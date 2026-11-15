@@ -58,8 +58,6 @@ const MS_PER_SECOND = 1000;
 const SEED = seedFor("47-tap-areas");
 /** The series the intercept answers, as spec 46's: a v4 UUID's shape, nothing the server holds. */
 const SERIES_ID = "00000000-0000-4000-8000-000000002122";
-/** p2, not 46's p1: the smoke shard runs 46 then 47 on one server, and both specs' menus in one minute pass R109's allowance for one account. */
-const SIGNED_IN = accounts.p2;
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
 const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-season", almanac: "almanac" } as const;
 /** The measure's own probe: this much narrower than the minimum and taller, its ::before no height and this far past each side. */
@@ -187,7 +185,7 @@ function emulateTouch(enabled: boolean): void {
 }
 
 /**
- * A pending account's code and consent screens for `SIGNED_IN`. Spec 10 redeems the pending fixture until
+ * A pending account's code and consent screens for the size's account. Spec 10 redeems the pending fixture until
  * the server restarts (R144) and may share this shard, so its own read says pending, plus `owes`: the
  * screens draw only from that read (CLAUDE.md rule 7).
  */
@@ -293,7 +291,13 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
     });
   });
 
-  for (const size of MENU_SIZES) {
+  for (const [index, size] of MENU_SIZES.entries()) {
+    // The account this size signs in as: p2 and p3, a size each in turn. R109 allows one account 300 requests a
+    // minute, and a size opens about sixteen screens in under twenty seconds, each with the inbox bell's reads
+    // (#3902) on top of its own. On one account the sizes passed that, so a screen drew a 429 about once a
+    // minute and never showed (#3919's smoke). Two accounts halve each one's rate. Not 46's p1: the smoke shard
+    // may run 46 then 47 on one server. p3 is otherwise only 55's, which frees it first.
+    const signedIn = index % 2 === 0 ? accounts.p2 : accounts.p3;
     describe(`R3728000 ${size.label}`, () => {
       beforeEach(() => {
         emulateTouch(size.width > BREAKPOINT_PX.phone);
@@ -399,26 +403,26 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
 
       describe("signed in", () => {
         before(() => {
-          cy.freeAccount(SIGNED_IN());
+          cy.freeAccount(signedIn());
         });
 
         it("R2122000 /play", () => {
-          cy.visitAs(SIGNED_IN(), routes.play());
+          cy.visitAs(signedIn(), routes.play());
           cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /decks", () => {
-          cy.visitAs(SIGNED_IN(), routes.deckbuilder());
+          cy.visitAs(signedIn(), routes.deckbuilder());
           cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /decks, a deck open", () => {
           // One full deck, whatever earlier specs saved: the open deck's pool is this menu's big list.
-          cy.clearDecks(SIGNED_IN());
-          cy.saveDeck(SIGNED_IN(), { name: "Taps", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
-            cy.visitAs(SIGNED_IN(), routes.deckbuilder());
+          cy.clearDecks(signedIn());
+          cy.saveDeck(signedIn(), { name: "Taps", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
+            cy.visitAs(signedIn(), routes.deckbuilder());
             cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
             // A window narrower than the workshop's split shows the list alone until a deck is opened (a wider
             // one opens it already).
@@ -429,77 +433,77 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
         });
 
         it("R2122000 /account", () => {
-          cy.visitAs(SIGNED_IN(), "/account");
+          cy.visitAs(signedIn(), "/account");
           cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /leaderboard", () => {
-          cy.visitAs(SIGNED_IN(), "/leaderboard");
+          cy.visitAs(signedIn(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /replays", () => {
-          cy.visitAs(SIGNED_IN(), routes.replays());
+          cy.visitAs(signedIn(), routes.replays());
           cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).find('[role="status"]').should("not.exist");
           expectHitAreas(size);
         });
 
         it("R2122000 /together", () => {
-          cy.visitAs(SIGNED_IN(), "/together");
+          cy.visitAs(signedIn(), "/together");
           cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         // R3734000: each of the Collection's four tabs, the chips, the search, the sort and the tabs among the controls.
         it("R2122000 R3734000 /collection, Cards", () => {
-          cy.visitAs(SIGNED_IN(), routes.collection());
+          cy.visitAs(signedIn(), routes.collection());
           cy.get(ts(COLLECTION_GRID), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 R3734000 /collection, Decks", () => {
-          cy.visitAs(SIGNED_IN(), routes.collectionTab("decks"));
+          cy.visitAs(signedIn(), routes.collectionTab("decks"));
           cy.get(ts(COLLECTION_DECKS), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 R3734000 /collection, Cosmetics", () => {
-          cy.visitAs(SIGNED_IN(), routes.collectionTab("cosmetics"));
+          cy.visitAs(signedIn(), routes.collectionTab("cosmetics"));
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 R3734000 /collection, Progress", () => {
-          cy.visitAs(SIGNED_IN(), routes.collectionProgress());
+          cy.visitAs(signedIn(), routes.collectionProgress());
           cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /shop", () => {
-          cy.visitAs(SIGNED_IN(), routes.shop());
+          cy.visitAs(signedIn(), routes.shop());
           cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /series, choosing a deck", () => {
           cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
-          cy.visitAs(SIGNED_IN(), routes.series(SERIES_ID));
+          cy.visitAs(signedIn(), routes.series(SERIES_ID));
           cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /invite, the code screen", () => {
           asPending();
-          cy.visitAs(SIGNED_IN(), routes.invite());
+          cy.visitAs(signedIn(), routes.invite());
           cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /invite, the consent screen", () => {
           asPending({ ageCheckOwed: true, termsOwed: true });
-          cy.visitAs(SIGNED_IN(), routes.invite());
+          cy.visitAs(signedIn(), routes.invite());
           cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
