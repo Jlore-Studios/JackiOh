@@ -973,8 +973,8 @@
 .tavern.app-shell .patch-pending__title {
   margin: 0;
   color: var(--tavern-gold);
-  font-family: var(--tavern-serif);
-  font-size: clamp(20px, 4.5vw, 26px);
+  font-family: var(--font-display);
+  font-size: clamp(var(--type-2xl), 4.5vw, var(--type-3xl));
   font-weight: 700;
   line-height: 1.2;
 }
@@ -982,7 +982,7 @@
 .tavern.app-shell .patch-pending__lede,
 .tavern.app-shell .patch__rollup {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
   color: var(--tavern-text-dim);
 }
 

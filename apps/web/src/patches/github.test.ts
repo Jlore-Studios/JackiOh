@@ -136,7 +136,8 @@ describe("GitHub releases", () => {
 
   it("open a release line's major with the line's summary and technical changes, which no other patch repeats", () => {
     const line: Release = { id: "fixture", name: "Fixture line", summary: "Four test cards, then more.", technical: ["A test screen."] };
-    const patches = FIXTURE_PATCHES.map((patch, at) => (at === 0 ? { ...patch, tier: "major" as const } : patch));
+    // R3944002: V2 and V3 are patches, so neither waits for a daily patch, which would give it no release.
+    const patches = FIXTURE_PATCHES.map((patch, at) => ({ ...patch, tier: at === 0 ? ("major" as const) : ("patch" as const) }));
     const { releases } = fixtureReleases({ patches, releases: [line] });
     const major = release(releases, V1).body;
     expect(major).toContain("**2026-01-02** · Fixture line · Major version");
