@@ -16828,9 +16828,12 @@
     "what": "review #3970 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-15T12:56:07Z",
+    "at": "2026-11-15T13:02:26Z",
     "notes": [
-      "#3966: green and waiting for a person to merge it, so `claude-7` gives up its claim on it"
+      "delivered revise #3970 on claude-8 (run 43711702906): built",
+      "started review #3970 on claude-8 (run 43717044950)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17536,7 +17539,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T12:56:07Z",
+  "loop_tick": "2026-11-15T13:02:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
