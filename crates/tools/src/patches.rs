@@ -4239,15 +4239,17 @@ mod tests {
                 assert_eq!(shipped_patch(&dir, "v0.1.1d").plays, Some(ids(bar + 1, bar + 2)));
             }
 
-            /// R3944000: a fragment titled `title` whose player note says `lines` under its changes.
-            fn noted(title: &str, lines: &[&str]) -> FragmentArgs {
+            /// R3944000: a fragment titled `title` whose player note says `lines` under its changes,
+            /// claiming `cards` (or, with none, every card the catalog changed since the newest snapshot,
+            /// so a second fragment pending beside a first names its own).
+            fn noted(title: &str, lines: &[&str], cards: Option<&[&str]>) -> FragmentArgs {
                 FragmentArgs {
                     player: Some(PlayerNote {
                         title: title.to_string(),
                         changes: strings(lines),
                         ..PlayerNote::default()
                     }),
-                    ..fragment_args(title, "s", "n", None)
+                    ..fragment_args(title, "s", "n", cards)
                 }
             }
 
@@ -4264,13 +4266,17 @@ mod tests {
                 let dir = root.join("crates/cards/patches");
                 let one = costing(&base, &ids(0, 1), 2);
                 write_files(root, &[("crates/cards/catalog.json", json(&one))]);
-                write_fragment(root, &noted("c00 buffed", &["c00 costs (2)."])).unwrap();
+                write_fragment(root, &noted("c00 buffed", &["c00 costs (2)."], None)).unwrap();
                 commit_at(root, "one card", "2026-10-01T12:00:00+00:00");
                 let two = costing(&one, &ids(1, 3), 3);
                 write_files(root, &[("crates/cards/catalog.json", json(&two))]);
                 write_fragment(
                     root,
-                    &noted("Two cards cost more", &["c01 costs (3).", "c00 costs (2)."]),
+                    &noted(
+                        "Two cards cost more",
+                        &["c01 costs (3).", "c00 costs (2)."],
+                        Some(&["c01", "c02"][..]),
+                    ),
                 )
                 .unwrap();
                 commit_at(root, "two cards", "2026-10-02T12:00:00+00:00");
@@ -4322,7 +4328,7 @@ mod tests {
                 );
                 let again = costing(&two, &ids(3, 4), 5);
                 write_files(root, &[("crates/cards/catalog.json", json(&again))]);
-                write_fragment(root, &noted("c03 costs more", &["c03 costs (5)."])).unwrap();
+                write_fragment(root, &noted("c03 costs more", &["c03 costs (5)."], None)).unwrap();
                 commit_at(root, "one more", "2026-10-03T12:00:00+00:00");
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.2b"]));
             }
@@ -4339,7 +4345,7 @@ mod tests {
                 git(root, &["branch", "_production"], None);
                 let one = costing(&base, &ids(0, 1), 2);
                 write_files(root, &[("crates/cards/catalog.json", json(&one))]);
-                write_fragment(root, &noted("c00 buffed", &["c00 costs (2)."])).unwrap();
+                write_fragment(root, &noted("c00 buffed", &["c00 costs (2)."], None)).unwrap();
                 commit_at(root, "one card", "2026-10-01T12:00:00+00:00");
                 let refused = cut_patch(root, Some("_production")).expect_err("pending");
                 assert!(
@@ -4356,7 +4362,7 @@ mod tests {
 
                 let two = costing(&one, &ids(1, 2), 2);
                 write_files(root, &[("crates/cards/catalog.json", json(&two))]);
-                write_fragment(root, &noted("c01 buffed", &["c01 costs (2)."])).unwrap();
+                write_fragment(root, &noted("c01 buffed", &["c01 costs (2)."], None)).unwrap();
                 commit_at(root, "another card", "2026-10-02T12:00:00+00:00");
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.2b"]));
                 commit_at(root, "ship", "2026-10-02T13:00:00+00:00");
@@ -4390,7 +4396,7 @@ mod tests {
                 let dir = root.join("crates/cards/patches");
                 let micro = base_with(&base, vec![in_set(card("aaa", 2), "Core")]);
                 write_files(root, &[("crates/cards/catalog.json", json(&micro))]);
-                write_fragment(root, &noted("aaa buffed", &["aaa costs (2)."])).unwrap();
+                write_fragment(root, &noted("aaa buffed", &["aaa costs (2)."], None)).unwrap();
                 commit_at(root, "a micro", "2026-10-01T12:00:00+00:00");
                 let with_set = base_with(
                     &micro,
@@ -4400,7 +4406,15 @@ mod tests {
                     ],
                 );
                 write_files(root, &[("crates/cards/catalog.json", json(&with_set))]);
-                write_fragment(root, &noted("Meditative", &["Meditative arrives."])).unwrap();
+                write_fragment(
+                    root,
+                    &noted(
+                        "Meditative",
+                        &["Meditative arrives."],
+                        Some(&["med1", "med2"][..]),
+                    ),
+                )
+                .unwrap();
                 commit_at(root, "the set ships", "2026-10-02T12:00:00+00:00");
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b", "v0.2.0"]));
                 let major = shipped_patch(&dir, "v0.2.0");
