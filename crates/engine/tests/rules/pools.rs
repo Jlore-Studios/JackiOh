@@ -830,3 +830,30 @@ mod r1221_r3869003_tribute_and_aim_read_the_registered_base_face {
         assert_eq!(pool(json!({ "aim": "harm" })), vec!["core-612"]);
     }
 }
+
+/// §5.1 (#3836): a pool's `costRange` holds a card at either end and none past it: `max` 3 keeps the 2
+/// and the 3 and leaves out the 4, `min` 3 the reverse.
+mod section_5_1_a_cost_range_holds_both_its_ends {
+    use super::*;
+
+    fn priced() {
+        register_catalog(catalog_of(vec![
+            card("core-701", "Core", "701", json!({ "cost": 2 })),
+            card("core-702", "Core", "702", json!({ "cost": 3 })),
+            card("core-703", "Core", "703", json!({ "cost": 4 })),
+        ]));
+    }
+
+    #[test]
+    fn a_cost_range_keeps_the_card_on_each_bound_and_leaves_out_the_one_past_it() {
+        priced();
+        assert_eq!(
+            pool(json!({ "costRange": { "max": 3 } })),
+            vec!["core-701", "core-702"]
+        );
+        assert_eq!(
+            pool(json!({ "costRange": { "min": 3 } })),
+            vec!["core-702", "core-703"]
+        );
+    }
+}
