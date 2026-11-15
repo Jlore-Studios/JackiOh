@@ -785,6 +785,12 @@
       "lines": [
         "approve"
       ]
+    },
+    "c:6902340299": {
+      "at": "2026-11-15T22:33:26Z",
+      "lines": [
+        "/harness handoff human"
+      ]
     }
   },
   "items": {
