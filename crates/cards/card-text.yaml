@@ -3365,8 +3365,8 @@ meditative-047: # 饕餮
     death: Still hungry. Always hungry.
   zh:
     name: 饕餮
-    base: 回合结束时：将一个随机敌方单位融合进本牌。
-    radiant: 回合结束时：将一个随机敌方单位和你对手牌库中的一张随机牌融合进本牌。
+    base: 激活：将一个随机敌方单位融合进本牌，然后冻结本牌。
+    radiant: 激活：将一个随机敌方单位融合进本牌。
 meditative-048: # Tranquility
   flavour: Breathe in. The storm waits its turn.
   voice:
@@ -7045,8 +7045,8 @@ stinkyscapeplus-004: # Profe Yates
     death: I'll never see the Northern Lights.
   zh:
     name: 耶茨教授
-    base: "战吼：放逐每张名字中含有M、O、U、S、E的牌。中国牌免疫。然后召唤两张随机陷阱。然后选择以下一项激活。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
-    radiant: "战吼：放逐每张名字中含有M、O、U、S、E的牌。中国牌免疫。然后召唤三张随机光辉陷阱。然后选择以下一项激活。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
+    base: "战吼：放逐一个永久物。然后召唤两张随机陷阱。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
+    radiant: "战吼：放逐一个永久物。然后召唤三张随机光辉陷阱。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
 stinkyscapeplus-005: # Dingleberry Droat
   flavour: He blends the whole fruit stand into one very expensive snack and calls it a business plan.
   voice:
@@ -7111,8 +7111,8 @@ stinkyscapeplus-009: # Drone Assembler v4
     death: Rolling back to version three.
   zh:
     name: 无人机组装器v4
-    base: "星舰部件，装备\n激活2：指定一个敌人，召唤一个无人截击机攻击它。"
-    radiant: "星舰部件，装备\n激活2：指定一个敌人，召唤一个光辉无人截击机攻击它。"
+    base: "星舰部件，装备\n激活：指定一个敌人，召唤一个无人截击机攻击它。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件，装备\n激活：指定一个敌人，召唤一个光辉无人截击机攻击它。使用后，你的下个回合无法使用。"
 stinkyscapeplus-010: # Drone Assembler v5
   flavour: By version five the drones had a union, a mascot and a retirement plan.
   voice:
@@ -7121,8 +7121,8 @@ stinkyscapeplus-010: # Drone Assembler v5
     death: Reverting. Please wait.
   zh:
     name: 无人机组装器v5
-    base: "星舰部件，装备\n激活：指定一个敌人，召唤一个无人护卫舰攻击它。"
-    radiant: "星舰部件，装备\n激活：指定一个敌人，召唤一个光辉无人护卫舰攻击它。"
+    base: "星舰部件，装备\n激活2：指定一个敌人，召唤一个无人截击机攻击它。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件，装备\n激活2：指定一个敌人，召唤一个光辉无人截击机攻击它。使用后，你的下个回合无法使用。"
 stinkyscapeplus-011: # Energy Booster
   flavour: It runs on pure enthusiasm and one suspicious extension cord.
   voice:
@@ -8473,7 +8473,7 @@ stinkyscapeplus-145: # Fire Beam v5
     death: Out of fuel.
   zh:
     name: 火焰光束v5
-    base: "星舰部件，装备\n激活2：对一个敌方单位施加燃烧{burn}，顺劈。"
+    base: "星舰部件，装备\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
     radiant: "星舰部件，装备\n激活2：对一个敌方单位施加燃烧{burn}，顺劈。"
 stinkyscapeplus-146: # Scourge Mortar v3
   flavour: It lobs a gentle suggestion over the wall. The suggestion is a swamp.

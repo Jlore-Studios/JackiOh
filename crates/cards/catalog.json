@@ -13951,16 +13951,16 @@
     "cost": 4,
     "loc": 29,
     "base": {
-      "attack": 0,
-      "health": 1,
-      "keywords": [],
-      "text": "End of turn: Fuse a random enemy Unit into this."
-    },
-    "radiant": {
-      "attack": 0,
+      "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "End of turn: Fuse a random enemy Unit and a random card from your opponent's deck into this."
+      "text": "Activate: Fuse a random enemy Unit into this, then Freeze this."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Activate: Fuse a random enemy Unit into this."
     }
   },
   "meditative-048": {
@@ -29125,13 +29125,13 @@
       "attack": 7,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon two random Traps. Then choose one of the following Activates.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile a permanent. Then summon two random Traps.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
     },
     "radiant": {
       "attack": 14,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon three random Radiant Traps. Then choose one of the following Activates.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile a permanent. Then summon three random Radiant Traps.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
     },
     "params": [
       {
@@ -29399,7 +29399,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Summon a Drone Interceptor to attack an enemy."
+      "text": "Starship Piece, Equip\nActivate: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -29412,7 +29412,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Summon a Radiant Drone Interceptor to attack an enemy."
+      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "refs": [
       "stinkyscape-t-drone-interceptor"
@@ -29443,7 +29443,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Drone Corvette to attack an enemy."
+      "text": "Starship Piece, Equip\nActivate 2: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -29456,10 +29456,10 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Drone Corvette to attack an enemy."
+      "text": "Starship Piece, Equip\nActivate 2: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "refs": [
-      "stinkyscape-t-drone-corvette"
+      "stinkyscape-t-drone-interceptor"
     ]
   },
   "stinkyscapeplus-011": {
@@ -35821,7 +35821,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Burn {burn} an enemy Unit, Cleave."
+      "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
     "radiant": {
       "attack": 0,
@@ -35839,8 +35839,8 @@
     "params": [
       {
         "key": "burn",
-        "base": 4,
-        "radiant": 8,
+        "base": 6,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1

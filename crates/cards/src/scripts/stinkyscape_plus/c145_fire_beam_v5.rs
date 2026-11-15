@@ -1,22 +1,27 @@
 //! SPEC §8.12 S+ #145 Fire Beam v5 (Unit 0/4 → 0/8, Weapon, cost 4, Legendary), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
-//!            Activate 2: Burn {burn} an enemy Unit, Cleave" — burn 4
-//!   Radiant: the same text — burn 8
+//!            Activate: Burn {burn} an enemy Unit, Cleave" — burn 6
+//!   Radiant: "Starship Piece, Equip
+//!            Activate 2: Burn {burn} an enemy Unit, Cleave" — burn 6
 //!
 //! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one (R1852001).
-//! The Activate is 2 uses a turn (R384, R1857003). R3544000: its target is a declared enemy Unit, never a
-//! hero (R81, R1862000); the verb adds its Burn and deals no damage (R3540000). R3544001: Cleave puts the
-//! same Burn on each Unit beside the chosen one, read before the first Burn. The number is the declared
-//! `burn` (R386), read through `param`.
+//! The Activate is once a turn on the base face and twice on the Radiant one (R384, R1857003). R3544000:
+//! its target is a declared enemy Unit, never a hero (R81, R1862000); the verb adds its Burn and deals no
+//! damage (R3540000). R3544001: Cleave puts the same Burn on each Unit beside the chosen one, read before
+//! the first Burn. The number is the declared `burn` (R386), read through `param`. Through v0.6.5 both
+//! faces were "Activate 2" (burn 4, Radiant 8); `script_v0_6_5` keeps the base face's two uses for those
+//! replays (R767000).
 
 use jackioh_engine::effects::{AfflictArgs, BoardScope, TargetSpec, adjacent_to_aimed, burn};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-145";
 
-/// "Activate 2": 2 uses a turn (R384, R1857003).
-const USES: i32 = 2;
+/// "Activate": 1 use a turn on the base face (R384, R1857003).
+const USES: i32 = 1;
+/// "Activate 2": 2 uses a turn on the Radiant face, and on both faces through v0.6.5.
+const RADIANT_USES: i32 = 2;
 
 /// R3544001: the chosen enemy Unit's Burn, then the same Burn on each Unit beside it, read before the
 /// first.
@@ -34,11 +39,12 @@ fn shot(ctx: &EffectContext<'_>) -> Vec<Effect> {
     out
 }
 
-fn beam() -> ActivationDecl {
+/// The Activate, `uses` a turn.
+fn beam(uses: i32) -> ActivationDecl {
     ActivationDecl {
         id: "burn".into(),
         label: "Burn an enemy Unit, and each Unit beside it".into(),
-        uses: ActivationUses::Count(USES),
+        uses: ActivationUses::Count(uses),
         cost: None,
         // "an enemy Unit": enemy Units only, never a hero.
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))],
@@ -52,16 +58,29 @@ fn beam() -> ActivationDecl {
     }
 }
 
-pub fn script() -> CardScripts {
-    let base = Script {
-        activations: vec![beam()],
+fn face(uses: i32) -> Script {
+    Script {
+        activations: vec![beam(uses)],
         ..Script::default()
-    };
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    }
 }
 
-// S+ #145 Fire Beam v5 — SPEC §8.12 row 145 (R3544000, R3544001; R81, R384, R1086, R1751000, R3540000).
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: face(USES),
+        radiant: face(RADIANT_USES),
+    }
+}
+
+/// R767000: through v0.6.5, "Activate 2" on both faces; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5() -> CardScripts {
+    CardScripts {
+        base: face(RADIANT_USES),
+        radiant: face(RADIANT_USES),
+    }
+}
+
+// S+ #145 Fire Beam v5 — SPEC §8.12 row 145 (R3544000, R3544001; R81, R384, R767000, R1086, R1751000, R3540000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,8 +98,8 @@ mod tests {
     const HOST: &str = "stand-in (1) 4/4 R12/12";
 
     /// The printed Burn, and the Radiant face's, and its Radiant health.
-    const BURN: i32 = 4;
-    const RADIANT_BURN: i32 = 8;
+    const BURN: i32 = 6;
+    const RADIANT_BURN: i32 = 6;
     const RADIANT_HEALTH: i32 = 8;
 
     fn at(target: &str) -> Value {
@@ -147,6 +166,22 @@ mod tests {
         assert_eq!(hero_burn_of(s.state(), P2), 0, "radiant {radiant}");
     }
 
+    /// R384: `uses` a turn, each adding its Burn to the last (R3540000), then refused until its user's
+    /// next turn.
+    fn uses_a_turn(radiant: bool, uses: i32, amount: i32) {
+        let mut s = beam_on(radiant, json!({ "field": [TOUGH] }));
+        let target = s.unit_at(P2, 1).id;
+        for _ in 0..uses {
+            assert_eq!(offers(&s), 1, "radiant {radiant}");
+            s.activate(ID, at(&target));
+        }
+        assert_eq!(burn_of(&s, &target), uses * amount, "radiant {radiant}");
+        assert_eq!(offers(&s), 0, "radiant {radiant}");
+        s.expect_refused(|s| s.activate(ID, at(&target)));
+        next_turn_of(&mut s, P1);
+        assert_eq!(offers(&s), 1, "radiant {radiant}");
+    }
+
     mod base {
         use super::*;
 
@@ -179,19 +214,13 @@ mod tests {
         }
 
         #[test]
-        fn r384_the_uses_are_spent_a_turn_and_come_back_the_next() {
-            let mut s = beam_on(false, json!({ "field": [TOUGH] }));
-            let target = s.unit_at(P2, 1).id;
-            for _ in 0..USES {
-                assert_eq!(offers(&s), 1);
-                s.activate(ID, at(&target));
-            }
-            // Each use adds to the last (R3540000).
-            assert_eq!(burn_of(&s, &target), USES * BURN);
-            assert_eq!(offers(&s), 0);
-            s.expect_refused(|s| s.activate(ID, at(&target)));
-            next_turn_of(&mut s, P1);
-            assert_eq!(offers(&s), 1);
+        fn r384_once_a_turn_and_back_the_next() {
+            uses_a_turn(false, USES, BURN);
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_5_is_used_twice_a_turn() {
+            crate::under_kept(ID, script_v0_6_5(), || uses_a_turn(false, RADIANT_USES, BURN));
         }
 
         #[test]
@@ -227,6 +256,11 @@ mod tests {
         #[test]
         fn r3544001_burns_the_chosen_unit_and_each_unit_beside_it_too() {
             cleaves(true, RADIANT_BURN);
+        }
+
+        #[test]
+        fn r384_twice_a_turn_and_back_the_next() {
+            uses_a_turn(true, RADIANT_USES, RADIANT_BURN);
         }
 
         #[test]

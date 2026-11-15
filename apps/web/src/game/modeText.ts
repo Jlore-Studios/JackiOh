@@ -231,7 +231,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "gain Brittle": { label: "More Brittle", detail: "This gains more Brittle." },
     "Tribute this": { label: "Tribute this", detail: "Tribute this card." },
   },
-  // S+ #4 Profe Yates: the one Activate it keeps while it stays.
+  // S+ #4 Profe Yates through v0.6.5: the one Activate it kept while it stayed (its replays; R3996000 gave it all three).
   "stinkyscapeplus-004": {
     overwhelm: { label: "Overwhelm", detail: "Activate: Freeze all Units in this lane and the surrounding lanes." },
     wolfsMaw: { label: "Wolf's Maw", detail: "Activate: Pull a Flying Unit down and deal damage to it. It loses Flying." },
