@@ -15305,17 +15305,8 @@
       }
     },
     "3932": {
-      "action": "plan",
-      "asks": [
-        "c:6891839530"
-      ],
-      "build_next": {
-        "from_run": "43696203237",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-15T09:11:41Z",
-        "until": "2026-11-15T09:41:41Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T09:11:33Z",
         "difficulty": "medium",
@@ -15334,10 +15325,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3932 && git log -n 50 --grep=\"bot: plan\" --oneline\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3932 && git log --all -S \"Files to touch\" -n 5 --oneline\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3932 && git show 19da01d87f\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3932 && grep -n -C 5 \"controlExtras\" apps/web/README.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3932 && grep -n -C 5 \"dungeon\" apps/web/README.md\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ac6287fc-43bd-4f15-b928-d94264e4a5a0/task-52\"}\n- said: \n- run_command: ps aux | grep -E \"cargo|jackioh\"\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ac6287fc-43bd-4f15-b928-d94264e4a5a0/task-52\"}\n- said: \n- run_command: ps aux | grep -E \"cargo|jackioh\"\n- said: \n- run_command: sleep 10 && ps aux | grep -E \"cargo|jackioh\"\n- said: \n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ac6287fc-43bd-4f15-b928-d94264e4a5a0/task-52\"}\n- said: \n- run_command: ps -f --ppid 2441\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ac6287fc-43bd-4f15-b928-d94264e4a5a0/task-52\"}\n- said: \n- run_command: ps -f --ppid 2441\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"ac6287fc-43bd-4f15-b928-d94264e4a5a0/task-52\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3932 && git status\n- said: \n- read_file: {\"EndLine\": 200, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3932/.bot-plan.md\", \"StartLine\": 1}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3932/.bot-plan.md\"}\n- said: \n- read_file: {\"EndLine\": 10, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3932/.bot-plan.md\", \"StartLine\": 1}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of lines 1-5 hold: UI change in apps/web/src/dungeon/fight with spec notes, no engine rules, AI, cross-crate design, migration or large footprint.\"} --> ## Goal Provide a Menu button in `<Game>`'s `controlExtras` on a dungeon fight board ([`FightScree\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-15T08:48:15Z",
       "owner_why": "it plans it",
@@ -15350,12 +15340,14 @@
       "provider": "agy",
       "queued_at": "2026-11-15T08:42:49Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43696203237",
+      "run_id": "pending:ebef8273-1794733927",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-15T08:48:15Z",
+      "started_at": "2026-11-15T09:12:23Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6891839530"
+      ]
     },
     "3936": {
       "action": "plan",
@@ -15524,9 +15516,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T09:02:49Z",
+    "at": "2026-11-15T09:12:23Z",
     "url": "",
-    "what": "build #3844 on claude-3"
+    "what": "build #3932 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T08:58:05Z",
