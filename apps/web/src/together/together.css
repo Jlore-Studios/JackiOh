@@ -145,7 +145,6 @@
 }
 
 .together-field:focus-visible {
-  outline: none;
   border-color: var(--you);
 }
 

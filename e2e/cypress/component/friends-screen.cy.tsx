@@ -144,7 +144,7 @@ function problemsAbout(win: Window): string[] {
   return hitAreaProblems(win).filter((problem) => WATCHED.some((name) => problem.includes(name)));
 }
 
-/** The field style the add and search inputs take: a sunken ground, a 1 px line and the small radius (index.css's tokens). */
+/** The field style the add and search inputs take: a sunken ground, a 1 px line, the small radius and a visible focus outline (index.css's tokens). */
 function expectThemedFields(): void {
   cy.window({ log: false }).then((win) => {
     const probe = win.document.createElement("div");
@@ -163,6 +163,9 @@ function expectThemedFields(): void {
       expect(style.backgroundColor, `${id}'s ground`).to.eq(ground);
       expect(style.borderTopWidth, `${id}'s line`).to.eq("1px");
       expect(style.borderTopLeftRadius, `${id}'s corners`).to.eq(radius);
+      (field as HTMLElement & { focus(options?: { focusVisible?: boolean }): void }).focus({ focusVisible: true });
+      expect(win.getComputedStyle(field).outlineStyle, `${id} has a focus outline`).not.to.eq("none");
+      field.blur();
     }
   });
 }
