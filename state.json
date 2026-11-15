@@ -14390,6 +14390,13 @@
     "3914": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T03:00:23Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Test code in 11 card scripts and one engine rules test, a 7-line testkit helper (crates/engine/src/testkit, not rules or the resolution loop) and a tools acceptance scan: no rule 1-5 line holds, about 17 files"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
