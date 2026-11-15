@@ -1007,10 +1007,6 @@ mod r113_a_question_mid_attack_summon_owes_the_rest {
         state
     }
 
-    fn on_field(state: &GameState, id: &str) -> bool {
-        find_instance(state, id).is_some_and(|card| card.zone.z() == ZoneName::Field)
-    }
-
     /// R1202, R113: the substitute's combat kills a Unit whose Death asks; its bounce is owed behind
     /// the question and runs once it is answered.
     #[test]
