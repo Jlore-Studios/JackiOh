@@ -14302,6 +14302,13 @@
     "3912": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T02:18:41Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "None of rule 1-5 holds: it is one web call site, its tests, a ruling note and two doc lines, about 7 files, with no engine, AI, cross-crate or migration change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
