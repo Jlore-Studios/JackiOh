@@ -14297,6 +14297,13 @@
       "action": "plan",
       "asks": [],
       "audit_tier": "",
+      "build_next": {
+        "from_run": "43687362253",
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-15T07:18:24Z",
+        "until": "2026-11-15T07:48:24Z"
+      },
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-15T07:18:16Z",
