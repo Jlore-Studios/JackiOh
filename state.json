@@ -16423,18 +16423,18 @@
     "what": "review #3963 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-15T09:52:19Z",
+    "at": "2026-11-15T10:27:55Z",
     "notes": [
-      "delivered plan #3936 on claude-1 (run 43699815393): planned",
-      "delivered plan #3957 on claude-7 (run 43699734082): planned",
-      "delivered plan #3956 on claude-4 (run 43699697105): planned",
-      "delivered build #3839 on claude-8 (run 43697203347): built",
-      "started review #3961 on claude-8 (run 43701600580)",
-      "started build #3956 on claude-4 (run 43701639569)",
-      "started build #3957 on claude-7 (run 43701679037)",
-      "started build #3936 on claude-1 (run 43701719182)",
-      "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "#3936 is held for `claude-1` until 06:20 (5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "delivered review #3961 on claude-8 (run 43701600580): approved",
+      "delivered review #3959 on agy (run 43700643996): approved",
+      "delivered build #3843 on claude-7 (run 43698190743): built",
+      "started review #3966 on claude-7 (run 43704462921)",
+      "started review #3962 on claude-3 (run 43704506527)",
+      "started review #3963 on claude-4 (run 43704550580)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is idle, but nothing queued is for it; `claude-1` 5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-15T12:20:00Z; it takes reviews only; it can start a build or a plan again in 1h 47m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 12h 27m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` is idle, but nothing queued is for it; `gpt` is idle, but nothing queued is for it; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3936 held for `claude-1` until 06:20 (5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "pruned 7 plan file(s) older than 7 days",
+      "runner gate: started 0 of 4 waiting run(s); 4 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17140,7 +17140,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T09:52:19Z",
+  "loop_tick": "2026-11-15T10:27:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
