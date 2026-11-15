@@ -25,7 +25,7 @@ for (`unknown_root`, R3479000); a call outside a decision passes `Prices::NONE` 
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
 
 Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`,
-`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_DEATH_PROBE_NODES`, `AI_TURN_HOOK_PROBE_NODES`
+`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_MULLIGAN_TRIBUTE_ALLOWANCE`, `AI_DEATH_PROBE_NODES`, `AI_TURN_HOOK_PROBE_NODES`
 and `AI_ACTIVATION_PROBE_NODES` in `src/config.rs`, and
 the deck, gate, sweep and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
 `AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE`,
@@ -68,7 +68,12 @@ every card costing more than `mulligan_keep_bound`, `AI_MULLIGAN.keep_max_cost` 
 bonus within its mana cap (R2977000), except the one proven card one dearer the shaped keep holds,
 and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
 the cheapest card when none is an early play, counted in the seat's crystals (its mana bonus and,
-going second, The Coin). Nothing here reads a difficulty, and a handicap only as the seat's mana (the
+going second, The Coin). A card's cost there is its `mulligan_cost` (R3936000): its mana cost, or,
+while it has Tribute X (`tribute_cost_of`, Nerfs, Buffs and Floats counted), the larger of that and X
+plus `AI_MULLIGAN_TRIBUTE_ALLOWANCE`, so a Tribute 3 three-drop goes back and a one-mana Tribute 2
+card is neither a one-drop nor an early play. The shaped exception, read off the printed cost, never
+takes a card its Tribute made dearer, and the greedy baseline's `mulligan_keep` reads mana alone.
+Nothing here reads a difficulty, and a handicap only as the seat's mana (the
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
 opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
