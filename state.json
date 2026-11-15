@@ -15019,8 +15019,14 @@
     "what": "review #3928 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-15T03:16:40Z",
-    "notes": [],
+    "at": "2026-11-15T03:29:10Z",
+    "notes": [
+      "delivered review #3926 on agy (run 43670443278): approved",
+      "delivered build #3888 on claude-6 (run 43666238812): built",
+      "started review #3928 on claude-6 (run 43672816928)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15725,7 +15731,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T03:16:40Z",
+  "loop_tick": "2026-11-15T03:29:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
