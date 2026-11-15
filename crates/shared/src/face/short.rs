@@ -233,8 +233,33 @@ mod tests {
     fn a_card_has_a_form_per_face() {
         assert_eq!(short_form_of("core-098", false), Some(ShortForm::Lines(2)));
         assert_eq!(short_form_of("classic-023", true), None);
-        assert_eq!(short_form_of("classic-023", false), Some(ShortForm::Clamp));
+        assert!(matches!(
+            short_form_of("classic-023", false),
+            Some(ShortForm::Written { .. })
+        ));
+        assert_eq!(short_form_of("stinkyscape-116", false), Some(ShortForm::Clamp));
         assert_eq!(short_form_of("core-001", false), None);
+    }
+
+    /// R3941001: a written form prints its English words on an English face, and on a Chinese one its Chinese
+    /// words, or clamps where none are written.
+    #[test]
+    fn r3941001_a_written_form_reads_in_the_readers_language() {
+        let english_only = ShortForm::Written {
+            en: "Draw {draw}.",
+            zh: None,
+        };
+        let both = ShortForm::Written {
+            en: "Draw {draw}.",
+            zh: Some("抽{draw}张牌。"),
+        };
+        assert_eq!(in_language(english_only, false), english_only);
+        assert_eq!(in_language(english_only, true), ShortForm::Clamp);
+        assert_eq!(in_language(both, true), both);
+        assert_eq!(in_language(ShortForm::Colon, true), ShortForm::Colon);
+        assert!(written_words("classic-023", false, false).is_some());
+        assert_eq!(written_words("classic-023", false, true), None);
+        assert_eq!(written_words("core-001", false, false), None);
     }
 
     /// #814: the ellipsis takes a last stop's place only: a cut ending in a word keeps it, one ending in spaces loses
