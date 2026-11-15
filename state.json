@@ -14915,8 +14915,25 @@
     "what": "plan #3937 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T19:56:27Z",
-    "notes": [],
+    "at": "2026-11-15T19:53:23Z",
+    "notes": [
+      "#3618 needs a plan",
+      "#3619 needs a plan",
+      "#3826 needs a plan",
+      "#3937 needs a plan",
+      "#3975 needs a plan",
+      "#3976 needs a plan",
+      "started plan #3975 on agy (run 43755025170)",
+      "started plan #3976 on gpt (run 43755075663)",
+      "started plan #3934 on claude-3 (run 43755131803)",
+      "started plan #3826 on claude-7 (run 43755178652)",
+      "started plan #3619 on claude-8 (run 43755227397)",
+      "started plan #3618 on claude-4 (run 43755277358)",
+      "started plan #3935 on claude-6 (run 43755325397)",
+      "started plan #3937 on claude-3 (run 43755376587)",
+      "nothing more to start: nothing is queued",
+      "pruned 17 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15621,7 +15638,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T19:46:32Z",
+  "loop_tick": "2026-11-15T19:53:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
