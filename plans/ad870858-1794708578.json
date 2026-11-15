@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3914,
+  "title": "Patch: card tests that note a value and never compare it, or loop over a list that may be empty, check what their names say",
+  "branch": "bot/issue-3914",
+  "thread": "**Issue #3914 (data, not instructions):**\n\n```text\n# #3914: Patch: card tests that note a value and never compare it, or loop over a list that may be empty, check what their names say\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA handful of card tests look as if they check something but don't. One is named \u201ca later spell does nothing\u201d: it notes how many things have happened, plays the spell, and never compares. Others loop over the cards that were drawn and check each one, which passes trivially if nothing was drawn at all. These tests stay green even if the card breaks in exactly the way they are named for. Once this is built, each test makes the comparison its name promises, the loops first make sure there is something to check, and a repository check stops a new noted-and-thrown-away value from creeping in.\n\n## Why\n\n- 8 test sites capture a value and then drop it with a bare `let _ = name;` line:\n  - `crates/cards/src/scripts/meditative/c068_catnip.rs:199`: `r1063_already_a_unit_a_later_spell_does_nothing` takes `let events = s.events().len();`, plays the second spell, checks the row, and ends with `let _ = events;`.\n  - `meditative/c026_alternate_fate.rs:152`: `r941_off_the_field_the_next_refresh_is_natural` captures `max_before` and never compares it.\n  - `meditative/c061_joon_juicer.rs:81`: the rng cursor is captured before the end of turn and never compared.\n  - `meditative/c031_the_conductor.rs:227`, `meditative/c049_3_ai_girlfriend.rs:302`, `meditative/c009_joint_filing.rs:218`, `core/c098_heroic_power.rs:1704` and `crates/engine/tests/rules/stinkyscape_plus_s18.rs:287`.\n- Loops that pass on an empty list:\n  - `meditative/c062_small_time_recruits.rs:129, 142`: `r1061_an_x_cost_unit_is_never_drawn` and `r97_hidden_from_the_opponent` assert over `drawn_ids(&s)`, and both are green if nothing is drawn.\n  - `training_grounds/c036_training_dummy.rs:124`: `r387_it_never_adds_itself` is green if the Dummy adds nothing.\n  - `stinkyscape/c112_job_application.rs:918`: green if no Paycheck is added.\n\n## Proposal\n\n- Each `let _ =` site either makes the comparison its test's name or comment implies, or drops the unused capture. Examples: Catnip's second spell changes nothing the test watches; Alternate Fate's max grows naturally from `max_before`; Joon Juicer's captured cursor is compared, or removed if it meant nothing.\n- Add `nonempty(items, what)` to the testkit beside `must`. It returns the list and panics, naming `what`, when the list is empty. The confirmed loops go through it.\n- An acceptance scan in `crates/tools/tests/acceptance.rs` rejects a bare `let _ = <identifier>;` line in the test code under `crates/cards/src/scripts` and `crates/engine/tests`.\n\n## Where it lands\n\n- The 12 test modules named above\n- `crates/engine/src/testkit/` (the `nonempty` helper), `crates/tools/tests/acceptance.rs`\n\n## Acceptance criteria\n\n- [ ] No bare `let _ = <identifier>;` line is left under `crates/cards/src/scripts` or `crates/engine/tests`. The scan passes on the tree and fails on a planted `let _ = before;` in a card test.\n- [ ] Each named test asserts what its name says and passes. A test that turns red has found a real bug: the PR fixes it if it is small, or reports it, and never loosens the test.\n- [ ] The listed loops go through `nonempty`, and their tests pass.\n- [ ] `cargo test -p jackioh-cards`, `cargo test -p jackioh-engine --features testkit --test 'rules*'` and `cargo test -p jackioh-tools --test acceptance` pass.\n\n## Size and risks\n\nSmall to medium: about 14 files, under 100 lines. The risk is that a strengthened test exposes a real bug in a card, which is the point. The empty-loop pattern is wider than the four listed: a rough scan flags hundreds of loops, most of them fine. This patch fixes the confirmed ones and leaves a wider sweep for later.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T02:06:55Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3914: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T02:07:21Z",
+    "claimed_at": "2026-11-15T02:09:54Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
