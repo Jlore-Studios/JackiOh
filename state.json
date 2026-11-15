@@ -6531,6 +6531,9 @@
       "started_at": "2026-11-10T03:56:10Z",
       "stop_requested": false
     },
+    "3618": {
+      "suggestion": true
+    },
     "3619": {
       "asks": [
         "c:6900293850"
