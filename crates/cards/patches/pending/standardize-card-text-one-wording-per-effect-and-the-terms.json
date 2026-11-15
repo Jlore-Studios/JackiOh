@@ -7,16 +7,19 @@
     "new": [],
     "balance": [],
     "changes": [
-      "Cards whose text ran past the card face now show shorter words written for play on the board and in your hand, instead of text cut off with \"…\"; the full text is still in the hover preview, the touch sheet and the card's details.",
+      "Cards whose text ran past the card show shorter words written for play on the board and in your hand, not text cut off with \"…\".",
+      "Their full text is still in the hover preview, the touch sheet and the card's details.",
       "A fused card, an Equipped Unit among them, shows one keyword line instead of one for each card fused into it."
     ],
     "text": [
-      "Keywords and triggers print as their glossary terms everywhere, so they bold and show their rule on hover: Phase Weaver's End of turn, Impact Reactor's When this awakens, Shawarma Law's Can't Defend, Phase Fabric's Can't be attacked and Mindustrial Cross-over's Starship Piece.",
+      "Keywords and triggers are spelled as their glossary terms, so they bold and show their rule on hover.",
+      "Phase Weaver prints End of turn and Impact Reactor prints When this awakens.",
+      "Shawarma Law prints Can't Defend, Phase Fabric prints Can't be attacked and Mindustrial Cross-over prints Starship Piece.",
       "Jlockeed's Forever War and Mindustrial Revolution read \"For the rest of the game.\" with a Start of turn line, as Jlockeed's Permanent Defense Contract does.",
       "A cost an effect sets on the card it adds is a sentence of its own: \"It costs (0).\"",
       "Wardrum, Tatches the Totem and Dogpile open their hand and deck triggers with \"While this is in your …\".",
       "Every Weapon that burns says \"Damage also Burns N\".",
-      "Graphite, Scorch, Astrophage, Colony Watcher, Meltdown, Fuse, Vela, Corvus, PIP, The Enigmata, Great Paperclip Theory II and Spaceberry say what they do in plain, whole sentences.",
+      "Graphite, Scorch, Astrophage, Colony Watcher, Meltdown, Fuse, Vela, Corvus, PIP, The Enigmata, Great Paperclip Theory II and Spaceberry read as plain, whole sentences.",
       "Churnwalker, Arc, Shawarma Law and the drills read shorter, and Arc now fits its card without being cut."
     ],
     "fixes": []

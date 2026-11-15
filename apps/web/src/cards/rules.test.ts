@@ -895,11 +895,11 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     expect(termsIn("This can't go Berserk.")).toEqual(["Berserk"]);
   });
 
-  it("R512 every new term has at least one catalog text that prints it", () => {
+  it("R512 R3941000 every new term has at least one catalog text that prints it", () => {
     // The Stinkyscape set's faces (#1884) print Frozen and Dormant (R1839000), where M+ #24 Bob (#1185)
-    // prints only the verb, Freeze. R3551003: Can't be attacked is printed by no card since Jlockeed's J15
-    // Fighter took Evasive in its place (§6.1's row: "None yet").
-    const unprinted: readonly GlossaryTermId[] = ["Can't be attacked"];
+    // prints only the verb, Freeze. R3551003: Can't be attacked went unprinted once Jlockeed's J15 Fighter took
+    // Evasive in its place, until R3941000 spelled S+ #46 Phase Fabric's Radiant "Can't be Attacked" as its label.
+    const unprinted: readonly GlossaryTermId[] = [];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",
