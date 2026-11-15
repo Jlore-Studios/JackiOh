@@ -123,7 +123,7 @@ mod tests {
         fn r387_it_never_adds_itself() {
             for n in 0..24 {
                 let mut s = board(true, &format!("training-dummy-{n}"), json!([HIT_JOB, FILLER]));
-                for card in kill_dummy(&mut s) {
+                for card in nonempty(kill_dummy(&mut s), "the cards the Dummy's Death added") {
                     from_the_pool(&card);
                 }
             }

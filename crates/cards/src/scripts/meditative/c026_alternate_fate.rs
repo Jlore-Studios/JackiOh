@@ -149,10 +149,10 @@ mod tests {
     fn r941_off_the_field_the_next_refresh_is_natural() {
         let mut s = casting("fate-hand", false);
         let max_before = s.state().players[P1].mana.max;
-        let _ = max_before;
         s.end_turn();
         s.end_turn();
         let side = &s.state().players[P1];
+        assert_eq!(side.mana.max, max_before, "max mana is already at its cap and stays there");
         assert_eq!(side.mana.current, side.mana.max, "a natural refresh fills to max");
         assert!(side.mana.max > 0);
     }

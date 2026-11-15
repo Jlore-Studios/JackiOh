@@ -11,8 +11,8 @@
 //! a pool's roll lands as a test needs. `preview.rs` is R1420's preview of a set that does not ship yet,
 //! `duos_scenario.rs` #936's begun Duos game. `golden.rs` (§13.3, #1641) and `pick.rs` (the one-pick
 //! builders and the `targets` wrapper, #1826, #3827) are not globbed in: callers name the module
-//! (`golden::<item>`). `must` (#2023) comes in with the glob, the effects library (its verbs share names
-//! with engine functions) does not.
+//! (`golden::<item>`). `must` (#2023) and `nonempty` (#3914) come in with the glob, the effects library
+//! (its verbs share names with engine functions) does not.
 //! `stand_in.rs` (#3486) builds the card a `stand-in …` id spells out; no catalog lists it.
 //! `unique_draws.rs` (R3563000) switches `UNIQUE_RANDOM_DRAWS` on for one call, which is on since the
 //! Stinkyscape+ release (#3573).
