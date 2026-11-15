@@ -786,6 +786,11 @@ one that lands while another runs does nothing). A game over whose result's writ
 `live`) is due too, so the sweep writes it; a Glitch's void (R679) goes through `results::void_match`. A
 game is written in the transaction that accepts its challenge, so a start that fails leaves the challenge
 open; a seek's claim commits first, and a start that fails puts the claimed seek back where it stood.
+R3727004's cap is read once before the choice is frozen, for a quick `daily_full`, and again in the
+transaction that writes the challenge, the seek or the game, under the account's daily lock
+(`Tx::daily_lock_account`: a transaction-level advisory lock in Postgres; the fake runs one transaction at a
+time), so of requests at once only those that fit are written (#3842); a claimed seek whose claimer is full
+that way goes back too.
 
 **Telling a player.** What to send is `jackioh_shared::notify::decide_notify`'s (a game newly waiting, and
 once `DAILY_REMINDER_HOURS` before a deadline; an email at most every `DAILY_EMAIL_MIN_GAP_HOURS`, and none
