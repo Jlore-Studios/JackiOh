@@ -221,10 +221,6 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
               <BackLink to={paths.daily} label="Back to daily games" showSettings={false} />
               {/* R169: every live modifier in full, one tap away, as every other table's rail lists them. */}
               <ModifierList view={game.view} opponentLabel={t("Opponent")} />
-            </>
-          }
-          boardNotice={
-            <>
               {game.olderCatalog ? (
                 <p className="daily-board-notice" data-testid={dailyTestid.olderCatalog} role="note">
                   {t("This game plays on the card version it started on, an older one than today's.")}

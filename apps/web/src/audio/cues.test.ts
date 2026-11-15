@@ -228,6 +228,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   // MN05.
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  // R3857000.
+  armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
   // Meditative #39.2, R961.
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   // Meditative MB05 (ME-SECRET).
@@ -344,6 +346,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   discardPrevented: "cancel",
   // MN05.
   damageAbsorbed: "armorRing",
+  // R3857000: the sweep of a stat gained; the ring stays the whole hit's (R1365's own sounds).
+  armorGained: "buff",
   // Meditative #39.2, R961.
   jadeChanged: "uiClick",
   // Meditative MB05 (ME-SECRET).
@@ -431,6 +435,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "marked",
   "discardPrevented",
   "damageAbsorbed",
+  "armorGained",
 ];
 
 describe("B17 SOUND_CUES is total over GameEvent types", () => {
@@ -1585,6 +1590,13 @@ describe("R1363 Armor clanks when it takes half or more of a hit, and rings when
   it("R1363 R203 a hidden source changes nothing: the sound reads the event's numbers alone", () => {
     expect(ids({ type: "damageAbsorbed", sourceId: HIDDEN_DEF_ID, targetId: "u6", absorbed: 4, combat: false })).toEqual(["armorRing"]);
     expect(ids({ ...hitOn("hero-p1", 1, 4), sourceId: HIDDEN_DEF_ID })).toEqual(["impact", "armorClank"]);
+  });
+
+  it("R3857000 an Armor gain sweeps up as a stat gained, centered on the hero, and never rings as a hit Armor took whole", () => {
+    const view = baseView();
+    expect(cuesFor({ type: "armorGained", player: "p2", amount: 2, armor: 2 }, ctx({ view }))).toEqual([{ kind: "sfx", id: "buff", delayMs: 0 }]);
+    expect(cuesFor({ type: "armorGained", player: "p1", amount: 4, armor: 9 }, ctx({ view }))).toEqual([{ kind: "sfx", id: "buff", delayMs: 0 }]);
+    expect(GAME_EVENT_TYPES.filter((type) => SOUND_CUES[type].sfx === "armorRing")).toEqual(["damageAbsorbed"]);
   });
 });
 

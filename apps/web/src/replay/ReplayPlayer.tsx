@@ -283,10 +283,6 @@ export default function ReplayPlayer({
             {back}
             {/* R169: the live modifiers of the step on the board, in full, one tap away. */}
             <ModifierList view={at.step.view} opponentLabel={opponentLabel ?? t("Opponent")} />
-          </>
-        }
-        boardNotice={
-          <>
             <ReplayToolbar
               at={current}
               last={last}

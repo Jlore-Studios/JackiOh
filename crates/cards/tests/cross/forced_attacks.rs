@@ -3,8 +3,8 @@
 //! lenses L1 and L5).
 //!  - R173: a forced attack is made on an enemy. When #86 "Miss" Mrow dies to #9 Moths to the
 //!    Flame's strike back and its Death steals Moths, the rest of the run is on Moths's new side and
-//!    does not attack it; radiant #60 Bear Honeypot's tokens do not attack a played unit that #52
-//!    Silly Silas has already rotated onto their own side.
+//!    does not attack it; radiant #60 Bear Honeypot's tokens do not attack a played unit on their
+//!    own side, #52 Silly Silas summoned for them (R3837000).
 //!  - R174: a run stops once its target has left the field, even when Reborn puts it straight back;
 //!    and (round 4, lens L2) an attacker the run named that died in an earlier combat of the run and
 //!    is back through Reborn is passed over, like one that is gone (R96).
@@ -89,24 +89,25 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
     }
 
     #[test]
-    fn r173_radiant_bear_honeypots_tokens_do_not_attack_a_played_unit_that_has_crossed_to_their_own_side_8_60_52()
+    fn r173_r3837000_radiant_bear_honeypots_tokens_do_not_attack_a_played_unit_that_lands_on_their_own_side_8_60_52()
      {
         let mut g = scenario(json!({
             "p1": { "hand": [SILAS, VANILLA] },
             "p2": { "hand": [VANILLA], "backrow": [{ "def": HONEYPOT, "radiant": true, "lane": 3, "faceUp": false }] },
         }));
 
-        // Silas enters p1's lane 5 and rotates right: he crosses to p2's lane 5 and is p2's (§3.1).
+        // p1 plays Silas, who is summoned for p2 (R3837000) and rotates left along p2's row: p2's (§3.1).
         let silas = g.card(SILAS).clone();
-        g.play(&silas.id, json!({ "zone": 5, "modes": ["right"] }));
-        assert!(g.events().contains(&GameEvent::ControlChanged {
-            instance_id: silas.id.clone(),
-            controller: P2,
-            row: Row::Units,
-            lane: 5,
-            former_id: None,
-            how: None,
-        }));
+        g.play(&silas.id, json!({ "zone": 5, "modes": ["left"] }));
+        assert_eq!(g.card(&silas.id).controller, P2);
+        assert!(matches!(
+            g.card(&silas.id).zone,
+            Zone::Field {
+                player: P2,
+                row: Row::Units,
+                ..
+            }
+        ));
 
         assert!(
             g.events()

@@ -1,5 +1,6 @@
-//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039 and 0051):
-//! rooms, matches, and logs over Postgres or fake `FakeTables::duos`.
+//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039, 0051 and 0091):
+//! rooms, matches, and logs over Postgres or fake `FakeTables::duos`. A 2v2's match row holds team
+//! B's people too (`b1`, `b2`, R3731002).
 //!
 //! Store methods on `Tx` dispatch to `pg` or `fake`. Nonces logged at their own seq return that
 //! row; other clashes error as `StoreError::SeqClash` (R776000). Timestamps are `i64` epoch ms.
@@ -8,8 +9,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use jackioh_engine::config::Difficulty;
-use jackioh_engine::wire::{DuosAction, DuosActionBody, DuosSeat, DuosTeamRules};
+use jackioh_engine::wire::{DUOS_SEATS, DuosAction, DuosActionBody, DuosSeat, DuosTeamRules};
 use jackioh_engine::{Handicap, LeanPick};
+use jackioh_shared::host::DuosTeamB;
 
 use crate::db::store::{FrozenDeck, StoreResult, Tx};
 
@@ -97,6 +99,9 @@ pub struct DuosMatchOptions {
     /// R767000: catalog version the match was dealt and played on.
     #[serde(default)]
     pub catalog_version: String,
+    /// R3731002: who plays team B. Written only for a 2v2, so a co-op match's options read as before.
+    #[serde(default, skip_serializing_if = "DuosTeamB::is_ai")]
+    pub team_b: DuosTeamB,
 }
 
 /// One row of `public.duos_matches` (S6, B40, B42).
@@ -109,6 +114,13 @@ pub struct DuosMatch {
     pub a1: String,
     /// Guest seat (cleared on deleted account).
     pub a2: String,
+    /// R3731002: team B's people in a 2v2 (migration 0091); empty for the AI team's seats, and cleared on
+    /// a deleted account as a1's is.
+    #[serde(default)]
+    pub b1: String,
+    #[serde(default)]
+    pub b2: String,
+    /// The AI team's tier; a 2v2 stores `easy`, which nothing reads (R3731002).
     pub difficulty: Difficulty,
     pub options: DuosMatchOptions,
     pub created_at: i64,
@@ -116,6 +128,42 @@ pub struct DuosMatch {
     pub ended_at: Option<i64>,
     /// Engine result as JSON.
     pub result: Option<Value>,
+}
+
+impl DuosMatch {
+    /// R3731002: who plays team B.
+    pub fn team_b(&self) -> DuosTeamB {
+        self.options.team_b
+    }
+
+    /// The profile at `seat`: empty for an AI team's seat or a deleted account's.
+    pub fn profile_at(&self, seat: DuosSeat) -> &str {
+        match seat {
+            DuosSeat::A1 => &self.a1,
+            DuosSeat::A2 => &self.a2,
+            DuosSeat::B1 => &self.b1,
+            DuosSeat::B2 => &self.b2,
+        }
+    }
+
+    /// The match's people's seats (`DuosTeamB::people`), each with its profile (empty once deleted).
+    pub fn people(&self) -> Vec<(DuosSeat, &str)> {
+        self.team_b()
+            .people()
+            .iter()
+            .map(|seat| (*seat, self.profile_at(*seat)))
+            .collect()
+    }
+
+    /// The seat `profile_id` plays, if any.
+    pub fn seat_of(&self, profile_id: &str) -> Option<DuosSeat> {
+        if profile_id.is_empty() {
+            return None;
+        }
+        DUOS_SEATS
+            .into_iter()
+            .find(|seat| self.profile_at(*seat) == profile_id)
+    }
 }
 
 /// One row of `public.duos_match_actions` (B40).
@@ -263,12 +311,12 @@ impl Tx<'_> {
     }
 }
 
-/// Migration 0051: profile seated in live co-op match cannot be deleted (R1497000).
+/// Migrations 0051 and 0091: profile seated in live co-op match or 2v2 cannot be deleted (R1497000).
 pub fn refuse_live_seat(tables: &DuosTables, profile_id: &str) -> StoreResult<()> {
     match tables
         .matches
         .iter()
-        .find(|row| row.ended_at.is_none() && (row.a1 == profile_id || row.a2 == profile_id))
+        .find(|row| row.ended_at.is_none() && row.seat_of(profile_id).is_some())
     {
         Some(row) => Err(format!(
             "duos_matches_seats_filled_unless_over_check: profile {profile_id} holds a seat in live co-op match {}",
@@ -285,7 +333,7 @@ pub fn remove_duos_rows(tables: &mut DuosTables, profile_id: &str) {
         .rooms
         .retain(|room| room.host != profile_id && room.guest.as_deref() != Some(profile_id));
     for row in tables.matches.iter_mut() {
-        for seat in [&mut row.a1, &mut row.a2] {
+        for seat in [&mut row.a1, &mut row.a2, &mut row.b1, &mut row.b2] {
             if *seat == profile_id {
                 seat.clear();
             }
@@ -341,7 +389,7 @@ mod pg {
 
     macro_rules! match_columns {
         () => {
-            "id, seed, a1, a2, difficulty, options, created_at, ended_at, result"
+            "id, seed, a1, a2, b1, b2, difficulty, options, created_at, ended_at, result"
         };
     }
 
@@ -354,6 +402,8 @@ mod pg {
             // (db::pg, KNOWN DIVERGENCES, deleted accounts).
             a1: uuid_text_or_null(row, "a1")?.unwrap_or_default(),
             a2: uuid_text_or_null(row, "a2")?.unwrap_or_default(),
+            b1: uuid_text_or_null(row, "b1")?.unwrap_or_default(),
+            b2: uuid_text_or_null(row, "b2")?.unwrap_or_default(),
             difficulty: difficulty_of(&row.try_get::<String, _>("difficulty")?)?,
             options: serde_json::from_value(row.try_get::<Value, _>("options")?)?,
             created_at: ms_of(row.try_get("created_at")?),
@@ -511,14 +561,17 @@ mod pg {
     pub async fn matches_create(t: &mut PgTx<'_>, row: &DuosMatch) -> Result<(), StoreError> {
         run_as(t, None).await?;
         sqlx::query(
-            "insert into public.duos_matches (id, seed, a1, a2, difficulty, options, created_at)
-             values ($1::uuid, $2::text, $3::uuid, $4::uuid, $5::text, $6::jsonb,
-                     to_timestamp($7::double precision / 1000.0))",
+            "insert into public.duos_matches (id, seed, a1, a2, b1, b2, difficulty, options, created_at)
+             values ($1::uuid, $2::text, $3::uuid, $4::uuid, $5::uuid, $6::uuid, $7::text, $8::jsonb,
+                     to_timestamp($9::double precision / 1000.0))",
         )
         .bind(row.id.as_str())
         .bind(row.seed.as_str())
         .bind(row.a1.as_str())
         .bind(row.a2.as_str())
+        // R3731002: the AI team's seats hold no profile.
+        .bind(Some(row.b1.as_str()).filter(|id| !id.is_empty()))
+        .bind(Some(row.b2.as_str()).filter(|id| !id.is_empty()))
         .bind(row.difficulty.as_str())
         .bind(json_text(&row.options)?)
         .bind(row.created_at)
@@ -551,7 +604,8 @@ mod pg {
         }
         let row = sqlx::query(
             "select id from public.duos_matches
-              where (a1 = $1::uuid or a2 = $1::uuid) and ended_at is null
+              where (a1 = $1::uuid or a2 = $1::uuid or b1 = $1::uuid or b2 = $1::uuid)
+                and ended_at is null
               order by created_at desc, id
               limit 1",
         )
@@ -790,7 +844,7 @@ mod fake {
         let newest = tables
             .matches
             .iter()
-            .filter(|row| row.ended_at.is_none() && (row.a1 == profile_id || row.a2 == profile_id))
+            .filter(|row| row.ended_at.is_none() && row.seat_of(profile_id).is_some())
             .max_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| b.id.cmp(&a.id)));
         Ok(newest.map(|row| row.id.clone()))
     }
@@ -917,6 +971,8 @@ mod tests {
             seed: format!("seed-{id}"),
             a1: a1.to_string(),
             a2: a2.to_string(),
+            b1: String::new(),
+            b2: String::new(),
             difficulty: Difficulty::Easy,
             options: DuosMatchOptions {
                 decks: SeatDecks {
@@ -937,6 +993,7 @@ mod tests {
                     b2: None,
                 },
                 catalog_version: "test".to_string(),
+                team_b: DuosTeamB::Ai,
             },
             created_at,
             ended_at: None,

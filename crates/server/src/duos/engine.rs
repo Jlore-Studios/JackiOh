@@ -16,6 +16,8 @@ use jackioh_engine::wire::{
     PerTeam,
 };
 use jackioh_engine::{Handicap, ReplayRefusal, Rng};
+use jackioh_shared::host::DuosTeamB;
+use jackioh_shared::host::duos::slot;
 
 pub use crate::actor::engine::Pinned;
 use crate::actor::engine::{deal_random_deck, lean_of};
@@ -115,84 +117,111 @@ fn ai_deck(seed: &str, seat: DuosSeat, handicap: &Handicap) -> Vec<String> {
     )
 }
 
-/// S6, B30: match options created with `DUOS_HUMAN_TEAM` (no handicap) and `duos_ai_team(difficulty)`.
-/// A person's random deck is dealt (R433), an AI's never (R185: redaction hides its own library).
-/// Pinned to `catalog_version` (R767000).
+/// R3731002: who team B is when a match is made: the AI team at its tier, or two more people with their
+/// picks.
+#[derive(Clone, Copy, Debug)]
+pub enum TeamBChoices<'a> {
+    Ai(Difficulty),
+    People { b1: &'a DuosChoice, b2: &'a DuosChoice },
+}
+
+/// S6, B30: match options created with `DUOS_HUMAN_TEAM` (no handicap) and `duos_ai_team(difficulty)`,
+/// or, for a 2v2's people, `DUOS_HUMAN_TEAM` on both teams (R3731002). A person's random deck is dealt
+/// (R433), an AI's never (R185: redaction hides its own library). Pinned to `catalog_version` (R767000).
 pub fn match_options(
     pinned: Pinned,
     catalog_version: &str,
     seed: &str,
-    difficulty: Difficulty,
+    team_b: TeamBChoices<'_>,
     host: &DuosChoice,
     guest: &DuosChoice,
 ) -> DuosMatchOptions {
-    pinned.run(|| dealt_options(catalog_version, seed, difficulty, host, guest))
+    pinned.run(|| dealt_options(catalog_version, seed, team_b, host, guest))
 }
 
 fn dealt_options(
     catalog_version: &str,
     seed: &str,
-    difficulty: Difficulty,
+    team_b: TeamBChoices<'_>,
     host: &DuosChoice,
     guest: &DuosChoice,
 ) -> DuosMatchOptions {
-    let handicap = AI_DIFFICULTY[difficulty];
-    // Easy is a person's resources exactly, and the engine stores none for it.
-    let ai_handicap = (handicap != HUMAN_HANDICAP).then_some(handicap);
-    let dealt = [(DuosSeat::A1, host), (DuosSeat::A2, guest)]
-        .into_iter()
+    let mut people = vec![(DuosSeat::A1, host), (DuosSeat::A2, guest)];
+    if let TeamBChoices::People { b1, b2 } = team_b {
+        people.extend([(DuosSeat::B1, b1), (DuosSeat::B2, b2)]);
+    }
+    let dealt = people
+        .iter()
         .filter(|(_, choice)| matches!(choice, DuosChoice::Random { .. }))
-        .map(|(seat, _)| seat)
+        .map(|(seat, _)| *seat)
         .collect();
+    let a1 = person_deck(host, seed, DuosSeat::A1);
+    let a2 = person_deck(guest, seed, DuosSeat::A2);
+    let (b1, b2, b, handicap_b, who) = match team_b {
+        TeamBChoices::Ai(difficulty) => {
+            let handicap = AI_DIFFICULTY[difficulty];
+            // Easy is a person's resources exactly, and the engine stores none for it.
+            let ai_handicap = (handicap != HUMAN_HANDICAP).then_some(handicap);
+            (
+                ai_deck(seed, DuosSeat::B1, &handicap),
+                ai_deck(seed, DuosSeat::B2, &handicap),
+                duos_ai_team(difficulty),
+                ai_handicap,
+                DuosTeamB::Ai,
+            )
+        }
+        TeamBChoices::People { b1, b2 } => (
+            person_deck(b1, seed, DuosSeat::B1),
+            person_deck(b2, seed, DuosSeat::B2),
+            DUOS_HUMAN_TEAM,
+            None,
+            DuosTeamB::People,
+        ),
+    };
     DuosMatchOptions {
-        decks: SeatDecks {
-            a1: person_deck(host, seed, DuosSeat::A1),
-            a2: person_deck(guest, seed, DuosSeat::A2),
-            b1: ai_deck(seed, DuosSeat::B1, &handicap),
-            b2: ai_deck(seed, DuosSeat::B2, &handicap),
-        },
+        decks: SeatDecks { a1, a2, b1, b2 },
         dealt,
         teams: TeamRules {
             a: DUOS_HUMAN_TEAM,
-            b: duos_ai_team(difficulty),
+            b,
         },
         handicaps: SeatHandicaps {
             a1: None,
             a2: None,
-            b1: ai_handicap,
-            b2: ai_handicap,
+            b1: handicap_b,
+            b2: handicap_b,
         },
         catalog_version: catalog_version.to_string(),
+        team_b: who,
     }
 }
 
-/// B41: both people's steps of a match, each seat's view as the game began (all four mulligans open)
+/// B41: every person's steps of a match, each seat's view as the game began (all four mulligans open)
 /// and after each logged action, exactly what that seat's live view showed.
 pub struct DuosSteps {
-    pub a1: Vec<DuosView>,
-    pub a2: Vec<DuosView>,
+    /// By `slot`; an AI team's seats have none.
+    pub steps: [Vec<DuosView>; 4],
     /// Where the game ended up, for the caller to hold to the result the match recorded.
     pub result: Option<DuosResult>,
 }
 
 impl DuosSteps {
-    /// A person's own steps (team B's seats are the AI's and have none).
+    /// A person's own steps (the AI team's seats have none).
     pub fn of(&self, seat: DuosSeat) -> &[DuosView] {
-        match seat {
-            DuosSeat::A2 => &self.a2,
-            _ => &self.a1,
-        }
+        &self.steps[slot(seat)]
     }
 }
 
-/// B41: the match folded once under its catalog, both people's views after every step. A log the
-/// engine no longer folds to its end, its setup or any action refused, is `rules_changed` (B24, R768):
-/// the replay is refused, never cut short. The match is built as one already made (R1705003). Panics,
-/// as `duos_create` does, on a deck the catalog refuses; the caller catches it.
+/// B41: the match folded once under its catalog, its people's views after every step (team A's, and team
+/// B's in a 2v2, R3731003). A log the engine no longer folds to its end, its setup or any action refused,
+/// is `rules_changed` (B24, R768): the replay is refused, never cut short. The match is built as one
+/// already made (R1705003). Panics, as `duos_create` does, on a deck the catalog refuses; the caller
+/// catches it.
 pub fn steps_for(
     pinned: Pinned,
     options: &DuosCreateOptions,
     log: &[DuosAction],
+    team_b: DuosTeamB,
 ) -> Result<DuosSteps, ReplayRefusal> {
     registered();
     pinned.run(|| {
@@ -202,20 +231,22 @@ pub fn steps_for(
         }
         let mut state = begun.state;
         let mut steps = DuosSteps {
-            a1: Vec::with_capacity(log.len() + 1),
-            a2: Vec::with_capacity(log.len() + 1),
+            steps: Default::default(),
             result: None,
         };
-        steps.a1.push(duos_view_for(&state, DuosSeat::A1));
-        steps.a2.push(duos_view_for(&state, DuosSeat::A2));
+        let record = |steps: &mut DuosSteps, state: &DuosState| {
+            for seat in team_b.people() {
+                steps.steps[slot(*seat)].push(duos_view_for(state, *seat));
+            }
+        };
+        record(&mut steps, &state);
         for action in log {
             let result = duos_reduce(&state, action);
             if result.error.is_some() {
                 return Err(ReplayRefusal::RulesChanged);
             }
             state = result.state;
-            steps.a1.push(duos_view_for(&state, DuosSeat::A1));
-            steps.a2.push(duos_view_for(&state, DuosSeat::A2));
+            record(&mut steps, &state);
         }
         steps.result = state.result;
         Ok(steps)

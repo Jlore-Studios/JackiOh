@@ -605,11 +605,19 @@ export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
 /** R1372: All random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
-/** R1578000: the Play hub, its online panel, the other ways to play and their tiles. */
+/** R1578000: the Play screen and a visitor's sign-in panel. R3729000: the hub of four groups of cards, the panel an Online card opens, the Private lobby's dialog, and the links under the groups. */
 export const PLAY_SCREEN = "play-screen";
 export const PLAY_ONLINE = "play-online";
-export const PLAY_WAYS = "play-ways";
+export const PLAY_HUB = "play-hub";
+export const PLAY_QUEUE_PANEL = "play-queue-panel";
+export const PLAY_LOBBY = "play-lobby";
+export const PLAY_LOBBY_DIALOG = "play-lobby-dialog";
+export const PLAY_MORE = "play-more";
 export const PLAY_TOGETHER = "play-together";
+/** R3729000: a group's section, `online`, `daily`, `friends` or `solo`. */
+export function playGroupId(group: "online" | "daily" | "friends" | "solo"): string {
+  return `play-group-${group}`;
+}
 /** R1578000: a visitor with no account is offered sign-in where the online controls would be. */
 export const PLAY_SIGN_IN = "play-sign-in";
 
@@ -755,9 +763,30 @@ export const TOGETHER_ERROR = "together-error";
 /** One per friend: `data-profile-id`, `data-status` (`offline|online|inMatch`), `data-watchable`. */
 export const TOGETHER_FRIEND_ROW = "together-friend-row";
 export const TOGETHER_NO_FRIENDS = "together-no-friends";
+/** R3732002: a row's Challenge or Daily, the one primary button of an online or an offline friend: `data-action` (`challenge|daily`). */
 export const TOGETHER_CHALLENGE = "together-challenge";
+/** R3732002: the primary Watch of a friend in a game that can be watched, and Join of one with a lobby open (`data-route`). */
 export const TOGETHER_WATCH = "together-watch";
+export const TOGETHER_JOIN = "together-join";
+/** R3732002: a row's ⋯ menu button, and its items: Chat, Daily challenge, Invite to lobby, Watch, Remove, Block. */
+export const TOGETHER_MENU = "together-menu";
+export const TOGETHER_MENU_UNREAD = "together-menu-unread";
 export const TOGETHER_CHAT_OPEN = "together-chat-open";
+export const TOGETHER_DAILY = "together-daily";
+export const TOGETHER_LOBBY = "together-lobby";
+export const TOGETHER_WATCH_ITEM = "together-watch-item";
+/** R3732002: the search over the list, a group (`data-group`: `requests|inGame|online|offline`) and Offline's toggle. */
+export const TOGETHER_SEARCH = "together-search";
+export const TOGETHER_GROUP = "together-group";
+export const TOGETHER_OFFLINE_TOGGLE = "together-offline-toggle";
+/** R3732000: Recently played's rows (`data-profile-id`) and each one's Add friend. */
+export const TOGETHER_RECENT_ROW = "together-recent-row";
+export const TOGETHER_RECENT_ADD = "together-recent-add";
+
+/** R3732002: a tab of the Friends page, by section (`friends|requests|recent|blocked|shared`). */
+export function togetherTabId(section: string): string {
+  return `together-tab-${section}`;
+}
 export const TOGETHER_UNREAD = "together-unread";
 export const TOGETHER_REMOVE = "together-remove";
 export const TOGETHER_BLOCK = "together-block";
@@ -861,6 +890,8 @@ export const CHALLENGE_TOAST = "challenge-toast";
 export const CHALLENGE_ACCEPT = "challenge-toast-accept";
 export const CHALLENGE_DECLINE = "challenge-decline";
 export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
+/** R3729002: Later sends the toast away; the challenge stays in the inbox. */
+export const CHALLENGE_LATER = "challenge-toast-later";
 
 /** `data-connection` (`connecting|open|closed|refused`). */
 export const WATCH_SCREEN = "watch-screen";
@@ -1055,6 +1086,9 @@ export const LOBBY_SCREEN = "lobby-screen";
 export const LOBBY_CODE = "lobby-code";
 export const LOBBY_COPY_LINK = "lobby-copy-link";
 export const LOBBY_SEAT = "lobby-seat";
+export const LOBBY_TEAM = "lobby-team";
+export const LOBBY_SWITCH_TEAM = "lobby-switch-team";
+export const LOBBY_MOVE = "lobby-move";
 export const LOBBY_INVITE = "lobby-invite";
 export const LOBBY_SETTINGS = "lobby-settings";
 export const LOBBY_DECK_SELECT = "lobby-deck-select";
@@ -1067,3 +1101,4 @@ export const LOBBY_JOIN_CARD = "lobby-join-card";
 export const LOBBY_JOIN_ROOM = "lobby-join-room";
 export const LOBBY_PANEL = "lobby-panel";
 export const LOBBY_CREATE = "lobby-create";
+export const LOBBY_CREATE_2V2 = "lobby-create-2v2";

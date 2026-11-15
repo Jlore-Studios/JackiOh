@@ -3,7 +3,7 @@
 
 use crate::config::LOSER_DRAWS_REASONS;
 use crate::script::EngineSink;
-use crate::wire::{GameEvent, GameOverReason, GameResult, Phase, PlayerId, Winner};
+use crate::wire::{GameEvent, GameOverReason, GameResult, PLAYER_IDS, Phase, PlayerId, Winner};
 
 /// §2.5: the game is over. R216: nothing happens after that, so a question still open when it ends (a
 /// Discover the other seat conceded under, R211; a Death hook's question, R156) can never be answered:
@@ -16,6 +16,11 @@ pub fn end_game(sink: &mut EngineSink, winner: impl Into<Winner>, reason: GameOv
     state.phase = Phase::Over;
     state.pending = None;
     state.mulligan = None;
+    // R3800003: the count of plays before the end is read only by an end of turn, which this ends, so a
+    // game over inside one keeps the final state (and hash, R767000) it had before the count was kept.
+    for player in PLAYER_IDS {
+        state.players[player].turn_log.played_before_end = None;
+    }
     sink.events.push(GameEvent::GameOver { winner, reason });
 }
 

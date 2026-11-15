@@ -172,7 +172,7 @@ describe("R3351000 a long press opens inspect and the full-screen view from ever
     closeFullScreenArt();
   });
 
-  it("R3351000 a long press opens inspect from every board face and hand card, and full-screen where R3345000 allows it", () => {
+  it("R3351000 R3893000 a long press opens inspect from every board face and hand card, and full-screen where R3345000 allows it", () => {
     cy.viewport(390, 844);
     // Own Mythics open the full-screen view; every other face opens inspect; an opponent Mythic
     // opens inspect but never full-screen (R3345000: the board opens it for own cards only).
@@ -234,14 +234,24 @@ describe("R3351000 a long press opens inspect and the full-screen view from ever
     for (const [index, press] of cases.entries()) {
       const pointerId = 100 + index;
       // A touch held past LONG_PRESS_MS where the card shows (in the ten-card fan each card's neighbour covers its middle,
-      // the last card's aside): the hover on a phone (R2617000), or the full-screen view.
+      // the last card's aside): the hover on a phone (R2617000), or the inspect sheet on a Mythic (R3893000).
       pressCard(press.testid, "pointerdown", { pointerId, pointerType: "touch" });
       cy.wait(LONG_PRESS_MS + 100);
       if (press.fullscreen) {
-        cy.get('[data-testid="fullscreen-art"]').should("be.visible");
-        // Release closes the view it opened.
-        cy.window().trigger("pointerup", { pointerId });
+        // R3893000: touch hold on a Mythic opens inspect-sheet with full text, where Full screen button is reachable.
+        cy.get('[data-testid="inspect-sheet"]').should("be.visible");
+        cy.get('[data-testid="inspect-extended"]').should("exist");
         cy.get('[data-testid="fullscreen-art"]').should("not.exist");
+        pressCard(press.testid, "pointerup", { pointerId });
+        // Tap Full screen button to open full-screen view
+        cy.get('[data-testid="fullscreen-art-open"]').click();
+        cy.get('[data-testid="fullscreen-art"]').should("be.visible");
+        // Close full-screen art
+        cy.get('[data-testid="fullscreen-art-close"]').click();
+        cy.get('[data-testid="fullscreen-art"]').should("not.exist");
+        // Close inspect sheet
+        cy.get('[data-testid="inspect-close"]').click();
+        cy.get('[data-testid="inspect-sheet"]').should("not.exist");
       } else {
         cy.get(`[data-testid="${INSPECT_HOVER}"]`).should("exist");
         cy.get('[data-testid="fullscreen-art"]').should("not.exist");

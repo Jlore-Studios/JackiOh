@@ -12,6 +12,8 @@
 // on/off controls are the Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art
 // card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played
 // synergy. R3838000: its "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx).
+// R3887000: the Cards tab's "Plain text" button prints each card it lists, and the drill-down's text and its Reference
+// cards, as readable text, no face (PlainText.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -60,6 +62,7 @@ import {
   patchTarget,
   type PatchWindow,
 } from "../stats/patches.ts";
+import { PlainCard, PlainTextButton, usePlainText } from "../stats/PlainText.tsx";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
@@ -109,12 +112,23 @@ function keywordName(kind: KeywordKind): string {
   return readerTerms()?.keywords[kind] ?? kind;
 }
 
-/** The tokens a card's text names (`CardDef.refs`, R279), the card itself left out: what the drill-down shows it makes. */
-function tokensOf(def: CardDef): CardDef[] {
-  return (def.refs ?? []).flatMap((id) => {
+/** R279, R3887000: every card a card's text names, token or not, the card itself left out, in the text's order. */
+function referencesOf(def: CardDef): CardDef[] {
+  return [...new Set(def.refs ?? [])].flatMap((id) => {
     const named = CATALOG[id];
-    return named !== undefined && named.token && id !== def.id ? [named] : [];
+    return named !== undefined && id !== def.id ? [named] : [];
   });
+}
+
+/** The tokens a card's text names (R279), the card itself left out: what the drill-down shows it makes. */
+function tokensOf(def: CardDef): CardDef[] {
+  return referencesOf(def).filter((named) => named.token);
+}
+
+/** R3887000: a card as plain text, or null for an id the catalog holds no card of (The Coin). */
+function plainCardOf(id: string): ReactElement | null {
+  const def = CATALOG[id];
+  return def === undefined ? null : <PlainCard def={def} />;
 }
 
 /**
@@ -342,6 +356,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
   const { fullArt: fullArtSetting } = useCardSettings();
+  // R3887000: the Cards tab's Plain text button, kept on the device.
+  const plain = usePlainText();
 
   // R1966000: every set's cards, unfiltered, and the previous patch's for the change.
   const [setsData, setSetsData] = useState<PublicStatsCardsResponse | null>(null);
@@ -654,6 +670,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const drillDownRadiantFace =
     drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
+  // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
+  const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
 
   return (
     <CardDefsProvider defs={CATALOG}>
@@ -909,6 +927,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 </button>
               </div>
 
+              {/* R3887000: every card as plain text, no face; the device keeps it, apart from Show card text */}
+              <PlainTextButton shown={plain.shown} onToggle={plain.toggle} />
+
               {/* Column visibility toggles: each on or off on its own, so buttons in the Segmented's look, not one of a few */}
               {view === "table" && (
                 <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
@@ -953,24 +974,26 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             ) : filteredCards.length === 0 ? (
               <EmptyState text={t("No cards match the selected filters.")} />
             ) : view === "grid" ? (
-              <ul className="stats-grid" data-testid={statsTestid.cardsGrid}>
+              <ul className={`stats-grid${plain.shown ? " stats-grid--plain" : ""}`} data-testid={statsTestid.cardsGrid}>
                 {filteredCards.map((card) => {
                   const def = CATALOG[card.id];
-                  const face = def ? faceModel({ defId: card.id, def, radiant: false }) : null;
+                  const plainCard = plain.shown ? plainCardOf(card.id) : null;
+                  const face = def && plainCard === null ? faceModel({ defId: card.id, def, radiant: false }) : null;
 
                   return (
                     <li key={card.id} className="stats-grid-item" data-card-id={card.id}>
                       <button
                         type="button"
-                        className="stats-grid-card"
+                        className={`stats-grid-card${plainCard === null ? "" : " stats-grid-card--plain"}`}
                         onClick={(e) => openDrillDown(card.id, e.currentTarget)}
                         aria-label={shownName(card.id, card.name)}
                       >
-                        {face && (
-                          <div className="stats-grid-face">
-                            <CardFace face={face} layout="full" lazyArt />
-                          </div>
-                        )}
+                        {plainCard ??
+                          (face && (
+                            <div className="stats-grid-face">
+                              <CardFace face={face} layout="full" lazyArt />
+                            </div>
+                          ))}
                       </button>
                       <dl className="stats-grid-figures">
                         <dt>{t("Tier")}</dt>
@@ -1107,6 +1130,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                   </thead>
                   <tbody>
                     {filteredCards.map((card) => {
+                      const plainCard = plain.shown ? plainCardOf(card.id) : null;
                       return (
                         <tr
                           key={card.id}
@@ -1130,7 +1154,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                             </td>
                           )}
                           <td className="stats-td stats-td--name">
-                            <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
+                            {plainCard ?? <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>}
                           </td>
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
                           <td className="stats-td">
@@ -1213,8 +1237,20 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 every other, no card in both */}
             {!cardStatsLoading && !cardStatsError && (
               <>
-                <CreatedPanel kind="tokens" created={tokenCards} minSample={minSample} nameOf={shownName} />
-                <CreatedPanel kind="other" created={otherCreatedCards} minSample={minSample} nameOf={shownName} />
+                <CreatedPanel
+                  kind="tokens"
+                  created={tokenCards}
+                  minSample={minSample}
+                  nameOf={shownName}
+                  plainCardOf={plain.shown ? plainCardOf : undefined}
+                />
+                <CreatedPanel
+                  kind="other"
+                  created={otherCreatedCards}
+                  minSample={minSample}
+                  nameOf={shownName}
+                  plainCardOf={plain.shown ? plainCardOf : undefined}
+                />
               </>
             )}
           </>
@@ -1567,7 +1603,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         {t("View in Almanac")}
                       </a>
                     </div>
-                    {drillDownTokens.length > 0 && (
+                    {!plain.shown && drillDownTokens.length > 0 && (
                       <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>
                         <h3>{t("Tokens this card makes")}</h3>
                         <ul className="stats-drilldown-token-list">
@@ -1593,6 +1629,39 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 )}
 
                 <div className="stats-drilldown-details">
+                  {/* R3887000: with Plain text on, the card's base and Radiant text, then every card it names */}
+                  {plain.shown && drillDownDef && (
+                    <>
+                      <section className="stats-drilldown-section" data-testid={statsTestid.drillDownPlain}>
+                        <PlainCard def={drillDownDef} />
+                      </section>
+                      {drillDownRefs.length > 0 && (
+                        <section className="stats-drilldown-section" data-testid={statsTestid.drillDownRefs}>
+                          <h3>{t("Reference cards")}</h3>
+                          <ul className="plain-refs">
+                            {drillDownRefs.map((named) => (
+                              <li
+                                key={named.id}
+                                className="plain-refs__item"
+                                data-card-id={named.id}
+                                data-testid={statsTestid.drillDownRef}
+                              >
+                                <PlainCard def={named} />
+                                <a
+                                  className="stats-drilldown-action button-secondary"
+                                  href={paths.almanacCard(named.id)}
+                                  onClick={followInApp(paths.almanacCard(named.id))}
+                                  aria-label={t("View {name} in the Almanac", { name: readerName(named) })}
+                                >
+                                  {t("View in Almanac")}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+                    </>
+                  )}
                   {drillDownLoading ? (
                     <Skeleton variant="rows" label={t("Loading this card's details…")} />
                   ) : drillDownError ? (

@@ -405,20 +405,20 @@ describe("B8: faceModel cost", () => {
 /* B9 */
 
 describe("B9: faceModel stat tones", () => {
-  // core-013 Jlockeed Shredder-10 prints 6/8 on its base face and 12/16 on its radiant one.
+  // core-013 Jlockeed Shredder-10 prints 5/7 on its base face and 10/14 on its radiant one (6/8 and 12/16 until #3837).
   const ID = "core-013";
 
   it("B9 attack above the printed face is buffed, below is reduced, equal is base", () => {
-    expect(face(ID, false, { live: live(7, 10, 10) }).stats?.attackTone).toBe("buffed");
-    expect(face(ID, false, { live: live(5, 10, 10) }).stats?.attackTone).toBe("reduced");
-    expect(face(ID, false, { live: live(6, 10, 10) }).stats?.attackTone).toBe("base");
+    expect(face(ID, false, { live: live(6, 10, 10) }).stats?.attackTone).toBe("buffed");
+    expect(face(ID, false, { live: live(4, 10, 10) }).stats?.attackTone).toBe("reduced");
+    expect(face(ID, false, { live: live(5, 10, 10) }).stats?.attackTone).toBe("base");
     expect(face(ID, false, { live: live(0, 10, 10) }).stats?.attackTone).toBe("reduced");
   });
 
   it("B9 at full health, max health above the printed health is buffed, below is reduced, equal is base", () => {
-    expect(face(ID, false, { live: live(6, 12, 12) }).stats?.healthTone).toBe("buffed");
-    expect(face(ID, false, { live: live(6, 7, 7) }).stats?.healthTone).toBe("reduced");
-    expect(face(ID, false, { live: live(6, 8, 8) }).stats?.healthTone).toBe("base");
+    expect(face(ID, false, { live: live(5, 12, 12) }).stats?.healthTone).toBe("buffed");
+    expect(face(ID, false, { live: live(5, 6, 6) }).stats?.healthTone).toBe("reduced");
+    expect(face(ID, false, { live: live(5, 7, 7) }).stats?.healthTone).toBe("base");
   });
 
   it("B9 health below max health is damaged, whatever max health is", () => {
@@ -439,9 +439,9 @@ describe("B9: faceModel stat tones", () => {
   });
 
   it("B9 a radiant card's tones compare with the radiant face", () => {
-    expect(face(ID, true, { live: live(12, 16, 16) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
-    expect(face(ID, false, { live: live(12, 16, 16) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
-    expect(face(ID, true, { live: live(6, 8, 8) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
+    expect(face(ID, true, { live: live(10, 14, 14) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
+    expect(face(ID, false, { live: live(10, 14, 14) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
+    expect(face(ID, true, { live: live(5, 7, 7) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
   });
 
   it("B9 with no def (an unknown card) both tones are base", () => {

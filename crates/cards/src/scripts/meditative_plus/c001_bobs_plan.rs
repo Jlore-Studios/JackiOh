@@ -1,11 +1,12 @@
 //! Meditative+ #1 Bob's Plan (SPEC §8.9 row 1, R1185000, R1563003, R2521008, R640, R380, R387, R673). (1)
 //! Spell, Quickdraw, Mythic.
 //!   Base:    "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit; a
-//!            Star Chart for Alteran Reach; for Aestheticize the Game, Discover a Spa Day, a Garage Sale
-//!            or a Leg Day."
+//!            Star Chart for Alteran Reach; an Infinite Reserves for A Glimpse into the Endless Sea; for
+//!            Aestheticize the Game, Discover a Spa Day, a Garage Sale or a Leg Day."
 //!   Radiant: "Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp
-//!            for Reach the Summit; a Radiant Star Chart for Alteran Reach; for Aestheticize the Game,
-//!            Discover a Radiant Spa Day, Garage Sale or Leg Day."
+//!            for Reach the Summit; a Radiant Star Chart for Alteran Reach; a Radiant Infinite Reserves
+//!            for A Glimpse into the Endless Sea; for Aestheticize the Game, Discover a Radiant Spa Day,
+//!            Garage Sale or Leg Day."
 //!
 //! THE PICK is one draw of the match rng over the Wincon pool (`{ tags: [Wincon] }`, the non-token
 //! cards of the sets that ship, R380, in catalog order, so it replays, R60; never this card, R387),
@@ -17,8 +18,9 @@
 //! #1.2 Spa Day (the hero's health), #1.3 Garage Sale (the graveyard) and #1.4 Leg Day (the Units'
 //! totals), the chosen one added. Since #3569 S+ #79 A Glimpse into the Endless Sea has one too, Core #75
 //! Infinite Reserves, so the deck it exiles costs its owner no fatigue before its countdown ends
-//! (R3569006); the card joins the pool when its set ships (R1420). A card with no plan (a later set's Wincon card, or a Glitch) is added
-//! alone. The Radiant face adds both Radiant. A full hand burns what does not fit, in that order (§2.4).
+//! (R3569006); the card joined the pool when its set shipped (R1420), and since #3886 the printed text
+//! names it and its plan. A card with no plan (a later set's Wincon card, or a Glitch) is added alone.
+//! The Radiant face adds both Radiant. A full hand burns what does not fit, in that order (§2.4).
 //! Quickdraw (R640) is a static flag beside the tag.
 //!
 //! `script_v0_4_0f` keeps the card as it ran through v0.4.0f, Spa Day M #20's only plan, for its
@@ -47,7 +49,8 @@ pub const WINCON_PLANS: &[(&str, &[&str])] = &[
         ],
     ),
     // S+ #79 A Glimpse into the Endless Sea: no fatigue from the exiled deck, Core #75 Infinite
-    // Reserves (R3569006). The card is held with its set (R1420), so the line is inert until it ships.
+    // Reserves (R3569006). Stinkyscape+ ships (R1420), so the card is in the pool and the printed text
+    // names it with Infinite Reserves (#3886).
     ("stinkyscapeplus-079", &["core-075"]),
 ];
 
@@ -356,6 +359,32 @@ mod tests {
             assert!(set_ships(SetName::StinkyscapePlus));
             let pool = crate::query::pool(ID, &json_as(json!({ "tags": ["Wincon"] })));
             assert!(pool.iter().any(|def| def.id == GLIMPSE), "{} ids", pool.len());
+        }
+
+        /// R279, R3569006: every Wincon card `WINCON_PLANS` names, and every plan it names, is in the
+        /// card's `refs` and by name in both its faces' text, so a later Wincon card cannot join the
+        /// pool with no words for it (#3886).
+        #[test]
+        fn r279_r3569006_the_text_and_refs_name_every_wincon_card_and_plan_in_the_plan_table() {
+            let def = &crate::CATALOG[ID];
+            let refs = def.refs.clone().unwrap_or_default();
+            for (wincon, plans) in WINCON_PLANS {
+                for id in std::iter::once(*wincon).chain(plans.iter().copied()) {
+                    assert!(
+                        refs.iter().any(|named| named.as_str() == id),
+                        "{id} is in WINCON_PLANS but not in Bob's Plan's refs"
+                    );
+                    let name = crate::CATALOG[id].name.as_str();
+                    assert!(
+                        def.base.text.contains(name),
+                        "{id} ({name}) is in WINCON_PLANS but not in Bob's Plan's base text"
+                    );
+                    assert!(
+                        def.radiant.text.contains(name),
+                        "{id} ({name}) is in WINCON_PLANS but not in Bob's Plan's Radiant text"
+                    );
+                }
+            }
         }
 
         /// R767000: the script kept for the replays of v0.5.11 and before adds Alteran Reach alone.

@@ -56,6 +56,33 @@ describe("CreatedPanel", () => {
     expect(screen.getByRole("region", { name: "Tokens" })).toContainElement(table);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
   });
+
+  it("R3887000 a plainCardOf result stands in the name cell, and null falls back to the name", () => {
+    const COPY: PublicCreatedStat = { ...COIN, id: "core-001", name: "Spark Pup" };
+    render(
+      <CreatedPanel
+        kind="other"
+        created={[COIN, COPY]}
+        minSample={20}
+        nameOf={(_id, name) => name}
+        plainCardOf={(id) => (id === "coin" ? null : <span data-testid="x" />)}
+      />,
+    );
+    const cell = (id: string): HTMLElement => {
+      const row = document.querySelector(`tr[data-card-id="${id}"]`);
+      if (row === null) throw new Error(`no row for ${id}`);
+      return within(row as HTMLElement).getByRole("rowheader");
+    };
+    expect(within(cell("core-001")).getByTestId("x")).toBeInTheDocument();
+    expect(cell("core-001")).not.toHaveTextContent("Spark Pup");
+    expect(within(cell("coin")).queryByTestId("x")).toBeNull();
+    expect(cell("coin")).toHaveTextContent("The Coin");
+  });
+
+  it("R3887000 without plainCardOf every name cell holds the name", () => {
+    render(<CreatedPanel kind="other" created={[COIN]} minSample={20} nameOf={(_id, name) => name} />);
+    expect(screen.getByRole("rowheader")).toHaveTextContent("The Coin");
+  });
 });
 
 describe("R3184002 the Created cards table sorts by every column", () => {

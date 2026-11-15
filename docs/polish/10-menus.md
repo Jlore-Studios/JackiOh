@@ -123,7 +123,7 @@ The issue's wide window, with the drawer open beside the screen:
 └──────┴───────────────────────────────────────────────┴───────────────┘
 ```
 
-The bell, the daily badge (③) and the account item ("me") are not built ([Out of scope](#out-of-scope)).
+The bell is built ([R3729002](../../spec/rulings/R3729002.md)); the daily badge (③) on the rail and the account item ("me") are not ([Out of scope](#out-of-scope)).
 
 ### Medium
 
@@ -157,7 +157,7 @@ The issue's phone:
 └──────────────────────────┘
 ```
 
-The bell and the daily badge (③) are not built.
+The bell is built ([R3729002](../../spec/rulings/R3729002.md)); the daily badge (③) on the tab bar is not.
 
 ### The screens
 
@@ -180,19 +180,23 @@ the corner.
 └──────┴────────────────────────────────────────────────────────┘
 ```
 
-**Play.** The hub: a mode picker and one primary action, Find a match.
+**Play.** The hub (#3729, [R3729000](../../spec/rulings/R3729000.md)): every way to play as a card in four groups,
+each with a name, a line, how long a game takes and what it needs. An Online card opens one panel, the deck or
+trio, the rank and Find a match, on the last mode and deck used; the search then shows in the status row
+([R3729001](../../spec/rulings/R3729001.md)).
 
 ```
 ┌──────┬────────────────────────────────────────────────────────┐
-│ Home │  Play                                       ◆ 1,240  ⚙ │
-│▶Play │                                                        │
-│ Coll │  ◉ Best of 1      ○ Conquest      ○ All random         │
-│ Shop │                                                        │
-│ Frnds│  Deck: Aggro ▾                  Usually under 1 min    │
-│      │                                                        │
-│      │                   [ Find a match ]                     │
-│      │                                                        │
-│      │  Practice · Dungeon run · Play together · Replays      │
+│ Home │  Play                                    ◆ 1,240 🔔 3 ⚙ │
+│▶Play │  In queue: All random · 0:42 · Usually under 2 min  Cancel │
+│ Coll │  Online                                                │
+│ Shop │  ┌─ Best of 1 ───┐ ┌─ Conquest ────┐ ┌─ All random ──┐ │
+│ Frnds│  │ one line      │ │ one line      │ │ one line      │ │
+│      │  │ 10–20 min     │ │ 25–50 min     │ │ 10–20 min     │ │
+│      │  │ One saved deck│ │ A trio        │ │ Nothing       │ │
+│      │  └───────────────┘ └───────────────┘ └───────────────┘ │
+│      │  Daily   ┌─ Daily games ③ ─┐  With friends  Solo  ...   │
+│      │  Replays · Play together                               │
 └──────┴────────────────────────────────────────────────────────┘
 ```
 
@@ -229,7 +233,9 @@ tabs, Cards, Decks, Cosmetics and Progress, each keeping its filters while you s
 └──────┴────────────────────────────────────────────────────────┘
 ```
 
-**The friends drawer.** Grouped: Requests, In a game, Online, Offline (n).
+**The friends drawer.** Grouped: Requests, In a game, Online, Offline (n), each row with one primary
+button and a ⋯ menu for the rest, and a search over the list. Issue #3732 builds what it holds
+([R3732002](../../spec/rulings/R3732002.md)); the sketch below is the shell's.
 
 ```
 ┌────────────────────────────┐
@@ -243,7 +249,7 @@ tabs, Cards, Decks, Cosmetics and Progress, each keeping its filters while you s
 │   Bo             Challenge │
 │ ▸ Offline (12)             │
 ├────────────────────────────┤
-│ Open Play together         │
+│ See all friends            │
 └────────────────────────────┘
 ```
 
@@ -287,15 +293,20 @@ the drawer, screenshots) and 38's axe block over the shell run it.
   [R3221000](../../spec/rulings/R3221000.md).
 - [R3728002](../../spec/rulings/R3728002.md): the status row and the toasts. It amends
   [R3218000](../../spec/rulings/R3218000.md) and [R1566000](../../spec/rulings/R1566000.md).
+- [R3729000](../../spec/rulings/R3729000.md): the Play hub's four groups of cards and its one panel. It amends
+  [R1578000](../../spec/rulings/R1578000.md).
+- [R3729001](../../spec/rulings/R3729001.md): the queue search in the status row on every menu screen, `/play`
+  included, and the match found naming the opponent. It amends [R3728002](../../spec/rulings/R3728002.md).
+- [R3729002](../../spec/rulings/R3729002.md): the bell and the inbox.
+- [R3732002](../../spec/rulings/R3732002.md): what the friends drawer holds, and the Friends page's
+  tabs. It amends [R3728001](../../spec/rulings/R3728001.md).
 
 ## Out of scope
 
 Left to the other issues of #3726:
 
-- The bell.
 - The daily badge on Play: daily games don't exist yet.
 - The lobby's status in the status row.
 - An account item ("me") at the rail's foot.
 - Widening `panel--auth`.
-- What the friends drawer holds.
 - Each screen's own redesign. The sketches above are where those issues start.

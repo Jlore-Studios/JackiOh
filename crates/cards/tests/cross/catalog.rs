@@ -102,12 +102,12 @@ const CORE: &[SpecRow] = &[
     row(
         "2",
         "Speciesist",
-        c(2),
+        c(3),
         T::Unit,
         &[G::Human],
         R::Common,
-        st(4, 1),
-        st(8, 2),
+        st(7, 1),
+        st(14, 2),
     ),
     row(
         "3",
@@ -216,8 +216,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed],
         R::Common,
-        st(6, 8),
-        st(12, 16),
+        st(5, 7),
+        st(10, 14),
     ),
     row(
         "14",
@@ -775,7 +775,7 @@ const CORE: &[SpecRow] = &[
     row(
         "70",
         "Spiteful Stab",
-        c(3),
+        c(2),
         T::Spell,
         &[],
         R::Common,
@@ -1753,8 +1753,8 @@ const CLASSIC: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(11, 13),
-        st(22, 26),
+        st(9, 12),
+        st(18, 24),
     ),
     row(
         "69",
@@ -1803,8 +1803,8 @@ const CLASSIC: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(3, 4),
-        st(6, 8),
+        st(2, 4),
+        st(4, 8),
     ),
     row(
         "74",
@@ -1819,7 +1819,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "75",
         "Argusland",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -2455,7 +2455,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "33",
         "Ivory Tower",
-        c(2),
+        c(1),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -2505,7 +2505,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "37",
         "Wardrum",
-        c(4),
+        c(3),
         T::Unit,
         &[G::Quickdraw, G::Acclaimed],
         R::Legendary,
@@ -3621,7 +3621,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "40",
         "Feng Shui",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[G::Cn],
         R::Legendary,
@@ -5414,8 +5414,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(4, 1),
-        st(8, 2),
+        st(3, 1),
+        st(6, 2),
     ),
     row(
         "49",
@@ -5564,11 +5564,11 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
+        st(0, 1),
         st(0, 2),
-        st(0, 4),
     ),
-    row("64", "Miner v3", c(2), T::Unit, &[], R::Rare, st(0, 4), st(0, 8)),
-    row("65", "Miner v4", c(3), T::Unit, &[], R::Epic, st(0, 6), st(0, 12)),
+    row("64", "Miner v3", c(2), T::Unit, &[], R::Rare, st(0, 2), st(0, 4)),
+    row("65", "Miner v4", c(3), T::Unit, &[], R::Epic, st(0, 3), st(0, 6)),
     row(
         "66",
         "Miner v5",
@@ -5576,8 +5576,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "67",
@@ -5618,8 +5618,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Epic,
-        st(6, 1),
-        st(12, 2),
+        st(5, 1),
+        st(10, 2),
     ),
     row(
         "73",
@@ -5907,8 +5907,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(7, 7),
-        st(14, 14),
+        st(7, 5),
+        st(14, 10),
     ),
     row(
         "109",
@@ -6127,8 +6127,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed],
         R::Epic,
-        st(2, 1),
-        st(4, 2),
+        st(1, 1),
+        st(2, 2),
     ),
     row(
         "130",
@@ -7318,8 +7318,8 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
         T::Unit,
         &[G::Human, G::Legacy],
         R::Common,
-        st(4, 1),
-        st(8, 2),
+        st(2, 1),
+        st(4, 2),
     ),
     row(
         "42",
@@ -7384,12 +7384,12 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     row(
         "48",
         "Legacy: Jlockeed Shredder-10",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Jlockeed, G::Legacy],
         R::Common,
-        st(4, 10),
-        st(8, 20),
+        st(8, 10),
+        st(16, 20),
     ),
     row(
         "49",
@@ -10503,7 +10503,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
 
     /// R2195001, R2511000: a Legacy card (Training Grounds #41–#60) is named `Legacy: <its Core card's
     /// name>` and carries the Legacy tag beside its Core card's tags, so it shares no name with its
-    /// Core card or any other; it keeps everything else.
+    /// Core card or any other; it keeps everything else but the numbers a balance pass gave it alone
+    /// (R2195003: TG #41's stats since issue #3837, its Core card's cost and stats having moved apart).
     #[test]
     fn r2195001_r2511000_a_legacy_card_is_its_core_card_s_name_after_legacy_and_tagged_legacy() {
         let legacy: Vec<&CardDef> = entries()
@@ -10527,12 +10528,19 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         assert_eq!(speciesist.tags, [Tag::Human, Tag::Legacy]);
         assert_eq!(
             (
-                speciesist.cost,
                 speciesist.rarity,
-                &speciesist.base,
-                &speciesist.radiant
+                &speciesist.base.text,
+                &speciesist.base.keywords,
+                &speciesist.radiant.text,
+                &speciesist.radiant.keywords
             ),
-            (core.cost, core.rarity, &core.base, &core.radiant)
+            (
+                core.rarity,
+                &core.base.text,
+                &core.base.keywords,
+                &core.radiant.text,
+                &core.radiant.keywords
+            )
         );
         assert_eq!(CATALOG["traininggrounds-060"].name, "Legacy: Rush Token Farm");
         // No name is shared, the Core card's and its Legacy card's included.

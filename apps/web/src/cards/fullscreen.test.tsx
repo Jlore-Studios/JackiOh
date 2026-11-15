@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -45,6 +45,7 @@ import {
   sliceShiftPx,
 } from "./FullScreenArt.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
+import { INSPECT_EXTENDED, INSPECT_SHEET } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
 import { FullArtShown } from "./fullArt.ts";
 import { VERSION_ALT_FULL_ART_ID } from "./versions.ts";
@@ -537,16 +538,24 @@ describe("R3345000 a board card's full-screen hold follows the animation queue",
     return null;
   }
 
-  /** A finger down for longer than the long press, and still down: lifting it closes the view (R3345000). */
+  /** A mouse click-and-hold: opens the full-screen view directly (R3345000). */
   function pressAndHold(element: HTMLElement): void {
-    fireEvent.pointerDown(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerDown(element, { pointerId: 1, pointerType: "mouse", button: 0, clientX: 10, clientY: 10 });
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_MS + 50);
     });
   }
 
   function lift(element: HTMLElement): void {
-    fireEvent.pointerUp(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(element, { pointerId: 1, pointerType: "mouse", button: 0, clientX: 10, clientY: 10 });
+  }
+
+  /** A touch hold: under R3893000, opens the inspect sheet with full text instead of opening full-screen view. */
+  function touchHold(element: HTMLElement): void {
+    fireEvent.pointerDown(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS + 50);
+    });
   }
 
   /** A Zone's mount of a board unit: `Card` with the unit as its card, the way Zone.tsx renders it. */
@@ -564,6 +573,17 @@ describe("R3345000 a board card's full-screen hold follows the animation queue",
   it("R3345000 your own board Mythic opens it on a hold while the queue is idle", () => {
     render(<Board owner="p1" held={false} />);
     pressAndHold(screen.getByTestId("card-mythic-unit"));
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+  });
+
+  it("R3893000 a touch hold on a board Mythic opens the inspect sheet with full text, and tapping Full screen opens the art view", () => {
+    render(<Board owner="p1" held={false} />);
+    touchHold(screen.getByTestId("card-mythic-unit"));
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+    const sheet = screen.getByTestId(INSPECT_SHEET);
+    expect(sheet).toBeInTheDocument();
+    expect(within(sheet).getByTestId(INSPECT_EXTENDED)).toBeInTheDocument();
+    fireEvent.click(within(sheet).getByTestId("fullscreen-art-open"));
     expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
   });
 
@@ -592,7 +612,7 @@ describe("R3345000 a board card's full-screen hold follows the animation queue",
   it("R3345000 a drain that starts while the finger is already down stops the hold from opening", () => {
     const { rerender } = render(<Board owner="p1" held={false} />);
     const unit = screen.getByTestId("card-mythic-unit");
-    fireEvent.pointerDown(unit, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerDown(unit, { pointerId: 1, pointerType: "mouse", button: 0, clientX: 10, clientY: 10 });
     rerender(<Board owner="p1" held={true} />);
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_MS + 50);
@@ -618,6 +638,22 @@ describe("R3345000 a board card's full-screen hold follows the animation queue",
     pressAndHold(screen.getByTestId("hand-card-mythic-hand"));
     expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
   });
+
+  it("R3893000 a touch hold on a hand Mythic opens the inspect sheet, not the full-screen view", () => {
+    const mythic = cardView({ instanceId: "mythic-hand", defId: MYTHIC });
+    render(
+      <WearerProvider seat="p1" viewer="p1">
+        <Card testId="hand-card-mythic-hand" card={mythic} inOwnHand />
+        <QueueHolder held={true} />
+        <FullScreenArtHost />
+      </WearerProvider>,
+    );
+    touchHold(screen.getByTestId("hand-card-mythic-hand"));
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+    const sheet = screen.getByTestId(INSPECT_SHEET);
+    expect(sheet).toBeInTheDocument();
+    expect(within(sheet).getByTestId(INSPECT_EXTENDED)).toBeInTheDocument();
+  });
 });
 
 describe("R3345000 a fused card's full-screen hold", () => {
@@ -632,14 +668,21 @@ describe("R3345000 a fused card's full-screen hold", () => {
   }
 
   function pressAndHold(element: HTMLElement): void {
-    fireEvent.pointerDown(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerDown(element, { pointerId: 1, pointerType: "mouse", button: 0, clientX: 10, clientY: 10 });
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_MS + 50);
     });
   }
 
   function lift(element: HTMLElement): void {
-    fireEvent.pointerUp(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(element, { pointerId: 1, pointerType: "mouse", button: 0, clientX: 10, clientY: 10 });
+  }
+
+  function touchHold(element: HTMLElement): void {
+    fireEvent.pointerDown(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS + 50);
+    });
   }
 
   // `hostAtRoot`: the app's leading host is mounted at its root (`main.tsx`), outside the board's definitions.
@@ -683,6 +726,17 @@ describe("R3345000 a fused card's full-screen hold", () => {
     pressAndHold(screen.getByTestId("card-fused-unit"));
     expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
     planesDrawFrom(MYTHIC);
+  });
+
+  it("R3893000 holding your own fusion of fusions on touch opens inspect sheet with host full text", () => {
+    const inner = fusedDef([def(MINER), def(MYTHIC)], 1);
+    const outer = fusedDef([def(WEAPON), inner], 2);
+    render(<Board fusion={outer} />);
+    touchHold(screen.getByTestId("card-fused-unit"));
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+    const sheet = screen.getByTestId(INSPECT_SHEET);
+    expect(sheet).toBeInTheDocument();
+    expect(within(sheet).getByTestId("fullscreen-art-open")).toBeInTheDocument();
   });
 
   it("R3345000 holding a single fusion draws the host's planes", () => {

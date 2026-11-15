@@ -552,6 +552,7 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
         english_name: english.as_ref().map(|(name, _)| name.clone()),
         english_text: english.map(|(_, text)| text),
         attack_reason: in_play.and_then(|play| play.attack_reason.clone()),
+        switch_reason: in_play.and_then(|play| play.switch_reason.clone()),
         tallies: in_play.and_then(|play| play.tallies.clone()),
         play_reason: in_play.and_then(|play| play.play_reason.clone()),
     }

@@ -68,4 +68,10 @@ export const statsTestid = {
   drillDownRadiantFace: "stats-drill-down-radiant-face",
   drillDownAlmanac: "stats-drill-down-almanac",
   drillDownTokens: "stats-drill-down-tokens",
+  /** R3887000: the Cards tab's Plain text button, a card as plain text, and the breakdown's plain text and Reference cards. */
+  plainTextToggle: "stats-plain-text-toggle",
+  plainCard: "stats-plain-card",
+  drillDownPlain: "stats-drill-down-plain",
+  drillDownRefs: "stats-drill-down-refs",
+  drillDownRef: "stats-drill-down-ref",
 } as const;

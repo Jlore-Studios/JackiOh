@@ -1,4 +1,4 @@
-//! SPEC §8.1 #2 Speciesist — 4/1 → 8/2 Unit, Human, cost 2.
+//! SPEC §8.1 #2 Speciesist — 7/1 → 14/2 Unit, Human, cost 3 (4/1 → 8/2, cost 2 until issue #3837).
 //! Base: "Cry: destroy target enemy non-Human unit". Radiant: "Cry: destroy all enemy non-Human
 //! units" — the radiant cell restates the clause, so it replaces the base one (§8 Conventions) and
 //! the radiant form declares no target at all.
@@ -121,7 +121,7 @@ mod tests {
             s.play("core-002", json!({}));
             s.expect_in_zone("core-008", "field");
             s.expect_in_zone("core-020", "field");
-            s.expect_stats("core-002", json!({ "attack": 8, "maxHealth": 2 }));
+            s.expect_stats("core-002", json!({ "attack": 14, "maxHealth": 2 }));
         }
     }
 }

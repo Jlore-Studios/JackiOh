@@ -495,7 +495,8 @@ mod r171_with_the_cards_that_change_control {
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
         assert_eq!(g.card(&traveller).controller, PlayerId::P2);
-        // Crater (issue #3136) left lane 1 Locked, so the second Silas goes into the open lane 3.
+        // Each Silas is summoned for p2 into their leftmost open zone, lane 1 (R3837000), whatever zone the
+        // play names; the first rotated home to p1's lane 1, and the second's Cry carries it back.
         g.play(SILAS, json!({ "zone": 3, "modes": ["left"] }));
 
         assert_eq!(g.unit("p1", 5).map(|c| c.id), Some(traveller.id.clone()));
@@ -507,14 +508,17 @@ mod r171_with_the_cards_that_change_control {
     fn r171_c52_twice_a_charge_unit_that_attacked_and_made_the_round_trip_may_attack_once_more() {
         let mut g = setup(json!({
             "p1": { "hand": [SILAS, SILAS], "mana": 10, "field": [{ "def": TIMMY, "radiant": true, "lane": 5 }] },
-            "p2": { "field": [{ "def": VANILLA, "lane": 3 }] },
+            // Both Silases end on p2's side (R3837000), so p1 has nothing left once Timmy attacks and the turn
+            // ends (R82): p2's draw comes from a library, not fatigue.
+            "p2": { "field": [{ "def": VANILLA, "lane": 3 }], "library": LIBRARY },
         }));
         let timmy = g.unit_at("p1", 5);
         let before = hero_health(&g, PlayerId::P2);
         g.attack(&timmy, "hero");
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
-        // Crater (issue #3136) left lane 1 Locked, so the second Silas goes into the open lane 3.
+        // Each Silas is summoned for p2 into their leftmost open zone, lane 1 (R3837000), whatever zone the
+        // play names; the first rotated home to p1's lane 1, and the second's Cry carries it back.
         g.play(SILAS, json!({ "zone": 3, "modes": ["left"] }));
 
         expect_entered_now(&g, &timmy);

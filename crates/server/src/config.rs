@@ -1298,6 +1298,13 @@ pub const CHAT_PAGE: i64 = 50;
 /// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
 /// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
 pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;
+/// R3732000: the most opponents `GET /api/friends/recent` lists, newest first: twenty, a screen of
+/// rows, so Recently played stays a glance and not a history.
+pub const RECENT_OPPONENTS_MAX: usize = 20;
+/// R3732000: the newest games `GET /api/friends/recent` reads to find them, ranked ones included
+/// (which it then leaves out): fifty, a page of the replay list's order of magnitude, so the read is
+/// one bounded query whatever the account's history.
+pub const RECENT_OPPONENTS_SCAN: i64 = 50;
 /// B58: how often an open chat panel reads its conversation again, while the tab's `/ws/social` is
 /// down (R3214000).
 pub const CHAT_POLL_MS: i64 = 4_000;

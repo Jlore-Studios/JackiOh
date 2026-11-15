@@ -41,7 +41,10 @@ begin
                              'guest_pick jsonb YES, host_ready boolean NO, guest_ready boolean NO, rev bigint NO, '
                              'catalog_version text NO, created_at timestamp with time zone NO, '
                              'expires_at timestamp with time zone NO, match_id uuid YES, series_id uuid YES, '
-                             'started_at timestamp with time zone YES' then
+                             'started_at timestamp with time zone YES, '
+                             -- R3731000: a 2v2's other team (migration 0091, checked in 55_two_v_two.sql).
+                             'guest2 uuid YES, guest3 uuid YES, guest2_pick jsonb YES, guest3_pick jsonb YES, '
+                             'guest2_ready boolean NO, guest3_ready boolean NO' then
     raise exception 'FAIL (R3730000): public.lobbies has the columns [%]', coalesce(v_text, '(none)');
   end if;
 

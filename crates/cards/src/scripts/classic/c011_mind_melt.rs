@@ -82,7 +82,7 @@ mod tests {
     const FELINORS: &str = "core-012"; // Duplicating Felinors
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
-    const SPECIESIST: &str = "core-002"; // Speciesist
+    const SPECIESIST: &str = "stand-in (2) 4/1 R8/2";
     const THEIR_HAND: [&str; 5] = [MENACE, SEVEN, FELINORS, VANILLA, REPLENISH];
 
     fn open(s: &Scenario) -> PendingChoice {

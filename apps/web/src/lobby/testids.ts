@@ -6,6 +6,10 @@ export const lobbyTestid = {
   copyCode: "lobby-copy-code",
   copyLink: "lobby-copy-link",
   seat: "lobby-seat",
+  /** R3731000: a team's row of seats, `data-team` 1 for the host's team and 2 for the other. */
+  team: "lobby-team",
+  switchTeam: "lobby-switch-team",
+  move: "lobby-move",
   invite: "lobby-invite",
   inviteFriend: "lobby-invite-friend",
   remove: "lobby-remove",
@@ -29,6 +33,7 @@ export const lobbyTestid = {
   joinRoom: "lobby-join-room",
   panel: "lobby-panel",
   create: "lobby-create",
+  create2v2: "lobby-create-2v2",
   joinForm: "lobby-join-form",
   joinInput: "lobby-join-code",
   joinSubmit: "lobby-join-submit",

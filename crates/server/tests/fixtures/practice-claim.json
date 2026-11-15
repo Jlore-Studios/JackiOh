@@ -90,13 +90,18 @@
     },
     {
       "type": "play",
-      "instanceId": "c22",
+      "instanceId": "c23",
       "zone": {
         "row": "units",
         "lane": 1
       },
       "playerId": "p1",
       "nonce": "a2"
+    },
+    {
+      "type": "endTurn",
+      "playerId": "p1",
+      "nonce": "a3"
     },
     {
       "type": "play",
@@ -134,70 +139,18 @@
     },
     {
       "type": "play",
-      "instanceId": "c1",
+      "instanceId": "c22",
       "zone": {
         "row": "units",
-        "lane": 2
+        "lane": 3
       },
-      "playerId": "p1",
-      "nonce": "a3"
-    },
-    {
-      "type": "attack",
-      "attackerId": "c22",
-      "targetId": "c46",
       "playerId": "p1",
       "nonce": "a4"
     },
     {
-      "type": "activate",
-      "instanceId": "c1",
-      "ability": "mine",
-      "playerId": "p1",
-      "nonce": "a5"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c1",
-      "ability": "mine",
-      "playerId": "p1",
-      "nonce": "a6"
-    },
-    {
-      "type": "play",
-      "instanceId": "c61",
-      "targets": [
-        {
-          "pick": "hero",
-          "player": "p2"
-        }
-      ],
-      "playerId": "p1",
-      "nonce": "a7"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c1",
-      "ability": "mine",
-      "playerId": "p1",
-      "nonce": "a8"
-    },
-    {
-      "type": "play",
-      "instanceId": "c62",
-      "playerId": "p1",
-      "nonce": "a9"
-    },
-    {
-      "type": "switchPosition",
-      "instanceId": "c1",
-      "playerId": "p1",
-      "nonce": "a10"
-    },
-    {
       "type": "endTurn",
       "playerId": "p1",
-      "nonce": "a11"
+      "nonce": "a5"
     },
     {
       "type": "play",
@@ -212,12 +165,8 @@
       "nonce": "h14"
     },
     {
-      "type": "play",
-      "instanceId": "c36",
-      "zone": {
-        "row": "units",
-        "lane": 5
-      },
+      "type": "switchPosition",
+      "instanceId": "c54",
       "playerId": "p2",
       "nonce": "h15"
     },
@@ -229,75 +178,72 @@
     {
       "type": "attack",
       "attackerId": "c22",
-      "targetId": "c46",
+      "targetId": "c54",
       "playerId": "p1",
-      "nonce": "a12"
+      "nonce": "a6"
     },
     {
       "type": "play",
       "instanceId": "c48",
       "zone": {
         "row": "units",
-        "lane": 1
+        "lane": 3
       },
       "equip": true,
       "playerId": "p1",
-      "nonce": "a13"
+      "nonce": "a7"
     },
     {
       "type": "attack",
       "attackerId": "c22",
       "targetId": "c46",
       "playerId": "p1",
-      "nonce": "a14"
+      "nonce": "a8"
     },
     {
       "type": "play",
-      "instanceId": "c23",
-      "embiggen": false,
+      "instanceId": "c19",
+      "zone": {
+        "row": "units",
+        "lane": 4
+      },
+      "playerId": "p1",
+      "nonce": "a9"
+    },
+    {
+      "type": "attack",
+      "attackerId": "c23",
+      "targetId": "hero-p2",
+      "playerId": "p1",
+      "nonce": "a10"
+    },
+    {
+      "type": "play",
+      "instanceId": "c17",
       "modes": [
-        "combat"
+        "greed"
       ],
       "playerId": "p1",
-      "nonce": "a15"
+      "nonce": "a11"
     },
     {
-      "type": "activate",
-      "instanceId": "c1",
-      "ability": "mine",
+      "type": "switchPosition",
+      "instanceId": "c19",
       "playerId": "p1",
-      "nonce": "a16"
+      "nonce": "a12"
+    },
+    {
+      "type": "switchPosition",
+      "instanceId": "c20",
+      "playerId": "p1",
+      "nonce": "a13"
     },
     {
       "type": "play",
-      "instanceId": "c63",
-      "playerId": "p1",
-      "nonce": "a17"
-    },
-    {
-      "type": "marketBuy",
-      "offer": 0,
-      "playerId": "p1",
-      "nonce": "a18"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c1",
-      "ability": "mine",
-      "playerId": "p1",
-      "nonce": "a19"
-    },
-    {
-      "type": "endTurn",
-      "playerId": "p1",
-      "nonce": "a20"
-    },
-    {
-      "type": "play",
-      "instanceId": "c31",
+      "instanceId": "c36",
       "zone": {
-        "row": "backrow",
-        "lane": 5
+        "row": "units",
+        "lane": 3
       },
       "playerId": "p2",
       "nonce": "h17"
@@ -325,24 +271,88 @@
       "instanceId": "c14",
       "zone": {
         "row": "units",
-        "lane": 4
+        "lane": 5
       },
+      "playerId": "p1",
+      "nonce": "a14"
+    },
+    {
+      "type": "attack",
+      "attackerId": "c23",
+      "targetId": "hero-p2",
+      "playerId": "p1",
+      "nonce": "a15"
+    },
+    {
+      "type": "attack",
+      "attackerId": "c22",
+      "targetId": "hero-p2",
+      "playerId": "p1",
+      "nonce": "a16"
+    },
+    {
+      "type": "attack",
+      "attackerId": "c22",
+      "targetId": "hero-p2",
+      "playerId": "p1",
+      "nonce": "a17"
+    },
+    {
+      "type": "play",
+      "instanceId": "c68",
+      "playerId": "p1",
+      "nonce": "a18"
+    },
+    {
+      "type": "play",
+      "instanceId": "c64",
+      "playerId": "p1",
+      "nonce": "a19"
+    },
+    {
+      "type": "switchPosition",
+      "instanceId": "c19",
+      "playerId": "p1",
+      "nonce": "a20"
+    },
+    {
+      "type": "endTurn",
       "playerId": "p1",
       "nonce": "a21"
     },
     {
-      "type": "marketBuy",
-      "offer": 2,
-      "playerId": "p1",
-      "nonce": "a22"
-    },
-    {
       "type": "play",
-      "instanceId": "c69",
+      "instanceId": "c31",
       "zone": {
         "row": "backrow",
         "lane": 1
       },
+      "playerId": "p2",
+      "nonce": "h21"
+    },
+    {
+      "type": "play",
+      "instanceId": "c57",
+      "playerId": "p2",
+      "nonce": "h22"
+    },
+    {
+      "type": "play",
+      "instanceId": "c57",
+      "playerId": "p2",
+      "nonce": "h23"
+    },
+    {
+      "type": "attack",
+      "attackerId": "c23",
+      "targetId": "hero-p2",
+      "playerId": "p1",
+      "nonce": "a22"
+    },
+    {
+      "type": "attack",
+      "attackerId": "c22",
+      "targetId": "hero-p2",
       "playerId": "p1",
       "nonce": "a23"
     },
@@ -355,182 +365,10 @@
     },
     {
       "type": "attack",
-      "attackerId": "c22",
-      "targetId": "c36",
-      "playerId": "p1",
-      "nonce": "a25"
-    },
-    {
-      "type": "attack",
-      "attackerId": "c1",
-      "targetId": "hero-p2",
-      "playerId": "p1",
-      "nonce": "a26"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c1",
-      "ability": "mine",
-      "playerId": "p1",
-      "nonce": "a27"
-    },
-    {
-      "type": "attack",
-      "attackerId": "c20",
-      "targetId": "hero-p2",
-      "playerId": "p1",
-      "nonce": "a28"
-    },
-    {
-      "type": "play",
-      "instanceId": "c66",
-      "playerId": "p1",
-      "nonce": "a29"
-    },
-    {
-      "type": "play",
-      "instanceId": "c65",
-      "playerId": "p1",
-      "nonce": "a30"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c1",
-      "ability": "mine",
-      "playerId": "p1",
-      "nonce": "a31"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c1",
-      "ability": "mine",
-      "playerId": "p1",
-      "nonce": "a32"
-    },
-    {
-      "type": "play",
-      "instanceId": "c71",
-      "playerId": "p1",
-      "nonce": "a33"
-    },
-    {
-      "type": "play",
-      "instanceId": "c66",
-      "playerId": "p1",
-      "nonce": "a34"
-    },
-    {
-      "type": "play",
-      "instanceId": "c72",
-      "playerId": "p1",
-      "nonce": "a35"
-    },
-    {
-      "type": "endTurn",
-      "playerId": "p1",
-      "nonce": "a36"
-    },
-    {
-      "type": "play",
-      "instanceId": "c57",
-      "zone": {
-        "row": "backrow",
-        "lane": 1
-      },
-      "faceDown": "cloaked",
-      "playerId": "p2",
-      "nonce": "h21"
-    },
-    {
-      "type": "play",
-      "instanceId": "c67",
-      "zone": {
-        "row": "backrow",
-        "lane": 2
-      },
-      "embiggen": true,
-      "faceDown": "cloaked",
-      "playerId": "p2",
-      "nonce": "h22"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c74",
-      "ability": "reveal",
-      "playerId": "p2",
-      "nonce": "h23"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c73",
-      "ability": "reveal",
-      "playerId": "p2",
-      "nonce": "h24"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c58",
-      "ability": "launch",
-      "playerId": "p2",
-      "nonce": "h25"
-    },
-    {
-      "type": "play",
-      "instanceId": "c68",
-      "zone": {
-        "row": "units",
-        "lane": 3
-      },
-      "embiggen": false,
-      "playerId": "p2",
-      "nonce": "h26"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c58",
-      "ability": "mine",
-      "playerId": "p2",
-      "nonce": "h27"
-    },
-    {
-      "type": "activate",
-      "instanceId": "c58",
-      "ability": "mine",
-      "playerId": "p2",
-      "nonce": "h28"
-    },
-    {
-      "type": "endTurn",
-      "playerId": "p2",
-      "nonce": "h29"
-    },
-    {
-      "type": "attack",
-      "attackerId": "c22",
-      "targetId": "hero-p2",
-      "playerId": "p1",
-      "nonce": "a37"
-    },
-    {
-      "type": "attack",
-      "attackerId": "c1",
-      "targetId": "hero-p2",
-      "playerId": "p1",
-      "nonce": "a38"
-    },
-    {
-      "type": "attack",
-      "attackerId": "c20",
-      "targetId": "hero-p2",
-      "playerId": "p1",
-      "nonce": "a39"
-    },
-    {
-      "type": "attack",
       "attackerId": "c14",
       "targetId": "hero-p2",
       "playerId": "p1",
-      "nonce": "a40"
+      "nonce": "a25"
     }
   ]
 }

@@ -19,12 +19,14 @@ import { forgetRoomLink } from "../net/roomLink.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { expectEmptyState } from "../test/empty.ts";
 import { pressBack } from "../test/history.ts";
+import { openFriendMenu, pressFriendMenuItem } from "../test/friendMenu.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { menuShellTestid } from "../shell/testids.ts";
 import { stopFollowingChallenge } from "./follow.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
-import { challengeKindTestid, friendsTestid, togetherTestid } from "./testids.ts";
+import { UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
+import { challengeKindTestid, chatTestid, friendsTestid, togetherTestid } from "./testids.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
 import { tabStops } from "./modalKeys.ts";
 
@@ -390,7 +392,7 @@ describe("#1831 the badge", () => {
 
 describe("#1831 the panel", () => {
   it(
-    "#1831 the panel lists friends online first, with Challenge, Watch and Chat as Play together decides them",
+    "R3732002 the panel groups the friends in a game, online and offline with counts, one primary button on each row and the rest in ⋯",
     async () => {
       signIn("tok-panel");
       serve(world({ unread: { "f-ann": 2 } }));
@@ -401,30 +403,64 @@ describe("#1831 the panel", () => {
       expect(within(panel).getByRole("heading", { name: "Friends" })).toBeInTheDocument();
 
       await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
-      const rows = within(panel).getAllByTestId(togetherTestid.friendRow);
-      expect(rows.map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-ann", "f-bob", "f-cy"]);
-      expect(rows.map((row) => row.getAttribute("data-status"))).toEqual(["online", "inMatch", "offline"]);
+      // The groups, in order, each with its count; Offline is collapsed, so Cy is not drawn yet.
+      const groups = within(panel).getAllByTestId(togetherTestid.group);
+      expect(groups.map((group) => group.getAttribute("data-group"))).toEqual(["inGame", "online", "offline"]);
+      expect(groups.map((group) => within(group).getByRole("heading").textContent?.replace(/[▸▾]\s*/u, ""))).toEqual([
+        "In a game (1)",
+        "Online (1)",
+        "Offline (1)",
+      ]);
+      const toggle = within(panel).getByTestId(togetherTestid.offlineToggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(within(panel).getAllByTestId(togetherTestid.friendRow).map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-bob", "f-ann"]);
 
-      const [ann, bob, cy] = rows as [HTMLElement, HTMLElement, HTMLElement];
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      const rows = within(panel).getAllByTestId(togetherTestid.friendRow);
+      expect(rows.map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-bob", "f-ann", "f-cy"]);
+      expect(rows.map((row) => row.getAttribute("data-status"))).toEqual(["inMatch", "online", "offline"]);
+
+      // One primary button each: Watch for the game that can be watched, Challenge for the free friend, Daily for the offline one.
+      const [bob, ann, cy] = rows as [HTMLElement, HTMLElement, HTMLElement];
+      expect(within(bob).getByTestId(togetherTestid.watch)).toBeInTheDocument();
+      expect(within(bob).queryByTestId(togetherTestid.challenge)).toBeNull();
       expect(within(ann).getByTestId(togetherTestid.challenge)).toBeEnabled();
+      expect(within(ann).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-action", "challenge");
       expect(within(ann).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-live", "true");
       expect(within(ann).queryByTestId(togetherTestid.watch)).toBeNull();
-      expect(within(ann).getByTestId(togetherTestid.chatOpen)).toBeInTheDocument();
-      expect(within(ann).getByTestId(togetherTestid.unread)).toHaveTextContent("2");
-      // #3727: a friend in a game or offline can be challenged to a daily game, never a live one.
-      expect(within(bob).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-live", "false");
-      expect(within(bob).getByTestId(togetherTestid.watch)).toBeInTheDocument();
-      expect(within(bob).getByTestId(togetherTestid.chatOpen)).toBeInTheDocument();
+      expect(within(cy).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-action", "daily");
       expect(within(cy).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-live", "false");
-      expect(within(cy).queryByTestId(togetherTestid.watch)).toBeNull();
-      expect(within(cy).getByTestId(togetherTestid.chatOpen)).toBeInTheDocument();
-      // Remove and Block are Play together's.
-      expect(within(panel).queryByTestId(togetherTestid.remove)).toBeNull();
-      expect(within(panel).queryByTestId(togetherTestid.block)).toBeNull();
+      for (const row of rows) expect(within(row).getAllByRole("button").filter((control) => control.className.includes("button-primary"))).toHaveLength(0);
+
+      // What each says they are doing, in words.
+      expect(bob).toHaveTextContent("In a game");
+      expect(ann).toHaveTextContent("Online");
+
+      // The rest is in ⋯: nothing of it is on the row until the menu opens, and Chat carries the unread count.
+      for (const row of rows) {
+        expect(within(row).queryByTestId(togetherTestid.chatOpen)).toBeNull();
+        expect(within(row).queryByTestId(togetherTestid.remove)).toBeNull();
+      }
+      expect(within(ann).getByTestId(togetherTestid.menuUnread)).toHaveTextContent("2");
+      const menu = openFriendMenu(ann);
+      expect(within(ann).getByTestId(togetherTestid.menu)).toHaveAttribute("aria-expanded", "true");
+      expect(within(menu).getAllByRole("menuitem").map((item) => item.getAttribute("data-testid"))).toEqual([
+        togetherTestid.chatOpen,
+        togetherTestid.daily,
+        togetherTestid.lobby,
+        togetherTestid.remove,
+        togetherTestid.block,
+      ]);
+      expect(within(menu).getByTestId(togetherTestid.unread)).toHaveTextContent("2");
+      // A friend in a game: the primary is Watch, so the menu has none; an offline friend has no Invite to lobby.
+      expect(within(openFriendMenu(bob)).queryByTestId(togetherTestid.watchItem)).toBeNull();
+      expect(within(openFriendMenu(cy)).queryByTestId(togetherTestid.lobby)).toBeNull();
 
       expect(within(panel).getByText(wholeText("Me#1"))).toBeInTheDocument();
       const all = within(panel).getByTestId(friendsTestid.all);
       expect(all).toHaveAttribute("href", "/together");
+      expect(all).toHaveTextContent("See all friends");
     },
     TEST_MS,
   );
@@ -441,7 +477,8 @@ describe("#1831 the panel", () => {
       expectSkeleton(within(panel).getByText("Loading your friends…"), "rows");
 
       await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
-      expect(within(panel).getAllByTestId(togetherTestid.friendRow)).toHaveLength(3);
+      // Offline is collapsed: Bob and Ann are drawn, Cy waits behind the toggle.
+      expect(within(panel).getAllByTestId(togetherTestid.friendRow)).toHaveLength(2);
       expect(within(panel).queryByText("Loading your friends…")).toBeNull();
       expect(within(panel).queryByTestId(skeletonTestid.root)).toBeNull();
     },
@@ -626,7 +663,7 @@ describe("#1831 the panel", () => {
   );
 
   it(
-    "#1831 All of Play together closes the panel and goes to /together",
+    "#1831 See all friends closes the panel and goes to /together",
     async () => {
       signIn("tok-all");
       at("/replays");
@@ -636,6 +673,214 @@ describe("#1831 the panel", () => {
       fireEvent.click(within(panel).getByTestId(friendsTestid.all));
       expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
       expect(window.location.pathname).toBe("/together");
+    },
+    TEST_MS,
+  );
+});
+
+describe("R3732002 the panel's rows, search and ⋯ menus", () => {
+  const DI = friend("f-di", "Di#6", "online", { lobbyCode: "ABC234" });
+  const FAY = friend("f-fay", "Fay#7", "offline", { lastSeenAt: new Date(Date.now() - 3 * 3_600_000).toISOString() });
+  const rowOf = (panel: HTMLElement, profileId: string): HTMLElement =>
+    must(
+      within(panel)
+        .getAllByTestId(togetherTestid.friendRow)
+        .find((row) => row.getAttribute("data-profile-id") === profileId),
+      `the row of ${profileId}`,
+    );
+
+  it(
+    "R3732002 Join takes the player to an online friend's open lobby and closes the panel",
+    async () => {
+      signIn("tok-join");
+      serve(world({ friends: [DI, ANN] }));
+      shell();
+      const panel = await openPanel();
+      await within(panel).findByText(wholeText("Di#6"), undefined, SLOW);
+      const di = rowOf(panel, "f-di");
+      expect(di).toHaveTextContent("In a lobby");
+      expect(di).toHaveAttribute("data-primary", "join");
+      expect(rowOf(panel, "f-ann")).toHaveTextContent("Online");
+      const join = within(di).getByTestId(togetherTestid.join);
+      expect(join).toHaveAttribute("data-route", "/lobby/ABC234");
+      expect(within(di).queryByTestId(togetherTestid.challenge)).toBeNull();
+
+      fireEvent.click(join);
+      expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      expect(window.location.pathname).toBe("/lobby/ABC234");
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3732002 an offline friend's row says when they were last seen, and its Daily opens the challenge on Daily",
+    async () => {
+      signIn("tok-daily");
+      serve(world({ friends: [FAY, ANN] }));
+      shell();
+      const panel = await openPanel();
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      // Collapsed: only the online friend is drawn, and the heading counts the offline one.
+      expect(within(panel).getAllByTestId(togetherTestid.friendRow)).toHaveLength(1);
+      fireEvent.click(within(panel).getByTestId(togetherTestid.offlineToggle));
+      const fay = rowOf(panel, "f-fay");
+      expect(fay).toHaveTextContent("Last seen 3 h ago");
+      expect(within(fay).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-action", "daily");
+
+      fireEvent.click(within(fay).getByTestId(togetherTestid.challenge));
+      const form = await screen.findByTestId(togetherTestid.challengeForm, undefined, SLOW);
+      expect(form).toHaveAttribute("data-kind", "daily");
+      expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      cleanup();
+
+      // The menu's Daily challenge of an online friend opens it on Daily too, though Live is open to them.
+      serve(world({ friends: [ANN] }));
+      shell();
+      const again = await openPanel();
+      await within(again).findByText(wholeText("Ann#2"), undefined, SLOW);
+      pressFriendMenuItem(rowOf(again, "f-ann"), togetherTestid.daily);
+      const dailyForm = await screen.findByTestId(togetherTestid.challengeForm, undefined, SLOW);
+      expect(dailyForm).toHaveAttribute("data-kind", "daily");
+      expect(screen.getByTestId(challengeKindTestid("live"))).toBeEnabled();
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3732002 a search filters the friends by name and opens Offline while it is typed",
+    async () => {
+      signIn("tok-search");
+      serve(world({ friends: [ANN, BOB, CY, FAY] }));
+      shell();
+      const panel = await openPanel();
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      const search = within(panel).getByTestId(togetherTestid.search);
+
+      fireEvent.change(search, { target: { value: " cy " } });
+      expect(within(panel).getAllByTestId(togetherTestid.friendRow).map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-cy"]);
+      expect(within(panel).getByTestId(togetherTestid.offlineToggle)).toHaveAttribute("aria-expanded", "true");
+      expect(within(panel).getByTestId(togetherTestid.group)).toHaveAttribute("data-group", "offline");
+
+      fireEvent.change(search, { target: { value: "nobody" } });
+      expect(within(panel).queryAllByTestId(togetherTestid.friendRow)).toHaveLength(0);
+      expect(within(panel).getByText("No friend has a name like that.")).toBeInTheDocument();
+
+      fireEvent.change(search, { target: { value: "" } });
+      expect(within(panel).getAllByTestId(togetherTestid.friendRow)).toHaveLength(2);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3732002 Escape and Back close the ⋯ menu alone, a press outside closes it, and an item closes it before it acts",
+    async () => {
+      signIn("tok-menu");
+      serve(world({ friends: [ANN] }));
+      window.history.pushState(null, "", "/play");
+      shell();
+      const panel = await openPanel();
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      const ann = rowOf(panel, "f-ann");
+      const more = within(ann).getByTestId(togetherTestid.menu);
+      expect(more).toHaveAttribute("aria-haspopup", "menu");
+      expect(more).toHaveAttribute("aria-label", "More for Ann#2");
+
+      // Escape: the menu goes, the focus is back on ⋯, and the panel stays.
+      openFriendMenu(ann);
+      expect(within(ann).getByRole("menu")).toBeInTheDocument();
+      expect(ann.querySelector('[data-tip-open="true"]')).not.toBeNull();
+      expect(within(ann).getAllByRole("menuitem")[0]).toHaveFocus();
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+      expect(within(ann).queryByRole("menu")).toBeNull();
+      expect(more).toHaveAttribute("aria-expanded", "false");
+      expect(more).toHaveFocus();
+      expect(screen.getByTestId(friendsTestid.panel)).toBeInTheDocument();
+      // The next Escape closes the panel.
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+      expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      cleanup();
+
+      // Back closes the menu and leaves the panel and the address as they were.
+      serve(world({ friends: [ANN] }));
+      shell();
+      const second = await openPanel();
+      await within(second).findByText(wholeText("Ann#2"), undefined, SLOW);
+      openFriendMenu(rowOf(second, "f-ann"));
+      await pressBack();
+      await waitFor(() => {
+        expect(within(second).queryByRole("menu")).toBeNull();
+      }, SLOW);
+      expect(screen.getByTestId(friendsTestid.panel)).toBeInTheDocument();
+      expect(window.location.pathname).toBe("/play");
+
+      // A press outside the menu closes it.
+      openFriendMenu(rowOf(second, "f-ann"));
+      fireEvent.pointerDown(within(second).getByTestId(togetherTestid.search));
+      expect(within(second).queryByRole("menu")).toBeNull();
+      expect(screen.getByTestId(friendsTestid.panel)).toBeInTheDocument();
+
+      // An item closes the menu, then acts: Chat closes the panel and opens the conversation.
+      pressFriendMenuItem(rowOf(second, "f-ann"), togetherTestid.chatOpen);
+      expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      expect(await screen.findByTestId(chatTestid.panel, undefined, SLOW)).toHaveAttribute("data-friend-id", "f-ann");
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3732002 opened from the shell the chat is the drawer too, in the list's place",
+    async () => {
+      signIn("tok-chat-drawer");
+      serve(world({ friends: [ANN] }));
+      at("/decks");
+      render(<App />);
+      fireEvent.click(await button());
+      const panel = await screen.findByTestId(friendsTestid.panel, undefined, SLOW);
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+      pressFriendMenuItem(rowOf(panel, "f-ann"), togetherTestid.chatOpen);
+
+      const chat = await screen.findByTestId(chatTestid.panel, undefined, SLOW);
+      expect(chat.parentElement).toHaveAttribute("data-drawer");
+      expect(chat.parentElement).not.toHaveAttribute("data-sheet");
+      expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      expect(window.location.pathname).toBe("/decks");
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3732002 R2119000 Remove in the menu takes the friend off behind Undo and Undo puts them back; Block still asks first",
+    async () => {
+      signIn("tok-remove");
+      const server = serve(world({ friends: [ANN, BOB] }), (call) =>
+        call.method === "DELETE" || (call.method === "POST" && call.path === "/api/blocks") ? { status: 204 } : undefined,
+      );
+      shell();
+      const panel = await openPanel();
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
+
+      pressFriendMenuItem(rowOf(panel, "f-ann"), togetherTestid.remove);
+      expect(within(panel).queryByText(wholeText("Ann#2"))).toBeNull();
+      // The toast is inside the panel, so Undo is a stop of its Tab order.
+      const undo = within(panel).getByTestId(UNDO_TOAST_UNDO);
+      expect(tabStops(panel)).toContain(undo);
+      expect(server.to("DELETE", "/api/friends/f-ann")).toHaveLength(0);
+      fireEvent.click(undo);
+      expect(await within(panel).findByText(wholeText("Ann#2"))).toBeInTheDocument();
+      expect(server.to("DELETE", "/api/friends/f-ann")).toHaveLength(0);
+
+      // Block asks first, naming the friend; Keep sends nothing, Block sends one block.
+      pressFriendMenuItem(rowOf(panel, "f-ann"), togetherTestid.block);
+      const ann = rowOf(panel, "f-ann");
+      expect(within(ann).getByRole("alertdialog")).toHaveTextContent("Block Ann#2?");
+      expect(server.to("POST", "/api/blocks")).toHaveLength(0);
+      fireEvent.click(within(ann).getByTestId(togetherTestid.keep));
+      expect(within(rowOf(panel, "f-ann")).getByTestId(togetherTestid.menu)).toBeInTheDocument();
+      pressFriendMenuItem(rowOf(panel, "f-ann"), togetherTestid.block);
+      fireEvent.click(within(rowOf(panel, "f-ann")).getByTestId(togetherTestid.confirm));
+      await waitFor(() => {
+        expect(server.to("POST", "/api/blocks")[0]?.body).toEqual({ profileId: "f-ann" });
+      }, SLOW);
     },
     TEST_MS,
   );
@@ -815,7 +1060,8 @@ describe("#1831 challenging from the panel", () => {
         }, SLOW);
         const challenge = must(within(panel).getAllByTestId(togetherTestid.challenge)[0], "the first Challenge");
         expect(challenge).toBeEnabled();
-        expect(within(panel).getAllByTestId(togetherTestid.chatOpen).length).toBeGreaterThan(0);
+        const first = must(within(panel).getAllByTestId(togetherTestid.friendRow)[0], "the first row");
+        expect(within(openFriendMenu(first)).getByTestId(togetherTestid.chatOpen)).toBeInTheDocument();
         fireEvent.click(challenge);
         const form = await screen.findByTestId(togetherTestid.challengeForm, undefined, SLOW);
         expect(form).toHaveAttribute("data-kind", "daily");

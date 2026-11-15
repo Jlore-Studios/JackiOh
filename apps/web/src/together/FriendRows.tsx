@@ -1,17 +1,20 @@
-// The rows Play together and the friends panel share (#936, B55, B56; #1831): the add form, one friend
-// with what can be done with them now, and one friend request. Nothing here is a rule (CLAUDE.md
-// rule 7): which friend can be challenged or watched is what the server says of them (`status`,
-// `watchable`), and every refusal is shown in the server's words.
+// The rows the Friends page and the friends panel share (#936, B55, B56; #1831; R3732002): the add form,
+// one friend with the one thing to do with them now and a ⋯ menu for the rest, and one friend request.
+// Nothing here is a rule (CLAUDE.md rule 7): which friend can be challenged, watched or joined is what the
+// server says of them (`status`, `watchable`, `lobbyCode`), and every refusal is shown in the server's words.
 
 import { useId, useState, type FormEvent, type ReactElement } from "react";
 
 import Username from "../auth/Username.tsx";
 import { t } from "../i18n/i18n.ts";
-import { navigate } from "../net/navigate.ts";
+import { navigate, paths } from "../net/navigate.ts";
 import { sendFriendRequest, type Friend, type FriendRequest, type PlayerRef } from "../net/social.ts";
+import type { ChallengeKind } from "./ChallengeDialog.tsx";
+import { FriendMenu } from "./FriendMenu.tsx";
+import { menuItemsOf, primaryActionOf, statusLineOf } from "./friendGroups.ts";
 import { togetherTestid } from "./testids.ts";
 import { watchLink } from "./watchLink.ts";
-import { Named, STATUS_WORDS } from "./words.tsx";
+import { Named } from "./words.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
 
 import "./together.css";
@@ -121,46 +124,67 @@ export function liveRefusalOf(friend: Friend, challengeRefusal: string | null): 
   return friend.status === "online" ? null : LIVE_NEEDS_ONLINE;
 }
 
-/** The friend a challenge dialog is open for, and why Live is out (`liveRefusalOf`). */
-export type Challenging = PlayerRef & { liveRefusal: string | null };
+/**
+ * The friend a challenge dialog is open for, and why Live is out (`liveRefusalOf`). `kind` is the kind it
+ * opens on (R3732002: a row's Daily opens on Daily); none, Live where it can be played.
+ */
+export type Challenging = PlayerRef & { liveRefusal: string | null; kind?: ChallengeKind };
 
 export type FriendRowProps = {
   friend: Friend;
   unread: number;
   busy: boolean;
-  /** Gets the Challenge button pressed, which has the focus back once the dialog closes. */
-  onChallenge: (opener: HTMLElement) => void;
+  /** Epoch ms the status line counts "last seen" from. */
+  now: number;
+  /**
+   * The Challenge or Daily pressed, as the primary button or the menu's Daily challenge; `opener` has the
+   * focus back once the dialog closes.
+   */
+  onChallenge: (opener: HTMLElement, kind: ChallengeKind) => void;
   onChat: () => void;
   /** A screen that leaves these out offers no Remove or Block. Remove goes at once; the screen offers Undo (R2119000). */
   onRemove?: () => void;
   onBlock?: () => void;
-  /** Runs before Watch takes the player to the game (the friends panel closes). */
-  onWatch?: () => void;
+  /** Runs before Watch or Join takes the player to the game or the lobby (the friends panel closes). */
+  onLeave?: () => void;
   /**
    * Why the player cannot play anyone live now (the server's own sentence). #3727: Challenge stays, for a
    * daily game, and its dialog says it of Live.
    */
   challengeRefusal?: string | null;
-  /** R3730005: a screen that passes it offers Lobby: a 1v1 lobby made and the friend invited into it. */
+  /** R3730005: a screen that passes it offers Invite to lobby: a 1v1 lobby made and the friend invited into it. */
   onLobby?: () => void;
 };
 
+/**
+ * One friend (R3732002): the dot, the name, what they are doing in words, the one button their state asks
+ * for (Watch, Join, Challenge or Daily) and the ⋯ menu with the rest.
+ */
 export function FriendRow({
   friend,
   unread,
   busy,
+  now,
   onChallenge,
   onChat,
   onRemove,
   onBlock,
-  onWatch,
+  onLeave,
   challengeRefusal = null,
   onLobby,
 }: FriendRowProps): ReactElement {
   const [asking, setAsking] = useState(false);
+  const primary = primaryActionOf(friend);
   // #3727: any friend can be challenged to a daily game; a live one needs them online and both free.
   const live = liveRefusalOf(friend, challengeRefusal) === null;
-  const canWatch = friend.watchable && friend.matchId !== null;
+  const line = statusLineOf(friend, now);
+  const watchRoute = friend.matchId === null ? null : watchLink(friend.matchId, friend.profileId, friend.duos === true);
+  const watch = (): void => {
+    if (watchRoute === null) return;
+    onLeave?.();
+    navigate(watchRoute);
+  };
+  const items = menuItemsOf(friend, primary, { lobby: onLobby !== undefined, remove: onRemove !== undefined, block: onBlock !== undefined });
   return (
     <li
       className="together-row"
@@ -168,77 +192,78 @@ export function FriendRow({
       data-profile-id={friend.profileId}
       data-status={friend.status}
       data-watchable={friend.watchable ? "true" : "false"}
+      data-primary={primary}
     >
       <span className="together-row__who">
         <span className="together-dot" data-status={friend.status} aria-hidden="true" />
-        <Username name={friend.username} />
-        <span className="together-row__status">{t(STATUS_WORDS[friend.status])}</span>
+        <span className="together-row__name">
+          <Username name={friend.username} />
+          {line === "" ? null : <span className="together-row__status">{line}</span>}
+        </span>
       </span>
       {!asking ? (
         <span className="together-row__actions">
-          <button
-            type="button"
-            className={live ? "button-primary" : undefined}
-            data-testid={togetherTestid.challenge}
-            data-live={live ? "true" : "false"}
-            disabled={busy}
-            onClick={(event) => {
-              onChallenge(event.currentTarget);
-            }}
-          >
-            {t("Challenge")}
-          </button>
-          {canWatch && friend.matchId !== null ? (
-            <button
-              type="button"
-              data-testid={togetherTestid.watch}
-              data-route={watchLink(friend.matchId, friend.profileId, friend.duos === true)}
-              onClick={() => {
-                if (friend.matchId === null) return;
-                onWatch?.();
-                navigate(watchLink(friend.matchId, friend.profileId, friend.duos === true));
-              }}
-            >
+          {primary === "watch" ? (
+            <button type="button" data-testid={togetherTestid.watch} data-route={watchRoute ?? undefined} onClick={watch}>
               {t("Watch")}
             </button>
           ) : null}
-          {onLobby === undefined || friend.status === "offline" ? null : (
-            <button type="button" data-testid={togetherTestid.lobby} disabled={busy} onClick={onLobby}>
-              {t("Lobby")}
-            </button>
-          )}
-          <button type="button" data-testid={togetherTestid.chatOpen} onClick={onChat}>
-            {t("Chat")}
-            {unread > 0 ? (
-              <span className="together-badge" data-testid={togetherTestid.unread} aria-label={t("{count} unread", { count: unread })}>
-                {unread}
-              </span>
-            ) : null}
-          </button>
-          {onRemove === undefined ? null : (
+          {primary === "join" && friend.lobbyCode !== undefined ? (
             <button
               type="button"
-              className="link-button"
-              data-testid={togetherTestid.remove}
-              disabled={busy}
-              onClick={onRemove}
-            >
-              {t("Remove")}
-            </button>
-          )}
-          {onBlock === undefined ? null : (
-            <button
-              type="button"
-              className="link-button"
-              data-testid={togetherTestid.block}
-              disabled={busy}
+              data-testid={togetherTestid.join}
+              data-route={paths.lobby(friend.lobbyCode)}
               onClick={() => {
-                setAsking(true);
+                if (friend.lobbyCode === undefined) return;
+                onLeave?.();
+                navigate(paths.lobby(friend.lobbyCode));
               }}
             >
-              {t("Block")}
+              {t("Join")}
             </button>
-          )}
+          ) : null}
+          {primary === "challenge" || primary === "daily" ? (
+            <button
+              type="button"
+              data-testid={togetherTestid.challenge}
+              data-action={primary}
+              data-live={live && primary === "challenge" ? "true" : "false"}
+              disabled={busy}
+              onClick={(event) => {
+                onChallenge(event.currentTarget, primary === "daily" ? "daily" : "live");
+              }}
+            >
+              {primary === "daily" ? t("Daily") : t("Challenge")}
+            </button>
+          ) : null}
+          <FriendMenu
+            name={friend.username}
+            items={items}
+            unread={unread}
+            busy={busy}
+            onItem={(item, opener) => {
+              switch (item) {
+                case "chat":
+                  onChat();
+                  return;
+                case "daily":
+                  onChallenge(opener, "daily");
+                  return;
+                case "lobby":
+                  onLobby?.();
+                  return;
+                case "watch":
+                  watch();
+                  return;
+                case "remove":
+                  onRemove?.();
+                  return;
+                case "block":
+                  setAsking(true);
+                  return;
+              }
+            }}
+          />
         </span>
       ) : (
         <BlockQuestion

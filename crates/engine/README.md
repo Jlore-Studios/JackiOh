@@ -56,7 +56,8 @@ Reborn in `state_check.rs` (R2783001). `hook_marks.rs` emits `hookResolving` jus
 of a Cry, Death, turn hook, Whenever trigger or Activate (`prompts::run_resume`,
 `state_check::run_death_pass`, `triggers::run_queued_trigger`), withheld from the trigger loop, and
 `view_for` keeps it from a seat that could not read the card (R2783000). `GameEvent::as_rules_read`
-drops `via`, so neither moves a hash.
+drops `via`, so neither moves a hash. `effects::gain_hero_armor` reports `armorGained`, withheld the
+same way (R3857000).
 
 ## Purity (CLAUDE.md rule 4)
 
