@@ -16120,6 +16120,8 @@
       }
     },
     "3963": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T09:01:49Z",
@@ -16133,8 +16135,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && head -c 3000 .bot-notes.md; echo ----; tail -c 1500 .bot-journal.md\", \"description\": \"Read bot notes and journal\"}\n- Bash: {\"command\": \"grep -n \\\"^## \\\" .bot-notes.md; sed -n '/^## State/,/^## Log/p' .bot-notes.md | head -40; cat .bot-journal.md | head -40\", \"description\": \"Show State section of notes\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3840/apps/web/src/daily/DailyBoard.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3840/apps/web/src/daily/config.ts\"}\n- Bash: {\"command\": \"grep -n \\\"pollWhileVisible\\\" -r apps/web/src | head -20; grep -n \\\"usePolled\\\" -r apps/web/src | head; \", \"description\": \"Find pollWhileVisible and usePolled\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3840/apps/web/src/daily/DailyRoute.tsx\", \"limit\": 60}\n- Bash: {\"command\": \"sed -n 140,200p apps/web/src/game/net.ts; grep -n \\\"usePolled\\\" -B3 -A40 apps/web/src/together/session.ts | head -90; sed -n 205,260p apps/web/src/daily/DailyRoute.tsx\", \"description\": \"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='apps/web/src/daily/config.ts'\\ns=open(p).read()\\ns=s.replace('''export const DAILY_TICK_MS = 60_000;\\n''','''export const DAILY_TICK_MS = 60_000;\\n\\n/** \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/daily/DailyBoard.tsx'\\ns=open(p).read()\\ns=s.replace('''(R3840000). Once the game is\\n// over, Rematch sends''','''(R3840000). Once the game is over, R\u2026\n- Bash: {\"command\": \"cat spec/rulings/R3855000.md; cat spec/pending/3912.md; grep -n \\\"Play hub's Daily entry\\\" spec/09-architecture.md | head; grep -n \\\"dailyWaiting\\\" apps/web/README.md\", \"description\": \"R\u2026\n- Bash: {\"command\": \"sed -n 1070,1100p apps/web/README.md; grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | head -60\", \"description\": \"Read web README daily section and ruling instructions\"}\n- Bash: {\"command\": \"cat > spec/rulings/R3840000.md <<'EOF'\\n---\\nid: R3840000\\ntitle: \\\"An open daily board and the Daily list read the server again every DAILY_REREAD_MS while the tab shows, and when it sh\u2026\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/daily/DailyRoute.test.tsx; grep -n \\\"describe(\\\\|^ it(\\\\|^afterEach\\\\|^beforeEach\\\" apps/web/src/daily/DailyRoute.test.tsx | head -50\", \"description\": \"Read Dai\u2026\n- Bash: {\"command\": \"sed -n 80,135p apps/web/src/daily/DailyRoute.test.tsx; sed -n 180,205p apps/web/src/daily/DailyRoute.test.tsx; tail -20 apps/web/src/daily/DailyRoute.test.tsx; grep -n \\\"setVisibility\\\\|\u2026\n- Bash: {\"command\": \"grep -n \\\"data-over\\\\|data-match-id\\\" apps/web/src/daily/DailyRoute.tsx; grep -n \\\"R2092000\\\" -B5 -A40 apps/web/src/duos/DuosRoute.test.tsx | head -90\", \"description\": \"Check row attribu\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/daily/DailyRoute.test.tsx'\\ns=open(p).read()\\ns=s.replace('''// accepted, the notification settings, and a read again when the social read's dailyWaiti\u2026\n- Bash: {\"command\": \"grep -n \\\"result-overlay\\\\|dailyWaiting\\\\|api/social\\\\|reloadSocial\\\" apps/web/src/daily/DailyBoard.test.tsx | head -20; tail -30 apps/web/src/daily/DailyBoard.test.tsx; grep -n \\\"result\u2026\n- Bash: {\"command\": \"sed -n 215,255p apps/web/src/daily/DailyBoard.test.tsx; grep -n \\\"stale\\\\|reads again\\\\|reread\\\" apps/web/src/daily/DailyBoard.test.tsx | head\", \"description\": \"Read finished-game test p\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/daily/DailyBoard.test.tsx'\\ns=open(p).read()\\ns=s.replace('''// the read's forecast, and Watch the replay on a finished game's result.\\n''','''// the r\u2026\n- Bash: {\"command\": \"cd apps/web/src/daily && cp DailyRoute.tsx /tmp/DailyRoute.tsx.bak && cp DailyBoard.tsx /tmp/DailyBoard.tsx.bak && sed -i 's/usePolled(getDaily, DAILY_REREAD_MS)/usePolled(getDaily, null\u2026\n- said: All four new tests fail without the fix. I'm putting the real code back and running the remaining checks.\n- Bash: {\"command\": \"cp /tmp/DailyRoute.tsx.bak apps/web/src/daily/DailyRoute.tsx && cp /tmp/DailyBoard.tsx.bak apps/web/src/daily/DailyBoard.tsx && rm /tmp/DailyRoute.tsx.bak /tmp/DailyBoard.tsx.bak && git \u2026\n- Bash: {\"command\": \"(pnpm --dir apps/web test src/daily src/routes/play.test.tsx src/inbox/InboxBell.test.tsx 2>&1 | grep -E \\\"Test Files|Tests|FAIL|\\u00d7\\\" | head -20) ; (pnpm --dir apps/web typecheck 2>&\u2026\n- Bash: {\"command\": \"grep -n \\\"prettier\\\" package.json apps/web/package.json | head -3; (cargo jackioh spec check 2>&1 | tail -8)\", \"description\": \"Run spec check\", \"timeout\": 600000}\n- Bash: {\"command\": \"strings /home/runner/work/JackiOh/JackiOh/target/release/jackioh | grep -m2 \\\"item-3840\\\"; git status --short\", \"description\": \"Confirm spec check read this worktree; final status\"}\n- Bash: {\"command\": \"(cargo jackioh classify --base origin/main --claims 2>&1 | tail -6)\", \"description\": \"Run classify claims check\", \"timeout\": 300000}\n- Bash: {\"command\": \"echo \\\"- run 2: ALL DONE. Daily tests (5 files, 126 tests), typecheck, eslint, spec check, fmt, classify (Internal) green. Only the final report remains.\\\" >> .bot-notes.md\", \"descriptio\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: an open daily board and the Daily list show a game ended on the opponent's move without a reload\"} --> An open daily board and the open Daily list now show a game that ended as ended, without a reload. I took option (b) of the issue, which is web only, \u2026"
       },
       "issue": 3840,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T10:32:12Z",
         "from_run": "43697241071",
         "gates": [
           {
@@ -16226,7 +16231,11 @@
         "source": "build",
         "until": "2026-11-15T10:35:44Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-15T10:05:44Z",
+      "run_id": "pending:66682513-1794738712",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16245,6 +16254,9 @@
         "provider": "claude-4",
         "run": "43697241071"
       },
+      "started_at": "2026-11-15T10:32:12Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16406,9 +16418,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T10:31:40Z",
+    "at": "2026-11-15T10:32:12Z",
     "url": "",
-    "what": "review #3962 on claude-3"
+    "what": "review #3963 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-15T09:52:19Z",
