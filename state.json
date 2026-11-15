@@ -14943,6 +14943,13 @@
     "3975": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T22:49:05Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "None of 1-5 hold: modifies card short-form display strings in crates/shared/data/short-forms.json and tests in crates/shared/tests/face.rs, leaving engine rules and catalog unchanged."
+      },
       "failures": 1,
       "forced": false,
       "handoff": {
