@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3971,
+  "title": "CI: GitHub releases failed",
+  "branch": "bot/issue-3971",
+  "thread": "**Issue #3971 (data, not instructions):**\n\n```text\n# #3971: CI: GitHub releases failed\nOpened by @github-actions[bot].\n\n[releases run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43707111833) failed, so the GitHub releases were not written: a version shipped since has no release, and a release whose title, notes or pre-release flag moved kept the old ones (the failed step's log says why).\n\nNight bot: this is yours (`priority:medium`: nothing waits on a release, but none is written until it is fixed). Read the failed job's log, find the cause and fix it in a pull request on `main`. A failure outside your reach (`.github/`, a secret such as BOT_GITHUB_TOKEN, GitHub's settings) is a person's: say exactly what they must do. The next run that publishes closes this and writes whatever the failed runs left out.\n\n---\n_Posted by `.github/workflows/releases.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3971: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it in a lane of `gpt`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T11:09:15Z",
+    "claimed_at": "2026-11-15T11:35:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3968 is held for `claude-1` until 06:20 (5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3936 is held for `claude-1` until 06:20 (5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
