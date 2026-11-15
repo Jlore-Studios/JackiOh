@@ -19,8 +19,8 @@ import { COLLECTION_SCREEN, FRIENDS_BUTTON, FRIENDS_CLOSE, FRIENDS_PANEL, PLAY_H
 
 /**
  * R109 refuses an account past 300 requests a minute, and each size here opens about ten screens. 46 signs
- * in as p1 too: smoke's split (WEIGHTS) runs it on the other shard's server, and 47, which runs just before
- * 51, signs in as p2. A 429 here means 51 shared a minute with another p1 spec: give it p2.
+ * in as p1 too (and p4): smoke's split (WEIGHTS) runs it on the other shard's server, and 47, which runs just
+ * before 51, signs in as p2 and p3. A 429 here means 51 shared a minute with another p1 spec: give it p2.
  */
 const SIGNED_IN = accounts.p1;
 

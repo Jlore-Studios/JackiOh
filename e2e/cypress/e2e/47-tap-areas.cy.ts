@@ -13,7 +13,7 @@ import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
-import { MENU_SIZES, accounts, constants, routes, seedFor, timeouts, viewports, type MenuSize, type MenuViewport } from "../../support/config.ts";
+import { MENU_SIZES, accounts, constants, routes, seedFor, timeouts, viewports, type E2EAccount, type MenuSize, type MenuViewport } from "../../support/config.ts";
 import { visitStatsFigures } from "../../support/stats.ts";
 import {
   BOARD,
@@ -58,8 +58,15 @@ const MS_PER_SECOND = 1000;
 const SEED = seedFor("47-tap-areas");
 /** The series the intercept answers, as spec 46's: a v4 UUID's shape, nothing the server holds. */
 const SERIES_ID = "00000000-0000-4000-8000-000000002122";
-/** p2, not 46's p1: the smoke shard runs 46 then 47 on one server, and both specs' menus in one minute pass R109's allowance for one account. */
-const SIGNED_IN = accounts.p2;
+/**
+ * Who a size's signed-in screens sign in as, by its place in `MENU_SIZES`: p2 and p3 in turn, never 46's p1 or p4
+ * (a full run plays 46 then 47 on one server). R109 allows one account 300 requests a minute, and one size's
+ * signed-in screens and the next's fall in one minute: since every screen also makes the inbox's reads (R3729002),
+ * two sizes on one account passed it, and the second size's last screens were refused (the 2nd, 4th and 6th sizes).
+ */
+function signedInFor(turn: number): () => E2EAccount {
+  return turn % 2 === 0 ? accounts.p2 : accounts.p3;
+}
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
 const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-season", almanac: "almanac" } as const;
 /** The measure's own probe: this much narrower than the minimum and taller, its ::before no height and this far past each side. */
@@ -293,7 +300,8 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
     });
   });
 
-  for (const size of MENU_SIZES) {
+  for (const [turn, size] of MENU_SIZES.entries()) {
+    const SIGNED_IN = signedInFor(turn);
     describe(`R3728000 ${size.label}`, () => {
       beforeEach(() => {
         emulateTouch(size.width > BREAKPOINT_PX.phone);
