@@ -14292,16 +14292,9 @@
       "verdict_rounds": 1
     },
     "3912": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "audit_tier": "",
-      "build_next": {
-        "from_run": "43687362253",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-15T07:18:24Z",
-        "until": "2026-11-15T07:48:24Z"
-      },
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-15T07:18:16Z",
@@ -14321,11 +14314,10 @@
         "reason": "planned on opus",
         "trail": "ace-2:\\\\|--space-3:\\\\|--space-5:\\\\|--type-sm:\\\" apps/web/src/*.css apps/web/src/styles/*.css 2>/dev/null | head\", \"description\": \"Look up the design to\u2026\n- said: The tokens put the status box with the chip at about 42px, under a 44px row. Whether the wrapped text then grows the row needs the measurement. Waiting on the build.\n- Read: {\"file_path\": \"/tmp/plan3912-dev.log\", \"offset\": 44}\n- Bash: {\"command\": \"for i in $(seq 1 280); do if grep -qE \\\"Local:|rror|ELIFECYCLE\\\" /tmp/plan3912-dev.log; then break; fi; sleep 2; done; grep -E \\\"Local:|rror|ELIFECYCLE|Finished\\\" /tmp/plan3912-dev.log |\u2026\n- Read: {\"file_path\": \"/tmp/plan3912-dev.log\", \"offset\": 44}\n- said: The dev server is up on :5191; my waiter missed it because of colour codes in the log. Opening `/dungeon` as an iPhone 13.\n- Bash: {\"command\": \"sh scripts/browse.sh -s=plan3912 open \\\"--device=iPhone 13\\\" \\\"http://localhost:5191/dungeon\\\" 2>&1 | tail -15\", \"description\": \"Open the dungeon page in a headless phone browser\", \"time\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=plan3912 eval \\\"async () => { const until = Date.now() + 20000; const q = (s) => document.querySelector(s); while (!q('[data-testid^=\\\\\\\"dungeon-preset-\\\\\\\"]') &&\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=plan3912 eval \\\"async () => { const q = (s) => document.querySelector(s); q('[data-testid=\\\\\\\"dungeon-start-run\\\\\\\"]').click(); const until = Date.now() + 20000; \u2026\n- said: I'm in a fight against \"Temp Grunt 2\" at 390\u00d7844. Now measuring the control bar as it stands, and whether the chip's CSS is already loaded on main.\n- Bash: {\"command\": \"cat > .cache/browse/plan3912-measure.js <<'EOF'\\n() => {\\n const bar = document.querySelector('.control-bar');\\n const status = bar.querySelector(':scope > .board-status');\\n const span \u2026\n- Bash: {\"command\": \"cat > .cache/browse/plan3912-inject.js <<'EOF'\\n() => {\\n if (!document.getElementById('plan3912-css')) {\\n const css = document.createElement('style');\\n css.id = 'plan3912-css';\\n css.\u2026\n- Bash: {\"command\": \"cat > .cache/browse/plan3912-detail.js <<'EOF'\\n() => {\\n const status = document.querySelector('.control-bar > .board-status');\\n const span = status.querySelector('.dungeon-fight__stat\u2026\n- said: At 390px everything fits: the name, \"Run time 0:44\" and End turn are all unclipped. Next the worst case, the longest enemy name in the run's content.\n- Bash: {\"command\": \"grep -rln \\\"cave-troll\\\\|\\\\\\\"enemies\\\\\\\"\\\" crates/run/src crates/run/*.json crates/run/content 2>/dev/null | head -5\", \"description\": \"Find where the run's enemies are defined\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json,sys\\nd=json.load(open('crates/run/src/placeholder.json'))\\nnames=set()\\ndef walk(x):\\n if isinstance(x,dict):\\n if 'name' in x and isinstance(x['name'],str)\u2026\n- said: The longest names are around 16 characters (\"Temp Mini-boss 1\"). I'll measure with that, then a 30-character name to stand in for later or translated names.\n- Bash: {\"command\": \"for name in \\\"Temp Mini-boss 1\\\" \\\"The Gelatinous Cube of Despair\\\"; do sh scripts/browse.sh -s=plan3912 eval \\\"() => { document.querySelector('[data-testid=\\\\\\\"dungeon-fight-enemy\\\\\\\"]'\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=plan3912 eval \\\"() => { document.querySelector('.control-bar > .board-status > .modifier-list')?.remove(); return 1; }\\\" --raw >/dev/null 2>&1; sh scripts/browse.\u2026\n- Bash: {\"command\": \"for size in \\\"320 568\\\" \\\"844 390\\\"; do sh scripts/browse.sh -s=plan3912 resize $size >/dev/null 2>&1; for name in \\\"Temp Mini-boss 1\\\"; do sh scripts/browse.sh -s=plan3912 eval \\\"() => \u2026\n- Bash: {\"command\": \"grep -rn \\\"width: 320\\\\|320, height\\\\|iPhone SE\\\\|\\\\b320x\\\" e2e/cypress/component/*.cy.tsx e2e/cypress/e2e/*.cy.ts e2e/support/*.ts 2>/dev/null | head -8; grep -n \\\"390x844\\\\|320\\\" BUILD\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=plan3912 eval \\\"() => { const bar = document.querySelector('.control-bar').getBoundingClientRect(); const out = []; for (const y of [150, 160, 166, 175, 185, 195]\u2026\n- said: Sideways, the space the rail grows into is empty board, so that case is fine. `mobile-ux.cy.tsx` does test 320\u00d7568, so I'll check what it holds there.\n- Bash: {\"command\": \"sed -n '955,1000p' e2e/cypress/component/mobile-ux.cy.tsx\", \"description\": \"Read the 320px case in mobile-ux.cy.tsx\"}\n- Bash: {\"command\": \"sed -n '210,240p' apps/web/src/daily/DailyBoard.tsx; grep -n \\\"matchStatus\\\" -A8 apps/web/src/routes/practice.tsx | sed -n '1,14p'\", \"description\": \"Read the daily and practice rails' ma\u2026\n- Bash: {\"command\": \"for size in \\\"360 740\\\" \\\"375 667\\\"; do sh scripts/browse.sh -s=plan3912 resize $size >/dev/null 2>&1; sh scripts/browse.sh -s=plan3912 eval \\\"$(cat .cache/browse/plan3912-inject.js)\\\" -\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=plan3912 eval \\\"() => { const css = document.createElement('style'); css.id = 'plan3912-ellipsis'; css.textContent = '.dungeon-fight__status { min-width: 0; } .du\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh -s=plan3912 close >/dev/null 2>&1; echo closed; git diff bfed6e9415f7880cd5a4132804649d984acaa18c 1b918f835a7aa40f4d6b4b68cfac582c7b098463 -- apps/web/README.md apps\u2026\n- said: The old diff applies cleanly to current main, and the tree is still clean. Stopping the dev server.\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"b1t0hog7r\"}\n- said: I measured the phone fit and confirmed the old diff applies cleanly, so the plan is settled. I'll save it to the draft file, then give it as my final message.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3912/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"stepped up after 3 failures at medium, and a rating may not go lower; \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"stepped up after 3 failures at medium, and a rating may not go lower; on the rule alone it would be medium (one web component, its test, spec notes)\"} --> ## Goal A dungeon fight's board rail shows `ModifierList`'s chip, as every other table's does (R169). `\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-15T06:05:02Z",
       "owner_why": "its approval shipped `1b918f835a7a`, and the last approver owns the merge, so it fixes what CI found",
@@ -14343,9 +14335,9 @@
       "queued_at": "2026-11-15T06:44:56Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43687362253",
+      "run_id": "pending:d4cfa927-1794727162",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T06:51:53Z",
+      "started_at": "2026-11-15T07:19:36Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
@@ -15315,9 +15307,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T06:51:53Z",
+    "at": "2026-11-15T07:19:36Z",
     "url": "",
-    "what": "plan #3912 on claude-7"
+    "what": "build #3912 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-15T07:11:11Z",
