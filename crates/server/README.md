@@ -724,7 +724,7 @@ from public.duos_matches m where m.id = '<match id>';
 
 An alert is an error log line marked `alert = true`: `api::http::log_alert`'s (`api.rejections.unusual`,
 `match.rejections.unusual`, `ranked.profile_missing`, `game_records.fold_poison`, `bug.found`,
-`bug.reports.refused`) and `loops.rs`'s (`loop.crashed`, `loop.returned`, and a sweep step's `<step>.failing`). `alerts.rs` (#3595) tells people
+`bug.reports.refused`, `api.route.failing`) and `loops.rs`'s (`loop.crashed`, `loop.returned`, and a sweep step's `<step>.failing`). `alerts.rs` (#3595) tells people
 of each, from a tracing layer beside the JSON log, at most once an hour per event in a process
 (`ALERT_WINDOW_MS`; the rest are logged as `alert.held`, and the next notice says how many):
 
@@ -753,13 +753,29 @@ has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least
 (both must hold, so the 3 s matchmaker alerts after five minutes and the hourly purge on its third failed
 pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
-`matches.reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
+`matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
 purge's seven, `game_records.fold`, `game_records.refile`, `retention.purge`, `chat.purge`, `duos.logs.purge`,
 `idempotency.sweep` and `practice.sweep`. A reaper pass in which any match would not reap counts as failed,
-so one wedged match is reported while the others reap. The first good pass after an alert logs
+so one wedged match is reported while the others reap; a co-op pass in which any match would not end
+(`duos::sweep` answers the ids, #3826) counts as failed too, and the open-room reap (R1450) is a step of its
+own. The first good pass after an alert logs
 `<step>.recovered` at info, and a later streak alerts again. A step that fails only now and then raises
 nothing, and the per-match and per-series warnings stay as they were. The count lives in the loop's future,
 so a restart of the loop or the process starts it afresh.
+
+A route that keeps failing (#3826). An internal error answers "something went wrong" and wrote a
+`handler.threw` warning per request, so a route broken for every player (opening packs, joining the queue,
+after a bad migration) told nobody. `api::http::RouteHealth`, one per `App`, holds one run per `(method,
+pattern)`: the route's own pattern, never the request's path, so ids cannot grow the map, and `GET` and `PUT`
+of one pattern are two routes. The four socket upgrades (`/ws/match`, `/ws/watch`, `/ws/social`, `/ws/duos`)
+have one each, under the method `WS`. An internal error is a failure and any other answer, a 4xx refusal
+included, ends the run; a route that matches no request counts for nothing. Once a run has at least
+`ROUTE_FAILING_ALERT_COUNT` internal errors over at least `ROUTE_FAILING_ALERT_MS` (both must hold), it
+raises one alert, `api.route.failing`, with `method`, `pattern`, `failures`, `failingForMs` and `message` in
+the line's `data`, which reaches only the email (the issue shows the event name, never the pattern or an
+id); the route's next good answer logs `api.route.recovered` at info and drops its run, and a later run
+alerts again. All routes share one event name, so two broken routes in an hour are one notice, whose email
+names the pattern it was raised for. The count is in memory, per process, as the sweeps' is.
 
 ## Daily games (§9.13, #3727)
 

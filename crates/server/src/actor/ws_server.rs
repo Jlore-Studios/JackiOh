@@ -31,7 +31,8 @@ use crate::actor::contracts::SocketHandlers;
 use crate::actor::protocol::{MAX_FRAME_BYTES, SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
 use crate::api::http::{
-    ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address, upgrade_profile,
+    ApiError, ApiErrorCode, SOCKET_METHOD, assert_active, client_address, lock, rate_limit_address,
+    upgrade_profile,
 };
 use crate::api::rematch::in_rematch_window;
 use crate::app::{App, browser_origins, now_ms};
@@ -520,10 +521,14 @@ pub async fn handle_match_socket(app: &Arc<App>, socket: &Socket, uri: &Uri, tok
 
     let query = query_pairs(uri);
     match upgrade_socket(app, socket, &query, token).await {
-        Ok(()) => {}
-        Err(UpgradeFailure::Refused { code, message }) => refuse(code, &message),
+        Ok(()) => app.route_health.answered(SOCKET_METHOD, WS_PATH),
+        Err(UpgradeFailure::Refused { code, message }) => {
+            app.route_health.answered(SOCKET_METHOD, WS_PATH);
+            refuse(code, &message);
+        }
         Err(UpgradeFailure::Threw(message)) => {
             tracing::error!(event = "ws.upgrade.threw", message = %message);
+            app.route_health.threw(SOCKET_METHOD, WS_PATH, &message);
             refuse(WS_CLOSE.internal, "something went wrong");
         }
     }

@@ -836,6 +836,8 @@ pub async fn run_reaper(app: Arc<App>) {
     // would not reap counts as failed, so one wedged match is reported while the others reap.
     let mut reaping = FailingStreak::new("matches.reaper");
     let mut reconciling = FailingStreak::new("seats.reconcile");
+    // #3826: the open-room reap is its own step, so its failing store is an alert too.
+    let mut opening = FailingStreak::new("matches.open_reaper");
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
         match reap_pass(&app).await {
@@ -858,8 +860,12 @@ pub async fn run_reaper(app: Arc<App>) {
                 reaping.failed(&error.message);
             }
         }
-        if let Err(error) = reap_open_matches(&app).await {
-            tracing::warn!(event = "matches.open_reaper_failed", message = %error.message);
+        match reap_open_matches(&app).await {
+            Ok(_) => opening.ok(),
+            Err(error) => {
+                tracing::warn!(event = "matches.open_reaper_failed", message = %error.message);
+                opening.failed(&error.message);
+            }
         }
         let _ = reconciling.track(crate::seats::try_reconcile(&app).await);
         app.matches.reap_finished(now_ms()).await;

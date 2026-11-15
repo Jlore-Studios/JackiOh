@@ -430,6 +430,10 @@ pub fn meaning(event: &str) -> &'static str {
             "GitHub refused CREATE_ISSUES_TOKEN, so neither bug reports nor alerts can open issues until \
              it is renewed (crates/server/README.md, A match its log does not reproduce)."
         }
+        "api.route.failing" => {
+            "An API route, or a socket's upgrade, answered an internal error to every request for a minute \
+             or more (#3826); the email names it."
+        }
         "bug.found" => {
             "A match did not replay from its own log, or the engine panicked on a live action. Its bug \
              report has an issue of its own for the night bot."
@@ -677,6 +681,7 @@ mod tests {
             "game_records.fold_poison",
             "bug.reports.refused",
             "bug.found",
+            "api.route.failing",
         ] {
             assert_ne!(meaning(event), fallback, "{event}");
         }

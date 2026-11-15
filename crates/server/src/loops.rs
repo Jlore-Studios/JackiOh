@@ -5,7 +5,8 @@
 //! alerts; either way the loop starts again `LOOP_RESTART_DELAY_SECONDS` later. A loop's per-tick
 //! `Result` handling is its own, except that the sweeps feed each step's result to a `FailingStreak`
 //! (#3770), which raises one alert for a step that fails on every pass. No SPEC section or ruling:
-//! restarting and alerting are operational, not a rule.
+//! restarting and alerting are operational, not a rule. `api::http::RouteHealth` shares `FailureRun`,
+//! the streak's counting core (#3826).
 //!
 //! The panic is caught on each poll of the loop's future (`catch_unwind`), as `actor/registry.rs`
 //! catches the engine's, so the loop runs on the supervisor's own task and aborting the returned
@@ -58,6 +59,40 @@ where
     })
 }
 
+/// A run of failures with no success between, and whether it has alerted (#3826): the counting core
+/// of `FailingStreak` and of `api::http::RouteHealth`, which differ only in what they log.
+#[derive(Default)]
+pub(crate) struct FailureRun {
+    count: u32,
+    since: i64,
+    alerted: bool,
+}
+
+impl FailureRun {
+    /// One failure at `now`. Answers the run's count and its span so far, once, when this failure
+    /// completes a run of at least `min_count` over at least `min_span_ms`; `None` before that and
+    /// after it, for the rest of the run.
+    pub(crate) fn failed(&mut self, now: i64, min_count: u32, min_span_ms: i64) -> Option<(u32, i64)> {
+        if self.count == 0 {
+            self.since = now;
+        }
+        self.count = self.count.saturating_add(1);
+        if self.alerted || self.count < min_count || now - self.since < min_span_ms {
+            return None;
+        }
+        self.alerted = true;
+        Some((self.count, now - self.since))
+    }
+
+    /// One success at `now`: it ends the run. Answers the run's count and its span, for a run that
+    /// had alerted only.
+    pub(crate) fn ok(&mut self, now: i64) -> Option<(u32, i64)> {
+        let ended = self.alerted.then(|| (self.count, now - self.since));
+        *self = Self::default();
+        ended
+    }
+}
+
 /// One sweep step's run of failed passes (#3770). A step that fails on every pass has its warning on
 /// every pass and nobody told, so each sweep loop holds one `FailingStreak` per step and feeds it each
 /// pass's result. Once the step has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row
@@ -70,9 +105,7 @@ pub struct FailingStreak {
     step: &'static str,
     failing_event: String,
     recovered_event: String,
-    passes: u32,
-    since: i64,
-    alerted: bool,
+    run: FailureRun,
 }
 
 impl FailingStreak {
@@ -83,9 +116,7 @@ impl FailingStreak {
             step,
             failing_event: format!("{step}.failing"),
             recovered_event: format!("{step}.recovered"),
-            passes: 0,
-            since: 0,
-            alerted: false,
+            run: FailureRun::default(),
         }
     }
 
@@ -100,37 +131,30 @@ impl FailingStreak {
 
     /// One failed pass; `message` is what the alert says when this pass completes the streak.
     pub fn failed(&mut self, message: &str) {
-        let now = now_ms();
-        if self.passes == 0 {
-            self.since = now;
-        }
-        self.passes = self.passes.saturating_add(1);
-        if self.alerted || self.passes < LOOP_FAILING_ALERT_PASSES || now - self.since < LOOP_FAILING_ALERT_MS
+        if let Some((passes, failing_for)) =
+            self.run
+                .failed(now_ms(), LOOP_FAILING_ALERT_PASSES, LOOP_FAILING_ALERT_MS)
         {
-            return;
+            tracing::error!(
+                event = self.failing_event.as_str(),
+                alert = true,
+                step = self.step,
+                passes = passes,
+                failingForMs = failing_for,
+                message = %message
+            );
         }
-        self.alerted = true;
-        tracing::error!(
-            event = self.failing_event.as_str(),
-            alert = true,
-            step = self.step,
-            passes = self.passes,
-            failingForMs = now - self.since,
-            message = %message
-        );
     }
 
     /// One good pass: it ends the streak, and logs the recovery if the streak had alerted.
     pub fn ok(&mut self) {
-        if self.alerted {
+        if let Some((passes, failed_for)) = self.run.ok(now_ms()) {
             tracing::info!(
                 event = self.recovered_event.as_str(),
                 step = self.step,
-                passes = self.passes,
-                failedForMs = now_ms() - self.since
+                passes = passes,
+                failedForMs = failed_for
             );
         }
-        self.passes = 0;
-        self.alerted = false;
     }
 }

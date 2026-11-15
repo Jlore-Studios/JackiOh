@@ -37,6 +37,7 @@ use crate::actor::match_actor::WATCH_NOT_ALLOWED as NOT_ALLOWED;
 use crate::actor::protocol::{ClientMessage, SocketErrorCode, encode, error_message, parse_client_message};
 use crate::actor::registry::AttachError;
 use crate::actor::ws_server::{Socket, UpgradeFailure, WATCH_PATH, WS_CLOSE, authenticate_upgrade};
+use crate::api::http::SOCKET_METHOD;
 use crate::app::App;
 use crate::config::{
     SPECTATOR_EMOTE_COOLDOWN_MS, SPECTATOR_EMOTE_HAND_SIZE, SPECTATOR_EMOTE_WINDOW_MAX,
@@ -242,10 +243,16 @@ pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>, liste
         socket.close(Some(code), Some(message));
     };
     match admit(app, socket, token, listener).await {
-        Ok(()) | Err(WatchFailure::Gone) => {}
-        Err(WatchFailure::Refused { code, message }) => refuse(code, &message),
+        Ok(()) => app.route_health.answered(SOCKET_METHOD, WATCH_PATH),
+        // No one was answered, so the route's run is neither counted nor ended.
+        Err(WatchFailure::Gone) => {}
+        Err(WatchFailure::Refused { code, message }) => {
+            app.route_health.answered(SOCKET_METHOD, WATCH_PATH);
+            refuse(code, &message);
+        }
         Err(WatchFailure::Threw(message)) => {
             tracing::error!(event = "ws.watch.threw", message = %message);
+            app.route_health.threw(SOCKET_METHOD, WATCH_PATH, &message);
             refuse(WS_CLOSE.internal, "something went wrong");
         }
     }

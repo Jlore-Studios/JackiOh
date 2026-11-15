@@ -20,6 +20,7 @@ use jackioh_engine::wire::DuosSeat;
 use crate::actor::guard;
 use crate::actor::protocol::SocketErrorCode;
 use crate::actor::ws_server::{Socket, UpgradeFailure, WS_CLOSE, WS_DUOS_PATH, authenticate_upgrade};
+use crate::api::http::SOCKET_METHOD;
 use crate::app::App;
 use crate::duos::live_match_of;
 use crate::duos::protocol::{DuosClientMessage, encode, error_message, parse_duos_message};
@@ -97,10 +98,14 @@ pub async fn handle_duos_socket(
         socket.close(Some(code), Some(message));
     };
     match attach_socket(app, socket, &gate, token, query_match_id).await {
-        Ok(_) => {}
-        Err(UpgradeFailure::Refused { code, message }) => refuse(code, &message),
+        Ok(_) => app.route_health.answered(SOCKET_METHOD, WS_DUOS_PATH),
+        Err(UpgradeFailure::Refused { code, message }) => {
+            app.route_health.answered(SOCKET_METHOD, WS_DUOS_PATH);
+            refuse(code, &message);
+        }
         Err(UpgradeFailure::Threw(message)) => {
             tracing::error!(event = "duos.ws.upgrade.threw", message = %message);
+            app.route_health.threw(SOCKET_METHOD, WS_DUOS_PATH, &message);
             refuse(WS_CLOSE.internal, "something went wrong");
         }
     }

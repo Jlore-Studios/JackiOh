@@ -45,6 +45,9 @@ pub struct App {
     /// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, which refuses
     /// an account whose R109 budget is spent before the store is read.
     pub known_profiles: api::http::KnownProfiles,
+    /// #3826: each route's run of internal errors (`api::http::RouteHealth`), which raises
+    /// `api.route.failing`.
+    pub route_health: api::http::RouteHealth,
     /// R1443: sign-ins by username, counted per address and, apart, per username.
     pub sign_in_limiter: api::http::RateLimiter,
     /// The catalog this build ships, its version and the deployed commit.
@@ -1240,6 +1243,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
             API_RATE_WINDOW_MS as _,
         ),
         known_profiles: api::http::KnownProfiles::default(),
+        route_health: api::http::RouteHealth::default(),
         sign_in_limiter: api::http::create_rate_limiter(
             crate::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
             crate::config::USERNAME_SIGN_IN_WINDOW_MS,

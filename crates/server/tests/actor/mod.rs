@@ -18,6 +18,7 @@ pub mod recovery;
 pub mod rooms;
 pub mod series_recovery;
 pub mod social_live;
+pub mod socket_failing;
 pub mod telemetry;
 pub mod watch;
 pub mod ws_server;

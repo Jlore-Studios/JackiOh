@@ -42,7 +42,7 @@ use crate::actor::contracts::SocketHandlers;
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard};
 use crate::actor::protocol::{SocketErrorCode, encode, error_message};
 use crate::actor::ws_server::{SOCIAL_PATH, Socket, UpgradeFailure, WS_CLOSE, authenticate_upgrade};
-use crate::api::http::{ApiError, assert_active, lock};
+use crate::api::http::{ApiError, SOCKET_METHOD, assert_active, lock};
 use crate::app::{App, now_ms};
 use crate::config::{SOCIAL_SESSION_CHECK_SECONDS, SOCIAL_SOCKETS_PER_ACCOUNT};
 use crate::social::reads::social_snapshot;
@@ -160,11 +160,17 @@ fn refuse(socket: &Socket, code: u16, message: &str) {
     socket.close(Some(code), Some(message));
 }
 
-fn refuse_for(socket: &Socket, failure: UpgradeFailure) {
+/// Refuses `socket` for `failure`, and tells `app.route_health` which it was (#3826): a refusal is an
+/// answer, a fault is a failure of the route.
+fn refuse_for(app: &App, socket: &Socket, failure: UpgradeFailure) {
     match failure {
-        UpgradeFailure::Refused { code, message } => refuse(socket, code, &message),
+        UpgradeFailure::Refused { code, message } => {
+            app.route_health.answered(SOCKET_METHOD, SOCIAL_PATH);
+            refuse(socket, code, &message);
+        }
         UpgradeFailure::Threw(message) => {
             tracing::error!(event = "ws.social.threw", message = %message);
+            app.route_health.threw(SOCKET_METHOD, SOCIAL_PATH, &message);
             refuse(socket, WS_CLOSE.internal, "something went wrong");
         }
     }
@@ -273,12 +279,13 @@ pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>) -> Op
     let profile = match authenticate_upgrade(app, token.clone(), SOCIAL_PATH).await {
         Ok(profile) => profile,
         Err(failure) => {
-            refuse_for(socket, failure);
+            refuse_for(app, socket, failure);
             return None;
         }
     };
     if !app.social.live.try_add(&profile.id, socket) {
         tracing::info!(event = "ws.social.too_many", profileId = %profile.id, limit = SOCIAL_SOCKETS_PER_ACCOUNT);
+        app.route_health.answered(SOCKET_METHOD, SOCIAL_PATH);
         refuse(socket, WS_CLOSE.forbidden, TOO_MANY_TABS);
         return None;
     }
@@ -304,10 +311,11 @@ pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>) -> Op
     match social_frame(app, &live.id).await {
         Ok(frame) => socket.send(frame),
         Err(error) => {
-            refuse_for(socket, UpgradeFailure::Threw(error.message));
+            refuse_for(app, socket, UpgradeFailure::Threw(error.message));
             return None;
         }
     }
+    app.route_health.answered(SOCKET_METHOD, SOCIAL_PATH);
     watch_session(&live, token.unwrap_or_default());
     Some(live)
 }
