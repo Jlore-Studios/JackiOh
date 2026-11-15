@@ -12623,15 +12623,8 @@
       "taken_asks": []
     },
     "3844": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43696412048",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-15T08:58:52Z",
-        "until": "2026-11-15T09:28:52Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12643,10 +12636,9 @@
         "reason": "planned on sonnet",
         "trail": "- Grep: {\"pattern\": \"410|Gone|gone\", \"path\": \"/home/runner/work/_temp/work/item-3844/crates/server/src/daily\", \"output_mode\": \"content\", \"-n\": true}\n- Grep: {\"pattern\": \"410|404, 410|gone\", \"path\": \"/home/runner/work/_temp/work/item-3844/spec\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"!rulings/**\", \"head_limit\": 60}\n- Grep: {\"pattern\": \"404 or 410|404 and 410|404, 410|404/410|404 \\\\| 410|answers 404\", \"path\": \"/home/runner/work/_temp/work/item-3844\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"!{target,node_modules,.\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3844/crates/server/src/daily/webpush.rs\"}\n- Bash: {\"command\": \"sed -n 1,30p crates/server/src/daily/notify.rs && sed -n 205,275p crates/server/src/daily/notify.rs\", \"description\": \"Show notify.rs head and push sending\"}\n- Grep: {\"pattern\": \"fn a_push_subscription|410|push_status|fn .*push\", \"path\": \"/home/runner/work/_temp/work/item-3844/crates/server/tests/api/daily.rs\", \"output_mode\": \"content\", \"-n\": true}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3844/crates/server/tests/api/daily.rs\", \"offset\": 1280, \"limit\": 340}\n- Grep: {\"pattern\": \"async fn fake_service|async fn held_service|fn notifier_idle|PUSH_\", \"path\": \"/home/runner/work/_temp/work/item-3844/crates/server\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"grep -n \\\"9\\\\.13\\\" spec/09-architecture.md | cut -c1-200; grep -n \\\"410\\\\|push service\\\" spec/09-architecture.md | cut -c1-160; grep -rn \\\"push service\\\\|daily.push\\\" crates/server/READM\u2026\n- Bash: {\"command\": \"sed -n 292p spec/09-architecture.md; sed -n 795,808p crates/server/README.md; sed -n 155,162p crates/server/README.md | cut -c1-900; sed -n 1600,1640p crates/server/src/config.rs; sed -n\u2026\n- Bash: {\"command\": \"git show --stat --format=%s 1c6a763abc | head -20; git log --format='%h %s' -8 -- crates/server/src/daily/webpush.rs crates/server/src/daily/notify.rs; grep -rn \\\"vapidPublicKey\\\\|applic\u2026\n- Bash: {\"command\": \"cat apps/web/src/daily/push.ts | head -80; git show --stat --format=%s 8d6a199056 | head -30; grep -n \\\"reqwest\\\" crates/server/Cargo.toml; grep -n \\\"docs/issues-and-patches\\\\|server-onl\u2026\n- Bash: {\"command\": \"sed -n 78,140p apps/web/src/daily/push.ts; grep -n \\\"is_gone\\\\|PushOutcome\\\" -r crates | grep -v \\\"^crates/server/src/daily/\\\\(notify\\\\|webpush\\\\).rs\\\" | head\", \"description\": \"Rest of w\u2026\n- Bash: {\"command\": \"ls crates/server/tests; grep -n \\\"^name\\\\|\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head -20; sed -n 1,60p crates/server/tests/server.rs 2>/dev/null | head -30; grep -n \\\"mod dai\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3844/.bot-plan.md\", \"content\": \"# Draft plan #3844 (planner notes)\\n\\nFound: webpush.rs:281 `matches!(status.as_u16(), 404 | 410)` -> PushOutcome::Gon\u2026\n- said: ## Goal A push subscription whose push service answers **403** (what every old subscription gets after the VAPID pair changes) is deleted, as 404 and 410 already are. It is no longer logged as `daily.push.failed` and retried every sweep. Module comments, \u00a79.13 and the server README name the new sta\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-15T08:50:57Z",
       "owner_why": "it plans it",
@@ -12659,9 +12651,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-15T08:45:44Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43696412048",
+      "run_id": "pending:4dac3843-1794733350",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T08:50:57Z",
+      "started_at": "2026-11-15T09:02:49Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15441,9 +15433,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T09:02:19Z",
+    "at": "2026-11-15T09:02:49Z",
     "url": "",
-    "what": "build #3841 on claude-6"
+    "what": "build #3844 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T08:47:14Z",
