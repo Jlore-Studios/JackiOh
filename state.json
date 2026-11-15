@@ -14639,6 +14639,8 @@
       }
     },
     "3980": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-15T12:35:51Z",
@@ -14652,8 +14654,13 @@
         "trail": "ace tests finish\", \"timeout\": 600000}\n- tool error: Exit code 143 Command timed out after 10m 0s\n- Bash: {\"command\": \"grep -E 'test result|Running' /tmp/ws-test.log | tail -6 | cut -c1-200; grep -E 'FAILED|panicked' /tmp/ws-test.log | head\", \"description\": \"Check workspace test progress\"}\n- Bash: {\"command\": \"until grep -q '^WIRE-DONE' /tmp/ws-test.log || grep -qE 'FAILED|panicked' /tmp/ws-test.log; do sleep 20; done; grep -E 'FAILED|panicked|^EXIT' /tmp/ws-test.log | head\", \"description\": \"W\u2026\n- Bash: {\"command\": \"until grep -q '^WIRE-DONE' /tmp/ws-test.log || grep -qE 'test result: FAILED|panicked at|\\\\.\\\\.\\\\. FAILED' /tmp/ws-test.log; do sleep 20; done; grep -E 'test result: FAILED|panicked at|\\\u2026\n- Bash: {\"command\": \"grep -n 'r3855000_a_daily_read_carries_the_forecast' /tmp/ws-test.log | head; grep -n \\\"panicked at\\\" /tmp/ws-test.log | head -5\", \"description\": \"Locate failing server test details\"}\n- Bash: {\"command\": \"grep -rn 'fn r3855000_a_daily_read_carries_the_forecast' crates/server/tests/ | head -2\", \"description\": \"Find failing server test source\"}\n- Bash: {\"command\": \"sed -n 490,580p crates/server/tests/api/daily.rs\", \"description\": \"Read the failing daily test\"}\n- Bash: {\"command\": \"grep -n 'async fn past_the_mulligan\\\\|fn next_move\\\\|async fn daily_game' -A20 crates/server/tests/api/*.rs | grep -n 'jackioh_ai\\\\|decide\\\\|mulligan\\\\|seed\\\\|keep' | head -20\", \"descrip\u2026\n- Bash: {\"command\": \"until grep -q '^WIRE-DONE' /tmp/ws-test.log || grep -q '^failures:' /tmp/ws-test.log; do sleep 15; done; sleep 30; awk '/^failures:/{f=1} f' /tmp/ws-test.log | head -60 | cut -c1-400\", \"\u2026\n- Bash: {\"command\": \"grep -n 'async fn daily_game' -A25 crates/server/tests/api/daily.rs | head -40; grep -rln 'jackioh_ai' crates/server/src | head\", \"description\": \"Check daily game seeding and AI use in s\u2026\n- Bash: {\"command\": \"grep -rn 'seed' crates/server/src/api/daily*.rs crates/server/src/daily*.rs crates/server/src/api/daily/ 2>/dev/null | grep -i 'random\\\\|uuid\\\\|rand\\\\|new_seed\\\\|fresh' | head -10; grep \u2026\n- tool error: Exit code 2\n- Bash: {\"command\": \"grep -rln 'daily/challenges' crates/server/src | head -5; grep -rn 'fn new_seed\\\\|fn fresh_seed\\\\|fn random_seed\\\\|fn match_seed' crates/server/src | head -5\", \"description\": \"Locate dai\u2026\n- Bash: {\"command\": \"grep -rn 'seed' crates/server/src/daily.rs | head -15; grep -n 'jackioh_ai' crates/server/src/daily.rs crates/server/src/api/mod.rs | head\", \"description\": \"Check daily.rs seeding and AI\u2026\n- Bash: {\"command\": \"ls crates/server/src/daily/; grep -rn 'seed' crates/server/src/daily/*.rs | grep -v '^\\\\s*//' | head -12; sed -n 50,66p crates/server/src/api/queue.rs; grep -rln 'jackioh_ai' crates/serv\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Workspace run: everything up to the server suite green; server's `api::daily::r3855000_a_daily_read_carries_the_forecast_of_its_seats_legal_attacks` FAILE\u2026\n- Bash: {\"command\": \"grep -n 'fn forecast_ids\\\\|fn legal_attack_ids' -A12 crates/server/tests/api/daily.rs | head -30; grep -rln 'R3477000' crates/engine/src | head -3\", \"description\": \"Inspect forecast id h\u2026\n- Bash: {\"command\": \"grep -E '^\\\\S*\\\\s*Running' /tmp/ws-test.log | sed 's/.*Running.\\\\{4\\\\}//' | awk '{print $1, $NF}' | sed 's#/home/runner/work/JackiOh/JackiOh/target/debug/deps/##' ; grep -n 'members' -A2\u2026\n- Bash: {\"command\": \"ls crates/server/tests/ | grep '\\\\.rs$'; ls crates; grep -n '^name' crates/shared/Cargo.toml crates/tools/Cargo.toml crates/wasm/core/Cargo.toml crates/wasm/c/Cargo.toml crates/wasm/Carg\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- r3855000 daily test reran 8/8 ok on this build: a seed flake. Running the rest of the workspace (server_store, shared, tools, wasm*) with --no-fail-fast (\u2026\n- Bash: {\"command\": \"sleep 20; head -c 3000 /tmp/ws-rest.log | tail -15\", \"description\": \"Check how cargo parsed the target filters\"}\n- Bash: {\"command\": \"grep -E 'Running|test result|^EXIT|error' /tmp/ws-rest.log | sed 's#/home/runner/work/JackiOh/JackiOh/target/debug/deps/##' | cut -c1-160 | head -20\", \"description\": \"Summarize the parti\u2026\n- Bash: {\"command\": \"(timeout 5400 cargo test --no-fail-fast --features jackioh-engine/testkit,jackioh-engine/ts -p jackioh-shared -p jackioh-tools -p jackioh-wasm -p jackioh-wasm-core -p jackioh-wasm-c > /t\u2026\n- Bash: {\"command\": \"until grep -q '^WIRE-DONE' /tmp/ws-rest2.log; do sleep 20; done; grep -E 'Running|Doc-tests|test result|^EXIT' /tmp/ws-rest2.log | sed 's#/home/runner/work/JackiOh/JackiOh/target/debug/d\u2026\n- Bash: {\"command\": \"grep -E 'Running|Doc-tests|test result|FAILED|panicked at' /tmp/ws-rest2.log | sed 's#/home/runner/work/JackiOh/JackiOh/target/debug/deps/##' | cut -c1-160 | tail -20\", \"description\": \"C\u2026\n- Bash: {\"command\": \"until grep -q '^WIRE-DONE' /tmp/ws-rest2.log; do sleep 20; done; grep -cE 'test result: ok' /tmp/ws-rest2.log; grep -E 'test result: FAILED|\\\\.\\\\.\\\\. FAILED|panicked at|^EXIT|Doc-tests' \u2026\n- Bash: {\"command\": \"cargo fmt --check && echo FMT-OK; timeout 1200 cargo test --doc --features jackioh-engine/testkit,jackioh-engine/ts -p jackioh-ai -p jackioh-engine -p jackioh-cards -p jackioh-run -p jac\u2026\n- Bash: {\"command\": \"timeout 900 cargo jackioh catalog check 2>&1 | tail -2; timeout 900 cargo jackioh patches check 2>&1 | tail -2\", \"description\": \"Run catalog and patches checks\", \"timeout\": 1850000}\n- Bash: {\"command\": \"git diff spec/09-architecture.md | grep '^[-+]' | cut -c1-80 | head; git status --short; git diff --stat\", \"description\": \"Final diff overview\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('## Log')\\nnew_state=\\\"\\\"\\\"## State\\n\\n- Build pass 1 (2026-11-15, opus): DONE. Plan ste\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI's mulligan counts a Tribute card's units, so it stops keeping opening hands it cannot play\"} --> ## What changed The practice AI's mulligan now counts a Tribute card's units when it prices the card. Before, it read the mana cost alone, so a card \u2026"
       },
       "issue": 3936,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-15T14:30:48Z",
+      "run_id": "pending:bf5fe362-1794753066",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -14672,6 +14679,9 @@
         "provider": "claude-1",
         "run": "43714672245"
       },
+      "started_at": "2026-11-15T14:31:20Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -14685,9 +14695,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T14:30:55Z",
+    "at": "2026-11-15T14:31:20Z",
     "url": "",
-    "what": "review #3979 on agy"
+    "what": "review #3980 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T14:22:51Z",
