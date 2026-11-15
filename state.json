@@ -14435,6 +14435,8 @@
     "3924": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "c11058431a6666090e79649a5bc3307bce076a3c",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-14T19:28:37Z",
