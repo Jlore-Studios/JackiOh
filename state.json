@@ -14886,6 +14886,7 @@
       "died": 0,
       "difficulty": "medium",
       "feedback_since": "2026-11-15T04:14:58Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-15T04:39:13Z",
         "family": "claude",
@@ -14899,6 +14900,7 @@
       "issue": 3910,
       "last_findings": [],
       "live": "fixing-ci",
+      "pending_request": false,
       "provider": "claude-3",
       "question": "Open run 43673825968 on GitHub and look at the failed jobs `e2e smoke (1/4)` (first attempt) and `e2e smoke (2/4)` (re-run): the Cypress summary just above the artifact upload, each job's duration, and the artifacts `cypress-smoke-1-of-4` and `cypress-smoke-2-of-4` (screenshots and server.log). Then: (a) if a job ran to about 10 minutes, or the failing tests are slow-runner timeouts, raise `timeout-minutes` of `e2e-smoke-shard` in `.github/workflows/ci.yml` (about line 1232, now 10; specs 46 and 47 each need about 6 minutes alone on a 4-core runner plus about 2 minutes of setup) or split specs 46 and 47 across more shards (which also needs `bot/tests/test_ci_matrix.py`'s pin changed); or (b) re-run the two shards and see whether they pass; or (c) if the failing test is spec 47's board test (`library-you` hit area covers the hero's Emotes button and a hand card), comment with the Cypress error text and I will fix that layout or timing. I cannot read the CI logs or artifacts, and the first fix is under `.github/`, which I may not change.",
       "run_id": "43678846456",
