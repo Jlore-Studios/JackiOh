@@ -38,6 +38,7 @@ mod sweep;
 mod technical;
 mod think;
 mod trace;
+mod winrates;
 
 use std::process::ExitCode;
 
@@ -98,6 +99,8 @@ enum Command {
     Selfplay(selfplay::Args),
     /// Self-play logs folded into the learned evaluation's training rows (#1006).
     Positions(positions::Args),
+    /// `winrates --refresh <report.json>`: the win rates of record from production's windowed card figures, once per patch (R3882000).
+    Winrates(winrates::Args),
 }
 
 fn main() -> ExitCode {
@@ -126,6 +129,7 @@ fn main() -> ExitCode {
         Command::Promote(args) => promote::run(args),
         Command::Selfplay(args) => selfplay::run(args),
         Command::Positions(args) => positions::run(args),
+        Command::Winrates(args) => winrates::run(args),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

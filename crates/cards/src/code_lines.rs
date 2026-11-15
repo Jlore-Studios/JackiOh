@@ -1,7 +1,8 @@
 //! R1846000: a card script's code lines, counted alike by `build.rs` (which `#[path]`-includes this
 //! file, so the BUSTED and complicated lists it compiles in come from here) and by the tools, which
 //! count a version's lists for `patches ship` and a change's for `classify` (R2173000). #3116: and
-//! whether a script owes an extra turn, which `build.rs` lists for the AI's hand prices (R846). Pure
+//! whether a script owes an extra turn, which `build.rs` lists for the AI's hand prices (R846).
+//! R3882000: and whether a script reads the win rates of record, which a refresh of them claims. Pure
 //! string work, so the cards crate may hold it (CLAUDE.md rule 4).
 
 /// R2173000: what a script's code spells when it reads the BUSTED or complicated lists: a catalog
@@ -20,6 +21,23 @@ const LIST_READS: [&str; 6] = [
 /// #111 Shockwave447 do.
 pub fn reads_card_lists(source: &str) -> bool {
     script_code(source).any(|code| LIST_READS.iter().any(|read| code.contains(read)))
+}
+
+/// R3882000: what a script's code spells when it reads the win rates of record (R3538000): a catalog
+/// query's `tier` (R3538001), a scope's `winRateBelow` (R3538007), or the engine's readers.
+const RECORD_READS: [&str; 5] = [
+    "\"tier\"",
+    "\"winRateBelow\"",
+    "tier_of_record(",
+    "win_rate_of_record(",
+    "lower_win_rate(",
+];
+
+/// R3882000: whether a card script reads the win rates of record: its code, above its tests and
+/// without its comments, spells one of `RECORD_READS`. A refresh of the record changes how these
+/// cards play, so its fragment claims them (`cargo jackioh winrates --refresh`).
+pub fn reads_win_rate_record(source: &str) -> bool {
+    script_code(source).any(|code| RECORD_READS.iter().any(|read| code.contains(read)))
 }
 
 /// #3116, R846: the engine's verb that owes a player an extra turn (`effects::take_extra_turn`), the

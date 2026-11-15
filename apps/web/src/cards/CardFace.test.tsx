@@ -790,8 +790,10 @@ describe("B15: length tiers, and useFitText without layout", () => {
       ["core-093", false, "l"],
       ["core-095", true, "m"],
       ["meditative-022-1", false, "l"],
+      // A written short form is what the face prints (R3941001).
+      ["meditative-045", true, "l"],
       // A clamp prints its whole text.
-      ["meditative-045", true, "xl"],
+      ["stinkyscape-116", false, "xl"],
     ];
     for (const [id, radiant, tier] of cases) {
       expect(catalogFace(id, radiant).getAttribute("data-text-tier"), `${id} radiant=${String(radiant)}`).toBe(tier);
@@ -1340,7 +1342,8 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     expect(fits.hasAttribute("data-less")).toBe(false);
     cleanup();
 
-    const clamp = faceModel({ defId: "meditative-049-2", def: def("meditative-049-2"), radiant: false });
+    // Megabase's keyword line alone fills four of the box's six lines, so its base face still clamps (R3941001).
+    const clamp = faceModel({ defId: "stinkyscape-116", def: def("stinkyscape-116"), radiant: false });
     const view = render(<CardFace face={clamp} />);
     flushFits();
     const box = one(view.container, ".card-text");

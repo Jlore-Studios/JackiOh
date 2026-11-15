@@ -156,7 +156,7 @@ placeholders (`app::load_server_env`).
 | `ALERT_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, with which an alert is emailed to `ALERT_EMAILS` ([Alerts](#alerts), #3595); unset, no alert is emailed. Secret |
 | `ALERT_EMAILS` | no | the addresses an alert is emailed to, comma-separated; an entry that is not an address is left out with a warning that never prints it, and nothing here refuses the boot. A Worker secret, since the repository is public; the boot logs how many, never which |
 | `PLAYER_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, apart from the alerts' key, with which the daily games' "your move" emails go ([Daily games](#daily-games-913-3727), #3727); unset, no player is emailed. Secret |
-| `VAPID_PRIVATE_KEY` | no | the daily games' Web Push signing key (RFC 8292): the raw P-256 private scalar, base64url without padding; unset, or no pair with `VAPID_PUBLIC_KEY` (logged as `daily.push.keys_refused`), no push is sent. Secret |
+| `VAPID_PRIVATE_KEY` | no | the daily games' Web Push signing key (RFC 8292): the raw P-256 private scalar, base64url without padding; unset, or no pair with `VAPID_PUBLIC_KEY` (logged as `daily.push.keys_refused`), no push is sent. Changing the pair makes every push service answer 403 to the subscriptions made under the old one, and the next push deletes them; each device turns push on again. Secret |
 | `VAPID_PUBLIC_KEY` | no | its public half, the raw uncompressed point (65 bytes) in base64url, which `GET /api/daily/settings` gives the browser to subscribe with; a Worker secret beside the private half, so the two always match |
 | `DEV_STRICT` | no | the dev dashboard's strict mode (§14.10, R3074000): `on` (the default when unset) makes every `/api/admin/*` route need the two-step code (`aal2`) and keeps a hand-set rating off the public ladder until it is reset (R3074001); `off` skips both. wrangler.jsonc sets `on` for production and `off` for staging, and end-to-end mode defaults it to `off`. Any other value refuses the boot |
 
@@ -803,14 +803,14 @@ the send fails (`daily_email_release`). Past it no email goes that day, logged o
 `daily.email.capped`, and the push still goes; nothing is marked sent, so the email goes the next day.
 `tests/sql/56_daily_email_days.sql` checks the table.
 A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
-VAPID, with `ring`), and a subscription its push service answers 404 or 410 is deleted. A subscription is
-kept only at a browser's push service (`webpush::is_push_service`, `PUSH_SERVICE_HOSTS`), and the push
-client follows no redirect, so no player can aim the server's requests elsewhere. With a key unset its
-channel is off, and the end-to-end server sends neither. A block or an unfriending cancels the open daily
-challenges between the two (R3727007); a game already running goes on. `DELETE /api/account` settles the
-caller's overdue daily games and is refused (409 `conflict`) while one still runs, since 0012's
-`matches_seats_filled_unless_over_check` would refuse it in Postgres, and the in-memory store refuses it
-alike (R3727008).
+VAPID, with `ring`), and a subscription its push service answers 404, 410 or 403 is deleted (403 is what a
+push service answers after the VAPID pair changes, #3844). A subscription is kept only at a browser's push
+service (`webpush::is_push_service`, `PUSH_SERVICE_HOSTS`), and the push client follows no redirect, so no
+player can aim the server's requests elsewhere. With a key unset its channel is off, and the end-to-end
+server sends neither. A block or an unfriending cancels the open daily challenges between the two
+(R3727007); a game already running goes on. `DELETE /api/account` settles the caller's overdue daily games
+and is refused (409 `conflict`) while one still runs, since 0012's `matches_seats_filled_unless_over_check`
+would refuse it in Postgres, and the in-memory store refuses it alike (R3727008).
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 

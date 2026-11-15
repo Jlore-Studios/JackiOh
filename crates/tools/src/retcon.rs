@@ -35,7 +35,7 @@ use crate::patches::js::{self, Json};
 use crate::patches::patch::bump_sites;
 use crate::patches::patches_io::{
     Catalog, PatchEntry, git_blob_hash, read_patches, read_shipped, read_snapshot, rebuild_derived,
-    snapshot_path, win_rates_path, write_json,
+    records_path, snapshot_path, win_rates_path, write_json,
 };
 use crate::patches::versions::name_by_tier;
 use crate::patches::{git, sets_of};
@@ -361,6 +361,7 @@ fn write_with(
     let mut snapshots = Vec::new();
     let mut tables = Vec::new();
     let mut lists = Vec::new();
+    let mut records = Vec::new();
     for (patch, renamed) in patches.iter_mut().zip(map) {
         if patch.version != renamed.old {
             bail!("patches.json changed since the map was made");
@@ -382,6 +383,15 @@ fn write_with(
         if let Ok(text) = fs::read_to_string(&kept) {
             lists.push((kept, crate::card_lists::lists_path(&renamed.new, &dir)?, text));
         }
+        // R3882000: and its win rates of record, whose `patch` label names a version.
+        let held = records_path(&patch.version, &dir)?;
+        if let Ok(text) = fs::read_to_string(&held) {
+            records.push((
+                held,
+                records_path(&renamed.new, &dir)?,
+                rename_versions(&text, &names),
+            ));
+        }
         patch.version = renamed.new.clone();
         patch.tier = Some(renamed.tier);
         patch.plays = Some(renamed.plays.clone());
@@ -394,6 +404,12 @@ fn write_with(
             .find(|(_, to, _)| to.file_stem().and_then(|stem| stem.to_str()) == Some(new.as_str()))
         {
             entry.win_rates_blob = Some(git_blob_hash(text));
+        }
+        if let Some((_, _, text)) = records
+            .iter()
+            .find(|(_, to, _)| to.file_stem().and_then(|stem| stem.to_str()) == Some(new.as_str()))
+        {
+            entry.records_blob = Some(git_blob_hash(text));
         }
         entry.version = new;
     }
@@ -431,10 +447,10 @@ fn write_with(
     for (from, _, _) in &snapshots {
         fs::remove_file(from).with_context(|| format!("{} cannot be removed", from.display()))?;
     }
-    for (from, _, _) in tables.iter().chain(&lists) {
+    for (from, _, _) in tables.iter().chain(&lists).chain(&records) {
         fs::remove_file(from).with_context(|| format!("{} cannot be removed", from.display()))?;
     }
-    for (_, to, text) in snapshots.iter().chain(&tables).chain(&lists) {
+    for (_, to, text) in snapshots.iter().chain(&tables).chain(&lists).chain(&records) {
         fs::write(to, text).with_context(|| format!("{} cannot be written", to.display()))?;
     }
     for (path, text) in &others {

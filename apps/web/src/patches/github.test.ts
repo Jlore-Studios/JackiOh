@@ -1,5 +1,6 @@
 // The GitHub releases (github.ts): one per shipped version, read as the Patch notes page reads it, a
-// pre-release while only staging has it, each tagged at the commit that brought it to main.
+// pre-release while only staging has it, each tagged at the commit that brought it to main; none for a
+// micro a patch rolls up or the next daily patch will (R3944002).
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -9,10 +10,26 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
-import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, TIERED_SNAPSHOTS, V1, V2, V3 } from "./fixtures.ts";
+import {
+  DAILY_PATCHES,
+  DAILY_SNAPSHOTS,
+  DM1,
+  DM2,
+  DM3,
+  DP,
+  FIXTURE_PATCHES,
+  FIXTURE_SNAPSHOTS,
+  M1,
+  M2,
+  TIERED_PATCHES,
+  TIERED_SNAPSHOTS,
+  V1,
+  V2,
+  V3,
+} from "./fixtures.ts";
 import { githubReleases, markdownText, type GithubRelease, type GithubReleases, type ShippedRecord } from "./github.ts";
 import { releaseArtPath } from "./releaseArt.ts";
-import type { Release } from "./releases.ts";
+import { tiers, type Release } from "./releases.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "./source.ts";
 
 const SITES = { production: "https://prod.example", staging: "https://staging.example", patchNotes: "/patch-notes" };
@@ -119,7 +136,8 @@ describe("GitHub releases", () => {
 
   it("open a release line's major with the line's summary and technical changes, which no other patch repeats", () => {
     const line: Release = { id: "fixture", name: "Fixture line", summary: "Four test cards, then more.", technical: ["A test screen."] };
-    const patches = FIXTURE_PATCHES.map((patch, at) => (at === 0 ? { ...patch, tier: "major" as const } : patch));
+    // R3944002: V2 and V3 are patches, so neither waits for a daily patch, which would give it no release.
+    const patches = FIXTURE_PATCHES.map((patch, at) => ({ ...patch, tier: at === 0 ? ("major" as const) : ("patch" as const) }));
     const { releases } = fixtureReleases({ patches, releases: [line] });
     const major = release(releases, V1).body;
     expect(major).toContain("**2026-01-02** · Fixture line · Major version");
@@ -198,6 +216,49 @@ describe("GitHub releases", () => {
   });
 });
 
+describe("R3944002 GitHub releases of a daily history", () => {
+  const shipped: readonly ShippedRecord[] = [V1, DM1, DM2, DP, DM3].map((version) => ({ version, commit: `c-${version}` }));
+  const daily = (live: readonly string[]) =>
+    githubReleases({
+      patches: DAILY_PATCHES,
+      shipped,
+      technical: [],
+      snapshot: (version) => DAILY_SNAPSHOTS[version] ?? null,
+      live: new Set(live),
+      sites: SITES,
+    });
+
+  it("R3944002 give no micro a release of its own: a daily patch's lists them as its snapshots, and its cards are theirs", () => {
+    const { latest, releases } = daily([V1, DM1, DM2, DP, DM3]);
+    // DM1 and DM2 are DP's, and DM3 waits for the next daily patch.
+    expect(releases.map((entry) => entry.tag)).toEqual([V1, DP]);
+    expect(latest).toBe(DP);
+    const body = release(releases, DP).body;
+    expect(body).toContain("### 📸 Snapshots (2)");
+    expect(body).toContain(`- **${markdownText(DM1)}** · 2026-04-01 · Knight grows\n- **${markdownText(DM2)}** · 2026-04-01 · Bolt rework`);
+    expect(body.indexOf("Snapshots")).toBeLessThan(body.indexOf("### 🃏 Cards"));
+    // Its note is its own, merged from theirs; its cards are what the day did, against V1.
+    expect(body).toContain("- Test Knight costs (3), up from (2).");
+    expect(body).toContain("- Test Bolt deals more damage.");
+    expect(body).toContain("**2 cards changed · 1 card removed**");
+    expect(body).toContain("**Test Knight**");
+    expect(body).toContain("**Test Bolt**");
+    expect(body).toMatch(/#### Removed \(1\)\n\nOld Relic/u);
+    expect(body).toContain(`(${SITES.production}/release-art/${DP}.svg)`);
+    expect(release(releases, V1).body).not.toContain("Snapshots");
+  });
+
+  it("R3944002 a daily patch only staging has is a pre-release, and Latest stays the newest production holds", () => {
+    const { latest, releases } = daily([V1, DM1]);
+    expect(releases.map((entry) => [entry.tag, entry.prerelease])).toEqual([
+      [V1, false],
+      [DP, true],
+    ]);
+    expect(latest).toBe(V1);
+    expect(release(releases, DP).body).toContain("**On staging.**");
+  });
+});
+
 describe("GitHub releases of the real history", () => {
   const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../../crates/cards/patches");
   const read = <T>(file: string): T => JSON.parse(readFileSync(join(dir, file), "utf8")) as T;
@@ -212,9 +273,13 @@ describe("GitHub releases of the real history", () => {
     sites: SITES,
   });
 
-  it("give every shipped version one release within GitHub's limit, the newest Latest", () => {
-    expect(releases.map((entry) => entry.tag)).toEqual(patches.map((patch) => patch.version));
-    expect(latest).toBe(patches.at(-1)?.version);
+  it("R3944002 give every shipped version one release within GitHub's limit, but a micro a patch rolls up or the next daily patch will, the newest Latest", () => {
+    const tierList = tiers(patches);
+    const newestHost = tierList.findLastIndex((tier) => tier !== "micro");
+    const included = new Set(patches.flatMap((patch) => patch.includes ?? []));
+    const own = patches.filter((patch, at) => tierList[at] !== "micro" || (!included.has(patch.version) && at <= newestHost));
+    expect(releases.map((entry) => entry.tag)).toEqual(own.map((patch) => patch.version));
+    expect(latest).toBe(own.at(-1)?.version);
     for (const entry of releases) {
       expect(entry.body.length, entry.tag).toBeLessThanOrEqual(GITHUB_RELEASE_BODY_LIMIT);
       expect(entry.target, entry.tag).toMatch(/^[0-9a-f]{40}$/u);

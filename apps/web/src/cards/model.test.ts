@@ -585,11 +585,13 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.printed).toBeNull();
   });
 
-  it("R243 a fused definition prints its own name, tags, keywords, stats and a line of text per ingredient", () => {
+  it("R243 R3941002 a fused definition prints its own name, tags, keywords, stats and its ingredients' text, one keyword line", () => {
     const fused = fusedDef([def("core-011"), def("core-089")]);
     const f = faceModel({ defId: fused.id, def: fused, radiant: false, liveCost: 4, inPlay: {} });
     expect(f).toMatchObject({ known: true, name: "Tempo Timmy + Corpse Eater", type: "Unit", tags: ["Human"] });
-    expect(f.text.full).toBe(`${def("core-011").base.text}\n${def("core-089").base.text}`);
+    // R3941002: Tempo Timmy's "Rush, First Strike" and Corpse Eater's "Rush, Brittle 1" print as one line.
+    const [, ...corpseEater] = def("core-089").base.text.split("\n");
+    expect(f.text.full).toBe(["Rush, First Strike, Brittle 1", ...corpseEater].join("\n"));
     expect(f.keywords.map((keyword) => keyword.kind)).toEqual(["Rush", "First Strike", "Brittle"]);
     expect(f.stats).toMatchObject({ attack: 5, health: 5 });
   });

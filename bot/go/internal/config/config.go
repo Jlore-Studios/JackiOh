@@ -229,9 +229,9 @@ var workflowLabels = []labelDef{
 	{"kind:ai", "5319e7", "It changes the practice and ladder AI's decisions; no version (#1360)"},
 	{"kind:app", "1d76db", "It changes the client or the server, what players see and use; no version (#1360)"},
 	{"kind:internal", "c5def5", "CI, bots, tooling, docs, tests or a refactor; no version (#1360)"},
-	{"tier:major", "b60205", "A set ships: the next v0.Z.0 (#1360)"},
-	{"tier:patch", "fbca04", "15 reprinted, 50 that play differently, or a rule every game meets: the next v0.Z.X (#1360, #2499)"},
-	{"tier:micro", "fef2c0", "Fewer cards, or their words alone: the next letter (#1360)"},
+	{"tier:major", "b60205", "A set ships: the next v0.X.0 (#1360, #3944)"},
+	{"tier:patch", "fbca04", "The day's patch, patches cut: the next v0.X.Y, rolling up the micros since the last (#3944)"},
+	{"tier:micro", "fef2c0", "Any card change that ships no set, whatever its size: the next letter (#1360, #3944)"},
 }
 
 // KindLabels are the labels the classifier puts on a pull request (#1370), its kind first.

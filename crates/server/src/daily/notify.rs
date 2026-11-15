@@ -8,7 +8,8 @@
 //!   At most `DAILY_PLAYER_EMAILS_PER_DAY` go in a UTC day across every account (#3843); past it, push
 //!   only.
 //! - Web Push goes to every device the account turned it on for (`daily::webpush`); a subscription
-//!   its push service answers 404 or 410 is deleted. With the VAPID keys unset none is sent.
+//!   its push service answers 404, 410 or 403 (the VAPID keys changed) is deleted. With the VAPID
+//!   keys unset none is sent.
 //! - After a move the decision runs on one task (`NotifyQueue`), once the move has been answered: a slow or
 //!   failing mail or push service delays only the notifications behind it, never a player's move.
 //! - The sweep (`POST /daily-sweep`, the Worker's hourly cron, and `run_sweeper` while the server is
