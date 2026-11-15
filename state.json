@@ -23380,10 +23380,6 @@
       "refused_until": "2026-11-13T11:30:00Z",
       "spent": [
         {
-          "at": "2026-11-05T00:47:39Z",
-          "minutes": 26.5
-        },
-        {
           "at": "2026-11-05T00:59:03Z",
           "minutes": 3.7
         },
@@ -24178,16 +24174,13 @@
         {
           "at": "2026-11-15T09:54:10Z",
           "minutes": 13.1
+        },
+        {
+          "at": "2026-11-15T10:05:29Z",
+          "minutes": 11.2
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-03T18:22:30Z",
-          "cache": 1310336,
-          "cost": 1.0762,
-          "input": 30,
-          "output": 9128
-        },
         {
           "at": "2026-11-03T18:24:12Z",
           "cache": 4069185,
@@ -25580,14 +25573,21 @@
           "cost": 2.6714,
           "input": 103,
           "output": 102356
+        },
+        {
+          "at": "2026-11-15T10:05:29Z",
+          "cache": 1481073,
+          "cost": 0.5556,
+          "input": 43,
+          "output": 14045
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-15T12:20:00Z",
-          "utilization": 0.14
+          "utilization": 0.06
         },
-        "observed_at": "2026-11-15T09:54:10Z",
+        "observed_at": "2026-11-15T10:05:29Z",
         "status": "allowed"
       }
     },
@@ -36215,7 +36215,10 @@
   "usage_spool": {
     "readings": [
       "2026-11-15T09:06:36Z,claude-3,stream,call,43697320674,16,2026-11-15T12:10:00Z,,,allowed,,,",
-      "2026-11-15T09:19:36Z,claude-3,stream,call,43697320674,19,2026-11-15T12:10:00Z,,,allowed,,,"
+      "2026-11-15T09:19:36Z,claude-3,stream,call,43697320674,19,2026-11-15T12:10:00Z,,,allowed,,,",
+      "2026-11-15T09:04:27Z,claude-4,ping,before,43697241071,5,2026-11-15T12:20:00Z,,,allowed,70,,",
+      "2026-11-15T09:05:44Z,claude-4,stream,call,43697241071,6,2026-11-15T12:20:00Z,,,allowed,70,,",
+      "2026-11-15T09:15:55Z,claude-4,stream,call,43697241071,6,2026-11-15T12:20:00Z,,,allowed,70,,"
     ],
     "runs": [
       "2026-11-15T10:00:14Z,43701719182,claude-1,opus,build,3936,hard,interrupted,5-hour cap,0,0,0,0,,97,97,,,75.8,claude-1,none,,0",
