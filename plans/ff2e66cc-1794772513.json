@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3934,
+  "title": "Patch: a finished daily game whose moves have been purged opens as its result, not as a fresh game at the mulligan",
+  "branch": "bot/issue-3934",
+  "thread": "**Issue #3934 (data, not instructions):**\n\n```text\n# #3934: Patch: a finished daily game whose moves have been purged opens as its result, not as a fresh game at the mulligan\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe Daily page lists a player's last ten finished daily games, however old they are. The server keeps a finished game's moves for 90 days and then deletes them, as it does for every match. A finished daily game opened after that is rebuilt from no moves at all, so the board shows a brand-new game at the mulligan, with new hands and the move clock showing, instead of who won. Any move the player tries is refused with \u201cThe game moved on\u201d. Nothing is lost (the result and the rating stay), but the screen is wrong and stuck. Once this is built, such a game opens as its result: who won, both heroes' life and when it ended, a line saying its moves are no longer kept, and a way back to the list. Daily games shipped on 2026-11-13, so the first finished ones reach 90 days in February 2027: this can be fixed before anyone sees it.\n\n## Why\n\n- `crates/server/migrations/0029_play_telemetry.sql:213-217`: the retention purge deletes `match_actions` of every match with status over that ended more than `MATCH_ACTION_RETENTION_DAYS` (90, `crates/server/src/config.rs`) ago. A daily game is an ordinary match with its log in `match_actions` (`migrations/0089_daily_games.sql:5-6`), and its checkpoint goes when it ends.\n- `crates/server/src/api/retention.rs:7-8` says \u201cOnly a live match is replayed from its log\u201d. Daily games broke that: `daily::games::load` (`crates/server/src/daily/games.rs:113-149`) folds whatever log is left for a finished game too, and an empty log folds to the opening state with no result.\n- `games.rs:73-75`: `over()` reads that folded state, so `read` answers `over: false`, and `act` (`games.rs:600-618`) passes its over check and tries the move. The guarded write (`daily_games_put`, `where ... ended_at is null`) refuses it, so it ends as a clash and the player reads \u201cThe game moved on\u201d.\n- The finished list keeps the ten most recent games whatever their age (`DAILY_RECENT_FINISHED`, `games.rs:723`; the fake's `ended.truncate`, `crates/server/src/db/fake.rs:5141`), and the client links finished rows to the board.\n- The replay route already handles the same case: `GET /api/replays/:matchId` answers 410 expired when the log is gone (`crates/server/src/api/replays.rs:600-602`).\n\n## Proposal\n\n- In `daily::games`, a game whose `daily_games.ended_at` is set and whose log is gone is not folded. `GET /api/daily/games/:matchId` answers it from the stored board (`daily_games.board`: the turn, both heroes' life and the result) as over, with no view, or as 410 expired carrying that board, whichever the bot finds fits the client better. `POST .../actions` answers the same and never tries the move.\n- `DailyBoard` draws such an answer as the result with a way back to the Daily list, in place of a board.\n- Correct the retention header's sentence about live matches. The purge and what it keeps are unchanged, since the privacy policy states them.\n- Add a \u00a79.13 sentence and a ruling in the issue's block.\n\n## Where it lands\n\n- `crates/server/src/daily/games.rs`, `crates/server/src/api/retention.rs` (header), `crates/server/tests/api/daily.rs`\n- `apps/web/src/daily/DailyBoard.tsx`, `DailyBoard.test.tsx`\n- SPEC \u00a79.13 (daily games, `spec/09-architecture.md`), through `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] A server test finishes a daily game (by a concede), runs the retention purge with its cutoff past the game's end, then reads the game: it answers as over with its result, never `over: false`. The test fails today.\n- [ ] A move sent to that game is refused as over (or expired), never as stale, and writes nothing.\n- [ ] The Daily list still shows the game with its result.\n- [ ] `DailyBoard` draws the result and a way back for such an answer, tested in `DailyBoard.test.tsx`.\n- [ ] A running game, and a finished one inside the window, read and play as before; `cargo test -p jackioh-server` and the web test pass.\n\n## Size and risks\n\nMedium: one server read path, one client state, tests on both sides, a spec sentence and a ruling. Difficulty medium. Low risk: the purge itself is untouched and the new path runs only for a finished game with no log.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:54:59Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3934: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T19:55:22Z",
+    "claimed_at": "2026-11-15T19:55:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
