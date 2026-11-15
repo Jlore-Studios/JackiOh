@@ -14224,6 +14224,7 @@
           }
         ],
         "head": "1793e519473aa70b7574160df79408ce7c87d98d",
+        "interruptions": 0,
         "kind": "build",
         "model": "sonnet",
         "provider": "claude-1",
