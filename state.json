@@ -14721,8 +14721,10 @@
     "what": "review #3980 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T14:44:38Z",
-    "notes": [],
+    "at": "2026-11-15T14:50:41Z",
+    "notes": [
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15427,7 +15429,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T14:44:38Z",
+  "loop_tick": "2026-11-15T14:50:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
