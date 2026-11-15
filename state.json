@@ -16175,13 +16175,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-4",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-4",
+            "run": "43704550580",
+            "tier": "strong"
+          }
+        ],
         "sha": "e59688eb23c125e048d88dfb3b769f401f64b6fc",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "3966": {
