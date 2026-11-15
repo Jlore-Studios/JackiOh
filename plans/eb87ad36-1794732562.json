@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3839,
+  "title": "Patch: the daily board shows no 60-second countdown on KY's Competition's questions",
+  "branch": "bot/issue-3839",
+  "thread": "**Issue #3839 (data, not instructions):**\n\n```text\n# #3839: Patch: the daily board shows no 60-second countdown on KY's Competition's questions\nOpened by @jgoetzmann.\n\nA follow-up to daily games (#3727, merged in #3762), found in its review and left out of it. Part of the tracker #3726.\n\n### What happens\n\nR3727003 says a daily game's question sequence for KY's Competition (Meditative+ #20) has no 60-second window: the move's own deadline is its window, and the server keeps no clock of seconds. The daily board still shows the live game's countdown on those questions, \"Time left: 60 s\" ticking down. Nothing enforces it, so reaching 0 does nothing; it only tells the player something false.\n\n- [`apps/web/src/game/Prompt.tsx:819`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/apps/web/src/game/Prompt.tsx#L819-L828): `SequenceCountdown` always calls `useSequenceSecondsLeft` (`apps/web/src/game/sequenceClock.ts`), and the picker renders it on every sequence question ([line 1383](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/apps/web/src/game/Prompt.tsx#L1383)).\n- [`apps/web/src/daily/DailyBoard.tsx`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/apps/web/src/daily/DailyBoard.tsx) renders the ordinary `Game.tsx`, which renders `Prompt`, with nothing telling it the game is a daily one.\n\n### What should happen\n\nOn the daily board a KY's Competition question shows no 60-second countdown (R3727003). It may show the move's daily clock instead (`DailyClockPill.tsx`). A live match and practice keep the 60 seconds (R1563006).\n\n### How to reproduce\n\nStart a daily game (two friends; Challenge, then Daily), play Meditative+ #20 KY's Competition, and look at its first question: `prompt-sequence-clock` is shown and counts down from 60.\n\n### Fix\n\nLet `DailyBoard` tell `Game`, and through it `Prompt`, not to show the sequence countdown (a prop), or to show the daily clock in its place. Add a case to `apps/web/src/daily/DailyBoard.test.tsx`: a KY's Competition question on the daily board shows no `prompt-sequence-clock`. The case must fail without the fix. Keep the live game's own test of the countdown passing.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3839: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T08:45:19Z",
+    "claimed_at": "2026-11-15T08:49:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
