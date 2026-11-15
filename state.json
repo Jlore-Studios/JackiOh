@@ -12579,15 +12579,8 @@
       "taken_asks": []
     },
     "3842": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43696235891",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-15T09:11:01Z",
-        "until": "2026-11-15T09:41:01Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12599,10 +12592,9 @@
         "reason": "planned on opus",
         "trail": "iption\": \"Read db run.sh test invocation\"}\n- Bash: {\"command\": \"grep -n \\\"proven_in\\\" spec/README.md | head -20; grep -rn \\\"proven_in\\\" crates/tools/src/*.rs crates/tools/src/**/*.rs 2>/dev/null | head -20\", \"description\": \"Learn how spec check uses \u2026\n- Bash: {\"command\": \"sed -n 30,75p spec/README.md\", \"description\": \"Read spec README ruling sections\"}\n- Bash: {\"command\": \"grep -n \\\"INDEX\\\\|stale\\\\|fn check\\\" crates/tools/src/spec.rs | head -30\", \"description\": \"Check whether spec check validates INDEX freshness\"}\n- Bash: {\"command\": \"grep -n \\\"fragment\\\\|classify\\\\|kind\\\" docs/issues-and-patches.md | head -40; ls patches 2>/dev/null | head; ls crates/cards/patches 2>/dev/null | head\", \"description\": \"Check patch frag\u2026\n- Bash: {\"command\": \"sed -n 120,135p docs/issues-and-patches.md; sed -n 155,180p docs/issues-and-patches.md; git log --oneline -8 -- crates/server/src/daily/ | cat; git show --stat HEAD~4 | head -30\", \"descr\u2026\n- Bash: {\"command\": \"git show --stat 8d6a199056 | head -30; git show --stat 376b8ad082 | head -30\", \"description\": \"See similar daily follow-up builds\"}\n- Bash: {\"command\": \"grep -n \\\"daily\\\" crates/server/README.md | head -20; grep -n \\\"daily\\\" docs/v0.3.0/SURFACE.md | head -10\", \"description\": \"Find daily mentions in server README and SURFACE\"}\n- Bash: {\"command\": \"sed -n 300,306p crates/server/README.md\", \"description\": \"Read daily games section intro in README\"}\n- Bash: {\"command\": \"grep -n \\\"^## \\\\|^### \\\" crates/server/README.md | sed -n 1,60p; grep -n \\\"Daily games (\\u00a79.13\\\" -A25 crates/server/README.md | head -40\", \"description\": \"Find the README daily games\u2026\n- Bash: {\"command\": \"sed -n 789,810p crates/server/README.md\", \"description\": \"Read rest of README daily section\"}\n- Bash: {\"command\": \"head -30 crates/server/tests/store/round_trips.rs; grep -rn \\\"economy.lock\\\\|\\\\\\\"daily\\\\.\\\\|dailyInvites\\\\.\\\" crates/server/tests | head -20\", \"description\": \"Check round_trips coverage \u2026\n- Bash: {\"command\": \"sed -n 10745,10800p crates/server/tests/store/contract.rs; sed -n 930,1000p crates/server/tests/api/dev.rs\", \"description\": \"Read existing lock-order tests\"}\n- Bash: {\"command\": \"sed -n 560,596p crates/server/tests/api/daily.rs; grep -n \\\"^use \\\\|^ use \\\" crates/server/tests/api/daily.rs | head -40; grep -n \\\"pub async fn fake\\\\b\\\\|pub fn fake\\\\b\\\\|pub async fn f\u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct DailyTables\\\" -A10 crates/server/src/db/fake.rs; grep -n \\\"/api/daily/seeks\\\\|reopen\\\\|not_reopened\\\" crates/server/tests/api/daily.rs | head -20\", \"description\": \"C\u2026\n- Bash: {\"command\": \"sed -n 940,1010p crates/server/tests/api/daily.rs\", \"description\": \"Read seek pairing test for patterns\"}\n- Bash: {\"command\": \"grep -n \\\"pub daily\\\\|pub db\\\" crates/server/src/app.rs | head; grep -n \\\"app.daily.now()\\\\|daily_active_count\\\" crates/server/tests -r | head -5\", \"description\": \"Check App field visibi\u2026\n- Bash: {\"command\": \"sed -n 13680,13701p crates/server/tests/store/contract.rs; grep -n \\\"async fn active_profile\\\\|fn now(&self)\\\" crates/server/tests/store/contract.rs | head\", \"description\": \"Read daily b\u2026\n- Bash: {\"command\": \"head -8 spec/rulings/R3727008.md; grep -n \\\"daily_game(harness\\\" crates/server/tests/store/contract.rs | wc -l; sed -n 13630,13650p crates/server/tests/store/contract.rs\", \"description\":\u2026\n- Bash: {\"command\": \"grep -n \\\"^use crate::db\\\" crates/server/src/daily/games.rs; grep -n \\\"hashtextextended\\\" -r crates/server/src | head; ls crates/server/tests/sql/\", \"description\": \"Check Tx import path \u2026\n- Bash: {\"command\": \"grep -n \\\"daily\\\" crates/server/tests/store/round_trips.rs crates/server/tests/store/postgres.rs | head -10; grep -rn \\\"daily/challenges\\\\|daily/seeks\\\" e2e/cypress 2>/dev/null | head -5\u2026\n- Bash: {\"command\": \"grep -rn \\\"daily.activeCount\\\\|daily.seekClaim\\\\|dailyInvites.create\\\\|dailyInvites.close\\\" crates/server/tests | head\", \"description\": \"Find tests hooking daily method names\"}\n- Bash: {\"command\": \"grep -n \\\"seeks\\\\|fn invite_json\\\\|choice\\\" crates/server/src/daily/games.rs | head -20; grep -rn \\\"enum FrozenChoice\\\" -A12 crates/server/src/api/decks.rs | head -16\", \"description\": \"C\u2026\n- Bash: {\"command\": \"sed -n 696,720p crates/server/src/daily/games.rs; sed -n 1050,1058p crates/server/src/api/decks.rs\", \"description\": \"Read invite_json and FrozenChoice serde attrs\"}\n- Bash: {\"command\": \"grep -n \\\"KNOWN DIVERGENCES\\\" -A3 crates/server/src/db/pg.rs | head -20; grep -n \\\"economy.lock\\\\|one at a time\\\" crates/server/src/db/fake.rs | head\", \"description\": \"Check pg.rs known \u2026\n- Bash: {\"command\": \"sed -n 736,780p crates/server/tests/api/daily.rs\", \"description\": \"Find end of the existing R3727004 API test\"}\n- Bash: {\"command\": \"ls -d target 2>/dev/null && ls target/debug/deps 2>/dev/null | grep -c \\\"^server-\\\" ; echo \\\"CARGO_TARGET_DIR=$CARGO_TARGET_DIR\\\"; nproc\", \"description\": \"Check for an existing build cac\u2026\n- Bash: {\"command\": \"ls /home/runner/work/JackiOh/JackiOh/target/debug/deps 2>/dev/null | grep -E \\\"^server-[0-9a-f]+$|^server_store-[0-9a-f]+$\\\" | head; ls -la /home/runner/work/JackiOh/JackiOh/target/debug\u2026\n- Bash: {\"command\": \"grep -n \\\"daily_invites\\\" -A40 crates/server/migrations/0089_daily_games.sql | grep -n \\\"check\\\\|constraint\\\\|state\\\\|match_id\\\\|index\\\\|trigger\\\" | head -30\", \"description\": \"Read daily\u2026\n- Bash: {\"command\": \"ls crates/server/tests/*.rs; grep -n \\\"mod \\\" crates/server/tests/server_store.rs crates/server/tests/server.rs | head -20; grep -n \\\"CHALLENGES_PER_HOUR\\\" crates/server/src/config.rs | \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3842/.bot-plan.md\", \"content\": \"# Draft plan #3842 (planner notes; final plan = the message)\\n\\nShape settled: Tx::daily_lock_account (pg advisory xac\u2026\n- said: **Goal.** However many challenge, seek or accept requests one account sends at once, it never holds more than `DAILY_MAX_ACTIVE_GAMES` (20) running daily games, open seeks and sent challenges together. Every request past the cap answers `409 daily_full` (R3727004). To get there, the count and the w\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-15T08:48:41Z",
       "owner_why": "it plans it",
@@ -12615,9 +12607,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-15T08:45:32Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43696235891",
+      "run_id": "pending:fdaf8402-1794733955",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T08:48:41Z",
+      "started_at": "2026-11-15T09:12:51Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15516,9 +15508,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T09:12:23Z",
+    "at": "2026-11-15T09:12:51Z",
     "url": "",
-    "what": "build #3932 on agy"
+    "what": "build #3842 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T08:58:05Z",
