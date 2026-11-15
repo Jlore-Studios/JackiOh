@@ -39,7 +39,7 @@ import {
 import { PatchNotes } from "./PatchNotes.tsx";
 import { countsLine } from "./history.ts";
 import { releaseArtPath } from "./releaseArt.ts";
-import { RELEASES, majors, releaseGroups, tiers, type Release } from "./releases.ts";
+import { RELEASES, cardsBasis, majors, releaseGroups, tiers, type Release } from "./releases.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, sourceFromData, type Patch, type PatchSource, type TechnicalEntry } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -347,11 +347,18 @@ describe("R388 the Patch notes page over the real history", () => {
     );
     // Only the newest opens on load (R507), so v0.2.0, the frozen patch this test reads, is opened by
     // hand; whichever is newest (R743's names for issues #113, #181 and #218) opens with every card it changed.
-    const newest = shipped.at(-1)?.version ?? "";
-    // A newest patch that changed no card has no cards to open: its entry says so instead.
-    if ((shipped.at(-1)?.changes ?? []).length === 0) {
+    const newestPatch = shipped.at(-1);
+    const newest = newestPatch?.version ?? "";
+    // A newest patch that changed no card has no cards to open: its entry says so instead. A daily patch
+    // records no card of its own: its cards are its micros' (R3944002), and each of its snapshots inside
+    // it keeps a cards control of its own, so only the entry's own control counts here.
+    const newestCards = newestPatch === undefined ? [] : cardsBasis(shipped, newestPatch).patch.changes;
+    if (newestCards.length === 0) {
       expect(patchEntry(newest)).toHaveTextContent("No card changed.");
-      expect(within(patchEntry(newest)).queryByTestId(patchTestid.toggle)).toBeNull();
+      const ownToggles = within(patchEntry(newest))
+        .queryAllByTestId(patchTestid.toggle)
+        .filter((toggle) => toggle.closest(`[data-testid="${patchTestid.micro}"]`) === null);
+      expect(ownToggles).toEqual([]);
     } else {
       await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
     }
