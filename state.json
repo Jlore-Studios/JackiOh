@@ -13738,6 +13738,13 @@
     "3933": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T20:18:35Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is a few lines in one web route plus one test, a ruling note and a spec sentence, and no engine, AI, cross-crate contract or migration is touched."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
