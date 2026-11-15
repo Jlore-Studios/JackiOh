@@ -68,7 +68,7 @@ import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { TierChip, adjustedText } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
-import { CardTextButton, CardTextFaces, useCardText, type CardText } from "./cardText.tsx";
+import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Segmented, Tabs } from "../tabs/index.ts";
 
@@ -1602,6 +1602,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       >
                         {t("View in Almanac")}
                       </a>
+                      {/* R3939000: the dialog covers the header's Show card text, so it holds one of its own below View in Almanac, the same choice */}
+                      <CardTextButton
+                        shown={cardText.shown}
+                        onToggle={cardText.toggle}
+                        testid={cardTextTestid.dialog}
+                        className="stats-drilldown-action"
+                      />
                     </div>
                     {!plain.shown && drillDownTokens.length > 0 && (
                       <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>
