@@ -14711,6 +14711,8 @@
       }
     },
     "3926": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T02:30:19Z",
@@ -14724,8 +14726,11 @@
         "trail": "- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3911/crates/server/tests/db/run.sh\", \"StartLine\": 1}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c01d9ac0-05ab-4175-b07e-e8932452e208/task-138\"}\n- said: \n- read_file: {\"EndLine\": 75, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3911/crates/server/tests/db/run.sh\", \"StartLine\": 50}\n- said: \n- run_command: groups && ls -la /var/run/docker.sock\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"c01d9ac0-05ab-4175-b07e-e8932452e208/task-138\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"c01d9ac0-05ab-4175-b07e-e8932452e208/task-138\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && cargo fmt\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && cargo clippy -p jackioh-server --all-targets -- -D warnings\n- said: Waiting for `cargo clippy -p jackioh-server --all-targets -- -D warnings` to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && cargo test -p jackioh-server --test server_store -- player_stats\n- said: Waiting for `server_store` tests to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && cargo test -p jackioh-server --test server -- api::stats\n- said: Waiting for `api::stats` tests to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && git status\n- said: Waiting for git status to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3911 && cargo fmt --check\n- said: Waiting for `cargo fmt --check` to finish.\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3911/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a banned account drops off the public Players list, as it already drops off the ranked leaderboard\"} --> ## What changed and why When a player account is banned (`profiles.status = 'banned'`), its row was still visible in the public Players tab ranking \u2026"
       },
       "issue": 3911,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T03:01:28Z",
         "from_run": "43668099949",
         "gates": [
           {
@@ -14784,8 +14789,15 @@
         "source": "build",
         "until": "2026-11-15T03:29:41Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-15T02:59:41Z",
+      "run_id": "pending:5526fcdd-1794711669",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-15T03:01:28Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -14799,9 +14811,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T02:45:47Z",
+    "at": "2026-11-15T03:01:28Z",
     "url": "",
-    "what": "build #3909 on claude-4"
+    "what": "review #3926 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T02:52:09Z",
