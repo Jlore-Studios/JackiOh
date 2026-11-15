@@ -456,6 +456,11 @@ pub struct EvalWeights {
     /// lent one, R1869003, or a field permission such as Second Wind's), either side's, since a
     /// graveyard is public. At 0 nothing is read.
     pub graveyard_playable: f64,
+    /// R3951100: while a Feng Shui acts (Meditative #40, R981–R985), the share that counts of what the
+    /// seat's next face-up play is worth to it (`evaluate::feng_shui_outlook`): of its own hand's cards a
+    /// Feng Shui would judge, the best verdict its last element gives one, a reward at what the card would
+    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. At 0 nothing is read.
+    pub feng_shui_outlook: f64,
     /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
     /// unit piles counts. It resumes when the cards above it leave.
     pub dormant_share: f64,
@@ -648,6 +653,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // one more play, once, and only while its permission lasts. At 0.5 its screen read 202-198, edge 0.01
     // (-0.021 to 0.041), against the control (training/improve.md, A screen).
     graveyard_playable: 0.5,
+    // R3951100: an untuned start, half, as R2380000's shares are: the next play is judged by the element
+    // the seat ends on only if no other card of its comes first. Issue #3951's scenes in
+    // `tests/ai/feng_shui.rs` hold at 0.5.
+    feng_shui_outlook: 0.5,
     // R3695001: half, as a turn's wait is for R2380000's shares: a card beneath an own Stack pile acts
     // again only once the cards above it leave. #1506 had it off (at 0.5 and 1.0 its screen read
     // 200-200, edge 0.0, -0.024 to 0.024), so casting Drone Core X gained only its Shield Layer and
@@ -728,6 +737,8 @@ pub const AI_AFFLICTION_TICKS: i32 = 4;
 const _: () = assert!(AI_AFFLICTION_TICKS >= 1);
 const _: () = assert!(AI_EVAL.unit_affliction >= 0.0 && AI_EVAL.unit_affliction <= 1.0);
 const _: () = assert!(AI_EVAL.unit_doomed >= 0.0 && AI_EVAL.unit_doomed <= 1.0);
+// R3951100: at most 1, so a reward held in hand is never worth more than the Radiant play that takes it.
+const _: () = assert!(AI_EVAL.feng_shui_outlook >= 0.0 && AI_EVAL.feng_shui_outlook <= 1.0);
 
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
@@ -901,6 +912,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     alt_win: 0.0,
     doomed_hand_discount: 0.0,
     graveyard_playable: 0.0,
+    feng_shui_outlook: 0.0,
     dormant_share: 0.0,
     dormant_card: 0.0,
     slumber_turn_share: 0.0,
