@@ -14903,17 +14903,8 @@
       ]
     },
     "3976": {
-      "action": "plan",
-      "asks": [
-        "c:6900309492"
-      ],
-      "build_next": {
-        "from_run": "43758054692",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-15T20:49:33Z",
-        "until": "2026-11-15T21:19:33Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T20:49:20Z",
         "difficulty": "hard",
@@ -14932,10 +14923,9 @@
         "reason": "planned on opus",
         "trail": "k\"}\n- Bash: {\"command\": \"grep -n 'role=\\\"menu\\\"\\\\|className=\\\"emote-menu\\\\|data-testid' apps/web/src/emotes/ui.tsx | head -8; grep -n 'role=\\\"menu\\\"\\\\|data-testid' apps/web/src/emotes/HeroInspect.tsx | head -4\",\u2026\n- Bash: {\"command\": \"grep -rn 'useGifExport(' apps/web/src | grep -v test; sed -n 95,120p apps/web/src/replay/ReplayPlayer.tsx\", \"description\": \"Find useGifExport callers and ReplayPlayer state setup\"}\n- Bash: {\"command\": \"grep -rn 'dailyDealConfig' apps/web/src --include=*.test.tsx --include=*.test.ts | head; grep -n 'from \\\"../practice/emotes.ts\\\"' apps/web/src/routes/practice.tsx; grep -rn 'readPractice\u2026\n- Bash: {\"command\": \"sed -n 1,52p apps/web/src/practice/resume.ts; sed -n 70,100p apps/web/src/practice/resume.test.ts\", \"description\": \"Read resume config validator and tests\"}\n- Bash: {\"command\": \"sed -n 53,100p apps/web/src/practice/resume.ts\", \"description\": \"Read resume read/write functions\"}\n- Bash: {\"command\": \"grep -n 'fn resume\\\\|self.config = \\\\|config: config\\\\|Resume' crates/shared/src/host/practice/host.rs | head -20\", \"description\": \"Check how the practice host resumes config\"}\n- Bash: {\"command\": \"sed -n 205,265p crates/shared/src/host/practice/host.rs\", \"description\": \"Read practice host resume\"}\n- Bash: {\"command\": \"sed -n 1,12p apps/web/src/wire/emotes.ts; grep -n 'export function isRecord' apps/web/src/wire/json.ts\", \"description\": \"Read wire/emotes.ts header and isRecord\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/emotes/portraits.ts; wc -l apps/web/src/emotes/portraits.ts\", \"description\": \"Read client portraits module header\"}\n- Bash: {\"command\": \"grep -rln 'practice/resume' apps/web/src --include=*.tsx --include=*.ts | grep -v test | head; grep -n '^import' apps/web/src/game/contract.ts | head -12; sed -n 10,21p apps/web/src/game\u2026\n- Bash: {\"command\": \"grep -rn 'type: \\\"start\\\", config: {' apps/web/src --include=*.test.tsx | head; grep -rn 'readPracticeResume' apps/web/src --include=*.test.tsx | grep -v 'practice.test.tsx' | head\", \"de\u2026\n- Bash: {\"command\": \"grep -rn 'Math, \\\"random\\\"\\\\|R642' apps/web/src/routes/practice.test.tsx apps/web/src/dungeon/fight/*.test.tsx 2>/dev/null | head\", \"description\": \"Check tests stubbing random or naming \u2026\n- Bash: {\"command\": \"grep -rn 'fn replays_get\\\\b\\\\|async fn replays_get(' crates/server/src | head -3; grep -rn 'pub portraits' crates/server/src/db/*.rs | head -5\", \"description\": \"Confirm replays_get retur\u2026\n- Bash: {\"command\": \"sed -n 3617,3640p crates/server/src/db/pg.rs; grep -n 'fn replays_list_with_modes' -A 20 crates/server/src/db/pg.rs | grep -n 'portraits\\\\|MATCH_COLUMNS\\\\|select' | head\", \"description\":\u2026\n- Bash: {\"command\": \"grep -n 'async fn replay_row' -A 25 crates/server/src/db/pg.rs | grep -n 'portrait\\\\|match_from\\\\|select\\\\|matches_get' | head\", \"description\": \"Check pg replay_row reads match portraits\u2026\n- Bash: {\"command\": \"sed -n 3470,3500p crates/server/src/db/pg.rs; grep -n 'const MATCH_COLUMNS' -A6 crates/server/src/db/pg.rs | head -10\", \"description\": \"Read pg replay_row query columns\"}\n- Bash: {\"command\": \"sed -n 147,164p apps/web/src/replay/sources.test.ts; sed -n 192,239p apps/web/src/replay/sources.test.ts; sed -n 68,91p apps/web/src/replay/sources.test.ts\", \"description\": \"Read online \u2026\n- Bash: {\"command\": \"ls spec/rulings/R0641.md spec/rulings/R0642.md spec/rulings/R0643.md spec/rulings/R0768.md spec/rulings/R768000.md spec/rulings/R1141000.md spec/rulings/R513000.md spec/rulings/R1834003.\u2026\n- Bash: {\"command\": \"grep -n 'ReplayRow\\\\|^use crate' crates/server/src/api/replays.rs | head -12; grep -n 'fn home_seat' -A3 crates/server/src/api/replays.rs\", \"description\": \"Check ReplayRow import and hel\u2026\n- Bash: {\"command\": \"grep -n 'export type GifPlan\\\\b\\\\|export type GifPlan =\\\\|export type GifFrame\\\\|items' apps/web/src/replay/gif/plan.ts | head -10; grep -n 'portrait' apps/web/src/replay/gif/plan.test.t\u2026\n- Bash: {\"command\": \"grep -n '^const HUMAN\\\\|^const steps\\\\|^const TOKEN' apps/web/src/routes/replays.test.tsx; grep -n 'import.*cleanup\\\\|import { testid\\\\|testid }' apps/web/src/replay/ReplayPlayer.test.ts\u2026\n- said: Now I'll write the full plan into the draft file.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3976/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Design across crates: crates/server's ReplaySteps answer and apps/web'\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count words in plan draft\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3976/.bot-plan.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\"Every replay draws each hero as the portrait its seat had, and \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3976/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Design across crates: crates/server's ReplaySteps answer and apps/web'\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; sed -n 1174,1178p apps/web/src/routes/practice.test.tsx; sed -n 1188,1192p apps/web/src/routes/practice.test.tsx; grep -n 'concedeOnBoard' apps/web/src/routes/practic\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3976/.bot-plan.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\" Body: pages of `GET /api/replays/:matchId` ([[R768]]) carry `portraits` `\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3976/.bot-plan.md\", \"offset\": 60, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3976/.bot-plan.md\", \"offset\": 100, \"limit\": 120}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3976/.bot-plan.md'\\ns=open(p).read()\\nold_start=s.index(\\\"Don't touch:\\\")\\nold_end=s.index(\\\"Governing:\\\")\\ns=s[:old_start]+\\\"D\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Design across crates: crates/server's ReplaySteps answer and apps/web's sources, board and practice start config must agree on a new field, with a new ruling\"} --> ## Goal Every replay draws each hero as its seat's portrait, and its GIF draws the same pair. \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-15T20:26:04Z",
       "owner_why": "handed off from `gpt`: its owner `gpt` has no strong seat, which it needs",
@@ -14948,12 +14938,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-15T19:51:37Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43758054692",
+      "run_id": "pending:2b893c60-1794775816",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T20:26:04Z",
+      "started_at": "2026-11-15T20:50:42Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6900309492"
+      ]
     },
     "3977": {
       "action": "build",
@@ -15127,9 +15119,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T20:34:50Z",
+    "at": "2026-11-15T20:50:42Z",
     "url": "",
-    "what": "plan #3913 on claude-4"
+    "what": "build #3976 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-15T20:41:30Z",
