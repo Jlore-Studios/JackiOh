@@ -31,8 +31,37 @@
   flex-direction: column;
   gap: var(--space-6);
   min-height: 0;
+  padding-bottom: var(--space-9);
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* A cue that the region scrolls (#3958): a dark fade stuck to its foot, over the last cards, that takes no
+   room and no tap. It sits over the bottom padding at the end of the scroll, and where the browser ties an
+   animation to the scroll it fades out as the end comes. */
+.tavern.play-screen.play-hub > .play-body::after {
+  content: "";
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  height: var(--space-9);
+  margin-top: calc(var(--space-9) * -1 - var(--space-6));
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--pal-black) 55%, transparent));
+  pointer-events: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  .tavern.play-screen.play-hub > .play-body::after {
+    animation: play-body-cue linear both;
+    animation-timeline: scroll(self);
+    animation-range: 85% 100%;
+  }
+
+  @keyframes play-body-cue {
+    to {
+      opacity: 0;
+    }
+  }
 }
 
 .tavern.play-screen.play-hub .play-cards {
@@ -328,5 +357,32 @@
   .tavern.play-screen.play-hub .play-card__icon {
     width: 28px;
     height: 28px;
+  }
+}
+
+/* A short desktop window (1280x720): the cards and the hero tighten so more of the hub shows before its scroll. */
+@media (min-width: 601px) and (max-height: 800px) {
+  .tavern.play-screen.play-hub .play-hero .brand__word {
+    font-size: var(--type-3xl);
+  }
+
+  .tavern.play-screen.play-hub .play-cards {
+    gap: var(--space-6);
+  }
+
+  .tavern.play-screen.play-hub .play-group {
+    gap: var(--space-3);
+  }
+
+  .tavern.play-screen.play-hub .play-group__heading {
+    font-size: var(--type-lg);
+  }
+
+  .tavern.play-screen.play-hub .play-group__cards {
+    gap: var(--space-4);
+  }
+
+  .tavern.play-screen.play-hub .play-card {
+    padding: var(--space-4) var(--space-6);
   }
 }

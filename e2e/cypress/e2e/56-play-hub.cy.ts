@@ -17,6 +17,11 @@ const ACCOUNT = accounts.p2;
 /** The two sizes the flow runs at; every size shoots. */
 const FLOW_SIZES = MENU_SIZES.filter((size) => size.label === "desktop-1440x900" || size.label === "ipad-portrait-820x1180");
 
+/** The hub's one scroll region (play-hub.css). */
+const PLAY_BODY = ".play-body";
+/** A scroll height this far past the region's own still counts as fitting (a rounded height). */
+const FIT_SLACK_PX = 1;
+
 /** An item of the shell's navigation. */
 function navItem(testid: string): Cypress.Chainable<JQuery> {
   return cy.get(ts(menuShellTestid.nav), { timeout: timeouts.view }).find(ts(testid), { timeout: timeouts.view });
@@ -91,6 +96,23 @@ describe("56 — the Play hub (issue #3729)", () => {
         cy.screenshot(`3729-play-${size.label}`, { capture: "viewport", overwrite: true });
         openQueuePanel("bo1");
         cy.screenshot(`3729-play-panel-${size.label}`, { capture: "viewport", overwrite: true });
+      });
+
+      // #3958: a hub whose last cards are cut at the window's foot says so; one that fits needs no cue.
+      it("R3729000 the hub shows its Solo cards, or a cue that more is below", () => {
+        cy.visitAs(ACCOUNT(), routes.play());
+        cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
+        cy.get(PLAY_BODY).should(($body) => {
+          const body = $body[0];
+          if (body === undefined) throw new Error("the hub's scroll region is not drawn");
+          const win = body.ownerDocument.defaultView;
+          if (win === null) throw new Error("the page has no window");
+          expect(win.getComputedStyle(body).overflowY, "the one region that scrolls").to.eq("auto");
+          const fits = body.scrollHeight <= body.clientHeight + FIT_SLACK_PX;
+          const cue = win.getComputedStyle(body, "::after");
+          const cued = cue.content !== "none" && parseFloat(cue.height) > 0 && cue.pointerEvents === "none";
+          expect(fits || cued, `the region (${String(body.scrollHeight)} px of content in ${String(body.clientHeight)}) fits or shows its cue`).to.eq(true);
+        });
       });
     });
   }
