@@ -15344,9 +15344,12 @@
     "what": "plan #3912 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-15T06:44:14Z",
+    "at": "2026-11-15T06:50:52Z",
     "notes": [
-      "#3927: closed, so `bot:merging` is off"
+      "#3912 needs a plan",
+      "started plan #3912 on claude-7 (run 43687362253)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16052,7 +16055,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T06:44:14Z",
+  "loop_tick": "2026-11-15T06:50:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
