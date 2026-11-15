@@ -1,19 +1,21 @@
 // R3838000: the Almanac's "Show card text" button prints every face's words, no full art, kept on the device and never
 // in the Full-art cards setting (the Statistics page's is stats.test.tsx's). R3838001: on the Almanac a mouse resting on
-// any card with words opens the hover preview with its whole text beside it.
+// any card with words opens the hover preview with its whole text beside it. R3939000: the detail view, which covers
+// the header, holds the button in its action row.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { faceText, printsText } from "../cards/CardFace.tsx";
 import { isFullArtCard, wearsFullArt } from "../cards/fullArt.ts";
-import { INSPECT_HOVER, closeInspect } from "../cards/index.ts";
+import { INSPECT_DETAIL, INSPECT_HOVER, closeInspect } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { INSPECT_EXTENDED } from "../cards/inspect/testids.ts";
 import { faceModel } from "../cards/model.ts";
 import { readCardSettings } from "../cards/settings.ts";
 import { DEFAULT_FILTER, DEFAULT_SORT, almanacPool } from "../game/deckbuilder/filters.ts";
 import { CARD_POOL, DB_SEARCH, poolCardId } from "../game/deckbuilder/testids.ts";
+import { paths } from "../net/navigate.ts";
 import { at } from "../test/stubServer.ts";
 import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
 import { CARD_TEXT_KEY, cardTextTestid } from "./cardText.tsx";
@@ -111,5 +113,29 @@ describe("R3838001 the Almanac's hover text box", SLOW_GRID, () => {
       fireEvent.pointerLeave(card, mouse());
       act(() => closeInspect());
     }
+  });
+});
+
+describe("R3939000 Show card text in the Almanac's detail view", SLOW_GRID, () => {
+  it("R3939000 the detail view's action row holds it; pressing it prints the detail's faces with their words", () => {
+    expect(FULL_ART_ID).toBeDefined();
+    at(paths.almanacCard(FULL_ART_ID!));
+    render(<AlmanacRoute />);
+    const detail = screen.getByTestId(INSPECT_DETAIL);
+    expect(detail).toHaveAttribute("data-card", FULL_ART_ID);
+    // The grid behind the detail draws about 700 faces; narrowed, pressing the button redraws few.
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: ALMANAC_CATALOG.cards[FULL_ART_ID!]!.name } });
+    const inDetail = within(detail).getByTestId(cardTextTestid.dialog);
+    expect(inDetail.closest(".inspect-actions")).not.toBeNull();
+    expect(inDetail).toHaveAttribute("aria-pressed", "false");
+    expect(detail.querySelector('.cf[data-full-art="true"]')).not.toBeNull();
+
+    fireEvent.click(inDetail);
+    expect(inDetail).toHaveAttribute("aria-pressed", "true");
+    expect(detail.querySelector(".cf")).not.toBeNull();
+    expect(detail.querySelector('.cf[data-full-art="true"]')).toBeNull();
+    expect(screen.getByTestId(cardTextTestid.toggle)).toHaveAttribute("aria-pressed", "true");
+    expect(window.localStorage.getItem(CARD_TEXT_KEY)).toBe("1");
+    expect(readCardSettings().fullArt).toBe(true);
   });
 });

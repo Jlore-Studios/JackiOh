@@ -2,6 +2,7 @@
 // (R3324003). While it is pressed every face on the page prints its normal face, its words on it (`FullArtAllowed`
 // false, R1108000), whatever the Full-art cards setting or a pick says. It is the pages' own choice, one for both, kept
 // on the device: it never writes the Full-art cards setting, so a game's faces are as they were. CLAUDE.md rule 7.
+// R3939000: the card dialogs that cover the header, the Statistics breakdown and the Almanac detail view, hold it too.
 
 import { useState, type ReactElement, type ReactNode } from "react";
 
@@ -15,8 +16,10 @@ import "../tabs/tabs.css";
 export const CARD_TEXT_KEY = "jackioh.cardText";
 
 export const cardTextTestid = {
-  /** R3838000: the button. */
+  /** R3838000: the button in the page's header. */
   toggle: "card-text-toggle",
+  /** R3939000: the button in a card dialog's action row. */
+  dialog: "card-text-toggle-dialog",
 } as const;
 
 /** R3838000: whether the pages print every card's text, as the device keeps it (off when it keeps nothing). */
@@ -40,22 +43,34 @@ export function useCardText(): CardText {
   };
 }
 
-/** R3838000: the button, pressed while every card prints its text. */
-export function CardTextButton({ shown, onToggle }: { shown: boolean; onToggle: () => void }): ReactElement {
-  return (
-    <div className="segmented">
-      <button
-        type="button"
-        className={`segmented__item ${shown ? "segmented__item--selected" : ""}`}
-        data-testid={cardTextTestid.toggle}
-        aria-pressed={shown}
-        title={t("Every card prints its text on its face, with no full art")}
-        onClick={onToggle}
-      >
-        {t("Show card text")}
-      </button>
-    </div>
+/**
+ * R3838000: the button, pressed while every card prints its text, in the Segmented's look. R3939000: given a
+ * `className`, the bare button wearing it, as a dialog's action row draws its others (the Statistics breakdown).
+ */
+export function CardTextButton({
+  shown,
+  onToggle,
+  testid = cardTextTestid.toggle,
+  className,
+}: {
+  shown: boolean;
+  onToggle: () => void;
+  testid?: string;
+  className?: string;
+}): ReactElement {
+  const button = (
+    <button
+      type="button"
+      className={className ?? `segmented__item ${shown ? "segmented__item--selected" : ""}`}
+      data-testid={testid}
+      aria-pressed={shown}
+      title={t("Every card prints its text on its face, with no full art")}
+      onClick={onToggle}
+    >
+      {t("Show card text")}
+    </button>
   );
+  return className === undefined ? <div className="segmented">{button}</div> : button;
 }
 
 /** R3838000: the faces below it print no full art while `shown`. */
