@@ -3298,10 +3298,16 @@ mod tests {
         #[test]
         fn instance_ids_keeps_the_instance_picks_in_order() {
             let selections = [
-                Selection::Instance { instance_id: String::from("c1") },
+                Selection::Instance {
+                    instance_id: String::from("c1"),
+                },
                 Selection::Hero { player: PlayerId::P2 },
-                Selection::Mode { option: String::from("a") },
-                Selection::Instance { instance_id: String::from("c2") },
+                Selection::Mode {
+                    option: String::from("a"),
+                },
+                Selection::Instance {
+                    instance_id: String::from("c2"),
+                },
             ];
             assert_eq!(pick::instance_ids(&selections), ["c1", "c2"]);
             assert!(pick::instance_ids(&[]).is_empty());
@@ -3474,10 +3480,13 @@ mod tests {
             let unit = s.unit_at("p1", 5);
             let attacks = s.attacks_of(&unit);
             assert!(!attacks.is_empty());
-            let by_unit =
-                |action: &ActionBody| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == unit.id);
+            let by_unit = |action: &ActionBody| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == unit.id);
             assert!(attacks.iter().all(by_unit));
-            let by_hand: Vec<ActionBody> = s.offered("p1").into_iter().filter(|action| by_unit(action)).collect();
+            let by_hand: Vec<ActionBody> = s
+                .offered("p1")
+                .into_iter()
+                .filter(|action| by_unit(action))
+                .collect();
             assert_eq!(attacks, by_hand);
             assert!(s.attacks_of(s.unit_at("p2", 5)).is_empty());
             assert!(s.activations_of(&unit).is_empty());

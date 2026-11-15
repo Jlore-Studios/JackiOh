@@ -262,7 +262,15 @@ fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
 
     let sets: Vec<ActionBody> = plays_in(&state, P1, &spell.id)
         .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { face_down: Some(_), .. }))
+        .filter(|action| {
+            matches!(
+                action,
+                ActionBody::Play {
+                    face_down: Some(_),
+                    ..
+                }
+            )
+        })
         .collect();
     assert!(!sets.is_empty(), "the face-down plays are offered");
     for set in sets {

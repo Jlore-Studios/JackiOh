@@ -74,7 +74,11 @@ fn offered(s: &Scenario, id: &str) -> Vec<Option<bool>> {
     let mut flags: Vec<Option<bool>> = plays_in(s.state(), P1, id)
         .into_iter()
         .filter_map(|action| match action {
-            ActionBody::Play { embiggen, face_down: None, .. } => Some(embiggen),
+            ActionBody::Play {
+                embiggen,
+                face_down: None,
+                ..
+            } => Some(embiggen),
             _ => None,
         })
         .collect();

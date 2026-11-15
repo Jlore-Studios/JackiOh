@@ -614,7 +614,10 @@ mod free_replays_r1965000 {
 
     /// How many of the turn's actions play `id`.
     fn plays_made(turn: &AiTurnResult, id: &str) -> usize {
-        turn.actions.iter().filter(|action| is_play_of(&action.body, id)).count()
+        turn.actions
+            .iter()
+            .filter(|action| is_play_of(&action.body, id))
+            .count()
     }
 
     /// Who won when the turn stopped, if anyone did.

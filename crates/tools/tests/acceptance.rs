@@ -966,7 +966,11 @@ const PLAY_READERS: &[&str] = &[
 ];
 
 /// PLAY_READERS but the rules tests, whose own `instance_ids` read events (#3913).
-const PICK_READERS: &[&str] = &["crates/cards/src/scripts", "crates/cards/tests", "crates/ai/tests"];
+const PICK_READERS: &[&str] = &[
+    "crates/cards/src/scripts",
+    "crates/cards/tests",
+    "crates/ai/tests",
+];
 
 /// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
 /// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.

@@ -8,8 +8,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::harness::{Bench, act, act_result, events_json, ids, matches_object, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     QUEST_REWARD_KEY, discover_spell, grave_spell, grave_trap, grave_unit, in_graveyard, lobbyist, monkey,
-    only, pb_playing, plantation, quest_card, round_trip, second_wind, three_spell, titan,
-    zero_spell,
+    only, pb_playing, plantation, quest_card, round_trip, second_wind, three_spell, titan, zero_spell,
 };
 
 fn hero_health(state: &GameState, player: PlayerId) -> i32 {

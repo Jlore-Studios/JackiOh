@@ -11,8 +11,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{act_result, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
-    five_unit, grave_spell, grave_unit, in_graveyard, pb_playing, plantation, second_wind,
-    three_spell, zero_spell,
+    five_unit, grave_spell, grave_unit, in_graveyard, pb_playing, plantation, second_wind, three_spell,
+    zero_spell,
 };
 
 /// What `viewer` reads as this graveyard card's `playReason`.
