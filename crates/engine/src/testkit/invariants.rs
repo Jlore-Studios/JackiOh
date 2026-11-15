@@ -62,8 +62,10 @@
 //!      the field holds nothing `zones::reset_instance` (R78's reset) would clear, bar the keeps its pile
 //!      lawfully allows (`field_state_held`), nor a graveyard or exile card R766's price.
 //!   I17 the state check ran (§4.5): on I7's settled state no field unit at layered health 0 or less but
-//!      an Indestructible one with max health above 0 (R69) or a Dormant one (R3539003), and no seat that
-//!      `can_lose` (R2201000) at hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
+//!      an Indestructible one with max health above 0 (R69) or a Dormant one (R3539003), no unit in Defense
+//!      Position while it is Indestructible, has Can't Defend or is Evasive, or while an aura bars Defense
+//!      (§4.5 step 1: R2179000, R2657000, R3543002, R1849006), and no seat that `can_lose` (R2201000) at
+//!      hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
 //!      mana and card `damage` are 0 or more (§2.3), and every `damage` event deals more than 0 (R63,
 //!      R1361, R1362).
 
@@ -86,8 +88,8 @@ use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
     Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
     DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
-    PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat, RevealAt, Row,
-    Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
+    PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, Position, PromptKind, RedirectWhat,
+    RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -714,9 +716,25 @@ fn card_record_findings(state: &GameState) -> Vec<String> {
     found
 }
 
+/// I17: why §4.5 step 1 (`state_check::leave_defense`) would switch this unit out of Defense, or None.
+fn forbidden_defense(auras: &AuraTable<'_>, unit: &CardInstance, barred: bool) -> Option<&'static str> {
+    if auras.unit_has(unit, KeywordKind::Indestructible) {
+        Some("it is Indestructible (R2179000)")
+    } else if auras.unit_has(unit, KeywordKind::CantDefend) {
+        Some("it has Can't Defend (R2657000)")
+    } else if auras.unit_has(unit, KeywordKind::Evasive) {
+        Some("it is Evasive (R3543002)")
+    } else if barred {
+        Some("an aura bars Defense Position (R1849006)")
+    } else {
+        None
+    }
+}
+
 /// I17 (the header's): what §4.5's state check and §4.4's pipeline leave (§2.3, R63, R69, R2201000,
-/// R3539003). A Duos seat's hero is its team's pool's (§13.4), bounded by `DuosInvariantMonitor::after`:
-/// B15's `sync_pools` writes the pool into a spent hero in the other duel, where no state check runs.
+/// R3539003, R2179000, R2657000, R3543002, R1849006). A Duos seat's hero is its team's pool's (§13.4),
+/// bounded by `DuosInvariantMonitor::after`: B15's `sync_pools` writes the pool into a spent hero in the
+/// other duel, where no state check runs.
 fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
     let mut found = Vec::new();
     let turn = state.turn;
@@ -757,8 +775,19 @@ fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> 
         return found;
     }
     let auras = AuraTable::new(state);
+    let barred = crate::restrictions::defense_barred(state);
     for player in PLAYER_IDS {
         for unit in crate::zones::units_on_field_of(state, player) {
+            // §4.5 step 1's switch out of Defense (`leave_defense`) skips no Dormant unit either.
+            if unit.position == Some(Position::Def)
+                && let Some(rule) = forbidden_defense(&auras, unit, barred)
+            {
+                found.push(format!(
+                    "I17 forbidden Defense: {} stands in Defense Position on turn {turn} with no prompt open, \
+                     but {rule} (§4.1, §4.5 step 1)",
+                    name_of(unit)
+                ));
+            }
             // R3539003: no health judges a Dormant card, so a 0/0 hull stands.
             if crate::slumber::is_slumbering(unit) {
                 continue;

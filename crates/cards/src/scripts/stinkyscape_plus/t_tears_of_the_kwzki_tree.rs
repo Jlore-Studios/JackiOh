@@ -67,6 +67,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005"; // Stockpile: a Spell (§2.5).
     const UNIT: &str = "stand-in (1) 2/3";
+    const JORO: &str = "classic-033"; // C #33 Joro: 1/1, its Radiant face 2/2 Indestructible.
 
     fn game(seed: &str, radiant: bool) -> Scenario {
         let mut s = scenario(json!({
@@ -119,6 +120,46 @@ mod tests {
 
     mod base {
         use super::*;
+
+        /// R3908000 through the real card: the resolution loop's repeat already did this before the
+        /// change, so the rules tests in `stinkyscape_plus_s22.rs` pin the check itself.
+        #[test]
+        fn r3908000_a_base_joro_in_defense_turns_radiant_and_switches_to_attack_in_the_same_step() {
+            let mut s = scenario(json!({
+                "seed": "tears-joro",
+                "p1": {
+                    "hand": [ID],
+                    "library": filler(6),
+                    "field": [{ "def": JORO, "position": "DEF" }],
+                    "mana": 4,
+                },
+                "p2": { "hand": [FILLER], "library": filler(6) },
+            }));
+            for player in [P1, P2] {
+                s.state_mut().players[player].auto_end_turn = Some(false);
+            }
+            let joro = s.unit_at(P1, 1);
+            assert!(!joro.radiant, "Joro starts on its base face");
+            assert_eq!(joro.position, Some(Position::Def));
+            s.play(ID, json!({}));
+            let after = s.unit_at(P1, 1);
+            assert!(after.radiant, "Joro is Radiant");
+            // R2179000: its Radiant face is Indestructible, which is never in Defense Position.
+            assert_eq!(after.position, Some(Position::Atk));
+            let seen: Vec<&str> = s
+                .last_events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::RadiantSet { instance_id, .. } if *instance_id == joro.id => Some("radiantSet"),
+                    GameEvent::PositionSwitched {
+                        instance_id,
+                        position: Position::Atk,
+                    } if *instance_id == joro.id => Some("positionSwitched"),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(seen, vec!["radiantSet", "positionSwitched"]);
+        }
 
         #[test]
         fn r3569000_every_card_of_both_players_is_radiant_now_and_later() {
