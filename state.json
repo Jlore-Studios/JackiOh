@@ -14496,6 +14496,8 @@
       "stop_requested": false
     },
     "3977": {
+      "action": "plan",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T13:39:08Z",
         "difficulty": "medium",
@@ -14505,20 +14507,30 @@
       },
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "agy",
+      "owner_since": "2026-11-15T13:39:38Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-15T13:39:08Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:f6cbc509-1794749963",
+      "runs_on": "night-vm-agy",
       "spot_check_of": 3969,
-      "stop_requested": false
+      "started_at": "2026-11-15T13:39:38Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T13:32:07Z",
+    "at": "2026-11-15T13:39:38Z",
     "url": "",
-    "what": "spot-check #3969 on claude-3"
+    "what": "plan #3977 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T13:31:31Z",
