@@ -15880,18 +15880,26 @@
         "approvals": [
           "gemini"
         ],
-        "builder": "claude",
-        "built_by": "claude-6",
+        "builder": "gemini",
+        "built_by": "agy",
+        "carried": {
+          "by": "`gemini` (medium)",
+          "conflicts": [
+            "apps/web/src/daily/DailyBoard.test.tsx"
+          ],
+          "from": "e10027bfa7586c33086a5ebce101303d99ff87c8",
+          "main": "b53e5fcabb3f1eca532f09874833d9b5def97ae4"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "gemini",
             "provider": "agy",
-            "run": "43706863359",
+            "run": "43709596279",
             "tier": "medium"
           }
         ],
-        "sha": "e10027bfa7586c33086a5ebce101303d99ff87c8",
+        "sha": "a74c89ec068e905b14f3f21cca5c0ff70b720591",
         "tiers": {
           "gemini": "medium"
         }
