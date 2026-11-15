@@ -36,7 +36,9 @@ trap backrow. This file binds every agent, not only Claude.
   before you change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform
   (#1708), and `bot/go/README.md`, for the bots' harness in Go (#467). Also: `docs/issues-and-patches.md`
   (titles, labels, patch and ruling numbers), `docs/architecture.md`, `training/README.md` and
-  `docs/v0.3.0/SURFACE.md` (every boundary between the crates and the client).
+  `docs/v0.3.0/SURFACE.md` (every boundary between the crates and the client). Before you ask a person to
+  add a repository secret, read `docs/repository-secrets.md`: every secret and variable the workflows read,
+  what it is and which workflows read it, held to the workflows by the bot selftest.
 - The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md`, the design briefs `docs/*-set*.md`) are
   what REVIEW Part A checks the spec against; read them only when the task is about them.
 

@@ -13,8 +13,9 @@
 //!
 //! R3538000, R3538002: the same frozen history answers what a card's past looked like: `PAST` groups
 //! each card's carried definitions into play-alike runs (`past_ids`, `past_def`), `TABLE_ROWS` reads
-//! the winrate of record (`record_at`), and `past_scripts` runs a past version under the script its
-//! game version kept. Every host computes the same past: the walk starts at `PAST_FROM`, the oldest
+//! the winrate of record (`record_at`: a version's `patches/records/<version>.json`, R3882000, else its
+//! `win_rates/` table; a fold's CN Tech reads only the latter), and `past_scripts` runs a past
+//! version under the script its game version kept. Every host computes the same past: the walk starts at `PAST_FROM`, the oldest
 //! version the browser's module carries (`build.rs`'s `BROWSER_CARRIED_FROM`), so the browser and the
 //! server read the same runs from the same tables.
 
@@ -831,6 +832,10 @@ struct VersionDelta {
     changed: IndexMap<String, usize>,
     #[serde(default, rename = "winRates")]
     win_rates: Option<usize>,
+    /// R3882000: its win rates of record, by index into `History::win_rates`, when it has a
+    /// `records/<version>.json`. Only the record reads them, never a fold's CN Tech (R3049000).
+    #[serde(default)]
+    records: Option<usize>,
     /// R2173000: its lists, by index into `History::card_lists`, when it has a file.
     #[serde(default, rename = "cardLists")]
     card_lists: Option<usize>,
@@ -1153,21 +1158,27 @@ static TABLE_ROWS: LazyLock<Vec<IndexMap<String, (i32, i32)>>> = LazyLock::new(|
 /// `PAST_FROM` on that holds a row for the card with at least `WIN_RATE_RECORD_MIN_GAMES` games.
 /// `None` for a version the history does not hold, or when no table that far back names the card.
 pub fn record_at(card: &str, version: &str) -> Option<(i32, i32)> {
-    let reference = HISTORY
-        .versions
-        .iter()
-        .position(|delta| delta.version == version)?;
-    let from = HISTORY
-        .versions
-        .iter()
-        .position(|delta| delta.version == PAST_FROM)?;
+    record_in(&HISTORY.versions, &TABLE_ROWS, PAST_FROM, card, version)
+}
+
+/// `record_at` over `versions` and their tables' `rows`, walked back to `from`. R3882000: a version's
+/// table is its win rates of record when it ships them, else its `win_rates/` table (R3538000).
+fn record_in(
+    versions: &[VersionDelta],
+    rows: &[IndexMap<String, (i32, i32)>],
+    from: &str,
+    card: &str,
+    version: &str,
+) -> Option<(i32, i32)> {
+    let reference = versions.iter().position(|delta| delta.version == version)?;
+    let from = versions.iter().position(|delta| delta.version == from)?;
     let mut at = reference + 1;
     while at > from {
         at -= 1;
-        let Some(table_at) = HISTORY.versions[at].win_rates else {
+        let Some(table_at) = versions[at].records.or(versions[at].win_rates) else {
             continue;
         };
-        if let Some(&(wins, games)) = TABLE_ROWS[table_at].get(card)
+        if let Some(&(wins, games)) = rows[table_at].get(card)
             && games >= WIN_RATE_RECORD_MIN_GAMES
         {
             return Some((wins, games));
@@ -1575,14 +1586,53 @@ mod tests {
         assert_eq!(record_at("classic-002", "v0.5.12k"), Some((21, 43)));
         // The v0.4.0 file's: an older reference reads the older row.
         assert_eq!(record_at("classic-002", "v0.4.0"), Some((51, 113)));
-        // No table ships after v0.5.12k, so the catalog version reads its row too.
-        assert_eq!(record_at("classic-002", crate::CATALOG_VERSION), Some((21, 43)));
+        // No table ships from v0.5.12l to v0.6.2b, so v0.6.2b reads v0.5.12k's row too. (The
+        // catalog version reads the newest records file's, R3882000, so it is not pinned here.)
+        assert_eq!(record_at("classic-002", "v0.6.2b"), Some((21, 43)));
         // A thin row is no record: v0.5.12k holds classic-001 at 10/16, so the record walks back
         // to an older table with enough games.
         let walked = record_at("classic-001", "v0.5.12k").expect("an older row");
         assert!(walked.1 >= WIN_RATE_RECORD_MIN_GAMES, "{walked:?}");
         assert_ne!(walked, (10, 16), "not the thin row");
         assert!(record_at("core-001", "v0.0.0-unknown").is_none());
+    }
+
+    #[test]
+    fn r3882000_a_versions_records_come_first_and_a_later_file_moves_no_earlier_version() {
+        let delta = |version: &str, win_rates: Option<usize>, records: Option<usize>| VersionDelta {
+            version: version.to_string(),
+            win_rates,
+            records,
+            ..VersionDelta::default()
+        };
+        let versions = [
+            delta("v1", Some(0), None),
+            delta("v2", None, None),
+            delta("v3", Some(0), Some(1)),
+            delta("v4", None, Some(2)),
+        ];
+        let table = |rows: &[(&str, i32, i32)]| -> IndexMap<String, (i32, i32)> {
+            rows.iter()
+                .map(|&(id, wins, games)| (id.to_string(), (wins, games)))
+                .collect()
+        };
+        let rows = [
+            table(&[("a", 10, 40), ("b", 5, 30)]),
+            table(&[("a", 30, 40), ("b", 1, 5)]),
+            table(&[("c", 25, 50)]),
+        ];
+        let record = |from: &str, card: &str, version: &str| record_in(&versions, &rows, from, card, version);
+        // v3's records answer before its `win_rates/` table, and v4's, which lack "a", walk back to them.
+        assert_eq!(record("v1", "a", "v3"), Some((30, 40)));
+        assert_eq!(record("v1", "a", "v4"), Some((30, 40)));
+        assert_eq!(record("v1", "c", "v4"), Some((25, 50)));
+        // A thin row of record is no record: the walk goes on back to v1's table.
+        assert_eq!(record("v1", "b", "v3"), Some((5, 30)));
+        // Records shipped with v3 move nothing at v2 or before, so its games fold as they were played.
+        assert_eq!(record("v1", "a", "v2"), Some((10, 40)));
+        assert_eq!(record("v1", "c", "v3"), None);
+        // The walk stops at `from`.
+        assert_eq!(record("v2", "a", "v2"), None);
     }
 
     #[test]

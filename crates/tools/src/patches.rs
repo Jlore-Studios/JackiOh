@@ -14,11 +14,14 @@
 //! A branch that changes `catalog.json`, or a card's play some other way, adds one fragment,
 //! `pending/<slug>.json`, with no version: `ship` names it from the patch's tier (R1366000). Its `plays`
 //! and `rule` (R2455000) are never set from the diff, since only the classifier's second stage
-//! (R1365000) tells a refactor from a change. Branches never edit `patches.json`, the snapshots, the
-//! tables under `win_rates/`, `index.json` or `shipped.json`. `check` fails, naming the card, on an entry
-//! that differs from the newest shipped snapshot without exactly one fragment's claim or is claimed and
-//! does not, a `plays` id that is no shipped card, a fragment that claims nothing or leaves its title,
-//! sources or notes empty (R388), a player note that breaks the note rules (R724001), a carried
+//! (R1365000) tells a refactor from a change. A fragment may carry the win rates of record
+//! (`records`, which `cargo jackioh winrates --refresh` writes in, R3882000), and `ship` freezes them
+//! as `records/<version>.json`. Branches never edit `patches.json`, the snapshots, the tables under
+//! `win_rates/` and `records/`, `index.json` or `shipped.json`. `check` fails, naming the card, on an
+//! entry that differs from the newest shipped snapshot without exactly one fragment's claim or is
+//! claimed and does not, a `plays` id that is no shipped card, a fragment that claims nothing, carries
+//! win rates of record with no row, or leaves its title, sources or notes empty (R388), a player note
+//! that breaks the note rules (R724001), a carried
 //! version whose win-rate table is not its frozen file (R1329000), and a technical log out of shape
 //! (R1369000); a changed script needs no claim, the pull request's `classify` check holds that. `ship`
 //! needs full history (`fetch-depth: 0`); `patches-ship.yml` runs it after every merge that touches
@@ -36,10 +39,10 @@ use indexmap::{IndexMap, IndexSet};
 
 use self::patch::bump_sites;
 use self::patches_io::{
-    Catalog, CheckFragmentsArgs, NamedFragment, PatchEntry, PendingFragment, PlayerNote, ShippedEntry,
-    check_fragments, differing_ids, fragment_name, git_blob_hash, next_ship_name, player_note_problems,
-    read_fragments, read_patches, read_shipped, read_snapshot, read_win_rates, rebuild_derived, remove_file,
-    same_win_rates, snapshot_path, win_rates_path, write_json,
+    Catalog, CheckFragmentsArgs, NamedFragment, PatchEntry, PendingFragment, PlayerNote, RECORDS_DIR,
+    ShippedEntry, check_fragments, differing_ids, fragment_name, git_blob_hash, next_ship_name,
+    player_note_problems, read_fragments, read_patches, read_shipped, read_snapshot, read_win_rates,
+    rebuild_derived, records_path, remove_file, same_win_rates, snapshot_path, win_rates_path, write_json,
 };
 use self::versions::name_by_tier;
 use crate::card_lists;
@@ -851,6 +854,14 @@ pub mod patches_io {
         snapshot_path(version, &dir.join("win_rates"))
     }
 
+    /// R3882000: the folder beside the snapshots that holds each version's win rates of record.
+    pub const RECORDS_DIR: &str = "records";
+
+    /// R3882000: `records/<version>.json` under `dir`, the win rates of record `version` shipped.
+    pub fn records_path(version: &str, dir: &Path) -> anyhow::Result<PathBuf> {
+        snapshot_path(version, &dir.join(RECORDS_DIR))
+    }
+
     /// R1329000: the empty table's text, as a version with no table file shipped with.
     pub fn empty_win_rates_text() -> String {
         format!("{}\n", js::stringify_pretty(&WinRateTable::default()))
@@ -1077,6 +1088,10 @@ pub mod patches_io {
         /// which ships as a patch.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub system: Option<u32>,
+        /// R3882000: the win rates of record the patch ships (`records/<version>.json`), which
+        /// `cargo jackioh winrates --refresh` writes in. They count as a claim of their own.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub records: Option<WinRateTable>,
     }
 
     /// One shipped patch's provenance: the commit that shipped it and its snapshot's blob.
@@ -1097,6 +1112,10 @@ pub mod patches_io {
         /// file, as every one shipped before the first card that reads them.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub card_metrics_blob: Option<String>,
+        /// R3882000: the git blob of `records/<version>.json`; none on a patch that shipped no win
+        /// rates of record, as every one before the first refresh.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub records_blob: Option<String>,
     }
 
     /// R1366000: the longest slug a fragment's file name takes from its title.
@@ -1349,17 +1368,28 @@ pub mod patches_io {
             for problem in player_note_problems(&fragment.player) {
                 problems.push(format!("pending/{name}'s player note {problem} (R724001)"));
             }
-            // A patch changes a card, a card's play or look, a rule or a system; one that claims none
-            // would bump the version over nothing (R650, R1366000, R2529000). No patch ships a
-            // win-rate table since #3049 (R3049000).
+            // A patch changes a card, a card's play or look, a rule, a system or the win rates of
+            // record; one that claims none would bump the version over nothing (R650, R1366000,
+            // R2529000, R3882000). No patch ships a `win_rates/` table since #3049 (R3049000).
             if fragment.cards.is_empty()
                 && fragment.plays.is_empty()
                 && !fragment.rule
                 && !fragment.visual
                 && fragment.system.is_none()
+                && fragment.records.is_none()
             {
                 problems.push(format!(
                     "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system), but a patch ships a change"
+                ));
+            }
+            // R3882000: win rates of record with no row would record nothing.
+            if fragment
+                .records
+                .as_ref()
+                .is_some_and(|table| table.cards.is_empty())
+            {
+                problems.push(format!(
+                    "pending/{name} ships win rates of record with no row (R3882000)"
                 ));
             }
             // R2529000: only the owner names a system.
@@ -1531,7 +1561,7 @@ pub fn patch_paths(repo_root: &Path) -> PatchPaths {
 }
 
 /// `catalog.json` as a patch sees it: its shipped view (R1420), without its flavors (R1437000).
-fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
+pub(crate) fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
     let text = fs::read_to_string(path).with_context(|| format!("{} cannot be read", path.display()))?;
     let catalog: Catalog =
         serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))?;
@@ -1649,6 +1679,7 @@ pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<N
         rule: args.rule.unwrap_or(held.rule),
         visual: args.visual.unwrap_or(held.visual),
         system: args.system.or(held.system),
+        records: held.records,
     };
     fs::create_dir_all(&paths.pending_dir)
         .with_context(|| format!("{} cannot be created", paths.pending_dir.display()))?;
@@ -2161,6 +2192,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     {
         let path = snapshot_path(&version, &paths.dir)?;
         fs::write(&path, &raw).with_context(|| format!("{} cannot be written", path.display()))?;
+        let fragment_records = fragment.records;
         let timestamp = git(repo_root, &["log", "-1", "--format=%ct", &commit], &[])?;
         let seconds: i64 = timestamp
             .trim()
@@ -2193,13 +2225,27 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             }
             None => None,
         };
+        // R3882000: the win rates of record the fragment carries, frozen under the version it ships.
+        let records_blob = match &fragment_records {
+            Some(table) => {
+                let records = records_path(&version, &paths.dir)?;
+                fs::create_dir_all(paths.dir.join(RECORDS_DIR))
+                    .with_context(|| format!("{} cannot be created", records.display()))?;
+                write_json(&records, table)?;
+                let text = fs::read_to_string(&records)
+                    .with_context(|| format!("{} cannot be read", records.display()))?;
+                Some(git_blob_hash(&text))
+            }
+            None => None,
+        };
         shipped.push(ShippedEntry {
             version: version.clone(),
             commit,
             blob: git_blob_hash(&written),
-            // R3049000: no table ships with a version since #3049.
+            // R3049000: no `win_rates/` table ships with a version since #3049.
             win_rates_blob: None,
             card_metrics_blob,
+            records_blob,
         });
         remove_file(&paths.pending_dir.join(&name));
         names.push(version);
@@ -3081,6 +3127,7 @@ mod tests {
                     blob: "0".repeat(40),
                     win_rates_blob: None,
                     card_metrics_blob: None,
+                    records_blob: None,
                 }]
             }
 
@@ -3368,6 +3415,7 @@ mod tests {
                             blob: git_blob_hash(&read(&dir.join("v0.1.1.json"))),
                             win_rates_blob: None,
                             card_metrics_blob: None,
+                            records_blob: None,
                         }]),
                     )],
                 );
@@ -3489,6 +3537,7 @@ mod tests {
                         // R3049000: no table ships with a version.
                         win_rates_blob: None,
                         card_metrics_blob: None,
+                        records_blob: None,
                     }
                 );
                 assert_eq!(shipped[2].commit, c2);
@@ -4242,6 +4291,65 @@ mod tests {
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
             }
 
+            // R3882000: a fragment that carries win rates of record and claims no card ships as a micro,
+            // its table frozen as `records/<version>.json` with its blob in shipped.json, and no
+            // `win_rates/` table; a fragment whose table of record holds no row is refused.
+            #[test]
+            fn r3882000_a_fragment_of_records_ships_them_under_its_version() {
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
+                let temp = shipped_repo("jackioh-ship-records-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let table: jackioh_engine::WinRateTable =
+                    serde_json::from_str(&win_rates_text("v0.1.1", &[("aaa", 30, 40), ("bbb", 12, 40)]))
+                        .unwrap();
+                let fragment = |records: jackioh_engine::WinRateTable| PendingFragment {
+                    title: "Patch: the win rates of record".to_string(),
+                    sources: "s".to_string(),
+                    notes: "n".to_string(),
+                    player: super::test_note(),
+                    records: Some(records),
+                    ..PendingFragment::default()
+                };
+                write_files(
+                    root,
+                    &[(
+                        "crates/cards/patches/pending/t.json",
+                        json(&fragment(table.clone())),
+                    )],
+                );
+                commit_at(root, "fragment t", "2026-10-01T12:00:00+00:00");
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
+                assert!(!dir.join("pending/t.json").exists(), "the fragment shipped");
+                let text = read(&records_path("v0.1.1b", &dir).unwrap());
+                assert_eq!(
+                    serde_json::from_str::<jackioh_engine::WinRateTable>(&text).unwrap(),
+                    table
+                );
+                assert!(
+                    !dir.join("win_rates/v0.1.1b.json").exists(),
+                    "no win_rates/ table"
+                );
+                let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
+                assert_eq!(
+                    shipped.last().and_then(|entry| entry.records_blob.clone()),
+                    Some(git_blob_hash(&text))
+                );
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+
+                write_files(
+                    root,
+                    &[(
+                        "crates/cards/patches/pending/t.json",
+                        json(&fragment(jackioh_engine::WinRateTable::default())),
+                    )],
+                );
+                assert!(check_patches(root).unwrap().contains(
+                    &"pending/t.json ships win rates of record with no row (R3882000)".to_string()
+                ));
+            }
+
             // R2173000: v0.1.1b changes a card while no card reads the lists, so it keeps no lists file;
             // v0.1.1c adds `rrr`, whose script reads them, so it ships the lists the working scripts
             // make, with its blob in shipped.json, and the file reads back as those lists.
@@ -4717,6 +4825,18 @@ mod tests {
                             entry.version
                         ),
                         None => assert!(!lists.exists(), "card_metrics/{}.json", entry.version),
+                    }
+                    // R3882000: and its win rates of record's, on a version that shipped them.
+                    let records =
+                        crate::patches::patches_io::records_path(&entry.version, &patches_dir()).unwrap();
+                    match &entry.records_blob {
+                        Some(blob) => assert_eq!(
+                            *blob,
+                            git_blob_hash(&fs::read_to_string(&records).unwrap()),
+                            "records/{}.json",
+                            entry.version
+                        ),
+                        None => assert!(!records.exists(), "records/{}.json", entry.version),
                     }
                 }
             }
