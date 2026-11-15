@@ -62,9 +62,9 @@ fn pool(pool: MarketPool) -> Vec<String> {
     }
 }
 
-/// R3869004: the lots that named their cards by id through v0.6.0g, pinned so a change to what they
+/// R3869004: the lots that named their cards by id through v0.6.2b, pinned so a change to what they
 /// read is deliberate: each reads the same cards in the same order.
-const WEAPONS_V0_6_0G: [&str; 12] = [
+const WEAPONS_V0_6_2B: [&str; 12] = [
     "stinkyscape-050",
     "stinkyscape-051",
     "stinkyscape-052",
@@ -78,7 +78,7 @@ const WEAPONS_V0_6_0G: [&str; 12] = [
     "stinkyscape-060",
     "stinkyscape-061",
 ];
-const DRONE_CORES_V0_6_0G: [&str; 10] = [
+const DRONE_CORES_V0_6_2B: [&str; 10] = [
     "stinkyscape-027",
     "stinkyscape-028",
     "stinkyscape-029",
@@ -90,7 +90,7 @@ const DRONE_CORES_V0_6_0G: [&str; 10] = [
     "stinkyscape-035",
     "stinkyscape-036",
 ];
-const LAUNCHERS_V0_6_0G: [&str; 4] = [
+const LAUNCHERS_V0_6_2B: [&str; 4] = [
     "stinkyscape-140",
     "stinkyscape-141",
     "stinkyscape-142",
@@ -101,9 +101,9 @@ const LAUNCHERS_V0_6_0G: [&str; 4] = [
 fn r3869004_the_tagged_lots_read_the_cards_they_named_in_the_same_order() {
     register_all();
     let ids = |list: &[&str]| list.iter().map(|id| (*id).to_string()).collect::<Vec<String>>();
-    assert_eq!(pool(MARKETPLACE_WEAPONS), ids(&WEAPONS_V0_6_0G));
-    assert_eq!(pool(MARKETPLACE_DRONE_CORES), ids(&DRONE_CORES_V0_6_0G));
-    assert_eq!(pool(MARKETPLACE_LAUNCHERS), ids(&LAUNCHERS_V0_6_0G));
+    assert_eq!(pool(MARKETPLACE_WEAPONS), ids(&WEAPONS_V0_6_2B));
+    assert_eq!(pool(MARKETPLACE_DRONE_CORES), ids(&DRONE_CORES_V0_6_2B));
+    assert_eq!(pool(MARKETPLACE_LAUNCHERS), ids(&LAUNCHERS_V0_6_2B));
     let ai: Vec<String> = (1..=10)
         .map(|n| format!("stinkyscape-t-ai-{n:02}"))
         .chain((1..=7).map(|n| format!("stinkyscapeplus-t-ai-{n:02}")))

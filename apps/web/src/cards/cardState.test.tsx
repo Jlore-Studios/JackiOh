@@ -22,7 +22,7 @@ import { __resetSettingsForTests } from "../settings/store.ts";
 import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
-import { CardFace } from "./CardFace.tsx";
+import { CardFace, tuningLine } from "./CardFace.tsx";
 import {
   BERSERK_WORDS,
   DORMANT_GLYPH,
@@ -315,6 +315,8 @@ describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", ()
 
   it("R386 keywords a Buff added are \"+\" chips and keywords a Nerf removed are struck \"−\" chips, and an added one is not also listed as gained", () => {
     const tuning: Tuning = { addKeywords: [{ kind: "Rush" }], removeKeywords: ["Taunt"] };
+    // React warns of two chips sharing a key: each chip is keyed by its own sign and keyword.
+    const errors = vi.spyOn(console, "error");
     renderBoard(
       baseView({
         you: emptySide("p1", {
@@ -329,8 +331,12 @@ describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", ()
       ["removed", "−Taunt"],
     ]);
     expect(chips.map((chip) => chip.getAttribute("title"))).toEqual(["Gained Rush", "Lost Taunt"]);
+    expect(errors.mock.calls.filter((call) => call.some((arg) => String(arg).includes("same key")))).toEqual([]);
+    errors.mockRestore();
     const field = liveFace(must(lookup("core-004", false), "Gary"), unit("p1", { defId: "core-004", keywords: [{ kind: "Rush" }, { kind: "Lifesteal" }], tuning }));
     expect(field.gained.map((keyword) => keyword.kind)).toEqual(["Lifesteal"]);
+    // The chips as the box's words, which its text tier and fit measure.
+    expect(tuningLine(field)).toBe("+Rush −Taunt");
   });
 
   it("R386 the hover preview gives the ribbon, every change in words, and the printed text beside a face whose numbers moved", () => {

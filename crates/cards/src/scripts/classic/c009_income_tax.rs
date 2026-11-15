@@ -731,6 +731,45 @@ mod tests {
             assert_eq!(s.card(&seven).cost_mod, -2);
         }
 
+        /// R78: the discount rides the keep prompt's data as JSON and comes back narrowed (SURFACE §4.4
+        /// item 10): a whole number written as a float still counts, a fraction counts as no discount.
+        #[test]
+        fn r78_a_carried_discount_counts_only_as_a_whole_number_2_0_is_2_and_1_5_is_none() {
+            for (carried, cost_mod) in [(json!(2.0), -2), (json!(1.5), 0)] {
+                let mut s = tax_board(json!({ "radiantFace": true }));
+                s.play(STOCKPILE, json!({}));
+                let seven = must(s.hand(P1).into_iter().find(|card| card.def_id == SEVEN), "7/7");
+                let Some(keep) = s.state_mut().pending.as_mut() else {
+                    panic!("the keep prompt is open");
+                };
+                keep.resume.data.insert(DISCOUNT.to_string(), carried.clone());
+                answer_with(&mut s, MENACE);
+                assert_eq!(s.card(&seven).cost_mod, cost_mod, "{carried}");
+            }
+        }
+
+        #[test]
+        fn r767000_a_game_on_v0_3_15_folds_the_radiant_face_under_the_kept_script_its_cards_cost_1_less() {
+            crate::register_all();
+            let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                let mut s = tax_board(json!({ "radiantFace": true }));
+                s.play(STOCKPILE, json!({}));
+                assert!(fired(&s));
+                let moved: Vec<CardInstance> = [FELINORS, SEVEN]
+                    .iter()
+                    .map(|def_id| must(s.hand(P1).into_iter().find(|card| card.def_id == *def_id), def_id))
+                    .collect();
+                answer_with(&mut s, MENACE);
+                assert_eq!(def_ids(&s.hand(P1)), [MENACE]);
+                for card in &moved {
+                    let live = s.card(card);
+                    assert_eq!(live.controller, P2);
+                    assert_eq!(live.cost_mod, -1);
+                }
+            });
+        }
+
         #[test]
         fn the_same_condition_a_single_draw_leaves_it_set() {
             let mut s = tax_board(json!({ "radiantFace": true, "p1Library": [FELINORS] }));

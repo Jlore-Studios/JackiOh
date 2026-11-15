@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { LobbySeat, LobbyView } from "./api.ts";
-import { canStart, deckWords, seatsOf } from "./seats.ts";
+import { canStart, deckWords, moveTargetOf, otherTeamHasRoom, seatsOf, type SeatShown } from "./seats.ts";
 
 function seat(over: Partial<LobbySeat> = {}): LobbySeat {
   return {
@@ -47,6 +47,48 @@ describe("the lobby's seats", () => {
       ["ai", "ai"],
     ]);
     expect(teams[0]?.[1]).toMatchObject({ kind: "player", host: false, you: true });
+  });
+
+  it("R3731000 a 2v2 lobby's seats are the host's team then the other team", () => {
+    const bo = { profileId: "p-bo", username: "Bo#2", status: "online" as const };
+    const kai = { profileId: "p-kai", username: "Kai#3", status: "online" as const };
+    const dee = { profileId: "p-dee", username: "Dee#4", status: "online" as const };
+    const twoVTwo = (seats: LobbySeat[], you: LobbyView["you"] = "guest2"): LobbyView => view({ settings: { format: "2v2" }, you, seats });
+    const roleOf = (shown: SeatShown): string => (shown.kind === "player" ? shown.seat.role : shown.kind === "ai" ? "ai" : shown.role);
+    const open = twoVTwo([seat(), seat({ role: "guest", player: null }), seat({ role: "guest2", player: bo }), seat({ role: "guest3", player: kai })]);
+
+    // Two teams of people, no AI seat: the host's (host, guest) and the other (guest2, guest3).
+    const teams = seatsOf(open);
+    expect(teams.map((team) => team.map(roleOf))).toEqual([
+      ["host", "guest"],
+      ["guest2", "guest3"],
+    ]);
+    expect(teams.map((team) => team.map((shown) => shown.kind))).toEqual([
+      ["player", "invite"],
+      ["player", "player"],
+    ]);
+    expect(teams[0]?.[0]).toMatchObject({ kind: "player", host: true, you: false });
+    expect(teams[1]?.[0]).toMatchObject({ kind: "player", host: false, you: true });
+    expect(seatsOf(twoVTwo(open.seats, null))[0]?.[1]).toEqual({ kind: "open", role: "guest" });
+
+    // Switch team lights only while the other team has an empty seat.
+    expect(otherTeamHasRoom(open, "guest2")).toBe(true);
+    expect(otherTeamHasRoom(open, "host")).toBe(false);
+
+    // The host's Move: to the other team's first empty seat but the host's, else its first seat but the host's.
+    expect(moveTargetOf(open, "guest2")).toBe("guest");
+    expect(moveTargetOf(open, "host")).toBeNull();
+    const full = twoVTwo([seat(), seat({ role: "guest", player: bo }), seat({ role: "guest2", player: kai }), seat({ role: "guest3", player: dee })]);
+    expect(moveTargetOf(full, "guest")).toBe("guest2");
+    expect(moveTargetOf(full, "guest3")).toBe("guest");
+    const roomAtThree = twoVTwo([seat(), seat({ role: "guest", player: bo }), seat({ role: "guest2", player: kai }), seat({ role: "guest3", player: null })]);
+    expect(moveTargetOf(roomAtThree, "guest")).toBe("guest3");
+
+    // The Start needs all four seats filled and ready.
+    const ready = full.seats.map((each) => ({ ...each, state: "ready" as const }));
+    expect(canStart({ ...full, you: "host", seats: ready })).toBe(true);
+    expect(canStart({ ...full, you: "host", seats: ready.map((each, index) => (index === 3 ? { ...each, state: "chosen" as const } : each)) })).toBe(false);
+    expect(canStart({ ...open, you: "host", seats: open.seats.map((each) => ({ ...each, state: "ready" as const })) })).toBe(false);
   });
 
   it("R3730001 each deck state reads as its words, a hidden or random deck by its kind", () => {

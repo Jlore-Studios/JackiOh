@@ -24,7 +24,7 @@ use crate::face::types::Span;
 use super::chaos::chaos_effect_name;
 use super::curve::curve_equation;
 use super::names::{Names, find_card};
-use super::say::{Part, capitalised, capitalised_spans, plain_words, sentence};
+use super::say::{Part, capitalised, capitalised_spans, plain_words, sentence, signed};
 
 fn p<T: Into<Part>>(name: &'static str, value: T) -> (&'static str, Part) {
     (name, value.into())
@@ -474,6 +474,11 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             };
             by(text, *via)
         }
+        // R3857000: a hero's kept Armor gain, named by its side.
+        GameEvent::ArmorGained { player, amount, .. } => s(
+            "{whose} hero gained {amount} Armor",
+            vec![p("whose", capitalised(&whose(*player))), p("amount", *amount)],
+        ),
         // R860: the line names only that a secret is held, never the choice.
         GameEvent::SecretChosen { player, .. } => s("{seat} kept a secret", vec![p("seat", seat(*player))]),
         // R864: revealed, the choice is public history.
@@ -597,7 +602,8 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             vec![p("seat", seat(*player))],
         ),
         // R177: a buff on a card this seat may not read arrives as the sentinel with 0/0, which says
-        // nothing of its size, so the line does not claim one.
+        // nothing of its size, so the line does not claim one. A change below 0 is written signed (U+2212),
+        // so it never prints "+-".
         GameEvent::Buffed {
             instance_id,
             attack,
@@ -605,6 +611,15 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
         } => {
             if hidden(instance_id) {
                 s("A hidden card was buffed", vec![])
+            } else if *attack < 0 || *health < 0 {
+                s(
+                    "{target} got {attack}/{health}",
+                    vec![
+                        p("target", target(instance_id)),
+                        p("attack", signed(*attack)),
+                        p("health", signed(*health)),
+                    ],
+                )
             } else {
                 s(
                     "{target} gained +{attack}/+{health}",

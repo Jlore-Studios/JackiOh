@@ -434,6 +434,36 @@ mod tests {
     }
 
     #[test]
+    fn r3567003_overwhelm_from_the_middle_lane_leaves_the_outer_lanes_open() {
+        let mut s = scenario(json!({
+            "seed": "s004-overwhelm-middle",
+            "p1": {
+                "mana": 10,
+                "hand": [ID],
+                "field": [{ "def": TYLANNT, "lane": 1 }, { "def": TYLANNT, "lane": 5 }],
+                "library": filler(4),
+            },
+            "p2": {
+                "field": [
+                    { "def": TYLANNT, "lane": 2 },
+                    { "def": TYLANNT, "lane": 4 },
+                    { "def": TYLANNT, "lane": 5 },
+                ],
+                "library": filler(4),
+            },
+        }));
+        s.play(ID, json!({ "zone": 3, "modes": [OVERWHELM] }));
+        let yates = s.unit_at(P1, 3).id;
+        s.activate(&yates, json!({ "ability": OVERWHELM }));
+        assert!(s.card(&s.unit_at(P1, 1).id).frozen.is_none(), "lane 1 open");
+        assert!(s.card(&s.unit_at(P1, 5).id).frozen.is_none(), "lane 5 open");
+        assert!(s.card(&s.unit_at(P2, 2).id).frozen.is_some(), "lane 2 frozen");
+        assert!(s.card(&s.unit_at(P2, 4).id).frozen.is_some(), "lane 4 frozen");
+        assert!(s.card(&s.unit_at(P2, 5).id).frozen.is_none(), "lane 5 open");
+        assert!(s.card(&yates).frozen.is_some(), "Yates freezes too");
+    }
+
+    #[test]
     fn r3567004_wolfs_maw_grounds_a_flying_unit_and_deals_it_damage() {
         let mut s = scenario(json!({
             "seed": "s004-wolf",

@@ -260,7 +260,7 @@ describe("44 watching a friend's live game", () => {
     });
 
     // B45: `two` accepts, and the page reads the friends list again. B56: the new friend's row offers
-    // Watch, and the click opens the watch screen in the page already loaded.
+    // Watch as its primary button, and the click opens the watch screen in the page already loaded.
     cy.then(() => {
       cy.get(incomingRequestRow(oneId)).within(() => {
         cy.get(ts(TOGETHER_REQUEST_ACCEPT)).click();
@@ -268,6 +268,8 @@ describe("44 watching a friend's live game", () => {
       cy.get(friendRow(oneId), { timeout: timeouts.view })
         .should("have.attr", "data-status", "inMatch")
         .and("have.attr", "data-watchable", "true")
+        // R3732002: Watch is the one button of a row in a game that can be watched.
+        .and("have.attr", "data-primary", "watch")
         .within(() => {
           cy.get(ts(TOGETHER_WATCH)).click();
         });

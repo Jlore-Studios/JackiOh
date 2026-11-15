@@ -4,15 +4,23 @@
 import { useCallback, useRef, useSyncExternalStore } from "react";
 import type { Rarity } from "@jackioh/shared";
 
+import { fullScreenArtId } from "./art/fusedArt.ts";
 import { FULLSCREEN_HOLD_MS, FULLSCREEN_SLOP_PX } from "./constants.ts";
 import { isFullArtCard, useCardLook } from "./fullArt.ts";
+import { useDefResolver } from "./refContext.tsx";
 import { VERSION_FULL_ART_ID, isFullBleed } from "./versions.ts";
+import { isCoarsePointer } from "./inspect/useInspectTrigger.tsx";
 
 export type FullScreenState = {
   defId: string;
   radiant?: boolean;
   name?: string;
   heldPointerId?: number | null;
+  /**
+   * The catalog card whose picture the view draws (`fullScreenArtId`), worked out where the view opens: that place has
+   * the board's definitions, which the view, mounted at the app's root, does not (a digest id, R468, reads only there).
+   */
+  artId?: string;
 } | null;
 
 let currentState: FullScreenState = null;
@@ -54,10 +62,15 @@ export function canOpenFullScreen(card: {
   return false;
 }
 
+/** R3345000: `fullScreenArtId` of `defId` under the definitions in reach of the caller (the board's, for a digest id). */
+export function useFullScreenArtId(defId: string): string | null {
+  return fullScreenArtId(defId, useDefResolver());
+}
+
 /**
  * R3345000: `canOpenFullScreen` for a copy of `defId` as it prints: the level it wears (`useCardLook`, a viewer's own
  * copy when `worn`) counts, so a Common wearing a full-art level opens as a Mythic does. A level or version the
- * caller names itself wins over the worn one. What the Full-art cards setting prints alone does not count: a
+ * caller names itself wins over the worn one. A fusion no picture resolves for (`fullScreenArtId`) does not open. What the Full-art cards setting prints alone does not count: a
  * full-art card's Epic Full art (`isFullArtCard`) is the look it has by default, and a default look's version is not a
  * level worn, so a card holds only for a level somebody picked.
  */
@@ -67,8 +80,9 @@ export function useCanOpenFullScreen(
   worn: boolean = false,
 ): boolean {
   const look = useCardLook(defId, worn);
+  const artId = useFullScreenArtId(defId);
   const byDefault = look.level === VERSION_FULL_ART_ID && isFullArtCard(defId);
-  return card !== null && canOpenFullScreen({ ...card, level: card.level ?? (byDefault ? null : look.level) });
+  return card !== null && artId !== null && canOpenFullScreen({ ...card, level: card.level ?? (byDefault ? null : look.level) });
 }
 
 export type FullScreenTriggerOptions = {
@@ -76,6 +90,11 @@ export type FullScreenTriggerOptions = {
   worn?: boolean;
   enabled?: boolean;
   onOpen?: () => void;
+  /**
+   * R3893000: called when held by touch on a touch screen, instead of opening full-screen art directly.
+   * On phone, a touch hold shows the card's text (InspectSheet or CardDetail), where Full screen can be tapped.
+   */
+  onTouchHold?: () => void;
 };
 
 /**
@@ -94,6 +113,9 @@ export function useFullScreenTrigger(
   options: FullScreenTriggerOptions = {},
 ) {
   const wearsIt = useCanOpenFullScreen(card, card?.defId ?? "", options.worn);
+  const artId = useFullScreenArtId(card?.defId ?? "");
+  const artIdRef = useRef(artId);
+  artIdRef.current = artId;
   const allowed = wearsIt && (options.enabled ?? true);
   const timerRef = useRef<number | null>(null);
   const startRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
@@ -115,6 +137,12 @@ export function useFullScreenTrigger(
       startRef.current = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
       timerRef.current = window.setTimeout(() => {
         timerRef.current = null;
+        const pointerType: string = e.pointerType;
+        const isTouch = pointerType === "touch" || (pointerType === "" && isCoarsePointer());
+        if (isTouch && options.onTouchHold) {
+          options.onTouchHold();
+          return;
+        }
         const current = cardRef.current;
         if (current) {
           openFullScreenArt({
@@ -122,6 +150,7 @@ export function useFullScreenTrigger(
             radiant: current.radiant,
             name: current.name,
             heldPointerId: e.pointerId,
+            artId: artIdRef.current ?? undefined,
           });
           options.onOpen?.();
         }

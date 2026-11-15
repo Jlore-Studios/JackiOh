@@ -12,6 +12,9 @@
 //! `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it reads as a person who is away,
 //! and in a match as a person in one (R1452).
 //!
+//! R3732001: a `Standing` also says the turn of the 1v1 match a friend is in, while the viewer may
+//! watch it, and when an offline friend was last seen, if presence kept a heartbeat.
+//!
 //! `watchable` (B50): the viewer may watch the friend's live 1v1 match, ranked or unranked, or their live
 //! co-op game when the viewer is not their teammate in it and stands blocked with neither of its people
 //! (R2881000, `duos` then true), with fewer than
@@ -46,14 +49,21 @@ pub enum Status {
 }
 
 /// Where a friend is (B47): their status, the match holding them (a live 1v1 or Duos match; none
-/// between a series' games, or when not in one), whether a friend may watch it (B50) and whether it
-/// is a co-op game (R2881000).
+/// between a series' games, or when not in one), whether a friend may watch it (B50), whether it
+/// is a co-op game (R2881000), the turn of a live 1v1 game a friend may watch and, for an offline
+/// friend, the last heartbeat (R3732001).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Standing {
     pub status: Status,
     pub match_id: Option<String>,
     pub watchable: bool,
     pub duos: bool,
+    /// R3732001: the player-turn counter of the live 1v1 match, only while the viewer may watch it
+    /// (`watchable`), as a watcher is shown it; never a co-op game's or a series' gap's.
+    pub turn: Option<i32>,
+    /// R3732001: epoch ms of an offline friend's last heartbeat, when presence has kept one; none
+    /// while they are online or in a match, and for a friend who never beat.
+    pub last_seen: Option<i64>,
 }
 
 impl Standing {
@@ -62,6 +72,8 @@ impl Standing {
         match_id: None,
         watchable: false,
         duos: false,
+        turn: None,
+        last_seen: None,
     };
 }
 
@@ -183,12 +195,20 @@ pub(crate) async fn standings(
     let mut standings = IndexMap::new();
     for profile in profiles {
         let standing = if let Some(match_id) = &profile.in_match_id {
+            let may_watch =
+                watchable.contains(&profile.id) && watcher_count(app, match_id) < SPECTATORS_PER_MATCH;
             Standing {
                 status: Status::InMatch,
                 match_id: Some(match_id.clone()),
-                watchable: watchable.contains(&profile.id)
-                    && watcher_count(app, match_id) < SPECTATORS_PER_MATCH,
+                watchable: may_watch,
                 duos: false,
+                // R3732001: the live actor's own counter, which a watcher sees too.
+                turn: if may_watch {
+                    app.matches.get(match_id).map(|actor| actor.snapshot().turn)
+                } else {
+                    None
+                },
+                last_seen: None,
             }
         } else if in_series.contains(&profile.id) {
             Standing {
@@ -196,6 +216,8 @@ pub(crate) async fn standings(
                 match_id: None,
                 watchable: false,
                 duos: false,
+                turn: None,
+                last_seen: None,
             }
         } else if let Some(duos_match) = in_duos.get(&profile.id) {
             // R2881000: a friend's co-op game is watched as a 1v1 match is, but by their teammate or
@@ -207,6 +229,8 @@ pub(crate) async fn standings(
                     && !duos_blocked.contains(duos_match)
                     && watcher_count(app, duos_match) < SPECTATORS_PER_MATCH,
                 duos: true,
+                turn: None,
+                last_seen: None,
             }
         } else if seen
             .get(&profile.id)
@@ -217,9 +241,14 @@ pub(crate) async fn standings(
                 match_id: None,
                 watchable: false,
                 duos: false,
+                turn: None,
+                last_seen: None,
             }
         } else {
-            Standing::OFFLINE
+            Standing {
+                last_seen: seen.get(&profile.id).copied(),
+                ..Standing::OFFLINE
+            }
         };
         standings.insert(profile.id.clone(), standing);
     }

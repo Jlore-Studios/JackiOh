@@ -7,8 +7,8 @@
 //! card and token tagged Terminus of the sets that ship, three different options shown to its caster
 //! alone: Core #100 Ceaseless Void (tagged Terminus since R1837000), the set's six Terminus tokens
 //! (R1857002) and the Stinkyscape+ set's Terminus cards and tokens. The pick reaches the hand on its
-//! base face. Through v0.6.0g the pool named the first seven by id, as it had to while the set was held
-//! (R1420; `script_v0_6_0g`, kept, R767000).
+//! base face. Through v0.6.2b the pool named the first seven by id, as it had to while the set was held
+//! (R1420; `script_v0_6_2b`, kept, R767000).
 
 use jackioh_engine::config::DISCOVER_OPTIONS;
 use jackioh_engine::effects::{WIN_ON_PLAY_KEY, add_to_hand, discover_from_catalog};
@@ -16,9 +16,9 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-004";
 
-/// R767000: the Terminus cards through v0.6.0g, Core #100 Ceaseless Void and the set's six Terminus
-/// tokens, in catalog order, which `script_v0_6_0g` and Stinkyscape #154 Dice of Doom's kept script name.
-pub const TERMINUS_CARDS_V0_6_0G: [&str; 7] = [
+/// R767000: the Terminus cards through v0.6.2b, Core #100 Ceaseless Void and the set's six Terminus
+/// tokens, in catalog order, which `script_v0_6_2b` and Stinkyscape #154 Dice of Doom's kept script name.
+pub const TERMINUS_CARDS_V0_6_2B: [&str; 7] = [
     "core-100",
     "stinkyscape-004-1",
     "stinkyscape-004-2",
@@ -34,12 +34,12 @@ const PICKED: &str = "picked";
 const FREE: &str = "free";
 const WINS: &str = "wins";
 
-/// The Discover; `kept`, the script through v0.6.0g.
+/// The Discover; `kept`, the script through v0.6.2b.
 fn discover(ctx: &mut EffectContext<'_>, kept: bool) -> Vec<Effect> {
     let free = zone_count(ctx.state, ctx.controller, OffFieldZone::Library) == 0;
     let wins = ctx.radiant && free && zone_count(ctx.state, ctx.controller, OffFieldZone::Hand) == 0;
-    // R3869000: the Terminus pool; R767000: through v0.6.0g, the seven named by id.
-    let pool = if kept { json!({ "defId": TERMINUS_CARDS_V0_6_0G }) } else { json!(crate::query::terminus_cards()) };
+    // R3869000: the Terminus pool; R767000: through v0.6.2b, the seven named by id.
+    let pool = if kept { json!({ "defId": TERMINUS_CARDS_V0_6_2B }) } else { json!(crate::query::terminus_cards()) };
     vec![discover_from_catalog(json_as(json!({
         "step": PICKED,
         "count": DISCOVER_OPTIONS,
@@ -65,7 +65,7 @@ fn picked(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![add_to_hand(json_as(args))]
 }
 
-/// Both faces; `kept`, the script through v0.6.0g.
+/// Both faces; `kept`, the script through v0.6.2b.
 fn faces(kept: bool) -> CardScripts {
     let base = Script {
         cry: Some(hook(move |ctx| discover(ctx, kept))),
@@ -79,14 +79,14 @@ fn faces(kept: bool) -> CardScripts {
 
 pub fn script() -> CardScripts { faces(false) }
 
-/// R767000: through v0.6.0g the Discover offered the seven Terminus cards it named by id; `KEPT_SCRIPTS`
+/// R767000: through v0.6.2b the Discover offered the seven Terminus cards it named by id; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_0g() -> CardScripts { faces(true) }
+pub fn script_v0_6_2b() -> CardScripts { faces(true) }
 
 // S #4 Olivian Expanse — SPEC §8.10 row S 4, BUILD M12 row S 4 (R1870000).
 #[cfg(test)]
 mod tests {
-    use super::{ID, TERMINUS_CARDS_V0_6_0G, script_v0_6_0g};
+    use super::{ID, TERMINUS_CARDS_V0_6_2B, script_v0_6_2b};
     use jackioh_engine::config::{DISCOVER_OPTIONS, HAND_CAP};
     use jackioh_engine::effects::WIN_ON_PLAY_KEY;
     use jackioh_engine::testkit::*;
@@ -253,7 +253,7 @@ mod tests {
         #[test]
         fn r3869000_the_pool_is_every_terminus_card_and_token_of_the_sets_that_ship() {
             let pool = terminus();
-            for id in TERMINUS_CARDS_V0_6_0G {
+            for id in TERMINUS_CARDS_V0_6_2B {
                 assert!(pool.contains(&id.to_string()), "{id} is still in it");
             }
             for id in ["stinkyscapeplus-077", "stinkyscapeplus-080", "stinkyscapeplus-t-supernova"] {
@@ -276,12 +276,12 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_0g_offers_only_the_seven_it_named() {
-            crate::under_kept(ID, script_v0_6_0g(), || {
+        fn r767000_the_script_kept_for_v0_6_2b_offers_only_the_seven_it_named() {
+            crate::under_kept(ID, script_v0_6_2b(), || {
                 for n in 0..12 {
                     let s = expanse(&format!("olivian-kept-{n}"), false, json!([]), json!([FILLER]));
                     for option in s.prompt_modes() {
-                        assert!(TERMINUS_CARDS_V0_6_0G.contains(&option.as_str()), "{option}");
+                        assert!(TERMINUS_CARDS_V0_6_2B.contains(&option.as_str()), "{option}");
                     }
                 }
             });

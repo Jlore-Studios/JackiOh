@@ -277,7 +277,7 @@ pub async fn accept(app: &Arc<App>, req: Req) -> ApiResult {
     game.started();
     let match_id = game.match_id().to_string();
     push_social(app, &[&me, &invite.from_profile]).await;
-    crate::daily::notify::after_move(app, &[&me, &invite.from_profile], now).await;
+    crate::daily::notify::after_move(app, &[&me, &invite.from_profile]);
     Ok(created(json!({ "matchId": match_id })))
 }
 
@@ -362,7 +362,7 @@ pub async fn seek(app: &Arc<App>, req: Req) -> ApiResult {
             }
         };
         push_social(app, &[&me, &other.from_profile]).await;
-        crate::daily::notify::after_move(app, &[&me, &other.from_profile], now).await;
+        crate::daily::notify::after_move(app, &[&me, &other.from_profile]);
         return Ok(created(json!({ "matchId": match_id })));
     }
     let row = DailyInviteRow {

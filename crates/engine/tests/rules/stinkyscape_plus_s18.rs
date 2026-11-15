@@ -284,7 +284,8 @@ mod r3557004_transform_cost_step {
             Some(HIGH.to_string()),
             "41 is empty, 42 is next"
         );
-        let _ = cost_of;
+        let new = s.unit_at(P1, 1);
+        assert_eq!(cost_of(&s, &new.id), 42, "it costs the price it was moved up to");
     }
 
     #[test]

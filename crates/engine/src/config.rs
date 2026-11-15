@@ -1458,7 +1458,7 @@ pub struct MarketLot {
 }
 
 /// R3869004: the Weapons lot, Stinkyscape's v3–v5 Weapons (#50 to #61): its Weapon-tagged cards but the
-/// Launchers. Named by id through v0.6.0g.
+/// Launchers. Named by id through v0.6.2b.
 pub const MARKETPLACE_WEAPONS: MarketPool = MarketPool::Tagged {
     sets: &[SetName::Stinkyscape],
     tag: Tag::Weapon,
@@ -1472,7 +1472,7 @@ pub const MARKETPLACE_PROBE_MK1: &[&str] = &["stinkyscape-166"];
 /// R1881006: Scanning Probe Mk2 (Stinkyscape #167), a lot of its own.
 pub const MARKETPLACE_PROBE_MK2: &[&str] = &["stinkyscape-167"];
 /// R3869004: the Drone Cores lot, Stinkyscape's Drone Core-tagged cards (#27 to #36). Named by id
-/// through v0.6.0g.
+/// through v0.6.2b.
 pub const MARKETPLACE_DRONE_CORES: MarketPool = MarketPool::Tagged {
     sets: &[SetName::Stinkyscape],
     tag: Tag::DroneCore,
@@ -1482,7 +1482,7 @@ pub const MARKETPLACE_DRONE_CORES: MarketPool = MarketPool::Tagged {
 /// R3869004: what a Launcher's name holds (Stinkyscape #140 to #143, "Rush Token Launcher" and the rest).
 pub const MARKETPLACE_LAUNCHER_NAME: &str = "Launcher";
 /// R3869004: the Launchers lot, Stinkyscape's Weapons whose name holds `MARKETPLACE_LAUNCHER_NAME`
-/// (#140 to #143). Named by id through v0.6.0g.
+/// (#140 to #143). Named by id through v0.6.2b.
 pub const MARKETPLACE_LAUNCHERS: MarketPool = MarketPool::Tagged {
     sets: &[SetName::Stinkyscape],
     tag: Tag::Weapon,
@@ -1491,7 +1491,7 @@ pub const MARKETPLACE_LAUNCHERS: MarketPool = MarketPool::Tagged {
 };
 /// R1881006, R3571001, R3869004: the AI cards lot, the AI-tagged tokens of Stinkyscape (T-AI-1 to
 /// T-AI-10, ST15) and Stinkyscape+ (T-AI-1 to T-AI-7, SP7), each set's offered once it is open. Named
-/// by id through v0.6.0g.
+/// by id through v0.6.2b.
 pub const MARKETPLACE_AI_CARDS: MarketPool = MarketPool::Tagged {
     sets: &[SetName::Stinkyscape, SetName::StinkyscapePlus],
     tag: Tag::Ai,

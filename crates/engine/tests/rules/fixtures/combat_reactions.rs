@@ -52,7 +52,7 @@ pub const PIP: &str = "e6-pip";
 /// A 5/6 Unit: "Cry: Take a snapshot... Death: Reset your board to that state" (Bogos Binted's
 /// shape).
 pub const BOGOS: &str = "e6-bogos";
-/// A Trap: "Cry: Look at your opponent's hand and choose a card secretly..." (Soul Read's shape).
+/// A Trap: "When played face down: Look at your opponent's hand and choose a card secretly..." (Soul Read's shape).
 pub const SOUL_READ: &str = "e6-soul-read";
 /// A 2/2 Unit whose Death takes a random enemy permanent (Snom Bunny's shape).
 pub const BUNNY: &str = "e6-bunny";

@@ -54,15 +54,18 @@ export function ChallengeDialog({
   onClose,
   onSent,
   liveRefusal = null,
+  initialKind,
 }: {
   friend: PlayerRef;
   onClose: () => void;
   onSent: () => void;
   /** #3727: why a live game can't be played now, in a player's words (untranslated); null, it can. */
   liveRefusal?: string | null;
+  /** R3732002: the kind a row's Daily opens on; Live when it can be played and none is asked for. */
+  initialKind?: ChallengeKind;
 }): ReactElement {
   useLocale();
-  const [kind, setKind] = useState<ChallengeKind>(liveRefusal === null ? "live" : "daily");
+  const [kind, setKind] = useState<ChallengeKind>(liveRefusal === null ? (initialKind ?? "live") : "daily");
   const daily = useDailyPick(undefined, kind === "daily");
   const [initial] = useState(readChallengeChoice);
   const [mode, setMode] = useState<QueueMode>(initial.mode);

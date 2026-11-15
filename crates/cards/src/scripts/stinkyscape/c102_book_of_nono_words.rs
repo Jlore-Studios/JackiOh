@@ -56,7 +56,6 @@ mod tests {
 
     const BOOK: &str = "stinkyscape-102";
     const NONO: &str = "stinkyscape-099";
-    const PARANOIA: &str = "meditative-099"; // Paranoia: Aura: your Spells have Cloaked.
     const CORE_SYSTEM: &str = "stinkyscape-117"; // Core System: Bounce all permanents.
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
@@ -134,7 +133,6 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [BOOK, CORE_SYSTEM, FILLER],
-                    "field": [{ "def": PARANOIA, "lane": 1 }],
                     "mana": 10,
                 },
                 "p2": { "hand": [FILLER] },
@@ -142,6 +140,12 @@ mod tests {
             s.play(BOOK, json!({}));
             let two = nonos(&s.hand(P1))[1].clone();
             assert_eq!(two.fixed_x, Some(2));
+            // A Buff's Cloaked (R2727000) sets it with no Paranoia out, which would resolve it as it is
+            // set and so needs a Unit to aim at (R3806000).
+            s.card_mut(two.id.as_str()).tuning = Some(Tuning {
+                add_keywords: Some(vec![Keyword::Cloaked]),
+                ..Tuning::default()
+            });
             s.play(&two, json!({ "zone": 2, "row": "backrow", "faceDown": "cloaked" }));
             // A set card takes a fresh id (R227).
             let set = s.backrow(P1, 2).expect("the set No-No Words");

@@ -1,4 +1,5 @@
-//! The private lobbies' store (SPEC §9.5, §13.9; migration 0090; R3730000 to R3730004; issue #3730):
+//! The private lobbies' store (SPEC §9.5, §13.9; migrations 0090 and 0091; R3730000 to R3730004,
+//! R3731000; issues #3730, #3731):
 //! `public.lobbies` over Postgres (`pg` below) or the in-memory fake (`fake` below, whose rows are
 //! `FakeTables::lobbies`).
 //!
@@ -16,13 +17,20 @@ use crate::api::decks::{FrozenChoice, ModeChoiceInput};
 use crate::db::store::{QueueMode, StoreResult, Tx};
 
 /// R3730003: what the host sets, everyone sees, and what a lobby plays: a 1v1 game in one of the
-/// room modes (§9.5, R264) or a co-op game against the AI team at a difficulty (§13.7, §13.9). The
-/// format is fixed when the lobby is made; the mode or the difficulty may change.
+/// room modes (§9.5, R264), a co-op game against the AI team at a difficulty (§13.7, §13.9), or
+/// (R3731000) a 2v2 between two teams of two people, which has nothing to set. The format is fixed
+/// when the lobby is made; the mode or the difficulty may change.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(tag = "format", rename_all = "camelCase")]
 pub enum LobbySettings {
-    Duel { mode: QueueMode },
-    Coop { difficulty: Difficulty },
+    Duel {
+        mode: QueueMode,
+    },
+    Coop {
+        difficulty: Difficulty,
+    },
+    #[serde(rename = "2v2")]
+    TwoVTwo,
 }
 
 impl LobbySettings {
@@ -31,13 +39,15 @@ impl LobbySettings {
         match self {
             LobbySettings::Duel { .. } => FORMAT_DUEL,
             LobbySettings::Coop { .. } => FORMAT_COOP,
+            LobbySettings::TwoVTwo => FORMAT_TWO_V_TWO,
         }
     }
 }
 
-/// The two formats' words.
+/// The three formats' words.
 pub const FORMAT_DUEL: &str = "duel";
 pub const FORMAT_COOP: &str = "coop";
+pub const FORMAT_TWO_V_TWO: &str = "2v2";
 
 /// R3730001: a member's pick, what they asked for and what it froze to when they made it (R253).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -45,6 +55,16 @@ pub const FORMAT_COOP: &str = "coop";
 pub struct LobbyPick {
     pub choice: ModeChoiceInput,
     pub frozen: FrozenChoice,
+}
+
+/// R3731000: one of a 2v2's other team's seats (`guest2`, `guest3`): who sits in it, their pick and
+/// their Ready.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct LobbyMember {
+    pub profile: Option<String>,
+    pub pick: Option<LobbyPick>,
+    pub ready: bool,
 }
 
 /// One row of `public.lobbies` (R3730000).
@@ -60,6 +80,9 @@ pub struct Lobby {
     pub guest_pick: Option<LobbyPick>,
     pub host_ready: bool,
     pub guest_ready: bool,
+    /// R3731000: a 2v2's other team, `guest2` and `guest3` (migration 0091); empty in any other format.
+    #[serde(default)]
+    pub others: [LobbyMember; 2],
     /// Every write's count: `lobbies_update` writes only over the revision it read.
     pub rev: i64,
     /// §9.4: the catalog the lobby was made under; a Start under another is `update_required`.
@@ -122,15 +145,35 @@ impl Tx<'_> {
         lobby_dispatch!(self, of_member(profile_id, at))
     }
 
+    /// R3732001: the unstarted, unexpired lobbies of `hosts` with an empty guest seat, newest first,
+    /// the code breaking a tie: a friend's row reads whether it holds one (`GET /api/friends`), by one
+    /// read for every friend.
+    pub async fn lobbies_open_of_hosts(&mut self, hosts: &[String], at: i64) -> StoreResult<Vec<Lobby>> {
+        lobby_dispatch!(self, open_of_hosts(hosts, at))
+    }
+
     /// R3730004: deletes every lobby expired at `before`.
     pub async fn lobbies_reap(&mut self, before: i64) -> StoreResult<u64> {
         lobby_dispatch!(self, reap(before))
     }
 }
 
-/// Migration 0090: a deleted profile takes the lobbies it hosts or sits in (`on delete cascade`).
+impl Lobby {
+    /// Whether `profile_id` hosts or sits in any seat, a 2v2's other team's included.
+    pub fn seats(&self, profile_id: &str) -> bool {
+        self.host == profile_id
+            || self.guest.as_deref() == Some(profile_id)
+            || self
+                .others
+                .iter()
+                .any(|member| member.profile.as_deref() == Some(profile_id))
+    }
+}
+
+/// Migrations 0090 and 0091: a deleted profile takes the lobbies it hosts or sits in (`on delete
+/// cascade`).
 pub fn remove_lobby_rows(lobbies: &mut Vec<Lobby>, profile_id: &str) {
-    lobbies.retain(|lobby| lobby.host != profile_id && lobby.guest.as_deref() != Some(profile_id));
+    lobbies.retain(|lobby| !lobby.seats(profile_id));
 }
 
 mod pg {
@@ -139,7 +182,7 @@ mod pg {
     use sqlx::postgres::PgRow;
     use time::OffsetDateTime;
 
-    use super::{Lobby, LobbyPick};
+    use super::{Lobby, LobbyMember, LobbyPick};
     use crate::auth::is_uuid;
     // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`).
     use crate::db::pg::{PgTx, ms_of, run_as, uuid_text, uuid_text_or_null};
@@ -156,7 +199,8 @@ mod pg {
     macro_rules! lobby_columns {
         () => {
             "code, host, guest, settings, host_pick, guest_pick, host_ready, guest_ready, rev,
-             catalog_version, created_at, expires_at, match_id, series_id, started_at"
+             catalog_version, created_at, expires_at, match_id, series_id, started_at,
+             guest2, guest3, guest2_pick, guest3_pick, guest2_ready, guest3_ready"
         };
     }
 
@@ -182,6 +226,18 @@ mod pg {
             match_id: uuid_text_or_null(row, "match_id")?,
             series_id: uuid_text_or_null(row, "series_id")?,
             started_at: started_at.map(ms_of),
+            others: [
+                LobbyMember {
+                    profile: uuid_text_or_null(row, "guest2")?,
+                    pick: pick("guest2_pick")?,
+                    ready: row.try_get("guest2_ready")?,
+                },
+                LobbyMember {
+                    profile: uuid_text_or_null(row, "guest3")?,
+                    pick: pick("guest3_pick")?,
+                    ready: row.try_get("guest3_ready")?,
+                },
+            ],
         })
     }
 
@@ -228,7 +284,9 @@ mod pg {
                  catalog_version = $9::text,
                  expires_at = to_timestamp($10::double precision / 1000.0),
                  match_id = $11::uuid, series_id = $12::uuid,
-                 started_at = to_timestamp($13::double precision / 1000.0)
+                 started_at = to_timestamp($13::double precision / 1000.0),
+                 guest2 = $15::uuid, guest3 = $16::uuid, guest2_pick = $17::jsonb, guest3_pick = $18::jsonb,
+                 guest2_ready = $19::boolean, guest3_ready = $20::boolean
               where code = $1::text and rev = $14::bigint",
         )
         .bind(next.code.as_str())
@@ -245,6 +303,12 @@ mod pg {
         .bind(next.series_id.as_deref())
         .bind(next.started_at)
         .bind(expected_rev)
+        .bind(next.others[0].profile.as_deref())
+        .bind(next.others[1].profile.as_deref())
+        .bind(pick_text(&next.others[0].pick)?)
+        .bind(pick_text(&next.others[1].pick)?)
+        .bind(next.others[0].ready)
+        .bind(next.others[1].ready)
         .execute(&mut **t)
         .await?;
         Ok(done.rows_affected() == 1)
@@ -291,11 +355,36 @@ mod pg {
             "select ",
             lobby_columns!(),
             " from public.lobbies
-              where (host = $1::uuid or guest = $1::uuid)
+              where (host = $1::uuid or guest = $1::uuid or guest2 = $1::uuid or guest3 = $1::uuid)
                 and expires_at > to_timestamp($2::double precision / 1000.0)
               order by created_at desc, code"
         ))
         .bind(profile_id)
+        .bind(at)
+        .fetch_all(&mut **t)
+        .await?;
+        rows.iter().map(lobby_of).collect()
+    }
+
+    pub async fn open_of_hosts(
+        t: &mut PgTx<'_>,
+        hosts: &[String],
+        at: i64,
+    ) -> Result<Vec<Lobby>, StoreError> {
+        run_as(t, None).await?;
+        let hosts: Vec<String> = hosts.iter().filter(|host| is_uuid(host)).cloned().collect();
+        if hosts.is_empty() {
+            return Ok(Vec::new());
+        }
+        let rows = sqlx::query(concat!(
+            "select ",
+            lobby_columns!(),
+            " from public.lobbies
+              where host = any($1::uuid[]) and guest is null and started_at is null
+                and expires_at > to_timestamp($2::double precision / 1000.0)
+              order by created_at desc, code"
+        ))
+        .bind(hosts)
         .bind(at)
         .fetch_all(&mut **t)
         .await?;
@@ -337,6 +426,7 @@ mod fake {
             guest_pick: None,
             host_ready: false,
             guest_ready: false,
+            others: Default::default(),
             match_id: None,
             series_id: None,
             started_at: None,
@@ -361,6 +451,17 @@ mod fake {
         // Postgres's check: a lobby's guest is never its host.
         if next.guest.as_deref() == Some(row.host.as_str()) {
             return Err(StoreError::from("lobbies_guest_not_host_check"));
+        }
+        // And migration 0091's: no one sits in two of a lobby's seats.
+        let mut members: Vec<&str> = std::iter::once(row.host.as_str())
+            .chain(next.guest.as_deref())
+            .chain(next.others.iter().filter_map(|member| member.profile.as_deref()))
+            .collect();
+        let seated = members.len();
+        members.sort_unstable();
+        members.dedup();
+        if members.len() != seated {
+            return Err(StoreError::from("lobbies_members_distinct_check"));
         }
         *row = Lobby {
             code: row.code.clone(),
@@ -400,14 +501,27 @@ mod fake {
         let lobbies = call(f, "lobbies.ofMember")?;
         let mut held: Vec<Lobby> = lobbies
             .iter()
-            .filter(|lobby| {
-                (lobby.host == profile_id || lobby.guest.as_deref() == Some(profile_id))
-                    && lobby.expires_at > at
-            })
+            .filter(|lobby| lobby.seats(profile_id) && lobby.expires_at > at)
             .cloned()
             .collect();
         held.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| a.code.cmp(&b.code)));
         Ok(held)
+    }
+
+    pub fn open_of_hosts(f: &mut FakeTx<'_>, hosts: &[String], at: i64) -> Result<Vec<Lobby>, StoreError> {
+        let lobbies = call(f, "lobbies.openOfHosts")?;
+        let mut open: Vec<Lobby> = lobbies
+            .iter()
+            .filter(|lobby| {
+                hosts.contains(&lobby.host)
+                    && lobby.guest.is_none()
+                    && lobby.started_at.is_none()
+                    && lobby.expires_at > at
+            })
+            .cloned()
+            .collect();
+        open.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| a.code.cmp(&b.code)));
+        Ok(open)
     }
 
     pub fn reap(f: &mut FakeTx<'_>, before: i64) -> Result<u64, StoreError> {

@@ -7,7 +7,7 @@
 //! Engine: one `cast_new` per Call to Chaos edition, in catalog order: the Call to Chaos pool
 //! (`query::call_to_chaos_editions`, R3869001), every card tagged Call to Chaos of the sets that ship:
 //! Core #95, C+ #73, M #95, the set's own two, Training Grounds #39 and Stinkyscape+ #142 today, the
-//! seven it named by id through v0.6.0g, in the same order, so no game plays differently, and an edition
+//! seven it named by id through v0.6.2b, in the same order, so no game plays differently, and an edition
 //! a later set prints joins it. Each is a play for
 //! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
 //! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
@@ -57,7 +57,7 @@ mod tests {
     use crate::scenario;
 
     /// R3869001: the editions the pool holds today, pinned so a change to it is deliberate: the seven
-    /// this card named by id through v0.6.0g, in its order.
+    /// this card named by id through v0.6.2b, in its order.
     const EDITIONS: [&str; 7] = [
         "core-095",
         "classicplus-073",

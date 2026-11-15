@@ -11,25 +11,25 @@
 //!
 //! The fallback (#3869, R3869005): when no row qualifies it adds a random non-token card of the sets
 //! that ship, never CN Tech itself (R387), drawn from the match rng, Radiant on the Radiant face, as
-//! R142 had it before #2521. Through v0.6.0g it added Core #35 Lunar Eclipse instead (R2521007;
-//! `script_v0_6_0g`, kept, R767000).
+//! R142 had it before #2521. Through v0.6.2b it added Core #35 Lunar Eclipse instead (R2521007;
+//! `script_v0_6_2b`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-050";
 
-/// R767000, R2521007: the card added through v0.6.0g when the table named no leader, Core #35 Lunar
+/// R767000, R2521007: the card added through v0.6.2b when the table named no leader, Core #35 Lunar
 /// Eclipse, 33/48, the leader of v0.4.0's provisional table.
-pub const FALLBACK_LEADER_V0_6_0G: &str = "core-035";
+pub const FALLBACK_LEADER_V0_6_2B: &str = "core-035";
 
-/// The Cry; `kept`, the script through v0.6.0g.
+/// The Cry; `kept`, the script through v0.6.2b.
 fn tech(radiant: bool, kept: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| match win_rate_leader(&*ctx.state, ID) {
             Some(id) => vec![add_to_hand(json_as(json!({ "defId": id, "radiant": radiant })))],
             // R3869005: no leader, a random non-token card of the sets that ship, never this one.
             None if !kept => vec![add_random_from_catalog(json_as(json!({ "query": { "excludeDefId": ID }, "radiant": radiant })))],
-            None => vec![add_to_hand(json_as(json!({ "defId": FALLBACK_LEADER_V0_6_0G, "radiant": radiant })))],
+            None => vec![add_to_hand(json_as(json!({ "defId": FALLBACK_LEADER_V0_6_2B, "radiant": radiant })))],
         })),
         ..Script::default()
     }
@@ -42,9 +42,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.0g a table with no leader added Lunar Eclipse (R2521007); `KEPT_SCRIPTS` folds
+/// R767000: through v0.6.2b a table with no leader added Lunar Eclipse (R2521007); `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_0g() -> CardScripts {
+pub fn script_v0_6_2b() -> CardScripts {
     CardScripts {
         base: tech(false, true),
         radiant: tech(true, true),
@@ -377,11 +377,11 @@ mod tests {
         }
 
         #[test]
-        fn r767000_r2521007_the_script_kept_for_v0_6_0g_adds_lunar_eclipse_with_no_leader() {
+        fn r767000_r2521007_the_script_kept_for_v0_6_2b_adds_lunar_eclipse_with_no_leader() {
             register_win_rates(table(vec![]));
-            crate::under_kept(TECH, script_v0_6_0g(), || {
+            crate::under_kept(TECH, script_v0_6_2b(), || {
                 for n in 0..3 {
-                    assert_eq!(added_by(casting(&format!("cn-tech-kept-{n}"), false)), FALLBACK_LEADER_V0_6_0G);
+                    assert_eq!(added_by(casting(&format!("cn-tech-kept-{n}"), false)), FALLBACK_LEADER_V0_6_2B);
                 }
             });
             clear_overrides();

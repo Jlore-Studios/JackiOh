@@ -348,6 +348,8 @@ function signInThroughForm(email: string): void {
 
     signInThroughForm(P1);
     cy.visit("/play");
+    // R3729000: the mode's card opens the panel that holds Find a match.
+    cy.get('[data-testid="play-mode-bo1"]').click();
     cy.get('[data-testid="play-queue"]').click();
     // Queued, with nobody to pair against.
     cy.get('[data-testid="play-status"]', { timeout: 30_000 }).should("exist");
@@ -373,7 +375,7 @@ function signInThroughForm(email: string): void {
 
   it("the account screen shows who you are signed in as, and your record", () => {
     signInThroughForm(P1);
-    cy.visit("/account");
+    cy.visit("/account?section=overview");
 
     cy.get('[data-testid="account-email"]', { timeout: 40_000 }).should("contain.text", P1);
     cy.get('[data-testid="account-status"]').should("have.attr", "data-status", "active");

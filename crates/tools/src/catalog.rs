@@ -375,6 +375,17 @@ fn validate_face(
             &format!("`text` must be a string (got {})", describe(face.get("text"))),
         );
     }
+    // R3806000: a card played face-down as a Trap runs no Cry at its play, so no Trap or Field Trap
+    // prints one: an effect a Trap has as it is set is written "When played face down:".
+    if matches!(running_type.and_then(Json::as_str), Some("Trap" | "Field Trap"))
+        && matches!(face.get("text"), Some(Json::String(text)) if text.contains("Cry:"))
+    {
+        fail(
+            failures,
+            &at,
+            "a Trap or Field Trap prints no `Cry:`: an effect it has as it is set is written `When played face down:` (R3806000)",
+        );
+    }
 
     let Some(Json::Array(keywords)) = face.get("keywords") else {
         fail(
@@ -2269,6 +2280,31 @@ mod tests {
             check_catalog(&catalog).failures,
             [
                 "catalog[\"classic-005\"].base: an Animated face prints both `attack` and `health` or neither (R2280000)"
+            ]
+        );
+    }
+
+    #[test]
+    fn r3806000_a_trap_or_field_trap_face_that_prints_a_cry_fails() {
+        // The shipped catalog prints no Cry on a Trap or Field Trap face.
+        assert_eq!(check_catalog(&shipped_catalog()).failures, Vec::<String>::new());
+        let mut catalog = shipped_catalog();
+        // C #41 Sheepish, a Trap, on its base face; C #5 Tesla, a Field Trap, on its Radiant one.
+        for (id, face) in [("core-041", "base"), ("classic-005", "radiant")] {
+            let mut entry = catalog[id].as_object().expect("the entry").clone();
+            if let Some(Json::Object(printed)) = entry.get_mut(face) {
+                let text = printed.get("text").and_then(Json::as_str).unwrap_or_default();
+                let cried = format!("{text}\nCry: Draw a card.");
+                printed.insert("text".to_string(), Json::from(cried));
+            }
+            catalog.insert(id.to_string(), Json::Object(entry));
+        }
+        let rule = "a Trap or Field Trap prints no `Cry:`: an effect it has as it is set is written `When played face down:` (R3806000)";
+        assert_eq!(
+            check_catalog(&catalog).failures,
+            [
+                format!("catalog[\"core-041\"].base: {rule}"),
+                format!("catalog[\"classic-005\"].radiant: {rule}"),
             ]
         );
     }

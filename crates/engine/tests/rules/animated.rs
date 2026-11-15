@@ -1291,6 +1291,151 @@ mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check 
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 1)), Some(flag.id.clone()));
         assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
     }
+
+    #[test]
+    fn r2280001_only_a_card_on_top_of_a_backrow_zone_is_owed_a_unit_given_animated_in_its_unit_zone_is_not() {
+        let mut state = playing("animated-owed-unit-zone");
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 3), Default::default());
+        let mut sink = sink_for(&mut state);
+        (grant_keyword(json_as(json!({
+            "target": { "of": "instance", "instanceId": unit.id },
+            "keyword": { "kind": "Animated" },
+        })))
+        .apply)(&mut make_context(&mut sink, None, by(P1)));
+        // It has both now, stats and plain Animated, but stands in a unit zone, not a backrow zone.
+        assert!(has_stat_line(sink.state, &live(sink.state, &unit.id)));
+        assert_eq!(
+            animated_kind_of(sink.state, &live(sink.state, &unit.id)),
+            Some(AnimatedKind::Animated)
+        );
+        assert!(!owed(sink.state, &unit.id));
+        state_check(&mut sink);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 3)), Some(unit.id.clone()));
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280001_a_trap_counts_once_it_has_fired_face_up_and_one_only_revealed_is_still_armed() {
+        let mut state = playing("animated-owed-fired-trap");
+        let fired = put(
+            &mut state,
+            &mote.id,
+            slot(P2, Row::Backrow, 3),
+            Default::default(),
+        );
+        // p1's play fires p2's stat-less Animated Trap, which stays face-up in its zone (R2280000).
+        let mut state = play_plain(&mut state, 1).state;
+        assert_eq!(live(&state, &fired.id).face_up, Some(true));
+        let armed = put(
+            &mut state,
+            &mote.id,
+            slot(P2, Row::Backrow, 4),
+            Default::default(),
+        );
+        live_mut(&mut state, &armed.id).revealed = Some(true);
+        let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
+        let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
+        let mut sink = sink_for(&mut state);
+        fuse_into(&mut sink, &first, &fired);
+        fuse_into(&mut sink, &second, &armed);
+        assert!(owed(sink.state, &fired.id));
+        assert!(!owed(sink.state, &armed.id));
+
+        state_check(&mut sink);
+        assert_eq!(id_at(sink.state, slot(P2, Row::Units, 3)), Some(fired.id.clone()));
+        assert_eq!(
+            id_at(sink.state, slot(P2, Row::Backrow, 4)),
+            Some(armed.id.clone())
+        );
+        assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
+    }
+}
+
+// R446, R1728000: a Unit in a backrow zone, on a carrier (R446) or standing there itself (R1081000), is a
+// Unit already, not the card on top of that zone: Animated owes it nothing (R2280001) and animating it
+// never takes it off its carrier.
+mod r446_r1728000_a_unit_in_a_backrow_zone_is_a_unit_already {
+    use super::*;
+
+    /// p1's carrier in backrow `lane` and a plain 3/3 standing on it: the state and the Unit.
+    fn carried_unit(seed: &str, lane: i32) -> (GameState, CardInstance) {
+        let mut state = playing(seed);
+        put(
+            &mut state,
+            &tower.id,
+            slot(P1, Row::Backrow, lane),
+            Default::default(),
+        );
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(P1, Row::Backrow, lane),
+            Default::default(),
+        );
+        assert!(is_carried(&state, &unit));
+        (state, unit)
+    }
+
+    fn grant_animated(sink: &mut EngineSink<'_>, id: &str) {
+        (grant_keyword(json_as(json!({
+            "target": { "of": "instance", "instanceId": id },
+            "keyword": { "kind": "Animated" },
+        })))
+        .apply)(&mut make_context(sink, None, by(P1)));
+    }
+
+    #[test]
+    fn r2280001_r446_a_carried_unit_given_animated_is_owed_nothing_and_stays_on_its_carrier() {
+        let (mut state, unit) = carried_unit("animated-owed-carried", 2);
+        let mut sink = sink_for(&mut state);
+        grant_animated(&mut sink, &unit.id);
+        // It has both, stats and plain Animated, but it is carried: a Unit already (R446).
+        let now = &live(sink.state, &unit.id);
+        assert!(has_stat_line(sink.state, now));
+        assert_eq!(animated_kind_of(sink.state, now), Some(AnimatedKind::Animated));
+        assert!(!owed(sink.state, &unit.id));
+        state_check(&mut sink);
+        assert!(is_carried(sink.state, &live(sink.state, &unit.id)));
+        assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
+        assert!(!owed(sink.state, &unit.id));
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280001_r1728000_a_unit_standing_in_its_backrow_zone_given_animated_is_owed_nothing() {
+        let mut state = playing("animated-owed-standing");
+        let mut card = new_instance(&mut state, &plain.id, P1, Zone::Hand { player: P1 });
+        assert!(place_standing_on_field(
+            &mut state,
+            &mut card,
+            slot(P1, Row::Backrow, 2),
+            PlaceOnFieldOptions::default()
+        ));
+        assert!(stands_in_backrow(&state, &live(&state, &card.id)));
+        let mut sink = sink_for(&mut state);
+        grant_animated(&mut sink, &card.id);
+        let now = &live(sink.state, &card.id);
+        assert!(has_stat_line(sink.state, now));
+        assert_eq!(animated_kind_of(sink.state, now), Some(AnimatedKind::Animated));
+        assert!(!owed(sink.state, &card.id));
+        state_check(&mut sink);
+        assert!(stands_in_backrow(sink.state, &live(sink.state, &card.id)));
+        assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r446_animating_a_carried_unit_moves_nothing_it_stays_on_its_carrier() {
+        let (mut state, unit) = carried_unit("animated-carried-move", 3);
+        let mut sink = sink_for(&mut state);
+        let now = live(sink.state, &unit.id);
+        animate_card(&mut sink, &now, Default::default());
+        // It steps down only once its carrier stops carrying (R446), never as an animation.
+        assert!(is_carried(sink.state, &live(sink.state, &unit.id)));
+        assert_eq!(live(sink.state, &unit.id).zone, now.zone);
+        assert!(card_at(sink.state, slot(P1, Row::Units, 3)).is_none());
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
 }
 
 // R3542000 (issue #3542): a card whose own text gives it stats by its Plague Counters has a stat line

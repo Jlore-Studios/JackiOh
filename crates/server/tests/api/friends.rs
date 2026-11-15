@@ -640,6 +640,163 @@ mod b46_blocks {
     }
 }
 
+// R3732001 — what a friend's row says besides their status
+
+mod r3732001_a_friends_row_says_more {
+    use super::*;
+
+    /// `who`'s heartbeat written as the store keeps it, `ago_ms` before now; answers its time.
+    async fn seen(app: &Arc<App>, who: &Account, ago_ms: i64) -> i64 {
+        let at = now_ms() - ago_ms;
+        fake(app)
+            .lock()
+            .await
+            .tables
+            .social
+            .presence
+            .insert(who.id.clone(), at);
+        at
+    }
+
+    #[tokio::test]
+    async fn r3732001_an_offline_friend_carries_when_they_were_last_seen_and_an_online_one_does_not() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let cyd = account(&app, 3, "Cyd").await;
+        let dov = account(&app, 4, "Dov").await;
+        for friend in [&bea, &cyd, &dov] {
+            befriend(&app, &ada, friend).await;
+        }
+        // Bea is past the TTL, Cyd beat just now, and Dov has no heartbeat on record at all.
+        let at = seen(&app, &bea, millis(PRESENCE_TTL_MS) as i64 + 5_000).await;
+        seen(&app, &cyd, 1_000).await;
+        fake(&app)
+            .lock()
+            .await
+            .tables
+            .social
+            .presence
+            .shift_remove(&dov.id);
+
+        let listed = lists(&app, &ada).await;
+
+        let offline = friend_entry(&listed, &bea.id);
+        assert_eq!(offline["status"], "offline", "{offline}");
+        assert_eq!(
+            offline["lastSeenAt"],
+            json!(jackioh_server::social::iso(at)),
+            "{offline}"
+        );
+        let online = friend_entry(&listed, &cyd.id);
+        assert_eq!(online["status"], "online", "{online}");
+        assert!(online.get("lastSeenAt").is_none(), "{online}");
+        let never = friend_entry(&listed, &dov.id);
+        assert_eq!(never["status"], "offline", "{never}");
+        assert!(never.get("lastSeenAt").is_none(), "{never}");
+    }
+
+    #[tokio::test]
+    async fn r3732001_a_friend_in_a_1v1_game_carries_its_turn_and_a_co_op_friend_carries_none() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let rex = account(&app, 3, "Rex").await;
+        let eli = account(&app, 4, "Eli").await;
+        let gus = account(&app, 5, "Gus").await;
+        let cyd = account(&app, 6, "Cyd").await;
+        for friend in [&bea, &eli, &cyd] {
+            befriend(&app, &ada, friend).await;
+        }
+        let match_id = uuid(530);
+        live_match(&app, &match_id, &bea, &rex, false).await;
+        duos_match(&app, &eli, &gus).await;
+        heartbeat(&app, &cyd).await;
+
+        let listed = lists(&app, &ada).await;
+
+        let duel = friend_entry(&listed, &bea.id);
+        assert_eq!(duel["status"], "inMatch", "{duel}");
+        let turn = app
+            .matches
+            .get(&match_id)
+            .expect("the live match")
+            .snapshot()
+            .turn;
+        assert_eq!(duel["turn"], json!(turn), "{duel}");
+        let coop = friend_entry(&listed, &eli.id);
+        assert_eq!(coop["status"], "inMatch", "{coop}");
+        assert!(coop.get("turn").is_none(), "{coop}");
+        let idle = friend_entry(&listed, &cyd.id);
+        assert!(idle.get("turn").is_none(), "{idle}");
+    }
+
+    #[tokio::test]
+    async fn r3732001_an_online_friend_with_an_open_lobby_carries_its_code_and_a_full_or_started_one_none() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let cyd = account(&app, 3, "Cyd").await;
+        let dov = account(&app, 4, "Dov").await;
+        for friend in [&bea, &cyd, &dov] {
+            befriend(&app, &ada, friend).await;
+        }
+        let mut codes = Vec::new();
+        for host in [&bea, &cyd, &dov] {
+            let (status, body) = api(
+                &app,
+                "POST",
+                "/api/lobbies",
+                &host.token,
+                json!({ "format": "duel", "mode": "random" }),
+            )
+            .await;
+            assert_eq!(status, 201, "{body}");
+            codes.push(body["code"].as_str().expect("a lobby code").to_string());
+        }
+        for host in [&bea, &cyd, &dov] {
+            heartbeat(&app, host).await;
+        }
+
+        let listed = lists(&app, &ada).await;
+        for (host, code) in [&bea, &cyd, &dov].into_iter().zip(&codes) {
+            assert_eq!(
+                friend_entry(&listed, &host.id)["lobbyCode"],
+                json!(code),
+                "{host:?}",
+                host = host.name
+            );
+        }
+
+        // Cyd's seat is taken (by Ada, who holds the code), Dov's lobby has started, and Bea
+        // drops off: only an online friend's lobby with an empty seat is named.
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{}/enter", codes[1]),
+            &ada.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        fake(&app)
+            .lock()
+            .await
+            .tables
+            .lobbies
+            .iter_mut()
+            .filter(|lobby| lobby.code == codes[2])
+            .for_each(|lobby| lobby.started_at = Some(now_ms()));
+        seen(&app, &bea, millis(PRESENCE_TTL_MS) as i64 + 5_000).await;
+
+        let listed = lists(&app, &ada).await;
+        for (host, why) in [(&bea, "offline"), (&cyd, "full"), (&dov, "started")] {
+            let entry = friend_entry(&listed, &host.id);
+            assert!(entry.get("lobbyCode").is_none(), "{why}: {entry}");
+        }
+    }
+}
+
 // B47 — status
 
 mod b47_status {
@@ -873,13 +1030,14 @@ mod b47_status {
     /// The store methods one `GET /api/friends` of `who`'s asked for, by name, the social ones only
     /// (a match or co-op actor running beside the request may be writing too).
     async fn friends_list_reads(app: &Arc<App>, who: &Account) -> (Value, Vec<String>) {
-        const SOCIAL: [&str; 6] = [
+        const SOCIAL: [&str; 7] = [
             "friends.",
             "blocks.",
             "presence.",
             "profiles.",
             "series.",
             "duos.matches.liveFor",
+            "lobbies.",
         ];
         let calls = record_store_calls(app).await;
         let listed = lists(app, who).await;
@@ -972,12 +1130,14 @@ mod b47_status {
                 "{per_friend}: {five_friends:?}"
             );
         }
+        // R3732001: and the open lobbies of every online friend are one read of their own.
         for set_based in [
             "presence.lastSeen",
             "presence.inSeries",
             "presence.inDuos",
             "presence.watchable",
             "presence.duosBlocked",
+            "lobbies.openOfHosts",
         ] {
             assert_eq!(
                 five_friends.iter().filter(|method| *method == set_based).count(),

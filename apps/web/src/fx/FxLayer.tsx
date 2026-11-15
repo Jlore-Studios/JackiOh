@@ -128,11 +128,19 @@ export function catalogFacts(lookup: CardLookup | null, defId: string): FxCardFa
   return { rarity: info.rarity, attack: info.attack, health: info.health, type: info.type, tags: info.tags };
 }
 
-/** R502: the sides whose next-refresh rider this entry lays or spends. */
+/**
+ * R502: the sides whose next-refresh rider this entry lays or spends. A switch, not `type === … &&`: only a
+ * modifierChanged carries a modifierId, so a type test beside the id test would decide nothing but the types.
+ */
 function riderSides(entry: AnimationEntry): Side[] {
-  return entry.events.flatMap((event) =>
-    event.type === "modifierChanged" && event.modifierId === FX_NEXT_REFRESH_MODIFIER_ID ? [sideOf(entry.view, event.player)] : [],
-  );
+  return entry.events.flatMap((event) => {
+    switch (event.type) {
+      case "modifierChanged":
+        return event.modifierId === FX_NEXT_REFRESH_MODIFIER_ID ? [sideOf(entry.view, event.player)] : [];
+      default:
+        return [];
+    }
+  });
 }
 
 
@@ -153,15 +161,19 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   // own style: there each entry's start restyled the whole game.
   const squeeze = useRef<RootVars | null>(null);
   useLayoutEffect(() => {
+    // Stryker disable next-line OptionalChaining: the root div always renders, so its ref is set whenever a layout effect runs
     const parent = rootRef.current?.parentElement ?? null;
     if (parent === null) return undefined;
     const owned = rootVars(parent);
     squeeze.current = owned;
+    // React runs an effect's cleanup before its next setup, so the ref still holds this run's own.
     return () => {
       owned.release();
-      if (squeeze.current === owned) squeeze.current = null;
+      squeeze.current = null;
     };
-  }, []);
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
   const removeSqueeze = (): void => squeeze.current?.remove(SQUEEZE);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
@@ -172,6 +184,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   // What the runner's listener reads: a ref, so the subscription is made once per queue and never
   // torn down between two entries of one burst.
   const bigMoments = settings.bigMoments;
+  // Stryker disable next-line ObjectLiteral,LogicalOperator: the next line overwrites this first value in the same render, before anything reads it
   const live = useRef({ enabled, still, intensity, lookup, seams, view, latest: latest ?? view, bigMoments });
   live.current = { enabled, still, intensity, lookup, seams, view, latest: latest ?? view, bigMoments };
 
@@ -194,7 +207,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   const markMana = (): void => {
     const current = live.current;
     const sides = riderReached.current;
-    applyManaMarks(document, manaMarks(current.view, sides.size > 0 ? { view: current.latest, sides } : undefined));
+    // manaMarks reads the newest view only for the sides the set holds: none while it is empty.
+    applyManaMarks(document, manaMarks(current.view, { view: current.latest, sides }));
   };
 
   // The director lives exactly as long as the canvas and the DOM root it draws into.
@@ -203,8 +217,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     const canvas = canvasRef.current;
     const domRoot = domRef.current!;
     const s = live.current.seams ?? {};
-    // A still layer has no canvas: its callouts are DOM.
-    const surface = enabled && canvas !== null ? (s.surface ?? createSurface)(canvas) : null;
+    // A still layer has no canvas (it renders only while enabled): its callouts are DOM.
+    const surface = canvas !== null ? (s.surface ?? createSurface)(canvas) : null;
     const created = createFxDirector({
       surface,
       domRoot,
@@ -218,8 +232,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       element: s.element,
     });
     director.current = created;
+    // React runs an effect's cleanup before its next setup, so the ref still holds this run's own.
     return () => {
-      if (director.current === created) director.current = null;
+      director.current = null;
       created.dispose();
       surface?.dispose();
     };
@@ -233,12 +248,14 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   // #3633: the marks above. The banner and the holds come and go inside the effects' own root, so they
   // are read off it as it changes; a mutation's record is read before the frame it lands in is drawn.
   useLayoutEffect(() => {
+    // Stryker disable next-line OptionalChaining: the root div always renders, so its ref is set whenever a layout effect runs
     const parent = rootRef.current?.parentElement ?? null;
     if (parent === null || !enabled) return undefined;
     parent.setAttribute(FX_LAYER_MARK, "on");
     return () => parent.removeAttribute(FX_LAYER_MARK);
   }, [enabled]);
   useLayoutEffect(() => {
+    // Stryker disable next-line OptionalChaining: the root div always renders, so its ref is set whenever a layout effect runs
     const parent = rootRef.current?.parentElement ?? null;
     const domRoot = domRef.current;
     if (parent === null || domRoot === null) return undefined;
@@ -259,6 +276,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   // The reduce setting acts like the media query (R200): index.css zeroes --anim-scale on :root,
   // this zeroes it on the game root.
   useLayoutEffect(() => {
+    // Stryker disable next-line OptionalChaining: the root div always renders, so its ref is set whenever a layout effect runs
     const parent = rootRef.current?.parentElement ?? null;
     if (parent === null || !settingReduces) return undefined;
     parent.style.setProperty(SCALE, "0");
@@ -269,26 +287,24 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
 
   /** Entries started since the runner last went idle, and the ones a drain cut short (for planLethal). */
   const played = useRef<AnimationEntry[]>([]);
+  // Stryker disable next-line ArrayDeclaration: the first view effect, at the mount, where no result can play, takes this first value and drops it unread
   const drained = useRef<readonly AnimationEntry[]>([]);
 
   // Runner signals. Declared after the director so a first `start` already has one to play into.
   useLayoutEffect(() => {
     const onSignal = (signal: RunnerSignal): void => {
-      const root = rootRef.current;
       switch (signal.kind) {
         case "start": {
           const entry = signal.entry;
           played.current.push(entry);
           drained.current = [];
           const table = animationRow(entry.type)?.durationMs ?? 0;
-          const parent = root?.parentElement ?? null;
-          if (parent !== null) {
-            // A slam's anticipation and a set piece's hold (R2722001, R2785000) are a wait before the motion, not a slower motion.
-            const motionMs = entry.durationMs - leadMs(entry);
-            // An event type this build does not know has no row (issue #769): no squeeze.
-            if (table > 0) squeeze.current?.set(SQUEEZE, (motionMs / table).toFixed(3));
-            else removeSqueeze();
-          }
+          // A slam's anticipation and a set piece's hold (R2722001, R2785000) are a wait before the motion, not a slower motion.
+          const motionMs = entry.durationMs - leadMs(entry);
+          // An event type this build does not know has no row (issue #769): no squeeze. A layer with no parent
+          // owns no variables (the first layout effect), so it writes none.
+          if (table > 0) squeeze.current?.set(SQUEEZE, (motionMs / table).toFixed(3));
+          else removeSqueeze();
           const reached = riderSides(entry);
           if (reached.length > 0) {
             for (const side of reached) riderReached.current.add(side);
@@ -329,6 +345,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
         case "drain": {
           removeSqueeze();
           director.current?.clear();
+          // Stryker disable next-line OptionalChaining: memory.current is set in the first render, before any signal can come
           memory.current?.clear();
           const cut = signal.entries.filter((entry) => !played.current.includes(entry));
           drained.current = [...played.current, ...cut];
@@ -343,6 +360,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
         case "reset":
           removeSqueeze();
           director.current?.clear();
+          // Stryker disable next-line OptionalChaining: memory.current is set in the first render, before any signal can come
           memory.current?.clear();
           played.current = [];
           drained.current = [];
@@ -358,11 +376,10 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   }, [queue]);
 
   // A newer view on the board ends every stage effect (stage.ts). A LAYOUT effect, so the swap and
-  // the release land in the same paint and no frame shows both, or neither.
-  const releasedFor = useRef<PlayerView | null>(null);
+  // the release land in the same paint and no frame shows both, or neither. At the mount the director is
+  // new (the layout effect above) and holds none, so the first view's release lets go of nothing.
   useLayoutEffect(() => {
-    if (releasedFor.current !== null && releasedFor.current !== view) director.current?.release();
-    releasedFor.current = view;
+    director.current?.release();
   }, [view]);
 
   // R502: the crystals the next refresh will not fill, from the shown view. A LAYOUT effect, after
@@ -375,10 +392,19 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   useLayoutEffect(
     () => () => {
       applyManaMarks(document, [
-        { side: "you", run: { from: 0, count: 0 } },
-        { side: "opponent", run: { from: 0, count: 0 } },
+        {
+          side: "you",
+          // Stryker disable next-line ObjectLiteral: applyManaMarks clears a run with no count as it does a count of 0
+          run: { from: 0, count: 0 },
+        },
+        {
+          side: "opponent",
+          // Stryker disable next-line ObjectLiteral: applyManaMarks clears a run with no count as it does a count of 0
+          run: { from: 0, count: 0 },
+        },
       ]);
     },
+    // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
     [],
   );
 
@@ -392,7 +418,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     return () => {
       document.removeEventListener("pointerdown", onDown, true);
     };
-  }, []);
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
   // R3351000: the pointer the shed order measures far auras by (shed.ts). One passive listener for
   // the whole layer; the aura layer reads the same store. There was no layer-wide pointer position
   // before: tilt tracks each face on its own (cards/tilt.ts, R3344001). #3610: the pointer is handled once a frame, the
@@ -410,7 +438,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       follow.cancel();
       setShedPointer(null);
     };
-  }, []);
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
   const promptForViewer = view.pending !== null && view.pending.forYou;
   useEffect(() => {
     if (promptForViewer) director.current?.dismissBanner();
@@ -429,7 +459,12 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     const cut = drained.current;
     drained.current = [];
     const target = director.current;
-    if (!live.current.enabled || target === null) return;
+    if (
+      !live.current.enabled ||
+      // Stryker disable next-line ConditionalExpression: TypeScript's narrowing; this passive effect runs after the commit that built the director, which is there whenever the layer is on
+      target === null
+    )
+      return;
     const env = planEnv();
     if (previousResult === null && view.result !== null) {
       // The killing blow first (the drain cleared it before it drew), then the result on its beat.

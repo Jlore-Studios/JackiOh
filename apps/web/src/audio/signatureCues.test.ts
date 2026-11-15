@@ -13,7 +13,7 @@
 // sounding as they land face up in the backrow.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "../wire/cards.ts";
 import { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_MYTHIC_MAX_MS, SIGNATURE_SPELL_SHARE } from "../fx/constants.ts";
@@ -508,5 +508,53 @@ describe("R3395000 Stinkyscape 001 to 090's signature sounds", () => {
     const sounds = Object.values(SIGNATURE_SFX).map((own) => own.sfx);
     expect(new Set(sounds).size, "no two cards share a sound").toBe(Object.keys(SIGNATURE_SFX).length);
     expect(new Set(sounds.map(graphOf)).size).toBe(sounds.length);
+  });
+});
+
+type SignatureModule = typeof import("./signatureCues.ts");
+
+/**
+ * The module as a page load builds it, inside the test that reads it (`vi.resetModules()`): its table and its
+ * empty answer are built as the module loads, so one built wrong fails here by name. Stryker runs a mutant of a
+ * value built at load only against the tests that load its module (#3518), which the file's own import is not.
+ */
+async function freshSignatures(): Promise<SignatureModule> {
+  vi.resetModules();
+  return import("./signatureCues.ts");
+}
+
+/**
+ * A card's signature moment, from its catalog type: a Trap's firing (R3402001), a Unit's landing in a unit zone,
+ * a Stinkyscape Field Spell's landing in the backrow (R3407001, R3395000) and The Cane's (R3405000), and every
+ * other card's play, a Meditative or Core Field Spell's among them (R3405001, R3402001).
+ */
+function momentOf(defId: string): { on: "cardPlayed" | "trapFired" } | { on: "summoned"; row: "units" | "backrow" } {
+  const type = CATALOG[defId]?.type;
+  if (type === "Trap") return { on: "trapFired" };
+  if (type === "Unit") return { on: "summoned", row: "units" };
+  if (type === "Field Spell" && (defId.startsWith("stinkyscape-") || defId === THE_CANE)) return { on: "summoned", row: "backrow" };
+  return { on: "cardPlayed" };
+}
+
+describe("R3400001 R3402001 R3405001 R3407001 R3395000 the signature table as a page load builds it", () => {
+  it("R3400001 R3402001 R3405001 R3407001 R3395000 each card of the table, in its order, sounds a bank sound of its own on its own moment", async () => {
+    const fresh = await freshSignatures();
+    const table = Object.entries(fresh.SIGNATURE_SFX);
+    const core = SIGNATURES.map(([defId]) => defId);
+    expect(table.map(([defId]) => defId)).toEqual([...EIGHT, ...core, ...STINKYSCAPE, ...MEDITATIVE, ...STINKYSCAPE_ONE]);
+    for (const [defId, own] of table) {
+      expect(SFX_IDS, defId).toContain(own.sfx);
+      expect(own, defId).toEqual({ sfx: own.sfx, ...momentOf(defId) });
+    }
+    const sounds = table.map(([, own]) => own.sfx);
+    expect(new Set(sounds).size, "no two cards share a sound").toBe(sounds.length);
+  });
+
+  it("R3400001 R203 a card with no signature, a hidden card or an event that is no card's moment sounds none", async () => {
+    const fresh = await freshSignatures();
+    const turnStarted: GameEvent = { type: "turnStarted", player: "p1", turn: 3 };
+    for (const event of [played("core-002"), summoned("core-004"), fired("core-018"), played(HIDDEN_DEF_ID), turnStarted]) {
+      expect(fresh.signatureCues(event), JSON.stringify(event)).toEqual([]);
+    }
   });
 });

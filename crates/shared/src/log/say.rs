@@ -2,6 +2,7 @@
 //! the way the web's `t(english, params)` filled them (`i18n.ts`), and the capital the log's own words open a
 //! line with. A part is plain words, or spans (a glossary term), so a line can carry the term it is about.
 
+use crate::face::tuning::MINUS;
 use crate::face::types::{RichText, Span};
 use crate::face::words::Words;
 
@@ -34,6 +35,15 @@ impl From<i32> for Part {
 impl From<usize> for Part {
     fn from(number: usize) -> Part {
         Part::Text(number.to_string())
+    }
+}
+
+/// A change as a signed number for the log: "+2", "+0", "−5" (U+2212, the minus a card's text prints).
+pub fn signed(number: i32) -> String {
+    if number < 0 {
+        format!("{MINUS}{}", number.unsigned_abs())
+    } else {
+        format!("+{number}")
     }
 }
 

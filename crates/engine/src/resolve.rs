@@ -203,9 +203,10 @@ pub fn cast_card(sink: &mut EngineSink<'_>, instance: &CardInstance, options: Ca
 
 /// §5.1 and R155: "Spells with 'End of turn: add this back to your hand' are flagged
 /// `returnToHandAtEndOfTurn` when played and return from the graveyard at the end of that turn".
-/// Written at §10.5 step 7, as the Spell lands, on three conditions in order: a Spell (a Unit with an
+/// Written at §10.5 step 7, as the Spell lands, on four conditions: a Spell (a Unit with an
 /// `endOfTurn` hook, #13, must not return, R153); an `endOfTurn` hook on its resolving face (#23, #24,
-/// #31); and in the **graveyard** (#39 exiles itself on play). `turn.cleanup` clears it that turn (R153).
+/// #31), all of it a Spell's text when the card is fused (R3806002); and in the **graveyard** (#39 exiles
+/// itself on play). `turn.cleanup` clears it that turn (R153).
 pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &str) {
     let Some(card) = find_instance(state, instance_id) else {
         return;
@@ -217,6 +218,11 @@ pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &s
         return;
     }
     if crate::scripts::script_of(state, card).end_of_turn.is_none() {
+        return;
+    }
+    // R3806002: a fused Spell whose end-of-turn text is (in part) a permanent ingredient's declares no
+    // return: that text works from the field alone (R153), so it never runs from the graveyard.
+    if !crate::subsystems::fuse::end_of_turn_is_spell_text(state, &card.def_id, card.radiant) {
         return;
     }
     if let Some(card) = find_instance_mut(state, instance_id) {

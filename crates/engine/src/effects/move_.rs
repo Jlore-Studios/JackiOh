@@ -31,6 +31,11 @@ fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     // R178: a resolving Spell's "exile this" names where §10.5 step 7 sends it, so it stays itself
     // for the rest of its text and its Echo repeats (§6.2).
     let is_self = ctx.self_.as_ref().is_some_and(|me| me.id == card.id);
+    // R3806000: a set Spell's "exile this" names where its reveal sends it, so as it resolves at its
+    // set under Paranoia it stays set.
+    if is_self && find_instance(ctx.state, &card.id).is_some_and(crate::alt_play::resolving_at_set) {
+        return;
+    }
     if card.zone.z() == ZoneName::Resolving && is_self {
         if let Some(live) = find_instance_mut(ctx.state, &card.id) {
             exile_on_landing(live);

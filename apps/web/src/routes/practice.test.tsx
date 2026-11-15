@@ -443,7 +443,7 @@ describe("B32 /practice shows setup to anyone", () => {
 
     // The Play hub holds the other ways; the setup links to none of them.
     expect(screen.queryByRole("navigation", { name: "More ways to play" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Play together" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^(Play together|Friends)$/ })).toBeNull();
 
     fireEvent.click(screen.getByTestId(navTestid.back));
     expect(window.location.pathname).toBe("/play");
@@ -2397,7 +2397,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       "This game won't earn anything: Claim one of your open practice games before starting another.",
     );
     expect(toast.closest(".board-notices")).not.toBeNull();
-    expect(toast.closest(".control-bar")).not.toBeNull();
+    expect(toast.closest(".field")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByTestId(practiceTestid.unearned)).toBeNull();

@@ -36,6 +36,7 @@ pub mod stinkyscape_plus_s19;
 pub mod stinkyscape_plus_s22;
 pub mod stinkyscape_plus_s24;
 pub mod stinkyscape_verbs;
+pub mod switch_reason_view;
 pub mod tallies;
 pub mod targeting;
 pub mod temporary;

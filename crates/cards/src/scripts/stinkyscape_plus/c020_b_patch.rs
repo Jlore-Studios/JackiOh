@@ -126,6 +126,43 @@ mod tests {
         assert!(lucky > base, "Lucky 1 buffs more often: {lucky} against {base}");
     }
 
+    /// R987, R1440: its controller's Luck flips that many more coins, heads kept. No card gives Luck since
+    /// R3140000, so Feng Shui's kept v0.5.11r script, "You have Luck 1", lends it, against today's Feng
+    /// Shui on the same board and seeds: Luck never turns a Buff into a Nerf, and turns some Nerf into a
+    /// Buff.
+    #[test]
+    fn r987_its_controllers_luck_flips_one_more_coin_and_keeps_heads() {
+        const FENG_SHUI: &str = "meditative-040"; // Feng Shui: "You have Luck 1" through v0.5.11r
+        crate::register_all();
+        let buffs = |seed: &str| {
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [FILLER],
+                    "library": [ID, FILLER, FILLER],
+                    "field": [BODY],
+                    "backrow": [FENG_SHUI],
+                },
+                "p2": { "hand": [FILLER, NETHER], "library": filler(4), "field": [BODY, BODY] },
+            }));
+            s.start_turn();
+            count(s.events(), "upgraded") > 0
+        };
+        let mut turned = false;
+        for n in 0..20 {
+            let seed = format!("r987-b-patch-{n}");
+            let plain = buffs(&seed);
+            let lucky = crate::under_kept(
+                FENG_SHUI,
+                crate::scripts::meditative::c040_feng_shui::script_v0_5_11o(),
+                || buffs(&seed),
+            );
+            assert!(lucky || !plain, "{seed}: Luck kept the Buff");
+            turned |= lucky && !plain;
+        }
+        assert!(turned, "Luck 1 turned a Nerf into a Buff on some seed");
+    }
+
     #[test]
     fn it_is_cast_free_and_goes_to_the_graveyard_when_drawn() {
         crate::register_all();

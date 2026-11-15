@@ -152,7 +152,11 @@ pub fn cloak_units() -> CardDef {
     def(7844, "cloak-units", "Field Spell", 1, json!([]))
 }
 
-/// "Aura: The Spells in your hand have Cloaked."
+/// The Echo the Radiant `cloak_spells` adds to a Spell its controller reveals.
+pub const REVEAL_ECHO: i32 = 1;
+
+/// "Aura: The Spells in your hand have Cloaked." — Meditative #99 Paranoia's shape, its Radiant face
+/// adding "Spells you reveal have Echo +`REVEAL_ECHO`" (R1045).
 pub fn cloak_spells() -> CardDef {
     def(7845, "cloak-spells", "Field Spell", 1, json!([]))
 }
@@ -341,6 +345,27 @@ pub fn cloaked_token() -> CardDef {
     ))
 }
 
+// R3806000: a set Spell resolves as it is set too
+
+/// Meditative #99 Paranoia's shape: "Aura: Your Spells have Cloaked. Spells you set face-down resolve as
+/// you set them and again as you reveal them."
+pub fn set_resolver() -> CardDef {
+    def(7871, "set-resolver", "Field Spell", 1, json!([]))
+}
+
+/// A Cloaked Spell at (1) with Echo 1 that deals 1 to the enemy hero.
+pub fn cloaked_echo() -> CardDef {
+    def(7872, "cloaked-echo", "Spell", 1, json!([{ "kind": "Cloaked" }]))
+}
+
+/// A Cloaked Spell at (1) whose text asks its controller a question, then deals 1 to the enemy hero.
+pub fn cloaked_asker() -> CardDef {
+    def(7873, "cloaked-asker", "Spell", 1, json!([{ "kind": "Cloaked" }]))
+}
+
+/// `cloaked_asker`'s step after its question.
+const ASKER_STEP: &str = "asked";
+
 pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         ranged(),
@@ -384,6 +409,9 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         cloaked_mourner(),
         cloaked_field_trap(),
         cloaked_token(),
+        set_resolver(),
+        cloaked_echo(),
+        cloaked_asker(),
     ]
 });
 
@@ -517,8 +545,48 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     );
     table.insert(
         cloak_spells().id,
+        CardScripts {
+            base: Script {
+                aura: Some(cloak_hand(CardType::Spell)),
+                ..Script::default()
+            },
+            radiant: Script {
+                aura: Some(cloak_hand(CardType::Spell)),
+                reveal_echo: Some(read_hook(|_args| REVEAL_ECHO)),
+                ..Script::default()
+            },
+        },
+    );
+    table.insert(
+        set_resolver().id,
         both(Script {
             aura: Some(cloak_hand(CardType::Spell)),
+            resolves_set_spells: true,
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        cloaked_echo().id,
+        both(Script {
+            static_flags: Some(StaticFlags {
+                echo: Some(1),
+                ..StaticFlags::default()
+            }),
+            cry: Some(hook(|_ctx| ping())),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        cloaked_asker().id,
+        both(Script {
+            cry: Some(hook(|_ctx| {
+                vec![effects::choose_mode(json_as(json!({
+                    "options": ["ping"],
+                    "step": ASKER_STEP,
+                    "prompt": "Asker: go on?",
+                })))]
+            })),
+            resume: IndexMap::from([(ASKER_STEP, hook(|_ctx| ping()))]),
             ..Script::default()
         }),
     );

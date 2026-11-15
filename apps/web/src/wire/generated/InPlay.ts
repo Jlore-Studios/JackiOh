@@ -124,6 +124,10 @@ grants?: Array<string>,
  */
 attackReason?: string, 
 /**
+ * R3821000: why the viewer's own unit cannot switch now, absent where it repeats the attack reason.
+ */
+switchReason?: string, 
+/**
  * R2321000: the counts cards on the field keep on the unit.
  */
 tallies?: Array<NamedTally>, 

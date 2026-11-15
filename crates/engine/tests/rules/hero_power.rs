@@ -811,6 +811,43 @@ mod heroic_power_the_powers_r753_r758 {
         assert!(hero_armor_of(&later, P1) >= TANK_UP_ARMOR);
     }
 
+    /// R3857000: Tank Up's kept Armor is reported once, its amount and the hero's Armor after, to both
+    /// seats; Armor Up's temporary Armor is a modifier (`modifierChanged`) and reports no gain.
+    #[test]
+    fn r3857000_tank_up_reports_its_kept_armor_to_both_seats_and_armor_up_reports_none() {
+        let mut state = game("r3857000-tank-up");
+        let card = powered(&mut state, "armor", true, 1);
+        keep_turn(&mut state);
+        let tanked = use_power(&state, &card, None);
+        assert_eq!(tanked.error, None);
+        let gained = vec![json!({
+            "type": "armorGained",
+            "player": "p1",
+            "amount": TANK_UP_ARMOR,
+            "armor": TANK_UP_ARMOR,
+        })];
+        assert_eq!(events_json(&tanked.events, GameEventType::ArmorGained), gained);
+        for viewer in [P1, P2] {
+            let seen: Vec<Value> = view_for(&tanked.state, viewer)
+                .events
+                .into_iter()
+                .map(json_of)
+                .filter(|event| event["type"] == "armorGained")
+                .collect();
+            assert_eq!(seen, gained);
+        }
+
+        let mut state = game("r3857000-armor-up");
+        let card = powered(&mut state, "armor", false, 1);
+        keep_turn(&mut state);
+        let armored = use_power(&state, &card, None);
+        assert_eq!(armored.error, None);
+        assert_eq!(
+            events_json(&armored.events, GameEventType::ArmorGained),
+            Vec::<Value>::new()
+        );
+    }
+
     #[test]
     fn r758_die_insect_deals_8_to_a_random_enemy_the_radiant_faces_lucky_1_hits_a_unit_more_often() {
         /// `{ hero, unit }`: how often each was hit over 40 seeds.

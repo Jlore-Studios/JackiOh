@@ -461,7 +461,8 @@ function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): 
         expect(zone, "the play names its zone").to.not.eq(undefined);
         if (zone === undefined) return;
         const where = zoneId("you", zone.row, zone.lane as Lane);
-        cy.get(onBoard(where) ? ts(where) : inPicker(`${zone.row}:${String(zone.lane)}`)).click();
+        // #3864: a zone pick is the board alone: no list to fall back to.
+        cy.get(ts(where)).click();
         break;
       }
       case "x":

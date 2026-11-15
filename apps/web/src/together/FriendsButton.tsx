@@ -7,7 +7,9 @@
 // when the tab's social socket says it changed (R3214000). Chat and Challenge close it and open their
 // own modal over the screen, which is left as it was. R3221000: it is the one Dialog's, a sheet: the
 // focus stays inside and returns to this button. R3728001: opened from the shell's navigation it is the
-// Dialog's drawer instead, down the right edge, and the screen stays where it is.
+// Dialog's drawer instead, down the right edge, and the screen stays where it is. R3732002: what it holds
+// is the list `FriendList.tsx` draws: the requests, the friends in groups, one primary button and a ⋯ menu
+// on each row; Chat opens as a drawer too, in the list's place.
 //
 // CLAUDE.md rule 7: nothing here is a rule. Which friend can be challenged or watched is the server's
 // status; Challenge is off while the player is in a game only to say what the server would, and the
@@ -18,7 +20,6 @@ import { createPortal } from "react-dom";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
-import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getMe, type MeResponse } from "../net/api.ts";
@@ -26,24 +27,20 @@ import { keptAccount, withSession } from "../net/gate.ts";
 import { bannerGameOf, type LiveGame } from "../net/liveGame.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
-import {
-  acceptFriendRequest,
-  cachedFriends,
-  declineFriendRequest,
-  getFriends,
-  type Friend,
-  type PlayerRef,
-} from "../net/social.ts";
+import { cachedFriends, getFriends, type PlayerRef } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
-import { AddFriend, FriendRow, RequestRow, liveRefusalOf, type Challenging } from "./FriendRows.tsx";
+import { FriendList } from "./FriendList.tsx";
+import { AddFriend, type Challenging } from "./FriendRows.tsx";
 import { usePolled } from "./session.ts";
 import { friendsBadgeCount, noteFriends, onFriendsPush, reloadSocial, useSocialReads } from "./socialPoll.ts";
-import { friendsTestid, togetherTestid } from "./testids.ts";
-import { attempt, messageOf } from "../net/errors.ts";
+import { friendsTestid } from "./testids.ts";
+import { useFriendActions } from "./useFriendActions.ts";
+import { attempt } from "../net/errors.ts";
+import { UndoToast } from "../undo/UndoToast.tsx";
 
 import "../auth/tavern.css";
 import "../routes/lobby.css";
@@ -56,14 +53,6 @@ const IN_GAME_WORDS: Readonly<Record<LiveGame["kind"], string>> = {
   series: "Finish your Conquest series first.",
   duos: "Finish your co-op match first.",
 };
-
-/** The order the panel lists friends in: online first, then in a game, then offline. */
-const STATUS_ORDER: readonly Friend["status"][] = ["online", "inMatch", "offline"];
-
-/** The friends in the panel's order; the server's order holds within a status. */
-function onlineFirst(friends: readonly Friend[]): Friend[] {
-  return [...friends].sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
-}
 
 /**
  * R3207003: the account the page already read stands for the panel; one that names a game is read again,
@@ -94,8 +83,6 @@ function FriendsPanel({
   useLocale();
   const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
   const [me] = usePolled(readAccount, null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   // The badge counts the requests this read held.
@@ -106,23 +93,11 @@ function FriendsPanel({
   // R3214000: the server said the friends list changed (a request, a friend made or lost, a block).
   useEffect(() => onFriendsPush(reloadFriends), [reloadFriends]);
 
-  /** One of the panel's own changes, then the list read again. */
-  const act = (work: () => Promise<unknown>): void => {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    attempt(work)
-      .then(
-        () => undefined,
-        (cause: unknown) => {
-          setError(messageOf(cause));
-        },
-      )
-      .finally(() => {
-        setBusy(false);
-        reloadFriends();
-      });
-  };
+  // A list whatever answered: the panel sits on every screen, a server's older answer must not take one down.
+  const list = friends.kind === "ready" ? friends.value : null;
+  const requests = Array.isArray(list?.incoming) ? list.incoming : [];
+  // R3732002: the same actions as the Friends page's, since the row's menu holds Remove, Block and Invite to lobby.
+  const actions = useFriendActions({ friends: list, reloadFriends });
 
   const name = me.kind === "ready" ? me.value.username?.name : undefined;
   const game = me.kind === "ready" ? bannerGameOf(me.value) : null;
@@ -138,11 +113,6 @@ function FriendsPanel({
       () => undefined,
     );
   };
-
-  // A list whatever answered: the panel sits on every screen, a server's older answer must not take one down.
-  const list = friends.kind === "ready" ? friends.value : null;
-  const all = Array.isArray(list?.friends) ? list.friends : [];
-  const requests = Array.isArray(list?.incoming) ? list.incoming : [];
 
   // Keyboard and screen-reader users start inside the panel, on its ✕ (Dialog's).
   return (
@@ -170,29 +140,10 @@ function FriendsPanel({
 
       <AddFriend onAdded={reloadFriends} />
 
-      {error === null ? null : (
+      {actions.error === null ? null : (
         <p className="notice" data-testid={friendsTestid.error} role="alert">
-          {t(error)}
+          {t(actions.error)}
         </p>
-      )}
-
-      {requests.length === 0 ? null : (
-        <ul className="together-list">
-          {requests.map((request) => (
-            <RequestRow
-              key={request.requestId}
-              request={request}
-              direction="incoming"
-              busy={busy}
-              onAccept={() => {
-                act(() => acceptFriendRequest(request.requestId));
-              }}
-              onDecline={() => {
-                act(() => declineFriendRequest(request.requestId));
-              }}
-            />
-          ))}
-        </ul>
       )}
 
       {friends.kind === "loading" ? <Skeleton variant="rows" label={t("Loading your friends…")} /> : null}
@@ -205,32 +156,16 @@ function FriendsPanel({
           retryTestId={friendsTestid.listRetry}
         />
       ) : null}
-      {list !== null && all.length === 0 ? (
-        <EmptyState
-          text={t("No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.")}
-          testId={togetherTestid.noFriends}
-        />
-      ) : null}
-      {all.length > 0 ? (
-        <ul className="together-list">
-          {onlineFirst(all).map((friend) => (
-            <FriendRow
-              key={friend.profileId}
-              friend={friend}
-              unread={unread[friend.profileId] ?? 0}
-              busy={busy}
-              challengeRefusal={challengeRefusal}
-              onChallenge={() => {
-                onChallenge({ profileId: friend.profileId, username: friend.username, liveRefusal: liveRefusalOf(friend, challengeRefusal) });
-              }}
-              onChat={() => {
-                onChat({ profileId: friend.profileId, username: friend.username });
-              }}
-              onWatch={onClose}
-            />
-          ))}
-        </ul>
-      ) : null}
+      <FriendList
+        friends={actions.shown}
+        requests={requests}
+        unread={unread}
+        actions={actions}
+        challengeRefusal={challengeRefusal}
+        onChat={onChat}
+        onChallenge={onChallenge}
+        onLeave={onClose}
+      />
 
       <a
         href={paths.together}
@@ -241,8 +176,10 @@ function FriendsPanel({
           followInApp(paths.together)(event);
         }}
       >
-        {t("All of Play together")}
+        {t("See all friends")}
       </a>
+      {/* Inside the dialog, so Undo is a stop of its Tab order (the toast sits at the window's foot, fixed). */}
+      <UndoToast held={actions.held} onUndo={actions.undo} />
     </Dialog>
   );
 }
@@ -363,8 +300,16 @@ export function FriendsButton({ placement, fallback = null }: FriendsButtonProps
                   }}
                 />
               ) : null}
-              {chatWith === null ? null : <ChatPanel key={chatWith.profileId} friend={chatWith} onClose={closeChat} />}
-              {challenging === null ? null : <ChallengeDialog friend={challenging} liveRefusal={challenging.liveRefusal} onClose={closeChallenge} onSent={sentChallenge} />}
+              {chatWith === null ? null : <ChatPanel key={chatWith.profileId} friend={chatWith} drawer={rail} onClose={closeChat} />}
+              {challenging === null ? null : (
+                <ChallengeDialog
+                  friend={challenging}
+                  liveRefusal={challenging.liveRefusal}
+                  {...(challenging.kind === undefined ? {} : { initialKind: challenging.kind })}
+                  onClose={closeChallenge}
+                  onSent={sentChallenge}
+                />
+              )}
             </div>,
             document.body,
           )

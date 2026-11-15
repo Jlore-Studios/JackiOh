@@ -1116,9 +1116,14 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     ];
 
     /// The Stinkyscape set's printed 1/1 Units (§8.10: #38 Shield Amplifier, #81 Radix since #2657 made
-    /// it 1/1, and #98 Hull Booster; none of its tokens prints 1/1), which the pool takes since its
-    /// release (#1884, R1857000).
-    const STINKYSCAPE_ONE_ONES: &[&str] = &["stinkyscape-038", "stinkyscape-081", "stinkyscape-098"];
+    /// it 1/1, #98 Hull Booster, and #129 Jlockeed's Missile Pod since #3837 made it 1/1; none of its
+    /// tokens prints 1/1), which the pool takes since its release (#1884, R1857000).
+    const STINKYSCAPE_ONE_ONES: &[&str] = &[
+        "stinkyscape-038",
+        "stinkyscape-081",
+        "stinkyscape-098",
+        "stinkyscape-129",
+    ];
     /// The Stinkyscape+ release (#3573): its printed 1/1 Units, its two tokens (#26.1 Conscript and #27.1
     /// Imp) among them, last in the catalog order.
     const STINKYSCAPE_PLUS_ONE_ONES: &[&str] = &[
@@ -1247,5 +1252,38 @@ mod r1878000_the_starship_piece_pool_stinkyscape_124_jlockeeds_shipbuilding_gran
         }));
         assert_eq!(sorted(ids_of_defs(query(&starship_pieces()))), sorted(printing));
         assert!(!ids_of_defs(query(&starship_pieces())).contains(&DORMANT_STARSHIP_DEF_ID.to_string()));
+    }
+}
+
+mod the_named_pools_spec_cards_3804 {
+    use super::*;
+    use jackioh_cards::query::{
+        POOLS, embiggen_cards, jlockeed_cards, luck_based, prime_cards, starship_pieces,
+    };
+
+    /// #3804: a pool of one part, as `spec/CARDS.md` lists it, is its query whole under the empty label,
+    /// which `cargo jackioh spec index` prints with no heading of its own.
+    #[test]
+    fn a_one_part_pool_is_its_query_whole_under_no_label() {
+        register();
+        for (name, args) in [
+            ("luck-based", luck_based()),
+            ("embiggen", embiggen_cards()),
+            ("starship-pieces", starship_pieces()),
+            ("jlockeed", jlockeed_cards()),
+            ("prime", prime_cards()),
+        ] {
+            let pool = POOLS
+                .iter()
+                .find(|pool| pool.name == name)
+                .unwrap_or_else(|| panic!("POOLS has no {name}"));
+            let parts: Vec<(&str, Vec<String>)> = with_pool_shift(0, || (pool.parts)())
+                .into_iter()
+                .map(|(label, members)| (label, ids_of_defs(members)))
+                .collect();
+            let whole = ids_of_defs(query(&args));
+            assert!(!whole.is_empty(), "{name} holds no card");
+            assert_eq!(parts, vec![("", whole)], "{name}");
+        }
     }
 }

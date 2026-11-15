@@ -4,9 +4,9 @@
 // not (R2370000), Used splits by a copy Radiant at its first use, and Not used is the baseline. The figures and
 // R654's floor ("—" below it) are the server's, and Win rate is read off them, nothing counted anew (CLAUDE.md
 // rule 7). The rows open on Win rate, best first, and every header sorts them (R3184002). It scrolls, never fixed
-// (R1646000).
+// (R1646000). R3887000: with the Plain text button on, a catalog card's name cell holds the card as plain text.
 
-import { useId, useState, type ReactElement } from "react";
+import { useId, useState, type ReactElement, type ReactNode } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import type { PublicCreatedStat } from "../net/api.ts";
 import { faceRate, formatPlayedDelta } from "./model.ts";
@@ -125,12 +125,15 @@ export function CreatedPanel({
   created,
   minSample,
   nameOf,
+  plainCardOf,
 }: {
   kind: CreatedKind;
   created: readonly PublicCreatedStat[];
   minSample: number;
   /** A card's name as the page shows it. */
   nameOf: (id: string, name: string) => string;
+  /** R3887000: a card's plain text, or null for an id with none; the name stands in for it. */
+  plainCardOf?: (id: string) => ReactNode;
 }): ReactElement | null {
   const locale = useLocale();
   const titleId = useId();
@@ -179,7 +182,7 @@ export function CreatedPanel({
             {rows.map((card) => (
               <tr key={card.id} className="stats-tr" data-card-id={card.id}>
                 <th scope="row" className="stats-td stats-td--name">
-                  {nameOf(card.id, card.name)}
+                  {plainCardOf?.(card.id) ?? nameOf(card.id, card.name)}
                 </th>
                 <td className="stats-td">{formatNumber(card.games)}</td>
                 <td className="stats-td">{rateText(card.games, createdWinRate(card), minSample)}</td>

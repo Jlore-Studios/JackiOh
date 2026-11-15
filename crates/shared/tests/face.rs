@@ -798,10 +798,12 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
             );
         }
     }
-    for id in ["core-052", "meditative-009"] {
-        assert_eq!(short_form_of(id, true), Some(ShortForm::Clamp), "{id}");
-        assert_eq!(short_form_of(id, false), None, "{id}");
-    }
+    assert_eq!(short_form_of("meditative-009", true), Some(ShortForm::Clamp));
+    assert_eq!(short_form_of("meditative-009", false), None);
+    // Issue #3837: Silly Silas's base face gained "Summon this for your opponent." and clamps, and his
+    // Radiant face, Crater gone, fits.
+    assert_eq!(short_form_of("core-052", false), Some(ShortForm::Clamp));
+    assert_eq!(short_form_of("core-052", true), None);
     // Training Grounds #38's text is one short line since issue #3139.
     assert_eq!(short_form_of("traininggrounds-038", true), None);
 }

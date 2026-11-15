@@ -27,7 +27,7 @@ import { createPortal } from "react-dom";
 import { CATALOG } from "@jackioh/cards";
 import { PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
-import { CardBack, CardFace, FullScreenArt, faceModel, useFullScreenTrigger } from "../cards/index.ts";
+import { CardBack, CardDetail, CardFace, FullScreenArt, faceModel, useFullScreenTrigger } from "../cards/index.ts";
 import { readerName } from "../cards/chinese.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
@@ -108,14 +108,20 @@ function revealOf(slot: OpenedPackResponse["slots"][number]): GrantItem | null {
 
 function PackSlotFace({ slot, look }: { slot: OpenedPackResponse["slots"][number]; look: string | null }): ReactElement {
   const def = CATALOG[slot.cardId];
-  const fs = useFullScreenTrigger({
-    defId: slot.cardId,
-    rarity: slot.rarity,
-    printedRarity: def?.printedRarity,
-    // A dropped cosmetic's look that is a full-art level opens as a Mythic does.
-    level: look,
-    name: def ? readerName(def) : slot.cardId,
-  });
+  const [detailOpen, setDetailOpen] = useState(false);
+  const fs = useFullScreenTrigger(
+    {
+      defId: slot.cardId,
+      rarity: slot.rarity,
+      printedRarity: def?.printedRarity,
+      // A dropped cosmetic's look that is a full-art level opens as a Mythic does.
+      level: look,
+      name: def ? readerName(def) : slot.cardId,
+    },
+    {
+      onTouchHold: () => setDetailOpen(true),
+    },
+  );
   return (
     <div className="pack-slot__face" {...fs.handlers}>
       {/* The shop never waits for the module (#1577), and a face is worked out by it (#778). */}
@@ -128,6 +134,7 @@ function PackSlotFace({ slot, look }: { slot: OpenedPackResponse["slots"][number
           )
         }
       </WhenEngineReady>
+      {detailOpen && def ? <CardDetail def={def} onClose={() => setDetailOpen(false)} /> : null}
     </div>
   );
 }

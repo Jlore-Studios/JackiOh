@@ -1915,6 +1915,37 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
         let found = monitor.clone().after(&[announced, played], g.state());
         assert_eq!(entry_mismatches(&found).len(), 1, "{found:?}");
     }
+
+    /// R3554001: the hole's pull at a turn's start moves a pile one lane and no event says so. A card the
+    /// action summoned (a Drone Battleship's layer, beneath its Shield), uncovered on a later turn of that
+    /// action and pulled on, takes the turn it was uncovered on, though it stands in no zone an event named
+    /// (fuzz handicap seed 6708, issue #3800). A card no event of the action named still does not.
+    #[test]
+    fn r3554001_r1829000_i4_takes_the_turn_of_a_unit_the_action_summoned_though_a_pull_moved_its_pile() {
+        let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
+        let summoned_on = g.state().turn;
+        g.end_turn();
+        let uncovered_on = g.state().turn;
+        assert!(uncovered_on > summoned_on);
+        find_instance_mut(g.state_mut(), &fiender.id)
+            .expect("the Fiender")
+            .summoned_turn = Some(uncovered_on);
+        // Summoned into lane 2 on the earlier turn; it stands in lane 1 now.
+        let summoned = event(json!({
+            "type": "summoned", "player": "p1", "instanceId": fiender.id, "defId": FIENDER,
+            "row": "units", "lane": 2,
+        }));
+        let turn = g.last_events().to_vec();
+
+        let events: Vec<GameEvent> = std::iter::once(summoned).chain(turn.iter().cloned()).collect();
+        let found = monitor.clone().after(&events, g.state());
+        assert!(entry_mismatches(&found).is_empty(), "{found:?}");
+
+        let found = monitor.clone().after(&turn, g.state());
+        let mismatches = entry_mismatches(&found);
+        assert_eq!(mismatches.len(), 1, "{found:?}");
+        assert!(mismatches[0].contains(&fiender.id), "{found:?}");
+    }
 }
 
 /// R1869002 (#1869), B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
@@ -2062,6 +2093,49 @@ mod r1869002_i2_a_kill_credit {
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(
             found[0].contains("I2 extra attack: ") && found[0].contains("attack number 7"),
+            "{}",
+            found[0]
+        );
+    }
+
+    /// R3543003, issue #3800 (fuzz seeds 8022 and 7429): a Frenzy kill inside one action is answered by
+    /// the Frenzy its attacker began the action with, though the state the action leaves shows none (the
+    /// autopilot's turn ends with a Drone Corvette exiled or dead, its drawn keywords reset, R78). One more
+    /// attack is no extra attack to I2; a third, with no second kill, still is.
+    #[test]
+    fn r3543003_a_frenzy_kill_inside_the_action_frees_the_attacker_though_it_leaves_without_frenzy() {
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let attacker = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        find_instance_mut(g.state_mut(), &attacker.id)
+            .expect("the Vanilla")
+            .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Frenzy" }))];
+        let mut monitor = create_invariant_monitor(g.state());
+        // Read between actions, as the fuzz does; its I3 on the setup's cards is not this test's.
+        monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn);
+        // The state the action leaves: the attacker's Frenzy is gone with the keywords it drew.
+        find_instance_mut(g.state_mut(), &attacker.id)
+            .expect("the Vanilla")
+            .granted_keywords
+            .clear();
+        let declared = |target: &str| {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": attacker.id, "targetId": target, "forced": false }),
+            )
+        };
+        let killed = event(json!({
+            "type": "destroyed", "instanceId": prey.id, "defId": prey.def_id, "owner": "p2",
+            "controller": "p2", "attack": 1, "maxHealth": 1, "killerId": attacker.id,
+        }));
+        let events = vec![declared(&prey.id), killed, declared("hero-p2")];
+        assert_eq!(monitor.after(&events, g.state()), no_violations());
+        let found = monitor.after(&[declared("hero-p2")], g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains("I2 extra attack: ") && found[0].contains("attack number 3"),
             "{}",
             found[0]
         );

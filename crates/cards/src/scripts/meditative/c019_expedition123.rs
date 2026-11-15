@@ -260,4 +260,50 @@ mod tests {
             assert_eq!(lost(&s), 3);
         }
     }
+
+    /// R767000: the script kept for the replays of v0.4.0f and before: "Lose all mana for your next
+    /// {turns} turns" (R844), `turns` 2 on both faces.
+    mod v0_4_0f {
+        use super::*;
+
+        #[test]
+        fn r640_r767000_the_kept_script_is_quickdraw_on_both_faces() {
+            crate::register_all();
+            let kept = script_v0_4_0f();
+            for face in [&kept.base, &kept.radiant] {
+                assert_eq!(face.flags().quickdraw, Some(true));
+            }
+        }
+
+        #[test]
+        fn r844_r767000_the_kept_script_loses_both_next_refreshes_whole_and_adds_a_rift_on_its_face() {
+            for radiant in [false, true] {
+                crate::under_kept_as(
+                    EXPEDITION,
+                    script_v0_4_0f(),
+                    // v0.4.0f's one declared number was `turns`, 2 on both faces, as `loss` is now.
+                    |def| {
+                        for entry in def.params.iter_mut().flatten() {
+                            if entry.key == "loss" {
+                                entry.key = "turns".to_string();
+                            }
+                        }
+                    },
+                    || {
+                        let mut s = board(json!([{ "def": EXPEDITION, "radiant": radiant }]));
+                        s.play(EXPEDITION, json!({}));
+                        let added = rifts(&s);
+                        assert_eq!(added.len(), 1);
+                        assert_eq!(added[0].radiant, radiant, "the Rift wears the running face");
+                        next_turn(&mut s);
+                        assert_eq!(s.state().players.p1.mana.current, 0, "next turn");
+                        next_turn(&mut s);
+                        assert_eq!(s.state().players.p1.mana.current, 0, "the turn after");
+                        next_turn(&mut s);
+                        assert_eq!(lost(&s), 0, "then normal");
+                    },
+                );
+            }
+        }
+    }
 }

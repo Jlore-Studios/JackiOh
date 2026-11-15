@@ -7,13 +7,15 @@
 //!   `List-Unsubscribe-Post`) and a link to each waiting game's board. With the key unset none is sent.
 //! - Web Push goes to every device the account turned it on for (`daily::webpush`); a subscription
 //!   its push service answers 404 or 410 is deleted. With the VAPID keys unset none is sent.
+//! - After a move the decision runs on one task (`NotifyQueue`), once the move has been answered: a slow or
+//!   failing mail or push service delays only the notifications behind it, never a player's move.
 //! - The sweep (`POST /daily-sweep`, the Worker's hourly cron, and `run_sweeper` while the server is
 //!   awake) lapses old invites, ends every game whose move ran out (R3727000), and decides for every
 //!   player a game waits on.
 //! - `GET`/`PUT /api/daily/settings`, `POST`/`DELETE /api/daily/push`, and
 //!   `GET`/`POST /api/daily/unsubscribe?token=`.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use axum::body::Body;
@@ -21,15 +23,17 @@ use axum::http::{StatusCode, header};
 use axum::response::Response;
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
+use tokio::sync::{mpsc, watch};
 
 use jackioh_shared::notify::{NotifyInput, NotifyPlan, WaitingGame, decide_notify};
 
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiResult, Req, bad_request, bool as body_bool, log_warn, ok, str};
+use crate::api::http::{ApiError, ApiResult, Req, bad_request, bool as body_bool, lock, log_warn, ok, str};
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{
-    DAILY_SWEEP_MINUTES, PLAYER_EMAIL_FROM, PLAYER_EMAIL_TIMEOUT_MS, PUSH_FIELD_MAX_LENGTH, PUSH_MAX_DEVICES,
+    DAILY_NOTIFY_QUEUE, DAILY_SWEEP_MINUTES, PLAYER_EMAIL_FROM, PLAYER_EMAIL_TIMEOUT_MS,
+    PUSH_FIELD_MAX_LENGTH, PUSH_MAX_DEVICES,
 };
 use crate::daily::games::{load, settle, waiting_of};
 use crate::daily::webpush::{self, PushOutcome, Subscription};
@@ -253,17 +257,92 @@ async fn send_pushes(app: &App, subscriptions: &[PushSubRow], plan: &NotifyPlan,
     any
 }
 
-/// After a move or a start: decides for both players (the one the move passed to is told), never at
-/// the move's expense.
-pub(crate) async fn after_move(app: &Arc<App>, profiles: &[&str], now: i64) {
-    for profile_id in profiles {
-        if let Err(error) = notify_one(app, profile_id, now).await {
-            log_warn(
-                "daily.notify_failed",
-                json!({ "profileId": profile_id, "message": error.message }),
-            );
+/// The profiles the notifier's task has yet to decide for (§9.13). One task, started by the first move,
+/// takes them in the order they came; a move never waits for it.
+pub struct NotifyQueue {
+    /// The task's channel, `DAILY_NOTIFY_QUEUE` deep, made together with the task.
+    sender: OnceLock<mpsc::Sender<String>>,
+    /// The profiles in the channel. One in it is not queued again, so two moves before the task
+    /// reaches a profile decide for it once; the task takes it out as it takes it off the channel.
+    queued: Mutex<IndexSet<String>>,
+    /// The profiles queued or being decided for; [`NotifyQueue::idle`] waits for it to reach 0.
+    busy: watch::Sender<usize>,
+}
+
+impl Default for NotifyQueue {
+    fn default() -> NotifyQueue {
+        NotifyQueue {
+            sender: OnceLock::new(),
+            queued: Mutex::new(IndexSet::new()),
+            busy: watch::Sender::new(0),
         }
     }
+}
+
+impl NotifyQueue {
+    /// Queues each of `profiles` the task has not yet got in its channel. One the channel cannot take
+    /// (full, or closed) is dropped and logged: nothing unsent is marked sent, so the next sweep
+    /// decides for it.
+    fn enqueue(&self, app: &Arc<App>, profiles: &[&str]) {
+        let sender = self.sender.get_or_init(|| start(app));
+        // Held across `try_send`, which never waits, so the set and the channel agree: the task's
+        // removal of a profile it took waits for this insert.
+        let mut queued = lock(&self.queued);
+        for profile_id in profiles {
+            if queued.contains(*profile_id) {
+                continue;
+            }
+            match sender.try_send((*profile_id).to_string()) {
+                Ok(()) => {
+                    queued.insert((*profile_id).to_string());
+                    self.busy.send_modify(|busy| *busy += 1);
+                }
+                Err(error) => log_warn(
+                    "daily.notify.dropped",
+                    json!({ "profileId": profile_id, "message": error.to_string() }),
+                ),
+            }
+        }
+    }
+
+    /// Resolves once nothing is queued or being decided for. Tests wait on it; the server never does:
+    /// what a stop leaves unsent, the next sweep sends.
+    pub async fn idle(&self) {
+        let mut busy = self.busy.subscribe();
+        let _ = busy.wait_for(|busy| *busy == 0).await;
+    }
+}
+
+/// The notifier's task: decides for each profile in the order queued, one at a time. It holds the app
+/// only for the profile in hand, so it ends (its channel closing) when the app is dropped.
+fn start(app: &Arc<App>) -> mpsc::Sender<String> {
+    let (sender, mut receiver) = mpsc::channel::<String>(DAILY_NOTIFY_QUEUE);
+    let app = Arc::downgrade(app);
+    tokio::spawn(async move {
+        while let Some(profile_id) = receiver.recv().await {
+            let Some(app) = app.upgrade() else { break };
+            // Taken off before it is decided for: a move that lands meanwhile queues it again.
+            lock(&app.daily.notifier.queued).shift_remove(profile_id.as_str());
+            if let Err(error) = notify_one(&app, &profile_id, app.daily.now()).await {
+                log_warn(
+                    "daily.notify_failed",
+                    json!({ "profileId": profile_id, "message": error.message }),
+                );
+            }
+            app.daily
+                .notifier
+                .busy
+                .send_modify(|busy| *busy = busy.saturating_sub(1));
+        }
+    });
+    sender
+}
+
+/// After a move or a start: queues both players for the notifier's task and returns, so the answer
+/// never waits on a mail or push service (§9.13). The one the move passed to is told once the task
+/// reaches it.
+pub(crate) fn after_move(app: &Arc<App>, profiles: &[&str]) {
+    app.daily.notifier.enqueue(app, profiles);
 }
 
 /// What one sweep did.

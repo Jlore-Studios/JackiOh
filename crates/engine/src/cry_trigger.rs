@@ -169,18 +169,13 @@ fn trigger(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId, ran
     continue_run(sink, run);
 }
 
-/// ME-ALTPLAY, R1044, R1045: resolve a set Spell from the backrow with `repeats` Echo repeats.
-/// R703 is read as it reveals: a required declaration the board cannot satisfy fizzles the reveal, as
-/// a play gate that does not hold does (R1851001).
+/// ME-ALTPLAY, R1044, R1045: resolve a set Spell from the backrow with `repeats` Echo repeats, as it
+/// reveals or (R3806000) as it is set under Paranoia (`alt_play::resolve_at_set`). R703 is read as it
+/// resolves: a required declaration the board cannot satisfy fizzles it, as a play gate that does not
+/// hold does (R1851001, `alt_play::spell_text_can_resolve`).
 pub fn reveal_set_spell(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId, repeats: u32) {
-    if !crate::play_choices::play_allowed(sink.state, controller, card) {
+    if !crate::alt_play::spell_text_can_resolve(sink.state, controller, card) {
         return;
-    }
-    for decl in crate::play_choices::declared_targets(sink.state, card) {
-        let offered = crate::play_choices::legal_selections_for(sink.state, controller, card, &decl);
-        if crate::play_choices::unmet_requirement(&decl, offered.len()) {
-            return;
-        }
     }
     let run = CryRun {
         instance_id: card.id.clone(),
@@ -205,6 +200,20 @@ pub const SET_REPEAT_HOOK: &str = "@setRepeat";
 pub fn run_owed_repeat(sink: &mut EngineSink, item: &WorkItem) {
     if let Some(run) = run_of(&item.resume.data) {
         continue_run(sink, run);
+    }
+}
+
+/// R3806000: the work hook a set Spell's resolution as it was set waits behind when its last run's
+/// text paused (R113), so it goes dormant again only once that text has all run.
+pub const SET_RESOLVED_HOOK: &str = "@setResolved";
+
+/// Where an owed `SET_RESOLVED_HOOK` keeps the set Spell's id.
+const SET_RESOLVED_KEY: &str = "instanceId";
+
+/// R3806000: end the resolution as it was set of the Spell an owed `SET_RESOLVED_HOOK` names.
+pub fn run_owed_set_resolved(sink: &mut EngineSink, item: &WorkItem) {
+    if let Some(id) = item.resume.data.get(SET_RESOLVED_KEY).and_then(Value::as_str) {
+        crate::alt_play::end_set_resolution(sink.state, id);
     }
 }
 
@@ -243,15 +252,21 @@ fn label_of(state: &GameState, selection: &Selection, chooser: PlayerId) -> Stri
     }
 }
 
+/// The title of a prompt the run opens: a Cry's, or a set Spell's as it reveals (R1044) or, under
+/// Paranoia, as it is set (R3806000).
+fn title_of(state: &GameState, run: &CryRun, card: &CardInstance) -> String {
+    let name = name_of(state, &card.def_id);
+    match run.place {
+        CryPlace::Backrow if crate::alt_play::resolving_at_set(card) => format!("Set: {name}"),
+        CryPlace::Backrow => format!("Reveal: {name}"),
+        CryPlace::Field | CryPlace::Graveyard => format!("Cry: {name}"),
+    }
+}
+
 /// The mode declarations still to ask; false while one is waiting (R81).
 fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let modes = declared_modes(sink.state, card);
-    let name = name_of(sink.state, &card.def_id);
-    let title = if run.place == CryPlace::Backrow {
-        format!("Reveal: {name}")
-    } else {
-        format!("Cry: {name}")
-    };
+    let title = title_of(sink.state, run, card);
     for (at, decl) in modes.iter().enumerate().skip(run.mode_at) {
         run.mode_at = at + 1;
         if decl.options.is_empty() {
@@ -304,12 +319,7 @@ fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bo
 /// The target declarations still to ask; false while one is waiting (R81, R90).
 fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let decls = active_target_decls(&declared_targets(sink.state, card), &run.modes);
-    let name = name_of(sink.state, &card.def_id);
-    let title = if run.place == CryPlace::Backrow {
-        format!("Reveal: {name}")
-    } else {
-        format!("Cry: {name}")
-    };
+    let title = title_of(sink.state, run, card);
     for (at, decl) in decls.iter().enumerate().skip(run.decl_at) {
         run.decl_at = at + 1;
         let options = legal_selections_for(sink.state, run.controller, card, decl);
@@ -561,6 +571,18 @@ fn run_cry_once(sink: &mut EngineSink, run: &CryRun, card: &CardInstance, exits_
                 crate::work::owe(sink, resume);
             } else {
                 continue_run(sink, next);
+            }
+        } else if run.place == CryPlace::Backrow
+            && find_instance(sink.state, &run.instance_id).is_some_and(crate::alt_play::resolving_at_set)
+        {
+            // R3806000: its last run as it was set is over, or will be once its parked tail has run.
+            // Only this resolution owes the item: a reveal takes no new work number.
+            if ran {
+                crate::alt_play::end_set_resolution(sink.state, &run.instance_id);
+            } else {
+                let mut data: IndexMap<String, Value> = IndexMap::new();
+                data.insert(SET_RESOLVED_KEY.to_string(), json!(run.instance_id));
+                crate::work::owe(sink, engine_resume(SET_RESOLVED_HOOK, "end", data));
             }
         }
         return;

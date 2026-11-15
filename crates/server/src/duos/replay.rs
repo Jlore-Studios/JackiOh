@@ -1,8 +1,9 @@
 //! `GET /api/duos/matches/:matchId/replay` (fullsend SPEC S6, B41): a finished co-op match, step by
 //! step, as the caller's seat saw it (B23, CLAUDE.md rule 7): `200 { seat, steps }`.
 //!
-//! Only the two people who played it may read it; anyone else gets 404 (R768). A live match is 409
-//! (§13.9); a purged log is 410 `gone`; an unsupported match is 422 `replay_unavailable`. The fold
+//! Only the people who played it (two, or four in a 2v2, R3731003) may read it, each their own seat's;
+//! anyone else gets 404 (R768). A live match is 409 (§13.9); a purged log is 410 `gone`; an
+//! unsupported match is 422 `replay_unavailable`. The fold
 //! runs under the catalog the match was played on (R767000) on the blocking pool, cached in
 //! `DuosReplayCache` (`REPLAY_CACHE_TTL_SECONDS`, `REPLAY_CACHE_MATCHES`). R3500000: an opening not
 //! kept waits for the permit every replay fold takes (`REPLAY_FOLDS_RUNNING_MAX`, the 1v1 replays'
@@ -73,7 +74,9 @@ fn open(row: &DuosMatch, log: Vec<DuosAction>) -> DuosOpened {
         Err(reason) => return DuosOpened::Refused(reason),
     };
     let options = engine::create_options(row);
-    let folded = catch_unwind(AssertUnwindSafe(|| engine::steps_for(pinned, &options, &log)));
+    let folded = catch_unwind(AssertUnwindSafe(|| {
+        engine::steps_for(pinned, &options, &log, row.team_b())
+    }));
     let steps = match folded {
         Ok(Ok(steps)) => steps,
         Ok(Err(reason)) => return DuosOpened::Refused(reason),
@@ -101,11 +104,8 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(no_such_match());
     };
     // The seat check comes first and answers what an unknown id answers.
-    let seat = if row.a1 == profile.id {
-        DuosSeat::A1
-    } else if row.a2 == profile.id {
-        DuosSeat::A2
-    } else {
+    // R3731003: each of a 2v2's four people opens their own seat's.
+    let Some(seat) = row.seat_of(&profile.id) else {
         return Err(no_such_match());
     };
     if row.ended_at.is_none() {

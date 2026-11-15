@@ -66,6 +66,8 @@ mod tests {
     const BODY: &str = "stand-in (1) 4/4 R12/12";
     const TOP: &str = "core-092"; // Felinor Fiender: Stack
     const FILLER: &str = "core-005";
+    const TOWER: &str = "classicplus-033"; // Ivory Tower: carries a Unit stacked onto it as its play resolves
+    const TRAP: &str = "stand-in (1) Trap";
     const GIGA_BODY: &str = "stand-in (1) 4/4 GIGA R12/12";
 
     fn felinor(radiant: bool, mine: Value, theirs: Value) -> Scenario {
@@ -89,6 +91,46 @@ mod tests {
             s.expect_stats(FELINOR, json!({ "attack": 6, "health": 6 }));
             let body = s.unit_at(P1, 2);
             s.expect_stats(&body, json!({ "attack": 7, "health": 7, "maxHealth": 7 }));
+        }
+
+        #[test]
+        fn r2196002_in_lane_2_the_unit_in_lane_1_is_to_its_left() {
+            let mut s = felinor(false, json!([{ "def": BODY, "lane": 1 }]), json!([]));
+            s.play(FELINOR, json!({ "zone": 2 }));
+            s.expect_stats(FELINOR, json!({ "attack": 6, "health": 6 }));
+            let body = s.unit_at(P1, 1);
+            s.expect_stats(&body, json!({ "attack": 7, "health": 7, "maxHealth": 7 }));
+        }
+
+        #[test]
+        fn r1839000_a_dormant_unit_to_its_left_is_passed_by() {
+            let dormant = json!([{ "def": BODY, "lane": 2, "slumber": { "turns": 2 } }]);
+            let mut s = felinor(false, dormant, json!([]));
+            let body = s.unit_at(P1, 2);
+            assert!(is_slumbering(&body));
+            s.play(FELINOR, json!({ "zone": 3 }));
+            let felinor = s.card(FELINOR).clone();
+            unbuffed(&mut s, &felinor);
+            unbuffed(&mut s, &body);
+        }
+
+        #[test]
+        fn r653_stacked_onto_an_ivory_tower_beside_a_set_trap_it_buffs_nothing() {
+            // R446, R653: a Unit stacked onto C+ #33 Ivory Tower is carried there while its play resolves,
+            // its Cry included, and then fused into the Tower. The card to its left is a set Trap, no Unit.
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [FELINOR, FILLER],
+                    "backrow": [{ "def": TRAP, "lane": 2 }, { "def": TOWER, "lane": 3 }],
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            let trap = s.backrow(P1, 2).expect("the set Trap");
+            let rider = s.card(FELINOR).id.clone();
+            s.play(&rider, json!({ "zone": 3, "row": "backrow" }));
+            s.expect_in_zone(&rider, "gone");
+            assert_eq!(s.last_count(GameEventType::Buffed), 0);
+            unbuffed(&mut s, &trap);
         }
 
         #[test]

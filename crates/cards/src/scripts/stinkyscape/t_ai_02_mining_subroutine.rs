@@ -4,7 +4,7 @@
 //!   Base:    "Gain a random Common or Rare Stinkyscape Resource."
 //!   Radiant: "Gain a random Radiant Common or Rare Stinkyscape Resource."
 //! Engine: `gain_resources` (R1840002) from a pool of the Common and Rare Stinkyscape Resources, read
-//!   off the catalog (`query::resources_of`, R3869001; through v0.6.0g named by id, the same three): the
+//!   off the catalog (`query::resources_of`, R3869001; through v0.6.2b named by id, the same three): the
 //!   rarity roll over the two rarities the pool holds (55 against 25), then one of the rolled rarity, into
 //!   the hand, which a full hand burns (R2250000). It never gains Axnit,
 //!   Narcor or Red Narcor, so a bought copy never pays for itself in Credits (R1881000). Radiant: a

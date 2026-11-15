@@ -52,7 +52,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     /// R3869002: the Miner pool today, S #62 Miner v1 to S #66 Miner v5, pinned so a change to it is
-    /// deliberate: the five this card named by id through v0.6.0g, in its order.
+    /// deliberate: the five this card named by id through v0.6.2b, in its order.
     const MINERS: [&str; 5] = [
         "stinkyscape-062",
         "stinkyscape-063",

@@ -69,6 +69,59 @@ fn hits(events: &[GameEvent]) -> Vec<(String, i32, Option<KeywordKind>)> {
 
 mod r3540000_counters {
     use super::*;
+    use crate::rules::fixtures::harness::sink_for;
+    use jackioh_engine::afflictions::{Affliction, afflict};
+
+    /// What `afflict` returns for `target`, and the `counterChanged` events it reported.
+    fn afflicted(state: &mut GameState, target: &DamageTarget, amount: i32) -> (i32, usize) {
+        let mut sink = sink_for(state);
+        let placed = afflict(&mut sink, target, Affliction::Burn, amount);
+        let reported = counter_events(sink.events, CounterKind::Burn).len();
+        (placed, reported)
+    }
+
+    fn unit_target(state: &GameState, id: &str) -> DamageTarget {
+        DamageTarget::Unit {
+            instance: find_instance(state, id).expect("on the board").clone(),
+        }
+    }
+
+    /// R3540000: a count goes on only for an amount above 0, in a game still going, on a Unit that acts in
+    /// a unit zone (or stands in the backrow). A Dormant Unit in its unit zone does not act (R1839000), so it
+    /// carries none; nor does a finished game's Unit, nor an amount of 0: each is 0, nothing set, nothing
+    /// reported.
+    #[test]
+    fn r3540000_a_count_goes_on_only_for_an_amount_above_0_on_an_acting_unit_in_a_game_still_going() {
+        let s = board("r3540000-afflict", json!({}), json!({ "field": [PLAIN, PLAIN] }));
+        let unit = id_at(&s, P2, 1);
+        let dormant = id_at(&s, P2, 2);
+        let mut state = s.state().clone();
+        find_instance_mut(&mut state, &dormant)
+            .expect("the second unit")
+            .slumber = Some(Slumber { turns: None });
+        let burn_of =
+            |state: &GameState, id: &str| query::burn_on(find_instance(state, id).expect("on the board"));
+
+        let on_unit = unit_target(&state, &unit);
+        assert_eq!(afflicted(&mut state, &on_unit, 0), (0, 0));
+        assert_eq!(burn_of(&state, &unit), 0);
+
+        let on_dormant = unit_target(&state, &dormant);
+        assert_eq!(afflicted(&mut state, &on_dormant, BT_BURN), (0, 0));
+        assert_eq!(burn_of(&state, &dormant), 0);
+
+        let mut over = state.clone();
+        over.result = Some(GameResult {
+            winner: Winner::P1,
+            reason: GameOverReason::Concede,
+        });
+        assert_eq!(afflicted(&mut over, &on_unit, BT_BURN), (0, 0));
+        assert_eq!(burn_of(&over, &unit), 0);
+
+        // The acting Unit, in the game still going, takes it.
+        assert_eq!(afflicted(&mut state, &on_unit, BT_BURN), (BT_BURN, 1));
+        assert_eq!(burn_of(&state, &unit), BT_BURN);
+    }
 
     #[test]
     fn r3540000_the_verbs_add_to_the_counter_already_there() {
@@ -301,10 +354,44 @@ mod r3540001_tick {
         let result = s.state().result.expect("the burn killed the hero");
         assert_eq!(result.winner, Winner::P1);
     }
+
+    #[test]
+    fn r3540001_a_unit_carrying_toxic_and_no_burn_still_takes_its_toxic() {
+        let mut s = board(
+            "r3540001-toxic-alone",
+            json!({}),
+            json!({ "field": [with(PLAIN, json!({ "toxic": 3 }))] }),
+        );
+        let plain = id_at(&s, P2, 1);
+        s.end_turn();
+        assert_eq!(
+            hits(s.last_events()),
+            vec![(plain.clone(), 3, Some(KeywordKind::Toxic))],
+            "a Unit with a count of either kind ticks"
+        );
+        assert_eq!(s.card(&plain).damage, 3);
+        assert_eq!(toxic(&s, &plain), 3);
+        assert_eq!(burn(&s, &plain), 0);
+    }
 }
 
 mod r3540002_riders {
     use super::*;
+
+    #[test]
+    fn r3540002_no_rider_on_a_hero_the_hit_leaves_at_0() {
+        let mut s = board("r3540002-hero-0", json!({ "field": [MACE] }), json!({}));
+        let mace = id_at(&s, P1, 1);
+        // The Mace's hit takes the hero to exactly 0: no life left, so its Burn does not follow.
+        let attack = unit_view(s.state(), s.card(&mace)).attack;
+        s.state_mut().players[P2].hero.health = attack;
+        s.attack(&mace, "hero");
+        s.expect_health(P2, 0);
+        assert!(counter_events(s.events(), CounterKind::Burn).is_empty());
+        assert_eq!(query::hero_burn_of(s.state(), P2), 0);
+        let result = s.state().result.expect("the hit killed the hero");
+        assert_eq!(result.winner, Winner::P1);
+    }
 
     #[test]
     fn r3540002_damage_also_burns_after_each_hit_its_target_survives() {

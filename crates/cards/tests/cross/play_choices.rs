@@ -225,17 +225,18 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
 
         g.play(&crafted.id, json!({ "zone": 2, "modes": ["highest", "right"] }));
 
-        // Rotating right moves the crafted card from lane 2 to lane 3, and p2's lane-1 card, the last
-        // step of the ring, onto p1's lane 1 (§3.1).
+        // The crafted card carries Silas's "Summon this for your opponent" (R102, R3837000), so it lands in
+        // p2's leftmost open zone, lane 2. Rotating right moves it on to p2's lane 1, and p2's lane-1 card,
+        // the last step of the ring, onto p1's lane 1 (§3.1).
         let hand: Vec<String> = g.hand(P1).iter().map(|card| card.def_id.clone()).collect();
         assert_eq!(
             json!({
                 "rotated": g.last_events().iter().any(|event| matches!(event, GameEvent::Rotated { .. })),
-                "craftedLane3": g.unit(P1, 3).map(|card| card.id.clone()),
+                "craftedTheirLane1": g.unit(P2, 1).map(|card| card.id.clone()),
                 "theirsNowControlledBy": g.card(&theirs.id).controller,
                 "hand": hand,
             }),
-            json!({ "rotated": true, "craftedLane3": crafted.id, "theirsNowControlledBy": "p1", "hand": [RENO, MIDRANGE_MENACE] })
+            json!({ "rotated": true, "craftedTheirLane1": crafted.id, "theirsNowControlledBy": "p1", "hand": [RENO, MIDRANGE_MENACE] })
         );
     }
 }

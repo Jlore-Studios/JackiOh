@@ -6,18 +6,22 @@ import { fileURLToPath } from "node:url";
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CATALOG_VERSION } from "@jackioh/cards";
+import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { readerName } from "../cards/chinese.ts";
 import { readCardPicks } from "../cards/cosmetics.ts";
+import { faceModel } from "../cards/model.ts";
 import { readCardSettings, writeCardSettings } from "../cards/settings.ts";
+import { resetLocaleForTests, setLocale, t } from "../i18n/i18n.ts";
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { clearReadCache, expireRead, rememberRead } from "../net/readCache.ts";
 import { SESSION_STORAGE_KEY } from "../net/session.ts";
 import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { EMPTY_LOG } from "../stats/model.ts";
+import { PLAIN_TEXT_KEY } from "../stats/PlainText.tsx";
 import { recordGame, resetPlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
 import { expectEmptyState } from "../test/empty.ts";
@@ -771,7 +775,7 @@ describe("R654 public statistics route", () => {
     const row = options as HTMLElement;
     for (const name of ["View", "Columns"]) expect(row).toContainElement(screen.getByRole("group", { name }));
     expect(row).toContainElement(screen.getByTestId(statsTestid.sortSelect));
-    for (const id of [statsTestid.viewTable, statsTestid.viewGrid, statsTestid.rangesToggle, statsTestid.columnGames, statsTestid.columnPlayRate]) {
+    for (const id of [statsTestid.viewTable, statsTestid.viewGrid, statsTestid.rangesToggle, statsTestid.plainTextToggle, statsTestid.columnGames, statsTestid.columnPlayRate]) {
       const control = screen.getByTestId(id);
       expect(row).toContainElement(control);
       expect(control.tagName).toBe("BUTTON");
@@ -1934,6 +1938,216 @@ describe("R3838000 the Statistics page's Show card text button", () => {
   });
 });
 
+describe("R3887000 the Statistics page's Plain text button", () => {
+  /** A card's two faces as the face model gives them, the text the page must print. */
+  function facesOf(id: string): { base: ReturnType<typeof faceModel>; radiant: ReturnType<typeof faceModel> } {
+    const def = CATALOG[id];
+    if (def === undefined) throw new Error(`no card ${id}`);
+    return {
+      base: faceModel({ defId: id, def, radiant: false }),
+      radiant: faceModel({ defId: id, def, radiant: true }),
+    };
+  }
+
+  /** The ids a card's text names, each once, the card itself and any the catalog lacks left out. */
+  function referencedBy(id: string): string[] {
+    return [...new Set(CATALOG[id]?.refs ?? [])].filter((ref) => ref !== id && CATALOG[ref] !== undefined);
+  }
+
+  /** A table row's plain card. */
+  function plainCardOfRow(id: string): HTMLElement {
+    const row = screen.getByTestId(statsTestid.cardsTable).querySelector(`tr[data-card-id="${id}"]`);
+    if (row === null) throw new Error(`no row for ${id}`);
+    return within(row as HTMLElement).getByTestId(statsTestid.plainCard);
+  }
+
+  it("R3887000 is an off aria-pressed button in the Cards tab's options row, not the header", async () => {
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const toggle = screen.getByTestId(statsTestid.plainTextToggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(toggle).toHaveClass("segmented__item", "stats-view-btn");
+    expect(toggle).toHaveTextContent("Plain text");
+    expect(document.querySelector(".stats-options")).toContainElement(toggle);
+    expect(screen.getByRole("banner")).not.toContainElement(toggle);
+    expect(within(table).queryByTestId(statsTestid.plainCard)).toBeNull();
+  });
+
+  it("R3887000 pressing it prints every table row as text with stats, text and Radiant text, and pressing it again brings the names back", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const toggle = screen.getByTestId(statsTestid.plainTextToggle);
+    expect(table.querySelector(".stats-card-name-link")).not.toBeNull();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(toggle).toHaveClass("segmented__item--selected");
+    const rows = [...table.querySelectorAll("tr[data-card-id]")];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(within(row as HTMLElement).getByTestId(statsTestid.plainCard)).toBeInTheDocument();
+    expect(table.querySelector(".stats-card-name-link")).toBeNull();
+
+    const { base, radiant } = facesOf("core-001");
+    if (base.stats === null || radiant.stats === null) throw new Error("core-001 has no stats");
+    // A face with no words would pass any `toContain` below.
+    expect(base.text.full).not.toBe("");
+    expect(radiant.text.full).not.toBe("");
+    const card = plainCardOfRow("core-001");
+    expect(card).toHaveTextContent(readerName(CATALOG["core-001"]!));
+    expect(card).toHaveTextContent(`Cost ${base.cost.text}`);
+    expect(card).toHaveTextContent(base.typeLine);
+    const baseFace = card.querySelector('[data-face="base"]') as HTMLElement;
+    const radiantFace = card.querySelector('[data-face="radiant"]') as HTMLElement;
+    expect(baseFace.textContent).toContain(base.text.full);
+    expect(baseFace.textContent).toContain(`Attack ${base.stats.attack} · Health ${base.stats.health}`);
+    expect(radiantFace.textContent).toContain("Radiant");
+    expect(radiantFace.textContent).toContain(radiant.text.full);
+    expect(radiantFace.textContent).toContain(`Attack ${radiant.stats.attack} · Health ${radiant.stats.health}`);
+    expect(window.localStorage.getItem(PLAIN_TEXT_KEY)).toBe("1");
+    expect(window.localStorage.getItem(CARD_TEXT_KEY)).toBeNull();
+    expect(readCardSettings().fullArt).toBe(true);
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(within(table).queryByTestId(statsTestid.plainCard)).toBeNull();
+    expect(table.querySelector(".stats-card-name-link")).not.toBeNull();
+    expect(window.localStorage.getItem(PLAIN_TEXT_KEY)).toBe("0");
+    expect(readCardSettings().fullArt).toBe(true);
+  });
+
+  it("R3887000 in the Grid every card is text in its button, with no face, and off again restores the faces", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    expect(grid.querySelector(".cf")).not.toBeNull();
+
+    await user.click(screen.getByTestId(statsTestid.plainTextToggle));
+    const items = [...grid.querySelectorAll("li[data-card-id]")];
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) {
+      const button = item.querySelector("button.stats-grid-card--plain");
+      expect(button).not.toBeNull();
+      expect(within(button as HTMLElement).getByTestId(statsTestid.plainCard)).toHaveAttribute("data-card-id", item.getAttribute("data-card-id"));
+      // The figures stay under it.
+      expect(item.querySelector("dl.stats-grid-figures")).not.toBeNull();
+    }
+    expect(grid).toHaveClass("stats-grid--plain");
+    expect(grid.querySelector(".cf")).toBeNull();
+
+    await user.click(screen.getByTestId(statsTestid.plainTextToggle));
+    expect(grid).not.toHaveClass("stats-grid--plain");
+    expect(within(grid).queryByTestId(statsTestid.plainCard)).toBeNull();
+    expect(grid.querySelector(".cf")).not.toBeNull();
+  });
+
+  it("R3887000 a visit after it was left on opens on, and the choice is the device's own", async () => {
+    window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const toggle = screen.getByTestId(statsTestid.plainTextToggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(within(table).getAllByTestId(statsTestid.plainCard).length).toBeGreaterThan(0);
+    // Show card text is its own button, with its own key.
+    expect(screen.getByTestId(cardTextTestid.toggle)).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(toggle);
+    expect(window.localStorage.getItem(PLAIN_TEXT_KEY)).toBe("0");
+    expect(window.localStorage.getItem(CARD_TEXT_KEY)).toBeNull();
+  });
+
+  it("R3887000 the breakdown shows base and Radiant text and a Reference cards list of every ref, token or not", async () => {
+    window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=meditativeplus-001");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+
+    const { base, radiant } = facesOf("meditativeplus-001");
+    expect(base.text.full).not.toBe("");
+    expect(radiant.text.full).not.toBe("");
+    const plain = within(dialog).getByTestId(statsTestid.drillDownPlain);
+    expect(plain.querySelector('[data-face="base"]')?.textContent).toContain(base.text.full);
+    expect(plain.querySelector('[data-face="radiant"]')?.textContent).toContain(radiant.text.full);
+
+    const expected = referencedBy("meditativeplus-001");
+    expect(expected.some((id) => CATALOG[id]?.token === true)).toBe(true);
+    expect(expected.some((id) => CATALOG[id]?.token !== true)).toBe(true);
+    const entries = within(within(dialog).getByTestId(statsTestid.drillDownRefs)).getAllByTestId(statsTestid.drillDownRef);
+    expect(entries.map((entry) => entry.getAttribute("data-card-id"))).toEqual(expected);
+    for (const entry of entries) {
+      const id = entry.getAttribute("data-card-id") as string;
+      const def = CATALOG[id]!;
+      expect(within(entry).getByTestId(statsTestid.plainCard)).toHaveAttribute("data-card-id", id);
+      const words = facesOf(id).base.text.full;
+      if (words !== "") expect(entry.textContent).toContain(words);
+      const link = within(entry).getByRole("link", { name: `View ${readerName(def)} in the Almanac` });
+      expect(link).toHaveAttribute("href", paths.almanacCard(id));
+    }
+    expect(within(dialog).queryByTestId(statsTestid.drillDownTokens)).toBeNull();
+
+    const first = within(entries[0]!).getByRole("link");
+    fireEvent.click(first);
+    expect(window.location.pathname + window.location.search).toBe(`/almanac?card=${expected[0]}`);
+  });
+
+  it("R3887000 the card itself is left out, and a card that names only itself has no list", async () => {
+    window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-095");
+    const { unmount } = render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    expect(CATALOG["core-095"]?.refs).toContain("core-095");
+    const ids = within(within(dialog).getByTestId(statsTestid.drillDownRefs))
+      .getAllByTestId(statsTestid.drillDownRef)
+      .map((entry) => entry.getAttribute("data-card-id"));
+    expect(ids).toEqual(referencedBy("core-095"));
+    expect(ids).not.toContain("core-095");
+    expect(ids.length).toBeGreaterThan(0);
+    unmount();
+
+    expect(CATALOG["core-003"]?.refs).toEqual(["core-003"]);
+    at("/stats?card=core-003");
+    render(<StatsRoute />);
+    const second = await screen.findByRole("dialog", undefined, SLOW);
+    expect(within(second).getByTestId(statsTestid.drillDownPlain)).toBeInTheDocument();
+    expect(within(second).queryByTestId(statsTestid.drillDownRefs)).toBeNull();
+  });
+
+  it("R3887000 with it off the breakdown keeps its Tokens section and no plain text", async () => {
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-041");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    expect(within(dialog).getByTestId(statsTestid.drillDownTokens)).toBeInTheDocument();
+    expect(within(dialog).queryByTestId(statsTestid.drillDownPlain)).toBeNull();
+    expect(within(dialog).queryByTestId(statsTestid.drillDownRefs)).toBeNull();
+  });
+});
+
+describe("R3887000 the Chinese reader", () => {
+  afterEach(resetLocaleForTests);
+
+  it("R3887000 a reader of Chinese gets the Chinese name, labels and text", async () => {
+    window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
+    await setLocale("zh-CN");
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const card = within(table).getAllByTestId(statsTestid.plainCard).find((each) => each.getAttribute("data-card-id") === "core-001");
+    if (card === undefined) throw new Error("no plain card for core-001");
+    const name = readerName(CATALOG["core-001"]!);
+    expect(name).not.toBe(CATALOG["core-001"]!.name);
+    expect(card).toHaveTextContent(name);
+    expect(card).toHaveTextContent(t("Attack"));
+    expect(card).toHaveTextContent(t("Radiant"));
+    expect(t("Attack")).not.toBe("Attack");
+    expect(screen.getByTestId(statsTestid.plainTextToggle)).toHaveTextContent(t("Plain text"));
+  });
+});
+
 describe("R3447000 the games tile names the patch its games were collected on", () => {
   /** Newest first: 0.7.0, past the tabs' floor and so not collecting, then 0.6.0. */
   const PATCHES = [
@@ -2144,6 +2358,26 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
   }
 
   const COLUMNS = ["Games", "Win rate ↓", "Used", "Not used", "Used Radiant", "Used normal", "Used vs not used"];
+
+  it("R3887000 the Tokens and Other created cards list a catalog card as plain text, and The Coin keeps its name", async () => {
+    window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
+    render(<StatsRoute />);
+    const tokens = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    const other = screen.getByTestId(statsTestid.createdTable);
+    const rowOf = (table: HTMLElement, id: string): HTMLElement => {
+      const row = table.querySelector(`tr[data-card-id="${id}"]`);
+      if (row === null) throw new Error(`no row for ${id}`);
+      return row as HTMLElement;
+    };
+
+    const rush = within(rowOf(tokens, "core-t-rush")).getByTestId(statsTestid.plainCard);
+    expect(rush).toHaveTextContent(readerName(CATALOG["core-t-rush"]!));
+    expect(within(rowOf(other, "core-001")).getByTestId(statsTestid.plainCard)).toHaveAttribute("data-card-id", "core-001");
+    const coin = rowOf(other, "coin");
+    expect(within(coin).queryByTestId(statsTestid.plainCard)).toBeNull();
+    expect(within(coin).getByRole("rowheader")).toHaveTextContent("The Coin");
+  });
 
   it("R2089000 R2370000 R3324002 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its win rate", async () => {
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });

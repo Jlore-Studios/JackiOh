@@ -63,6 +63,31 @@ describe("the lobby panel", () => {
     expect(mine).toHaveTextContent("DUELAB");
     expect(mine).not.toHaveTextContent("COOPCD");
   });
+
+  it("R3731000 the co-op panel makes a 2v2 lobby", async () => {
+    const lobbies = [
+      { code: "DUELAB", settings: { format: "duel", mode: "bo1" }, you: "host", expiresAt: 0 },
+      { code: "TWOVTW", settings: { format: "2v2" }, you: "guest2", expiresAt: 0 },
+    ];
+    const server = serve(lobbies);
+    render(<LobbyPanel format="coop" />);
+    // The player's own 2v2 lobbies are listed beside their co-op ones, a 1v1 lobby not.
+    const mine = await screen.findByTestId(lobbyTestid.mine, undefined, SLOW);
+    expect(mine).toHaveTextContent("Your lobby TWOVTW · 2v2");
+    expect(mine).not.toHaveTextContent("DUELAB");
+    fireEvent.click(screen.getByTestId(lobbyTestid.create2v2));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/lobby/K7Q2XM");
+    }, SLOW);
+    expect(server.to("POST", "/api/lobbies").map((call) => call.body)).toEqual([{ format: "2v2" }]);
+    cleanup();
+
+    // Play's 1v1 panel makes no 2v2 and lists none.
+    serve(lobbies);
+    render(<LobbyPanel format="duel" />);
+    expect(await screen.findByTestId(lobbyTestid.mine, undefined, SLOW)).not.toHaveTextContent("TWOVTW");
+    expect(screen.queryByTestId(lobbyTestid.create2v2)).toBeNull();
+  });
 });
 
 describe("#1900 the way back to a live co-op game", () => {

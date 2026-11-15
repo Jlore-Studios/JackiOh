@@ -478,7 +478,7 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
     expect(portrait).toMatch(/\.board \.control-bar \.audio-toggle,\s*\.board \.control-bar \.language-button--game\s*\{\s*display:\s*none;/);
   });
 
-  it("#815 board.css wraps End turn's label in the one row, takes an empty notices strip out of it, and gives a notice a row of its own", () => {
+  it("#815 board.css wraps End turn's label in the one row, and board notices draw as an overlay over the field (#3868)", () => {
     const text = css("board.css");
     const start = text.indexOf("@media (max-width: 600px) {");
     const portrait = text.slice(start, text.indexOf("@media", start + 1));
@@ -486,12 +486,12 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
     expect(start).toBeGreaterThan(-1);
     // "End turn" took 63px on one line in a 44px button at 390px, and ran over Offer draw.
     expect(portrait).toMatch(/\.board \.control-bar \.control-end-turn\s*\{[^}]*white-space:\s*normal;/);
-    // An empty strip is hidden the visually-hidden way, so its live region still announces.
-    const empty = portrait.match(/\.board \.control-bar \.board-notices:not\(:has\(> :not\(:empty\)\)\)\s*\{([^}]*)\}/);
-    expect(empty).not.toBeNull();
-    expect(empty?.[1]).toMatch(/position:\s*absolute;/);
-    expect(empty?.[1]).not.toMatch(/display:\s*none/);
-    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-notices > :not\(:empty\)\)\s*\{\s*flex-wrap:\s*wrap;/);
+    // #3868: notices are an overlay layer over the field, taking no space in the control bar.
+    const notices = text.match(/\.board-notices\s*\{([^}]*)\}/);
+    expect(notices).not.toBeNull();
+    expect(notices?.[1]).toMatch(/position:\s*absolute;/);
+    expect(notices?.[1]).toMatch(/pointer-events:\s*none;/);
+    expect(text).not.toMatch(/\.control-bar:has\(> \.board-notices > :not\(:empty\)\)/);
   });
 });
 
@@ -807,10 +807,6 @@ describe("#990 an online match's rail on a phone", () => {
 
     expect(start).toBeGreaterThan(-1);
     expect(landscape).toMatch(/\.match-ranks\s*\{\s*flex-basis:\s*100%;/);
-    const empty = landscape.match(/\.board \.control-bar:has\(> \.board-rail\) \.board-notices:not\(:has\(> :not\(:empty\)\)\)\s*\{([^}]*)\}/);
-    expect(empty).not.toBeNull();
-    expect(empty?.[1]).toMatch(/position:\s*absolute;/);
-    expect(empty?.[1]).not.toMatch(/display:\s*none/);
     expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.language-button--game\s*\{\s*display:\s*none;/);
     expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.turn-plate\s*\{[^}]*flex-flow:\s*row wrap;/);
   });
@@ -840,8 +836,9 @@ describe("B44 the picker says which route opened it", () => {
     const text = css("prompt.css");
     const portrait = text.slice(text.lastIndexOf("@media (max-width: 600px) {"));
 
-    expect(portrait).toContain('.game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(');
-    expect(portrait).toMatch(/> :is\(\.prompt-count, \.prompt-zones, \.prompt-list, \.prompt-board-note\) \{\s*display: none;/);
+    // #3864: a one-zone pick is the hint pill at any width, so the bar leaves it out.
+    expect(portrait).toContain('.game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(');
+    expect(portrait).toMatch(/> :is\(\.prompt-count, \.prompt-list, \.prompt-board-note\) \{\s*display: none;/);
   });
 
   it("Confirm sticks to the modal's visible bottom, so no menu pushes it off-screen", () => {

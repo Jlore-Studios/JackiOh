@@ -18,7 +18,7 @@ import { setShips, type CardDef } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { readerName } from "../cards/chinese.ts";
-import { useCanOpenFullScreen, CardDefsProvider, CardFace, closeInspect, faceModel, INSPECT_KEY_SHORTCUT, openFullScreenArt } from "../cards/index.ts";
+import { useCanOpenFullScreen, CardDefsProvider, CardDetail, CardFace, closeInspect, faceModel, INSPECT_KEY_SHORTCUT, openFullScreenArt } from "../cards/index.ts";
 import FilterBar from "../game/deckbuilder/FilterBar.tsx";
 import { FILTER_KEYWORDS, collectionPool } from "../game/deckbuilder/filters.ts";
 import { DB_EMPTY } from "../game/deckbuilder/testids.ts";
@@ -66,10 +66,11 @@ function CollectionCardTile({
   onOpen: () => void;
   onPreview: () => void;
 }): ReactElement {
+  const [detailOpen, setDetailOpen] = useState(false);
   const isFs = useCanOpenFullScreen(def, def.id, owned);
-  const hold = usePreviewHold(`card-${def.id}`, (pointerId) => {
+  const hold = usePreviewHold(`card-${def.id}`, (pointerId, pointerType) => {
     // The inspect key (no pointer) keeps the preview, with its equip and buy buttons; only a hold opens the art.
-    if (isFs && pointerId !== undefined) {
+    if (isFs && pointerId !== undefined && pointerType !== "touch") {
       openFullScreenArt({
         defId: def.id,
         name: readerName(def),
@@ -78,43 +79,56 @@ function CollectionCardTile({
       });
       return;
     }
+    if (isFs && pointerType === "touch") {
+      setDetailOpen(true);
+      return;
+    }
     onPreview();
   });
   return (
-    <button
-      type="button"
-      className="collection-card"
-      data-testid={collectionTestid.card(def.id)}
-      data-owned={String(owned)}
-      aria-label={owned ? readerName(def) : t("{name}, not owned yet", { name: readerName(def) })}
-      aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
-      data-new={isNew ? "true" : undefined}
-      {...hold}
-      {...hover}
-      onPointerDown={(event) => {
-        hover.onPointerDown();
-        hold.onPointerDown(event);
-      }}
-      onClick={() => {
-        closeInspect();
-        onOpen();
-      }}
-    >
-      <span className="collection-card__face">
-        {/* R3350000: the player turns a card here to look at it, so a Mythic's diorama turns as far as it does in inspect. */}
-        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} tilt="host" turn />
-      </span>
-      {isNew ? (
-        <span className="collection-card__new" data-testid={collectionTestid.newMark(def.id)}>
-          {t("New")}
+    <>
+      <button
+        type="button"
+        className="collection-card"
+        data-testid={collectionTestid.card(def.id)}
+        data-owned={String(owned)}
+        aria-label={owned ? readerName(def) : t("{name}, not owned yet", { name: readerName(def) })}
+        aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
+        data-new={isNew ? "true" : undefined}
+        {...hold}
+        {...hover}
+        onPointerDown={(event) => {
+          hover.onPointerDown();
+          hold.onPointerDown(event);
+        }}
+        onClick={() => {
+          closeInspect();
+          onOpen();
+        }}
+      >
+        <span className="collection-card__face">
+          {/* R3350000: the player turns a card here to look at it, so a Mythic's diorama turns as far as it does in inspect. */}
+          <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} tilt="host" turn />
         </span>
+        {isNew ? (
+          <span className="collection-card__new" data-testid={collectionTestid.newMark(def.id)}>
+            {t("New")}
+          </span>
+        ) : null}
+        {owned ? null : (
+          <span className="collection-card__lock" aria-hidden="true">
+            {t("Locked")}
+          </span>
+        )}
+      </button>
+      {detailOpen ? (
+        <CardDetail
+          def={def}
+          onClose={() => setDetailOpen(false)}
+          meta={<span>{owned ? t("Owned") : t("Not owned yet")}</span>}
+        />
       ) : null}
-      {owned ? null : (
-        <span className="collection-card__lock" aria-hidden="true">
-          {t("Locked")}
-        </span>
-      )}
-    </button>
+    </>
   );
 }
 

@@ -3,7 +3,7 @@
 //!   Radiant: "Cry: Equip a random Radiant Miner into this, twice."
 //!
 //! R1872001: the Cry is `equip_picks` (R1841002), a random pick from the Miners (`query::miners`,
-//! R3869002), S #62 Miner v1 to S #66 Miner v5 today (named by id through v0.6.0g): a
+//! R3869002), S #62 Miner v1 to S #66 Miner v5 today (named by id through v0.6.2b): a
 //! fresh copy fused straight into this, as an Equip play fuses its card (R1086, R77), with no hand, no
 //! play and no Cry, its Activate with it (R1751000). The Radiant face picks twice, each pick on its
 //! Radiant face (R469), the second from the Miners it does not hold yet. Off the field, Immutable, or
@@ -49,7 +49,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     /// R3869002: the Miner pool today, S #62 Miner v1 to S #66 Miner v5, pinned so a change to it is
-    /// deliberate: the five this card named by id through v0.6.0g, in its order.
+    /// deliberate: the five this card named by id through v0.6.2b, in its order.
     const MINERS: [&str; 5] = [
         "stinkyscape-062",
         "stinkyscape-063",

@@ -1383,6 +1383,42 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
     use super::*;
 
     #[test]
+    fn r3800002_a_cost_set_on_a_card_in_a_graveyard_or_an_exile_pile_changes_nothing() {
+        // Seed 6140: a fused Field Trap discarded its chosen hand card, and C+ #41's part after it set that
+        // card's cost in the graveyard, where it costs its printed cost (R766).
+        for zone in [
+            Zone::Graveyard { player: PlayerId::P1 },
+            Zone::Exile { player: PlayerId::P1 },
+        ] {
+            let mut state = game("tune");
+            let gone = new_instance(
+                &mut state,
+                &instance_fx::numbered_body.id,
+                PlayerId::P1,
+                zone.clone(),
+            );
+            let pile = &mut state.players[PlayerId::P1];
+            match zone {
+                Zone::Graveyard { .. } => pile.graveyard.push(gone.clone()),
+                _ => pile.exile.push(gone.clone()),
+            }
+            let printed = &numbers(&state, &gone.id)[0];
+            assert_eq!(json!([printed["id"], printed["value"]]), json!(["cost", 1]));
+
+            let events = run(
+                &mut state,
+                set_number(json_as(
+                    json!({ "instanceId": gone.id, "which": "cost", "value": 3 }),
+                )),
+                RunOptions::default(),
+            );
+
+            assert_eq!(live(&state, &gone.id).cost_mod, 0, "{zone:?}");
+            assert!(events_of_type(&events, "numberChanged").is_empty(), "{zone:?}");
+        }
+    }
+
+    #[test]
     fn r386_numbers_on_lists_the_cost_never_an_x_attack_health_numbered_keywords_and_declared_numbers_none_on_an_immutable_card()
      {
         let mut state = game("tune");

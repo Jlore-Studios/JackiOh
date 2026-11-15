@@ -1285,6 +1285,8 @@ impl SupabaseAuth {
 const E2E_FIXTURE_ACCOUNTS: &[(&str, &str, &str, &str)] = &[
     ("e2e-p1", "e2e-p1@jackioh.test", "e2e-p1-password", "e2e-token-p1"),
     ("e2e-p2", "e2e-p2@jackioh.test", "e2e-p2-password", "e2e-token-p2"),
+    ("e2e-p3", "e2e-p3@jackioh.test", "e2e-p3-password", "e2e-token-p3"),
+    ("e2e-p4", "e2e-p4@jackioh.test", "e2e-p4-password", "e2e-token-p4"),
     (
         "e2e-pending",
         "e2e-pending@jackioh.test",
@@ -1550,5 +1552,20 @@ impl Auth {
             Auth::Supabase(_) => true,
             Auth::E2e(auth) => auth.can_delete_users(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::iso_of;
+
+    /// The cached confirmation's `email_confirmed_at` (`authoritative_user`): RFC 3339 of its epoch
+    /// ms, and the ms themselves for an instant no date holds, so it is never empty, which is all
+    /// `is_email_confirmed` asks of it.
+    #[test]
+    fn iso_of_writes_epoch_ms_as_rfc_3339_and_never_an_empty_text() {
+        assert_eq!(iso_of(1_700_000_000_123), "2023-11-14T22:13:20.123Z");
+        assert_eq!(iso_of(0), "1970-01-01T00:00:00Z");
+        assert_eq!(iso_of(i64::MAX), i64::MAX.to_string());
     }
 }

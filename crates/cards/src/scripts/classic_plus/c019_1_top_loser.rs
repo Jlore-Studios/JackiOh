@@ -165,6 +165,28 @@ mod tests {
                 assert_eq!(s.stats(unit_or_blank(&s, P1, 1)).position, Position::Atk);
             }
 
+            /// R767000: a game on v0.5.9f folds under the kept script, whose static flags still bar Defense
+            /// Position (before R2657000's Can't Defend) and an attack from another lane.
+            #[test]
+            fn r767000_a_game_on_v0_5_9f_keeps_it_out_of_defense_and_open_only_to_its_own_lane() {
+                crate::register_all();
+                let shipped = crate::shipped_catalog("v0.5.9f").expect("v0.5.9f is carried");
+                jackioh_engine::with_shipped(Some(shipped), || {
+                    let mut s = top_loser(
+                        json!({ "field": [{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 }] }),
+                        false,
+                        json!({}),
+                    );
+                    let beside = s.unit(P1, 2).expect("setup");
+                    let loser = top(&s);
+                    s.expect_refused_with(|s| s.attack(&beside, &loser), "lane");
+                    s.end_turn();
+                    let loser = top(&s);
+                    s.expect_refused_with(|s| s.switch_position(&loser), "Defense");
+                    assert_eq!(s.stats(top(&s)).position, Position::Atk);
+                });
+            }
+
             #[test]
             fn s4_1_a_switch_all_effect_leaves_it_in_attack_position() {
                 let mut s = top_loser(

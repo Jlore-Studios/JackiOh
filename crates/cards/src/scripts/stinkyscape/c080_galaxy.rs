@@ -6,7 +6,7 @@
 //!
 //! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
 //! printed Tribute (R366). R1872003: the Cry is `equip_picks` (R1841002) from the Miners (`query::miners`,
-//! R3869002), S #62 Miner v1 to S #66 Miner v5 today (named by id through v0.6.0g),
+//! R3869002), S #62 Miner v1 to S #66 Miner v5 today (named by id through v0.6.2b),
 //! each pick a fresh copy on its Radiant face (R469) fused straight into this (R1086, R77), its Activate
 //! with it (R1751000): two Discovers of three in turn, the second without the first; the Radiant face
 //! fuses all five, v1 first, asking nothing. Flying is a catalog keyword the engine plays. Since #2521 it
@@ -73,7 +73,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     /// R3869002: the Miner pool today, S #62 Miner v1 to S #66 Miner v5, pinned so a change to it is
-    /// deliberate: the five this card named by id through v0.6.0g, in its order.
+    /// deliberate: the five this card named by id through v0.6.2b, in its order.
     const MINERS: [&str; 5] = [
         "stinkyscape-062",
         "stinkyscape-063",

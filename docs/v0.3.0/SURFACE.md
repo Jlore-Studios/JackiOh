@@ -489,7 +489,10 @@ hidden_from }` marks each first run of a Cry, Death, start-of-turn or end-of-tur
 trigger and Activate just before its effects (`hook_marks.rs`). Neither reaches the trigger loop
 (`as_rules_read`, `triggers::withhold_report`), so no rule reads them and no hash moves; `view_for`
 withholds a marker from a seat that could not read its card and never forwards `hiddenFrom`, and the
-golden texts leave both out (R2783000, R2783001).
+golden texts leave both out (R2783000, R2783001). Since #3857 `GameEvent::ArmorGained { player, amount,
+armor }` reports a hero's kept Armor gain (`effects::gain_hero_armor`), `armor` being `hero_armor_of`
+after it. It is withheld from the trigger loop, public, takes no room in R168's floor and is left out
+of the golden texts (R3857000).
 
 ### 6.5 Mutation convention and the per-call sink
 
@@ -923,8 +926,8 @@ daily/<x>.rs   (#3727, SPEC §9.13) daily games over plain HTTPS, no actor: game
 ```
 
 A daily game's boundary (#3727) is plain HTTPS, so a client with no socket and no engine (a Roblox
-server, later) can play one: the caller's `view_for` and legal actions under the game's catalog, the
-`seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
+server, later) can play one: the caller's `view_for`, legal actions and the forecast of its attacks (R3855000)
+under the game's catalog, the `seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
 (`apps/web/src/wire/generated/DailyHold.ts`). The routes are `crates/server/README.md`'s "Daily games".
 
 ### 11.2 The shared shapes (frozen)
@@ -1380,3 +1383,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§6.1, a stat line by count (issue #3542, R3542000):** `Script` gains `stat_line_when: Option<HasHook>`, dropped by a fusion and read by `layers::has_stat_line` beside the printed, fused, `statsOverride` and X stats; `plague::place_plague_on` owes R2280001's animation when a counter first gives a card both.
 - **§6.1 / §6.2 / §10.8, Stinkyscape+ S10 (issue #3556, R3556000–R3556001):** `slumber.rs` gains `DORMANT_PARAM` (`dormant`, tuning a Dormant countdown) and starts a face-up Field Spell printing Dormant asleep as a Unit, counting down after the Units at its controller's turn start; `triggers.rs` and `cry_trigger.rs` skip a Dormant backrow card's triggers and Cry re-firings; `PublicBackrowView` gains `slumber: Option<Slumber>` and `LiveCard` carries it, so the dormant badge reads in the backrow too; `StaticFlags` gains `spell_echo_aura: Option<SpellEchoAura>` (`SpellEchoAura { amount, both }`, summed by a Fuse, read through the declared number `spellEcho`), and `echo.rs` gains `echo::aura_echo` (each Spell played or cast resolving N more times while the card acts). Every new field is absent until set, so old games hash the same.
  - **§6.3, Stinkyscape+ S25 (issue #3571, R3571000, R3571001):** `LineRules` gains `pierce: bool` (Lancer, Vela and Corvus set it, KY's Line Search Bot does not); `MarketPool` gains `OpenIds` (the ids named whose set is open, R1420), the AI lot's pool, now 17 ids (`MARKETPLACE_AI_CARDS`); nothing reaches the client.
+- **§6.1 / §10.8, the switch's refusal on the unit view (issue #3821, R3821000):** `UnitView` carries `switchReason` (`combat::why_cannot_switch_in` to `position_after_switch`, spending exertion), gated by `view_for::turn_open_to`. `golden::view_texts` strips it, so no golden hash moves. jackioh-shared's `LiveCard`, `InPlay` and `FaceModel` carry it, `InPlay` dropping it where it repeats `attackReason`.

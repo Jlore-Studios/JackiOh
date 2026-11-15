@@ -393,6 +393,8 @@ export type ProfileResponse = {
   record: { wins: number; losses: number; draws: number };
   /** 0..1, or null when nothing has been played. Computed server-side so the two cannot differ. */
   winRate: number | null;
+  /** R3733000: epoch ms the account was made; an older server omits it. */
+  createdAt?: number;
 };
 
 export function getProfile(token: string): Promise<ProfileResponse> {

@@ -192,6 +192,26 @@ mod tests {
     }
 
     #[test]
+    fn r3557001_a_second_radiant_cast_buffs_its_own_copies_and_none_the_first_made() {
+        let mut s = scenario(json!({
+            "seed": SEED,
+            "p1": {
+                "hand": [{ "def": ID, "radiant": true }, { "def": ID, "radiant": true }, FILLER],
+                "field": [BODY],
+                "library": filler(3),
+                "mana": 10,
+            },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        let body = s.unit_at(P1, 1).id;
+        s.play(ID, pick::targets(pick::id(&body)));
+        s.play(ID, pick::targets(pick::id(&body)));
+        assert_eq!(copies(&s, BODY).len(), 20);
+        let buffed = s.last_events().iter().filter(|event| event.event_type().as_str() == "upgraded").count();
+        assert_eq!(buffed, 10, "the second cast Buffs its ten copies alone");
+    }
+
+    #[test]
     fn r3557001_a_fused_card_is_copied_into_nothing() {
         let mut s = scenario(json!({
             "seed": SEED,

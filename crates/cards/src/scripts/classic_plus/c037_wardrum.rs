@@ -1,5 +1,5 @@
-//! C+ #37 Wardrum (SPEC §8.7 row 37): (4) Unit ((5) until issue #3138), Quickdraw, Legendary, 5/5 → 10/10,
-//! Divine Shield on both faces (issue #3138).
+//! C+ #37 Wardrum (SPEC §8.7 row 37): (3) Unit ((4) until issue #3837, (5) until issue #3138), Quickdraw,
+//! Legendary, 5/5 → 10/10, Divine Shield on both faces (issue #3138).
 //!   Base:    "Divine Shield. While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.
 //!            End of turn: Cast a copy of a random non-Unit you played this turn."
 //!   Radiant: "… End of turn: Cast a copy of each non-Unit you played this turn."
@@ -27,15 +27,30 @@ fn non_unit(state: &GameState, card: &CardInstance) -> bool {
     NON_UNIT.contains(&card_type_of_face(state, &card.def_id, card.radiant))
 }
 
-/// This turn's non-Unit plays of `player` that still exist, in play order (R86).
-fn non_unit_plays(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    played_ids_this_turn(state, player)
+/// The non-Units among `played`, the ids of this turn's plays, that still exist, in play order (R86).
+fn non_units_of(state: &GameState, played: &[String]) -> Vec<CardInstance> {
+    played
         .iter()
         .filter_map(|id| find_instance(state, id))
         .filter(|card| non_unit(state, card))
         .cloned()
         .collect()
 }
+
+/// This turn's non-Unit plays of `player` that still exist, made before the turn's end began: another
+/// Wardrum's end-of-turn copies are none of them (R3800003).
+fn non_unit_plays(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    non_units_of(state, &played_ids_before_this_end(state, player))
+}
+
+/// R767000: the pool as it was through v0.6.2b, every non-Unit played this turn, the copies an earlier
+/// Wardrum's end of turn cast included; `KEPT_SCRIPTS` folds those replays under it.
+fn non_unit_plays_v0_6_2b(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    non_units_of(state, &played_ids_this_turn(state, player))
+}
+
+/// Where an end of turn casts from: `non_unit_plays`, or the kept script's pool.
+type Pool = fn(&GameState, PlayerId) -> Vec<CardInstance>;
 
 /// R578: whether the play this event resolves is the controller's threshold-th non-Unit play of the turn.
 /// Its place is the turn's count of such plays (which keeps a play whose card has since ceased to exist)
@@ -114,9 +129,9 @@ fn copy_of(id: String) -> impl Fn(&mut EffectContext<'_>) -> Option<CastDef> + S
     }
 }
 
-/// The radiant face's `forEachCard` list: this turn's non-Unit plays that still exist, by id.
-fn played_non_unit_ids(ctx: &mut EffectContext<'_>) -> Vec<String> {
-    non_unit_plays(ctx.state, ctx.controller).into_iter().map(|card| card.id).collect()
+/// The radiant face's `forEachCard` list: the pool's cards, by id.
+fn played_non_unit_ids(pool: Pool) -> impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static {
+    move |ctx| pool(ctx.state, ctx.controller).into_iter().map(|card| card.id).collect()
 }
 
 /// The radiant face's `forEachCard` step: cast a copy of that card, by definition and face.
@@ -139,10 +154,10 @@ fn wardrum(end_of_turn: Hook) -> Script {
     }
 }
 
-pub fn script() -> CardScripts {
-    let base = wardrum(hook(|_ctx| {
-        vec![cast_new_read(|ctx| {
-            let plays = non_unit_plays(ctx.state, ctx.controller);
+fn scripts(pool: Pool) -> CardScripts {
+    let base = wardrum(hook(move |_ctx| {
+        vec![cast_new_read(move |ctx| {
+            let plays = pool(ctx.state, ctx.controller);
             ctx.rng.pick(&plays).map(|card| CastDef {
                 def_id: card.def_id.clone(),
                 radiant: Some(card.radiant),
@@ -150,14 +165,24 @@ pub fn script() -> CardScripts {
         })]
     }));
 
-    let radiant = wardrum(hook(|_ctx| {
+    let radiant = wardrum(hook(move |_ctx| {
         vec![for_each_card(ForEachCardArgs {
-            cards: Arc::new(played_non_unit_ids),
+            cards: Arc::new(played_non_unit_ids(pool)),
             each: Arc::new(cast_copy_of),
         })]
     }));
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(non_unit_plays)
+}
+
+/// R767000, R3800003: through v0.6.2b each end of turn cast from every non-Unit played this turn, an
+/// earlier Wardrum's copies included; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_2b() -> CardScripts {
+    scripts(non_unit_plays_v0_6_2b)
 }
 
 // C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1); a Trap copy stays hidden (R33, R97).
@@ -245,17 +270,17 @@ mod tests {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::DivineShield)
     }
 
-    /// Issue #3138: it costs (4), from (5), on both faces: refused with 3 mana, played with 4, as a 5/5
-    /// (Radiant 10/10) that has the Divine Shield from the first moment.
+    /// Issue #3837: it costs (3), from (4) ((5) until issue #3138), on both faces: refused with 2 mana,
+    /// played with 3, as a 5/5 (Radiant 10/10) that has the Divine Shield from the first moment.
     #[test]
-    fn issue_3138_it_costs_4_and_enters_the_field_with_its_divine_shield_on_both_faces() {
+    fn issue_3837_it_costs_3_and_enters_the_field_with_its_divine_shield_on_both_faces() {
         for (radiant, health) in [(false, 5), (true, 10)] {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": WARDRUM, "radiant": radiant }, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER] },
             }));
-            crate::expect_costs(&mut s, WARDRUM, 4, json!({}));
-            s.state_mut().players.p1.mana.current = 4;
+            crate::expect_costs(&mut s, WARDRUM, 3, json!({}));
+            s.state_mut().players.p1.mana.current = 3;
             s.play(WARDRUM, json!({}));
             s.expect_mana(P1, 0);
             s.expect_stats(WARDRUM, json!({ "attack": health, "health": health, "maxHealth": health }));
@@ -708,6 +733,74 @@ mod tests {
                 .collect();
             assert_eq!(casts, vec![BONE_STORM, MANA_WELL, SHEEPISH]);
             s.expect_stats(MENACE, json!({ "health": 7 }));
+        }
+
+        /// R3800003 (issue #3800, fuzz seed 5763): each Radiant Wardrum casts a copy of the non-Units
+        /// played before the turn's end began, not of the copies another Wardrum's end of turn cast, so
+        /// two of them cast the two plays twice, four casts, where reading each other's would make six.
+        #[test]
+        fn r3800003_two_radiant_wardrums_each_cast_the_plays_made_before_the_end_not_each_others_copies() {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [BONE_STORM, MANA_WELL, FILLER],
+                    "field": [{ "def": WARDRUM, "radiant": true, "lane": 1 }, { "def": WARDRUM, "radiant": true, "lane": 2 }],
+                    "library": LIBRARY,
+                    "mana": 8,
+                },
+                "p2": { "hand": [FILLER], "field": [MENACE], "library": LIBRARY },
+            }));
+            s.play(BONE_STORM, json!({}));
+            s.play(MANA_WELL, json!({}));
+            let from = s.events().len();
+            s.end_turn();
+            let casts: Vec<String> = events_json(&s)[from..]
+                .iter()
+                .filter(|event| event["type"] == "cardAnnounced" && event["player"] == "p1")
+                .filter_map(|event| event["defId"].as_str().map(str::to_string))
+                .collect();
+            assert_eq!(casts, vec![BONE_STORM, MANA_WELL, BONE_STORM, MANA_WELL]);
+        }
+
+        /// R3800003, R767000: the count of plays before the end is noted by the first card the end of turn
+        /// plays or casts, on that player's log alone, and cleared when the game ends, so a game that ends
+        /// inside an end of turn (here the turn cap's draw) leaves `playedBeforeEnd` absent on both logs
+        /// and keeps the final state it had before the count was kept.
+        #[test]
+        fn r3800003_the_count_of_plays_before_the_end_is_kept_only_while_the_end_plays_a_card() {
+            let board = |turn: i32, hand: Value| {
+                scenario(json!({
+                    "turn": turn,
+                    "p1": {
+                        "hand": hand,
+                        "field": [{ "def": WARDRUM, "radiant": true }],
+                        "library": LIBRARY,
+                        "mana": 8,
+                    },
+                    "p2": { "hand": [FILLER], "field": [MENACE], "library": LIBRARY },
+                }))
+            };
+            let counts = |s: &Scenario| [P1, P2].map(|player| s.state().players[player].turn_log.played_before_end);
+
+            // Paused inside the end on the copy of Lunar Eclipse, after the copy of Bone Storm was cast:
+            // the count holds the two plays before the end.
+            let mut paused = board(1, json!([BONE_STORM, LUNAR, FILLER]));
+            paused.play(BONE_STORM, json!({}));
+            paused.play(LUNAR, pick::targets(pick::hero("p2")));
+            paused.end_turn();
+            assert_eq!(paused.state().phase, Phase::End);
+            assert_eq!(counts(&paused), [Some(2), None]);
+
+            let cap = jackioh_engine::config::TURN_CAP_PLAYER_TURNS;
+            for (hand, play) in [(json!([VANILLA, FILLER]), VANILLA), (json!([BONE_STORM, FILLER]), BONE_STORM)] {
+                let mut over = board(cap, hand);
+                over.play(play, json!({}));
+                over.end_turn();
+                assert_eq!(
+                    over.state().result.as_ref().map(|result| result.reason),
+                    Some(GameOverReason::TurnCap)
+                );
+                assert_eq!(counts(&over), [None, None], "{play}");
+            }
         }
 
         #[test]

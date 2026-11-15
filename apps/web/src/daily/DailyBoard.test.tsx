@@ -1,16 +1,25 @@
 // #3727: a daily game's board. Each action is one POST sent after the last action read, under a fresh
 // nonce, and the board draws the answer; a stale board reads the game again; Next game appears once the
 // move has passed on; the result says Lost on time or Won on time; an older card version says so; a
-// finished game's Rematch challenges its opponent again at its mode and time per move.
+// finished game's Rematch challenges its opponent again at its mode and time per move. R3855000: it shows what
+// every table shows: the opponent's name on the hero, the modifiers in play, an aimed attack's outcomes from
+// the read's forecast, and Watch the replay on a finished game's result.
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import type { ActionBody, AttackForecast, CombatForecast, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setAudioEngineForTests } from "../audio/engine.ts";
+import { resetAudioSettingsForTests } from "../audio/settings.ts";
+import { fakeAudioEngine } from "../audio/test/fakeAudio.ts";
+import type { AudioEngine } from "../audio/types.ts";
+import { modifierListTestid } from "../game/ModifierList.tsx";
 import type { DailyGame } from "../net/daily.ts";
 import { clearReadCache } from "../net/readCache.ts";
+import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { resetSettings, writeSettings } from "../settings/store.ts";
-import { baseView } from "../test/fixtures.ts";
+import { baseView, emptySide, opponentModifiers, unit, yourModifiers } from "../test/fixtures.ts";
+import { foldedReplaySteps } from "../test/replay.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
 import { dailyConstants } from "../wasm/index.ts";
 import DailyBoard from "./DailyBoard.tsx";
@@ -276,5 +285,140 @@ describe("#3727 a daily game's board", () => {
     fireEvent.click(screen.getByTestId(dailyTestid.boardRetry));
     await screen.findByTestId("end-turn", undefined, SLOW);
     expect(server.to("GET", "/api/daily/games/g-1")).toHaveLength(2);
+  });
+});
+
+/** The forecast entry of one attack, the numbers named and the rest at rest. */
+function forecastEntry(attackerId: string, targetId: string, fields: Partial<AttackForecast>): AttackForecast {
+  return {
+    attackerId,
+    targetId,
+    dealt: 0,
+    taken: 0,
+    kills: false,
+    survives: true,
+    pops: false,
+    attackerSize: 0,
+    targetSize: 0,
+    ...fields,
+  };
+}
+
+describe("R3855000 a daily board shows what every table shows", () => {
+  const steps = foldedReplaySteps();
+
+  it("R3855000 the opponent's hero reads the opponent's username", async () => {
+    serve(dailyGame);
+    render(<DailyBoard matchId="g-1" />);
+    const opponent = await screen.findByTestId("hero-opponent", undefined, SLOW);
+    expect(opponent.querySelector(".hero-seat")).toHaveTextContent("Opp#7");
+    expect(screen.getByTestId("hero-you").querySelector(".hero-seat")).toHaveTextContent("You");
+  });
+
+  it("R3855000 the board rail lists the modifiers the view holds", async () => {
+    const view = baseView();
+    serve(() =>
+      dailyGame({ view: { ...view, you: { ...view.you, modifiers: yourModifiers }, opponent: { ...view.opponent, modifiers: opponentModifiers } } }),
+    );
+    render(<DailyBoard matchId="g-1" />);
+    const chip = await screen.findByTestId(modifierListTestid.chip, undefined, SLOW);
+    expect(chip).toHaveAttribute("data-count", String(yourModifiers.length + opponentModifiers.length));
+    fireEvent.click(chip);
+    const panel = screen.getByTestId(modifierListTestid.panel);
+    for (const modifier of [...yourModifiers, ...opponentModifiers]) expect(panel).toHaveTextContent(modifier.label);
+    expect(Array.from(panel.querySelectorAll(".modifier-list__who"), (who) => who.textContent)).toEqual(["You", "Opponent"]);
+  });
+
+  describe("an aimed attack", () => {
+    const POINTER_SPOT = { clientX: 10, clientY: 10 };
+    let under: Element[] = [];
+
+    /** Puts `element` under the pointer (null: bare board); the hovered-target reader runs on the move. */
+    function hover(element: Element | null): void {
+      under = element === null ? [] : [element];
+      fireEvent.pointerMove(window, POINTER_SPOT);
+    }
+
+    beforeEach(() => {
+      under = [];
+      document.elementsFromPoint = (() => under) as Document["elementsFromPoint"];
+      resetAudioSettingsForTests();
+      setAudioEngineForTests(fakeAudioEngine({ contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 1) }));
+    });
+
+    afterEach(() => {
+      setAudioEngineForTests(null);
+      delete (document as Partial<Document>).elementsFromPoint;
+      document.documentElement.removeAttribute("data-dragging");
+      resetAudioSettingsForTests();
+    });
+
+    it("R3855000 selecting an attacker and hovering its target shows the forecast's damage", async () => {
+      const view = baseView({
+        you: emptySide("p1", { units: [unit("p1", { instanceId: "u1", defId: "core-066" }), null, null, null, null] }),
+        opponent: emptySide("p2", { hand: { count: 3 }, units: [unit("p2", { instanceId: "e1", defId: "core-055" }), null, null, null, null] }),
+      });
+      const forecast: CombatForecast = {
+        attacks: [
+          forecastEntry("u1", "e1", { dealt: 2, taken: 3, kills: true, survives: false, pops: true }),
+          forecastEntry("u1", "hero-p2", { dealt: 2 }),
+        ],
+        lethal: false,
+      };
+      serve(() =>
+        dailyGame({
+          view,
+          legal: [{ type: "attack", attackerId: "u1", targetId: "e1" }, { type: "attack", attackerId: "u1", targetId: "hero-p2" }, END_TURN, CONCEDE],
+          forecast,
+        }),
+      );
+      render(<DailyBoard matchId="g-1" />);
+      fireEvent.click(await screen.findByTestId("card-u1", undefined, SLOW));
+      expect(screen.queryAllByTestId(/^outcome-/)).toEqual([]);
+
+      hover(screen.getByTestId("card-e1"));
+      const target = screen.getByTestId("outcome-card-e1");
+      expect(target).toHaveAttribute("data-dealt", "2");
+      expect(target.querySelector(".fx-splat")).toHaveAttribute("data-amount", "−2");
+      expect(screen.getByTestId("outcome-taken-card-u1")).toHaveAttribute("data-taken", "3");
+
+      hover(null);
+      expect(screen.queryAllByTestId(/^outcome-/)).toEqual([]);
+    });
+  });
+
+  describe("a finished game's result", () => {
+    const finished = (): DailyGame =>
+      dailyGame({ view: baseView({ result: { winner: "p1", reason: "concede" } }), over: true, hasMove: false, legal: [], holds: [] });
+
+    it("R3855000 holds Watch the replay, which opens the game's replay and returns to the board", async () => {
+      const server = serve(finished, (call) => {
+        if (call.method !== "GET" || call.path !== "/api/replays/g-1") return undefined;
+        const from = Number(call.query.get("from") ?? "0");
+        const count = Number(call.query.get("count") ?? "1");
+        return { status: 200, body: { matchId: "g-1", from, steps: steps.slice(from, from + count), total: steps.length } };
+      });
+      render(<DailyBoard matchId="g-1" />);
+      await screen.findByTestId("result-overlay", undefined, SLOW);
+
+      fireEvent.click(screen.getByTestId(dailyTestid.watchReplay));
+      expect(await screen.findByTestId(replayTestid.player, undefined, SLOW)).toHaveAttribute("data-step", "0");
+      const first = server.to("GET", "/api/replays/g-1")[0];
+      expect(first?.query.get("from")).toBe("0");
+      expect(first?.headers.authorization).toBe("Bearer tok-daily-board");
+      expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("Opp#7");
+
+      fireEvent.click(screen.getByTestId(replayTestid.back));
+      expect(await screen.findByTestId(dailyTestid.watchReplay, undefined, SLOW)).toBeInTheDocument();
+      expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    });
+
+    it("R3855000 a voided game's result offers no replay", async () => {
+      serve(() => dailyGame({ ...finished(), view: baseView({ result: { winner: "draw", reason: "voided" } }) }));
+      render(<DailyBoard matchId="g-1" />);
+      await screen.findByTestId("result-overlay", undefined, SLOW);
+      expect(screen.getByTestId(dailyTestid.rematch)).toBeInTheDocument();
+      expect(screen.queryByTestId(dailyTestid.watchReplay)).toBeNull();
+    });
   });
 });

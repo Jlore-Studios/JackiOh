@@ -52,6 +52,9 @@ pub struct AgainStatusBody {
     pub teammate_offered: bool,
     pub teammate_here: bool,
     pub match_id: Option<String>,
+    /// R3731003: a 2v2 offers no Play again; written only when it is so.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub unavailable: bool,
 }
 
 /// R2092000's offers, by the finished match's id: rendezvous state for two sockets, not rows. One
@@ -187,11 +190,7 @@ async fn callers_match(app: &App, req: &Req, profile: &Profile) -> Result<(DuosM
     let Some(match_row) = found else {
         return Err(no_such_match());
     };
-    let seat = if match_row.a1 == profile.id {
-        DuosSeat::A1
-    } else if match_row.a2 == profile.id {
-        DuosSeat::A2
-    } else {
+    let Some(seat) = match_row.seat_of(&profile.id) else {
         return Err(no_such_match());
     };
     Ok((match_row, seat))
@@ -275,6 +274,7 @@ async fn create_again(
             difficulty: finished.difficulty,
             seed: None,
             claim_room: None,
+            team_b: None,
         },
         |_| already_in_match(),
     )
@@ -299,6 +299,13 @@ pub async fn offer_again(app: &Arc<App>, req: Req) -> ApiResult {
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
     if match_row.ended_at.is_none() {
         return Err(not_finished());
+    }
+    // R3731003: a 2v2 is made in a lobby, where four people pick again; nothing is offered or made.
+    if !match_row.team_b().is_ai() {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "a 2v2 game cannot be played again",
+        ));
     }
     // R1497000: a seat emptied by a deleted account cannot be played again; the remaining seat's
     // offer is refused and nothing is made.
@@ -343,6 +350,20 @@ pub async fn again_status(app: &Arc<App>, req: Req) -> ApiResult {
     if match_row.ended_at.is_none() {
         return Err(not_finished());
     }
+    // R3731003: a 2v2 offers no Play again, which the result panel reads.
+    if !match_row.team_b().is_ai() {
+        let status = AgainStatusBody {
+            you_offered: false,
+            teammate_offered: false,
+            teammate_here: false,
+            match_id: None,
+            unavailable: true,
+        };
+        return Ok(json(
+            200,
+            serde_json::to_value(status).map_err(|error| ApiError::internal(error.to_string()))?,
+        ));
+    }
 
     let seen = offers(app).book.seen(&match_row.id, seat, now_ms());
     // Gone whenever no live actor holds the match or the teammate's socket closed, and never
@@ -362,6 +383,7 @@ pub async fn again_status(app: &Arc<App>, req: Req) -> ApiResult {
         teammate_offered: seen.teammate_offered,
         teammate_here,
         match_id: seen.match_id,
+        unavailable: false,
     };
     Ok(json(
         200,

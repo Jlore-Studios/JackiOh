@@ -10,7 +10,7 @@
 //! Engine: Cry (R1): with a Dormant Starship (`building_a_ship`, R1852005), `awaken` it, which launches
 //! it for nothing, spending no launch price (R1839002, R1852003, R1852006); then a Discover (§6.3) of
 //! three of the four War Doctrines, S #137.1 to S #137.4 (R1857002), the War Doctrine pool
-//! (`query::war_doctrines`, R3869001, which named them by id through v0.6.0g), and a `cast_new` of the pick, free and counted as played (R70), Radiant on
+//! (`query::war_doctrines`, R3869001, which named them by id through v0.6.2b), and a `cast_new` of the pick, free and counted as played (R70), Radiant on
 //! the Radiant face. The Doctrine resolves inside the Cry, before the Starship's fused When launched
 //! answers the launch (R113), so its Starship line reads the Starship before those (R1859006). With no
 //! Dormant Starship, nothing: no launch and no Discover. Declares no numbers. The Discover's prompt names
@@ -68,7 +68,7 @@ mod tests {
     use super::ID;
 
     /// R3869001: the War Doctrine pool today, S #137.1 to S #137.4, pinned so a change to it is
-    /// deliberate: the four this card named by id through v0.6.0g.
+    /// deliberate: the four this card named by id through v0.6.2b.
     const WAR_DOCTRINES: [&str; 4] = [
         "stinkyscape-137-1",
         "stinkyscape-137-2",
