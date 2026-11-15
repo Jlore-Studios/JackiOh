@@ -465,126 +465,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6728330727": {
-      "at": "2026-11-08T22:59:15Z",
-      "lines": [
-        "@jgoetzmann-bot I read the logs the hand-off asked for. Both promotions failed on a test timing out, and a different test each time. Make both robust, then plan and build the fix."
-      ]
-    },
-    "c:6728331432": {
-      "at": "2026-11-08T22:59:18Z",
-      "lines": [
-        "/harness 1"
-      ]
-    },
-    "c:6741604637": {
-      "at": "2026-11-09T13:46:33Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6741628434": {
-      "at": "2026-11-09T13:47:44Z",
-      "lines": [
-        "Reject"
-      ]
-    },
-    "c:6741668623": {
-      "at": "2026-11-09T13:49:26Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6741679815": {
-      "at": "2026-11-09T13:49:57Z",
-      "lines": [
-        "Reject"
-      ]
-    },
-    "c:6741689506": {
-      "at": "2026-11-09T13:50:25Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6741694695": {
-      "at": "2026-11-09T13:50:45Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6741703152": {
-      "at": "2026-11-09T13:51:05Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6741712749": {
-      "at": "2026-11-09T13:51:33Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6741750938": {
-      "at": "2026-11-09T13:53:27Z",
-      "lines": [
-        "@jgoetzmann-bot One requirement to add when you plan this: **the switch has to keep working for future sets too.** Stinkyscape and Training Grounds are the sets missing from the network today, but the next set to reach AI decks will be missing in the same way until a person retrains it. That case should need no code change."
-      ]
-    },
-    "c:6748725467": {
-      "at": "2026-11-09T19:00:55Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6750718420": {
-      "at": "2026-11-09T20:32:09Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6750728108": {
-      "at": "2026-11-09T20:32:35Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6750739688": {
-      "at": "2026-11-09T20:33:45Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6750771698": {
-      "at": "2026-11-09T20:34:13Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6750781831": {
-      "at": "2026-11-09T20:34:42Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6750788414": {
-      "at": "2026-11-09T20:34:56Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6750796756": {
-      "at": "2026-11-09T20:35:23Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6750808141": {
-      "at": "2026-11-09T20:35:54Z",
-      "lines": [
-        "Approve"
-      ]
-    },
     "c:6757657195": {
       "at": "2026-11-10T02:56:30Z",
       "lines": [
@@ -811,6 +691,12 @@
       "at": "2026-11-13T15:08:29Z",
       "lines": [
         "Approve"
+      ]
+    },
+    "c:6887698346": {
+      "at": "2026-11-15T02:05:20Z",
+      "lines": [
+        "approve"
       ]
     }
   },
