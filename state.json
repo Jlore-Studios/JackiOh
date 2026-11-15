@@ -15386,9 +15386,7 @@
     },
     "3936": {
       "action": "build",
-      "asks": [
-        "c:6891830857"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T09:52:59Z",
         "difficulty": "hard",
@@ -15406,14 +15404,6 @@
         "provider": "claude-1",
         "reason": "planned on opus",
         "trail": " crates/engine/src/config.rs crates/engine/src/tuning.rs | head -3; grep -n \\\"Tribute =>\\\" crates/engine/src/numbers.rs | head; sed -n 355,367p crates/engine/s\u2026\n- Bash: {\"command\": \"cat crates/ai/Cargo.toml; grep -rn \\\"TRIBUTE_LOWERED_KEY\\\\|Tuning {\\\" crates/ai/tests crates/cards/src/scripts | head -5; grep -n \\\"pub use\\\" crates/engine/src/testkit.rs crates/engine/s\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/ai/tests/ai/position_model.rs | grep -n \\\"use\\\\|Tuning\\\\|IndexMap\\\"; sed -n 205,230p crates/ai/tests/ai/position_model.rs\", \"description\": \"See how an AI test builds \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3936/.bot-plan.md\", \"content\": \"# Draft plan #3936 (opus run 2), in progress\\n\\nVerified against code:\\n- mulligan.rs as the earlier plan describes; `\u2026\n- Bash: {\"command\": \"sed -n 155,170p spec/09-architecture.md | cut -c1-2000; ls spec/rulings | grep -c .; cat spec/rulings/R2977000.md | head -60\", \"description\": \"Read \\u00a79.9 mulligan line and R2977000 n\u2026\n- Bash: {\"command\": \"sed -n 163p spec/09-architecture.md | grep -o \\\"The mulligan returns[^.]*\\\\.[^.]*\\\\.[^.]*\\\\.\\\" ; cat spec/pending/3912.md | head -20; ls spec/pending | head -30\", \"description\": \"Extract\u2026\n- Bash: {\"command\": \"grep -n -i \\\"mulligan\\\" crates/ai/README.md | cut -c1-400\", \"description\": \"Find mulligan mentions in AI README\"}\n- Bash: {\"command\": \"sed -n 24,32p crates/ai/README.md; sed -n 62,74p crates/ai/README.md\", \"description\": \"Read README constants list and mulligan paragraph\"}\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | cut -c1-600 | head -45\", \"description\": \"Read spec README Adding a ruling\"}\n- Bash: {\"command\": \"sed -n 60p spec/README.md | cut -c600-2000\", \"description\": \"Read rest of spec check rules\"}\n- Bash: {\"command\": \"grep -h \\\"^cards:\\\" spec/rulings/*.md | grep -o \\\"T[A-Za-z ]*#[0-9]*\\\" | sort | uniq -c | sort -rn | head -5; grep -h \\\"^cards:\\\" spec/rulings/*.md | grep -o \\\"M #25\\\\b\\\" | head -2; grep\u2026\n- Bash: {\"command\": \"grep -h \\\"^cards:\\\" spec/rulings/R0046.md spec/rulings/R1841003.md spec/rulings/R0386.md 2>/dev/null; ls spec/rulings | grep -E \\\"^R(0386|1841003|0244|0181)\\\\.md\\\"\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"sed -n 362,372p crates/ai/README.md; grep -rln \\\"mulligan\\\" crates/ai/tests crates/tools/tests crates/tools/src crates/shared/tests crates/server/tests 2>/dev/null | head -20\", \"descript\u2026\n- Bash: {\"command\": \"grep -rln \\\"traininggrounds-025\\\\|core-055\\\\|traininggrounds-054\\\" crates apps/web/src e2e --include=*.rs --include=*.ts --include=*.json 2>/dev/null | grep -v \\\"catalog.json\\\\|scripts/\\\u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20\", \"description\": \"Read classify docs in tools README\"}\n- Bash: {\"command\": \"ls crates/cards/patches/pending/ | head; grep -n -i \\\"kind:ai\\\\|AI change\\\\|kind AI\\\" docs/issues-and-patches.md | head -10\", \"description\": \"Check patch fragment rules for AI changes\"}\n- Bash: {\"command\": \"sed -n 30,70p docs/issues-and-patches.md | cut -c1-500\", \"description\": \"Read issues-and-patches kind section\"}\n- Bash: {\"command\": \"grep -rn \\\"mulligan_cost\\\\|TRIBUTE_ALLOWANCE\\\" crates apps/web/src --include=*.rs --include=*.ts | head; grep -rln \\\"AI_MULLIGAN_CURVE\\\" crates apps/web/src --include=*.rs --include=*.ts\u2026\n- Bash: {\"command\": \"grep -n -o \\\"[^.]*early play[^.]*\\\\.\\\\|[^.]*one-drop[^.]*\\\\.\\\" spec/09-architecture.md | cut -c1-400; grep -n \\\"^### 9.9\\\\|^## 9\\\" spec/09-architecture.md | head\", \"description\": \"Check \u2026\n- Bash: {\"command\": \"sed -n 789,880p crates/ai/tests/ai/decide.rs\", \"description\": \"Read the rest of mod the_mulligans_curve\"}\n- Bash: {\"command\": \"sed -n 2485,2560p crates/engine/src/state.rs | grep -n \\\"extra_opening\\\\|OPENING\\\\|fn validate_handicap\\\\|return Err\\\\|Some(format\\\" | head -20\", \"description\": \"Check handicap validatio\u2026\n- Bash: {\"command\": \"sed -n 2489,2560p crates/engine/src/state.rs | grep -B3 \\\"return Err\\\" | grep \\\"if \\\" | head -12\", \"description\": \"List handicap validation conditions\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/cards/src/scripts/meditative/c025_blue_eyes_white_felinor.rs | grep -v \\\"^\\\\s*//\\\" | head -40; grep -n \\\"pub fn declared_targets\\\" -A25 crates/engine/src/*.rs | head \u2026\n- Bash: {\"command\": \"grep -n \\\"^indexmap\\\" Cargo.toml; grep -n \\\"IndexMap::from\\\\|NumberedKey\\\" crates/ai/tests/ai/*.rs | head -5; grep -n \\\"pub use numbers\\\" crates/engine/src/lib.rs\", \"description\": \"Check\u2026\n- Bash: {\"command\": \"grep -n \\\"pub enum NumberedKey\\\\|pub fn as_str\\\\|pub const fn as_str\\\" crates/engine/src/numbers.rs | head -3; grep -n \\\"fn tribute_cost_of\\\\|fn mulligan\\\" -r crates/engine/src/testkit |\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn find_def\\\\|pub fn query_cost\\\\|pub fn def_of\\\" -A3 crates/engine/src/catalog.rs | head -20\", \"description\": \"Check find_def and query_cost signatures\"}\n- Bash: {\"command\": \"ls spec/rulings | grep \\\"^R3936\\\"; ls spec/pending/3936.md 2>&1 | tail -1; grep -rn \\\"R3936\\\" crates spec --include=*.rs --include=*.md | head -3\", \"description\": \"Confirm R3936000 is fr\u2026\n- Bash: {\"command\": \"grep -n \\\"mulligan\\\" crates/ai/tests/ai/search.rs crates/ai/tests/ai/observe.rs crates/ai/tests/ai/duos.rs crates/ai/tests/ai/tutorial_tier.rs crates/shared/tests/practice.rs crates/tool\u2026\n- Bash: {\"command\": \"grep -rn \\\"mulligan_keep\\\" docs/ --include=*.md | cut -c1-200 | head\", \"description\": \"Check docs listing mulligan functions\"}\n- said: I have enough to finalize. Writing the full plan to the draft file before the final message.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3936/.bot-plan.md\", \"content\": \"# Draft plan #3936 (opus run 2): complete, final message = this plan\\n\\nVerified against code:\\n- mulligan.rs as the e\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2 (the AI): it changes the practice AI's mulligan decisions in crates/ai/src/mulligan.rs\"} --> ## Goal The practice AI's own mulligan (`mulligan_keep_shaped` and `mulligan_keep_curved`) prices each hand card by a new `mulligan_cost`. That is the ca\u2026"
-      },
-      "hold": {
-        "ends": "2026-11-15T12:28:15Z",
-        "lifted": "2026-11-15T12:33:08Z",
-        "owner": "claude-1",
-        "since": "2026-11-15T10:28:15Z",
-        "until": "2026-11-15T12:20:00Z",
-        "why": "5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%)"
       },
       "interruptions": 0,
       "kind": "build",
@@ -15437,12 +15427,14 @@
       "queued_at": "2026-11-15T08:41:37Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "43701719182",
+      "run_id": "pending:2d3e2744-1794746133",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T09:57:24Z",
+      "started_at": "2026-11-15T12:35:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6891830857"
+      ],
       "verdict_rounds": 0,
       "waiting_comment": 6892983344
     },
@@ -16747,9 +16739,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T12:35:21Z",
+    "at": "2026-11-15T12:35:51Z",
     "url": "",
-    "what": "review #3968 on claude-1"
+    "what": "build #3936 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-15T12:07:41Z",
