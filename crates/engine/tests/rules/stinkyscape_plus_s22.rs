@@ -263,12 +263,27 @@ mod r3569001_card_scope_piles {
             })
             .collect();
         // The spell itself lands in the graveyard after it resolves; it was not there to be reached.
-        for id in &reached {
+        // R3888000: a graveyard card no play may take from there takes only Flashback, which would let
+        // one, and an exiled card has no live change, so it is left alone with no draw (R129).
+        let (graveyard, exile) = reached.split_at(2);
+        for id in graveyard {
             assert!(upgraded.contains(id), "{id} was Buffed: {upgraded:?}");
+            assert!(
+                card_keywords(s.state(), s.card(id.as_str()))
+                    .iter()
+                    .any(|keyword| keyword.kind() == KeywordKind::Flashback),
+                "{id} took Flashback"
+            );
+        }
+        for id in exile {
+            assert!(
+                !upgraded.contains(id),
+                "{id} in exile was left alone: {upgraded:?}"
+            );
         }
         assert_eq!(
             upgraded.len(),
-            3,
+            2,
             "one application each, and nothing of the library or the enemy"
         );
     }
@@ -293,6 +308,15 @@ mod r3596001_no_price_in_a_pile {
                 }),
                 json!({}),
             );
+            // R3888000: a graveyard card is Nerfed only while a play may take it from there, so these
+            // carry Flashback (a Buff's, R2657005); the exiled one has no live change at all.
+            let piled: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
+            for id in &piled {
+                s.card_mut(id.as_str()).tuning = Some(Tuning {
+                    add_keywords: Some(vec![Keyword::Flashback]),
+                    ..Tuning::default()
+                });
+            }
             s.play(DEGRADE_PILES, json!({}));
             for event in s.events() {
                 if let GameEvent::Degraded {
@@ -310,7 +334,7 @@ mod r3596001_no_price_in_a_pile {
                 assert_eq!(card.cost_mod, 0, "seed {n}: {} holds a price", card.id);
             }
         }
-        assert!(changed >= 24 * 4, "every pile card was Degraded: {changed}");
+        assert!(changed >= 24 * 3, "every graveyard card was Degraded: {changed}");
     }
 }
 

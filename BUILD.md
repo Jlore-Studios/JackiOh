@@ -165,8 +165,9 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `BRITTLE_TICK` | 1: what each Brittle tick takes | §6.1, R385 |
 | `TUNE_COST_STEP` / `TUNE_ATTACK_FLOOR` / `TUNE_HEALTH_FLOOR` | 1 / 0 / 1: a cost change's size, and the floors a stats change stops at | §6.3, R386 |
 | `TUNE_HARMFUL_KEYWORDS` | Can't attack, Brittle, Untributable, Can't Defend, Crater: keywords a Nerf never removes | §6.3, R386, R442, R1220, R2657005 |
-| `TUNE_BUFF_REMOVES` / `TUNE_BUFF_ANY_KEYWORDS` / `TUNE_NERF_HAND_KEYWORDS` | Can't attack and Can't Defend, which a Buff may remove / Flashback, which a Buff may add to any card / Crater, which a Nerf may add to a Unit, Field Spell or Trap in a hand | §6.3, R2657005 |
-| `TUNE_BUFF_HAND_KEYWORDS` / `TUNE_BUFF_HAND_REMOVES` | Cloaked, which a Buff may add to a Unit, Spell or Field Spell in a hand / Crater, which a Buff may remove from a card in a hand | §6.3, R2727000, R2727001 |
+| `TUNE_BUFF_REMOVES` / `TUNE_BUFF_ANY_KEYWORDS` / `TUNE_NERF_HAND_KEYWORDS` | Can't attack and Can't Defend, which a Buff may remove / Flashback, which a Buff may add to any card / Crater, which a Nerf may add to a Unit, Field Spell or Trap where §6.3's table calls it live | §6.3, R2657005, R3888000 |
+| `TUNE_BUFF_HAND_KEYWORDS` / `TUNE_BUFF_HAND_REMOVES` | Cloaked, which a Buff may add to a Unit, Spell or Field Spell / Crater, which a Buff may remove from a card, each where §6.3's table calls it live | §6.3, R2727000, R2727001, R3888000 |
+| `TUNE_ACTS_IN_HAND` / `TUNE_ACTS_AT_PLAY` / `TUNE_ACTS_ON_ENTRY_TURN` / `TUNE_ACTS_FROM_GRAVEYARD` | the keywords §6.3's table says act from a hand (Cloaked, Tradable, Temporary) / as the card is played or enters (Crater, Equip, Stack, GIGA, Tipsy, Flexible) / on the turn a Unit enters (Rush, Charge) / from a graveyard (Flashback); every other keyword lasts | §6.3, R3888000 |
 | `MIN_PLAGUE_PAYMENT` / `PLAGUE_TOKEN_MANA` | 1 / 1: a play paid with Plague Counters spends at least one, each paying (1) | §6.3 Play, R454; C #74 |
 | `PLAGUE_MULTIPLIER_NONE` | 1: a card's Plague placement multiplier when it declares none | §6.3, R471 |
 | `RANDOM_CAST_CHAIN_CAP` | 20: casts one random cast and the casts inside it may make | §6.3 Cast, R452 |

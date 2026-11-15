@@ -627,14 +627,41 @@ pub const TUNE_BUFF_REMOVES: &[KeywordKind] = &[KeywordKind::CantAttack, Keyword
 /// row's other keywords.
 pub const TUNE_BUFF_ANY_KEYWORDS: &[KeywordKind] = &[KeywordKind::Flashback];
 /// R2657005: the harmful keywords a Nerf's keyword row may add to a Unit, a Field Spell, a Trap or a
-/// Field Trap that lacks them, while it is in a hand.
+/// Field Trap that lacks them, where R3888000's table calls them live.
 pub const TUNE_NERF_HAND_KEYWORDS: &[KeywordKind] = &[KeywordKind::Crater];
 /// R2727000: the keywords a Buff's keyword row may add to a Unit, a Spell or a Field Spell that lacks them
-/// of its own while it is in a hand, after the row's other additions. Never to a Trap or a Field Trap.
+/// of its own, where R3888000's table calls them live, after the row's other additions. Never to a Trap
+/// or a Field Trap.
 pub const TUNE_BUFF_HAND_KEYWORDS: &[KeywordKind] = &[KeywordKind::Cloaked];
 /// R2727001: the harmful keywords a Buff's keyword row may also take off a card of any type that has them
-/// of its own while it is in a hand, beside `TUNE_BUFF_REMOVES`.
+/// of its own, where R3888000's table calls them live, beside `TUNE_BUFF_REMOVES`.
 pub const TUNE_BUFF_HAND_REMOVES: &[KeywordKind] = &[KeywordKind::Crater];
+/// R3888000: the keywords that act only from a hand (Cloaked's face-down play, R2577000; a Trade; a
+/// Temporary count), so a Buff or a Nerf changes them only on a card in a deck or a hand.
+pub const TUNE_ACTS_IN_HAND: &[KeywordKind] = &[
+    KeywordKind::Cloaked,
+    KeywordKind::Tradable,
+    KeywordKind::Temporary,
+];
+/// R3888000: the keywords that act only as the card is played or enters the field (Crater's Lock, an
+/// Equip, a Stack, a GIGA's size, a Tipsy count, a Flexible placement), so a Buff or a Nerf changes them
+/// only before the card is face-up on the field.
+pub const TUNE_ACTS_AT_PLAY: &[KeywordKind] = &[
+    KeywordKind::Crater,
+    KeywordKind::Equip,
+    KeywordKind::Stack,
+    KeywordKind::Giga,
+    KeywordKind::Tipsy,
+    KeywordKind::Flexible,
+];
+/// R3888000: the keywords that act only on the turn a Unit enters the field (§4.1's summoning
+/// sickness), so on the field a Buff or a Nerf changes them only that turn, or on a Unit whose Reborn
+/// would bring it back sick (R83).
+pub const TUNE_ACTS_ON_ENTRY_TURN: &[KeywordKind] = &[KeywordKind::Rush, KeywordKind::Charge];
+/// R3888000: the keywords that act only from a graveyard (Flashback's play, R783012), so a Buff or a
+/// Nerf changes them anywhere but an exile pile, and never on a unit token, which no graveyard keeps
+/// (R11).
+pub const TUNE_ACTS_FROM_GRAVEYARD: &[KeywordKind] = &[KeywordKind::Flashback];
 /// R1748001: the keywords a Buff's keyword row may add to a Field Spell, in this order; R2436000 added
 /// Immutable after Indestructible.
 pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible, KeywordKind::Immutable];

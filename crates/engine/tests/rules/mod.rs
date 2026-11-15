@@ -148,6 +148,7 @@ pub mod extra_turns;
 pub mod face_down_text;
 pub mod faces;
 pub mod feng_shui;
+pub mod tune_live;
 pub mod tutorial_cards;
 // A fixture only the other binary's modules use is dead code in this one.
 #[allow(dead_code)]
