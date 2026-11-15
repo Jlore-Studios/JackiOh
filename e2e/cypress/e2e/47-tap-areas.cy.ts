@@ -68,7 +68,35 @@ const SIGNED_IN = accounts.p2;
  */
 const SPARE = accounts.p4;
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
-const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-season", almanac: "almanac" } as const;
+const SCREEN = {
+  accountRank: "account-rank",
+  accountHistoryAll: "account-history-all",
+  leaderboardSeason: "leaderboard-season",
+  almanac: "almanac",
+} as const;
+/** When the faked match history's games ended, a fixed moment so each row's date is the same width on every run. */
+const HISTORY_GAME_ENDED_AT = Date.UTC(2026, 10, 1, 18);
+/** What `GET /api/replays` answers for `/account`'s Match history (R3957000): three games, so "All replays" sits under a last row with a "Watch replay". */
+const HISTORY_REPLAYS = {
+  replays: (
+    [
+      ["h1", "bo1", "win"],
+      ["h2", "random", "loss"],
+      ["h3", null, "draw"],
+    ] as const
+  ).map(([matchId, mode, result]) => ({
+    matchId,
+    mode,
+    endedAt: HISTORY_GAME_ENDED_AT,
+    seat: "p1",
+    result,
+    turns: 7,
+    steps: 40,
+    portraits: { p1: "gary", p2: "timmy" },
+    opponent: { profileId: "p2", username: "Grape#12" },
+  })),
+  nextOffset: null,
+};
 /** The measure's own probe: this much narrower than the minimum and taller, its ::before no height and this far past each side. */
 const PROBE_PX = 14;
 const PROBE_TESTID = "tap-probe";
@@ -439,6 +467,15 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
         it("R2122000 /account", () => {
           cy.visitAs(SIGNED_IN(), "/account");
           cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        // R3957000: "All replays" is a 44 px button under the last row's "Watch replay", so no band covers it. The history is
+        // faked, as SIGNED_IN (p2) is near R109's per-minute allowance.
+        it("R2122000 R3957000 /account, Match history", () => {
+          cy.intercept({ method: "GET", pathname: "/api/replays" }, { statusCode: 200, body: HISTORY_REPLAYS });
+          cy.visitAs(SPARE(), "/account?section=history");
+          cy.get(ts(SCREEN.accountHistoryAll), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
