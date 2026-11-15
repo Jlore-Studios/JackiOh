@@ -14541,6 +14541,8 @@
       "verdict_rounds": 0
     },
     "3979": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T14:04:49Z",
@@ -14554,8 +14556,11 @@
         "trail": "- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3977/e2e/cypress/component/friends-screen.cy.tsx\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && git diff\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3977/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && pnpm exec eslint apps/web e2e\n- said: Launched ESLint check on `apps/web` and `e2e` in the background; waiting for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && NODE_OPTIONS=\"--max-old-space-size=4096\" pnpm --dir e2e run typecheck:component\n- said: Launched `pnpm --dir e2e run typecheck:component` in the background; waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && sh scripts/build-wasm.sh\n- said: Building the WebAssembly package via `scripts/build-wasm.sh` in the background; waiting for compilation to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && NODE_OPTIONS=\"--max-old-space-size=4096\" pnpm --dir e2e run typecheck:component\n- said: Running `NODE_OPTIONS=\"--max-old-space-size=4096\" pnpm --dir e2e run typecheck:component` in the background; waiting for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && pnpm --dir apps/web typecheck\n- said: Running `pnpm --dir apps/web typecheck` in the background; waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && NODE_OPTIONS=\"--max-old-space-size=4096\" pnpm --dir apps/web typecheck\n- said: Running `apps/web` typecheck with 4GB heap in the background; waiting for completion.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && cargo jackioh catalog check\n- said: Running `cargo jackioh catalog check` in the background; waiting for completion.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && git diff\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3977/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #3969 from the after-merge spot-check\"} --> ## Summary of changes In [together.css](file:///home/agent-agy/actions-runner/_work/_temp/work/item-3977/apps/web/src/together/together.css), deleted `outline: none;` from [`.together-field:focus-\u2026"
       },
       "issue": 3977,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T14:30:55Z",
         "from_run": "43722376282",
         "gates": [
           {
@@ -14614,8 +14619,15 @@
         "source": "build",
         "until": "2026-11-15T14:59:32Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-15T14:29:32Z",
+      "run_id": "pending:16a89680-1794753037",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-15T14:30:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -14673,9 +14685,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T14:04:49Z",
+    "at": "2026-11-15T14:30:55Z",
     "url": "",
-    "what": "build #3977 on agy"
+    "what": "review #3979 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T14:22:51Z",
