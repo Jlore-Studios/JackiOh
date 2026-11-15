@@ -6576,6 +6576,13 @@
     "3618": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43755277358",
+        "model": "sonnet",
+        "provider": "claude-4",
+        "since": "2026-11-15T20:19:39Z",
+        "until": "2026-11-15T20:49:39Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
