@@ -16410,7 +16410,11 @@
       "issue": 3955,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-6",
+      "merge_owner_gave_up": {
+        "at": "2026-11-15T12:33:26Z",
+        "provider": "claude-6",
+        "sha": "5e9236fd151db06879d165e8ad1bff9f7b058a2a"
+      },
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-15T10:50:15Z",
