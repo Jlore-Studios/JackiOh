@@ -110,7 +110,7 @@ describe("56 — the Play hub (issue #3729)", () => {
           expect(win.getComputedStyle(body).overflowY, "the one region that scrolls").to.eq("auto");
           const fits = body.scrollHeight <= body.clientHeight + FIT_SLACK_PX;
           const cue = win.getComputedStyle(body, "::after");
-          const cued = cue.content !== "none" && parseFloat(cue.height) > 0 && cue.pointerEvents === "none";
+          const cued = cue.content !== "none" && parseFloat(cue.height) > 0 && parseFloat(cue.opacity) > 0 && cue.pointerEvents === "none";
           expect(fits || cued, `the region (${String(body.scrollHeight)} px of content in ${String(body.clientHeight)}) fits or shows its cue`).to.eq(true);
         });
       });

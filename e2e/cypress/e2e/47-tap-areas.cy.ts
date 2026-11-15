@@ -110,6 +110,24 @@ const DAILY_LIST = {
   seeks: [],
   waiting: 1,
 };
+/**
+ * `GET /api/news` as the Home's bookmark reads it (`NewsResponse`, apps/web/src/net/api.ts): one live, unclaimed
+ * alert. The server's own list lapses with each entry's `NEWS_TTL_DAYS`, so a bookmark that waits for it vanishes (#3958).
+ */
+const NEWS_LIST = {
+  news: [
+    {
+      id: "r3958-alert",
+      kind: "alert",
+      version: null,
+      title: "A notice",
+      summary: "One live entry, so the bookmark draws.",
+      postedAt: 0,
+      reward: null,
+      claimed: false,
+    },
+  ],
+};
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
 const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-season", almanac: "almanac" } as const;
 /** The measure's own probe: this much narrower than the minimum and taller, its ::before no height and this far past each side. */
@@ -460,6 +478,7 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
         });
 
         it("R2122000 R2035000 R2875002 /, the news' bookmark", () => {
+          cy.intercept("GET", "**/api/news", { body: NEWS_LIST });
           cy.visitAs(SIGNED_IN(), "/");
           cy.get(ts(landingTestid.newsBookmark), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);

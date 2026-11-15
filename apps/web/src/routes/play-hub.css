@@ -31,34 +31,42 @@
   flex-direction: column;
   gap: var(--space-6);
   min-height: 0;
-  padding-bottom: var(--space-9);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-/* A cue that the region scrolls (#3958): a dark fade stuck to its foot, over the last cards, that takes no
-   room and no tap. It sits over the bottom padding at the end of the scroll, and where the browser ties an
-   animation to the scroll it fades out as the end comes. */
+/* A cue that the region scrolls (#3958): a dark fade stuck to the region's foot, over the last cards, that
+   takes no tap. Its own height is the room it adds after the last row (its margin cancels the flex gap), so
+   at the end of the scroll it lies below the cards, never over them. Where the browser ties an animation to
+   the scroll, the fade shows only while the region scrolls and goes as the end comes; a region that fits
+   has no scroll range, so it shows none. The fade is a mask on a flat color, not a background gradient. */
 .tavern.play-screen.play-hub > .play-body::after {
   content: "";
   flex: 0 0 auto;
   position: sticky;
   bottom: 0;
   height: var(--space-9);
-  margin-top: calc(var(--space-9) * -1 - var(--space-6));
-  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--pal-black) 55%, transparent));
+  margin-top: calc(var(--space-6) * -1);
+  background: color-mix(in srgb, var(--pal-black) 55%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, var(--pal-black));
+  mask-image: linear-gradient(to bottom, transparent, var(--pal-black));
   pointer-events: none;
 }
 
 @supports (animation-timeline: scroll()) {
   .tavern.play-screen.play-hub > .play-body::after {
+    opacity: 0;
     animation: play-body-cue linear both;
-    animation-timeline: scroll(self);
-    animation-range: 85% 100%;
+    animation-timeline: scroll(nearest block);
   }
 
   @keyframes play-body-cue {
-    to {
+    0%,
+    85% {
+      opacity: 1;
+    }
+
+    100% {
       opacity: 0;
     }
   }

@@ -75,6 +75,8 @@ const KEEP: Record<string, string[]> = {
   "practice/practice.css": ["(max-height: 820px)", "(max-width: 420px)"],
   // #1577: the hero shrinks up to 800 px tall (1280x720, 1280x800); 390x844 keeps it whole.
   "routes/landing.css": ["(max-height: 800px)", "(max-height: 800px)"],
+  // #3958: the Play hub's cards tighten up to 800 px tall (1280x720, 1280x800), as the landing's hero does.
+  "routes/play-hub.css": ["(max-height: 800px)"],
   // A row stacks up to 412 px; 430 keeps it.
   "routes/replays.css": ["(max-width: 420px)"],
   // The coach's lines, measured at phones' heights: 2 up to 679 px (390x664), 1 up to 655 (360x640).
