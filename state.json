@@ -36120,7 +36120,8 @@
       "2026-11-15T22:10:21Z,43767370537,claude-8,opus,review,3995,hard,reviewed,,1.6,37,8374,1831846,1.2377,0,2,,,0.9,,none,,1",
       "2026-11-15T22:04:37Z,43756411117,claude-6,sonnet+opus,build,3935,medium,built,,75.3,70,21175,2767549,0.8081,2,32,,,14.5,claude-6,fresh,,1",
       "2026-11-15T22:27:58Z,43767298089,claude-3,opus,suggest,,,suggested,,19.5,40,38039,2542307,22.8579,37,85,,,,,none,,1",
-      "2026-11-15T22:18:29Z,43765647729,claude-7,sonnet+opus,review,3994,medium,approved,,28,4,1866,97438,1.1152,11,13,,,1.1,,none,,1"
+      "2026-11-15T22:18:29Z,43765647729,claude-7,sonnet+opus,review,3994,medium,approved,,28,4,1866,97438,1.1152,11,13,,,1.1,,none,,1",
+      "2026-11-15T22:29:33Z,43755025170,agy,gemini-3.8-flash-high,plan,3975,medium,failed,,150.3,270368,35216,0,,0,3,43,44,3.2,,none,,1"
     ]
   },
   "version": 1
