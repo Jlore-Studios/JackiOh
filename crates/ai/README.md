@@ -120,7 +120,11 @@ Unit directly across from it (S+ #37 Scorch) threatens no face either, and an at
 (S+ #121 Toxopid) is bound by no Taunt, Defense Position's included: `face_threat` asks
 `attack_restriction` of the first, as of a Unit in The Gauntlet's lanes, and `damage_past_taunts_with`
 leaves the second unbound (`static_attack_flags_read`, R3550001, R3560007, #3909; off in `GREEDY_EVAL`).
-`damage_past_taunts`, which the lethal solver's `ready_gap` reads, takes `AI_EVAL`'s flag. A unit's Death
+`damage_past_taunts`, which the lethal solver's `ready_gap` reads, takes `AI_EVAL`'s flag. Each Taunt is
+walked as the opponent would attack it: the larger of two orders counts, smallest first and the smallest
+attacker that destroys it alone first, and an attacker its Armor or First Strike would stop whole waits
+until it falls, then goes on to the next Taunt or the hero (`best_attack_order_past_taunts`, R3937000,
+#3937; off in `GREEDY_EVAL`). A unit's Death
 counts by what it leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,

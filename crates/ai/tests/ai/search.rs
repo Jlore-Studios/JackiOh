@@ -1121,6 +1121,30 @@ mod wall_switches_2976 {
         assert_eq!(expanded[1..1 + kept], walls[..kept]);
         assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
     }
+
+    /// R3937000, #3937: the issue's board. p1 at 6 life guards with a Mr. Vanilla in Defense Position at 3
+    /// health (Armor 1) against two 3/4s and a 4/4. The 4 destroys the guard alone and both 3s go face for
+    /// 6, lethal, where smallest first sends the 3s into it and counts 4. So the switch of p1's other
+    /// Vanilla to Defense, which leaves 0 in either order, is offered as a wall.
+    #[test]
+    fn r3937000_a_lone_breaker_makes_the_threat_lethal_so_the_second_guard_is_offered() {
+        jackioh_cards::register_all();
+        let three = json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 4 } });
+        let state = scenario(json!({
+            "seed": "search-wall-switch-breaker",
+            "p1": { "health": 6, "field": [{ "def": VANILLA, "position": "DEF", "damage": 1 }, VANILLA] },
+            "p2": { "field": [three.clone(), three, VANILLA] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(face_threat(&state, HUMAN), 6);
+        assert_eq!(face_threat_with(&state, HUMAN, &GREEDY_EVAL), 4);
+        assert_eq!(effective_life(&state, AI), 6);
+        assert_eq!(
+            wall_switches(&state, AI, &candidate_actions(&state, AI, Prices::NONE)),
+            vec![switch_of(&state, VANILLA, Position::Atk)]
+        );
+    }
 }
 
 mod lanes_that_play_differently {
