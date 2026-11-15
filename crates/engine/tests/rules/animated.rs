@@ -790,6 +790,32 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         }
         assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
     }
+
+    /// B3.1 rule 4: of the plain Animated cards only a Field Spell animates as it enters. A face-up
+    /// Animated Field Trap that enters a backrow zone, with its stats, stays a backrow card: it animates
+    /// only as its firing's last step (rules 3 and 8).
+    #[test]
+    fn r383_rule_4_a_face_up_animated_field_trap_entering_the_backrow_does_not_animate() {
+        let mut state = playing("animated-entry-field-trap");
+        let card = put(
+            &mut state,
+            &tesla.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        live_mut(&mut state, &card.id).face_up = Some(true);
+        let mut sink = sink_for(&mut state);
+        let now = live(sink.state, &card.id);
+        assert!(has_stat_line(sink.state, &now));
+        assert_eq!(animated_kind_of(sink.state, &now), Some(AnimatedKind::Animated));
+        assert!(!animate_on_entry(&mut sink, &now));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
 }
 
 mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
