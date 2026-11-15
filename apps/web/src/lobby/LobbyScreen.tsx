@@ -21,6 +21,7 @@ import {
   type ReactElement,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
 import { LOBBY_START_COUNTDOWN_SECONDS } from "@jackioh/server-config";
@@ -221,6 +222,8 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
     return refused === null ? null : t(refused);
   });
   const [copied, setCopied] = useState<"code" | "shared" | "copied" | null>(null);
+  // R3954000: Ready is drawn in the action bar, so YourDeck portals it into this slot.
+  const [readySlot, setReadySlot] = useState<HTMLElement | null>(null);
   const inviteHeading = useRef<HTMLHeadingElement>(null);
 
   /** One request at a time; its refusal is shown, and every answer reads the lobby again. */
@@ -359,7 +362,7 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
           <Settings view={view} disabled={!host || busy || started} onChange={(change) => {
             run(() => setLobbySettings(view.code, change));
           }} />
-          {member ? <YourDeck token={token} view={view} busy={busy || started} run={run} /> : null}
+          {member ? <YourDeck token={token} view={view} busy={busy || started} run={run} readySlot={readySlot} /> : null}
           {member && !full && !started ? <InviteList code={view.code} heading={inviteHeading} run={run} /> : null}
         </div>
       </div>
@@ -388,6 +391,7 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
             {t("Leave")}
           </button>
         ) : null}
+        {member ? <div className="lobby__ready-slot" ref={setReadySlot} /> : null}
         {host ? (
           <button
             type="button"
@@ -697,11 +701,13 @@ function YourDeck({
   view,
   busy,
   run,
+  readySlot,
 }: {
   token: string;
   view: LobbyView;
   busy: boolean;
   run: (work: () => Promise<unknown>) => void;
+  readySlot: HTMLElement | null;
 }): ReactElement {
   const id = useId();
   const [load, retryLoad] = useLobbyData(token);
@@ -732,6 +738,32 @@ function YourDeck({
     remember(nextBody);
     run(() => pickLobby(view.code, nextBody));
   };
+
+  const readyButton = (
+    <button
+      type="button"
+      className="button-secondary lobby__ready"
+      data-testid={lobbyTestid.ready}
+      data-ready={ready ? "true" : "false"}
+      aria-pressed={ready}
+      disabled={busy || (!ready && body === null)}
+      onClick={() => {
+        run(async () => {
+          if (ready) {
+            await readyLobby(view.code, false);
+            return;
+          }
+          if (body === null) return;
+          remember(body);
+          // A pick shown here that the server does not hold yet is sent first (R3730001).
+          if (!samePick(view, body)) await pickLobby(view.code, body);
+          await readyLobby(view.code, true);
+        });
+      }}
+    >
+      {ready ? t("Not ready") : t("Ready")}
+    </button>
+  );
 
   return (
     <div className="lobby__deck">
@@ -788,29 +820,7 @@ function YourDeck({
       ) : null}
       {load.kind === "failed" && duelMode !== "random" ? <DecksFailed message={load.message} retry={retryLoad} /> : null}
       <Verdict result={verdict} />
-      <button
-        type="button"
-        className="button-secondary lobby__ready"
-        data-testid={lobbyTestid.ready}
-        data-ready={ready ? "true" : "false"}
-        aria-pressed={ready}
-        disabled={busy || (!ready && body === null)}
-        onClick={() => {
-          run(async () => {
-            if (ready) {
-              await readyLobby(view.code, false);
-              return;
-            }
-            if (body === null) return;
-            remember(body);
-            // A pick shown here that the server does not hold yet is sent first (R3730001).
-            if (!samePick(view, body)) await pickLobby(view.code, body);
-            await readyLobby(view.code, true);
-          });
-        }}
-      >
-        {ready ? t("Not ready") : t("Ready")}
-      </button>
+      {readySlot === null ? null : createPortal(readyButton, readySlot)}
     </div>
   );
 }
