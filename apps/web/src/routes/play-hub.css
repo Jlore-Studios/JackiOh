@@ -39,7 +39,10 @@
    takes no tap. Its own height is the room it adds after the last row (its margin cancels the flex gap), so
    at the end of the scroll it lies below the cards, never over them. Where the browser ties an animation to
    the scroll, the fade shows only while the region scrolls and goes as the end comes; a region that fits
-   has no scroll range, so it shows none. The fade is a mask on a flat color, not a background gradient. */
+   has no scroll range, so it shows none. The fade is a mask on a flat color, not a background gradient.
+   Under reduced motion (the media query, or the settings panel's attribute on <html>) the scroll-tied
+   animation is dropped, since index.css and animations.css would hold it at its last keyframe, which hides
+   the cue: the cue is then a plain static fade at full opacity, always shown. */
 .tavern.play-screen.play-hub > .play-body::after {
   content: "";
   flex: 0 0 auto;
@@ -69,6 +72,18 @@
     100% {
       opacity: 0;
     }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tavern.play-screen.play-hub > .play-body::after {
+      opacity: 1;
+      animation: none;
+    }
+  }
+
+  :root[data-reduce-motion="true"] .tavern.play-screen.play-hub > .play-body::after {
+    opacity: 1;
+    animation: none;
   }
 }
 
