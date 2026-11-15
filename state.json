@@ -15602,6 +15602,36 @@
     "3998": {
       "action": "review",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-15T23:16:24Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-16T23:16:24Z",
+        "hours": 24,
+        "kind": "revise",
+        "model": "sonnet",
+        "options": [
+          {
+            "change": "Merge as it stands, with no fragment and the kept rows under `v0.6.5`. Open a follow-up issue to teach `classify` stage 2 to force a set or Buffed Wall.",
+            "tradeoff": "Smallest and safest to merge. Replays of games recorded on the build between this merge and the next patch cut that set or Buff an Embiggened Wall fold under the old script and can diverge. The window is short and the case is rare."
+          },
+          {
+            "change": "In this PR, extend `crates/tools/src/classify.rs` stage 2 with a scripted forced scenario (embiggen a Wall, then set it or Buff it), then add the fragment with `--plays` for 064 to 067.",
+            "tradeoff": "Gives the change its own version and closes the replay gap, and it also helps later card-script changes of this kind. It is a larger, riskier tooling change that touches the classifier's contract (R1365000, R1370000) and needs its own tests."
+          },
+          {
+            "change": "A person adds the fragment by hand and waives the `--claims` check for it, or makes the classify change as a separate issue first and rebases this PR on it.",
+            "tradeoff": "Keeps the PR focused. It waits on a person, and a hand-written claim that `classify` cannot back sets a precedent for bypassing the check."
+          }
+        ],
+        "problem": "Finding 1 held and is fixed. Finding 2 holds, but I can't fix it honestly inside the tooling.\n\nThe change needs a pending patch fragment so `patches ship` gives it its own catalog version. Without one, games played after the merge carry the same `v0.6.5` stamp as games played with the old Wall script. Whichever script the kept row assigns to `v0.6.5`, one of those two groups of replays folds wrongly. That window is narrow: only boards holding an Embiggened Wall that was set or Buffed are affected.\n\nA fragment that `classify --claims` accepts is out of reach today. `classify`'s stage 2 forces the card into both decks and lets the AI play 40 games, and none of them sets or Buffs an Embiggened Wall. So `--claims` rejects any `plays` claim for ids 064 to 067 as 'plays as before'. With `plays` empty, `patches check` rejects the fragment because it claims nothing. Making stage 2 reach the case means a scripted forced scenario in `crates/tools/src/classify.rs`, which is a tooling change of its own. I did not do it unasked: it has to stay deterministic and must not change what the classifier says about other cards. A person has to choose between the ways out.",
+        "provider": "claude-6",
+        "question": "How should this change get a version of its own, given that `classify --claims` cannot see a set or Buffed Embiggened Wall?",
+        "why": "it ships the fix that players are waiting on with a small, known and rare replay gap, and the classifier gap becomes its own issue where a person can choose how `classify` should reach the case."
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T20:09:00Z",
@@ -15619,6 +15649,7 @@
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-6",
+      "question": "How should this change get a version of its own, given that `classify --claims` cannot see a set or Buffed Embiggened Wall?",
       "queued_at": "2026-11-15T22:15:14Z",
       "run_id": "43770404137",
       "runs_on": "ubuntu-latest",
