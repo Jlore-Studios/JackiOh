@@ -15463,6 +15463,14 @@
         "sha": "6425fa36f0ff7083122571d12460eb927399ce65",
         "tiers": {}
       }
+    },
+    "3993": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-15T20:23:22Z",
+      "issue": 3934,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
