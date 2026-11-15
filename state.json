@@ -35575,7 +35575,9 @@
           "provider": "claude-6"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-15T22:48:24Z",
         "every": 5,
+        "findings": 0,
         "head": "0ea62b00f54f229192d87699b2afcd156ff78762",
         "issue": 3976,
         "merged_at": "2026-11-15T22:32:11Z",
@@ -35588,12 +35590,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:9b2d4353-1794782352",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43770521940",
         "sha": "ff38380a54cf428ad747d5b378b8bed495aef7f9",
         "started_at": "2026-11-15T22:39:38Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a replay and its shared GIF draw each hero as the portrait its seat had, not both as Vanilla",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 280
