@@ -3,12 +3,14 @@
 //! cap, Trample excess from an attack on a unit included, ≥ health".
 //!
 //! A projection: it walks §4.4's ordered steps through the pipeline's own readers, never the state.
+//! Every hit's steps 1 to 4 are `damage::project_hit`'s, a conversion and the damage pool included
+//! (R4032000), so one attack's hits spend a pool once between them.
 
 use crate::combat::AttackTarget;
-use crate::damage::DamageTarget;
+use crate::damage::{DamageTarget, ProjectedPools, project_hit};
 use crate::layers::unit_view;
 use crate::state::{CardInstance, GameState};
-use crate::wire::{KeywordKind, PlayerId, armor_of, has_keyword};
+use crate::wire::{KeywordKind, PlayerId, has_keyword};
 
 /// The hero a hit on this target can reach: itself, or through Trample its controller's (§4.4 step 9).
 pub fn defending_hero(target: &AttackTarget) -> PlayerId {
@@ -20,61 +22,54 @@ pub fn defending_hero(target: &AttackTarget) -> PlayerId {
 
 /// §4.4 on a hero: step 2 subtracts its Armor, backrow grants included (#84, R124: or My Pawn would call
 /// lethal an attack Going Long blunts), unless `pierce` (R346); step 3 clamps to the Anti-oneshot cap,
-/// and the zero rule stops anything left at 0 (R63).
+/// and the zero rule stops anything left at 0 (R63). Sourceless and pool-blind, as the AI reads a Burn
+/// or Toxic tick (R3822000); an attack's projection is `damage::project_hit` (R4032000).
 pub fn projected_hero_damage(state: &GameState, player: PlayerId, amount: i32, pierce: bool) -> i32 {
     // B5 E6: the pipeline's own reading of steps 2 and 3, the divisors between them included.
     crate::damage::hero_hit_amount(state, player, amount, pierce)
 }
 
-/// R346: a striking unit with Pierce skips §4.4 step 2 on every hit it makes.
-fn piercing(state: &GameState, unit: &CardInstance) -> bool {
-    crate::damage::pierces(state, Some(unit), None)
-}
-
-/// §4.4 step 9: what a Trample source's hit on a unit passes on to that unit's hero; steps 1, 2, 4 and
-/// the zero rule can end the hit on the unit first. R176: every hit of the attack counts, Cleave's
-/// (step 10) included, as R63 makes Cleave the attack's and R44 counts "Trample excess from an attack".
-fn trample_excess(state: &GameState, source: &CardInstance, unit: &CardInstance, amount: i32) -> i32 {
-    if amount <= 0 {
-        return 0;
-    }
-    let view = unit_view(state, unit);
-
-    // Step 1: Divine Shield negates the whole hit.
-    if has_keyword(&view.keywords, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true) {
-        return 0;
-    }
-    // Step 4: an Indestructible unit takes nothing at all.
-    if has_keyword(&view.keywords, KeywordKind::Indestructible) {
-        return 0;
-    }
-
-    // Step 2, then the zero rule. A Pierce source skips step 2 (R346).
-    let after_armor = if piercing(state, source) {
-        amount
-    } else {
-        (amount - armor_of(&view.keywords)).max(0)
+/// §4.4 step 9: what a Trample source's hit on a unit passes on to that unit's hero; steps 1 to 4 and
+/// the zero rule, as `damage::project_hit` reads them (a conversion and the unit's side's damage pool
+/// included, R4032000), can end the hit on the unit first. R176: every hit of the attack counts,
+/// Cleave's (step 10) included, as R63 makes Cleave the attack's and R44 counts "Trample excess from an
+/// attack".
+fn trample_excess(
+    state: &GameState,
+    source: &CardInstance,
+    unit: &CardInstance,
+    amount: i32,
+    pools: &mut ProjectedPools,
+) -> i32 {
+    let target = DamageTarget::Unit {
+        instance: unit.clone(),
     };
-    // Step 3: the unit's own cap (R2179005), before step 5 splits off the excess.
-    let after_armor =
-        crate::damage::unit_damage_cap(state, unit).map_or(after_armor, |cap| after_armor.min(cap));
-    if after_armor <= 0 {
+    let after = project_hit(state, Some(source), &target, amount, pools);
+    if after <= 0 || !has_keyword(&unit_view(state, source).keywords, KeywordKind::Trample) {
         return 0;
     }
-
-    if !has_keyword(&unit_view(state, source).keywords, KeywordKind::Trample) {
-        return 0;
-    }
-    if after_armor <= view.health {
+    let health = unit_view(state, unit).health;
+    if after <= health {
         return 0;
     }
     // Step 5: only what lands beyond the unit's health becomes the step 9 instance (R63).
-    after_armor - view.health.max(0)
+    after - health.max(0)
 }
 
 /// The damage a declared attack would deal to the defending hero (R44), assumed legal: §4.2 steps 1
 /// to 3 have passed when the trap window opens.
 pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> i32 {
+    projected_damage_with(state, attacker, target, &mut ProjectedPools::default())
+}
+
+/// `projected_damage`, its hits spending the damage pools past what `pools` says they have soaked
+/// already (R4032000), as the combat forecast's lethal sum adds one attacker's after another's.
+pub(crate) fn projected_damage_with(
+    state: &GameState,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+    pools: &mut ProjectedPools,
+) -> i32 {
     // MD-D4, R1120: a combat-only bonus on the attacker's strike at a Unit target is dealt there, so
     // the projection reads it through the same function the combat does.
     let attack = match target {
@@ -85,9 +80,8 @@ pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &Att
         }
     };
     let hero = defending_hero(target);
-    let pierce = piercing(state, attacker);
     let defender = match target {
-        DamageTarget::Hero { .. } => return projected_hero_damage(state, hero, attack, pierce),
+        DamageTarget::Hero { .. } => return project_hit(state, Some(attacker), target, attack, pools),
         DamageTarget::Unit { instance } => instance,
     };
     // R176, §4.3 step 1: an attacker a First Strike defender destroys first deals nothing, Cleave
@@ -98,13 +92,17 @@ pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &Att
         return 0;
     }
     let hit = attack * crate::combat::lane_multiplier_for(state, attacker, defender);
-    // Each hit is its own damage instance on the hero, so Armor and the cap apply to each (§4.4).
-    struck_by(state, attacker, defender)
-        .iter()
-        .fold(0, |total, unit| {
-            let amount = if unit.id == defender.id { hit } else { attack };
-            total + projected_hero_damage(state, hero, trample_excess(state, attacker, unit, amount), pierce)
-        })
+    // Each hit is its own damage instance on the hero, so Armor and the cap apply to each (§4.4), in
+    // `combat::strike`'s order: the blow and its excess, then each Cleave hit and its excess, so the
+    // pools soak the first of them (R4032000).
+    let on_hero = DamageTarget::Hero { player: hero };
+    let mut total = 0;
+    for unit in struck_by(state, attacker, defender) {
+        let amount = if unit.id == defender.id { hit } else { attack };
+        let excess = trample_excess(state, attacker, &unit, amount, pools);
+        total += project_hit(state, Some(attacker), &on_hero, excess, pools);
+    }
+    total
 }
 
 /// The units one attack on `defender` strikes: the defender, then, with Cleave, each unit adjacent to
@@ -128,7 +126,8 @@ fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance
 
 /// §4.3 step 1 and R93, projected: a defender with First Strike, against an attacker without it,
 /// strikes first, and an attacker that falls there never lands its own hit. §4.4's stops apply to the
-/// strike back, the attacker's own cap included (R2179005), and a Poisonous defender destroys with any
+/// strike back as `damage::project_hit` reads them, the attacker's own cap (R2179005), a conversion and
+/// the attacker's side's damage pool included (R4032000), and a Poisonous defender destroys with any
 /// damage at all (step 7).
 pub(crate) fn falls_to_first_strike(
     state: &GameState,
@@ -146,20 +145,17 @@ pub(crate) fn falls_to_first_strike(
     if theirs_attack <= 0 {
         return false;
     }
-
-    if has_keyword(&mine.keywords, KeywordKind::DivineShield) && attacker.divine_shield_spent != Some(true) {
-        return false;
-    }
-    if has_keyword(&mine.keywords, KeywordKind::Indestructible) {
-        return false;
-    }
-    let dealt = if piercing(state, defender) {
-        theirs_attack
-    } else {
-        (theirs_attack - armor_of(&mine.keywords)).max(0)
+    let on_attacker = DamageTarget::Unit {
+        instance: attacker.clone(),
     };
-    // Step 3: the attacker's own cap on the hit (R2179005), as the strike back's damage reads it.
-    let dealt = crate::damage::unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
+    // Step 3 reads the attacker's own cap on the hit (R2179005), as the strike back's damage does.
+    let dealt = project_hit(
+        state,
+        Some(defender),
+        &on_attacker,
+        theirs_attack,
+        &mut ProjectedPools::default(),
+    );
     if dealt <= 0 {
         return false;
     }
@@ -171,8 +167,9 @@ pub(crate) fn falls_to_first_strike(
 
 /// §4.3, §4.4 step 8: what the defender's Lifesteal strike back heals the hero the attack's Trample
 /// reaches: nothing for a hero target, a defender a First Strike attacker destroys first (§4.3 step 1),
-/// one a Ranged attacker takes nothing back from (R783000), or a hit Divine Shield, Indestructible or
-/// Armor stops. A strike back never tramples (R1750000 over R176), so all it deals heals.
+/// one a Ranged attacker takes nothing back from (R783000), or a hit `damage::project_hit` stops
+/// (Divine Shield, Armor, a cap, a conversion, the attacker's side's damage pool or Indestructible,
+/// R4032000). A strike back never tramples (R1750000 over R176), so all it deals heals.
 fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> i32 {
     let defender = match target {
         DamageTarget::Unit { instance } => instance,
@@ -189,19 +186,16 @@ fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackT
     if falls_to_first_strike(state, defender, attacker) {
         return 0;
     }
-    let mine = unit_view(state, attacker);
-    if has_keyword(&mine.keywords, KeywordKind::DivineShield) && attacker.divine_shield_spent != Some(true) {
-        return 0;
-    }
-    if has_keyword(&mine.keywords, KeywordKind::Indestructible) {
-        return 0;
-    }
-    let pierce = piercing(state, defender);
-    if pierce {
-        theirs.attack
-    } else {
-        (theirs.attack - armor_of(&mine.keywords)).max(0)
-    }
+    let on_attacker = DamageTarget::Unit {
+        instance: attacker.clone(),
+    };
+    project_hit(
+        state,
+        Some(defender),
+        &on_attacker,
+        theirs.attack,
+        &mut ProjectedPools::default(),
+    )
 }
 
 /// R44: the projection against the defending hero's health at §4.5 step 2's check after the combat, net

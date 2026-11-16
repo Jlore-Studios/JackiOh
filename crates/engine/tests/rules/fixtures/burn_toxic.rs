@@ -240,6 +240,11 @@ pub fn defs() -> Vec<CardDef> {
 /// The engine's fixture catalog (`harness::setup_catalog`) with these cards and scripts on top.
 pub fn register_burn_toxic_fixtures() {
     super::harness::setup_catalog();
+    add_burn_toxic_fixtures();
+}
+
+/// These cards and scripts on top of whatever is registered now.
+pub fn add_burn_toxic_fixtures() {
     let mut catalog: CardDefs = registered_catalog().clone();
     for def in defs() {
         catalog.insert(def.id.clone(), def);
