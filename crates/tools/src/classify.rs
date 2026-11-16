@@ -61,7 +61,8 @@ const FORCED_GAMES: u32 = 40;
 /// plays an Embiggened Wall and then a card that sets or Buffs it. A subject's forced games force
 /// and steer these too, and a divergence the cards that act on it show counts as its own, since only
 /// the subject's change explains it. Stinkyscape+ #64 to #66, the Walls: Meditative+ #21 Harmony
-/// Spirit sets every other Unit to 3/3 and Classic+ #57 Book of Stats gives a Unit +N/+N. Phase Wall
+/// Spirit sets every other Unit to 3/3 and Classic+ #71 Book of Buff Upgrades a permanent, which writes its
+/// `tuning` (a Buff, R1320). Phase Wall
 /// is left out: Immutable refuses a set and a Buff or Nerf (R23, R386), the changes its bonus read, so
 /// the 40 steered games never reach it differently and a fragment claims it only if they do.
 const STEERED_GAMES: &[(&[&str], &[&str])] = &[(
@@ -70,7 +71,7 @@ const STEERED_GAMES: &[(&[&str], &[&str])] = &[(
         "stinkyscapeplus-065",
         "stinkyscapeplus-066",
     ],
-    &["meditativeplus-021", "classicplus-057"],
+    &["meditativeplus-021", "classicplus-071"],
 )];
 
 /// Stage 2: the unforced games a change to play code replays.
@@ -1350,7 +1351,7 @@ mod tests {
     fn r3935001_the_walls_are_steered_with_the_cards_that_act_on_them() {
         register_all();
         let none = BTreeSet::new();
-        let actors = ["meditativeplus-021".to_string(), "classicplus-057".to_string()];
+        let actors = ["meditativeplus-021".to_string(), "classicplus-071".to_string()];
         for wall in [
             "stinkyscapeplus-064",
             "stinkyscapeplus-065",
@@ -1361,7 +1362,7 @@ mod tests {
         // A card of no entry plays the games it played.
         assert!(steered_with("core-001", &none).is_empty());
         // A card that acts on the subject and moves in the same change stays out of the steer.
-        let moved: BTreeSet<String> = ["classicplus-057".to_string()].into();
+        let moved: BTreeSet<String> = ["classicplus-071".to_string()].into();
         assert_eq!(steered_with("stinkyscapeplus-065", &moved), [actors[0].clone()]);
         // Every card an entry names can be forced into a deck.
         for (subjects, acting) in STEERED_GAMES {

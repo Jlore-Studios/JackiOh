@@ -107,7 +107,7 @@ mod tests {
 
     const WALL: &str = "stinkyscapeplus-065";
     const SETTER: &str = "meditativeplus-021";
-    const BUFFER: &str = "classicplus-057";
+    const BUFFER: &str = "classicplus-071";
 
     /// What the steered games of seeds 1 to 40 played, in order: each play of a steered card with its
     /// card and whether it was embiggened, read by folding the recorded actions on this build.
