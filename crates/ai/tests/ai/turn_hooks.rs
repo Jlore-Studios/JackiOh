@@ -15,6 +15,9 @@
 //! Living Bomb (classic-062), a (2) Field Spell, Radiant "At the start of your opponent's turn: Destroy
 //! every permanent they control with a Plague Token on it"; and Fed Fauci (core-091), a (2) 1/6 Rush,
 //! "Start of turn: +1 mana per Plague Counter".
+//! R4024000: a turn-hook price is kept per controller, so each side's copy is probed on its own board:
+//! Jlockeed Shredder-10 (core-013), a (3) 4/6, "End of turn: deal 2 damage to each enemy unit and the
+//! enemy hero", is worth more facing more units.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -41,6 +44,7 @@ const HARMONY_SPIRIT: &str = "meditativeplus-021";
 const FED_FAUCI: &str = "core-091";
 const JOINT_FILING: &str = "meditative-009";
 const LIVING_BOMB: &str = "classic-062";
+const SHREDDER_10: &str = "core-013";
 const LIBRARY: &[&str] = &[VANILLA, VANILLA, VANILLA, VANILLA];
 
 /// The AI's turn with `hand` and `backrow`, the human's `enemy` backrow and a Mr. Vanilla in the
@@ -70,6 +74,23 @@ fn price_of(prices: &[TurnHookPrice], def_id: &str, radiant: bool) -> f64 {
         .find(|entry| entry.def_id == def_id && entry.radiant == radiant)
         .map(|entry| entry.price)
         .unwrap_or_else(|| panic!("{def_id}'s turn hooks are priced: {prices:?}"))
+}
+
+/// R4024000: the price of `controller`'s copy of `def_id`'s base face, which must be priced.
+fn price_for(prices: &[TurnHookPrice], def_id: &str, controller: PlayerId) -> f64 {
+    prices
+        .iter()
+        .find(|entry| entry.def_id == def_id && !entry.radiant && entry.controller == controller)
+        .map(|entry| entry.price)
+        .unwrap_or_else(|| panic!("{controller:?}'s {def_id} is priced: {prices:?}"))
+}
+
+/// R4024000: each entry's card and controller, in the order the probes priced them.
+fn priced_order(prices: &[TurnHookPrice]) -> Vec<(&str, PlayerId)> {
+    prices
+        .iter()
+        .map(|entry| (entry.def_id.as_str(), entry.controller))
+        .collect()
 }
 
 /// The start-of-the-opponent's-turn price of `def_id`'s face `radiant`, which must be priced (R2689000).
@@ -172,11 +193,12 @@ fn r2477000_a_masochism_mask_scores_no_more_than_a_hookless_one() {
 
 #[test]
 fn r2477000_an_enemy_face_down_card_is_priced_as_before() {
-    let held = || {
+    let held = |controller: PlayerId| {
         [ACE_IN_THE_HOLE]
             .map(|def_id| TurnHookPrice {
                 def_id: def_id.to_string(),
                 radiant: false,
+                controller,
                 price: 10.0,
                 opponent_turn: 0.0,
             })
@@ -189,14 +211,14 @@ fn r2477000_an_enemy_face_down_card_is_priced_as_before() {
         "an enemy face-down card is never probed"
     );
     assert_eq!(
-        eval_with(&enemy, held()),
+        eval_with(&enemy, held(HUMAN)),
         evaluate(&enemy, AI, NextSwing::Enemy, &AI_EVAL),
         "nor priced"
     );
 
     let own = board("ai-hook-enemy", json!([]), json!([ACE_IN_THE_HOLE]), json!([]));
     close(
-        eval_with(&own, held()) - evaluate(&own, AI, NextSwing::Enemy, &AI_EVAL),
+        eval_with(&own, held(AI)) - evaluate(&own, AI, NextSwing::Enemy, &AI_EVAL),
         AI_EVAL.turn_hook * 10.0,
     );
 }
@@ -320,11 +342,68 @@ fn r2565000_a_unit_with_a_turn_hook_is_priced_on_either_field() {
     );
     let (prices, used) = priced(&both);
     assert_eq!(
-        prices.len(),
-        1,
-        "a card the same as one listed is not priced again: {prices:?}"
+        priced_order(&prices),
+        [(GATLING_PEA, AI), (GATLING_PEA, HUMAN)],
+        "each side's copy is priced on its own board, the seat's first (R4024000)"
     );
-    assert_eq!(used, 1);
+    assert_eq!(used, 2, "one end-of-turn hook each");
+}
+
+#[test]
+fn r4024000_a_shredder_on_each_side_is_priced_on_the_board_it_hits() {
+    let state = sides(
+        "ai-hook-shredder",
+        json!({ "field": [SHREDDER_10] }),
+        json!({ "field": [SHREDDER_10, VANILLA, VANILLA, VANILLA] }),
+    );
+    let (prices, used) = priced(&state);
+    assert_eq!(
+        priced_order(&prices),
+        [(SHREDDER_10, AI), (SHREDDER_10, HUMAN)],
+        "the seat's copy first"
+    );
+    assert_eq!(used, 2, "one end-of-turn hook each");
+    let (own, enemy) = (
+        price_for(&prices, SHREDDER_10, AI),
+        price_for(&prices, SHREDDER_10, HUMAN),
+    );
+    assert!(
+        own > enemy,
+        "four units to hit against one: {own} against {enemy}"
+    );
+    let held = prices_of(prices.clone());
+    for player in [AI, HUMAN] {
+        let shredder = unit(&state, player, SHREDDER_10);
+        close(
+            unit_worth(&state, shredder, &AI_EVAL, &held)
+                - unit_worth(&state, shredder, &AI_EVAL, Prices::NONE),
+            AI_EVAL.turn_hook * price_for(&prices, SHREDDER_10, player),
+        );
+    }
+}
+
+#[test]
+fn r4024000_a_shredder_in_the_ai_hand_is_not_priced_by_the_enemy_s_copy() {
+    let state = sides(
+        "ai-hook-shredder",
+        json!({ "hand": [SHREDDER_10] }),
+        json!({ "field": [SHREDDER_10, VANILLA, VANILLA, VANILLA] }),
+    );
+    let (prices, used) = priced(&state);
+    assert_eq!(
+        priced_order(&prices),
+        [(SHREDDER_10, HUMAN), (SHREDDER_10, AI)],
+        "the enemy's board, then the seat's hand"
+    );
+    assert_eq!(used, 3, "a firing, then a spawn and a firing");
+    let (own, enemy) = (
+        price_for(&prices, SHREDDER_10, AI),
+        price_for(&prices, SHREDDER_10, HUMAN),
+    );
+    assert!(
+        own > enemy,
+        "the hand copy hits four units: {own} against {enemy}"
+    );
 }
 
 #[test]
@@ -395,6 +474,7 @@ fn r2565000_an_enemy_face_up_field_spell_is_priced_a_face_down_trap_is_not() {
     let trap = vec![TurnHookPrice {
         def_id: ACE_IN_THE_HOLE.to_string(),
         radiant: false,
+        controller: HUMAN,
         price: 10.0,
         opponent_turn: 0.0,
     }];
