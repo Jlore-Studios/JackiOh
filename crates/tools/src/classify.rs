@@ -56,6 +56,23 @@ const AI_TOOLING: &[&str] = &["gate.rs", "sweep.rs", "dev_run.rs", "baselines.rs
 /// Stage 2: forced games per card a script change claims. A refactor diverges in none of them.
 const FORCED_GAMES: u32 = 40;
 
+/// R3935001: the cards whose change shows only when another card acts on them, each group with the
+/// cards its forced games hold and play after the subject (`steer.rs`): the random policy seldom
+/// plays an Embiggened Wall and then a card that sets or Buffs it. A subject's forced games force
+/// and steer these too, and a divergence the cards that act on it show counts as its own, since only
+/// the subject's change explains it. Stinkyscape+ #64 to #66, the Walls: Meditative+ #21 Harmony
+/// Spirit sets every other Unit to 3/3 and Classic+ #57 Book of Stats gives a Unit +N/+N. Phase Wall
+/// is left out: Immutable refuses a set and a Buff or Nerf (R23, R386), the changes its bonus read, so
+/// the 40 steered games never reach it differently and a fragment claims it only if they do.
+const STEERED_GAMES: &[(&[&str], &[&str])] = &[(
+    &[
+        "stinkyscapeplus-064",
+        "stinkyscapeplus-065",
+        "stinkyscapeplus-066",
+    ],
+    &["meditativeplus-021", "classicplus-057"],
+)];
+
 /// Stage 2: the unforced games a change to play code replays.
 const UNFORCED_GAMES: u32 = 200;
 
@@ -905,13 +922,34 @@ fn summary_counts(stdout: &str) -> Option<(u64, u64)> {
     Some((steps.parse().ok()?, diverged.parse().ok()?))
 }
 
+/// The cards `STEERED_GAMES` has act on `id`, none for the others, less those `changed` (families a
+/// change of this diff also plays differently, whose own divergence would explain a game's).
+fn steered_with(id: &str, changed: &BTreeSet<String>) -> Vec<String> {
+    STEERED_GAMES
+        .iter()
+        .filter(|(subjects, _)| subjects.iter().any(|subject| family(subject) == family(id)))
+        .flat_map(|(_, actors)| actors.iter())
+        .filter(|actor| !changed.contains(&family(actor)))
+        .map(|actor| actor.to_string())
+        .collect()
+}
+
 /// Whether `id`'s own play diverges from the parent's in `FORCED_GAMES` games with it forced in: a
 /// divergence that touches its family, or one that touches no card at all. The other cards of those
-/// games are random, so a divergence one of them explains says nothing of `id`.
-fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
+/// games are random, so a divergence one of them explains says nothing of `id`. R3935001: the games of
+/// `STEERED_GAMES` also hold and play the cards that act on `id` (`actors`), and a divergence that
+/// touches one of them counts too.
+fn forced_diverge(id: &str, actors: &[String], head: &Side, parent: &Path) -> Result<bool> {
     let traces = temp_traces();
     let seeds: Vec<u32> = (1..=FORCED_GAMES).collect();
-    record_seeds(&seeds, &[id.to_string()], &traces)?;
+    let mut force = vec![id.to_string()];
+    force.extend(actors.iter().cloned());
+    let steer = if actors.is_empty() {
+        Vec::new()
+    } else {
+        force.clone()
+    };
+    record_seeds(&seeds, &force, &steer, &traces)?;
     let (_, report) = parent_check(parent, &traces)?;
     let games = games_in(&traces)?;
     let own = family(id);
@@ -921,7 +959,8 @@ fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
             continue;
         };
         let touched = touched_by(&divergence, game, head)?;
-        if touched.is_empty() || touched.contains(&own) {
+        let explained = touched.contains(&own) || actors.iter().any(|actor| touched.contains(&family(actor)));
+        if touched.is_empty() || explained {
             diverged = true;
             break;
         }
@@ -1046,6 +1085,12 @@ fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -
     let enough = |checked: &Checked| {
         diff.play.len() + checked.scripts.len() + checked.touched.len() >= PATCH_MIN_CARDS || checked.rule
     };
+    let changed: BTreeSet<String> = diff
+        .scripts
+        .iter()
+        .map(|script| family(script))
+        .chain(diff.play.iter().cloned())
+        .collect();
     for id in &diff.scripts {
         let family = family(id);
         if diff.play.contains(&family) || checked.scripts.contains(&family) {
@@ -1055,7 +1100,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -
             checked.skipped.insert(id.clone());
             continue;
         }
-        let diverged = match forced_diverge(id, head, parent) {
+        let diverged = match forced_diverge(id, &steered_with(id, &changed), head, parent) {
             Ok(diverged) => diverged,
             Err(error) => {
                 // A card the recorder cannot force counts as changed, never as a refactor.
@@ -1071,7 +1116,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -
     if diff.play_code && !enough(&checked) {
         let traces = temp_traces();
         let seeds: Vec<u32> = (1..=UNFORCED_GAMES).collect();
-        record_seeds(&seeds, &[], &traces)?;
+        record_seeds(&seeds, &[], &[], &traces)?;
         match parent_check(parent, &traces) {
             Ok((_, report)) => {
                 let games = games_in(&traces)?;
@@ -1299,6 +1344,35 @@ mod tests {
             Some((95, 1))
         );
         assert_eq!(summary_counts("hotseat fixture: folds to a798906b"), None);
+    }
+
+    #[test]
+    fn r3935001_the_walls_are_steered_with_the_cards_that_act_on_them() {
+        register_all();
+        let none = BTreeSet::new();
+        let actors = ["meditativeplus-021".to_string(), "classicplus-057".to_string()];
+        for wall in [
+            "stinkyscapeplus-064",
+            "stinkyscapeplus-065",
+            "stinkyscapeplus-066",
+        ] {
+            assert_eq!(steered_with(wall, &none), actors, "{wall}");
+        }
+        // A card of no entry plays the games it played.
+        assert!(steered_with("core-001", &none).is_empty());
+        // A card that acts on the subject and moves in the same change stays out of the steer.
+        let moved: BTreeSet<String> = ["classicplus-057".to_string()].into();
+        assert_eq!(steered_with("stinkyscapeplus-065", &moved), [actors[0].clone()]);
+        // Every card an entry names can be forced into a deck.
+        for (subjects, acting) in STEERED_GAMES {
+            let ids: Vec<String> = subjects
+                .iter()
+                .chain(acting.iter())
+                .map(|id| id.to_string())
+                .collect();
+            let forced = crate::golden::resolve_force(&ids).expect("forceable");
+            assert_eq!(forced, ids);
+        }
     }
 
     fn card(id: &str, set: &str, cost: i64, text: &str) -> (String, crate::patches::js::Object) {

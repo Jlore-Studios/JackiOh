@@ -844,18 +844,18 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.4b",
         c155_the_far_vagabond::script_v0_6_4b,
     ),
-    (c064_surge_wall::ID, "v0.6.4d", c064_surge_wall::script_v0_6_4d),
+    (c064_surge_wall::ID, "v0.6.5b", c064_surge_wall::script_v0_6_5b),
     (
         c065_thorium_wall::ID,
-        "v0.6.4d",
-        c065_thorium_wall::script_v0_6_4d,
+        "v0.6.5b",
+        c065_thorium_wall::script_v0_6_5b,
     ),
     (
         c066_plastanium_wall::ID,
-        "v0.6.4d",
-        c066_plastanium_wall::script_v0_6_4d,
+        "v0.6.5b",
+        c066_plastanium_wall::script_v0_6_5b,
     ),
-    (c067_phase_wall::ID, "v0.6.4d", c067_phase_wall::script_v0_6_4d),
+    (c067_phase_wall::ID, "v0.6.5b", c067_phase_wall::script_v0_6_5b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
