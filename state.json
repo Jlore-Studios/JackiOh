@@ -17461,7 +17461,7 @@
       }
     },
     "4055": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -17483,12 +17483,12 @@
       "interruptions": 0,
       "issue": 4032,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-16T06:49:01Z",
-      "run_id": "43807744854",
+      "run_id": "pending:b5796442-1794811729",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17509,7 +17509,7 @@
         "run": "43807744854"
       },
       "source": "conflict",
-      "started_at": "2026-11-16T05:03:10Z",
+      "started_at": "2026-11-16T06:49:18Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17595,9 +17595,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T06:40:06Z",
+    "at": "2026-11-16T06:49:18Z",
     "url": "",
-    "what": "build #4035 on claude-3"
+    "what": "revise #4055 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-16T06:34:03Z",
