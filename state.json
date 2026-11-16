@@ -14088,7 +14088,9 @@
     },
     "4065": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6931090044"
+      ],
       "build_next": {
         "from_run": "43975897244",
         "model": "opus",
@@ -14135,9 +14137,7 @@
       "started_at": "2026-11-16T23:03:49Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6931090044"
-      ]
+      "taken_asks": []
     },
     "4066": {
       "action": "build",
