@@ -128,7 +128,8 @@ fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance
 
 /// §4.3 step 1 and R93, projected: a defender with First Strike, against an attacker without it,
 /// strikes first, and an attacker that falls there never lands its own hit. §4.4's stops apply to the
-/// strike back, and a Poisonous defender destroys with any damage at all (step 7).
+/// strike back, the attacker's own cap included (R2179005), and a Poisonous defender destroys with any
+/// damage at all (step 7).
 pub(crate) fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
@@ -157,6 +158,8 @@ pub(crate) fn falls_to_first_strike(
     } else {
         (theirs_attack - armor_of(&mine.keywords)).max(0)
     };
+    // Step 3: the attacker's own cap on the hit (R2179005), as the strike back's damage reads it.
+    let dealt = crate::damage::unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
     if dealt <= 0 {
         return false;
     }

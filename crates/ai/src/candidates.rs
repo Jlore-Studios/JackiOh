@@ -9,7 +9,7 @@ use jackioh_engine::{
     attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, effective_cost,
     effective_life, find_instance, find_instance_mut, has_keyword, is_locked, lane_multiplier_for,
     legal_actions, midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, subsystems,
-    takes_strike_back, unit_view,
+    takes_strike_back, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -190,6 +190,8 @@ pub(crate) struct Side {
     pub(crate) poisonous: bool,
     /// R346: its hits skip §4.4 step 2, the Armor.
     pub(crate) pierce: bool,
+    /// R2179005: its own guard's cap on each hit it takes, after Armor (§4.4 step 3, `unit_damage_cap`).
+    pub(crate) cap: Option<i32>,
 }
 
 pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
@@ -200,6 +202,7 @@ pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
         first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
         poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
         pierce: pierces(state, Some(unit), None),
+        cap: unit_damage_cap(state, unit),
         view,
     }
 }
@@ -211,9 +214,9 @@ pub(crate) struct Blow {
     pub(crate) pops_shield: bool,
 }
 
-/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
+/// §4.4 steps 1 to 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
 /// (`exchange`'s), Poisonous when `poisonous`, and whether it kills. Step 2's Armor is skipped when
-/// `from` pierces (R346).
+/// `from` pierces (R346), and step 3 caps it at `to`'s own cap (R2179005).
 pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
     if amount <= 0 {
         return Blow {
@@ -241,6 +244,7 @@ pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow
     } else {
         (amount - to.view.armor).max(0)
     };
+    let dealt = to.cap.map_or(dealt, |cap| dealt.min(cap));
     let kills = dealt >= to.view.health || (poisonous && dealt > 0);
     Blow {
         dealt,
@@ -272,7 +276,8 @@ pub(crate) fn cleaved_neighbours(
 /// Tier 1: an attack on a unit it kills and survives, read from the layers and the combat's own
 /// reads (`exchange`). Divine Shield or Indestructible on the target means no kill; a Ranged attacker
 /// survives any target that is not Ranged (R783000). Either side's hit skips the other's Armor when
-/// it pierces (§4.4 step 2, R346).
+/// it pierces (§4.4 step 2, R346), and each side's hit is capped by the side it hits (§4.4 step 3,
+/// R2179005).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
@@ -287,6 +292,7 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     } else {
         (combat.hit - t.armor).max(0)
     };
+    let dealt = unit_damage_cap(state, target).map_or(dealt, |cap| dealt.min(cap));
     if dealt <= 0 {
         return false;
     }
@@ -313,6 +319,7 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     } else {
         (combat.strike_back - a.armor).max(0)
     };
+    let taken = unit_damage_cap(state, attacker).map_or(taken, |cap| taken.min(cap));
     if taken <= 0 {
         return true;
     }
@@ -1043,9 +1050,12 @@ fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &Atta
 
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::combat_forecast;
     use jackioh_engine::testkit::{Keyword, Scenario, Value, json, scenario};
 
     use super::*;
+    use crate::config::AI_REPLY;
+    use crate::reply::fight;
 
     /// Classic #73 Nurse Cleaver, with Rush, Cleave and Lifesteal: a 3/4 since issue #3136, set back to the 3/6
     /// these trades were worked out for (see `facing`).
@@ -1093,14 +1103,17 @@ mod tests {
     /// #43 Big Felinor, a 3/10 Felinor.
     const BIG_FELINOR: &str = "core-043";
 
-    /// Whether p1's `attacker`, given `attacker_keywords`, kills p2's `target`, given `target_keywords`,
-    /// and survives, by `kills_and_survives`.
-    fn kills_and_survives_with(
+    /// C+ #11 Anime Armor, a 3/3 whose own guard caps each hit on it at 1.
+    const ANIME_ARMOR: &str = "classicplus-011";
+
+    /// p1's `attacker`, given `attacker_keywords`, facing p2's `target`, given `target_keywords`: the
+    /// state and the two units' ids.
+    fn duel(
         attacker: &str,
         attacker_keywords: &[Keyword],
         target: &str,
         target_keywords: &[Keyword],
-    ) -> bool {
+    ) -> (GameState, String, String) {
         jackioh_cards::register_all();
         let mut state = scenario(json!({ "p1": { "field": [attacker] }, "p2": { "field": [target] } }))
             .state()
@@ -1111,6 +1124,18 @@ mod tests {
             let unit = find_instance_mut(&mut state, id).expect("on the field");
             unit.granted_keywords.extend(keywords.iter().cloned());
         }
+        (state, attacker_id, target_id)
+    }
+
+    /// Whether p1's `attacker`, given `attacker_keywords`, kills p2's `target`, given `target_keywords`,
+    /// and survives, by `kills_and_survives`.
+    fn kills_and_survives_with(
+        attacker: &str,
+        attacker_keywords: &[Keyword],
+        target: &str,
+        target_keywords: &[Keyword],
+    ) -> bool {
+        let (state, attacker_id, target_id) = duel(attacker, attacker_keywords, target, target_keywords);
         let attacker = find_instance(&state, &attacker_id).expect("the attacker");
         let target = find_instance(&state, &target_id).expect("the target");
         kills_and_survives(&state, attacker, target)
@@ -1228,5 +1253,129 @@ mod tests {
         let trade = trade_value(s.state(), cleaver, &reno.id, Prices::NONE);
         assert!(!trade.kills && !trade.splash_kills && trade.value > 0.0);
         assert_eq!(even_trade(s.state(), &cleaver.id, &reno.id, Prices::NONE), None);
+    }
+
+    /// R2179005, §4.4 step 3: Anime Armor's own guard caps each hit on it at 1 after Armor, a Pierce hit's
+    /// too, and a Poisonous hit of 1 still destroys it (step 7).
+    #[test]
+    fn r2179005_a_hit_on_anime_armor_deals_it_one() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({ "p1": { "field": [VANILLA] }, "p2": { "field": [ANIME_ARMOR] } }));
+        let mut from = side_of(s.state(), s.card(VANILLA));
+        let to = side_of(s.state(), s.card(ANIME_ARMOR));
+        assert_eq!((from.cap, to.cap), (None, Some(1)));
+        let plain = blow(&from, 4, false, &to);
+        assert_eq!((plain.dealt, plain.kills), (1, false));
+        let poisonous = blow(&from, 4, true, &to);
+        assert_eq!((poisonous.dealt, poisonous.kills), (1, true));
+        from.pierce = true;
+        assert_eq!(blow(&from, 4, false, &to).dealt, 1);
+    }
+
+    /// R2179005: a 4/4's 4 deals Anime Armor 1, so the attack is a chip of 1 that kills nothing (its 3
+    /// back leaves the 4/4 standing): no tier 1 attack and no even trade.
+    #[test]
+    fn r2179005_a_four_four_into_anime_armor_is_no_free_kill() {
+        let (state, vanilla, anime) = duel(VANILLA, &[], ANIME_ARMOR, &[]);
+        let attacker = find_instance(&state, &vanilla).expect("the attacker");
+        let trade = trade_value(&state, attacker, &anime, Prices::NONE);
+        assert!(!trade.kills);
+        assert!(
+            (trade.value - AI_REPLY.chip_per_damage).abs() < 1e-9,
+            "{}",
+            trade.value
+        );
+        assert_eq!(attack_tier(&state, PlayerId::P1, &vanilla, &anime), 4);
+        assert_eq!(even_trade(&state, &vanilla, &anime, Prices::NONE), None);
+    }
+
+    /// R2179005: a 4/4's strike back deals the attacking Anime Armor 1, so it survives; a Poisonous Anime
+    /// Armor kills the 4/4 and walks away.
+    #[test]
+    fn r2179005_anime_armor_survives_the_strike_back_of_a_four_four() {
+        let (state, anime_id, vanilla_id) = duel(ANIME_ARMOR, &[], VANILLA, &[]);
+        let anime = find_instance(&state, &anime_id).expect("the attacker");
+        let vanilla = find_instance(&state, &vanilla_id).expect("the target");
+        let read = fight(&state, anime, vanilla);
+        assert_eq!(
+            blow(&read.t, read.combat.strike_back, read.t.poisonous, &read.a).dealt,
+            1
+        );
+        assert!(!read.dies && !read.kills);
+        assert!(kills_and_survives_with(
+            ANIME_ARMOR,
+            &[Keyword::Poisonous],
+            VANILLA,
+            &[]
+        ));
+    }
+
+    /// The bodies `r2179005_the_trade_reads_agree_with_the_combat_forecast` sets against each other: a
+    /// name, a card and the keywords granted it.
+    fn bodies() -> Vec<(&'static str, &'static str, Vec<Keyword>)> {
+        vec![
+            ("Mr. Vanilla", VANILLA, vec![]),
+            ("Anime Armor", ANIME_ARMOR, vec![]),
+            ("Armor 2", VANILLA, vec![Keyword::Armor { n: 2 }]),
+            ("Divine Shield", VANILLA, vec![Keyword::DivineShield]),
+            ("Indestructible", VANILLA, vec![Keyword::Indestructible]),
+            ("Poisonous", VANILLA, vec![Keyword::Poisonous]),
+            ("Pierce", VANILLA, vec![Keyword::Pierce]),
+            ("First Strike", VANILLA, vec![Keyword::FirstStrike]),
+            ("Poisonous Anime Armor", ANIME_ARMOR, vec![Keyword::Poisonous]),
+            (
+                "First Strike Anime Armor",
+                ANIME_ARMOR,
+                vec![Keyword::FirstStrike],
+            ),
+            ("Pierce Anime Armor", ANIME_ARMOR, vec![Keyword::Pierce]),
+            ("Armored Anime Armor", ANIME_ARMOR, vec![Keyword::Armor { n: 1 }]),
+            (
+                "Poisonous First Strike",
+                VANILLA,
+                vec![Keyword::Poisonous, Keyword::FirstStrike],
+            ),
+        ]
+    }
+
+    /// R2179005, R3100000: on every legal attack of one body on another, the static trader's kill and death
+    /// (`trade_value`, `fight`) and the move order's tier 1 read (`kills_and_survives`) are the engine's
+    /// combat forecast's, Anime Armor's cap among Armor, Divine Shield, Indestructible, Poisonous, Pierce and
+    /// First Strike.
+    #[test]
+    fn r2179005_the_trade_reads_agree_with_the_combat_forecast() {
+        let bodies = bodies();
+        let mut checked = 0;
+        for (a, attacker_card, attacker_keywords) in &bodies {
+            for (t, target_card, target_keywords) in &bodies {
+                let (state, attacker_id, target_id) =
+                    duel(attacker_card, attacker_keywords, target_card, target_keywords);
+                let attacker = find_instance(&state, &attacker_id).expect("the attacker");
+                for entry in combat_forecast(&state, PlayerId::P1).attacks {
+                    if entry.target_id.starts_with("hero-") {
+                        continue;
+                    }
+                    assert_eq!(entry.target_id, target_id, "{a} into {t}");
+                    let target = find_instance(&state, &entry.target_id).expect("the target");
+                    assert_eq!(
+                        trade_value(&state, attacker, &entry.target_id, Prices::NONE).kills,
+                        entry.kills,
+                        "{a} into {t}: trade_value's kill, {entry:?}"
+                    );
+                    assert_eq!(
+                        fight(&state, attacker, target).dies,
+                        !entry.survives,
+                        "{a} into {t}: fight's death, {entry:?}"
+                    );
+                    assert_eq!(
+                        kills_and_survives(&state, attacker, target),
+                        entry.kills && entry.survives,
+                        "{a} into {t}: kills_and_survives, {entry:?}"
+                    );
+                    checked += 1;
+                }
+            }
+        }
+        assert_eq!(checked, bodies.len() * bodies.len());
     }
 }

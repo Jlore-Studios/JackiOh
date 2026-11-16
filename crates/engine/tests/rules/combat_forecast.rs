@@ -11,6 +11,7 @@ use crate::rules::fixtures::combat::{
     shielded, taunter, trampler, zero_attack,
 };
 use crate::rules::fixtures::combat_judge::{combat_judge_game, snare};
+use crate::rules::fixtures::damage_combat;
 use crate::rules::fixtures::harness::{act_ok, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
@@ -262,6 +263,29 @@ mod r3100000_the_forecast_is_the_engine_s_own_combat {
             "{} against {}",
             capped_hit.dealt,
             plain_hit.dealt
+        );
+    }
+
+    #[test]
+    fn r2179005_a_capped_attacker_outlasts_a_first_strike_defender_and_lands_its_blow() {
+        let mut state = board("r2179005-first-strike");
+        damage_combat::register();
+        // A 4/4 whose own guard caps each hit on it at 1, into a 4/4 First Strike: the strike back comes
+        // first but deals it 1, so it lives to land its 4.
+        let guard = put(
+            &mut state,
+            &damage_combat::self_guard.id,
+            slot(P1, Row::Units, 1),
+            json!({}),
+        );
+        let striker = put(&mut state, &first_striker.id, slot(P2, Row::Units, 1), json!({}));
+
+        let forecast = forecast_of(&state, &guard.id, &striker.id).expect("the attack is legal");
+        assert_eq!((forecast.dealt, forecast.taken), (4, 1));
+        assert!(forecast.kills && forecast.survives);
+        assert_eq!(
+            played_as_forecast(&forecast),
+            play_out(&state, &guard.id, &striker.id)
         );
     }
 }

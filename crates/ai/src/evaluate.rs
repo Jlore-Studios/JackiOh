@@ -1236,12 +1236,12 @@ pub fn damage_past_taunts(
 /// What `attacks` (attacker, its attack, whether it may hit the hero once no Taunt walls it) deal
 /// `defender`'s hero once its Taunts have soaked the attackers they bind (those that may not hit the hero
 /// first, then the smallest). §4.2 step 3: a Taunt binds only attackers `attack_restriction` lets attack
-/// it (R783002, R783003). Each bound attacker is one §4.4 hit on it (#898, R346, R63), a destroyed Reborn
-/// Taunt returning; lane strike (R94) and combat-only bonuses (R1120) stay out. A hit that may not hit the
-/// hero (R1849005, #1823) lands nothing past the Taunts. With `w.static_attack_flags_read`, an attacker that
-/// Ignores Taunt (R3560007) is bound by none, Defense Position's included. With
-/// `w.best_attack_order_past_taunts` (R3937000) the walk runs as the flag's doc says, the larger of its two
-/// orders counting.
+/// it (R783002, R783003). Each bound attacker is one §4.4 hit on it (#898, R346, R63), capped after Armor by
+/// the Taunt's own guard (R2179005), a destroyed Reborn Taunt returning; lane strike (R94) and combat-only
+/// bonuses (R1120) stay out. A hit that may not hit the hero (R1849005, #1823) lands nothing past the Taunts.
+/// With `w.static_attack_flags_read`, an attacker that Ignores Taunt (R3560007) is bound by none, Defense
+/// Position's included. With `w.best_attack_order_past_taunts` (R3937000) the walk runs as the flag's doc
+/// says, the larger of its two orders counting.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
@@ -1318,7 +1318,7 @@ fn soak_past_taunts(
             // Divine Shield still takes it, so it still goes in to pop one.
             if w.best_attack_order_past_taunts
                 && !stands[i].shield
-                && dealt_after_armor(attack, stands[i].view.armor, pierce) <= 0
+                && dealt_to(state, attack, &stands[i], pierce) <= 0
             {
                 stopped.push((attacker, attack, may_hit_hero));
                 continue;
@@ -1349,6 +1349,7 @@ fn soak_past_taunts(
                         first_strike: false,
                         poisonous: false,
                         pierce: false,
+                        cap: unit_damage_cap(state, &stands[j].unit),
                     };
                     let splash = blow(&from, attack, poisonous, &to);
                     if splash.pops_shield {
@@ -1391,7 +1392,7 @@ fn soak_past_taunts(
             }
             // Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346); a hit it takes
             // whole is no damage instance at all (R1361).
-            let dealt = dealt_after_armor(attack, stands[i].view.armor, pierce);
+            let dealt = dealt_to(state, attack, &stands[i], pierce);
             if dealt <= 0 {
                 continue;
             }
@@ -1431,9 +1432,15 @@ fn soak_past_taunts(
     (total, breaker_behind)
 }
 
-/// §4.4 step 2: what a hit of `attack` deals a unit with `armor`, all of it when the hit pierces (R346).
-fn dealt_after_armor(attack: i32, armor: i32, pierce: bool) -> i32 {
-    if pierce { attack } else { (attack - armor).max(0) }
+/// §4.4 steps 2 and 3: what a hit of `attack` deals `stand`: its Armor comes off unless the hit pierces (R346),
+/// then its own guard's cap (R2179005).
+fn dealt_to(state: &GameState, attack: i32, stand: &TauntStand, pierce: bool) -> i32 {
+    let after_armor = if pierce {
+        attack
+    } else {
+        (attack - stand.view.armor).max(0)
+    };
+    unit_damage_cap(state, &stand.unit).map_or(after_armor, |cap| after_armor.min(cap))
 }
 
 /// R3937000: whether `attacker`'s one hit of `attack` destroys `stand` as the walk left it: no Divine Shield
@@ -1443,7 +1450,7 @@ fn breaks_alone(state: &GameState, attacker: &CardInstance, attack: i32, stand: 
     if stand.shield || falls_to_first_strike(state, attacker, &stand.unit, &stand.view) {
         return false;
     }
-    let dealt = dealt_after_armor(attack, stand.view.armor, pierces(state, Some(attacker), None));
+    let dealt = dealt_to(state, attack, stand, pierces(state, Some(attacker), None));
     dealt > 0
         && (dealt >= stand.health
             || has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Poisonous))
@@ -1451,8 +1458,9 @@ fn breaks_alone(state: &GameState, attacker: &CardInstance, attack: i32, stand: 
 
 /// §4.3 step 1 and R93, as `subsystems::lethal`'s private `falls_to_first_strike` reads it: a First Strike Taunt
 /// strikes an attacker without it first, and an attacker that falls there never lands its hit. The strike back runs
-/// the §4.4 steps that can stop it (Divine Shield, Armor, which a Pierce Taunt skips, R346, Indestructible, the zero
-/// rule); a Poisonous Taunt destroys with any damage. A Ranged attacker takes none from a non-Ranged Taunt (R783000).
+/// the §4.4 steps that can stop it (Divine Shield, Armor, which a Pierce Taunt skips, R346, the attacker's own cap,
+/// R2179005, Indestructible, the zero rule); a Poisonous Taunt destroys with any damage. A Ranged attacker takes
+/// none from a non-Ranged Taunt (R783000).
 fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
@@ -1477,6 +1485,7 @@ fn falls_to_first_strike(
     } else {
         (view.attack - mine.armor).max(0)
     };
+    let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
     dealt > 0 && (has_keyword(&view.keywords, KeywordKind::Poisonous) || dealt >= mine.health)
 }
 
