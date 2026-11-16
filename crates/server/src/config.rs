@@ -880,6 +880,28 @@ pub const ALERT_EMAIL_DAY_MS: i64 = 24 * 60 * 60 * 1000;
 pub const ALERT_TIMEOUT_MS: u64 = 10_000;
 
 // ---------------------------------------------------------------------------------------------
+// Client errors (#3619): a crash in a player's browser, told to the owners as the `client.error` alert.
+// ---------------------------------------------------------------------------------------------
+
+/// #3619: the longest error message a client report keeps; the rest is cut. The web reads it too.
+pub const CLIENT_ERROR_MESSAGE_MAX_CHARS: usize = 300;
+/// #3619: the longest stack a client report keeps; the rest is cut. The web reads it too.
+pub const CLIENT_ERROR_STACK_MAX_CHARS: usize = 2000;
+/// #3619: the longest route or catalog version a client report keeps.
+pub const CLIENT_ERROR_FIELD_MAX_CHARS: usize = 64;
+/// #3619: the largest client report body, in bytes, refused before it is counted.
+pub const CLIENT_ERROR_BODY_MAX_BYTES: usize = 8192;
+/// #3619: how many client reports one address may send in `CLIENT_ERROR_WINDOW_MS`.
+pub const CLIENT_ERROR_REPORTS_PER_ADDRESS: usize = 10;
+/// #3619: how many client reports one account may send in `CLIENT_ERROR_WINDOW_MS`, from any address.
+pub const CLIENT_ERROR_REPORTS_PER_ACCOUNT: usize = 10;
+/// #3619: the window of both client-report limits (ten minutes).
+pub const CLIENT_ERROR_WINDOW_MS: i64 = 10 * 60 * 1000;
+/// #3619: what raised a client report: an error the route boundary caught, an uncaught `error` event
+/// or an `unhandledrejection`.
+pub const CLIENT_ERROR_TRIGGERS: &[&str] = &["boundary", "error", "unhandledrejection"];
+
+// ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
 // ---------------------------------------------------------------------------------------------
 

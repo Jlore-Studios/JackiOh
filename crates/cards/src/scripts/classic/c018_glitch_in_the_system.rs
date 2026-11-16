@@ -188,10 +188,10 @@ mod tests {
     }
 
     fn offered_modes(s: &Scenario, instance_id: &str) -> Vec<Vec<String>> {
-        legal_actions(s.state(), P1)
+        plays_in(s.state(), P1, instance_id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id: id, modes, .. } if id == instance_id => Some(modes.unwrap_or_default()),
+                ActionBody::Play { modes, .. } => Some(modes.unwrap_or_default()),
                 _ => None,
             })
             .collect()

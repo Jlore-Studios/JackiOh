@@ -166,6 +166,19 @@ mod r382_the_fruit_pool_holds_the_grapes_and_only_a_pool_that_takes_every_token_
         );
     }
 
+    /// R382: a Fruit token that is no Grape (as S+ #6.1 Fine Fermented Grape and T-AI-1 are) stays out
+    /// of the Fruit pool, beside the Grapes it takes (#3836: the Grape check's `&&` taken as `||` let
+    /// every Fruit token in).
+    #[test]
+    fn r382_a_fruit_token_that_is_no_grape_stays_out_of_the_fruit_pool() {
+        let mut defs = defs();
+        defs.push(token("classicplus-058-1", "Classic+", "58.1", &["Fruit"]));
+        register_catalog(catalog_of(defs));
+        let fruit = pool(json!({ "tags": ["Fruit"] }));
+        assert!(!fruit.contains(&"classicplus-058-1".to_string()), "{fruit:?}");
+        assert!(fruit.contains(&"classicplus-065-1".to_string()), "{fruit:?}");
+    }
+
     #[test]
     fn r382_the_grapes_are_in_no_other_pool_a_plain_query_a_type_pool_and_a_set_pool_leave_them_out() {
         setup();
@@ -729,5 +742,118 @@ mod r3134001_the_turn_hook_filter_reads_the_registered_base_face_script {
                 json!({ "turnHook": which })
             );
         }
+    }
+}
+
+/// R1221 and R3869003 (#3836): `tribute` keeps the cards whose registered base face sets a Tribute
+/// play cost above 0, and `aim` those whose base face's first target declares that aim outright, each
+/// read without state as `turnHook` is. The cards crate's Tribute and Book cards reached them, the
+/// engine's tests none.
+mod r1221_r3869003_tribute_and_aim_read_the_registered_base_face {
+    use super::*;
+
+    fn flag_defs() -> Vec<CardDef> {
+        [
+            "601", "602", "603", "604", "605", "611", "612", "613", "614", "615",
+        ]
+        .iter()
+        .map(|index| card(&format!("core-{index}"), "Core", index, json!({})))
+        .collect()
+    }
+
+    /// 601 Tribute 2; 602 Tribute 0; 603 other static flags; 604 no script; 605 Tribute 2 on its
+    /// Radiant face only. 611 aims its first target to help; 612 to harm; 613 leaves its aim unset;
+    /// 614 declares no target; 615 aims only its second target.
+    fn flag_scripts() -> IndexMap<String, CardScripts> {
+        let flags = |value: Value| Script {
+            static_flags: Some(json_as(value)),
+            ..Script::default()
+        };
+        let aimed = |aims: &[Option<TargetAim>]| Script {
+            targets: aims
+                .iter()
+                .map(|aim| TargetDecl {
+                    aim: *aim,
+                    ..TargetDecl::target(1, 1, json!({ "of": ["unit"] }))
+                })
+                .collect(),
+            ..Script::default()
+        };
+        let same = |face: Script| CardScripts {
+            base: face.clone(),
+            radiant: face,
+        };
+        IndexMap::from([
+            ("core-601".to_string(), same(flags(json!({ "tribute": 2 })))),
+            ("core-602".to_string(), same(flags(json!({ "tribute": 0 })))),
+            ("core-603".to_string(), same(flags(json!({ "castOnDraw": true })))),
+            (
+                "core-605".to_string(),
+                CardScripts {
+                    base: Script::default(),
+                    radiant: flags(json!({ "tribute": 2 })),
+                },
+            ),
+            ("core-611".to_string(), same(aimed(&[Some(TargetAim::Help)]))),
+            ("core-612".to_string(), same(aimed(&[Some(TargetAim::Harm)]))),
+            ("core-613".to_string(), same(aimed(&[None]))),
+            ("core-614".to_string(), same(Script::default())),
+            (
+                "core-615".to_string(),
+                same(aimed(&[None, Some(TargetAim::Help)])),
+            ),
+        ])
+    }
+
+    fn setup_flags() {
+        register_catalog(catalog_of(flag_defs()));
+        register_scripts(flag_scripts());
+    }
+
+    #[test]
+    fn r1221_tribute_true_keeps_a_base_face_tribute_above_zero_and_false_keeps_the_rest() {
+        setup_flags();
+        assert_eq!(pool(json!({ "tribute": true })), vec!["core-601"]);
+        assert_eq!(
+            pool(json!({ "tribute": false })),
+            vec![
+                "core-602", "core-603", "core-604", "core-605", "core-611", "core-612", "core-613",
+                "core-614", "core-615",
+            ]
+        );
+    }
+
+    #[test]
+    fn r3869003_aim_keeps_the_cards_whose_first_target_declares_it() {
+        setup_flags();
+        assert_eq!(pool(json!({ "aim": "help" })), vec!["core-611"]);
+        assert_eq!(pool(json!({ "aim": "harm" })), vec!["core-612"]);
+    }
+}
+
+/// §5.1 (#3836): a pool's `costRange` holds a card at either end and none past it: `max` 3 keeps the 2
+/// and the 3 and leaves out the 4, `min` 3 the reverse.
+mod section_5_1_a_cost_range_holds_both_its_ends {
+    use super::*;
+
+    fn priced() {
+        register_catalog(catalog_of(vec![
+            card("core-701", "Core", "701", json!({ "cost": 2 })),
+            card("core-702", "Core", "702", json!({ "cost": 3 })),
+            card("core-703", "Core", "703", json!({ "cost": 4 })),
+        ]));
+    }
+
+    #[test]
+    fn a_cost_range_keeps_the_card_on_each_bound_and_leaves_out_the_one_past_it() {
+        priced();
+        assert_eq!(
+            pool(json!({ "costRange": { "max": 3 } })),
+            vec!["core-701", "core-702"]
+        );
+        assert_eq!(
+            pool(json!({ "costRange": { "min": 3 } })),
+            vec!["core-702", "core-703"]
+        );
     }
 }

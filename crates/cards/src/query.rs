@@ -124,11 +124,11 @@ pub fn terminus_cards() -> CardQuery {
 }
 
 /// R3869001: "a Call to Chaos" (S #4.6 The Big Crunch, S #149 Wildar, S+ #154 Chaos Accelerator):
-/// every edition, the cards tagged Call to Chaos, from the sets that ship (R380, R1420).
+/// every edition, the cards tagged Call to Chaos, from the sets that ship (R380, R1420). Cards, as the
+/// ruling reads, not tokens: no token carries the tag.
 pub fn call_to_chaos_editions() -> CardQuery {
     CardQuery {
         tags: Some(vec![Tag::CallToChaos]),
-        with_tokens: Some(true),
         ..CardQuery::default()
     }
 }

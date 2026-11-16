@@ -115,9 +115,10 @@ func ExcessSection(ctx *hctx.Context, state *pyjson.Object, explained *waiting.E
 		"as a medium one; a medium model only a medium one.</sub>", "", "<sub>"+IdleLegend+"</sub>")
 	if cfg := ctx.Cfg; cfg.SuggestionsEnabled {
 		table = append(table, "", fmt.Sprintf("<sub>With %d or more spare, the bot runs a suggestion "+
-			"survey (`suggestions.spare_lanes`), up to %d open suggestions (`%s`: %d open now).</sub>",
-			cfg.SuggestionsSpareLanes, cfg.SuggestionsMaxOpen, config.LabelSuggestion,
-			openSuggestions(issues)))
+			"survey (`suggestions.spare_lanes`) on a spare lane, up to %d at once, one an area "+
+			"(`suggestions.areas`, #4026), up to %d open suggestions (`%s`: %d open now).</sub>",
+			cfg.SuggestionsSpareLanes, plan.MaxSurveys(cfg), cfg.SuggestionsMaxOpen,
+			config.LabelSuggestion, openSuggestions(issues)))
 	}
 	return append(lines, Fold("Which subscriptions have lanes free, why each is not working, and what "+
 		"counts", table)...)

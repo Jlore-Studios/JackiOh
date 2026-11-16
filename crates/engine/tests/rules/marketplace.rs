@@ -652,9 +652,9 @@ fn r1853004_a_deal_left_keeps_the_turn_from_ending_by_itself() {
     assert!(!types_of(&bought.events).contains(&GameEventType::TurnAutoEnded));
     assert_eq!(bought.state.active, P1, "the card bought is playable at no mana");
     let card = bought.state.players[P1].hand[0].id.clone();
-    let play = legal_actions(&bought.state, P1)
+    let play = plays_in(&bought.state, P1, &card)
         .into_iter()
-        .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card))
+        .next()
         .expect("the card bought is listed to play");
     let played = reduce(&bought.state, &Action::new(play, P1, next_nonce()));
     assert_eq!(played.error, None);

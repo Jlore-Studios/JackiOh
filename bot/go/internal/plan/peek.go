@@ -96,8 +96,10 @@ func peek(ctx *hctx.Context, force bool, item *int, mode string, skipped *[]stri
 		}
 	}
 	spare := 0
+	var spareLanes []SpareLanes
 	if found == nil && item == nil {
-		spare = SpareTotal(Spare(ctx, state, lanes, force))
+		spareLanes = Spare(ctx, state, lanes, force)
+		spare = SpareTotal(spareLanes)
 		if mode == "auto" {
 			seen.idle, seen.spare = spare >= ctx.Cfg.SuggestionsSpareLanes, spare
 		}
@@ -108,7 +110,7 @@ func peek(ctx *hctx.Context, force bool, item *int, mode string, skipped *[]stri
 	// surveying.
 	if found == nil && item == nil && (mode == "suggest" || mode == "auto") &&
 		SuggestionsDue(ctx, state, mode == "suggest", spare) != 0 {
-		if provider := SurveyProvider(ctx, state, lanes, force, AnyQuiet); provider != nil {
+		if provider := SurveyProvider(ctx, state, lanes, force, AnyQuiet, spareLanes); provider != nil {
 			found = &work{nil, provider, force}
 		}
 	}
@@ -239,6 +241,11 @@ func HousekeepingDue(ctx *hctx.Context, state *pyjson.Object) string {
 		}
 		if eqStr(ctx.GH.GetPull(py.MustInt(thread.Get("number"))).Get("mergeable_state"), "dirty") {
 			return fmt.Sprintf("#%s conflicts with main", py.Str(thread.Get("number")))
+		}
+	}
+	for _, survey := range Surveys(state) {
+		if RunStatus(ctx, survey.Record.Get("run_id")) == "dead" {
+			return "a survey's run ended" // its area and its share of the room go back (#4026)
 		}
 	}
 	return ""

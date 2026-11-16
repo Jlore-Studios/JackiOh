@@ -9,7 +9,7 @@ export default {
   vitest: { configFile: "vitest.config.ts", related: true },
   // config.test.ts reads wrangler.jsonc and the server's routes from the repository's root.
   inPlace: true,
-  mutate: ["src/**/*.ts", "!src/**/*.test.ts"],
+  mutate: ["src/**/*.ts", "!src/**/*.test.ts", "!src/**/*.fake.ts"],
   ignoreStatic: true,
   // No `// @ts-nocheck` written into the source files: vitest strips the types and checks none, and
   // in place the line lands in every file under src/, which a test reading a file's first line sees.

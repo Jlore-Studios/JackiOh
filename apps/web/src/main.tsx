@@ -22,6 +22,9 @@
 // one that landed anywhere else (Supabase's Site URL fallback) is handed to `/login` (R193); a room link
 // on /play is kept for this tab (net/roomLink.ts), so the gate's way to /login cannot lose it (R767).
 //
+// A CRASH REACHES THE OWNERS (#3619): the boundary below, an uncaught error and an unhandled rejection each send
+// one report (`net/clientErrors.ts`).
+//
 // THE QUEUE FOLLOWS THE PLAYER (R765): `useQueueFollow` (`net/liveGame.ts`) watches the account on
 // every screen but `/play`, and takes a paired player to the game (`QueueFound`).
 //
@@ -63,6 +66,7 @@ import { useProficiencyAccountSync } from "./cards/proficiencySync.ts";
 import { ViewerAccountCosmetics, ViewerFullArt } from "./cards/ownedFullArt.ts";
 import { FullScreenArtHost } from "./cards/index.ts";
 import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
+import { installClientErrorReports, reportClientError } from "./net/clientErrors.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
@@ -320,6 +324,8 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
   override componentDidCatch(error: unknown, info: ErrorInfo): void {
     // Kept for whoever opens the console; the player gets the panel below.
     console.error("A screen failed to load", error, info.componentStack);
+    // #3619: and to the owners, unless it is a lazy chunk that failed (the panel below covers that).
+    reportClientError("boundary", error);
   }
 
   override render(): ReactNode {
@@ -931,6 +937,8 @@ if (import.meta.env.MODE !== "test") {
   const host = document.getElementById("root");
   if (host === null) throw new Error("index.html is missing #root");
 
+  // #3619: an uncaught error or an unhandled rejection reaches the owners, as the boundary's does.
+  installClientErrorReports();
   // The settings store's first read puts `data-reduce-motion` on <html> (index.css), so the player's
   // "Reduce motion" holds from the first paint of every screen, not only once a board has read it.
   readSettings();

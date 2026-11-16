@@ -41,15 +41,8 @@ fn backrow_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
     }
 }
 
-fn offered(g: &Scenario, id: &str) -> Vec<ActionBody> {
-    legal_actions(g.state(), PlayerId::P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == id))
-        .collect()
-}
-
 fn offered_modes(g: &Scenario, id: &str) -> Vec<Option<Vec<String>>> {
-    offered(g, id)
+    plays_in(g.state(), PlayerId::P1, id)
         .into_iter()
         .map(|action| match action {
             ActionBody::Play { modes, .. } => modes,

@@ -644,9 +644,7 @@ mod tests {
     }
 
     fn offers_play_of(s: &Scenario, player: PlayerId, instance_id: &str) -> bool {
-        legal_actions(s.state(), player)
-            .iter()
-            .any(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+        !plays_in(s.state(), player, instance_id).is_empty()
     }
 
     fn prompt_opened_for_a_reward(events: &[GameEvent]) -> bool {

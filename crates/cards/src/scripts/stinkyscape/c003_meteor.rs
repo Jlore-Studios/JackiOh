@@ -150,11 +150,11 @@ mod tests {
         }
 
         fn no_play_into(s: &Scenario, lane: i32) -> bool {
-            let held = s.card(VANILLA).id.clone();
-            let plays: Vec<Option<ZoneChoice>> = legal_actions(s.state(), P2)
+            let plays: Vec<Option<ZoneChoice>> = s
+                .plays_of(VANILLA)
                 .iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, zone, .. } if *instance_id == held => Some(*zone),
+                    ActionBody::Play { zone, .. } => Some(*zone),
                     _ => None,
                 })
                 .collect();

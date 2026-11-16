@@ -35,13 +35,6 @@ fn body(literal: Value) -> ActionBody {
     json_as(literal)
 }
 
-fn plays_of(state: &GameState, card: &CardInstance) -> Vec<ActionBody> {
-    legal_actions(state, card.controller)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-        .collect()
-}
-
 fn modes_of(action: &ActionBody) -> Vec<String> {
     match action {
         ActionBody::Play { modes, .. } => modes.clone().unwrap_or_default(),
@@ -177,7 +170,7 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
             },
             Selection::Hero { player: P2 },
         ];
-        assert!(plays_of(g.state(), &crafted).iter().any(
+        assert!(plays_in(g.state(), crafted.controller, &crafted.id).iter().any(
             |play| matches!(play, ActionBody::Play { targets: Some(targets), .. } if *targets == choice)
         ));
 
@@ -218,7 +211,7 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
 
         let wanted = vec!["highest".to_string(), "right".to_string()];
         assert!(
-            plays_of(g.state(), &crafted)
+            plays_in(g.state(), crafted.controller, &crafted.id)
                 .iter()
                 .any(|play| matches!(play, ActionBody::Play { modes: Some(modes), .. } if *modes == wanted))
         );
@@ -257,7 +250,7 @@ mod s8_conventions_r90_a_mode_that_deals_damage_or_heals_needs_its_target {
         }));
         let dividend = must(g.hand(P1).first().cloned(), "Efficiency Dividend");
 
-        let untargeted: Vec<ActionBody> = plays_of(g.state(), &dividend)
+        let untargeted: Vec<ActionBody> = plays_in(g.state(), dividend.controller, &dividend.id)
             .into_iter()
             .filter(|play| {
                 modes_of(play).first().map(String::as_str) != Some("mana") && targets_of(play).is_empty()
@@ -274,7 +267,7 @@ mod s8_conventions_r90_a_mode_that_deals_damage_or_heals_needs_its_target {
         );
         assert!(refused.error.is_some());
 
-        let mana: Vec<ActionBody> = plays_of(g.state(), &dividend)
+        let mana: Vec<ActionBody> = plays_in(g.state(), dividend.controller, &dividend.id)
             .into_iter()
             .filter(|play| modes_of(play).first().map(String::as_str) == Some("mana"))
             .collect();
@@ -352,13 +345,6 @@ fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         .collect()
 }
 
-fn plays_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
-    legal_actions(state, player)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-        .collect()
-}
-
 fn sorted_key(ids: &[String]) -> String {
     let mut ids = ids.to_vec();
     ids.sort();
@@ -408,7 +394,7 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
 
         // …so legalActions, which the client narrows and the AI policy draws from (§10.2, CLAUDE.md
         // rule 7), must offer it.
-        let offered = plays_for(s.state(), P1, &golem);
+        let offered = plays_in(s.state(), P1, &golem.id);
         assert!(!offered.is_empty());
         let enemy_only: Vec<&ActionBody> = offered
             .iter()
@@ -518,7 +504,7 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
             "the Sorcerer's part dealt its 4 to the enemy hero"
         );
 
-        let offered = plays_for(s.state(), P1, &crafted);
+        let offered = plays_in(s.state(), P1, &crafted.id);
         assert!(!offered.is_empty());
         let first_picks: IndexSet<String> = offered.iter().map(first_pick_key).collect();
         assert!(

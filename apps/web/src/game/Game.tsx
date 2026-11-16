@@ -61,7 +61,7 @@ import {
   type AnimationQueue,
   type SetPieceClaimer,
 } from "./animations.ts";
-import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type AnimatingMap, type ClickTarget, type Highlight, type HeroAside } from "./contract.ts";
+import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type AnimatingMap, type ClickTarget, type Highlight, type HeroAside, type SeatPortraits } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
 import { cardMotionLevel } from "./cardMotion.ts";
 import { aimDeal, clearDeal, planOpening, type OpeningPlan } from "./opening.ts";
@@ -211,7 +211,7 @@ export type GameProps = {
   heroAside?: HeroAside;
   /** A route warning mounted in the board rail. */
   boardNotice?: ReactNode;
-  /** The route's emote session (R643–R644). Absent, the heroes draw default portraits and open no menus. */
+  /** The route's emote session (R643–R644). Absent, the heroes draw `portraits` or the default and open no menus. */
   emotes?: GameEmotes;
   /** R2990004: the watchers' emotes, a networked route's `useSideline`. Absent, no sideline strip. */
   sideline?: GameSideline;
@@ -223,6 +223,8 @@ export type GameProps = {
   deckCosmetics?: DeckCosmetics | null;
   /** R1834004: both seats' frozen loadouts (R1834002): a seat not wearing the device's picks wears its own. */
   loadouts?: SeatLoadouts | null;
+  /** R3976000: each seat's portrait on a board with no emote session (a replay's), drawn read-only; null or absent, the default. */
+  portraits?: SeatPortraits | null;
   /** R738: `emit` sends this seat's aim as it changes; `opponent` is the opponent's as last relayed. */
   aim?: GameAim;
   /** R2739001: `emit` sends the option of this seat's card picker under its pointer; `opponent` is theirs as last relayed. */
@@ -324,6 +326,7 @@ export default function Game({
   wearCosmetics = false,
   deckCosmetics = null,
   loadouts = null,
+  portraits = null,
   aim,
   choiceHover,
   replay = false,
@@ -1050,6 +1053,7 @@ export default function Game({
         onClick={handleClick}
         onControl={handleControl}
         emotes={heroEmotes}
+        portraits={portraits}
       />
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}

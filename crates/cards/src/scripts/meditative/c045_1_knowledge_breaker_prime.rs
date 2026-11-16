@@ -234,11 +234,10 @@ mod tests {
                     .iter()
                     .any(|keyword| keyword.kind() == KeywordKind::Cloaked)
             );
-            let set_plays: Vec<_> = legal_actions(s.state(), P1)
+            let set_plays: Vec<_> = s
+                .plays_of(&unit)
                 .into_iter()
-                .filter(|action| {
-                    matches!(action, ActionBody::Play { instance_id, face_down: Some(_), .. } if instance_id == &unit.id)
-                })
+                .filter(|action| matches!(action, ActionBody::Play { face_down: Some(_), .. }))
                 .collect();
             assert!(!set_plays.is_empty());
             assert!(

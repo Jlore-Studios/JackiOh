@@ -187,6 +187,8 @@ pub struct CastOptions {
     pub afterward: Option<CastAfterward>,
     /// MD-B22, R946: an aimed cast takes a named legal pick for its first target declaration.
     pub aim_at: Option<String>,
+    /// R3920001: a cast from the deck, a cast and no play (`deck_cast.rs`).
+    pub from_deck: Option<bool>,
 }
 
 /// R70: "a cast is free and counts as a play for every rule that counts or reacts to plays, with cost

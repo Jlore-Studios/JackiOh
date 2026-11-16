@@ -10,7 +10,7 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::blueprint::*;
 use super::fixtures::harness::{act, act_result, put, run_on_sink as run, sink_for, slot};
-use super::fixtures::play_pipeline_b::{plays_of, round_trip};
+use super::fixtures::play_pipeline_b::round_trip;
 use super::fixtures::prompt_harness::board;
 
 fn give_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
@@ -72,7 +72,7 @@ mod r1281_stack_base {
         let unit = give_hand(&mut state, "bp-cheap-unit", P1);
         state.players.p1.mana.current = 5;
 
-        let plays = plays_of(&state, &unit.id, P1);
+        let plays = plays_in(&state, P1, &unit.id);
         assert!(plays.iter().any(
             |p| matches!(p, ActionBody::Play { zone: Some(z), .. } if z.row == Row::Units && z.lane == 1)
         ));
@@ -98,7 +98,7 @@ mod r1281_stack_base {
         let unit = give_hand(&mut state, "bp-cheap-unit", P1);
         state.players.p1.mana.current = 5;
 
-        assert!(!plays_of(&state, &unit.id, P1).iter().any(
+        assert!(!plays_in(&state, P1, &unit.id).iter().any(
             |p| matches!(p, ActionBody::Play { zone: Some(z), .. } if z.row == Row::Units && z.lane == 1)
         ));
 
@@ -363,7 +363,7 @@ mod r1282_wide_tribute {
         let church = give_hand(&mut state, "bp-church", P1);
         state.players.p1.mana.current = 10;
 
-        let plays = plays_of(&state, &church.id, P1);
+        let plays = plays_in(&state, P1, &church.id);
         assert_eq!(plays.len(), 19_380);
     }
 }

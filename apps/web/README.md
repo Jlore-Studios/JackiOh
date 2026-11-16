@@ -626,6 +626,9 @@ practice result dialog and an online match's result panel offer "Watch the repla
 last turn" (the last step, its turn's GIF already being made). A practice result reads the kept game from
 the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
 match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
+Each source answers `portraits()` (R3976000: an online one from its pages, a practice one from its summary, an
+opened file from the file), which the board draws read-only (`Game`'s `portraits`, no emote menu) and the GIF
+draws too; a source with none draws the default.
 The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
@@ -720,6 +723,10 @@ inbox/                  R3729002: the bell (`InboxBell`, in the top bar's end gr
                         the tab), daily games on the player's move, daily challenges, friend requests and
                         shared replays, in `order.ts`'s order, each answered inline; `store.ts` reads the
                         daily list, friends and shared replays beside the social read, no new server state
+net/clientErrors.ts     #3619: a crash in this browser told to the owners: the route boundary's error, an
+                        uncaught error and an unhandled rejection each POST one small report (message,
+                        trimmed stack, route pattern, catalog version) to /api/client-errors; never state,
+                        a query or an id; lazy-chunk failures and stacks with no file of ours are left out
 net/roomLink.ts         R767, R3730006: the room link (/play?room=…&mode=…) and the lobby link
                         (/lobby/:code): built for the share sheet or the clipboard, read once off the
                         address bar into this tab, through a sign-in, for the lobby screen
@@ -1091,7 +1098,10 @@ routes (net/navigate.ts paths, public/_redirects, behind the gate as /together i
                          daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
                          and Watch the replay (the server's replay of it, none for a voided game); read
                          again the same way until the game is over, so an end on the opponent's move
-                         shows (R3840000)
+                         shows (R3840000); a finished game whose moves the retention purge took (its
+                         read says `expired`) shows its result, both heroes' life, when it ended, a line
+                         that its moves are no longer kept and Back to daily games, with no replay or
+                         rematch (R3934000)
 net/daily.ts             fetch wrappers for every daily route, typed
 daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
                          the mode, its deck or lean, and the time per move on the segmented toggle; as a

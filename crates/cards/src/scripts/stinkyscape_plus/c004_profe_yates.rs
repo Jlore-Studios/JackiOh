@@ -350,12 +350,9 @@ mod tests {
                 .id;
             let offered: Vec<Vec<String>> = policy_actions(s.state(), P1, Default::default())
                 .into_iter()
+                .filter(|action| is_play_of(action, &yates))
                 .filter_map(|action| match action {
-                    ActionBody::Play {
-                        instance_id,
-                        modes: Some(modes),
-                        ..
-                    } if instance_id == yates => Some(modes),
+                    ActionBody::Play { modes: Some(modes), .. } => Some(modes),
                     _ => None,
                 })
                 .collect();

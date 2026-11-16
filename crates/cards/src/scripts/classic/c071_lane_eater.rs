@@ -264,15 +264,11 @@ mod tests {
             let eater = s.card(LANE_EATER).id.clone();
             s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": eater }] }));
             assert!(s.unit(P1, 2).is_none());
-            let vanilla = s.card(VANILLA).clone();
-            let zones: Vec<i32> = legal_actions(s.state(), P1)
+            let zones: Vec<i32> = s
+                .plays_of(VANILLA)
                 .into_iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play {
-                        instance_id,
-                        zone: Some(zone),
-                        ..
-                    } if instance_id == vanilla.id => Some(zone.lane),
+                    ActionBody::Play { zone: Some(zone), .. } => Some(zone.lane),
                     _ => None,
                 })
                 .collect();

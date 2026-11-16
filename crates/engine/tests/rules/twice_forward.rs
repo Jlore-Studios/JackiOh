@@ -105,7 +105,7 @@ fn first_fused_ids(events: &[GameEvent]) -> Option<Vec<String>> {
 }
 
 /// The `cardPlayed` events as `(defId, instanceId)` pairs.
-fn plays_of(events: &[GameEvent]) -> Vec<(String, String)> {
+fn plays_logged(events: &[GameEvent]) -> Vec<(String, String)> {
     events_of_type(events, GameEventType::CardPlayed)
         .iter()
         .filter_map(|event| match event {
@@ -223,7 +223,7 @@ mod c_plus_c74s_field_trap_r425 {
             Some((Row::Backrow, 1)),
         );
         // R227: the trap was set under a fresh id, the one its play announced; it is still there.
-        let set_id = plays_of(&second.events).first().map(|(_, id)| id.clone());
+        let set_id = plays_logged(&second.events).first().map(|(_, id)| id.clone());
         assert_eq!(
             second.state.players.p2.backrow[0]
                 .as_ref()
@@ -279,7 +279,7 @@ mod c_plus_c74s_field_trap_r425 {
      {
         let OpponentsTurn { state, trap_id } = opponents_turn("nested", false);
         let first = play(state, PlayerId::P2, &caster().id, None);
-        let played = plays_of(&first.events);
+        let played = plays_logged(&first.events);
         assert_eq!(
             played
                 .iter()

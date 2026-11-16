@@ -106,7 +106,7 @@ mod tests {
             .collect()
     }
 
-    fn instance_ids(s: &Scenario, def_ids: &[&str]) -> Vec<String> {
+    fn ids_of_defs(s: &Scenario, def_ids: &[&str]) -> Vec<String> {
         def_ids.iter().map(|def_id| s.card(*def_id).id.clone()).collect()
     }
 
@@ -132,7 +132,7 @@ mod tests {
                     .as_array()
                     .map(|options| options.iter().map(|option| option["selection"].clone()).collect())
                     .unwrap_or_default();
-                let expected: Vec<Value> = instance_ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR])
+                let expected: Vec<Value> = ids_of_defs(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR])
                     .into_iter()
                     .map(|instance_id| json!({ "pick": "instance", "instanceId": instance_id }))
                     .collect();
@@ -147,7 +147,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(TYRANT, json!({}));
-                let spells = instance_ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR]);
+                let spells = ids_of_defs(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR]);
                 let answers: Vec<Value> = legal_actions(s.state(), P1)
                     .iter()
                     .map(js)
@@ -165,9 +165,9 @@ mod tests {
                         );
                     }
                 }
-                let vanilla = instance_ids(&s, &[VANILLA]);
-                let well = instance_ids(&s, &[MANA_WELL]);
-                let four = instance_ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR]);
+                let vanilla = ids_of_defs(&s, &[VANILLA]);
+                let well = ids_of_defs(&s, &[MANA_WELL]);
+                let four = ids_of_defs(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR]);
                 s.expect_refused(|s| s.answer(json!(vanilla)));
                 s.expect_refused(|s| s.answer(json!(well)));
                 s.expect_refused(|s| s.answer(json!(four)));
@@ -181,7 +181,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(TYRANT, json!({}));
-                let picks = instance_ids(&s, &[STOCKPILE, FRIENDS]);
+                let picks = ids_of_defs(&s, &[STOCKPILE, FRIENDS]);
                 s.answer(json!(picks));
                 assert_eq!(played(&s), vec![TYRANT, STOCKPILE, FRIENDS]);
                 assert_eq!(cards_played_this_turn(s.state(), P1), 3);
@@ -203,7 +203,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(TYRANT, json!({}));
-                let picks = instance_ids(&s, &[FRIENDS, SPEK]);
+                let picks = ids_of_defs(&s, &[FRIENDS, SPEK]);
                 s.answer(json!(picks));
                 assert_eq!(played(&s), vec![TYRANT, SPEK, FRIENDS]);
             }
@@ -222,7 +222,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": [STOCKPILE, VANILLA], "library": DECK }, "p2": { "hand": [FILLER] } }));
                 s.play(TYRANT, json!({}));
                 assert_eq!(js(&s.state().pending)["max"], 1);
-                let picks = instance_ids(&s, &[STOCKPILE]);
+                let picks = ids_of_defs(&s, &[STOCKPILE]);
                 s.answer(json!(picks));
                 s.expect_in_zone(STOCKPILE, "exile");
             }
@@ -243,7 +243,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [MENACE] },
                 }));
                 s.play(TYRANT, json!({}));
-                let picks = instance_ids(&s, &[LUNAR, STOCKPILE]);
+                let picks = ids_of_defs(&s, &[LUNAR, STOCKPILE]);
                 s.answer(json!(picks));
                 assert_eq!(js(&s.state().pending)["playerId"], "p1");
                 let menace = s.card(MENACE).id.clone();
@@ -260,7 +260,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [MENACE] },
                 }));
                 s.play(TYRANT, json!({}));
-                let picks = instance_ids(&s, &[LUNAR, STOCKPILE]);
+                let picks = ids_of_defs(&s, &[LUNAR, STOCKPILE]);
                 s.answer(json!(picks));
                 let pending = s.state().pending.clone();
                 assert!(pending.is_some());
@@ -291,7 +291,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": [PILE_ON], "library": full }, "p2": { "hand": [FILLER] } }));
                 s.expect_in_zone(PILE_ON, "graveyard");
                 s.play(TYRANT, json!({}));
-                let picks = instance_ids(&s, &[PILE_ON]);
+                let picks = ids_of_defs(&s, &[PILE_ON]);
                 s.answer(json!(picks));
                 assert_eq!(played(&s), vec![TYRANT, PILE_ON]);
                 assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(VANILLA.to_string()));
