@@ -841,6 +841,12 @@
       "lines": [
         "/harness handoff human"
       ]
+    },
+    "c:6909387232": {
+      "at": "2026-11-16T06:41:08Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
