@@ -266,59 +266,60 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.12c",
         c075_infinite_reserves::script_v0_4_12c,
     ),
-    (c048_tranquility::ID, "v0.5.1", c048_tranquility::script_v0_5_2),
+    // #2179 (R1161, R920, R580, R2179003): kept under v0.5.2, the newest shipped version that ran them.
+    (c048_tranquility::ID, "v0.5.2", c048_tranquility::script_v0_5_2),
     (
         c045_knowledge_breaker::ID,
-        "v0.5.1",
+        "v0.5.2",
         c045_knowledge_breaker::script_v0_5_2,
     ),
     (
         c030_felinor_fuser::ID,
-        "v0.5.1",
+        "v0.5.2",
         c030_felinor_fuser::script_v0_5_2,
     ),
     (
         c083_transmogulate::ID,
-        "v0.5.1",
+        "v0.5.2",
         c083_transmogulate::script_v0_5_2,
     ),
-    (c023_devils_pact::ID, "v0.5.1", c023_devils_pact::script_v0_5_2),
-    (c085_playtester::ID, "v0.5.1", c085_playtester::script_v0_5_2),
+    (c023_devils_pact::ID, "v0.5.2", c023_devils_pact::script_v0_5_2),
+    (c085_playtester::ID, "v0.5.2", c085_playtester::script_v0_5_2),
     (
         c102_catboy_maid_ssr::ID,
-        "v0.5.1",
+        "v0.5.2",
         c102_catboy_maid_ssr::script_v0_5_2,
     ),
     (
         c009_magic_amplifier::ID,
-        "v0.5.1",
+        "v0.5.2",
         c009_magic_amplifier::script_v0_5_2,
     ),
-    (c035_prep::ID, "v0.5.1", c035_prep::script_v0_5_2),
-    (c011_anime_armor::ID, "v0.5.1", c011_anime_armor::script_v0_5_2),
-    (c023_dropshipping::ID, "v0.5.1", c023_dropshipping::script_v0_5_2),
+    (c035_prep::ID, "v0.5.2", c035_prep::script_v0_5_2),
+    (c011_anime_armor::ID, "v0.5.2", c011_anime_armor::script_v0_5_2),
+    (c023_dropshipping::ID, "v0.5.2", c023_dropshipping::script_v0_5_2),
     (
         c020_the_power_to_punish::ID,
-        "v0.5.1",
+        "v0.5.2",
         c020_the_power_to_punish::script_v0_5_2,
     ),
     (
         c032_spiritually_zhongguo::ID,
-        "v0.5.1",
+        "v0.5.2",
         c032_spiritually_zhongguo::script_v0_5_2,
     ),
     (
         c081_radiant_saintess::ID,
-        "v0.5.1",
+        "v0.5.2",
         c081_radiant_saintess::script_v0_5_2,
     ),
-    (c071_book_of_buff::ID, "v0.5.1", c071_book_of_buff::script_v0_5_2),
+    (c071_book_of_buff::ID, "v0.5.2", c071_book_of_buff::script_v0_5_2),
     (
         c078_claudes_datacenter::ID,
-        "v0.5.1",
+        "v0.5.2",
         c078_claudes_datacenter::script_v0_5_2,
     ),
-    (c042_kys_test::ID, "v0.5.1", c042_kys_test::script_v0_5_2),
+    (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
     (
         c049_3_ai_girlfriend::ID,
         "v0.5.7",
@@ -670,20 +671,20 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c047_taotie::ID, "v0.5.11r", c047_taotie::script_v0_5_11o),
     (
         c065_keymaster_keenus::ID,
-        "v0.6.0b",
-        c065_keymaster_keenus::script_v0_6_0b,
+        "v0.6.0c",
+        c065_keymaster_keenus::script_v0_6_0c,
     ),
     (
         c111_shockwave447::ID,
-        "v0.6.0b",
-        c111_shockwave447::script_v0_6_0b,
+        "v0.6.0c",
+        c111_shockwave447::script_v0_6_0c,
     ),
     (
         t_drone_interceptor::ID,
-        "v0.6.0b",
-        t_drone_interceptor::script_v0_6_0b,
+        "v0.6.0c",
+        t_drone_interceptor::script_v0_6_0c,
     ),
-    (t_drone_corvette::ID, "v0.6.0b", t_drone_corvette::script_v0_6_0b),
+    (t_drone_corvette::ID, "v0.6.0c", t_drone_corvette::script_v0_6_0c),
     (
         c109_xxfreshjack::ID,
         "v0.5.12ap",
@@ -713,76 +714,77 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
     ),
-    // #3802: Jungle Loser's roll, through v0.6.0g, the newest shipped version that ran it.
+    // #3802: Jungle Loser's roll, through v0.6.1b, the newest shipped version that ran it.
     (
         c019_2_jungle_loser::ID,
-        "v0.6.0g",
-        c019_2_jungle_loser::script_v0_6_0g,
+        "v0.6.1b",
+        c019_2_jungle_loser::script_v0_6_1b,
     ),
+    // R3806000: Paranoia before its set Spells resolved as they were set, through v0.6.0g.
     (c099_paranoia::ID, "v0.6.0g", c099_paranoia::script_v0_6_0g),
     // #3837 (R3837000, R3837003, R3837005): the last scripts before Stinkyscape Balance Changes V.
-    (c052_silly_silas::ID, "v0.6.1b", c052_silly_silas::script_v0_6_1b),
+    (c052_silly_silas::ID, "v0.6.2c", c052_silly_silas::script_v0_6_2c),
     (
         c029_portal_to_the_past::ID,
-        "v0.6.1b",
-        c029_portal_to_the_past::script_v0_6_1b,
+        "v0.6.2c",
+        c029_portal_to_the_past::script_v0_6_2c,
     ),
     (
         c044_cn_jade_well::ID,
-        "v0.6.1b",
-        c044_cn_jade_well::script_v0_6_1b,
+        "v0.6.2c",
+        c044_cn_jade_well::script_v0_6_2c,
     ),
     (
         c087_tatches_the_totem::ID,
-        "v0.6.1b",
-        c087_tatches_the_totem::script_v0_6_1b,
+        "v0.6.2c",
+        c087_tatches_the_totem::script_v0_6_2c,
     ),
     (
         c035_corpse_recycler::ID,
-        "v0.6.1b",
-        c035_corpse_recycler::script_v0_6_1b,
+        "v0.6.2c",
+        c035_corpse_recycler::script_v0_6_2c,
     ),
     (
         c096_ocean_tsunami::ID,
-        "v0.6.1b",
-        c096_ocean_tsunami::script_v0_6_1b,
+        "v0.6.2c",
+        c096_ocean_tsunami::script_v0_6_2c,
     ),
-    // Issue #3800 (R3800003, S+ #104): the last scripts before its fix, kept under v0.6.2b, the newest
+    // Issue #3800 (R3800003, S+ #104): the last scripts before its fix, kept under v0.6.3, the newest
     // shipped version that ran them.
-    (c037_wardrum::ID, "v0.6.2b", c037_wardrum::script_v0_6_2b),
+    (c037_wardrum::ID, "v0.6.3", c037_wardrum::script_v0_6_3),
     (
         c104_tireless_cultivation::ID,
-        "v0.6.2b",
-        c104_tireless_cultivation::script_v0_6_2b,
+        "v0.6.3",
+        c104_tireless_cultivation::script_v0_6_3,
     ),
     // Issue #3800 (R3800004): Warp Disruptor's and Warp Disruptor II's answer before its once-a-turn end.
     (
         c023_warp_disruptor::ID,
-        "v0.6.2b",
-        c023_warp_disruptor::script_v0_6_2b,
+        "v0.6.3",
+        c023_warp_disruptor::script_v0_6_3,
     ),
     (
         c024_warp_disruptor_ii::ID,
-        "v0.6.2b",
-        c024_warp_disruptor_ii::script_v0_6_2b,
+        "v0.6.3",
+        c024_warp_disruptor_ii::script_v0_6_3,
     ),
     // #3869 (R3869000, R3869005): the Terminus cards before the pool read the tag, and CN Tech and NA
     // Tech before their fallbacks were random.
     (
         c004_olivian_expanse::ID,
-        "v0.6.2b",
-        c004_olivian_expanse::script_v0_6_2b,
+        "v0.6.3b",
+        c004_olivian_expanse::script_v0_6_3b,
     ),
     (
         c154_dice_of_doom::ID,
-        "v0.6.2b",
-        c154_dice_of_doom::script_v0_6_2b,
+        "v0.6.3b",
+        c154_dice_of_doom::script_v0_6_3b,
     ),
-    (c050_cn_tech::ID, "v0.6.2b", c050_cn_tech::script_v0_6_2b),
-    (c002_na_tech::ID, "v0.6.2b", c002_na_tech::script_v0_6_2b),
+    (c050_cn_tech::ID, "v0.6.3b", c050_cn_tech::script_v0_6_3b),
+    (c002_na_tech::ID, "v0.6.3b", c002_na_tech::script_v0_6_3b),
     // #3835 (R1440): Mid Loser's coin before it read its own Lucky off the field, in a cast's
     // resolving zone too.
-    (c019_3_mid_loser::ID, "v0.6.2b", c019_3_mid_loser::script_v0_6_2b),
+    (c019_3_mid_loser::ID, "v0.6.4", c019_3_mid_loser::script_v0_6_4),
     // #3951 (R3951000, R3951001, R3951002): the last scripts before Stinkyscape+ Balance Changes I.
     (
         c052_legacy_snom_bunny_mind_control::ID,
@@ -1420,12 +1422,25 @@ mod tests {
     fn r767000_jungle_loser_roll_is_kept_through_the_newest_version_that_ran_it() {
         crate::register_all();
         let id = c019_2_jungle_loser::ID;
-        for version in ["v0.5.12ap", "v0.6.0b", "v0.6.0d", "v0.6.0e", "v0.6.0f", "v0.6.0g"] {
+        for version in [
+            "v0.5.12ap",
+            "v0.6.0b",
+            "v0.6.0d",
+            "v0.6.0e",
+            "v0.6.0f",
+            "v0.6.0g",
+            "v0.6.1",
+            "v0.6.1b",
+        ] {
             assert!(
                 covering(&HISTORY.order, KEPT_SCRIPTS, version, id).is_some(),
                 "{version} ran the roll: its replays need the kept script"
             );
         }
+        assert!(
+            covering(&HISTORY.order, KEPT_SCRIPTS, "v0.6.2", id).is_none(),
+            "v0.6.2 ran #3810's script"
+        );
     }
 
     /// #3951 merged after `patches ship` named v0.6.4c and shipped as v0.6.4d, so v0.6.4c is the newest
@@ -1461,6 +1476,130 @@ mod tests {
             );
             assert_ne!(kept_at("v0.6.4d"), Some("v0.6.4c"), "{id}: v0.6.4d ran #3951's");
         }
+    }
+
+    /// R767000: each of `ids` folds every version of `ran_it` (the last its key) under its row kept at the
+    /// last of them, and `after`, the first version to run its replacement, under no such row.
+    fn assert_kept_through(ids: &[&str], ran_it: &[&str], after: &str) {
+        crate::register_all();
+        let key = *ran_it.last().expect("a version");
+        for id in ids {
+            let kept_at = |version: &str| {
+                covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1)
+            };
+            for version in ran_it {
+                assert_eq!(
+                    kept_at(version),
+                    Some(key),
+                    "{id}: {version} ran the script kept at {key}"
+                );
+            }
+            assert_ne!(kept_at(after), Some(key), "{id}: {after} ran its replacement");
+        }
+    }
+
+    /// Issue #4086: each block below was once keyed at a version older than the newest shipped as it
+    /// merged (a `patches ship` landed ahead of it), so the versions between ran the script it keeps and
+    /// folded under its replacement. #3778 shipped in v0.6.0d.
+    #[test]
+    fn r767000_issue_3778_scripts_are_kept_through_v0_6_0c_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c065_keymaster_keenus::ID,
+                c111_shockwave447::ID,
+                t_drone_interceptor::ID,
+                t_drone_corvette::ID,
+            ],
+            &["v0.6.0b", "v0.6.0c"],
+            "v0.6.0d",
+        );
+    }
+
+    /// Issue #4086: #3837 shipped in v0.6.3, and Tatches the Totem's #3951 row still follows its own.
+    #[test]
+    fn r767000_issue_3837_scripts_are_kept_through_v0_6_2c_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c052_silly_silas::ID,
+                c029_portal_to_the_past::ID,
+                c044_cn_jade_well::ID,
+                c087_tatches_the_totem::ID,
+                c035_corpse_recycler::ID,
+                c096_ocean_tsunami::ID,
+            ],
+            &["v0.6.1b", "v0.6.2", "v0.6.2b", "v0.6.2c"],
+            "v0.6.3",
+        );
+        let tatches = covering_at(&HISTORY.order, KEPT_SCRIPTS, "v0.6.3", c087_tatches_the_totem::ID);
+        assert_eq!(tatches.map(|at| KEPT_SCRIPTS[at].1), Some("v0.6.4c"));
+    }
+
+    /// Issue #4086: issue #3800's fix shipped in v0.6.3b.
+    #[test]
+    fn r767000_issue_3800_scripts_are_kept_through_v0_6_3_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c037_wardrum::ID,
+                c104_tireless_cultivation::ID,
+                c023_warp_disruptor::ID,
+                c024_warp_disruptor_ii::ID,
+            ],
+            &["v0.6.2b", "v0.6.2c", "v0.6.3"],
+            "v0.6.3b",
+        );
+    }
+
+    /// Issue #4086: #3869 shipped in v0.6.3c.
+    #[test]
+    fn r767000_issue_3869_scripts_are_kept_through_v0_6_3b_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c004_olivian_expanse::ID,
+                c154_dice_of_doom::ID,
+                c050_cn_tech::ID,
+                c002_na_tech::ID,
+            ],
+            &["v0.6.2b", "v0.6.2c", "v0.6.3", "v0.6.3b"],
+            "v0.6.3c",
+        );
+    }
+
+    /// Issue #4086: #3835's coin shipped in v0.6.4b.
+    #[test]
+    fn r767000_mid_loser_coin_is_kept_through_v0_6_4_the_newest_version_that_ran_it() {
+        assert_kept_through(
+            &[c019_3_mid_loser::ID],
+            &["v0.6.2b", "v0.6.2c", "v0.6.3", "v0.6.3b", "v0.6.3c", "v0.6.4"],
+            "v0.6.4b",
+        );
+    }
+
+    /// Issue #4086: #2179's seventeen shipped in v0.5.3.
+    #[test]
+    fn r767000_issue_2179_scripts_are_kept_through_v0_5_2_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c048_tranquility::ID,
+                c045_knowledge_breaker::ID,
+                c030_felinor_fuser::ID,
+                c083_transmogulate::ID,
+                c023_devils_pact::ID,
+                c085_playtester::ID,
+                c102_catboy_maid_ssr::ID,
+                c009_magic_amplifier::ID,
+                c035_prep::ID,
+                c011_anime_armor::ID,
+                c023_dropshipping::ID,
+                c020_the_power_to_punish::ID,
+                c032_spiritually_zhongguo::ID,
+                c081_radiant_saintess::ID,
+                c071_book_of_buff::ID,
+                c078_claudes_datacenter::ID,
+                c042_kys_test::ID,
+            ],
+            &["v0.5.1", "v0.5.1b", "v0.5.2"],
+            "v0.5.3",
+        );
     }
 
     #[test]
