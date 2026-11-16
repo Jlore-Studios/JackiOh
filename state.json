@@ -36136,16 +36136,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-16T00:53:54Z,claude-3,stream,call,43782761803,0,2026-11-16T05:50:00Z,,,allowed,,,",
-      "2026-11-16T00:54:09Z,claude-3,stream,call,43782761803,1,2026-11-16T05:50:00Z,,,allowed,,,",
-      "2026-11-16T00:54:24Z,claude-3,stream,call,43782761803,2,2026-11-16T05:50:00Z,,,allowed,,,",
-      "2026-11-16T01:02:26Z,claude-3,stream,call,43782761803,3,2026-11-16T05:50:00Z,,,allowed,,,"
-    ],
-    "runs": [
-      "2026-11-16T01:02:29Z,43782761803,claude-3,opus,review,4031,hard,approved,,9.3,38,14156,1672738,1.3146,0,3,,,77.6,,none,,1"
-    ]
-  },
   "version": 1
 }
