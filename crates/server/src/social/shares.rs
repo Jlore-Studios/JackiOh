@@ -16,6 +16,8 @@ use crate::api::http::{ApiError, ApiResult, Req, log_info, now_ms, ok_of, str};
 use crate::app::App;
 use crate::config::SHARED_REPLAYS_LIST_MAX;
 use crate::db::store::{MatchPhase, ReplayShare, StoreError, Tx};
+use crate::notifications::store::NotificationKind;
+use crate::notifications::{Notice, notify};
 use crate::social::friends::are_friends;
 use crate::social::{PlayerRef, iso, no_content, not_found, param};
 
@@ -75,12 +77,23 @@ pub async fn share_replay(app: &Arc<App>, req: Req) -> ApiResult {
     tx.shares_put(&ReplayShare {
         match_id: match_id.clone(),
         sharer: profile.id.clone(),
-        friend: friend_id,
+        friend: friend_id.clone(),
         created_at: now_ms(),
     })
     .await?;
     tx.commit().await?;
     log_info("replay.shared", json!({ "matchId": match_id }));
+    // R4039000: the friend is told, the shared list's link the subject.
+    notify(
+        app,
+        vec![Notice::new(
+            NotificationKind::ReplayShared,
+            &friend_id,
+            &profile.id,
+            &match_id,
+        )],
+    )
+    .await;
     Ok(no_content())
 }
 

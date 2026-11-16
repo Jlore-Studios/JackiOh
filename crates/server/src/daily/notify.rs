@@ -13,8 +13,11 @@
 //! - After a move the decision runs on one task (`NotifyQueue`), once the move has been answered: a slow or
 //!   failing mail or push service delays only the notifications behind it, never a player's move.
 //! - The sweep (`POST /daily-sweep`, the Worker's hourly cron, and `run_sweeper` while the server is
-//!   awake) lapses old invites, ends every game whose move ran out (R3727000), and decides for every
-//!   player a game waits on.
+//!   awake) lapses old invites, ends every game whose move ran out (R3727000), decides for every
+//!   player a game waits on, and deletes the notification feed's rows past `NOTIFICATIONS_KEEP_DAYS`
+//!   (R4039000).
+//! - Email and Web Push are extras: the in-game feed (`crate::notifications`) is the channel that is
+//!   always on, and `GET /api/daily/settings`'s `emailAvailable` says whether email is sent at all.
 //! - `GET`/`PUT /api/daily/settings`, `POST`/`DELETE /api/daily/push`, and
 //!   `GET`/`POST /api/daily/unsubscribe?token=`.
 
@@ -36,8 +39,9 @@ use crate::api::http::{ApiError, ApiResult, Req, bad_request, bool as body_bool,
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{
-    DAILY_NOTIFY_QUEUE, DAILY_PLAYER_EMAILS_PER_DAY, DAILY_SWEEP_MINUTES, PLAYER_EMAIL_FROM,
-    PLAYER_EMAIL_TIMEOUT_MS, PUSH_FIELD_MAX_LENGTH, PUSH_MAX_DEVICES,
+    DAILY_NOTIFY_QUEUE, DAILY_PLAYER_EMAILS_PER_DAY, DAILY_SWEEP_MINUTES, MS_PER_DAY,
+    NOTIFICATIONS_KEEP_DAYS, PLAYER_EMAIL_FROM, PLAYER_EMAIL_TIMEOUT_MS, PUSH_FIELD_MAX_LENGTH,
+    PUSH_MAX_DEVICES,
 };
 use crate::daily::games::{load, settle, waiting_of};
 use crate::daily::webpush::{self, PushOutcome, Subscription};
@@ -405,7 +409,14 @@ pub async fn sweep(app: &Arc<App>, now: i64) -> Result<Swept, ApiError> {
     let mut tx = app.db.begin(None).await?;
     let lapsed = tx.daily_invites_expire(now).await?;
     let due = tx.daily_games_due(now).await?;
+    // R4039000: the notification feed keeps no row past NOTIFICATIONS_KEEP_DAYS, read or not.
+    let purged = tx
+        .notifications_purge(now - NOTIFICATIONS_KEEP_DAYS * MS_PER_DAY)
+        .await?;
     tx.commit().await?;
+    if purged > 0 {
+        tracing::info!(event = "notifications.purged", rows = purged);
+    }
     swept.expired = lapsed.len();
     for invite in &lapsed {
         let mut told = vec![invite.from_profile.as_str()];
@@ -495,6 +506,9 @@ async fn settings_json(app: &App, profile_id: &str, email: &str) -> Result<Value
         // The browser subscribes with it; null while the server sends no push.
         "vapidPublicKey": app.daily.push.as_ref().map(|keys| keys.public_key()),
         "pushDevices": devices,
+        // R4039000: whether the server sends player email at all (PLAYER_RESEND_API_KEY); without it
+        // the settings offer no email toggle.
+        "emailAvailable": app.daily.mailer.is_some(),
     }))
 }
 

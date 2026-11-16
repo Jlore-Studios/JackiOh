@@ -138,7 +138,14 @@ mod r3214000_signing_in {
         let first = next_social(&client, 0).await;
         assert_eq!(
             first,
-            json!({ "type": "social", "incoming": [], "outgoing": [], "unread": {}, "dailyWaiting": 0 })
+            json!({
+                "type": "social",
+                "incoming": [],
+                "outgoing": [],
+                "unread": {},
+                "dailyWaiting": 0,
+                "notificationsUnread": 0,
+            })
         );
         assert!(client.close_code().is_none());
         for frame in client.frames() {
@@ -683,5 +690,72 @@ mod r3730000_lobbies {
         );
         assert_told_nothing(&ana_ws, from_ana, "Ana").await;
         assert_told_nothing(&cy_ws, from_cy, "Cy").await;
+    }
+}
+
+mod r4039000_frames {
+    //! R4039000: a row of an account's notification feed reaches every one of its sockets as a
+    //! `notification` frame, with its social read after it, and no other account's.
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r4039000_a_notification_reaches_every_socket_of_its_account_alone() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        let cy = account(&app, 3, "Cy").await;
+        let served = serve(&app);
+        let (bob_one, bob_two, ana_ws, cy_ws) = (
+            connected(&served, &bob).await,
+            connected(&served, &bob).await,
+            connected(&served, &ana).await,
+            connected(&served, &cy).await,
+        );
+        let from: Vec<usize> = [&bob_one, &bob_two, &ana_ws, &cy_ws]
+            .iter()
+            .map(|client| client.received())
+            .collect();
+
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/friends/requests",
+            &ana.token,
+            json!({ "username": bob.name }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let request_id = body["requestId"].as_str().expect("a request id").to_string();
+        for (client, at) in [(&bob_one, from[0]), (&bob_two, from[1])] {
+            let (index, _, frame) = client
+                .wait_for(at, PROMPTLY, |frame| frame["type"] == "notification")
+                .await
+                .unwrap_or_else(|| panic!("Bob: no notification frame: {:?}", client.frames()));
+            assert_eq!(
+                frame,
+                json!({
+                    "type": "notification",
+                    "notification": {
+                        "id": frame["notification"]["id"],
+                        "kind": "friendRequest",
+                        "actor": { "profileId": ana.id, "username": ana.name },
+                        "subject": request_id,
+                        "payload": {},
+                        "createdAt": frame["notification"]["createdAt"],
+                        "read": false,
+                    },
+                })
+            );
+            assert_eq!(next_social(client, index).await["notificationsUnread"], 1);
+        }
+        settle().await;
+        for (client, at, who) in [(&ana_ws, from[2], "Ana"), (&cy_ws, from[3], "Cy")] {
+            assert!(
+                client.of_type_since(at, "notification").is_empty(),
+                "{who} was told {:?}",
+                client.frames()
+            );
+        }
+        assert_told_nothing(&cy_ws, from[3], "Cy").await;
     }
 }

@@ -98,6 +98,8 @@ export type DailySettings = {
   /** The VAPID public key a push subscription is made with; null when the server sends no push. */
   vapidPublicKey: string | null;
   pushDevices: number;
+  /** R4039000: the server can send email at all; false when it has no mailer (absent from an older server). */
+  emailAvailable?: boolean;
 };
 
 /** What a daily game is made with: the mode and its pick (a saved deck, or a lean for All random), and the time. */

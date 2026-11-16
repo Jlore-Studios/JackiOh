@@ -13891,3 +13891,293 @@ mod daily {
         s913_daily_email_claims_stop_at_each_days_cap,
     );
 }
+
+// The in-game notification feed (SPEC §9.4, §9.13; migration 0093; R4039000; issue #4039)
+
+mod r4039000_notifications {
+    use super::*;
+    use jackioh_server::notifications::store::{NewNotification, NotificationKind, NotificationRow};
+
+    fn notice(
+        to: &str,
+        kind: NotificationKind,
+        actor: Option<&str>,
+        subject: &str,
+        at: i64,
+    ) -> NewNotification {
+        NewNotification {
+            profile_id: to.to_string(),
+            kind,
+            actor_id: actor.map(str::to_string),
+            subject: Some(subject.to_string()),
+            payload: json!({ "outcome": "win", "reason": "concede" }),
+            created_at: at,
+        }
+    }
+
+    fn subjects(rows: &[NotificationRow]) -> Vec<String> {
+        rows.iter()
+            .map(|row| row.subject.clone().unwrap_or_default())
+            .collect()
+    }
+
+    /// R4039000: a row is written as asked and read back whole; a new row replaces its account's
+    /// unread row of the same kind, actor and subject (never a read one, nor another account's or
+    /// actor's), and past `keep` an account loses only its own oldest.
+    async fn r4039000_add_replaces_an_unread_row_and_keeps_the_newest(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let cy = active_profile(harness, None).await;
+        let at = harness.now();
+        let first = q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "game-1", at), 10));
+        assert_eq!(
+            first,
+            NotificationRow {
+                id: first.id,
+                profile_id: ana.id.clone(),
+                kind: NotificationKind::DailyMove,
+                actor_id: Some(bo.id.clone()),
+                subject: Some("game-1".to_string()),
+                payload: json!({ "outcome": "win", "reason": "concede" }),
+                created_at: at,
+                read_at: None,
+            },
+            "{}",
+            harness.name
+        );
+        // Another actor, another kind, another account: three rows of their own.
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&cy.id), "game-1", at), 10));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyEnded, Some(&bo.id), "game-1", at), 10));
+        q!(harness, t => t.notifications_add(&notice(&cy.id, NotificationKind::DailyMove, Some(&bo.id), "game-1", at), 10));
+        // The same kind, actor and subject: the newer replaces the unread one.
+        let second = q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "game-1", at + 1), 10));
+        assert!(
+            second.id > first.id,
+            "{}: a newer row has the larger id",
+            harness.name
+        );
+        let anas = q!(harness, t => t.notifications_page(&ana.id, None, 10));
+        assert_eq!(anas.len(), 3, "{}: {anas:?}", harness.name);
+        assert_eq!(anas[0], second, "{}", harness.name);
+        assert!(!anas.iter().any(|row| row.id == first.id), "{}", harness.name);
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&cy.id, None, 10)).len(),
+            1,
+            "{}",
+            harness.name
+        );
+
+        // A read row stays when the next one comes.
+        q!(harness, t => t.notifications_mark_read(&ana.id, Some(second.id), at + 2));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "game-1", at + 3), 10));
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)).len(),
+            4,
+            "{}",
+            harness.name
+        );
+
+        // The cap: Ana keeps her newest 3, Cy his one.
+        for n in 0..3 {
+            q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::ReplayShared, Some(&bo.id), &format!("replay-{n}"), at + 4), 3));
+        }
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10))),
+            vec!["replay-2", "replay-1", "replay-0"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&cy.id, None, 10)).len(),
+            1,
+            "{}",
+            harness.name
+        );
+    }
+
+    /// R4039000: a page is one account's rows, newest first, below `before`, `limit` of them.
+    async fn r4039000_page_reads_newest_first_before_an_id(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let at = harness.now();
+        let mut ids = Vec::new();
+        for n in 0..5 {
+            let row = q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::FriendRequest, Some(&bo.id), &format!("request-{n}"), at + n), 100));
+            ids.push(row.id);
+        }
+        q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::FriendAccepted, Some(&ana.id), "request-x", at), 100));
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 2))),
+            vec!["request-4", "request-3"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, Some(ids[3]), 2))),
+            vec!["request-2", "request-1"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, Some(ids[1]), 2))),
+            vec!["request-0"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, Some(ids[0]), 2)),
+            Vec::new(),
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page("not-a-uuid", None, 2)),
+            Vec::new(),
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id)),
+            5,
+            "{}",
+            harness.name
+        );
+    }
+
+    /// R4039000: marking read touches only its own account's unread rows, up to an id inclusive or all
+    /// of them, and stamps each with its time once; a delete takes only its own account's rows.
+    async fn r4039000_mark_read_touches_only_its_profile_up_to_an_id(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let at = harness.now();
+        let mut ids = Vec::new();
+        for n in 0..3 {
+            let row = q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::ReplayShared, Some(&bo.id), &format!("replay-{n}"), at), 100));
+            ids.push(row.id);
+        }
+        let bos = q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::ReplayShared, Some(&ana.id), "replay-b", at), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_read(&ana.id, Some(ids[1]), at + 5)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id)),
+            1,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&bo.id)),
+            1,
+            "{}",
+            harness.name
+        );
+        // Bo's row is past Ana's id, and no read of Ana's touches it.
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_read(&ana.id, None, at + 6)),
+            1,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_read(&ana.id, None, at + 7)),
+            0,
+            "{}",
+            harness.name
+        );
+        let anas = q!(harness, t => t.notifications_page(&ana.id, None, 10));
+        assert_eq!(
+            anas.iter().map(|row| row.read_at).collect::<Vec<_>>(),
+            vec![Some(at + 6), Some(at + 5), Some(at + 5)],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&bo.id)),
+            1,
+            "{}",
+            harness.name
+        );
+
+        assert_eq!(
+            q!(harness, t => t.notifications_delete(&ana.id, &[ids[0], bos.id])),
+            1,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)).len(),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&bo.id, None, 10)),
+            vec![bos],
+            "{}",
+            harness.name
+        );
+    }
+
+    /// R4039000: the purge takes every row written before its cutoff, read or not, and none at or
+    /// after it.
+    async fn r4039000_purge_drops_rows_before_its_cutoff(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let at = harness.now();
+        for (n, written) in [at - 10, at - 1, at, at + 1].into_iter().enumerate() {
+            q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::LobbyInvite, Some(&bo.id), &format!("lobby-{n}"), written), 100));
+        }
+        q!(harness, t => t.notifications_mark_read(&ana.id, None, at));
+        q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::LobbyInvite, Some(&ana.id), "lobby-b", at - 10), 100));
+        assert_eq!(q!(harness, t => t.notifications_purge(at)), 3, "{}", harness.name);
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10))),
+            vec!["lobby-3", "lobby-2"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&bo.id, None, 10)),
+            Vec::new(),
+            "{}",
+            harness.name
+        );
+        assert_eq!(q!(harness, t => t.notifications_purge(at)), 0, "{}", harness.name);
+    }
+
+    /// Migration 0093: a deleted profile takes the rows that tell it and the rows it is the actor of,
+    /// and no other.
+    async fn r4039000_a_deleted_profile_takes_its_rows_both_ways(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let gone = active_profile(harness, None).await;
+        let at = harness.now();
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&gone.id), "game-1", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&gone.id, NotificationKind::DailyMove, Some(&ana.id), "game-1", at), 100));
+        let kept = q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "game-2", at), 100));
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)), "{}", harness.name);
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)),
+            vec![kept],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&gone.id, None, 10)),
+            Vec::new(),
+            "{}",
+            harness.name
+        );
+    }
+
+    both_stores!(
+        r4039000_add_replaces_an_unread_row_and_keeps_the_newest,
+        r4039000_page_reads_newest_first_before_an_id,
+        r4039000_mark_read_touches_only_its_profile_up_to_an_id,
+        r4039000_purge_drops_rows_before_its_cutoff,
+        r4039000_a_deleted_profile_takes_its_rows_both_ways,
+    );
+}

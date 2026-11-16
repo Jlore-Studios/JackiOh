@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 82 tables of migrations 0001-0092 ==='
+\echo '=== CHECK 2: the 83 tables of migrations 0001-0093 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -90,7 +90,8 @@ declare
   -- and each card's plays, level and stamp, card_proficiency (0081, R3013000), and the Fleet track's
   -- fleet_tracks and fleet_track_grants (0086, R3335001), and the daily games' daily_games,
   -- daily_invites, daily_notify and push_subscriptions (0089, SPEC §9.13, #3727), and a private
-  -- lobby's lobbies (0090, R3730000), and the player mail's daily_email_days (0092, #3843).
+  -- lobby's lobbies (0090, R3730000), and the player mail's daily_email_days (0092, #3843), and the
+  -- in-game notification feed's notifications (0093, R4039000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
@@ -110,7 +111,7 @@ declare
     'inventory_grants',
     'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards', 'lobbies',
     'loadout_decks', 'loadouts', 'match_actions', 'match_checkpoints', 'match_signals', 'matches',
-    'news_claims', 'news_posts', 'player_settings',
+    'news_claims', 'news_posts', 'notifications', 'player_settings',
     'player_stats', 'practice_claim_counts', 'practice_seeds', 'presence', 'profiles', 'push_subscriptions', 'quest_grants', 'quest_schedules', 'rated_games', 'rating_grants', 'record_totals',
     'replay_shares', 'results',
     'season_ranks', 'seasons', 'series', 'set_track_grants', 'set_tracks', 'terms_acceptances', 'tickets',

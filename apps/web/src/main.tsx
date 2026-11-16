@@ -90,6 +90,7 @@ import type { MeResponse } from "./net/api.ts";
 import { GlitchPath, NotFoundPlay } from "./notfound/NotFoundPlay.tsx";
 import { ChallengeToast } from "./together/ChallengeToast.tsx";
 import { LobbyInviteToast } from "./lobby/LobbyInviteToast.tsx";
+import { NotificationToast } from "./inbox/NotificationToast.tsx";
 import { usePresenceHeartbeat } from "./together/presence.ts";
 import { watchCoopOf, watchFriendOf } from "./together/watchLink.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
@@ -919,6 +920,8 @@ export function App(): ReactElement {
       <QueueFound game={found} />
       {signedIn ? <ChallengeToast /> : null}
       {signedIn ? <LobbyInviteToast /> : null}
+      {/* R4039001: the newest row of the notification feed, and its desktop notification. */}
+      {signedIn ? <NotificationToast /> : null}
       {/* Keyed by the path, so a move closes it; its own key, as the boundary above holds `path`. */}
       <CommandMenu key={`command-menu:${path}`} path={path} />
       <FullScreenArtHost />

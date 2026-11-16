@@ -256,7 +256,9 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` per account, `FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR` per address (R4008001), is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, cancels every open challenge between them and frees its room (R1689000), and lets go a watch of either by the other) |
 | `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship, every request and every replay share either way, letting go a watch of either by the other, and muting the two's emotes in a live match between them, R1351000) and unblock |
 | `POST` | `/api/presence` | active | the heartbeat, which a client sends only after `PRESENCE_HEARTBEAT_MS` with no other signed-in request (R3210000); a friend reads as online for `PRESENCE_TTL_MS` after the last write; records nothing while the account owes the terms (R970002) |
-| `GET` | `/api/social` | active | the social poll's one read (R3210000): `{incoming, outgoing, unread}`, what `GET /api/challenges` and `GET /api/chat/unread` answer, read in one transaction for the caller alone |
+| `GET` | `/api/social` | active | the social poll's one read (R3210000): `{incoming, outgoing, unread}`, what `GET /api/challenges` and `GET /api/chat/unread` answer, read in one transaction for the caller alone, with `dailyWaiting` (#3727) and `notificationsUnread`, the caller's unread feed rows (R4039000) |
+| `GET` | `/api/notifications?before=<id>&limit=<n>` | active | the caller's notification feed (`notifications/`, R4039000), newest first: `{notifications: [{id, kind, actor, subject, payload, createdAt, read}], nextBefore, unread}`, `limit` from 1 to `NOTIFICATIONS_PAGE_MAX` (`NOTIFICATIONS_PAGE` without it) and `nextBefore` the next page's `before` or null; any other `before` or `limit` is 400. A `lobbyInvite` whose lobby is gone, started or expired is deleted as it is read |
+| `POST` | `/api/notifications/read` | active | `{upTo?}`: marks the caller's unread rows up to that id, inclusive, or all of them, read: `{unread}`; nobody else's; an `upTo` that is no positive whole number is 400 |
 | `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; a challenge's room joined by its friend alone, while the two are still friends, anyone else getting an unknown code's 404 (R1689000); decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room, and the sweeper then deletes every challenge row that old; past `CHALLENGES_PER_HOUR` an hour a challenger gets 429 |
 | `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read, `nextCursor` the opaque cursor of the page before it, R1384000), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
 | `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the newest `SHARED_REPLAYS_LIST_MAX` replays shared with the caller; the friends the caller shared a finished match it held a seat in with (`GET`, R1435000), share it with a friend, and unshare it |
@@ -330,7 +332,7 @@ token, no socket, no cookie and no engine in the client, so any client can play 
 | `DELETE /api/daily/seeks/:id` | Active | cancels the caller's seek: 204 |
 | `GET /api/daily/games/:matchId` | Active | `{matchId, seat, view, legal, forecast, seq, holds, hasMove, perMoveDays, mode, catalogVersion, olderCatalog, opponent, over, lostOnTime, nextGame}`: the caller's own `view_for`, legal actions and `forecast` only (`forecast` is the engine's `combat_forecast` for the seat kept to the attacks `legal` lists, R3855000; `legal` holds only a concede and `forecast` is empty while the move is the other player's), under the game's catalog (R3727005); 404 for a game the caller does not play. A finished game whose log the retention purge took answers 200 with its list row (the stored board's turn, life and result, and when it ended) plus `expired: true` and no `view`, `legal` or `forecast`, never folded (R3934000) |
 | `POST /api/daily/games/:matchId/actions` | Active | `{after, nonce, action}`, `after` the `seq` it was read at: 200 with the read. A nonce already logged answers 200 and applies nothing; 409 `stale` (the log moved on, or another request sent after the same `seq` was logged first: the clock is written only on `daily_games.seq` still at `after`), `time_up` or `over`; 422 `not_your_move` (anything but `concede` from a seat holding no move, R3727006's offerer among them) or `illegal`. Every refusal carries `game`, the read as it stands. A finished game whose log the purge took answers 409 `over` (`time_up` if it was lost on time) with its `expired` read as `game`, and logs nothing (R3934000) |
-| `GET /api/daily/settings`, `PUT /api/daily/settings` | Active | `{emailOn, hasEmail, vapidPublicKey, pushDevices}`; the `PUT` takes `{emailOn}` |
+| `GET /api/daily/settings`, `PUT /api/daily/settings` | Active | `{emailOn, hasEmail, vapidPublicKey, pushDevices, emailAvailable}`, `emailAvailable` whether the server sends player email at all (`PLAYER_RESEND_API_KEY` set, R4039000); the `PUT` takes `{emailOn}` |
 | `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint at a browser's push service, one of `PUSH_SERVICE_HOSTS` or a subdomain of one, else 400; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
 | `DELETE /api/daily/push` | User | `{endpoint}`: the device's subscription goes, as the web signs out: 204 |
 | `GET /api/daily/unsubscribe?token=`, `POST …` | None | the email's own link: a small page whose button posts the `POST`, so opening it (a mail scanner following every link) changes nothing; the `POST` is RFC 8058's one-click, emails off for the token's account (a form-encoded or `multipart/form-data` body of `List-Unsubscribe=One-Click` is read as empty): a small page saying so |
@@ -518,21 +520,23 @@ Each signed-in tab holds one socket at `/ws/social` (`social::live`, R3214000), 
 what changed instead of the tab polling `GET /api/social` every `SOCIAL_POLL_MS` and an open conversation every
 `CHAT_POLL_MS`; the tab polls only while it is down, and older tabs poll as before. It signs in as `/ws/match`
 does (the subprotocol, R1379000; one request against the account's budget, 4429 past it, R2478000; §9.4's gate,
-4403), with every refusal one `error forbidden` frame and a close. It is sent five frames, each only what its own
+4403), with every refusal one `error forbidden` frame and a close. It is sent six frames, each only what its own
 account may read:
 
-- `social {incoming, outgoing, unread, dailyWaiting}`: exactly what that account's `GET /api/social` answers
-  (`reads::social_snapshot`; `dailyWaiting` is how many daily games wait on its move, #3727), first as it opens,
-  then after each change to its challenges, unread counts or daily games, a lapse among them, and in answer to a
-  `hello`;
+- `social {incoming, outgoing, unread, dailyWaiting, notificationsUnread}`: exactly what that account's `GET
+  /api/social` answers (`reads::social_snapshot`; `dailyWaiting` is how many daily games wait on its move, #3727,
+  `notificationsUnread` how many of its feed's rows are unread, R4039000), first as it opens, then after each
+  change to its challenges, unread counts, daily games or feed, a lapse among them, and in answer to a `hello`;
 - `chat {friendId}`: a message between it and that friend was sent, either way; no body rides it, and the tab
   reads the conversation itself;
 - `friends`: its friends list changed; the tab reads `GET /api/friends` itself. A friend's status is not pushed:
   the list keeps its own `FRIENDS_POLL_MS` read on the screens that show it.
 - `lobby {code}`: a private lobby it is in, or was just in, changed (a seat filled or freed, a pick, a Ready, a
   setting, the Start, the lobby closed; R3730000); the tab reads `GET /api/lobbies/:code` itself;
-- `lobbyInvite {code, format, from}`: a friend invites it into their lobby's empty seat (R3730005), a toast that
-  nothing keeps.
+- `lobbyInvite {code, format, from}`: a friend invites it into their lobby's empty seat (R3730005), a toast; the
+  feed keeps a `lobbyInvite` row of it too;
+- `notification {notification}`: a row of its notification feed, as `GET /api/notifications` lists it, as it is
+  written (R4039000), with a `social` frame after it.
 
 The pushes, each after its handler's commit and only on success: a challenge made (both, and both again when it
 lapses, `CHALLENGE_TTL_MS` later), declined or canceled (both), and accepted (both, once the room's game or
@@ -540,7 +544,8 @@ series has started, so the challenger's follow finds it); a message sent (`chat`
 recipient) and a read that marked one (`social` to the reader alone); a friend request made, accepted, declined
 or canceled (`friends` to both); a friendship ended (`friends` and `social` to both); a block (`friends` to the
 blocker, and to the blocked with a `social` to both only when the block ended a friendship, a request or a
-challenge between them, so a blocked stranger is told nothing) and an unblock (`friends` to the blocker). An
+challenge between them, so a blocked stranger is told nothing) and an unblock (`friends` to the blocker); a feed
+row written (`notification` and `social` to its recipient) and a read of the feed marked (`social` to the reader). An
 account with no social socket costs no read; a read that fails is logged as `social.live.read_failed` and
 dropped.
 
@@ -841,6 +846,18 @@ conditional upsert, so the sweep and the queue together, and a restart, never pa
 the send fails (`daily_email_release`). Past it no email goes that day, logged once a day as
 `daily.email.capped`, and the push still goes; nothing is marked sent, so the email goes the next day.
 `tests/sql/56_daily_email_days.sql` checks the table.
+**The notification feed** (`notifications/`, R4039000, issue #4039) is the channel that is always on; email and
+push are extras while their keys are set. Each event's handler, after its own commit, calls
+`notifications::notify`, which writes its rows in a transaction of its own (a notice its own actor would get, or
+one across a block either way, writes nothing), sends each row to its recipient's social sockets and logs a
+failure as `notifications.write_failed` without failing the event. The kinds: `dailyMove` (a hold that began with
+an action, `daily::games::apply`, and the waiting seeker of a paired seek), `dailyEnded` (both players, on time and
+by concession included, a void excepted), `dailyChallenge`, `dailyAnswered` (accept and decline; a cancel tells
+nobody), `friendRequest`, `friendAccepted` (an accept and a mutual request), `lobbyInvite` and `replayShared`. A new
+row replaces its recipient's unread row of the same kind, actor and subject (`Tx::notifications_add`), each
+account keeps its newest `NOTIFICATIONS_KEEP`, and the sweep deletes rows older than `NOTIFICATIONS_KEEP_DAYS`
+(`notifications_purge`). Migration 0093 adds `public.notifications`, the server's alone (RLS on, no policy, no
+grant), and `tests/sql/57_notifications.sql` checks it.
 A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
 VAPID, with `ring`), and a subscription its push service answers 404, 410 or 403 is deleted (403 is what a
 push service answers after the VAPID pair changes, #3844). A subscription is kept only at a browser's push

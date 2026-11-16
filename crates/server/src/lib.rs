@@ -27,6 +27,8 @@
 //!   (SPEC §9.5, §13.9; #3730, R3730000 to R3730006).
 //! - `admin`: the dev dashboard's store (#3074): the audit of every dev and admin action, the
 //!   hand-set ratings and their ledger, and the news posts (R3074000, R3074001, R3074003).
+//! - `notifications`: the in-game feed kept until read, written where each event is handled, read in
+//!   the inbox and pushed over `/ws/social` (SPEC §9.4, §9.13; #4039, R4039000).
 
 pub mod actor;
 // The dev dashboard (SPEC §14.10, §14.13; #3074): its audit, hand-set ratings and posts.
@@ -55,6 +57,8 @@ pub mod loadout;
 // Private lobbies (#3730): a friend game's pre-game stage, 1v1 or co-op (SPEC §9.5, §13.9).
 pub mod lobby;
 pub mod loops;
+// The in-game notification feed (#4039, R4039000): kept until read, pushed over `/ws/social`.
+pub mod notifications;
 /// The ranked ladder's rules are `jackioh-shared`'s (#3105); the old paths (`ranked::ladder::…`) name them.
 pub use jackioh_shared::ranked;
 pub mod seats;

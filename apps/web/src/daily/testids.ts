@@ -29,6 +29,12 @@ export const dailyTestid = {
   pushNote: "daily-push-note",
   /** iOS and iPadOS Safari, not from the Home Screen: web push needs the Home Screen there. */
   homeScreenNote: "daily-home-screen-note",
+  /** R4039001: the server has no mailer, so no email toggle; where JackiOh tells the player instead. */
+  emailUnavailable: "daily-email-unavailable",
+  /** R4039001: desktop notifications while JackiOh is open, this browser's setting. */
+  desktop: "daily-desktop",
+  /** The browser refused its permission for them. */
+  desktopRefused: "daily-desktop-refused",
   /** The New daily game dialog. */
   dialog: "daily-new-dialog",
   dialogKind: "daily-new-kind",

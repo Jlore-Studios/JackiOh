@@ -1,7 +1,8 @@
 /* The inbox (R3729002): the bell in the top bar and the panel it opens. The bell wears the bar's one skin
    (`routes/top-bar.css`, `top-bar-button--round`: a --hit-min circle), as the Friends button does; the panel
    is the one Dialog's sheet and its rows are Play together's (`together/together.css`: `together-list`,
-   `together-row`). Tokens only: spacing.css, typescale.css, palette.css. */
+   `together-row`). R4039001: the bell's dot, the panel's Recent section and the notification toast. Tokens only:
+   spacing.css, typescale.css, palette.css, surfaces.css. */
 
 /* The bell: the round skin's circle, its icon centred and room for the badge at its corner. */
 .inbox-bell {
@@ -28,6 +29,17 @@
   top: calc(var(--space-3) * -1);
   right: calc(var(--space-3) * -1);
   margin-left: 0;
+}
+
+/* R4039001: the feed holds unread rows and nothing is counted: a dot where the badge would be. */
+.inbox-bell__dot {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-round);
+  background: var(--opponent);
 }
 
 /* A phone, 320 to 600 px: with the bell in the bar there is no room for the language button beside Back, the
@@ -102,4 +114,64 @@
   border-radius: var(--radius-sm);
   font-weight: 700;
   text-decoration: none;
+}
+
+/* R4039001: the panel's two parts, what waits and what happened, each under its heading. */
+.dialog.inbox-panel .inbox-panel__heading {
+  margin: 0;
+  font-size: var(--type-lg);
+  text-align: start;
+}
+
+.inbox-recent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* A row the player had not read when the panel opened: a dot before it, and its words in bold. */
+.inbox-recent__dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-round);
+  background: var(--legal);
+}
+
+.inbox-row[data-unread="true"] .inbox-row__text > :first-child {
+  font-weight: 700;
+}
+
+.inbox-recent__empty {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+}
+
+/* "Show older", a --hit-min tall tap; a row's Open is sized as the panel's other answers are (`.inbox-row`, above). */
+.inbox-recent__older {
+  align-self: center;
+  min-height: var(--hit-min);
+}
+
+/* R4039001: the one notification toast, at the bottom right on the toasts' layer (the challenge toasts keep the
+   bottom left), inside the safe-area insets; its card is the challenge toast's (`together/together.css`). */
+.notification-toasts {
+  position: fixed;
+  z-index: var(--z-toast);
+  right: max(var(--space-7), env(safe-area-inset-right));
+  bottom: max(var(--space-7), env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(22.5rem, calc(100vw - var(--space-10)));
+  pointer-events: none;
+}
+
+/* A phone in the menus' shell: above its tab bar, a gap clear of it, as the challenge toasts sit
+   (shell/menu-shell.css; drawn beside the shell, the toast cannot read its `--shell-bottom`). */
+@media (max-width: 600px) {
+  body:has(.menu-shell:not([data-board])) .notification-toasts {
+    bottom: calc(var(--shell-tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--space-7));
+  }
 }

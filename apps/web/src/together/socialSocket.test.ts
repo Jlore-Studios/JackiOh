@@ -344,4 +344,33 @@ describe("R3214000 the social socket", () => {
       from,
     });
   });
+
+  it("R4039000 a notification frame parses, and the social frame keeps the feed's unread count", () => {
+    const notification = {
+      id: 42,
+      kind: "dailyMove",
+      actor: { profileId: "f-ann", username: "Ann#1" },
+      subject: "m-1",
+      payload: {},
+      createdAt: 1_700_000_000_000,
+      read: false,
+    };
+    expect(parseSocialPush(JSON.stringify({ type: "notification", notification }))).toEqual({ kind: "notification", notification });
+    const gone = { ...notification, id: 43, kind: "replayShared", actor: null, subject: null };
+    expect(parseSocialPush(JSON.stringify({ type: "notification", notification: gone }))).toEqual({ kind: "notification", notification: gone });
+    expect(parseSocialPush(JSON.stringify({ ...SOCIAL, dailyWaiting: 1, notificationsUnread: 3 }))).toEqual({
+      kind: "social",
+      read: { incoming: [], outgoing: [], unread: { "f-ann": 2 }, dailyWaiting: 1, notificationsUnread: 3 },
+    });
+    for (const other of [
+      JSON.stringify({ type: "notification" }),
+      JSON.stringify({ type: "notification", notification: { ...notification, kind: "weather" } }),
+      JSON.stringify({ type: "notification", notification: { ...notification, id: "42" } }),
+      JSON.stringify({ type: "notification", notification: { ...notification, actor: { profileId: "f-ann" } } }),
+      JSON.stringify({ type: "notification", notification: { ...notification, payload: null } }),
+      JSON.stringify({ type: "notification", notification: { ...notification, read: "no" } }),
+    ]) {
+      expect(parseSocialPush(other), other).toBeNull();
+    }
+  });
 });

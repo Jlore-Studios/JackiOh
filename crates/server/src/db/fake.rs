@@ -220,6 +220,9 @@ pub struct FakeTables {
     /// Daily games (SPEC §9.13, #3727): migration 0089's games, invites, notice settings and push
     /// subscriptions.
     pub daily: DailyTables,
+    /// The notification feed (#4039, R4039000): migration 0093's `public.notifications`. Its store
+    /// methods are `crate::notifications::store`'s.
+    pub notifications: crate::notifications::store::NotificationTables,
 }
 
 pub fn empty_tables() -> FakeTables {
@@ -3310,6 +3313,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     crate::admin::store::remove_admin_rows(&mut tables.admin, profile_id);
     // Daily games (#3727): 0089's rows cascade with the profile.
     remove_daily_rows(&mut tables.daily, profile_id);
+    // The notification feed (#4039): 0093's rows cascade with the profile they tell or name.
+    crate::notifications::store::remove_notification_rows(&mut tables.notifications, profile_id);
     true
 }
 

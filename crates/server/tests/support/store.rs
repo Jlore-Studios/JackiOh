@@ -11,6 +11,7 @@ use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, MutexGuard};
 
 use jackioh_server::app::App;
+use jackioh_server::config::NOTIFICATIONS_PAGE_MAX;
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StoreError};
 
@@ -200,6 +201,33 @@ pub async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
     )
     .await;
     assert_eq!(status, 200, "{body}");
+}
+
+/// R4039000: `who`'s notification feed, `GET /api/notifications?limit=NOTIFICATIONS_PAGE_MAX`'s 200 body
+/// (`{notifications, nextBefore, unread}`).
+pub async fn feed(app: &Arc<App>, who: &Account) -> Value {
+    let (status, _headers, body) = call(
+        app,
+        "GET",
+        &format!("/api/notifications?limit={NOTIFICATIONS_PAGE_MAX}"),
+        Some(&who.token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    body
+}
+
+/// R4039000: the kinds of a feed body's rows, newest first.
+pub fn feed_kinds(body: &Value) -> Vec<String> {
+    body["notifications"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| row["kind"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Every `(instanceId, defId)` a view JSON names, wherever it names one.

@@ -49,6 +49,8 @@ use crate::duos::rooms::{
     CoopStart, CoopStartOutcome, CoopTeamB, code_of, duos_choice_of, read_choice, read_difficulty,
     start_coop_match,
 };
+use crate::notifications::store::NotificationKind;
+use crate::notifications::{Notice, notify};
 use crate::seats::Taken;
 use crate::social::friends::are_friends;
 use crate::social::live::{nudge_lobby, send_lobby_invite};
@@ -910,6 +912,20 @@ pub async fn invite(app: &Arc<App>, req: Req) -> ApiResult {
         .map_err(|error| ApiError::internal(error.to_string()))?;
     send_lobby_invite(app, &friend_id, &lobby.code, lobby.settings.format(), &from);
     tracing::info!(event = "lobby.invited", code = %lobby.code);
+    // R4039000: kept in the friend's feed while the lobby stays open and unstarted.
+    notify(
+        app,
+        vec![
+            Notice::new(
+                NotificationKind::LobbyInvite,
+                &friend_id,
+                &profile.id,
+                &lobby.code,
+            )
+            .with(json!({ "format": lobby.settings.format() })),
+        ],
+    )
+    .await;
     Ok(no_content())
 }
 

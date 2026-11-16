@@ -1,4 +1,4 @@
-# `e2e/` — the fifty-five specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the tap areas' `47`, the tutorial's final exam's `48`, the dev dashboard's `49`, the menus' shell's `51`, daily games' `52` and `53`, the private lobby's `54`, the 2v2 lobby's `55`, the Play hub's `56` and the inbox's `57`, plus twenty-two component specs
+# `e2e/` — the fifty-six specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the tap areas' `47`, the tutorial's final exam's `48`, the dev dashboard's `49`, the menus' shell's `51`, daily games' `52` and `53`, the private lobby's `54`, the 2v2 lobby's `55`, the Play hub's `56`, the inbox's `57` and the notification feed's `58`, plus twenty-two component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,7 +35,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 41, 42, 44, 45, 46, 47, 49, 51, 52, 53, 54, 55, 56, 57
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 41, 42, 44, 45, 46, 47, 49, 51, 52, 53, 54, 55, 56, 57, 58
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 2b. spec 49 only: the dev dashboard's own client (apps/admin/README.md), proxying /api to the server
@@ -169,7 +169,11 @@ for contract reasons rather than rules reasons.
    (`POST /daily-sweep`), and seat one's board says "Lost on time". Both are networked. A daily game
    has no socket: every move is `POST /api/daily/games/:id/actions`, which `support/daily.ts` sends as
    the board does (after the read's `seq`, under a fresh nonce). Their test ids (`daily-*`) are
-   `apps/web/src/daily/testids.ts`'s, mirrored in `support/testids.ts`.
+   `apps/web/src/daily/testids.ts`'s, mirrored in `support/testids.ts`. Spec 58 (#4039, R4039001) makes
+   a daily game the same way, opens seat one's Play and waits for its social socket to be live (the
+   bell's `data-live="true"`); seat two's move over HTTP then shows seat one "Your move against …" as
+   the notification toast (`notification-toast`) and as a `dailyMove` row of the inbox's Recent section
+   (`inbox-recent-row`). It imports `apps/web/src/inbox/testids.ts` as spec 57 does. Networked.
 
 Every one of these is either an ask on another team or a convention this suite invented because
 BUILD does not fix it. They are all made in `support/`, never in a spec, so each has exactly one
@@ -192,7 +196,7 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | `savedDecks` / `clearDecks` / `saveDeck` / `saveTrio` | `GET /api/decks`; delete every deck and trio (yields the catalog version); one `PUT /api/decks/:id` or `PUT /api/trios/:id` under a client-minted id (R256), yielding it. |
 | `freeAccount(account)` / `concedeAs(account, matchId)` | The E2E server keeps its state for its whole life, so a networked spec starts by taking both accounts out of any queue ticket, live match or unfinished series (a concede, or a forfeit between games, R261). `concedeAs` connects, concedes and closes in one `wsPlayer` task, because the account's own browser would reclaim the seat between two. |
 | `stayQueued(account, everyMs)` | R897000: the queue cancels a ticket nobody has heard from for `QUEUE_TICKET_STALE_MS`, and a queued client polls `GET /api/auth/me` every `SERIES_POLL_SECONDS`. A seat a spec enqueues over HTTP and leaves waiting (specs 19 and 37; two accounts 320 apart, as one rated game between new players leaves them, pair only after the newer ticket has waited 50 s) polls through the `stayQueued` task, which ends itself once `queued` is no longer `true`; `before:spec` and `after:spec` clear any left. |
-| `support/daily.ts` (functions, not commands) | #3727: a daily game over HTTP for specs 52 and 53: `makeFriends`, `clearDaily` (no running game, challenge or seek left from an earlier run, since a running game counts against the account's cap), `dailyOf`, `dailyGameOf`, `dailyActAs` (after the read's `seq`, a fresh nonce), `dailyKeepHandAs`, `dailyEndTurnAs`, `dailyConcedeAs`, `setDailyClock` and `sweepDaily`. |
+| `support/daily.ts` (functions, not commands) | #3727: a daily game over HTTP for specs 52, 53 and 58: `makeFriends`, `clearDaily` (no running game, challenge or seek left from an earlier run, since a running game counts against the account's cap), `dailyOf`, `dailyGameOf`, `dailyActAs` (after the read's `seq`, a fresh nonce), `dailyKeepHandAs`, `dailyEndTurnAs`, `dailyConcedeAs`, `setDailyClock` and `sweepDaily`. |
 | `dragCardToDeck(cardId, { touch?, first? })` | A11's whole gesture onto the open deck's `deck-drop` by pointer events (R3734001): `pointerdown` on the pool card, a first move across it (or down, `first: "down"`), a move to the deck's middle and `pointerup`; `touch` sends them as a finger's. |
 | `handIds(player)` / `unitIds(player)` | Which instance ids might I click. Setup only: assertions belong on the DOM, which is `viewFor` (CLAUDE.md rule 7). |
 | `advanceToTurn(turn)` | End turns until `turn`, R82-safe: a turn that ended by itself leaves nothing to press, only a device to hand over. |

@@ -29,6 +29,8 @@ use crate::app::App;
 use crate::config::{DAILY_CHALLENGE_TTL_DAYS, DAILY_MAX_ACTIVE_GAMES, DAILY_SEEK_TTL_DAYS, MS_PER_DAY};
 use crate::daily::games::{NewDaily, prepare_daily};
 use crate::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, ProfileStatus, QueueMode, Tx};
+use crate::notifications::store::NotificationKind;
+use crate::notifications::{Notice, notify};
 use crate::social::friends::are_friends;
 use crate::social::live::push_social;
 use crate::social::{created, no_content, not_found, param, refused};
@@ -232,6 +234,14 @@ pub async fn challenge(app: &Arc<App>, req: Req) -> ApiResult {
     tx.commit().await?;
     push_social(app, &[&me, &friend_id]).await;
     tracing::info!(event = "daily.challenged", challengeId = %row.id, mode = ?mode, perMoveDays = days);
+    notify(
+        app,
+        vec![
+            Notice::new(NotificationKind::DailyChallenge, &friend_id, &me, &row.id)
+                .with(json!({ "mode": mode, "perMoveDays": days })),
+        ],
+    )
+    .await;
     Ok(created(json!({ "id": row.id })))
 }
 
@@ -311,6 +321,20 @@ pub async fn accept(app: &Arc<App>, req: Req) -> ApiResult {
     let match_id = game.match_id().to_string();
     push_social(app, &[&me, &invite.from_profile]).await;
     crate::daily::notify::after_move(app, &[&me, &invite.from_profile]);
+    // R4039000: the challenger is told of the accept, which links the board, and no `dailyMove` too.
+    notify(
+        app,
+        vec![
+            Notice::new(
+                NotificationKind::DailyAnswered,
+                &invite.from_profile,
+                &me,
+                &invite.id,
+            )
+            .with(json!({ "answer": "accepted", "matchId": match_id })),
+        ],
+    )
+    .await;
     Ok(created(json!({ "matchId": match_id })))
 }
 
@@ -333,6 +357,22 @@ async fn close(
     let mut told = vec![invite.from_profile.as_str()];
     told.extend(invite.to_profile.as_deref());
     push_social(app, &told).await;
+    // R4039000: a decline is told to the challenger; a cancel tells nobody.
+    if state == DailyInviteState::Declined {
+        notify(
+            app,
+            vec![
+                Notice::new(
+                    NotificationKind::DailyAnswered,
+                    &invite.from_profile,
+                    &me,
+                    &invite.id,
+                )
+                .with(json!({ "answer": "declined" })),
+            ],
+        )
+        .await;
+    }
     Ok(no_content())
 }
 
@@ -406,6 +446,17 @@ pub async fn seek(app: &Arc<App>, req: Req) -> ApiResult {
         };
         push_social(app, &[&me, &other.from_profile]).await;
         crate::daily::notify::after_move(app, &[&me, &other.from_profile]);
+        // R4039000: the seeker who waited is told the game began on their move (the mulligan).
+        notify(
+            app,
+            vec![Notice::new(
+                NotificationKind::DailyMove,
+                &other.from_profile,
+                &me,
+                &match_id,
+            )],
+        )
+        .await;
         return Ok(created(json!({ "matchId": match_id })));
     }
     let row = DailyInviteRow {

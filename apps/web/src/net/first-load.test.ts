@@ -34,8 +34,13 @@ const SOURCE = join(SRC, "patches/source.ts");
  * their words and Chinese, their art and their effects table. CI's build of the pull request merged into
  * `main` (b237155b5) measured 1,055,996 bytes. The budget is now 132 × 8192 (1,081,344), about 25 KB (2.4%)
  * over that: putting `patches.json` back would still cross it.
+ *
+ * The in-game notification feed (#4039) crossed it: its toast is mounted for every signed-in tab, so it, the
+ * feed's lines and the social socket's `notification` frame are in the first load. CI's build of the pull
+ * request merged into `main` (#4068, run 43822008191) measured 1,081,650 bytes. The budget is now 135 × 8192
+ * (1,105,920), about 24 KB (2.2%) over that: putting `patches.json` back would still cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 1_081_344;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 1_105_920;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

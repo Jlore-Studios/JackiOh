@@ -37,6 +37,7 @@ pub mod guess_limits;
 pub mod health;
 pub mod lobbies;
 pub mod news;
+pub mod notifications;
 pub mod packs;
 pub mod practice;
 pub mod proficiency;
