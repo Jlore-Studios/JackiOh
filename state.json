@@ -14115,7 +14115,9 @@
     },
     "4070": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6931068590"
+      ],
       "difficulty_by": {
         "at": "2026-11-16T22:31:11Z",
         "difficulty": "hard",
@@ -14155,9 +14157,7 @@
       "started_at": "2026-11-16T22:22:03Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6931068590"
-      ]
+      "taken_asks": []
     },
     "4074": {
       "action": "review",
