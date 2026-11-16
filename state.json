@@ -15900,6 +15900,13 @@
     "4021": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:13:14Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium: no hard-rule line holds \u2014 one web hook plus its tests, not engine/AI/cross-crate/migration/big"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
