@@ -294,14 +294,17 @@ describe("R2094000 a room link in chat text", () => {
 
   it("#4009 findRoomLinkInText is linear on long adversarial chat text", () => {
     // Another player's message reaches this scan, so a punctuation run must not stall the tab: the
-    // old `/[.,;:!?)\]]+$/` strip rescanned a trailing run from every position (#4009).
+    // old `/[.,;:!?)\]]+$/u` strip rescanned a failed trailing run from every position, so the
+    // adversarial input is a long punctuation run closed by a non-punctuation character (#4009).
+    const tripping = `${".".repeat(50_000)}y`;
     const started = performance.now();
-    expect(findRoomLinkInText(`see https://${"a".repeat(25_000)}${".".repeat(25_000)}`, origin)).toBeNull();
-    expect(findRoomLinkInText(`/lobby/${"!".repeat(50_000)}`, origin)).toBeNull();
-    expect(findRoomLinkInText(`${origin}/lobby/${"A".repeat(50_000)}.`, origin)).toBeNull();
+    expect(findRoomLinkInText(`/lobby/${tripping}`, origin)).toBeNull();
+    expect(findRoomLinkInText(`${origin}/lobby/${tripping}`, origin)).toBeNull();
     const elapsed = performance.now() - started;
     console.log(`findRoomLinkInText adversarial: ${elapsed.toFixed(1)}ms`);
     expect(elapsed).toBeLessThan(REDOS_BUDGET_MS);
+    // The trailing non-punctuation keeps the candidate unchanged, exactly as the old strip did.
+    expect(stripTrailingPunct(tripping)).toBe(tripping);
     expect(stripTrailingPunct("...")).toBe("");
     expect(stripTrailingPunct("abc")).toBe("abc");
   });
