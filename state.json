@@ -16167,7 +16167,9 @@
     },
     "4024": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6905079078"
+      ],
       "difficulty_by": {
         "at": "2026-11-16T03:33:11Z",
         "difficulty": "hard",
@@ -16206,9 +16208,7 @@
       "started_at": "2026-11-16T03:41:56Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6905079078"
-      ]
+      "taken_asks": []
     },
     "4025": {
       "action": "build",
