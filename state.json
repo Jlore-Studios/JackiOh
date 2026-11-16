@@ -16748,6 +16748,18 @@
       "asks": [],
       "ci_fixed_head": "7ed2c7f27e67e26bbfb619b0306efa33b4e7e20e",
       "ci_fixes": 1,
+      "cleared": {
+        "approver": {
+          "family": "gpt",
+          "model": "gpt-5.6-sol",
+          "provider": "gpt",
+          "tier": "medium"
+        },
+        "at": "2026-11-16T04:38:49Z",
+        "built_by": "gpt",
+        "by": "`gpt` (medium)",
+        "sha": "7ed2c7f27e67e26bbfb619b0306efa33b4e7e20e"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T02:35:59Z",
@@ -16763,6 +16775,7 @@
       "issue": 4033,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "gpt",
       "pending_request": false,
       "provider": "gpt",
       "queued_at": "2026-11-16T03:34:11Z",
