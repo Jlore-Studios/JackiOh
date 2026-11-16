@@ -14122,18 +14122,29 @@
       ]
     },
     "4062": {
-      "asks": [
-        "c:6932740802"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "gpt",
+      "owner_since": "2026-11-16T23:41:03Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "gpt",
       "queued_at": "2026-11-16T23:39:08Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:4cea0dff-1794872443",
+      "runs_on": "night-vm-gpt",
+      "started_at": "2026-11-16T23:41:03Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6932740802"
+      ]
     },
     "4064": {
       "action": "build",
@@ -14956,9 +14967,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T23:40:31Z",
+    "at": "2026-11-16T23:41:03Z",
     "url": "",
-    "what": "plan #4057 on agy"
+    "what": "plan #4062 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-16T23:28:10Z",
