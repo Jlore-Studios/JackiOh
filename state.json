@@ -34924,6 +34924,12 @@
         "number": 3825,
         "title": "Patch: a Mass Driver played into a unit zone arrives as a Unit for every card that answers one",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-16T22:19:55Z",
+        "number": 4063,
+        "title": "Patch: spoken battle lines show as text bubbles",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-16T22:07:21Z",
