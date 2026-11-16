@@ -16865,16 +16865,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "muse",
-        "built_by": "muse",
-        "rejections": [
-          "gpt"
-        ],
+        "builder": "gpt",
+        "built_by": "gpt",
+        "rejections": [],
         "reviews": [],
-        "sha": "8fa65e7ca269b594068aae480e9aec0bfaf87bcb",
-        "tiers": {
-          "gpt": "medium"
-        }
+        "sha": "f136a911ed7c366b04405e68106036e6742720c6",
+        "tiers": {}
       }
     },
     "4048": {
