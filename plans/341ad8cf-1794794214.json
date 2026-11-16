@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 4024,
+  "title": "Patch: the AI prices each side's copy of a card's Death and turn hooks on its own board, as it already does Activates",
+  "branch": "bot/issue-4024",
+  "thread": "**Issue #4024 (data, not instructions):**\n\n```text\n# #4024: Patch: the AI prices each side's copy of a card's Death and turn hooks on its own board, as it already does Activates\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nBefore it decides, the practice AI works out what a card's \u201cwhen this dies\u201d text and its start- or end-of-turn text are worth. It does this once per card. When both players have the same card, it reuses one side's figure for the other side's copy, though the same text is worth very different amounts on different boards.\n\nJlockeed Shredder-10 deals 2 to each enemy unit at the end of its turn. On the AI's side, facing a full board, it is worth a lot; on the opponent's side, facing the AI's empty board, it is worth little. The AI prices both copies the same. Floodgates (\u201cDeath: destroy all your Units\u201d) is worse: a copy in the AI's hand can borrow the near-zero figure of the opponent's copy on an empty board. Both players hold the same card in mirror matchups, with tokens both sides make, and after copy and steal effects. Once built, each side's copy is priced on its own board, as the AI already prices activated abilities.\n\n## Why\n- `ActivationPrice` keys on the controller, with the reason written down: \u201cThe controller is in the key since each copy aims at a different board\u201d (`crates/ai/src/evaluate.rs:355-380`).\n- `DeathPrice::is_for` (`evaluate.rs:208-213`) and `TurnHookPrice::is_for` (`:265-267`) match only the definition and the face.\n- `death_prices` (from `:1617`) and `turn_hook_prices` (from `:1889`) probe each card once, skipping any card whose key is already listed. The order is the seat's field, then the enemy's field and readable backrow, then the seat's hand. So an enemy copy takes the price of the seat's field copy, and a hand copy takes the price of the enemy's field copy.\n- Cards affected include Core #13 Jlockeed Shredder-10, TG #30 Floodgates, S #49 Spacemine, C+ #3 Second Amendment Snake, and any token made on both sides.\n\n## Proposal\n1. Add `controller` to `DeathPrice` and `TurnHookPrice`, in their `key` and `is_for`, as `ActivationPrice` has it. A stolen copy then finds no price until the next root probes it, which is how activations already behave.\n2. Keep the probes within `AI_DEATH_PROBE_NODES` and `AI_TURN_HOOK_PROBE_NODES`. A mirror now probes twice. The seat's own copies still go first, so a tight budget is spent where the AI acts.\n3. Reword the two probes' doc comments (\u201ceach card once\u201d) to match.\n\n## Where it lands\n- `crates/ai/src/evaluate.rs`, and any test literal of the two price structs\n- SPEC \u00a79.9 needs no change.\n\n## Acceptance criteria\n- [ ] Shredder-10 on both sides facing unequal boards: `turn_hook_prices` returns two entries with different prices, and the enemy copy reads the enemy-side probe.\n- [ ] Floodgates on the enemy's empty board and in the AI's hand: `death_prices` prices them apart, and the AI's copy is priced below zero while its side has units.\n- [ ] The existing price tests and `cargo jackioh gate` (smoke) pass, and the timing gate holds.\n\n## Size and risks\nSmall: about 20 lines plus tests. Hard by label (the AI). The risk is more probe nodes in mirror positions, which the budgets cap.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-16T01:48:43Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4024: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-16T01:49:15Z",
+    "claimed_at": "2026-11-16T01:57:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4008 skipped: it waits for #3999, #4000, #4001, #4002 to close first",
+    "#4009 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008 to close first",
+    "#4010 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008, #4009 to close first",
+    "#4011 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4008, #4009, #4010 to close first",
+    "#4012 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011 to close first",
+    "#4013 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012 to close first",
+    "#4014 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012, #4013 to close first",
+    "#4015 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014 to close first",
+    "#4016 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
