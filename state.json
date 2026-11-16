@@ -14972,10 +14972,16 @@
     "what": "plan #4062 on gpt"
   },
   "last_sweep": {
-    "at": "2026-11-16T23:28:10Z",
+    "at": "2026-11-16T23:36:15Z",
     "notes": [
-      "delivered plan #4065 on claude-3 (run 43975897244): planned",
-      "started build #4065 on claude-3 (run 43979771743)",
+      "#4072 needs a plan",
+      "delivered build #4086 on claude-8 (run 43965758333): built",
+      "started review #4090 on claude-8 (run 43981022841)",
+      "started plan #4072 on muse (run 43981098327)",
+      "started plan #4067 on muse (run 43981174761)",
+      "started plan #4058 on muse (run 43981243374)",
+      "started plan #4057 on agy (run 43981325072)",
+      "started plan #4062 on gpt (run 43981401087)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15680,7 +15686,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T23:28:10Z",
+  "loop_tick": "2026-11-16T23:36:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
