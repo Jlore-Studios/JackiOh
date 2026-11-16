@@ -17600,28 +17600,16 @@
     "what": "suggestions (ai) on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-16T06:34:03Z",
+    "at": "2026-11-16T06:46:41Z",
     "notes": [
-      "#4047: approved and green, so its strikes are cleared",
-      "delivered suggest on muse (run 43815603090): suggested",
-      "delivered suggest on muse (run 43815529785): suggested",
-      "delivered suggest on claude-8 (run 43815448492): interrupted",
-      "delivered suggest on claude-3 (run 43813250213): suggested",
-      "delivered suggest on claude-3 (run 43813185836): suggested",
-      "delivered build #4024 on claude-8 (run 43811600837): interrupted",
-      "delivered build #4039 on claude-1 (run 43805657782): built",
-      "delivered build #4035 on claude-4 (run 43805597415): infra (its model job left no upload)",
-      "started review #4068 on claude-1 (run 43818267339)",
-      "started build #4035 on claude-3 (run 43818336882)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-16T08:00:00Z; it can start a build or a plan again in 1h 19m; `claude-1` is busy; `claude-4` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-16T07:28:34Z; `claude-6` is busy; `claude-5` 7-day usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 2h 19m; `muse` is idle, but nothing queued is for it; `agy` is idle, but nothing queued is for it; `gpt` is idle, but nothing queued is for it; `claude-2` 5-hour usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-16T10:50:00Z; it can start a build or a plan again in 4h 09m; waiting for their owners: #4024 held for `claude-8` until 02:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "pruned 3 plan file(s) older than 7 days",
-      "#4067: typed it Task",
-      "#4066: typed it Task",
-      "#4065: typed it Task",
-      "#4064: typed it Task",
-      "#4063: typed it Task",
-      "#4062: typed it Bug",
-      "runner gate: started 1 of 1 waiting run(s) (run 43818320870 on patches/ship-0fee92df13-cut)"
+      "#4024 is held for `claude-8` until 02:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "delivered review #4068 on claude-1 (run 43818267339): stopped",
+      "delivered review #4055 on claude-7 (run 43807744854): approved",
+      "started revise #4055 on claude-7 (run 43819412529)",
+      "started suggest on claude-3 (run 43819472169)",
+      "started suggest on claude-1 (its run is not listed yet)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-16T08:00:00Z; it can start a build or a plan again in 1h 08m; `claude-1` is busy; `claude-4` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-16T07:28:34Z; `claude-6` is busy; `claude-5` 7-day usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 2h 08m; `muse` is idle, but nothing queued is for it; `agy` is idle, but nothing queued is for it; `gpt` is idle, but nothing queued is for it; `claude-2` 5-hour usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-16T10:50:00Z; it can start a build or a plan again in 3h 58m; waiting for their owners: #4024 held for `claude-8` until 02:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18325,7 +18313,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T06:34:03Z",
+  "loop_tick": "2026-11-16T06:46:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
