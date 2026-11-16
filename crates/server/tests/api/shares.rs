@@ -643,3 +643,39 @@ mod r1435000_the_sharer_reads_its_shares {
         assert_eq!(shares_of(&w, "not-a-match", &w.a).await, unknown);
     }
 }
+
+// R4039000: a share tells the friend in its notification feed
+
+mod r4039000_the_share_feed {
+    use super::*;
+    use crate::support::store::feed;
+
+    /// `who`'s `replayShared` rows as `(actor, subject)`, newest first.
+    async fn shares_told(w: &World, who: &Account) -> Vec<(Value, Value)> {
+        feed(&w.app, who).await["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["kind"] == "replayShared")
+            .map(|row| (row["actor"]["profileId"].clone(), row["subject"].clone()))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_share_tells_the_friend() {
+        let w = world("share-feed").await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(
+            shares_told(&w, &w.c).await,
+            vec![(json!(w.a.id), json!(w.match_id))]
+        );
+        for who in [&w.a, &w.b, &w.d] {
+            assert_eq!(shares_told(&w, who).await, Vec::new(), "{}", who.name);
+        }
+        // A share refused (a stranger) tells nobody.
+        let (status, _) = w.share(&w.a, &w.d).await;
+        assert_eq!(status, 404);
+        assert_eq!(shares_told(&w, &w.d).await, Vec::new());
+    }
+}

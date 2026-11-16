@@ -202,6 +202,33 @@ pub async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
     assert_eq!(status, 200, "{body}");
 }
 
+/// R4039000: `who`'s notification feed, `GET /api/notifications?limit=50`'s 200 body (`{notifications,
+/// nextBefore, unread}`).
+pub async fn feed(app: &Arc<App>, who: &Account) -> Value {
+    let (status, _headers, body) = call(
+        app,
+        "GET",
+        "/api/notifications?limit=50",
+        Some(&who.token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    body
+}
+
+/// R4039000: the kinds of a feed body's rows, newest first.
+pub fn feed_kinds(body: &Value) -> Vec<String> {
+    body["notifications"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| row["kind"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// Every `(instanceId, defId)` a view JSON names, wherever it names one.
 pub fn named_cards(view: &Value) -> Vec<(String, String)> {
     let mut named = Vec::new();

@@ -42,6 +42,8 @@ use crate::db::store::{
     DailyGameRow, DailyInviteKind, DailyInviteRow, MatchActionRow, MatchCheckpointRow, MatchRow, MatchStatus,
     QueueMode, StartMatchInput, StoreError, Tx,
 };
+use crate::notifications::Notice;
+use crate::notifications::store::NotificationKind;
 use crate::social::live::push_social;
 use crate::social::{PlayerRef, not_found, param, profiles_by_id};
 
@@ -239,6 +241,8 @@ pub(crate) async fn apply(
         return Ok(Applied::Refused(error));
     }
     let state = reduced.state;
+    // R4039000: who sent it, as the seats stood before it (R677), whom the feed never tells of it.
+    let sender = loaded.account_at(action.player_id).to_string();
     let clock = daily_sync(&loaded.daily.clock, &state, now);
     let board = daily_board(&state);
     let ended_at = state.result.is_some().then_some(now);
@@ -281,14 +285,68 @@ pub(crate) async fn apply(
     loaded.state = state;
     loaded.daily.next_deadline_at = clock.next_deadline();
     loaded.daily.seq = after + 1;
-    loaded.daily.clock = clock;
+    let before = std::mem::replace(&mut loaded.daily.clock, clock);
     loaded.daily.board = board;
     loaded.daily.ended_at = ended_at;
     checkpoint_if_due(app, loaded, now).await;
     if loaded.over() {
         record(app, loaded, now).await;
     }
+    crate::notifications::notify(app, feed_notices(loaded, &before, &sender)).await;
     Ok(Applied::Done)
+}
+
+/// R4039000: what the feed tells of an action that left `loaded` (its clock `before` it, sent by
+/// `sender`), each about the game, by the other player. A game that ended tells both players its
+/// result as each sees it (`dailyEnded`; a void tells nobody, R679); one that goes on tells each
+/// account the move newly passed to (a hold that began with this action) unless it sent it
+/// (`dailyMove`). The server's own `disconnectExpired` ends the game, so a loss on time is told too.
+fn feed_notices(loaded: &Loaded, before: &DailyClock, sender: &str) -> Vec<Notice> {
+    let match_id = loaded.match_row.id.as_str();
+    let (a, b) = (loaded.daily.players.0.as_str(), loaded.daily.players.1.as_str());
+    let other = |me: &str| if me == a { b } else { a };
+    if let Some(result) = loaded.daily.board.result {
+        if result.reason == GameOverReason::Voided {
+            return Vec::new();
+        }
+        return [a, b]
+            .into_iter()
+            .filter_map(|me| {
+                let seat = seat_now(&loaded.daily, me)?;
+                Some(
+                    Notice::new(NotificationKind::DailyEnded, me, other(me), match_id).with(json!({
+                        "outcome": outcome_of(result.winner, seat),
+                        "reason": result.reason,
+                    })),
+                )
+            })
+            .collect();
+    }
+    loaded
+        .daily
+        .clock
+        .holds
+        .iter()
+        // `daily_sync` keeps a hold only while its seat holds the same move (its key), so a hold the
+        // clock before did not have under that key is one this action began.
+        .filter(|hold| {
+            before
+                .hold_of(hold.player)
+                .is_none_or(|held| held.key != hold.key)
+        })
+        .map(|hold| loaded.account_at(hold.player))
+        .filter(|holder| *holder != sender)
+        .map(|holder| Notice::new(NotificationKind::DailyMove, holder, other(holder), match_id))
+        .collect()
+}
+
+/// A result as `seat` sees it: `"win"`, `"loss"` or `"draw"`.
+fn outcome_of(winner: Winner, seat: PlayerId) -> &'static str {
+    match winner {
+        Winner::Draw => "draw",
+        winner if winner == Winner::from(seat) => "win",
+        _ => "loss",
+    }
 }
 
 /// #1169: every `MATCH_CHECKPOINT_MIN_ACTIONS` rows, the state after the last, so a long game's next
@@ -771,14 +829,10 @@ fn summary_json(
     };
     let mine = row.clock.hold_of(seat).map(|hold| hold.deadline);
     let theirs = row.clock.hold_of(other).map(|hold| hold.deadline);
-    let result = row.board.result.map(|result| {
-        let outcome = match result.winner {
-            Winner::Draw => "draw",
-            winner if winner == Winner::from(seat) => "win",
-            _ => "loss",
-        };
-        json!({ "outcome": outcome, "reason": result.reason })
-    });
+    let result = row
+        .board
+        .result
+        .map(|result| json!({ "outcome": outcome_of(result.winner, seat), "reason": result.reason }));
     Some(json!({
         "matchId": row.match_id,
         "mode": row.mode,

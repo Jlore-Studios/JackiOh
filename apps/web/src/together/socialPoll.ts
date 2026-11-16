@@ -15,12 +15,16 @@
 // `onLobbyInvitePush` (R3730000, R3730005): an open lobby reads again, and an invite shows a toast.
 // R3576000: a tab hidden for `HIDDEN_QUIET_MS` closes its socket, so the server can sleep, and the poll
 // takes over as for any drop (paused while hidden, R3205000); it opens again when the tab shows.
+// R4039000: the read also counts the notification feed's unread rows (`notificationsUnread`), and the socket's
+// `notification` push, a row the server just wrote, goes to `onNotificationPush`'s listeners (R4039001: the
+// inbox's Recent section, the toast and the desktop notification).
 
 import { useEffect, useSyncExternalStore } from "react";
 
 import { dailyWaitingOf } from "../daily/order.ts";
 import { pollWhileVisible, quietWhileHidden } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
+import type { FeedNotification } from "../net/notifications.ts";
 import { getSocial, type Challenge, type PlayerRef, type SocialRead } from "../net/social.ts";
 import { HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { followingChallenge } from "./follow.ts";
@@ -43,6 +47,8 @@ export type SocialReads = {
   readonly live: boolean;
   /** #3727: how many daily games wait on the player (the Play screen's Daily games badge); 0 when unread. */
   readonly dailyWaiting: number;
+  /** R4039000: how many rows of the notification feed are unread (the bell's dot); 0 until read. */
+  readonly notificationsUnread: number;
 };
 
 const NO_CHALLENGES: readonly Challenge[] = Object.freeze([]);
@@ -57,6 +63,7 @@ const EMPTY: SocialReads = Object.freeze({
   refused: false,
   live: false,
   dailyWaiting: 0,
+  notificationsUnread: 0,
 });
 
 let reads: SocialReads = EMPTY;
@@ -75,6 +82,7 @@ const chatListeners = new Set<(friendId: string) => void>();
 const friendsListeners = new Set<() => void>();
 const lobbyListeners = new Set<(code: string) => void>();
 const lobbyInviteListeners = new Set<(invite: LobbyInvite) => void>();
+const notificationListeners = new Set<(notification: FeedNotification) => void>();
 
 /** R3730005: a friend's invite into their private lobby, as the `lobbyInvite` frame carries it. */
 export type LobbyInvite = { code: string; format: LobbyFormat; from: PlayerRef };
@@ -111,6 +119,7 @@ function applySocial(answer: SocialRead): void {
     unread: unreadCountsOf(answer),
     refused: false,
     dailyWaiting: dailyWaitingOf(answer.dailyWaiting),
+    notificationsUnread: dailyWaitingOf(answer.notificationsUnread),
   });
 }
 
@@ -122,7 +131,7 @@ function tick(): void {
     return;
   }
   if (token === refusedToken) {
-    if (!reads.refused) publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true, dailyWaiting: 0 });
+    if (!reads.refused) publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true, dailyWaiting: 0, notificationsUnread: 0 });
     return;
   }
   // R3214000: a socket that is down (never opened, refused for an older token) opens again with this
@@ -139,7 +148,7 @@ function tick(): void {
     (cause: unknown) => {
       if (started !== generation || !isRefusedSession(cause)) return;
       refusedToken = token;
-      publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true, dailyWaiting: 0 });
+      publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true, dailyWaiting: 0, notificationsUnread: 0 });
     },
   );
 }
@@ -175,6 +184,9 @@ function onPush(push: SocialPush): void {
       return;
     case "lobbyInvite":
       for (const listener of [...lobbyInviteListeners]) listener({ code: push.code, format: push.format, from: push.from });
+      return;
+    case "notification":
+      for (const listener of [...notificationListeners]) listener(push.notification);
       return;
   }
 }
@@ -282,6 +294,14 @@ export function onLobbyInvitePush(listener: (invite: LobbyInvite) => void): () =
   lobbyInviteListeners.add(listener);
   return () => {
     lobbyInviteListeners.delete(listener);
+  };
+}
+
+/** R4039000: calls `listener` with each row the server writes to the account's notification feed; returns its unsubscribe. */
+export function onNotificationPush(listener: (notification: FeedNotification) => void): () => void {
+  notificationListeners.add(listener);
+  return () => {
+    notificationListeners.delete(listener);
   };
 }
 

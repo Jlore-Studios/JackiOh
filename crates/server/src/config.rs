@@ -1366,6 +1366,22 @@ pub const CHALLENGES_PER_HOUR: usize = 30;
 // CHALLENGE_TTL_MS for one cheap delete.
 pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
 // ---- end Social ----
+// ---- Notifications: the in-game feed kept until read (#4039) ----
+/// R4039000: the feed's rows one account keeps; writing one more deletes its oldest past this. A
+/// hundred is weeks of a busy player's daily games and friends, and keeps every page read small.
+/// Server-only.
+pub const NOTIFICATIONS_KEEP: i64 = 100;
+/// R4039000: how old a feed row gets before the daily sweep deletes it, read or not. A month: a
+/// daily game's longest time per move is two weeks, so a row outlives the move it told of. Server-only.
+pub const NOTIFICATIONS_KEEP_DAYS: i64 = 30;
+/// R4039000: the rows `GET /api/notifications` answers when it names no `limit`: what the inbox's
+/// Recent section shows before "Show older". Server-only.
+pub const NOTIFICATIONS_PAGE: i64 = 20;
+/// R4039000: the most rows one `GET /api/notifications` answers; a larger `limit` is 400. Server-only.
+pub const NOTIFICATIONS_PAGE_MAX: i64 = 50;
+const _: () =
+    assert!(NOTIFICATIONS_PAGE <= NOTIFICATIONS_PAGE_MAX && NOTIFICATIONS_PAGE_MAX <= NOTIFICATIONS_KEEP);
+// ---- end Notifications ----
 // ---- Duos co-op (#946) ----
 // Fullsend SPEC S6 (#936): the Duos co-op rooms and their four-seat actor (`src/duos/`). Every one
 // but `DUOS_AI_BUDGET` is exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board

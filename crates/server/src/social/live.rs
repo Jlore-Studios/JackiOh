@@ -10,10 +10,10 @@
 //! so a session the provider ended (R194) or an account banned meanwhile is cut off as a polling tab
 //! would be refused.
 //!
-//! The server sends five frames, each only what its account may read:
-//! - `{type: "social", incoming, outgoing, unread, dailyWaiting}`: `GET /api/social`'s own body for
-//!   the socket's account (`social_snapshot`), on connect, after every change to its challenges, unread
-//!   counts or daily games (#3727),
+//! The server sends six frames, each only what its account may read:
+//! - `{type: "social", incoming, outgoing, unread, dailyWaiting, notificationsUnread}`: `GET
+//!   /api/social`'s own body for the socket's account (`social_snapshot`), on connect, after every
+//!   change to its challenges, unread counts, daily games (#3727) or notification feed (R4039000),
 //!   when one of its challenges lapses, and in answer to a hello;
 //! - `{type: "chat", friendId}`: a message between it and that friend was sent; no body rides it,
 //!   the tab reads the conversation itself;
@@ -22,7 +22,9 @@
 //! - `{type: "lobby", code}`: a private lobby it is in (or was just removed from) changed (R3730000);
 //!   the tab reads the lobby itself;
 //! - `{type: "lobbyInvite", code, format, from}`: a friend invites it into their lobby (R3730005), a
-//!   live toast that nothing keeps.
+//!   live toast; the feed keeps it too (R4039000);
+//! - `{type: "notification", notification}`: a row of its notification feed, as it is written
+//!   (R4039000), as `GET /api/notifications` lists it.
 //!
 //! The socket takes one frame, `{type: "hello"}`, answered with a `social` frame at most once a
 //! `WATCH_HELLO_INTERVAL_MS` (R2609000's interval), so a woken page's probe (R1441) hears a live
@@ -263,9 +265,16 @@ pub fn nudge_lobby(app: &App, ids: &[&str], code: &str) {
 }
 
 /// R3730005: `from` invites `to` into lobby `code` of `format` (`"duel"` or `"coop"`), a live toast
-/// that no inbox keeps: `from` is the inviter's `{profileId, username}`.
+/// (the feed's `lobbyInvite` row keeps it, R4039000): `from` is the inviter's `{profileId, username}`.
 pub fn send_lobby_invite(app: &App, to: &str, code: &str, format: &str, from: &Value) {
     let frame = json!({ "type": "lobbyInvite", "code": code, "format": format, "from": from }).to_string();
+    send_to(app, to, &frame);
+}
+
+/// R4039000: a row of `to`'s notification feed was written: each of `to`'s sockets is sent it, as
+/// `GET /api/notifications` lists it (`notifications::notification_json`).
+pub fn send_notification(app: &App, to: &str, notification: &Value) {
+    let frame = json!({ "type": "notification", "notification": notification }).to_string();
     send_to(app, to, &frame);
 }
 

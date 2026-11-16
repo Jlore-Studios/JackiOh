@@ -8,6 +8,8 @@
 // joined, a request accepted or a deck played is the server's, and every refusal is shown in its words, in
 // the panel's one alert. Opening the panel reads the lists again; any answer reads them and the social read
 // again. Opening it also marks the shared replays it lists as seen, so the bell stops counting them.
+// R4039001: under what waits ("Waiting on you") is what happened ("Recent", `RecentSection.tsx`): the notification
+// feed the server keeps, which opening the panel marks read.
 
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 
@@ -33,6 +35,7 @@ import { MODE_WORDS, Named } from "../together/words.tsx";
 import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { dropInvite } from "./invites.ts";
 import { challengeLeftText, type InboxItem } from "./order.ts";
+import { RecentSection } from "./RecentSection.tsx";
 import { markSeen, refreshInbox } from "./store.ts";
 import { inboxTestid } from "./testids.ts";
 
@@ -418,6 +421,7 @@ export function InboxPanel({ id, items, now, onClose }: InboxPanelProps): ReactE
           {t(error)}
         </p>
       )}
+      <h3 className="inbox-panel__heading">{t("Waiting on you")}</h3>
       {shown.length === 0 ? (
         <EmptyState text={t("Nothing is waiting for you.")} testId={inboxTestid.empty} />
       ) : (
@@ -440,6 +444,8 @@ export function InboxPanel({ id, items, now, onClose }: InboxPanelProps): ReactE
           })}
         </ul>
       )}
+      <h3 className="inbox-panel__heading">{t("Recent")}</h3>
+      <RecentSection now={now} onClose={onClose} />
     </Dialog>
   );
 }

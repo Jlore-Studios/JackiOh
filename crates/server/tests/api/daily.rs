@@ -2186,3 +2186,407 @@ async fn the_social_read_counts_the_daily_games_waiting_on_you() {
     let (_, mine) = api(&app, "GET", "/api/social", &on_move.token, Value::Null).await;
     assert_eq!(mine["dailyWaiting"], 0);
 }
+
+// R4039000: what the daily games write to the notification feed
+
+mod r4039000_daily_feed {
+    use super::*;
+    use crate::support::store::{feed, feed_kinds};
+
+    /// `who`'s unread feed rows.
+    async fn unread(app: &Arc<App>, who: &Account) -> Vec<Value> {
+        feed(app, who).await["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["read"] == false)
+            .cloned()
+            .collect()
+    }
+
+    /// Marks every row of `who`'s feed read.
+    async fn read_all(app: &Arc<App>, who: &Account) {
+        let (status, body) = api(app, "POST", "/api/notifications/read", &who.token, json!({})).await;
+        assert_eq!((status, body), (200, json!({ "unread": 0 })));
+    }
+
+    /// `who`'s rows of `kind`, newest first.
+    async fn of_kind(app: &Arc<App>, who: &Account, kind: &str) -> Vec<Value> {
+        feed(app, who).await["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["kind"] == kind)
+            .cloned()
+            .collect()
+    }
+
+    /// The move `who`, holding it, makes in `match_id`.
+    async fn move_now(app: &Arc<App>, who: &Account, match_id: &str, nonce: &str) {
+        let game = read(app, who, match_id).await;
+        assert_eq!(game["hasMove"], true, "{game}");
+        let (status, body) = send(
+            app,
+            who,
+            match_id,
+            game["seq"].as_i64().expect("a seq"),
+            nonce,
+            next_move(&game),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+    }
+
+    /// A game `ada` challenged `bo` to, past its mulligan, both feeds read: its match id.
+    async fn begun(app: &Arc<App>, ada: &Account, bo: &Account) -> String {
+        let match_id = daily_game(app, ada, bo, 1).await;
+        past_the_mulligan(app, [ada, bo], &match_id).await;
+        read_all(app, ada).await;
+        read_all(app, bo).await;
+        match_id
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_handover_tells_the_next_holder_alone() {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = begun(&app, &ada, &bo).await;
+        let (on_move, other) = holder(&app, [&ada, &bo], &match_id).await;
+        move_now(&app, on_move, &match_id, "hand-over").await;
+        let (next, _) = holder(&app, [&ada, &bo], &match_id).await;
+        assert_eq!(next.id, other.id, "the move passed");
+        let told = unread(&app, other).await;
+        assert_eq!(
+            told,
+            vec![json!({
+                "id": told[0]["id"],
+                "kind": "dailyMove",
+                "actor": { "profileId": on_move.id, "username": on_move.name },
+                "subject": match_id,
+                "payload": {},
+                "createdAt": told[0]["createdAt"],
+                "read": false,
+            })]
+        );
+        assert_eq!(
+            unread(&app, on_move).await,
+            Vec::<Value>::new(),
+            "the mover is told nothing"
+        );
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_second_move_replaces_the_unread_daily_move() {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = begun(&app, &ada, &bo).await;
+        let (first, second) = holder(&app, [&ada, &bo], &match_id).await;
+        // First hands over, Second hands back, First hands over again: Second's one unread row stands.
+        move_now(&app, first, &match_id, "one").await;
+        let told = of_kind(&app, second, "dailyMove").await;
+        assert_eq!(told.len(), 1, "{told:?}");
+        move_now(&app, second, &match_id, "two").await;
+        move_now(&app, first, &match_id, "three").await;
+        let again = of_kind(&app, second, "dailyMove").await;
+        assert_eq!(
+            again.len(),
+            1,
+            "the newer move replaced the unread one: {again:?}"
+        );
+        assert!(again[0]["id"].as_i64() > told[0]["id"].as_i64(), "{again:?}");
+        assert_eq!(
+            unread(&app, first)
+                .await
+                .iter()
+                .filter(|row| row["kind"] == "dailyMove")
+                .count(),
+            1,
+            "First was told once"
+        );
+
+        // Once read, the next move is a row of its own.
+        read_all(&app, second).await;
+        move_now(&app, second, &match_id, "four").await;
+        move_now(&app, first, &match_id, "five").await;
+        let rows = of_kind(&app, second, "dailyMove").await;
+        assert_eq!(
+            rows.iter().map(|row| row["read"].clone()).collect::<Vec<_>>(),
+            vec![json!(false), json!(true)],
+            "{rows:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_concession_tells_both_their_result() {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = begun(&app, &ada, &bo).await;
+        let game = read(&app, &ada, &match_id).await;
+        let (status, body) = send(
+            &app,
+            &ada,
+            &match_id,
+            game["seq"].as_i64().expect("a seq"),
+            "concede",
+            json!({ "type": "concede" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        for (who, other, outcome) in [(&ada, &bo, "loss"), (&bo, &ada, "win")] {
+            let rows = unread(&app, who).await;
+            assert_eq!(rows.len(), 1, "{}: {rows:?}", who.name);
+            assert_eq!(rows[0]["kind"], "dailyEnded", "{rows:?}");
+            assert_eq!(rows[0]["subject"], json!(match_id));
+            assert_eq!(rows[0]["actor"]["profileId"], json!(other.id));
+            assert_eq!(
+                rows[0]["payload"],
+                json!({ "outcome": outcome, "reason": "concede" })
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn r4039000_time_up_tells_both_on_time() {
+        for through_the_sweep in [true, false] {
+            let (app, ada, bo) = two_friends().await;
+            let match_id = begun(&app, &ada, &bo).await;
+            let (late, waiting) = holder(&app, [&ada, &bo], &match_id).await;
+            app.daily.set_offset(MS_PER_DAY);
+            if through_the_sweep {
+                let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+                assert_eq!((status, swept["settled"].clone()), (200, json!(1)), "{swept}");
+            } else {
+                assert_eq!(read(&app, waiting, &match_id).await["lostOnTime"], true);
+            }
+            for (who, outcome) in [(late, "loss"), (waiting, "win")] {
+                let rows = unread(&app, who).await;
+                assert_eq!(
+                    rows.iter()
+                        .map(|row| (row["kind"].clone(), row["payload"].clone()))
+                        .collect::<Vec<_>>(),
+                    vec![(
+                        json!("dailyEnded"),
+                        json!({ "outcome": outcome, "reason": "disconnect" })
+                    )],
+                    "{}: {rows:?}",
+                    who.name
+                );
+            }
+            // Read again, the game writes nothing more.
+            read(&app, late, &match_id).await;
+            assert_eq!(of_kind(&app, waiting, "dailyEnded").await.len(), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_challenge_its_decline_and_a_cancel() {
+        let (app, ada, bo) = two_friends().await;
+        read_all(&app, &ada).await;
+        read_all(&app, &bo).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ada.token,
+            random_challenge(&bo, 3),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let id = body["id"].as_str().expect("a challenge id").to_string();
+        let rows = unread(&app, &bo).await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(
+            (
+                rows[0]["kind"].clone(),
+                rows[0]["subject"].clone(),
+                rows[0]["payload"].clone()
+            ),
+            (
+                json!("dailyChallenge"),
+                json!(id),
+                json!({ "mode": "random", "perMoveDays": 3 })
+            )
+        );
+        assert_eq!(rows[0]["actor"]["profileId"], json!(ada.id));
+        assert_eq!(unread(&app, &ada).await, Vec::<Value>::new());
+
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{id}/decline"),
+            &bo.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        let rows = unread(&app, &ada).await;
+        assert_eq!(
+            rows.iter()
+                .map(|row| (
+                    row["kind"].clone(),
+                    row["subject"].clone(),
+                    row["payload"].clone()
+                ))
+                .collect::<Vec<_>>(),
+            vec![(json!("dailyAnswered"), json!(id), json!({ "answer": "declined" }))]
+        );
+        assert_eq!(unread(&app, &bo).await.len(), 1, "the decliner is told nothing");
+
+        // A cancel tells nobody.
+        read_all(&app, &ada).await;
+        read_all(&app, &bo).await;
+        let (_, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ada.token,
+            random_challenge(&bo, 7),
+        )
+        .await;
+        let id = body["id"].as_str().expect("a challenge id").to_string();
+        read_all(&app, &bo).await;
+        let (status, body) = api(
+            &app,
+            "DELETE",
+            &format!("/api/daily/challenges/{id}"),
+            &ada.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(unread(&app, &ada).await, Vec::<Value>::new());
+        assert_eq!(unread(&app, &bo).await, Vec::<Value>::new());
+
+        // An accept tells the challenger, linking the board, and no "your move" beside it.
+        let (_, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ada.token,
+            random_challenge(&bo, 1),
+        )
+        .await;
+        let id = body["id"].as_str().expect("a challenge id").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{id}/accept"),
+            &bo.token,
+            json!({ "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let rows = unread(&app, &ada).await;
+        assert_eq!(
+            rows.iter()
+                .map(|row| (
+                    row["kind"].clone(),
+                    row["subject"].clone(),
+                    row["payload"].clone()
+                ))
+                .collect::<Vec<_>>(),
+            vec![(
+                json!("dailyAnswered"),
+                json!(id),
+                json!({ "answer": "accepted", "matchId": body["matchId"] })
+            )]
+        );
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_seek_pairing_tells_the_waiting_seeker() {
+        let app = app_with(None, TestAppOptions::default()).await;
+        let ada = person(&app, 1, "Ada").await;
+        let bo = person(&app, 2, "Bo").await;
+        let seek = json!({ "mode": "random", "perMoveDays": 3 });
+        let (status, body) = api(&app, "POST", "/api/daily/seeks", &ada.token, seek.clone()).await;
+        assert_eq!(status, 201, "{body}");
+        assert_eq!(
+            feed_kinds(&feed(&app, &ada).await),
+            Vec::<String>::new(),
+            "a seek alone tells nobody"
+        );
+        let (status, body) = api(&app, "POST", "/api/daily/seeks", &bo.token, seek).await;
+        assert_eq!(status, 201, "{body}");
+        let match_id = body["matchId"].as_str().expect("it paired").to_string();
+        let rows = unread(&app, &ada).await;
+        assert_eq!(
+            rows.iter()
+                .map(|row| (
+                    row["kind"].clone(),
+                    row["subject"].clone(),
+                    row["actor"]["profileId"].clone()
+                ))
+                .collect::<Vec<_>>(),
+            vec![(json!("dailyMove"), json!(match_id), json!(bo.id))]
+        );
+        assert_eq!(
+            feed_kinds(&feed(&app, &bo).await),
+            Vec::<String>::new(),
+            "the claimer is told nothing"
+        );
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_block_writes_nothing() {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = begun(&app, &ada, &bo).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/blocks",
+            &bo.token,
+            json!({ "profileId": ada.id }),
+        )
+        .await;
+        assert!(status == 201 || status == 204, "{status} {body}");
+        // R3727007: the game goes on, and neither is told of the other's moves, nor of its end.
+        let (on_move, _) = holder(&app, [&ada, &bo], &match_id).await;
+        move_now(&app, on_move, &match_id, "after-block").await;
+        let game = read(&app, &ada, &match_id).await;
+        let (status, body) = send(
+            &app,
+            &ada,
+            &match_id,
+            game["seq"].as_i64().expect("a seq"),
+            "concede",
+            json!({ "type": "concede" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(unread(&app, &ada).await, Vec::<Value>::new());
+        assert_eq!(unread(&app, &bo).await, Vec::<Value>::new());
+    }
+
+    #[tokio::test]
+    async fn r4039000_email_available_follows_the_mailer() {
+        let (mail_api, _seen) = fake_service(StatusCode::OK).await;
+        for (mail, available) in [(Some(mail_api), true), (None, false)] {
+            let app = app_with(
+                None,
+                TestAppOptions {
+                    mail_api: mail,
+                    ..TestAppOptions::default()
+                },
+            )
+            .await;
+            let ada = person(&app, 1, "Ada").await;
+            let (status, settings) = api(&app, "GET", "/api/daily/settings", &ada.token, Value::Null).await;
+            assert_eq!(
+                (status, settings["emailAvailable"].clone()),
+                (200, json!(available)),
+                "{settings}"
+            );
+            let (status, settings) = api(
+                &app,
+                "PUT",
+                "/api/daily/settings",
+                &ada.token,
+                json!({ "emailOn": false }),
+            )
+            .await;
+            assert_eq!(
+                (status, settings["emailAvailable"].clone()),
+                (200, json!(available)),
+                "{settings}"
+            );
+        }
+    }
+}

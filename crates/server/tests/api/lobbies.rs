@@ -1028,3 +1028,77 @@ async fn r3731003_a_two_v_two_offers_no_play_again() {
         404
     );
 }
+
+// R4039000: a lobby invite in the notification feed
+
+mod r4039000_the_invite_feed {
+    use super::*;
+    use crate::support::store::{feed, feed_kinds};
+
+    /// `who`'s listed `lobbyInvite` rows as `(subject, payload)`, and its unread count.
+    async fn invites(app: &Arc<App>, who: &Account) -> (Vec<(Value, Value)>, Value) {
+        let body = feed(app, who).await;
+        let listed = body["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["kind"] == "lobbyInvite")
+            .map(|row| (row["subject"].clone(), row["payload"].clone()))
+            .collect();
+        (listed, body["unread"].clone())
+    }
+
+    #[tokio::test]
+    async fn r4039000_an_invite_lists_until_the_host_leaves_or_starts() {
+        let t = three().await;
+        befriend(&t.app, &t.host, &t.guest).await;
+        befriend(&t.app, &t.third, &t.host).await;
+        api(
+            &t.app,
+            "POST",
+            "/api/notifications/read",
+            &t.guest.token,
+            json!({}),
+        )
+        .await;
+        let invite = |who: &Account| json!({ "profileId": who.id });
+
+        // Listed once, however often it is sent, and to the invited alone.
+        let left = duel(&t.app, &t.host, "random").await;
+        ok_act(&t.app, &t.host, &left, "invite", invite(&t.guest)).await;
+        ok_act(&t.app, &t.host, &left, "invite", invite(&t.guest)).await;
+        let started = coop(&t.app, &t.host).await;
+        ok_act(&t.app, &t.host, &started, "invite", invite(&t.guest)).await;
+        assert_eq!(
+            invites(&t.app, &t.guest).await,
+            (
+                vec![
+                    (json!(started), json!({ "format": "coop" })),
+                    (json!(left), json!({ "format": "duel" })),
+                ],
+                json!(2)
+            )
+        );
+        assert_eq!(
+            feed_kinds(&feed(&t.app, &t.host).await),
+            vec!["friendRequest", "friendAccepted"]
+        );
+        assert_eq!(invites(&t.app, &t.third).await.0, Vec::new());
+
+        // The host leaves the first: it is listed no more.
+        ok_act(&t.app, &t.host, &left, "leave", Value::Null).await;
+        assert_eq!(
+            invites(&t.app, &t.guest).await,
+            (vec![(json!(started), json!({ "format": "coop" }))], json!(1))
+        );
+
+        // The second starts (its Start written as `lobby::start` writes it): it goes too.
+        let mut lobby =
+            store!(t.app, tx => tx.lobbies_get(&started).await.expect("lobbies.get")).expect("the lobby");
+        let rev = lobby.rev;
+        lobby.rev += 1;
+        lobby.started_at = Some(now_ms());
+        assert!(store!(t.app, tx => tx.lobbies_update(&lobby, rev).await.expect("lobbies.update")));
+        assert_eq!(invites(&t.app, &t.guest).await, (Vec::new(), json!(0)));
+    }
+}

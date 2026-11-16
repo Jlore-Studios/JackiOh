@@ -888,6 +888,19 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::social::reads::get_social),
     ),
+    // R4039000: the notification feed, the caller's own rows.
+    (
+        "GET",
+        "/api/notifications",
+        AuthLevel::Active,
+        h!(crate::notifications::list),
+    ),
+    (
+        "POST",
+        "/api/notifications/read",
+        AuthLevel::Active,
+        h!(crate::notifications::mark_read),
+    ),
     (
         "POST",
         "/api/challenges",

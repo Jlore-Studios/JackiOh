@@ -1174,3 +1174,98 @@ mod b47_status {
         assert_eq!(status, 401);
     }
 }
+
+// R4039000 — the notification feed
+
+mod r4039000_friend_feed {
+    use super::*;
+    use crate::support::store::{feed, feed_kinds};
+
+    /// `who`'s rows as `(kind, actor, subject)`, newest first.
+    async fn rows(app: &Arc<App>, who: &Account) -> Vec<(String, String, String)> {
+        feed(app, who).await["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .map(|row| {
+                let text = |value: &Value| value.as_str().unwrap_or_default().to_string();
+                (
+                    text(&row["kind"]),
+                    text(&row["actor"]["profileId"]),
+                    text(&row["subject"]),
+                )
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_request_and_its_accept_each_tell_one_account() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let cy = account(&app, 3, "Cy").await;
+        let request_id = requested(&app, &ada, &bea).await;
+        assert_eq!(
+            rows(&app, &bea).await,
+            vec![("friendRequest".to_string(), ada.id.clone(), request_id.clone())]
+        );
+        assert_eq!(rows(&app, &ada).await, Vec::new(), "the asker is told nothing");
+
+        let (status, body) = accept(&app, &bea, &request_id).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(
+            rows(&app, &ada).await,
+            vec![("friendAccepted".to_string(), bea.id.clone(), request_id.clone())]
+        );
+        assert_eq!(feed_kinds(&feed(&app, &bea).await), vec!["friendRequest"]);
+        assert_eq!(feed_kinds(&feed(&app, &cy).await), Vec::<String>::new());
+
+        // A declined request tells the asker nothing.
+        let request_id = requested(&app, &cy, &ada).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/friends/requests/{request_id}/decline"),
+            &ada.token,
+            Value::Null,
+        )
+        .await;
+        assert!((200..300).contains(&status), "{status}: {body}");
+        assert_eq!(feed_kinds(&feed(&app, &cy).await), Vec::<String>::new());
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_mutual_add_tells_the_first_asker() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let request_id = requested(&app, &ada, &bea).await;
+        let (status, body) = request(&app, &bea, &ada.name).await;
+        assert!((200..300).contains(&status), "{status}: {body}");
+        assert_eq!(
+            rows(&app, &ada).await,
+            vec![("friendAccepted".to_string(), bea.id.clone(), request_id.clone())]
+        );
+        assert_eq!(
+            rows(&app, &bea).await,
+            vec![("friendRequest".to_string(), ada.id.clone(), request_id)],
+            "the second asker is told only of the first request"
+        );
+    }
+
+    #[tokio::test]
+    async fn r4039000_a_blocked_account_writes_nothing() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let request_id = requested(&app, &ada, &bea).await;
+        block(&app, &bea, &ada).await;
+        // A block hides the request and refuses its accept; nothing new reaches either feed.
+        let (status, _) = accept(&app, &bea, &request_id).await;
+        assert_eq!(status, 404);
+        let (status, _) = request(&app, &ada, &bea.name).await;
+        assert_eq!(status, 404);
+        assert_eq!(feed_kinds(&feed(&app, &ada).await), Vec::<String>::new());
+        assert_eq!(feed_kinds(&feed(&app, &bea).await), vec!["friendRequest"]);
+    }
+}

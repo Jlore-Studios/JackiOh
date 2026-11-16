@@ -384,6 +384,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0092_daily_email_days.sql",
         include_str!("../../migrations/0092_daily_email_days.sql"),
     ),
+    (
+        "0093_notifications.sql",
+        include_str!("../../migrations/0093_notifications.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

@@ -17,6 +17,7 @@ import { CHALLENGE_CHOICE_KEY } from "../together/challengeChoice.ts";
 import { SOCIAL_POLL_MS } from "../together/config.ts";
 import { challengeToastTestid } from "../together/testids.ts";
 import { INBOX_MIN_GAP_MS, INBOX_POLL_MS, INBOX_SEEN_KEY } from "./config.ts";
+import { resetFeedForTests } from "./feed.ts";
 import { forgetInvites, noteInvite } from "./invites.ts";
 import { InboxBell } from "./InboxBell.tsx";
 import { replayKey } from "./order.ts";
@@ -117,6 +118,9 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
     if (method === "GET" && path === "/api/friends") return { status: 200, body: { friends: [], incoming: state.requests, outgoing: [], blocked: [] } };
     if (method === "GET" && path === "/api/replays/shared") return { status: 200, body: { shared: state.shared } };
     if (method === "GET" && path === "/api/daily") return state.daily === null ? refusal(500, "internal", "The daily games are out of reach.") : { status: 200, body: state.daily };
+    // R4039001: opening the panel reads the notification feed (its Recent section), here empty.
+    if (method === "GET" && path === "/api/notifications") return { status: 200, body: { notifications: [], nextBefore: null, unread: 0 } };
+    if (method === "POST" && path === "/api/notifications/read") return { status: 200, body: { unread: 0 } };
     if (method === "GET" && path === "/api/decks") return { status: 200, body: DECKS };
     if (method === "GET" && path === "/api/duos/live") return { status: 200, body: { matchId: null } };
     if (method === "POST" && path === "/api/presence") return { status: 204 };
@@ -181,6 +185,7 @@ beforeEach(() => {
   window.localStorage.clear();
   forgetRoomLink();
   resetInboxForTests();
+  resetFeedForTests();
   at("/collection");
 });
 

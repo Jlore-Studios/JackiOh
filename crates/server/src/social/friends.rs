@@ -27,6 +27,8 @@ use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::MAX_FRIENDS;
 use crate::db::store::{ChallengeState, DailyInviteState, FriendRequestRow, Profile, StoreError, Tx};
+use crate::notifications::store::NotificationKind;
+use crate::notifications::{Notice, notify};
 use crate::social::live::{nudge_friends, push_social};
 use crate::social::presence::{Standing, Status, standings};
 use crate::social::watch::{revoke_between, revoke_blocked};
@@ -249,6 +251,17 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
             "friends.added",
             json!({ "profileId": me, "friendProfileId": target.id, "mutual": true }),
         );
+        // R4039000: the one who asked first is told their request was taken.
+        notify(
+            app,
+            vec![Notice::new(
+                NotificationKind::FriendAccepted,
+                &target.id,
+                &me,
+                &theirs.id,
+            )],
+        )
+        .await;
         return Ok(created(json!({ "requestId": theirs.id })));
     }
 
@@ -267,6 +280,16 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
         "friends.requested",
         json!({ "requestId": request.id, "fromProfileId": me, "toProfileId": target.id }),
     );
+    notify(
+        app,
+        vec![Notice::new(
+            NotificationKind::FriendRequest,
+            &target.id,
+            &me,
+            &request.id,
+        )],
+    )
+    .await;
     Ok(created(json!({ "requestId": request.id })))
 }
 
@@ -304,6 +327,16 @@ pub async fn accept_request(app: &Arc<App>, req: Req) -> ApiResult {
         "friends.added",
         json!({ "profileId": me, "friendProfileId": sender.id, "mutual": false }),
     );
+    notify(
+        app,
+        vec![Notice::new(
+            NotificationKind::FriendAccepted,
+            &sender_id,
+            &me,
+            &request_id,
+        )],
+    )
+    .await;
     let friend = Friend::of(&sender, friendship.since, standing.get(&sender.id), None);
     Ok(crate::api::http::ok(json!({ "friend": to_json(&friend)? })))
 }

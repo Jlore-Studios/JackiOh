@@ -1,9 +1,12 @@
 // The notification settings (#3727): email on or off, and push on this device. `/daily` shows them under its
-// games; `/account` has them as its Notifications section (#3733).
+// games; `/account` has them as its Notifications section (#3733). R4039001: desktop notifications while JackiOh is
+// open (`inbox/desktop.ts`), this browser's own setting; and a server with no mailer (`emailAvailable` false)
+// offers no email, saying where JackiOh tells the player instead.
 
 import { useEffect, useState, type ReactElement } from "react";
 
 import { t } from "../i18n/i18n.ts";
+import { desktopOn, desktopSupported, disableDesktop, enableDesktop } from "../inbox/desktop.ts";
 import { getDailySettings, putDailySettings, type DailySettings } from "../net/daily.ts";
 import { attempt, messageOf } from "../net/errors.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -21,6 +24,10 @@ export function NotificationSettings(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [homeScreen] = useState(needsHomeScreen);
   const [supported] = useState(pushSupported);
+  const [desktopHere] = useState(desktopSupported);
+  const [desktop, setDesktop] = useState(desktopOn);
+  /** The browser said no when asked for its permission. */
+  const [desktopRefused, setDesktopRefused] = useState(false);
 
   useEffect(() => {
     let canceled = false;
@@ -72,6 +79,20 @@ export function NotificationSettings(): ReactElement {
     });
   };
 
+  const toggleDesktop = (on: boolean): void => {
+    setDesktopRefused(false);
+    if (!on) {
+      disableDesktop();
+      setDesktop(false);
+      return;
+    }
+    act(async () => {
+      const granted = await enableDesktop();
+      setDesktop(granted);
+      setDesktopRefused(!granted);
+    });
+  };
+
   const key = settings?.vapidPublicKey ?? null;
   return (
     <section className="lobby-card daily-panel" aria-labelledby="daily-settings-heading" data-testid={dailyTestid.settings}>
@@ -86,23 +107,50 @@ export function NotificationSettings(): ReactElement {
       )}
       {settings === null ? null : (
         <div className="daily-settings">
-          <label className="daily-toggle">
-            <input
-              type="checkbox"
-              data-testid={dailyTestid.email}
-              checked={settings.emailOn && settings.hasEmail}
-              disabled={busy || !settings.hasEmail}
-              onChange={(event) => {
-                toggleEmail(event.target.checked);
-              }}
-            />
-            {t("Email me when it's my move")}
-          </label>
-          {settings.hasEmail ? null : (
-            <p className="lobby-note" data-testid={dailyTestid.noEmail}>
-              {t("Your account has no email address to send to.")}
+          {settings.emailAvailable === false ? (
+            <p className="lobby-note" data-testid={dailyTestid.emailUnavailable}>
+              {t("JackiOh tells you here: in the bell, with a toast, and on this computer if you turn that on.")}
             </p>
+          ) : (
+            <>
+              <label className="daily-toggle">
+                <input
+                  type="checkbox"
+                  data-testid={dailyTestid.email}
+                  checked={settings.emailOn && settings.hasEmail}
+                  disabled={busy || !settings.hasEmail}
+                  onChange={(event) => {
+                    toggleEmail(event.target.checked);
+                  }}
+                />
+                {t("Email me when it's my move")}
+              </label>
+              {settings.hasEmail ? null : (
+                <p className="lobby-note" data-testid={dailyTestid.noEmail}>
+                  {t("Your account has no email address to send to.")}
+                </p>
+              )}
+            </>
           )}
+          {desktopHere ? (
+            <label className="daily-toggle">
+              <input
+                type="checkbox"
+                data-testid={dailyTestid.desktop}
+                checked={desktop}
+                disabled={busy}
+                onChange={(event) => {
+                  toggleDesktop(event.target.checked);
+                }}
+              />
+              {t("Show notifications on this computer while JackiOh is open")}
+            </label>
+          ) : null}
+          {desktopRefused ? (
+            <p className="lobby-note" data-testid={dailyTestid.desktopRefused}>
+              {t("This browser said no to notifications.")}
+            </p>
+          ) : null}
           {homeScreen ? (
             <p className="lobby-note" data-testid={dailyTestid.homeScreenNote}>
               {t(
@@ -124,7 +172,8 @@ export function NotificationSettings(): ReactElement {
               {t("Notify me on this device")}
             </label>
           ) : null}
-          {!homeScreen && !supported ? (
+          {/* R4039001: a browser that shows desktop notifications can show notifications, push or not. */}
+          {!homeScreen && !supported && !desktopHere ? (
             <p className="lobby-note" data-testid={dailyTestid.pushNote}>
               {t("This browser can't show notifications.")}
             </p>

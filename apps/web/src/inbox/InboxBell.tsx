@@ -2,6 +2,8 @@
 // on the player (`InboxPanel.tsx`). Its badge counts what needs them (`order.ts`): the live challenges, the lobby
 // invites, the daily games on their move, the daily challenges, the friend requests, and the shared replays
 // not yet seen; until the daily list has been read, the social read's `dailyWaiting` stands for its games.
+// R4039001: with nothing counted, a dot says the notification feed holds rows not yet read (the social read's
+// `notificationsUnread`), and while the tab is hidden its title carries the count (`title.ts`).
 //
 // The bell adds no server state: it reads the social snapshot the shell already polls (`together/socialPoll.ts`)
 // and, while shown, the daily list, the friends list and the shared replays (`store.ts`). It is hidden when no
@@ -23,6 +25,7 @@ import { InboxPanel } from "./InboxPanel.tsx";
 import { inboxBadge, inboxItems } from "./order.ts";
 import { useInboxPoll, useInboxReads } from "./store.ts";
 import { inboxTestid } from "./testids.ts";
+import { useHiddenTitleCount } from "./title.ts";
 
 import "../auth/tavern.css";
 import "../routes/lobby.css";
@@ -61,8 +64,6 @@ export function InboxBell(): ReactElement | null {
     if (element !== null && element.isConnected) element.focus({ preventScroll: true });
   }, []);
 
-  if (!active) return null;
-
   const items = inboxItems(
     {
       challenges: reads.incoming,
@@ -75,6 +76,12 @@ export function InboxBell(): ReactElement | null {
   );
   // Until the daily list has been read, the social read's count stands for the games on the player's move.
   const count = inboxBadge(items, inbox.seen) + (inbox.daily === null ? reads.dailyWaiting : 0);
+  useHiddenTitleCount(active ? count : 0);
+
+  if (!active) return null;
+
+  // R4039001: the badge counts what waits; with nothing counted, the dot says something happened.
+  const dot = count === 0 && reads.notificationsUnread > 0;
 
   return (
     <>
@@ -83,11 +90,12 @@ export function InboxBell(): ReactElement | null {
         type="button"
         className="inbox-bell top-bar-button top-bar-button--round"
         data-testid={inboxTestid.bell}
-        aria-label={count > 0 ? t("Inbox, {count} waiting for you", { count }) : t("Inbox")}
+        aria-label={count > 0 ? t("Inbox, {count} waiting for you", { count }) : dot ? t("Inbox, new notifications") : t("Inbox")}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         title={t("Inbox")}
+        data-live={reads.live ? "true" : "false"}
         onClick={() => {
           setOpen(true);
         }}
@@ -100,6 +108,7 @@ export function InboxBell(): ReactElement | null {
             {count}
           </span>
         ) : null}
+        {dot ? <span className="inbox-bell__dot" data-testid={inboxTestid.dot} aria-hidden="true" /> : null}
       </button>
       {open
         ? createPortal(

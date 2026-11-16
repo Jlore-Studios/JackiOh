@@ -719,10 +719,20 @@ routes/playTestids.ts   /play's testids, with no imports, which e2e/support/test
 shell/QueueBanner.tsx   R3729001: the queue search in the shell's status row, on every menu screen: the mode, a
                         ticking clock, the expected wait (net/queueReadout.ts) and Cancel
 inbox/                  R3729002: the bell (`InboxBell`, in the top bar's end group and the landing's corner)
-                        and its sheet (`InboxPanel`): live challenges, lobby invites (`invites.ts`, kept in
-                        the tab), daily games on the player's move, daily challenges, friend requests and
-                        shared replays, in `order.ts`'s order, each answered inline; `store.ts` reads the
-                        daily list, friends and shared replays beside the social read, no new server state
+                        and its sheet (`InboxPanel`): under "Waiting on you", live challenges, lobby invites
+                        (`invites.ts`, kept in the tab), daily games on the player's move, daily challenges,
+                        friend requests and shared replays, in `order.ts`'s order, each answered inline;
+                        `store.ts` reads the daily list, friends and shared replays beside the social read.
+                        R4039001: under "Recent" (`RecentSection.tsx`, `feed.ts`), the notification feed the
+                        server keeps (R4039000, `net/notifications.ts`), newest first, each row in words, its
+                        time ago and Open, "Show older" a page at a time; opening the panel marks it read up
+                        to the newest row shown. A dot on the bell when the feed holds unread rows and the
+                        badge counts nothing (the social read's `notificationsUnread`); while the tab is
+                        hidden its title carries the badge's count, except on a board or /daily (`title.ts`);
+                        one toast for the newest row the socket pushes, none for a lobby invite (it has its
+                        own), held while a board is shown (`NotificationToast.tsx`, in `main.tsx`); and a
+                        desktop notification for a daily move, a daily challenge, a lobby invite or a friend
+                        request while the tab is hidden, when the player turned them on (`desktop.ts`)
 net/clientErrors.ts     #3619: a crash in this browser told to the owners: the route boundary's error, an
                         uncaught error and an unhandled rejection each POST one small report (message,
                         trimmed stack, route pattern, catalog version) to /api/client-errors; never state,
@@ -1106,7 +1116,11 @@ net/daily.ts             fetch wrappers for every daily route, typed
 daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
                          the mode, its deck or lean, and the time per move on the segmented toggle; as a
                          rematch, only the deck or lean, to the finished game's opponent
-daily/NotificationSettings.tsx  email and push on or off: /daily's panel and /account's Notifications section
+daily/NotificationSettings.tsx  email and push on or off, and (R4039001) desktop notifications while JackiOh is
+                         open, this browser's own (`inbox/desktop.ts`; a refused permission leaves them off
+                         and says so); a server with no mailer (`emailAvailable` false) shows no email toggle,
+                         only where JackiOh tells the player instead: /daily's panel and /account's
+                         Notifications section
 daily/DailyBadge.tsx     the count of games waiting on the player (the social read's dailyWaiting), on
                          the Play hub's Daily games
 daily/push.ts            this device's push subscription from GET /api/daily/settings's vapidPublicKey,

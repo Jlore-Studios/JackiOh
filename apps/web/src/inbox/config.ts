@@ -30,3 +30,9 @@ export const INBOX_TICK_MS = 1_000;
 /** The clock a challenge's time left reads on: sixty seconds to the minute, the seconds in two digits ("1:05 left"). */
 export const SECONDS_PER_MINUTE = 60;
 export const INBOX_CLOCK_DIGITS = 2;
+
+/**
+ * R4039001: where this browser keeps whether the player turned desktop notifications on ("on"); the browser's own
+ * permission must be granted too. A setting of this device's, never the server's.
+ */
+export const DESKTOP_NOTIFY_KEY = "jackioh.inbox.desktop";
