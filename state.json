@@ -16886,13 +16886,24 @@
       "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gpt"
+        ],
         "builder": "gpt",
         "built_by": "gpt",
         "rejections": [],
-        "reviews": [],
-        "sha": "f136a911ed7c366b04405e68106036e6742720c6",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "gpt",
+            "provider": "gpt",
+            "run": "43811474583",
+            "tier": "medium"
+          }
+        ],
+        "sha": "3af812061084a199caa7c4bcd97573e3932642fe",
+        "tiers": {
+          "gpt": "medium"
+        }
       }
     },
     "4048": {
