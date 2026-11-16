@@ -38013,14 +38013,6 @@
         "provider": "claude-8",
         "run_id": "43815448492",
         "taken_asks": []
-      },
-      "4": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-16T06:15:30Z",
-        "provider": "muse",
-        "run_id": "43815529785",
-        "taken_asks": []
       }
     },
     "taken_asks": []
