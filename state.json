@@ -17740,19 +17740,15 @@
     "what": "build #4024 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-16T04:58:40Z",
+    "at": "2026-11-16T05:35:39Z",
     "notes": [
-      "delivered review #4047 on gpt (run 43806637943): reviewed",
-      "delivered review #4052 on claude-8 (run 43805530496): approved",
-      "delivered build #4008 on claude-1 (run 43799786570): built",
-      "delivered build #4032 on claude-7 (run 43796176717): built",
-      "started review #4055 on claude-7 (run 43807744854)",
-      "started review #4054 on claude-1 (run 43807808878)",
-      "started revise #4047 on gpt (run 43807878550)",
-      "started review #4048 on claude-2 (run 43807942079)",
+      "delivered revise #4047 on gpt (run 43807878550): built",
+      "started review #4047 on gpt (run 43811474583)",
+      "started review #4053 on claude-3 (run 43811537426)",
+      "started build #4024 on claude-8 (run 43811600837)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
+      "pruned 5 plan file(s) older than 7 days",
+      "#4052: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18456,7 +18452,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T04:58:40Z",
+  "loop_tick": "2026-11-16T05:35:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
