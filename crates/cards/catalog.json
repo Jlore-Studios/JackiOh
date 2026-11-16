@@ -224,7 +224,7 @@
     "rarity": "Common",
     "flavor": "Hustle",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "mana",
@@ -480,14 +480,14 @@
     ],
     "loc": 10,
     "base": {
-      "attack": 5,
-      "health": 7,
+      "attack": 4,
+      "health": 6,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 10,
-      "health": 14,
+      "attack": 8,
+      "health": 12,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     }
@@ -1803,14 +1803,14 @@
     "cost": 4,
     "loc": 14,
     "base": {
-      "attack": 2,
-      "health": 2,
+      "attack": 4,
+      "health": 4,
       "keywords": [],
       "text": "Summon this for your opponent.\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
     },
     "radiant": {
-      "attack": 4,
-      "health": 4,
+      "attack": 8,
+      "health": 8,
       "keywords": [],
       "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
     }
@@ -2802,7 +2802,7 @@
     "rarity": "Rare",
     "flavor": "Chaos",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "refs": [
       "core-072"
     ],
@@ -2912,7 +2912,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "echoGain",
@@ -3659,7 +3659,7 @@
     "rarity": "Mythic",
     "flavor": "Chaos",
     "token": false,
-    "cost": 0,
+    "cost": 1,
     "refs": [
       "core-t-rush",
       "core-t-felinor",
@@ -4412,7 +4412,7 @@
     "rarity": "Legendary",
     "flavor": "Hustle",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "draws",
@@ -5291,7 +5291,7 @@
     "rarity": "Rare",
     "flavor": "Beast",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "core-t-felinor"
     ],
@@ -5631,8 +5631,8 @@
     "cost": 1,
     "loc": 3,
     "base": {
-      "attack": 3,
-      "health": 3,
+      "attack": 2,
+      "health": 2,
       "keywords": [
         {
           "kind": "Indestructible"
@@ -5644,8 +5644,8 @@
       "text": "Indestructible, Immutable"
     },
     "radiant": {
-      "attack": 6,
-      "health": 6,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Indestructible"
@@ -8912,7 +8912,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
+      "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per} Health per mana lost."
     },
     "radiant": {
       "attack": 8,
@@ -8922,7 +8922,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
+      "text": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per} Health per mana lost."
     }
   },
   "classicplus-027": {
@@ -13169,8 +13169,8 @@
     "params": [
       {
         "key": "units",
-        "base": 5,
-        "radiant": 5,
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -13202,16 +13202,8 @@
     "params": [
       {
         "key": "cards",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -13220,11 +13212,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Add {cards|random CN card|random CN cards} to your hand. Each costs ({discount}) less."
+      "text": "Add {cards|random CN card|random CN cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand. Each costs ({discount}) less."
+      "text": "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand."
     }
   },
   "meditative-034": {
@@ -13670,18 +13662,18 @@
     "rarity": "Legendary",
     "flavor": "Nature",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "meditative-039-1"
     ],
     "loc": 35,
     "base": {
       "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.\nActivate: Add an Auspicious Rock to your hand.\nYour last element, your opponent's last element."
+      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.\nCry: Add an Auspicious Rock to your hand.\nActivate: Add an Auspicious Rock to your hand.\nYour last element, your opponent's last element."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily.\nActivate: Add a Radiant Auspicious Rock to your hand.\nYour last element, your opponent's last element."
+      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily.\nCry: Add a Radiant Auspicious Rock to your hand.\nActivate: Add a Radiant Auspicious Rock to your hand.\nYour last element, your opponent's last element."
     }
   },
   "meditative-041": {
@@ -13951,16 +13943,16 @@
     "cost": 4,
     "loc": 29,
     "base": {
-      "attack": 0,
-      "health": 1,
-      "keywords": [],
-      "text": "End of turn: Fuse a random enemy Unit into this."
-    },
-    "radiant": {
-      "attack": 0,
+      "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "End of turn: Fuse a random enemy Unit and a random card from your opponent's deck into this."
+      "text": "Activate: Fuse a random enemy Unit into this, then Freeze this."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Activate: Fuse a random enemy Unit into this."
     }
   },
   "meditative-048": {
@@ -14408,18 +14400,28 @@
     "rarity": "Common",
     "flavor": "Physical",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "refs": [
       "core-003"
+    ],
+    "params": [
+      {
+        "key": "brittle",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
     ],
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Fill your board with Right-house defenders."
+      "text": "Fill your board with Right-house defenders. They have Brittle {brittle}, and so do their Reborn copies."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Radiant Right-house defenders."
+      "text": "Fill your board with Radiant Right-house defenders. They have Brittle {brittle}, and so do their Reborn copies."
     }
   },
   "meditative-057": {
@@ -15257,25 +15259,14 @@
     "flavor": "Dark",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "discount",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Exile every non-CN permanent. Add a random CN card to your hand for each of yours exiled this way."
+      "text": "Exile every non-CN permanent."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile every non-CN permanent. Add a random Radiant CN card to your hand for each of yours exiled this way. Each costs ({discount}) less."
+      "text": "Exile every enemy non-CN permanent."
     }
   },
   "meditative-079": {
@@ -17221,8 +17212,8 @@
     "flavor": "Nerd",
     "token": false,
     "cost": {
-      "base": 2,
-      "embiggen": 4
+      "base": 1,
+      "embiggen": 3
     },
     "params": [
       {
@@ -17253,11 +17244,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (3): Draw {embiggenedDraw} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (3): Draw {embiggenedDraw} instead."
     }
   },
   "meditativeplus-004": {
@@ -18028,7 +18019,7 @@
     "rarity": "Epic",
     "flavor": "Nature",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "premium",
@@ -19691,13 +19682,13 @@
       "attack": 2,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
+      "text": "Tribute 1\nCry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
     },
     "radiant": {
       "attack": 4,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
+      "text": "Tribute 1\nCry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
     }
   },
   "stinkyscape-027": {
@@ -19836,7 +19827,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
@@ -20059,8 +20050,8 @@
     "params": [
       {
         "key": "buff",
-        "base": 3,
-        "radiant": 6,
+        "base": 2,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20240,8 +20231,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "read": "cry"
+        "min": 1
       }
     ],
     "loc": 19,
@@ -20249,13 +20239,13 @@
       "attack": 3,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
+      "text": "Death: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
     },
     "radiant": {
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
+      "text": "Death: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
     }
   },
   "stinkyscape-043": {
@@ -20949,8 +20939,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 11,
-        "radiant": 22,
+        "base": 9,
+        "radiant": 18,
         "better": "up",
         "step": 2,
         "min": 1
@@ -21869,8 +21859,8 @@
     "cost": 4,
     "loc": 46,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 2,
+      "health": 2,
       "keywords": [
         {
           "kind": "Flying"
@@ -21879,8 +21869,8 @@
       "text": "Tribute 2, Flying\nCry: Discover 2 Radiant Miners and Equip them into this."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Flying"
@@ -22310,7 +22300,7 @@
     "cost": 2,
     "loc": 21,
     "base": {
-      "attack": 3,
+      "attack": 2,
       "health": 3,
       "keywords": [
         {
@@ -22320,7 +22310,7 @@
       "text": "Rush\nAfter this attacks, summon a copy of this, then evolve.\nEvolve: Gain Flying."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 4,
       "health": 6,
       "keywords": [
         {
@@ -27387,24 +27377,14 @@
     "refs": [
       "core-t-rush"
     ],
-    "params": [
-      {
-        "key": "tokens",
-        "base": 4,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 50,
     "base": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them."
+      "text": "Fill your board with Rush Tokens. At the end of this turn, destroy them."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. At the end of this turn, destroy them."
+      "text": "Fill your board with Radiant Rush Tokens. At the end of this turn, destroy them."
     }
   },
   "traininggrounds-016": {
@@ -28469,11 +28449,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack and Rush."
+      "text": "Aura: Your Units have +{attack} Attack."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack and Rush."
+      "text": "Aura: Your Units have +{attack} Attack."
     }
   },
   "traininggrounds-046": {
@@ -28563,13 +28543,13 @@
     ],
     "loc": 12,
     "base": {
-      "attack": 8,
+      "attack": 6,
       "health": 10,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 16,
+      "attack": 12,
       "health": 20,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
@@ -28678,15 +28658,25 @@
     "rarity": "Rare",
     "flavor": "Dark",
     "token": false,
-    "cost": 4,
+    "cost": 3,
+    "params": [
+      {
+        "key": "loss",
+        "base": 2,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Set its stats to 2/2."
+      "text": "Steal an enemy Unit. Next turn, lose ({loss}) mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy card."
+      "text": "Steal an enemy Unit. Next turn, lose ({loss}) mana."
     }
   },
   "traininggrounds-053": {
@@ -29125,13 +29115,13 @@
       "attack": 7,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon two random Traps. Then choose one of the following Activates.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile a permanent. Then summon two random Traps.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
     },
     "radiant": {
       "attack": 14,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon three random Radiant Traps. Then choose one of the following Activates.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile a permanent. Then summon three random Radiant Traps.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
     },
     "params": [
       {
@@ -29399,7 +29389,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Summon a Drone Interceptor to attack an enemy."
+      "text": "Starship Piece, Equip\nActivate: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -29412,7 +29402,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Summon a Radiant Drone Interceptor to attack an enemy."
+      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "refs": [
       "stinkyscape-t-drone-interceptor"
@@ -29443,7 +29433,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Drone Corvette to attack an enemy."
+      "text": "Starship Piece, Equip\nActivate 2: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -29456,10 +29446,10 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Drone Corvette to attack an enemy."
+      "text": "Starship Piece, Equip\nActivate 2: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "refs": [
-      "stinkyscape-t-drone-corvette"
+      "stinkyscape-t-drone-interceptor"
     ]
   },
   "stinkyscapeplus-011": {
@@ -29865,7 +29855,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Tribute 1, Pierce\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      "text": "Tribute 2, Pierce\nEnd of turn: Deal {damage} damage to all enemies, twice."
     },
     "radiant": {
       "attack": 24,
@@ -29875,7 +29865,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Tribute 1, Pierce\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      "text": "Tribute 2, Pierce\nEnd of turn: Deal {damage} damage to all enemies, twice."
     },
     "params": [
       {
@@ -30806,14 +30796,24 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Give a Unit Immutable, Immune to Spells and Divine Shield."
+      "text": "Give a Unit Immutable, Immune to Spells, Divine Shield and Armor {armor}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit Immutable, Immune to Spells, Divine Shield and Can't be attacked."
+      "text": "Give a Unit Immutable, Immune to Spells, Divine Shield, Armor {armor} and Can't be attacked."
     }
   },
   "stinkyscapeplus-047": {
@@ -31230,7 +31230,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "loc": 21,
     "base": {
       "keywords": [],
@@ -32353,22 +32353,12 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game, lose {mana} mana. Add a random Terminus card to your hand. It costs (2)."
+      "text": "Now and at the start of each of your turns for the rest of the game: Add a random Terminus card to your hand. It costs (2)."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game, lose {mana} mana. Add a random Radiant Terminus card to your hand. It costs (2)."
-    },
-    "params": [
-      {
-        "key": "mana",
-        "base": 1,
-        "radiant": 1,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ]
+      "text": "Now and at the start of each of your turns for the rest of the game: Add a random Radiant Terminus card to your hand. It costs (2)."
+    }
   },
   "stinkyscapeplus-083": {
     "id": "stinkyscapeplus-083",
@@ -33265,7 +33255,7 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 5
+          "n": 3
         },
         {
           "kind": "Can't Defend"
@@ -33277,7 +33267,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 5, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
+      "text": "Armor 3, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
     },
     "radiant": {
       "attack": 4,
@@ -33285,7 +33275,7 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 10
+          "n": 6
         },
         {
           "kind": "Can't Defend"
@@ -33297,7 +33287,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 10, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
+      "text": "Armor 6, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
     },
     "params": [
       {
@@ -34134,7 +34124,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 0,
+    "cost": 1,
     "loc": 87,
     "base": {
       "attack": 1,
@@ -34159,8 +34149,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 2,
-        "radiant": 4,
+        "base": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35321,7 +35311,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 16,
     "base": {
       "keywords": [],
@@ -35347,7 +35337,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 30,
     "base": {
       "keywords": [],
@@ -35373,7 +35363,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "loc": 28,
     "base": {
       "keywords": [],
@@ -35570,8 +35560,8 @@
       },
       {
         "key": "card3",
-        "base": 5,
-        "radiant": 5,
+        "base": 4,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35594,8 +35584,8 @@
       },
       {
         "key": "burn",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35821,7 +35811,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Burn {burn} an enemy Unit, Cleave."
+      "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
     "radiant": {
       "attack": 0,
@@ -35839,8 +35829,8 @@
     "params": [
       {
         "key": "burn",
-        "base": 4,
-        "radiant": 8,
+        "base": 6,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -36416,16 +36406,24 @@
     "cost": 4,
     "loc": 55,
     "base": {
-      "attack": 2,
-      "health": 8,
-      "keywords": [],
-      "text": "Tribute 3\nActivate: Summon a Radi. It triggers its Cry.\nCry: Discover an Epic Weapon; Equip it into this."
+      "attack": 4,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Tribute 3, Immune to Spells\nActivate: Summon a Radi. It triggers its Cry.\nCry: Discover an Epic Weapon; Equip it into this."
     },
     "radiant": {
-      "attack": 4,
-      "health": 16,
-      "keywords": [],
-      "text": "Tribute 3\nActivate: Summon a Radiant Radi. It triggers its Cry.\nCry: Discover a Legendary Weapon; Equip it into this."
+      "attack": 8,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Tribute 3, Immune to Spells\nActivate: Summon a Radiant Radi. It triggers its Cry.\nCry: Discover a Legendary Weapon; Equip it into this."
     },
     "refs": [
       "stinkyscapeplus-060"
@@ -36568,7 +36566,7 @@
     "rarity": "Epic",
     "flavor": "Physical",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 32,
     "base": {
       "attack": 3,

@@ -79,7 +79,7 @@ chalk (the set keeps blade for #18's knives and chalk for #38's teacher).
 | `traininggrounds-049` | Legacy: Reoccurring Dream | Spell | cast radiance; trigger send | 1.19 | bolt | cast: the census's bolt is its End of turn window's noise; its play's radiantSet, which radiance reads; trigger: its return to the hand (bounced, then addedToHand), which send reads |
 | `traininggrounds-050` | Legacy: Glowy Jelly Bean | Spell | cast radiance | 1.36 | none: no motif reads radiantSet | cast: no census family reads radiantSet, which radiance (#2793) reads |
 | `traininggrounds-051` | Legacy: Big Felinor | Unit | cry wipe Beast/felinor | 1.45 | wipe | cry: the census agrees (wipe), in Beast's felinor sub-look |
-| `traininggrounds-052` | Legacy: Snom Bunny Mind Control | Spell | cast tether | 1.45 | none: no motif reads controlChanged | cast: no census family reads stolen, controlChanged and held, which tether (#2786) reads |
+| `traininggrounds-052` | Legacy: Snom Bunny Mind Control | Spell | cast tether | 1.36 | none: no motif reads controlChanged | cast: no census family reads stolen, controlChanged and held, which tether (#2786) reads |
 | `traininggrounds-053` | Legacy: Prejudiced Postdoc | Unit | cry conjure | 1.28 | none: no motif reads summoned | cry: no census family reads summoned, which conjure (#2786) reads |
 | `traininggrounds-054` | Legacy: The Rock | Unit | cry offering | 1.32 | offering | cry: the census agrees (offering), its Tribute 1 |
 | `traininggrounds-055` | Legacy: Reminisce | Spell | cast send | 1.19 | bolt | cast: the census's bolt is one stray hit; its Discover adds the card to the hand (addedToHand), which send reads |

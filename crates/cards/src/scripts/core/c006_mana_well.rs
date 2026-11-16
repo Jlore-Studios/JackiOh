@@ -1,6 +1,6 @@
-//! #6 Mana Well (SPEC §8.1): a 3-cost Field Spell, "Start of turn: gain 1 mana", radiant "Gain 2" —
-//! a Radiant cell that changes only a number changes only that number (§8 Conventions), so the two
-//! faces are the same hook with a different amount.
+//! #6 Mana Well (SPEC §8.1): a 2-cost Field Spell (3-cost until issue #3996), "Start of turn: gain 1
+//! mana", radiant "Gain 2" — a Radiant cell that changes only a number changes only that number (§8
+//! Conventions), so the two faces are the same hook with a different amount.
 //!
 //! `gain_mana` adds to `mana.current`, never `mana.max`, so it may exceed 4 (§2.3), and defaults its
 //! `player` to "self" (§6.3). `start_of_turn` fires for the controller only, before the draw (§2.2,

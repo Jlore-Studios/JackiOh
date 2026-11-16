@@ -33,7 +33,8 @@
 //!      Under a Mayor (R1200) a target is refused.
 //!   I9 the wire tells the truth (§10.3, §10.10, #1719): `turnEnded` names the turn under way (§2.2), each
 //!      `fatigue` is the next draw's `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902), the last `manaChanged`
-//!      is `mana` (§2.3).
+//!      is `mana` (§2.3), and no 1v1 hero's health moves without its `damage`, `healthLost`, `healed`,
+//!      `healthSet` or health `swapped` (R2201000).
 //!   I10 no opponent-held prompt on its holder's off turn (§10.6, R1279000; #2568): a `pending` whose
 //!      `player_id` is not `state.active` and whose `prompt_owner_of` is another player is a violation.
 //!   I11 no definition-level Unit token sits in a graveyard, an exile pile or `held` (§3, §3.2, R11), read
@@ -89,7 +90,8 @@ use crate::wire::{
     Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
     DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
     PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, Position, PromptKind, RedirectWhat,
-    RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
+    RevealAt, Row, Selection, SwapWhat, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword,
+    opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -2144,6 +2146,12 @@ struct ChosenExertion {
 /// A hero is a target `hero-<player>` (the combat's facts, `after_attack_of`).
 const HERO_TARGET_PREFIX: &str = "hero-";
 
+/// The seat a `hero-<player>` target id names (the spelling `damage` and `healed` use), or None for a unit.
+fn hero_seat_of(target_id: &str) -> Option<PlayerId> {
+    let named = target_id.strip_prefix(HERO_TARGET_PREFIX)?;
+    PLAYER_IDS.into_iter().find(|seat| seat.as_str() == named)
+}
+
 /// B5 E35, R1869002: the fresh exertion a kill gave its attacker in one stint on one turn: `at` is how
 /// many attacks it had declared there then (none once a settling took it back), `before` the credit it
 /// held there before it.
@@ -2269,6 +2277,11 @@ pub struct InvariantMonitor {
     /// I9: each seat's fatigue draws as the stream counted them (§2.4, R3, R315): the start state's
     /// `fatigue_count`, one more per `fatigue` event, and the new game's count after a Glitch's reset (R676).
     fatigue: PerPlayer<i32>,
+    /// I9: each seat's hero health as the stream's events moved it (§10.3): the start state's, less each
+    /// `damage` on the hero and `healthLost`, plus each `healed`, set by `healthSet`, swapped by `swapped`
+    /// (health), held to the seat's hero floor as `duos_life` holds it (R2201000); a Glitch's reset (R676)
+    /// starts it again from the state it left.
+    health: PerPlayer<i32>,
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
 }
@@ -2308,6 +2321,7 @@ impl InvariantMonitor {
             attack_open: false,
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
+            health: start.players.map(|_, side| side.hero.health),
             dormant: dormant_cards(start),
         }
     }
@@ -2762,6 +2776,47 @@ impl InvariantMonitor {
         found
     }
 
+    /// I9 on the state one action left: each 1v1 seat's hero health is what the stream's `damage`,
+    /// `healthLost`, `healed`, `healthSet` and health `swapped` events left it (§10.3, R2201000). A
+    /// Duos seat is skipped, as I17's hero bound is: `duos::reduce` copies the team pool into a spent
+    /// hero with no event (`duos/reduce.rs`). A Glitch's reset (R676) starts the tally again from the
+    /// state it left. A silent move is reported once: the tally then follows the state.
+    fn counted_health(&mut self, state: &GameState, reset: bool) -> Vec<String> {
+        let mut found: Vec<String> = Vec::new();
+        for seat in PLAYER_IDS {
+            let side = &state.players[seat];
+            let held = side.hero.health;
+            if reset || side.duos.is_some() {
+                self.health[seat] = held;
+                continue;
+            }
+            let counted = self.health[seat];
+            if counted != held {
+                found.push(format!(
+                    "I9 silent hero health: {seat} holds hero health {held} on turn {}, but the stream's tally for \
+                     {seat} is {counted} (§10.3, R2201000)",
+                    state.turn
+                ));
+                self.health[seat] = held;
+            }
+        }
+        found
+    }
+
+    /// R2201000: a floored hero's tally reads its floor after any move that would take it lower.
+    fn hold_hero_floor(&mut self, seat: PlayerId, state: &GameState) {
+        if let Some(floor) = crate::state::hero_floor_of(state, seat)
+            && self.health[seat] < floor
+        {
+            self.health[seat] = floor;
+        }
+    }
+
+    fn hero_loses(&mut self, seat: PlayerId, amount: i32, state: &GameState) {
+        self.health[seat] -= amount;
+        self.hold_hero_floor(seat, state);
+    }
+
     /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot.
     /// Empty when clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
@@ -2945,6 +3000,33 @@ impl InvariantMonitor {
                              turn {}, but FATIGUE_DAMAGE({count}) is {dealt} (§2.4, R3, R315)",
                             self.turn
                         ));
+                    }
+                }
+                GameEvent::Damage {
+                    target_id, amount, ..
+                } => {
+                    // I9: the amount is what got through Armor (§4.4 step 5); a unit's hit moves no hero.
+                    if let Some(seat) = hero_seat_of(target_id) {
+                        self.hero_loses(seat, *amount, state);
+                    }
+                }
+                GameEvent::HealthLost { player, amount } => self.hero_loses(*player, *amount, state),
+                GameEvent::Healed {
+                    target_id, amount, ..
+                } => {
+                    if let Some(seat) = hero_seat_of(target_id) {
+                        self.health[seat] += *amount;
+                    }
+                }
+                GameEvent::HealthSet { player, health, .. } => self.health[*player] = *health,
+                GameEvent::Swapped {
+                    what: SwapWhat::Health,
+                } => {
+                    let (one, other) = (self.health[PlayerId::P1], self.health[PlayerId::P2]);
+                    self.health[PlayerId::P1] = other;
+                    self.health[PlayerId::P2] = one;
+                    for seat in PLAYER_IDS {
+                        self.hold_hero_floor(seat, state);
                     }
                 }
                 GameEvent::CardPlayed { instance_id, .. }
@@ -3342,6 +3424,7 @@ impl InvariantMonitor {
         self.resets = state.resets;
         found.extend(InvariantMonitor::announced_state(events, state, reset));
         found.extend(self.counted_fatigue(state, reset));
+        found.extend(self.counted_health(state, reset));
 
         // R1829000: a card a Stack pile uncovers has entered, though no event says so (R212).
         if !reset {
@@ -3787,5 +3870,32 @@ mod tests {
         let found = i17(monitor.clone().after(&[], &state));
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].starts_with("duel 0: I17 negative mana"), "{}", found[0]);
+    }
+    #[test]
+    fn duos_monitor_skips_a_duos_seat_s_hero_health_i9() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i9-duos-health", test_decks(), None);
+        let monitor = create_duos_invariant_monitor(&state);
+        assert!(state.duels[0].players[PlayerId::P1].duos.is_some());
+        let silent = |found: Vec<String>| -> Vec<String> {
+            found
+                .into_iter()
+                .filter(|f| f.contains(": I9 silent hero health"))
+                .collect()
+        };
+
+        // `duos::reduce` copies the team pool into a spent hero with no event (§13.4).
+        state.duels[0].players[PlayerId::P1].hero.health = 7;
+        assert_eq!(silent(monitor.clone().after(&[], &state)), Vec::<String>::new());
+
+        // The contrast: the same silent move on a 1v1 seat is reported.
+        let mut one_v_one = state.clone();
+        one_v_one.duels[0].players[PlayerId::P1].duos = None;
+        let found = silent(monitor.clone().after(&[], &one_v_one));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("duel 0: I9 silent hero health: p1"),
+            "{}",
+            found[0]
+        );
     }
 }

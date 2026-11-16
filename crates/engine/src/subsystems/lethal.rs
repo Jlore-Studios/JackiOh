@@ -126,8 +126,9 @@ fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance
 
 /// §4.3 step 1 and R93, projected: a defender with First Strike, against an attacker without it,
 /// strikes first, and an attacker that falls there never lands its own hit. §4.4's stops apply to the
-/// strike back as `damage::project_hit` reads them, a conversion and the attacker's side's damage pool
-/// included (R4032000), and a Poisonous defender destroys with any damage at all (step 7).
+/// strike back as `damage::project_hit` reads them, the attacker's own cap (R2179005), a conversion and
+/// the attacker's side's damage pool included (R4032000), and a Poisonous defender destroys with any
+/// damage at all (step 7).
 pub(crate) fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
@@ -147,6 +148,7 @@ pub(crate) fn falls_to_first_strike(
     let on_attacker = DamageTarget::Unit {
         instance: attacker.clone(),
     };
+    // Step 3 reads the attacker's own cap on the hit (R2179005), as the strike back's damage does.
     let dealt = project_hit(
         state,
         Some(defender),

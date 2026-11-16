@@ -204,7 +204,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn all_three_in_order_the_learning_the_hand_and_five_cn_units() {
+            fn all_three_in_order_the_learning_the_hand_and_three_cn_units() {
                 let mut s = casting("spiritually-all", false);
                 s.play(SPIRITUALLY, json!({}));
                 for card in s.hand(P2) {
@@ -223,7 +223,7 @@ mod tests {
                 assert!(defs.iter().all(|def| *def == defs[0]));
                 assert!(CN_IDS.contains(&defs[0].as_str()));
                 let units = units_of(&s);
-                assert_eq!(units.len(), 5);
+                assert_eq!(units.len(), 3);
                 for unit in &units {
                     let def = crate::card_def(&unit.def_id);
                     assert_eq!(def.type_, CardType::Unit);
@@ -272,10 +272,13 @@ mod tests {
                     let mut s = casting(&format!("spiritually-prices-{n}"), false);
                     s.play(SPIRITUALLY, json!({}));
                     let hand = s.hand(P1);
-                    let def = crate::card_def(&hand[0].def_id);
-                    assert_eq!(effective_cost(s.state(), &hand[0], CostOptions::default()), printed_cost(s.state(), &hand[0]));
+                    // Issue #3951: a hand made Tatches the Totem summons itself into the lanes the three
+                    // Units leave open (five filled the row until issue #3996), leaving no hand to read.
+                    let Some(card) = hand.first() else { continue };
+                    let def = crate::card_def(&card.def_id);
+                    assert_eq!(effective_cost(s.state(), card, CostOptions::default()), printed_cost(s.state(), card));
                     if let CardCost::Fixed(price) = def.cost {
-                        assert_eq!(printed_cost(s.state(), &hand[0]), price);
+                        assert_eq!(printed_cost(s.state(), card), price);
                         prices.insert(price);
                     }
                 }
@@ -330,7 +333,7 @@ mod tests {
                     assert_eq!(card.cost_override, None);
                 }
                 let units = units_of(&s);
-                assert_eq!(units.len(), 5);
+                assert_eq!(units.len(), 3);
                 for unit in &units {
                     assert!(unit.radiant);
                 }

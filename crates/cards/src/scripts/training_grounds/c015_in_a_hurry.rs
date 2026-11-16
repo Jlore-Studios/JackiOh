@@ -1,8 +1,11 @@
-//! TG #15 In a hurry (SPEC §8.11 row TG 15; §2.2, §3.2, §4.2, §7, R11, R64, R174, R350, R2198002): (3)
-//! Spell, Common, a card of the held Training Grounds set (R1420, R2194000).
-//!   Base:    "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them." — 4.
-//!   Radiant: "Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. …" — 4.
-//! C+ #15 summon leftmost open zones (R64; fewer if full, §3.2; rememberAs, R1126; §4.2, §7).
+//! TG #15 In a hurry (SPEC §8.11 row TG 15; §2.2, §3.2, §4.2, §7, R11, R64, R174, R350, R1136000,
+//! R2198002): (3) Spell, Common, a card of the Training Grounds set (R1420, R2194000).
+//!   Base:    "Fill your board with Rush Tokens. At the end of this turn, destroy them."
+//!   Radiant: "Fill your board with Radiant Rush Tokens. At the end of this turn, destroy them."
+//! "Fill your board" is one summon per unit zone, C+ #46.1's fill: each takes the leftmost open zone
+//! (R64), else a Locked one (R688, R1136000), and fizzles once none is left (§3.2), each remembered
+//! (rememberAs, R1126; §4.2, §7). Through v0.6.5b it summoned the declared `tokens`, 4 (issue #3996),
+//! which `script_v0_6_5b` keeps for those replays (R767000).
 //! End-of-turn delay destroys at §2.2 (R2198002, R350; off field forgotten, R11, R174; stolen still destroyed; END_OF_TURN_MARK, R437, R2321001; TG6 row 10).
 
 use jackioh_engine::prelude::*;
@@ -27,10 +30,11 @@ fn summoned(ctx: &mut EffectContext<'_>, tokens: i32) -> Vec<String> {
         .collect()
 }
 
-fn hurry() -> Script {
+/// `fill`: one Rush Token per unit zone; else, as through v0.6.5b, the declared `tokens`.
+fn hurry(fill: bool) -> Script {
     Script {
-        cry: Some(hook(|ctx| {
-            let tokens = param(&*ctx, "tokens");
+        cry: Some(hook(move |ctx| {
+            let tokens = if fill { UNIT_ZONES } else { param(&*ctx, "tokens") };
             let radiant = ctx.radiant;
             let mut effects: Vec<Effect> = (0..tokens)
                 .map(|n| {
@@ -64,8 +68,17 @@ fn hurry() -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: hurry(),
-        radiant: hurry(),
+        base: hurry(true),
+        radiant: hurry(true),
+    }
+}
+
+/// R767000: the scripts v0.6.5b and every version before it ran, summoning the declared `tokens` (issue
+/// #3996). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5b() -> CardScripts {
+    CardScripts {
+        base: hurry(false),
+        radiant: hurry(false),
     }
 }
 
@@ -75,7 +88,8 @@ mod tests {
     use jackioh_engine::effects::{END_OF_TURN_MARK, END_OF_TURN_MARK_COLOR};
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario, upgrade_number};
+    use super::script_v0_6_5b;
+    use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -87,6 +101,9 @@ mod tests {
     const ROCK: &str = "core-066"; // The Rock: Indestructible
     const SUPPORT_LOSER: &str = "classicplus-019-4"; // Support Loser: End of turn: heal your hero and each of your Units 3.
     const ACE: &str = "classic-065"; // Ace in the Hole: Radiant: at the end of your turn, Recruit 1 or 3
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
+    const SHOWDOWN: &str = "meditative-098"; // Showdown: Lock every lane but an empty one you choose.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
 
     fn board(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({
@@ -111,7 +128,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn four_rush_tokens_in_the_leftmost_open_unit_zones() {
+        fn it_fills_every_open_unit_zone_with_rush_tokens() {
+            let mut s = board(false, json!([]), json!([]));
+            s.play(HURRY, json!({}));
+            assert_eq!(lanes(&s, P1), vec![1, 2, 3, 4, 5]);
             let mut s = board(false, json!([{ "def": VANILLA, "lane": 2 }]), json!([]));
             s.play(HURRY, json!({}));
             assert_eq!(lanes(&s, P1), vec![1, 3, 4, 5]);
@@ -119,6 +139,19 @@ mod tests {
                 s.expect_stats(&token, json!({ "attack": 3, "health": 3 }));
                 assert!(!token.radiant);
             }
+        }
+
+        #[test]
+        fn r1136000_after_showdown_it_fills_the_locked_zones_too_and_destroys_them_all() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [SHOWDOWN, HURRY, FILLER], "mana": 10, "library": filler(4) },
+                "p2": { "hand": filler(2), "library": filler(4) },
+            }));
+            s.play(SHOWDOWN, json!({ "modes": ["lane-3"] }));
+            s.play(HURRY, json!({}));
+            assert_eq!(lanes(&s, P1), vec![1, 2, 3, 4, 5]);
+            s.end_turn();
+            assert!(tokens(&s, P1).is_empty());
         }
 
         #[test]
@@ -164,7 +197,7 @@ mod tests {
             let mut s = board(false, json!([]), json!([]));
             s.play(HURRY, json!({}));
             let made: Vec<CardInstance> = tokens(&s, P1).into_iter().map(|(_, card)| card).collect();
-            assert_eq!(made.len(), 4);
+            assert_eq!(made.len(), 5);
             s.end_turn();
             assert!(tokens(&s, P1).is_empty());
             let destroyed: Vec<String> = s
@@ -243,18 +276,22 @@ mod tests {
         fn r2198002_they_are_destroyed_after_the_end_of_turn_traps() {
             // p1's Radiant Ace in the Hole Recruits in the end-of-turn trap window whatever its coin (R62).
             // It must still find the tokens standing in lanes 1 to 4: the recruited Vanilla lands in lane 5,
-            // the only open zone, not in lane 1.
+            // the only open zone once a Hit Job has cleared the Vanilla the fill went round, not in lane 1.
             let mut s = scenario(json!({
                 "p1": {
-                    "hand": [HURRY],
+                    "hand": [HURRY, HIT_JOB],
+                    "field": [{ "def": VANILLA, "lane": 5 }],
                     "backrow": [{ "def": ACE, "radiant": true, "faceUp": false }],
                     "mana": 10,
                     "library": [VANILLA, VANILLA, VANILLA, VANILLA],
                 },
                 "p2": { "hand": filler(2), "library": filler(4) },
             }));
+            let standing = s.unit_at(P1, 5);
             s.play(HURRY, json!({}));
             assert_eq!(lanes(&s, P1), vec![1, 2, 3, 4]);
+            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": standing.id }] }));
+            assert!(s.unit(P1, 5).is_none());
             let first = tokens(&s, P1)[0].1.clone();
             s.end_turn();
 
@@ -285,7 +322,7 @@ mod tests {
             }));
             crate::run_as(&mut s, jackioh_engine::effects::cast_new(json_as(json!({ "def": HURRY }))), P1);
             assert_eq!(s.state().active, P2);
-            assert_eq!(tokens(&s, P1).len(), 4);
+            assert_eq!(tokens(&s, P1).len(), 5);
             s.end_turn();
             assert_eq!(s.state().active, P1);
             assert!(tokens(&s, P1).is_empty());
@@ -345,19 +382,33 @@ mod tests {
             );
             assert_eq!(
                 s.state().marks.clone().unwrap_or_default().len(),
-                3,
-                "the three left standing still wear theirs"
+                4,
+                "the four left standing still wear theirs"
             );
         }
 
+        /// R767000: through v0.6.5b it summoned the declared `tokens`, 4 on both faces (issue #3996).
         #[test]
-        fn tokens_reads_through_param() {
-            let mut s = board(false, json!([]), json!([]));
-            assert_eq!(upgrade_number(&mut s, HURRY, "tokens"), 5);
-            s.play(HURRY, json!({}));
-            assert_eq!(tokens(&s, P1).len(), 5);
-            s.end_turn();
-            assert!(tokens(&s, P1).is_empty());
+        fn r767000_the_script_kept_for_v0_6_5b_summons_the_declared_four() {
+            crate::under_kept_as(
+                HURRY,
+                script_v0_6_5b(),
+                |def| {
+                    def.params = serde_json::from_value(json!([
+                        { "key": "tokens", "base": 4, "radiant": 4, "better": "up", "step": 1, "min": 1 }
+                    ]))
+                    .expect("the v0.6.5b params");
+                },
+                || {
+                    for radiant in [false, true] {
+                        let mut s = board(radiant, json!([]), json!([]));
+                        s.play(HURRY, json!({}));
+                        assert_eq!(lanes(&s, P1), vec![1, 2, 3, 4]);
+                        s.end_turn();
+                        assert!(tokens(&s, P1).is_empty());
+                    }
+                },
+            );
         }
     }
 
@@ -365,11 +416,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn four_radiant_rush_tokens_six_six_rush_and_cleave() {
+        fn it_fills_the_board_with_radiant_rush_tokens_six_six_rush_and_cleave() {
             let mut s = board(true, json!([]), json!([]));
             s.play(HURRY, json!({}));
             let made = tokens(&s, P1);
-            assert_eq!(made.len(), 4);
+            assert_eq!(made.len(), 5);
             for (_, token) in made {
                 assert!(token.radiant);
                 s.expect_stats(&token, json!({ "attack": 6, "health": 6 }));

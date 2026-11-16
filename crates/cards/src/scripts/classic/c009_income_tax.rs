@@ -1,5 +1,5 @@
 //! C #9 Income Tax (SPEC §8.6 row 9, §6.3 Steal, §10.6; R12, R33, R58, R61, R78, R97, R99, R317,
-//! R521, R1279000). Trap, cost 3, Legendary.
+//! R521, R1279000). Trap, cost 2 (3 until issue #3996), Legendary.
 //!   Base:    "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one
 //!            card of their choice and give you the rest of their hand."
 //!   Radiant: the same, then "The cards you get cost ({discount}) less."
@@ -280,7 +280,7 @@ mod tests {
         #[test]
         fn r33_it_sits_face_down_the_opponent_reads_a_face_down_card_and_nothing_more() {
             let s = tax_board(json!({}));
-            assert_eq!(js(&s.view(P1))["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 3 }));
+            assert_eq!(js(&s.view(P1))["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 2 }));
         }
 
         #[test]

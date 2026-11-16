@@ -289,9 +289,9 @@ mod tests {
 
     #[test]
     fn r781004_fused_into_another_card_the_kept_card_draws_its_own() {
-        // M #47 饕餮 eats an enemy permanent at its end of turn: the kept 饕餮 carries the Aura and draws
-        // its number for itself, Ranged and Flying already its own. The fusion wears the kept card's face
-        // (R77), so a Radiant 饕餮 draws the Radiant number; p2's empty deck leaves its second meal out.
+        // M #47 饕餮's Activate eats an enemy Unit: the kept 饕餮 carries the Aura and draws its number for
+        // itself, Ranged and Flying already its own. The fusion wears the kept card's face (R77), so a
+        // Radiant 饕餮 draws the Radiant number.
         for (radiant, count) in [(false, 2), (true, 4)] {
             let mut s = scenario(json!({
                 "seed": "corvette-fused",
@@ -302,7 +302,7 @@ mod tests {
                 "p2": { "field": [{ "def": CORVETTE, "lane": 1 }], "library": [] },
             }));
             let taotie = s.unit(P1, 1).expect("饕餮").id;
-            s.end_turn();
+            s.activate(taotie.as_str(), json!({ "ability": "devour" }));
             assert!(s.unit(P2, 1).is_none(), "eaten");
             let drawn = drawn(&s, &taotie);
             assert_eq!(drawn.len(), count, "radiant {radiant}: {drawn:?}");

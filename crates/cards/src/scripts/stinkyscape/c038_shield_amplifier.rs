@@ -1,6 +1,7 @@
 //! SPEC §8.10 Stinkyscape 38 Shield Amplifier, a card of the Stinkyscape set.
 //! (1) Unit, Common, 1/1 → 2/2: Starship Piece, Equip, Divine Shield.
-//! "Whenever this survives an attack, it gains +{buff}/+{buff}." — buff 3, Radiant 6 (R1860000).
+//! "Whenever this survives an attack, it gains +{buff}/+{buff}." — buff 2, Radiant 4 (R1860000; 3 and 6
+//! until issue #3996).
 //!
 //! Engine: Equip (R1086): played onto one of your Units it fuses into it, the host keeping its zone
 //! and taking its stats, keywords and text (R77, R102), Starship Piece only into a piece (R1852001);
@@ -46,7 +47,7 @@ fn amplifier() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // One script: the Radiant face's +6/+6 is its declared `buff`, which `param` reads off the
+    // One script: the Radiant face's +4/+4 is its declared `buff`, which `param` reads off the
     // running face; its stats are the catalog's.
     let base = amplifier();
     CardScripts {
@@ -94,7 +95,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1860000_survives_an_attack_it_made_gains_3_3() {
+        fn r1860000_survives_an_attack_it_made_gains_2_2() {
             let mut s = scenario(json!({
                 "p1": { "hand": [AMPLIFIER, ANCHOR], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -104,12 +105,12 @@ mod tests {
             s.end_turn();
             s.attack(AMPLIFIER, "hero");
 
-            assert_eq!(buffs_of(&s, AMPLIFIER), (3, 3));
+            assert_eq!(buffs_of(&s, AMPLIFIER), (2, 2));
             s.expect_health(PlayerId::P2, 29);
         }
 
         #[test]
-        fn r1860000_survives_one_made_on_it_its_divine_shield_taking_the_hit_gains_3_3() {
+        fn r1860000_survives_one_made_on_it_its_divine_shield_taking_the_hit_gains_2_2() {
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [ANCHOR], "field": [AMPLIFIER], "library": filler(4) },
@@ -118,7 +119,7 @@ mod tests {
             s.attack(VANILLA, AMPLIFIER);
 
             s.expect_in_zone(AMPLIFIER, "field");
-            assert_eq!(buffs_of(&s, AMPLIFIER), (3, 3));
+            assert_eq!(buffs_of(&s, AMPLIFIER), (2, 2));
         }
 
         #[test]
@@ -208,7 +209,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1860000_radiant_survives_an_attack_it_made_gains_6_6() {
+        fn r1860000_radiant_survives_an_attack_it_made_gains_4_4() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": AMPLIFIER, "radiant": true }, ANCHOR], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -218,7 +219,7 @@ mod tests {
             s.end_turn();
             s.attack(AMPLIFIER, "hero");
 
-            assert_eq!(buffs_of(&s, AMPLIFIER), (6, 6));
+            assert_eq!(buffs_of(&s, AMPLIFIER), (4, 4));
             s.expect_health(PlayerId::P2, 28);
         }
 

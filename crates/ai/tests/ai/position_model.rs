@@ -579,6 +579,37 @@ mod soak {
     }
 
     #[test]
+    fn r2179005_anime_armor_on_guard_takes_one_from_each_hit_so_three_four_fours_spend_themselves_on_it() {
+        // Anime Armor (3/3) in Defense Position: each Mr. Vanilla's 4 loses 1 to the Armor and its own
+        // guard caps the 3 left at 1, so all three hits go into it and nothing goes face. Uncapped, the walk
+        // had the first Vanilla's 3 destroy it and counted the other two at the face, 1 each through the
+        // hero's same cap.
+        assert_soaks(
+            json!({
+                "seed": "ai-soak-anime-armor",
+                "p1": { "field": ["core-008", "core-008", "core-008"] },
+                "p2": { "field": [{ "def": "classicplus-011", "position": "DEF" }] },
+            }),
+            0,
+        );
+    }
+
+    #[test]
+    fn r2179005_anime_armor_outlasts_a_first_strike_taunt_and_frees_mr_vanilla_for_the_face() {
+        // Pointmaster (First Strike) in Defense Position strikes Anime Armor first, but its own guard caps
+        // the hit at 1, so Anime Armor lives to destroy it and Mr. Vanilla goes face for 4. Uncapped, the
+        // walk had Pointmaster strike Anime Armor down and Mr. Vanilla wait on it for good.
+        assert_soaks(
+            json!({
+                "seed": "ai-soak-anime-armor-first-strike",
+                "p1": { "field": ["classicplus-011", "core-008"] },
+                "p2": { "field": [{ "def": "core-020", "position": "DEF" }] },
+            }),
+            4,
+        );
+    }
+
+    #[test]
     fn r3937000_greedy_eval_keeps_the_old_order() {
         const { assert!(AI_EVAL.best_attack_order_past_taunts) };
         const { assert!(!GREEDY_EVAL.best_attack_order_past_taunts) };
