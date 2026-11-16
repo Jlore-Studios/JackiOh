@@ -20,6 +20,7 @@ pub mod cosmetic_packs;
 pub mod cosmetics;
 pub mod daily;
 pub mod decks;
+pub mod dependencies;
 pub mod dev;
 pub mod duos_again;
 pub mod duos_rooms;
