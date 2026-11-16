@@ -14293,15 +14293,8 @@
     "what": "plan #4084 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-16T21:12:33Z",
-    "notes": [
-      "#4084 needs a plan",
-      "delivered plan #4082 on claude-7 (run 43955341066): planned",
-      "started build #4082 on claude-7 (run 43958010437)",
-      "started plan #4084 on muse (run 43958097948)",
-      "nothing more to start: nothing is queued",
-      "pruned 10 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-16T21:14:49Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
