@@ -16109,17 +16109,8 @@
       "taken_asks": []
     },
     "4025": {
-      "action": "plan",
-      "asks": [
-        "c:6905093886"
-      ],
-      "build_next": {
-        "from_run": "43789390155",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-16T02:07:32Z",
-        "until": "2026-11-16T02:37:32Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T02:07:19Z",
         "difficulty": "medium",
@@ -16138,10 +16129,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; ls .bot-plan.md 2>&1; wc -l crates/engine/src/testkit/invariants.rs; grep -n \\\"I9\\\\|I17\\\\|counted_fatigue\\\\|fn check_\\\" crates/engine/src/testk\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; f=crates/engine/src/testkit/invariants.rs; sed -n 28,48p $f; sed -n 2215,2330p $f; sed -n 2680,2775p $f\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; f=crates/engine/src/testkit/invariants.rs; sed -n 2870,3000p $f; sed -n 3325,3350p $f; sed -n 3590,3700p $f\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; f=crates/engine/src/testkit/invariants.rs; sed -n 3436,3460p $f; sed -n 815,835p $f; grep -n \\\"duos\\\" $f | head -40; cat crates/engine/src/duos\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; grep -rn \\\"hero\\\\.health\\\\s*[-+]\\\\?=[^=]\\\" crates/engine/src --include=*.rs | grep -v \\\"testkit\\\\|tests\\\\|^crates/engine/src/duos_life\\\" | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; grep -n \\\"hero_loses\\\\|hero_heals\\\\|hero_set\\\\|heroes_swap_health\\\\|GameEvent::Damage\\\\|GameEvent::HealthLost\\\\|GameEvent::HealthSet\\\\|GameEven\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; sed -n 590,615p crates/engine/src/combat.rs; sed -n 690,760p crates/engine/src/damage.rs; sed -n 1190,1320p crates/engine/src/damage.rs; sed -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; sed -n 590,615p crates/engine/src/replacements.rs; sed -n 3005,3025p crates/engine/src/state.rs; grep -n \\\"fn hero_floor_of\\\" -A8 crates/engine\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; grep -n \\\"HERO_TARGET_PREFIX\\\" crates/engine/src/testkit/invariants.rs | head -3; grep -n \\\"enum GlitchOutcome\\\" -A12 crates/engine/src/wire/*.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; grep -n \\\"wrong mana\\\\|manaChanged\\\\|fatigue\\\" crates/tools/src/fuzz.rs | head; grep -rn \\\"I9\\\" crates/tools/src/fuzz.rs | head; grep -n \\\"sile\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; sed -n 24,66p crates/tools/src/fuzz.rs | cut -c1-220; sed -n 760,830p crates/engine/tests/rules/invariants.rs; sed -n 1,60p crates/engine/tests\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; sed -n 575,700p crates/engine/tests/rules/invariants.rs; grep -n \\\"struct DuosLife\\\" -B3 -A14 crates/engine/src/state.rs; sed -n 3760,3791p cra\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; sed -n 835,1000p crates/engine/tests/rules/invariants.rs | grep -n \\\"fn \\\\|Glitch\\\\|reset\\\" | head -30; grep -n \\\"pub fn \\\\(damage\\\\|heal\\\\|set\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; sed -n 872,905p crates/engine/tests/rules/invariants.rs; grep -n \\\"pub struct Handicap\\\" -B6 -A8 crates/engine/src/wire/*.rs | head -50; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; sed -n 290,320p crates/engine/tests/rules/hero_floor.rs; ls docs/issues-and-patches.md >/dev/null && grep -n -i \\\"fuzz\\\\|testkit\\\\|test-only\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4025; echo \\\"Plan draft #4025: add health tally in InvariantMonitor (invariants.rs), tests in crates/engine/tests/rules/invariants.rs + duos test in \u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Only the test-only fuzz monitor (`crates/engine/src/testkit/invariants.rs`) and a header comment change, with no rules change; hard rule 1 would apply only if the fuzz seeds find a silent hero-health path whose engine fix is needed, and then the builder mu\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-16T01:58:56Z",
       "owner_why": "it plans it",
@@ -16154,12 +16144,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-16T01:50:17Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43789390155",
+      "run_id": "pending:39bfa432-1794796618",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-16T01:58:56Z",
+      "started_at": "2026-11-16T02:37:28Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6905093886"
+      ]
     },
     "4028": {
       "action": "review",
@@ -16635,9 +16627,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T02:36:43Z",
+    "at": "2026-11-16T02:37:28Z",
     "url": "",
-    "what": "build #4039 on claude-3"
+    "what": "build #4025 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-16T01:47:44Z",
