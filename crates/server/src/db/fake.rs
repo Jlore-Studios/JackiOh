@@ -5302,8 +5302,15 @@ pub fn daily_invites_open_of(
     now: i64,
 ) -> Result<Vec<DailyInviteRow>, StoreError> {
     call(f, "dailyInvites.openOf")?;
-    let mut rows: Vec<DailyInviteRow> = f
-        .tables()
+    let tables = f.tables();
+    // R4019000: a banned challenger's challenge waits out the ban, off every inbox.
+    let challenger_active = |from: &str| {
+        tables
+            .profiles
+            .iter()
+            .any(|p| p.id == from && p.status == ProfileStatus::Active)
+    };
+    let mut rows: Vec<DailyInviteRow> = tables
         .daily
         .invites
         .iter()
@@ -5311,6 +5318,7 @@ pub fn daily_invites_open_of(
             (row.from_profile == profile_id || row.to_profile.as_deref() == Some(profile_id))
                 && row.state == DailyInviteState::Open
                 && row.expires_at > now
+                && (row.kind != DailyInviteKind::Challenge || challenger_active(&row.from_profile))
         })
         .cloned()
         .collect();
@@ -5381,6 +5389,13 @@ pub fn daily_seek_claim(
             .iter()
             .any(|block| joins(&block.blocker, &block.blocked, from, me))
     };
+    // R4019000: a banned account's open seeks pair with no one, until an unban.
+    let seeker_active = |from: &str| {
+        tables
+            .profiles
+            .iter()
+            .any(|p| p.id == from && p.status == ProfileStatus::Active)
+    };
     let Some(at) = tables
         .daily
         .invites
@@ -5394,6 +5409,7 @@ pub fn daily_seek_claim(
                 && row.from_profile != me
                 && row.expires_at > now
                 && !blocked(&row.from_profile)
+                && seeker_active(&row.from_profile)
         })
         .min_by(|(_, a), (_, b)| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)))
         .map(|(at, _)| at)
