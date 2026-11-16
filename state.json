@@ -16664,8 +16664,15 @@
     "what": "plan #4008 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-16T02:48:42Z",
-    "notes": [],
+    "at": "2026-11-16T02:56:18Z",
+    "notes": [
+      "#4008 needs a plan",
+      "delivered plan #4022 on claude-3 (run 43793451548): planned",
+      "started build #4022 on claude-3 (run 43795394385)",
+      "started plan #4008 on claude-4 (run 43795470480)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17370,7 +17377,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T02:48:42Z",
+  "loop_tick": "2026-11-16T02:56:18Z",
   "machine_disk": {
     "issue": null,
     "reading": {
