@@ -1161,26 +1161,33 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                             <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
                             {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
                           </td>
+                          {/* R4084000: the bar lives in the Adjusted cell, sized by the adjusted rate on the same 0–100% scale the Win rate bar used. */}
                           <td className="stats-td" data-testid={statsTestid.adjustedCell}>
-                            {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
-                            {showRanges && card.hasEnoughGames && (
-                              <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                            {card.hasEnoughGames && typeof card.adjustedWinRate === "number" ? (
+                              <div className="stats-winrate-cell">
+                                <span className="stats-winrate-text">{adjustedText(card.adjustedWinRate)}</span>
+                                <div className="stats-confidence-bar">
+                                  <div
+                                    className="stats-confidence-fill"
+                                    style={{ width: `${Math.round(card.adjustedWinRate * 100)}%` }}
+                                  />
+                                </div>
+                                {showRanges && (
+                                  <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                                )}
+                              </div>
+                            ) : (
+                              "—"
                             )}
                           </td>
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
-                              <div className="stats-winrate-cell">
+                              <>
                                 <span className="stats-winrate-text">{Math.round(card.winRate * 100)}%</span>
-                                <div className="stats-confidence-bar">
-                                  <div
-                                    className="stats-confidence-fill"
-                                    style={{ width: `${Math.round(card.winRate * 100)}%` }}
-                                  />
-                                </div>
                                 {showRanges && (
                                   <RangeText low={card.winRateLow} high={card.winRateHigh} digits={WIN_RATE_RANGE_DIGITS} testid={statsTestid.winRateRange} />
                                 )}
-                              </div>
+                              </>
                             ) : (
                               <span className="stats-not-enough">{t("not enough games")}</span>
                             )}

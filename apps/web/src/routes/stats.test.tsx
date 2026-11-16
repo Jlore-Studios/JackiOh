@@ -1089,6 +1089,50 @@ describe("R377 public statistics match type", () => {
     expect(screen.queryByTestId(statsTestid.rangesNote)).not.toBeInTheDocument();
   });
 
+  it("R4084000 the bar sits in the Adjusted cell sized by the adjusted rate, the Win rate cell keeps its text and range, and no bar shows below the floor or without an adjusted rate", async () => {
+    const user = userEvent.setup();
+    const cards = MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => {
+      if (card.id === "core-001") {
+        return { ...card, winRateLow: 0.462, winRateHigh: 0.722, adjustedLow: 0.4452, adjustedHigh: 0.6228 };
+      }
+      if (card.id === "core-003") {
+        return { ...card, adjustedWinRate: null };
+      }
+      return card;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const row = (id: string): HTMLElement => table.querySelector<HTMLElement>(`tbody tr[data-card-id="${id}"]`)!;
+    const adjustedCell = (id: string): HTMLElement => within(row(id)).getByTestId(statsTestid.adjustedCell);
+
+    // Card A: the bar lives in the Adjusted cell, sized by the adjusted rate, while Win rate reads the raw rate.
+    expect(adjustedCell("core-001").textContent).toContain("53.4%");
+    const bar = adjustedCell("core-001").querySelector(".stats-confidence-bar");
+    expect(bar).not.toBeNull();
+    expect(bar!.querySelector(".stats-confidence-fill")).toHaveStyle({ width: "53%" });
+    const winRateA = row("core-001").querySelector(".stats-td--winrate")!;
+    expect(winRateA.textContent).toContain("60%");
+    expect(winRateA.querySelector(".stats-confidence-bar")).toBeNull();
+
+    // Ranges on: both figures keep their ranges.
+    await user.click(screen.getByTestId(statsTestid.rangesToggle));
+    const shown = (scope: HTMLElement, testid: string): (string | null)[] =>
+      within(scope).queryAllByTestId(testid).map((range) => range.textContent);
+    expect(shown(row("core-001"), statsTestid.adjustedRange)).toEqual(["44.5–62.3%"]);
+    expect(shown(row("core-001"), statsTestid.winRateRange)).toEqual(["46–72%"]);
+
+    // Below the floor and without an adjusted rate: "—" and no bar anywhere in the row.
+    expect(adjustedCell("core-002").textContent).toBe("—");
+    expect(row("core-002").querySelector(".stats-confidence-bar")).toBeNull();
+    expect(adjustedCell("core-003").textContent).toBe("—");
+    expect(row("core-003").querySelector(".stats-confidence-bar")).toBeNull();
+  });
+
   it("R377 stats page starts with the mode the URL names", async () => {
     at("/stats?mode=bo3");
     render(<StatsRoute />);

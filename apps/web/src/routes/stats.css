@@ -367,7 +367,7 @@
   margin: 4px 0;
 }
 
-/* R2895000: a figure's 95% range, on its own line under it (in the Win rate cell, under its text and bar) */
+/* R2895000: a figure's 95% range, on its own line under it (in a figure cell, under its text and — in the Adjusted cell, R4084000 — its bar) */
 .stats-range {
   display: block;
   white-space: nowrap;
