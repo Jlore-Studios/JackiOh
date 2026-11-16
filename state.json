@@ -15996,6 +15996,13 @@
     "4024": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:09:15Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 2: it changes the practice AI's evaluation in crates/ai/src/evaluate.rs, so what the AI decides changes."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
