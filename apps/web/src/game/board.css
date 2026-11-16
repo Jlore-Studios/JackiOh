@@ -3709,6 +3709,12 @@ button.modifier-badge[data-open="true"] {
     transform: translateX(-50%);
   }
 
+  /* The opponent's seat has no hand below it, so its pills' band reaches the whole half of --hit-min
+     below the pill's centre; the hero plate above still keeps its own taps. */
+  .seat-opponent .pile--browsable::after {
+    height: calc(50% + var(--hit-min) / 2);
+  }
+
   .hero-tray .modifier-badge,
   .hero button.modifier-badge {
     height: var(--tray-chip-h);

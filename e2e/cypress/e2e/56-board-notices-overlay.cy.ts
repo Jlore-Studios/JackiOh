@@ -11,12 +11,13 @@ import {
   DRAW_TOAST,
   END_TURN,
   RESULT_OVERLAY,
+  handCardId,
   ts,
   zoneId,
 } from "../../support/testids.ts";
 import type { PlayerId } from "../../support/types.ts";
 
-const SEED = seedFor("56-board-notices");
+const SEED = seedFor("32-tribute-18");
 const ATTACK_REASON = "attack-reason";
 
 const VIEWPORTS = [
@@ -168,12 +169,12 @@ describe("56 — board notices draw in an overlay over the board (#3868)", () =>
         // Record baseline bounding boxes for all 6 board elements.
         measureBoxes().then((baseline) => {
           // --- Test 1: attack-reason ---
-          // Tap the asleep unit: it cannot attack, so attack-reason appears.
+          // Tap the summoning-sick unit: it cannot attack, so attack-reason appears.
           const cardSelector = `${ts(zoneId("you", "units", 3))} .card`;
           cy.get(cardSelector).click();
 
           const attackReasonSelector = `[data-testid="${ATTACK_REASON}"]`;
-          cy.get(attackReasonSelector).should("be.visible").and("contain.text", "asleep");
+          cy.get(attackReasonSelector).should("be.visible").and("contain.text", "summoning sick");
 
           // Check boxes while attack-reason is visible.
           measureBoxes().then((boxesWhileNotice) => {
@@ -186,8 +187,13 @@ describe("56 — board notices draw in an overlay over the board (#3868)", () =>
           // Click pass-through: with attack-reason showing, clicking the card under it reaches the card.
           cy.get(cardSelector).click();
 
-          // Click empty zone to clear notice.
-          cy.get(ts(zoneId("you", "units", 1))).click();
+          // Clear the notice with the next click the board takes: an empty zone takes none while no
+          // play is being built, so pick a hand card up and put it back (Reno, the hand's last card,
+          // which no other card covers on a phone).
+          cy.handCardByName("Reno").then((instanceId) => {
+            cy.get(ts(handCardId(instanceId))).click();
+            cy.get(ts(handCardId(instanceId))).click();
+          });
           cy.get(attackReasonSelector).should("not.exist");
 
           // Check boxes after attack-reason clears.
@@ -253,8 +259,9 @@ describe("56 — board notices draw in an overlay over the board (#3868)", () =>
             expectBoxesUnchanged(boxesAfterDecline, baseline, "after draw offer is declined");
           });
 
-          // P2 offers draw back to P1, and P1 accepts.
+          // P2 offers a draw on its own turn (only the active player offers, R36), and P1 accepts.
           cy.jackioh().then((handle) => {
+            handle.dispatch({ type: "endTurn", playerId: "p1" });
             handle.dispatch({ type: "offerDraw", playerId: "p2" });
             handle.setSeat?.("p1");
           });

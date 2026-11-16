@@ -68,6 +68,11 @@ for (const viewport of VIEWPORTS) {
         cy.get(YOURS).should("have.length", 2);
         cy.get(THEIRS).should("have.length", 2);
         cy.get(`${YOURS}[data-fit="pending"]`).should("have.length", 0);
+        // The first mount measures before its fonts and art settle the board, and useFits (CornerProps.tsx) measures
+        // again as they do: wait until both props are drawn before reading them once.
+        cy.document().should((doc) => {
+          expect(shown(doc), `${table}: both props are drawn at ${viewport.label}`).to.have.length(2);
+        });
 
         cy.document().then((doc) => {
           const props = shown(doc);
