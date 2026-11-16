@@ -16366,12 +16366,25 @@
     "what": "plan #4025 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-16T01:39:36Z",
+    "at": "2026-11-16T01:47:44Z",
     "notes": [
-      "#4037 needs a plan",
-      "started plan #4037 on muse (run 43787689410)",
+      "#4019 needs a plan",
+      "#4020 needs a plan",
+      "delivered plan #4037 on muse (run 43787689410): planned",
+      "delivered revise #3994 on claude-7 (run 43782832628): approved",
+      "started build #4037 on muse (run 43788705321)",
+      "started plan #4019 on muse (run 43788773591)",
+      "started plan #4020 on muse (run 43788837270)",
+      "started plan #4021 on muse (run 43788903282)",
+      "started plan #4033 on gpt (run 43788974184)",
+      "started plan #4039 on claude-3 (run 43789043202)",
+      "started plan #4022 on claude-3 (run 43789114306)",
+      "started plan #4032 on claude-7 (run 43789183838)",
+      "started plan #4024 on claude-8 (run 43789254457)",
+      "started plan #4023 on claude-8 (run 43789323546)",
+      "started plan #4025 on claude-1 (run 43789390155)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17077,7 +17090,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T01:39:36Z",
+  "loop_tick": "2026-11-16T01:47:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
