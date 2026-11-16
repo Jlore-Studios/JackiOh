@@ -14353,9 +14353,9 @@
     "what": "plan #4086 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-16T21:37:01Z",
+    "at": "2026-11-16T21:44:05Z",
     "notes": [
-      "delivered plan #4079 on claude-3 (run 43947209640): interrupted"
+      "#4079 is held for `claude-3` until 16:40 (it refused a call)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15059,7 +15059,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T21:37:01Z",
+  "loop_tick": "2026-11-16T21:44:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
