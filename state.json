@@ -14045,11 +14045,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-16T22:41:43Z",
+        "at": "2026-11-16T23:19:19Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "rule 2 (The AI): the change rewrites the AI's attack evaluation, threat walk and reply trading"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 2 (the AI's decisions: evaluate, reply, candidates) and rule 1 (two engine read helpers in crates/engine/src)"
       },
       "failures": 0,
       "forced": false,
