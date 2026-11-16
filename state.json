@@ -15867,13 +15867,14 @@
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-15T23:33:02Z",
-      "run_id": "43782761803",
+      "run_id": "pending:581fde39-1794792305",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 285,
-      "started_at": "2026-11-16T00:50:39Z",
+      "started_at": "2026-11-16T01:25:30Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16016,9 +16017,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T01:24:51Z",
+    "at": "2026-11-16T01:25:30Z",
     "url": "",
-    "what": "review #4036 on agy"
+    "what": "spot-check #4031 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-16T01:15:13Z",
@@ -35782,7 +35783,15 @@
         "n": 285,
         "pr": 4031,
         "queued_at": "2026-11-16T01:24:23Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:581fde39-1794792305",
         "sha": "43eea36894de0c7ab0b8d953d39450c74dcc0c9f",
+        "started_at": "2026-11-16T01:25:30Z",
         "status": "queued",
         "title": "Patch: the AI's count of the damage that gets past its Taunts lets a big attacker break a Taunt first, and keeps the attackers a Taunt's Armor would stop",
         "tries": 0
