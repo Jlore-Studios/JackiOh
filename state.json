@@ -14328,10 +14328,10 @@
     "what": "plan #4086 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-16T21:21:14Z",
+    "at": "2026-11-16T21:29:21Z",
     "notes": [
-      "delivered plan #4084 on muse (run 43958097948): planned",
-      "started build #4084 on muse (run 43959528613)",
+      "#4086 needs a plan",
+      "started plan #4086 on claude-8 (run 43960784008)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15036,7 +15036,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T21:21:14Z",
+  "loop_tick": "2026-11-16T21:29:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
