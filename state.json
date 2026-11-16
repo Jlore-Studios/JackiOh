@@ -14755,17 +14755,14 @@
     "what": "plan #4010 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-16T22:40:08Z",
+    "at": "2026-11-16T22:51:20Z",
     "notes": [
-      "#4079: `claude-3` can start again, so its hold is lifted",
-      "delivered plan #4065 on muse (run 43969561832): planned",
-      "delivered plan #4064 on muse (run 43969469972): planned",
-      "delivered build #4082 on claude-7 (run 43958010437): built",
-      "started review #4088 on claude-7 (run 43972761729)",
-      "started plan #4079 on claude-3 (run 43972836475)",
-      "started plan #4064 on claude-6 (run 43972917467)",
-      "started plan #4065 on claude-5 (run 43972999651)",
-      "nothing more to start: nothing is queued"
+      "#4010 needs a plan",
+      "delivered plan #4070 on claude-4 (run 43971229596): planned",
+      "started build #4070 on claude-4 (run 43974230016)",
+      "started plan #4010 on muse (run 43974309618)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15469,7 +15466,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T22:40:08Z",
+  "loop_tick": "2026-11-16T22:51:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
