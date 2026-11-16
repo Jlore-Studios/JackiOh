@@ -14332,6 +14332,13 @@
     "4086": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43960784008",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-16T21:59:36Z",
+        "until": "2026-11-16T22:29:36Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
