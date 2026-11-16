@@ -14067,6 +14067,13 @@
     "4066": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T22:32:04Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "engine rules: the fix is in crates/engine/src/combat.rs resolution loop, so rule 1 holds"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
