@@ -11,6 +11,7 @@ use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, MutexGuard};
 
 use jackioh_server::app::App;
+use jackioh_server::config::NOTIFICATIONS_PAGE_MAX;
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StoreError};
 
@@ -202,13 +203,13 @@ pub async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
     assert_eq!(status, 200, "{body}");
 }
 
-/// R4039000: `who`'s notification feed, `GET /api/notifications?limit=50`'s 200 body (`{notifications,
-/// nextBefore, unread}`).
+/// R4039000: `who`'s notification feed, `GET /api/notifications?limit=NOTIFICATIONS_PAGE_MAX`'s 200 body
+/// (`{notifications, nextBefore, unread}`).
 pub async fn feed(app: &Arc<App>, who: &Account) -> Value {
     let (status, _headers, body) = call(
         app,
         "GET",
-        "/api/notifications?limit=50",
+        &format!("/api/notifications?limit={NOTIFICATIONS_PAGE_MAX}"),
         Some(&who.token),
         Value::Null,
     )

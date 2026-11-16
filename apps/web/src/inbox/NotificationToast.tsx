@@ -49,8 +49,7 @@ export function NotificationToast(): ReactElement {
                 className="button-primary"
                 data-testid={inboxTestid.toastOpen}
                 onClick={() => {
-                  setPending(null);
-                  navigate(path);
+                  if (navigate(path)) setPending(null);
                 }}
               >
                 {t("Open")}

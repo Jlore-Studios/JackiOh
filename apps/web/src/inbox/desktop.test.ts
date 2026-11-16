@@ -99,11 +99,16 @@ describe("R4039001 desktop notifications", () => {
     for (const kind of ["dailyEnded", "dailyAnswered", "friendAccepted", "replayShared"] as const) notifyDesktop(row(3, kind));
     expect(FakeNotification.shown).toHaveLength(0);
 
+    notifyDesktop(row(8, "dailyAnswered", { payload: { answer: "declined" } }));
+    expect(FakeNotification.shown).toHaveLength(0);
+
+    notifyDesktop(row(9, "dailyAnswered", { payload: { answer: "accepted", matchId: "m-9" } }));
     notifyDesktop(row(4, "dailyChallenge", { payload: { mode: "random", perMoveDays: 3 } }));
     notifyDesktop(row(5, "lobbyInvite", { subject: "K7Q2XM", payload: { format: "duel" } }));
     notifyDesktop(row(6, "friendRequest"));
     notifyDesktop(row(7, "dailyMove"));
     expect(FakeNotification.shown.map((shown) => shown.options.body)).toEqual([
+      "Ann#2 accepted your daily challenge",
       "Ann#2 challenged you to a daily game",
       "Ann#2 invited you to their lobby",
       "Ann#2 sent you a friend request",

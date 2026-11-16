@@ -196,6 +196,10 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
     let actors: Vec<String> = rows.iter().filter_map(|row| row.actor_id.clone()).collect();
     let people = profiles_by_id(&mut tx, &actors).await?;
     tx.commit().await?;
+    if !closed.is_empty() {
+        // A dropped invite may have been the only unread row: the bell's dot follows the count again.
+        push_social(app, &[&me]).await;
+    }
     let notifications: Vec<Value> = rows
         .iter()
         .map(|row| {
