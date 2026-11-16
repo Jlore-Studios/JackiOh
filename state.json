@@ -16402,6 +16402,13 @@
     "4034": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T03:05:08Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "None of the five hard lines hold: client-only tutorial coach and test changes in apps/web touching about 4\u20135 files, with no engine, AI, cross-crate or migration changes."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
