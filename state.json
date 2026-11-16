@@ -14962,9 +14962,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6900304011"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "3976": {
