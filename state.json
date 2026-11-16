@@ -15925,6 +15925,13 @@
     "4022": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:11:10Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 1: the change rewrites the order in which `land()` in crates/engine/src/damage.rs spends a damage pool against \u00a74.4 steps 3b and 4a, which is the engine's resolution loop."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
