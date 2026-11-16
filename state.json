@@ -16215,6 +16215,13 @@
     "4032": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:10:13Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule 1 and rule 2: it changes the damage pipeline's shared readers in crates/engine/src and the lethal and forecast reads that the AI's reply model uses."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
