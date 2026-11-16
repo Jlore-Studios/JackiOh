@@ -15,6 +15,7 @@ type MomentOptions = {
   id: string;
   title: string;
   text: string;
+  params?: CoachStep["params"];
   discovers: readonly string[];
   hints: readonly [Text, Text];
   /** The coach's line; the moment shows only while it offers an action. */
