@@ -28,6 +28,7 @@ use jackioh_shared::host::duos::slot;
 
 use crate::actor::contracts::one_tx;
 use crate::actor::protocol::SERVER_NONCE_PREFIX;
+use crate::api::queue::json_list;
 use crate::app::{App, now_ms};
 use crate::config::{
     DUOS_ROOM_TTL_MS, JLORE_GAMES_DAILY_CAP, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS,
@@ -217,8 +218,9 @@ fn seat_moves(log: &[DuosActionRow], seat: DuosSeat) -> (i64, i64) {
 
 /// R1047001: an abandoned live match past its ceiling (R1047000) ends as the ceiling's draw (§9.5).
 /// `duos_matches_finish` writes once; before the ceiling nothing is written and the next sweep
-/// folds the match back again.
-async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
+/// folds the match back again. A store failure is logged and answered (#3826): the match is wedged,
+/// and the sweeper counts a pass with one as failed.
+async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) -> Result<(), StoreError> {
     let ended = one_tx!(app.db, |t| {
         match t.duos_matches_get(match_id).await? {
             Some(row) if row.ended_at.is_none() && now >= ceiling_at(&row) => {
@@ -247,17 +249,20 @@ async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
                 app.seats.release(person, &seat);
             }
             tracing::warn!(event = "duos.abandoned.ended", matchId = %match_id);
+            Ok(())
         }
-        Ok(None) => {}
+        Ok(None) => Ok(()),
         Err(error) => {
             tracing::error!(event = "duos.abandoned.failed", matchId = %match_id, message = %error);
+            Err(error)
         }
     }
 }
 
 /// One sweep: reaps B34's expired rooms, drops finished actors, and folds back live matches with no
 /// actor so the AI plays them out (B37). Matches that cannot fold back end past ceiling (R1047000, R1047001).
-pub async fn sweep(app: &Arc<App>) -> Result<(), StoreError> {
+/// Answers the ids of the matches that would not end (#3826), as the 1v1 reaper's report names its failed.
+pub async fn sweep(app: &Arc<App>) -> Result<Vec<String>, StoreError> {
     let now = now_ms();
     let reaped = one_tx!(app.db, |t| t.duos_rooms_reap(now, now - DUOS_ROOM_TTL_MS).await?)?;
     if reaped > 0 {
@@ -266,16 +271,19 @@ pub async fn sweep(app: &Arc<App>) -> Result<(), StoreError> {
     let held = registry(app);
     held.reap_finished(now).await;
     let live = one_tx!(app.db, |t| t.duos_matches_live().await?)?;
+    let mut wedged = Vec::new();
     for match_id in live {
         if held.has(&match_id) {
             continue;
         }
         if let Err(error) = held.actor_for(app, &match_id).await {
             tracing::warn!(event = "duos.resume_failed", matchId = %match_id, message = %error);
-            end_abandoned(app, &match_id, now).await;
+            if end_abandoned(app, &match_id, now).await.is_err() {
+                wedged.push(match_id);
+            }
         }
     }
-    Ok(())
+    Ok(wedged)
 }
 
 /// The co-op sweeper, at the 1v1 reaper's pace (`MATCH_REAPER_INTERVAL_SECONDS`), started by
@@ -289,8 +297,18 @@ pub async fn run_sweeper(app: Arc<App>) {
             u64::try_from(MATCH_REAPER_INTERVAL_SECONDS).unwrap_or(0),
         ))
         .await;
-        if let Err(error) = sweeping.track(sweep(&app).await) {
-            tracing::warn!(event = "duos.sweep_failed", message = %error);
+        match sweep(&app).await {
+            Ok(wedged) if wedged.is_empty() => sweeping.ok(),
+            // #3826: a pass in which any match would not end counts as failed, as the 1v1 reaper's does.
+            Ok(wedged) => sweeping.failed(&format!(
+                "{} co-op matches would not end: {}",
+                wedged.len(),
+                json_list(&wedged)
+            )),
+            Err(error) => {
+                tracing::warn!(event = "duos.sweep_failed", message = %error);
+                sweeping.failed(&error.to_string());
+            }
         }
     }
 }

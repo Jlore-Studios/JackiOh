@@ -136,6 +136,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
             API_RATE_WINDOW_MS as _,
         ),
         known_profiles: jackioh_server::api::http::KnownProfiles::default(),
+        route_health: jackioh_server::api::http::RouteHealth::default(),
         sign_in_limiter: jackioh_server::api::http::create_rate_limiter(
             jackioh_server::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
             jackioh_server::config::USERNAME_SIGN_IN_WINDOW_MS,
