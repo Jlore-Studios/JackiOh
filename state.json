@@ -15950,6 +15950,13 @@
     "4023": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:08:18Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 2: the change alters the AI's combat arithmetic in crates/ai/src (blow, kills_and_survives, trade_value), which feeds its decisions."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
