@@ -17167,16 +17167,24 @@
     "what": "build #4008 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-16T03:02:45Z",
+    "at": "2026-11-16T03:31:40Z",
     "notes": [
-      "delivered plan #4023 on claude-8 (run 43793672959): planned",
-      "delivered plan #4032 on claude-7 (run 43793521024): planned",
-      "delivered plan #4034 on agy (run 43793381644): planned",
-      "started build #4034 on agy (run 43796113158)",
-      "started build #4032 on claude-7 (run 43796176717)",
-      "started build #4023 on claude-8 (run 43796242664)",
+      "delivered plan #4008 on claude-4 (run 43795470480): planned",
+      "delivered plan #4024 on claude-8 (run 43793600089): planned",
+      "delivered build #4033 on gpt (run 43793160405): built",
+      "delivered build #4021 on muse (run 43791462838): built",
+      "delivered build #4020 on muse (run 43791390433): built",
+      "delivered build #4019 on muse (run 43791311281): built",
+      "delivered revise #3998 on claude-6 (run 43783606547): built",
+      "started review #4046 on gpt (run 43799432214)",
+      "started review #4047 on muse (run 43799494859)",
+      "started review #4048 on muse (run 43799553630)",
+      "started review #4049 on muse (run 43799612944)",
+      "started review #3998 on claude-6 (run 43799669981)",
+      "started build #4024 on claude-8 (run 43799727786)",
+      "started build #4008 on claude-1 (run 43799786570)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 7 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17882,7 +17890,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T03:02:45Z",
+  "loop_tick": "2026-11-16T03:31:40Z",
   "machine_disk": {
     "issue": null,
     "reading": {
