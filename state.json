@@ -14434,6 +14434,13 @@
     "4072": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T23:50:33Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: single-crate server change, no migration, no engine/AI/cross-crate design, well under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
