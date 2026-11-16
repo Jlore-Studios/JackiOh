@@ -14059,6 +14059,9 @@
       "stop_requested": false,
       "verdict_rounds": 1
     },
+    "4058": {
+      "suggestion": true
+    },
     "4064": {
       "action": "build",
       "asks": [],
