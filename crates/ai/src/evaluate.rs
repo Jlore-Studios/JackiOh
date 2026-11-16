@@ -1148,7 +1148,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0 that may swing
 /// (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49), ascending by attack.
-/// Taunts soak the smallest first (`damage_past_taunts_with`); each remaining attack goes through
+/// Taunts soak the attackers they bind (`damage_past_taunts_with`, in the opponent's better order with
+/// `w.best_attack_order_past_taunts`, R3937000); each remaining attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
 /// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
@@ -1238,13 +1239,32 @@ pub fn damage_past_taunts(
 /// it (R783002, R783003). Each bound attacker is one §4.4 hit on it (#898, R346, R63), a destroyed Reborn
 /// Taunt returning; lane strike (R94) and combat-only bonuses (R1120) stay out. A hit that may not hit the
 /// hero (R1849005, #1823) lands nothing past the Taunts. With `w.static_attack_flags_read`, an attacker that
-/// Ignores Taunt (R3560007) is bound by none, Defense Position's included.
+/// Ignores Taunt (R3560007) is bound by none, Defense Position's included. With
+/// `w.best_attack_order_past_taunts` (R3937000) the walk runs as the flag's doc says, the larger of its two
+/// orders counting.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
     attacks: &[(&CardInstance, i32, bool)],
     w: &EvalWeights,
 ) -> i32 {
+    let (smallest_first, breaker_behind) = soak_past_taunts(state, defender, attacks, w, false);
+    if !breaker_behind {
+        return smallest_first;
+    }
+    smallest_first.max(soak_past_taunts(state, defender, attacks, w, true).0)
+}
+
+/// `damage_past_taunts_with`'s walk in one order (R3937000), and whether a Taunt had a lone breaker behind a
+/// smaller attacker, the one case where the orders can differ.
+fn soak_past_taunts(
+    state: &GameState,
+    defender: PlayerId,
+    attacks: &[(&CardInstance, i32, bool)],
+    w: &EvalWeights,
+    breaker_first: bool,
+) -> (i32, bool) {
+    let mut breaker_behind = false;
     let mut free: Vec<(&CardInstance, i32, bool)> = attacks.to_vec();
     free.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
     let mut stands: Vec<TauntStand> = active_units_of(state, defender)
@@ -1261,21 +1281,48 @@ pub fn damage_past_taunts_with(
             instance: stands[i].unit.clone(),
         };
         // R3560007, #3909: an attacker that Ignores Taunt is bound by no Taunt (§4.2 step 3 skips it).
-        let (bound, mut unbound): (Vec<_>, Vec<_>) = free.into_iter().partition(|(attacker, _, _)| {
+        let (mut bound, mut unbound): (Vec<_>, Vec<_>) = free.into_iter().partition(|(attacker, _, _)| {
             !(w.static_attack_flags_read && flags_of(state, attacker).ignores_taunt == Some(true))
                 && attack_restriction(state, attacker, &target).is_ok()
         });
+        // R3937000: the smallest attacker that destroys this Taunt alone, when a smaller one comes first.
+        if w.best_attack_order_past_taunts
+            && let Some(at) = bound
+                .iter()
+                .position(|(attacker, attack, _)| breaks_alone(state, attacker, *attack, &stands[i]))
+            && at > 0
+        {
+            if breaker_first {
+                bound[..=at].rotate_right(1);
+            } else {
+                breaker_behind = true;
+            }
+        }
         let mut bound = bound.into_iter();
+        // R3937000: the attackers this Taunt stops whole, waiting until it is destroyed.
+        let mut stopped: Vec<(&CardInstance, i32, bool)> = Vec::new();
         let mut poisoned = false;
         while stands[i].health > 0 && !poisoned {
-            let Some((attacker, attack, _)) = bound.next() else {
+            let Some((attacker, attack, may_hit_hero)) = bound.next() else {
                 break;
             };
             if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view) {
+                if w.best_attack_order_past_taunts {
+                    stopped.push((attacker, attack, may_hit_hero));
+                }
                 continue;
             }
             let keywords = unit_view(state, attacker).keywords;
             let pierce = pierces(state, Some(attacker), None);
+            // R3937000: a hit the Taunt's Armor would take whole waits, with no hit and no splash yet; a
+            // Divine Shield still takes it, so it still goes in to pop one.
+            if w.best_attack_order_past_taunts
+                && !stands[i].shield
+                && dealt_after_armor(attack, stands[i].view.armor, pierce) <= 0
+            {
+                stopped.push((attacker, attack, may_hit_hero));
+                continue;
+            }
             // The splash belongs to the attack rather than to the hit (R63), so it lands even when
             // the hit on the Taunt itself is stopped below. Only live neighbouring Taunts matter:
             // the target itself and the stands already walked bind nothing more.
@@ -1344,11 +1391,7 @@ pub fn damage_past_taunts_with(
             }
             // Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346); a hit it takes
             // whole is no damage instance at all (R1361).
-            let dealt = if pierce {
-                attack
-            } else {
-                (attack - stands[i].view.armor).max(0)
-            };
+            let dealt = dealt_after_armor(attack, stands[i].view.armor, pierce);
             if dealt <= 0 {
                 continue;
             }
@@ -1361,6 +1404,10 @@ pub fn damage_past_taunts_with(
             stands[i].health -= dealt;
         }
         unbound.extend(bound);
+        // R3937000: a destroyed Taunt frees the attackers that waited on it (a Reborn body binds them again).
+        if stands[i].health <= 0 || poisoned {
+            unbound.extend(stopped);
+        }
         unbound.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
         free = unbound;
         // §4.5 step 4: a destroyed Reborn Taunt comes back and binds what is left.
@@ -1381,7 +1428,25 @@ pub fn damage_past_taunts_with(
         let pierce = pierces(state, Some(attacker), None);
         total += subsystems::projected_hero_damage(state, defender, *hit, pierce);
     }
-    total
+    (total, breaker_behind)
+}
+
+/// §4.4 step 2: what a hit of `attack` deals a unit with `armor`, all of it when the hit pierces (R346).
+fn dealt_after_armor(attack: i32, armor: i32, pierce: bool) -> i32 {
+    if pierce { attack } else { (attack - armor).max(0) }
+}
+
+/// R3937000: whether `attacker`'s one hit of `attack` destroys `stand` as the walk left it: no Divine Shield
+/// takes it, no First Strike destroys the attacker first, and what gets past the Armor is the stand's
+/// health or more, or any of it from a Poisonous attacker.
+fn breaks_alone(state: &GameState, attacker: &CardInstance, attack: i32, stand: &TauntStand) -> bool {
+    if stand.shield || falls_to_first_strike(state, attacker, &stand.unit, &stand.view) {
+        return false;
+    }
+    let dealt = dealt_after_armor(attack, stand.view.armor, pierces(state, Some(attacker), None));
+    dealt > 0
+        && (dealt >= stand.health
+            || has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Poisonous))
 }
 
 /// §4.3 step 1 and R93, as `subsystems::lethal`'s private `falls_to_first_strike` reads it: a First Strike Taunt
