@@ -2046,8 +2046,9 @@ mod r243_what_the_view_carries_of_a_card_beyond_its_printed_face {
         let power = g.card(&power.id).clone();
         let rolled = must(power_of(&power), "a power on the Heroic Power");
         let entry = hand_entry(&g.view("p1"), &power.id);
-        // The card costs (0) whatever power it holds (R752), so the cost in the view does not say which it is.
-        assert_eq!(entry["cost"], json!(0));
+        // The card costs (1) whatever power it holds (R752, since issue #3996), so the cost in the view does
+        // not say which it is.
+        assert_eq!(entry["cost"], json!(1));
         assert_eq!(
             entry["power"],
             json!(rolled.name.to_string()),

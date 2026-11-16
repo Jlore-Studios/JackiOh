@@ -144,7 +144,7 @@ const CORE: &[SpecRow] = &[
     row(
         "6",
         "Mana Well",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[],
         R::Common,
@@ -218,8 +218,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed],
         R::Common,
-        st(5, 7),
-        st(10, 14),
+        st(4, 6),
+        st(8, 12),
     ),
     row(
         "14",
@@ -591,8 +591,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Legendary,
-        st(2, 2),
         st(4, 4),
+        st(8, 8),
     ),
     row(
         "53",
@@ -828,7 +828,7 @@ const CORE: &[SpecRow] = &[
     row(
         "76",
         "Field of Dreams",
-        c(2),
+        c(1),
         T::Spell,
         &[],
         R::Rare,
@@ -858,7 +858,7 @@ const CORE: &[SpecRow] = &[
     row(
         "79",
         "Twinspell",
-        c(2),
+        c(1),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -1069,7 +1069,7 @@ const CORE: &[SpecRow] = &[
     row(
         "98",
         "Heroic Power",
-        c(0),
+        c(1),
         T::FieldSpell,
         &[G::Quickdraw],
         R::Mythic,
@@ -1224,7 +1224,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "9",
         "Income Tax",
-        c(3),
+        c(2),
         T::Trap,
         &[],
         R::Legendary,
@@ -1436,7 +1436,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "32",
         "Felinor Feelings",
-        c(2),
+        c(3),
         T::Spell,
         &[],
         R::Rare,
@@ -1512,8 +1512,8 @@ const CLASSIC: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(3, 3),
-        st(6, 6),
+        st(2, 2),
+        st(4, 4),
     ),
     row(
         "42",
@@ -4512,7 +4512,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "3",
         "Wondrous Wand",
-        emb(2, 4),
+        emb(1, 3),
         T::Spell,
         &[],
         R::Epic,
@@ -4713,7 +4713,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "22",
         "Mountaintop Garden",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -5242,7 +5242,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "31",
         "Drone Core V",
-        c(3),
+        c(4),
         T::Spell,
         &[G::DroneCore],
         R::Rare,
@@ -5664,8 +5664,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Legendary,
-        st(5, 5),
-        st(10, 10),
+        st(2, 2),
+        st(4, 4),
     ),
     row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(1, 1), st(2, 2)),
     row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
@@ -5758,8 +5758,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Swarm],
         R::Rare,
-        st(3, 3),
-        st(6, 6),
+        st(2, 3),
+        st(4, 6),
     ),
     row(
         "93",
@@ -7390,8 +7390,8 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed, G::Legacy],
         R::Common,
-        st(8, 10),
-        st(16, 20),
+        st(6, 10),
+        st(12, 20),
     ),
     row(
         "49",
