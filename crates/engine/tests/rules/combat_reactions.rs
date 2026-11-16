@@ -1,6 +1,6 @@
 //! Stinkyscape+ E6 (issue #3550, R3550000–R3550009): the set's small combat and reaction verbs,
 //! proved on fixture scripts (`fixtures::combat_reactions`, the `testkit` feature's `scenario()`),
-//! with no card yet.
+//! with no card yet, and R4022000's tests (issue #4022): a pool meets a lethal guard and a lethal cancel.
 
 use jackioh_engine::effects;
 use jackioh_engine::subsystems::activate::{ability_uses_this_turn, activation_views_for};
@@ -352,6 +352,87 @@ mod r3550004_a_per_turn_damage_pool {
         s.attack(id_at(&s, P2, 1).as_str(), plain.as_str());
         s.expect_stats(plain.as_str(), json!({ "health": 3 }));
         assert_eq!(pool_left(&s, &pool), Some(5));
+    }
+}
+
+mod r4022000_a_pool_is_spent_only_by_a_hit_that_lands {
+    use super::*;
+
+    /// A 1/2 Unit with no text: a hit of 7 less the pool's 5 kills it.
+    const FRAIL: &str = "stand-in (1) 1/2";
+
+    fn pool_left(s: &Scenario, id: &str) -> Option<i32> {
+        damage_pool_left(s.state(), s.card(id))
+    }
+
+    /// A hit of `amount` with no source on `to`, as p1's resolving effect deals it.
+    fn hit(s: &mut Scenario, to: Value, amount: i32) {
+        apply_now(
+            s.state_mut(),
+            effects::damage(json_as(json!({ "to": to, "amount": amount }))),
+        );
+    }
+
+    #[test]
+    fn r4022000_a_guard_that_takes_a_moved_hit_spends_the_pool_once() {
+        let mut s = board(
+            "r4022000-guard",
+            json!({ "field": [FRAIL, GUARD], "backrow": face_up(POOL) }),
+            json!({}),
+        );
+        let pool = backrow_id(&s, P1, 1);
+        let ally = id_at(&s, P1, 1);
+        let guard = id_at(&s, P1, 2);
+        assert_eq!(pool_left(&s, &pool), Some(5));
+        // The 2 the pool would leave of 7 kills the ally, so the guard catches the 7: its Armor 2
+        // leaves 5, and the pool, spent on nothing yet, soaks them whole.
+        hit(&mut s, json!({ "of": "instance", "instanceId": ally }), 7);
+        s.expect_stats(ally.as_str(), json!({ "health": 2 }));
+        s.expect_stats(guard.as_str(), json!({ "health": 20 }));
+        assert_eq!(pool_left(&s, &pool), Some(0));
+    }
+
+    #[test]
+    fn r4022000_a_hit_a_cancel_stops_leaves_the_pool_untouched() {
+        let mut s = board(
+            "r4022000-cancel",
+            json!({
+                "health": 2,
+                "backrow": [
+                    { "def": POOL, "lane": 1, "faceUp": true },
+                    { "def": GAMBIT, "lane": 2, "faceUp": false },
+                ],
+            }),
+            json!({}),
+        );
+        let pool = backrow_id(&s, P1, 1);
+        // The 2 the pool would leave of 7 is lethal on a 2-health hero, so the cancel stops the hit.
+        hit(&mut s, json!({ "of": "selfHero" }), 7);
+        s.expect_health(P1, 2);
+        s.expect_in_zone(GAMBIT, "graveyard");
+        assert_eq!(pool_left(&s, &pool), Some(5));
+    }
+
+    #[test]
+    fn r4022000_a_lethal_hit_no_replacement_answers_still_spends_the_pool() {
+        // The cancel answers for its own hero only: the window opens on the ally, and nothing answers.
+        let mut s = board(
+            "r4022000-unanswered",
+            json!({
+                "field": [FRAIL],
+                "backrow": [
+                    { "def": POOL, "lane": 1, "faceUp": true },
+                    { "def": GAMBIT, "lane": 2, "faceUp": false },
+                ],
+            }),
+            json!({}),
+        );
+        let pool = backrow_id(&s, P1, 1);
+        let ally = id_at(&s, P1, 1);
+        hit(&mut s, json!({ "of": "instance", "instanceId": ally }), 7);
+        assert_eq!(pool_left(&s, &pool), Some(0));
+        s.expect_in_zone(ally.as_str(), "graveyard");
+        s.expect_in_zone(GAMBIT, "field");
     }
 }
 
