@@ -153,6 +153,7 @@ pub mod condition_active;
 pub mod control_change;
 pub mod control_change_carry;
 pub mod costs_and_mana;
+pub mod damage_pool;
 pub mod deaths_and_reborn;
 pub mod duos;
 pub mod echo_and_exile;
