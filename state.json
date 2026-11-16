@@ -17335,16 +17335,20 @@
     "what": "build #4039 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-16T03:57:58Z",
+    "at": "2026-11-16T04:34:40Z",
     "notes": [
-      "delivered build #4034 on agy (run 43796113158): built",
-      "delivered build #4025 on claude-1 (run 43793308294): built",
-      "delivered build #4039 on claude-3 (run 43793236170): infra (its model job left no upload)",
-      "started review #4050 on agy (run 43801548738)",
-      "started review #4051 on claude-1 (run 43801610735)",
-      "started build #4039 on claude-5 (run 43801674049)",
+      "delivered review #4051 on claude-1 (run 43801610735): approved",
+      "delivered plan #4035 on claude-4 (run 43800617471): planned",
+      "delivered review #4049 on muse (run 43799612944): approved",
+      "delivered review #4048 on muse (run 43799553630): approved",
+      "delivered review #4046 on gpt (run 43799432214): approved",
+      "delivered build #4023 on claude-8 (run 43796242664): built",
+      "started review #4052 on claude-8 (run 43805530496)",
+      "started build #4035 on claude-4 (run 43805597415)",
+      "started build #4039 on claude-1 (run 43805657782)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 5 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18050,7 +18054,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T03:57:58Z",
+  "loop_tick": "2026-11-16T04:34:40Z",
   "machine_disk": {
     "issue": null,
     "reading": {
