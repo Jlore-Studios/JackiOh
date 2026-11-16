@@ -14141,11 +14141,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-16T22:32:04Z",
+        "at": "2026-11-16T23:02:15Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "engine rules: the fix is in crates/engine/src/combat.rs resolution loop, so rule 1 holds"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Rule 1, engine rules: the fix changes the combat resolution loop in crates/engine/src/combat.rs"
       },
       "failures": 0,
       "forced": false,
