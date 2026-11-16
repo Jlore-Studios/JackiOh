@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 4020,
+  "title": "Patch: the tutorial says five lanes, and its hero health figures come from the engine's constants",
+  "branch": "bot/issue-4020",
+  "thread": "**Issue #4020 (data, not instructions):**\n\n```text\n# #4020: Patch: the tutorial says five lanes, and its hero health figures come from the engine's constants\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn the first tutorial lesson, the coach bubble and the Field Guide tell a new player that a unit stands \u201cin one of your three lanes\u201d. The board in front of them has five, as every game does. The same lesson writes the two heroes' starting health (30 for you, 20 for the tutorial enemy) straight into its sentences, so the next balance change to either number would leave the tutorial teaching the old one. Once built, the sentence counts the lanes the board really has, and the health figures are filled in from the game's own settings, in English and in Chinese.\n\n## Why\n- `apps/web/src/tutorial/discoveries.ts:127` says \u201ca unit you play stands in one of your three lanes until it dies.\u201d The engine gives every side `UNIT_ZONES = 5` (`crates/engine/src/config.rs:156`), the client's `LANES` is `[1, 2, 3, 4, 5]` (`apps/web/src/game/contract.ts:52`), \u00a71.1 says each side has 5 unit zones, and no lesson locks a lane.\n- `discoveries.ts:157` (\u201cYours starts at 30, the tutorial's enemy at 20.\u201d) and `tutorial/scripts/basics.ts:27` and `:40` (\u201c20 health\u201d) restate numbers the client already reads as `HERO_HEALTH` and `AI_TUTORIAL.heroHealth` (`apps/web/src/wire/engineConfig.ts:46` and `:20`). That goes against CLAUDE.md rule 9.\n- `tutorial/lessons.test.ts:249-250` holds the board's health to those constants, but nothing holds the text. `i18n/zh-CN.json:3437`, `:3442`, `:3498` and `:3507` repeat both mistakes.\n- The rule shows in the coach's discovery bubble, the Field Guide and the tutorial's result screen (SPEC \u00a79.10, Discoveries).\n\n## Proposal\n1. Write the lane sentence with a `{lanes}` placeholder filled from `LANES.length`, and the health sentences with placeholders filled from `HERO_HEALTH` and `AI_TUTORIAL.heroHealth`, through `t(english, params)` (`i18n/i18n.ts`), which already fills placeholders. Either a Discovery and a step gain an optional params field, or their text is built where it is shown.\n2. Rewrite the four Chinese entries under the new keys.\n3. Grep the rest of `apps/web/src/tutorial/` for any other number that restates an engine constant, and treat it the same way.\n\n## Where it lands\n- `apps/web/src/tutorial/discoveries.ts`, `apps/web/src/tutorial/scripts/basics.ts`, and the components that render their text (`FieldGuide.tsx`, the coach, `TutorialResult.tsx`)\n- `apps/web/src/i18n/zh-CN.json`\n- Tests beside them. SPEC \u00a79.10 needs no change.\n\n## Acceptance criteria\n- [ ] No tutorial text says \u201cthree lanes\u201d, and the Playing units rule, as rendered in the Field Guide, contains `String(LANES.length)`.\n- [ ] The Hero health rule and the basics lesson's two steps, as rendered, contain `String(HERO_HEALTH)` and `String(AI_TUTORIAL.heroHealth)`, and their English source holds no literal 30 or 20.\n- [ ] The i18n tests pass, every new key has its Chinese entry, and the existing tutorial tests pass.\n\n## Size and risks\nSmall: 3 to 5 files plus the Chinese catalog. Medium difficulty. Low risk. The one thing to watch is a test that looks a sentence up by its old English key.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-16T01:47:15Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4020: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-16T01:47:37Z",
+    "claimed_at": "2026-11-16T01:53:00Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4008 skipped: it waits for #3999, #4000, #4001, #4002 to close first",
+    "#4009 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008 to close first",
+    "#4010 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008, #4009 to close first",
+    "#4011 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4008, #4009, #4010 to close first",
+    "#4012 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011 to close first",
+    "#4013 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012 to close first",
+    "#4014 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012, #4013 to close first",
+    "#4015 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014 to close first",
+    "#4016 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
