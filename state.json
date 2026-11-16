@@ -15136,17 +15136,18 @@
     "what": "build #4058 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-16T23:36:15Z",
+    "at": "2026-11-16T23:48:12Z",
     "notes": [
-      "#4072 needs a plan",
-      "delivered build #4086 on claude-8 (run 43965758333): built",
-      "started review #4090 on claude-8 (run 43981022841)",
-      "started plan #4072 on muse (run 43981098327)",
-      "started plan #4067 on muse (run 43981174761)",
-      "started plan #4058 on muse (run 43981243374)",
-      "started plan #4057 on agy (run 43981325072)",
-      "started plan #4062 on gpt (run 43981401087)",
-      "nothing more to start: nothing is queued"
+      "delivered plan #4058 on muse (run 43981243374): planned",
+      "delivered plan #4067 on muse (run 43981174761): planned",
+      "delivered plan #4072 on muse (run 43981098327): planned",
+      "delivered build #4010 on muse (run 43977169498): built",
+      "started review #4091 on muse (run 43982978603)",
+      "started build #4072 on muse (run 43983061683)",
+      "started build #4067 on muse (run 43983133818)",
+      "started build #4058 on muse (run 43983204340)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15850,7 +15851,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T23:36:15Z",
+  "loop_tick": "2026-11-16T23:48:12Z",
   "machine_disk": {
     "issue": null,
     "reading": {
