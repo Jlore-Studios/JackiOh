@@ -14438,17 +14438,8 @@
       ]
     },
     "4072": {
-      "action": "plan",
-      "asks": [
-        "c:6932678505"
-      ],
-      "build_next": {
-        "from_run": "43981098327",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-16T23:50:42Z",
-        "until": "2026-11-17T00:20:42Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T23:50:33Z",
         "difficulty": "medium",
@@ -14467,10 +14458,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- 7. **Amend `spec/rulings/R3730002.md` and `spec/rulings/R3730003.md`.** Append one line each: `Amended by [[R4072000]] (issue #4072): an unstarted lobby follows the running catalog on its next read, clearing picks and Readies; a started one is left alone.`\n- 8. **`spec/09-architecture.md`, Private lobbies bullet (\u00a79.5).** In the Start sentence (\"The host's Start needs every seat filled and ready, checks the catalog and both seats again\u2026\"), add that an unstarted lobby whose catalog is older moves onto the running catalog, picks and Readies off, when fir\u2026\n- 9. **Tests.** Add the helper and tests below, then run the commands in **Tests** plus `cargo test -p jackioh-server --test server api::lobbies::`, `cargo test -p jackioh-server --test server actor::social_live::`, `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `\u2026\n- ## Tests\n- Helper in `crates/server/tests/api/lobbies.rs` (copy the `store!` get/update pattern from `r4039000_an_invite_lists_until_the_host_leaves_or_starts` at the file's end):\n- ```rust\n- /// Fakes a lobby made before a deploy: its stored catalog is older, same rev line.\n- async fn age_catalog(app: &Arc<App>, code: &str) -> i64 {\n- let mut lobby = store!(app, tx => tx.lobbies_get(code).await.expect(\"lobbies.get\")).expect(\"the lobby\");\n- let rev = lobby.rev;\n- lobby.catalog_version = \"v-before-the-deploy\".to_string();\n- assert!(store!(app, tx => tx.lobbies_update(&lobby, rev).await.expect(\"lobbies.update\")));\n- rev\n- }\n- ```\n- Each test name must contain the token `r4072000` between underscores (rule 3):\n- - `r4072000_an_unstarted_duel_moves_to_the_running_catalog_on_read` \u2014 `with_saved_deck` for host and guest, `duel` `\"bo1\"`, guest `enter`, both `pick` deck + `ready` true. `age_catalog`. Host `view`: `states` is `[\"choosing\", \"choosing\"]`, `yourPick` null, both seats still seated. `lobbies_get` sho\u2026\n- - `r4072000_a_co_op_lobby_moves_and_starts_again` \u2014 `coop`, guest `enter`, both `pick {\"random\": true}` + ready, `age_catalog`, read shows `[\"choosing\", \"choosing\"]`, re-pick + ready, `start` 200; stored co-op match has `(a1, a2)` host/guest (mirror `r3730002_a_co_op_lobby_starts_with_the_host_as_a\u2026\n- - `r4072000_a_2v2_lobby_keeps_four_seats_and_two_teams` \u2014 `full_two_v_two`, record `lineup_of`, `age_catalog`, `view`: same `lineup_of`, `states` all `\"choosing\"`. All four re-pick `{\"random\": true}` + ready, host `start` 200 with `matchId`.\n- - `r4072000_a_friend_enters_a_lobby_left_under_an_older_catalog` \u2014 host `duel` `\"random\"`, `age_catalog` before anyone enters, guest `enter` answers 200 (today 409), guest `view` shows `\"you\" == \"guest\"`, `\"choosing\"`.\n- - `r4072000_a_started_lobby_under_an_older_catalog_is_left_alone` \u2014 `ready_random_duel`, host `start` 200, then `age_catalog` on the started row. `view`: `startedAt` set, `matchId` present, `states` still `[\"ready\", \"ready\"]`; `lobbies_get` still holds `\"v-before-the-deploy\"`.\n- - `r4072000_two_reads_racing_the_move_both_get_the_lobby` \u2014 duel random both ready, `age_catalog` (keep its `rev`). `tokio::join!` a host `read` and a guest `read`: both status 200. Stored lobby: running catalog, `states` choosing, `rev == aged_rev + 1` (moved exactly once).\n- - In `crates/server/tests/actor/social_live.rs`, mod `r3730000_lobbies`, `r4072000_the_move_reaches_every_member`: mirror `r3730000_every_lobby_change_reaches_its_members_alone` (Ana creates duel-random lobby, Bob enters, both pick + ready), then `age_catalog`-equivalent via `store!` (`lobbies_get`\u2026\n- Commands: `cargo test -p jackioh-server --test server r4072000` (all new tests at once), then the two full module runs above, `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo jackioh spec check`.\n- ## Done when\n- - [ ] Unstarted duel, co-op and 2v2 lobbies move on read: choosing everywhere, Readies off, seats/teams/settings kept, re-pick + ready lets Start answer 200.\n- - [ ] A friend enters an older-catalog lobby with 200, not 409.\n- - [ ] Every member gets a `lobby` frame on the move; a started lobby is never rewritten; racing reads both get 200 with one move.\n- - [ ] `cargo jackioh spec check` passes with the note, its pending paragraph and its tests.\n- - [ ] `cargo test -p jackioh-server --test server api::lobbies::`, `actor::social_live::`, `fmt --check` and the `clippy` gate above are green.\n- ## Risks\n- - Lost-update races: every move goes through `write`'s revision compare-and-set, the module's own pattern; the loser re-reads once instead of answering `changed`, so concurrent touches converge with no retry loop and no livelock.\n- - A read that writes twice when a blocked guest and a stale catalog coincide (drop-write then move-write): harmless \u2014 same pattern, two `lobby` frames; members re-read on each.\n- - Rule 7: the move clears picks server-side and the read path is unchanged, so no card leaves; the client already renders a pick-less seat as choosing (`LobbyScreen.tsx:145`).\n- ## Open questions\n- None. No person-only step: no dashboard, secret, or forbidden-path change is needed.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4072 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4072/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-16T23:38:53Z",
       "owner_why": "it plans it",
@@ -14483,12 +14473,14 @@
       "provider": "muse",
       "queued_at": "2026-11-16T23:35:51Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43981098327",
+      "run_id": "pending:05e4540f-1794873156",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-16T23:38:53Z",
+      "started_at": "2026-11-16T23:53:01Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6932678505"
+      ]
     },
     "4074": {
       "action": "review",
@@ -15155,9 +15147,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T23:52:23Z",
+    "at": "2026-11-16T23:53:01Z",
     "url": "",
-    "what": "review #4091 on muse"
+    "what": "build #4072 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T23:36:15Z",
