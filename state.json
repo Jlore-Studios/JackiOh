@@ -15659,7 +15659,7 @@
       }
     },
     "3998": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -15678,10 +15678,12 @@
       },
       "interruptions": 0,
       "issue": 3935,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T03:41:19Z",
         "from_run": "43783606547",
         "gates": [
           {
@@ -15778,7 +15780,7 @@
       "question": "",
       "queued_at": "2026-11-16T03:37:46Z",
       "round_tier": "medium",
-      "run_id": "43783606547",
+      "run_id": "pending:7881c92c-1794800454",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15799,7 +15801,7 @@
         "run": "43783606547"
       },
       "source": "",
-      "started_at": "2026-11-16T00:59:39Z",
+      "started_at": "2026-11-16T03:41:19Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17176,9 +17178,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T03:40:42Z",
+    "at": "2026-11-16T03:41:19Z",
     "url": "",
-    "what": "review #4049 on muse"
+    "what": "review #3998 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-16T03:02:45Z",
