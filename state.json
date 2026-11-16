@@ -14017,6 +14017,13 @@
     "4064": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T22:41:43Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "rule 2 (The AI): the change rewrites the AI's attack evaluation, threat walk and reply trading"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
