@@ -16773,13 +16773,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gpt"
+        ],
         "builder": "gpt",
         "built_by": "gpt",
         "rejections": [],
-        "reviews": [],
-        "sha": "dfb8c64421008abded6af3c1d6fc2aefac9211be",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "gpt",
+            "provider": "gpt",
+            "run": "43799432214",
+            "tier": "medium"
+          }
+        ],
+        "sha": "7ed2c7f27e67e26bbfb619b0306efa33b4e7e20e",
+        "tiers": {
+          "gpt": "medium"
+        }
       }
     },
     "4047": {
