@@ -17611,6 +17611,7 @@
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-16T04:41:57Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-16T06:22:59Z",
         "family": "claude",
@@ -17741,7 +17742,9 @@
         "run": "43805657782"
       },
       "started_at": "2026-11-16T06:39:29Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-11-16T06:41:14Z",
+      "stopped_by": "squishy-squooby",
       "taken_asks": [],
       "votes": {
         "approvals": [],
