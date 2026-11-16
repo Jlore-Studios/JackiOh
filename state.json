@@ -31335,10 +31335,6 @@
       "refused_until": "2026-11-16T00:00:00Z",
       "spent": [
         {
-          "at": "2026-11-03T21:22:05Z",
-          "minutes": 2.8
-        },
-        {
           "at": "2026-11-03T21:24:03Z",
           "minutes": 95.6
         },
@@ -32133,14 +32129,18 @@
         {
           "at": "2026-11-16T09:41:14Z",
           "minutes": 33.6
+        },
+        {
+          "at": "2026-11-16T21:21:55Z",
+          "minutes": 2.8
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-16T12:40:00Z",
-          "utilization": 0.23
+          "resets_at": "2026-11-17T02:18:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-11-16T09:41:14Z",
+        "observed_at": "2026-11-16T21:21:55Z",
         "seven_day": {
           "resets_at": "2026-11-23T00:00:00Z",
           "utilization": 0.12
@@ -34765,6 +34765,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-16T21:21:12Z,muse,usage-command,after,43958097948,0,2026-11-17T02:18:00Z,12,2026-11-23T00:00:00Z,allowed,100,100,"
+    ]
   },
   "version": 1
 }
