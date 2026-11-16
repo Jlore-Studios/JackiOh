@@ -424,60 +424,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6793581842": {
-      "at": "2026-11-11T10:38:08Z",
-      "lines": [
-        "/harness revise The person's part is done. This PR's description now opens `Part of #3674`, not `Closes #3674`. Nothing else in it changed, and I took `human required` off."
-      ]
-    },
-    "c:6800135416": {
-      "at": "2026-11-11T15:38:08Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6800145555": {
-      "at": "2026-11-11T15:38:33Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6800155352": {
-      "at": "2026-11-11T15:38:59Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6800161899": {
-      "at": "2026-11-11T15:39:15Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6800169439": {
-      "at": "2026-11-11T15:40:36Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6800173873": {
-      "at": "2026-11-11T15:44:08Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6800181150": {
-      "at": "2026-11-11T15:45:48Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6800190067": {
-      "at": "2026-11-11T15:45:51Z",
-      "lines": [
-        "Approve"
-      ]
-    },
     "c:6825494758": {
       "at": "2026-11-12T13:53:32Z",
       "lines": [
@@ -818,6 +764,12 @@
       "at": "2026-11-16T06:41:08Z",
       "lines": [
         "/harness stop"
+      ]
+    },
+    "c:6931068590": {
+      "at": "2026-11-16T22:18:23Z",
+      "lines": [
+        "Approve"
       ]
     }
   },
