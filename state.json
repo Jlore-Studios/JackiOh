@@ -15470,11 +15470,18 @@
       "interruptions": 0,
       "issue": 3826,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-7",
+      "paused": {
+        "at": "2026-11-16T00:16:13Z",
+        "interrupt": "usage",
+        "provider": "claude-7"
+      },
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-16T00:03:06Z",
+      "round_tier": "",
       "run_id": "pending:17de95da-1794787661",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15499,6 +15506,7 @@
       "started_at": "2026-11-16T00:08:09Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
