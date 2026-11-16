@@ -16656,10 +16656,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-5",
       "owner_since": "2026-11-16T04:02:43Z",
       "owner_why": "handed off from `claude-3`: `claude-3` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-16T04:50:30Z",
+      "paused": {
+        "at": "2026-11-16T04:10:29Z",
+        "interrupt": "usage",
+        "provider": "claude-5"
+      },
       "pending_request": false,
       "planned_at": "2026-11-16T02:32:55Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -16669,6 +16675,7 @@
       "provider": "claude-5",
       "queued_at": "2026-11-16T04:00:30Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "",
       "run_id": "43801674049",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-16T04:02:43Z",
@@ -16677,7 +16684,8 @@
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4043": {
       "action": "review",
