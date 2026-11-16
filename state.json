@@ -15754,7 +15754,7 @@
       "started_at": "2026-11-16T07:46:29Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 3
     },
     "4010": {
       "failures": 0,
