@@ -3,15 +3,18 @@
 // copies, transforms' results, The Coin). A row counts the seats that made a copy: Win rate pools them, used or
 // not (R2370000), Used splits by a copy Radiant at its first use, and Not used is the baseline. The figures and
 // R654's floor ("—" below it) are the server's, and Win rate is read off them, nothing counted anew (CLAUDE.md
-// rule 7). The rows open on Win rate, best first, and every header sorts them (R3184002). It scrolls, never fixed
-// (R1646000). R3887000: with the Plain text button on, a catalog card's name cell holds the card as plain text.
+// rule 7). R4082000: Tier and Adjusted are the server's too, each card read against the other Created cards, and
+// the rows open on Adjusted, best first, as the deck table does; every header sorts them (R3184002). It scrolls,
+// never fixed (R1646000). R3887000: with the Plain text button on, a catalog card's name cell holds the card as
+// plain text.
 
 import { useId, useState, type ReactElement, type ReactNode } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
-import type { PublicCreatedStat } from "../net/api.ts";
+import type { PublicCreatedStat, PublicCreatedTiers } from "../net/api.ts";
 import { faceRate, formatPlayedDelta } from "./model.ts";
 import { TableScroll } from "./TableScroll.tsx";
 import { statsTestid } from "./testids.ts";
+import { TierChip, adjustedText, percentText, tierRank } from "./TierChip.tsx";
 
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
@@ -35,19 +38,36 @@ export function createdWinRate(card: PublicCreatedStat): number | null {
 }
 
 /** R3184002: the Created tables' columns, every one sortable. */
-export type CreatedColumn = "name" | "games" | "winRate" | "used" | "notUsed" | "usedRadiant" | "usedNormal" | "delta";
+export type CreatedColumn =
+  | "name"
+  | "games"
+  | "tier"
+  | "adjusted"
+  | "winRate"
+  | "used"
+  | "notUsed"
+  | "usedRadiant"
+  | "usedNormal"
+  | "delta";
 
 /** R3184002: a header's sort: the column and its direction. */
 export type CreatedSort = { col: CreatedColumn; dir: "asc" | "desc" };
 
-/** R3324002: the sort a table opens on, its Win rate best first, as the deck table opens on its own headline rate. */
-export const CREATED_DEFAULT_SORT: CreatedSort = { col: "winRate", dir: "desc" };
+/** R4082000: the sort a table opens on, its Adjusted best first, as the deck table opens on its own headline rate. */
+export const CREATED_DEFAULT_SORT: CreatedSort = { col: "adjusted", dir: "desc" };
+
+/** R4082000: a card's adjusted win rate as the row shows it, null below the floor or from an older server. */
+function adjustedOf(card: PublicCreatedStat): number | null {
+  return card.hasEnoughGames ? (card.adjustedWinRate ?? null) : null;
+}
 
 /** R3184002: a column's figure as the row shows it: its games, or its rate or delta, null for "—". */
-function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name">, minSample: number): number | null {
+function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name" | "tier">, minSample: number): number | null {
   switch (col) {
     case "games":
       return card.games;
+    case "adjusted":
+      return adjustedOf(card);
     case "winRate":
       return faceRate(card.games, createdWinRate(card), minSample);
     case "used":
@@ -65,7 +85,7 @@ function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name">, mi
 
 /**
  * R3184002: the rows in a header's order: a row with no figure (below the floor, or none) after those with one,
- * either way, and rows that tie in the server's order.
+ * either way, and rows that tie in the server's order. R4082000: by tier, S first descending, then by Adjusted.
  */
 export function sortCreated(
   created: readonly PublicCreatedStat[],
@@ -78,8 +98,14 @@ export function sortCreated(
   const { col } = sort;
   return [...created].sort((a, b) => {
     if (col === "name") return nameOf(a.id, a.name).localeCompare(nameOf(b.id, b.name), language) * flip;
-    const x = figure(a, col, minSample);
-    const y = figure(b, col, minSample);
+    if (col === "tier") {
+      const x = tierRank(a.hasEnoughGames ? a.tier : null);
+      const y = tierRank(b.hasEnoughGames ? b.tier : null);
+      if (x !== y) return x < 0 || y < 0 ? (x < 0 ? 1 : -1) : (x - y) * flip;
+    }
+    const by = col === "tier" ? "adjusted" : col;
+    const x = figure(a, by, minSample);
+    const y = figure(b, by, minSample);
     if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
     return (x - y) * flip;
   });
@@ -120,16 +146,45 @@ function SortHeader({
 /** R3324002: which of the two sections a panel is: the tokens, or every other Created card. */
 export type CreatedKind = "tokens" | "other";
 
+/** R4082000: a signed number of points to a tenth ("+6.1"), as the Created tiers' note reads the centre. */
+function pointsText(fraction: number): string {
+  const points = (fraction * PERCENT).toFixed(1);
+  return fraction >= 0 ? `+${points}` : points;
+}
+
+/** R4082000: what a panel's Tier and Adjusted are read against, from the server's Created field. */
+function CreatedTiersNote({ field }: { field: PublicCreatedTiers }): ReactElement {
+  return (
+    <span data-testid={statsTestid.createdTiersNote}>
+      {field.cards > 0
+        ? t(
+            "Tier and Adjusted read each card against the other Created cards, whose average reads 50%: a seat makes one only after playing what makes it, so the seats that make an average one win {baseline} of their games, {center} points against the average deck, and real ones differ by about {spread} points. The Coin and the cards only a rule makes are read against the average deck.",
+            {
+              baseline: percentText(field.baseline),
+              center: pointsText(field.center),
+              spread: (field.spread * PERCENT).toFixed(1),
+            },
+          )
+        : t(
+            "Tier and Adjusted read each card against the average deck, as too few Created cards have enough games to read them against each other.",
+          )}
+    </span>
+  );
+}
+
 export function CreatedPanel({
   kind,
   created,
   minSample,
+  field,
   nameOf,
   plainCardOf,
 }: {
   kind: CreatedKind;
   created: readonly PublicCreatedStat[];
   minSample: number;
+  /** R4082000: the Created field the tiers are read against; absent from a server deployed before it. */
+  field?: PublicCreatedTiers;
   /** A card's name as the page shows it. */
   nameOf: (id: string, name: string) => string;
   /** R3887000: a card's plain text, or null for an id with none; the name stands in for it. */
@@ -163,6 +218,12 @@ export function CreatedPanel({
           "Win rate is of the seats that made one, used or not; Used of those that used one, Not used of those that made one and used none. Each needs {minSample} games.",
           { minSample },
         )}
+        {field && (
+          <>
+            {" "}
+            <CreatedTiersNote field={field} />
+          </>
+        )}
       </p>
       <TableScroll labeledBy={titleId}>
         <table className="stats-table" data-testid={tokens ? statsTestid.tokensTable : statsTestid.createdTable}>
@@ -170,6 +231,8 @@ export function CreatedPanel({
             <tr>
               <SortHeader col="name" label={tokens ? t("Token") : t("Card")} {...header} />
               <SortHeader col="games" label={t("Games")} {...header} />
+              <SortHeader col="tier" label={t("Tier")} {...header} />
+              <SortHeader col="adjusted" label={t("Adjusted")} {...header} />
               <SortHeader col="winRate" label={t("Win rate")} {...header} />
               <SortHeader col="used" label={t("Used")} {...header} />
               <SortHeader col="notUsed" label={t("Not used")} {...header} />
@@ -185,6 +248,12 @@ export function CreatedPanel({
                   {plainCardOf?.(card.id) ?? nameOf(card.id, card.name)}
                 </th>
                 <td className="stats-td">{formatNumber(card.games)}</td>
+                <td className="stats-td">
+                  <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.createdTierCell} />
+                </td>
+                <td className="stats-td" data-testid={statsTestid.createdAdjustedCell}>
+                  {adjustedText(adjustedOf(card))}
+                </td>
                 <td className="stats-td">{rateText(card.games, createdWinRate(card), minSample)}</td>
                 <td className="stats-td">
                   {rateText(card.createdPlayedGames, card.createdPlayedWinRate, minSample)}
