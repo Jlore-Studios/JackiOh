@@ -42,6 +42,7 @@ use crate::fuzz::{
     SHIPPED_FUZZ_POOL, SHIPPED_HANDICAP_POOL, SeedHandicap, actor_of, deal_deck, decks_for_seed_from,
     handicap_decks_for_seed_from, handicap_for_seed,
 };
+use crate::steer::steered_action;
 
 // The recording's shape (§13.1, §13.3)
 
@@ -389,7 +390,7 @@ fn hashes_of(state: &GameState, events: &[GameEvent]) -> Hashes {
 
 /// Plays `spec`'s game (the fuzz's loop, nonce `golden-<n>`, stopped at the game's end or STEP_CAP)
 /// and records it: the one recorder `record` and the bench share.
-fn record_game(spec: GameSpec) -> Result<GameLine> {
+fn record_game(spec: GameSpec, steer: &[String]) -> Result<GameLine> {
     let args = CreateGameArgs {
         seed: spec.seed.clone(),
         decks: spec.decks.clone(),
@@ -413,7 +414,9 @@ fn record_game(spec: GameSpec) -> Result<GameLine> {
         let n = steps.len();
         let player = actor_of(&state, &mut order);
         let l = fnv1a32_utf16(&legal_text(&state, player));
-        let chosen = choose_action(&state, player, &mut policy).ok_or_else(|| {
+        let chosen = steered_action(&state, player, steer)
+            .or_else(|| choose_action(&state, player, &mut policy))
+            .ok_or_else(|| {
             anyhow!(
                 "{} step {n}: no legal action for {player} while the game is live (turn {}): R82 auto-ends \
                  a turn with nothing left to do, so this is a stall",
@@ -533,7 +536,7 @@ pub(crate) fn force_into(deck: &[String], forced: &[String]) -> Vec<String> {
 }
 
 /// Seed k's game with `forced` in both decks.
-fn record_forced(k: u32, forced: &[String]) -> Result<GameLine> {
+fn record_forced(k: u32, forced: &[String], steer: &[String]) -> Result<GameLine> {
     let mut spec = spec_for_seed(k)?;
     for deck in [&mut spec.decks.0, &mut spec.decks.1] {
         if forced.len() > deck.len() {
@@ -546,7 +549,7 @@ fn record_forced(k: u32, forced: &[String]) -> Result<GameLine> {
         }
         *deck = force_into(deck, forced);
     }
-    record_game(spec)
+    record_game(spec, steer)
 }
 
 /// What `record_seeds` wrote.
@@ -557,12 +560,19 @@ pub(crate) struct Recorded {
     pub forced: Vec<String>,
 }
 
-/// Plays each of `seeds` with `force` in both decks and writes the lines, in seed order, to `out`.
-pub(crate) fn record_seeds(seeds: &[u32], force: &[String], out: &Path) -> Result<Recorded> {
+/// Plays each of `seeds` with `force` in both decks and writes the lines, in seed order, to `out`. A
+/// non-empty `steer` (the subject first, R3935001) plays those cards the way `steer.rs` says; the cards
+/// are forced too (`classify` names them in `force`).
+pub(crate) fn record_seeds(
+    seeds: &[u32],
+    force: &[String],
+    steer: &[String],
+    out: &Path,
+) -> Result<Recorded> {
     let forced = resolve_force(force)?;
     let games: Vec<GameLine> = seeds
         .par_iter()
-        .map(|&k| record_forced(k, &forced))
+        .map(|&k| record_forced(k, &forced, steer))
         .collect::<Result<Vec<_>>>()?;
     let steps: usize = games.iter().map(|game| game.steps.len()).sum();
 
@@ -581,7 +591,7 @@ pub(crate) fn record_seeds(seeds: &[u32], force: &[String], out: &Path) -> Resul
 
 fn run_record(args: &RecordArgs) -> Result<()> {
     let seeds = parse_seed_range(&args.seeds)?;
-    let recorded = record_seeds(&seeds, &args.force, &args.out)?;
+    let recorded = record_seeds(&seeds, &args.force, &[], &args.out)?;
     let forced = if recorded.forced.is_empty() {
         "none".to_string()
     } else {
