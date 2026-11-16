@@ -247,6 +247,87 @@ describe("the lobby screen", () => {
     }
   });
 
+  it("R3730000 a failed re-read keeps the lobby, its pick and its Leave, and reads again within LOBBY_POLL_MS while live", async () => {
+    const fake = fakeSockets();
+    setSocialSocketFactory(fake.factory);
+    try {
+      vi.useFakeTimers();
+      const empty = lobby({ settings: { format: "duel", mode: "bo1" }, seats: [seat(), seat({ role: "guest", player: null })] });
+      const server = serve([empty, empty, refusal(500, "busy", "the lobby is busy"), lobby({ settings: { format: "duel", mode: "bo1" } })]);
+      const reads = (): number => server.to("GET", `/api/lobbies/${CODE}`).length;
+      show();
+      await settle({ advance: 0 });
+      expect(reads()).toBe(1);
+      const socket = must(fake.sockets.at(-1), "the tab's social socket");
+      socket.open();
+      socket.deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+      await settle({ advance: 0 });
+      expect(reads(), "the socket came up: one read").toBe(2);
+      const picker = screen.getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect);
+      fireEvent.change(picker, { target: { value: "d-pyre" } });
+      // The push's read fails while the socket is live: the lobby on screen stays.
+      socket.deliver({ type: "lobby", code: CODE });
+      await settle({ advance: 0 });
+      expect(server.to("POST", `/api/lobbies/${CODE}/pick`)).toHaveLength(1);
+      expect(screen.getByTestId(lobbyTestid.leave)).toBeInTheDocument();
+      expect(screen.getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect).value).toBe("d-pyre");
+      expect(screen.queryByText(/could not be read/i)).toBeNull();
+      const before = reads();
+      await settle({ advance: LOBBY_POLL_MS });
+      expect(reads(), "the failed re-read retries once within LOBBY_POLL_MS while live").toBe(before + 1);
+      const seats = screen.getAllByTestId(lobbyTestid.seat);
+      expect(within(seats[1] ?? document.body).getByText("Bo#2")).toBeInTheDocument();
+    } finally {
+      setSocialSocketFactory(null);
+    }
+  });
+
+  it("R3730000 an action's refusal survives a failed re-read", async () => {
+    const fake = fakeSockets();
+    setSocialSocketFactory(fake.factory);
+    try {
+      vi.useFakeTimers();
+      serve([lobby(), refusal(500, "busy", "the lobby is busy"), lobby()], (call) =>
+        call.method === "POST" && call.path === `/api/lobbies/${CODE}/settings`
+          ? refusal(409, "busy", "the lobby is busy")
+          : undefined,
+      );
+      show();
+      await settle({ advance: 0 });
+      fireEvent.change(screen.getByTestId(lobbyTestid.settings), { target: { value: "bo1" } });
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.error)).toHaveTextContent("the lobby is busy");
+      const socket = must(fake.sockets.at(-1), "the tab's social socket");
+      socket.deliver({ type: "lobby", code: CODE });
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.error)).toHaveTextContent("the lobby is busy");
+      expect(screen.queryByText(/could not be read/i)).toBeNull();
+      expect(screen.getByTestId(lobbyTestid.leave)).toBeInTheDocument();
+    } finally {
+      setSocialSocketFactory(null);
+    }
+  });
+
+  it("R3730000 a 404 re-read closes the lobby", async () => {
+    const fake = fakeSockets();
+    setSocialSocketFactory(fake.factory);
+    try {
+      vi.useFakeTimers();
+      serve([lobby(), { status: 404, body: { error: { code: "not_found", message: "gone" } } }]);
+      show();
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.leave)).toBeInTheDocument();
+      const socket = must(fake.sockets.at(-1), "the tab's social socket");
+      socket.open();
+      socket.deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+      socket.deliver({ type: "lobby", code: CODE });
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.closed)).toHaveTextContent("This lobby is closed.");
+    } finally {
+      setSocialSocketFactory(null);
+    }
+  });
+
   it("R3205000 R3730002 the lobby's own reads keep running while the tab is hidden", async () => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
     try {

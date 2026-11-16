@@ -114,6 +114,11 @@ type Read =
 function useLobbyRead(code: string): [Read, () => void] {
   const [read, setRead] = useState<Read>({ kind: "loading" });
   const [round, setRound] = useState(0);
+  const [retry, setRetry] = useState(0);
+  const readRef = useRef(read);
+  useEffect(() => {
+    readRef.current = read;
+  }, [read]);
   const social = useSocialPoll();
   const reload = useCallback((): void => {
     setRound((before) => before + 1);
@@ -127,6 +132,7 @@ function useLobbyRead(code: string): [Read, () => void] {
       (cause: unknown) => {
         if (canceled) return;
         if (cause instanceof ApiRequestError && cause.status === 404) setRead({ kind: "closed" });
+        else if (readRef.current.kind === "ready") setRetry((n) => n + 1);
         else setRead({ kind: "failed", message: messageOf(cause) });
       },
     );
@@ -152,6 +158,13 @@ function useLobbyRead(code: string): [Read, () => void] {
       window.clearInterval(timer);
     };
   }, [social.live, reload]);
+  useEffect(() => {
+    if (retry === 0) return undefined;
+    const timer = window.setTimeout(reload, LOBBY_POLL_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [retry, reload]);
   // R3730004: an idle lobby closes at its expiry, so the screen reads it then.
   const expiresAt = read.kind === "ready" && read.value.kind === "lobby" ? read.value.expiresAt : null;
   useEffect(() => {
