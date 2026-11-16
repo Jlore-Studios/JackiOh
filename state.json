@@ -14140,6 +14140,13 @@
     "4066": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43971140257",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-16T23:02:26Z",
+        "until": "2026-11-16T23:32:26Z"
+      },
       "difficulty_by": {
         "at": "2026-11-16T23:02:15Z",
         "difficulty": "hard",
