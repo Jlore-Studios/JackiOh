@@ -73,10 +73,7 @@ fn play_of(id: &str) -> ActionBody {
 }
 
 fn plays_naming(state: &GameState, player: PlayerId, id: &str) -> usize {
-    legal_actions(state, player)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == id))
-        .count()
+    plays_in(state, player, id).len()
 }
 
 fn rarity_of(def_id: &str) -> &'static str {

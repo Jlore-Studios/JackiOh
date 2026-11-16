@@ -351,6 +351,13 @@ describe("R3840000 the open Daily list reads a game that ended", () => {
     const server = serve(world);
     render(<DailyRoute />);
     await screen.findAllByTestId(dailyTestid.gameRow, undefined, SLOW);
+    // The social read's dailyWaiting starts at 0 and lands as the world's, which reads the list again once
+    // (#3727): wait for that read, so a test counting reads from here never meets it late. `vi.waitFor` keeps
+    // real timers when a test fakes setInterval.
+    await vi.waitFor(() => {
+      expect(server.to("GET", "/api/daily")).toHaveLength(world.dailyWaiting === 0 ? 1 : 2);
+    }, SLOW);
+    await flush();
     expect(rowOf("theirs")).toHaveAttribute("data-over", "false");
     return server;
   }

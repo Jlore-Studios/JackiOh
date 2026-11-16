@@ -106,17 +106,12 @@ mod tests {
             .expect("the card is in the hand")
     }
 
-    // Differs from Scenario::offered: one card's face-up embiggen flags, not the seat's whole legal list.
+    /// The embiggen flags of p1's face-up plays of `id`, sorted and deduplicated.
     fn offered(s: &Scenario, id: &str) -> Vec<Option<bool>> {
-        let mut flags: Vec<Option<bool>> = legal_actions(s.state(), P1)
+        let mut flags: Vec<Option<bool>> = plays_in(s.state(), P1, id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id,
-                    embiggen,
-                    face_down: None,
-                    ..
-                } if instance_id == id => Some(embiggen),
+                ActionBody::Play { embiggen, face_down: None, .. } => Some(embiggen),
                 _ => None,
             })
             .collect();

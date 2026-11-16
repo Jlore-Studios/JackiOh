@@ -287,12 +287,7 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
         );
         let card = with_power(&mut g, &first, "ping");
 
-        let plays: Vec<ActionBody> = legal_actions(g.state(), PlayerId::P1)
-            .into_iter()
-            .filter(
-                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
-            )
-            .collect();
+        let plays: Vec<ActionBody> = g.plays_of(&card);
         let per_zone: IndexSet<String> = plays
             .iter()
             .map(|play| match play {
@@ -591,13 +586,6 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
 
 const EDGE_VANILLA: &str = "core-008";
 
-fn plays_of(s: &Scenario, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
-    legal_actions(s.state(), player)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-        .collect()
-}
-
 mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
     use super::*;
 
@@ -627,7 +615,7 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
         let a = must(s.unit(PlayerId::P1, 1), "p1's first unit");
         let b = must(s.unit(PlayerId::P1, 2), "p1's second unit");
 
-        let plays = plays_of(&s, PlayerId::P1, &devourer);
+        let plays = plays_in(s.state(), PlayerId::P1, &devourer.id);
         assert!(!plays.is_empty());
         let mismatched: Vec<&ActionBody> = plays
             .iter()
@@ -722,7 +710,7 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
         let b = must(s.unit(PlayerId::P2, 2), "p2's lane-2 unit");
 
         assert_eq!(
-            plays_of(&s, PlayerId::P1, &spell)
+            plays_in(s.state(), PlayerId::P1, &spell.id)
                 .iter()
                 .map(|play| {
                     targets_of(play)

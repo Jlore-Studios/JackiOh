@@ -654,20 +654,12 @@ fn b26_the_catalog_prints_the_new_costs() {
     }
 }
 
-fn plays_listed(s: &Scenario, card: &str) -> Vec<ActionBody> {
-    let held = s.card(card).id.clone();
-    legal_actions(s.state(), P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == held))
-        .collect()
-}
-
 #[test]
 fn b26_one_mana_short_of_the_new_cost_is_refused() {
     for (card, radiant, cost) in COSTS.into_iter().filter(|(_, _, cost)| *cost > 0) {
         let mut s = priced(card, radiant, cost - 1);
         assert!(
-            plays_listed(&s, card).is_empty(),
+            s.plays_of(card).is_empty(),
             "{card} is not offered at {} mana",
             cost - 1
         );
@@ -683,7 +675,8 @@ fn b26_one_mana_short_of_the_new_cost_is_refused() {
 fn b26_exactly_the_new_cost_plays_it() {
     for (card, radiant, cost) in COSTS {
         let mut s = priced(card, radiant, cost);
-        let play = plays_listed(&s, card)
+        let play = s
+            .plays_of(card)
             .into_iter()
             .next()
             .unwrap_or_else(|| panic!("{card} is offered at {cost} mana"));
@@ -881,12 +874,10 @@ fn memory_leak_into_lane_2(radiant: bool) -> Scenario {
         !is_locked(s.state(), slot(P1, Row::Backrow, 2)),
         "not Locked before"
     );
-    let play = legal_actions(s.state(), P1)
+    let play = s
+        .plays_of(&leak)
         .into_iter()
-        .find(|action| {
-            matches!(action, ActionBody::Play { instance_id, zone: Some(at), .. }
-                if *instance_id == leak.id && *at == zone)
-        })
+        .find(|action| matches!(action, ActionBody::Play { zone: Some(at), .. } if *at == zone))
         .expect("a play of Memory Leak into backrow lane 2 is listed");
     s.act(play, P1, "play Memory Leak into backrow lane 2");
     if s.state().pending.is_some() {

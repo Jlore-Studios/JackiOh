@@ -244,10 +244,7 @@ impl Sweep {
 fn sweep(def_id: &str, seed: &str) -> Vec<String> {
     let s = board(seed, def_id);
     let own = s.card(def_id).id.clone();
-    let plays: Vec<ActionBody> = legal_actions(s.state(), PlayerId::P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == own))
-        .collect();
+    let plays: Vec<ActionBody> = s.plays_of(&own);
     if plays.is_empty() {
         return vec![];
     }

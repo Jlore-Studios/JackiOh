@@ -359,12 +359,7 @@ mod tests {
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
                     "active": "p2",
                 }));
-                let stockpile = s.card(STOCKPILE).id.clone();
-                assert!(
-                    legal_actions(s.state(), P2)
-                        .iter()
-                        .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == stockpile))
-                );
+                assert!(s.can_play(STOCKPILE));
             }
         }
     }

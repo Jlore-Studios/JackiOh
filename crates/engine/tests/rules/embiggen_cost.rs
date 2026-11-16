@@ -8,7 +8,7 @@ use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{act, act_result, in_hand, sink_for};
-use crate::rules::fixtures::play_pipeline_b::{embiggen_field, only, pb_playing, plays_of};
+use crate::rules::fixtures::play_pipeline_b::{embiggen_field, only, pb_playing};
 
 /// The fixture's printed prices: "2 embiggen 4".
 const BASE: i32 = 2;
@@ -155,7 +155,7 @@ fn charged(before: &GameState, result: &ReduceResult) -> (i32, i32) {
 
 /// The prices `legal_actions` offers the card at, as its plays' `embiggen` flags.
 fn offered(state: &GameState, id: &str) -> Vec<Option<bool>> {
-    let mut flags: Vec<Option<bool>> = plays_of(state, id, PlayerId::P1)
+    let mut flags: Vec<Option<bool>> = plays_in(state, PlayerId::P1, id)
         .into_iter()
         .filter_map(|action| match action {
             ActionBody::Play { embiggen, .. } => Some(embiggen),

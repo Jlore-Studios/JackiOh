@@ -126,10 +126,7 @@ mod tests {
             let s = standing(false, json!([]));
             let theirs = s.pile(P2, "graveyard")[0].clone();
             assert!(!flashback(&s, &theirs));
-            assert!(!legal_actions(s.state(), P1).iter().any(|action| matches!(
-                action,
-                ActionBody::Play { instance_id, .. } if *instance_id == theirs.id
-            )));
+            assert!(plays_in(s.state(), P1, &theirs.id).is_empty());
         }
 
         #[test]
@@ -158,10 +155,7 @@ mod tests {
             let s = standing(false, json!([]));
             let top = s.pile(P1, "library")[0].clone();
             assert!(flashback(&s, &top));
-            assert!(!legal_actions(s.state(), P1).iter().any(|action| matches!(
-                action,
-                ActionBody::Play { instance_id, .. } if *instance_id == top.id
-            )));
+            assert!(!s.can_play(&top));
             assert!(!serde_json::to_string(&s.view(P1)).expect("serializes").contains("Flashback"));
         }
 

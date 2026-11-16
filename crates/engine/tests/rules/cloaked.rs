@@ -10,7 +10,6 @@ use super::fixtures::keywords_783::{
     cloaked_field, cloaked_field_trap, cloaked_mourner, cloaked_token, cloaked_trap, cloaked_unit,
     crater_cloaked, grunt, plain_spell, plain_unit, second_wind, set_resolver, toe_cracker, trap_discount,
 };
-use super::fixtures::play_pipeline_b::plays_of;
 use super::fixtures::prompt_harness::{answer_keys, cast_now, open_as, round_trip};
 
 const P1: PlayerId = PlayerId::P1;
@@ -27,7 +26,7 @@ fn in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstanc
 }
 
 fn face_down_offered(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Value> {
-    plays_of(state, instance_id, player)
+    plays_in(state, player, instance_id)
         .iter()
         .map(|play| serde_json::to_value(play).expect("a play serializes"))
         .filter(|play| play.get("faceDown").is_some_and(|timing| !timing.is_null()))
@@ -87,7 +86,7 @@ fn backrow_as_seen(state: &GameState, owner: PlayerId, viewer: PlayerId, lane: i
     view[side]["backrow"][(lane - 1) as usize].clone()
 }
 
-fn attacks_of(state: &GameState, id: &str) -> usize {
+fn attack_count(state: &GameState, id: &str) -> usize {
     legal_actions(state, P1)
         .iter()
         .filter(|action| matches!(action, ActionBody::Attack { attacker_id, .. } if attacker_id == id))
@@ -159,7 +158,7 @@ mod r783004_cloaked_set {
         let trap = in_hand(&mut state, &cloaked_trap().id, P1);
         let field_trap = in_hand(&mut state, &cloaked_field_trap().id, P1);
         for card in [&trap, &field_trap] {
-            assert!(!plays_of(&state, &card.id, P1).is_empty());
+            assert!(!plays_in(&state, P1, &card.id).is_empty());
             assert_eq!(face_down_offered(&state, &card.id, P1), Vec::<Value>::new());
             assert!(
                 refusal(&act_result(
@@ -181,7 +180,7 @@ mod r783004_cloaked_set {
         let buried = new_instance(&mut state, &cloaked_bolt().id, P1, Zone::Graveyard { player: P1 });
         state.players.p1.graveyard.push(buried.clone());
         put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
-        assert!(!plays_of(&state, &buried.id, P1).is_empty());
+        assert!(!plays_in(&state, P1, &buried.id).is_empty());
         assert_eq!(face_down_offered(&state, &buried.id, P1), Vec::<Value>::new());
         assert!(
             refusal(&act_result(
@@ -409,7 +408,7 @@ mod r783006_cloaked_reveal {
         assert_eq!(revealed.summoned_turn, Some(3));
         assert!(state.players.p1.backrow[1].is_none());
         // Set on an earlier turn, it may attack at once.
-        assert!(attacks_of(&state, &set.id) > 0);
+        assert!(attack_count(&state, &set.id) > 0);
     }
 
     #[test]
@@ -427,7 +426,7 @@ mod r783006_cloaked_reveal {
             "the revealed Unit in unit lane 1",
         );
         assert_eq!(revealed.id, set.id);
-        assert_eq!(attacks_of(&state, &set.id), 0);
+        assert_eq!(attack_count(&state, &set.id), 0);
         // Its Reveal went with its set form.
         assert!(!reveal_offered(&state, &set.id, P1));
     }

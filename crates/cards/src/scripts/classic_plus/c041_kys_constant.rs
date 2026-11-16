@@ -117,23 +117,8 @@ mod tests {
     }
 
     /// The hand cards `legal_actions` offers as the Constant's pick.
-    // Differs from Scenario::offered: one card's play targets as def ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
-        let constant_id = s.card(CONSTANT).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == constant_id => targets
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(|target| match target {
-                        Selection::Instance { instance_id } => Some(s.card(&instance_id).def_id.clone()),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>(),
-                _ => vec![],
-            })
-            .collect()
+        pick::instance_ids(&s.play_targets(CONSTANT)).iter().map(|id| s.card(id).def_id.clone()).collect()
     }
 
     fn sorted(mut list: Vec<String>) -> Vec<String> {

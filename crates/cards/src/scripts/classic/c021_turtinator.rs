@@ -96,13 +96,6 @@ mod tests {
             .collect()
     }
 
-    fn activations_of(s: &Scenario, player: PlayerId, id: &str) -> Vec<ActionBody> {
-        legal_actions(s.state(), player)
-            .into_iter()
-            .filter(|action| matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id))
-            .collect()
-    }
-
     mod c_n21_turtinator {
         use super::*;
 
@@ -169,7 +162,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [TURTLE] }), json!({}));
                 let turtle = s.card(TURTLE).clone();
 
-                assert_eq!(activations_of(&s, P1, &turtle.id).len(), 0);
+                assert_eq!(s.activations_of(&turtle).len(), 0);
                 s.expect_refused(|s| eat(s, TURTLE, pick::hero("p2"), TURTLE));
 
                 s.expect_in_zone(&turtle, "field");
@@ -305,7 +298,7 @@ mod tests {
 
                 eat(&mut s, TIMMY, pick::hero("p2"), TURTLE);
                 s.expect_health(P2, 30 - 3);
-                assert_eq!(activations_of(&s, P1, &turtle).len(), 0);
+                assert_eq!(s.activations_of(&turtle).len(), 0);
                 s.expect_refused(|s| eat(s, VANILLA, pick::hero("p2"), TURTLE));
                 s.expect_in_zone(VANILLA, "field");
 
@@ -368,7 +361,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [{ "def": TURTLE, "radiant": true }] }), json!({ "health": 30 }));
                 let turtle = s.card(TURTLE).clone();
 
-                assert_eq!(activations_of(&s, P1, &turtle.id).len(), 0);
+                assert_eq!(s.activations_of(&turtle).len(), 0);
                 s.expect_refused(|s| eat(s, TURTLE, pick::hero("p2"), TURTLE));
 
                 s.expect_in_zone(&turtle, "field");

@@ -85,11 +85,11 @@ mod tests {
                     "p1": { "hand": [VITAL, FILLER], "field": [VANILLA] },
                     "p2": { "hand": [FILLER], "library": [FILLER], "field": [VANILLA] },
                 }));
-                let book = s.card(VITAL).clone();
-                let targets: Vec<Option<Vec<Selection>>> = legal_actions(s.state(), P1)
+                let targets: Vec<Option<Vec<Selection>>> = s
+                    .plays_of(VITAL)
                     .into_iter()
                     .filter_map(|action| match action {
-                        ActionBody::Play { instance_id, targets, .. } if instance_id == book.id => Some(targets),
+                        ActionBody::Play { targets, .. } => Some(targets),
                         _ => None,
                     })
                     .collect();

@@ -72,16 +72,10 @@ mod tests {
     const MANA: i32 = 10;
 
     fn plays(s: &Scenario) -> Vec<(Option<i32>, Vec<Selection>)> {
-        let held = s.card(NONO).id.clone();
-        legal_actions(s.state(), P1)
+        s.plays_of(NONO)
             .iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id,
-                    x,
-                    targets,
-                    ..
-                } if *instance_id == held => Some((*x, targets.clone().unwrap_or_default())),
+                ActionBody::Play { x, targets, .. } => Some((*x, targets.clone().unwrap_or_default())),
                 _ => None,
             })
             .collect()

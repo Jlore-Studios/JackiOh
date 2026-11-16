@@ -199,10 +199,11 @@ mod tests {
         fn r703_with_no_enemy_unit_the_take_is_not_offered_and_the_rest_are() {
             let s = bob("bob-no-target", false, json!([FILLER, FILLER]), json!([]));
             let me = s.hand(P1).into_iter().find(|card| card.def_id == ID).expect("Bob");
-            let offered: Vec<Vec<String>> = legal_actions(s.state(), P1)
+            let offered: Vec<Vec<String>> = s
+                .plays_of(&me)
                 .into_iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, modes, .. } if instance_id == me.id => modes,
+                    ActionBody::Play { modes, .. } => modes,
                     _ => None,
                 })
                 .collect();
