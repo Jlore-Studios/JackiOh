@@ -9,8 +9,9 @@
 //!
 //! The cards: Mana Well (Radiant 2), Rush Token Farm, Masochism Mask (a prompt),
 //! Ace in the Hole (a Trap), Gatling Pea, Gravedigger, Meltdown Layer (a token that harms its holder),
-//! three Field Spells with no turn hook and a textless (2) stand-in, and Mr. Vanilla. For R2689000: Joint Filing (meditative-009), a
-//! (2) Field Spell, "Aura: Your Start of turn and End of turn effects trigger an extra time" (Radiant two);
+//! three Field Spells with no turn hook and a textless (2) stand-in, and Mr. Vanilla. For R2689000: Joint
+//! Filing (meditative-009), a (2) Field Spell, "Aura: Your Start of turn and End of turn effects trigger an
+//! extra time" (Radiant two);
 //! Living Bomb (classic-062), a (2) Field Spell, Radiant "At the start of your opponent's turn: Destroy
 //! every permanent they control with a Plague Token on it"; and Fed Fauci (core-091), a (2) 1/6 Rush,
 //! "Start of turn: +1 mana per Plague Counter".
