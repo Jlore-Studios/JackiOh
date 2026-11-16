@@ -16442,6 +16442,7 @@
     "4034": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-16T03:05:08Z",
         "difficulty": "medium",
