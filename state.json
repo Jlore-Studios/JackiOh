@@ -16921,6 +16921,7 @@
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 294,
       "started_at": "2026-11-16T05:37:39Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37727,7 +37728,7 @@
         "verdict": "clean"
       }
     ],
-    "count": 293
+    "count": 294
   },
   "statistics": {
     "at": "2026-11-16T06:35:27Z"
