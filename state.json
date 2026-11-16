@@ -15916,6 +15916,8 @@
       "taken_asks": []
     },
     "4036": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T22:50:25Z",
@@ -15929,8 +15931,11 @@
         "trail": "- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/crates/shared/data/short-forms.json\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/crates/shared/data/short-forms.json\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/crates/shared/data/short-forms.json\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/crates/shared/tests/face.rs\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && pnpm --dir apps/web test src/cards/textLimit.test.ts\n- said: I have started `pnpm --dir apps/web test src/cards/textLimit.test.ts` and am waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo test -p jackioh-shared --features jackioh-engine/testkit --test face r3941001_written_words_describe_their_cards_effect_honestly\n- said: I have started `cargo test -p jackioh-shared --features jackioh-engine/testkit --test face r3941001_written_words_describe_their_cards_effect_honestly` and am waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo test -p jackioh-shared --features jackioh-engine/testkit --test face\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo fmt --check\n- said: I have started `cargo fmt --check` and am waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo clippy -p jackioh-shared --features jackioh-engine/testkit --all-targets -- -D warnings\n- said: I have launched `cargo clippy -p jackioh-shared --features jackioh-engine/testkit --all-targets -- -D warnings` and am waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo jackioh classify --base origin/main --claims\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && git status\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/.bot-notes.md\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 160, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/.bot-notes.md\", \"StartLine\": 100}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the in-game short texts of Crawler, Oct, Thorium Reactor, Memory Leak and The Narcor Project say what the cards do\"} --> # Patch: the in-game short texts of Crawler, Oct, Thorium Reactor, Memory Leak and The Narcor Project say what the cards do ## What \u2026"
       },
       "issue": 3975,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T01:24:51Z",
         "from_run": "43771513143",
         "gates": [
           {
@@ -15989,8 +15994,15 @@
         "source": "build",
         "until": "2026-11-16T01:53:40Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-16T01:23:40Z",
+      "run_id": "pending:38148e73-1794792267",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-16T01:24:51Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -16004,9 +16016,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T01:00:19Z",
+    "at": "2026-11-16T01:24:51Z",
     "url": "",
-    "what": "plan #4035 on claude-4"
+    "what": "review #4036 on agy"
   },
   "last_sweep": {
     "at": "2026-11-16T01:15:13Z",
