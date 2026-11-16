@@ -38022,14 +38022,6 @@
         "provider": "muse",
         "run_id": "43815529785",
         "taken_asks": []
-      },
-      "5": {
-        "area": "tests",
-        "count": 1,
-        "last_run": "2026-11-16T06:16:09Z",
-        "provider": "muse",
-        "run_id": "43815603090",
-        "taken_asks": []
       }
     },
     "taken_asks": []
