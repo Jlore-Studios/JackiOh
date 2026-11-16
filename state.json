@@ -17370,6 +17370,7 @@
     "4068": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-11-16T08:08:21Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -17388,6 +17389,7 @@
       "issue": 4039,
       "kind": "review",
       "live": "reviewing",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-11-16T06:37:52Z",
