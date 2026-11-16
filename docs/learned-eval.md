@@ -239,6 +239,15 @@ and 0.6117 (seed 1; seeds 2 and 3 at 0.7 and 0.3 alike), so the choice is made i
 table). `fit.py` fits (c) on the outcomes, then twice more from the same start (`TD_RELABELS`), each
 on TD(0.3) targets from the fit before it.
 
+**Priced rows (2026-11-16, #4070).** The search corrects `evaluate_priced`, the hand eval priced with
+the Death, turn-hook, Activate, attack-hook and awakening prices its decision's root probes (SPEC §9.9), after
+a reply simulated with them. Until #4070 the rows held the unpriced `evaluate` after an unpriced reply,
+so the network learned those values as residuals on a card's features and the search counted them
+twice: Core #37 Gravedigger's return to hand, for one. `positions` now prices each row as the decision
+at its root prices it (`decision_prices_at`; a reply row by the decision that ended the turn, whose
+prices also play its reply), so its `hand` is the one the search corrects (R4070000). The network that
+ships was fitted before this change, so the gain arrives only with the learn lane's next refit.
+
 ### D5. The network's shape
 
 The search calls the evaluation about once per node, a few hundred to a thousand times a decision,

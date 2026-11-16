@@ -29,10 +29,11 @@ use jackioh_engine::{
 
 use crate::candidates::candidate_actions;
 use crate::config::{
-    AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AI_KY_TEST_ACCURACY,
-    AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT, AI_WRAP_UP_SHARE,
+    AI_DECISION_PRICE_NODES, AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY,
+    AI_KY_TEST_ACCURACY, AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
+    AI_WRAP_UP_SHARE,
 };
-use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
+use crate::determinize::{DetGround, DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
     Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, holds_starship,
     turn_hook_prices,
@@ -405,6 +406,64 @@ struct Scratch {
     worlds_scored: usize,
 }
 
+/// R4070000: the world a decision's root lists its candidates and probes its prices on: `public`
+/// determinized once on `AI_SEARCH.probe_seed`, never drawing from the decision's own `Rng`. `ground` is
+/// `det_ground(public, seat)`.
+pub fn probe_world(public: &GameState, seat: PlayerId, ground: &DetGround) -> GameState {
+    determinize_on(
+        public,
+        seat,
+        &mut Rng::new(AI_SEARCH.probe_seed, 0),
+        DeterminizeOptions::default(),
+        ground,
+    )
+}
+
+/// R2424000, R2477000, R2564000, R2565000, R2603000, R2687000, R2688000, R3064000: every Death (a
+/// backrow card's and a hand Field Spell's among them), turn hook, Activate, attack hook and Dormant
+/// card's awakening the seat can read, priced once on the probe world (`probe_world` of `public`) for the
+/// whole decision from `counter`'s nodes; all are priced before any is passed, so no probe reads a price.
+/// R4070000: `decide` and `decision_prices_at` both take a decision's prices from here.
+pub fn decision_prices(
+    public: &GameState,
+    probe: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+) -> Prices {
+    let deaths = death_prices(probe, seat, counter);
+    let turn_hooks = turn_hook_prices(probe, seat, counter);
+    let activations = activation_prices(probe, seat, counter);
+    let attack_hooks = attack_hook_prices(probe, seat, counter);
+    let awakenings = awaken_prices(probe, seat, counter);
+    Prices {
+        deaths,
+        turn_hooks,
+        activations,
+        attack_hooks,
+        awakenings,
+        // R3038003: read off the redacted root, so no hidden card is in it, and carried with the prices
+        // so that every line of the decision, on every determinization, is scored by the same eval.
+        starship_root: holds_starship(public, seat),
+        // R3479000: read off the redacted root too, against the network the search scores with.
+        unknown_root: unknown_root(public, seat, &LEARNED),
+    }
+}
+
+/// R4070000: the prices a decision of `seat`'s at `state` would pass its search, for a caller outside a
+/// decision (`cargo jackioh positions`): `state` redacted for the seat (R185), so a true state is fine,
+/// its `probe_world`, and `decision_prices` on a counter of `AI_DECISION_PRICE_NODES`, every probe's cap.
+pub fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
+    let public = redact(state, seat);
+    let ground = det_ground(&public, seat);
+    let probe = probe_world(&public, seat, &ground);
+    decision_prices(
+        &public,
+        &probe,
+        seat,
+        &create_node_counter(AI_DECISION_PRICE_NODES, None),
+    )
+}
+
 /// Steps 1–7 on the redacted copy; every number `stats` reads beside the counter goes in `scratch`.
 /// `options` gives the budget, the wrap-up and the stream; its `should_stop` is the counter's.
 fn plan(
@@ -446,13 +505,7 @@ fn plan(
     // of the determinization (the pools, what each side has shown, each side's face-down
     // grants) is computed once (det_ground) and handed to each.
     let ground = det_ground(&public, seat);
-    let probe = determinize_on(
-        &public,
-        seat,
-        &mut Rng::new(AI_SEARCH.probe_seed, 0),
-        DeterminizeOptions::default(),
-        &ground,
-    );
+    let probe = probe_world(&public, seat, &ground);
     scratch.candidates = candidate_actions(&probe, seat, Prices::NONE);
     if scratch.candidates.len() == 1
         && let Some(only) = scratch.candidates.first()
@@ -468,28 +521,9 @@ fn plan(
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
 
-    // R2424000, R2477000, R2564000, R2565000, R2603000, R2687000, R2688000, R3064000: every Death (a
-    // backrow card's and a hand Field Spell's among them), turn hook, Activate, attack hook and Dormant
-    // card's awakening the seat can read, priced once on the probe world for the whole decision from the
-    // searched section's nodes; all are priced before any is passed, so no probe reads a price, and every
-    // step below is passed them (`Prices`).
-    let deaths = death_prices(&probe, seat, counter);
-    let turn_hooks = turn_hook_prices(&probe, seat, counter);
-    let activations = activation_prices(&probe, seat, counter);
-    let attack_hooks = attack_hook_prices(&probe, seat, counter);
-    let awakenings = awaken_prices(&probe, seat, counter);
-    let prices = Prices {
-        deaths,
-        turn_hooks,
-        activations,
-        attack_hooks,
-        awakenings,
-        // R3038003: read off the redacted root, so no hidden card is in it, and carried with the prices
-        // so that every line of the decision, on every determinization, is scored by the same eval.
-        starship_root: holds_starship(&public, seat),
-        // R3479000: read off the redacted root too, against the network the search scores with.
-        unknown_root: unknown_root(&public, seat, &LEARNED),
-    };
+    // R2424000, R2477000, R2564000, R2688000, R3064000: the decision's prices (`decision_prices`), from
+    // the searched section's nodes, passed to every step below.
+    let prices = decision_prices(&public, &probe, seat, counter);
 
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
     // finalist), the only draws decide ever takes from options.rng.
