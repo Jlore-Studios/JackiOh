@@ -16834,7 +16834,7 @@
       }
     },
     "4047": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cross_rounds": 1,
@@ -16854,10 +16854,12 @@
       },
       "interruptions": 0,
       "issue": 4021,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T05:37:39Z",
         "from_run": "43807878550",
         "gates": [
           {
@@ -16923,11 +16925,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "43807878550",
+      "run_id": "pending:5819c54e-1794807430",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-16T05:04:27Z",
+      "started_at": "2026-11-16T05:37:39Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17732,9 +17734,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T05:05:05Z",
+    "at": "2026-11-16T05:37:39Z",
     "url": "",
-    "what": "spot-check #4048 on claude-2"
+    "what": "review #4047 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-16T04:58:40Z",
