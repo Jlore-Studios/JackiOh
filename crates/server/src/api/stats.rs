@@ -38,11 +38,11 @@ use jackioh_engine::config::{TIER_BAND_HIGH, TIER_BAND_LOW};
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter,
-    StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
-    WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate, card_drills_of,
-    card_family, card_stats_of, card_window, collapse_gameless, created_played_delta, held_adjusted,
-    patch_windows, seen, sources_of, stats_field, tier_of, wilson_interval, win_rate, windowed_card_stats,
-    windowed_game_figures,
+    StatsField, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated,
+    WindowedGames, WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate,
+    card_drills_of, card_family, card_stats_of, card_window, collapse_gameless, created_adjusted,
+    created_field, created_played_delta, held_adjusted, patch_windows, seen, sources_of, stats_field,
+    tier_of, wilson_interval, win_rate, windowed_card_stats, windowed_game_figures,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -114,16 +114,33 @@ pub struct PublicCreatedStat {
     pub created_played_normal_win_rate: Option<f64>,
     /// R654: as the played delta, it waits for the sample floor on both its sides.
     pub created_played_delta: Option<f64>,
+    /// R4077000: the made games' win rate read against the Created cards (`created_adjusted`): an
+    /// average Created card reads an even game.
+    pub adjusted_win_rate: Option<f64>,
+    /// R4077000: the 95% range of `adjusted_win_rate`, R2895000's.
+    pub adjusted_low: Option<f64>,
+    pub adjusted_high: Option<f64>,
+    /// R4077000: the card's balance tier (`tier_of` its adjusted rate and range, R3022000); null below
+    /// R654's floor, as its rate is shown only from it.
+    pub tier: Option<CardTier>,
     pub has_enough_games: bool,
     pub window: PublicCardWindow,
 }
 
 impl PublicCreatedStat {
-    fn of(def: &CardDef, row: &WindowedCreated) -> PublicCreatedStat {
+    /// `created` the Created field and `deck` the deck cards' (R4077000).
+    fn of(
+        def: &CardDef,
+        row: &WindowedCreated,
+        created: &StatsField,
+        deck: &StatsField,
+    ) -> PublicCreatedStat {
         let stats = &row.stats;
         let (played_games, _) = tally_of(&stats.created_played);
         let (not_played_games, _) = tally_of(&stats.created_not_played);
         let games = played_games + not_played_games;
+        let has_enough_games = games >= CARD_STATS_MIN_SAMPLE;
+        let adjusted = created_adjusted(stats, created, deck);
         PublicCreatedStat {
             id: stats.card.clone(),
             name: def.name.clone(),
@@ -143,7 +160,13 @@ impl PublicCreatedStat {
                 && not_played_games >= CARD_STATS_MIN_SAMPLE)
                 .then(|| created_played_delta(stats))
                 .flatten(),
-            has_enough_games: games >= CARD_STATS_MIN_SAMPLE,
+            adjusted_win_rate: adjusted.map(|(rate, _)| rate),
+            adjusted_low: adjusted.map(|(_, (low, _))| low),
+            adjusted_high: adjusted.map(|(_, (_, high))| high),
+            tier: adjusted
+                .filter(|_| has_enough_games)
+                .map(|(rate, (low, high))| tier_of(rate, low, high)),
+            has_enough_games,
             window: PublicCardWindow::of(&row.window),
         }
     }
@@ -386,12 +409,7 @@ pub struct PublicStatsCardsResponse {
 /// card only a rule makes. `None` when no counted seat made one.
 fn made_games(report: &WindowedReport, id: &str) -> Option<Tally> {
     let row = report.created.iter().find(|row| row.stats.card == id)?;
-    let (used, unused) = (&row.stats.created_played, &row.stats.created_not_played);
-    Some(Tally {
-        games: used.games + unused.games,
-        wins: used.wins + unused.wins,
-        draws: used.draws + unused.draws,
-    })
+    Some(row.stats.made())
 }
 
 /// R3950000: a card's play rate, how often it was played when seen: its played games over its seen
@@ -433,6 +451,24 @@ pub struct PublicStatsTiers {
     /// The band: tier S is above `band_high`, tier F below `band_low` (`TIER_BAND_HIGH`, `TIER_BAND_LOW`).
     pub band_low: f64,
     pub band_high: f64,
+    /// R4077000: the field the Created cards a card's text makes are read against.
+    pub created: PublicCreatedTiers,
+}
+
+/// R4077000: what a Created card's adjusted win rate and tier are read against (`created_field`).
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicCreatedTiers {
+    /// How much more often the seats that make an average Created card win than the average deck, as a
+    /// fraction; 0 when too few Created cards were read, and each is read against the average deck.
+    pub center: f64,
+    /// The spread (one standard deviation) of real Created cards' lifts; the deck cards' when too few.
+    pub spread: f64,
+    /// The Created cards the field was read from; 0 when too few were.
+    pub cards: usize,
+    /// The win rate of the seats that make an average Created card, which reads an even game: the average
+    /// deck's plus `center`.
+    pub baseline: f64,
 }
 
 /// R1994000: `GET /api/stats/games`'s body: counts and shares only, naming no game and no player.
@@ -1181,6 +1217,16 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             .map(|card| &card.stats),
         i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX),
     );
+    // R4077000: the field every Created card is read against, from every Created card of the report the
+    // catalog holds, whatever the filters show, as the deck cards' is read.
+    let made_field = created_field(
+        report
+            .created
+            .iter()
+            .filter(|row| app.catalog.defs.contains_key(&row.stats.card))
+            .map(|row| &row.stats),
+        &field,
+    );
 
     let mut cards: Vec<PublicCardStat> = Vec::new();
     for (id, def) in &app.catalog.defs {
@@ -1207,7 +1253,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let play_rate = play_rate_of(report, id, stat, made.as_ref());
         let has_enough_games = counted_games >= CARD_STATS_MIN_SAMPLE;
         // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
-        // R3022000: read against the field. R3070000: a card a rule makes, against the average deck.
+        // R3022000: read against the field. R3070000: a card a rule makes, against the average deck, as its
+        // Created row reads it (R4077000).
         let (adjusted, adjusted_range) = match made {
             Some(made) => {
                 held_adjusted(&made, &field).map_or((None, None), |(rate, range)| (Some(rate), Some(range)))
@@ -1288,7 +1335,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .filter_map(|row| {
             let def = app.catalog.defs.get(&row.stats.card)?;
-            shown(&row.stats.card, def).then(|| PublicCreatedStat::of(def, row))
+            shown(&row.stats.card, def).then(|| PublicCreatedStat::of(def, row, &made_field, &field))
         })
         .collect();
     created.sort_by(|a, b| {
@@ -1323,6 +1370,12 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             baseline: field.baseline,
             band_low: TIER_BAND_LOW,
             band_high: TIER_BAND_HIGH,
+            created: PublicCreatedTiers {
+                center: made_field.center,
+                spread: made_field.spread,
+                cards: made_field.cards,
+                baseline: made_field.baseline,
+            },
         },
         patches: kept.patches.clone(),
         summary: PublicStatsSummary {

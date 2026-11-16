@@ -2140,6 +2140,128 @@ mod r3070000_every_card {
     }
 }
 
+mod r4077000_created_tiers {
+    use super::*;
+
+    /// Thirty-two Core cards, each made as a Created copy in some games: the first sixteen in the games of
+    /// one group, the rest in the other's.
+    const MADE: [&str; 32] = [
+        "core-050", "core-051", "core-052", "core-053", "core-054", "core-055", "core-056", "core-057",
+        "core-058", "core-059", "core-060", "core-061", "core-062", "core-063", "core-064", "core-065",
+        "core-066", "core-067", "core-068", "core-069", "core-070", "core-071", "core-072", "core-073",
+        "core-074", "core-075", "core-076", "core-077", "core-078", "core-079", "core-080", "core-081",
+    ];
+
+    /// `count` live Best of 1 games p1 wins `won` of: p1 holds core-001 and core-002, plays both, uses a
+    /// Created copy of each of `made` and makes The Coin, never used.
+    fn games(tag: &str, made: &[&str], won: usize, count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                let used: Vec<Value> = made
+                    .iter()
+                    .map(|card| json!({ "card": card, "turn": 5, "radiant": false }))
+                    .collect();
+                make_game_record(
+                    &format!("created-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_created_used: Some(json!(used)),
+                        p1_created_unused: Some(vec!["core-t-coin"]),
+                        winner: Some(if i < won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r4077000_a_created_card_answers_an_adjusted_rate_and_a_tier_read_against_the_created_cards() {
+        let app = test_app().await;
+        let (top, bottom) = MADE.split_at(16);
+        let mut records = Vec::new();
+        records.extend(games("top", top, 35, 50));
+        records.extend(games("bottom", bottom, 25, 50));
+        insert_records(&app, records).await;
+
+        let (status, _, page) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(status, 200);
+        let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
+        // The average deck: p1's two cards won 60 of 100 decks each, and p2's two 40.
+        let deck = page["tiers"]["baseline"]
+            .as_f64()
+            .expect("the average deck's win rate");
+        assert!(close(deck, 0.5), "{}", page["tiers"]);
+        // The Created cards' seats won 70% and 50%, 50 games each: their centre is the mean lift over the
+        // average deck, and their spread their lifts' variance less the noise.
+        let field = &page["tiers"]["created"];
+        assert_eq!(field["cards"], json!(32), "{field}");
+        let noise: f64 = 0.25 / 50.0;
+        let spread = (32.0 * 0.1 * 0.1 / 31.0 - noise).sqrt();
+        assert!(close(field["center"].as_f64().unwrap(), 0.6 - deck), "{field}");
+        assert!(close(field["spread"].as_f64().unwrap(), spread), "{field}");
+        assert!(close(field["baseline"].as_f64().unwrap(), 0.6), "{field}");
+
+        let weight = spread * spread / (spread * spread + noise);
+        let row = |id: &str| {
+            find(&page["created"], "id", &json!(id))
+                .expect("the Created card is listed")
+                .clone()
+        };
+        // 70% over the 60% an average Created card's seats win: kept as far as the spread lets it, A, as its
+        // range still reaches an even game; 50%, as far below, D.
+        let high = row("core-050");
+        assert_eq!(high["games"], json!(50));
+        let rate = high["adjustedWinRate"].as_f64().expect("an adjusted rate");
+        assert!(close(rate, 0.5 + weight * 0.1), "{high}");
+        let half = jackioh_engine::config::STATS_INTERVAL_Z * (weight * noise).sqrt();
+        assert!(
+            close(high["adjustedLow"].as_f64().unwrap(), rate - half),
+            "{high}"
+        );
+        assert!(
+            close(high["adjustedHigh"].as_f64().unwrap(), rate + half),
+            "{high}"
+        );
+        assert_eq!(high["tier"], json!("A"));
+        let low = row("core-081");
+        assert!(
+            close(low["adjustedWinRate"].as_f64().unwrap(), 0.5 - weight * 0.1),
+            "{low}"
+        );
+        assert_eq!(low["tier"], json!("D"));
+
+        // The Coin, made in every game before any play, is read against the average deck: 60% of 100.
+        let coin = row("core-t-coin");
+        let deck_spread = page["tiers"]["spread"].as_f64().unwrap();
+        let kept = deck_spread * deck_spread / (deck_spread * deck_spread + 0.25 / 100.0);
+        assert!(
+            close(
+                coin["adjustedWinRate"].as_f64().unwrap(),
+                0.5 + kept * (0.6 - deck)
+            ),
+            "{coin}"
+        );
+        assert!(coin["tier"].is_string(), "{coin}");
+    }
+
+    #[tokio::test]
+    async fn r4077000_below_the_floor_a_created_card_answers_its_adjusted_rate_and_no_tier() {
+        let app = test_app().await;
+        insert_records(&app, games("few", &["core-050"], 10, 10)).await;
+        let (status, _, page) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(status, 200);
+        // Too few Created cards for a field: read against the average deck, as the Dormant Starship is.
+        assert_eq!(page["tiers"]["created"]["cards"], json!(0));
+        assert_eq!(page["tiers"]["created"]["center"], json!(0.0));
+        let row = find(&page["created"], "id", &json!("core-050")).expect("listed");
+        assert_eq!(row["hasEnoughGames"], json!(false));
+        assert!(row["adjustedWinRate"].as_f64().is_some(), "{row}");
+        assert_eq!(row["tier"], Value::Null);
+    }
+}
+
 mod r3022000_tiers {
     use super::*;
 

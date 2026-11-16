@@ -17,10 +17,11 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use crate::catalog::RULE_MADE_DEF_IDS;
 use crate::config::{
     ADJUSTED_FIELD_MIN_CARDS, ADJUSTED_FIELD_SPREAD_FLOOR, ADJUSTED_WIN_RATE_CENTER,
-    ADJUSTED_WIN_RATE_PRIOR_SPREAD, STATS_INTERVAL_Z, STATS_SHARE_PRECISION, TIER_A_FROM, TIER_BAND_HIGH,
-    TIER_BAND_LOW, TIER_C_FROM,
+    ADJUSTED_WIN_RATE_PRIOR_SPREAD, COIN_DEF_ID, STATS_INTERVAL_Z, STATS_SHARE_PRECISION, TIER_A_FROM,
+    TIER_BAND_HIGH, TIER_BAND_LOW, TIER_C_FROM,
 };
 use crate::state::EngineError;
 use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer, PlayerId};
@@ -508,6 +509,14 @@ impl CreatedStats {
     /// The seats it counts: every one that made a copy, used or not.
     pub fn games(&self) -> i32 {
         self.created_played.games + self.created_not_played.games
+    }
+
+    /// R3070000, R4077000: the games of the seats that made a copy, used or not: what its win rate, its
+    /// adjusted win rate and its tier read.
+    pub fn made(&self) -> Tally {
+        let mut made = self.created_played;
+        add_tally(&mut made, &self.created_not_played);
+        made
     }
 }
 
@@ -1508,6 +1517,20 @@ pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>, drawn_flo
             ..StatsField::PRIOR
         };
     }
+    let (center, spread_squared) = random_effects(&lifts);
+    StatsField {
+        center,
+        spread: spread_squared.sqrt(),
+        cards: lifts.len(),
+        baseline,
+        drawn_floor,
+    }
+}
+
+/// R3022000: DerSimonian and Laird's random-effects estimate over `(lift, noise)` pairs, `noise` each lift's
+/// sampling variance: `(centre, τ²)`, τ² at least `ADJUSTED_FIELD_SPREAD_FLOOR²`. `lifts` holds at least
+/// `ADJUSTED_FIELD_MIN_CARDS` pairs.
+fn random_effects(lifts: &[(f64, f64)]) -> (f64, f64) {
     let weights: f64 = lifts.iter().map(|(_, noise)| 1.0 / noise).sum();
     let squares: f64 = lifts.iter().map(|(_, noise)| 1.0 / (noise * noise)).sum();
     let fixed = lifts.iter().map(|(delta, noise)| delta / noise).sum::<f64>() / weights;
@@ -1524,13 +1547,7 @@ pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>, drawn_flo
         .map(|(delta, noise)| delta * shared(*noise))
         .sum::<f64>()
         / lifts.iter().map(|(_, noise)| shared(*noise)).sum::<f64>();
-    StatsField {
-        center,
-        spread: spread_squared.sqrt(),
-        cards: lifts.len(),
-        baseline,
-        drawn_floor,
-    }
+    (center, spread_squared)
 }
 
 /// R2777000: the drawn delta's sampling variance at its widest,
@@ -1590,14 +1607,19 @@ fn adjusted_posterior(stats: &CardStats, field: &StatsField) -> Option<(f64, f64
 /// the baseline is read over every deck. `None` when `games` has none.
 pub fn held_posterior(games: &Tally, field: &StatsField) -> Option<(f64, f64)> {
     let rate = win_rate(games)?;
-    let game_variance = ADJUSTED_WIN_RATE_CENTER * (1.0 - ADJUSTED_WIN_RATE_CENTER);
-    let noise = game_variance / f64::from(games.games);
+    let noise = held_noise(games);
     let prior = field.spread * field.spread;
     let weight = prior / (prior + noise);
     Some((
         ADJUSTED_WIN_RATE_CENTER + weight * (rate - field.baseline),
         weight * noise,
     ))
+}
+
+/// R3070000: the sampling variance of a win rate over `games` read against a baseline of every deck,
+/// `p(1 − p) / games` at `p = ADJUSTED_WIN_RATE_CENTER`. `games` must have games.
+fn held_noise(games: &Tally) -> f64 {
+    ADJUSTED_WIN_RATE_CENTER * (1.0 - ADJUSTED_WIN_RATE_CENTER) / f64::from(games.games)
 }
 
 /// R3070000: `held_posterior` as a page shows it: the adjusted win rate and its 95% range,
@@ -1640,6 +1662,78 @@ pub fn tier_of(rate: f64, low: f64, high: f64) -> CardTier {
     } else {
         CardTier::D
     }
+}
+
+/// R4077000: whether a rule makes the Created card, not a card's text: The Coin, which the rules deal every
+/// second seat once the mulligans are answered (`OPENING_COINS`, R244), and the cards only a rule makes
+/// (`catalog::RULE_MADE_DEF_IDS`: Glitch and the Dormant Starship, R1857001). A rule makes one whenever its
+/// moment comes, so no play of the seat's chooses the seats that made one: it is read against the average
+/// deck (R3070000) and is no part of the Created field (`created_field`).
+pub fn made_by_the_rules(card: &str) -> bool {
+    card == COIN_DEF_ID || RULE_MADE_DEF_IDS.contains(&card)
+}
+
+/// R4077000: the field a Created card is read against: the Created cards of a report, each with at least
+/// `deck.drawn_floor` games made (R654's floor, as the deck field's), those a rule makes left out
+/// (`made_by_the_rules`). A seat makes such a card only once a card it played made it, so the seats that
+/// made one win more than the average deck (`deck.baseline`) whatever the card. Each card's lift is its
+/// made win rate (`CreatedStats::made`) less the average deck's, its sampling variance `¼ / made games`
+/// (R3070000's, the baseline read over every deck), and DerSimonian and Laird's estimate (R3022000) reads
+/// the lift an average Created card shows (`center`) and how far real ones differ (`spread`) from them.
+/// `baseline` is then the win rate of the seats that make an average Created card, `deck.baseline +
+/// center`, which `held_posterior` reads a Created card's made games against, so an average one reads
+/// an even game. With fewer than `ADJUSTED_FIELD_MIN_CARDS` such cards it is the deck field, `cards` and
+/// `center` 0: a Created card is then read against the average deck, as R3070000 reads the Dormant
+/// Starship.
+pub fn created_field<'a>(
+    created: impl IntoIterator<Item = &'a CreatedStats>,
+    deck: &StatsField,
+) -> StatsField {
+    let floor = deck.drawn_floor.max(1);
+    let lifts: Vec<(f64, f64)> = created
+        .into_iter()
+        .filter(|stats| !made_by_the_rules(&stats.card))
+        .filter_map(|stats| {
+            let made = stats.made();
+            if made.games < floor {
+                return None;
+            }
+            Some((win_rate(&made)? - deck.baseline, held_noise(&made)))
+        })
+        .collect();
+    if lifts.len() < ADJUSTED_FIELD_MIN_CARDS {
+        return StatsField {
+            center: 0.0,
+            cards: 0,
+            drawn_floor: floor,
+            ..*deck
+        };
+    }
+    let (center, spread_squared) = random_effects(&lifts);
+    StatsField {
+        center,
+        spread: spread_squared.sqrt(),
+        cards: lifts.len(),
+        baseline: deck.baseline + center,
+        drawn_floor: floor,
+    }
+}
+
+/// R4077000: a Created card's adjusted win rate and its 95% range, `(rate, (low, high))`: R3070000's
+/// `held_adjusted` of its made games against the Created field (`created_field`), or against the average
+/// deck (`deck`) for one a rule makes (`made_by_the_rules`), as the Dormant Starship's row in the deck
+/// table reads it (R3070000). `None` when no seat made one.
+pub fn created_adjusted(
+    stats: &CreatedStats,
+    created: &StatsField,
+    deck: &StatsField,
+) -> Option<(f64, (f64, f64))> {
+    let field = if made_by_the_rules(&stats.card) {
+        deck
+    } else {
+        created
+    };
+    held_adjusted(&stats.made(), field)
 }
 
 /// R2089000: the Created played delta, R377's over a Created card's used and never-used seats.
@@ -2528,6 +2622,7 @@ mod tests {
 
     mod card_win_rates {
         use super::*;
+        use crate::config::{DORMANT_STARSHIP_DEF_ID, GLITCH_DEF_ID};
 
         /// R3022000: a card's balance tier (`CardTier`) against the field, `tier_of` its adjusted win
         /// rate and range; `None` when it has no adjusted win rate. The server reads the two itself
@@ -2990,6 +3085,86 @@ mod tests {
             let (made, (from, to)) = held_adjusted(&tally(500, 300, 0), &field).unwrap();
             assert!(close(made, rate) && close(from, low) && close(to, high));
             assert_eq!(held_adjusted(&tally(0, 0, 0), &field), None);
+        }
+
+        /// R4077000: a Created card whose `games` seats won at `rate`, half of them having used a copy.
+        fn made_at(card: &str, games: i32, rate: f64) -> CreatedStats {
+            let wins = (f64::from(games) * rate).round() as i32;
+            CreatedStats {
+                card: card.to_string(),
+                created_played: tally(games / 2, wins / 2, 0),
+                created_not_played: tally(games - games / 2, wins - wins / 2, 0),
+                created_played_radiant: tally(0, 0, 0),
+                created_played_normal: tally(games / 2, wins / 2, 0),
+            }
+        }
+
+        #[test]
+        fn r4077000_a_created_card_is_read_against_the_created_cards_an_average_one_reading_an_even_game() {
+            let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
+            let deck = StatsField {
+                baseline: 0.5,
+                drawn_floor: 20,
+                ..StatsField::PRIOR
+            };
+            // Forty Created cards, each made by 1,000 seats: half won 60%, half 52%. A seat makes one only
+            // once it played what makes it, so they average 6 points over the average deck.
+            let mut created: Vec<CreatedStats> = (0..40)
+                .map(|at| made_at(&format!("t{at}"), 1000, if at < 20 { 0.60 } else { 0.52 }))
+                .collect();
+            assert_eq!(created[0].made(), tally(1000, 600, 0));
+            // Below the floor, The Coin and a card only a rule makes give no lift.
+            created.push(made_at("rare", 19, 1.0));
+            created.push(made_at(COIN_DEF_ID, 1000, 0.40));
+            created.push(made_at(DORMANT_STARSHIP_DEF_ID, 1000, 0.40));
+            let field = created_field(&created, &deck);
+            let noise: f64 = 0.25 / 1000.0;
+            let variance = 40.0 * 0.04 * 0.04 / 39.0;
+            assert_eq!((field.cards, field.drawn_floor), (40, 20));
+            assert!(close(field.center, 0.06), "{}", field.center);
+            assert!(close(field.spread, (variance - noise).sqrt()), "{}", field.spread);
+            assert!(close(field.baseline, 0.56), "{}", field.baseline);
+
+            // An average Created card reads an even game; one 4 points above them keeps its distance as the
+            // field's spread lets it, with R3070000's range.
+            let average = made_at("average", 1000, 0.56);
+            let (rate, (low, high)) = created_adjusted(&average, &field, &deck).unwrap();
+            assert!(close(rate, ADJUSTED_WIN_RATE_CENTER), "{rate}");
+            let weight = field.spread * field.spread / (field.spread * field.spread + noise);
+            let (rate, (low_lifted, high_lifted)) = created_adjusted(&created[0], &field, &deck).unwrap();
+            assert!(close(rate, 0.5 + weight * 0.04), "{rate}");
+            let half = STATS_INTERVAL_Z * (weight * noise).sqrt();
+            assert!(close(rate - low_lifted, half) && close(high_lifted - rate, half));
+            assert!(close(high - low, high_lifted - low_lifted));
+            assert_eq!(tier_of(rate, low_lifted, high_lifted), CardTier::A);
+            // Read against the average deck instead, the same card would be a nerf candidate.
+            let (deck_rate, (deck_low, deck_high)) = held_adjusted(&created[0].made(), &deck).unwrap();
+            assert_eq!(tier_of(deck_rate, deck_low, deck_high), CardTier::S);
+
+            // The Coin, dealt to every second seat before any play, and the cards only a rule makes are read
+            // against the average deck.
+            for card in [COIN_DEF_ID, GLITCH_DEF_ID, DORMANT_STARSHIP_DEF_ID] {
+                assert!(made_by_the_rules(card), "{card}");
+                let made = made_at(card, 1000, 0.48);
+                assert_eq!(
+                    created_adjusted(&made, &field, &deck),
+                    held_adjusted(&made.made(), &deck)
+                );
+            }
+            assert!(!made_by_the_rules("t0"));
+            // No seat made one: no rate.
+            assert_eq!(created_adjusted(&made_at("none", 0, 0.5), &field, &deck), None);
+
+            // Too few Created cards with the floor: the deck field, and each card read against the average deck.
+            let few = created_field(&created[..29], &deck);
+            assert_eq!(
+                (few.cards, few.center, few.baseline, few.spread),
+                (0, 0.0, 0.5, deck.spread)
+            );
+            assert_eq!(
+                created_adjusted(&created[0], &few, &deck),
+                held_adjusted(&created[0].made(), &deck)
+            );
         }
 
         #[test]
