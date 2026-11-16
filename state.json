@@ -16788,6 +16788,7 @@
         "by": "`gpt` (medium)",
         "sha": "7ed2c7f27e67e26bbfb619b0306efa33b4e7e20e"
       },
+      "closed_at": "2026-11-16T05:09:32Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16798,6 +16799,7 @@
       "kind": "review",
       "live": "reviewing",
       "merge_owner": "gpt",
+      "merged": true,
       "pending_request": false,
       "provider": "gpt",
       "queued_at": "2026-11-16T03:34:11Z",
