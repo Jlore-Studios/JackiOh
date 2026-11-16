@@ -29247,5 +29247,29 @@
       "stinkyscapeplus-034"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.6d",
+    "date": "2026-11-16",
+    "title": "Diorama picture tag scan is linear with identical matches",
+    "source": "#4009",
+    "notes": "The diorama markup tag scanner in apps/web/src/cards/art/dioramas/pieces.ts was rewritten for #4009 (ReDoS lint part 7): the old tag pattern scanned super-linearly on markup with no closing angle bracket, so it is now a lookahead-captured name replayed as a backreference. Matches are identical (fuzz-compared old-vs-new in pass 1); no picture renders differently.",
+    "player": {
+      "title": "Steadier card pictures",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Pictures with damaged markup data no longer risk freezing the tab while their tags are read."
+      ]
+    },
+    "commits": [
+      "6bf1e5335cab304eec3eb5d706b4d54c07e2f355"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
