@@ -1,7 +1,7 @@
 // Compact card statistics block for CardDetail view (SPEC §9.11, R654). It names no data source (R661). It shows
 // the four figures that read a card, Tier, Adjusted win rate, Win rate and Play rate, with Games as their sample,
 // as /stats prints them, and nothing else of the server's (R3185000) but the patch they were collected on, the
-// patch before while a newer one gathers its games (R3447000). R4077000: a card no deck holds, a token, reads its
+// patch before while a newer one gathers its games (R3447000). R4082000: a card no deck holds, a token, reads its
 // Created figures the same way: the seats that made one, read against the other Created cards.
 
 import { useEffect, useState, type ReactElement } from "react";
@@ -32,7 +32,7 @@ type ShownStat = Pick<
 >;
 
 /**
- * R4077000: a Created card's figures as the block shows a deck card's: its games and win rate are the seats that
+ * R4082000: a Created card's figures as the block shows a deck card's: its games and win rate are the seats that
  * made one (R2370000), its play rate how many of them used one (R3950000's, as the Dormant Starship's row reads it),
  * and its tier and adjusted rate the server's.
  */

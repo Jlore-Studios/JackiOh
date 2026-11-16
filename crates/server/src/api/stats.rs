@@ -114,13 +114,13 @@ pub struct PublicCreatedStat {
     pub created_played_normal_win_rate: Option<f64>,
     /// R654: as the played delta, it waits for the sample floor on both its sides.
     pub created_played_delta: Option<f64>,
-    /// R4077000: the made games' win rate read against the Created cards (`created_adjusted`): an
+    /// R4082000: the made games' win rate read against the Created cards (`created_adjusted`): an
     /// average Created card reads an even game.
     pub adjusted_win_rate: Option<f64>,
-    /// R4077000: the 95% range of `adjusted_win_rate`, R2895000's.
+    /// R4082000: the 95% range of `adjusted_win_rate`, R2895000's.
     pub adjusted_low: Option<f64>,
     pub adjusted_high: Option<f64>,
-    /// R4077000: the card's balance tier (`tier_of` its adjusted rate and range, R3022000); null below
+    /// R4082000: the card's balance tier (`tier_of` its adjusted rate and range, R3022000); null below
     /// R654's floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
     pub has_enough_games: bool,
@@ -128,7 +128,7 @@ pub struct PublicCreatedStat {
 }
 
 impl PublicCreatedStat {
-    /// `created` the Created field and `deck` the deck cards' (R4077000).
+    /// `created` the Created field and `deck` the deck cards' (R4082000).
     fn of(
         def: &CardDef,
         row: &WindowedCreated,
@@ -451,11 +451,11 @@ pub struct PublicStatsTiers {
     /// The band: tier S is above `band_high`, tier F below `band_low` (`TIER_BAND_HIGH`, `TIER_BAND_LOW`).
     pub band_low: f64,
     pub band_high: f64,
-    /// R4077000: the field the Created cards a card's text makes are read against.
+    /// R4082000: the field the Created cards a card's text makes are read against.
     pub created: PublicCreatedTiers,
 }
 
-/// R4077000: what a Created card's adjusted win rate and tier are read against (`created_field`).
+/// R4082000: what a Created card's adjusted win rate and tier are read against (`created_field`).
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicCreatedTiers {
@@ -1217,7 +1217,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             .map(|card| &card.stats),
         i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX),
     );
-    // R4077000: the field every Created card is read against, from every Created card of the report the
+    // R4082000: the field every Created card is read against, from every Created card of the report the
     // catalog holds, whatever the filters show, as the deck cards' is read.
     let made_field = created_field(
         report
@@ -1254,7 +1254,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let has_enough_games = counted_games >= CARD_STATS_MIN_SAMPLE;
         // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
         // R3022000: read against the field. R3070000: a card a rule makes, against the average deck, as its
-        // Created row reads it (R4077000).
+        // Created row reads it (R4082000).
         let (adjusted, adjusted_range) = match made {
             Some(made) => {
                 held_adjusted(&made, &field).map_or((None, None), |(rate, range)| (Some(rate), Some(range)))

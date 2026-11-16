@@ -3,7 +3,7 @@
 // copies, transforms' results, The Coin). A row counts the seats that made a copy: Win rate pools them, used or
 // not (R2370000), Used splits by a copy Radiant at its first use, and Not used is the baseline. The figures and
 // R654's floor ("—" below it) are the server's, and Win rate is read off them, nothing counted anew (CLAUDE.md
-// rule 7). R4077000: Tier and Adjusted are the server's too, each card read against the other Created cards, and
+// rule 7). R4082000: Tier and Adjusted are the server's too, each card read against the other Created cards, and
 // the rows open on Adjusted, best first, as the deck table does; every header sorts them (R3184002). It scrolls,
 // never fixed (R1646000). R3887000: with the Plain text button on, a catalog card's name cell holds the card as
 // plain text.
@@ -53,10 +53,10 @@ export type CreatedColumn =
 /** R3184002: a header's sort: the column and its direction. */
 export type CreatedSort = { col: CreatedColumn; dir: "asc" | "desc" };
 
-/** R4077000: the sort a table opens on, its Adjusted best first, as the deck table opens on its own headline rate. */
+/** R4082000: the sort a table opens on, its Adjusted best first, as the deck table opens on its own headline rate. */
 export const CREATED_DEFAULT_SORT: CreatedSort = { col: "adjusted", dir: "desc" };
 
-/** R4077000: a card's adjusted win rate as the row shows it, null below the floor or from an older server. */
+/** R4082000: a card's adjusted win rate as the row shows it, null below the floor or from an older server. */
 function adjustedOf(card: PublicCreatedStat): number | null {
   return card.hasEnoughGames ? (card.adjustedWinRate ?? null) : null;
 }
@@ -85,7 +85,7 @@ function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name" | "t
 
 /**
  * R3184002: the rows in a header's order: a row with no figure (below the floor, or none) after those with one,
- * either way, and rows that tie in the server's order. R4077000: by tier, S first descending, then by Adjusted.
+ * either way, and rows that tie in the server's order. R4082000: by tier, S first descending, then by Adjusted.
  */
 export function sortCreated(
   created: readonly PublicCreatedStat[],
@@ -146,13 +146,13 @@ function SortHeader({
 /** R3324002: which of the two sections a panel is: the tokens, or every other Created card. */
 export type CreatedKind = "tokens" | "other";
 
-/** R4077000: a signed number of points to a tenth ("+6.1"), as the Created tiers' note reads the centre. */
+/** R4082000: a signed number of points to a tenth ("+6.1"), as the Created tiers' note reads the centre. */
 function pointsText(fraction: number): string {
   const points = (fraction * PERCENT).toFixed(1);
   return fraction >= 0 ? `+${points}` : points;
 }
 
-/** R4077000: what a panel's Tier and Adjusted are read against, from the server's Created field. */
+/** R4082000: what a panel's Tier and Adjusted are read against, from the server's Created field. */
 function CreatedTiersNote({ field }: { field: PublicCreatedTiers }): ReactElement {
   return (
     <span data-testid={statsTestid.createdTiersNote}>
@@ -183,7 +183,7 @@ export function CreatedPanel({
   kind: CreatedKind;
   created: readonly PublicCreatedStat[];
   minSample: number;
-  /** R4077000: the Created field the tiers are read against; absent from a server deployed before it. */
+  /** R4082000: the Created field the tiers are read against; absent from a server deployed before it. */
   field?: PublicCreatedTiers;
   /** A card's name as the page shows it. */
   nameOf: (id: string, name: string) => string;

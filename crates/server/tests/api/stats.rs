@@ -2140,7 +2140,7 @@ mod r3070000_every_card {
     }
 }
 
-mod r4077000_created_tiers {
+mod r4082000_created_tiers {
     use super::*;
 
     /// Thirty-two Core cards, each made as a Created copy in some games: the first sixteen in the games of
@@ -2177,7 +2177,7 @@ mod r4077000_created_tiers {
     }
 
     #[tokio::test]
-    async fn r4077000_a_created_card_answers_an_adjusted_rate_and_a_tier_read_against_the_created_cards() {
+    async fn r4082000_a_created_card_answers_an_adjusted_rate_and_a_tier_read_against_the_created_cards() {
         let app = test_app().await;
         let (top, bottom) = MADE.split_at(16);
         let mut records = Vec::new();
@@ -2247,7 +2247,7 @@ mod r4077000_created_tiers {
     }
 
     #[tokio::test]
-    async fn r4077000_below_the_floor_a_created_card_answers_its_adjusted_rate_and_no_tier() {
+    async fn r4082000_below_the_floor_a_created_card_answers_its_adjusted_rate_and_no_tier() {
         let app = test_app().await;
         insert_records(&app, games("few", &["core-050"], 10, 10)).await;
         let (status, _, page) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;

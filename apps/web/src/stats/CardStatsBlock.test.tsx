@@ -1,4 +1,4 @@
-// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000, R3447000, R4077000).
+// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000, R3447000, R4082000).
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -145,7 +145,7 @@ describe("R3185000 CardStatsBlock", () => {
   });
 });
 
-describe("R4077000 a card no deck holds reads its Created figures", () => {
+describe("R4082000 a card no deck holds reads its Created figures", () => {
   /** A token's Created row: 50 seats made one and won 30 (24 of the 40 that used one, 6 of the 10 that did not). */
   const TOKEN = {
     id: "core-t-sheep",
@@ -176,7 +176,7 @@ describe("R4077000 a card no deck holds reads its Created figures", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })));
   }
 
-  it("R4077000 a token shows the seats that made one: its games, tier, adjusted and win rate, and how many used one", async () => {
+  it("R4082000 a token shows the seats that made one: its games, tier, adjusted and win rate, and how many used one", async () => {
     serveCreated(TOKEN);
     render(<CardStatsBlock cardId="core-t-sheep" />);
     await screen.findByText("Adjusted win rate", undefined, SLOW);
@@ -189,7 +189,7 @@ describe("R4077000 a card no deck holds reads its Created figures", () => {
     ]);
   });
 
-  it("R4077000 a card a deck holds keeps its deck figures, Created copies or not", async () => {
+  it("R4082000 a card a deck holds keeps its deck figures, Created copies or not", async () => {
     serveCreated({ ...TOKEN, id: "core-001" }, [SPARK_PUP]);
     render(<CardStatsBlock cardId="core-001" />);
     await screen.findByText("Adjusted win rate", undefined, SLOW);

@@ -1,5 +1,5 @@
 // Tests for the Created cards panels of /stats (SPEC §9.11, R2089000), the Tokens and the Other created cards
-// (R3324002), their sorting (R3184002), and their Tier and Adjusted (R4077000).
+// (R3324002), their sorting (R3184002), and their Tier and Adjusted (R4082000).
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -86,7 +86,7 @@ describe("CreatedPanel", () => {
     expect(screen.getByRole("rowheader")).toHaveTextContent("The Coin");
   });
 
-  it("R4077000 a row shows the server's tier and Adjusted from the floor, and the panel says what they are read against", () => {
+  it("R4082000 a row shows the server's tier and Adjusted from the floor, and the panel says what they are read against", () => {
     const TOKEN: PublicCreatedStat = { ...COIN, id: "rush", adjustedWinRate: 0.5234, tier: "B" };
     const FEW: PublicCreatedStat = { ...TOKEN, id: "ember", games: 12, adjustedWinRate: 0.61, tier: null, hasEnoughGames: false };
     const field = { center: 0.061, spread: 0.032, cards: 40, baseline: 0.561 };
@@ -194,7 +194,7 @@ describe("R3184002 the Created cards table sorts by every column", () => {
     };
   }
 
-  it("R4077000 opens on Adjusted, best first, a row below the floor last, every other header unsorted", () => {
+  it("R4082000 opens on Adjusted, best first, a row below the floor last, every other header unsorted", () => {
     const { headers, order } = renderTable();
     // Adjusted: Rush 53%, The Coin 51.2%, Spark Sprite 50.5%; Ember's 12 games are below the floor.
     expect(order()).toEqual(["rush", "coin", "sprite", "ember"]);
@@ -213,7 +213,7 @@ describe("R3184002 the Created cards table sorts by every column", () => {
     const cases: [number, string, (string | null)[], (string | null)[]][] = [
       // Games: Spark Sprite and The Coin tie, and keep the server's order both ways.
       [1, "Games", ["rush", "sprite", "coin", "ember"], ["ember", "sprite", "coin", "rush"]],
-      // R4077000: Tier, S first, then by Adjusted within a tier: The Coin and Spark Sprite share B.
+      // R4082000: Tier, S first, then by Adjusted within a tier: The Coin and Spark Sprite share B.
       [2, "Tier", ["rush", "coin", "sprite", "ember"], ["sprite", "coin", "rush", "ember"]],
       [4, "Win rate", ["sprite", "rush", "coin", "ember"], ["coin", "rush", "sprite", "ember"]],
       [5, "Used", ["sprite", "rush", "coin", "ember"], ["coin", "rush", "sprite", "ember"]],

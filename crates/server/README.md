@@ -604,7 +604,7 @@ back-fill: a record written before them adds none. `stats-cards` prints them as 
 the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/cards` answers them as
 `created` (R2089000), each with an adjusted win rate, its range and a tier read against the other Created
 cards (`created_field`, answered as `tiers.created`), or against the average deck for The Coin, Glitch and
-the Dormant Starship, which a rule makes (R4077000).
+the Dormant Starship, which a rule makes (R4082000).
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it

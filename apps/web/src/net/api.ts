@@ -1726,19 +1726,19 @@ export type PublicCreatedStat = {
   /** Used's win rate less Not used's, as a fraction; null until both sides have `minSample` games. */
   createdPlayedDelta: number | null;
   /**
-   * R4077000: the made games' win rate read against the Created cards (`tiers.created`), an average one reading
+   * R4082000: the made games' win rate read against the Created cards (`tiers.created`), an average one reading
    * 50%, and its 95% range; absent from a server deployed before it.
    */
   adjustedWinRate?: number | null;
   adjustedLow?: number | null;
   adjustedHigh?: number | null;
-  /** R4077000: the card's balance tier from its adjusted rate and range (R3022000); null below the floor. */
+  /** R4082000: the card's balance tier from its adjusted rate and range (R3022000); null below the floor. */
   tier?: CardTier | null;
   hasEnoughGames: boolean;
   window: PublicCardWindow;
 };
 
-/** R4077000: what a Created card a card's text makes is read against, as fractions. */
+/** R4082000: what a Created card a card's text makes is read against, as fractions. */
 export type PublicCreatedTiers = {
   /** How much more the seats that make an average Created card win than the average deck; 0 when too few were read. */
   center: number;
@@ -1762,7 +1762,7 @@ export type PublicStatsTiers = {
   baseline?: number;
   bandLow: number;
   bandHigh: number;
-  /** R4077000: the field the Created cards are read against; absent from a server deployed before it. */
+  /** R4082000: the field the Created cards are read against; absent from a server deployed before it. */
   created?: PublicCreatedTiers;
 };
 

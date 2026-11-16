@@ -511,7 +511,7 @@ impl CreatedStats {
         self.created_played.games + self.created_not_played.games
     }
 
-    /// R3070000, R4077000: the games of the seats that made a copy, used or not: what its win rate, its
+    /// R3070000, R4082000: the games of the seats that made a copy, used or not: what its win rate, its
     /// adjusted win rate and its tier read.
     pub fn made(&self) -> Tally {
         let mut made = self.created_played;
@@ -1664,7 +1664,7 @@ pub fn tier_of(rate: f64, low: f64, high: f64) -> CardTier {
     }
 }
 
-/// R4077000: whether a rule makes the Created card, not a card's text: The Coin, which the rules deal every
+/// R4082000: whether a rule makes the Created card, not a card's text: The Coin, which the rules deal every
 /// second seat once the mulligans are answered (`OPENING_COINS`, R244), and the cards only a rule makes
 /// (`catalog::RULE_MADE_DEF_IDS`: Glitch and the Dormant Starship, R1857001). A rule makes one whenever its
 /// moment comes, so no play of the seat's chooses the seats that made one: it is read against the average
@@ -1673,7 +1673,7 @@ pub fn made_by_the_rules(card: &str) -> bool {
     card == COIN_DEF_ID || RULE_MADE_DEF_IDS.contains(&card)
 }
 
-/// R4077000: the field a Created card is read against: the Created cards of a report, each with at least
+/// R4082000: the field a Created card is read against: the Created cards of a report, each with at least
 /// `deck.drawn_floor` games made (R654's floor, as the deck field's), those a rule makes left out
 /// (`made_by_the_rules`). A seat makes such a card only once a card it played made it, so the seats that
 /// made one win more than the average deck (`deck.baseline`) whatever the card. Each card's lift is its
@@ -1719,7 +1719,7 @@ pub fn created_field<'a>(
     }
 }
 
-/// R4077000: a Created card's adjusted win rate and its 95% range, `(rate, (low, high))`: R3070000's
+/// R4082000: a Created card's adjusted win rate and its 95% range, `(rate, (low, high))`: R3070000's
 /// `held_adjusted` of its made games against the Created field (`created_field`), or against the average
 /// deck (`deck`) for one a rule makes (`made_by_the_rules`), as the Dormant Starship's row in the deck
 /// table reads it (R3070000). `None` when no seat made one.
@@ -3087,7 +3087,7 @@ mod tests {
             assert_eq!(held_adjusted(&tally(0, 0, 0), &field), None);
         }
 
-        /// R4077000: a Created card whose `games` seats won at `rate`, half of them having used a copy.
+        /// R4082000: a Created card whose `games` seats won at `rate`, half of them having used a copy.
         fn made_at(card: &str, games: i32, rate: f64) -> CreatedStats {
             let wins = (f64::from(games) * rate).round() as i32;
             CreatedStats {
@@ -3100,7 +3100,7 @@ mod tests {
         }
 
         #[test]
-        fn r4077000_a_created_card_is_read_against_the_created_cards_an_average_one_reading_an_even_game() {
+        fn r4082000_a_created_card_is_read_against_the_created_cards_an_average_one_reading_an_even_game() {
             let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
             let deck = StatsField {
                 baseline: 0.5,

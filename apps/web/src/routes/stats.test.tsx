@@ -2350,7 +2350,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
    */
   const RUSH = {
     ...created("core-t-rush", "Rush Token", 30, 0.6, 25, 0.52),
-    // R4077000: the server's tier and adjusted rate, read against the Created cards.
+    // R4082000: the server's tier and adjusted rate, read against the Created cards.
     tier: "B",
     adjustedWinRate: 0.521,
     createdPlayedRadiantGames: 8,
@@ -2410,7 +2410,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(within(coin).getByRole("rowheader")).toHaveTextContent("The Coin");
   });
 
-  it("R2089000 R2370000 R3324002 R4077000 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
+  it("R2089000 R2370000 R3324002 R4082000 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
     const tiers = { center: 0, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 };
     const field = { center: 0.052, spread: 0.041, cards: 36, baseline: 0.552 };
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, tiers: { ...tiers, created: field }, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
@@ -2427,14 +2427,14 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     // The tokens come first.
     expect(tokens.compareDocumentPosition(others) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    // R4077000: each section says what its tiers are read against, from the server's Created field.
+    // R4082000: each section says what its tiers are read against, from the server's Created field.
     for (const panel of [tokens, others]) {
       expect(within(panel).getByTestId(statsTestid.createdTiersNote)).toHaveTextContent(
         "win 55.2% of their games, +5.2 points against the average deck, and real ones differ by about 4.1 points",
       );
     }
 
-    // One table, the same columns, opened on Adjusted, best first, a row under the floor last (R4077000).
+    // One table, the same columns, opened on Adjusted, best first, a row under the floor last (R4082000).
     const tokenTable = within(tokens).getByTestId(statsTestid.tokensTable);
     const otherTable = within(others).getByTestId(statsTestid.createdTable);
     expect(within(tokenTable).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(["Token", ...COLUMNS]);
