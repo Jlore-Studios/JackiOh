@@ -16509,6 +16509,23 @@
       "round_tier": "",
       "run_id": "43783676772",
       "runs_on": "ubuntu-latest",
+      "session": {
+        "action": "plan",
+        "artifact": 14195637001,
+        "artifact_bytes": 2552618,
+        "artifact_name": "work",
+        "at": "2026-11-16T03:50:40Z",
+        "bytes": 3380656,
+        "cwd": "/home/runner/work/_temp/work/item-4035",
+        "ended": "failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s",
+        "head": "411011f9e309e65f07d357be57dc96c95a9b0e40",
+        "id": "98ee2131-c715-421e-8406-c391bc39813b",
+        "kind": "plan",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-4035",
+        "provider": "claude-4",
+        "run": "43783676772"
+      },
       "started_at": "2026-11-16T01:00:19Z",
       "stop_requested": false,
       "strike_log": [
