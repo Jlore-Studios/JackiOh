@@ -15651,7 +15651,7 @@
       "provider": "claude-6",
       "question": "How should this change get a version of its own, given that `classify --claims` cannot see a set or Buffed Embiggened Wall?",
       "queued_at": "2026-11-16T00:58:39Z",
-      "run_id": "pending:375e51d0-1794790749",
+      "run_id": "43783606547",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
