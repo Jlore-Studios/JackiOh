@@ -8912,7 +8912,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
+      "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per} Health per mana lost."
     },
     "radiant": {
       "attack": 8,
@@ -8922,7 +8922,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
+      "text": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per} Health per mana lost."
     }
   },
   "classicplus-027": {
@@ -13202,16 +13202,8 @@
     "params": [
       {
         "key": "cards",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -13220,11 +13212,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Add {cards|random CN card|random CN cards} to your hand. Each costs ({discount}) less."
+      "text": "Add {cards|random CN card|random CN cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand. Each costs ({discount}) less."
+      "text": "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand."
     }
   },
   "meditative-034": {
@@ -19690,13 +19682,13 @@
       "attack": 2,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
+      "text": "Tribute 1\nCry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
     },
     "radiant": {
       "attack": 4,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
+      "text": "Tribute 1\nCry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
     }
   },
   "stinkyscape-027": {
@@ -28457,11 +28449,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack and Rush."
+      "text": "Aura: Your Units have +{attack} Attack."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack and Rush."
+      "text": "Aura: Your Units have +{attack} Attack."
     }
   },
   "traininggrounds-046": {
@@ -29863,7 +29855,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Tribute 1, Pierce\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      "text": "Tribute 2, Pierce\nEnd of turn: Deal {damage} damage to all enemies, twice."
     },
     "radiant": {
       "attack": 24,
@@ -29873,7 +29865,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Tribute 1, Pierce\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      "text": "Tribute 2, Pierce\nEnd of turn: Deal {damage} damage to all enemies, twice."
     },
     "params": [
       {
@@ -30804,14 +30796,24 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Give a Unit Immutable, Immune to Spells and Divine Shield."
+      "text": "Give a Unit Immutable, Immune to Spells, Divine Shield and Armor {armor}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit Immutable, Immune to Spells, Divine Shield and Can't be attacked."
+      "text": "Give a Unit Immutable, Immune to Spells, Divine Shield, Armor {armor} and Can't be attacked."
     }
   },
   "stinkyscapeplus-047": {
@@ -35558,8 +35560,8 @@
       },
       {
         "key": "card3",
-        "base": 5,
-        "radiant": 5,
+        "base": 4,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35582,8 +35584,8 @@
       },
       {
         "key": "burn",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -36404,16 +36406,24 @@
     "cost": 4,
     "loc": 55,
     "base": {
-      "attack": 2,
-      "health": 8,
-      "keywords": [],
-      "text": "Tribute 3\nActivate: Summon a Radi. It triggers its Cry.\nCry: Discover an Epic Weapon; Equip it into this."
+      "attack": 4,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Tribute 3, Immune to Spells\nActivate: Summon a Radi. It triggers its Cry.\nCry: Discover an Epic Weapon; Equip it into this."
     },
     "radiant": {
-      "attack": 4,
-      "health": 16,
-      "keywords": [],
-      "text": "Tribute 3\nActivate: Summon a Radiant Radi. It triggers its Cry.\nCry: Discover a Legendary Weapon; Equip it into this."
+      "attack": 8,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Tribute 3, Immune to Spells\nActivate: Summon a Radiant Radi. It triggers its Cry.\nCry: Discover a Legendary Weapon; Equip it into this."
     },
     "refs": [
       "stinkyscapeplus-060"

@@ -2,12 +2,14 @@
 //! a card of the Stinkyscape+ set (R1420, R3535000). (4) Spell, Call to Chaos, Legendary.
 //!   Base:    "One of the following random effects: add 3 random Paperclip cards to your hand, they cost
 //!            (0), replenish 2 mana; add 3 random Evolved Swarm cards to your hand, they cost (0); summon
-//!            two random Radiant Units, make them GIGA; summon or cast 5 random Jlockeed cards; add 3
+//!            two random Radiant Units, make them GIGA; summon or cast 4 random Jlockeed cards; add 3
 //!            random Terminus cards to your hand, replenish 4 mana; add the Toxopid to your hand, it costs
-//!            (0); Toxic 3 and Burn 3 all enemies; for the rest of the game, when you launch a Starship,
+//!            (0); Toxic 3 and Burn 2 all enemies; for the rest of the game, when you launch a Starship,
 //!            cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem
 //!            and a Swarm Golem; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
+//!   Issue #3996 cut the two strongest entries' declared numbers (R3996200): `card3` 5 → 4 and `burn`
+//!   3 → 2, on both faces; the numbers are catalog data, so a replay of v0.6.5 reads its own.
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MS_EFFECTS`,
 //! `subsystems/call_to_chaos_mindustrial_swarm.rs`): the roll, the announcement both players read (R436), the
@@ -176,6 +178,22 @@ mod tests {
         assert_eq!(label_of("launchWatch"), subsystems::CHAOS_MS_LAUNCH_WATCH_LABEL);
     }
 
+    /// R3996200: issue #3996 cut the Jlockeed entry's count 5 → 4 and the afflict entry's Burn 3 → 2 on
+    /// both faces, and left every other declared number as it was.
+    #[test]
+    fn r3996200_the_nerf_cuts_the_jlockeed_count_and_the_burn_and_leaves_the_rest() {
+        crate::register_all();
+        let def = card_def(ID);
+        for (key, value) in [("card", 3), ("card2", 3), ("card3", 4), ("card4", 3), ("toxic", 3), ("burn", 2)] {
+            let declared = def
+                .params
+                .as_ref()
+                .and_then(|params| params.iter().find(|param| param.key == key))
+                .unwrap_or_else(|| panic!("{key} is declared"));
+            assert_eq!((declared.base, declared.radiant), (value, value), "{key}");
+        }
+    }
+
     #[test]
     fn each_of_the_ten_entries_is_rolled_over_the_seeds() {
         let mut seen: Vec<&str> = Vec::new();
@@ -329,7 +347,7 @@ mod tests {
         }
 
         #[test]
-        fn r3570003_entry_jlockeed_summons_its_permanents_and_casts_its_spells() {
+        fn r3570003_r3996200_entry_jlockeed_summons_its_permanents_and_casts_its_spells_four_of_them() {
             crate::register_all();
             let (mut summons, mut casts) = (0, 0);
             for n in 0..GAMES {
@@ -360,7 +378,7 @@ mod tests {
                         casts += 1;
                     }
                 }
-                assert!(generated >= 5, "game {n}: five picks, {generated} made");
+                assert!(generated >= 4, "game {n}: four picks, {generated} made");
             }
             assert!(summons > 0 && casts > 0, "{summons} summoned, {casts} cast");
         }
@@ -410,7 +428,7 @@ mod tests {
         }
 
         #[test]
-        fn r3570000_entry_afflict_gives_every_enemy_and_their_hero_toxic_and_burn_three() {
+        fn r3570000_r3996200_entry_afflict_gives_every_enemy_and_their_hero_toxic_three_and_burn_two() {
             let mut p1 = side(false, json!([]));
             p1["field"] = json!([{ "def": "stand-in (1) 9/9", "lane": 1 }]);
             let s = chaos(
@@ -424,10 +442,10 @@ mod tests {
             for lane in [1, 3] {
                 let enemy = s.unit_at(P2, lane);
                 assert_eq!(jackioh_engine::afflictions::toxic_on(&enemy), 3, "lane {lane}");
-                assert_eq!(jackioh_engine::afflictions::burn_on(&enemy), 3, "lane {lane}");
+                assert_eq!(jackioh_engine::afflictions::burn_on(&enemy), 2, "lane {lane}");
             }
             assert_eq!(jackioh_engine::afflictions::hero_toxic_of(s.state(), P2), 3);
-            assert_eq!(jackioh_engine::afflictions::hero_burn_of(s.state(), P2), 3);
+            assert_eq!(jackioh_engine::afflictions::hero_burn_of(s.state(), P2), 2);
             // Its caster's side is untouched.
             let own = s.unit_at(P1, 1);
             assert_eq!(jackioh_engine::afflictions::toxic_on(&own), 0);

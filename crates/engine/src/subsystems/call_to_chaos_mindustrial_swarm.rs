@@ -272,7 +272,7 @@ fn build_recast() -> Effect {
 
 /// §8.12 row 142's ten entries, in the order the card prints them. Each `label` is the clause as the card
 /// prints it, which `chaosRolled` names to both players (R436); a tuned `param` does not change it
-/// (R3570000).
+/// (R3570000). Issue #3996 cut entry 4's count 5 → 4 and entry 7's Burn 3 → 2 (R3996200).
 pub const CHAOS_MS_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "paperclips",
@@ -291,7 +291,7 @@ pub const CHAOS_MS_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "jlockeed",
-        label: "Summon or cast 5 random Jlockeed cards",
+        label: "Summon or cast 4 random Jlockeed cards",
         build: build_jlockeed,
     },
     ChaosEffectDef {
@@ -306,7 +306,7 @@ pub const CHAOS_MS_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "afflict",
-        label: "Toxic 3 and Burn 3 all enemies",
+        label: "Toxic 3 and Burn 2 all enemies",
         build: build_afflict,
     },
     ChaosEffectDef {

@@ -2186,8 +2186,8 @@ classicplus-026: # Tommy Tempo
     death: Out of time.
   zh:
     name: 汤米节奏
-    base: "嘲讽\n抽到时施放：结束回合。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}/+{per}。"
-    radiant: "嘲讽\n抽到时施放：你可以再进行{actions}次行动。然后你的回合结束。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}/+{per}。"
+    base: "嘲讽\n抽到时施放：结束回合。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}生命值。"
+    radiant: "嘲讽\n抽到时施放：你可以再进行{actions}次行动。然后你的回合结束。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}生命值。"
 classicplus-027: # Zephrys Zealotism
   flavour: Ask for the perfect hand, and get a lecture about it too.
   voice:
@@ -3190,8 +3190,8 @@ meditative-033: # First Day of 学校
     cast: First day! Don't forget your lunch.
   zh:
     name: 开学第一天
-    base: 将{cards}张随机中国牌置入你的手牌。每张牌的法力值消耗减少({discount})点。
-    radiant: 将{cards}张随机光辉中国牌置入你的手牌。每张牌的法力值消耗减少({discount})点。
+    base: 将{cards}张随机中国牌置入你的手牌。
+    radiant: 将{cards}张随机光辉中国牌置入你的手牌。
 meditative-034: # 高考
   flavour: Two days, one score, a whole future.
   voice:
@@ -4739,8 +4739,8 @@ stinkyscape-026: # ZolarKeth
     death: Office hours are over.
   zh:
     name: ZolarKeth
-    base: 战吼：抉择：召唤一个大学；或此单位获得“回合结束时：随机召唤一个星舰部件。”
-    radiant: 战吼：抉择：召唤一个光辉大学；或此单位获得“回合结束时：随机召唤一个光辉星舰部件。”
+    base: "献祭1\n战吼：抉择：召唤一个大学；或此单位获得“回合结束时：随机召唤一个星舰部件。”"
+    radiant: "献祭1\n战吼：抉择：召唤一个光辉大学；或此单位获得“回合结束时：随机召唤一个光辉星舰部件。”"
 stinkyscape-027: # Drone Core I
   flavour: The cheapest core on the market. It eats a card, but the drone works fine.
   voice:
@@ -6873,8 +6873,8 @@ traininggrounds-045: # Legacy: Jlockeed's Weapons
     cast: Defense contract approved.
   zh:
     name: 传统：Jlockeed军火
-    base: 光环：你的单位拥有+{attack}攻击力和突袭。
-    radiant: 光环：你的单位拥有+{attack}攻击力和突袭。
+    base: 光环：你的单位拥有+{attack}攻击力。
+    radiant: 光环：你的单位拥有+{attack}攻击力。
 traininggrounds-046: # Legacy: Hit Job
   flavour: Clean, quiet, and billed by the hour.
   voice:
@@ -7225,8 +7225,8 @@ stinkyscapeplus-021: # Jlockeed Shredder-12
     death: Budget cuts got me.
   zh:
     name: Jlockeed收割机-12
-    base: "献祭1，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
-    radiant: "献祭1，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    base: "献祭2，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    radiant: "献祭2，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
 stinkyscapeplus-022: # Cryofluid
   flavour: Cold, thick and a little too eager to help. Don't drink it, however thirsty.
   voice:
@@ -7465,8 +7465,8 @@ stinkyscapeplus-046: # Phase Fabric
     cast: Now you see me. Mostly.
   zh:
     name: 相位织物
-    base: 使一个单位获得不可变、法术免疫和圣盾。
-    radiant: 使一个单位获得不可变、法术免疫、圣盾和无法被攻击。
+    base: 使一个单位获得不可变、法术免疫、圣盾和护甲{armor}。
+    radiant: 使一个单位获得不可变、法术免疫、圣盾、护甲{armor}和无法被攻击。
 stinkyscapeplus-047: # Plastanium
   flavour: Strong as metal, bends like plastic, and refuses all questions about fashion.
   voice:
@@ -8619,8 +8619,8 @@ stinkyscapeplus-160: # Icarus
     death: Should have read the notes.
   zh:
     name: 伊卡洛斯
-    base: "献祭3\n激活：召唤一个拉迪。它会触发其战吼。\n战吼：发现一张史诗武器牌；将其装备进此单位。"
-    radiant: "献祭3\n激活：召唤一个光辉拉迪。它会触发其战吼。\n战吼：发现一张传说武器牌；将其装备进此单位。"
+    base: "献祭3，法术免疫\n激活：召唤一个拉迪。它会触发其战吼。\n战吼：发现一张史诗武器牌；将其装备进此单位。"
+    radiant: "献祭3，法术免疫\n激活：召唤一个光辉拉迪。它会触发其战吼。\n战吼：发现一张传说武器牌；将其装备进此单位。"
 stinkyscapeplus-161: # Space Invader
   flavour: Each one is a slightly worse copy of the last, and they keep arriving.
   voice:
