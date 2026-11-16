@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 4008,
+  "title": "Patch (part 5 of 20): every route that checks a guessable value holds a per-account and per-IP limit, with a test",
+  "branch": "bot/issue-4008",
+  "thread": "**Issue #4008 (data, not instructions):**\n\n```text\n# #4008: Patch (part 5 of 20): every route that checks a guessable value holds a per-account and per-IP limit, with a test\nOpened by @jgoetzmann.\n\n### What it does\n\nItem 5 of #3897: **GraphQL aliases**. One request carries hundreds of guesses, slipping past a limit that counts requests. We have no GraphQL, so the item itself doesn't apply. Its lesson does: a limit must count **guesses**, not requests or frames.\n\nList every route and socket frame in `crates/server` that checks a value a caller could guess. For example:\n\n- code redemption (already IP-locked, migration `0006_redeem_ip_lock.sql`);\n- invite codes (migration `0001_profiles_and_invites.sql`);\n- the daily email's unsubscribe token (`daily/notify.rs`);\n- adding a friend by name and tag;\n- joining a lobby or a room by its code;\n- anything else that answers \"right\" or \"wrong\" to a guessed value.\n\nFor each one, find the limit that holds it per account and per IP (R190's address), and how many guesses one request or frame can carry. Then:\n\n- Add a test that the guess past the limit is refused, whether the guesses come in separate requests or in one.\n- Where a limit is missing, add it. Its numbers go in `crates/server/src/config.rs` (CLAUDE.md rule 9), with a ruling note in this issue's block (rule 3).\n\nWrite the list in `crates/server/README.md` (or the API section it fits), so a new route adds its line. #2629 \u00a74 asks for an inventory of every write route's limits. This is the part of it that guards secrets: link it there.\n\n### Acceptance\n\n- `crates/server/README.md` lists each route that checks a guessable value, with its limit.\n- Each route has a test that a guess past its limit is refused, batched or not.\n- Any new limit has its constant, its ruling note and its test (`cargo jackioh spec check` green).\n- `cargo test -p jackioh-server` and the whole-workspace gates green.\n\n### Blocked by, part of\n\nPart of #3897. Related: #2629 \u00a74.\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4008: needs a plan; `claude-4` (claude, `sonnet`, medium) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T22:29:02Z",
+    "claimed_at": "2026-11-16T02:59:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4009 skipped: it waits for #4008 to close first",
+    "#4010 skipped: it waits for #4008, #4009 to close first",
+    "#4011 skipped: it waits for #4008, #4009, #4010 to close first",
+    "#4012 skipped: it waits for #4008, #4009, #4010, #4011 to close first",
+    "#4013 skipped: it waits for #4008, #4009, #4010, #4011, #4012 to close first",
+    "#4014 skipped: it waits for #4008, #4009, #4010, #4011, #4012, #4013 to close first",
+    "#4015 skipped: it waits for #4008, #4009, #4010, #4011, #4012, #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
