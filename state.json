@@ -13996,6 +13996,9 @@
       "stop_requested": false,
       "verdict_rounds": 1
     },
+    "4066": {
+      "suggestion": true
+    },
     "4068": {
       "action": "review",
       "closed_at": "2026-11-16T08:08:21Z",
