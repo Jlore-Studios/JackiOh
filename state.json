@@ -37558,7 +37558,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-16T05:12:30Z",
         "every": 5,
+        "findings": 0,
         "head": "a1cc3d4b772bd725096824bb229325346baed234",
         "issue": 4020,
         "merged_at": "2026-11-16T04:55:06Z",
@@ -37571,12 +37573,13 @@
           "provider": "claude-2",
           "tier": "strong"
         },
-        "run_id": "pending:cdbf9db7-1794805480",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43807942079",
         "sha": "5fa7d217b3fe74022c352929a3408a01b39a0e28",
         "started_at": "2026-11-16T05:05:05Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the tutorial says five lanes, and its hero health figures come from the engine's constants",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 291
