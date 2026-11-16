@@ -38240,7 +38240,8 @@
       "2026-11-16T06:28:02Z,43811600837,claude-8,opus,build,4024,hard,interrupted,5-hour cap,46.3,0,0,0,,17,87,,,229.6,claude-8,fresh,,1",
       "2026-11-16T06:22:59Z,43805657782,claude-1,opus,build,4039,hard,built,,75.7,394,125595,49717975,22.8806,7,57,,,41.5,claude-5,fresh,cap,1",
       "2026-11-16T06:38:45Z,43805597415,claude-4,opus,build,4035,hard,infra,infra,,,,,,,,,,227.9,claude-4,none,,",
-      "2026-11-16T06:41:26Z,43818267339,claude-1,opus,review,4068,hard,stopped,stop,0,0,0,0,,72,72,,,1.6,,none,,0"
+      "2026-11-16T06:41:26Z,43818267339,claude-1,opus,review,4068,hard,stopped,stop,0,0,0,0,,72,72,,,1.6,,none,,0",
+      "2026-11-16T06:36:45Z,43807744854,claude-7,opus,review,4055,hard,approved,,52.3,56,21869,2422280,2.8546,38,2,,,1,,fresh,,3"
     ]
   },
   "version": 1
