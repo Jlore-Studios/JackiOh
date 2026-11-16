@@ -16009,14 +16009,15 @@
     "what": "plan #4035 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-16T00:49:06Z",
+    "at": "2026-11-16T00:58:05Z",
     "notes": [
-      "#3994 is held for `claude-7` until 18:50 (5-hour usage is 62%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "#4031 is held for `claude-3` until 18:50 (it refused a call)",
-      "started review #4031 on claude-3 (run 43782761803)",
-      "started revise #3994 on claude-7 (run 43782832628)",
+      "#4035 needs a plan",
+      "#3998: @jgoetzmann answered its question, so it is queued again with the answer",
+      "started revise #3998 on claude-6 (run 43783606547)",
+      "started plan #4035 on claude-4 (run 43783676772)",
       "nothing more to start: nothing is queued",
-      "pruned 5 plan file(s) older than 7 days"
+      "pruned 2 plan file(s) older than 7 days",
+      "#4035: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16722,7 +16723,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T00:49:06Z",
+  "loop_tick": "2026-11-16T00:58:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
