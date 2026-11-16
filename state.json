@@ -16107,18 +16107,29 @@
       "suggestion": true
     },
     "4033": {
-      "asks": [
-        "c:6905106324"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "gpt",
+      "owner_since": "2026-11-16T01:54:25Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "gpt",
       "queued_at": "2026-11-16T01:51:10Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:1fea96e7-1794794036",
+      "runs_on": "night-vm-gpt",
+      "started_at": "2026-11-16T01:54:25Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6905106324"
+      ]
     },
     "4035": {
       "action": "plan",
@@ -16283,9 +16294,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T01:53:42Z",
+    "at": "2026-11-16T01:54:25Z",
     "url": "",
-    "what": "plan #4021 on muse"
+    "what": "plan #4033 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-16T01:39:36Z",
