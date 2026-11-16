@@ -14090,11 +14090,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-16T22:40:57Z",
+        "at": "2026-11-16T23:28:51Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The rule rates the AI's decisions and search as hard, and this changes both."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 2 (the AI): it changes the AI's threat count, combat reads and trade pricing in crates/ai/src/"
       },
       "failures": 0,
       "forced": false,
