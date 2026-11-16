@@ -816,7 +816,10 @@ included (16, #3740: the organization runs 60 hosted jobs at once on GitHub's Te
 2026-11-11, split as 2 for the status loop and the bots' short jobs, 12 for the training lanes, 16
 for these runs, and the rest, 30 or so, for CI; it was 8 of the Free plan's 20, #1455). It stays at
 16, not the 24 #3740 planned: at 16 the bot's token ran out of REST calls near the end of every
-hour (#3760), so more runs wait until what spends them is cut. It is one pool
+hour (#3760), so more runs wait until what spends them is cut. Since #4059 every GET the client
+sends is conditional, so a read GitHub answers 304 Not Modified costs nothing, and the state file's
+blob is read once a version, not on every read (`gh.Cached`, `gh.Blobs`); the loop's hourly `rate:`
+line counts the reads that came back free beside what it spent, which says whether 24 fits now. It is one pool
 the two bots share, first come first served: Squishy's `providers.json` names the same number, and each
 bot counts the other's live runs against it (`plan.OthersOnGithub`, by the workflow its identity
 names), so a free slot goes to whichever bot asks first. `machine_parallel` how
