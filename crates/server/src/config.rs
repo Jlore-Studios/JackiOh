@@ -453,6 +453,16 @@ pub const LOOP_FAILING_ALERT_MS: i64 = 5 * 60 * 1000;
 /// `LOOP_FAILING_ALERT_MS`. Three keeps one unlucky pass of a slow loop (the hourly purge) from
 /// being a streak.
 pub const LOOP_FAILING_ALERT_PASSES: u32 = 3;
+/// #3826: how many internal errors in a row, with no other answer between, one route (or one socket
+/// upgrade) must give before `http::RouteHealth` raises `api.route.failing`, beside
+/// `ROUTE_FAILING_ALERT_MS`. Both must hold. Five in a row is no unlucky request: a route that answers
+/// "something went wrong" to every request is broken for its players (a bad migration, say).
+pub const ROUTE_FAILING_ALERT_COUNT: u32 = 5;
+/// #3826: how long a route's run of internal errors must last, beside `ROUTE_FAILING_ALERT_COUNT`,
+/// before `api.route.failing` is raised. Both must hold. A minute passes over a database blip, which a
+/// reconnect clears, and is quicker than the loops' five minutes (`LOOP_FAILING_ALERT_MS`) because a
+/// player is waiting on the route. `ALERT_WINDOW_MS` then holds the event to one notice an hour.
+pub const ROUTE_FAILING_ALERT_MS: i64 = 60 * 1000;
 
 // ---------------------------------------------------------------------------------------------
 // The probes and the shutdown (`api/health.rs`, `app::serve_until`). Not in SPEC, and no R-row (#861).

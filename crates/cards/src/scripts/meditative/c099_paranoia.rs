@@ -86,15 +86,9 @@ mod tests {
     }
 
     fn set_plays(s: &Scenario, id: &str) -> Vec<ActionBody> {
-        legal_actions(s.state(), P1)
+        plays_in(s.state(), P1, id)
             .into_iter()
-            .filter(|action| {
-                matches!(
-                    action,
-                    ActionBody::Play { instance_id, face_down: Some(_), .. }
-                    if instance_id == id
-                )
-            })
+            .filter(|action| matches!(action, ActionBody::Play { face_down: Some(_), .. }))
             .collect()
     }
 

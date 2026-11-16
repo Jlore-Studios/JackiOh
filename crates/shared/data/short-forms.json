@@ -64,7 +64,7 @@
     },
     "classicplus-034": {
       "base": {
-        "en": "Crater\nChoose one.\nEnd of turn: Lock a random enemy zone.\nOr Lock each zone your opponent plays into."
+        "en": "Crater\nChoose one.\nEnd of turn: Lock a random enemy zone.\nOr Lock their zone when they play a Unit or Field Spell."
       }
     },
     "classicplus-037": {
@@ -280,7 +280,7 @@
         "en": "Brittle 4\nEnd of turn: Gain a Narcor.\nActivate: Discard a Narcor: −1 Brittle.\nDeath: If by Brittle, 2 Narcors a turn."
       },
       "radiant": {
-        "en": "Brittle 4\nEnd of turn: +1 Red Narcor.\nActivate: Discard a Narcor: −1 Brittle.\nDeath: If by Brittle, 2 Red Narcors a turn."
+        "en": "Brittle 4\nEnd of turn: +1 Red Narcor.\nActivate: Discard a Narcor or Red Narcor: −1 Brittle.\nDeath: If by Brittle, 2 Red Narcors a turn."
       }
     },
     "stinkyscape-077": {
@@ -445,10 +445,10 @@
     },
     "stinkyscapeplus-055": {
       "base": {
-        "en": "Start of turn: Gain {mana} mana, draw {card|card|cards}.\nEnd of turn: {chance}% chance of {damage} to your hero, unless you discarded a Thorium."
+        "en": "Start of turn: Gain {mana} mana, draw {card|card|cards}.\nEnd of turn: {chance}% to blow up, {damage} to your hero. Activate: Discard a Thorium: skip it."
       },
       "radiant": {
-        "en": "Lucky 1\nStart of turn: Gain {mana} mana, draw {card|card|cards}.\nEnd of turn: {chance}% chance of {damage} to your hero, unless you discarded a Thorium."
+        "en": "Lucky 1\nStart of turn: Gain {mana} mana, draw {card|card|cards}.\nEnd of turn: {chance}% to blow up, {damage} to your hero. Activate: Discard a Thorium: skip it."
       }
     },
     "stinkyscapeplus-061-1": {
@@ -506,10 +506,10 @@
     },
     "stinkyscapeplus-120": {
       "base": {
-        "en": "Can't Defend\nFirst time in play each game: add a Toxopid.\nPlay from graveyard: (1).\nDies after attacking.\nDeath: {damage} to its last target."
+        "en": "Can't Defend. Graveyard (1).\nFirst time in play each game: add a Toxopid.\nDies after attacking.\nDeath: {damage} to the last Unit it damaged."
       },
       "radiant": {
-        "en": "Can't Defend\nFirst time in play each game: add a Radiant Toxopid.\nPlay from graveyard: (1).\nDies after attacking.\nDeath: {damage} to its last target."
+        "en": "Can't Defend. Graveyard (1).\nFirst time in play each game: add a Radiant Toxopid.\nDies after attacking.\nDeath: {damage} to the last Unit it damaged."
       }
     },
     "stinkyscapeplus-121": {
@@ -522,7 +522,7 @@
     },
     "stinkyscapeplus-123": {
       "base": {
-        "en": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal allies {heal}.\nAura: Allies ignore their first {pool} damage each turn."
+        "en": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal allies {heal}.\nAura: Allies ignore the first {pool} damage each turn."
       },
       "radiant": {
         "en": "Tribute 3, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal allies {heal}.\nAura: Allies ignore the first {pool} damage each turn."

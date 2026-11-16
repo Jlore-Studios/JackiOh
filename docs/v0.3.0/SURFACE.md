@@ -717,7 +717,11 @@ than a copy (#1826, #3827). `testkit::must(value, what)` is an
 `Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `s.count(kind)` and
 `s.events_of(kind)` read the log by event type (a `GameEventType` or its string; a string naming none panics),
 `s.last_count(kind)` and `s.last_events_of(kind)` the last step's, and `s.offered(p)` is `legal_actions` for that
-seat now (#3504). `testkit::invariants::InvariantMonitor`
+seat now (#3504). `s.plays_of(card)`, `s.can_play(card)` and `s.play_targets(card)` read one card's offered plays
+for its owner, `s.activations_of(card)` and `s.attacks_of(card)` its activations and attacks for its controller;
+`testkit::plays_in(state, seat, id)` and `testkit::is_play_of(action, id)` are the same read for a state a test
+holds, another seat or one action, and `pick::instance_ids(selections)` the instance ids among a `Selection[]`;
+tests take these rather than a copy (#3913). `testkit::invariants::InvariantMonitor`
 is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::glow` is `_glow.ts`.
 
 ## 9. The AI crate

@@ -54,15 +54,10 @@ fn held(g: &Scenario, def_id: &str) -> String {
 }
 
 fn offered(g: &Scenario, card: &str) -> Vec<(Option<ZoneChoice>, Option<bool>)> {
-    legal_actions(g.state(), P1)
+    plays_in(g.state(), P1, card)
         .into_iter()
         .filter_map(|action| match action {
-            ActionBody::Play {
-                instance_id,
-                zone,
-                embiggen,
-                ..
-            } if instance_id == card => Some((zone, embiggen)),
+            ActionBody::Play { zone, embiggen, .. } => Some((zone, embiggen)),
             _ => None,
         })
         .collect()
@@ -87,12 +82,10 @@ static NONCE: AtomicU32 = AtomicU32::new(0);
 /// The modes of the first play `legalActions` lists for p1's hand card, so a card that declares one
 /// (Meditative+ #4 Supply Drop's Combat or Supplies, R81) is played with a mode it is offered at;
 fn listed_modes(g: &Scenario, card: &str) -> Option<Vec<String>> {
-    legal_actions(g.state(), P1)
+    plays_in(g.state(), P1, card)
         .into_iter()
         .find_map(|action| match action {
-            ActionBody::Play {
-                instance_id, modes, ..
-            } if instance_id == card => Some(modes),
+            ActionBody::Play { modes, .. } => Some(modes),
             _ => None,
         })
         .flatten()
@@ -101,12 +94,10 @@ fn listed_modes(g: &Scenario, card: &str) -> Option<Vec<String>> {
 /// The targets of the first play `legalActions` lists for p1's hand card, so a card that declares one
 /// (Stinkyscape+ #24 Forced Propagation's pick, R3557001) is played with a pick it is offered.
 fn listed_targets(g: &Scenario, card: &str) -> Option<Vec<Selection>> {
-    legal_actions(g.state(), P1)
+    plays_in(g.state(), P1, card)
         .into_iter()
         .find_map(|action| match action {
-            ActionBody::Play {
-                instance_id, targets, ..
-            } if instance_id == card => Some(targets),
+            ActionBody::Play { targets, .. } => Some(targets),
             _ => None,
         })
         .flatten()

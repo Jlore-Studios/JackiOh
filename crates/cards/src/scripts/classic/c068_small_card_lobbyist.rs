@@ -96,13 +96,9 @@ mod tests {
             .and_then(|card| card["cost"].as_i64())
     }
 
-    // Differs from Scenario::offered: whether that card can be played, not the seat's whole legal list.
+    /// Whether `player` may play the first copy of `def_id` now.
     fn offered(s: &Scenario, player: PlayerId, def_id: &str) -> bool {
-        let id = s.card(def_id).id.clone();
-        legal_actions(s.state(), player)
-            .iter()
-            .map(js)
-            .any(|action| action["type"] == "play" && action["instanceId"] == id.as_str())
+        !plays_in(s.state(), player, &s.card(def_id).id).is_empty()
     }
 
     fn play_action(player: &str, instance_id: &str, nonce: &str) -> Action {

@@ -1265,3 +1265,71 @@ fn r3941001_every_written_face_names_only_its_faces_numbers() {
     }
     assert!(written > 0, "PREMISE: some face has written words");
 }
+
+/// R3941001: a written face says what the face does in fewer words, never a rule its whole text lacks.
+/// Short forms must not mislead on targets, conditions or outcomes.
+#[test]
+fn r3941001_written_words_describe_their_cards_effect_honestly() {
+    // S+ #120 Crawler: Death hits only the last Unit damaged, never a hero or generic "target" (R3560003).
+    for radiant in [false, true] {
+        let face = printed("stinkyscapeplus-120", radiant, Locale::En);
+        let short = face.short.expect("Crawler has written words").full;
+        assert!(
+            short.contains("to the last Unit it damaged."),
+            "Crawler (radiant: {radiant}) must specify 'to the last Unit it damaged.', got: {short}"
+        );
+        assert!(
+            !short.contains("target"),
+            "Crawler (radiant: {radiant}) must not suggest heroes count with 'target', got: {short}"
+        );
+    }
+
+    // S+ #55 Thorium Reactor: blows up on hit; only its own Activate discard skips the roll.
+    for radiant in [false, true] {
+        let face = printed("stinkyscapeplus-055", radiant, Locale::En);
+        let short = face.short.expect("Thorium Reactor has written words").full;
+        assert!(
+            short.contains("blow up"),
+            "Thorium Reactor (radiant: {radiant}) must state blow up outcome, got: {short}"
+        );
+        assert!(
+            short.contains("Activate: Discard a Thorium: skip it"),
+            "Thorium Reactor (radiant: {radiant}) must state Activate skip condition, got: {short}"
+        );
+        assert!(
+            !short.contains("unless you discarded a Thorium"),
+            "Thorium Reactor (radiant: {radiant}) must not imply external discards count, got: {short}"
+        );
+    }
+
+    // S+ #123 Oct: allies share one single nullification pool per card (R3550004), not 'their first'.
+    let oct_base = printed("stinkyscapeplus-123", false, Locale::En);
+    let oct_short = oct_base.short.expect("Oct base has written words").full;
+    assert!(
+        oct_short.contains("Allies ignore the first"),
+        "Oct base must state shared pool ('the first'), got: {oct_short}"
+    );
+    assert!(
+        !oct_short.contains("their first"),
+        "Oct base must not suggest separate per-ally pools ('their first'), got: {oct_short}"
+    );
+
+    // C+ #34 Memory Leak: locks only after a Unit or Field Spell is played, not Traps.
+    let leak_base = printed("classicplus-034", false, Locale::En);
+    let leak_short = leak_base.short.expect("Memory Leak base has written words").full;
+    assert!(
+        leak_short.contains("Unit or Field Spell"),
+        "Memory Leak base must specify Unit or Field Spell, got: {leak_short}"
+    );
+
+    // S #39 The Narcor Project (Radiant): both Narcor and Red Narcor can be discarded for Activate.
+    let narcor_radiant = printed("stinkyscape-039", true, Locale::En);
+    let narcor_short = narcor_radiant
+        .short
+        .expect("The Narcor Project radiant has written words")
+        .full;
+    assert!(
+        narcor_short.contains("Discard a Narcor or Red Narcor:"),
+        "The Narcor Project radiant must permit either Narcor or Red Narcor, got: {narcor_short}"
+    );
+}

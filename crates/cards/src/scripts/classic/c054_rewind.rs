@@ -76,28 +76,14 @@ mod tests {
         applicable_changes(s.state(), s.card(card), direction).iter().map(js).collect()
     }
 
-    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
+    /// The instance ids among the play targets of the Rewind in `player`'s hand, in offer order.
     fn offered(s: &Scenario, player: PlayerId) -> Vec<String> {
         let rewind = s
             .hand(player)
             .into_iter()
             .find(|card| card.def_id == REWIND)
             .expect("Rewind should be in hand");
-        legal_actions(s.state(), player)
-            .iter()
-            .map(js)
-            .filter(|action| action["type"] == "play" && action["instanceId"] == rewind.id.as_str())
-            .flat_map(|action| {
-                action["targets"]
-                    .as_array()
-                    .cloned()
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter(|selection| selection["pick"] == "instance")
-                    .filter_map(|selection| selection["instanceId"].as_str().map(str::to_string))
-                    .collect::<Vec<String>>()
-            })
-            .collect()
+        pick::instance_ids(&s.play_targets(&rewind))
     }
 
     fn tokens_of(s: &Scenario, player: PlayerId) -> usize {

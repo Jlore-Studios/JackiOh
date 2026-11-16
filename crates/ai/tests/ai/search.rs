@@ -1121,6 +1121,30 @@ mod wall_switches_2976 {
         assert_eq!(expanded[1..1 + kept], walls[..kept]);
         assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
     }
+
+    /// R3937000, #3937: the issue's board. p1 at 6 life guards with a Mr. Vanilla in Defense Position at 3
+    /// health (Armor 1) against two 3/4s and a 4/4. The 4 destroys the guard alone and both 3s go face for
+    /// 6, lethal, where smallest first sends the 3s into it and counts 4. So the switch of p1's other
+    /// Vanilla to Defense, which leaves 0 in either order, is offered as a wall.
+    #[test]
+    fn r3937000_a_lone_breaker_makes_the_threat_lethal_so_the_second_guard_is_offered() {
+        jackioh_cards::register_all();
+        let three = json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 4 } });
+        let state = scenario(json!({
+            "seed": "search-wall-switch-breaker",
+            "p1": { "health": 6, "field": [{ "def": VANILLA, "position": "DEF", "damage": 1 }, VANILLA] },
+            "p2": { "field": [three.clone(), three, VANILLA] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(face_threat(&state, HUMAN), 6);
+        assert_eq!(face_threat_with(&state, HUMAN, &GREEDY_EVAL), 4);
+        assert_eq!(effective_life(&state, AI), 6);
+        assert_eq!(
+            wall_switches(&state, AI, &candidate_actions(&state, AI, Prices::NONE)),
+            vec![switch_of(&state, VANILLA, Position::Atk)]
+        );
+    }
 }
 
 mod lanes_that_play_differently {
@@ -1840,10 +1864,10 @@ mod enemy_targets_first {
     }
 
     /// The action keys of `actions`' plays of `instance_id`, in order.
-    fn plays_of(actions: &[ActionBody], instance_id: &str) -> Vec<String> {
+    fn play_keys(actions: &[ActionBody], instance_id: &str) -> Vec<String> {
         actions
             .iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+            .filter(|action| is_play_of(action, instance_id))
             .map(action_key)
             .collect()
     }
@@ -1870,11 +1894,11 @@ mod enemy_targets_first {
     fn a_sources_variants_alternate_enemy_first_with_the_enemy_hero_first() {
         let state = burn_board();
         let burn = hand_id(&state, "classic-036");
-        let legal = plays_of(&legal_actions(&state, AI), &burn);
+        let legal = play_keys(&legal_actions(&state, AI), &burn);
         assert_eq!(legal.len(), 6, "{legal:?}");
         let expected: Vec<String> = [5, 0, 4, 1, 2, 3].iter().map(|&at| legal[at].clone()).collect();
         assert_eq!(
-            plays_of(&candidate_actions(&state, AI, Prices::NONE), &burn),
+            play_keys(&candidate_actions(&state, AI, Prices::NONE), &burn),
             expected
         );
     }
@@ -1899,8 +1923,8 @@ mod enemy_targets_first {
         let candidates = candidate_actions(&state, AI, Prices::NONE);
         for def_id in ["classicplus-065-4", "core-008"] {
             let id = hand_id(&state, def_id);
-            let kept = plays_of(&candidates, &id);
-            let offered: Vec<String> = plays_of(&legal, &id)
+            let kept = play_keys(&candidates, &id);
+            let offered: Vec<String> = play_keys(&legal, &id)
                 .into_iter()
                 .filter(|key| kept.contains(key))
                 .collect();

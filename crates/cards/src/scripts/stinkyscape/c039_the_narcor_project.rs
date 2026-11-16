@@ -131,20 +131,6 @@ mod tests {
         active_brittle_count(s.card(ID))
     }
 
-    // Differs from Scenario::offered: how many activations of one card, not the seat's whole legal list.
-    fn offered(s: &Scenario) -> usize {
-        let id = s.card(ID).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .filter(|body| match body {
-                ActionBody::Activate { instance_id, .. } | ActionBody::ActivatePower { instance_id, .. } => {
-                    *instance_id == id
-                }
-                _ => false,
-            })
-            .count()
-    }
-
     fn activate(s: &mut Scenario) -> &mut Scenario {
         s.activate(ID, json!({ "ability": DISCARD_NARCOR }))
     }
@@ -172,12 +158,12 @@ mod tests {
     #[test]
     fn the_activate_needs_a_narcor_and_discards_the_oldest() {
         let mut s = project(false, json!([REKNITE]));
-        assert_eq!(offered(&s), 0, "no Narcor in the hand");
+        assert_eq!(s.activations_of(ID).len(), 0, "no Narcor in the hand");
         s.expect_refused(activate);
 
         let mut s = project(false, json!([NARCOR, REKNITE, NARCOR]));
         let oldest = crate::resources_in_hand(&s, P1)[0].id.clone();
-        assert_eq!(offered(&s), 1);
+        assert_eq!(s.activations_of(ID).len(), 1);
         activate(&mut s);
         assert_eq!(in_hand(&s), vec![REKNITE, NARCOR], "the oldest Narcor is gone");
         assert!(
@@ -259,7 +245,7 @@ mod tests {
         assert!(!crate::resources_in_hand(&s, P1)[0].radiant, "a Red Narcor, not a Radiant one");
 
         let mut s = project(true, json!([RED_NARCOR]));
-        assert_eq!(offered(&s), 1, "a Red Narcor pays the Radiant Activate");
+        assert_eq!(s.activations_of(ID).len(), 1, "a Red Narcor pays the Radiant Activate");
         activate(&mut s);
         assert!(in_hand(&s).is_empty());
         assert_eq!(brittle(&s), Some(3));

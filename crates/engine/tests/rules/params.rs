@@ -405,9 +405,9 @@ mod r386_b3_4_rule_5_a_card_resolves_with_its_number_as_it_stands {
         state.players.p1.mana.current = 4;
         state.players.p1.mana.max = 4;
         let before = state.players.p2.hero.health;
-        let play = legal_actions(&state, P1)
+        let play = plays_in(&state, P1, &card.id)
             .into_iter()
-            .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
+            .next()
             .expect("expected a play");
         state = act(
             &state,

@@ -18,7 +18,6 @@ use super::fixtures::keywords_783::{
     cloak_units, cloaked_unit, crater_field, crater_trap, crater_unit, plain_spell, plain_unit,
     register_keywords_783,
 };
-use super::fixtures::play_pipeline_b::plays_of;
 use super::fixtures::prompt_harness::board;
 
 const P1: PlayerId = PlayerId::P1;
@@ -87,7 +86,7 @@ fn in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstanc
 
 /// The offered plays of this card that set it face-down, as JSON.
 fn face_down_offered(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<Value> {
-    plays_of(state, instance_id, player)
+    plays_in(state, player, instance_id)
         .iter()
         .map(|play| serde_json::to_value(play).expect("a play serializes"))
         .filter(|play| play.get("faceDown").is_some_and(|timing| !timing.is_null()))

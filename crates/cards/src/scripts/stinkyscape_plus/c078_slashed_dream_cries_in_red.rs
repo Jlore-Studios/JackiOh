@@ -105,10 +105,11 @@ mod tests {
         assert_eq!(s.view(P1).slashed_lane, Some(3));
         assert_eq!(s.view(P2).slashed_lane, Some(3));
         let body = s.hand(P1).iter().find(|card| card.def_id == BODY).expect("a body in hand").id.clone();
-        let offered: Vec<i32> = legal_actions(s.state(), P1)
+        let offered: Vec<i32> = s
+            .plays_of(&body)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, zone, .. } if instance_id == body => zone.map(|zone| zone.lane),
+                ActionBody::Play { zone, .. } => zone.map(|zone| zone.lane),
                 _ => None,
             })
             .collect();

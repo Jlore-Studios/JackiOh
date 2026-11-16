@@ -120,9 +120,8 @@ mod r90_r102_a_fused_cards_choices_are_split_as_the_play_declared_them {
                 .is_some_and(|def| def.tags.contains(&Tag::Human))
         );
         let hero_only: Vec<Selection> = vec![Selection::Hero { player: P2 }];
-        let offered = legal_actions(s.state(), P1).iter().any(|action| {
-            matches!(action, ActionBody::Play { instance_id, targets, .. }
-                if *instance_id == crafted.id && targets.as_ref() == Some(&hero_only))
+        let offered = s.plays_of(&crafted).iter().any(|action| {
+            matches!(action, ActionBody::Play { targets, .. } if targets.as_ref() == Some(&hero_only))
         });
         assert!(offered);
 

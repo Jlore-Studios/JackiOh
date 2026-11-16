@@ -210,12 +210,10 @@ mod tests {
 
     /// The zones `legal_actions` lists for a play of this card, in its order.
     fn zones_listed(s: &Scenario, card: &CardInstance) -> Vec<(Row, i32)> {
-        legal_actions(s.state(), P1)
+        plays_in(s.state(), P1, &card.id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, zone: Some(zone), .. } if instance_id == card.id => {
-                    Some((zone.row, zone.lane))
-                }
+                ActionBody::Play { zone: Some(zone), .. } => Some((zone.row, zone.lane)),
                 _ => None,
             })
             .collect()
@@ -342,11 +340,7 @@ mod tests {
                 let (mut s, _tower, _rider) =
                     tower_with(TOKENS, TowerOptions { hand: Some(vec![MENACE, FILLER]), ..TowerOptions::default() });
                 s.expect_refused(|s| s.play(MENACE, json!({ "zone": 2, "row": "backrow" })));
-                let menace = s.card(MENACE).id.clone();
-                let plays: Vec<ActionBody> = legal_actions(s.state(), P1)
-                    .into_iter()
-                    .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == menace))
-                    .collect();
+                let plays = s.plays_of(MENACE);
                 assert!(!plays.is_empty());
                 // R1194000: the Aura's Flying offers the other backrow zones, never the Tower's own.
                 assert!(!plays.iter().any(|action| matches!(

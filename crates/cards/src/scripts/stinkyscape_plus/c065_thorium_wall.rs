@@ -80,16 +80,15 @@ mod tests {
 
     /// Every unit lane a play of the wall is offered, sorted, embiggened or not.
     fn offered_lanes(s: &Scenario, embiggen: bool) -> Vec<i32> {
-        let id = s.card(ID).id.clone();
-        let mut lanes: Vec<i32> = legal_actions(s.state(), P1)
+        let mut lanes: Vec<i32> = s
+            .plays_of(ID)
             .into_iter()
             .filter_map(|action| match action {
                 ActionBody::Play {
-                    instance_id,
                     zone,
                     embiggen: offered,
                     ..
-                } if instance_id == id && offered == Some(embiggen) => zone,
+                } if offered == Some(embiggen) => zone,
                 _ => None,
             })
             .filter(|zone| zone.row == Row::Units)

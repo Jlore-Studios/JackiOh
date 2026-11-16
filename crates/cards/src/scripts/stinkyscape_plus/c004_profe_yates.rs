@@ -405,7 +405,7 @@ mod tests {
                 .id;
             let offered: Vec<ActionBody> = policy_actions(s.state(), P1, Default::default())
                 .into_iter()
-                .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == yates))
+                .filter(|action| is_play_of(action, &yates))
                 .collect();
             assert!(!offered.is_empty());
             for action in &offered {

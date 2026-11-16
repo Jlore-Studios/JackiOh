@@ -1085,9 +1085,7 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
                 .iter()
                 .find(|card| card.def_id == HEROIC_POWER)
                 .map(|card| card.id.clone());
-            let play = legal_actions(&state, PlayerId::P2).into_iter().find(|body| {
-                matches!(body, ActionBody::Play { instance_id, .. } if Some(instance_id) == power.as_ref())
-            });
+            let play = power.and_then(|power| plays_in(&state, PlayerId::P2, &power).into_iter().next());
             act(
                 &mut state,
                 &mut nonce,

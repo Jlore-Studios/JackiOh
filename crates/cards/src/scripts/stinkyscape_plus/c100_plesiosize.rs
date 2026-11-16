@@ -92,20 +92,7 @@ mod tests {
             let plesio = held_id(&s, ID);
             let unit = held_id(&s, UNIT);
             let spell = held_id(&s, SPELL);
-            let offered: Vec<String> = legal_actions(s.state(), P1)
-                .into_iter()
-                .filter_map(|action| match action {
-                    ActionBody::Play {
-                        instance_id, targets, ..
-                    } if instance_id == plesio => targets,
-                    _ => None,
-                })
-                .flatten()
-                .filter_map(|target| match target {
-                    Selection::Instance { instance_id } => Some(instance_id),
-                    _ => None,
-                })
-                .collect();
+            let offered = pick::instance_ids(&s.play_targets(&plesio));
             assert!(offered.contains(&unit), "the Unit is offered");
             assert!(!offered.contains(&spell), "the Spell is never offered");
         }

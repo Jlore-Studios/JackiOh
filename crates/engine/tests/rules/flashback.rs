@@ -9,7 +9,7 @@ use super::fixtures::keywords_783::{
     flashback_spell, flashback_unit, picky_wind, plague_field, plain_spell, plain_unit,
     register_keywords_783, second_wind,
 };
-use super::fixtures::play_pipeline_b::{in_graveyard, plays_of};
+use super::fixtures::play_pipeline_b::in_graveyard;
 use super::fixtures::prompt_harness::board;
 
 const P1: PlayerId = PlayerId::P1;
@@ -62,14 +62,14 @@ mod r783012_flashback_play {
 
         // Offered from its owner's graveyard with no permission; not a card without Flashback, nor theirs.
         assert!(has_flashback(&state, &spell));
-        assert!(!plays_of(&state, &spell.id, P1).is_empty());
-        assert!(plays_of(&state, &plain.id, P1).is_empty());
-        assert!(plays_of(&state, &theirs.id, P1).is_empty());
+        assert!(!plays_in(&state, P1, &spell.id).is_empty());
+        assert!(plays_in(&state, P1, &plain.id).is_empty());
+        assert!(plays_in(&state, P1, &theirs.id).is_empty());
 
         // At its cost: with less mana, neither offered nor allowed.
         let mut poor = state.clone();
         poor.players.p1.mana.current = 1;
-        assert!(plays_of(&poor, &spell.id, P1).is_empty());
+        assert!(plays_in(&poor, P1, &spell.id).is_empty());
         assert!(cast_spell(&poor, &spell.id).error.is_some());
 
         // A play: paid, its Cry run, counted, announced as from the graveyard (R454).
@@ -103,7 +103,7 @@ mod r783013_flashback_spent {
         let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
         assert_eq!(landed.flashback_spent, Some(true));
         assert!(!has_flashback(&state, &landed));
-        assert!(plays_of(&state, &spell.id, P1).is_empty());
+        assert!(plays_in(&state, P1, &spell.id).is_empty());
         assert!(cast_spell(&state, &spell.id).error.is_some());
 
         // A Unit: spent on the field, and still once it dies.
@@ -127,7 +127,7 @@ mod r783013_flashback_spent {
         let dead = must(graveyard_card(&units, &body.id), "the Unit in the graveyard");
         assert_eq!(dead.flashback_spent, Some(true));
         assert!(!has_flashback(&units, &dead));
-        assert!(plays_of(&units, &body.id, P1).is_empty());
+        assert!(plays_in(&units, P1, &body.id).is_empty());
     }
 
     #[test]
@@ -149,14 +149,14 @@ mod r783013_flashback_spent {
         // Without the permission, Flashback still offers it once.
         let mut lone = wind.clone();
         jackioh_engine::zones::remove_from_any_zone(&mut state, &mut lone);
-        assert!(!plays_of(&state, &spell.id, P1).is_empty());
+        assert!(!plays_in(&state, P1, &spell.id).is_empty());
         state = act(
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );
         let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
         assert_eq!(landed.flashback_spent, Some(true));
-        assert!(plays_of(&state, &spell.id, P1).is_empty());
+        assert!(plays_in(&state, P1, &spell.id).is_empty());
     }
 
     #[test]
@@ -173,7 +173,7 @@ mod r783013_flashback_spent {
         let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
         assert_eq!(landed.flashback_spent, Some(true));
         assert!(!has_flashback(&state, &landed));
-        assert!(plays_of(&state, &spell.id, P1).is_empty());
+        assert!(plays_in(&state, P1, &spell.id).is_empty());
         assert!(cast_spell(&state, &spell.id).error.is_some());
 
         // A Plague-only permission (Corpse Plantation's shape): a play paid in mana is Flashback's, spending

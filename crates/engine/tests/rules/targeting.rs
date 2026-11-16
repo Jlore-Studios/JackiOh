@@ -284,15 +284,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         assert_eq!(at_other.len(), 1);
         assert!(at_ghost.iter().all(|play| play.get("discards").is_none()));
         assert!(at_other.iter().all(|play| play.get("discards").is_none()));
-        assert_eq!(
-            legal_actions(&state, PlayerId::P1)
-                .iter()
-                .filter(
-                    |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == bolt.id)
-                )
-                .count(),
-            plays.len()
-        );
+        assert_eq!(plays_in(&state, PlayerId::P1, &bolt.id).len(), plays.len());
     }
 
     #[test]
