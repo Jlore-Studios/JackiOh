@@ -16041,11 +16041,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-16T02:08:18Z",
+        "at": "2026-11-16T03:03:38Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 2: the change alters the AI's combat arithmetic in crates/ai/src (blow, kills_and_survives, trade_value), which feeds its decisions."
+        "tier": "strong",
+        "why": "rule 2 (the AI: crates/ai/src's combat reads and lethal walk) and rule 1 (an engine projection in crates/engine/src/subsystems/lethal.rs)"
       },
       "failures": 0,
       "forced": false,
