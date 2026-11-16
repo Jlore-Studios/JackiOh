@@ -1255,6 +1255,10 @@ var GraphqlLeft = func(token string) (gh.RateLeft, bool) { return gh.Rate.LeftOf
 // forgets them (`gh.Rate.Take`); a variable so the tests can replace it.
 var RateSpent = func(token string) map[string]int { return gh.Rate.Take(token, gh.REST) }
 
+// RateFree is how many of a token's REST reads GitHub answered 304 Not Modified this process since
+// it was last asked, free (`gh.Rate.TakeFree`, #4059); a variable so the tests can replace it.
+var RateFree = func(token string) int { return gh.Rate.TakeFree(token, gh.REST) }
+
 // RateSpentShown is how many of the loop's costliest paths its hourly line names.
 var RateSpentShown = 8
 
@@ -1275,7 +1279,7 @@ func rateNote(cfg *config.Config, every float64) bool {
 	local := func(at time.Time) string { return dashboard.Local(Ctx(cfg, false), at).Format("15:04") }
 	if !left.Reset.IsZero() && !left.Reset.Equal(rateHour) {
 		if !rateHour.IsZero() {
-			if line := spentLine(RateSpent(token), local(rateHour)); line != "" {
+			if line := spentLine(RateSpent(token), RateFree(token), local(rateHour)); line != "" {
 				say(line)
 			}
 		}
@@ -1301,18 +1305,25 @@ func rateNote(cfg *config.Config, every float64) bool {
 }
 
 // spentLine is the loop's line on what it spent of a REST hour that ended at `until`: its calls
-// and its costliest paths, or "" when it spent none.
-func spentLine(spent map[string]int, until string) string {
+// and its costliest paths, and how many reads came back unchanged for nothing (`free`, #4059), or
+// "" when it spent none and saved none.
+func spentLine(spent map[string]int, free int, until string) string {
 	total, top := gh.TopSpent(spent, RateSpentShown)
-	if total == 0 {
+	if total == 0 && free == 0 {
 		return ""
 	}
 	var paths []string
 	for _, p := range top {
 		paths = append(paths, fmt.Sprintf("%d %s", p.Calls, p.Path))
 	}
-	return fmt.Sprintf("rate: this loop spent %d of the bot's REST calls in the hour to %s; the most: %s",
-		total, until, strings.Join(paths, ", "))
+	line := fmt.Sprintf("rate: this loop spent %d of the bot's REST calls in the hour to %s", total, until)
+	if len(paths) > 0 {
+		line += "; the most: " + strings.Join(paths, ", ")
+	}
+	if free > 0 {
+		line += fmt.Sprintf("; %d more reads were answered unchanged (304), free", free)
+	}
+	return line
 }
 
 // gateTick is a tick of the runner gate between the loop's rewrites (`cigate.Tick`), after the look

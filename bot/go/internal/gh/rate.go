@@ -18,7 +18,7 @@ import (
 // REST's and never saw REST's run out until it was spent (#3760). It also counts the calls each
 // REST path cost, so the loop can say what spends them. Only what an answer already carried is
 // kept; nothing here costs a call.
-var Rate = &RateBook{left: map[rateKey]RateLeft{}, spent: map[rateKey]map[string]int{}}
+var Rate = &RateBook{left: map[rateKey]RateLeft{}, spent: map[rateKey]map[string]int{}, free: map[rateKey]int{}}
 
 // REST is the `X-RateLimit-Resource` of REST's limit, which every call but GraphQL and search
 // counts against; an answer that names none is counted there.
@@ -37,12 +37,14 @@ type RateLeft struct {
 // rateKey is one token's limit for one resource.
 type rateKey struct{ token, resource string }
 
-// RateBook is Rate: each token's last RateLeft for each resource, and the calls each path cost,
-// behind a lock, since the loop's goroutines share it.
+// RateBook is Rate: each token's last RateLeft for each resource, the calls each path cost and
+// the conditional reads GitHub answered 304 Not Modified, free (#4059), behind a lock, since the
+// loop's goroutines share it.
 type RateBook struct {
 	mu    sync.Mutex
 	left  map[rateKey]RateLeft
 	spent map[rateKey]map[string]int
+	free  map[rateKey]int
 }
 
 // resource is the limit `header` says an answer counted against, REST's when it names none.
@@ -74,10 +76,16 @@ func (b *RateBook) note(token string, header http.Header) {
 
 // spend counts an answer to `method` `url` against the limit its header names, as one call of
 // its path (`SpendPath`). A 304 costs nothing (a conditional request whose answer had not
-// changed), nor does the limit's own refusal once it is spent, and an answer without the headers
-// was not counted by GitHub either.
+// changed): it is counted apart, as free. Nor does the limit's own refusal once it is spent, and
+// an answer without the headers was not counted by GitHub either.
 func (b *RateBook) spend(token string, header http.Header, code int, method string, url string) {
-	if header == nil || code == 304 || header.Get("X-RateLimit-Remaining") == "" {
+	if code == 304 {
+		b.mu.Lock()
+		defer b.mu.Unlock()
+		b.free[rateKey{token, resource(header)}]++
+		return
+	}
+	if header == nil || header.Get("X-RateLimit-Remaining") == "" {
 		return
 	}
 	if (code == 403 || code == 429) && header.Get("X-RateLimit-Remaining") == "0" {
@@ -120,12 +128,24 @@ func (b *RateBook) Take(token string, resource string) map[string]int {
 	return spent
 }
 
+// TakeFree is how many of `token`'s reads on `resource`'s limit GitHub answered 304 Not Modified
+// since the last TakeFree, which cost nothing, and forgets them.
+func (b *RateBook) TakeFree(token string, resource string) int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	key := rateKey{token, resource}
+	free := b.free[key]
+	delete(b.free, key)
+	return free
+}
+
 // Clear forgets every token's limits and counts (for the tests).
 func (b *RateBook) Clear() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.left = map[rateKey]RateLeft{}
 	b.spent = map[rateKey]map[string]int{}
+	b.free = map[rateKey]int{}
 }
 
 // numberOrSHA is a path segment that names one thing among many: a number, or a commit's SHA.
