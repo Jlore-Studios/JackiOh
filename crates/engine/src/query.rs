@@ -15,14 +15,14 @@ use serde_json::Value;
 
 use crate::combat::{AttackTarget, attack_target_of};
 use crate::config::{BRITTLE_FIRST_TICK_TURNS, CHINESE_TAG, HAND_CAP, LIBRARY_CAP};
-use crate::damage::DamageTarget;
+use crate::damage::{DamageTarget, ProjectedPools};
 use crate::duos_life::effective_life;
 use crate::layers::{AuraTable, face_of, unit_has, unit_view};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{
     CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, can_lose, find_instance,
 };
-use crate::subsystems::lethal::{falls_to_first_strike, is_lethal, projected_damage};
+use crate::subsystems::lethal::{falls_to_first_strike, is_lethal, projected_damage, projected_damage_with};
 use crate::wire::{
     ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
     ZoneName, has_keyword, opponent_of,
@@ -768,8 +768,9 @@ pub fn gifted_would_make_radiant(state: &GameState, player: PlayerId, card: &Car
 }
 
 /// R662, R44: the units acting on the other side whose attack on this player's hero would be lethal now
-/// by #96 My Pawn's projection (`subsystems::is_lethal`: after Armor and the Anti-oneshot cap, net of a
-/// Lifesteal strike back): whether the blow is on the board, not whether it can be declared now.
+/// by #96 My Pawn's projection (`subsystems::is_lethal`: after Armor, the Anti-oneshot cap, a conversion
+/// and the damage pool, R4032000, net of a Lifesteal strike back): whether the blow is on the board, not
+/// whether it can be declared now.
 pub fn lethal_attackers_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let target = DamageTarget::Hero { player };
     active_units_of(state, opponent_of(player))
@@ -995,12 +996,15 @@ pub struct CombatForecast {
 /// R3100000: the forecast of every attack `seat` may declare now. It reads only what the board shows
 /// (every unit's stats and keywords through the layers, each hero's Armor and life), never a hand, a
 /// library or a face-down card, and it changes nothing: each damage is the pipeline's own reading (§4.4
-/// steps 1 to 4, `projected_damage` on a hero), so no forecast can disagree with the hit.
+/// steps 1 to 4 through `damage::project_hit`, a conversion and the damage pool included, R4032000;
+/// `projected_damage` on a hero), so no forecast can disagree with the hit. `lethal` adds up the blows
+/// on the enemy hero one after another, so they spend each enemy pool once between them.
 pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
     let enemy = opponent_of(seat);
     let mut attacks = Vec::new();
     let mut hitters: IndexSet<String> = IndexSet::new();
     let mut hero_damage = 0;
+    let mut pools = ProjectedPools::default();
     for action in crate::reduce::legal_actions(state, seat) {
         let ActionBody::Attack {
             attacker_id,
@@ -1018,7 +1022,7 @@ pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
         let forecast = forecast_attack(state, attacker, &target);
         let on_enemy_hero = matches!(target, DamageTarget::Hero { player } if player == enemy);
         if on_enemy_hero && hitters.insert(attacker_id.clone()) {
-            hero_damage += forecast.dealt;
+            hero_damage += projected_damage_with(state, attacker, &target, &mut pools);
         }
         attacks.push(AttackForecast {
             attacker_id,
@@ -1094,17 +1098,19 @@ fn is_shielded(state: &GameState, unit: &CardInstance) -> bool {
     unit_has(state, unit, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true)
 }
 
-/// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them: a Divine Shield negates the
-/// hit, Armor takes its part unless the source pierces (R346), the unit's own cap comes next (R2179005)
-/// and an Indestructible unit takes nothing.
+/// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them (`damage::project_hit`,
+/// R4032000): a Divine Shield negates the hit, Armor takes its part unless the source pierces (R346),
+/// the unit's own cap comes next (R2179005), a converting source deals nothing (R3540003), its side's
+/// damage pool soaks what it has left (R3550004) and an Indestructible unit takes nothing.
 fn hit_on_unit(state: &GameState, source: &CardInstance, unit: &CardInstance, amount: i32) -> i32 {
-    if amount <= 0 || is_shielded(state, unit) || unit_has(state, unit, KeywordKind::Indestructible) {
-        return 0;
-    }
-    let after_armor = if crate::damage::pierces(state, Some(source), None) {
-        amount
-    } else {
-        (amount - unit_view(state, unit).armor).max(0)
+    let target = DamageTarget::Unit {
+        instance: unit.clone(),
     };
-    crate::damage::unit_damage_cap(state, unit).map_or(after_armor, |cap| after_armor.min(cap))
+    crate::damage::project_hit(
+        state,
+        Some(source),
+        &target,
+        amount,
+        &mut ProjectedPools::default(),
+    )
 }

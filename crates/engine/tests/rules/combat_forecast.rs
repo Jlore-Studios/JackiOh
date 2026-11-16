@@ -6,11 +6,15 @@
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
+use crate::rules::fixtures::burn_toxic::{
+    PLAIN as BT_PLAIN, SHIELDED as BT_SHIELDED, VOLCANIC, add_burn_toxic_fixtures,
+};
 use crate::rules::fixtures::combat::{
     armored, big_body, charger, first_striker, indestructible, lifestealer, plain, poisonous, rusher,
     shielded, taunter, trampler, zero_attack,
 };
 use crate::rules::fixtures::combat_judge::{combat_judge_game, snare};
+use crate::rules::fixtures::combat_reactions::{POOL, POOL_SIZE, register_e6_fixtures};
 use crate::rules::fixtures::harness::{act_ok, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
@@ -375,4 +379,136 @@ fn r3100000_every_forecast_attack_is_what_the_engine_s_combat_does() {
         pops > 10 && kills > 10 && stopped > 10,
         "pops {pops}, kills {kills}, stopped {stopped}"
     );
+}
+
+/// `board` with the E6 fixtures (`e6-pool`'s damage pool) and the Burn and Toxic ones registered on
+/// top, after `new_game` has registered the engine's own.
+fn pool_board(seed: &str) -> GameState {
+    let state = board(seed);
+    register_e6_fixtures();
+    add_burn_toxic_fixtures();
+    state
+}
+
+/// A damage pool of `POOL_SIZE` in `player`'s backrow, face up and unspent.
+fn put_pool(state: &mut GameState, player: PlayerId) -> CardInstance {
+    let pool = put(state, POOL, slot(player, Row::Backrow, 1), json!({}));
+    assert_eq!(damage_pool_left(state, &live(state, &pool)), Some(POOL_SIZE));
+    pool
+}
+
+/// The forecast of one attack, held to what the engine's combat does with it.
+fn forecast_played(state: &GameState, attacker_id: &str, target_id: &str) -> AttackForecast {
+    let forecast = forecast_of(state, attacker_id, target_id).expect("the attack is legal");
+    assert_eq!(
+        played_as_forecast(&forecast),
+        play_out(state, attacker_id, target_id),
+        "{attacker_id} on {target_id}"
+    );
+    forecast
+}
+
+mod r4032000_the_forecast_reads_the_pool_and_conversion {
+    use super::*;
+
+    #[test]
+    fn r4032000_a_blow_into_a_pool_deals_what_is_left() {
+        let mut state = pool_board("r4032000-forecast-blow");
+        let striker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({}));
+        find_instance_mut(&mut state, &striker.id)
+            .expect("on the field")
+            .buffs
+            .attack = 1; // 6/10
+        put_pool(&mut state, P2);
+        state.players.p2.hero.health = 4;
+
+        // 6 less the pool's 5 is 1, short of 4.
+        let forecast = forecast_played(&state, &striker.id, "hero-p2");
+        assert_eq!(forecast.dealt, 1);
+        assert!(!forecast.kills);
+        assert!(!combat_forecast(&state, P1).lethal);
+
+        state.players.p2.hero.health = 1;
+        let forecast = forecast_played(&state, &striker.id, "hero-p2");
+        assert!(forecast.kills);
+        assert!(combat_forecast(&state, P1).lethal);
+    }
+
+    #[test]
+    fn r4032000_the_blows_the_lethal_sum_adds_share_the_pool() {
+        let mut state = pool_board("r4032000-forecast-sum");
+        let first = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({})); // 3/3
+        let second = put(&mut state, &charger.id, slot(P1, Row::Units, 2), json!({})); // 3/3
+        put_pool(&mut state, P2);
+        state.players.p2.hero.health = 2;
+
+        // 3 + 3 is 6, but the pool soaks the first 5 of them: 1 lands, short of 2.
+        assert!(!combat_forecast(&state, P1).lethal);
+        for attacker in [&first, &second] {
+            assert_eq!(forecast_played(&state, &attacker.id, "hero-p2").dealt, 0);
+        }
+        let once = act_ok(&state, attack_of(&first.id, "hero-p2"));
+        assert_eq!(once.state.players.p2.hero.health, 2);
+        let twice = act_ok(&once.state, attack_of(&second.id, "hero-p2"));
+        assert_eq!(twice.state.players.p2.hero.health, 1);
+
+        state.players.p2.hero.health = 1;
+        assert!(combat_forecast(&state, P1).lethal);
+    }
+
+    #[test]
+    fn r4032000_a_blow_on_a_unit_behind_a_pool_kills_only_with_what_is_left() {
+        let mut state = pool_board("r4032000-forecast-unit");
+        let striker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({})); // 5/10
+        let wall = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({})); // 3/3
+        let stone = put(&mut state, &indestructible.id, slot(P2, Row::Units, 2), json!({})); // 4/4
+        let pool = put_pool(&mut state, P2);
+
+        // The pool soaks all 5, and the 3 struck back lands.
+        let forecast = forecast_played(&state, &striker.id, &wall.id);
+        assert_eq!((forecast.dealt, forecast.taken), (0, 3));
+        assert!(!forecast.kills);
+
+        // An Indestructible unit takes nothing and leaves the pool whole (§4.4 step 4).
+        assert_eq!(forecast_played(&state, &striker.id, &stone.id).dealt, 0);
+        let after = act_ok(&state, attack_of(&striker.id, &stone.id));
+        assert_eq!(
+            damage_pool_left(&after.state, &live(&after.state, &pool)),
+            Some(POOL_SIZE)
+        );
+
+        // 8 less 5 leaves 3, which still destroys the 3-health unit.
+        find_instance_mut(&mut state, &striker.id)
+            .expect("on the field")
+            .buffs
+            .attack = 3;
+        let forecast = forecast_played(&state, &striker.id, &wall.id);
+        assert_eq!(forecast.dealt, 3);
+        assert!(forecast.kills);
+    }
+
+    #[test]
+    fn r4032000_a_converting_blow_deals_and_kills_nothing() {
+        let mut state = pool_board("r4032000-forecast-volcanic");
+        let volcanic = put(&mut state, VOLCANIC, slot(P1, Row::Units, 1), json!({})); // 4/8
+        let wall = put(&mut state, BT_PLAIN, slot(P2, Row::Units, 1), json!({})); // 2/20
+        let shield = put(&mut state, BT_SHIELDED, slot(P2, Row::Units, 2), json!({})); // 2/20
+        state.players.p2.hero.health = 3;
+        // R345: p1's turn stays open after the blow, so no Burn ticks at p2's start of turn.
+        state.players.p1.auto_end_turn = Some(false);
+
+        // §4.4 step 3a: the hit is Burn, not damage; the strike back is damage all the same.
+        let forecast = forecast_played(&state, &volcanic.id, &wall.id);
+        assert_eq!((forecast.dealt, forecast.taken), (0, 2));
+        assert!(!forecast.kills);
+        // Step 1 comes first, so the blow still breaks a Divine Shield.
+        let forecast = forecast_played(&state, &volcanic.id, &shield.id);
+        assert_eq!(forecast.dealt, 0);
+        assert!(forecast.pops);
+
+        let forecast = forecast_played(&state, &volcanic.id, "hero-p2");
+        assert_eq!(forecast.dealt, 0);
+        assert!(!forecast.kills);
+        assert!(!combat_forecast(&state, P1).lethal);
+    }
 }

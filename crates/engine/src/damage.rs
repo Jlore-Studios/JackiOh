@@ -17,7 +17,7 @@ use crate::replacements::LethalHitTo;
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
 use crate::wire::{
-    GameEvent, Keyword, KeywordKind, PlayerId, RedirectWhat, Row, ZoneName, armor_of, has_keyword,
+    GameEvent, Keyword, KeywordKind, PerPlayer, PlayerId, RedirectWhat, Row, ZoneName, armor_of, has_keyword,
     opponent_of,
 };
 
@@ -590,7 +590,8 @@ fn land(
 
     // R3550004, §4.4 step 3b: the first damage allies would take per turn is nullified — after Armor
     // ("accounts for armor"), on the controller's Units and hero alike, never spent on an
-    // Indestructible Unit. No event is emitted.
+    // Indestructible Unit. No event is emitted. `project_hit` reads steps 1 to 4 in this order for My
+    // Pawn and the forecast (R4032000): a change here changes it too.
     if amount > 0 {
         let indestructible = unit.as_ref().is_some_and(|live| {
             has_keyword(
@@ -1011,6 +1012,62 @@ fn damage_pool(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i32 
         rest -= take;
     }
     rest
+}
+
+/// R4032000: what a projection's hits have soaked so far of each side's damage pools (§4.4 step 3b),
+/// so the hits of one attack, and the attackers of one forecast, spend each pool once between them.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ProjectedPools {
+    soaked: PerPlayer<i32>,
+}
+
+/// R4032000: §4.4 steps 1 to 4 of one hit as `land` reads them after step 0: Divine Shield, Armor
+/// unless it pierces (R346), divisors and caps, a conversion, which deals nothing (step 3a, R3540003),
+/// then what the target side's pools have left past `pools` (step 3b, R3550004), never an
+/// Indestructible Unit's. It writes no state; what the pools soak goes into `pools`. Steps 0a, 0b and
+/// 4a's replacements are not projected.
+pub fn project_hit(
+    state: &GameState,
+    source: Option<&CardInstance>,
+    target: &DamageTarget,
+    amount: i32,
+    pools: &mut ProjectedPools,
+) -> i32 {
+    if amount <= 0 {
+        return 0;
+    }
+    let pierce = pierces(state, source, None);
+    let (side, after) = match target {
+        DamageTarget::Hero { player } => (*player, hero_hit_amount(state, *player, amount, pierce)),
+        DamageTarget::Unit { instance } => {
+            let view = crate::layers::unit_view(state, instance);
+            // Step 1, and step 4 read first: a shield's hit and an Indestructible's spend no pool.
+            if (has_keyword(&view.keywords, KeywordKind::DivineShield)
+                && instance.divine_shield_spent != Some(true))
+                || has_keyword(&view.keywords, KeywordKind::Indestructible)
+            {
+                return 0;
+            }
+            let after_armor = if pierce {
+                amount
+            } else {
+                (amount - armor_of(&view.keywords)).max(0)
+            };
+            let capped = unit_damage_cap(state, instance).map_or(after_armor, |cap| after_armor.min(cap));
+            (instance.controller, capped)
+        }
+    };
+    if after <= 0 || source.is_some_and(|source| crate::afflictions::converts_to(state, source).is_some()) {
+        return 0;
+    }
+    // Step 3b: `damage_pool` soaks in R68's order, so what the side's pools take is their sum's part.
+    let left: i32 = acting_texts_of(state, side)
+        .iter()
+        .filter_map(|card| crate::query::damage_pool_left(state, card))
+        .sum();
+    let take = after.min(left - pools.soaked[side]).max(0);
+    pools.soaked[side] += take;
+    after - take
 }
 
 /// R1849004: where a card with an own-turn redirect notes how much it has moved this turn,
