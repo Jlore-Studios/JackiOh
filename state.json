@@ -14352,6 +14352,8 @@
       "taken_asks": []
     },
     "4087": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T21:22:58Z",
@@ -14365,8 +14367,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the /stats win-rate bar reads the adjusted win rate\"} -->\n- ## What changed\n- The Cards tab table on `/stats` now draws its little bar (`.stats-confidence-bar` / `.stats-confidence-fill`) in the **Adjusted** cell, sized by the adjusted win rate (`Math.round(adjustedWinRate * 100)%`) on the same 0\u2013100% scale, reusing the existing `stats-winrate-cell` markup and CSS with no ne\u2026\n- - [stats.tsx](apps/web/src/routes/stats.tsx): table-row JSX only; bar + `R4084000` comment moved to the Adjusted cell behind a `typeof` guard, Win rate cell reduced to text + range.\n- - [stats.css](apps/web/src/routes/stats.css): one comment updated; no selector, property or value changed.\n- - [stats.test.tsx](apps/web/src/routes/stats.test.tsx): new `it(\"R4084000 \u2026\")` covering an enough-games card with differing raw/adjusted rates (bar at 53% in Adjusted, \"60%\" with no bar in Win rate, both ranges intact when on), a below-floor row, and a null-rate row (both \"\u2014\", no bar).\n- - [R4084000.md](spec/rulings/R4084000.md) (new, amends R2777000), [4084.md](spec/pending/4084.md) (new \u00a711 paragraph), [R2777000.md](spec/rulings/R2777000.md) (title + appended `**Amended.**` paragraph).\n- ## How it was tested\n- - `pnpm --dir apps/web test src/routes/stats.test.tsx`: 89 passed; the new test also confirmed individually via `-t \"R4084000\"` (1 passed, 88 skipped).\n- - `pnpm --dir apps/web typecheck`: green.\n- - `pnpm exec eslint apps/edge apps/web e2e`: green.\n- - `cargo jackioh spec check`: ok (2229 rulings, 5659 proofs).\n- - `cargo fmt --check`: clean (no Rust files touched).\n- - Grepped `stats-confidence` across `apps/web` and `e2e`: only `stats.tsx` and `stats.test.tsx` match, so no Cypress spec asserts the bar and none needed editing.\n- ## Decisions\n- - Kept the 0\u2013100% scale as the issue asks, even though adjusted rates cluster near 50%; a centered-on-50% rescale needs a person, recorded as Rejected in the ruling note.\n- - A null/missing rate with enough games renders bare \"\u2014\" with no range line (previously a served range could have shown under \"\u2014\"); the test pins this.\n- One environment note: `typecheck` ran out of memory at the default 2GB V8 heap on this machine, so it was rerun with `NODE_OPTIONS=--max-old-space-size=6144` (about 6.7GB was free). No check was weakened.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4084 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4084/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4084,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T21:52:24Z",
         "from_run": "43959528613",
         "gates": [
           {
@@ -14425,8 +14430,15 @@
         "source": "build",
         "until": "2026-11-16T22:21:36Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-16T21:51:36Z",
+      "run_id": "pending:5a1290d6-1794865927",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-16T21:52:24Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -14440,9 +14452,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T21:30:26Z",
+    "at": "2026-11-16T21:52:24Z",
     "url": "",
-    "what": "plan #4086 on claude-8"
+    "what": "review #4087 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T21:44:05Z",
