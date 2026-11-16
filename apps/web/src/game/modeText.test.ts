@@ -17,7 +17,7 @@ type Face = "base" | "radiant";
 
 const NUMBER_WORD = "once|twice|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty";
 const RAW_X_MULTIPLIER = new RegExp(
-  String.raw`\b(?:\d+X|(?:${NUMBER_WORD})(?:\s+times?)?\s+X)\b`,
+  String.raw`\b(?:\d+(?:X|\s+times?\s+X)|(?:${NUMBER_WORD})(?:\s+times?)?\s+X)\b`,
   "gi",
 );
 
@@ -97,6 +97,7 @@ describe("declared numbers in mode words", () => {
     expect("X".match(RAW_X_MULTIPLIER), "plain X is allowed").toBeNull();
     expect("X plus 1".match(RAW_X_MULTIPLIER), "the fixed X plus 1 form is allowed").toBeNull();
     expect("4X".match(RAW_X_MULTIPLIER)).toEqual(["4X"]);
+    expect("3 times X".match(RAW_X_MULTIPLIER)).toEqual(["3 times X"]);
     expect("twice X".match(RAW_X_MULTIPLIER)).toEqual(["twice X"]);
     expect("four times X".match(RAW_X_MULTIPLIER)).toEqual(["four times X"]);
   });
