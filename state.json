@@ -16000,6 +16000,13 @@
     "4025": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:07:19Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Only the test-only fuzz monitor (`crates/engine/src/testkit/invariants.rs`) and a header comment change, with no rules change; hard rule 1 would apply only if the fuzz seeds find a silent hero-health path whose engine fix is needed, and then the builder must stop and report it."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
