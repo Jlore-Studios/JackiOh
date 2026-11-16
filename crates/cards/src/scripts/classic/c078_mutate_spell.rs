@@ -126,25 +126,17 @@ mod tests {
             .collect()
     }
 
-    // Differs from Scenario::offered: Mutate's activation targets, deduped, not the seat's whole legal list.
+    /// The instance ids Mutate's activations are offered as targets, each once, in offer order.
     fn offered(s: &Scenario) -> Vec<String> {
-        let mutate = s.card(MUTATE).id.clone();
-        let ids: Vec<String> = legal_actions(s.state(), P1)
-            .iter()
-            .map(js)
-            .filter(|action| action["type"] == json!("activate") && action["instanceId"] == json!(mutate))
-            .flat_map(|action| {
-                action["targets"]
-                    .as_array()
-                    .cloned()
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter(|target| target["pick"] == json!("instance"))
-                    .filter_map(|target| target["instanceId"].as_str().map(String::from))
-                    .collect::<Vec<_>>()
+        let targets: Vec<Selection> = s
+            .activations_of(MUTATE)
+            .into_iter()
+            .flat_map(|activation| match activation {
+                ActionBody::Activate { targets, .. } => targets.unwrap_or_default(),
+                _ => Vec::new(),
             })
             .collect();
-        ids.into_iter().collect::<IndexSet<String>>().into_iter().collect()
+        pick::instance_ids(&targets).into_iter().collect::<IndexSet<String>>().into_iter().collect()
     }
 
     /// R402 is a Field Spell with one Activate ability (♾️ on the Radiant face), its target a tokened

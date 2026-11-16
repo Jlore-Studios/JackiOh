@@ -2,11 +2,13 @@
 // scrubber, drawn as a GIF from its steps' views alone and handed to the share sheet or downloaded.
 // The state lives in `useGifExport`, which the player calls above its board so a fresh board keeps it.
 // The export, the raster and the encoder load on demand, with `import()`, out of the main bundle.
+// R3976000: the GIF draws each seat as the portrait the replay's source holds, the default for none.
 
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 
 import { CatalogContext } from "../game/catalog.ts";
+import type { SeatPortraits } from "../game/contract.ts";
 import { t } from "../i18n/i18n.ts";
 import { REPLAY_GIF_SIZES } from "./config.ts";
 import type { ReplayGifPreset } from "./config.ts";
@@ -71,7 +73,7 @@ export function markedClip(from: number | null, to: number | null): [number, num
   return clampClip(a, to ?? from ?? a);
 }
 
-export function useGifExport(cache: StepCache, current: number): GifExport {
+export function useGifExport(cache: StepCache, current: number, portraits: SeatPortraits | null): GifExport {
   const lookup = useContext(CatalogContext);
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState<number | null>(null);
@@ -107,7 +109,7 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
         loaded.current = gif;
         if (controller.signal.aborted) return;
         const result = await gif.exportGif(
-          { clip, preset, lookup },
+          { clip, preset, lookup, ...(portraits === null ? {} : { portraits }) },
           {
             signal: controller.signal,
             onProgress: (progress) => {
@@ -122,7 +124,7 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
         setPhase({ kind: "failed", message: messageOf(cause), ready: null });
       }
     })();
-  }, [cache, current, from, to, preset, lookup]);
+  }, [cache, current, from, to, preset, lookup, portraits]);
 
   return {
     open,

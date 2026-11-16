@@ -377,11 +377,17 @@ later, so Render would stop billing:
   `ALERT_EMAILS` the details (`crates/server/README.md`, Alerts). Read the event in the Worker's logs
   (Workers & Pages -> the Worker -> Logs), and close the issue once it is handled, so the next one emails
   again. To turn the emails on or change who gets them, `wrangler secret put ALERT_RESEND_API_KEY` and
-  `ALERT_EMAILS` on that Worker, then redeploy it.
+  `ALERT_EMAILS` on that Worker, then redeploy it. When the server will not start or the Worker cannot reach
+  it, the Worker opens `Patch: alert server.unreachable on <site>` and emails the same people itself
+  (`apps/edge/README.md`, #3618), at most once an hour.
 - **The server will not start:** its boot runs `release` (migrate, seed the catalog) and exits on
   any failure; with one container there is no older instance to keep serving. The Worker's logs
   show the error. CI's `db` job boots the image against Postgres before any merge that changes the
-  migrations or the image, so this should be rare. Roll back (above) while fixing it.
+  migrations or the image, so this should be rare. Roll back (above) while fixing it. The Worker alerts
+  when it finds the server failed to start or not listening within `START_WAIT_MS`, and when the daily
+  `/readyz` fails (#3618). To check it on staging, set staging's `DATABASE_URL` secret to a bad value,
+  redeploy, and request `/api/catalog`: one issue and one email follow, however many requests fail. Restore
+  the secret, redeploy, and close the issue.
 - **Restore the database:** JackiOh-Production, on the Pro plan, is backed up daily, and the last
   seven backups are kept. Database -> Backups -> Scheduled backups lists them, and Restore on one
   puts the whole project back to it ([Supabase's guide](https://supabase.com/docs/guides/platform/backups)).

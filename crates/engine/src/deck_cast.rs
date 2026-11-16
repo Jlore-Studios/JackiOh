@@ -1,8 +1,9 @@
 //! Casts from the deck (Stinkyscape+ E8, R3558007): a card whose `castFromDeckWhen` holds is cast
 //! from its owner's library the moment its owner's condition holds at a settled state check —
 //! "when your exile has 5 cards, cast this (wherever in your deck this is)". The cast is the
-//! owner's own (R453): they make its choices. Like every standing rule it draws no rng, and the
-//! per-action cap keeps a card that returns itself to its deck from casting for ever.
+//! owner's own (R453): they make its choices. It is a cast and no play, as a cast on draw is
+//! (R3920001). Like every standing rule it draws no rng, and the per-action cap keeps a card that
+//! returns itself to its deck from casting for ever.
 
 use crate::config::DECK_CAST_ACTION_CAP;
 use crate::script::{EngineSink, HookArgs};
@@ -79,5 +80,12 @@ pub fn run_deck_cast(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     let Some(card) = find_instance(sink.state, &entry.instance_id).cloned() else {
         return;
     };
-    crate::resolve::cast_card(sink, &card, crate::resolve::CastOptions::default());
+    crate::resolve::cast_card(
+        sink,
+        &card,
+        crate::resolve::CastOptions {
+            from_deck: Some(true),
+            ..Default::default()
+        },
+    );
 }

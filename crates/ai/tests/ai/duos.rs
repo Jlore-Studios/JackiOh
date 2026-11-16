@@ -20,10 +20,10 @@ use jackioh_engine::duos::{
     DuosState, duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_scenario, duos_view_for,
 };
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, ActionBody, ActionType, COIN_DEF_ID, DECK_SIZE, Difficulty, GameState, Keyword, MAX_MANA,
+    AI_DIFFICULTY, ActionBody, ActionType, COIN_DEF_ID, DECK_SIZE, Difficulty, Keyword, MAX_MANA,
     PlaceOnFieldOptions, PlayerId, PlayerState, Position, Row, UNIT_ZONES, Value, Zone, ZoneRef, ZoneSlot,
-    create_rng, def_of, effective_life, find_instance_mut, hand_cap_of, legal_actions, lock_zone,
-    new_instance, place_on_field, query_cost,
+    create_rng, def_of, effective_life, find_instance_mut, hand_cap_of, is_play_of, lock_zone, new_instance,
+    place_on_field, plays_in, query_cost,
 };
 use jackioh_engine::wire::{
     DUOS_SEATS, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosSeat,
@@ -185,10 +185,6 @@ fn is_mulligan(body: &DuosActionBody) -> bool {
     matches!(body, DuosActionBody::Duel { body } if body.action_type() == ActionType::Mulligan)
 }
 
-fn is_play_of(action: &ActionBody, id: &str) -> bool {
-    matches!(action, ActionBody::Play { instance_id, .. } if instance_id == id)
-}
-
 thread_local! {
     /// One count per test thread, so every nonce is fresh.
     static NONCES: Cell<u32> = const { Cell::new(0) };
@@ -302,13 +298,6 @@ fn grant_flying(state: &mut DuosState, seat: DuosSeat, id: &str) {
 
 fn cost(def_id: &str) -> i32 {
     query_cost(def_of(None, def_id))
-}
-
-/// Whether the 1v1 engine offers `player` a play of the instance `id` in `game`.
-fn can_play(game: &GameState, player: PlayerId, id: &str) -> bool {
-    legal_actions(game, player)
-        .iter()
-        .any(|action| is_play_of(action, id))
 }
 
 /// The duel play of the instance `id` that `duos_legal_actions` offers `seat`.
@@ -554,7 +543,7 @@ fn b27_a_whole_ai_turn_plays_then_passes_then_ends() {
 fn b28_a_card_the_seat_cannot_afford_and_its_teammate_can_is_passed() {
     let seed = "duos-ai-pass";
     let (state, ids) = passing(seed, None, &[BIG], DUOS_PASS_COST, cost(BIG));
-    let playable = can_play(&state.duels[0], PlayerId::P1, &ids[0]);
+    let playable = !plays_in(&state.duels[0], PlayerId::P1, &ids[0]).is_empty();
     assert!(!playable, "A1 cannot afford it");
     let free_zone = state.duels[1].players.p1.units.iter().any(Option::is_none);
     assert!(free_zone, "A2 has a unit zone free");
@@ -567,7 +556,7 @@ fn b28_a_card_the_seat_cannot_afford_and_its_teammate_can_is_passed() {
 fn b28_a_card_the_seat_can_afford_but_has_no_zone_for_is_passed() {
     let (mut state, ids) = passing("duos-ai-pass-no-zone", None, &[BIG], cost(BIG), cost(BIG));
     lock_units(&mut state, A1);
-    let playable = can_play(&state.duels[0], PlayerId::P1, &ids[0]);
+    let playable = !plays_in(&state.duels[0], PlayerId::P1, &ids[0]).is_empty();
     assert!(!playable, "the locks close every unit zone of A1's");
     assert_eq!(duos_passes(&state, A1), ids);
 }
@@ -576,7 +565,7 @@ fn b28_a_card_the_seat_can_afford_but_has_no_zone_for_is_passed() {
 fn b28_a_card_the_seat_can_play_itself_is_not_passed() {
     let hand = [ONE_DROP, BIG];
     let (state, ids) = passing("duos-ai-keep-playable", None, &hand, DUOS_PASS_COST, cost(BIG));
-    assert!(can_play(&state.duels[0], PlayerId::P1, &ids[0]));
+    assert!(!plays_in(&state.duels[0], PlayerId::P1, &ids[0]).is_empty());
     assert!(!duos_passes(&state, A1).contains(&ids[0]));
 }
 
@@ -644,7 +633,7 @@ fn b28_nothing_is_passed_to_a_teammate_with_no_zone_for_it() {
     let (mut state, _) = passing(seed, None, &[BIG], DUOS_PASS_COST, cost(BIG));
     lock_units(&mut state, A2);
     let probe = give(&mut state, A2, ONE_DROP);
-    let playable = can_play(&state.duels[1], PlayerId::P1, &probe);
+    let playable = !plays_in(&state.duels[1], PlayerId::P1, &probe).is_empty();
     assert!(!playable, "the locks close every unit zone of A2's");
     assert!(duos_passes(&state, A1).is_empty());
 }
@@ -663,7 +652,7 @@ fn full_row_state(seed: &str, def_id: &str, flying: bool) -> (DuosState, String,
     set_mana(&mut state, A2, cost(def_id));
     fill_units(&mut state, A2, ONE_DROP);
     assert!(
-        !can_play(&state.duels[0], PlayerId::P1, &id),
+        plays_in(&state.duels[0], PlayerId::P1, &id).is_empty(),
         "A1 cannot afford it"
     );
     let full = state.duels[1].players.p1.units.iter().all(Option::is_some);
@@ -673,7 +662,7 @@ fn full_row_state(seed: &str, def_id: &str, flying: bool) -> (DuosState, String,
     if flying {
         grant_flying(&mut probe, A2, &copy);
     }
-    let offered = can_play(&probe.duels[1], PlayerId::P1, &copy);
+    let offered = !plays_in(&probe.duels[1], PlayerId::P1, &copy).is_empty();
     (state, id, offered)
 }
 
@@ -1078,11 +1067,11 @@ fn r1127000_passes_the_cheaper_card_that_wins_the_teammate_the_game_first() {
         "B2's effective life"
     );
     assert!(
-        !can_play(&state.duels[0], PlayerId::P1, &big),
+        plays_in(&state.duels[0], PlayerId::P1, &big).is_empty(),
         "A1 cannot play BIG"
     );
     assert!(
-        !can_play(&state.duels[0], PlayerId::P1, &stab),
+        plays_in(&state.duels[0], PlayerId::P1, &stab).is_empty(),
         "A1 cannot play the Stab"
     );
     assert_eq!(duos_passes(&state, A1), vec![stab.clone()]);
@@ -1126,7 +1115,7 @@ fn r1127000_pass_limits_still_cap_a_scored_list() {
     register_cards();
     let (state, ids) = passing(seed, team_a(rules), &hand, cost(BIG) - 1, cost(BIG));
     assert!(
-        can_play(&state.duels[0], PlayerId::P1, &ids[0]),
+        !plays_in(&state.duels[0], PlayerId::P1, &ids[0]).is_empty(),
         "A1 keeps its one-drop"
     );
     let passes = duos_passes(&state, A1);
@@ -1181,7 +1170,7 @@ fn r1127000_a_passed_fused_card_is_scored_with_its_match_made_definitions_along(
     state.duels[0].transient_defs.insert(fused.clone(), fused_def);
     let fusion = give(&mut state, A1, &fused);
     assert!(
-        !can_play(&state.duels[0], PlayerId::P1, &fusion),
+        plays_in(&state.duels[0], PlayerId::P1, &fusion).is_empty(),
         "A1 cannot play the fusion"
     );
     assert_eq!(duos_passes(&state, A1), vec![stab.clone()], "not {big}");
@@ -1204,7 +1193,7 @@ fn trade_state(seed: &str, teams: Option<PerTeam<DuosTeamRules>>, a2_hand: &[&st
 fn r1723000_a_card_the_teammate_cannot_use_better_than_its_own_play_is_kept() {
     let seed = "duos-ai-trade-keep";
     let (state, big) = trade_state(seed, None, &[BIG]);
-    assert!(!can_play(&state.duels[0], PlayerId::P1, &big));
+    assert!(plays_in(&state.duels[0], PlayerId::P1, &big).is_empty());
     assert_eq!(decided_alone(&state, A1, seed), ActionBody::EndTurn);
     assert!(duos_passes(&state, A1).is_empty());
     assert_eq!(
@@ -1251,7 +1240,7 @@ fn r2827000_passes_a_playable_card_whose_teammate_wins_with_it() {
     let (mut state, _big, stab) = winning_pass_state(seed);
     set_mana(&mut state, A1, cost(STAB));
     assert!(
-        can_play(&state.duels[0], PlayerId::P1, &stab),
+        !plays_in(&state.duels[0], PlayerId::P1, &stab).is_empty(),
         "A1 can play the Stab itself"
     );
     assert_eq!(duos_passes(&state, A1).first(), Some(&stab));
@@ -1266,7 +1255,7 @@ fn r2827000_keeps_a_playable_card_the_teammate_gains_nothing_from() {
     set_hand(&mut state, A2, &[ONE_DROP]);
     set_mana(&mut state, A2, cost(ONE_DROP));
     assert!(
-        can_play(&state.duels[0], PlayerId::P1, &ids[0]),
+        !plays_in(&state.duels[0], PlayerId::P1, &ids[0]).is_empty(),
         "A1 can play it itself"
     );
     assert!(duos_passes(&state, A1).is_empty());
@@ -1291,12 +1280,12 @@ fn r2827000_keeps_a_playable_card_its_teammate_uses_no_better_than_it_would() {
     register_cards();
     // A1 cannot play the Stab: A2's 4 damage clears R1723000's check alone, so the card is passed.
     let (state, stab) = stab_pass_state(seed, DUOS_PASS_COST, DUOS_OWN_HEALTH);
-    assert!(!can_play(&state.duels[0], PlayerId::P1, &stab));
+    assert!(plays_in(&state.duels[0], PlayerId::P1, &stab).is_empty());
     assert_eq!(duos_passes(&state, A1), vec![stab]);
     // A1 can: its own 4 damage gains it what A2's would, and a pass must beat that by its price.
     let (state, stab) = stab_pass_state(seed, cost(STAB), DUOS_OWN_HEALTH);
     assert!(
-        can_play(&state.duels[0], PlayerId::P1, &stab),
+        !plays_in(&state.duels[0], PlayerId::P1, &stab).is_empty(),
         "A1 can play the Stab itself"
     );
     assert!(duos_passes(&state, A1).is_empty());
@@ -1308,7 +1297,7 @@ fn r2827000_passes_a_playable_card_its_hurt_teammate_hits_harder_with() {
     register_cards();
     let (state, stab) = stab_pass_state(seed, cost(STAB), 5);
     assert!(
-        can_play(&state.duels[0], PlayerId::P1, &stab),
+        !plays_in(&state.duels[0], PlayerId::P1, &stab).is_empty(),
         "A1 can play the Stab itself"
     );
     // A2's duel goes worse than A1's: the hurdle weighs what the card gains each, not the two duels.

@@ -561,17 +561,8 @@ mod tests {
         }
 
         /// Whether `legal_actions` offers p1 a play of a Prestige in their hand.
-        // Differs from Scenario::offered: whether Prestige can be played, not the seat's whole legal list.
         fn offered(s: &Scenario) -> bool {
-            let held: Vec<String> = s
-                .hand("p1")
-                .into_iter()
-                .filter(|card| card.def_id == PRESTIGE)
-                .map(|card| card.id)
-                .collect();
-            legal_actions(s.state(), PlayerId::P1)
-                .iter()
-                .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if held.contains(instance_id)))
+            s.hand("p1").iter().any(|card| card.def_id == PRESTIGE && s.can_play(card))
         }
 
         /// Whether `legal_actions` offers p1 a Trade of the first Prestige in their hand.

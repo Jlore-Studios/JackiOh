@@ -64,14 +64,6 @@ mod tests {
         reduce(state, &json_as::<Action>(action))
     }
 
-    fn wildfire_plays(s: &Scenario, player: PlayerId) -> Vec<ActionBody> {
-        let id = s.card(WILDFIRE).id.clone();
-        legal_actions(s.state(), player)
-            .into_iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == id))
-            .collect()
-    }
-
     fn spares(s: &Scenario, player: PlayerId) -> Vec<String> {
         s.hand(player)
             .iter()
@@ -151,13 +143,15 @@ mod tests {
                     "p2": { "field": [GHOST] },
                 }));
                 let ghost = s.card(GHOST).clone();
-                let at_ghost: Vec<ActionBody> = wildfire_plays(&s, P1)
+                let at_ghost: Vec<ActionBody> = s
+                    .plays_of(WILDFIRE)
                     .into_iter()
                     .filter(|play| first_target(play) == Some(at(&ghost)))
                     .collect();
                 assert_eq!(at_ghost.len(), 1);
                 assert!(at_ghost.iter().all(carries_no_discards));
-                let at_hero: Vec<ActionBody> = wildfire_plays(&s, P1)
+                let at_hero: Vec<ActionBody> = s
+                    .plays_of(WILDFIRE)
                     .into_iter()
                     .filter(|play| matches!(first_target(play), Some(Selection::Hero { .. })))
                     .collect();
@@ -214,7 +208,7 @@ mod tests {
                     "p2": { "field": [GHOST, VANILLA] },
                 }));
                 let ghost = s.card(GHOST).clone();
-                let targets: Vec<Option<Selection>> = wildfire_plays(&s, P1).iter().map(first_target).collect();
+                let targets: Vec<Option<Selection>> = s.plays_of(WILDFIRE).iter().map(first_target).collect();
                 assert!(!targets.contains(&Some(at(&ghost))));
                 assert!(targets.contains(&Some(at(s.card(VANILLA)))));
             }
@@ -222,10 +216,11 @@ mod tests {
             #[test]
             fn b5_e5_it_binds_both_players_its_controller_too() {
                 let s = scenario(json!({ "p1": { "hand": [WILDFIRE, SPARE], "field": [GHOST] } }));
-                let targets: Vec<Option<Selection>> = wildfire_plays(&s, P1).iter().map(first_target).collect();
+                let targets: Vec<Option<Selection>> = s.plays_of(WILDFIRE).iter().map(first_target).collect();
                 assert!(!targets.contains(&Some(at(s.card(GHOST)))));
                 let rich = scenario(json!({ "p1": { "hand": [WILDFIRE, SPARE, SPARE], "field": [GHOST] } }));
-                let own: Vec<ActionBody> = wildfire_plays(&rich, P1)
+                let own: Vec<ActionBody> = rich
+                    .plays_of(WILDFIRE)
                     .into_iter()
                     .filter(|play| matches!(first_target(play), Some(Selection::Instance { .. })))
                     .collect();
@@ -409,7 +404,7 @@ mod tests {
             fn r386_its_discard_is_the_declared_number_an_upgrades_step_makes_it_3_and_2_others_no_longer_pay() {
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, SPARE, SPARE] }, "p2": { "field": [GHOST] } }));
                 step_param(s.card_mut(GHOST), "discard", 1);
-                let targets: Vec<Option<Selection>> = wildfire_plays(&s, P1).iter().map(first_target).collect();
+                let targets: Vec<Option<Selection>> = s.plays_of(WILDFIRE).iter().map(first_target).collect();
                 assert!(!targets.contains(&Some(at(s.card(GHOST)))));
                 let mut rich = scenario(json!({
                     "p1": { "hand": [WILDFIRE, SPARE, SPARE, SPARE, SPARE] },
@@ -417,7 +412,8 @@ mod tests {
                 }));
                 step_param(rich.card_mut(GHOST), "discard", 1);
                 let ghost = rich.card(GHOST).clone();
-                let at_ghost: Vec<ActionBody> = wildfire_plays(&rich, P1)
+                let at_ghost: Vec<ActionBody> = rich
+                    .plays_of(WILDFIRE)
                     .into_iter()
                     .filter(|play| first_target(play) == Some(at(&ghost)))
                     .collect();
@@ -447,7 +443,8 @@ mod tests {
                 s.expect_in_zone(GHOST, "field")
                     .expect_stats(GHOST, json!({ "health": 1 }));
                 let ghost = s.card(GHOST).clone();
-                let at_ghost: Vec<ActionBody> = wildfire_plays(&s, P1)
+                let at_ghost: Vec<ActionBody> = s
+                    .plays_of(WILDFIRE)
                     .into_iter()
                     .filter(|play| first_target(play) == Some(at(&ghost)))
                     .collect();
@@ -461,7 +458,7 @@ mod tests {
                     "p1": { "hand": [WILDFIRE, SPARE] },
                     "p2": { "field": [{ "def": GHOST, "radiant": true }] },
                 }));
-                let targets: Vec<Option<Selection>> = wildfire_plays(&s, P1).iter().map(first_target).collect();
+                let targets: Vec<Option<Selection>> = s.plays_of(WILDFIRE).iter().map(first_target).collect();
                 assert!(!targets.contains(&Some(at(s.card(GHOST)))));
             }
         }

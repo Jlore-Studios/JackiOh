@@ -28,6 +28,7 @@ import {
   PLAY_HUB,
   PRACTICE_HUD,
   REPLAYS_ROOT,
+  SKELETON,
   TOGETHER_ROOT,
   WORKSHOP,
   cardId,
@@ -46,9 +47,13 @@ const BOOT_TIMEOUT = 60_000;
 const SEED = seedFor("38-accessibility");
 
 /** BUILD M5-T1's two sizes; the desktop's labels are the routes as #757 named them. */
+/**
+ * Each width's signed-in block signs in as its own account, so its page loads do not share R109's minute with the
+ * other width's: back to back on one account, the second width's ran past it (#3920).
+ */
 const VIEWPORTS = [
-  { label: "desktop", width: 1280, height: 720, suffix: "" },
-  { label: "phone", width: 390, height: 844, suffix: " (phone)" },
+  { label: "desktop", width: 1280, height: 720, suffix: "", account: accounts.p1 },
+  { label: "phone", width: 390, height: 844, suffix: " (phone)", account: accounts.p2 },
 ] as const;
 
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
@@ -73,8 +78,12 @@ function dealt(): void {
   cy.get(DEALING, { timeout: timeouts.animation, log: false }).should("not.exist");
 }
 
-/** R3728000's block signs in as p2, so the page loads at seven sizes do not share R109's minute with p1's block. */
-const SHELL_ACCOUNT = accounts.p2;
+/**
+ * R3728000's block signs in as p3 and p4 in turn, one a size, so its page loads at seven sizes do not share R109's
+ * minute with the signed-in blocks' p1 and p2, nor run one account past it: a size loads four pages, each a burst
+ * of requests, and one account for all seven was refused on the fifth size's (#3920).
+ */
+const SHELL_ACCOUNTS = [accounts.p3, accounts.p4] as const;
 
 /** The landing's fan is dealt in (R704): checked once every card is drawn, so the check sees them. */
 function fanDealt(): void {
@@ -95,6 +104,14 @@ function poolFacesDrawn(): void {
     .should(($face) => {
       expect($face.children().length, "the pool's first card has drawn its face").to.be.greaterThan(0);
     });
+}
+
+/**
+ * The Collection's grid is virtual (CardGrid, #3734): it mounts its cards once it has measured the page, so axe run
+ * before then meets an empty grid, and the `.collection-card` exceptions in axe-exceptions.ts read as stale (#3920).
+ */
+function gridFacesDrawn(): void {
+  cy.get(`${ts(COLLECTION_SCREEN)} .collection-card .cf`, { timeout: timeouts.view }).should("have.length.greaterThan", 0);
 }
 
 function checkPublic(route: string, path: string, root: string): void {
@@ -234,20 +251,21 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
       });
 
       describe("signed in", () => {
+        const account = viewport.account;
         beforeEach(() => {
-          cy.freeAccount(accounts.p1());
+          cy.freeAccount(account());
         });
 
         it("/play", () => {
-          checkSignedIn(at("/play"), accounts.p1(), routes.play(), PLAY_HUB);
+          checkSignedIn(at("/play"), account(), routes.play(), PLAY_HUB);
         });
 
         it("/decks", () => {
           // One full deck, whatever specs ran before this one saved: the list's rows and the open deck's
           // card strips are what this page checks, and the exception for the strips must fire.
-          cy.clearDecks(accounts.p1());
-          cy.saveDeck(accounts.p1(), { name: "Axe", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
-            cy.visitAs(accounts.p1(), routes.deckbuilder());
+          cy.clearDecks(account());
+          cy.saveDeck(account(), { name: "Axe", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
+            cy.visitAs(account(), routes.deckbuilder());
             cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
             // A phone shows the list alone until a deck is opened (a desktop opens it already), so
             // its row is pressed, and the pool is checked at both widths.
@@ -259,33 +277,36 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         });
 
         it("/account", () => {
-          checkSignedIn(at("/account"), accounts.p1(), "/account", SCREEN.account);
+          checkSignedIn(at("/account"), account(), "/account", SCREEN.account);
         });
 
         it("/leaderboard", () => {
-          checkSignedIn(at("/leaderboard"), accounts.p1(), "/leaderboard", SCREEN.leaderboard);
+          checkSignedIn(at("/leaderboard"), account(), "/leaderboard", SCREEN.leaderboard);
         });
 
         it("/replays", () => {
-          checkSignedIn(at("/replays"), accounts.p1(), routes.replays(), REPLAYS_ROOT);
+          checkSignedIn(at("/replays"), account(), routes.replays(), REPLAYS_ROOT);
         });
 
         it("/together", () => {
-          checkSignedIn(at("/together"), accounts.p1(), "/together", TOGETHER_ROOT);
+          checkSignedIn(at("/together"), account(), "/together", TOGETHER_ROOT);
         });
 
         it("/collection", () => {
-          checkSignedIn(at("/collection"), accounts.p1(), routes.collection(), COLLECTION_SCREEN);
+          cy.visitAs(account(), routes.collection());
+          cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
+          gridFacesDrawn();
+          expectNoBlockingViolations(at("/collection"));
         });
 
         it("/invite, the code screen", () => {
           asPending();
-          checkSignedIn(at("/invite"), accounts.p1(), routes.invite(), inviteTestid.input);
+          checkSignedIn(at("/invite"), account(), routes.invite(), inviteTestid.input);
         });
 
         it("/invite, the consent screen (R757000, R757001)", () => {
           asPending({ ageCheckOwed: true, termsOwed: true });
-          checkSignedIn(at("/invite consent"), accounts.p1(), routes.invite(), consentTestid.prompt);
+          checkSignedIn(at("/invite consent"), account(), routes.invite(), consentTestid.prompt);
           cy.get(ts(consentTestid.birthMonth)).should("be.visible");
         });
       });
@@ -293,14 +314,15 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
   }
 
   describe("R3728000 the menus' shell at every size", () => {
-    // p2, not the signed-in block's p1: seven sizes of page loads in a minute or two would pass R109's
-    // requests a minute for one account on top of that block's. Nothing here queues or plays, so it is
-    // freed once.
+    // p3 and p4 (SHELL_ACCOUNTS), not the signed-in blocks' p1 and p2: seven sizes of page loads in a minute or
+    // two would pass R109's requests a minute for one account. Nothing here queues or plays, so each is freed
+    // once.
     before(() => {
-      cy.freeAccount(SHELL_ACCOUNT());
+      for (const account of SHELL_ACCOUNTS) cy.freeAccount(account());
     });
 
-    for (const size of MENU_SIZES) {
+    for (const [index, size] of MENU_SIZES.entries()) {
+      const shellAccount = SHELL_ACCOUNTS[index % SHELL_ACCOUNTS.length] ?? accounts.p3;
       /** The label `route` has in axe-exceptions.ts at this width. */
       const at = (route: string): string => (size.width <= BREAKPOINT_PX.phone ? `${route} (phone)` : route);
 
@@ -310,7 +332,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         });
 
         it("/", () => {
-          cy.visitAs(SHELL_ACCOUNT(), routes.landing());
+          cy.visitAs(shellAccount(), routes.landing());
           cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
           fanDealt();
           expectShellNav(true);
@@ -318,25 +340,27 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         });
 
         it("/play", () => {
-          cy.visitAs(SHELL_ACCOUNT(), routes.play());
+          cy.visitAs(shellAccount(), routes.play());
           cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           expectShellNav(true);
           expectNoBlockingViolations(at("/play"));
         });
 
         it("/collection", () => {
-          cy.visitAs(SHELL_ACCOUNT(), routes.collection());
+          cy.visitAs(shellAccount(), routes.collection());
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
+          gridFacesDrawn();
           expectShellNav(true);
           expectNoBlockingViolations(at("/collection"));
         });
 
         it("/play, the friends drawer open (R3728001)", () => {
-          cy.visitAs(SHELL_ACCOUNT(), routes.play());
+          cy.visitAs(shellAccount(), routes.play());
           cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           cy.get(ts(menuShellTestid.nav)).find(ts(FRIENDS_BUTTON), { timeout: timeouts.view }).click();
-          // Checked with the friends list read, never against the skeleton that comes first.
-          cy.get(ts(FRIENDS_PANEL), { timeout: timeouts.view }).should("be.visible").find('[role="status"]').should("not.exist");
+          // Checked with the friends list read, never against the skeleton that comes first; the drawer's undo
+          // region (R2119000, #3891) is always a status, so the wait is on the skeleton itself.
+          cy.get(ts(FRIENDS_PANEL), { timeout: timeouts.view }).should("be.visible").find(ts(SKELETON)).should("not.exist");
           expectNoBlockingViolations(at("/play friends drawer"));
         });
       });

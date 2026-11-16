@@ -1,4 +1,4 @@
-<!-- version: 4 -->
+<!-- version: 5 -->
 # Suggest improvements to JackiOh
 
 A lane of the night bot of `$repo` has had nothing it could start for a while. Your job is to propose up to $count
@@ -9,6 +9,10 @@ JackiOh is a 1v1 card game: Hearthstone-style mana, combat and keywords on Yu-Gi
 with a hidden trap backrow, with a pure seeded Rust engine, a practice AI, an online server and a
 React client. The spec (`spec/`, which `SPEC.md` points to) is the design, `BUILD.md` the work
 order, `CLAUDE.md` the rules of the codebase.
+
+## Your area
+
+$area
 
 ## What makes a good suggestion
 
@@ -26,7 +30,7 @@ order, `CLAUDE.md` the rules of the codebase.
   the suggestions that came to nothing (below) under another name: those were rejected, closed
   unbuilt, or turned out to be work the bot could not do, and they are never offered again.
 
-Use subagents to survey different areas in parallel, then keep only the strongest ideas. Fewer,
+Use subagents to survey different parts of your area in parallel, then keep only the strongest ideas. Fewer,
 better suggestions beat $count weak ones; zero is a fine answer.
 
 ## Issues that already exist

@@ -11,7 +11,6 @@ use super::fixtures::keywords_783::{
     board_783 as playing, crater_cloaked, crater_field, crater_moon, crater_reborn, crater_spell,
     crater_trap, crater_unit, flicker_all, plague_field, plain_unit, recruiter, stacker, summon_crater,
 };
-use super::fixtures::play_pipeline_b::plays_of;
 use super::fixtures::prompt_harness::cast_now;
 
 const P1: PlayerId = PlayerId::P1;
@@ -180,7 +179,7 @@ mod r783010_crater_arrivals {
         );
         let placed = must(unit_in(&state, 1), "the Crater Unit in lane 1");
         // Offered into the other zones, never onto the Crater Unit's.
-        let offered: Vec<Value> = plays_of(&state, &stack.id, P1)
+        let offered: Vec<Value> = plays_in(&state, P1, &stack.id)
             .iter()
             .map(|play| serde_json::to_value(play).expect("a play serializes"))
             .collect();

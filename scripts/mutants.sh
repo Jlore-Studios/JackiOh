@@ -96,10 +96,13 @@ host=
 if command -v prlimit >/dev/null 2>&1; then
   host=$(rustc -vV 2>/dev/null | sed -n 's/^host: //p' | tr 'a-z-' 'A-Z_')
 fi
-# Each test binary runs under prlimit with `$1` bytes of data, as cargo's runner for the host.
+# Each test binary runs under prlimit with `$1` bytes of data, as cargo's runner for the host, through
+# scripts/mutants-runner.sh, which kills it outright when cargo-mutants' timeout sends SIGTERM: the
+# server's binary stops hearing SIGTERM once its drain test has run, and its timed-out binaries ran on
+# beside the next mutants until they took the runner (#3836).
 cap_tests() {
   if [ -n "$host" ]; then
-    export "CARGO_TARGET_${host}_RUNNER=prlimit --data=$1 --"
+    export "CARGO_TARGET_${host}_RUNNER=prlimit --data=$1 -- sh $ROOT/scripts/mutants-runner.sh"
   fi
 }
 cap_tests "$TEST_MEMORY"

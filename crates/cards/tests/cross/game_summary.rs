@@ -829,9 +829,7 @@ mod r1256000_per_seat_counts {
     }
 
     fn play_offer(state: &GameState, player: PlayerId, instance_id: &str) -> Option<ActionBody> {
-        legal_actions(state, player)
-            .into_iter()
-            .find(|body| matches!(body, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+        plays_in(state, player, instance_id).into_iter().next()
     }
 
     fn summarize(seed: String, decks: (Vec<String>, Vec<String>), log: Vec<Action>) -> GameSummary {

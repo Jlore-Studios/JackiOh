@@ -1,7 +1,7 @@
 //! The one-pick `Selection[]` a test hands to a play's `targets` or a prompt's `answer` (an instance,
 //! a hero or a Mode option), and `targets`, the play's `{ "targets": … }` around one. Not globbed in:
 //! a test writes `pick::<builder>`. crates/tools/tests/acceptance.rs refuses a test's own copy of one,
-//! whatever its name (#1826, #3827).
+//! whatever its name (#1826, #3827). And `instance_ids`, the instance ids among a `Selection[]` (#3913).
 
 use std::fmt::Display;
 
@@ -9,6 +9,7 @@ use serde_json::{Value, json};
 
 use crate::state::CardInstance;
 use crate::testkit::scenario::{CardRef, Scenario, SeatRef};
+use crate::wire::Selection;
 
 /// The pick of the instance whose id is `instance_id`.
 pub fn id(instance_id: &str) -> Value {
@@ -43,4 +44,15 @@ pub fn hero(player: impl Display) -> Value {
 /// The `targets` of a play: `picks` (a builder above, or any `Selection[]`) as its only key.
 pub fn targets(picks: Value) -> Value {
     json!({ "targets": picks })
+}
+
+/// The instance picks' ids among `selections`, in order; hero, zone, Mode, craft and none picks are skipped.
+pub fn instance_ids(selections: &[Selection]) -> Vec<String> {
+    selections
+        .iter()
+        .filter_map(|selection| match selection {
+            Selection::Instance { instance_id } => Some(instance_id.clone()),
+            _ => None,
+        })
+        .collect()
 }

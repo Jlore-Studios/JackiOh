@@ -405,6 +405,9 @@ pub struct PlayRun {
     /// resolved (`draw_complete.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drawn_as: Option<String>,
+    /// R3920001: a cast from the deck (`deck_cast.rs`), a cast and no play as a cast on draw is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_deck: Option<bool>,
     /// R1086: the host an Equip play fuses into at step 7 (ME-EQUIP), read at step 1 (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub equip_host: Option<String>,
@@ -489,6 +492,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         countered: None,
         replaced: None,
         drawn_as: None,
+        from_deck: None,
         copied: None,
         extra_cries: None,
         aim_at: None,
@@ -1427,10 +1431,10 @@ fn claim_win_on_play(sink: &mut EngineSink<'_>, player: PlayerId, instance_id: &
     sink.state.players[player].won_by_effect = Some(true);
 }
 
-/// R2179002: whether this run is §2.4's cast on draw (`PlayRun.drawn_as`): a cast and no play, counted
-/// and answered as none.
+/// R2179002: whether this run is §2.4's cast on draw (`PlayRun.drawn_as`) or R3920001's cast from the deck
+/// (`PlayRun.from_deck`): a cast and no play, counted and answered as none.
 pub(crate) fn cast_on_draw(run: &PlayRun) -> bool {
-    run.drawn_as.is_some()
+    run.drawn_as.is_some() || run.from_deck == Some(true)
 }
 
 fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, former_id: Option<String>) {
@@ -3140,6 +3144,7 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
 
     let mut run = blank_run(card.id.clone(), card.def_id.clone(), player);
     run.drawn_as = drawn_as;
+    run.from_deck = options.from_deck;
     run.cost_paid = 0;
     run.zone = None;
     run.target_slices = slices_for(sink.state, player, &card, 0, &targets, &modes);

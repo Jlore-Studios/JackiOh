@@ -37,7 +37,6 @@ mod tests {
 
     use crate::weapon_board;
 
-    const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     const ARMORED: &str = "stand-in (0) 1/30 Armor 5";
@@ -60,11 +59,11 @@ mod tests {
                 json!({ "hand": [{ "def": ID, "radiant": radiant }], "mana": 10 }),
                 json!({}),
             );
-            let id = s.card(ID).id.clone();
-            let mut pairs: Vec<(Row, i32)> = legal_actions(s.state(), P1)
+            let mut pairs: Vec<(Row, i32)> = s
+                .plays_of(ID)
                 .into_iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, zone, .. } if instance_id == id => zone,
+                    ActionBody::Play { zone, .. } => zone,
                     _ => None,
                 })
                 .map(|zone| (zone.row, zone.lane))

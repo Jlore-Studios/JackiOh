@@ -55,14 +55,7 @@ mod tests {
                     "p1": { "hand": [BURN, FILLER], "field": [MAYOR] },
                     "p2": { "hand": [FILLER], "field": [GRUNT] },
                 }));
-                let burn = s.card(BURN).id.clone();
-                let plays: Vec<ActionBody> =
-                    jackioh_engine::reduce::legal_actions(s.state(), P1)
-                        .into_iter()
-                        .filter(|action| {
-                            matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &burn)
-                        })
-                        .collect();
+                let plays: Vec<ActionBody> = s.plays_of(BURN);
                 assert_eq!(plays.len(), 1, "one play, not one per target: {plays:?}");
                 assert!(
                     matches!(&plays[0], ActionBody::Play { targets: None, .. }),
@@ -133,17 +126,7 @@ mod tests {
                 gone.zone = jackioh_engine::wire::Zone::Graveyard { player: P1 };
                 s.state_mut().players[P1].graveyard.push(gone);
                 assert_eq!(s.view(P1).random_targets, None);
-                let burn = s.card(BURN).id.clone();
-                assert_eq!(
-                    jackioh_engine::reduce::legal_actions(s.state(), P1)
-                        .into_iter()
-                        .filter(|action| {
-                            matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &burn)
-                        })
-                        .count(),
-                    3,
-                    "burn at either hero and the grunt — the Mayor is gone"
-                );
+                assert_eq!(s.plays_of(BURN).len(), 3, "burn at either hero and the grunt — the Mayor is gone");
             }
         }
 

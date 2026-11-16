@@ -53,6 +53,14 @@ function pressCard(testid: string, type: "pointerdown" | "pointerup", options: {
     });
 }
 
+/**
+ * Lifts the touch `pointerId` off the card `testid`: a touch's pointer is captured by its card, so the lift reaches
+ * that card under the sheet the hold opened, which may cover all of it.
+ */
+function releaseCard(testid: string, pointerId: number): void {
+  cy.get(`[data-testid="${testid}"]`).trigger("pointerup", { pointerId, pointerType: "touch", force: true });
+}
+
 function TriggerCard({ id, name }: { id: string; name: string }) {
   const { handlers } = useFullScreenTrigger({
     defId: id,
@@ -242,7 +250,7 @@ describe("R3351000 a long press opens inspect and the full-screen view from ever
         cy.get('[data-testid="inspect-sheet"]').should("be.visible");
         cy.get('[data-testid="inspect-extended"]').should("exist");
         cy.get('[data-testid="fullscreen-art"]').should("not.exist");
-        pressCard(press.testid, "pointerup", { pointerId });
+        releaseCard(press.testid, pointerId);
         // Tap Full screen button to open full-screen view
         cy.get('[data-testid="fullscreen-art-open"]').click();
         cy.get('[data-testid="fullscreen-art"]').should("be.visible");
@@ -255,7 +263,7 @@ describe("R3351000 a long press opens inspect and the full-screen view from ever
       } else {
         cy.get(`[data-testid="${INSPECT_HOVER}"]`).should("exist");
         cy.get('[data-testid="fullscreen-art"]').should("not.exist");
-        pressCard(press.testid, "pointerup", { pointerId });
+        releaseCard(press.testid, pointerId);
         cy.get(`[data-testid="${INSPECT_HOVER}"]`).should("not.exist");
       }
     }

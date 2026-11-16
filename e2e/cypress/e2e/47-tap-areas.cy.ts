@@ -9,6 +9,7 @@
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
 import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
+import { inboxTestid } from "../../../apps/web/src/inbox/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
@@ -55,6 +56,66 @@ const SIGNED_IN = accounts.p2;
  * the last of them drew, and the invite screens met a 429. Split, each opens under ten.
  */
 const SPARE = accounts.p4;
+/**
+ * `GET /api/daily` as the inbox reads it (`DailyList`, apps/web/src/net/daily.ts): one game on the player's
+ * move (a Play link) and one incoming challenge (an Open link), the two rows whose answers are links (#3958).
+ */
+const DAILY_LIST = {
+  games: [
+    {
+      matchId: "00000000-0000-4000-8000-000000003958",
+      mode: "random",
+      perMoveDays: 1,
+      seat: "p1",
+      opponent: { profileId: "00000000-0000-4000-8000-0000000039a1", username: "Rival#1" },
+      portraits: { me: "vanilla", them: "gary" },
+      turn: 1,
+      life: { me: 30, them: 30 },
+      hasMove: true,
+      theirMove: false,
+      deadline: null,
+      over: false,
+      result: null,
+      endedAt: null,
+      createdAt: 0,
+    },
+  ],
+  challenges: {
+    incoming: [
+      {
+        id: "00000000-0000-4000-8000-0000000039b1",
+        kind: "challenge",
+        from: { profileId: "00000000-0000-4000-8000-0000000039a2", username: "Friend#2" },
+        to: null,
+        mode: "random",
+        perMoveDays: 1,
+        expiresAt: 32_503_680_000_000,
+        createdAt: 0,
+      },
+    ],
+    outgoing: [],
+  },
+  seeks: [],
+  waiting: 1,
+};
+/**
+ * `GET /api/news` as the Home's bookmark reads it (`NewsResponse`, apps/web/src/net/api.ts): one live, unclaimed
+ * alert. The server's own list lapses with each entry's `NEWS_TTL_DAYS`, so a bookmark that waits for it vanishes (#3958).
+ */
+const NEWS_LIST = {
+  news: [
+    {
+      id: "r3958-alert",
+      kind: "alert",
+      version: null,
+      title: "A notice",
+      summary: "One live entry, so the bookmark draws.",
+      postedAt: 0,
+      reward: null,
+      claimed: false,
+    },
+  ],
+};
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
 const SCREEN = {
   accountRank: "account-rank",
@@ -309,6 +370,34 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
         it("R2122000 /play", () => {
           cy.visitAs(SIGNED_IN(), routes.play());
           cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 R2035000 R2875002 /, the news' bookmark", () => {
+          cy.intercept("GET", "**/api/news", { body: NEWS_LIST });
+          cy.visitAs(SIGNED_IN(), "/");
+          cy.get(ts(landingTestid.newsBookmark), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 R3729002 the inbox, a daily move and a daily challenge", () => {
+          cy.intercept("GET", "**/api/daily", { body: DAILY_LIST });
+          cy.visitAs(SPARE(), routes.collection());
+          cy.get(ts(inboxTestid.bell), { timeout: timeouts.view }).should("be.visible").click();
+          cy.get(ts(inboxTestid.play), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(inboxTestid.open)).should("be.visible");
+          // The hit area alone cannot tell: index.css's ::before band stretches a bare link's tap area to
+          // --hit-min, so the link's own box is held to the button's size and shape as well (#3958).
+          for (const id of [inboxTestid.play, inboxTestid.open]) {
+            cy.get(ts(id)).should(($link) => {
+              const style = $link[0]!.ownerDocument.defaultView!.getComputedStyle($link[0]!);
+              expect($link[0]!.getBoundingClientRect().height, `${id}'s own height`).to.be.at.least(HIT_MIN_PX);
+              // A flex item's display is blockified (`inline-flex` computes as `flex`), so the match is on the flex.
+              expect(style.display, `${id}'s display`).to.match(/flex$/);
+              expect(parseFloat(style.paddingLeft), `${id}'s padding`).to.be.greaterThan(0);
+              expect(parseFloat(style.borderTopLeftRadius), `${id}'s radius`).to.be.greaterThan(0);
+            });
+          }
           expectHitAreas(size);
         });
 

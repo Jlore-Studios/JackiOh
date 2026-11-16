@@ -466,7 +466,7 @@ mod r1180003_healing_twice_as_effective {
 mod r1180004_health_as_the_price {
     use super::*;
 
-    fn plays_of(s: &Scenario, player: PlayerId, def_id: &str) -> usize {
+    fn plays_of_def(s: &Scenario, player: PlayerId, def_id: &str) -> usize {
         legal_actions(s.state(), player)
             .into_iter()
             .filter(|action| match action {
@@ -509,9 +509,9 @@ mod r1180004_health_as_the_price {
             json!({ "hand": [BLOOM, ZAP], "mana": 0 }),
             json!({}),
         );
-        assert_eq!(plays_of(&s, P1, ZAP), 0);
+        assert_eq!(plays_of_def(&s, P1, ZAP), 0);
         s.play(BLOOM, json!({}));
-        assert_eq!(plays_of(&s, P1, ZAP), 1);
+        assert_eq!(plays_of_def(&s, P1, ZAP), 1);
         s.play(ZAP, json!({}));
         assert_eq!(health(&s, P1), 24);
         assert_eq!(health(&s, P2), 28);

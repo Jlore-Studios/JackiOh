@@ -287,7 +287,7 @@ func (x *Lanes) Describe() string {
 	parts := make([]string, 0, len(numbers))
 	for _, n := range numbers {
 		p := x.Held[n]
-		if n == 0 {
+		if IsSurveyLane(n) {
 			parts = append(parts, "a survey with `"+p+"`")
 			continue
 		}
@@ -408,9 +408,10 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 	}
 	reservedBuilds(ctx, state, lanes)
 	reservedTurns(ctx, state, lanes)
-	survey := state.Obj("suggest")
-	if survey.Truthy("provider") && RunAlive(ctx, survey.Get("run_id")) {
-		lanes.Held[0] = py.Str(survey.Get("provider"))
+	for _, survey := range Surveys(state) {
+		if RunAlive(ctx, survey.Record.Get("run_id")) {
+			lanes.Held[survey.Lane] = py.Str(survey.Record.Get("provider"))
+		}
 	}
 	return lanes
 }

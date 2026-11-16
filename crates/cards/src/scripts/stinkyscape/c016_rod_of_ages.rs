@@ -77,15 +77,14 @@ mod tests {
     }
 
     fn equip_lanes(s: &Scenario, card: &CardInstance) -> Vec<i32> {
-        legal_actions(s.state(), P1)
+        s.plays_of(card)
             .iter()
             .filter_map(|action| match action {
                 ActionBody::Play {
-                    instance_id,
                     zone: Some(zone),
                     equip: Some(true),
                     ..
-                } if *instance_id == card.id => Some(zone.lane),
+                } => Some(zone.lane),
                 _ => None,
             })
             .collect()

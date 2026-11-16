@@ -262,7 +262,8 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
     // R14's center crossings make control changes visible in seat 1 lane 5 and seat 2 lane 1.
     const built: Board = {
       yourLane1: { side: "you", row: "units", lane: 1 },
-      silas: { side: "you", row: "units", lane: 3 },
+      // R3837000: Silas lands in seat 2's leftmost open unit zone, lane 1 holding theirLane1.
+      silas: { side: "opponent", row: "units", lane: 2 },
       yourLane5: { side: "you", row: "units", lane: 5 },
       theirLane1: { side: "opponent", row: "units", lane: 1 },
       myPawn: { side: "you", row: "backrow", lane: 2 },

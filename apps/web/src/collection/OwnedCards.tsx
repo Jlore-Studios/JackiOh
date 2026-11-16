@@ -269,7 +269,9 @@ export default function OwnedCards({
               {formatNumber(ownedTotal)} / {formatNumber(total)}
             </strong>
           </p>
-          <ul className="collection-set-list">
+          {/* It scrolls sideways, so it takes the keyboard (WCAG 2.1.1, axe scrollable-region-focusable), as
+              /stats' TableScroll does: it holds no control of its own. */}
+          <ul className="collection-set-list" tabIndex={0} aria-label={t("Sets")}>
             {completions.map(({ set, owned: have, total: of }) => (
               <li key={set} className="collection-set" data-testid={collectionTestid.set(set)}>
                 <span className="collection-set__name">{t(set)}</span>

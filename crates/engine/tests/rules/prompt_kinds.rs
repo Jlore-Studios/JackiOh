@@ -310,12 +310,10 @@ mod e18_the_number_kind {
     fn r81_e18_a_number_declared_with_the_play_travels_in_the_action_from_a_fixed_list() {
         let mut state = board("glitch");
         let card = in_hand(&mut state, &glitch().id, P1, 1).remove(0);
-        let plays: Vec<Vec<String>> = legal_actions(&state, P1)
+        let plays: Vec<Vec<String>> = plays_in(&state, P1, &card.id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id, modes, ..
-                } if instance_id == card.id => Some(modes.unwrap_or_default()),
+                ActionBody::Play { modes, .. } => Some(modes.unwrap_or_default()),
                 _ => None,
             })
             .collect();

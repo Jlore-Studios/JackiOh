@@ -56,17 +56,8 @@ mod tests {
     }
 
     /// The instance ids a play of the Book is offered (`legalActions`).
-    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
-        let own = s.card(BOOK).id.clone();
-        legal_actions(s.state(), P1)
-            .iter()
-            .map(js)
-            .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(own))
-            .flat_map(|action| action["targets"].as_array().cloned().unwrap_or_default())
-            .filter(|selection| selection["pick"] == json!("instance"))
-            .map(|selection| selection["instanceId"].as_str().unwrap_or("").to_string())
-            .collect()
+        pick::instance_ids(&s.play_targets(BOOK))
     }
 
     fn book(radiant: bool, seed: Option<&str>) -> Scenario {

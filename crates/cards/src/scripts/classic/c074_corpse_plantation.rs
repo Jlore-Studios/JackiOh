@@ -119,15 +119,8 @@ mod tests {
         error: Option<String>,
     }
 
-    fn graveyard_plays(state: &GameState, card: &CardInstance) -> Vec<ActionBody> {
-        legal_actions(state, P1)
-            .into_iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-            .collect()
-    }
-
     fn token_options(state: &GameState, card: &CardInstance) -> Vec<Option<i32>> {
-        let offered: IndexSet<Option<i32>> = graveyard_plays(state, card)
+        let offered: IndexSet<Option<i32>> = plays_in(state, P1, &card.id)
             .into_iter()
             .map(|play| match play {
                 ActionBody::Play { plague, .. } => plague.map(|spend| spend.tokens),
@@ -256,7 +249,7 @@ mod tests {
         #[test]
         fn r831015_unarmed_it_offers_nothing_from_the_graveyard() {
             let s = standing_unarmed(2, &GRAVEYARD, None);
-            assert!(graveyard_plays(s.state(), s.card(MENACE)).is_empty());
+            assert!(plays_in(s.state(), P1, &s.card(MENACE).id).is_empty());
             let plantation = s.card(PLANTATION).id.clone();
             let menace = s.card(MENACE).id.clone();
             assert!(
@@ -270,12 +263,12 @@ mod tests {
         #[test]
         fn r831015_one_activate_arms_one_play_from_the_graveyard() {
             let s = standing(3, &[MR_TOKEN, VANILLA], None);
-            assert!(!graveyard_plays(s.state(), s.card(VANILLA)).is_empty());
+            assert!(!plays_in(s.state(), P1, &s.card(VANILLA).id).is_empty());
 
             let after = play_from_graveyard(s.state(), s.card(MR_TOKEN), s.card(PLANTATION), 1, None);
 
             assert_eq!(tokens_on(&after.state, s.card(PLANTATION)), 2);
-            assert!(graveyard_plays(&after.state, s.card(VANILLA)).is_empty());
+            assert!(plays_in(&after.state, P1, &s.card(VANILLA).id).is_empty());
         }
 
         /// R831015 the arming ends with the turn, and its next Activate arms it again
@@ -284,9 +277,9 @@ mod tests {
             let mut s = standing(2, &[MENACE], None);
             s.end_turn();
             s.end_turn();
-            assert!(graveyard_plays(s.state(), s.card(MENACE)).is_empty());
+            assert!(plays_in(s.state(), P1, &s.card(MENACE).id).is_empty());
             arm(&mut s);
-            assert!(!graveyard_plays(s.state(), s.card(MENACE)).is_empty());
+            assert!(!plays_in(s.state(), P1, &s.card(MENACE).id).is_empty());
         }
 
         #[test]
@@ -296,9 +289,9 @@ mod tests {
 
             assert_eq!(token_options(s.state(), &menace), vec![Some(1), Some(2)]);
             assert_eq!(token_options(s.state(), &mr_token), vec![Some(1)]);
-            assert!(graveyard_plays(s.state(), &stockpile).is_empty());
+            assert!(plays_in(s.state(), P1, &stockpile.id).is_empty());
             let plantation = s.card(PLANTATION).id.clone();
-            assert!(graveyard_plays(s.state(), &menace).iter().all(|play| matches!(
+            assert!(plays_in(s.state(), P1, &menace.id).iter().all(|play| matches!(
                 play,
                 ActionBody::Play { plague: Some(spend), .. } if spend.from == plantation
             )));
@@ -367,7 +360,7 @@ mod tests {
             let s = standing(2, &GRAVEYARD, None);
             let slime = s.card(SLIME).clone();
 
-            assert!(graveyard_plays(s.state(), &slime).is_empty());
+            assert!(plays_in(s.state(), P1, &slime.id).is_empty());
             let plantation = s.card(PLANTATION).id.clone();
             assert!(
                 send(s.state(), json!({ "instanceId": slime.id, "plague": { "from": plantation, "tokens": 1 } }))
@@ -416,10 +409,10 @@ mod tests {
             let after = play_from_graveyard(s.state(), s.card(MR_TOKEN), s.card(PLANTATION), 1, None);
 
             assert_eq!(tokens_on(&after.state, s.card(PLANTATION)), 0);
-            assert!(graveyard_plays(&after.state, s.card(VANILLA)).is_empty());
+            assert!(plays_in(&after.state, P1, &s.card(VANILLA).id).is_empty());
             let mut zero = standing_unarmed(0, &[VANILLA], None);
             arm(&mut zero);
-            assert!(graveyard_plays(zero.state(), zero.card(VANILLA)).is_empty());
+            assert!(plays_in(zero.state(), P1, &zero.card(VANILLA).id).is_empty());
         }
 
         #[test]
@@ -453,7 +446,7 @@ mod tests {
 
             s.expect_in_zone(&plantation, "exile");
             assert!(s.card(&plantation).counters.plague.is_none());
-            assert!(graveyard_plays(s.state(), s.card(MENACE)).is_empty());
+            assert!(plays_in(s.state(), P1, &s.card(MENACE).id).is_empty());
         }
 
         /// §3 with your unit row full nothing is offered, and the play is refused
@@ -471,7 +464,7 @@ mod tests {
             arm(&mut s);
             let mr_token = s.card(MR_TOKEN).clone();
 
-            assert!(graveyard_plays(s.state(), &mr_token).is_empty());
+            assert!(plays_in(s.state(), P1, &mr_token.id).is_empty());
             let plantation = s.card(PLANTATION).id.clone();
             assert!(
                 send(s.state(), json!({ "instanceId": mr_token.id, "plague": { "from": plantation, "tokens": 1 } }))
@@ -489,11 +482,7 @@ mod tests {
             arm(&mut s);
 
             let menace = s.card(MENACE).id.clone();
-            assert!(
-                !legal_actions(s.state(), P1)
-                    .iter()
-                    .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == menace))
-            );
+            assert!(plays_in(s.state(), P1, &menace).is_empty());
         }
 
         /// R386 an Upgrade places 3 on itself

@@ -82,13 +82,6 @@ fn board(p1: Value, p2: Value) -> Scenario {
     s
 }
 
-fn plays_of(s: &Scenario, id: &str) -> Vec<ActionBody> {
-    legal_actions(s.state(), P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == id))
-        .collect()
-}
-
 mod r3560000_once_a_game_marks_are_per_player {
     use super::*;
 
@@ -142,7 +135,7 @@ mod r3560001_graveyard_price_offers_and_prices_the_play {
     fn r3560001_with_mana_1_it_is_offered_and_costs_1() {
         let s = graveyard_board(1);
         let id = grave_id(&s, CRAWLERISH);
-        assert!(!plays_of(&s, &id).is_empty());
+        assert!(!plays_in(s.state(), P1, &id).is_empty());
         let card = find_instance(s.state(), &id).expect("held");
         assert_eq!(printed_cost(s.state(), card), 1);
         assert_eq!(play_cost(s.state(), card), 1);
@@ -152,7 +145,7 @@ mod r3560001_graveyard_price_offers_and_prices_the_play {
     fn r3560001_with_mana_0_it_is_refused() {
         let s = graveyard_board(0);
         let id = grave_id(&s, CRAWLERISH);
-        assert!(plays_of(&s, &id).is_empty());
+        assert!(plays_in(s.state(), P1, &id).is_empty());
     }
 
     #[test]
@@ -160,7 +153,7 @@ mod r3560001_graveyard_price_offers_and_prices_the_play {
         let s = graveyard_board(3);
         let id = grave_id(&s, CRAWLERISH);
         let plain = grave_id(&s, PLAIN);
-        assert!(plays_of(&s, &plain).is_empty());
+        assert!(plays_in(s.state(), P1, &plain).is_empty());
         let action = json!({ "type": "play", "playerId": "p1", "instanceId": id, "zone": { "row": "units", "lane": 1 }, "nonce": "s13-grave-1" });
         let result = reduce(s.state(), &json_as::<Action>(action));
         assert!(result.error.is_none(), "{:?}", result.error);
