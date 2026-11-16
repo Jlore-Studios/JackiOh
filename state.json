@@ -14409,6 +14409,13 @@
     "4079": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43972836475",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-16T23:20:13Z",
+        "until": "2026-11-16T23:50:13Z"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-16T21:34:39Z",
