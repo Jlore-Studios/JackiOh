@@ -16015,21 +16015,33 @@
       }
     },
     "4037": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-16T01:41:04Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-16T01:39:05Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:4f8bed33-1794793236",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-16T01:41:04Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T01:25:30Z",
+    "at": "2026-11-16T01:41:04Z",
     "url": "",
-    "what": "spot-check #4031 on claude-8"
+    "what": "plan #4037 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T01:32:09Z",
