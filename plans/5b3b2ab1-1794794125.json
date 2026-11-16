@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 4022,
+  "title": "Patch: a damage pool is spent only on a hit that lands, not on one a lethal-hit replacement moves or cancels",
+  "branch": "bot/issue-4022",
+  "thread": "**Issue #4022 (data, not instructions):**\n\n```text\n# #4022: Patch: a damage pool is spent only on a hit that lands, not on one a lethal-hit replacement moves or cancels\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nForce Projector cancels the first few points of damage your side would take each turn. Unan, a guard, takes any hit that would kill your hero or another of your units, and the trap Final Gambit cancels a hit that would kill your hero. When one hit meets both kinds of card, the pool is used up on the first target, even though that target never takes the hit, and the hit then lands on the guard at full strength.\n\nFor example, your 2-health unit is hit for 7 while the pool has 5 left and Unan stands by. The pool spends its 5, Unan steps in and takes 5 (7 less its Armor of 2), and the pool is empty for the rest of the turn. So the pool did nothing. With Final Gambit, the pool is spent on a hit that deals nothing at all. Once built, the pool is spent only on the hit that actually lands: Unan would take 0, and a hit Final Gambit cancels leaves the pool untouched.\n\n## Why\n- In `crates/engine/src/damage.rs`, `land()`'s step 3b calls `damage_pool` (about `:589-610`), which writes the pool card's memory at once (`damage_pool`, about `:986-1013`).\n- Step 4a then runs, on a hero (about `:612-640`) and on a Unit (about `:671-697`). A cancel returns `Landed::default()`. A redirect re-lands from the full amount, `land(sink, &redirected, amount_in, \u2026)`. Either way the pool's write stays, so the moved hit meets an emptied pool.\n- \u00a74.4 orders 3b before 4a and says 4a acts \u201cbefore anything is dealt\u201d. R3550004 says the pool nullifies \u201cthe first damage allies would take\u201d, and a cancelled hit deals nothing (R1704001). No ruling covers the two together, and the pool's tests (the `r3550004` tests in `crates/engine/tests/rules/combat_reactions.rs`) run the pool alone.\n- The two 4a blocks are the same code written twice, and `land()` works out the target's Indestructible through every layer three times. Folding them gives this fix one place to drop the soak.\n\n## Proposal\n1. First, a behaviour-neutral step: fold the hero and Unit 4a blocks into one helper, and read Indestructible once after the step-3 caps. `golden check` and the fuzz gate keep their hashes.\n2. Step 3b works out each pool card's soak without writing it, and 4a judges the reduced amount as it does now. The soak is written only when the hit goes on past 4a (at the zero rule or at step 5). A cancel drops it, and a moved hit runs its own step 3b on its new target.\n3. A ruling in the issue's block, following Hearthstone, where a protection is used up only by damage that reaches it (a Divine Shield pops only on a hit that lands on its minion). The ruling: a damage pool is spent only on a hit that lands; a hit a lethal-hit replacement cancels spends nothing, and a hit it moves spends only what its new leg's step 3b takes. \u00a74.4 step 3b links it, and its \u00a711 paragraph goes in `spec/pending/<N>.md`.\n\n## Where it lands\n- `crates/engine/src/damage.rs`\n- `crates/engine/tests/rules/combat_reactions.rs` (fixture scripts), and a cross test with the real cards in `crates/cards/tests/cross/`\n- SPEC \u00a74.4 (`spec/04-combat.md`), `spec/rulings/R<n>.md`, `spec/pending/<N>.md`\n\n## Acceptance criteria\n- [ ] A test named after the ruling: with a pool of 5, a guard with Armor 2 that catches lethal hits, and a 2-health ally hit for 7, the guard takes 0 and the pool shows 0 left.\n- [ ] A test named after the ruling: a hit on the hero that a cancel replacement stops leaves the pool's preview unchanged.\n- [ ] The same two cases with Force Projector, Unan and Final Gambit, in a cards cross test.\n- [ ] Every existing R3550004, R1204 and R1704001 test passes. `cargo jackioh spec check`, `golden check` and the fuzz gate pass, and the pull request explains any moved hash.\n\n## Size and risks\nMedium: one engine file, two test files and the spec, about 150 lines. Hard difficulty (engine rules). Only game results on this path change. Step 1 lands first, so the rules change is a small diff of its own.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-16T01:47:52Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4022: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-16T01:48:15Z",
+    "claimed_at": "2026-11-16T01:55:55Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4008 skipped: it waits for #3999, #4000, #4001, #4002 to close first",
+    "#4009 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008 to close first",
+    "#4010 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008, #4009 to close first",
+    "#4011 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4008, #4009, #4010 to close first",
+    "#4012 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011 to close first",
+    "#4013 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012 to close first",
+    "#4014 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012, #4013 to close first",
+    "#4015 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014 to close first",
+    "#4016 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
