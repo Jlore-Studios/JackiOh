@@ -17540,6 +17540,7 @@
       "run_id": "43850093234",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 300,
       "started_at": "2026-11-16T10:34:33Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37540,9 +37541,33 @@
         "title": "Patch: every route that checks a guessable value holds a per-account and per-IP limit, with a test",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "61d1651ba9a5c72a4cff3d57b6f6c22e8aff5585",
+        "issue": 4035,
+        "merged_at": "2026-11-16T11:04:34Z",
+        "n": 300,
+        "pr": 4076,
+        "queued_at": "2026-11-16T11:04:34Z",
+        "sha": "d9f6d0c37b386996fb3790356c4ab9456e4ce2db",
+        "status": "queued",
+        "title": "Patch: daily super run failed",
+        "tries": 0
       }
     ],
-    "count": 299
+    "count": 300
   },
   "statistics": {
     "at": "2026-11-16T11:02:43Z"
