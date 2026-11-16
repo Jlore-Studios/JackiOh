@@ -15976,17 +15976,8 @@
       ]
     },
     "4022": {
-      "action": "plan",
-      "asks": [
-        "c:6905067108"
-      ],
-      "build_next": {
-        "from_run": "43793451548",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-16T02:57:44Z",
-        "until": "2026-11-16T03:27:44Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T02:57:32Z",
         "difficulty": "hard",
@@ -16005,10 +15996,9 @@
         "reason": "planned on opus",
         "trail": "final_gambit.rs\", \"de\u2026\n- Bash: {\"command\": \"sed -n 86,145p crates/cards/src/scripts/stinkyscape_plus/c042_force_projector.rs\", \"description\": \"Read Force Projector test setup\"}\n- Bash: {\"command\": \"grep -n \\\"^#\\\\|step 3b\\\\|3b\\\\b\\\\|4a\\\" spec/04-combat.md | head -60\", \"description\": \"Outline \\u00a74 combat spec\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4022/spec/04-combat.md\", \"offset\": 14, \"limit\": 60}\n- Bash: {\"command\": \"ls spec/rulings/ | grep -c .; ls spec/rulings/R4022* 2>/dev/null; ls spec/pending/ | head -30; cat spec/rulings/R3550004.md; echo ----; cat spec/rulings/R1704001.md | head -30\", \"descrip\u2026\n- Bash: {\"command\": \"cat spec/rulings/R767000.md | head -30; cat spec/pending/3937.md; echo; cat spec/pending/3976.md | head -20\", \"description\": \"Read R767000 and pending examples\"}\n- Bash: {\"command\": \"grep -rn \\\"rules_changed\\\\|rulesChanged\\\" spec/*.md | head -5; grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | head -50\", \"description\": \"Check rules_changed handling and adding ruling\u2026\n- Bash: {\"command\": \"grep -n \\\"^fn answering\\\\|^pub fn answering\\\\|^pub(crate) fn answering\\\\|^fn candidates\\\\|^pub fn candidates\\\\|^pub(crate) fn candidates\\\" -A4 crates/engine/src/replacements.rs\", \"descri\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn apply_now\\\" -B6 -A30 crates/engine/tests/rules/fixtures/harness.rs\", \"description\": \"Read apply_now in harness\"}\n- Bash: {\"command\": \"sed -n 80,150p crates/engine/tests/rules/replacements.rs\", \"description\": \"Read R1704001 engine test\"}\n- Bash: {\"command\": \"ls target 2>/dev/null | head; du -sh target 2>/dev/null; ls ~/.cargo 2>/dev/null | head; nproc; free -g | head -2\", \"description\": \"Check for existing build artifacts and machine size\"}\n- Bash: {\"command\": \"grep -rln \\\"damagePool\\\\|damage_pool\\\" crates/cards/src crates/ai/src crates/shared/src crates/run/src 2>/dev/null; grep -rn \\\"LethalHit\\\" crates/cards/src/scripts --include=*.rs -l | he\u2026\n- Bash: {\"command\": \"sed -n 1,25p crates/cards/src/scripts/stinkyscape_plus/c123_oct.rs; sed -n 1,20p crates/cards/src/scripts/stinkyscape/c004_4_last_word.rs; sed -n 1,20p crates/cards/src/scripts/stinkysca\u2026\n- Bash: {\"command\": \"grep -rln \\\"shield-layer\\\\|Shield Layer\\\" spec/rulings | head -3; grep -rh \\\"^cards:.*S #4\\\\.4\\\\|^cards:.*T-shield\\\" spec/rulings | head -3; cat spec/rulings/R1204.md | head -12\", \"descr\u2026\n- Bash: {\"command\": \"grep -rh \\\"^cards:.*#4\\\\.4\\\" spec/rulings | head -3; grep -rh \\\"^cards:\\\" spec/rulings/R18*.md | grep -i \\\"stinkyscape #4\\\" | head -2\", \"description\": \"Check citation of S #4.4\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20; cat spec/rulings/R1370000.md | sed -n 1,20p\", \"description\": \"Read classify docs and R1370000\"}\n- Bash: {\"command\": \"grep -n \\\"refut\\\\|played_for\\\\|forced\\\\|fn check_claims\\\\|unconfirmed\\\" crates/tools/src/claims.rs | head -40\", \"description\": \"Look at claims refutation logic\"}\n- Bash: {\"command\": \"sed -n 1,140p crates/tools/src/claims.rs\", \"description\": \"Read claims.rs head\"}\n- Bash: {\"command\": \"grep -n \\\"lints\\\" -A25 Cargo.toml | head -40; cat rustfmt.toml; grep -n \\\"lints\\\" crates/engine/Cargo.toml\", \"description\": \"Check workspace lint configuration\"}\n- Bash: {\"command\": \"grep -n \\\"damage pool\\\\|Damage pool\\\\|R3550004\\\" spec/0*.md spec/10*.md spec/1[2-9]*.md 2>/dev/null | head; grep -n \\\"R3550004\\\" spec/11-rulings.md | head -3\", \"description\": \"Find spec \u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/engine/tests/rules/fixtures/mb22.rs | grep -n \\\"^use\\\\|^ \\\" ; grep -n \\\"ReplacementDef\\\\|ReplacementMoment\\\\|ReplacementInstead\\\" crates/engine/src/testkit/mod.rs | h\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/engine/src/testkit/stand_in.rs; grep -n \\\"stand-in\\\" crates/engine/tests/rules/stinkyscape_plus_s18.rs | head -3\", \"description\": \"Read stand-in testkit header\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/cards/tests/cross/my_pawn.rs; cat crates/cards/tests/cards.rs | head -30\", \"description\": \"Read a cross test example and cards.rs\"}\n- Bash: {\"command\": \"grep -n \\\"scenario\\\\b\\\\|scenario(\\\" crates/cards/tests/cross/my_pawn.rs | head -5; grep -rn \\\"^use super::scenario\\\\|use super::{.*scenario\\\" crates/cards/tests/cross/*.rs | head -5; gre\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4022/crates/engine/src/replacements.rs\", \"offset\": 119, \"limit\": 135}\n- Bash: {\"command\": \"grep -rn \\\"damage_pool\\\\|damagePool\\\\|damage pool\\\" crates/engine/README.md docs/architecture.md docs/v0.3.0/SURFACE.md 2>/dev/null | head\", \"description\": \"Check docs mentioning damage \u2026\n- Bash: {\"command\": \"grep -n \\\"^use\\\\|^pub use\\\" crates/engine/tests/rules/fixtures/harness.rs | head; grep -n \\\"pub use\\\" crates/engine/src/testkit/mod.rs | head -20\", \"description\": \"Check testkit re-expor\u2026\n- Bash: {\"command\": \"grep -n \\\"| \\\\`names\\\" crates/tools/README.md | cut -c1-900\", \"description\": \"Read names command docs\"}\n- Bash: {\"command\": \"sed -n 46p crates/tools/README.md | cut -c900-2500; grep -rn \\\"names\\\" .github/workflows/ci.yml | grep -i \\\"jackioh names\\\" | head -3\", \"description\": \"Read rest of names docs and CI use\u2026\n- Bash: {\"command\": \"ls crates/cards/*.json | head; python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\ncards = d if isinstance(d,list) else d.get('cards', d)\\nitems = cards.values\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4022/.bot-plan.md\", \"content\": \"# Draft plan #4022 (opus planner, run 2)\\n\\nStatus: code read and verified; writing final plan.\\n\\nFindings (verified \u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\nFinal plan structure: Step 1 fold (damage.rs) -> checkpoint engine tests; Step 2 fixtures + engine tests +\\ncross tests, run red; Step 3 late spend (PoolSo\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: it changes when \u00a74.4 step 3b spends the pool in crates/engine/src/damage.rs's land()\"} --> ## Goal A damage pool (Force Projector S+ #42, Oct S+ #123) is spent only by a hit that lands. A hit that a lethal-hit replacement cancels (Final Gambit)\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-16T01:55:55Z",
       "owner_why": "it plans it",
@@ -16021,12 +16011,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-16T01:48:15Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43793451548",
+      "run_id": "pending:a6a71f71-1794797912",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-16T02:38:54Z",
+      "started_at": "2026-11-16T02:59:08Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6905067108"
+      ]
     },
     "4023": {
       "action": "plan",
@@ -16650,9 +16642,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T02:41:12Z",
+    "at": "2026-11-16T02:59:08Z",
     "url": "",
-    "what": "plan #4023 on claude-8"
+    "what": "build #4022 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-16T02:48:42Z",
