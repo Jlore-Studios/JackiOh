@@ -36266,15 +36266,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-15T23:37:03Z,claude-8,ping,before,43775623388,3,2026-11-16T03:00:00Z,,,allowed,85,,",
-      "2026-11-15T23:37:39Z,claude-8,stream,call,43775623388,4,2026-11-16T03:00:00Z,,,allowed,85,,",
-      "2026-11-15T23:38:09Z,claude-8,stream,call,43775623388,5,2026-11-16T03:00:00Z,,,allowed,85,,"
-    ],
-    "runs": [
-      "2026-11-15T23:39:34Z,43775623388,claude-8,sonnet+opus,review,3989,medium,approved,,2.3,38,10961,1564253,1.1304,3,5,,,1.1,claude-8,none,,1"
-    ]
-  },
   "version": 1
 }
