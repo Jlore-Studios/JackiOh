@@ -150,8 +150,11 @@ func TestACachedGetSendsItsETag(t *testing.T) {
 			t.Fatalf("jobs %v", got)
 		}
 	}
-	client.ListJobs(5, false)
-	if !reflect.DeepEqual(sent, []string{"", `"v1"`, ""}) {
+	// Every GET is conditional now (#4059), whatever its caller asks.
+	if got := client.ListJobs(5, false); len(got) != 1 {
+		t.Fatalf("jobs %v", got)
+	}
+	if !reflect.DeepEqual(sent, []string{"", `"v1"`, `"v1"`}) {
 		t.Fatalf("If-None-Match %q", sent)
 	}
 	if !strings.HasSuffix(o.asked[0].URL, "/repos/o/r/actions/runs/5/jobs?per_page=100&page=1") {
@@ -172,6 +175,121 @@ func TestTheCacheKeepsTheNewest(t *testing.T) {
 	_, hasB := Cached.get([2]string{"t", "b"})
 	if Cached.Len() != 2 || !hasA || hasB {
 		t.Fatalf("kept %v", Cached.keys)
+	}
+}
+
+// #4059: a read the loop repeats costs a call only when what it reads changed. An issue read again
+// unchanged is the answer kept, for nothing (counted apart, as free); a write is never
+// conditional, nor kept.
+func TestEveryGetIsConditionalAndNoWriteIs(t *testing.T) {
+	Cached.Clear()
+	Rate.Clear()
+	t.Cleanup(Cached.Clear)
+	t.Cleanup(Rate.Clear)
+	o := &opener{answer: func(req *Request) (*Response, error) {
+		h := http.Header{"X-Ratelimit-Remaining": {"4000"}, "X-Ratelimit-Limit": {"5000"}}
+		if req.Header.Get("If-None-Match") == `W/"i1"` {
+			return nil, &HTTPError{URL: req.URL, Code: 304, Msg: "Not Modified", Header: h}
+		}
+		resp := jsonAnswer(pyjson.New("number", 7, "title", "kept"))
+		resp.Header = h
+		resp.Header.Set("ETag", `W/"i1"`)
+		return resp, nil
+	}}
+	client := NewGitHub("o/r", "token-for-reads", false, o.open, nil, "")
+	for range 3 {
+		if got := client.GetIssue(7); got.Str("title") != "kept" {
+			t.Fatalf("issue %v", got)
+		}
+	}
+	client.UpdateIssue(7, pyjson.New("title", "new"))
+	client.UpdateIssue(7, pyjson.New("title", "new"))
+	var conditional []string
+	for _, req := range o.asked {
+		conditional = append(conditional, req.Method+" "+req.Header.Get("If-None-Match"))
+	}
+	if !reflect.DeepEqual(conditional, []string{"GET ", `GET W/"i1"`, `GET W/"i1"`, "PATCH ", "PATCH "}) {
+		t.Fatalf("sent %q", conditional)
+	}
+	if free, spent := Rate.TakeFree("token-for-reads", REST), Rate.Take("token-for-reads", REST); free != 2 ||
+		!reflect.DeepEqual(spent, map[string]int{"GET /issues/{n}": 1, "PATCH /issues/{n}": 2}) {
+		t.Fatalf("free %d, spent %v", free, spent)
+	}
+	if Rate.TakeFree("token-for-reads", REST) != 0 {
+		t.Fatal("TakeFree forgets what it gave")
+	}
+}
+
+// The cache holds no more than CachedBytes of text, the least recently used going first, and the
+// newest stays whatever its size; an answer given again (a 304) is the most recent once more.
+func TestTheCacheKeepsWhatItHoldsUnderItsBytes(t *testing.T) {
+	Cached.Clear()
+	t.Cleanup(Cached.Clear)
+	limit := CachedBytes
+	CachedBytes = 12
+	t.Cleanup(func() { CachedBytes = limit })
+	put := func(k, text string) { Cached.put([2]string{"t", k}, [2]string{"e", text}) }
+	has := func(k string) bool { _, ok := Cached.get([2]string{"t", k}); return ok }
+	put("a", "aaaa") // 5 bytes with its ETag
+	put("b", "bbbb")
+	if Cached.Bytes() != 10 || !has("a") || !has("b") {
+		t.Fatalf("held %d", Cached.Bytes())
+	}
+	put("a", "aaaa") // used again: b is the oldest now
+	put("c", "cc")
+	if has("b") || !has("a") || !has("c") || Cached.Bytes() != 8 {
+		t.Fatalf("kept %v, %d bytes", Cached.keys, Cached.Bytes())
+	}
+	put("d", strings.Repeat("d", 40))
+	if Cached.Len() != 1 || !has("d") || Cached.Bytes() != 41 {
+		t.Fatalf("kept %v, %d bytes", Cached.keys, Cached.Bytes())
+	}
+}
+
+// A blob is named by its content: the state file's, read once, is not read again while its sha
+// stands, and the one the loop writes is not read back at all (#4059). A small file, whose content
+// the contents API gives itself, is not kept.
+func TestABlobReadOrWrittenBeforeCostsNoCall(t *testing.T) {
+	Blobs.Clear()
+	t.Cleanup(Blobs.Clear)
+	big := strings.Repeat("{}", 600_000)
+	newer := strings.Repeat("[]", 600_000)
+	current := "abc123"
+	o := &opener{answer: func(req *Request) (*Response, error) {
+		switch {
+		case req.Method == "PUT":
+			return jsonAnswer(pyjson.New("content", pyjson.New("sha", "def456"))), nil
+		case strings.Contains(req.URL, "/contents/"):
+			return jsonAnswer(pyjson.New("type", "file", "encoding", "none", "content", "", "size", len(big),
+				"sha", current)), nil
+		}
+		return jsonAnswer(pyjson.New("sha", "abc123", "content", base64.StdEncoding.EncodeToString([]byte(big)))), nil
+	}}
+	client := NewGitHub("o/r", "token", false, o.open, nil, "")
+	var paths []string
+	read := func(want string) {
+		t.Helper()
+		before := len(o.asked)
+		if text, _ := client.GetFile("state.json", "_bot-state"); text != want {
+			t.Fatalf("read %d characters", len(text))
+		}
+		for _, req := range o.asked[before:] {
+			paths = append(paths, SpendPath(req.Method, req.URL))
+		}
+		paths = append(paths, "|")
+	}
+	read(big)
+	read(big)
+	client.PutFile("state.json", newer, "_bot-state", "abc123", "state")
+	current = "def456"
+	read(newer)
+	client.PutFile("small.json", "{}", "_bot-state", "", "state")
+	if !reflect.DeepEqual(paths, []string{"GET /contents/state.json", "GET /git/blobs/abc123", "|",
+		"GET /contents/state.json", "|", "GET /contents/state.json", "|"}) {
+		t.Fatalf("read %q", paths)
+	}
+	if len(Blobs.order) != 2 {
+		t.Fatalf("kept %v", Blobs.order)
 	}
 }
 

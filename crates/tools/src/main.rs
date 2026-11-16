@@ -34,6 +34,7 @@ mod selfplay_records;
 mod spec;
 mod spec_cards;
 mod stats;
+mod steer;
 mod sweep;
 mod technical;
 mod think;

@@ -3,7 +3,8 @@
 //! Frozen trigger and the freeze rider, Activate cooldowns, a per-turn damage pool, counters, a kill
 //! deadline, a side snapshot and its restore, a secret pick and take control — each through the
 //! engine's verbs and flags, so the engine never imports `crates/cards`. Ids are `e6-` from 35500,
-//! clear of every other fixture file's.
+//! clear of every other fixture file's. Issue #4022 (R4022000) adds a lethal guard and a lethal cancel,
+//! to meet the pool.
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
@@ -58,6 +59,12 @@ pub const SOUL_READ: &str = "e6-soul-read";
 pub const BUNNY: &str = "e6-bunny";
 /// A Field Spell with an extra-turn-cooldown "slow": the shipped cooldown, unchanged by E6.
 pub const SLOW: &str = "e6-slow";
+/// A 1/20 Unit, Armor 2: "Lethal damage your hero or your other Units would take is redirected to
+/// this" (Unan's shape).
+pub const GUARD: &str = "e6-guard";
+/// A Trap: "Reveals when a hit would bring your hero to 0 or less: Cancel the hit" (Final Gambit's
+/// shape).
+pub const GAMBIT: &str = "e6-gambit";
 
 fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
     let (base, radiant) = match stats {
@@ -240,6 +247,35 @@ fn pool() -> Script {
     }
 }
 
+/// A replacement at "would take lethal damage" (§4.4 step 4a), `fixtures::mb22`'s shape.
+fn lethal_replacement(id: &str, instead: Value) -> ReplacementDef {
+    ReplacementDef {
+        id: id.to_string(),
+        on: ReplacementMoment::LethalHit,
+        where_: None,
+        when: None,
+        instead: json_as(instead),
+        then: None,
+        by: None,
+    }
+}
+
+/// GUARD's catch: a lethal hit on its controller's hero or another of their Units comes to it.
+fn lethal_guard() -> Script {
+    Script {
+        replacements: vec![lethal_replacement("e6-guard", json!({ "redirect": "self" }))],
+        ..Script::default()
+    }
+}
+
+/// GAMBIT's cancel: a lethal hit on its controller's hero deals nothing.
+fn lethal_cancel() -> Script {
+    Script {
+        replacements: vec![lethal_replacement("e6-gambit", json!({ "cancel": true }))],
+        ..Script::default()
+    }
+}
+
 /// PIP's plan: the chosen Unit has until the end of its controller's next turn to get a kill.
 fn pip(radiant: bool) -> Script {
     Script {
@@ -352,6 +388,8 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
         (SLOW, slow()),
         (ZAPPER, zapper()),
         (POOL, pool()),
+        (GUARD, lethal_guard()),
+        (GAMBIT, lethal_cancel()),
         (
             SEGMENT,
             Script {
@@ -424,6 +462,14 @@ pub fn defs() -> Vec<CardDef> {
         card(35514, SOUL_READ, "Trap", None, json!([])),
         card(35515, BUNNY, "Unit", Some((2, 2)), json!([])),
         card(35516, SLOW, "Field Spell", None, json!([])),
+        card(
+            35518,
+            GUARD,
+            "Unit",
+            Some((1, 20)),
+            json!([{ "kind": "Armor", "n": 2 }]),
+        ),
+        card(35519, GAMBIT, "Trap", None, json!([])),
         // PIP's Radiant consolation rides on the shipped The Coin; the fixture catalog holds this
         // stand-in under its id, since fixtures register no shipped defs.
         json_as(json!({

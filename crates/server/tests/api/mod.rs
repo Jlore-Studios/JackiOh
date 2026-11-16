@@ -33,6 +33,7 @@ pub mod es256_test_only;
 pub mod fleet;
 pub mod friends;
 pub mod game_records;
+pub mod guess_limits;
 pub mod health;
 pub mod lobbies;
 pub mod news;

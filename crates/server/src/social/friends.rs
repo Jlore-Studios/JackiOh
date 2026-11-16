@@ -21,7 +21,7 @@ use serde_json::json;
 use crate::actor::rooms::release_room;
 use crate::api::collection::caller_profile;
 use crate::api::http::{
-    ApiResult, Req, account_key, bad_request, log_info, now_ms, rate_limited, str, to_json,
+    ApiResult, Req, account_key, address_key, bad_request, log_info, now_ms, rate_limited, str, to_json,
 };
 use crate::api::queue::new_uuid;
 use crate::app::App;
@@ -209,6 +209,16 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(rate_limited(
             "too many friend requests; try again later",
             app.social.friend_requests.retry_after_ms(&key, now),
+        ));
+    }
+    // R4008001: and per address, so a second account at the same address starts no fresh allowance.
+    let address = address_key(&req.address);
+    if !app.social.friend_requests_by_address.allow(&address, now) {
+        return Err(rate_limited(
+            "too many friend requests; try again later",
+            app.social
+                .friend_requests_by_address
+                .retry_after_ms(&address, now),
         ));
     }
 
