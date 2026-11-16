@@ -17423,10 +17423,14 @@
     "what": "build #4039 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-11-16T03:49:33Z",
+    "at": "2026-11-16T03:57:58Z",
     "notes": [
-      "delivered plan #4035 on claude-4 (run 43783676772): failed",
-      "started plan #4035 on claude-4 (run 43800617471)",
+      "delivered build #4034 on agy (run 43796113158): built",
+      "delivered build #4025 on claude-1 (run 43793308294): built",
+      "delivered build #4039 on claude-3 (run 43793236170): infra (its model job left no upload)",
+      "started review #4050 on agy (run 43801548738)",
+      "started review #4051 on claude-1 (run 43801610735)",
+      "started build #4039 on claude-5 (run 43801674049)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -18134,7 +18138,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T03:49:33Z",
+  "loop_tick": "2026-11-16T03:57:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
