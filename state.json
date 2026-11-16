@@ -16103,6 +16103,13 @@
     "4037": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43787689410",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-16T01:49:08Z",
+        "until": "2026-11-16T02:19:08Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
