@@ -217,6 +217,11 @@ describe("#3727 the Daily screen", () => {
     );
     render(<DailyRoute />);
     await screen.findAllByTestId(dailyTestid.gameRow, undefined, SLOW);
+    // The social read lands after the list and changes dailyWaiting from 0 to 2, which rereads the
+    // list. Count from after that mount-time read so it cannot satisfy or overshoot the seek's read.
+    await waitFor(() => {
+      expect(server.to("GET", "/api/daily")).toHaveLength(2);
+    }, SLOW);
     const reads = server.to("GET", "/api/daily").length;
 
     fireEvent.click(screen.getByTestId(dailyTestid.newGame));
