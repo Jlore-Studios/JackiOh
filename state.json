@@ -14182,11 +14182,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-16T22:31:11Z",
+        "at": "2026-11-16T22:51:59Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "rule line 2 (The AI): it moves decide's root pricing and the search's leaf score, so hard"
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Rule 2 (the AI): it moves decide's root pricing into new public functions of crates/ai/src/decide.rs and changes how the AI's training rows are scored"
       },
       "failures": 0,
       "forced": false,
