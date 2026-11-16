@@ -17076,6 +17076,8 @@
       }
     },
     "4049": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T02:17:55Z",
@@ -17089,8 +17091,11 @@
         "trail": "- Verification is in flight \u2014 the store contract test run will report back, and I'll finish the remaining checks (API tests, clippy, spec check) from there.The store test compilation is still running; I'll continue once its terminal result is delivered.\n- Clippy is still working through the crate; I'll pick up its result and the spec check when it lands.\n- Spec check is building; I'll report its outcome when it lands.Still building the release tooling for the spec gate; the result will arrive on its own and I'll close out the issue from it.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a banned account's open daily seeks and challenges no longer start games\"} -->\n- ## What changed\n- A banned account's open daily seeks now pair with no one and its open challenges can't be accepted, as if the account were gone; both work again if the ban is lifted before they lapse. Running daily games still end on time (out of scope, owner's call).\n- - [R4019000](/home/agent-muse/actions-runner/_work/_temp/work/item-4019/spec/rulings/R4019000.md) \u2014 new ruling note (`cards: \"\u00a79.13, issue #4019\"`, proven in the store contract and the daily API tests), plus its \u00a711 paragraph in [spec/pending/4019.md](/home/agent-muse/actions-runner/_work/_temp/wor\u2026\n- - [pg.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4019/crates/server/src/db/pg.rs) \u2014 `daily_seek_claim` passes over seeks whose `from_profile` is not `active` (`exists` beside the blocks check); `daily_invites_open_of` hides challenges from a non-`active` challenger.\n- - [fake.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4019/crates/server/src/db/fake.rs) \u2014 same two filters on the in-memory tables, mirroring the blocks-closure pattern.\n- - [invites.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4019/crates/server/src/daily/invites.rs) \u2014 `accept` answers 404 `no such daily challenge` when the challenger is not `active`, right after the R1689000 friendship re-check. `ban_profile` untouched.\n- ## How it was tested\n- - `cargo test -p jackioh-server --test server_store r4019000` \u2014 memory and postgres halves pass.\n- - `cargo test -p jackioh-server --test server r4019000` \u2014 both new API tests pass (accept-404 + inbox absence with no game written; seek never pairs with a banned seek, pairs after unban).\n- - Existing suites unchanged and green: full `api::daily` (36 passed) and store `daily` (27 passed, memory and postgres).\n- - `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, and `cargo jackioh spec check` (2209 rulings, 5610 proofs: ok) all pass.\n- ## Decisions\n- - Filtered where the game starts instead of closing rows in `ban_profile`, per the issue: the filter holds however the status was set and survives an unban, and the rows themselves keep their open state so nothing is lost.\n- - Pending (never-activated) profiles are also filtered by `= 'active'`: intended, matching the live queue's active-only stance.\n- - The `open_of` filter hides the banned sender's own outgoing copy too: acceptable, reads as \"as if the account were gone\", and the row returns on unban.\n- Reviewers should look twice at the `open_of` SQL `--` comment inside the query string (spec-check citation, harmless to Postgres) and at `accept`'s extra `profiles_get_by_id` read, which runs inside the existing transaction beside the friendship re-check.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4019 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4019/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4019,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T03:40:42Z",
         "from_run": "43791311281",
         "gates": [
           {
@@ -17149,8 +17154,15 @@
         "source": "build",
         "until": "2026-11-16T04:06:57Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-16T03:36:57Z",
+      "run_id": "pending:2c84ac7d-1794800416",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-16T03:40:42Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17164,9 +17176,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T03:40:04Z",
+    "at": "2026-11-16T03:40:42Z",
     "url": "",
-    "what": "review #4048 on muse"
+    "what": "review #4049 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T03:02:45Z",
