@@ -278,7 +278,7 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
     }
 
     #[test]
-    fn r752_r65_heroic_power_costs_0_legal_actions_offers_no_x_choice_a_play_naming_one_is_refused_and_a_play_pays_0_2_3()
+    fn r752_r65_heroic_power_costs_1_legal_actions_offers_no_x_choice_a_play_naming_one_is_refused_and_a_play_pays_1_2_3()
      {
         let mut g = scenario(json!({ "p1": { "hand": [HEROIC, RENO], "mana": 4 } }));
         let first = must(
@@ -325,7 +325,8 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
             GameEvent::CardPlayed { cost_paid, .. } => Some(*cost_paid),
             _ => None,
         });
-        assert_eq!(played, Some(0));
+        // Heroic Power costs (1) since issue #3996 (R752).
+        assert_eq!(played, Some(1));
     }
 }
 

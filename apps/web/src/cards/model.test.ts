@@ -253,11 +253,11 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
   it("R277 every catalog radiant face prints its catalog text and marks at least one stretch the base text lacks", () => {
     // #55 Lava Golem's Radiant face is its base text less the drawback, so its text adds nothing to
     // mark; its doubled stats are what R277 marks on it. Classic #60, Classic+ #5, Classic+ #34 and
-    // Classic #28 drop words too, as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862)
-    // and #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
+    // Classic #28 drop words too, as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862),
+    // #47 饕餮's (less "then Freeze this.", issue #3996) and #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
     // Living Potions, the Stinkyscape set's #9 Ticketed and Core #79 Twinspell, whose Radiant face drops
     // "Then this goes to the graveyard." (R3044000), and Stinkyscape+ #31, #72, #73 and #85 (§8.12)
-    // (radiantDiff.test.ts names all eighteen;
+    // (radiantDiff.test.ts names all twenty;
     // #149 Wildar's Radiant face adds "It costs (0)." (#2657), a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
@@ -268,6 +268,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "classicplus-005",
       "classicplus-034",
       "meditative-022-1",
+      "meditative-047",
       "meditative-048",
       "meditative-089",
       "meditativeplus-011",
@@ -406,20 +407,21 @@ describe("B8: faceModel cost", () => {
 /* B9 */
 
 describe("B9: faceModel stat tones", () => {
-  // core-013 Jlockeed Shredder-10 prints 5/7 on its base face and 10/14 on its radiant one (6/8 and 12/16 until #3837).
+  // core-013 Jlockeed Shredder-10 prints 4/6 on its base face and 8/12 on its radiant one (6/8 and 12/16 until #3837,
+  // 5/7 and 10/14 until #3996).
   const ID = "core-013";
 
   it("B9 attack above the printed face is buffed, below is reduced, equal is base", () => {
-    expect(face(ID, false, { live: live(6, 10, 10) }).stats?.attackTone).toBe("buffed");
-    expect(face(ID, false, { live: live(4, 10, 10) }).stats?.attackTone).toBe("reduced");
-    expect(face(ID, false, { live: live(5, 10, 10) }).stats?.attackTone).toBe("base");
+    expect(face(ID, false, { live: live(5, 10, 10) }).stats?.attackTone).toBe("buffed");
+    expect(face(ID, false, { live: live(3, 10, 10) }).stats?.attackTone).toBe("reduced");
+    expect(face(ID, false, { live: live(4, 10, 10) }).stats?.attackTone).toBe("base");
     expect(face(ID, false, { live: live(0, 10, 10) }).stats?.attackTone).toBe("reduced");
   });
 
   it("B9 at full health, max health above the printed health is buffed, below is reduced, equal is base", () => {
-    expect(face(ID, false, { live: live(5, 12, 12) }).stats?.healthTone).toBe("buffed");
-    expect(face(ID, false, { live: live(5, 6, 6) }).stats?.healthTone).toBe("reduced");
-    expect(face(ID, false, { live: live(5, 7, 7) }).stats?.healthTone).toBe("base");
+    expect(face(ID, false, { live: live(4, 12, 12) }).stats?.healthTone).toBe("buffed");
+    expect(face(ID, false, { live: live(4, 5, 5) }).stats?.healthTone).toBe("reduced");
+    expect(face(ID, false, { live: live(4, 6, 6) }).stats?.healthTone).toBe("base");
   });
 
   it("B9 health below max health is damaged, whatever max health is", () => {
@@ -440,9 +442,9 @@ describe("B9: faceModel stat tones", () => {
   });
 
   it("B9 a radiant card's tones compare with the radiant face", () => {
-    expect(face(ID, true, { live: live(10, 14, 14) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
-    expect(face(ID, false, { live: live(10, 14, 14) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
-    expect(face(ID, true, { live: live(5, 7, 7) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
+    expect(face(ID, true, { live: live(8, 12, 12) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
+    expect(face(ID, false, { live: live(8, 12, 12) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
+    expect(face(ID, true, { live: live(4, 6, 6) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
   });
 
   it("B9 with no def (an unknown card) both tones are base", () => {
@@ -499,11 +501,12 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.stats).toMatchObject({ attackTone: "base", healthTone: "base" });
   });
 
-  it("R752 a Heroic Power in play prints only the power it rolled, and its (0) on the gem", () => {
-    const f = face("core-098", false, { liveCost: 0, inPlay: { power: { name: "recruit" } } });
+  it("R752 a Heroic Power in play prints only the power it rolled, and its (1) on the gem", () => {
+    // R752: the card costs (1) since issue #3996, (0) before.
+    const f = face("core-098", false, { liveCost: 1, inPlay: { power: { name: "recruit" } } });
     // R3551002: each power costs (1) less than through v0.5.13g.
     expect(legacyText(f.text)).toEqual({ full: "Indestructible\nExpedition Map\nActivate: Spend (2): Recruit a permanent.", marks: [] });
-    expect(f.cost).toEqual({ text: "0", value: "0", tone: "base", alt: null });
+    expect(f.cost).toEqual({ text: "1", value: "1", tone: "base", alt: null });
     for (const other of ["one of 14 powers", "Felinor Token", "Discover a Unit", "Life Tap"]) {
       expect(f.text.full).not.toContain(other);
     }
@@ -534,10 +537,10 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(face("core-098", false, { liveCost: 0, inPlay: { power: { name: "burn" } } }).text.full).toContain("Deal 2 damage");
   });
 
-  it("R752 a Heroic Power in the collection keeps the list of fourteen and its (0) on the gem", () => {
+  it("R752 a Heroic Power in the collection keeps the list of fourteen and its (1) on the gem", () => {
     const f = face("core-098", false);
     expect(f.text.full).toContain("Discover one of 14 powers");
-    expect(f.cost.text).toBe("0");
+    expect(f.cost.text).toBe("1");
     // In play with no power named (one that has not rolled, R43), it prints the card as printed.
     expect(face("core-098", false, { inPlay: {} }).text.full).toContain("Discover one of 14 powers");
   });

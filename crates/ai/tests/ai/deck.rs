@@ -701,7 +701,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         // #3138 the human, easy and hard pins: Living Bomb costs (2), Snom Bunny Mind Control (5) and a dozen
         // Meditative and Classic+ cards move cost, which moves the curve's buckets; #3837 every pin:
         // Speciesist costs (3), Spiteful Stab, Argusland and Wardrum one less, and Ivory Tower (1); #3951
-        // every pin: Wardrum, Jlarna, Jlockeed's Yamato Cannon and Cloaking Module cost one less).
+        // every pin: Wardrum, Jlarna, Jlockeed's Yamato Cannon and Cloaking Module cost one less; #3996
+        // the easy, hard and themed pins: Mana Well, Twinspell, Field of Dreams and Income Tax cost one
+        // less, Felinor Feelings and Heroic Power one more).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -747,16 +749,16 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-015",
                     "core-004",
                     "core-052",
-                    "core-091",
-                    "classic-089",
-                    "classicplus-044",
+                    "core-092",
+                    "classicplus-001",
+                    "classicplus-045",
                     "core-032",
-                    "classic-049",
+                    "classic-050",
                     "classicplus-067",
-                    "classic-004",
-                    "classicplus-068",
-                    "core-026",
-                    "core-053",
+                    "classic-020",
+                    "classicplus-071",
+                    "core-038",
+                    "core-055",
                 ],
             ),
             (
@@ -785,16 +787,16 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-066",
                     "classicplus-012",
                     "classic-077",
-                    "classic-019",
+                    "classic-020",
                     "classicplus-003",
-                    "classic-059",
-                    "classicplus-017",
-                    "classicplus-046",
-                    "core-029",
-                    "classic-010",
-                    "classic-009",
+                    "classic-061",
+                    "classicplus-018",
+                    "classicplus-047",
+                    "core-026",
+                    "classic-006",
                     "classic-005",
-                    "classicplus-007",
+                    "core-094",
+                    "classic-088",
                 ],
             ),
             (
@@ -816,13 +818,13 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-066",
                     "classicplus-037",
                     "core-002",
-                    "core-086",
+                    "core-085",
+                    "core-075",
                     "core-066",
-                    "core-078",
                     "classicplus-063",
-                    "core-090",
-                    "classic-071",
-                    "classicplus-026",
+                    "core-093",
+                    "classic-056",
+                    "classicplus-017",
                 ],
             ),
         ];

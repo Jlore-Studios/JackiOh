@@ -52,6 +52,11 @@
         "en": "Can't attack\nEnd of turn: Attack a random enemy Unit. A kill across from your Bot Loser is its kill."
       }
     },
+    "classicplus-026": {
+      "radiant": {
+        "en": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per} Health per mana."
+      }
+    },
     "classicplus-042-1": {
       "radiant": {
         "en": "Activate: Gain {mana} mana. Heal your hero {heal}. Your opponent discards {discards}. Add a Radiant Book, KY, Legendary and (4) Cost card at ({setCost})."

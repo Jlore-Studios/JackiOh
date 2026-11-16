@@ -9,7 +9,7 @@
 //!
 //! The cards: Mana Well (Radiant 2), Rush Token Farm, Masochism Mask (a prompt),
 //! Ace in the Hole (a Trap), Gatling Pea, Gravedigger, Meltdown Layer (a token that harms its holder),
-//! three Field Spells with no turn hook, and Mr. Vanilla. For R2689000: Joint Filing (meditative-009), a
+//! three Field Spells with no turn hook and a textless (2) stand-in, and Mr. Vanilla. For R2689000: Joint Filing (meditative-009), a
 //! (2) Field Spell, "Aura: Your Start of turn and End of turn effects trigger an extra time" (Radiant two);
 //! Living Bomb (classic-062), a (2) Field Spell, Radiant "At the start of your opponent's turn: Destroy
 //! every permanent they control with a Plague Token on it"; and Fed Fauci (core-091), a (2) 1/6 Rush,
@@ -28,6 +28,8 @@ const MASOCHISM_MASK: &str = "core-065";
 const ACE_IN_THE_HOLE: &str = "classic-065";
 const POWER_TO_THRIVE: &str = "classic-081";
 const LEVEL_UP: &str = "traininggrounds-031";
+/// A textless Field Spell of Mana Well's (2) (since issue #3996), so one with no turn hook of its cost.
+const HOOKLESS_2: &str = "stand-in (2) Field Spell";
 const MUTATE_SPELL: &str = "classic-078";
 const VANILLA: &str = "core-008";
 const GATLING_PEA: &str = "meditative-013";
@@ -135,7 +137,7 @@ fn r2477000_an_own_mana_well_prices_the_crystal_it_gains() {
 
 #[test]
 fn r2477000_an_own_hook_field_spell_scores_above_a_hookless_one_of_its_cost() {
-    for (hooked, hookless) in [(RUSH_TOKEN_FARM, POWER_TO_THRIVE), (MANA_WELL, LEVEL_UP)] {
+    for (hooked, hookless) in [(RUSH_TOKEN_FARM, POWER_TO_THRIVE), (MANA_WELL, HOOKLESS_2)] {
         let with_hook = board("ai-hook-pair", json!([]), json!([hooked]), json!([]));
         let without = board("ai-hook-pair", json!([]), json!([hookless]), json!([]));
         close(

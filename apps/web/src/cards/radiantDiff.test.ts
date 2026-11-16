@@ -112,8 +112,8 @@ describe("R277 the word diff", () => {
     // doubled stats carry its marks, R277), as are Classic #60 Pile On's and Classic+ #5 Guy Att's, the brief's own
     // Radiant texts (docs/classic-sets.md, B6, B7), Classic+ #34 Memory Leak's (less "Choose one.") and Classic #28
     // Second Wind's (less "exile": the deck it discards lands in the graveyard, issue #3951). The designer's own:
-    // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #48 Tranquility's
-    // (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
+    // Meditative #89 Jlarna's (less the end-of-turn Tribute, R1225), #22.1 Fortify Mind's (R862), #47 饕餮's (less
+    // "then Freeze this.", issue #3996), #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
     // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000), and Training Grounds #31 Level Up!'s (less "if it destroyed an enemy Unit",
     // issue #3951). #149 Wildar's is marked (#2657): its
     // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too. Core #79 Twinspell's is its base
@@ -129,6 +129,7 @@ describe("R277 the word diff", () => {
       "classicplus-005",
       "classicplus-034",
       "meditative-022-1",
+      "meditative-047",
       "meditative-048",
       "meditative-089",
       "meditativeplus-011",
