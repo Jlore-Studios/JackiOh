@@ -17101,13 +17101,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "gemini",
         "built_by": "agy",
         "rejections": [],
-        "reviews": [],
-        "sha": "6421f98943a5cce9ce8691b3783f06b9f910a5b0",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "gemini",
+            "provider": "agy",
+            "run": "43801548738",
+            "tier": "medium"
+          }
+        ],
+        "sha": "200aede7296a722954676b0f51e86ecbd71f47f5",
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     },
     "4051": {
