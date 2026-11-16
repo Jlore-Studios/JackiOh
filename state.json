@@ -14312,6 +14312,13 @@
     "4067": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T23:49:49Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "touches only crates/run plus spec notes; none of the hard triggers (engine rules, AI, cross-crate design, migration, ~40 files) apply"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
