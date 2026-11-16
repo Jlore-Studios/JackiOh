@@ -17303,10 +17303,12 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "at": "2026-11-16T06:48:16Z",
+        "at": "2026-11-16T08:09:04Z",
         "built_by": "claude-7",
         "by": "`claude` (strong)",
-        "sha": "46e2ca39cebe50810aca69798b17915084ac5296"
+        "carried_from": "46e2ca39cebe50810aca69798b17915084ac5296",
+        "resolved_by": "`claude` (strong)",
+        "sha": "f73e0c91fa01fd4ee4cb9a79e4fb89c162027bd9"
       },
       "died": 0,
       "difficulty": "hard",
