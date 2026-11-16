@@ -16829,7 +16829,7 @@
       }
     },
     "4047": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "cross_rounds": 1,
@@ -16849,17 +16849,17 @@
           "where": "apps/web/src/lobby/LobbyScreen.tsx:135"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "gpt",
       "queued_at": "2026-11-16T04:59:47Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "43806637943",
+      "run_id": "pending:945e94ee-1794805439",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-16T04:52:02Z",
+      "started_at": "2026-11-16T05:04:27Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17667,9 +17667,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T05:03:47Z",
+    "at": "2026-11-16T05:04:27Z",
     "url": "",
-    "what": "review #4054 on claude-1"
+    "what": "revise #4047 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-16T04:48:31Z",
