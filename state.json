@@ -37647,7 +37647,8 @@
       "2026-11-16T04:22:26Z,claude-1,stream,call,43801610735,5,2026-11-16T08:30:00Z,,,allowed,100,,"
     ],
     "runs": [
-      "2026-11-16T04:02:23Z,43793084076,muse,muse-spark-1.3-contributor,review,4043,medium,approved,,82.3,0,0,0,,4,10,1,3,1.1,,none,,5"
+      "2026-11-16T04:02:23Z,43793084076,muse,muse-spark-1.3-contributor,review,4043,medium,approved,,82.3,0,0,0,,4,10,1,3,1.1,,none,,5",
+      "2026-11-16T04:22:32Z,43801610735,claude-1,sonnet+opus,review,4051,medium,approved,,18.4,34,8567,1156222,0.8908,3,5,,,2.2,,none,,1"
     ]
   },
   "version": 1
