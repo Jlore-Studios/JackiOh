@@ -16655,9 +16655,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-5",
-      "owner_since": "2026-11-16T04:02:43Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-16T04:50:30Z",
+      "owner": "claude-1",
+      "owner_since": "2026-11-16T04:41:57Z",
+      "owner_why": "handed off from `claude-5`: `claude-5` 7-day usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-16T09:00:00Z",
       "paused": {
         "at": "2026-11-16T04:10:29Z",
         "interrupt": "usage",
@@ -16669,13 +16669,13 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-5",
+      "provider": "claude-1",
       "queued_at": "2026-11-16T04:00:30Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "43801674049",
+      "run_id": "pending:cb6288c2-1794804091",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-16T04:02:43Z",
+      "started_at": "2026-11-16T04:41:57Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -17330,9 +17330,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T04:41:19Z",
+    "at": "2026-11-16T04:41:57Z",
     "url": "",
-    "what": "build #4035 on claude-4"
+    "what": "build #4039 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-16T03:57:58Z",
