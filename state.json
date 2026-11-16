@@ -15055,6 +15055,8 @@
       }
     },
     "4091": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T23:11:56Z",
@@ -15068,8 +15070,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: regression tests for JWT algorithm confusion and every claim the server checks\"} -->\n- ## What changed\n- Added `mod jwt_forgeries_are_refused_over_rest_and_the_socket` (8 tests, +276 lines) to [crates/server/tests/api/auth.rs](crates/server/tests/api/auth.rs), pinning that every JWT forgery in the issue is refused on both doors \u2014 `GET /api/auth/me` \u2192 401 and the match-socket upgrade \u2192 close 4401 \u2014 wit\u2026\n- - HS256 keyed with the JWKS's own public bytes, `alg: none`, a published `oct` JWKS key, ES256 with a swapped `alg` header (RS256 and HS256 sub-cases), wrong/missing `iss`/`aud` (4 sub-cases), unknown `kid`, and a forged HS256 with no secret configured (legacy `fetch_user_by_token` path, asserting \u2026\n- - A premise test guards the helpers against always-refuse: an honest token gets REST 200 and socket 4404 (\"you are not in a match\"), proving the token verified and only the match lookup failed.\n- No change to `crates/server/src/auth.rs`: the verifier already refused all seven forgeries, so there was nothing to fix.\n- ## How I tested\n- - `cargo test -p jackioh-server --test server api::auth::jwt_forgeries_are_refused_over_rest_and_the_socket` \u2014 8/8 pass.\n- - `cargo test -p jackioh-server --test server api::auth` \u2014 69/69 pass.\n- - `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo jackioh spec check` (2229 rulings, 5659 proofs \u2014 ok) \u2014 all green.\n- ## Decisions the issue did not settle\n- - Case 7's counter: the plan said `user_calls() == 1`, but each door's verify makes its own legacy lookup (a miss is never remembered), so the test asserts 1 after REST and 2 after the socket. Rejected alternative: asserting 1 at the end, which would hide a second-door regression.\n- - Unknown-`kid` final counters are `(total, user_calls) == (1, 0)`, not `(0, 0)`: the 1 is the premise's own admin lookup for the known key. Rejected alternative: dropping the premise, which would leave the \"one fetch, miss answered from the fresh set\" behavior unanchored.\n- - The honest-token test seeds Alice's profile *before* the REST call: `GET /api/auth/me` creates a pending profile for an unknown account, and a later seed loses the lookup race, so the socket saw 4403 (\"redeem an invite code\") instead of 4404. Rejected alternative: seeding after REST and expecting\u2026\n- - A scratch debug test was added to diagnose the 4403 and removed afterwards; the delivered diff is only the new module (single file, no weakened tests, no new allows).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4010 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4010/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4010,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T23:52:23Z",
         "from_run": "43977169498",
         "gates": [
           {
@@ -15128,8 +15133,15 @@
         "source": "build",
         "until": "2026-11-17T00:21:34Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-16T23:51:34Z",
+      "run_id": "pending:38a0dc32-1794873123",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-16T23:52:23Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15143,9 +15155,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T23:41:03Z",
+    "at": "2026-11-16T23:52:23Z",
     "url": "",
-    "what": "plan #4062 on gpt"
+    "what": "review #4091 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T23:36:15Z",
