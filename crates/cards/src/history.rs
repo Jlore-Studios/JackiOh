@@ -786,66 +786,66 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     // #3951 (R3951000, R3951001, R3951002): the last scripts before Stinkyscape+ Balance Changes I.
     (
         c052_legacy_snom_bunny_mind_control::ID,
-        "v0.6.4b",
-        c052_legacy_snom_bunny_mind_control::script_v0_6_4b,
+        "v0.6.4c",
+        c052_legacy_snom_bunny_mind_control::script_v0_6_4c,
     ),
     (
         c082_endless_expedition::ID,
-        "v0.6.4b",
-        c082_endless_expedition::script_v0_6_4b,
+        "v0.6.4c",
+        c082_endless_expedition::script_v0_6_4c,
     ),
-    (c037_scorch::ID, "v0.6.4b", c037_scorch::script_v0_6_4b),
-    (c031_level_up::ID, "v0.6.4b", c031_level_up::script_v0_6_4b),
+    (c037_scorch::ID, "v0.6.4c", c037_scorch::script_v0_6_4c),
+    (c031_level_up::ID, "v0.6.4c", c031_level_up::script_v0_6_4c),
     (
         c019_1_temporal_rift::ID,
-        "v0.6.4b",
-        c019_1_temporal_rift::script_v0_6_4b,
+        "v0.6.4c",
+        c019_1_temporal_rift::script_v0_6_4c,
     ),
     (
         c112_job_application::ID,
-        "v0.6.4b",
-        c112_job_application::script_v0_6_4b,
+        "v0.6.4c",
+        c112_job_application::script_v0_6_4c,
     ),
     (
         c068_organic_produce::ID,
-        "v0.6.4b",
-        c068_organic_produce::script_v0_6_4b,
+        "v0.6.4c",
+        c068_organic_produce::script_v0_6_4c,
     ),
     (
         c087_tatches_the_totem::ID,
-        "v0.6.4b",
-        c087_tatches_the_totem::script_v0_6_4b,
+        "v0.6.4c",
+        c087_tatches_the_totem::script_v0_6_4c,
     ),
     (
         c033_unstable_clone_machine::ID,
-        "v0.6.4b",
-        c033_unstable_clone_machine::script_v0_6_4b,
+        "v0.6.4c",
+        c033_unstable_clone_machine::script_v0_6_4c,
     ),
     (
         c046_phase_fabric::ID,
-        "v0.6.4b",
-        c046_phase_fabric::script_v0_6_4b,
+        "v0.6.4c",
+        c046_phase_fabric::script_v0_6_4c,
     ),
     (
         c079_a_glimpse_into_the_endless_sea::ID,
-        "v0.6.4b",
-        c079_a_glimpse_into_the_endless_sea::script_v0_6_4b,
+        "v0.6.4c",
+        c079_a_glimpse_into_the_endless_sea::script_v0_6_4c,
     ),
-    (c028_second_wind::ID, "v0.6.4b", c028_second_wind::script_v0_6_4b),
+    (c028_second_wind::ID, "v0.6.4c", c028_second_wind::script_v0_6_4c),
     (
         c046_circadian_halfcycler::ID,
-        "v0.6.4b",
-        c046_circadian_halfcycler::script_v0_6_4b,
+        "v0.6.4c",
+        c046_circadian_halfcycler::script_v0_6_4c,
     ),
     (
         c080_the_last_voyage::ID,
-        "v0.6.4b",
-        c080_the_last_voyage::script_v0_6_4b,
+        "v0.6.4c",
+        c080_the_last_voyage::script_v0_6_4c,
     ),
     (
         c155_the_far_vagabond::ID,
-        "v0.6.4b",
-        c155_the_far_vagabond::script_v0_6_4b,
+        "v0.6.4c",
+        c155_the_far_vagabond::script_v0_6_4c,
     ),
     (c064_surge_wall::ID, "v0.6.5c", c064_surge_wall::script_v0_6_5c),
     (
@@ -1425,6 +1425,41 @@ mod tests {
                 covering(&HISTORY.order, KEPT_SCRIPTS, version, id).is_some(),
                 "{version} ran the roll: its replays need the kept script"
             );
+        }
+    }
+
+    /// #3951 merged after `patches ship` named v0.6.4c and shipped as v0.6.4d, so v0.6.4c is the newest
+    /// version that ran the scripts it replaced: a v0.6.4c replay folds under them, a v0.6.4d one does not.
+    #[test]
+    fn r767000_issue_3951_scripts_are_kept_through_v0_6_4c_the_newest_version_that_ran_them() {
+        crate::register_all();
+        let ids = [
+            c052_legacy_snom_bunny_mind_control::ID,
+            c082_endless_expedition::ID,
+            c037_scorch::ID,
+            c031_level_up::ID,
+            c019_1_temporal_rift::ID,
+            c112_job_application::ID,
+            c068_organic_produce::ID,
+            c087_tatches_the_totem::ID,
+            c033_unstable_clone_machine::ID,
+            c046_phase_fabric::ID,
+            c079_a_glimpse_into_the_endless_sea::ID,
+            c028_second_wind::ID,
+            c046_circadian_halfcycler::ID,
+            c080_the_last_voyage::ID,
+            c155_the_far_vagabond::ID,
+        ];
+        for id in ids {
+            let kept_at = |version: &str| {
+                covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1)
+            };
+            assert_eq!(
+                kept_at("v0.6.4c"),
+                Some("v0.6.4c"),
+                "{id}: v0.6.4c ran the old script"
+            );
+            assert_ne!(kept_at("v0.6.4d"), Some("v0.6.4c"), "{id}: v0.6.4d ran #3951's");
         }
     }
 
