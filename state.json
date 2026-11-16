@@ -17074,6 +17074,8 @@
     "4050": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "200aede7296a722954676b0f51e86ecbd71f47f5",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T03:06:12Z",
