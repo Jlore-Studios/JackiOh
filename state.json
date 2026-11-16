@@ -16302,6 +16302,7 @@
       "planned_at": "2026-11-16T02:12:16Z",
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
+      "planned_model": "gpt-5.6-sol",
       "planned_tier": "medium",
       "provider": "gpt",
       "queued_at": "2026-11-16T01:51:10Z",
