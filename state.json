@@ -14042,17 +14042,8 @@
       "verdict_rounds": 1
     },
     "4064": {
-      "action": "plan",
-      "asks": [
-        "c:6931085090"
-      ],
-      "build_next": {
-        "from_run": "43972917467",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-16T23:19:28Z",
-        "until": "2026-11-16T23:49:28Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T23:19:19Z",
         "difficulty": "hard",
@@ -14071,10 +14062,9 @@
         "reason": "planned on opus",
         "trail": "e/runner/work/_temp/work/item-4064; grep -n \\\"damage_pool_left\\\\|damagePool\\\" docs/v0.3.0/SURFACE.md | cut -c1-300 | head -5; grep -n \\\"damage_pool\\\\|query::\\\" crates/engine/READM\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; grep -n \\\"^ - \\\\*\\\\*\\\\|^- \\\\*\\\\*\\\" docs/v0.3.0/SURFACE.md | tail -5 | cut -c1-200; wc -l docs/v0.3.0/SURFACE.md\", \"description\": \"Find the last\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; sed -n 1388,1392p docs/v0.3.0/SURFACE.md | cut -c1-400; grep -n \\\"^## \\\\|^### \\\" docs/v0.3.0/SURFACE.md | awk -F: '$1>1300' | head\", \"descripti\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; grep -n \\\"static trad\\\\|Static trades\\\\|trade up\\\\|R2179005\\\\|Anime Armor\\\" spec/09-architecture.md | cut -c1-400 | head\", \"description\": \"Find\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; sed -n 167p spec/09-architecture.md | fold -w 400 | grep -n \\\"attack\\\\|trade\\\\|value\\\" | head -10\", \"description\": \"Scan the reply paragraph's \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; sed -n 1,40p crates/engine/tests/rules/burn_toxic.rs; grep -n \\\"pub const VOLCANIC\\\\|pub const NOXIOUS\\\\|pub const BOTH\\\\|pub const PLAIN\\\\|pub\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; grep -n \\\"fn ticking\\\" -A22 crates/ai/tests/ai/evaluate.rs; sed -n 18,62p crates/ai/tests/ai/evaluate.rs; grep -n \\\"pub fn scenario\\\\|pub use\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; sed -n 49,60p crates/ai/src/reply.rs; sed -n 82,96p crates/ai/src/evaluate.rs; sed -n 18,40p crates/ai/src/reply.rs; sed -n 36,60p crates/ai/sr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; grep -rn \\\"face_threat\\\\|damage_past_taunts\\\" crates/ai/tests/ai/*.rs | grep -v \\\"static_attack_flags\\\\|gauntlet\\\\|position_model\\\" | head -20\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; grep -rn \\\"EvalWeights {\\\" crates/ apps/ --include=*.rs | head -20\", \"description\": \"Find EvalWeights struct literals\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; grep -rln \\\"AI_EVAL\\\\|EvalWeights\\\" crates/tools crates/wasm crates/server crates/shared apps/web/src training 2>/dev/null | head\", \"descriptio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; grep -n \\\"AI_EVAL\\\\|EvalWeights\\\" crates/tools/src/gate.rs crates/server/src/actor/telemetry.rs crates/shared/src/bots/signals.rs crates/tools/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; sed -n 553,560p crates/ai/src/config.rs; grep -n \\\"PlayerId\\\" crates/engine/src/query.rs | head -3; grep -n \\\"fn burn_on\\\\|counters\\\" crates/en\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; grep -n \\\"pub mod static_attack_flags\\\\|pub mod pierce\\\\|pub mod pinned\\\" crates/ai/tests/ai/mod.rs; grep -n \\\"^fn falls_to_first_strike\\\\|^pub\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4064/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2 (the AI's decisions: evaluate, reply, candidates) plus rule 1 (\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; sed -n 44,52p crates/ai/tests/ai/mod.rs\", \"description\": \"Check mod.rs ordering near policy\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4064/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2 (the AI's decisions: evaluate, reply, candidates) and rule 1 (t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; sed -n 1676,1700p crates/engine/src/testkit/scenario.rs\", \"description\": \"Check Scenario::attack hero target semantics\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4064/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2 (the AI's decisions: evaluate, reply, candidates) and rule 1 (t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"Every static hit read in `crates/ai` follows \\u00a74.4's order: D\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4064/.bot-plan.md\", \"offset\": 60, \"limit\": 40}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\" /// R4064000: what `player`'s damage pools (R3550004) may soak between them\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; awk '/^## /{if(n)print n, w; n=$0; w=0; next}{w+=NF}END{print n, w}' .bot-plan.md\", \"description\": \"Count words per plan section\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4064/.bot-plan.md\", \"offset\": 99, \"limit\": 12}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\" Say: the issue's board (7 read, 2 land); no spec rule for the AI's read, so\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4064/.bot-plan.md\", \"limit\": 58}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4064/.bot-plan.md\", \"offset\": 106}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=\\\"- `r4064000_ticks_meet_a_refilled_pool`: Projector, p1 `hero_toxic = Some(3)`: `eval\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4064; cat .bot-plan.md\", \"description\": \"Print the final plan draft\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2 (the AI's decisions: evaluate, reply, candidates) and rule 1 (two engine read helpers in crates/engine/src)\"} --> ## Goal The AI's quick damage reads must follow \u00a74.4 in the engine's order. These are the Taunt walk under `face_threat`/`damage_past_tau\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-16T22:44:23Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -14087,12 +14077,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-16T22:19:16Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43972917467",
+      "run_id": "pending:d8b863e9-1794871281",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-16T22:44:23Z",
+      "started_at": "2026-11-16T23:21:42Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6931085090"
+      ]
     },
     "4065": {
       "action": "plan",
@@ -14684,9 +14676,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T23:21:07Z",
+    "at": "2026-11-16T23:21:42Z",
     "url": "",
-    "what": "build #4079 on claude-3"
+    "what": "build #4064 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-16T23:10:18Z",
