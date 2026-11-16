@@ -131,6 +131,7 @@ function useLobbyRead(code: string): [Read, () => void] {
       },
       (cause: unknown) => {
         if (canceled) return;
+        // R4021000: a non-404 re-read keeps a lobby already shown and schedules one retry.
         if (cause instanceof ApiRequestError && cause.status === 404) setRead({ kind: "closed" });
         else if (readRef.current.kind === "ready") setRetry((n) => n + 1);
         else setRead({ kind: "failed", message: messageOf(cause) });
@@ -158,6 +159,7 @@ function useLobbyRead(code: string): [Read, () => void] {
       window.clearInterval(timer);
     };
   }, [social.live, reload]);
+  // R4021000: retry a failed re-read once at the lobby's pace even while the socket is live.
   useEffect(() => {
     if (retry === 0) return undefined;
     const timer = window.setTimeout(reload, LOBBY_POLL_MS);

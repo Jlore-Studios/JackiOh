@@ -1,4 +1,4 @@
-// The private lobby screen (R3730000 to R3730006): its controls, Ready, the countdown, its reads again,
+// The private lobby screen (R3730000 to R3730006, R4021000): its controls, Ready, the countdown, its reads again,
 // closed and removed, and the classic room's join card, against a stubbed server.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -247,7 +247,7 @@ describe("the lobby screen", () => {
     }
   });
 
-  it("R3730000 a failed re-read keeps the lobby, its pick and its Leave, and reads again within LOBBY_POLL_MS while live", async () => {
+  it("R4021000 a failed re-read keeps the lobby, its pick and its Leave, and reads again within LOBBY_POLL_MS while live", async () => {
     const fake = fakeSockets();
     setSocialSocketFactory(fake.factory);
     try {
@@ -282,7 +282,7 @@ describe("the lobby screen", () => {
     }
   });
 
-  it("R3730000 an action's refusal survives a failed re-read", async () => {
+  it("R4021000 an action's refusal survives a failed re-read", async () => {
     const fake = fakeSockets();
     setSocialSocketFactory(fake.factory);
     try {
@@ -308,7 +308,7 @@ describe("the lobby screen", () => {
     }
   });
 
-  it("R3730000 a 404 re-read closes the lobby", async () => {
+  it("R3730004 R4021000 a 404 re-read closes the lobby", async () => {
     const fake = fakeSockets();
     setSocialSocketFactory(fake.factory);
     try {
