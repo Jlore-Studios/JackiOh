@@ -129,7 +129,8 @@ each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R217
 static trader's. A unit's Death
 counts by what it leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
-the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
+the sandbox's destroy less after its remove (R923003), once for each controller, so each side's copy reads
+the price of its own board (R4024000); `unit_worth` adds `AI_EVAL.death` of it,
 `kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
 fuses into its owner's Starship, its probe after every Death's, so pieces never take a Death's nodes
 (R2566000). A backrow card's Death counts the same way (R2687000): after the units, `death_prices`
@@ -142,7 +143,8 @@ by one firing each (R2477000, R2565000, R2689000): at the root `turn_hook_prices
 `AI_TURN_HOOK_PROBE_NODES`, each such hook of the units on either field, of the backrow cards the seat can
 read on either side (a face-down enemy card is never probed) and of the seat's hand's Field Spells and
 Units (set or placed first, R923001) through the engine's trigger queue, and prices it as its controller's
-evaluation after less before, each crystal gained at `next_turn_mana`; the first two count once for each
+evaluation after less before, each crystal gained at `next_turn_mana`, once for each controller (R4024000);
+the first two count once for each
 time its controller's turn runs them (`multipliers::extra_runs`, Joint Filing's extra runs, R821), read on
 the state evaluated, and the third once; `material` adds `AI_EVAL.turn_hook` of it for a readable
 backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
