@@ -16504,6 +16504,13 @@
     "4039": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43789043202",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-16T02:33:04Z",
+        "until": "2026-11-16T03:03:04Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
