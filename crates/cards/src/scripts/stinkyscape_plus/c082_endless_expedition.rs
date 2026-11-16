@@ -14,8 +14,8 @@
 //!
 //! Kept for replays (R767000): through v0.6.5b the card read "For the rest of the game, lose {mana} mana.
 //! Add a random Terminus card to your hand. It costs (2).", `loseMaxMana` lowering its caster's max mana
-//! (R3569008) and one card added (`script_v0_6_5b`, issue #3996); through v0.6.4b that card cost (3)
-//! (`script_v0_6_4b`, issue #3951).
+//! (R3569008) and one card added (`script_v0_6_5b`, issue #3996); through v0.6.4c that card cost (3)
+//! (`script_v0_6_4c`, issue #3951).
 
 use jackioh_engine::effects::for_rest_of_game;
 use jackioh_engine::prelude::*;
@@ -24,8 +24,8 @@ pub const ID: &str = "stinkyscapeplus-082";
 
 /// "It costs (2)": the added card's cost.
 const TERMINUS_COST: i32 = 2;
-/// Through v0.6.4b (issue #3951): "it costs (3)".
-const TERMINUS_COST_V0_6_4B: i32 = 3;
+/// Through v0.6.4c (issue #3951): "it costs (3)".
+const TERMINUS_COST_V0_6_4C: i32 = 3;
 /// The step the start-of-turn add is re-entered under (`delayed`).
 const EXPEDITION_STEP: &str = "expedition";
 
@@ -85,7 +85,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts after v0.6.4b through v0.6.5b: max mana lowered for the rest of the game and one
+/// R767000: the scripts after v0.6.4c through v0.6.5b: max mana lowered for the rest of the game and one
 /// Terminus card added, costing (2) (issue #3996). `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
@@ -94,12 +94,12 @@ pub fn script_v0_6_5b() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.4b, whose Terminus card cost (3) (issue #3951). `KEPT_SCRIPTS` folds
+/// R767000: the scripts through v0.6.4c, whose Terminus card cost (3) (issue #3951). `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_4b() -> CardScripts {
+pub fn script_v0_6_4c() -> CardScripts {
     CardScripts {
-        base: expedition_v0_6_5b(false, TERMINUS_COST_V0_6_4B),
-        radiant: expedition_v0_6_5b(true, TERMINUS_COST_V0_6_4B),
+        base: expedition_v0_6_5b(false, TERMINUS_COST_V0_6_4C),
+        radiant: expedition_v0_6_5b(true, TERMINUS_COST_V0_6_4C),
     }
 }
 
@@ -177,7 +177,7 @@ mod tests {
 
         #[test]
         fn r640_it_is_quickdraw() {
-            for scripts in [script(), script_v0_6_5b(), script_v0_6_4b()] {
+            for scripts in [script(), script_v0_6_5b(), script_v0_6_4c()] {
                 assert_eq!(scripts.base.flags().quickdraw, Some(true));
                 assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
             }
@@ -236,7 +236,7 @@ mod tests {
             }
         }
 
-        /// R767000, R3569008: after v0.6.4b through v0.6.5b it lowered its caster's max mana for the rest of
+        /// R767000, R3569008: after v0.6.4c through v0.6.5b it lowered its caster's max mana for the rest of
         /// the game and added one card, costing (2) (issue #3996).
         #[test]
         fn r767000_r3569008_the_script_kept_for_v0_6_5b_lowers_max_mana_and_adds_one_2_cost_card() {
@@ -257,15 +257,15 @@ mod tests {
             });
         }
 
-        /// R767000: through v0.6.4b the card added cost (3) (issue #3951).
+        /// R767000: through v0.6.4c the card added cost (3) (issue #3951).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_4b_adds_a_3_cost_terminus_card() {
-            kept(script_v0_6_4b(), || {
+        fn r767000_the_script_kept_for_v0_6_4c_adds_a_3_cost_terminus_card() {
+            kept(script_v0_6_4c(), || {
                 let mut s = game("expedition-kept", false);
                 s.play(ID, json!({}));
                 let made = added(&s);
                 assert_eq!(made.len(), 1, "{made:?}");
-                assert_eq!(effective_cost(s.state(), &made[0], Default::default()), TERMINUS_COST_V0_6_4B);
+                assert_eq!(effective_cost(s.state(), &made[0], Default::default()), TERMINUS_COST_V0_6_4C);
             });
         }
     }

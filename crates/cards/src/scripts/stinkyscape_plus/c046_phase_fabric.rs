@@ -11,7 +11,7 @@
 //! adding it, and effects still reach it. Immutable and Immune to Spells bar every Spell's pick of the
 //! Unit from then on, this card's own among them (R781001, E35); Immune to Spells is given last, so the
 //! Spell's own remaining grants are not turned away by it (R3547002). Issue #3951 added Divine Shield to
-//! both faces; through v0.6.4b neither gave it, which `script_v0_6_4b` keeps for those replays (R767000).
+//! both faces; through v0.6.4c neither gave it, which `script_v0_6_4c` keeps for those replays (R767000).
 //! Issue #3996 added Armor `armor` to both faces (§6.1: a granted Armor N, stacking with every other
 //! source), given with the rest before Immune to Spells; through v0.6.5b neither gave it, which
 //! `script_v0_6_5b` keeps for those replays (R767000).
@@ -69,9 +69,9 @@ pub fn script_v0_6_5b() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.4b, which gave no Divine Shield (issue #3951). `KEPT_SCRIPTS` folds
+/// R767000: the scripts through v0.6.4c, which gave no Divine Shield (issue #3951). `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_4b() -> CardScripts {
+pub fn script_v0_6_4c() -> CardScripts {
     CardScripts {
         base: phase_fabric(false, false, false),
         radiant: phase_fabric(true, false, false),
@@ -193,10 +193,10 @@ mod tests {
             assert_eq!(keyword_count(&s, &theirs, KeywordKind::DivineShield), 0, "the attack reached it");
         }
 
-        /// R767000: through v0.6.4b it gave no Divine Shield (issue #3951), nor any Armor.
+        /// R767000: through v0.6.4c it gave no Divine Shield (issue #3951), nor any Armor.
         #[test]
-        fn r767000_the_script_kept_for_v0_6_4b_gives_no_divine_shield() {
-            crate::under_kept(FABRIC, super::super::script_v0_6_4b(), || {
+        fn r767000_the_script_kept_for_v0_6_4c_gives_no_divine_shield() {
+            crate::under_kept(FABRIC, super::super::script_v0_6_4c(), || {
                 let mut s = board(false, json!([VANILLA]), json!([]));
                 let unit = s.unit_at(P1, 1);
                 s.play(FABRIC, pick::targets(pick::instance(&unit)));
