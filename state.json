@@ -16050,6 +16050,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-16T02:19:25Z",
       "stop_requested": false,
+      "strike_log": [
+        "`gpt` (codex, gpt-5.6-sol) rejected it: `apps/web/src/lobby/LobbyScreen.tsx:135`: The stale-lobby and live-socket retry policy contradicts the current failed-read ruling and lacks the required new rul"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 3
