@@ -14089,6 +14089,13 @@
     "4065": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43975897244",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-16T23:29:00Z",
+        "until": "2026-11-16T23:59:00Z"
+      },
       "difficulty_by": {
         "at": "2026-11-16T23:28:51Z",
         "difficulty": "hard",
