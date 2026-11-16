@@ -1,9 +1,13 @@
 //! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/7 → 4/14 (2/9 → 4/18
 //! until #3041), of the Stinkyscape set.
-//!   Base:    "Cry: Choose one: summon a University, or this gains 'End of turn: Summon a random Starship
+//!   Base:    "Tribute 1
+//!            Cry: Choose one: summon a University, or this gains 'End of turn: Summon a random Starship
 //!            Piece.'"
-//!   Radiant: "Cry: Choose one: summon a Radiant University, or this gains 'End of turn: Summon a random
+//!   Radiant: "Tribute 1
+//!            Cry: Choose one: summon a Radiant University, or this gains 'End of turn: Summon a random
 //!            Radiant Starship Piece.'"
+//! Tribute 1 since issue #3996, the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
+//! keyword line's printed Tribute (R366); through v0.6.5 it took none (`script_v0_6_5`, kept, R767000).
 //! Engine since #2657: the Cry's two modes are declared at play (R81, R1). `university` summons an
 //! M #97.6 University (R64), Radiant from the Radiant face, whose own Activate is its own to use; a full
 //! unit row summons nothing. `piece` has ZolarKeth remember its new ability (`memory`), so the End of turn
@@ -36,6 +40,8 @@ const CRY_UNIVERSITY: &str = "university";
 const CRY_PIECE: &str = "piece";
 /// #2657: what ZolarKeth remembers once its Cry gave it the Activate (since #3041 the End of turn).
 const GAINED_KEY: &str = "gainedPieceActivate";
+/// "Tribute 1" (R101, R366: printed, declared nowhere), since issue #3996.
+const TRIBUTE: i32 = 1;
 
 /// R1876000: the Universities this Cry summoned.
 fn summoned_universities(ctx: &mut EffectContext<'_>) -> Vec<String> {
@@ -181,9 +187,13 @@ fn gained_ability(radiant: bool) -> ActivationDecl {
 }
 
 /// #2657: "Cry: Choose one: summon a University, or this gains '…'": `end_of_turn` is #3041's End of turn,
-/// else v0.5.11r's Activate.
-fn chooses(radiant: bool, end_of_turn: bool) -> Script {
+/// else v0.5.11r's Activate; `tribute` is issue #3996's Tribute, none through v0.6.5.
+fn chooses(radiant: bool, end_of_turn: bool, tribute: Option<i32>) -> Script {
     Script {
+        static_flags: tribute.map(|tribute| StaticFlags {
+            tribute: Some(tribute),
+            ..StaticFlags::default()
+        }),
         modes: vec![ModeDecl {
             kind: PromptKind::Mode,
             options: vec![CRY_UNIVERSITY.to_string(), CRY_PIECE.to_string()],
@@ -206,8 +216,16 @@ fn chooses(radiant: bool, end_of_turn: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: chooses(false, true),
-        radiant: chooses(true, true),
+        base: chooses(false, true, Some(TRIBUTE)),
+        radiant: chooses(true, true, Some(TRIBUTE)),
+    }
+}
+
+/// R767000: through v0.6.5 it took no Tribute (issue #3996); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5() -> CardScripts {
+    CardScripts {
+        base: chooses(false, true, None),
+        radiant: chooses(true, true, None),
     }
 }
 
@@ -215,8 +233,8 @@ pub fn script() -> CardScripts {
 /// the random Starship Piece; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
-        base: chooses(false, false),
-        radiant: chooses(true, false),
+        base: chooses(false, false, None),
+        radiant: chooses(true, false, None),
     }
 }
 
@@ -251,8 +269,11 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use jackioh_engine::play_choices::tribute_cost_of;
+
     use super::{
-        CRY_PIECE, CRY_UNIVERSITY, ID, PIECE, UNIVERSITIES, UNIVERSITY, script_v0_5_11, script_v0_5_11o, script_v0_5_9f,
+        CRY_PIECE, CRY_UNIVERSITY, ID, PIECE, TRIBUTE, UNIVERSITIES, UNIVERSITY, script_v0_5_11, script_v0_5_11o,
+        script_v0_5_9f, script_v0_6_5,
     };
     use crate::{filler, scenario};
 
@@ -300,10 +321,50 @@ mod tests {
             .collect()
     }
 
+    /// The lane of the Unit `paying` boards hold for ZolarKeth's Tribute 1 (issue #3996).
+    const TRIBUTE_LANE: i32 = 4;
+
+    /// `board` with a Vanilla in `TRIBUTE_LANE` to pay the Tribute, beside `field`.
+    fn paying(radiant: bool, field: Value) -> Scenario {
+        let mut field = field.as_array().cloned().unwrap_or_default();
+        field.push(json!({ "def": VANILLA, "lane": TRIBUTE_LANE }));
+        board(radiant, json!(field))
+    }
+
+    /// Plays ZolarKeth into zone 1 choosing `mode`, the Unit in `TRIBUTE_LANE` paying its Tribute 1.
+    fn cry(s: &mut Scenario, mode: &str) {
+        let tribute = s.unit_at(P1, TRIBUTE_LANE).id;
+        s.play(ID, json!({ "zone": 1, "modes": [mode], "tributes": [tribute] }));
+        s.expect_in_zone(tribute.as_str(), "graveyard");
+    }
+
+    #[test]
+    fn r101_it_needs_tribute_1_on_both_faces() {
+        for radiant in [false, true] {
+            let mut s = paying(radiant, json!([]));
+            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] })));
+            cry(&mut s, CRY_UNIVERSITY);
+            s.expect_in_zone(ID, "field");
+        }
+    }
+
+    /// R767000: through v0.6.5 it took no Tribute (issue #3996).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_5_takes_no_tribute() {
+        crate::under_kept(ID, script_v0_6_5(), || {
+            let mut s = board(false, json!([]));
+            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), 0);
+            s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
+            s.end_turn();
+            assert_eq!(pieces(&s).len(), 1);
+        });
+    }
+
     #[test]
     fn its_cry_summons_a_university_its_own_activate_its_own() {
-        let mut s = board(false, json!([{ "def": VANILLA, "lane": 5 }]));
-        s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] }));
+        let mut s = paying(false, json!([{ "def": VANILLA, "lane": 5 }]));
+        cry(&mut s, CRY_UNIVERSITY);
         let uni = university(&s);
         assert!(!uni.radiant, "a base University");
         s.activate(&uni, json!({}));
@@ -313,8 +374,8 @@ mod tests {
 
     #[test]
     fn r62_its_cry_may_give_it_an_end_of_turn_that_summons_a_random_starship_piece_at_its_controllers_end_of_turn() {
-        let mut s = board(false, json!([]));
-        s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
+        let mut s = paying(false, json!([]));
+        cry(&mut s, CRY_PIECE);
         assert!((1..=5).filter_map(|lane| s.unit(P1, lane)).all(|unit| unit.def_id != UNIVERSITY));
         assert!(pieces(&s).is_empty(), "nothing as it is played");
         s.expect_refused(|s| s.activate(ID, json!({})));
@@ -339,21 +400,21 @@ mod tests {
 
     #[test]
     fn r62_the_university_mode_gives_no_end_of_turn() {
-        let mut s = board(false, json!([]));
-        s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] }));
+        let mut s = paying(false, json!([]));
+        cry(&mut s, CRY_UNIVERSITY);
         s.end_turn();
         assert!(pieces(&s).is_empty());
     }
 
     #[test]
     fn r275_radiant_4_14_a_radiant_university_or_a_radiant_piece_at_the_end_of_turn() {
-        let mut s = board(true, json!([]));
-        s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] }));
+        let mut s = paying(true, json!([]));
+        cry(&mut s, CRY_UNIVERSITY);
         s.expect_stats(ID, json!({ "attack": 4, "health": 14 }));
         assert!(university(&s).radiant, "a Radiant University");
 
-        let mut s = board(true, json!([]));
-        s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
+        let mut s = paying(true, json!([]));
+        cry(&mut s, CRY_PIECE);
         s.end_turn();
         let pieces = pieces(&s);
         assert_eq!(pieces.len(), 1);

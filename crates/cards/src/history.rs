@@ -36,10 +36,10 @@ use crate::scripts::classic::{
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
-    c019_3_mid_loser, c023_dropshipping, c029_portal_to_the_past, c030_felinor_fuser, c033_ivory_tower,
-    c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box, c048_jlockeeds_lobbyist,
-    c049_jay_fungus, c051_jlockeeds_j15_fighter, c053_book_of_tokens, c062_kys_papaya, c068_organic_produce,
-    c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
+    c019_3_mid_loser, c023_dropshipping, c026_tommy_tempo, c029_portal_to_the_past, c030_felinor_fuser,
+    c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box,
+    c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter, c053_book_of_tokens,
+    c062_kys_papaya, c068_organic_produce, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
@@ -52,13 +52,14 @@ use crate::scripts::core::{
 use crate::scripts::meditative::{
     c005_death_by_1000_cuts, c007_introspection, c009_joint_filing, c017_true_craft_a_card,
     c018_expedition12, c019_1_temporal_rift, c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten,
-    c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c044_cn_jade_well,
-    c045_knowledge_breaker, c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
-    c049_yilegpt_tamed, c050_cn_tech, c053_prestige, c054_money_machine, c063_skull_of_jnari,
-    c065_keymaster_keenus, c074_montana_giant, c080_aluneth, c081_deadmans_hand, c085_playtester,
-    c087_tatches_the_totem, c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
-    c093_3_growing_felinor_super_senior, c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem,
-    c097_2_wishing_well, c097_8_prison, c099_paranoia, c102_catboy_maid_ssr,
+    c032_spiritually_zhongguo, c033_first_day_of_xuexiao, c037_cn_in_a_bottle, c038_h1b_printer,
+    c040_feng_shui, c044_cn_jade_well, c045_knowledge_breaker, c047_taotie, c048_tranquility,
+    c049_1_yilegpt_unleashed, c049_3_ai_girlfriend, c049_yilegpt_tamed, c050_cn_tech, c053_prestige,
+    c054_money_machine, c063_skull_of_jnari, c065_keymaster_keenus, c074_montana_giant, c080_aluneth,
+    c081_deadmans_hand, c085_playtester, c087_tatches_the_totem, c090_spell_basket,
+    c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior,
+    c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison,
+    c099_paranoia, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c002_na_tech, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
@@ -77,8 +78,8 @@ use crate::scripts::stinkyscape::{
     t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
-    c037_scorch, c046_phase_fabric, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c104_tireless_cultivation, c155_the_far_vagabond,
+    c021_jlockeed_shredder_12, c037_scorch, c046_phase_fabric, c079_a_glimpse_into_the_endless_sea,
+    c080_the_last_voyage, c082_endless_expedition, c104_tireless_cultivation, c155_the_far_vagabond,
 };
 use crate::scripts::training_grounds::{
     c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
@@ -842,6 +843,30 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c155_the_far_vagabond::ID,
         "v0.6.4b",
         c155_the_far_vagabond::script_v0_6_4b,
+    ),
+    // #3996 group C (R3996200, R3996201, R3996202): the last scripts before Stinkyscape+ Balance Changes II.
+    (c026_tommy_tempo::ID, "v0.6.5", c026_tommy_tempo::script_v0_6_5),
+    (
+        c021_jlockeed_shredder_12::ID,
+        "v0.6.5",
+        c021_jlockeed_shredder_12::script_v0_6_5,
+    ),
+    (c026_zolarketh::ID, "v0.6.5", c026_zolarketh::script_v0_6_5),
+    (
+        c045_jlockeeds_weapons::ID,
+        "v0.6.5",
+        c045_jlockeeds_weapons::script_v0_6_5,
+    ),
+    (
+        c033_first_day_of_xuexiao::ID,
+        "v0.6.5",
+        c033_first_day_of_xuexiao::script_v0_6_5,
+    ),
+    (c046_phase_fabric::ID, "v0.6.5", c046_phase_fabric::script_v0_6_5),
+    (
+        c040_appropriations::ID,
+        "v0.6.5",
+        c040_appropriations::script_v0_6_5,
     ),
 ];
 
