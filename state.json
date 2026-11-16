@@ -16746,6 +16746,8 @@
     "4046": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "7ed2c7f27e67e26bbfb619b0306efa33b4e7e20e",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T02:35:59Z",
