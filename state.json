@@ -17434,9 +17434,13 @@
     "what": "build #4024 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-16T07:53:27Z",
+    "at": "2026-11-16T08:00:05Z",
     "notes": [
-      "#4024 is held for `claude-8` until 02:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))"
+      "#4024: `claude-8` can start again, so its hold is lifted",
+      "found the run of #4009: 43826171974",
+      "started build #4024 on claude-8 (run 43827998353)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18140,7 +18144,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T07:53:27Z",
+  "loop_tick": "2026-11-16T08:00:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
