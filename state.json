@@ -15880,17 +15880,8 @@
       ]
     },
     "4020": {
-      "action": "plan",
-      "asks": [
-        "c:6905058935"
-      ],
-      "build_next": {
-        "from_run": "43788837270",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-16T02:14:29Z",
-        "until": "2026-11-16T02:44:29Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T02:14:16Z",
         "difficulty": "medium",
@@ -15909,10 +15900,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "p`. Change `textOf` to `export function textOf(text: Text, ctx: CoachCtx, params?: Params): string { return typeof text === \"function\" ? \u2026\n- 2. `discoveries.ts`: add imports `import { AI_TUTORIAL, HERO_HEALTH } from \"@jackioh/engine/config\";`, `import { LANES } from \"../game/contract.ts\";`, `import type { Params } from \"../i18n/i18n.ts\";`. Add to `Discovery`: `/** Values for `{name}` tokens in `rule`, filled where shown. */ params?: Par\u2026\n- 3. `steps.ts`: add `import type { Params } from \"../i18n/i18n.ts\";` and add `params?: Params;` to the `Common` type. No function-body changes: `info` spreads `...options` and `moment` spreads `...rest`, so `params` flows onto the step.\n- 4. `scripts/basics.ts`: add `import { AI_TUTORIAL, HERO_HEALTH } from \"@jackioh/engine/config\";`. Welcome step: text becomes `\"Your hero is at the bottom and the enemy's is at the top. Bring the enemy hero from {enemy} health to 0 and you win. You can't lose here, so try things out.\"` with `params:\u2026\n- 5. `TutorialResult.tsx` `StillToFind`: change the rule argument to `t(entry.rule, entry.params)`, i.e. `<li key={id}>{t(\"{name}: {rule}\", { name: t(entry.name), rule: t(entry.rule, entry.params) })}</li>`. Keep lowercase (no `ruleSentence` here: after a colon the rule reads as a continuation). No o\u2026\n- 6. `zh-CN.json`: delete the 4 old keys (`\"a unit you play stands in one of your three lanes until it dies.\"`, `\"a hero at 0 health loses. Yours starts at 30, the tutorial's enemy at 20.\"`, the welcome sentence, `\"The enemy hero has 20 health. How do you bring it down?\"`) and add exactly:\n- - `\"a unit you play stands in one of your {lanes} lanes until it dies.\": \"\u4f60\u6253\u51fa\u7684\u5355\u4f4d\u4f1a\u7ad9\u5728\u4f60\u7684{lanes}\u6761\u7eb5\u5217\u4e4b\u4e00\uff0c\u76f4\u5230\u5b83\u6b7b\u4ea1\u3002\"`\n- - `\"a hero at 0 health loses. Yours starts at {yours}, the tutorial's enemy at {enemy}.\": \"\u751f\u547d\u503c\u964d\u52300\u7684\u82f1\u96c4\u4f1a\u8f93\u6389\u3002\u4f60\u7684\u82f1\u96c4\u4ece{yours}\u5f00\u59cb\uff0c\u6559\u7a0b\u4e2d\u7684\u654c\u4eba\u4ece{enemy}\u5f00\u59cb\u3002\"`\n- - `\"Your hero is at the bottom and the enemy's is at the top. Bring the enemy hero from {enemy} health to 0 and you win. You can't lose here, so try things out.\": \"\u4f60\u7684\u82f1\u96c4\u5728\u4e0b\u65b9\uff0c\u654c\u65b9\u82f1\u96c4\u5728\u4e0a\u65b9\u3002\u628a\u654c\u65b9\u82f1\u96c4\u7684\u751f\u547d\u503c\u4ece{enemy}\u6253\u52300\uff0c\u4f60\u5c31\u8d62\u4e86\u3002\u5728\u8fd9\u91cc\u4f60\u4e0d\u4f1a\u8f93\uff0c\u5c3d\u7ba1\u653e\u624b\u5c1d\u8bd5\u3002\"`\n- - `\"The enemy hero has {enemy} health. How do you bring it down?\": \"\u654c\u65b9\u82f1\u96c4\u6709{enemy}\u70b9\u751f\u547d\u503c\u3002\u4f60\u8981\u600e\u6837\u628a\u5b83\u6253\u5012\uff1f\"`\n- 7. Grep the rest of `apps/web/src/tutorial/` for remaining digits in `rule:`, `text:`, `title:`, `hints:` strings. Verdict, already checked: leave `\"1 mana crystal\"` (the dealt turn-1 mana, not a constant), `\"(1) Cost\"` / `\"It costs (0)\"` (card-cost examples), `\"1 Armor\"` in the Defense Position ru\u2026\n- 8. `discovery.test.ts`: add imports for `LANES`, `HERO_HEALTH`, `AI_TUTORIAL`, `ruleSentence`, `textOf`, and `scriptFor`. Add three tests: `R2205000 the playing-units rule counts the board's lanes` (rule holds `{lanes}` and not `three`; `ruleSentence` output contains `String(LANES.length)`); `R2205\u2026\n- 9. `FieldGuide.test.tsx`: add `R2205002 the Field guide fills the lane and health numbers`: `markFound([\"play-unit\", \"hero-health\"])`, render, and expect those entries' text to contain `String(LANES.length)`, `String(HERO_HEALTH)`, and `String(AI_TUTORIAL.heroHealth ?? HERO_HEALTH)`. `TutorialResul\u2026\n- ## Tests\n- - `pnpm --dir apps/web test src/tutorial/discovery.test.ts` (new lane/health/step tests plus the existing zh-CN coverage test, which now covers the new keys as string literals).\n- - `pnpm --dir apps/web test src/tutorial/FieldGuide.test.tsx` (new render test).\n- - `pnpm --dir apps/web test src/tutorial/TutorialResult.test.tsx` (new missed-rule test).\n- - `pnpm --dir apps/web test src/tutorial/lessons.test.ts` (zh-CN completeness over the new step strings; health-constant test untouched).\n- - `pnpm --dir apps/web test src/tutorial/discovery-play.test.ts` and `pnpm --dir apps/web test src/tutorial/scripts/basics.test.ts` (regression: real lesson still plays).\n- - `pnpm --dir apps/web test src/i18n/i18n.test.ts` (token-match between the new keys and translations; every-`t()`-has-an-entry).\n- - `pnpm --dir apps/web typecheck` (new `params` fields and engine-config imports typecheck).\n- ## Done when\n- - [ ] No tutorial source string says \"three lanes\"; the Field Guide's Playing-units entry renders `String(LANES.length)`.\n- - [ ] The Hero-health rule and both basics steps render `String(HERO_HEALTH)` / `String(AI_TUTORIAL.heroHealth)`; their English sources hold `{lanes}`/`{yours}`/`{enemy}` and no literal 30/20/three.\n- - [ ] Every new key has its Chinese entry with matching tokens; the i18n and lessons zh-CN tests pass.\n- - [ ] The grep sweep is done; any other constant-restating number got the same treatment, the rest are named as left-literal.\n- - [ ] All test commands above pass; no ruling note or spec change was needed.\n- ## Risks\n- - A test looking a sentence up by its old English key: the old keys are deleted, so any source still calling `t()` with one fails the i18n completeness test. Mitigation: steps 2/4 change every call site, step 6 swaps the catalog, and the lessons test hunts stragglers.\n- - i18n pattern matching: a `{token}` key also matches finished sentences, but these call sites always pass `params`, so `t()` hits the exact template key first. The token-match test enforces identical tokens on both sides.\n- - `ruleSentence` capitalizes after filling; numbers fill mid-sentence so casing is unaffected. `StillToFind` deliberately stays lowercase after its colon.\n- - Never call `t()` at module scope: the new module-scope values are plain numbers in `params`, filled at render time only.\n- ## Open questions\n- None. Every number maps to an existing client-readable constant, and the placeholder names follow the existing `{name}` convention in the same files.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4020 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4020/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-16T01:53:00Z",
       "owner_why": "it plans it",
@@ -15925,12 +15915,14 @@
       "provider": "muse",
       "queued_at": "2026-11-16T01:47:37Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43788837270",
+      "run_id": "pending:28ece01b-1794795490",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-16T01:53:00Z",
+      "started_at": "2026-11-16T02:18:40Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6905058935"
+      ]
     },
     "4021": {
       "action": "plan",
@@ -16541,9 +16533,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T02:17:55Z",
+    "at": "2026-11-16T02:18:40Z",
     "url": "",
-    "what": "build #4019 on muse"
+    "what": "build #4020 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T01:47:44Z",
