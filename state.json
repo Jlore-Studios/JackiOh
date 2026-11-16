@@ -15983,13 +15983,30 @@
         "tiers": {}
       },
       "waiting_comment": 6903257445
+    },
+    "4035": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "claude-4",
+      "owner_since": "2026-11-16T01:00:19Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "claude-4",
+      "run_id": "pending:3bdd2a22-1794790793",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-16T01:00:19Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T00:59:39Z",
+    "at": "2026-11-16T01:00:19Z",
     "url": "",
-    "what": "revise #3998 on claude-6"
+    "what": "plan #4035 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-16T00:49:06Z",
