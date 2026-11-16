@@ -14087,17 +14087,8 @@
       ]
     },
     "4065": {
-      "action": "plan",
-      "asks": [
-        "c:6931090044"
-      ],
-      "build_next": {
-        "from_run": "43975897244",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-16T23:29:00Z",
-        "until": "2026-11-16T23:59:00Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T23:28:51Z",
         "difficulty": "hard",
@@ -14116,10 +14107,9 @@
         "reason": "planned on opus",
         "trail": "\"players\\\\[AI\\\\]\\\\.\\\\(health\\\\|hero\\\\)\\\" crates/ai/tests/ai/*.rs | head -3; grep -n \\\"pub health\\\\|pub hero_burn\\\\|pub exile\\\\b\\\\|pub exiled\\\\|pub banished\\\" crates/engine/src/\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4065/.bot-plan.md\", \"content\": \"# Draft plan #4065 (claude-opus-5-5 run 3) \\u2014 in progress\\n\\nFindings so far (verified in code at 6bf1e5335c):\\n- \u2026\n- Bash: {\"command\": \"awk 'NR>=1300 && NR<=1390 && /pub struct/ {print NR\\\": \\\"$0}' crates/engine/src/state.rs; sed -n 1386,1391p crates/engine/src/state.rs\", \"description\": \"Confirm exile zone belongs to Pla\u2026\n- Bash: {\"command\": \"grep -n \\\" pub fn [a-z_]*(\\\" crates/engine/src/testkit/scenario.rs | cut -c1-120 | head -60\", \"description\": \"List Scenario verbs in testkit\"}\n- Bash: {\"command\": \"sed -n 1680,1760p crates/engine/src/testkit/scenario.rs; sed -n 1905,1930p crates/engine/src/testkit/scenario.rs; sed -n 1540,1560p crates/engine/src/testkit/scenario.rs\", \"description\":\u2026\n- Bash: {\"command\": \"grep -n \\\"pub enum CardRef\\\" -A12 crates/engine/src/testkit/scenario.rs; grep -n \\\"impl From<.*> for CardRef\\\" -A6 crates/engine/src/testkit/scenario.rs | head -30; grep -n \\\"fn resolve(\u2026\n- Bash: {\"command\": \"grep -n \\\"impl SeatRef for\\\" crates/engine/src/testkit/*.rs | head; grep -n \\\"fn expect_health\\\" -A10 crates/engine/src/testkit/scenario.rs | head -12; grep -n \\\"\\\\\\\"turn\\\\\\\"\\\\|turn: 9\\\\\u2026\n- Bash: {\"command\": \"ls crates/tools/src | head -50 | tr '\\\\n' ' '; echo; grep -rn \\\"crates/ai\\\" crates/tools/src/classify*.rs 2>/dev/null | head -10\", \"description\": \"Check classify handling of AI changes\"}\n- Bash: {\"command\": \"grep -n \\\"Area::Ai\\\" crates/tools/src/classify.rs | head -12; grep -n \\\"fn claims\\\\|Area::Ai =>\\\\|ai change\\\\|AI change\\\" crates/tools/src/claims.rs crates/tools/src/classify.rs | head -\u2026\n- Bash: {\"command\": \"grep -n \\\"diff.ai\\\\|\\\\.ai\\\\b\\\" crates/tools/src/claims.rs | head -12; grep -n \\\"ai\\\" crates/tools/README.md | grep -i \\\"classify\\\\|claims\\\\|fragment\\\" | cut -c1-300 | head -8\", \"descript\u2026\n- Bash: {\"command\": \"git log --oneline -8 --format=\\\"%h %s\\\" -- crates/ai/src/evaluate.rs | head -8; git show --stat 43eea36894 | head -30\", \"description\": \"See what files the #3937 AI change touched\"}\n- Bash: {\"command\": \"git show --stat 007204a0ef | tail -14; git show 43eea36894 -- crates/ai/tests/ai/lethal.rs | head -40\", \"description\": \"Check #3793 PR files and lethal test change\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\nfor k,c in d.items():\\n if not isinstance(c,dict) or c.get('type')!='Unit' or c.get('token'): continue\\\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\nfor k in ['classicplus-049','core-019','core-067','core-030','core-053']:\\n print(k, repr(d[k]['base'][\u2026\n- Bash: {\"command\": \"sed -n 2655,2705p crates/ai/src/evaluate.rs\", \"description\": \"Read how evaluate uses face threat\"}\n- Bash: {\"command\": \"grep -n \\\"pub threat_per_damage\\\\|pub lethal_threat\\\\|pub answerable_threat\\\\|pub pressure_per_damage\\\\|pub lethal_pressure\\\\|pub lethal_on_board\\\" crates/ai/src/config.rs\", \"description\u2026\n- Bash: {\"command\": \"grep -n \\\"burn\\\\|toxic\\\\|R3535002\\\\|R3822000\\\" crates/ai/tests/ai/features.rs crates/ai/tests/ai/learned.rs crates/ai/src/features.rs | head -12; grep -n \\\"face_threat\\\" crates/ai/src/fe\u2026\n- Bash: {\"command\": \"sed -n 70,90p crates/ai/src/features.rs; grep -rn \\\"burn\\\\|Burn\\\" crates/ai/tests/ai/features.rs crates/ai/tests/ai/learned.rs | head -5\", \"description\": \"Read features doc about left-ou\u2026\n- Bash: {\"command\": \"grep -l \\\"crates/ai/src/candidates.rs\\\\|crates/ai/src/reply.rs\\\" spec/rulings/*.md | head -3; grep -n \\\"fn r4065\\\\|R4065\\\" -r crates spec | head\", \"description\": \"Confirm src files serve\u2026\n- Bash: {\"command\": \"grep -h \\\"^cards:\\\" spec/rulings/R3822000.md spec/rulings/R3540001.md spec/rulings/R1124.md spec/rulings/R3550001.md | cut -c1-300\", \"description\": \"See cards field style for Stinkyscape\u2026\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights\\\" crates/ai/src/*.rs | grep -v \\\"w: &EvalWeights\\\\|&EvalWeights\\\" | cut -c1-160 | head; grep -n \\\"serde(default\\\" crates/ai/src/config.rs | head -3\", \"description\"\u2026\n- Bash: {\"command\": \"grep -n \\\"fn attacks_of\\\" -A10 crates/engine/src/testkit/scenario.rs | head -12; grep -n \\\"fn unit_at\\\" -A5 crates/engine/src/testkit/scenario.rs | head -6\", \"description\": \"Confirm atta\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4065/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule line 2 (the AI): it changes the AI's threat count, combat reads a\u2026\n- Bash: {\"command\": \"ls spec/rulings/R0083.md spec/rulings/R0347.md 2>&1; head -4 spec/rulings/R0083.md | cut -c1-200; wc -w .bot-plan.md\", \"description\": \"Verify R83 exists and plan word count\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4065/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule line 2 (the AI): it changes the AI's threat count, combat reads a\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Check plan length\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4065/.bot-plan.md\", \"old_string\": \"- **The greedy yardstick.** `candidate_actions`, which the greedy baseline uses, reads `AI_EV\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4065/.bot-plan.md\", \"old_string\": \" - Body: the reads in steps 5\\u20138; `unit_worth` pricing, with no Death payout subtracted a\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4065/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule line 2 (the AI): it changes the AI's threat count, combat reads and trade pricing in crates/ai/src/\"} --> ## Goal Two AI misreads get fixed so the static reads match `reduce`: - **Burn/Toxic.** `face_threat` (so threat, pressure, `wall_switches` and the\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-16T23:03:49Z",
       "owner_why": "handed off from `claude-5`: `claude-5` 5-hour usage is 42%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-17T01:20:00Z; it can start again only in 2h 16m, more than the 120 minutes an item waits for its owner",
@@ -14132,12 +14122,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-16T22:19:27Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43975897244",
+      "run_id": "pending:502fc9d7-1794871773",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-16T23:03:49Z",
+      "started_at": "2026-11-16T23:29:50Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6931090044"
+      ]
     },
     "4066": {
       "action": "build",
@@ -14666,9 +14658,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T23:21:42Z",
+    "at": "2026-11-16T23:29:50Z",
     "url": "",
-    "what": "build #4064 on claude-6"
+    "what": "build #4065 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-16T23:18:37Z",
