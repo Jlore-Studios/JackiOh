@@ -569,6 +569,16 @@ fn land(
         (DamageTarget::Unit { .. }, None) => {}
     }
 
+    // Whether the target is an Indestructible Unit, read once past step 3's caps: 3a gives it no Burn or
+    // Toxic, 3b spends no pool on it, and step 4 stops the hit at it. Only a hit with something left asks.
+    let indestructible = amount > 0
+        && unit.as_ref().is_some_and(|live| {
+            has_keyword(
+                &crate::layers::unit_view(sink.state, live).keywords,
+                KeywordKind::Indestructible,
+            )
+        });
+
     // R3540003, §4.4 step 3a: a hit from a source that states "Damage dealt Burns" (or "is Toxic"), past
     // Armor and the caps, is its target's Burn (or Toxic) instead of damage: nothing of steps 4 to 9
     // happens. A Unit that takes no damage (Indestructible, step 4) gains none, and a hit of 0 converts
@@ -576,12 +586,6 @@ fn land(
     if amount > 0
         && let Some(kind) = source.and_then(|source| crate::afflictions::converts_to(sink.state, source))
     {
-        let indestructible = unit.as_ref().is_some_and(|live| {
-            has_keyword(
-                &crate::layers::unit_view(sink.state, live).keywords,
-                KeywordKind::Indestructible,
-            )
-        });
         if !indestructible {
             crate::afflictions::afflict(sink, target, kind, amount);
         }
@@ -590,60 +594,25 @@ fn land(
 
     // R3550004, §4.4 step 3b: the first damage allies would take per turn is nullified — after Armor
     // ("accounts for armor"), on the controller's Units and hero alike, never spent on an
-    // Indestructible Unit. No event is emitted. `project_hit` reads steps 1 to 4 in this order for My
-    // Pawn and the forecast (R4032000): a change here changes it too.
-    if amount > 0 {
-        let indestructible = unit.as_ref().is_some_and(|live| {
-            has_keyword(
-                &crate::layers::unit_view(sink.state, live).keywords,
-                KeywordKind::Indestructible,
-            )
-        });
-        if !indestructible {
-            let side = match target {
-                DamageTarget::Hero { player } => Some(*player),
-                DamageTarget::Unit { .. } => unit.as_ref().map(|live| live.controller),
-            };
-            if let Some(side) = side {
-                amount = damage_pool(sink, side, amount);
-            }
-        }
-    }
-
-    // E5, E9: after the caps and before step 5, a hit that alone would bring its hero to 0 or less (R44)
-    // meets the lethal-hit replacements, which may send it to the other hero or cancel it (R1704001).
-    // #936 B17: in a Duos duel the hit is judged against own HP and the team's pool together.
-    if let DamageTarget::Hero { player } = target
-        && amount > 0
-        && redirects < DAMAGE_REDIRECT_CAP
-        && crate::duos_life::effective_life(sink.state, *player) - amount <= 0
-    {
-        let source_id = source.map(|card| card.id.clone());
-        let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
-        if let Some(LethalHitTo::Canceled) = to {
-            // R1704001: a canceled hit deals nothing, and emits no damage event.
-            return Landed::default();
-        }
-        if let Some(LethalHitTo::Target(to)) = to {
-            let to = *to;
-            // R1204: a guard never catches the same hit twice; a hero-to-hero redirect changes
-            // controllers, so only a Unit destination names its catcher.
-            let mut next_caught: Vec<String> = caught.to_vec();
-            if let DamageTarget::Unit { instance } = &to {
-                next_caught.push(instance.id.clone());
-            }
-            let redirected = DamageArgs {
-                target: to,
-                ..args.clone()
-            };
-            return land(sink, &redirected, amount_in, redirects + 1, &next_caught, hold);
-        }
-    }
+    // Indestructible Unit. No event is emitted. R4022000: worked out here, written only once the hit
+    // lands (`spend_pool`), so a hit step 4a cancels or moves spends nothing here. `project_hit` reads
+    // steps 1 to 4 in this order for My Pawn and the forecast (R4032000): a change here changes it too.
+    let side = match target {
+        DamageTarget::Hero { player } => Some(*player),
+        DamageTarget::Unit { .. } => unit.as_ref().map(|live| live.controller),
+    };
+    let soaked: Vec<PoolSoak> = match side {
+        Some(side) if amount > 0 && !indestructible => pool_soak(sink.state, side, amount),
+        _ => Vec::new(),
+    };
+    amount -= soaked.iter().map(|soak| soak.take).sum::<i32>();
 
     // The zero rule (R63): a hit reduced to 0 by steps 2 and 3 stops here, before step 4 as §4.4 orders
     // it. R1361: one the target's Armor took whole (an Indestructible's too) is reported by
     // `damageAbsorbed`, which nothing answers (`triggers::dispatch_event`); a cap's stop is not Armor's.
     if amount <= 0 {
+        // R4022000: a pool that took the hit whole has been hit.
+        spend_pool(sink.state, &soaked);
         if absorbed > 0 && absorbed >= struck {
             sink.events.push(GameEvent::DamageAbsorbed {
                 source_id: source.map(|card| card.id.clone()),
@@ -659,31 +628,19 @@ fn land(
     }
 
     // Step 4: Indestructible units take nothing, and emit no damage event.
-    if let Some(live) = &unit
-        && has_keyword(
-            &crate::layers::unit_view(sink.state, live).keywords,
-            KeywordKind::Indestructible,
-        )
-    {
+    if indestructible {
         return Landed::default();
     }
 
-    // ME-LETHALGUARD (R1204): §4.4 step 4a opens for Units too. A hit that alone would leave a Unit
-    // nothing has killed yet (R42) at 0 or less, judged after steps 0 to 4 (so a Divine Shield or an
-    // Indestructible never opens it), meets the replacements, which may send it on to a guard.
-    if let Some(live) = &unit
-        && amount > 0
-        && redirects < DAMAGE_REDIRECT_CAP
-        && !already_killed(sink.state, live)
-        && crate::layers::unit_view(sink.state, live).health - amount <= 0
-    {
-        let source_id = source.map(|card| card.id.clone());
-        let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
-        if let Some(LethalHitTo::Canceled) = to {
-            return Landed::default();
-        }
-        if let Some(LethalHitTo::Target(to)) = to {
+    // E5, E9, §4.4 step 4a: a hit that alone would bring its target to 0 or less meets the lethal-hit
+    // replacements (`lethal_replaced`), which may send it on or cancel it.
+    match lethal_replaced(sink, args, unit.as_ref(), amount, redirects, caught) {
+        // R1704001: a canceled hit deals nothing, and emits no damage event.
+        Some(LethalHitTo::Canceled) => return Landed::default(),
+        Some(LethalHitTo::Target(to)) => {
             let to = *to;
+            // R1204: a guard never catches the same hit twice; a hero-to-hero redirect changes
+            // controllers, so only a Unit destination names its catcher.
             let mut next_caught: Vec<String> = caught.to_vec();
             if let DamageTarget::Unit { instance } = &to {
                 next_caught.push(instance.id.clone());
@@ -694,7 +651,12 @@ fn land(
             };
             return land(sink, &redirected, amount_in, redirects + 1, &next_caught, hold);
         }
+        None => {}
     }
+
+    // R4022000: the hit goes on past step 4a, so its pool is spent. A cancel or a move returned above
+    // and spent nothing here: a moved hit soaks at its new target's own step 3b.
+    spend_pool(sink.state, &soaked);
 
     // Step 5: apply, capping what a Trample source deals to a unit at its health (R63).
     let mut dealt = amount;
@@ -837,6 +799,39 @@ fn land(
     // Step 9: Trample sends the excess on (`send_excess`).
     let held = send_excess(sink, args, &unit, trample_excess, caught, hold);
     Landed { dealt, held }
+}
+
+/// §4.4 step 4a (E5, E9): whether a hit of `amount`, past steps 0 to 4, alone would bring its target to
+/// 0 or less (R44), and if so what the lethal-hit replacements did with it (`lethal_hit_window`). A
+/// hero's is judged against its own HP and, in a Duos duel, its team's pool together (#936 B17).
+/// ME-LETHALGUARD (R1204): it opens for a Unit nothing has killed yet (R42) too, so a Divine Shield
+/// or an Indestructible, which stop the hit before here, never opens it. `None` lets the hit go on.
+fn lethal_replaced(
+    sink: &mut DamageSink<'_>,
+    args: &DamageArgs,
+    unit: Option<&CardInstance>,
+    amount: i32,
+    redirects: u32,
+    caught: &[String],
+) -> Option<LethalHitTo> {
+    if amount <= 0 || redirects >= DAMAGE_REDIRECT_CAP {
+        return None;
+    }
+    let lethal = match (&args.target, unit) {
+        (DamageTarget::Hero { player }, _) => {
+            crate::duos_life::effective_life(sink.state, *player) - amount <= 0
+        }
+        (DamageTarget::Unit { .. }, Some(live)) => {
+            !already_killed(sink.state, live)
+                && crate::layers::unit_view(sink.state, live).health - amount <= 0
+        }
+        (DamageTarget::Unit { .. }, None) => false,
+    };
+    if !lethal {
+        return None;
+    }
+    let source_id = args.source.as_ref().map(|card| card.id.clone());
+    crate::replacements::lethal_hit_window(sink, &args.target, amount, source_id, caught)
 }
 
 /// §4.4 step 9: a Trample excess goes on as a new instance of the same hit (not raised again, keeping
@@ -983,35 +978,53 @@ pub(crate) fn damage_pool_used(state: &GameState, card: &CardInstance) -> i32 {
         .map_or(0, |used| used as i32)
 }
 
+/// R3550004: one pool card's share of a hit, worked out at §4.4 step 3b (`pool_soak`) and written to
+/// the card (`spend_pool`) only once the hit lands (R4022000).
+struct PoolSoak {
+    card_id: String,
+    take: i32,
+    /// The card's note once it has soaked `take` (`DAMAGE_POOL_KEY`).
+    note: serde_json::Value,
+}
+
 /// R3550004 (Stinkyscape+ #42 Force Projector), §4.4 step 3b: each card acting for `player` with a
-/// pool, in R68's order, soaks what its declared `pool` (R386) has left of the hit. Returns the rest
-/// of the hit.
-fn damage_pool(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i32 {
+/// pool, in R68's order, soaks what its declared `pool` (R386) has left of a hit of `amount`. Reads
+/// only: R4022000's `spend_pool` writes the soaks once the hit lands.
+fn pool_soak(state: &GameState, player: PlayerId, amount: i32) -> Vec<PoolSoak> {
     let mut rest = amount;
-    for card in acting_texts_of(sink.state, player) {
+    let mut soaked = Vec::new();
+    for card in acting_texts_of(state, player) {
         if rest <= 0 {
             break;
         }
-        let Some(pool) = crate::scripts::flags_of(sink.state, &card).damage_pool else {
+        let Some(pool) = crate::scripts::flags_of(state, &card).damage_pool else {
             continue;
         };
         // R386: the card's declared number `pool` where it declares one.
-        let cap = crate::params::declared_or(sink.state, &card, "pool", pool).max(0);
-        let used = damage_pool_used(sink.state, &card);
+        let cap = crate::params::declared_or(state, &card, "pool", pool).max(0);
+        let used = damage_pool_used(state, &card);
         let take = rest.min(cap - used);
         if take <= 0 {
             continue;
         }
-        let turns = sink.state.players[card.controller].turns_started;
-        if let Some(live) = find_instance_mut(sink.state, &card.id) {
-            live.memory.insert(
-                DAMAGE_POOL_KEY.to_string(),
-                serde_json::json!({ "turns": turns, "used": used + take }),
-            );
-        }
+        let turns = state.players[card.controller].turns_started;
+        soaked.push(PoolSoak {
+            card_id: card.id.clone(),
+            take,
+            note: serde_json::json!({ "turns": turns, "used": used + take }),
+        });
         rest -= take;
     }
-    rest
+    soaked
+}
+
+/// R4022000: the hit `soaked` was worked out for has landed, so each pool card notes what it took.
+fn spend_pool(state: &mut GameState, soaked: &[PoolSoak]) {
+    for soak in soaked {
+        if let Some(live) = find_instance_mut(state, &soak.card_id) {
+            live.memory.insert(DAMAGE_POOL_KEY.to_string(), soak.note.clone());
+        }
+    }
 }
 
 /// R4032000: what a projection's hits have soaked so far of each side's damage pools (§4.4 step 3b),
