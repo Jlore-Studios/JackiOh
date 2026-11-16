@@ -16107,11 +16107,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-16T02:09:15Z",
+        "at": "2026-11-16T03:33:11Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 2: it changes the practice AI's evaluation in crates/ai/src/evaluate.rs, so what the AI decides changes."
+        "tier": "strong",
+        "why": "Rule line 2 (The AI): it changes how crates/ai/src/evaluate.rs prices cards for every decision; the earlier rating was hard and this cannot rate lower"
       },
       "failures": 0,
       "forced": false,
