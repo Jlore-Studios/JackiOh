@@ -22361,6 +22361,10 @@
         {
           "at": "2026-11-15T21:31:23Z",
           "minutes": 18.8
+        },
+        {
+          "at": "2026-11-16T05:12:26Z",
+          "minutes": 1.3
         }
       ],
       "tokens_spent": [
@@ -22734,19 +22738,26 @@
           "cost": 0.423,
           "input": 14,
           "output": 6677
+        },
+        {
+          "at": "2026-11-16T05:12:26Z",
+          "cache": 654206,
+          "cost": 0.6613,
+          "input": 21,
+          "output": 5970
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-15T22:00:00Z",
-          "utilization": 0.9
+          "resets_at": "2026-11-16T05:40:00Z",
+          "utilization": 0.18
         },
-        "observed_at": "2026-11-15T21:31:23Z",
+        "observed_at": "2026-11-16T05:12:26Z",
         "seven_day": {
           "resets_at": "2026-11-21T05:00:00Z",
-          "utilization": 0.08
+          "utilization": 0.11
         },
-        "status": "allowed_warning"
+        "status": "allowed"
       }
     },
     "claude-3": {
@@ -38084,7 +38095,10 @@
       "2026-11-16T03:44:45Z,claude-7,stream,call,43796176717,35,2026-11-16T05:50:00Z,,,allowed,50,,",
       "2026-11-16T03:49:45Z,claude-7,stream,call,43796176717,36,2026-11-16T05:50:00Z,,,allowed,50,,",
       "2026-11-16T03:59:30Z,claude-7,stream,call,43796176717,37,2026-11-16T05:50:00Z,,,allowed,50,,",
-      "2026-11-16T04:23:01Z,claude-7,stream,call,43796176717,38,2026-11-16T05:50:00Z,,,allowed,50,,"
+      "2026-11-16T04:23:01Z,claude-7,stream,call,43796176717,38,2026-11-16T05:50:00Z,,,allowed,50,,",
+      "2026-11-16T05:06:53Z,claude-2,ping,before,43807942079,15,2026-11-16T05:40:00Z,10,2026-11-21T05:00:00Z,allowed,90,90,",
+      "2026-11-16T05:07:25Z,claude-2,stream,call,43807942079,17,2026-11-16T05:40:00Z,10,2026-11-21T05:00:00Z,allowed,90,90,",
+      "2026-11-16T05:07:40Z,claude-2,stream,call,43807942079,18,2026-11-16T05:40:00Z,11,2026-11-21T05:00:00Z,allowed,90,90,"
     ],
     "runs": [
       "2026-11-16T04:37:13Z,43799494859,muse,muse-spark-1.3-contributor,review,4047,medium,built,,56.2,0,0,0,,7,11,2,3,4.4,,none,,5",
