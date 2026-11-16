@@ -6,7 +6,7 @@ import { clearSeenForCard, hasUnseen, markNewLevels, resetNewLevelsForTests } fr
 
 function tokenFor(sub: string, nonce: string): string {
   const encode = (value: object): string =>
-    btoa(JSON.stringify(value)).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/gu, "");
+    btoa(JSON.stringify(value)).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/(?:==?)?$/gu, "");
   return `${encode({ alg: "none" })}.${encode({ sub, nonce })}.${encode({ signature: nonce })}`;
 }
 

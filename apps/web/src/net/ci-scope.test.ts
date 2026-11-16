@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { stripTrailingSlashes } from "./navigate.ts";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../../..");
 const SCRIPT = join(ROOT, "scripts/ci-scope.sh");
@@ -661,7 +663,7 @@ function readings(file: string, literal: string): string[] {
 }
 
 function named(reading: string, literal: string): string | undefined {
-  const path = posix.normalize(reading.replaceAll("*", "x")).replace(/\/+$/, "");
+  const path = stripTrailingSlashes(posix.normalize(reading.replaceAll("*", "x")));
   const first = path.split("/")[0] ?? "";
   if (!TOP.has(first) || NOT_NAMED.has(first) || /\s/.test(path)) return undefined;
   const stat = statSync(join(ROOT, path), { throwIfNoEntry: false });

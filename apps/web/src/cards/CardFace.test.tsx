@@ -79,6 +79,26 @@ const cardsCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "car
 const cardStateCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "cardstate.css"), "utf8");
 const inspectCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "inspect", "inspect.css"), "utf8");
 
+/**
+ * A sheet's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 function def(id: string): CardDef {
   const found = CATALOG[id];
   if (found === undefined) throw new Error(`the catalog has no ${id}`);
@@ -474,9 +494,9 @@ describe("B10: RulesText marks terms in bold", () => {
   it("B10 a term keeps the rules box's ink in a tavern screen, whose own bold words are pale gold (#85)", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const rules = (file: string): { selector: string; body: string }[] =>
-      [...readFileSync(join(here, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
-        selector: (match[1] ?? "").trim(),
-        body: match[2] ?? "",
+      rulePairs(readFileSync(join(here, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "")).map(([selector, body]) => ({
+        selector: selector.trim(),
+        body,
       }));
     /** [ids, classes, types] of a selector made of ids, classes and type names, as both of these are. */
     const specificity = (selector: string): number[] => [

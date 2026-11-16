@@ -26,6 +26,41 @@ const OWN: ReadonlyArray<readonly [string, TakeoverLook]> = [
 const NONE: readonly TakeoverLook[] = ["void", "prismatic"];
 
 /** `look`'s scene's shapes, or none when it draws no scene. */
+/** Whether `selector` names a drawing's part: `.takeover-drawing-<part>` (#4009). */
+function hasDrawingClass(selector: string): boolean {
+  const tag = ".takeover-drawing-";
+  let at = selector.indexOf(tag);
+  while (at !== -1) {
+    if (at + tag.length < selector.length && /[\w-]/.test(selector.charAt(at + tag.length))) return true;
+    at = selector.indexOf(tag, at + 1);
+  }
+  return false;
+}
+
+/**
+ * `text` split at each comma with no `)` before the next `(` ahead of it, as `/,(?![^(]*\))/` does
+ * (#4009: the lookahead rescans ahead from every comma, super-linearly on comma runs).
+ */
+function splitOutsideParens(text: string): string[] {
+  const closesFirst: boolean[] = new Array<boolean>(text.length).fill(false);
+  let first: string | null = null;
+  for (let i = text.length - 1; i >= 0; i--) {
+    closesFirst[i] = first === ")";
+    const char = text.charAt(i);
+    if (char === "(" || char === ")") first = char;
+  }
+  const out: string[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charAt(i) === "," && !closesFirst[i]) {
+      out.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  out.push(text.slice(start));
+  return out;
+}
+
 function sceneOf(look: TakeoverLook): readonly ArtShape[] {
   const drawing = TAKEOVER_ART_DRAWINGS[look];
   return drawing !== undefined && "shapes" in drawing ? drawing.shapes : [];
@@ -147,12 +182,29 @@ describe("R3402000 a Core Mythic's takeover art", () => {
     for (const motion of ["back", "subject", "spin", "drift"]) expect(parts.has(motion), motion).toBe(false);
     for (const part of parts) expect(fx, `.takeover-drawing-${part}`).toMatch(new RegExp(`\\.takeover-drawing-${part}(?![\\w-])`));
     // Every rule that names a drawing's part and moves it is the live takeover's alone, so the still stands still.
-    const rules = [...fx.matchAll(/([^{}]*\.takeover-drawing-[\w-]+[^{}]*)\{([^{}]*)\}/g)];
+    // Rule scans as character loops (#4009: the class-heavy patterns rescan brace-free runs).
+    const rules: [string, string][] = [];
+    const chunks = fx.split("}");
+    if (!fx.endsWith("}")) chunks.pop();
+    for (const chunk of chunks) {
+      let start = 0;
+      let open = chunk.indexOf("{", start);
+      while (open !== -1) {
+        const selector = chunk.slice(start, open);
+        const body = chunk.slice(open + 1);
+        if (hasDrawingClass(selector) && !body.includes("{")) {
+          rules.push([selector, body]);
+          break;
+        }
+        start = open + 1;
+        open = chunk.indexOf("{", start);
+      }
+    }
     expect(rules.length).toBeGreaterThan(0);
-    for (const [, selector, body] of rules) {
-      if (!/(?<![\w-])(animation|transition)(-[\w-]+)?\s*:/.test(body ?? "")) continue;
+    for (const [selector, body] of rules) {
+      if (!/(?<![\w-])(animation|transition)(-[\w-]+)?\s*:/.test(body)) continue;
       // Each selector of the list (a comma inside `:is(…)` is the selector's own).
-      for (const one of (selector ?? "").split(/,(?![^(]*\))/)) expect(one, one).toMatch(/\.fx-takeover(?![\w-])/);
+      for (const one of splitOutsideParens(selector)) expect(one, one).toMatch(/\.fx-takeover(?![\w-])/);
     }
   });
 });

@@ -198,6 +198,26 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
   },
 };
 
+/**
+ * A sheet's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 function owned(ids: readonly string[]): string[] {
   return ids.filter((id) => id !== UNOWNED);
 }
@@ -395,10 +415,7 @@ describe("the pool grid (B30)", () => {
   it("B30 deckbuilder.css declares nothing sticky or fixed that takes the pointer, so Cypress can reach every target", () => {
     const css = readFileSync(join(HERE, "deckbuilder.css"), "utf8");
     const bare = css.replace(/\/\*[\s\S]*?\*\//g, "");
-    const rules = [...bare.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
-      selector: (match[1] ?? "").trim(),
-      body: match[2] ?? "",
-    }));
+    const rules = rulePairs(bare).map(([selector, body]) => ({ selector: selector.trim(), body }));
     // The one sticky element is the sidebar of a phone on its side, in its own grid column, so it
     // never lies over a pool card Cypress scrolls to the top of the viewport.
     const sticky = rules.filter((rule) => /position\s*:\s*sticky/.test(rule.body));

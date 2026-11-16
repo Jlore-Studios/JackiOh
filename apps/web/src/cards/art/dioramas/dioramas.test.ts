@@ -66,9 +66,24 @@ function hexes(svg: string): Set<string> {
   return new Set([...svg.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((match) => match[0].toLowerCase()));
 }
 
-/** The properties a CSS text sets. */
+/**
+ * The properties a CSS text sets, as `/([a-z-]+)\s*:/gu` names them (#4009: the name plus optional
+ * whitespace before `:` scans super-linearly on long runs).
+ */
 function properties(css: string): string[] {
-  return [...css.matchAll(/([a-z-]+)\s*:/gu)].map((match) => match[1] ?? "");
+  const names: string[] = [];
+  let at = 0;
+  while (at < css.length) {
+    const colon = css.indexOf(":", at);
+    if (colon === -1) return names;
+    let start = colon;
+    while (start > 0 && /\s/.test(css.charAt(start - 1))) start--;
+    let name = start;
+    while (name > 0 && /[a-z-]/.test(css.charAt(name - 1))) name--;
+    if (name < start) names.push(css.slice(name, start));
+    at = colon + 1;
+  }
+  return names;
 }
 
 describe("R3350000 the Mythics' dioramas", () => {

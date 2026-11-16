@@ -206,7 +206,7 @@ function sessionKeysIn(win: Window): { real: string | null; fixture: string | nu
 // Emailed links
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
 }
 
 /** An unsigned JWT for link tests; the client never verifies it. */

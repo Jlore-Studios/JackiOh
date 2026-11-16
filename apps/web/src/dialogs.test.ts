@@ -112,10 +112,30 @@ const ESCAPE_HANDLERS: Record<string, number> = {
 /** The board's own scrims, under the prompt and the result (R3220000 left them to the board). */
 const BOARD_SCRIMS = ["prompt-scrim", "result-scrim"];
 
+/**
+ * A sheet's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 /** Every rule of a sheet, its comments cut, as `[selector, body]`; a rule inside `@media` counts as its own. */
 function rules(css: string): [string, string][] {
   const code = css.replace(/\/\*[\s\S]*?\*\//g, " ");
-  return [...code.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => [(match[1] ?? "").trim(), match[2] ?? ""]);
+  return rulePairs(code).map(([selector, body]) => [selector.trim(), body] as [string, string]);
 }
 
 /** A glyph standing alone in an element, as a close's label would, or a string that is only the glyph. */

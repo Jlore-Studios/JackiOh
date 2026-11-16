@@ -39,16 +39,64 @@ const SCRIPTS = files(
   .map(relativeToSrc)
   .sort();
 
-/** Every `@media` prelude in a sheet, its whitespace collapsed. */
+/**
+ * Every `@media` prelude in a sheet, its whitespace collapsed (#4009: `/@media\s+([^{;]+)\{/g`
+ * rescans a brace-free run from every position).
+ */
 function preludes(css: string): string[] {
-  return [...css.matchAll(/@media\s+([^{;]+)\{/g)].map((match) => (match[1] ?? "").replace(/\s+/g, " ").trim());
+  const out: string[] = [];
+  let at = 0;
+  for (;;) {
+    const found = css.indexOf("@media", at);
+    if (found === -1) return out;
+    let i = found + "@media".length;
+    let spaces = 0;
+    while (/\s/.test(css.charAt(i))) {
+      i++;
+      spaces++;
+    }
+    const open = css.indexOf("{", i);
+    if (open === -1) return out;
+    if (spaces > 0 && !css.slice(i, open).includes(";")) {
+      out.push(css.slice(i, open).replace(/\s+/g, " ").trim());
+      at = open + 1;
+    } else {
+      at = found + 1;
+    }
+  }
 }
 
-/** Every `(min-|max-)(width|height)` feature in a query, as `(max-width: 600px)`. */
+const FEATURES = ["min-width", "max-width", "min-height", "max-height"];
+
+/**
+ * Every `(min-|max-)(width|height)` feature in a query, as `(max-width: 600px)` (#4009: the
+ * `/\(\s*((?:min|max)-(?:width|height))\s*:\s*([^)]*?)\s*\)/g` scan this replaces trades characters
+ * between its runs super-linearly).
+ */
 function sizes(query: string): string[] {
-  return [...query.matchAll(/\(\s*((?:min|max)-(?:width|height))\s*:\s*([^)]*?)\s*\)/g)].map(
-    (match) => `(${match[1] ?? ""}: ${match[2] ?? ""})`,
-  );
+  const out: string[] = [];
+  let at = 0;
+  for (;;) {
+    const open = query.indexOf("(", at);
+    if (open === -1) return out;
+    let i = open + 1;
+    while (/\s/.test(query.charAt(i))) i++;
+    const feature = FEATURES.find((name) => query.startsWith(name, i));
+    if (feature === undefined) {
+      at = open + 1;
+      continue;
+    }
+    let j = i + feature.length;
+    while (/\s/.test(query.charAt(j))) j++;
+    if (query.charAt(j) !== ":") {
+      at = open + 1;
+      continue;
+    }
+    const close = query.indexOf(")", j + 1);
+    if (close === -1) return out;
+    out.push(`(${feature}: ${query.slice(j + 1, close).trim()})`);
+    at = close + 1;
+  }
 }
 
 const NAMES = Object.keys(BREAKPOINT_PX) as Breakpoint[];
@@ -161,7 +209,11 @@ describe("#3227 the named breakpoints", () => {
     expect(SCRIPTS.length).toBeGreaterThan(0);
     const spelled: Record<string, number> = {};
     for (const script of SCRIPTS) {
-      const text = code(script).replace(/^\s*\/\/.*$/gm, "");
+      // Full-line comments cut (#4009: `/^\s*\/\/.*$/gm` rescans newline runs from every line).
+      const text = code(script)
+        .split("\n")
+        .map((line) => (/^\s*\/\/.*$/.test(line) ? "" : line))
+        .join("\n");
       const count = [...text.matchAll(/\((?:min|max)-(?:width|height)\s*:/g)].length;
       if (count > 0) spelled[script] = count;
     }

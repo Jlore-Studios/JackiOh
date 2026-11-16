@@ -25,6 +25,40 @@ function block(css: string, selector: string): string {
   return css.slice(css.indexOf("{", start) + 1, css.indexOf("}", start));
 }
 
+/**
+ * A sheet's `selector { declarations }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly
+ * on a long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
+/** The `@media` queries of a sheet, in order (#4009: `/@media\s*([^{]*)\{/g` scans super-linearly). */
+function mediaQueries(css: string): string[] {
+  const out: string[] = [];
+  let at = 0;
+  for (;;) {
+    const found = css.indexOf("@media", at);
+    if (found === -1) return out;
+    const open = css.indexOf("{", found + "@media".length);
+    if (open === -1) return out;
+    out.push(css.slice(found + "@media".length, open).trim());
+    at = open + 1;
+  }
+}
+
 const BAR = ":is(.screen-nav, .landing-corner)";
 
 describe("#3189 the top bar's one skin", () => {
@@ -108,7 +142,7 @@ describe("R3218000 the top bar's one layout", () => {
     for (const file of sheets) {
       const css = sheet(file);
       expect(css, file).not.toContain(".screen-nav__");
-      for (const [, selector = "", declarations = ""] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      for (const [selector, declarations] of rulePairs(css)) {
         if (selector.includes(".screen-nav") && placed.test(selector)) {
           expect(declarations, `${file}: ${selector.trim()}`).not.toMatch(placement);
         }
@@ -131,7 +165,7 @@ describe("R3218000 the top bar's one layout", () => {
 
   it("R3218000 the bar's phone breakpoint is the touch rule's, 600 px, and no bar rule is left at 560 px", () => {
     const css = sheet("routes/top-bar.css");
-    const queries = [...css.matchAll(/@media\s*([^{]*)\{/g)].map((match) => match[1]?.trim());
+    const queries = mediaQueries(css);
     expect(queries.length).toBeGreaterThan(0);
     for (const query of queries) expect(query).toBe("(max-width: 600px)");
     expect(sheet("index.css")).toContain("@media (pointer: coarse), (max-width: 600px)");

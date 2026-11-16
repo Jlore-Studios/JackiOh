@@ -254,11 +254,22 @@ describe("R2942001 Extended art's rules box", () => {
 });
 
 describe("R2942001 Pixel's name face stays readable", () => {
-  /** The declarations of the one rule of `css` whose selector is exactly `selector`. */
+  /**
+   * The declarations of the one rule of `css` whose selector is exactly `selector` (#4009: the
+   * `/([^{}]*)\{([^}]*)\}/g` scan this replaces rescans a brace-free run from every position).
+   */
   function bodyOf(css: string, selector: string): string {
-    const bodies = [...css.matchAll(/([^{}]*)\{([^}]*)\}/g)].filter((match) => match[1]?.replace(/\/\*[^]*?\*\//g, "").trim() === selector);
+    const chunks = css.split("}");
+    if (!css.endsWith("}")) chunks.pop();
+    const bodies: string[] = [];
+    for (const chunk of chunks) {
+      const open = chunk.indexOf("{");
+      if (open === -1) continue;
+      if (chunk.slice(0, open).replace(/\/\*[^]*?\*\//g, "").trim() !== selector) continue;
+      bodies.push(chunk.slice(open + 1));
+    }
     expect(bodies, selector).toHaveLength(1);
-    return bodies[0]?.[2] ?? "";
+    return bodies[0] ?? "";
   }
 
   /** The number before `unit` that `property` is set to in `body`, the first of a shorthand's. */

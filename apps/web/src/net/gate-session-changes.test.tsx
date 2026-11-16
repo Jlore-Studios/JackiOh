@@ -29,7 +29,7 @@ const SLOW = { timeout: 5_000 } as const;
 const SLOW_TEST = { timeout: 30_000 } as const;
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
 }
 
 /** A token whose payload names a user id; the client reads it, the provider and server verify it. */

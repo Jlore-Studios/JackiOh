@@ -852,8 +852,10 @@ describe("R3340000 the stylesheet", () => {
     }
     expect(css).toContain("--art-aim-x");
     expect(css).toContain("--fx-lunge-x");
+    // No `\d*\.?\d+`: its runs trade characters super-linearly; the alternation matches the same
+    // numbers (#4009).
     expect(css, "the sheet uses relative lengths and the shared lunge distance, never a raw px or rem length").not.toMatch(
-      /(?<![\w.])\d*\.?\d+(?:px|rem)\b/u,
+      /(?<![\w.])(\d+(?:\.\d+)?|\.\d+)(?:px|rem)\b/u,
     );
     expect(css).toContain("var(--lunge-distance)");
     const gate = css.indexOf("@media (prefers-reduced-motion: no-preference)");

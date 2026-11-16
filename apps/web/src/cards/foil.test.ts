@@ -42,6 +42,34 @@ function ruleBody(pattern: RegExp): string {
   return blockFrom(open);
 }
 
+/**
+ * The names a keyframes body declares with values, as `/([a-z-]+)\s*:[^;{}]+;/gi` names them
+ * (#4009: the name plus whitespace before `:` scans super-linearly on long runs).
+ */
+function declarationNames(keyframes: string): (string | undefined)[] {
+  const names: (string | undefined)[] = [];
+  let at = 0;
+  while (at < keyframes.length) {
+    const colon = keyframes.indexOf(":", at);
+    if (colon === -1) return names;
+    let start = colon;
+    while (start > 0 && /\s/.test(keyframes.charAt(start - 1))) start--;
+    let name = start;
+    while (name > 0 && /[a-zA-Z-]/.test(keyframes.charAt(name - 1))) name--;
+    if (name < start) {
+      let value = colon + 1;
+      while (value < keyframes.length && keyframes.charAt(value) !== ";" && keyframes.charAt(value) !== "{" && keyframes.charAt(value) !== "}") value++;
+      if (keyframes.charAt(value) === ";") {
+        names.push(keyframes.slice(name, start));
+        at = value + 1;
+        continue;
+      }
+    }
+    at = colon + 1;
+  }
+  return names;
+}
+
 /** Every `linear-gradient(…)` value in the sheet, with its parentheses balanced. */
 function gradients(): string[] {
   const out: string[] = [];
@@ -105,7 +133,7 @@ describe("the animated foil sweep", () => {
     const keyframes = ruleBody(/@keyframes cf-foil-sweep/);
     expect(keyframes).toMatch(/transform:\s*translateX\(-150%\) skewX\(-25deg\)/);
     expect(keyframes).toMatch(/transform:\s*translateX\(110%\) skewX\(-25deg\)/);
-    const properties = [...keyframes.matchAll(/([a-z-]+)\s*:[^;{}]+;/gi)].map((match) => match[1]);
+    const properties = declarationNames(keyframes);
     expect(properties, "the keyframes declare nothing but the swept transform").toEqual([
       "transform",
       "transform",

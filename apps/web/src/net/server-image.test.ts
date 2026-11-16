@@ -206,7 +206,12 @@ describe("scripts/server-image.sh use", () => {
     // The other site's container, and the file's comments, are left as they were.
     expect(production.image).toBe("./crates/server/Dockerfile");
     expect(production.image_build_context).toBe(".");
-    expect(readFileSync(join(w.repo, "wrangler.jsonc"), "utf8")).toMatch(/^\s*\/\/ /mu);
+    // A comment line of its own (#4009: `/^\s*\/\/ /mu` rescans newline runs from every line).
+    expect(
+      readFileSync(join(w.repo, "wrangler.jsonc"), "utf8")
+        .split("\n")
+        .some((line) => /^\s*\/\/ /u.test(line)),
+    ).toBe(true);
   });
 
   it("builds and pushes nothing when the registry holds the inputs' image, whichever site pushed it", () => {

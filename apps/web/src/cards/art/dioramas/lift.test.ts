@@ -34,12 +34,36 @@ const percent = (units: number): string => (units === 0 ? "0" : `${fmt(units)}%`
  * A move's keyframes (`ART_MOVES`) as a lift's: each `transform` the transform properties it equals, a scale before a
  * translation scaling the translation (`translate` applies after `scale`), and each picture unit (px) a percent.
  */
+/**
+ * The `name(args)` calls of a transform list (#4009: `/(\w+)\(([^)]*)\)/g` rescans a word run from
+ * every position).
+ */
+function callsOf(list: string): [string, string][] {
+  const out: [string, string][] = [];
+  let at = 0;
+  while (at < list.length) {
+    const open = list.indexOf("(", at);
+    if (open === -1) return out;
+    let start = open;
+    while (start > 0 && /\w/.test(list.charAt(start - 1))) start--;
+    if (start === open) {
+      at = open + 1;
+      continue;
+    }
+    const close = list.indexOf(")", open + 1);
+    if (close === -1) return out;
+    out.push([list.slice(start, open), list.slice(open + 1, close)]);
+    at = close + 1;
+  }
+  return out;
+}
+
 function asLift(keyframes: string): string {
   return keyframes.replace(/transform:([^;}]*)/g, (_match, list: string) => {
     let scale: number | null = null;
     let rotate: string | null = null;
     let moved: [number, number] | null = null;
-    for (const [, fn = "", arg = ""] of list.matchAll(/(\w+)\(([^)]*)\)/g)) {
+    for (const [fn, arg] of callsOf(list)) {
       const units = Number(arg.replace(/px$/, "")) * (scale ?? 1);
       if (fn === "scale") scale = Number(arg);
       else if (fn === "rotate") rotate = arg;

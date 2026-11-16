@@ -4,7 +4,7 @@
 
 import { lazy, useState, type ComponentType, type ReactElement } from "react";
 
-import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, watchIdOf } from "../net/navigate.ts";
+import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, stripTrailingSlashes, watchIdOf } from "../net/navigate.ts";
 import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
 import { loadWasm } from "../wasm/index.ts";
@@ -109,7 +109,7 @@ const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>([
 
 /** The chunk drawing `path` (query ignored), or null. */
 export function chunkAt(path: string): RouteChunkName | null {
-  const pathname = new URL(path, window.location.origin).pathname.replace(/\/+$/u, "") || "/";
+  const pathname = stripTrailingSlashes(new URL(path, window.location.origin).pathname) || "/";
   if (matchIdOf(pathname) !== null) return "match";
   if (seriesIdOf(pathname) !== null) return "series";
   if (watchIdOf(pathname) !== null) return "watch";

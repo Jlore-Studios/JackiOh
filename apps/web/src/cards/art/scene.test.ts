@@ -177,7 +177,14 @@ describe("R3331000 the scene kits", () => {
 
   it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", { timeout: SWEEP_TIMEOUT_MS }, () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../palette.css"), "utf8");
-    const declared = Object.fromEntries([...css.matchAll(/^\s*--pal-([a-z0-9-]+):\s*(#[0-9a-f]{6});$/gm)].map((match) => [match[1] ?? "", match[2] ?? ""]));
+    // Token lines as entries (#4009: the `/^\s*--pal-…$/gm` pattern rescans newline runs).
+    const declared = Object.fromEntries(
+      css
+        .split("\n")
+        .map((line) => /^\s*--pal-([a-z0-9-]+):\s*(#[0-9a-f]{6});$/.exec(line))
+        .filter((match) => match !== null)
+        .map((match) => [match[1] ?? "", match[2] ?? ""]),
+    );
     expect(Object.keys(declared).length).toBeGreaterThan(0);
     expect(SCENE_PALETTE).toEqual(declared);
     // The window holds palette.css's golds, so the test can fail.

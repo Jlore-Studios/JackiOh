@@ -23,8 +23,13 @@ import { mindustrialOverlay, paintsUnderOverlay } from "../stinkyscapeplus.ts";
 /** R3350000: how many pictures' pieces, slices and slice URIs are memoised before each memo is cleared. */
 export const DIORAMA_CACHE_MAX = 512;
 
-/** One tag of the markup: whether it closes, its name, and whether it closes itself. */
-const TAG = /<(\/?)([a-zA-Z][\w:-]*)[^>]*?(\/?)>/g;
+/**
+ * One tag of the markup: whether it closes, its name, and whether it closes itself.
+ * The name is captured in a lookahead and replayed as a backreference, so a later failure cannot
+ * give characters back and forth between the name and the attributes (#4009: the plain
+ * `[\\w:-]*[^>]*?` scans super-linearly on `<` with no `>` ahead); the matches are unchanged.
+ */
+const TAG = /<(\/?)(?=([a-zA-Z][\w:-]*))\2[^>]*?(\/?)>/g;
 
 /** What a data URI of an SVG picture starts with. */
 const DATA_PREFIX = "data:image/svg+xml,";

@@ -513,17 +513,27 @@ export const CARD_REF = ".cf-ref";
 export const CARD_VALUE = ".cf-value";
 
 // R3572000: a Greek letter reads as its name, so the Automa-α to Automa-ζ and Automa-Ω chips each get an id.
+/** `value` without its leading and trailing hyphens (#4009: `/^-+|-+$/` scans super-linearly). */
+function stripEdgeHyphens(value: string): string {
+  let start = 0;
+  while (value.charAt(start) === "-") start++;
+  let end = value.length;
+  while (end > start && value.charAt(end - 1) === "-") end--;
+  return value.slice(start, end);
+}
+
 export function slugOf(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/α/g, "alpha")
-    .replace(/β/g, "beta")
-    .replace(/γ/g, "gamma")
-    .replace(/δ/g, "delta")
-    .replace(/ζ/g, "zeta")
-    .replace(/ω/g, "omega")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return stripEdgeHyphens(
+    value
+      .toLowerCase()
+      .replace(/α/g, "alpha")
+      .replace(/β/g, "beta")
+      .replace(/γ/g, "gamma")
+      .replace(/δ/g, "delta")
+      .replace(/ζ/g, "zeta")
+      .replace(/ω/g, "omega")
+      .replace(/[^a-z0-9]+/g, "-"),
+  );
 }
 
 export const DB_FILTERS = "db-filters";

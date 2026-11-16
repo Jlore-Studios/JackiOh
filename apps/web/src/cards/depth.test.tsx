@@ -58,6 +58,28 @@ function sheet(name: string): string {
   return readFileSync(join(HERE, name), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
+/**
+ * Every `::after`/`::before` span of `css` with its brace-free surroundings, as the
+ * `[^{}]*::(?:after|before)[^{}]*` pattern finds them (#4009: the classes rescan brace-free runs).
+ */
+function pseudoElements(css: string): string[] {
+  const out: string[] = [];
+  let at = 0;
+  for (;;) {
+    const after = css.indexOf("::after", at);
+    const before = css.indexOf("::before", at);
+    const hit = after === -1 ? before : before === -1 ? after : Math.min(after, before);
+    if (hit === -1) return out;
+    let start = hit;
+    while (start > at && css.charAt(start - 1) !== "{" && css.charAt(start - 1) !== "}") start--;
+    const end = css.startsWith("::after", hit) ? hit + "::after".length : hit + "::before".length;
+    let stop = end;
+    while (stop < css.length && css.charAt(stop) !== "{" && css.charAt(stop) !== "}") stop++;
+    out.push(css.slice(start, stop));
+    at = stop;
+  }
+}
+
 // Cards that are no full-art card, one of each rarity the issue names, a Legacy card and the Starship.
 const EPIC = "core-022";
 const LEGENDARY = "core-052";
@@ -621,10 +643,21 @@ describe("R3344000 the glare is by area for each foil", () => {
     expect(/\.cf\[data-depth\] \.cf-art-frame,\s*\.cf\[data-depth\] \.cf-scale\s*\{[^}]*isolation: isolate/.test(css)).toBe(true);
     // Radiant's shimmer and every worn foil are the other sheets', and no foil rule is here.
     expect(css).not.toMatch(/data-foil|data-cosmetic-foil|data-radiant-face/);
-    for (const [, selector] of css.matchAll(/([^{}]+)\{[^{}]*content: none[^{}]*\}/g)) {
-      expect(selector, "only the planes' own pseudo-elements are turned off").toMatch(/\.cf-plane/);
+    // Rule scans as character loops (#4009: the class-heavy patterns rescan brace-free runs).
+    const chunks = css.split("}");
+    if (!css.endsWith("}")) chunks.pop();
+    for (const chunk of chunks) {
+      const open = chunk.lastIndexOf("{");
+      if (open === -1) continue;
+      const before = chunk.slice(0, open);
+      const selector = before.slice(before.lastIndexOf("{") + 1);
+      const body = chunk.slice(open + 1);
+      if (selector === "" || body.includes("{")) continue;
+      if (body.includes("content: none")) {
+        expect(selector, "only the planes' own pseudo-elements are turned off").toMatch(/\.cf-plane/);
+      }
     }
-    for (const [selector] of css.matchAll(/[^{}]*::(?:after|before)[^{}]*/g)) {
+    for (const selector of pseudoElements(css)) {
       for (const each of selector.split(",")) expect(each.trim(), "a pseudo-element of the planes' art alone").toMatch(/^\.cf\[data-depth\] \.cf-plane > \.cf-art::(?:after|before)$/);
     }
   });

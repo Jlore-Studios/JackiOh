@@ -22,7 +22,11 @@ import {
   roomLinkOf,
   roomLinkPath,
   sendRoomLink,
+  stripTrailingPunct,
 } from "./roomLink.ts";
+
+/** #4009: an adversarial input must finish in milliseconds, not the exponential blowup it replaces. */
+const REDOS_BUDGET_MS = 1_000;
 
 function visit(url: string): void {
   window.history.replaceState(null, "", url);
@@ -286,6 +290,20 @@ describe("R2094000 a room link in chat text", () => {
     expect(findRoomLinkInText(`nope https://evil.test/together?coop=ABC234 then ${origin}/together?coop=QRSTUV`, origin)).toEqual({
       path: "/lobby/QRSTUV",
     });
+  });
+
+  it("#4009 findRoomLinkInText is linear on long adversarial chat text", () => {
+    // Another player's message reaches this scan, so a punctuation run must not stall the tab: the
+    // old `/[.,;:!?)\]]+$/` strip rescanned a trailing run from every position (#4009).
+    const started = performance.now();
+    expect(findRoomLinkInText(`see https://${"a".repeat(25_000)}${".".repeat(25_000)}`, origin)).toBeNull();
+    expect(findRoomLinkInText(`/lobby/${"!".repeat(50_000)}`, origin)).toBeNull();
+    expect(findRoomLinkInText(`${origin}/lobby/${"A".repeat(50_000)}.`, origin)).toBeNull();
+    const elapsed = performance.now() - started;
+    console.log(`findRoomLinkInText adversarial: ${elapsed.toFixed(1)}ms`);
+    expect(elapsed).toBeLessThan(REDOS_BUDGET_MS);
+    expect(stripTrailingPunct("...")).toBe("");
+    expect(stripTrailingPunct("abc")).toBe("abc");
   });
 });
 

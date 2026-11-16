@@ -11,7 +11,7 @@ import {
 import { claimsOf } from "../auth/claims.ts";
 import { challengeForRequest, forgetVerifier, storedVerifiers, type PkceChallenge, type PkceFlow } from "../auth/pkce.ts";
 import { ApiRequestError, apiRequest } from "./api.ts";
-import { paths } from "./navigate.ts";
+import { paths, stripTrailingSlashes } from "./navigate.ts";
 import {
   forgetPendingAddresses,
   readSession,
@@ -382,7 +382,7 @@ export function authConfig(): AuthConfig | null {
   const publishableKey: unknown = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (typeof url !== "string" || url.length === 0) return null;
   if (typeof publishableKey !== "string" || publishableKey.length === 0) return null;
-  return { url: url.replace(/\/+$/u, ""), publishableKey };
+  return { url: stripTrailingSlashes(url), publishableKey };
 }
 
 function requireConfig(): AuthConfig {

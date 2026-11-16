@@ -604,7 +604,15 @@ describe("R3127000 the 404 page", () => {
     for (const name of ["nf-hand-deal", "nf-hand-fan", "nf-hand-flip"]) {
       const frames = block(`@keyframes ${name}`);
       expect(frames, name).toContain("from {");
-      expect(frames, name).not.toMatch(/\bto \{|^\s*\d+% \{/mu);
+      // No keyframe that rests (`to` or `00%`) outside the float (#4009: `/\bto \{|^\s*\d+% \{/mu`
+      // rescans from every position).
+      expect(frames, name).not.toMatch(/\bto \{/u);
+      expect(
+        frames
+          .split("\n")
+          .some((line) => /^\s*\d+% \{/u.test(line)),
+        name,
+      ).toBe(false);
     }
     expect(css).toContain("@keyframes nf-hand-float");
     expect(css).toMatch(/\.nf-hand__slot:nth-child\(1\) \{ --turn: -15deg;/u);

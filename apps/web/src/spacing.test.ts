@@ -12,8 +12,11 @@ const SRC = dirname(fileURLToPath(import.meta.url));
 /** A spacing declaration: gap, padding, margin (and their longhands), and the `--gap` the board's rows read. */
 const SPACING =
   /(?<![\w-])((?:grid-)?(?:row-|column-)?gap|padding(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|margin(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|--gap)\s*:\s*([^;}]+)/g;
-/** A length of the sheet's own: a px or rem number that is not 0. An em, %, viewport or container term, or an env(), is relative. */
-const FIXED = /(?<![\w.])(\d*\.?\d+)(?:px|rem)\b/g;
+/**
+ * A length of the sheet's own: a px or rem number that is not 0. An em, %, viewport or container term, or an env(), is relative.
+ * No `\d*\.?\d+`: its runs trade characters super-linearly; the alternation matches the same numbers (#4009).
+ */
+const FIXED = /(?<![\w.])(\d+(?:\.\d+)?|\.\d+)(?:px|rem)\b/g;
 
 /** Every fixed length a gap, padding or margin states, as `property: length (value)`. */
 function rawSpacing(css: string): string[] {
@@ -110,13 +113,30 @@ const UNMIGRATED: Record<string, number> = {
   "undo/undo.css": 3,
 };
 
-const STEPS = [...read("spacing.css").matchAll(/^\s*--space-(\d+):\s*(\d+)px;$/gm)].map((match) => ({ name: Number(match[1]), px: Number(match[2]) }));
+/**
+ * A token line's captures (#4009: `/^\s*--…$/gm` line patterns rescan newline runs from every line
+ * start); `pattern` is the line without its `m` flag.
+ */
+function tokenLines(text: string, pattern: RegExp): [string, string][] {
+  const out: [string, string][] = [];
+  for (const line of text.split("\n")) {
+    const match = pattern.exec(line);
+    if (match !== null) out.push([match[1] ?? "", match[2] ?? ""]);
+  }
+  return out;
+}
+
+const STEPS = tokenLines(read("spacing.css"), /^\s*--space-(\d+):\s*(\d+)px;$/).map(([name, px]) => ({ name: Number(name), px: Number(px) }));
 
 describe("#3225 the spacing scale", () => {
   it("#3225 spacing.css names eleven lengths in px, smallest first, as --space-1 up, and nothing else", () => {
     expect(STEPS.map((step) => step.px)).toEqual([2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40]);
     expect(STEPS.map((step) => step.name)).toEqual(STEPS.map((_, i) => i + 1));
-    const rest = codeOf("spacing.css").replace(/^\s*--space-\d+:\s*\d+px;$/gm, "");
+    // Token lines blanked (#4009: the `/^\s*--…$/gm` pattern rescans newline runs from every line).
+    const rest = codeOf("spacing.css")
+      .split("\n")
+      .map((line) => (/^\s*--space-\d+:\s*\d+px;$/.test(line) ? "" : line))
+      .join("\n");
     expect(rest.replace(/\s+/g, "")).toBe(":root{}");
     expect(read("index.css")).toMatch(
       /^@import "\.\/fonts\.css";\n@import "\.\/palette\.css";\n@import "\.\/typescale\.css";\n@import "\.\/surfaces\.css";\n@import "\.\/motion\.css";\n@import "\.\/spacing\.css";\n/,

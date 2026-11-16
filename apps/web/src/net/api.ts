@@ -31,10 +31,19 @@ const DEFAULT_HTTP_URL = "http://localhost:8787";
  * `VITE_SERVER_HTTP_URL` is public (`crates/server/src/env.rs` `PUBLIC_ENV_VARS`). The default is
  * the port `crates/server` listens on, which `e2e/support/config.ts` points at.
  */
+/**
+ * `base` without its trailing slashes (#4009: `/\/+$/` scans super-linearly on a long slash run).
+ */
+function stripTrailingSlashes(base: string): string {
+  let end = base.length;
+  while (end > 0 && base.charCodeAt(end - 1) === 0x2f) end--;
+  return base.slice(0, end);
+}
+
 export function apiBaseUrl(): string {
   const configured: unknown = import.meta.env.VITE_SERVER_HTTP_URL;
   const base = typeof configured === "string" && configured.length > 0 ? configured : DEFAULT_HTTP_URL;
-  return base.replace(/\/+$/, "");
+  return stripTrailingSlashes(base);
 }
 
 const DEFAULT_WS_URL = "ws://localhost:8787/ws/match";
@@ -55,7 +64,7 @@ export function serverSocketUrl(path: string, base: string = matchSocketUrl()): 
     return url.toString();
   } catch {
     // A relative test address.
-    return MATCH_SOCKET_PATH.test(base) ? base.replace(MATCH_SOCKET_PATH, path) : `${base.replace(/\/+$/u, "")}${path}`;
+    return MATCH_SOCKET_PATH.test(base) ? base.replace(MATCH_SOCKET_PATH, path) : `${stripTrailingSlashes(base)}${path}`;
   }
 }
 

@@ -74,7 +74,8 @@ type HeaderBlock = { path: string; headers: Header[] };
 const lines = (text: string): string[] =>
   text
     .split("\n")
-    .map((line) => line.replace(/\s+$/u, ""))
+    // No `/\s+$/`: it rescans a whitespace run from every position (#4009); `trimEnd` cuts the same.
+    .map((line) => line.trimEnd())
     .filter((line) => line.trim() !== "" && !line.trim().startsWith("#"));
 
 function blocks(): HeaderBlock[] {

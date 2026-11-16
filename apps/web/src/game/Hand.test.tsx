@@ -21,12 +21,32 @@ import { revealTestid } from "./reveal.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * A sheet's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 /** board.css without its comments, as a list of `{ selectors, body }` rules (innermost blocks). */
 function boardRules(): { selectors: string[]; body: string }[] {
   const css = readFileSync(join(HERE, "board.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
-    selectors: (match[1] ?? "").split(",").map((selector) => selector.trim().replace(/\s+/g, " ")),
-    body: (match[2] ?? "").replace(/\s+/g, " ").trim(),
+  return rulePairs(css).map(([selector, body]) => ({
+    selectors: selector.split(",").map((part) => part.trim().replace(/\s+/g, " ")),
+    body: body.replace(/\s+/g, " ").trim(),
   }));
 }
 
