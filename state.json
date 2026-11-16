@@ -15875,6 +15875,13 @@
     "4020": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:14:16Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "hard needs engine-rules/AI/cross-crate/migration/40-files; this wires one app's tutorial copy to existing constants"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
