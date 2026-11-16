@@ -16328,17 +16328,8 @@
       "taken_asks": []
     },
     "4033": {
-      "action": "plan",
-      "asks": [
-        "c:6905106324"
-      ],
-      "build_next": {
-        "from_run": "43788974184",
-        "model": "gpt-5.6-sol",
-        "provider": "gpt",
-        "since": "2026-11-16T02:12:25Z",
-        "until": "2026-11-16T02:42:25Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T02:12:12Z",
         "difficulty": "medium",
@@ -16357,10 +16348,9 @@
         "reason": "planned on gpt-5.6-sol",
         "trail": "- said: I\u2019ll trace the prompt rendering path from the catalog through `Prompt.tsx`, read the governing client/spec contracts, and inspect the existing tests and translations before drafting the implementation plan. I\u2019ll keep the required `.bot-plan.md` updated as the shape becomes concrete.\n- ran `/bin/bash -lc \"wc -l CLAUDE.md AGENTS.md SPEC.md CONTRIBUTING.md docs/issues-and-patches.md && sed -n '1,260p' CLAUDE.md && sed -n '1,180p' AGENTS.md && sed -n\u2026` (exit 0)\n- ran `/bin/bash -lc \"git status --short && sed -n '1,280p' spec/README.md && sed -n '1,220p' spec/01-overview.md && rg -n -C 5 \\\"Efficiency Dividend|core-024|Core #2\u2026` (exit 0)\n- said: The spec confirms this is wording/rendering only: Core #24\u2019s live multiples are catalog params (`heal` 3/6 and Radiant `damage` 2), while the Radiant \u201cX+1\u201d mana remains a fixed card constant. No rules decision or new ruling is needed. I\u2019m narrowing the plan around the three prompt-card render sites\u2026\n- ran `/bin/bash -lc \"wc -l apps/web/README.md apps/web/src/game/modeText.ts apps/web/src/game/modeText.test.ts apps/web/src/game/Prompt.tsx apps/web/src/game/Prompt.\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n -C 4 \\\"modeText|ChoiceCard|Prompt\\\\.tsx|fillParams|locali|i18n|Chinese|zh-CN|choice card|declared numbers|params\\\" apps/web/README.md | he\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '280,430p' apps/web/src/game/modeText.ts sed -n '1,130p' apps/web/src/game/Prompt.tsx sed -n '300,470p' apps/web/src/game/Prompt.tsx sed \u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n -C 6 \\\"sourceCard|sourceDefId|artSource|type Picker|interface Picker|playedRef|cardRefFor\\\" apps/web/src/game/Prompt.tsx sed -n '130,310p'\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '150,255p' apps/web/src/game/Prompt.tsx sed -n '540,815p' apps/web/src/game/Prompt.tsx sed -n '1350,1510p' apps/web/src/game/Prompt.tsx r\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '853,930p' crates/cards/catalog.json sed -n '1920,2000p' apps/web/src/game/Prompt.tsx rg -n -C 5 \\\"export type CardLookup|function lookup\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,340p' apps/web/src/game/Prompt.test.tsx sed -n '340,440p' apps/web/src/game/Prompt.test.tsx sed -n '1,130p' apps/web/src/game/catalog.\u2026` (exit 1)\n- ran `/bin/bash -lc \"rg -o '\"'^ \"[a-z0-9-]+\":'\"' apps/web/src/game/modeText.ts | sed -E 's/\"'^ \"([''^\"]+)\":/'\"\\\\1/' | sort -u > /tmp/mode_ids_4033 jq -r 'to_entries[\u2026` (exit 0)\n- ran `/bin/bash -lc 'while read -r id; do jq -r --arg id \"$id\" '\"'select(.[\"'$id].params != null) | [$id, (.[$id].params | map(\"'\"\\\\(.key)=\\\\(.base)/\\\\(.radiant)\\\") \u2026` (exit 0)\n- ran `/bin/bash -lc \"jq '.\\\"core-098\\\"' crates/cards/catalog.json jq '.\\\"core-017\\\", .\\\"core-065\\\", .\\\"stinkyscape-112-1\\\"' crates/cards/catalog.json | head -260 rg \u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1880,1925p' apps/web/src/game/Prompt.tsx rg -n \\\"withMatchDefs\\\" apps/web/src/game apps/web/src | head -80 rg -n -C 8 \\\"CatalogProvider|\u2026` (exit 0)\n- said: The render path has the needed data split cleanly: inline play choices carry the actual `CardView` (including live `params`), while engine-opened mode prompts carry only the public source definition and face. The plan will therefore require one Prompt-local formatter that translates first, then app\u2026\n- ran `/bin/bash -lc \"git log --oneline --all -- apps/web/src/game/modeText.ts apps/web/src/game/modeText.test.ts | head -40 git log -S'four times X' --oneline --all \u2026` (exit 0)\n- ran `/bin/bash -lc \"jq '.\\\"classicplus-040\\\" | {params,base:.base.text,radiant:.radiant.text}' crates/cards/catalog.json jq -r 'to_entries[] | select(.value.params \u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,90p' spec/08-catalog.md rg -n '\"'^### 10'\"\\\\.(6|8|10)|\"'^### 10'\"\\\\.' spec/10-engine-guide.md rg -n -C 10 '\"'^### 10'\"\\\\.(6|8|10)' spe\u2026` (exit 0)\n- ran `/bin/bash -lc \"cat spec/rulings/R0386.md cat spec/rulings/R0081.md sed -n '155,225p' spec/10-engine-guide.md sed -n '256,285p' spec/10-engine-guide.md\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,220p' apps/web/src/i18n/i18n.ts rg -n -C 4 \\\"placeholders|placeholder|\\\\{[a-zA-Z]+\\\\}\\\" apps/web/src/i18n/i18n.test.ts | head -240 rg \u2026` (exit 1)\n- said: I\u2019ve now confirmed the governing contract: SPEC \u00a75/R386 requires current `params` wherever the viewer may read a card, SPEC \u00a710.6/R81 distinguishes engine prompts from inline play choices, and \u00a710.8/\u00a710.10 forbid the client from deriving rules. I\u2019m recording the concrete five-file plan now, then I\u2019\u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4033/.bot-plan.md\n- ran `/bin/bash -lc 'git check-ignore -v .bot-plan.md && pnpm --dir apps/web exec vitest run src/game/modeText.test.ts src/game/Prompt.test.tsx'` (exit 1)\n- ran `/bin/bash -lc 'rg -n -A 55 \"export function pendingFor\" apps/web/src/test/fixtures.ts rg -n \"sourceDefId|sourceRadiant\" apps/web/src/game/Prompt.test.tsx apps/\u2026` (exit 0)\n- ran `/bin/bash -lc \"test -x apps/web/node_modules/.bin/vitest && echo web-vitest-present || true test -x node_modules/.bin/vitest && echo root-vitest-present || tru\u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4033/.bot-plan.md\n- ran `/bin/bash -lc \"wc -w -c .bot-plan.md rg -n '\"'^'\"\\\\*\\\\*(Goal|Files to touch|Steps|Tests|Done when|Risks|Open questions)\\\\.\\\\*\\\\*' .bot-plan.md sed -n '1,260p' \u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4033/.bot-plan.md\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No hard rule applies: this is a five-file web presentation and regression-test change, with no engine, AI, cross-crate design, migration, or large diff.\"} --> **Goal.** Make Efficiency Dividend's choice cards interpolate the card definition's `damage` and \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "gpt",
       "owner_since": "2026-11-16T01:54:25Z",
       "owner_why": "it plans it",
@@ -16373,12 +16363,14 @@
       "provider": "gpt",
       "queued_at": "2026-11-16T01:51:10Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43788974184",
+      "run_id": "pending:3806923e-1794796531",
       "runs_on": "night-vm-gpt",
-      "started_at": "2026-11-16T01:54:25Z",
+      "started_at": "2026-11-16T02:35:59Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6905106324"
+      ]
     },
     "4034": {
       "asks": [
@@ -16651,9 +16643,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T02:35:17Z",
+    "at": "2026-11-16T02:35:59Z",
     "url": "",
-    "what": "review #4043 on muse"
+    "what": "build #4033 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-16T01:47:44Z",
