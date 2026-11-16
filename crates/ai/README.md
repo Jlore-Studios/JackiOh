@@ -124,7 +124,9 @@ leaves the second unbound (`static_attack_flags_read`, R3550001, R3560007, #3909
 walked as the opponent would attack it: the larger of two orders counts, smallest first and the smallest
 attacker that destroys it alone first, and an attacker its Armor or First Strike would stop whole waits
 until it falls, then goes on to the next Taunt or the hero (`best_attack_order_past_taunts`, R3937000,
-#3937; off in `GREEDY_EVAL`). A unit's Death
+#3937; off in `GREEDY_EVAL`). A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
+each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
+static trader's. A unit's Death
 counts by what it leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
