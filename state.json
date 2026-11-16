@@ -17257,6 +17257,7 @@
       "run_id": "43807808878",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 295,
       "started_at": "2026-11-16T05:03:47Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37367,9 +37368,33 @@
         "title": "Patch: the tutorial says five lanes, and its hero health figures come from the engine's constants",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-1"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "80a65928750d78175255754fefd67cbc9d145a40",
+        "issue": 4008,
+        "merged_at": "2026-11-16T07:35:21Z",
+        "n": 295,
+        "pr": 4054,
+        "queued_at": "2026-11-16T07:35:21Z",
+        "sha": "a222fb95ef9858f3de754a376ea857e5427d78b5",
+        "status": "queued",
+        "title": "Patch: every route that checks a guessable value holds a per-account and per-IP limit, with a test",
+        "tries": 0
       }
     ],
-    "count": 294
+    "count": 295
   },
   "statistics": {
     "at": "2026-11-16T07:20:28Z"
