@@ -15816,15 +15816,8 @@
       }
     },
     "4008": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43795470480",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-16T03:32:41Z",
-        "until": "2026-11-16T04:02:41Z"
-      },
       "handoff": {
         "at": "2026-11-16T03:14:29Z",
         "family": "claude",
@@ -15834,22 +15827,21 @@
         "reason": "planned on sonnet",
         "trail": "load's tail \u2026\n- Bash: {\"command\": \"sed -n 392,485p crates/server/src/duos/rooms.rs\", \"description\": \"Read duos join and cancel\"}\n- Bash: {\"command\": \"grep -rn \\\"App {$\\\\|App {\\\\s\\\" crates/server/src crates/server/tests --include=*.rs | grep -v \\\"impl\\\\|struct App\\\\|pub struct\\\\|fn \\\\|//\\\" | head; grep -n \\\"pub fn normalize_code\\\\|pub \u2026\n- Bash: {\"command\": \"sed -n 105,120p crates/server/tests/api/e2e.rs; sed -n 940,955p crates/server/tests/api/e2e.rs; sed -n 125,180p crates/server/tests/support/test_app.rs\", \"description\": \"Check App constr\u2026\n- Bash: {\"command\": \"grep -n \\\"unsubscribe\\\" crates/server/tests/api/daily.rs | head -30\", \"description\": \"Find unsubscribe tests\"}\n- Bash: {\"command\": \"grep -n \\\"fn parse_query\\\" -A25 crates/server/src/api/http.rs | head -40; sed -n 826,846p crates/server/src/api/http.rs\", \"description\": \"Read parse_query and key helpers\"}\n- Bash: {\"command\": \"sed -n 1540,1640p crates/server/tests/api/daily.rs\", \"description\": \"Read existing unsubscribe test\"}\n- Bash: {\"command\": \"sed -n 5055,5085p crates/server/src/db/fake.rs; grep -n \\\"daily_notify\\\" crates/server/src/db/fake.rs | head -12; grep -n \\\"pub fn fake\\\\|pub async fn fake_lock\\\\|pub fn uuid\\\\|pub async\u2026\n- Bash: {\"command\": \"grep -n \\\"^### 9\\\\.\\\\|^## 9\\\" spec/09-architecture.md | head -30; grep -n \\\"rate limit\\\\|Rate limit\\\\|per-account\\\\|abuse\\\" spec/09-architecture.md | head -20\", \"description\": \"Find \\u00\u2026\n- Bash: {\"command\": \"sed -n 120,145p spec/09-architecture.md | cut -c1-400\", \"description\": \"Read \\u00a79.8 abuse surface table rows\"}\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"^R(0264|0109|0190|0192|1443|1434|0145|0079|3730006|3730000)\\\\.md\\\"; sed -n 1,40p docs/issues-and-patches.md | head -5; grep -n \\\"Ruling numbers\\\" -A12 docs/is\u2026\n- Bash: {\"command\": \"grep -rn \\\"rooms/.*join\\\" crates/server/tests --include=*.rs | head -10; grep -n \\\"fn read_mode_choice\\\" -A30 crates/server/src/actor/rooms.rs crates/server/src/api/*.rs | head -50\", \"de\u2026\n- Bash: {\"command\": \"sed -n 225,300p crates/server/tests/api/duos_rooms.rs; sed -n 120,175p crates/server/tests/api/duos_rooms.rs\", \"description\": \"Read duos_rooms helpers for room create/join\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"/api/lobbies\\\\\\\"\\\" -B3 -A8 crates/server/tests/api/lobbies.rs | head -50; grep -n \\\"^async fn\\\\|^fn \\\" crates/server/tests/api/lobbies.rs | head -30\", \"description\": \"Look \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4008/crates/server/tests && grep -rn \\\"api/rooms/\\\\|api/duos/rooms/\\\\|api/lobbies/\\\" --include=*.rs . | wc -l; grep -rn -B3 \\\"api/rooms/{\\\\|api/duos/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4008 && grep -n \\\"pub struct Req\\\" -A22 crates/server/src/api/http.rs | head -40; sed -n 250,266p crates/server/src/api/http.rs; sed -n 45,75p crates\u2026\n- Bash: {\"command\": \"grep -n \\\"ClientErrors\\\\|RateLimiter\\\\|allow\\\\|address_key\\\\|account_key\\\\|window\\\" crates/server/src/api/client_errors.rs | head -40; sed -n 895,915p crates/server/src/config.rs; sed -n\u2026\n- Bash: {\"command\": \"grep -n \\\"joinRoom\\\" crates/server/src/actor/protocol.rs crates/server/tests -r | head; grep -n \\\"pub async fn daily_notify_get\\\\|pub async fn daily_notify\\\" crates/server/src/db/store.r\u2026\n- Bash: {\"command\": \"grep -n \\\"#\\\\[test\\\\]\\\\|fn \\\" crates/server/tests/export_config.rs | head -20; sed -n 380,420p crates/server/src/config.rs\", \"description\": \"Check export_config tests and config section \u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/server/src/social/friends.rs | grep -n \\\"use \\\\|account_key\\\\|rate_limited\\\" ; grep -n \\\"^use\\\\|^ [A-Za-z_, ]*,$\\\" crates/server/src/lobby/mod.rs | sed -n 1,50p\", \"de\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/server/src/duos/rooms.rs | grep -n \\\"use \\\\|^ \\\" | head -30; sed -n 1,50p crates/server/src/actor/rooms.rs | grep -n \\\"use \\\" \", \"description\": \"Read imports of duos \u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Decisions (draft 2)\\n- NEW `crates/server/src/api/guesses.rs`: `CodeGuesses` {per_account, per_address, counted(limit 1)} on `App.code_guesses`; counts \u2026\n- Bash: {\"command\": \"sed -n 446,492p crates/server/src/lobby/mod.rs; grep -n \\\"fn is_member\\\\|fn view\\\\b\\\\|async fn view\\\" crates/server/src/lobby/mod.rs; grep -n \\\"pub(crate) fn caller_profile\\\\|pub fn call\u2026\n- Bash: {\"command\": \"grep -n \\\"fn consent_owed\\\" -B3 -A22 crates/server/src/api/consent.rs | head -50\", \"description\": \"Check consent_owed behavior in E2E mode\"}\n- Bash: {\"command\": \"sed -n 25,54p crates/server/src/api/consent.rs; grep -n \\\"consent_get\\\" -A14 crates/server/src/db/fake.rs | head -30\", \"description\": \"Read consent defaults in fake store\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn seed_profile\\\" -A40 crates/server/src/db/fake.rs | head -70\", \"description\": \"Check seed_profile consent behavior\"}\n- Bash: {\"command\": \"sed -n 413,470p crates/server/src/db/fake.rs\", \"description\": \"Read rest of seed_profile\"}\n- Bash: {\"command\": \"sed -n 768,778p crates/server/src/config.rs; grep -n \\\"WS_MAX_CONNECTIONS_PER_ADDRESS\\\" -r crates/server/src | head -4\", \"description\": \"Check WS per-address limit doc\"}\n- Bash: {\"command\": \"grep -rn \\\"Social {\\\" crates/server --include=*.rs | grep -v \\\"pub struct\\\\|impl \\\" | head; grep -rn \\\"social::Social\\\\b\\\" crates/server/tests | head -3; sed -n 1,30p crates/server/tests\u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct Account\\\" -B2 -A10 crates/server/tests/support/store.rs; grep -n \\\"pub async fn account\\\\|pub async fn seeded\\\\|pub async fn befriend\\\\|pub fn sign_in_again\\\" -A22 c\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Status\\nSurvey done; plan composed in final message (steps: config.rs consts -> api/guesses.rs -> App field (app.rs, tests/support/test_app.rs) -> Socia\u2026\n- said: ## Goal Every route or socket frame in `crates/server` that answers right or wrong to a guessable value gets an inventory line in `crates/server/README.md`. Each line names its per-account limit, its per-address (R190) limit and how many guesses one request or frame can carry. Each door gets a test\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-4",
-      "owner_since": "2026-11-16T02:59:58Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-1",
+      "owner_since": "2026-11-16T03:42:35Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-16T03:32:35Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-4",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-4",
-      "run_id": "43795470480",
+      "provider": "claude-1",
+      "run_id": "pending:3841eb31-1794800530",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-16T02:59:58Z",
+      "started_at": "2026-11-16T03:42:35Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17170,9 +17162,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T03:41:56Z",
+    "at": "2026-11-16T03:42:35Z",
     "url": "",
-    "what": "build #4024 on claude-8"
+    "what": "build #4008 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-16T03:02:45Z",
