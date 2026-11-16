@@ -36,8 +36,8 @@ export const lesson: TutorialLesson = {
     "traininggrounds-018", // Knife Juggler, Rare
     "traininggrounds-045", // Legacy: Jlockeed's Weapons, Common
     "traininggrounds-038", // Tutorial Master, Legendary
-    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
-    "traininggrounds-008", // Clobberer, Common
+    "traininggrounds-051", // Legacy: Big Felinor, Rare
+    "traininggrounds-054", // Legacy: The Rock, Common
     "traininggrounds-011", // Thwomp, Common
     "traininggrounds-009", // Ravager, Common
     "traininggrounds-057", // Legacy: Recycling Initiative, Epic

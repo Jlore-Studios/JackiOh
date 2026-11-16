@@ -368,4 +368,19 @@ describe("R2205000 the Field guide", () => {
     expect(found(view, [{ ...fired, again: true } as GameEvent], defs)).toEqual([]);
     expect(found(view, [{ ...fired, controller: "p2", again: true } as GameEvent], defs)).toEqual([]);
   });
+
+  it("R292 finds The Coin when the opponent goes second with it, and reads nothing hidden", () => {
+    const view = baseView({
+      viewer: "p1",
+      opponent: emptySide("p2"),
+      events: [{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }],
+    });
+    expect(found(view, [])).toContain("the-coin");
+
+    const freshEvent: GameEvent = { type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" };
+    expect(found(baseView({ viewer: "p1", opponent: emptySide("p2") }), [freshEvent])).toContain("the-coin");
+
+    const p2View = baseView({ viewer: "p2", you: emptySide("p2", { hand: [card({ defId: "core-t-coin" })] }) });
+    expect(found(p2View, [])).toContain("the-coin");
+  });
 });

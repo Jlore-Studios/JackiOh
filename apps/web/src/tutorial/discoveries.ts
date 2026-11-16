@@ -330,7 +330,14 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     name: "The Coin",
     rule: "the player going second gets The Coin: one extra mana, once.",
     lesson: "finale",
-    found: (ctx) => myPlays(ctx).some(({ event }) => event.defId === COIN),
+    found: (ctx) =>
+      myPlays(ctx).some(({ event }) => event.defId === COIN) ||
+      myHand(ctx.view).some((card) => card.defId === COIN) ||
+      freshOf(ctx, "cardPlayed").some((event) => event.defId === COIN) ||
+      freshOf(ctx, "addedToHand").some((event) => event.defId === COIN) ||
+      (ctx.view.opponent.player === "p2" &&
+        (freshOf(ctx, "addedToHand").some((event) => event.player === ctx.view.opponent.player) ||
+          ctx.view.events.some((event) => event.type === "addedToHand" && event.player === ctx.view.opponent.player))),
   },
   {
     id: "radiant",
