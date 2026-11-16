@@ -22822,10 +22822,6 @@
       "refused_until": "2026-11-16T00:50:00Z",
       "spent": [
         {
-          "at": "2026-11-07T19:53:36Z",
-          "minutes": 36.1
-        },
-        {
           "at": "2026-11-07T23:38:12Z",
           "minutes": 1.1
         },
@@ -23620,16 +23616,13 @@
         {
           "at": "2026-11-16T05:12:50Z",
           "minutes": 7.9
+        },
+        {
+          "at": "2026-11-16T05:52:45Z",
+          "minutes": 11.5
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-07T04:13:01Z",
-          "cache": 3210316,
-          "cost": 1.0256,
-          "input": 57,
-          "output": 13224
-        },
         {
           "at": "2026-11-07T09:51:08Z",
           "cache": 69428753,
@@ -25022,15 +25015,22 @@
           "cost": 0.7076,
           "input": 16,
           "output": 7247
+        },
+        {
+          "at": "2026-11-16T05:52:45Z",
+          "cache": 697933,
+          "cost": 0.7657,
+          "input": 19,
+          "output": 7924
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-16T05:50:00Z",
-          "utilization": 0.94
+          "resets_at": "2026-11-16T10:50:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-11-16T05:12:50Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-11-16T05:52:45Z",
+        "status": "allowed"
       }
     },
     "claude-4": {
@@ -38124,7 +38124,10 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-16T05:20:47Z,gpt,stream,call,43807878550,,,48,2026-11-22T11:42:02Z,allowed,100,100,"
+      "2026-11-16T05:20:47Z,gpt,stream,call,43807878550,,,48,2026-11-22T11:42:02Z,allowed,100,100,",
+      "2026-11-16T05:41:14Z,claude-3,stream,call,43811537426,95,2026-11-16T05:50:00Z,,,allowed_warning,,,",
+      "2026-11-16T05:41:44Z,claude-3,stream,call,43811537426,96,2026-11-16T05:50:00Z,,,allowed_warning,,,",
+      "2026-11-16T05:51:44Z,claude-3,stream,call,43811537426,0,2026-11-16T10:50:00Z,,,allowed,,,"
     ],
     "runs": [
       "2026-11-16T05:21:20Z,43807878550,gpt,gpt-5.6-sol,revise,4047,medium,built,,15.8,4755803,20442,0,,,,48,48,4.7,gpt,none,,1"
