@@ -17242,6 +17242,18 @@
     "4051": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "at": "2026-11-16T04:35:45Z",
+        "built_by": "claude-1",
+        "by": "`claude` (strong)",
+        "sha": "3d33c47c15bdeeb32c16d19c8daf47ad41094641"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T02:37:28Z",
@@ -17257,6 +17269,7 @@
       "issue": 4025,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-11-16T03:59:51Z",
