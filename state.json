@@ -15848,17 +15848,8 @@
       "stop_requested": false
     },
     "4019": {
-      "action": "plan",
-      "asks": [
-        "c:6905054221"
-      ],
-      "build_next": {
-        "from_run": "43788773591",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-16T02:15:34Z",
-        "until": "2026-11-16T02:45:34Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T02:15:18Z",
         "difficulty": "medium",
@@ -15877,10 +15868,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "accept-404 + inbox; seek never pairs with a banned seek) |\n- | `spec/rulings/R4019000.md` | new | The ruling (lowest free number in issue #4019's block) |\n- | `spec/pending/4019.md` | new | The \u00a711 paragraph the daily fold will append |\n- | `spec/09-architecture.md` | change | One sentence in \u00a79.13's daily-queue paragraph linking the ruling |\n- Do not touch `.github/`, `.harness/`, `.squishy/`, `bot/`, `crates/engine/`, `crates/cards/`, `crates/ai/`, or `spec/11-rulings.md` and `spec/INDEX.md` (the daily fold job owns the last two). Governing spec: \u00a79.13 (daily queue, challenge, deleting-an-account paragraphs); rulings to follow: R1689000\u2026\n- ## Steps\n- 1. Write `spec/rulings/R4019000.md` with front matter `id: R4019000`, a title such as `A banned account's open daily seeks and challenges start no games`, `cards: \"\u00a79.13, issue #4019\"`, and `proven_in` listing `crates/server/tests/store/contract.rs` and `crates/server/tests/api/daily.rs`. Body: whi\u2026\n- 2. In `crates/server/src/db/pg.rs`, in `daily_seek_claim`'s inner select (after the `not exists` blocks check, ~line 8426), add `and exists (select 1 from public.profiles p where p.id = i.from_profile and p.status = 'active')`, with a `// R4019000:` comment. Copy the `exists` style of the blocks ch\u2026\n- 3. In `crates/server/src/db/pg.rs`, in `daily_invites_open_of`'s `where` clause, add `and (kind <> 'challenge' or exists (select 1 from public.profiles p where p.id = from_profile and p.status = 'active'))`, with a `// R4019000:` comment. Seeks are untouched, so a banned seeker's own seek stays lis\u2026\n- 4. In `crates/server/src/db/fake.rs`, in `daily_seek_claim`, read `f.tables().profiles`, build `is_active(from) = profiles.iter().any(|p| p.id == from && p.status == ProfileStatus::Active)` (borrow the profiles slice before the `invites` borrow; copy the `blocked` closure pattern), and add `&& is_a\u2026\n- 5. In `crates/server/src/db/fake.rs`, in `daily_invites_open_of`, add `.filter(|row| row.kind != DailyInviteKind::Challenge || profiles_active(&row.from_profile))` using the same active test, with a `// R4019000:` comment.\n- 6. In `crates/server/src/daily/invites.rs`, in `accept` directly after the `are_friends` 404 (`// R1689000: still friends as it starts.`), add: fetch `tx.profiles_get_by_id(&invite.from_profile).await?`; unless it is `Some` with `status == ProfileStatus::Active`, commit and `return Err(not_found(\"n\u2026\n- 7. In `spec/09-architecture.md`, append to \u00a79.13's daily-queue paragraph: a banned account's open seeks pair with no one and its challenges cannot be accepted, returning on unban before lapse ([[R4019000]]). In `spec/pending/4019.md`, write the \u00a711 paragraph: `**[[R4019000]] \u2026 (issue #4019, <date>)\u2026\n- 8. Add the store test (step 1 of Tests), register it in `mod daily`'s `both_stores!(\u2026)` list, add the two API tests, then run the checks in Tests and `cargo jackioh spec check`; fix only by narrowing the filter or test, never by weakening a check.\n- ## Tests\n- - `crates/server/tests/store/contract.rs`, in `mod daily`, `async fn r4019000_banned_seeks_and_challenges_wait_out_the_ban`: active `me`, banned `banned` (via `profiles_set_status(&id, status(\"banned\"))`), active `other`; open seek from each of `banned`/`other`, open challenge `banned \u2192 me`. Assert\u2026\n- - `crates/server/tests/api/daily.rs`, `async fn r4019000_a_banned_challengers_challenge_cannot_be_accepted`: Ada challenges Bo (`random_challenge`), ban Ada via `store!(app, |t| t.profiles_set_status(&ada.id, ProfileStatus::Banned))` (import `store!` and `ProfileStatus`), Bo's accept answers 404 wi\u2026\n- - `crates/server/tests/api/daily.rs`, `async fn r4019000_a_seek_never_pairs_with_a_banned_seek`: banned Ada posts a seek (201 `seekId`); active Bo posts the same mode/time and gets a `seekId` (not a `matchId`); a third active friend Cy posts and pairs with Bo. Unban Ada, Cy-style repost pairs with \u2026\n- - Commands: `cargo test -p jackioh-server --test server_store r4019000`, `cargo test -p jackioh-server --test server r4019000`, `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo jackioh spec check`.\n- ## Done when\n- - [ ] A banned profile's open seek is skipped by `daily_seek_claim` on both stores and claimed after unban (store test green on fake; Postgres half runs in CI).\n- - [ ] Accepting a banned challenger's challenge answers 404, writes no daily game, and the challenge is absent from the friend's open list until unban.\n- - [ ] A seek posted while a banned account's matching seek is open never pairs with the banned one.\n- - [ ] Each new test is named after R4019000 and listed in the note's `proven_in`; `cargo jackioh spec check` passes.\n- - [ ] Existing daily API and store suites pass unchanged; `fmt` and `clippy` gates for the touched crate pass.\n- - [ ] \u00a79.13 links the ruling and `spec/pending/4019.md` holds its \u00a711 paragraph; `spec/11-rulings.md` untouched.\n- ## Risks\n- - `open_of` hiding the banned sender's own outgoing copy too: acceptable (reads \"as if the account were gone\"); the row itself stays `open` and returns on unban, so nothing is lost.\n- - Pending (never-activated) profiles are also filtered by `= 'active'`: intended, since only active accounts can hold daily rows, and it matches the live queue's active-only stance.\n- - RLS (`run_as`) still applies; the new `exists` subselects read `public.profiles` in the same query, like the blocks check, so no new permission shape.\n- ## Open questions\n- None. The out-of-scope item (running daily games still end on time) is the owner's call per the issue; `ban_profile` needs no change.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4019 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4019/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-16T01:52:18Z",
       "owner_why": "it plans it",
@@ -15893,12 +15883,14 @@
       "provider": "muse",
       "queued_at": "2026-11-16T01:47:18Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43788773591",
+      "run_id": "pending:21729705-1794795440",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-16T01:52:18Z",
+      "started_at": "2026-11-16T02:17:55Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6905054221"
+      ]
     },
     "4020": {
       "action": "plan",
@@ -16562,9 +16554,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T01:58:56Z",
+    "at": "2026-11-16T02:17:55Z",
     "url": "",
-    "what": "plan #4025 on claude-1"
+    "what": "build #4019 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T01:47:44Z",
