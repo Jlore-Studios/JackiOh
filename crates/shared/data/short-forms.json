@@ -52,6 +52,11 @@
         "en": "Can't attack\nEnd of turn: Attack a random enemy Unit. A kill across from your Bot Loser is its kill."
       }
     },
+    "classicplus-026": {
+      "radiant": {
+        "en": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per} Health per mana."
+      }
+    },
     "classicplus-042-1": {
       "radiant": {
         "en": "Activate: Gain {mana} mana. Heal your hero {heal}. Your opponent discards {discards}. Add a Radiant Book, KY, Legendary and (4) Cost card at ({setCost})."
@@ -105,10 +110,10 @@
     },
     "meditative-040": {
       "base": {
-        "en": "Aura: Good feng shui is rewarded, bad punished.\nActivate: Add an Auspicious Rock.\nYour last element, your opponent's last element."
+        "en": "Aura: Good feng shui is rewarded, bad punished.\nCry and Activate: Add an Auspicious Rock.\nYour last element, your opponent's last element."
       },
       "radiant": {
-        "en": "Aura: Good feng shui helps you, bad hurts them.\nActivate: Add a Radiant Auspicious Rock.\nYour last element, your opponent's last element."
+        "en": "Aura: Good feng shui helps you, bad hurts them.\nCry and Activate: Add a Radiant Auspicious Rock.\nYour last element, your opponent's last element."
       }
     },
     "meditative-045": {
@@ -408,10 +413,10 @@
     },
     "stinkyscapeplus-004": {
       "base": {
-        "en": "Cry: Exile every card with M, O, U, S or E in its name, but CN cards. Summon two random Traps. Choose an Activate: Overwhelm, Wolf's Maw or Iron Mandate."
+        "en": "Cry: Exile a permanent. Summon two random Traps.\nActivates: Overwhelm, Wolf's Maw and Iron Mandate."
       },
       "radiant": {
-        "en": "Cry: Exile every card with M, O, U, S or E in its name, but CN cards. Summon three Radiant Traps. Choose an Activate: Overwhelm, Wolf's Maw or Iron Mandate."
+        "en": "Cry: Exile a permanent. Summon three Radiant Traps.\nActivates: Overwhelm, Wolf's Maw and Iron Mandate."
       }
     },
     "stinkyscapeplus-007": {

@@ -1,4 +1,5 @@
-//! #79 Twinspell (SPEC §8.3 row 79; §2.2, §6.2 Echo, §10.5 step 6, R384, R3044000). (2) Field Spell, Rare.
+//! #79 Twinspell (SPEC §8.3 row 79; §2.2, §6.2 Echo, §10.5 step 6, R384, R3044000). (1) Field Spell
+//! ((2) until issue #3996), Rare.
 //!   Base:    "Activate: The next Spell you play this turn gains Echo +{echoGain}. Then this goes to the
 //!            graveyard." — 1
 //!   Radiant: "Activate: The next Spell you play this turn gains Echo +{echoGain}." — 1; it stays on the
@@ -119,7 +120,7 @@ mod tests {
         echo_riders(s).into_iter().next().expect("an echoNextSpell modifier")
     }
 
-    /// Mana 4, so Twinspell (2), The Coin (0) and the Vanilla (1) all fit on one turn.
+    /// Mana 4, so Twinspell (1), The Coin (0) and the Vanilla (1) all fit on one turn.
     fn with_coin(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": {
@@ -131,7 +132,7 @@ mod tests {
         }))
     }
 
-    /// Twinspell played and activated, 2 mana left.
+    /// Twinspell played and activated, 3 mana left.
     fn activated(radiant: bool) -> Scenario {
         let mut s = with_coin(radiant);
         s.play(TWINSPELL, json!({}));
@@ -162,10 +163,10 @@ mod tests {
             s.activate(TWINSPELL, json!({}));
             assert_eq!(first_echo_rider(&s)["amount"], 2);
 
-            // The Coin's "gain 1 mana" once per resolution: 2 left after the Twinspell, plus three.
+            // The Coin's "gain 1 mana" once per resolution: 3 left after the Twinspell, plus three.
             s.play(COIN, json!({}));
 
-            s.expect_mana(P1, 2 + 1 + 2);
+            s.expect_mana(P1, 3 + 1 + 2);
         }
     }
 
@@ -180,8 +181,8 @@ mod tests {
             assert_eq!(echo_riders(&s).len(), 0);
             s.play(COIN, json!({}));
 
-            // One resolution: 2 + 1.
-            s.expect_mana(P1, 3);
+            // One resolution: 3 + 1.
+            s.expect_mana(P1, 4);
             s.expect_in_zone(TWINSPELL, "field");
         }
 
@@ -241,24 +242,24 @@ mod tests {
 
         #[test]
         fn s10_5_step_6_the_next_spell_this_turn_resolves_one_extra_time() {
-            let mut s = activated(false); // 4 − 2 = 2
+            let mut s = activated(false); // 4 − 1 = 3
 
             s.play(COIN, json!({})); // 0, then 1 mana per resolution
 
-            // Two resolutions of "gain 1 mana": 2 + 2 = 4 rather than 2 + 1 = 3.
-            s.expect_mana(P1, 4);
+            // Two resolutions of "gain 1 mana": 3 + 2 = 5 rather than 3 + 1 = 4.
+            s.expect_mana(P1, 5);
             assert_eq!(echo_riders(&s).len(), 0);
         }
 
         #[test]
         fn r3044000_a_unit_played_first_leaves_the_grant_for_the_next_spell() {
-            let mut s = activated(false); // 2
-            s.play(VANILLA, json!({})); // 1
+            let mut s = activated(false); // 3
+            s.play(VANILLA, json!({})); // 2
             assert_eq!(echo_riders(&s).len(), 1);
 
             s.play(COIN, json!({})); // +1 twice
 
-            s.expect_mana(P1, 3);
+            s.expect_mana(P1, 4);
             assert_eq!(echo_riders(&s).len(), 0);
         }
 
@@ -268,19 +269,19 @@ mod tests {
                 "p1": { "hand": [TWINSPELL, COIN, COIN], "mana": 4, "library": LIBRARY },
                 "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }
             }));
-            s.play(TWINSPELL, json!({})); // 4 − 2 = 2
+            s.play(TWINSPELL, json!({})); // 4 − 1 = 3
             s.activate(TWINSPELL, json!({}));
             let coins: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| card.def_id == COIN).collect();
             let (Some(first), Some(second)) = (coins.first().cloned(), coins.get(1).cloned()) else {
                 panic!("setup: two Coins in hand");
             };
-            s.play(&first, json!({})); // +1 per resolution, twice: 4
-            s.expect_mana(P1, 4);
+            s.play(&first, json!({})); // +1 per resolution, twice: 5
+            s.expect_mana(P1, 5);
 
-            s.play(&second, json!({})); // +1 once: 5
+            s.play(&second, json!({})); // +1 once: 6
 
             // The rider was spent on the first spell, so this one carries no Echo (§10.5 step 6).
-            s.expect_mana(P1, 5);
+            s.expect_mana(P1, 6);
             assert_eq!(echo_riders(&s).len(), 0);
         }
 
@@ -328,11 +329,11 @@ mod tests {
 
         #[test]
         fn s10_5_step_6_radiant_makes_the_next_spell_resolve_one_extra_time() {
-            let mut s = activated(true); // 2
+            let mut s = activated(true); // 3
 
             s.play(COIN, json!({})); // two resolutions of +1
 
-            s.expect_mana(P1, 4);
+            s.expect_mana(P1, 5);
             s.expect_in_zone(TWINSPELL, "field");
         }
 

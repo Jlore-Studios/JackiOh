@@ -263,6 +263,10 @@ pub struct RebornEntry {
     /// R3546003: the other three zones a returning GIGA holds with its anchor, released at its return.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub giga_zones: Option<Vec<ZoneRef>>,
+    /// R3996100: the Brittle the body comes back with, read off the snapshot of a card summoned with
+    /// Brittle for itself and its Reborn copy (`SummonPlacement.brittle`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brittle: Option<i32>,
 }
 
 /// One of step 5's reports (`DeathPass.collected`).
@@ -420,6 +424,11 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             continue;
         }
         prepare_body(&mut copy, entry);
+        // R3996100: Brittle N whatever its count was as it died (a crumble's spent count went with the
+        // move, R441), its turn cycle started by the return (R638).
+        if let Some(count) = entry.brittle {
+            crate::brittle_count::give_brittle_count(&*sink.state, &mut copy, count);
+        }
         // A body that finds no room keeps these changes in the graveyard.
         if entry.token.is_none()
             && let Some(card) = find_instance_mut(sink.state, &entry.id)
@@ -810,6 +819,12 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 face,
                 standing: if card.standing { Some(true) } else { None },
                 giga_zones,
+                brittle: card
+                    .snapshot
+                    .memory
+                    .get(crate::effects::summon::REBORN_BRITTLE_KEY)
+                    .and_then(Value::as_i64)
+                    .and_then(|count| i32::try_from(count).ok()),
             });
         }
         sink.state.counters.destroyed += 1;

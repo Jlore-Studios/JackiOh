@@ -267,7 +267,7 @@ fn r1181001_the_ai_weighs_both_supply_drop_modes_at_each_price_it_can_pay() {
 
 // M+ #22 Mountaintop Garden: the dearer choice (R1181002)
 
-/// The AI holds Wondrous Wand (2, Embiggened 4) and a filler at `mana`, a Garden (Radiant on
+/// The AI holds Wondrous Wand (1, Embiggened 3) and a filler at `mana`, a Garden (Radiant on
 /// `radiant`) face-up in its backrow.
 fn garden_game(seed: &str, radiant: bool, mana: i32) -> GameState {
     register_cards();
@@ -287,9 +287,9 @@ fn garden_game(seed: &str, radiant: bool, mana: i32) -> GameState {
 
 #[test]
 fn r1181002_the_ai_is_offered_the_gardens_dearer_choice_only_when_it_can_pay_the_premium() {
-    // The base Garden's premium is 2 and the Radiant one's 1, over the Wand's normal (2): the Radiant
-    // Garden's dearer choice costs 3, below the (4) the Wand prints.
-    for (radiant, dearer) in [(false, 4), (true, 3)] {
+    // The base Garden's premium is 2 and the Radiant one's 1, over the Wand's normal (1, since issue
+    // #3996): the Radiant Garden's dearer choice costs 2, below the (3) the Wand prints.
+    for (radiant, dearer) in [(false, 3), (true, 2)] {
         for mana in [dearer, dearer - 1] {
             let seed = format!("ai-garden-{radiant}-{mana}");
             let state = garden_game(&seed, radiant, mana);

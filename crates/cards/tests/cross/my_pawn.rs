@@ -403,8 +403,10 @@ mod r152_the_ai_turns_lockout_ends_with_the_turn_it_was_set_for {
             "active": "p2",
             "turn": 10,
             // p1 keeps a unit, so its own turn does not end by itself (R82) and the test can look at it.
+            // Its 4 Health is what p2's Jlockeed Shredder-10 hits for (4/6 since issue #3996), so the
+            // swing is lethal and arms My Pawn (R61).
             "p1": {
-                "health": 5,
+                "health": 4,
                 "field": [MR_VANILLA],
                 "backrow": [
                     { "def": MY_PAWN, "faceUp": false },

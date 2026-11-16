@@ -113,7 +113,17 @@ pub struct SummonPlacement {
     /// awake. Fresh summons only, and never a card that has awakened before (R3039000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dormant_turns: Option<i32>,
+    /// R3996100 (M #56 House Party, "They have Brittle 1, and so do their Reborn copies"): the fresh card
+    /// has Brittle N, a given count (R385) its arrival starts, and so does the body its Reborn returns
+    /// (`state_check`'s Reborn step), however its count stood as it died. Fresh summons only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brittle: Option<i32>,
 }
+
+/// R3996100: the memory key holding the Brittle a fresh card's Reborn copy has (`SummonPlacement.brittle`).
+/// Memory goes as the card leaves the field (R78), so §4.5 reads it off the dying card's snapshot and
+/// the Reborn copy, its own memory reset, passes nothing on.
+pub(crate) const REBORN_BRITTLE_KEY: &str = "__rebornBrittle";
 
 /// `summon`'s arguments, the placement's keys beside the rest.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -198,6 +208,7 @@ impl SummonArgs {
             giga: None,
             enters_evolved: None,
             dormant_turns: self.dormant_turns,
+            brittle: None,
         }
     }
 }
@@ -505,6 +516,12 @@ fn summon_fresh_into(
         card.slumber = Some(Slumber {
             turns: at.dormant_turns,
         });
+    }
+    // R3996100: Brittle N before it lands, its turn cycle started by the arrival (R638), and the count
+    // its Reborn copy has.
+    if let Some(count) = at.brittle {
+        crate::brittle_count::give_brittle_count(&*ctx.state, &mut card, count);
+        card.memory.insert(REBORN_BRITTLE_KEY.to_string(), json!(count));
     }
     crate::generators::record_generator(ctx, &card);
     if summon_onto(ctx, &mut card, slot, at, None, stands) {
@@ -1256,6 +1273,10 @@ pub struct FillBoardArgs {
     /// face, "Rush Tokens in Chinese").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chinese: Option<bool>,
+    /// R3996100: every card the fill summons has Brittle N, and so does its Reborn copy
+    /// (`SummonPlacement.brittle`; M #56 House Party).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brittle: Option<i32>,
 }
 
 /// §7 and R64: "fill your board" summons the named token into every empty, unreserved unit zone, left to
@@ -1285,6 +1306,7 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
                 stats_override: args.stats_override,
                 armor_override: args.armor_override,
                 chinese: args.chinese,
+                brittle: args.brittle,
                 ..SummonPlacement::default()
             };
             for slot in slots {

@@ -1,5 +1,5 @@
-//! SPEC §8.12 S+ #135 Crawler Swarm (§7, R64, R1136000, R1420, R3535000, R3560000): (2) Spell, Mindustrial,
-//! Common, a card of the Stinkyscape+ set.
+//! SPEC §8.12 S+ #135 Crawler Swarm (§7, R64, R1136000, R1420, R3535000, R3560000): (3) Spell ((2) until
+//! issue #3996), Mindustrial, Common, a card of the Stinkyscape+ set.
 //!   Base:    "Fill your board with Crawlers."
 //!   Radiant: "Fill your board with Radiant Crawlers."
 //!

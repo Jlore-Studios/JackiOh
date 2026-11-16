@@ -333,7 +333,7 @@ mod tests {
     const SPELL_2: &str = "core-069"; // Call to Arms: a Spell (Hit Job costs 3 since patch v0.2.0)
     const UNIT_1: &str = "core-008"; // Mr. Vanilla: a Unit
     const UNIT_4: &str = "core-025"; // 4-mana 7/7: a Unit
-    const FIELD_3: &str = "core-006"; // Mana Well: a Field Spell
+    const FIELD_3: &str = "stand-in (3) Field Spell";
     const FIELD_TRAP_1: &str = "core-018"; // Bread and Butter: a Field Trap
     const TRAP_1: &str = "core-041"; // Sheepish: a Trap
 
@@ -533,7 +533,7 @@ mod tests {
 
             let mut fields = tutor(TutorOpts::default());
             fields.play(TUTOR, json!({})).answer(json!("Field Spell"));
-            // Mana Well is the only Field Spell in the fixture, at 3.
+            // The only Field Spell in the fixture, at 3.
             assert_eq!(fields.prompt_modes(), vec!["3"]);
         }
 

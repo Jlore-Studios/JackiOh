@@ -1923,8 +1923,12 @@ mod r2490000_backrow_unit_priced_once {
         state
     }
 
+    /// A textless Field Spell of (3), whose price is its cost alone (#3486: Mana Well, which stood here,
+    /// costs (2) since issue #3996).
+    const FIELD_SPELL_3: &str = "stand-in (3) Field Spell";
+
     /// A live backrow on each side on the enemy's turn, so no grade rise is armed: the enemy's
-    /// face-down Sheepish, our face-up Mana Well and our Combo-Index, raised to grade C (3).
+    /// face-down Sheepish, our face-up Field Spell of (3) and our Combo-Index, raised to grade C (3).
     fn graded_backrow() -> GameState {
         let mut state = board(json!({
             "seed": "ai-r2490000-backrow",
@@ -1932,7 +1936,7 @@ mod r2490000_backrow_unit_priced_once {
             "p1": {
                 "hand": [VANILLA],
                 "field": [VANILLA],
-                "backrow": [{ "def": "core-006", "faceUp": true }, { "def": "core-093", "faceUp": true }],
+                "backrow": [{ "def": FIELD_SPELL_3, "faceUp": true }, { "def": "core-093", "faceUp": true }],
             },
             "p2": {
                 "hand": [VANILLA],

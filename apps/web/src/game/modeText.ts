@@ -51,10 +51,10 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   },
   // C+ #40 Appropriations (X spell): the effects the Discover menu shows, X filled in on play.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(2X−2) Attack and Rush." },
-    Education: { label: "Education", detail: "Shuffle 2X−2 random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 6X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(2X−2) Health and Armor X." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(2X−3) Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 2X−3 random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 5X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(2X−3) Health and Armor X." },
   },
   // C+ #7 The House: the twin is the Activate's mode (R1704002).
   "classicplus-007": {
@@ -231,7 +231,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "gain Brittle": { label: "More Brittle", detail: "This gains more Brittle." },
     "Tribute this": { label: "Tribute this", detail: "Tribute this card." },
   },
-  // S+ #4 Profe Yates: the one Activate it keeps while it stays.
+  // S+ #4 Profe Yates through v0.6.5b: the one Activate it kept while it stayed (its replays; R3996000 gave it all three).
   "stinkyscapeplus-004": {
     overwhelm: { label: "Overwhelm", detail: "Activate: Freeze all Units in this lane and the surrounding lanes." },
     wolfsMaw: { label: "Wolf's Maw", detail: "Activate: Pull a Flying Unit down and deal damage to it. It loses Flying." },
@@ -329,10 +329,10 @@ function combatKeywords(): Record<string, ModeText> {
 export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
   // C+ #40 Appropriations, radiant.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(4X−3) Attack and Rush." },
-    Education: { label: "Education", detail: "Shuffle 4X−1 random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 16X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(5X−1) Health and Armor 2X." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(4X−5) Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 4X−3 random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 14X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +4X Health and Armor 2X." },
   },
   // C+ #7 The House, radiant: the twins it summons are Radiant.
   "classicplus-007": {
