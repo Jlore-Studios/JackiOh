@@ -35777,7 +35777,9 @@
           "provider": "claude-3"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-16T01:33:13Z",
         "every": 5,
+        "findings": 0,
         "head": "8c4fd7fb68980f24bd33e32a5739fb5577d5e850",
         "issue": 3937,
         "merged_at": "2026-11-16T01:24:23Z",
@@ -35790,12 +35792,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:581fde39-1794792305",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43786199409",
         "sha": "43eea36894de0c7ab0b8d953d39450c74dcc0c9f",
         "started_at": "2026-11-16T01:25:30Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the AI's count of the damage that gets past its Taunts lets a big attacker break a Taunt first, and keeps the attackers a Taunt's Armor would stop",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 285
