@@ -66,7 +66,7 @@ export default function AccessibilityRoute(): ReactElement {
         <section aria-labelledby="a11y-gaps">
           <h2 className="section-heading" id="a11y-gaps">{t("Known gaps")}</h2>
           <ul>
-            <li>{t("A card shown as a button, on the home page, in the Almanac's card pool and in a game's prompts, is named by a short summary that names the card, not by all the text on its face.")}</li>
+            <li>{t("A card shown as a button, on the home page, in the Almanac's card pool, in the Collection and in a game's prompts, is named by a short summary that names the card, not by all the text on its face.")}</li>
             <li>{t("In the deck builder, a card in the pool is named by the same short summary, and a card in the open deck by what pressing it does, “Remove” and the card's name, not by the cost shown beside it.")}</li>
             <li>{t("Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where it goes does the same, by click or by Enter on each.")}</li>
             <li>{t("With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.")}</li>

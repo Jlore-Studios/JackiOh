@@ -85,3 +85,21 @@
 .inbox-row__meta[data-urgent="true"] {
   color: var(--tavern-danger-text, var(--opponent));
 }
+
+/* A row's answers: the panel is portalled to the body, outside `.app-shell`, so the shell's sizing of
+   `a.button-primary` never reaches it. A link gets here the button's size and shape (#3958); its colors
+   come from buttons.css, and a <button> is sized by its own role. */
+.inbox-row .together-row__actions :is(a, button) {
+  min-height: var(--hit-min);
+}
+
+.inbox-row .together-row__actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: var(--space-4) var(--space-7);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  text-decoration: none;
+}

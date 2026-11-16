@@ -211,6 +211,13 @@ describe("#1307 OwnedCards", () => {
     expect(screen.getByTestId(T.setProgress("Classic"))).toHaveAttribute("value", "0");
   });
 
+  it("scrolls its sets in a list the keyboard can reach, as it holds no control (axe scrollable-region-focusable)", () => {
+    render(<OwnedCards collection={collectionOwning(["core-001"])} defs={DEFS} />);
+    const sets = screen.getByRole("list", { name: "Sets" });
+    expect(sets.tabIndex).toBe(0);
+    expect(sets).toContainElement(screen.getByTestId(T.set("Core")));
+  });
+
   it("draws an unowned card as a locked silhouette", () => {
     render(<OwnedCards collection={collectionOwning(["core-001"])} defs={DEFS} />);
 

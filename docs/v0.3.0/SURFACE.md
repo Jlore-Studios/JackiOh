@@ -1081,7 +1081,8 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`jackioh_shared::loadout::SeatPicks::freeze`, #3102). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
-  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). #3013 (R3013002): a frozen loadout
+  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). #3976 (R3976000): and `portraits`
+  (`{ p1, p2 }`, the match row's, `vanilla` before them). #3013 (R3013002): a frozen loadout
   holds `stamps` (`[{ cardId, stamp }]`, each dealt card's proficiency stamp), and a `cardLoadouts`
   frame and a replay page's entry carry the stamps of the cards they send, `{ seat, cards, stamps? }`,
   `stamps` left out when none, by the same send rule; two more `Active` routes, `GET /api/proficiency`

@@ -253,7 +253,7 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
 }
 
 /// Every aura source's entries, in `aura_sources` order: each source's hook asked once.
-fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
+pub(crate) fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
     let mut entries: Vec<AuraEntry<'_>> = Vec::new();
     for source in aura_sources(state) {
         // §6.1/§6.3: Vanilla clears scripts, and an aura is part of a card's Script (§10.9), so a

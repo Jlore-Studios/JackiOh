@@ -49,6 +49,7 @@ on:
       - .cargo/mutants.toml
       - .github/workflows/mutants.yml
       - scripts/mutants.sh
+      - scripts/mutants-runner.sh
       - apps/web/stryker.config.mjs
       - apps/edge/stryker.config.mjs
 

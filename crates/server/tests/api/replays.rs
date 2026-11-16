@@ -275,10 +275,19 @@ async fn all_steps(app: &Arc<App>, match_id: &str, token: &str) -> Vec<Value> {
         .await;
         assert_eq!(status, 200, "{body}");
         let keys: Vec<&String> = body.as_object().expect("an object").keys().collect();
-        // R1834002, R1834003: the seats' loadouts and the page's card picks ride beside the steps.
+        // R1834002, R1834003, R3976000: the seats' loadouts, the page's card picks and the seats'
+        // portraits ride beside the steps.
         assert_eq!(
             keys,
-            vec!["cardLoadouts", "from", "loadouts", "matchId", "steps", "total"]
+            vec![
+                "cardLoadouts",
+                "from",
+                "loadouts",
+                "matchId",
+                "portraits",
+                "steps",
+                "total"
+            ]
         );
         assert_eq!(body["matchId"], match_id);
         assert_eq!(body["from"], steps.len());
@@ -1510,5 +1519,51 @@ mod r1834003_a_replays_pages_carry_the_loadouts {
         assert_eq!(status, 200, "{body}");
         assert_eq!(body["loadouts"], json!({ "p1": defaults(), "p2": defaults() }));
         assert_eq!(body["cardLoadouts"], json!([]));
+    }
+}
+
+// R3976000 — the portraits on a replay's pages
+
+/// R3976000: every page of a replay carries both seats' portraits, whoever of its seats reads it,
+/// and `vanilla` for a match from before portraits.
+mod r3976000_a_replays_pages_carry_the_portraits {
+    use super::*;
+
+    #[tokio::test]
+    async fn r3976000_every_page_carries_both_seats_portraits_and_vanilla_before_them() {
+        let (app, tokens) = app_with_players().await;
+        let played = played_game("replay-portraits", PLAYED_ACTIONS);
+        let mut finish = Finish::new("replay-portrayed", &played, now_ms());
+        finish.row = json!({ "portraits": ["gary", "shredder"] });
+        seed_finished(&app, finish, &played).await;
+
+        for token in [&tokens.a, &tokens.b] {
+            let mut from = 0;
+            let mut pages = 0;
+            loop {
+                let (status, body) =
+                    get(&app, &format!("/api/replays/replay-portrayed?from={from}"), token).await;
+                assert_eq!(status, 200, "{body}");
+                assert_eq!(body["portraits"], json!({ "p1": "gary", "p2": "shredder" }));
+                pages += 1;
+                let steps = body["steps"].as_array().map_or(0, Vec::len);
+                from += steps;
+                if steps == 0 || from >= body["total"].as_u64().unwrap_or(0) as usize {
+                    break;
+                }
+            }
+            assert!(pages > 1, "the replay spans more than one page");
+        }
+
+        // A match from before portraits.
+        seed_finished(
+            &app,
+            Finish::new("replay-unportrayed", &played, now_ms()),
+            &played,
+        )
+        .await;
+        let (status, body) = get(&app, "/api/replays/replay-unportrayed?from=0", &tokens.a).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["portraits"], json!({ "p1": "vanilla", "p2": "vanilla" }));
     }
 }

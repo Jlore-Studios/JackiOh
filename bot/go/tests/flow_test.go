@@ -755,7 +755,8 @@ func TestFlow_ARevisionTheReviewerRejectsGoesToItsFinal(t *testing.T) {
 }
 
 func TestFlow_SuggestionsOpenIssuesUpToTheCap(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll}) // every account's lanes spare
+	// Every account's lanes spare, and one survey of everything (no `suggestions.areas`, #4026).
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Overrides: oneSurvey()})
 	h.gh.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	ideas := []string{}
 	for i := 0; i < 11; i++ {
@@ -888,7 +889,9 @@ func TestFlow_ASuggestRequestIsAnsweredByTheSurvey(t *testing.T) {
 	planned, _ := h.night(workFake(map[string]any{"suggest": workReviewer(text)}))
 	assertEqual(t, planned.Get("action"), "suggest")
 	assertEqual(t, flowReacted(h, 35), []string{"eyes", "+1", "rocket", "heart", "hooray"})
-	assertEqual(t, dig(t, h.ctx.Store.Load(), "suggest", "taken_asks"), []any{})
+	// The survey that took the ask has ended (#4026: its record held the ask), and none waits.
+	assertEqual(t, dig(t, h.ctx.Store.Load(), "suggest", "running"), pyjson.New())
+	assertEqual(t, dig(t, h.ctx.Store.Load(), "suggest", "asks"), []any{})
 }
 
 func TestFlow_AnApproveCommentQueuesASuggestionForBuild(t *testing.T) {

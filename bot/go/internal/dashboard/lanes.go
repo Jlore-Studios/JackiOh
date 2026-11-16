@@ -11,6 +11,7 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -468,7 +469,7 @@ func LaneLimits(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	if pool.PlanLanes != 0 {
 		planning := 0
 		for _, l := range lanesIn(live) {
-			if l.number != 0 && queue.PlanningPool(status.Record(state, l.number)) { // an in-lane plan holds its own lane (#2903)
+			if !plan.IsSurveyLane(l.number) && queue.PlanningPool(status.Record(state, l.number)) { // an in-lane plan holds its own lane (#2903)
 				planning++
 			}
 		}

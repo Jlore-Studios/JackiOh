@@ -13,7 +13,8 @@
 //! owner's deck after the opening shuffle, several such cards shuffled among themselves there
 //! (R3558006, the owner's call of 2026-11-09); and `cast_from_deck_when` casts it from its owner's
 //! deck, wherever it lies, at the first settled check where their exile holds at least `card` cards
-//! (R3558007, R3569007), its Cry resolving as a cast's, and the card ending in the graveyard.
+//! (R3558007, R3569007), its Cry resolving as a cast's, and the card ending in the graveyard; a cast
+//! and no play (R3920001).
 
 use jackioh_engine::prelude::*;
 
@@ -126,6 +127,11 @@ mod tests {
     /// p1's deck holds Animosity (`radiant` its face) beneath two fillers, with `exiled` cards in their
     /// exile; p1 ends the turn, whose settled check casts it from the deck once that is at least `card`.
     fn deck_board(seed: &str, radiant: bool, exiled: usize) -> Scenario {
+        deck_board_beside(seed, radiant, exiled, json!([]))
+    }
+
+    /// `deck_board`, with `backrow` in p1's backrow.
+    fn deck_board_beside(seed: &str, radiant: bool, exiled: usize, backrow: Value) -> Scenario {
         crate::register_all();
         let exile: Vec<&str> = std::iter::repeat_n(FILLER, exiled).collect();
         let mut s = scenario(json!({
@@ -134,6 +140,7 @@ mod tests {
                 "hand": [FILLER],
                 "library": [FILLER, FILLER, { "def": ID, "radiant": radiant }, FILLER],
                 "exile": exile,
+                "backrow": backrow,
             },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
@@ -183,6 +190,21 @@ mod tests {
             let made = added(&s);
             assert_eq!(made.len(), 1, "{made:?}");
             assert!(made[0].radiant);
+        }
+
+        /// R3920001: a cast from the deck is no play, so Core #33 Unstable Clone Machine, which copies
+        /// every card its controller plays or casts but a cast on draw, shuffles no copy of it into the
+        /// deck to cast itself again (handicapped fuzz seed 4517).
+        #[test]
+        fn r3920001_a_clone_machine_copies_no_cast_from_the_deck() {
+            let s = deck_board_beside(
+                "animosity-deck-clone",
+                false,
+                5,
+                json!([{ "def": "core-033", "lane": 1 }]),
+            );
+            assert!(!in_library(&s), "no copy shuffled in");
+            assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == ID));
         }
 
         #[test]

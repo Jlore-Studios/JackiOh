@@ -35,6 +35,58 @@
   overscroll-behavior: contain;
 }
 
+/* A cue that the region scrolls (#3958): a dark fade stuck to the region's foot, over the last cards, that
+   takes no tap. Its own height is the room it adds after the last row (its margin cancels the flex gap), so
+   at the end of the scroll it lies below the cards, never over them. Where the browser ties an animation to
+   the scroll, the fade shows only while the region scrolls and goes as the end comes; a region that fits
+   has no scroll range, so it shows none. The fade is a mask on a flat color, not a background gradient.
+   Under reduced motion (the media query, or the settings panel's attribute on <html>) the scroll-tied
+   animation is dropped, since index.css and animations.css would hold it at its last keyframe, which hides
+   the cue: the cue is then a plain static fade at full opacity, always shown. */
+.tavern.play-screen.play-hub > .play-body::after {
+  content: "";
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  height: var(--space-9);
+  margin-top: calc(var(--space-6) * -1);
+  background: color-mix(in srgb, var(--pal-black) 55%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, var(--pal-black));
+  mask-image: linear-gradient(to bottom, transparent, var(--pal-black));
+  pointer-events: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  .tavern.play-screen.play-hub > .play-body::after {
+    opacity: 0;
+    animation: play-body-cue linear both;
+    animation-timeline: scroll(nearest block);
+  }
+
+  @keyframes play-body-cue {
+    0%,
+    85% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tavern.play-screen.play-hub > .play-body::after {
+      opacity: 1;
+      animation: none;
+    }
+  }
+
+  :root[data-reduce-motion="true"] .tavern.play-screen.play-hub > .play-body::after {
+    opacity: 1;
+    animation: none;
+  }
+}
+
 .tavern.play-screen.play-hub .play-cards {
   display: flex;
   flex: 0 0 auto;
@@ -328,5 +380,32 @@
   .tavern.play-screen.play-hub .play-card__icon {
     width: 28px;
     height: 28px;
+  }
+}
+
+/* A short desktop window (1280x720): the cards and the hero tighten so more of the hub shows before its scroll. */
+@media (min-width: 601px) and (max-height: 800px) {
+  .tavern.play-screen.play-hub .play-hero .brand__word {
+    font-size: var(--type-3xl);
+  }
+
+  .tavern.play-screen.play-hub .play-cards {
+    gap: var(--space-6);
+  }
+
+  .tavern.play-screen.play-hub .play-group {
+    gap: var(--space-3);
+  }
+
+  .tavern.play-screen.play-hub .play-group__heading {
+    font-size: var(--type-lg);
+  }
+
+  .tavern.play-screen.play-hub .play-group__cards {
+    gap: var(--space-4);
+  }
+
+  .tavern.play-screen.play-hub .play-card {
+    padding: var(--space-4) var(--space-6);
   }
 }

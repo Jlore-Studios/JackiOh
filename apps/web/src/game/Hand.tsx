@@ -169,7 +169,15 @@ export default function Hand(props: HandProps): ReactElement {
           style={{ "--i": index } as CSSProperties}
           data-lifted={lifted ? "true" : undefined}
           data-landing={yours && landing === card.instanceId ? "true" : undefined}
-          onClickCapture={yours ? () => toggle(card.instanceId) : undefined}
+          // R3893000: a click that reaches here through a React portal (the inspect sheet a touch hold
+          // opened, its Close among it) is no tap on the card.
+          onClickCapture={
+            yours
+              ? (event) => {
+                  if (event.currentTarget.contains(event.target as Node)) toggle(card.instanceId);
+                }
+              : undefined
+          }
           onPointerEnter={yours ? () => report(card.instanceId) : undefined}
           onPointerLeave={yours ? () => report(null) : undefined}
         >

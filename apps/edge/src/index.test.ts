@@ -1,10 +1,12 @@
 // Holds how long a request waits for a sleeping server, with the container library replaced: its
 // real class needs Cloudflare's runtime.
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "../../web/src/wire/serverConfig.ts";
-import worker, { IMAGE_CHECK_RETRY_MS, IMAGE_CHECK_TIMEOUT_MS, Server, START_WAIT_MS, type Env } from "./index.ts";
+import { ALERT_WINDOW_MS } from "./alerts.ts";
+import worker, { IMAGE_CHECK_RETRY_MS, IMAGE_CHECK_TIMEOUT_MS, Server, START_WAIT_MS, TOLD_AT_KEY, type Env } from "./index.ts";
+import { FakeNetwork } from "./network.fake.ts";
 import { DAILY_SWEEP_CRON, DAILY_SWEEP_PATH, SERVER_PORT } from "./routing.ts";
 
 const library = vi.hoisted(() => ({
@@ -47,9 +49,11 @@ vi.mock("@cloudflare/containers", () => ({
 
 const COMMIT = "abc123";
 const LISTENING = new Response("from the server");
+/** The context a cron run gets, for a test that is not about what the run tells people. */
+const CRON_CTX = { waitUntil: vi.fn() } as unknown as ExecutionContext;
 
 function serverWith(running: boolean): Server {
-  const ctx = { container: { running } };
+  const ctx = { container: { running }, waitUntil: vi.fn() };
   const env = { DEPLOYED_COMMIT: COMMIT };
   return new Server(ctx as unknown as ConstructorParameters<typeof Server>[0], env as unknown as ConstructorParameters<typeof Server>[1]);
 }
@@ -481,8 +485,9 @@ describe("the Worker's routes", () => {
 describe("the daily wake-up", () => {
   function scheduledEnv(status: number): { env: Env; fetch: ReturnType<typeof vi.fn> } {
     const fetch = vi.fn(() => Promise.resolve(new Response(status === 200 ? "ready" : "not ready", { status })));
+    const tellUnreachable = vi.fn(() => Promise.resolve());
     const env = {
-      SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch })) },
+      SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch, tellUnreachable })) },
     } as unknown as Env;
     return { env, fetch };
   }
@@ -490,7 +495,7 @@ describe("the daily wake-up", () => {
   it("asks the server for readiness", async () => {
     const { env, fetch } = scheduledEnv(200);
 
-    await worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env);
+    await worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env, CRON_CTX);
 
     expect(env.SERVER.idFromName).toHaveBeenCalledWith("main");
     expect(fetch).toHaveBeenCalledOnce();
@@ -500,7 +505,7 @@ describe("the daily wake-up", () => {
   it("fails naming the path and the status when the server is not ready", async () => {
     const { env } = scheduledEnv(500);
 
-    await expect(worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env)).rejects.toThrow(
+    await expect(worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env, CRON_CTX)).rejects.toThrow(
       "the server's /readyz answered 500",
     );
   });
@@ -508,7 +513,7 @@ describe("the daily wake-up", () => {
   it("CLAUDE.md rule 13: the daily cron still asks for readiness, not the sweep", async () => {
     const { env, fetch } = scheduledEnv(200);
 
-    await worker.scheduled({ cron: "23 14 * * *" } as Parameters<typeof worker.scheduled>[0], env);
+    await worker.scheduled({ cron: "23 14 * * *" } as Parameters<typeof worker.scheduled>[0], env, CRON_CTX);
 
     expect((fetch.mock.calls[0]?.[0] as Request).url).toBe("http://container/readyz");
   });
@@ -517,8 +522,9 @@ describe("the daily wake-up", () => {
 describe("#3727 the daily games' hourly sweep", () => {
   function sweepEnv(status: number): { env: Env; fetch: ReturnType<typeof vi.fn> } {
     const fetch = vi.fn(() => Promise.resolve(new Response("{}", { status })));
+    const tellUnreachable = vi.fn(() => Promise.resolve());
     const env = {
-      SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch })) },
+      SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch, tellUnreachable })) },
     } as unknown as Env;
     return { env, fetch };
   }
@@ -526,7 +532,7 @@ describe("#3727 the daily games' hourly sweep", () => {
   it("posts the sweep to the server on the hourly cron", async () => {
     const { env, fetch } = sweepEnv(200);
 
-    await worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env);
+    await worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env, CRON_CTX);
 
     expect(fetch).toHaveBeenCalledOnce();
     const request = fetch.mock.calls[0]?.[0] as Request;
@@ -538,8 +544,342 @@ describe("#3727 the daily games' hourly sweep", () => {
     const { env } = sweepEnv(500);
 
     await expect(
-      worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env),
+      worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env, CRON_CTX),
     ).rejects.toThrow("the server's /daily-sweep answered 500");
+  });
+});
+
+/** What a request or a cron run tells people (#3618), with the alert's two services faked (network.fake.ts). */
+describe("#3618 server.unreachable", () => {
+  const T0 = Date.parse("2026-11-15T03:00:00Z");
+  const TITLE = "Patch: alert server.unreachable on jackioh.com";
+  const ENV = {
+    DEPLOYED_COMMIT: COMMIT,
+    PUBLIC_ORIGINS: "https://jackioh.com",
+    CREATE_ISSUES_TOKEN: "ghp_token",
+    ALERT_RESEND_API_KEY: "re_key",
+    ALERT_EMAILS: "owner@example.com",
+  };
+
+  let network: FakeNetwork;
+
+  /** A Server over a Map-backed storage, which several can share (a restart), and the promises it gave `waitUntil`. */
+  function alerting(env: Record<string, string> = ENV, storage = new Map<string, unknown>()) {
+    const waiting: Promise<unknown>[] = [];
+    const ctx = {
+      container: { running: false },
+      waitUntil: vi.fn((promise: Promise<unknown>) => {
+        waiting.push(promise);
+      }),
+      storage: {
+        get: vi.fn((key: string) => Promise.resolve(storage.get(key))),
+        put: vi.fn((key: string, value: unknown) => {
+          storage.set(key, value);
+          return Promise.resolve();
+        }),
+      },
+    };
+    const server = serverWithCtx(ctx, env);
+    return { server, ctx, storage, settled: () => Promise.all(waiting.splice(0)) };
+  }
+
+  /** One request to a server whose start fails, then what it told. */
+  async function failingRequest(handle: ReturnType<typeof alerting>): Promise<Response> {
+    const answer = await handle.server.fetch(request());
+    await handle.settled();
+    return answer;
+  }
+
+  beforeEach(() => {
+    resetLibrary();
+    library.startAndWaitForPorts.mockRejectedValue(new Error("the container failed to start"));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0);
+    network = new FakeNetwork();
+    vi.stubGlobal("fetch", network.fetch);
+    for (const level of ["info", "warn", "error"] as const) vi.spyOn(console, level).mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  describe("from a request", () => {
+    it("opens one issue and sends one email for a boot loop, and every request still gets the library's answer", async () => {
+      const handle = alerting();
+      const refused = new Response("Failed to start container", { status: 500 });
+      library.fetch.mockResolvedValue(refused);
+
+      expect(await handle.server.fetch(request())).toBe(refused);
+      expect(await handle.server.fetch(request())).toBe(refused);
+      expect(await handle.server.fetch(request())).toBe(refused);
+      await handle.settled();
+
+      expect(network.to("search")).toHaveLength(1);
+      expect(network.to("create")).toHaveLength(1);
+      expect(network.to("create")[0]?.body?.title).toBe(TITLE);
+      expect(network.to("comment")).toHaveLength(0);
+      expect(network.to("email")).toHaveLength(1);
+      expect(network.to("email")[0]?.body?.text).toContain("cause: start");
+      expect(network.to("email")[0]?.body?.text).toContain("message: the container failed to start");
+      expect(network.to("email")[0]?.headers["idempotency-key"]).toBe(
+        `jackioh-alert/jackioh.com/server.unreachable/${FakeNetwork.issueUrl(1)}`,
+      );
+    });
+
+    it("tells nothing again within the window", async () => {
+      const handle = alerting();
+      await failingRequest(handle);
+      network.calls.length = 0;
+
+      vi.setSystemTime(T0 + ALERT_WINDOW_MS - 1_000);
+      await failingRequest(handle);
+
+      expect(network.calls).toHaveLength(0);
+    });
+
+    it("comments, with no email, once an issue is open and the window has passed", async () => {
+      const handle = alerting();
+      await failingRequest(handle);
+      network.calls.length = 0;
+      network.openIssues = [{ number: 1, title: TITLE, html_url: FakeNetwork.issueUrl(1) }];
+
+      vi.setSystemTime(T0 + ALERT_WINDOW_MS);
+      await failingRequest(handle);
+
+      expect(network.to("comment")).toHaveLength(1);
+      expect(network.to("comment")[0]?.url.pathname).toBe("/repos/Jlore-Studios/JackiOh/issues/1/comments");
+      expect(network.to("create")).toHaveLength(0);
+      expect(network.to("email")).toHaveLength(0);
+    });
+
+    it("opens a new issue and emails again once the issue is closed", async () => {
+      const handle = alerting();
+      await failingRequest(handle);
+      network.calls.length = 0;
+
+      vi.setSystemTime(T0 + ALERT_WINDOW_MS);
+      await failingRequest(handle);
+
+      expect(network.to("create")).toHaveLength(1);
+      expect(network.to("email")).toHaveLength(1);
+      expect(network.to("email")[0]?.headers["idempotency-key"]).toBe(
+        `jackioh-alert/jackioh.com/server.unreachable/${FakeNetwork.issueUrl(2)}`,
+      );
+    });
+
+    it("keeps when it told in the object's storage, under a key of its own", async () => {
+      const handle = alerting();
+      await failingRequest(handle);
+
+      expect(handle.storage.get(TOLD_AT_KEY)).toBe(T0);
+      expect(TOLD_AT_KEY).toBe("jackioh:server.unreachable:toldAt");
+      expect(handle.ctx.storage.put).toHaveBeenCalledOnce();
+    });
+
+    it("remembers across a restart: a new object on the same storage tells nothing inside the window", async () => {
+      const first = alerting();
+      await failingRequest(first);
+      network.calls.length = 0;
+
+      vi.setSystemTime(T0 + 60_000);
+      await failingRequest(alerting(ENV, first.storage));
+
+      expect(network.calls).toHaveLength(0);
+    });
+
+    it("tells again after a restart once the window has passed", async () => {
+      const first = alerting();
+      await failingRequest(first);
+      network.calls.length = 0;
+
+      vi.setSystemTime(T0 + ALERT_WINDOW_MS);
+      await failingRequest(alerting(ENV, first.storage));
+
+      expect(network.to("create")).toHaveLength(1);
+    });
+
+    it("makes one notice for requests that fail together", async () => {
+      const handle = alerting();
+
+      await Promise.all([handle.server.fetch(request()), handle.server.fetch(request())]);
+      await handle.settled();
+
+      expect(network.to("create")).toHaveLength(1);
+      expect(network.to("email")).toHaveLength(1);
+      expect(handle.ctx.storage.get).toHaveBeenCalledOnce();
+    });
+
+    it("sends from waitUntil, never while the request waits", async () => {
+      vi.stubGlobal("fetch", () => new Promise<Response>(() => undefined));
+      const handle = alerting();
+
+      const answer = await handle.server.fetch(request());
+
+      expect(answer).toBe(LISTENING);
+      expect(handle.ctx.waitUntil).toHaveBeenCalledOnce();
+    });
+
+    it("is not raised for a client that hung up", async () => {
+      const handle = alerting();
+
+      await handle.server.fetch(new Request("https://jackioh.com/api/catalog", { signal: AbortSignal.abort() }));
+
+      expect(handle.ctx.waitUntil).not.toHaveBeenCalled();
+      expect(network.calls).toHaveLength(0);
+    });
+
+    it("says nothing for a start that succeeds", async () => {
+      library.startAndWaitForPorts.mockResolvedValue();
+      const handle = alerting();
+
+      await failingRequest(handle);
+
+      expect(handle.ctx.waitUntil).not.toHaveBeenCalled();
+      expect(network.calls).toHaveLength(0);
+    });
+
+    it("says nothing with no token and no email key, and keeps no time", async () => {
+      const handle = alerting({ DEPLOYED_COMMIT: COMMIT });
+
+      await failingRequest(handle);
+
+      expect(network.calls).toHaveLength(0);
+      expect(handle.ctx.storage.get).not.toHaveBeenCalled();
+      expect(handle.ctx.storage.put).not.toHaveBeenCalled();
+    });
+
+    it("falls back to the day's one email when GitHub fails", async () => {
+      network.status.create = 500;
+      const handle = alerting();
+
+      await failingRequest(handle);
+
+      expect(network.to("email")).toHaveLength(1);
+      expect(network.to("email")[0]?.headers["idempotency-key"]).toBe(
+        "jackioh-alert/jackioh.com/server.unreachable/2026-11-15",
+      );
+    });
+
+    it("tells what it can when the object's storage fails", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const handle = alerting();
+      handle.ctx.storage.get.mockRejectedValue(new Error("storage down"));
+      handle.ctx.storage.put.mockRejectedValue(new Error("storage down"));
+
+      await failingRequest(handle);
+
+      expect(network.to("create")).toHaveLength(1);
+      expect(warn).toHaveBeenCalledWith("server.alert_state_unreadable", expect.any(Error));
+      expect(warn).toHaveBeenCalledWith("server.alert_state_unwritten", expect.any(Error));
+    });
+
+    it("never rejects, even when telling fails outright", async () => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      vi.stubGlobal("fetch", () => {
+        throw new Error("fetch is gone");
+      });
+      const handle = alerting();
+
+      await expect(failingRequest(handle)).resolves.toBe(LISTENING);
+
+      expect(error).toHaveBeenCalledWith("alert.issue.failed", "fetch is gone");
+    });
+
+    it("tells a failure that is no Error by its text", async () => {
+      library.startAndWaitForPorts.mockRejectedValue("no container");
+      const handle = alerting();
+
+      await failingRequest(handle);
+
+      expect(network.to("email")[0]?.body?.text).toContain("message: no container");
+    });
+  });
+
+  describe("from the daily cron", () => {
+    function cronEnv(fetch: () => Promise<Response>) {
+      const tellUnreachable = vi.fn(() => Promise.resolve());
+      const env = {
+        SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch, tellUnreachable })) },
+      } as unknown as Env;
+      const waitUntil = vi.fn();
+      return { env, tellUnreachable, waitUntil, ctx: { waitUntil } as unknown as ExecutionContext };
+    }
+    const daily = {} as Parameters<typeof worker.scheduled>[0];
+
+    it("alerts when /readyz answers an error, from waitUntil, and still fails the run", async () => {
+      const { env, tellUnreachable, waitUntil, ctx } = cronEnv(() => Promise.resolve(new Response("no", { status: 500 })));
+
+      await expect(worker.scheduled(daily, env, ctx)).rejects.toThrow("the server's /readyz answered 500");
+
+      expect(tellUnreachable).toHaveBeenCalledExactlyOnceWith({
+        cause: "readyz",
+        message: "the server's /readyz answered 500",
+      });
+      expect(waitUntil).toHaveBeenCalledOnce();
+      expect(waitUntil).toHaveBeenCalledWith(tellUnreachable.mock.results[0]?.value);
+    });
+
+    it("alerts when the server cannot be reached, and fails the run", async () => {
+      const { env, tellUnreachable, waitUntil, ctx } = cronEnv(() => Promise.reject(new Error("container never started")));
+
+      await expect(worker.scheduled(daily, env, ctx)).rejects.toThrow(
+        "the server's /readyz failed: container never started",
+      );
+
+      expect(tellUnreachable).toHaveBeenCalledExactlyOnceWith({
+        cause: "readyz",
+        message: "the server's /readyz failed: container never started",
+      });
+      expect(waitUntil).toHaveBeenCalledOnce();
+    });
+
+    it("names a failure that is no Error by its text", async () => {
+      const { env, tellUnreachable, ctx } = cronEnv(() => Promise.reject("gone"));
+
+      await expect(worker.scheduled(daily, env, ctx)).rejects.toThrow("the server's /readyz failed: gone");
+
+      expect(tellUnreachable).toHaveBeenCalledOnce();
+    });
+
+    it("says nothing when /readyz answers", async () => {
+      const { env, tellUnreachable, waitUntil, ctx } = cronEnv(() => Promise.resolve(new Response("ready")));
+
+      await worker.scheduled(daily, env, ctx);
+
+      expect(tellUnreachable).not.toHaveBeenCalled();
+      expect(waitUntil).not.toHaveBeenCalled();
+    });
+
+    it("does not alert for the hourly sweep that fails", async () => {
+      const { env, tellUnreachable, waitUntil, ctx } = cronEnv(() => Promise.resolve(new Response("no", { status: 500 })));
+
+      await expect(
+        worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env, ctx),
+      ).rejects.toThrow("the server's /daily-sweep answered 500");
+
+      expect(tellUnreachable).not.toHaveBeenCalled();
+      expect(waitUntil).not.toHaveBeenCalled();
+    });
+
+    it("tells people through the object the request path uses, so the two share one window", async () => {
+      // The stub the cron holds is the Durable Object: its `tellUnreachable` is the method a request calls.
+      const handle = alerting();
+      const { env, waitUntil, ctx } = cronEnv(() => Promise.resolve(new Response("no", { status: 500 })));
+      (env.SERVER.get as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+        fetch: () => Promise.resolve(new Response("no", { status: 500 })),
+        tellUnreachable: (fields: Record<string, string>) => handle.server.tellUnreachable(fields),
+      });
+
+      await expect(worker.scheduled(daily, env, ctx)).rejects.toThrow();
+      await Promise.all(waitUntil.mock.calls.map(([promise]) => promise as Promise<unknown>));
+      await failingRequest(handle);
+
+      expect(network.to("create")).toHaveLength(1);
+      expect(network.to("email")).toHaveLength(1);
+      expect(network.to("email")[0]?.body?.text).toContain("cause: readyz");
+    });
   });
 });
 

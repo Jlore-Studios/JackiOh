@@ -870,8 +870,31 @@ func handedOff(c *queue.Candidate, assignment *Assignment, own *Ownership) {
 		"`%s` owns it from this run", c.Number, own.Owner, why, assignment.Provider.ID))
 }
 
-// SurveyProvider is plan.survey_provider.
-func SurveyProvider(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, force bool, quietOK string) *providers.Provider {
+// SurveyProvider is the subscription a survey runs on (#4026): one with a lane spare (`spare`, from
+// `Spare`: free on a subscription that may start a build or a plan now, inside its `start_headroom`
+// of each cap, with a runner free), a strong seat's before a medium one's, and among them the one
+// with the most room under its caps and the fewest runs first (the load balancer's order,
+// `Balance_`), then the pool's order. A survey once took the first subscription in the pool that
+// could run one at all, so it started on accounts nearly out of usage and half of them were cut
+// off. Only a forced one (`/harness suggest --force`) still takes the pool's first.
+func SurveyProvider(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, force bool, quietOK string,
+	spare []SpareLanes) *providers.Provider {
+	spread := Balance_(ctx, state, lanes)
+	ranked := py.SortedBy(spare, func(s SpareLanes) []any {
+		tier := 1
+		if s.Hard {
+			tier = 0
+		}
+		return []any{tier, spread.place(s.Provider.ID)}
+	})
+	for _, s := range ranked {
+		if Usable(ctx, state, s.Provider, lanes, "suggest", force, quietOK) {
+			return s.Provider
+		}
+	}
+	if !force {
+		return nil
+	}
 	for _, provider := range ctx.Cfg.Pool.Ordered() {
 		if Usable(ctx, state, provider, lanes, "suggest", force, quietOK) {
 			return provider

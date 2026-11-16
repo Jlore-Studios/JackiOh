@@ -40,6 +40,8 @@ func TestDeclined_QueuedWorkThatWaitsForAnotherSubscriptionNoLongerStopsASurvey(
 	// By day only Muse is free, and a hard item needs a strong model: Muse has nothing it can
 	// start, so its lanes are spare (its four and the two it fills while gpt and agy are off: the
 	// night box's six), and once a tick has seen them it surveys, though the queue is not empty.
+	// Six spare lanes start a survey in each of the five areas (#4026), so the first takes a fifth
+	// of the ten suggestions' room.
 	h := ratingDayHarness(t, "muse")
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	look := plan.Peek_(h.ctx, false, nil, "auto")
@@ -47,9 +49,11 @@ func TestDeclined_QueuedWorkThatWaitsForAnotherSubscriptionNoLongerStopsASurvey(
 	testsupport.IdleFor(h.ctx, 0)
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), planned.Get("count")},
-		[]any{"suggest", "muse", 10})
+		[]any{"suggest", "muse", 2})
 }
 
+// A survey claimed before #4026 (`suggest.provider`, lane 0) was given all the room there was, so
+// no other starts while it runs, unless forced.
 func TestDeclined_NoSecondSurveyWhileOneRuns(t *testing.T) {
 	h := newFlowHarness(t)
 	testsupport.IdleFor(h.ctx, 45)

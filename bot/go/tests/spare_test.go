@@ -199,8 +199,9 @@ func TestSpare_TheStatusIssueOpensWithTheExcessCompute(t *testing.T) {
 	assertIn(t, "a runner where it runs has room for it (GitHub's runners have 5 free, the AWS boxes "+
 		"5, once the planner has handed out every queued item it can start)", section)
 	assertIn(t, "(`start_headroom`, 5% under it as `.harness/providers.json` sets it)", section)
-	assertIn(t, "With 1 or more spare, the bot runs a suggestion survey (`suggestions.spare_lanes`), "+
-		"up to 10 open suggestions (`bot:suggestion`: 1 open now).", section)
+	assertIn(t, "With 1 or more spare, the bot runs a suggestion survey (`suggestions.spare_lanes`) "+
+		"on a spare lane, up to 5 at once, one an area (`suggestions.areas`, #4026), up to 10 open "+
+		"suggestions (`bot:suggestion`: 1 open now).", section)
 
 	// By day the accounts are outside their hours, and with the box off nothing may start.
 	day := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day,

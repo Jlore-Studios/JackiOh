@@ -50,6 +50,12 @@ func suggestionPriorityOpened(h *flowHarness) map[string]*pyjson.Object {
 	return made
 }
 
+// oneSurvey is config.json's `suggestions` with no areas (#4026): one survey at a time, of the whole
+// repository, which may take all the room under `suggestions.max_open`.
+func oneSurvey() *pyjson.Object {
+	return pyjson.New("suggestions", testsupport.RawConfig().Obj("suggestions").Copy().Set("areas", []any{}))
+}
+
 // suggestionPriorityWith is with_priorities(priorities): config.json's `suggestions` with this
 // table.
 func suggestionPriorityWith(priorities any) *pyjson.Object {
@@ -59,7 +65,8 @@ func suggestionPriorityWith(priorities any) *pyjson.Object {
 // ---------------------------------------------------------------------------- DeliveryTests
 
 func TestSuggestionPriority_EachClassOpensWithItsPriority(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll}) // every account's lanes spare
+	// Every account's lanes spare, and one survey of everything (#4026), with room for all seven.
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Overrides: oneSurvey()})
 	testsupport.IdleFor(h.ctx)
 	r := suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Security", "security"),
 		suggestionPriorityIdea("Data", "data"), suggestionPriorityIdea("Feature", "feature"),
@@ -158,7 +165,7 @@ func TestSuggestionPriority_TheSurveyListsEveryClass(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := template.Template
-	assertTrue(t, strings.HasPrefix(text, "<!-- version: 4 -->"), text[:min(len(text), 40)])
+	assertTrue(t, strings.HasPrefix(text, "<!-- version: 5 -->"), text[:min(len(text), 40)])
 	for _, kind := range config.SuggestionClasses {
 		assertIn(t, "- `"+kind+"`: ", text)
 	}

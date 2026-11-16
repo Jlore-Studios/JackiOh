@@ -22,7 +22,6 @@ import { clearPracticeResume, writePracticeResume } from "./resume.ts";
 import type {
   PracticeClaim,
   PracticeDebug,
-  PracticeReplaySummary,
   PracticeRequestBody,
   PracticeResponse,
   PracticeSnapshot,
@@ -30,7 +29,7 @@ import type {
   PracticeTimer,
 } from "./protocol.ts";
 import type { ReplaySource } from "../replay/source.ts";
-import { practiceReplaySource } from "../replay/sources.ts";
+import { practiceReplaySource, type PracticeReplayKept } from "../replay/sources.ts";
 import { messageOf } from "../net/errors.ts";
 
 type PracticePhase = "idle" | "starting" | "playing" | "over" | "failed";
@@ -75,9 +74,10 @@ export type PracticeController = {
   runReport(): Promise<RunAction>;
   /**
    * R768000: the replay of a game the worker kept (the finished game's snapshot names it, `replay`),
-   * its pages asked behind any request already queued, as every request to the worker is.
+   * its pages asked behind any request already queued, as every request to the worker is; R3976000: with
+   * the portraits its board drew, where the page knows them.
    */
-  replaySource(kept: Pick<PracticeReplaySummary, "game" | "steps">): ReplaySource;
+  replaySource(kept: PracticeReplayKept): ReplaySource;
   dispose(): void;
 };
 
@@ -403,7 +403,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
       });
     },
 
-    replaySource(kept: Pick<PracticeReplaySummary, "game" | "steps">): ReplaySource {
+    replaySource(kept: PracticeReplayKept): ReplaySource {
       const queued = {
         request: (body: PracticeRequestBody): Promise<PracticeResponse> =>
           new Promise<PracticeResponse>((resolve) => {

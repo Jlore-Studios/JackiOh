@@ -27,7 +27,9 @@ const FACES = [
   { key: "classic", id: "classic-043", set: "Classic", radiant: false, chinese: false },
   { key: "classic-plus", id: "classicplus-043", set: "Classic+", radiant: false, chinese: false },
   { key: "meditative", id: "meditative-027", set: "Meditative", radiant: false, chinese: false },
-  { key: "meditative-plus", id: "meditativeplus-001", set: "Meditative+", radiant: false, chinese: false },
+  // Meditative+ #7 Life Mage: #1 Bob's Plan's text, longer since #3904, clamps on a 200 px face, and a
+  // clamped box's transparent bottom border (cards.css) sets its watermark 2 px above the box's middle.
+  { key: "meditative-plus", id: "meditativeplus-007", set: "Meditative+", radiant: false, chinese: false },
   { key: "stinkyscape", id: "stinkyscape-017", set: "Stinkyscape", radiant: false, chinese: false },
   { key: "training-grounds", id: "traininggrounds-017", set: "Training Grounds", radiant: false, chinese: false },
   { key: "classic-radiant", id: "classic-043", set: "Classic", radiant: true, chinese: false },
