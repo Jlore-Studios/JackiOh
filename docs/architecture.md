@@ -697,13 +697,21 @@ step that is not yet implemented says which BUILD task delivers it.
      same address, then try the password. If the password still signs in, Supabase kept an
      unconfirmed account's password through linking (a pre-account takeover); do not enable
      providers until that is resolved.
+     Microsoft (`azure`, which `OAUTH_PROVIDER_LABELS` still names) stays off in both projects: it is
+     the provider the nOAuth attack was found on, where an `email` claim a user can set to any address
+     was trusted as their identity. Before turning it on, repeat #4002's check on staging: make an
+     email-and-password account for an address, then sign in with Microsoft for that same address. The
+     Microsoft sign-in must not land in the existing account unless Microsoft truly verified the
+     address; if it does, leave Microsoft off.
    - **Roblox (R3147000),** a custom OIDC provider, since Supabase has no built-in one: at
      create.roblox.com → Creations → OAuth 2.0 Apps, an app with the scopes `openid` and `profile`
      and the redirect URL `https://<ref>.supabase.co/auth/v1/callback` (each project's own); then
      Auth → Sign In / Providers → Custom Providers → a new OIDC provider with the identifier
      `custom:roblox` exactly (the client sends that name, and it cannot be changed later), the issuer
      `https://apis.roblox.com/oauth/`, the app's client id and secret, and the scopes `openid profile`.
-     Roblox gives third-party apps no email address, so its sign-in never matches an account by one:
+     Keep those two scopes: Roblox names an address only for its `email` scope, so with `openid profile`
+     alone its sign-in carries none and never matches an account by one (#4002; asking for `email` would
+     let automatic linking join a Roblox sign-in to the account holding that address):
      a Roblox sign-up is a new pending account with no address, which adds one on the code screen
      (R3147001), and a player who already has an account links Roblox from `/account` (R3147002).
      Both projects have it (#3147).
