@@ -17252,13 +17252,14 @@
       "merge_owner": "claude-1",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-4",
       "queued_at": "2026-11-16T05:01:17Z",
-      "run_id": "43807808878",
+      "run_id": "pending:eb9d71f2-1794814605",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 295,
-      "started_at": "2026-11-16T05:03:47Z",
+      "started_at": "2026-11-16T07:37:05Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17417,9 +17418,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T07:23:24Z",
+    "at": "2026-11-16T07:37:05Z",
     "url": "",
-    "what": "build #4035 on claude-6"
+    "what": "spot-check #4054 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-16T07:21:27Z",
@@ -37391,7 +37392,15 @@
         "n": 295,
         "pr": 4054,
         "queued_at": "2026-11-16T07:35:21Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:eb9d71f2-1794814605",
         "sha": "a222fb95ef9858f3de754a376ea857e5427d78b5",
+        "started_at": "2026-11-16T07:37:05Z",
         "status": "queued",
         "title": "Patch: every route that checks a guessable value holds a per-account and per-IP limit, with a test",
         "tries": 0
