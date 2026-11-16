@@ -30,7 +30,7 @@ use jackioh_server::config::{
     DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, MATCH_ACTION_RETENTION_DAYS, MS_PER_DAY,
 };
 use jackioh_server::daily::notify::sweep;
-use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, PushSubRow};
+use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, ProfileStatus, PushSubRow};
 use jackioh_shared::economy::rewards::utc_day_bounds;
 
 use crate::support::deps::{
@@ -1124,6 +1124,116 @@ async fn r3727007_a_block_cancels_open_daily_challenges_and_a_running_game_goes_
     )
     .await;
     assert_eq!(status, 200, "{body}");
+}
+
+// R4019000: a banned challenger's open challenge cannot be accepted and leaves the inbox;
+// unbanned, it accepts again.
+
+#[tokio::test]
+async fn r4019000_a_banned_challengers_challenge_cannot_be_accepted() {
+    let (app, ada, bo) = two_friends().await;
+    let (status, body) = api(
+        &app,
+        "POST",
+        "/api/daily/challenges",
+        &ada.token,
+        random_challenge(&bo, 1),
+    )
+    .await;
+    assert_eq!(status, 201, "{body}");
+    let id = body["id"].as_str().expect("a challenge id").to_string();
+
+    {
+        let mut tx = app.db.begin(Some(&ada.id)).await.expect("a transaction");
+        tx.profiles_set_status(&ada.id, ProfileStatus::Banned)
+            .await
+            .expect("the ban");
+        tx.commit().await.expect("commit");
+    }
+
+    // The accept answers 404 as to a non-friend and writes no daily game ...
+    let (status, body) = api(
+        &app,
+        "POST",
+        &format!("/api/daily/challenges/{id}/accept"),
+        &bo.token,
+        json!({ "mode": "random" }),
+    )
+    .await;
+    assert_eq!((status, code_of(&body)), (404, "not_found"), "{body}");
+    let (_, list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+    assert_eq!(list["games"], json!([]), "{list}");
+    assert_eq!(
+        list["challenges"],
+        json!({ "incoming": [], "outgoing": [] }),
+        "{list}"
+    );
+
+    // ... and the challenge accepts again once the ban is lifted.
+    {
+        let mut tx = app.db.begin(Some(&ada.id)).await.expect("a transaction");
+        tx.profiles_set_status(&ada.id, ProfileStatus::Active)
+            .await
+            .expect("the unban");
+        tx.commit().await.expect("commit");
+    }
+    let (status, body) = api(
+        &app,
+        "POST",
+        &format!("/api/daily/challenges/{id}/accept"),
+        &bo.token,
+        json!({ "mode": "random" }),
+    )
+    .await;
+    assert_eq!(status, 201, "{body}");
+    assert!(body["matchId"].is_string(), "{body}");
+}
+
+// R4019000: a seek posted while a banned account's matching seek waits never pairs with it;
+// the banned seek pairs again once the ban is lifted.
+
+#[tokio::test]
+async fn r4019000_a_seek_never_pairs_with_a_banned_seek() {
+    let app = app_with(None, TestAppOptions::default()).await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    let cy = person(&app, 3, "Cy").await;
+    let seek = json!({ "mode": "random", "perMoveDays": 3 });
+
+    // Ada's seek waits; banning her leaves it open but unpairable.
+    let (status, body) = api(&app, "POST", "/api/daily/seeks", &ada.token, seek.clone()).await;
+    assert_eq!(status, 201, "{body}");
+    assert!(body["seekId"].is_string(), "{body}");
+    {
+        let mut tx = app.db.begin(Some(&ada.id)).await.expect("a transaction");
+        tx.profiles_set_status(&ada.id, ProfileStatus::Banned)
+            .await
+            .expect("the ban");
+        tx.commit().await.expect("commit");
+    }
+
+    // Bo's matching seek waits beside it instead of pairing with Ada's.
+    let (status, body) = api(&app, "POST", "/api/daily/seeks", &bo.token, seek.clone()).await;
+    assert_eq!(status, 201, "{body}");
+    assert!(body["seekId"].is_string(), "no banned pairing: {body}");
+
+    // Cy pairs with Bo's seek, never Ada's.
+    let (status, body) = api(&app, "POST", "/api/daily/seeks", &cy.token, seek.clone()).await;
+    assert_eq!(status, 201, "{body}");
+    assert!(body["matchId"].is_string(), "{body}");
+
+    // Unbanned, Ada's still-open seek pairs with the next matching seek.
+    {
+        let mut tx = app.db.begin(Some(&ada.id)).await.expect("a transaction");
+        tx.profiles_set_status(&ada.id, ProfileStatus::Active)
+            .await
+            .expect("the unban");
+        tx.commit().await.expect("commit");
+    }
+    let dan = person(&app, 4, "Dan").await;
+    let (status, body) = api(&app, "POST", "/api/daily/seeks", &dan.token, seek).await;
+    assert_eq!(status, 201, "{body}");
+    assert!(body["matchId"].is_string(), "the unbanned seek pairs: {body}");
 }
 
 // R3727008: a running daily game holds its account from deletion

@@ -13498,6 +13498,63 @@ mod daily {
         );
     }
 
+    /// R4019000: a banned profile's open seek is passed over by `daily_seek_claim`, and its open
+    /// challenge stays out of `daily_invites_open_of`; both work again once the ban is lifted.
+    async fn r4019000_banned_seeks_and_challenges_wait_out_the_ban(harness: &StoreHarness) {
+        let me = active_profile(harness, None).await;
+        let banned = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.profiles_set_status(&banned.id, status("banned")));
+        let banned_seek = seek(&banned.id, QueueMode::Bo1, DAYS, now - 8_000, now + 60_000);
+        let other_seek = seek(&other.id, QueueMode::Bo1, DAYS, now - 7_000, now + 60_000);
+        let challenge = challenge(&banned.id, &me.id, now - 6_000, now + 60_000);
+        for row in [&banned_seek, &other_seek, &challenge] {
+            assert!(
+                q!(harness, t => t.daily_invites_create(row, now - 10_000)),
+                "{}",
+                harness.name
+            );
+        }
+
+        // The banned seek is passed over for the active one, and the banned challenge is hidden.
+        let match_one = id();
+        let paired = must(
+            q!(harness, t => t.daily_seek_claim(QueueMode::Bo1, DAYS, &me.id, &match_one, now)),
+            "the active seek",
+        );
+        assert_eq!(paired.id, other_seek.id, "{}", harness.name);
+        assert!(
+            !ids_of(&q!(harness, t => t.daily_invites_open_of(&me.id, now))).contains(&challenge.id),
+            "{}: no banned challenge in the inbox",
+            harness.name
+        );
+
+        // With the other seeker banned too, nothing is left to claim.
+        q!(harness, t => t.profiles_set_status(&other.id, status("banned")));
+        assert_eq!(
+            q!(harness, t => t.daily_seek_claim(QueueMode::Bo1, DAYS, &me.id, &id(), now)),
+            None,
+            "{}: only banned seeks are left",
+            harness.name
+        );
+
+        // Unbanned, the oldest seek pairs again and the challenge lists again.
+        q!(harness, t => t.profiles_set_status(&banned.id, status("active")));
+        q!(harness, t => t.profiles_set_status(&other.id, status("active")));
+        let match_two = id();
+        let next = must(
+            q!(harness, t => t.daily_seek_claim(QueueMode::Bo1, DAYS, &me.id, &match_two, now)),
+            "the unbanned seek",
+        );
+        assert_eq!(next.id, banned_seek.id, "{}", harness.name);
+        assert!(
+            ids_of(&q!(harness, t => t.daily_invites_open_of(&me.id, now))).contains(&challenge.id),
+            "{}: the challenge is back",
+            harness.name
+        );
+    }
+
     /// §9.13, RFC 8058: an account's notice settings start at email on with a token of its own, keep
     /// that token, take each time sent, and an unsubscribe by the token turns email off.
     async fn s913_daily_notify_defaults_settings_and_unsubscribe(harness: &StoreHarness) {
@@ -13825,6 +13882,7 @@ mod daily {
         r3727004_two_sends_racing_for_the_last_daily_place_write_one,
         s913_daily_invites_one_open_per_key_close_and_expire,
         s913_daily_seek_claim_takes_the_oldest_fitting_unblocked_seek,
+        r4019000_banned_seeks_and_challenges_wait_out_the_ban,
         s913_daily_notify_defaults_settings_and_unsubscribe,
         s913_push_subscriptions_are_one_per_endpoint,
         s913_a_deleted_profile_takes_its_daily_rows,

@@ -135,7 +135,8 @@ func TestStatusLoop_TheRewritesComeAtTheSweepsPaceWhileTheTokenRunsLow(t *testin
 }
 
 // Once the REST hour turns, the loop says what it spent of the one before, by path, the costliest
-// first, and counts the new hour afresh (#3760); an hour it spent nothing of says nothing.
+// first, and how many reads GitHub answered unchanged, for nothing (#4059), and counts the new hour
+// afresh (#3760); an hour it spent nothing of says nothing.
 func TestStatusLoop_SaysWhatItSpentOfEachRESTHour(t *testing.T) {
 	now := statusLoopClock(t, 0)
 	hour := time.Date(2026, 11, 13, 6, 6, 0, 0, time.UTC)
@@ -155,6 +156,7 @@ func TestStatusLoop_SaysWhatItSpentOfEachRESTHour(t *testing.T) {
 		takes++
 		return map[string]int{"GET /actions/runs/{n}/jobs": 1200, "GET /issues": 300, "PATCH /issues/{n}": 30}
 	})
+	patch(t, &cli.RateFree, func(string) int { return 2400 })
 	patch(t, &cli.RateSpentShown, 2)
 	dashboardOffline(t, nil)
 	out, _ := capture(t, &cli.Stdout)
@@ -162,7 +164,8 @@ func TestStatusLoop_SaysWhatItSpentOfEachRESTHour(t *testing.T) {
 	assertEqual(t, takes, 1)
 	assertEqual(t, strings.Count(out.String(), "rate: this loop spent"), 1)
 	assertIn(t, "rate: this loop spent 1530 of the bot's REST calls in the hour to ", out.String())
-	assertIn(t, "; the most: 1200 GET /actions/runs/{n}/jobs, 300 GET /issues\n", out.String())
+	assertIn(t, "; the most: 1200 GET /actions/runs/{n}/jobs, 300 GET /issues; "+
+		"2400 more reads were answered unchanged (304), free\n", out.String())
 }
 
 // The statistics are counted on a clock of their own, every 10 minutes, and each rewrite draws the

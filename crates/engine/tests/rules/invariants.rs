@@ -6,7 +6,8 @@
 //! an action announces says what the state it left holds. Each `fatigue` is its seat's next fatigue draw
 //! at `FATIGUE_DAMAGE` of its count, and each seat's `fatigue_count` moves only with one (§2.4, R3, R315;
 //! #1902). Each check is proved by tampering with one payload of a real action's events; the untampered
-//! events are clean.
+//! events are clean. And each 1v1 hero's health moves only with a `damage`, `healthLost`, `healed`,
+//! `healthSet` or health `swapped` (§10.3, R2201000; #4025), proved on synthetic events and an edited state.
 //!
 //! And its I17 (#3773): what the state check leaves on a settled state (no unit at 0 health but R69's or
 //! R3539003's, no unit in Defense Position that R2179000, R2657000, R3543002 or R1849006 switches out of
@@ -15,6 +16,7 @@
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
+use jackioh_engine::wire::SwapWhat;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
 use crate::rules::fixtures::harness::{both, new_game, put, setup_catalog, slot};
@@ -897,6 +899,183 @@ fn i9_a_glitch_reset_starts_the_fatigue_count_again() {
     let found = i9(create_invariant_monitor(&late).after(&[], &playing("i9-fatigue-reset")));
     assert_eq!(found.len(), 1, "{found:?}");
     assert!(found[0].starts_with("I9 silent fatigue"), "{}", found[0]);
+}
+
+fn hero_health_findings(start: &GameState, events: &[GameEvent], state: &GameState) -> Vec<String> {
+    create_invariant_monitor(start)
+        .after(events, state)
+        .into_iter()
+        .filter(|finding| finding.starts_with("I9 silent hero health"))
+        .collect()
+}
+
+fn hero_damage(seat: PlayerId, amount: i32) -> GameEvent {
+    GameEvent::Damage {
+        source_id: None,
+        target_id: format!("hero-{seat}"),
+        amount,
+        combat: false,
+        absorbed: 0,
+        via: None,
+    }
+}
+
+fn hero_healed(target_id: &str, amount: i32) -> GameEvent {
+    GameEvent::Healed {
+        target_id: target_id.to_string(),
+        amount,
+        via: None,
+    }
+}
+
+/// A started game with p1 at 30 and p2 at 20.
+fn health_start(seed: &str) -> GameState {
+    let mut start = playing(seed);
+    start.players[P1].hero.health = 30;
+    start.players[P2].hero.health = 20;
+    start
+}
+
+#[test]
+fn i9_a_hero_s_damage_heal_set_and_health_swap_with_their_events_are_clean() {
+    let start = health_start("i9-health-clean");
+    let none = Vec::<String>::new();
+
+    let mut hit = start.clone();
+    hit.players[P1].hero.health = 25;
+    assert_eq!(hero_health_findings(&start, &[hero_damage(P1, 5)], &hit), none);
+
+    let mut healed = hit.clone();
+    healed.players[P1].hero.health = 28;
+    assert_eq!(
+        hero_health_findings(&hit, &[hero_healed("hero-p1", 3)], &healed),
+        none
+    );
+
+    let mut set = start.clone();
+    set.players[P2].hero.health = 7;
+    let set_event = GameEvent::HealthSet {
+        player: P2,
+        health: 7,
+        source_id: None,
+    };
+    assert_eq!(hero_health_findings(&start, &[set_event], &set), none);
+
+    let mut lost = start.clone();
+    lost.players[P2].hero.health = 17;
+    let lost_event = GameEvent::HealthLost {
+        player: P2,
+        amount: 3,
+    };
+    assert_eq!(hero_health_findings(&start, &[lost_event], &lost), none);
+
+    let mut swapped = start.clone();
+    swapped.players[P1].hero.health = 20;
+    swapped.players[P2].hero.health = 30;
+    let swap_event = GameEvent::Swapped {
+        what: SwapWhat::Health,
+    };
+    assert_eq!(hero_health_findings(&start, &[swap_event], &swapped), none);
+}
+
+#[test]
+fn i9_a_hero_s_health_that_moves_without_its_event_or_an_event_without_its_move_is_flagged() {
+    let start = health_start("i9-health-silent");
+    let only_one = |found: Vec<String>, prefix: &str| {
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with(prefix), "{}", found[0]);
+    };
+
+    let mut drop = start.clone();
+    drop.players[P1].hero.health -= 1;
+    only_one(
+        hero_health_findings(&start, &[], &drop),
+        "I9 silent hero health: p1",
+    );
+
+    let mut rise = start.clone();
+    rise.players[P2].hero.health += 1;
+    only_one(
+        hero_health_findings(&start, &[], &rise),
+        "I9 silent hero health: p2",
+    );
+
+    only_one(
+        hero_health_findings(&start, &[hero_damage(P1, 5)], &start),
+        "I9 silent hero health: p1",
+    );
+
+    let mut wrong = start.clone();
+    wrong.players[P1].hero.health -= 4;
+    only_one(
+        hero_health_findings(&start, &[hero_damage(P1, 5)], &wrong),
+        "I9 silent hero health: p1",
+    );
+
+    // A unit's heal names a unit, not a hero: it moves no tally.
+    assert_eq!(
+        hero_health_findings(&start, &[hero_healed("fx-1", 4)], &start),
+        Vec::<String>::new()
+    );
+
+    // One silent move is one finding: the tally then follows the state.
+    let mut monitor = create_invariant_monitor(&start);
+    let count = |found: Vec<String>| {
+        found
+            .iter()
+            .filter(|finding| finding.starts_with("I9 silent hero health"))
+            .count()
+    };
+    assert_eq!(count(monitor.after(&[], &drop)), 1);
+    assert_eq!(count(monitor.after(&[], &drop)), 0);
+}
+
+#[test]
+fn i9_a_floored_hero_s_hit_past_its_floor_reads_the_floor() {
+    let mut start = health_start("i9-health-floor");
+    start.players[P1].handicap = Some(TUTORIAL_HUMAN);
+    let floor = TUTORIAL_HERO_FLOOR;
+    let mut at_floor = start.clone();
+    at_floor.players[P1].hero.health = floor;
+    assert_eq!(
+        hero_health_findings(&start, &[hero_damage(P1, 40)], &at_floor),
+        Vec::<String>::new()
+    );
+    let mut below = start.clone();
+    below.players[P1].hero.health = floor - 1;
+    assert_eq!(
+        hero_health_findings(&start, &[hero_damage(P1, 40)], &below).len(),
+        1
+    );
+}
+
+#[test]
+fn i9_a_glitch_reset_starts_the_hero_health_tally_again() {
+    let mut late = playing("i9-health-reset");
+    late.players[P1].hero.health = 12;
+    let mut monitor = create_invariant_monitor(&late);
+    // R676: the reset deals a new game, whose heroes start whole.
+    let mut reset = playing("i9-health-reset");
+    reset.players[P1].hero.health = 30;
+    reset.resets = Some(late.resets.unwrap_or(0) + 1);
+    let health = |found: Vec<String>| -> Vec<String> {
+        found
+            .into_iter()
+            .filter(|finding| finding.starts_with("I9 silent hero health"))
+            .collect()
+    };
+    assert_eq!(health(monitor.after(&[], &reset)), Vec::<String>::new());
+    let mut next = reset.clone();
+    next.players[P1].hero.health = 25;
+    assert_eq!(
+        health(monitor.after(&[hero_damage(P1, 5)], &next)),
+        Vec::<String>::new()
+    );
+    // The control: with `resets` unmoved, the same jump to 30 is a silent move.
+    let mut jumped = late.clone();
+    jumped.players[P1].hero.health = 30;
+    let found = health(create_invariant_monitor(&late).after(&[], &jumped));
+    assert_eq!(found.len(), 1, "{found:?}");
 }
 
 // I16: a card's own record agrees with the pile that holds it (§3.2, R78, R766)

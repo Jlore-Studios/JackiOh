@@ -35,16 +35,17 @@ import {
   type ReactNode,
 } from "react";
 
-import type {
-  ActionBody,
-  CardDef,
-  CardView,
-  MulliganView,
-  PendingView,
-  PlayerId,
-  PlayerView,
-  PromptKind,
-  Selection,
+import {
+  fillParams,
+  type ActionBody,
+  type CardDef,
+  type CardView,
+  type MulliganView,
+  type PendingView,
+  type PlayerId,
+  type PlayerView,
+  type PromptKind,
+  type Selection,
 } from "@jackioh/shared";
 
 import {
@@ -363,13 +364,15 @@ function laneAnswers(
   offered: readonly { key: string; option: string }[],
   source: string | undefined,
   radiant: boolean,
+  lookup: CardLookup | null,
+  card?: CardView,
 ): { lanes: LaneChoice[]; boardKeys: Map<string, string> } {
   const lanes: LaneChoice[] = [];
   const boardKeys = new Map<string, string>();
   for (const { key, option } of offered) {
     const lane = laneOf(option);
     if (lane === null) continue;
-    const text = modeText(source, option, radiant);
+    const text = filledModeText(lookup, source, option, radiant, card);
     lanes.push(
       text.detail === undefined
         ? { lane, key, label: t("Lane {lane}", { lane: String(lane) }) }
@@ -380,6 +383,31 @@ function laneAnswers(
   return { lanes: lanes.sort((a, b) => a.lane - b.lane), boardKeys };
 }
 
+/** A mode's translated words with its declared numbers filled from the visible card, or its printed face. */
+function filledModeText(
+  lookup: CardLookup | null,
+  defId: string | undefined,
+  option: string,
+  radiant: boolean,
+  card?: CardView,
+): { label: string; detail?: string } {
+  // Translate while the dictionary can still see the `{key}`s; the same placeholders are then filled in either language.
+  const text = modeText(defId, option, radiant);
+  const def = defId === undefined ? undefined : lookup?.(defId, radiant)?.def;
+  if (def === undefined) return text;
+  const face = radiant ? "radiant" : "base";
+  const fill = (words: string): string =>
+    fillParams(
+      { params: def.params, base: { ...def.base, text: words }, radiant: { ...def.radiant, text: words } },
+      face,
+      card?.params,
+    );
+  return {
+    label: fill(text.label),
+    ...(text.detail === undefined ? {} : { detail: fill(text.detail) }),
+  };
+}
+
 // Route 1: an open `PendingChoice`.
 
 function pickerForPending(
@@ -387,6 +415,7 @@ function pickerForPending(
   view: PlayerView,
   legal: readonly ActionBody[],
   lesson: boolean,
+  lookup: CardLookup | null,
 ): Picker {
   const items = pending.options.map((option): PickerItem => {
     const base: PickerItem = { key: option.key, label: t(option.label) };
@@ -431,7 +460,10 @@ function pickerForPending(
     // the view names the card asking. The label stays the engine's, which can carry a rolled number.
     if (pending.kind === "mode") {
       const selection = selectionForOption(option);
-      const detail = selection.pick === "mode" ? modeText(pending.sourceDefId, selection.option, pending.sourceRadiant === true).detail : undefined;
+      const detail =
+        selection.pick === "mode"
+          ? filledModeText(lookup, pending.sourceDefId, selection.option, pending.sourceRadiant === true).detail
+          : undefined;
       if (detail !== undefined) base.detail = detail;
       // R831004: an option that names a set (#82 KY's Trial's first Discover) wears the set's mark (R503).
       if (option.defId === undefined && setMarkOf(option.label).kind !== "unknown") base.set = option.label;
@@ -493,7 +525,7 @@ function pickerForPending(
   }
   if (laneModes !== null) {
     const offered = pending.options.map((option, at) => ({ key: option.key, option: laneModes[at] ?? "" }));
-    const answers = laneAnswers(offered, pending.sourceDefId, pending.sourceRadiant === true);
+    const answers = laneAnswers(offered, pending.sourceDefId, pending.sourceRadiant === true, lookup);
     picker.lanes = answers.lanes;
     picker.boardKeys = answers.boardKeys;
   }
@@ -775,7 +807,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
     }
     case "mode": {
       // The card being played (or activated, R384) is the one asking; its options read as that
-      // card's words, on the face it is played with (#24's radiant 2X, 4X and X).
+      // card's words, on the face and with the live declared numbers it is played with.
       const played = isBuilding(interaction) ? cardRefFor(view, interaction.instanceId) : null;
       const source = played?.defId ?? undefined;
       const radiant = played?.radiant === true;
@@ -790,7 +822,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.options.map((option): PickerItem => {
           const arrow = DIRECTIONS.find((d) => d === option);
           if (arrow !== undefined) return { key: option, label: t(option), arrow };
-          const text = modeText(source, option, radiant);
+          const text = filledModeText(lookup, source, option, radiant, played?.card);
           return text.detail === undefined
             ? { key: option, label: text.label }
             : { key: option, label: text.label, detail: text.detail };
@@ -800,7 +832,13 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       if (source !== undefined) picker.sourceDefId = source;
       if (played !== null) picker.sourceCard = played.card;
       if (lanePick) {
-        const answers = laneAnswers(need.options.map((option) => ({ key: option, option })), source, radiant);
+        const answers = laneAnswers(
+          need.options.map((option) => ({ key: option, option })),
+          source,
+          radiant,
+          lookup,
+          played?.card,
+        );
         picker.lanes = answers.lanes;
         picker.boardKeys = answers.boardKeys;
       }
@@ -1954,7 +1992,7 @@ export default function Prompt(props: PromptProps) {
         <PromptModal
           key={pending.choiceId}
           source="engine"
-          picker={pickerForPending(pending, props.view, props.legal ?? [], props.lesson === true)}
+          picker={pickerForPending(pending, props.view, props.legal ?? [], props.lesson === true, lookup)}
           {...(pending.kind === "mulligan" && mulligan !== undefined
             ? { status: <OpponentMulliganStatus mulligan={mulligan} /> }
             : {})}

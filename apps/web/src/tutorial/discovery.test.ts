@@ -6,6 +6,9 @@ import { describe, expect, it } from "vitest";
 
 import type { ActionBody, CardDef, GameEvent, PlayerView } from "@jackioh/shared";
 
+import { AI_TUTORIAL, HERO_HEALTH } from "@jackioh/engine/config";
+
+import { LANES } from "../game/contract.ts";
 import zhCN from "../i18n/zh-CN.json";
 import { baseView, card, emptySide, resetIds, unit } from "../test/fixtures.ts";
 import {
@@ -18,12 +21,15 @@ import {
   coachStart,
   hintLevel,
   missedOf,
+  ruleSentence,
+  textOf,
   type CoachCtx,
   type CoachState,
   type LessonScript,
 } from "./coach.ts";
 import { TUTORIAL_BUBBLES_PER_MOVE_MAX, TUTORIAL_MOMENT_TURNS_MAX } from "./config.ts";
 import { FIELD_GUIDE, discoveryById, type Discovery } from "./discoveries.ts";
+import { scriptFor } from "./scripts/index.ts";
 import { moment } from "./steps.ts";
 import { coachTargets } from "./targets.ts";
 
@@ -305,6 +311,40 @@ describe("R2205000 the Field guide", () => {
     expect(missing).toEqual([]);
   });
 
+  it("R2205000 the playing-units rule counts the board's lanes", () => {
+    const entry = discoveryById("play-unit");
+    if (entry === undefined) throw new Error("no play-unit entry");
+    expect(entry.rule).toContain("{lanes}");
+    expect(entry.rule).not.toContain("three");
+    expect(ruleSentence(entry)).toContain(String(LANES.length));
+    expect(ruleSentence(entry)).not.toContain("{lanes}");
+  });
+
+  it("R2205000 the hero-health rule fills both settings", () => {
+    const entry = discoveryById("hero-health");
+    if (entry === undefined) throw new Error("no hero-health entry");
+    expect(entry.rule).toContain("{yours}");
+    expect(entry.rule).toContain("{enemy}");
+    expect(entry.rule).not.toMatch(/30|20/);
+    const sentence = ruleSentence(entry);
+    expect(sentence).toContain(String(HERO_HEALTH));
+    expect(sentence).toContain(String(AI_TUTORIAL.heroHealth ?? HERO_HEALTH));
+  });
+
+  it("R293 the basics welcome and hero steps fill the tutorial enemy's health", () => {
+    const script = scriptFor("basics");
+    if (script === undefined) throw new Error("no basics script");
+    const enemy = AI_TUTORIAL.heroHealth ?? HERO_HEALTH;
+    for (const id of ["welcome", "hero"]) {
+      const step = script.steps.find((candidate) => candidate.id === id);
+      if (step === undefined) throw new Error(`no ${id} step`);
+      expect(typeof step.text === "string" ? step.text : "", id).toContain("{enemy}");
+      expect(step.params?.["enemy"], id).toBe(enemy);
+      expect(textOf(step.text, ctx(myTurn(3)), step.params), id).toContain(String(enemy));
+      if (typeof step.text === "string") expect(step.text, id).not.toContain("20");
+    }
+  });
+
   it("R2205000 recognizes each entry from the human's view and its fresh events alone", () => {
     resetIds();
     const mine = unit("p1", { instanceId: "u1", defId: "rusher", keywords: [{ kind: "Rush" }] });
@@ -367,5 +407,20 @@ describe("R2205000 the Field guide", () => {
     expect(found(view, [fired], defs)).toEqual(["trap", "field-trap"]);
     expect(found(view, [{ ...fired, again: true } as GameEvent], defs)).toEqual([]);
     expect(found(view, [{ ...fired, controller: "p2", again: true } as GameEvent], defs)).toEqual([]);
+  });
+
+  it("R292 finds The Coin when the opponent goes second with it, and reads nothing hidden", () => {
+    const view = baseView({
+      viewer: "p1",
+      opponent: emptySide("p2"),
+      events: [{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }],
+    });
+    expect(found(view, [])).toContain("the-coin");
+
+    const freshEvent: GameEvent = { type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" };
+    expect(found(baseView({ viewer: "p1", opponent: emptySide("p2") }), [freshEvent])).toContain("the-coin");
+
+    const p2View = baseView({ viewer: "p2", you: emptySide("p2", { hand: [card({ defId: "core-t-coin" })] }) });
+    expect(found(p2View, [])).toContain("the-coin");
   });
 });

@@ -8339,6 +8339,11 @@ pub async fn daily_invites_open_of(
         " from public.daily_invites
           where (from_profile = $1::uuid or to_profile = $1::uuid)
             and state = 'open' and expires_at > $2::bigint
+            -- R4019000: a banned challenger's challenge waits out the ban, off every inbox.
+            and (kind <> 'challenge'
+              or exists (
+                select 1 from public.profiles p
+                 where p.id = from_profile and p.status = 'active'))
           order by created_at, id"
     ))
     .bind(profile_id)
@@ -8415,6 +8420,7 @@ pub async fn daily_seek_claim(
         return Ok(None);
     }
     run_as(t, Some(me)).await?;
+    // R4019000: a banned account's open seeks pair with no one, until an unban.
     let row = sqlx::query(concat!(
         "update public.daily_invites set state = 'paired', match_id = $4::uuid
           where state = 'open'
@@ -8427,6 +8433,9 @@ pub async fn daily_seek_claim(
                    select 1 from public.blocks b
                     where (b.blocker = i.from_profile and b.blocked = $3::uuid)
                        or (b.blocker = $3::uuid and b.blocked = i.from_profile))
+                 and exists (
+                   select 1 from public.profiles p
+                    where p.id = i.from_profile and p.status = 'active')
                order by i.created_at, i.id
                limit 1
                for update of i skip locked)

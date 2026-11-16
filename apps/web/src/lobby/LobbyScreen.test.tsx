@@ -1,4 +1,4 @@
-// The private lobby screen (R3730000 to R3730006): its controls, Ready, the countdown, its reads again,
+// The private lobby screen (R3730000 to R3730006, R4021000): its controls, Ready, the countdown, its reads again,
 // closed and removed, and the classic room's join card, against a stubbed server.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -30,6 +30,14 @@ const DECKS = {
   decks: [{ id: "d-pyre", name: "Pyre Control", cards: [], catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 }],
   trios: [],
   limits: { decks: 20, trios: 10, nameLength: 40 },
+};
+
+const DECKS_WITH_DISTINCT_DEFAULT = {
+  ...DECKS,
+  decks: [
+    { id: "d-starter", name: "Starter Deck", cards: [], catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 },
+    ...DECKS.decks,
+  ],
 };
 
 function seat(over: Partial<LobbySeat> = {}): LobbySeat {
@@ -242,6 +250,94 @@ describe("the lobby screen", () => {
       expect(within(seats[1] ?? document.body).getByText("Bo#2")).toBeInTheDocument();
       await settle({ advance: LOBBY_POLL_MS * 2 });
       expect(reads(), "live, the lobby sends no poll").toBe(2);
+    } finally {
+      setSocialSocketFactory(null);
+    }
+  });
+
+  it("R4021000 a failed re-read keeps the lobby, its pick and its Leave, and reads again within LOBBY_POLL_MS while live", async () => {
+    const fake = fakeSockets();
+    setSocialSocketFactory(fake.factory);
+    try {
+      vi.useFakeTimers();
+      const empty = lobby({ settings: { format: "duel", mode: "bo1" }, seats: [seat(), seat({ role: "guest", player: null })] });
+      const server = serve(
+        [empty, empty, refusal(500, "busy", "the lobby is busy"), lobby({ settings: { format: "duel", mode: "bo1" } })],
+        (call) =>
+          call.method === "GET" && call.path === "/api/decks"
+            ? { status: 200, body: DECKS_WITH_DISTINCT_DEFAULT }
+            : undefined,
+      );
+      const reads = (): number => server.to("GET", `/api/lobbies/${CODE}`).length;
+      show();
+      await settle({ advance: 0 });
+      expect(reads()).toBe(1);
+      const socket = must(fake.sockets.at(-1), "the tab's social socket");
+      socket.open();
+      socket.deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+      await settle({ advance: 0 });
+      expect(reads(), "the socket came up: one read").toBe(2);
+      const picker = screen.getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect);
+      expect(picker.value).toBe("d-starter");
+      fireEvent.change(picker, { target: { value: "d-pyre" } });
+      // The push's read fails while the socket is live: the lobby on screen stays.
+      socket.deliver({ type: "lobby", code: CODE });
+      await settle({ advance: 0 });
+      expect(server.to("POST", `/api/lobbies/${CODE}/pick`)).toHaveLength(1);
+      expect(screen.getByTestId(lobbyTestid.leave)).toBeInTheDocument();
+      expect(screen.getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect).value).toBe("d-pyre");
+      expect(screen.queryByText(/could not be read/i)).toBeNull();
+      const before = reads();
+      await settle({ advance: LOBBY_POLL_MS });
+      expect(reads(), "the failed re-read retries once within LOBBY_POLL_MS while live").toBe(before + 1);
+      const seats = screen.getAllByTestId(lobbyTestid.seat);
+      expect(within(seats[1] ?? document.body).getByText("Bo#2")).toBeInTheDocument();
+    } finally {
+      setSocialSocketFactory(null);
+    }
+  });
+
+  it("R4021000 an action's refusal survives a failed re-read", async () => {
+    const fake = fakeSockets();
+    setSocialSocketFactory(fake.factory);
+    try {
+      vi.useFakeTimers();
+      serve([lobby(), refusal(500, "busy", "the lobby is busy"), lobby()], (call) =>
+        call.method === "POST" && call.path === `/api/lobbies/${CODE}/settings`
+          ? refusal(409, "busy", "the lobby is busy")
+          : undefined,
+      );
+      show();
+      await settle({ advance: 0 });
+      fireEvent.change(screen.getByTestId(lobbyTestid.settings), { target: { value: "bo1" } });
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.error)).toHaveTextContent("the lobby is busy");
+      const socket = must(fake.sockets.at(-1), "the tab's social socket");
+      socket.deliver({ type: "lobby", code: CODE });
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.error)).toHaveTextContent("the lobby is busy");
+      expect(screen.queryByText(/could not be read/i)).toBeNull();
+      expect(screen.getByTestId(lobbyTestid.leave)).toBeInTheDocument();
+    } finally {
+      setSocialSocketFactory(null);
+    }
+  });
+
+  it("R3730004 R4021000 a 404 re-read closes the lobby", async () => {
+    const fake = fakeSockets();
+    setSocialSocketFactory(fake.factory);
+    try {
+      vi.useFakeTimers();
+      serve([lobby(), { status: 404, body: { error: { code: "not_found", message: "gone" } } }]);
+      show();
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.leave)).toBeInTheDocument();
+      const socket = must(fake.sockets.at(-1), "the tab's social socket");
+      socket.open();
+      socket.deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+      socket.deliver({ type: "lobby", code: CODE });
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.closed)).toHaveTextContent("This lobby is closed.");
     } finally {
       setSocialSocketFactory(null);
     }

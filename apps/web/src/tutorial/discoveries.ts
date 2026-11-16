@@ -4,6 +4,10 @@
 
 import type { CardDef, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 
+import { AI_TUTORIAL, HERO_HEALTH } from "@jackioh/engine/config";
+
+import { LANES } from "../game/contract.ts";
+import type { Params } from "../i18n/i18n.ts";
 import type { CoachCtx } from "./coach.ts";
 import { freshOf, heroTargetId, myHand, unitsOf } from "./steps.ts";
 
@@ -13,6 +17,8 @@ export type Discovery = {
   name: string;
   /** The rule in one line, after "You found {name}:". */
   rule: string;
+  /** Values for `{name}` tokens in `rule`, filled where shown. */
+  params?: Params;
   /** The lesson that sets it up; the Field guide lists an entry not yet found under it. */
   lesson: string;
   found: (ctx: CoachCtx) => boolean;
@@ -124,7 +130,8 @@ export const FIELD_GUIDE: readonly Discovery[] = [
   {
     id: "play-unit",
     name: "Playing units",
-    rule: "a unit you play stands in one of your three lanes until it dies.",
+    rule: "a unit you play stands in one of your {lanes} lanes until it dies.",
+    params: { lanes: LANES.length },
     lesson: "basics",
     found: (ctx) => myPlays(ctx).some(({ def }) => def?.type === "Unit"),
   },
@@ -154,7 +161,8 @@ export const FIELD_GUIDE: readonly Discovery[] = [
   {
     id: "hero-health",
     name: "Hero health",
-    rule: "a hero at 0 health loses. Yours starts at 30, the tutorial's enemy at 20.",
+    rule: "a hero at 0 health loses. Yours starts at {yours}, the tutorial's enemy at {enemy}.",
+    params: { yours: HERO_HEALTH, enemy: AI_TUTORIAL.heroHealth ?? HERO_HEALTH },
     lesson: "basics",
     found: (ctx) => freshOf(ctx, "damage").some((event) => event.targetId === heroTargetId(ctx.view, "you")),
   },
@@ -330,7 +338,14 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     name: "The Coin",
     rule: "the player going second gets The Coin: one extra mana, once.",
     lesson: "finale",
-    found: (ctx) => myPlays(ctx).some(({ event }) => event.defId === COIN),
+    found: (ctx) =>
+      myPlays(ctx).some(({ event }) => event.defId === COIN) ||
+      myHand(ctx.view).some((card) => card.defId === COIN) ||
+      freshOf(ctx, "cardPlayed").some((event) => event.defId === COIN) ||
+      freshOf(ctx, "addedToHand").some((event) => event.defId === COIN) ||
+      (ctx.view.opponent.player === "p2" &&
+        (freshOf(ctx, "addedToHand").some((event) => event.player === ctx.view.opponent.player) ||
+          ctx.view.events.some((event) => event.type === "addedToHand" && event.player === ctx.view.opponent.player))),
   },
   {
     id: "radiant",

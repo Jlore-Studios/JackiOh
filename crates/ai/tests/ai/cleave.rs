@@ -58,6 +58,23 @@ mod threat {
         // Each attacker is spent on one Taunt: with no splash nothing reaches the face.
         assert_eq!(face_threat(&wall(), HUMAN), 0);
     }
+
+    #[test]
+    fn r2179005_a_cleave_splash_on_anime_armor_is_capped_and_it_still_binds() {
+        // Zoomerbin Oomen (1/2) and Anime Armor (3/3), both Taunts, side by side. The Cleave Voidwalker's 6
+        // destroys the Oomen and splashes Anime Armor, whose own guard caps the splash at 1, so it still
+        // stands to take Menace's 9 (capped at 1 too) and nothing goes face. Uncapped, the splash destroyed
+        // Anime Armor and Menace's 9 went face, 1 through the hero's same cap.
+        let mut state = board(json!({
+            "seed": "ai-cleave-anime-armor",
+            "p1": { "field": [{ "def": "core-067", "lane": 1 }, { "def": "classicplus-011", "lane": 2 }] },
+            "p2": { "field": ["classic-050", "core-019"] },
+        }));
+        grant(&mut state, AI, "core-067", Keyword::Taunt);
+        grant(&mut state, AI, "classicplus-011", Keyword::Taunt);
+        grant(&mut state, HUMAN, "classic-050", Keyword::Cleave);
+        assert_eq!(face_threat(&state, HUMAN), 0);
+    }
 }
 
 mod reply_cleave {
