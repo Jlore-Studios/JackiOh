@@ -2350,3 +2350,10 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-16T03:51:57Z,43793308294,claude-1,sonnet+opus,build,4025,medium,built,,33.9,4,46,96606,0.9163,26,29,,,47.2,claude-1,fresh,,1
 2026-11-16T04:00:41Z,43793236170,claude-3,opus,build,4039,hard,infra,infra,,,,,,,,,,46.2,claude-3,none,,
 2026-11-16T04:05:23Z,43801674049,claude-5,opus,build,4039,hard,interrupted,weekly cap,0,0,0,0,,5,5,92,92,2.2,claude-3,none,other,0
+2026-11-16T04:02:23Z,43793084076,muse,muse-spark-1.3-contributor,review,4043,medium,approved,,82.3,0,0,0,,4,10,1,3,1.1,,none,,5
+2026-11-16T04:22:32Z,43801610735,claude-1,sonnet+opus,review,4051,medium,approved,,18.4,34,8567,1156222,0.8908,3,5,,,2.2,,none,,1
+2026-11-16T04:21:00Z,43800617471,claude-4,opus,plan,4035,hard,planned,,26.6,114,50601,15585628,23.685,0,17,,,178,claude-4,resumed,,1
+2026-11-16T04:24:50Z,43799612944,muse,muse-spark-1.3-contributor,review,4049,medium,approved,,42,0,0,0,,9,10,3,3,3.8,,none,,1
+2026-11-16T04:18:25Z,43799553630,muse,muse-spark-1.3-contributor,review,4048,medium,approved,,36.2,0,0,0,,9,10,3,3,4,,none,,1
+2026-11-16T04:32:46Z,43799432214,gpt,gpt-5.6-sol,review,4046,medium,approved,,52.1,24585285,59557,0,,,,21,40,4.6,,none,,5
+2026-11-16T04:34:40Z,43796242664,claude-8,opus,build,4023,hard,built,,49.6,156,48733,9091839,3.9637,1,12,,,78,claude-8,fresh,,1
