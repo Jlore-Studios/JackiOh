@@ -2366,3 +2366,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-16T05:08:12Z,43807942079,claude-2,opus,review,4048,medium,reviewed,,1.3,21,5970,654206,0.6613,15,18,10,11,,,none,,1
 2026-11-16T05:21:20Z,43807878550,gpt,gpt-5.6-sol,revise,4047,medium,built,,15.8,4755803,20442,0,,,,48,48,4.7,gpt,none,,1
 2026-11-16T05:52:01Z,43811537426,claude-3,opus,review,4053,hard,approved,,11.5,19,7924,697933,0.7657,95,0,,,47.7,claude-3,none,,1
+2026-11-16T05:59:50Z,43801548738,agy,gemini-3.8-flash-high,review,4050,medium,approved,,117.2,1951011,181745,0,,20,1,54,77,2.3,,none,,3
+2026-11-16T06:09:46Z,43813445310,claude-8,opus,suggest,,,suggested,,10.7,55,31295,3584800,8.7861,21,42,,,,,none,,1
+2026-11-16T06:05:12Z,43813381902,claude-2,opus,suggest,,,interrupted,5-hour cap,7.3,81,20905,2906976,6.285,2,91,11,18,,,none,,1
+2026-11-16T06:05:20Z,43813314868,claude-2,opus,suggest,,,interrupted,5-hour cap,8,0,0,0,,0,92,11,18,,,none,,1
+2026-11-16T06:09:04Z,43811474583,gpt,gpt-5.6-sol,review,4047,medium,approved,,30.4,10017449,37106,0,,,,52,57,0.9,gpt,none,,3
