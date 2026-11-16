@@ -1,11 +1,12 @@
 // What a "Choose one" option says to the player (presentation only, CLAUDE.md rule 7).
 //
 // A card script's mode options are its public interface (`crates/cards` owns them, e2e answers with
-// them). This map gives each a label and a line of detail from the card's §8 text, naming no number a card
-// declares (its `params`), which a patch may tune. The option string stays the key the answer sends; an
-// unknown option prints capitalised with no detail. #2646: modeText.test.ts holds this map to every option
-// a card offers in a Choose one of DISCOVER_OPTION_LIMIT options or fewer (cardModes.json, `ENGINE_MODES`).
-// The words are English here and read through `t()`: the Chinese card table has each card's text, not its options' words.
+// them). This map gives each a label and a line of detail from the card's §8 text. A declared number uses
+// its `{key}` placeholder, filled from the definition or a visible instance after these words read through
+// `t()`. The option string stays the key the answer sends; an unknown option prints capitalised with no
+// detail. #2646: modeText.test.ts holds this map to every option a card offers in a Choose one of
+// DISCOVER_OPTION_LIMIT options or fewer (cardModes.json, `ENGINE_MODES`). The words are English here; the
+// Chinese card table has each card's text, not its options' words.
 
 import { SHIPPED_SETS } from "@jackioh/shared";
 
@@ -23,7 +24,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   // #24 Efficiency Dividend.
   "core-024": {
     damage: { label: "Deal X damage", detail: "Deal X damage." },
-    heal: { label: "Heal 4X", detail: "Heal a target by four times X." },
+    heal: { label: "Heal {heal}X", detail: "Heal a target by {heal} times X." },
     mana: { label: "Mana next turn", detail: "Gain X mana next turn." },
   },
   // #30 Archivist.
@@ -348,8 +349,8 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),
   // #24 Efficiency Dividend, radiant (§8 #24, R275).
   "core-024": {
-    damage: { label: "Deal 2X damage", detail: "Deal twice X damage." },
-    heal: { label: "Heal 8X", detail: "Heal a target by eight times X." },
+    damage: { label: "Deal {damage}X damage", detail: "Deal {damage}X damage." },
+    heal: { label: "Heal {heal}X", detail: "Heal a target by {heal} times X." },
     mana: { label: "Mana next turn", detail: "Gain X plus 1 mana next turn." },
   },
   // #98 Heroic Power, radiant (R3134002): its own lines, Armor Up named Tank Up.

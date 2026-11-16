@@ -5,14 +5,21 @@
 // cardModes.json, and the ones an engine prompt asks as a card resolves, built at run time and so
 // listed here by hand, each from its script.
 
+import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import CARD_MODES from "./cardModes.json";
 import { DISCOVER_OPTION_LIMIT } from "./contract.ts";
-import { modeText } from "./modeText.ts";
+import { MODE_TEXT, RADIANT_MODE_TEXT, modeText } from "./modeText.ts";
 
 type Face = "base" | "radiant";
+
+const NUMBER_WORD = "once|twice|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty";
+const RAW_X_MULTIPLIER = new RegExp(
+  String.raw`\b(?:\d+X|(?:${NUMBER_WORD})(?:\s+times?)?\s+X)\b`,
+  "gi",
+);
 
 /** The card scripts' declared Choose ones, by card and face; `"//"` says where the file comes from. */
 const DECLARED = CARD_MODES as unknown as Readonly<Record<string, string | Partial<Record<Face, readonly (readonly string[])[]>>>>;
@@ -67,6 +74,33 @@ const ENGINE_MODES: readonly { id: string; faces: readonly Face[]; options: read
   // crates/engine/src/subsystems/papaya.rs: cells `x,y` (`cell_option`), corners and middle, and PAPAYA_DONE.
   { id: "classicplus-062", faces: ["base", "radiant"], options: ["0,0", "2,1", "4,3", "done"] },
 ];
+
+describe("declared numbers in mode words", () => {
+  it("a card with params uses placeholders for its X multipliers", () => {
+    const violations = ([
+      ["base", MODE_TEXT],
+      ["radiant", RADIANT_MODE_TEXT],
+    ] as const).flatMap(([face, map]) =>
+      Object.entries(map).flatMap(([id, options]) =>
+        CATALOG[id]?.params === undefined
+          ? []
+          : Object.entries(options).flatMap(([option, text]) =>
+              Object.values(text).flatMap((words) =>
+                (words.match(RAW_X_MULTIPLIER) ?? []).map(() => `${id} ${face} ${option}: ${words}`),
+              ),
+            ),
+      ),
+    );
+
+    expect(violations).toEqual([]);
+    expect("{heal}X".match(RAW_X_MULTIPLIER), "a declared-number placeholder is allowed").toBeNull();
+    expect("X".match(RAW_X_MULTIPLIER), "plain X is allowed").toBeNull();
+    expect("X plus 1".match(RAW_X_MULTIPLIER), "the fixed X plus 1 form is allowed").toBeNull();
+    expect("4X".match(RAW_X_MULTIPLIER)).toEqual(["4X"]);
+    expect("twice X".match(RAW_X_MULTIPLIER)).toEqual(["twice X"]);
+    expect("four times X".match(RAW_X_MULTIPLIER)).toEqual(["four times X"]);
+  });
+});
 
 describe("#2646 every short choice card has its words", () => {
   it("#2646 every declared Choose one of DISCOVER_OPTION_LIMIT options or fewer has MODE_TEXT's words", () => {
