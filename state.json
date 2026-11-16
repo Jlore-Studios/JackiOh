@@ -16884,6 +16884,7 @@
       "run_id": "43799553630",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 290,
       "started_at": "2026-11-16T03:40:04Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37270,9 +37271,33 @@
         "title": "Patch: the AI's count of the damage that gets past its Taunts lets a big attacker break a Taunt first, and keeps the attackers a Taunt's Armor would stop",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "a1cc3d4b772bd725096824bb229325346baed234",
+        "issue": 4020,
+        "merged_at": "2026-11-16T04:55:06Z",
+        "n": 290,
+        "pr": 4048,
+        "queued_at": "2026-11-16T04:55:06Z",
+        "sha": "5fa7d217b3fe74022c352929a3408a01b39a0e28",
+        "status": "queued",
+        "title": "Patch: the tutorial says five lanes, and its hero health figures come from the engine's constants",
+        "tries": 0
       }
     ],
-    "count": 289
+    "count": 290
   },
   "statistics": {
     "at": "2026-11-16T04:45:14Z"
