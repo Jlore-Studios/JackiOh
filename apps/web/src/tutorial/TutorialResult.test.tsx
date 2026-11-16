@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TURN_CAP_PLAYER_TURNS } from "@jackioh/engine/config";
 
+import { LANES } from "../game/contract.ts";
 import { dialogTestid } from "../game/Dialog.tsx";
 import { pressBack } from "../test/history.ts";
 import { at } from "../test/stubServer.ts";
@@ -176,6 +177,23 @@ describe("the end of a lesson", () => {
     expect(screen.getByTestId(tutorialTestid.result)).toHaveAttribute("data-outcome", "draw");
     expect(screen.getByTestId(tutorialTestid.retry)).toBeInTheDocument();
     expect(readTutorialProgress().completed).toEqual([]);
+  });
+
+  it("the result fills a missed rule's numbers", () => {
+    render(
+      <TutorialResult
+        result={{ winner: "p1", reason: "hero-death" }}
+        viewer="p1"
+        lesson={lesson(1)}
+        next={lesson(2)}
+        unlockedNow
+        missed={["play-unit"]}
+        {...handlers()}
+      />,
+    );
+    const still = screen.getByTestId(tutorialTestid.stillToFind);
+    expect(still).toHaveTextContent(String(LANES.length));
+    expect(still.textContent).not.toContain("{lanes}");
   });
 
   it("View the board and Escape close it", () => {

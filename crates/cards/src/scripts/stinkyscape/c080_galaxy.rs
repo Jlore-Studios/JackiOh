@@ -1,4 +1,5 @@
-//! Stinkyscape #80 Galaxy (SPEC §8.10 row 80). Unit 5/5 → 10/10, cost 4, Legendary.
+//! Stinkyscape #80 Galaxy (SPEC §8.10 row 80). Unit 2/2 → 4/4 (5/5 → 10/10 until issue #3996), cost 4,
+//! Legendary.
 //!   Base:    "Tribute 2, Flying
 //!            Cry: Discover 2 Radiant Miners and Equip them into this."
 //!   Radiant: "Tribute 2, Flying
@@ -105,16 +106,16 @@ mod tests {
         crate::card_def(id).radiant.health.unwrap_or_default()
     }
 
-    /// #3142: 5/5 on its base face and 10/10 on its Radiant one: the base face before any Miner is fused into
-    /// it (its Discover is open), the Radiant one as printed (it fuses all five at once, below).
+    /// #3142, issue #3996: 2/2 on its base face and 4/4 on its Radiant one: the base face before any Miner is
+    /// fused into it (its Discover is open), the Radiant one as printed (it fuses all five at once, below).
     #[test]
-    fn it_is_5_5_and_radiant_10_10() {
+    fn it_is_2_2_and_radiant_4_4() {
         let (s, host) = played(false);
         assert!(s.state().pending.is_some(), "the Discover is open: nothing is fused yet");
         let first = s.stats(host.as_str());
-        assert_eq!((first.attack, first.health), (5, 5));
+        assert_eq!((first.attack, first.health), (2, 2));
         let printed = crate::card_def(ID);
-        assert_eq!((printed.radiant.attack, printed.radiant.health), (Some(10), Some(10)));
+        assert_eq!((printed.radiant.attack, printed.radiant.health), (Some(4), Some(4)));
     }
 
     #[test]
@@ -151,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    fn r1872003_radiant_10_10_and_all_five_radiant_miners_fused_v1_to_v5_asking_nothing() {
+    fn r1872003_radiant_4_4_and_all_five_radiant_miners_fused_v1_to_v5_asking_nothing() {
         let (mut s, host) = played(true);
         assert!(s.state().pending.is_none());
         let fusions = s
@@ -161,7 +162,7 @@ mod tests {
             .count();
         assert_eq!(fusions, MINERS.len());
         let gained: i32 = MINERS.iter().map(|id| radiant_health(id)).sum();
-        s.expect_stats(host.as_str(), json!({ "attack": 10, "health": 10 + gained }));
+        s.expect_stats(host.as_str(), json!({ "attack": 4, "health": 4 + gained }));
         let mut held: Vec<String> = self_def_ids(Some(s.state()), &s.card(host.as_str()).def_id)
             .into_iter()
             .filter(|id| MINERS.contains(&id.as_str()))

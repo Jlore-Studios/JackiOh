@@ -2186,8 +2186,8 @@ classicplus-026: # Tommy Tempo
     death: Out of time.
   zh:
     name: 汤米节奏
-    base: "嘲讽\n抽到时施放：结束回合。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}/+{per}。"
-    radiant: "嘲讽\n抽到时施放：你可以再进行{actions}次行动。然后你的回合结束。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}/+{per}。"
+    base: "嘲讽\n抽到时施放：结束回合。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}生命值。"
+    radiant: "嘲讽\n抽到时施放：你可以再进行{actions}次行动。然后你的回合结束。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}生命值。"
 classicplus-027: # Zephrys Zealotism
   flavour: Ask for the perfect hand, and get a lecture about it too.
   voice:
@@ -3190,8 +3190,8 @@ meditative-033: # First Day of 学校
     cast: First day! Don't forget your lunch.
   zh:
     name: 开学第一天
-    base: 将{cards}张随机中国牌置入你的手牌。每张牌的法力值消耗减少({discount})点。
-    radiant: 将{cards}张随机光辉中国牌置入你的手牌。每张牌的法力值消耗减少({discount})点。
+    base: 将{cards}张随机中国牌置入你的手牌。
+    radiant: 将{cards}张随机光辉中国牌置入你的手牌。
 meditative-034: # 高考
   flavour: Two days, one score, a whole future.
   voice:
@@ -3290,8 +3290,8 @@ meditative-040: # Feng Shui
     cast: Water feeds wood. Wood feeds fire.
   zh:
     name: 风水
-    base: "光环：每张牌都有一个元素：水、木、火、金或土；好风水受奖赏，坏风水受惩罚。\n激活：将一张鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
-    radiant: "光环：每张牌都有一个元素：水、木、火、金或土；好风水为你带来奖赏，坏风水为你的对手带来重罚。\n激活：将一张光辉鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
+    base: "光环：每张牌都有一个元素：水、木、火、金或土；好风水受奖赏，坏风水受惩罚。\n战吼：将一张鸿运石置入你的手牌。\n激活：将一张鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
+    radiant: "光环：每张牌都有一个元素：水、木、火、金或土；好风水为你带来奖赏，坏风水为你的对手带来重罚。\n战吼：将一张光辉鸿运石置入你的手牌。\n激活：将一张光辉鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
     previews:
       Your last element: 你的上一个元素
       your opponent's last element: 你的对手的上一个元素
@@ -3365,8 +3365,8 @@ meditative-047: # 饕餮
     death: Still hungry. Always hungry.
   zh:
     name: 饕餮
-    base: 回合结束时：将一个随机敌方单位融合进本牌。
-    radiant: 回合结束时：将一个随机敌方单位和你对手牌库中的一张随机牌融合进本牌。
+    base: 激活：将一个随机敌方单位融合进本牌，然后冻结本牌。
+    radiant: 激活：将一个随机敌方单位融合进本牌。
 meditative-048: # Tranquility
   flavour: Breathe in. The storm waits its turn.
   voice:
@@ -3471,8 +3471,8 @@ meditative-056: # House Party
     cast: Everybody in! The house is open!
   zh:
     name: 轰趴
-    base: 用对门守卫者填满你的单位区。
-    radiant: 用光辉对门守卫者填满你的单位区。
+    base: 用对门守卫者填满你的单位区。它们拥有易碎{brittle}，它们复生后的复制也是。
+    radiant: 用光辉对门守卫者填满你的单位区。它们拥有易碎{brittle}，它们复生后的复制也是。
 meditative-057: # Clip-Farming Critikal
   flavour: Do it for the clip. Then do it again, but shinier.
   voice:
@@ -3695,8 +3695,8 @@ meditative-078: # Occidentless Mandate
     cast: By order of the mandate, clear the board.
   zh:
     name: 无西方法令
-    base: 放逐每个非中国永久物。每以这种方式放逐一个你的永久物，便将一张随机中国牌置入你的手牌。
-    radiant: 放逐每个非中国永久物。每以这种方式放逐一个你的永久物，便将一张随机光辉中国牌置入你的手牌。每张牌的法力值消耗减少({discount})点。
+    base: 放逐每个非中国永久物。
+    radiant: 放逐每个敌方非中国永久物。
 meditative-079: # Touched by KY
   flavour: Once KY touches your mind, it never fits back in the box.
   voice:
@@ -4133,8 +4133,8 @@ meditativeplus-003: # Wondrous Wand
     cast: Twice the wishes, none of the warnings.
   zh:
     name: 奇妙魔杖
-    base: "抽{draw}张牌。它们的法力值消耗为({setCost})。\n加码(4)：改为抽{embiggenedDraw}张牌。"
-    radiant: "抽{draw}张牌。它们的法力值消耗为({setCost})。\n加码(4)：改为抽{embiggenedDraw}张牌。"
+    base: "抽{draw}张牌。它们的法力值消耗为({setCost})。\n加码(3)：改为抽{embiggenedDraw}张牌。"
+    radiant: "抽{draw}张牌。它们的法力值消耗为({setCost})。\n加码(3)：改为抽{embiggenedDraw}张牌。"
 meditativeplus-004: # Jlockeed's Supply Drop
   flavour: The crate is always late, and always worth the wait.
   voice:
@@ -4739,8 +4739,8 @@ stinkyscape-026: # ZolarKeth
     death: Office hours are over.
   zh:
     name: ZolarKeth
-    base: 战吼：抉择：召唤一个大学；或此单位获得“回合结束时：随机召唤一个星舰部件。”
-    radiant: 战吼：抉择：召唤一个光辉大学；或此单位获得“回合结束时：随机召唤一个光辉星舰部件。”
+    base: "献祭1\n战吼：抉择：召唤一个大学；或此单位获得“回合结束时：随机召唤一个星舰部件。”"
+    radiant: "献祭1\n战吼：抉择：召唤一个光辉大学；或此单位获得“回合结束时：随机召唤一个光辉星舰部件。”"
 stinkyscape-027: # Drone Core I
   flavour: The cheapest core on the market. It eats a card, but the drone works fine.
   voice:
@@ -4875,8 +4875,8 @@ stinkyscape-042: # Core Researcher
     death: My notes, save my notes.
   zh:
     name: 核心研究员
-    base: 战吼：将{cards}张随机光辉无人机核心牌置入你的手牌。
-    radiant: 战吼：将{cards}张随机光辉无人机核心牌置入你的手牌。
+    base: 亡语：将{cards}张随机光辉无人机核心牌置入你的手牌。
+    radiant: 亡语：将{cards}张随机光辉无人机核心牌置入你的手牌。
 stinkyscape-043: # Healing Capsule
   flavour: A warm green glow, a soft beep, and the dents pop back out.
   voice:
@@ -6587,8 +6587,8 @@ traininggrounds-015: # In a hurry
     cast: Go go go, no time!
   zh:
     name: 匆匆忙忙
-    base: 召唤{tokens}个突袭衍生物。在本回合结束时，消灭它们。
-    radiant: 召唤{tokens}个光辉突袭衍生物。在本回合结束时，消灭它们。
+    base: 用突袭衍生物填满你的单位区。在本回合结束时，消灭它们。
+    radiant: 用光辉突袭衍生物填满你的单位区。在本回合结束时，消灭它们。
 traininggrounds-016: # Celestial Caller
   flavour: Calls the sun to one side and the moon to the other, and stands in the middle of the argument.
   voice:
@@ -6873,8 +6873,8 @@ traininggrounds-045: # Legacy: Jlockeed's Weapons
     cast: Defense contract approved.
   zh:
     name: 传统：Jlockeed军火
-    base: 光环：你的单位拥有+{attack}攻击力和突袭。
-    radiant: 光环：你的单位拥有+{attack}攻击力和突袭。
+    base: 光环：你的单位拥有+{attack}攻击力。
+    radiant: 光环：你的单位拥有+{attack}攻击力。
 traininggrounds-046: # Legacy: Hit Job
   flavour: Clean, quiet, and billed by the hour.
   voice:
@@ -6935,8 +6935,8 @@ traininggrounds-052: # Legacy: Snom Bunny Mind Control
     cast: Hop along. You're mine now.
   zh:
     name: 传统：Snom兔精神控制
-    base: 夺取一个敌方单位。将其攻击力和生命值变为2/2。
-    radiant: 夺取一张敌方牌。
+    base: 夺取一个敌方单位。在下个回合失去({loss})点法力值。
+    radiant: 夺取一个敌方单位。在下个回合失去({loss})点法力值。
 traininggrounds-053: # Legacy: Prejudiced Postdoc
   flavour: Six years of research and one strongly held belief about who counts.
   voice:
@@ -7045,8 +7045,8 @@ stinkyscapeplus-004: # Profe Yates
     death: I'll never see the Northern Lights.
   zh:
     name: 耶茨教授
-    base: "战吼：放逐每张名字中含有M、O、U、S、E的牌。中国牌免疫。然后召唤两张随机陷阱。然后选择以下一项激活。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
-    radiant: "战吼：放逐每张名字中含有M、O、U、S、E的牌。中国牌免疫。然后召唤三张随机光辉陷阱。然后选择以下一项激活。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
+    base: "战吼：放逐一个永久物。然后召唤两张随机陷阱。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
+    radiant: "战吼：放逐一个永久物。然后召唤三张随机光辉陷阱。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
 stinkyscapeplus-005: # Dingleberry Droat
   flavour: He blends the whole fruit stand into one very expensive snack and calls it a business plan.
   voice:
@@ -7111,8 +7111,8 @@ stinkyscapeplus-009: # Drone Assembler v4
     death: Rolling back to version three.
   zh:
     name: 无人机组装器v4
-    base: "星舰部件，装备\n激活2：指定一个敌人，召唤一个无人截击机攻击它。"
-    radiant: "星舰部件，装备\n激活2：指定一个敌人，召唤一个光辉无人截击机攻击它。"
+    base: "星舰部件，装备\n激活：指定一个敌人，召唤一个无人截击机攻击它。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件，装备\n激活：指定一个敌人，召唤一个光辉无人截击机攻击它。使用后，你的下个回合无法使用。"
 stinkyscapeplus-010: # Drone Assembler v5
   flavour: By version five the drones had a union, a mascot and a retirement plan.
   voice:
@@ -7121,8 +7121,8 @@ stinkyscapeplus-010: # Drone Assembler v5
     death: Reverting. Please wait.
   zh:
     name: 无人机组装器v5
-    base: "星舰部件，装备\n激活：指定一个敌人，召唤一个无人护卫舰攻击它。"
-    radiant: "星舰部件，装备\n激活：指定一个敌人，召唤一个光辉无人护卫舰攻击它。"
+    base: "星舰部件，装备\n激活2：指定一个敌人，召唤一个无人截击机攻击它。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件，装备\n激活2：指定一个敌人，召唤一个光辉无人截击机攻击它。使用后，你的下个回合无法使用。"
 stinkyscapeplus-011: # Energy Booster
   flavour: It runs on pure enthusiasm and one suspicious extension cord.
   voice:
@@ -7225,8 +7225,8 @@ stinkyscapeplus-021: # Jlockeed Shredder-12
     death: Budget cuts got me.
   zh:
     name: Jlockeed收割机-12
-    base: "献祭1，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
-    radiant: "献祭1，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    base: "献祭2，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    radiant: "献祭2，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
 stinkyscapeplus-022: # Cryofluid
   flavour: Cold, thick and a little too eager to help. Don't drink it, however thirsty.
   voice:
@@ -7465,8 +7465,8 @@ stinkyscapeplus-046: # Phase Fabric
     cast: Now you see me. Mostly.
   zh:
     name: 相位织物
-    base: 使一个单位获得不可变、法术免疫和圣盾。
-    radiant: 使一个单位获得不可变、法术免疫、圣盾和无法被攻击。
+    base: 使一个单位获得不可变、法术免疫、圣盾和护甲{armor}。
+    radiant: 使一个单位获得不可变、法术免疫、圣盾、护甲{armor}和无法被攻击。
 stinkyscapeplus-047: # Plastanium
   flavour: Strong as metal, bends like plastic, and refuses all questions about fashion.
   voice:
@@ -7811,8 +7811,8 @@ stinkyscapeplus-082: # Endless Expedition
     cast: Into the endless unknown!
   zh:
     name: 无尽远征
-    base: 在本局对战的剩余时间内，失去{mana}点法力值。将一张随机终点牌置入你的手牌，其法力值消耗为(2)。
-    radiant: 在本局对战的剩余时间内，失去{mana}点法力值。将一张随机光辉终点牌置入你的手牌，其法力值消耗为(2)。
+    base: 现在以及在本局对战剩余时间内你的每个回合开始时：将一张随机终点牌置入你的手牌。其法力值消耗为(2)。
+    radiant: 现在以及在本局对战剩余时间内你的每个回合开始时：将一张随机光辉终点牌置入你的手牌。其法力值消耗为(2)。
 stinkyscapeplus-083: # Offworld Replicant
   flavour: Always has a spare. It is also the spare.
   voice:
@@ -8039,8 +8039,8 @@ stinkyscapeplus-107: # Fuse
     death: Fuse blown!
   zh:
     name: 融合炮
-    base: "护甲5，无法守备，远程，穿透\n对本纵列的单位造成{sweepLane}x点伤害，对相邻纵列的单位造成{sweepAdjacent}x点伤害。"
-    radiant: "护甲10，无法守备，远程，穿透\n对本纵列的单位造成{sweepLane}x点伤害，对相邻纵列的单位造成{sweepAdjacent}x点伤害。"
+    base: "护甲3，无法守备，远程，穿透\n对本纵列的单位造成{sweepLane}x点伤害，对相邻纵列的单位造成{sweepAdjacent}x点伤害。"
+    radiant: "护甲6，无法守备，远程，穿透\n对本纵列的单位造成{sweepLane}x点伤害，对相邻纵列的单位造成{sweepAdjacent}x点伤害。"
 stinkyscapeplus-108: # Swarmer
   flavour: A hundred small rockets and one large attitude problem.
   voice:
@@ -8473,7 +8473,7 @@ stinkyscapeplus-145: # Fire Beam v5
     death: Out of fuel.
   zh:
     name: 火焰光束v5
-    base: "星舰部件，装备\n激活2：对一个敌方单位施加燃烧{burn}，顺劈。"
+    base: "星舰部件，装备\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
     radiant: "星舰部件，装备\n激活2：对一个敌方单位施加燃烧{burn}，顺劈。"
 stinkyscapeplus-146: # Scourge Mortar v3
   flavour: It lobs a gentle suggestion over the wall. The suggestion is a swamp.
@@ -8619,8 +8619,8 @@ stinkyscapeplus-160: # Icarus
     death: Should have read the notes.
   zh:
     name: 伊卡洛斯
-    base: "献祭3\n激活：召唤一个拉迪。它会触发其战吼。\n战吼：发现一张史诗武器牌；将其装备进此单位。"
-    radiant: "献祭3\n激活：召唤一个光辉拉迪。它会触发其战吼。\n战吼：发现一张传说武器牌；将其装备进此单位。"
+    base: "献祭3，法术免疫\n激活：召唤一个拉迪。它会触发其战吼。\n战吼：发现一张史诗武器牌；将其装备进此单位。"
+    radiant: "献祭3，法术免疫\n激活：召唤一个光辉拉迪。它会触发其战吼。\n战吼：发现一张传说武器牌；将其装备进此单位。"
 stinkyscapeplus-161: # Space Invader
   flavour: Each one is a slightly worse copy of the last, and they keep arriving.
   voice:

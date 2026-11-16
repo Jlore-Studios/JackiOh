@@ -1463,3 +1463,8 @@ the card and deck slot cosmetics, the full arts and the portraits, the registry 
 - Logs are `tracing` JSON lines to stdout with stable `event` names (`server.listening`,
   `api.forwarded_for`, `match.fold.errors`, `game.record.failed`, …).
 - Anything the spec does not decide is marked `// NOT IN SPEC:` where it is decided.
+- Symmetric encryption is an AEAD (AES-GCM or ChaCha20-Poly1305, through `ring`), never CBC or another
+  bare block mode, whose padding errors decrypt a ciphertext byte by byte; today Web Push's
+  `aes128gcm` (`daily/webpush.rs`) is the only one. Nothing parses XML from a player or another
+  service; a parser that ever does disables DTDs and external entities (XXE). `tests/api/dependencies.rs`
+  keeps both kinds of crate out of `Cargo.lock` (#4006, #4007).

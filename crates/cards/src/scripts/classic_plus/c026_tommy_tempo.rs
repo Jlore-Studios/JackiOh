@@ -1,39 +1,43 @@
 //! C+ #26 Tommy Tempo (SPEC §8.7 row 26): (3) Unit, Human, Common, 4/4 → 8/8 (5/5 → 10/10 until issue #3138). Taunt, cast on draw;
 //! that cast ends your turn (Radiant: after {actions} more action, R415). No open zone: to the hand
-//! uncast (R560). "Cry: Lose all your mana. Gain +{per}/+{per} for each mana lost" (#831): played or
-//! cast on draw (R1), it loses the mana left once its price is paid, all of it on a free cast, and grows
-//! by it (R831010; Radiant +2/+2 a mana).
+//! uncast (R560). "Cry: Lose all your mana. Gain +{per} Health per mana lost" (#831, issue #3996): played
+//! or cast on draw (R1), it loses the mana left once its price is paid, all of it on a free cast, and
+//! gains that much Health times `per` (R831010; Radiant +2 a mana). Through v0.6.5b it gained
+//! +{per}/+{per} a mana, which `script_v0_6_5b` keeps for those replays (R767000, R3996202).
 
 use jackioh_engine::effects::{buff, gain_mana};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-026";
 
-/// The Cry: the mana left once the play's price is paid, on a cast on draw too (R831010).
-fn tempo(ctx: &EffectContext<'_>) -> Vec<Effect> {
+/// The Cry: the mana left once the play's price is paid, on a cast on draw too (R831010), lost for
+/// `per` Health a mana (R3996202); `attack` also gives as much Attack, as the Cry did through v0.6.5b.
+fn tempo(ctx: &EffectContext<'_>, attack: bool) -> Vec<Effect> {
     let lost = unspent_mana_of(&*ctx.state, ctx.controller);
     if lost <= 0 {
         return vec![];
     }
     let gain = lost * param(ctx, "per");
-    vec![
-        gain_mana(json_as(json!({ "amount": -lost }))),
-        buff(json_as(json!({ "target": { "of": "self" }, "attack": gain, "health": gain }))),
-    ]
+    let mut grow = json!({ "target": { "of": "self" }, "health": gain });
+    if attack {
+        grow["attack"] = json!(gain);
+    }
+    vec![gain_mana(json_as(json!({ "amount": -lost }))), buff(json_as(grow))]
 }
 
 fn cast_on_draw(ctx: &EffectContext<'_>) -> bool {
     ctx.self_.as_ref().is_some_and(|me| is_cast_on_draw(&*ctx.state, me))
 }
 
-pub fn script() -> CardScripts {
+/// `attack`: the Cry also gives Attack, as it did through v0.6.5b.
+fn tommy(attack: bool) -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             cast_on_draw: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(|ctx| {
-            let mut effects = tempo(ctx);
+        cry: Some(hook(move |ctx| {
+            let mut effects = tempo(ctx, attack);
             if cast_on_draw(ctx) {
                 effects.push(end_turn(json_as(json!({}))));
             }
@@ -47,8 +51,8 @@ pub fn script() -> CardScripts {
             cast_on_draw: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(|ctx| {
-            let mut effects = tempo(ctx);
+        cry: Some(hook(move |ctx| {
+            let mut effects = tempo(ctx, attack);
             if cast_on_draw(ctx) {
                 effects.push(end_turn_after_actions(json_as(json!({ "actions": param(&*ctx, "actions") }))));
             }
@@ -58,6 +62,16 @@ pub fn script() -> CardScripts {
     };
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    tommy(false)
+}
+
+/// R767000: through v0.6.5b the Cry gave +{per}/+{per} a mana lost (issue #3996, R3996202);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5b() -> CardScripts {
+    tommy(true)
 }
 
 // C+ #26 Tommy Tempo — SPEC §8.7 row 26: cast on draw (R70: free, counts as played), your turn ends once
@@ -181,23 +195,23 @@ mod tests {
             }
 
             #[test]
-            fn r831010_cast_on_draw_at_your_start_of_turn_it_loses_the_4_refreshed_mana_and_is_an_8_8() {
+            fn r831010_r3996202_cast_on_draw_at_your_start_of_turn_it_loses_the_4_refreshed_mana_and_is_a_4_8() {
                 let mut s = drawn_at_start(false, json!({}));
                 s.end_turn();
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 8, "health": 8 }));
+                s.expect_stats(&tommy, json!({ "attack": 4, "health": 8, "maxHealth": 8 }));
                 assert_eq!(s.state().players[P1].mana.current, 0);
             }
 
             #[test]
-            fn r831010_played_from_a_hand_it_loses_what_its_price_left_1_and_is_a_5_5() {
+            fn r831010_r3996202_played_from_a_hand_it_loses_what_its_price_left_1_and_is_a_4_5() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 s.play(TOMMY, json!({}));
                 s.expect_mana(P1, 0);
-                s.expect_stats(TOMMY, json!({ "attack": 5, "health": 5 }));
+                s.expect_stats(TOMMY, json!({ "attack": 4, "health": 5 }));
             }
 
             #[test]
@@ -219,7 +233,7 @@ mod tests {
                 }));
                 step_param(s.card_mut(TOMMY), "per", 1);
                 s.play(TOMMY, json!({}));
-                s.expect_stats(TOMMY, json!({ "attack": 6, "health": 6 }));
+                s.expect_stats(TOMMY, json!({ "attack": 4, "health": 6 }));
             }
 
             #[test]
@@ -259,9 +273,9 @@ mod tests {
                 assert_eq!(s.card(&menace).damage, 0);
                 assert_eq!(s.state().active, P2);
                 s.expect_health(P1, 22);
-                // R831010: the 3 mana Stockpile left are lost and grow it to 7/7.
+                // R831010, R3996202: the 3 mana Stockpile left are lost and grow it to 4/7.
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 7, "health": 7 }));
+                s.expect_stats(&tommy, json!({ "attack": 4, "health": 7 }));
             }
 
             #[test]
@@ -356,7 +370,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 16, "health": 16 }));
+                s.expect_stats(&tommy, json!({ "attack": 8, "health": 16 }));
                 s.expect_mana(P1, 0);
                 s.play(FREE, json!({}));
                 assert!(cut_short(&s));
@@ -374,7 +388,7 @@ mod tests {
                 }));
                 s.end_turn();
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 16, "health": 16 }));
+                s.expect_stats(&tommy, json!({ "attack": 8, "health": 16 }));
                 assert!(!has_turn_ends(&s, P1));
                 assert!(!has_turn_ends(&s, P2));
                 let card = first_in_hand(&s, P2);
@@ -463,14 +477,14 @@ mod tests {
             }
 
             #[test]
-            fn r831010_played_from_a_hand_it_gains_2_2_for_each_mana_lost() {
+            fn r831010_r3996202_played_from_a_hand_it_gains_2_health_for_each_mana_lost() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TOMMY, "radiant": true }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 s.play(TOMMY, json!({}));
                 s.expect_mana(P1, 0);
-                s.expect_stats(TOMMY, json!({ "attack": 10, "health": 10 }));
+                s.expect_stats(TOMMY, json!({ "attack": 8, "health": 10, "maxHealth": 10 }));
             }
 
             #[test]
@@ -484,6 +498,22 @@ mod tests {
                 assert!(matches!(rider.map(|modifier| &modifier.kind), Some(ModifierKind::TurnEnds { actions_left: 1, .. })));
                 assert_eq!(&round_trip(s.state()), s.state());
             }
+        }
+
+        /// R767000, R3996202: through v0.6.5b the Cry gave +{per}/+{per} a mana lost, on both faces.
+        #[test]
+        fn r767000_r3996202_the_script_kept_for_v0_6_5b_gains_attack_and_health_for_each_mana_lost() {
+            crate::under_kept(TOMMY, script_v0_6_5b(), || {
+                for (radiant, grown) in [(false, 5), (true, 10)] {
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [{ "def": TOMMY, "radiant": radiant }, FILLER], "library": DECK },
+                        "p2": { "hand": [FILLER], "library": DECK },
+                    }));
+                    s.play(TOMMY, json!({}));
+                    s.expect_mana(P1, 0);
+                    s.expect_stats(TOMMY, json!({ "attack": grown, "health": grown }));
+                }
+            });
         }
     }
 }

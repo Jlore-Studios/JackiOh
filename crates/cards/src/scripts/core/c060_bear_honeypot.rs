@@ -543,11 +543,11 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
-                // Mana Well is a 3-cost Field Spell: no cost threshold left, and not a Unit, so no attacks.
-                "p2": merged(spare(), json!({ "hand": ["core-006", "core-005"] })),
+                // A 3-cost Field Spell: no cost threshold left, and not a Unit, so no attacks.
+                "p2": merged(spare(), json!({ "hand": ["stand-in (3) Field Spell", "core-005"] })),
             }));
 
-            g.play("core-006", json!({ "zone": 1 }));
+            g.play("stand-in (3) Field Spell", json!({ "zone": 1 }));
 
             g.expect_events(json!(["cardPlayed", "trapFired", "summoned"]));
             assert_eq!(count_of(&g, "attackDeclared"), 0);

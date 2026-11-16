@@ -29,6 +29,9 @@
 //! no unit in Defense Position that §4.5 step 1 switches out of it (R2179000, R2657000, R3543002,
 //! R1849006) and no 1v1 hero at 0 that can lose; on every state no mana or card damage below 0 and no
 //! `damage` of 0 (R63).
+//! I9 holds the wire to the state: each `turnStarted`, `turnEnded`, `gameOver` and `manaChanged` to the
+//! state it left, each `fatigue` to its seat's count, and each 1v1 hero's health to a tally kept from
+//! `damage`, `healthLost`, `healed`, `healthSet` and `swapped` alone (§10.3).
 //!
 //! And after every action, GROWTH (#1254): each action is weighed by the events `reduce` returned, the
 //! largest number on any card instance and the instances in play, and a seed fails in the "growth" stage

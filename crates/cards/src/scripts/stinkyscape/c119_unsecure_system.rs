@@ -56,7 +56,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const UNSECURE: &str = "stinkyscape-119";
-    const STATE_OF_THE_GAME: &str = "classic-041"; // State of the Game: Indestructible
+    const THREE_THREE: &str = "stand-in (1) 3/3";
     const BIG_D: &str = "core-001"; // Big D-fender
     const FILLER: &str = "core-005";
 
@@ -71,10 +71,10 @@ mod tests {
         scenario(json!({
             "p1": {
                 "hand": [{ "def": UNSECURE, "radiant": radiant }, FILLER],
-                "field": [STATE_OF_THE_GAME, BIG_D],
+                "field": [THREE_THREE, BIG_D],
                 "library": filler(4),
             },
-            "p2": { "hand": [FILLER], "field": [STATE_OF_THE_GAME], "library": filler(4) },
+            "p2": { "hand": [FILLER], "field": [THREE_THREE], "library": filler(4) },
         }))
     }
 

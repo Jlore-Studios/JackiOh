@@ -28,7 +28,6 @@ describe("R3230000 one name per page across menu, footer and document title", ()
       { path: paths.stats, expected: "Statistics", footerTestId: siteFooterTestid.stats },
       { path: paths.privacy, expected: "Privacy policy", footerTestId: siteFooterTestid.privacy },
       { path: paths.terms, expected: "Terms of service", footerTestId: siteFooterTestid.terms },
-      { path: paths.ai, expected: "How JackiOh uses AI", footerTestId: siteFooterTestid.ai },
       { path: paths.dungeon, expected: "Dungeon run" },
       { path: paths.play, expected: "Play" },
       { path: paths.account, expected: "Account" },

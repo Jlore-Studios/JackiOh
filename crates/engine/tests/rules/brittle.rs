@@ -659,3 +659,72 @@ mod r113_b3_3_a_crumble_that_pauses_the_settle_after_the_tick_9_3 {
 fn body() -> String {
     "fx-2".to_string()
 }
+
+/// R3996100 (M #56 House Party, "They have Brittle 1, and so do their Reborn copies"): a fill with
+/// Brittle gives every card it summons the count, and the body Reborn returns has it again, a crumble's
+/// spent count (R441) included; a count given otherwise is not renewed.
+mod r3996100_a_fill_with_brittle_renews_it_on_the_reborn_copies {
+    use super::*;
+    use crate::rules::fixtures::harness::Bench;
+    use jackioh_engine::effects::fill_board;
+
+    /// A 1/1 with Reborn, spelled out by its id (#3486).
+    const REBORN: &str = "stand-in (1) 1/1 Reborn";
+
+    fn row(state: &GameState) -> Vec<String> {
+        (1..=5)
+            .map(|lane| {
+                card_at(state, slot(P1, Row::Units, lane))
+                    .map(|card| card.id.clone())
+                    .unwrap_or_default()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r3996100_each_card_the_fill_summons_has_the_count_and_its_reborn_copy_has_it_again_after_a_crumble() {
+        let mut state = at(5, P1);
+        let mut bench = Bench::new(&state);
+        bench.run(&mut state, |sink| {
+            let mut ctx = make_context(
+                sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..HookOptions::default()
+                },
+            );
+            (fill_board(json_as(json!({ "defId": REBORN, "brittle": 1 }))).apply)(&mut ctx);
+        });
+        let ids = row(&state);
+        assert!(ids.iter().all(|id| !id.is_empty()), "{ids:?}");
+        for id in &ids {
+            assert_eq!(live(&state, id).brittle, Some(counter(1, 5, false)));
+        }
+        // p1's turn 7: each crumbles (R385), and Reborn returns its body with Brittle 1, started now.
+        tick_at(&mut state, 7, P1);
+        assert_eq!(row(&state), ids);
+        for id in &ids {
+            let body = live(&state, id);
+            assert_eq!(body.reborn_spent, Some(true));
+            assert_eq!(body.brittle, Some(counter(1, 7, false)));
+        }
+        // The Reborn copies, with no Reborn of their own, crumble at p1's turn 9 and stay gone.
+        tick_at(&mut state, 9, P1);
+        for id in &ids {
+            assert_eq!(zone_of(&state, id), ZoneName::Graveyard);
+        }
+    }
+
+    #[test]
+    fn r3996100_r441_a_count_given_otherwise_is_spent_by_its_crumble_and_the_reborn_copy_has_none() {
+        let mut state = at(5, P1);
+        let mut unit = put(&mut state, REBORN, slot(P1, Row::Units, 1), Default::default());
+        given(&mut state, &mut unit, 1, 5);
+        tick_at(&mut state, 7, P1);
+        let body = live(&state, &unit.id);
+        assert_eq!(body.zone.z(), ZoneName::Field);
+        assert_eq!(body.reborn_spent, Some(true));
+        assert_eq!(body.brittle, None);
+    }
+}

@@ -1,4 +1,4 @@
-//! C #41 State of the Game (SPEC §8.6 row 41). Unit 3/3 → 6/6, cost 1, Common.
+//! C #41 State of the Game (SPEC §8.6 row 41). Unit 2/2 → 4/4 (3/3 → 6/6 until issue #3996), cost 1, Common.
 //!   Base:    "Indestructible, Immutable"
 //!   Radiant: "Indestructible, Immutable, Lifesteal" — the adopted Radiant face: a keyword-only Unit's
 //!            Radiant owes one more keyword or a stronger one (R275), and Taunt is out (R347).
@@ -78,8 +78,8 @@ mod tests {
                 s.attack(STATE, &menace);
 
                 s.expect_in_zone(STATE, "field");
-                s.expect_stats(STATE, json!({ "health": 3, "maxHealth": 3 }));
-                s.expect_stats(&menace, json!({ "health": 6 }));
+                s.expect_stats(STATE, json!({ "health": 2, "maxHealth": 2 }));
+                s.expect_stats(&menace, json!({ "health": 7 }));
                 // R63: the strike back is reduced to nothing, so no damage event names it.
                 let state = s.card(STATE).id.clone();
                 assert_eq!(
@@ -100,7 +100,7 @@ mod tests {
                 s.play(WHIRLWIND, json!({}));
 
                 s.expect_in_zone(&state, "field");
-                s.expect_stats(&state, json!({ "health": 3, "maxHealth": 3 }));
+                s.expect_stats(&state, json!({ "health": 2, "maxHealth": 2 }));
                 assert_eq!(
                     s.events().iter().map(js).filter(|event| event["type"] == "damage" && event["targetId"] == state).count(),
                     0,
@@ -209,13 +209,13 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r275_the_radiant_face_is_a_6_6_with_indestructible_immutable_and_lifesteal() {
+            fn r275_the_radiant_face_is_a_4_4_with_indestructible_immutable_and_lifesteal() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }] },
                     "p2": { "hand": [FILLER] },
                 }));
 
-                s.expect_stats(STATE, json!({ "attack": 6, "health": 6, "maxHealth": 6 }));
+                s.expect_stats(STATE, json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
                 assert_eq!(keyword_kinds(&s, PlayerId::P1, 1), vec!["Indestructible", "Immutable", "Lifesteal"]);
             }
 
@@ -228,8 +228,8 @@ mod tests {
 
                 s.attack(STATE, "hero");
 
-                s.expect_health(PlayerId::P2, 24);
-                s.expect_health(PlayerId::P1, 26);
+                s.expect_health(PlayerId::P2, 26);
+                s.expect_health(PlayerId::P1, 24);
             }
 
             #[test]
@@ -242,9 +242,9 @@ mod tests {
 
                 s.attack(STATE, &menace);
 
-                s.expect_stats(&menace, json!({ "health": 3 }));
-                s.expect_stats(STATE, json!({ "health": 6, "maxHealth": 6 }));
-                s.expect_health(PlayerId::P1, 16);
+                s.expect_stats(&menace, json!({ "health": 5 }));
+                s.expect_stats(STATE, json!({ "health": 4, "maxHealth": 4 }));
+                s.expect_health(PlayerId::P1, 14);
             }
 
             #[test]
@@ -273,7 +273,7 @@ mod tests {
                 s.play(NETHER, json!({}));
 
                 s.expect_in_zone(&state, "field");
-                s.expect_stats(&state, json!({ "health": 6 }));
+                s.expect_stats(&state, json!({ "health": 4 }));
             }
         }
     }

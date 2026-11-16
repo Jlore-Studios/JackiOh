@@ -1,25 +1,29 @@
 //! SPEC §8.12 S+ #9 Drone Assembler v4 (Unit 0/3 → 0/6, Weapon, cost 3, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
-//!            Activate 2: Target an enemy, summon a Drone Interceptor to attack it"
+//!            Activate: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
 //!   Radiant: "Starship Piece, Equip
-//!            Activate 2: Target an enemy, summon a Radiant Drone Interceptor to attack it"
+//!            Activate: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
 //!
 //! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one (R1852001).
-//! The Activate is 2 uses a turn (R384, R1857003). R3537000: its target is a declared enemy Unit,
-//! never a hero (R81, R1862000). R3537001: the Drone Interceptor is summoned into its controller's side by R64
+//! The Activate is once a turn (R384, R1857003) with an extra turn cooldown (R1841000): a use is followed
+//! by one of its user's turns it sits out (R3996001). R3537000: its target is a declared enemy Unit, never
+//! a hero (R81, R1862000). R3537001: the Drone Interceptor is summoned into its controller's side by R64
 //! (the leftmost open unit zone, else the leftmost empty Locked one, R688; a Flying Unit with its unit row
 //! full, the backrow, R2248000) and makes one forced attack on that Unit (R53), so it has no summoning
 //! sickness; the Activate is offered while it has a zone to enter and an enemy Unit stands (R430). The
-//! Radiant face summons the Radiant Drone Interceptor.
+//! Radiant face summons the Radiant Drone Interceptor. Through v0.6.5b it was "Activate 2", twice a turn
+//! with no cooldown; `script_v0_6_5b` keeps it for those replays (R767000).
 
 use jackioh_engine::effects::{forced_attacks, summon};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-009";
 
-/// "Activate 2": 2 uses a turn (R384, R1857003).
-const USES: i32 = 2;
+/// "Activate": 1 use a turn (R384, R1857003).
+const USES: i32 = 1;
+/// Through v0.6.5b, "Activate 2": 2 uses a turn.
+const USES_V0_6_5B: i32 = 2;
 
 /// The Drone Interceptor token (S §8.10 T-drone-interceptor).
 const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
@@ -30,8 +34,9 @@ fn has_entry_zone(state: &GameState, player: PlayerId) -> bool {
     first_entry_zone(state, player, Row::Units).is_some() || first_entry_zone(state, player, Row::Backrow).is_some()
 }
 
-/// R3537000, R3537001: "Target an enemy, summon a [Radiant] Drone Interceptor to attack it".
-fn assemble(radiant: bool) -> Script {
+/// R3537000, R3537001: "Summon a [Radiant] Drone Interceptor to attack an enemy", `uses` a turn, with an
+/// extra turn cooldown (R1841000, R3996001) when `cooldown`.
+fn assemble(radiant: bool, uses: i32, cooldown: bool) -> Script {
     let label = if radiant {
         "Summon a Radiant Drone Interceptor to attack an enemy Unit"
     } else {
@@ -40,8 +45,11 @@ fn assemble(radiant: bool) -> Script {
     let activation = ActivationDecl {
         id: "assemble".to_string(),
         label: label.to_string(),
-        uses: ActivationUses::Count(USES),
-        cost: None,
+        uses: ActivationUses::Count(uses),
+        cost: cooldown.then(|| ActivationCost {
+            extra_turn_cooldown: Some(true),
+            ..ActivationCost::default()
+        }),
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))],
         modes: Vec::new(),
         can_activate: Some(condition_hook(|c| {
@@ -72,12 +80,20 @@ fn assemble(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: assemble(false),
-        radiant: assemble(true),
+        base: assemble(false, USES, true),
+        radiant: assemble(true, USES, true),
     }
 }
 
-// S+ #9 Drone Assembler v4 — SPEC §8.12 row 9 (R3537000, R3537001; R53, R64, R81, R384, R1086, R1751000, R2248000).
+/// R767000: through v0.6.5b, twice a turn with no cooldown; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5b() -> CardScripts {
+    CardScripts {
+        base: assemble(false, USES_V0_6_5B, false),
+        radiant: assemble(true, USES_V0_6_5B, false),
+    }
+}
+
+// S+ #9 Drone Assembler v4 — SPEC §8.12 row 9 (R3537000, R3537001, R3996001; R53, R64, R81, R384, R1086, R1751000, R1841000, R2248000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,6 +142,13 @@ mod tests {
 
     fn activations(s: &Scenario) -> usize {
         activate_actions_for(s.state(), P1, s.card(ID)).len()
+    }
+
+    fn drones_on_field(s: &Scenario) -> usize {
+        (1..=UNIT_ZONES)
+            .filter_map(|lane| s.unit(P1, lane))
+            .filter(|c| c.def_id == INTERCEPTOR)
+            .count()
     }
 
     mod base {
@@ -210,19 +233,23 @@ mod tests {
         }
 
         #[test]
-        fn r384_the_uses_are_spent_a_turn_and_come_back_the_next() {
+        fn r3996001_once_a_turn_then_it_sits_out_the_next_and_is_back_the_turn_after() {
             let mut s = assembler(false, json!({ "field": [TOUGH] }));
             let target = s.unit_at(P2, 1).id;
-            for _ in 0..USES {
-                assert_eq!(activations(&s), 1);
-                s.activate(ID, at(&target));
-            }
+            assert_eq!(activations(&s), 1);
+            s.activate(ID, at(&target));
             assert_eq!(activations(&s), 0);
-            s.expect_refused(|s| s.activate(ID, at(&target)));
-            let drones = (1..=UNIT_ZONES).filter_map(|lane| s.unit(P1, lane)).filter(|c| c.def_id == INTERCEPTOR).count();
-            assert_eq!(drones, USES as usize);
+            s.expect_refused_with(|s| s.activate(ID, at(&target)), "already been used");
+            assert_eq!(drones_on_field(&s), 1);
+            // R1841000: its user's next turn is the one it sits out...
+            next_turn_of(&mut s, P1);
+            assert_eq!(activations(&s), 0);
+            s.expect_refused_with(|s| s.activate(ID, at(&target)), "cooling down");
+            // ...and the turn after it is back.
             next_turn_of(&mut s, P1);
             assert_eq!(activations(&s), 1);
+            s.activate(ID, at(&target));
+            assert_eq!(drones_on_field(&s), 2);
         }
 
         #[test]
@@ -239,6 +266,24 @@ mod tests {
             let drones = summoned(s.last_events());
             assert_eq!(drones.len(), 1);
             assert_eq!(hits(s.last_events()).first(), Some(&(target, DRONE_ATTACK)));
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_5b_is_used_twice_a_turn_with_no_cooldown() {
+            crate::under_kept(ID, script_v0_6_5b(), || {
+                let mut s = assembler(false, json!({ "field": [TOUGH] }));
+                let target = s.unit_at(P2, 1).id;
+                for _ in 0..USES_V0_6_5B {
+                    assert_eq!(activations(&s), 1);
+                    s.activate(ID, at(&target));
+                }
+                assert_eq!(activations(&s), 0);
+                s.expect_refused_with(|s| s.activate(ID, at(&target)), "used 2 times");
+                assert_eq!(drones_on_field(&s), USES_V0_6_5B as usize);
+                // No cooldown: its user's next turn has its uses back.
+                next_turn_of(&mut s, P1);
+                assert_eq!(activations(&s), 1);
+            });
         }
     }
 
@@ -258,6 +303,18 @@ mod tests {
             assert_eq!(s.stats(drone.as_str()).attack, RADIANT_DRONE_ATTACK);
             assert_eq!(s.stats(drone.as_str()).health, 2 * DRONE_HEALTH);
             assert_eq!(hits(s.last_events()).first(), Some(&(target.clone(), RADIANT_DRONE_ATTACK)));
+        }
+
+        #[test]
+        fn r3996001_once_a_turn_then_the_cooldown_here_too() {
+            let mut s = assembler(true, json!({ "field": [TOUGH] }));
+            let target = s.unit_at(P2, 1).id;
+            s.activate(ID, at(&target));
+            assert_eq!(activations(&s), 0);
+            next_turn_of(&mut s, P1);
+            s.expect_refused_with(|s| s.activate(ID, at(&target)), "cooling down");
+            next_turn_of(&mut s, P1);
+            assert_eq!(activations(&s), 1);
         }
 
         #[test]

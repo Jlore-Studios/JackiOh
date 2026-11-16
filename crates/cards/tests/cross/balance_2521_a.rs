@@ -143,7 +143,7 @@ const NOT_PIECES: [&str; 15] = [
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
     ("stinkyscape-050", "Beam v3", 5, 10),
     ("stinkyscape-054", "Beam v4", 7, 14),
-    ("stinkyscape-058", "Beam v5", 11, 22),
+    ("stinkyscape-058", "Beam v5", 9, 18),
     (CANNON_V3, "Cannon v3", 5, 10),
     ("stinkyscape-056", "Cannon v4", 7, 14),
     ("stinkyscape-060", "Cannon v5", 9, 18),
