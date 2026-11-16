@@ -32,6 +32,14 @@ const DECKS = {
   limits: { decks: 20, trios: 10, nameLength: 40 },
 };
 
+const DECKS_WITH_DISTINCT_DEFAULT = {
+  ...DECKS,
+  decks: [
+    { id: "d-starter", name: "Starter Deck", cards: [], catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 },
+    ...DECKS.decks,
+  ],
+};
+
 function seat(over: Partial<LobbySeat> = {}): LobbySeat {
   return { role: "host", player: ANA, state: "choosing", deck: null, random: false, ...over };
 }
@@ -253,7 +261,13 @@ describe("the lobby screen", () => {
     try {
       vi.useFakeTimers();
       const empty = lobby({ settings: { format: "duel", mode: "bo1" }, seats: [seat(), seat({ role: "guest", player: null })] });
-      const server = serve([empty, empty, refusal(500, "busy", "the lobby is busy"), lobby({ settings: { format: "duel", mode: "bo1" } })]);
+      const server = serve(
+        [empty, empty, refusal(500, "busy", "the lobby is busy"), lobby({ settings: { format: "duel", mode: "bo1" } })],
+        (call) =>
+          call.method === "GET" && call.path === "/api/decks"
+            ? { status: 200, body: DECKS_WITH_DISTINCT_DEFAULT }
+            : undefined,
+      );
       const reads = (): number => server.to("GET", `/api/lobbies/${CODE}`).length;
       show();
       await settle({ advance: 0 });
@@ -264,6 +278,7 @@ describe("the lobby screen", () => {
       await settle({ advance: 0 });
       expect(reads(), "the socket came up: one read").toBe(2);
       const picker = screen.getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect);
+      expect(picker.value).toBe("d-starter");
       fireEvent.change(picker, { target: { value: "d-pyre" } });
       // The push's read fails while the socket is live: the lobby on screen stays.
       socket.deliver({ type: "lobby", code: CODE });
