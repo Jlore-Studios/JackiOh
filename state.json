@@ -14264,15 +14264,8 @@
       "taken_asks": []
     },
     "4084": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43958097948",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-16T21:22:10Z",
-        "until": "2026-11-16T21:52:10Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14284,10 +14277,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ) : (\n- <span className=\"stats-not-enough\">{t(\"not enough games\")}</span>\n- )}\n- </td>\n- ```\n- Keep the `stats-td--winrate` class on the `td` (column width) and the `stats-winrate-text` class on the span (weight); only the `stats-winrate-cell` wrapper and the bar go with the move. Do not edit the grid JSX (~lines 998\u20131023).\n- 3. In `apps/web/src/routes/stats.css`, update the line-370 comment `/* R2895000: a figure's 95% range, on its own line under it (in the Win rate cell, under its text and bar) */` so it no longer claims the bar is in the Win rate cell, e.g. `(in a figure cell, under its text and \u2014 in the Adjusted ce\u2026\n- 4. Write `spec/rulings/R4084000.md` with this exact front matter (copy the shape of `spec/rulings/R3184000.md`):\n- ```yaml\n- ---\n- id: R4084000\n- title: \"The /stats Cards table's bar sits in the Adjusted cell and reads the adjusted win rate (issue #4084; amends R2777000)\"\n- cards: \"\u00a79.11, R2777000\"\n- proven_in:\n- - apps/web/src/routes/stats.test.tsx\n- ---\n- ```\n- Body (short, three parts): **Why** \u2014 the Adjusted rate is the page's headline, default sort and tier read (R2777000, R3022000, R3184000), but the bar tracked the raw rate, which mostly shows the deck's strength; **The change** \u2014 the existing bar markup and CSS move to the Adjusted cell, fill width \u2026\n- 5. Write `spec/pending/4084.md` holding the one \u00a711 paragraph, in the style of `spec/pending/4024.md`: `**[[R4084000]] The /stats Cards table's bar reads the adjusted win rate (issue #4084, 2026-11-16)**: \u2026` followed by two sentences \u2014 what moved and where, and that Win rate keeps its percentage an\u2026\n- 6. Edit `spec/rulings/R2777000.md`: change the title's `(issue #2777; amended by R3022000 and R3070000)` to `(issue #2777; amended by R3022000, R3070000 and R4084000)` (the R3185000-title list style), and append: `**Amended.** [[R4084000]] puts the Cards table's bar in the Adjusted cell, sized by t\u2026\n- ## Tests\n- - `apps/web/src/routes/stats.test.tsx`: one test named `it(\"R4084000 the bar sits in the Adjusted cell sized by the adjusted rate, the Win rate cell keeps its text and range, and no bar shows below the floor or without an adjusted rate\", \u2026)`. Follow the R2895000 test's pattern (mapped `MOCK_CARD_ST\u2026\n- - Commands: `pnpm --dir apps/web test src/routes/stats.test.tsx`, then `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/edge apps/web e2e`, and `cargo jackioh spec check`. No Cypress spec asserts the bar (verified by grepping `stats-confidence` across `apps/web` and `e2e`: only `stats.tsx` l\u2026\n- ## Done when\n- - [ ] The table's bar renders inside `statsTestid.adjustedCell` with width `Math.round(adjustedWinRate * 100)%`, even when the raw win rate differs.\n- - [ ] The Win rate cell has no `.stats-confidence-bar`; its percentage and (when on) range text are unchanged.\n- - [ ] Below-floor and null-`adjustedWinRate` rows read \"\u2014\" in the Adjusted cell with no bar in the row.\n- - [ ] Grid, inspect panel, Sets/Players tabs, server and engine untouched; no new CSS rules.\n- - [ ] `R4084000.md`, `spec/pending/4084.md` and the R2777000 title/paragraph edits exist; `cargo jackioh spec check` is green.\n- - [ ] `pnpm --dir apps/web test src/routes/stats.test.tsx`, typecheck and the eslint command above are green.\n- ## Risks\n- - Reusing `.stats-winrate-cell` in the Adjusted cell also reuses its `:has(.stats-range)` wrap rules \u2014 that is the point (figure, bar and range stack exactly as before), and `.stats-range` is `display: block`, so the range still drops to its own line. No layout regression is expected and no new sty\u2026\n- - `adjustedWinRate: null` with `hasEnoughGames: true` must render exactly \"\u2014\": the `typeof` guard plus the `\"\u2014\"` fallback preserves today's `adjustedText(null)` output; the test's card C pins this.\n- - `spec check` fails if the `R4084000` citation in `stats.tsx` comments or the `it(\"R4084000 \u2026\")` name has no matching note file, or if the note's `cards` links resolve nowhere \u2014 the note, test name, code comment and `\u00a79.11`/`R2777000` links above keep all three in agreement.\n- ## Open questions\n- None. Difficulty is medium: one route file's table JSX plus its test and three spec notes \u2014 no engine, AI, cross-crate design, migration, or large surface. The scale-readability worry in the issue is settled by the issue itself (keep the 0\u2013100% scale; a centered-on-50% scale would need a person and\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4084 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4084/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-16T21:14:44Z",
       "owner_why": "it plans it",
@@ -14300,18 +14292,18 @@
       "provider": "muse",
       "queued_at": "2026-11-16T21:11:37Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43958097948",
+      "run_id": "pending:8d9122fa-1794864160",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-16T21:14:44Z",
+      "started_at": "2026-11-16T21:22:58Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T21:14:44Z",
+    "at": "2026-11-16T21:22:58Z",
     "url": "",
-    "what": "plan #4084 on muse"
+    "what": "build #4084 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T21:14:49Z",
