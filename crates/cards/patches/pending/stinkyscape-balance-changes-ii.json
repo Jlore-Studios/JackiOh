@@ -93,5 +93,27 @@
     "stinkyscapeplus-145",
     "stinkyscapeplus-160",
     "stinkyscapeplus-165"
-  ]
+  ],
+  "plays": [
+    "classicplus-029",
+    "classicplus-040",
+    "classicplus-073",
+    "core-023",
+    "core-093",
+    "meditative-001",
+    "meditative-058",
+    "meditative-059",
+    "meditative-081",
+    "meditative-084",
+    "stinkyscape-053",
+    "stinkyscape-109",
+    "stinkyscape-111",
+    "stinkyscape-t-reknite",
+    "stinkyscapeplus-026",
+    "stinkyscapeplus-040",
+    "stinkyscapeplus-071",
+    "stinkyscapeplus-096",
+    "stinkyscapeplus-134"
+  ],
+  "rule": true
 }
