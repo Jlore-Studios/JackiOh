@@ -16282,6 +16282,13 @@
     "4033": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:12:12Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "No hard rule applies: this is a five-file web presentation and regression-test change, with no engine, AI, cross-crate design, migration, or large diff."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
