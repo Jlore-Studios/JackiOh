@@ -14584,6 +14584,14 @@
           "muse": "medium"
         }
       }
+    },
+    "4088": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-16T21:14:13Z",
+      "issue": 4082,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
