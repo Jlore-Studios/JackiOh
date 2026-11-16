@@ -351,7 +351,9 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
       cy.viewport(viewport.width, viewport.height);
       mountGame(fullBoardView());
 
-      // The pill's ::after is its finger-sized target.
+      // The pill's ::after is its finger-sized target. R2122000: neighbours split the gap, so the band stops
+      // halfway to a target beside it across its 44 px (on a phone the hero plate and the Heroic Power stand
+      // flush above the pills, and your hand's cards rise below them).
       cy.get(`${BOARD} [data-browsable="true"]`)
         .should("have.length", 3)
         .each(($pile) => {
@@ -360,10 +362,16 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
             const box = rectOf(pile);
             const doc = pile.ownerDocument;
             const reach = TOUCH_PX / 2 - 2;
-            for (const [x, y] of [
-              [box.left + box.width / 2, box.top + box.height / 2 - reach],
-              [box.left + box.width / 2, box.top + box.height / 2 + reach],
-            ] as const) {
+            const x = box.left + box.width / 2;
+            let top = box.top + box.height / 2 - reach;
+            let bottom = box.top + box.height / 2 + reach;
+            for (const target of doc.querySelectorAll(`${BOARD} :is(button, [role="button"], [tabindex="0"], .hero, .card)`)) {
+              const r = rectOf(target);
+              if (target.contains(pile) || pile.contains(target) || r.right <= x - TOUCH_PX / 2 || r.left >= x + TOUCH_PX / 2) continue;
+              if (r.bottom <= box.top + EPSILON) top = Math.max(top, (r.bottom + box.top) / 2 + 1);
+              if (r.top >= box.bottom - EPSILON) bottom = Math.min(bottom, (box.bottom + r.top) / 2 - 1);
+            }
+            for (const y of [top, bottom]) {
               const hit = doc.elementFromPoint(x, y);
               expect(
                 hit !== null && (hit === pile || pile.contains(hit)),

@@ -346,6 +346,13 @@ fn rebuild_sides(sink: &mut EngineSink<'_>, snapshot: &BoardSnapshot, sides: &[P
                     place_on_field(sink.state, &mut card, slot, options)
                 };
                 if !landed {
+                    // R227: a card the restore cannot set face-down never went face-down, so it keeps its own id,
+                    // and the events that named it (an exile before a slash voided its lane, R3554002) still do.
+                    if let Some(former) = &former_id {
+                        crate::state::rename_in_board_history(sink.state, &card.id, former);
+                        crate::generators::rename_generator(sink.state, &card.id, former);
+                        card.id = former.clone();
+                    }
                     bounce_card(sink, &card);
                     continue;
                 }

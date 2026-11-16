@@ -685,3 +685,81 @@ mod e29_through_reduce_s9_3 {
         );
     }
 }
+
+mod r227_e29_a_restore_into_a_void_zone {
+    use super::*;
+
+    /// p2's face-down trap in backrow lane 3 at the snapshot, then exiled publicly and lane 3 voided (S+ #78's
+    /// slash, R3554002), then both sides rolled back one turn (R419). With `full_hand`, p2's hand holds 10 first.
+    fn rolled_back_into_the_void(seed: &str, full_hand: bool) -> (GameState, String, Vec<GameEvent>) {
+        let mut state = board(seed);
+        if full_hand {
+            let filler = state
+                .players
+                .p2
+                .library
+                .first()
+                .map(|card| card.def_id.clone())
+                .expect("a library card");
+            while state.players.p2.hand.len() < 10 {
+                let card = new_instance(&mut state, &filler, P2, Zone::Hand { player: P2 });
+                state.players.p2.hand.push(card);
+            }
+        }
+        let mut trap = put(&mut state, &watcher.id, slot(P2, Row::Backrow, 3), json!({}));
+        record_board_snapshot(&mut state);
+        move_to_zone(
+            &mut state,
+            &mut trap,
+            OffFieldZone::Exile,
+            MoveToZoneOptions::default(),
+        );
+        state.slashed_lane = Some(3);
+        let old = trap.id.clone();
+        let exiled: GameEvent =
+            json_as(json!({ "type": "exiled", "instanceId": old, "defId": watcher.id, "owner": "p2" }));
+        state.applied.push(AppliedAction {
+            nonce: format!("{seed}-exile"),
+            events: vec![exiled],
+        });
+        let mut events: Vec<GameEvent> = Vec::new();
+        restore(&mut state, &mut events, P1, 1, &[P1, P2]);
+        state.applied.push(AppliedAction {
+            nonce: seed.into(),
+            events: events.clone(),
+        });
+        (state, old, events)
+    }
+
+    #[test]
+    fn r227_r419_r3554002_a_card_a_rollback_cannot_put_back_face_down_goes_to_hand_under_its_own_id_and_p1_reads_none_of_it()
+     {
+        let (state, old, events) = rolled_back_into_the_void("bh-void", false);
+        assert_eq!(live(&state, &old).zone, Zone::Hand { player: P2 });
+        assert_eq!(
+            instance_ids(&events_of_type(&events, GameEventType::Bounced)),
+            vec![json!(old)]
+        );
+        let view = view_for(&state, P1);
+        assert!(!json_of(&view.events).to_string().contains(&format!("\"{old}\"")));
+        assert_eq!(
+            hidden_information_violations(&state, P1, &view, &legal_actions(&state, P1)),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn r227_r419_r3554002_one_burned_by_a_full_hand_is_in_the_graveyard_under_its_own_id_and_reads_openly() {
+        let (state, old, events) = rolled_back_into_the_void("bh-void-full", true);
+        assert_eq!(live(&state, &old).zone, Zone::Graveyard { player: P2 });
+        assert_eq!(
+            instance_ids(&events_of_type(&events, GameEventType::Burned)),
+            vec![json!(old)]
+        );
+        let view = view_for(&state, P1);
+        assert_eq!(
+            hidden_information_violations(&state, P1, &view, &legal_actions(&state, P1)),
+            Vec::<String>::new()
+        );
+    }
+}

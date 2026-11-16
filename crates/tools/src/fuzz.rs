@@ -132,14 +132,14 @@
 //!
 //! # The daily top-up (#3113)
 //!
-//! The daily 1v1 run plays a fixed `FUZZ_SEEDS` (super.yml's, 10,000), so each card the pool gains
-//! would be dealt in a smaller share of its games. The tests' `fuzz_daily_top_up` keeps each pool card's
-//! deck slots over the day at `DAILY_DEALS_PER_CARD`: `daily_seeds(pool)` is the seeds that takes,
-//! and its daily test plays the seeds past `DAILY_FUZZ_SEEDS` (`extra_daily_seeds`, none while the pool
-//! is today's) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own `FUZZ_SEEDS` must
-//! grow, which a person edits, and the test fails to say so. Each wave's summary reports the fewest
-//! and most games any pool card was dealt in (`Coverage::deals_line`), so the daily log shows what
-//! each card got.
+//! The daily 1v1 run plays a fixed `FUZZ_SEEDS` (super.yml's, read by `workflow_seeds`), so each card
+//! the pool gains would be dealt in a smaller share of its games. The tests' `fuzz_daily_top_up` keeps
+//! each pool card's deck slots over the day at `DAILY_DEALS_PER_CARD`: `daily_seeds(pool)` is the seeds
+//! that takes, and its daily test plays the seeds past super.yml's `FUZZ_SEEDS` (`extra_daily_seeds`,
+//! none while those are enough) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own
+//! `FUZZ_SEEDS` must grow, which a person edits, and the test fails to say so. Each wave's summary
+//! reports the fewest and most games any pool card was dealt in (`Coverage::deals_line`), so the daily
+//! log shows what each card got.
 //!
 //! # Pool coverage (#2426)
 //!
@@ -6236,8 +6236,8 @@ pub(crate) mod tests {
     mod fuzz_daily_top_up {
         use super::*;
 
-        /// The seeds the daily 1v1 run plays, as super.yml's `FUZZ_SEEDS` says it: `daily_seeds` is what
-        /// the pool needs, and a test holds the two together.
+        /// The floor super.yml's `FUZZ_SEEDS` (the seeds the daily 1v1 run plays) never drops under, sized
+        /// for the 633-card pool: `daily_seeds` is what the pool needs, and a test holds the two together.
         const DAILY_FUZZ_SEEDS: u32 = 10_000;
 
         /// The deck slots each pool card gets over the daily run's seeds, kept as the pool grows: the
@@ -6245,10 +6245,13 @@ pub(crate) mod tests {
         /// 633 cards is 790 slots a card, rounded down.
         const DAILY_DEALS_PER_CARD: u64 = 780;
 
-        /// The most seeds past `DAILY_FUZZ_SEEDS` the daily test plays, about 15 minutes of games on the
-        /// daily run's runner. A pool that needs more has outgrown super.yml's `FUZZ_SEEDS`, which a
-        /// person edits (the bot may not change `.github/`).
-        const DAILY_TOP_UP_MAX: u32 = 4_000;
+        /// The most seeds past super.yml's `FUZZ_SEEDS` the daily test plays, about 15 minutes of both
+        /// waves in the test profile on the daily run's four cores. On 2026-11-16 the plain wave played
+        /// about 50 seeds a minute there and the handicapped wave is about a third slower (release: 921 s
+        /// against 697 s), so the 4,000 this was first set to took nearly two hours and the daily-tests
+        /// job's 60-minute timeout cancelled it (#4035). A pool that needs more has outgrown super.yml's
+        /// `FUZZ_SEEDS`, which a person edits (the bot may not change `.github/`).
+        const DAILY_TOP_UP_MAX: u32 = 300;
 
         /// The seeds that deal each pool card `DAILY_DEALS_PER_CARD` deck slots when the pool holds
         /// `pool` cards.
@@ -6258,9 +6261,9 @@ pub(crate) mod tests {
             u32::try_from(needed).unwrap_or(u32::MAX)
         }
 
-        /// The seeds `pool` cards need past what super.yml plays: 0 while `DAILY_FUZZ_SEEDS` is enough.
-        fn extra_daily_seeds(pool: usize) -> u32 {
-            daily_seeds(pool).saturating_sub(DAILY_FUZZ_SEEDS)
+        /// The seeds `pool` cards need past the `played` seeds super.yml plays: 0 while those are enough.
+        fn extra_daily_seeds(pool: usize, played: u32) -> u32 {
+            daily_seeds(pool).saturating_sub(played)
         }
 
         /// super.yml's `FUZZ_SEEDS`, the 1v1 daily run's seeds.
@@ -6281,11 +6284,19 @@ pub(crate) mod tests {
 
         #[test]
         fn daily_seeds_grow_with_the_pool_and_super_yml_plays_the_baseline() {
-            assert_eq!(workflow_seeds(), DAILY_FUZZ_SEEDS, "super.yml's FUZZ_SEEDS moved");
+            assert!(
+                workflow_seeds() >= DAILY_FUZZ_SEEDS,
+                "super.yml's FUZZ_SEEDS fell under the baseline"
+            );
             // The pool super.yml's count was sized for needs no top-up, and the first card past it does.
-            assert_eq!(extra_daily_seeds(633), 0);
-            assert_eq!(extra_daily_seeds(641), 0);
-            assert_eq!(extra_daily_seeds(642), 16);
+            assert_eq!(extra_daily_seeds(633, DAILY_FUZZ_SEEDS), 0);
+            assert_eq!(extra_daily_seeds(641, DAILY_FUZZ_SEEDS), 0);
+            assert_eq!(extra_daily_seeds(642, DAILY_FUZZ_SEEDS), 16);
+            assert_eq!(
+                extra_daily_seeds(799, 12_500),
+                0,
+                "a wider FUZZ_SEEDS covers a bigger pool"
+            );
             let today = daily_seeds(633);
             assert!(today <= DAILY_FUZZ_SEEDS, "{today}");
             assert!(
@@ -6300,16 +6311,18 @@ pub(crate) mod tests {
         #[test]
         #[ignore = "daily: the seeds the pool needs past super.yml's FUZZ_SEEDS, in both waves; the per-pull-request test of daily_seeds and the workflow's count holds the rule"]
         fn the_days_extra_seeds_keep_every_pool_card_s_deals_as_the_pool_grows() {
-            let extra = extra_daily_seeds(FUZZ_POOL.len());
+            let played = workflow_seeds();
+            let extra = extra_daily_seeds(FUZZ_POOL.len(), played);
             if extra == 0 {
                 return;
             }
             assert!(
                 extra <= DAILY_TOP_UP_MAX,
-                "the pool of {} cards needs {extra} seeds past super.yml's {DAILY_FUZZ_SEEDS}, over the {DAILY_TOP_UP_MAX} this test plays: a person must widen FUZZ_SEEDS in .github/workflows/super.yml (and its fuzz job's shards and timeout)",
-                FUZZ_POOL.len()
+                "the pool of {} cards needs {extra} seeds past super.yml's {played}, over the {DAILY_TOP_UP_MAX} this test plays: a person must widen FUZZ_SEEDS in .github/workflows/super.yml to at least {} (and check its fuzz job's shards and timeout)",
+                FUZZ_POOL.len(),
+                daily_seeds(FUZZ_POOL.len())
             );
-            let from = DAILY_FUZZ_SEEDS + 1;
+            let from = played + 1;
             for wave in [
                 play_wave(from, extra, &Forcing::default()),
                 play_handicap_wave(from, extra, &Forcing::default()),
