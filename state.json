@@ -15661,6 +15661,7 @@
     "3998": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "decision": {
         "answer": "/revise 2",
         "answer_url": "https://github.com/Jlore-Studios/JackiOh/pull/3998#issuecomment-6904339513",
@@ -15697,7 +15698,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-15T20:09:00Z",
+      "feedback_since": "2026-11-16T00:59:39Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-15T23:09:43Z",
@@ -15711,11 +15712,13 @@
       "interruptions": 0,
       "issue": 3935,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-6",
-      "question": "How should this change get a version of its own, given that `classify --claims` cannot see a set or Buffed Embiggened Wall?",
+      "question": "",
       "queued_at": "2026-11-16T00:58:39Z",
+      "round_tier": "medium",
       "run_id": "43783606547",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15736,10 +15739,11 @@
         "provider": "claude-6",
         "run": "43770404137"
       },
-      "source": "decision",
+      "source": "",
       "started_at": "2026-11-16T00:59:39Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
