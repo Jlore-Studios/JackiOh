@@ -14065,6 +14065,9 @@
       "stop_requested": false,
       "verdict_rounds": 1
     },
+    "4057": {
+      "suggestion": true
+    },
     "4058": {
       "asks": [
         "c:6932712682"
