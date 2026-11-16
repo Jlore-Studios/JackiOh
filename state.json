@@ -15850,6 +15850,13 @@
     "4019": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T02:15:18Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "server-only filter in two stores plus one route, with tests and a ruling; none of the hard lines (engine rules, AI, cross-crate design, migration, ~40 files) holds"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
