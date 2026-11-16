@@ -17537,8 +17537,10 @@
     "what": "review #4075 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-16T09:48:30Z",
-    "notes": [],
+    "at": "2026-11-16T09:55:56Z",
+    "notes": [
+      "#4074: green and waiting for a person to merge it, so `muse` gives up its claim on it"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18241,7 +18243,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T09:48:30Z",
+  "loop_tick": "2026-11-16T09:55:56Z",
   "machine_disk": {
     "issue": null,
     "reading": {
