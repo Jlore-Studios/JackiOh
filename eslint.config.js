@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
+import regexp from "eslint-plugin-regexp";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
@@ -40,6 +41,18 @@ export default defineConfig(
             "No real-time wait in a web test: use vi.useFakeTimers and advance past the component's own constant (#1490).",
         },
       ],
+    },
+  },
+  {
+    // Item 7 of #3897 (#4009): a regex that backtracks super-linearly on crafted input freezes
+    // whatever runs it, and another player's text (chat, lobby and deck names, deck codes,
+    // usernames) reaches the browser and the Worker. These two rules hold every regex over the
+    // client, the Worker, the admin app and e2e to linear time.
+    files: ["apps/web/**/*.{ts,tsx,js}", "apps/edge/**/*.ts", "apps/admin/**/*.ts", "e2e/**/*.{ts,tsx}"],
+    plugins: { regexp },
+    rules: {
+      "regexp/no-super-linear-backtracking": "error",
+      "regexp/no-super-linear-move": "error",
     },
   },
   {

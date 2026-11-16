@@ -66,6 +66,23 @@ const ENTRY_LINE = /^ {4}"([^"]+)": \{ \/\/ (.+)$/;
 
 type Json = Record<string, unknown>;
 
+/**
+ * Whether `source` carries a comma before a closing brace, as `/,\s*\n\s*\}/` reads it: a line
+ * ending in a comma, then blank lines, then a line opening with `}` (#4009).
+ */
+function hasTrailingCommaBeforeBrace(source: string): boolean {
+  const lines = source.split("\n");
+  return lines.some((line, at) => {
+    if (!line.trimEnd().endsWith(",")) return false;
+    for (let next = at + 1; next < lines.length; next++) {
+      const following = lines[next] ?? "";
+      if (following.trim() === "") continue;
+      return /^\s*\}/.test(following);
+    }
+    return false;
+  });
+}
+
 function isRecord(value: unknown): value is Json {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -472,8 +489,10 @@ describe("card-audio.json5's layout and effects (R655)", () => {
   });
 
   it("R655 is JSON5: its comments and trailing commas parse, where JSON would refuse them", () => {
-    expect(SOURCE, "the file carries // comments").toMatch(/^\s*\/\/ /m);
-    expect(SOURCE, "the file carries a trailing comma before a closing brace").toMatch(/,\s*\n\s*\}/);
+    // A `//` line and a comma before a closing brace, each on lines of their own (#4009: the
+    // `/^\s*\/\/ /m` and `/,\s*\n\s*\}/` scans rescan newline runs from every position).
+    expect(SOURCE.split("\n").some((line) => /^\s*\/\/ /.test(line)), "the file carries // comments").toBe(true);
+    expect(hasTrailingCommaBeforeBrace(SOURCE), "the file carries a trailing comma before a closing brace").toBe(true);
     expect(() => JSON.parse(SOURCE) as unknown, "JSON.parse refuses the file").toThrow();
     expect(() => JSON5.parse<unknown>(SOURCE), "JSON5.parse reads it").not.toThrow();
     expect(JSON5.parse<unknown>('{ a: 1, // a comment\n b: { c: "d", },\n}\n')).toEqual({ a: 1, b: { c: "d" } });

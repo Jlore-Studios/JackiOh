@@ -180,7 +180,8 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     if (def === undefined) return;
     // The card's own `--def-scale` (the `.zone > .card` rule's), repeated: the stack is no child of the card.
     const card = /\.zone\s*>\s*\.card\s*\{([\s\S]*?)\}/.exec(phone)?.[1] ?? "";
-    const scale = /--def-scale:\s*([^;]+);/.exec(card)?.[1];
+    // No `\s*` before the capture (#4009): it trades characters with `[^;]+` super-linearly.
+    const scale = /--def-scale:([^;]+);/.exec(card)?.[1]?.trimStart();
     expect(scale, "the phone's card has a `--def-scale`").toBeDefined();
     expect(def).toContain(`--def-scale: ${scale};`);
     // The turned card's box is as tall as the card is wide, scaled, and centred in the zone: the room is the band above it.
@@ -196,8 +197,9 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     expect(cards).toContain("--mf-stat: min(30cqmin, 26cqh);");
     expect(cards).toContain("--mf-plate: max(11cqh, 10px);");
     const badges = /\.board \.zone\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phoneBlock())?.[1] ?? "";
-    const stat = /--badges-stat:\s*([^;]+);/.exec(badges)?.[1] ?? "";
-    const plate = /--badges-plate:\s*([^;]+);/.exec(badges)?.[1] ?? "";
+    // No `\s*` before the captures (#4009): they trade characters with `[^;]+` super-linearly.
+    const stat = (/--badges-stat:([^;]+);/.exec(badges)?.[1] ?? "").trimStart();
+    const plate = (/--badges-plate:([^;]+);/.exec(badges)?.[1] ?? "").trimStart();
     expect(stat).toContain("* 0.3");
     expect(stat).toContain("* 0.26");
     expect(plate).toContain("* 0.11");

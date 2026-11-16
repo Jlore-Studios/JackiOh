@@ -65,9 +65,72 @@ function names(fragment: string, reader: string): boolean {
   return fragment.includes(attribute) && (reader.endsWith("]") ? new RegExp(`\\${attribute}(?=[\\]=~|^$*])`).test(fragment) : true);
 }
 
+/**
+ * `selector` with each combinator and its surrounding whitespace collapsed to one space, as
+ * the `\s*([>+~])\s*` to `" "` rewrite does (#4009: the pattern rescans whitespace runs).
+ */
+function dropCombinators(selector: string): string {
+  let out = "";
+  let i = 0;
+  let spaced = false;
+  while (i < selector.length) {
+    const char = selector.charAt(i);
+    if (char === ">" || char === "+" || char === "~") {
+      if (!spaced) {
+        let end = out.length;
+        while (end > 0 && /\s/.test(out.charAt(end - 1))) end--;
+        out = out.slice(0, end);
+      }
+      out += " ";
+      spaced = true;
+      i++;
+      while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+    } else {
+      out += char;
+      spaced = false;
+      i++;
+    }
+  }
+  return out;
+}
+
+/**
+ * `selector` split at whitespace outside brackets and parentheses, as `/\s+(?![^([]*[)\]])/` does:
+ * a run splits unless `)` or `]` comes before any `(` or `[` after it (#4009: the lookahead rescans
+ * ahead from every whitespace run).
+ */
+function splitOutsideBrackets(selector: string): string[] {
+  const closesFirst: boolean[] = new Array<boolean>(selector.length + 1).fill(false);
+  let first: string | null = null;
+  for (let i = selector.length - 1; i >= 0; i--) {
+    const char = selector.charAt(i);
+    if (char === "(" || char === "[") first = char;
+    else if (char === ")" || char === "]") first = char;
+    closesFirst[i] = first === ")" || first === "]";
+  }
+  const out: string[] = [];
+  let start = 0;
+  let at = 0;
+  while (at < selector.length) {
+    if (/\s/.test(selector.charAt(at))) {
+      let end = at;
+      while (end < selector.length && /\s/.test(selector.charAt(end))) end++;
+      if (!closesFirst[end]) {
+        out.push(selector.slice(start, at));
+        start = end;
+      }
+      at = end;
+    } else {
+      at++;
+    }
+  }
+  out.push(selector.slice(start));
+  return out;
+}
+
 /** A selector's last compound: what it styles, with its pseudo-element. */
 function subjectOf(selector: string): string {
-  const compounds = selector.replace(/\s*([>+~])\s*/g, " ").split(/\s+(?![^([]*[)\]])/);
+  const compounds = splitOutsideBrackets(dropCombinators(selector));
   return compounds[compounds.length - 1] ?? "";
 }
 

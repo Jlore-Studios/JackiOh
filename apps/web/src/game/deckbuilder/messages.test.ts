@@ -16,6 +16,18 @@ const SELF = resolve(here, "messages.test.ts");
 /** Captures Rust string bodies without mistaking comments or character literals for strings. */
 const RUST_TOKENS = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^'\\\n]|\\.)'|"((?:[^"\\]|\\.)*)"/g;
 
+/**
+ * Prose without its edge whitespace and punctuation, as `/^[\s;:,."()]+|[\s;:,."()]+$/g` cuts them
+ * (#4009: the edge classes rescan from every position).
+ */
+function trimProse(text: string): string {
+  let start = 0;
+  while (start < text.length && (/\s/.test(text.charAt(start)) || ";:,.\"()".includes(text.charAt(start)))) start++;
+  let end = text.length;
+  while (end > start && (/\s/.test(text.charAt(end - 1)) || ";:,.\"()".includes(text.charAt(end - 1)))) end--;
+  return text.slice(start, end);
+}
+
 function unescaped(text: string): string {
   return text.replace(/\\(["'\\])/g, "$1");
 }
@@ -27,7 +39,8 @@ function validatorFragments(): string[] {
   for (const literal of literals) {
     for (const piece of literal.split(/\{[^{}]*\}/)) {
       const trimmed = piece.trim();
-      const prose = trimmed.replace(/^[\s;:,."()]+|[\s;:,."()]+$/g, "");
+      // Prose without its edge punctuation (#4009: the edge classes rescan from every position).
+      const prose = trimProse(trimmed);
       if (prose.length < 9) continue;
       if (!/[A-Za-z]\s[A-Za-z]/.test(prose)) continue;
       fragments.add(trimmed);

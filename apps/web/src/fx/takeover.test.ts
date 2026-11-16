@@ -78,6 +78,26 @@ const CARDS: Record<string, { type: CardType; rarity: string }> = {
 const resolve: EntranceResolver = (defId) => CARDS[defId] ?? null;
 /** The effects layer's stylesheet, for the takeover looks' art. */
 const fxCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fx.css"), "utf8");
+
+/**
+ * The property names `body` sets, as `/([a-z-]+)\s*:/g` names them (#4009: the name plus optional
+ * whitespace before `:` scans super-linearly on long runs).
+ */
+function propertyNames(body: string): (string | undefined)[] {
+  const names: (string | undefined)[] = [];
+  let at = 0;
+  while (at < body.length) {
+    const colon = body.indexOf(":", at);
+    if (colon === -1) return names;
+    let start = colon;
+    while (start > 0 && /\s/.test(body.charAt(start - 1))) start--;
+    let name = start;
+    while (name > 0 && /[a-z-]/.test(body.charAt(name - 1))) name--;
+    if (name < start) names.push(body.slice(name, start));
+    at = colon + 1;
+  }
+  return names;
+}
 const p1 = baseView();
 const p2 = baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") });
 
@@ -587,7 +607,7 @@ describe("R3345000 Mythic takeover in depth planes", () => {
     expect(css).toMatch(/\.fx-takeover-plane\[data-slice\]\s*\{\s*animation: fx-takeover-fly var\(--fx-land\) var\(--ease-out\) both;\s*\}/);
     const frames = /@keyframes fx-takeover-fly\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
     expect(frames).toContain("var(--fx-slice-depth, 0)");
-    for (const property of [...frames.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1])) expect(["transform", "opacity"]).toContain(property);
+    for (const property of propertyNames(frames)) expect(["transform", "opacity"]).toContain(property);
   });
 
   it("R3345000 bigMoments short gives 500ms hold and off gives 0ms hold", () => {

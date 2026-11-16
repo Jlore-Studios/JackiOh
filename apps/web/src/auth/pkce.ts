@@ -27,7 +27,9 @@ export type PkceChallenge = { code_challenge: string; code_challenge_method: typ
 function base64url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
+  // btoa pads with at most two `=`, so one bounded match strips them all (#4009: `/=+$/` scans
+  // super-linearly on a long `=` run).
+  return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/(?:==?)?$/u, "");
 }
 
 const VERIFIER_PATTERN = /^[A-Za-z0-9._~-]+$/u;

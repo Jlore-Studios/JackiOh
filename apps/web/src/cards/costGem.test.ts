@@ -23,10 +23,30 @@ const FACE_SHEETS = [
   "inspect/inspect.css",
 ] as const;
 
+/**
+ * A sheet's `selector { body }` pairs (#4009: `/([^{}]+)\{([^{}]*)\}/g` scans super-linearly on a
+ * long brace-free run).
+ */
+function rulePairs(css: string): [string, string][] {
+  const out: [string, string][] = [];
+  const chunks = css.split("}");
+  if (!css.endsWith("}")) chunks.pop();
+  for (const chunk of chunks) {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) continue;
+    const before = chunk.slice(0, open);
+    const selector = before.slice(before.lastIndexOf("{") + 1);
+    const body = chunk.slice(open + 1);
+    if (selector === "" || body.includes("{")) continue;
+    out.push([selector, body]);
+  }
+  return out;
+}
+
 /** A sheet's rules (at any depth) as selector and body, comments stripped so a comment naming a property proves nothing. */
 function rules(file: string): { selector: string; body: string }[] {
   const css = readSheet(`src/cards/${file}`).replace(/\/\*[\s\S]*?\*\//g, "");
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({ selector: (match[1] ?? "").trim(), body: match[2] ?? "" }));
+  return rulePairs(css).map(([selector, body]) => ({ selector: selector.trim(), body }));
 }
 
 /** The value of `property` in a rule's body, or null when it declares none. */

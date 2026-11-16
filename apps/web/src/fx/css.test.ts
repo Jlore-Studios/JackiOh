@@ -100,21 +100,113 @@ function parseSheet(css: string): Sheet {
   return sheet;
 }
 
+/**
+ * Whitespace collapsed to one space (#4009: `/\s+/g` on its own is linear; the helpers below cover
+ * the adjacent-quantifier shapes around operators and brackets).
+ */
+function collapseSpaces(value: string): string {
+  let out = "";
+  let i = 0;
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      out += " ";
+      while (i < value.length && /\s/.test(value.charAt(i))) i++;
+    } else {
+      out += char;
+      i++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Whitespace touching any of `chars` dropped, as the `\s*([>,+~=])\s*` to `"$1"` rewrite does
+ * (#4009: the class plus whitespace rescans from every position).
+ */
+function tightenAround(value: string, chars: string): string {
+  let out = "";
+  let i = 0;
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      let end = i;
+      while (end < value.length && /\s/.test(value.charAt(end))) end++;
+      const left = i > 0 && chars.includes(value.charAt(i - 1));
+      const right = end < value.length && chars.includes(value.charAt(end));
+      if (!left && !right) out += value.slice(i, end);
+      i = end;
+    } else {
+      out += char;
+      i++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Whitespace directly before any of `chars` dropped, as `/\s+\)/g` with `")"` does (#4009: the
+ * class plus bracket rescans from every position).
+ */
+function dropWsBefore(value: string, chars: string): string {
+  let out = "";
+  let i = 0;
+  while (i < value.length) {
+    const char = value.charAt(i);
+    if (/\s/.test(char)) {
+      let end = i;
+      while (end < value.length && /\s/.test(value.charAt(end))) end++;
+      if (end >= value.length || !chars.includes(value.charAt(end))) out += value.slice(i, end);
+      i = end;
+    } else {
+      out += char;
+      i++;
+    }
+  }
+  return out;
+}
+
 /** Selector text with quotes dropped and the whitespace that carries no meaning removed. */
 function normSelector(selector: string): string {
-  return selector
-    .replace(/['"]/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/\s*([>,+~=])\s*/g, "$1")
-    .replace(/\(\s+/g, "(")
-    .replace(/\s+\)/g, ")")
-    .replace(/\[\s+/g, "[")
-    .replace(/\s+\]/g, "]")
-    .trim();
+  return dropWsBefore(
+    dropWsBefore(
+      tightenAround(collapseSpaces(selector.replace(/['"]/g, "")), ">,+~=").replace(/\(\s+/g, "(").replace(/\[\s+/g, "["),
+      ")",
+    ),
+    "]",
+  ).trim();
 }
 
 function normValue(value: string): string {
-  return value.replace(/\s+/g, " ").replace(/\s*,\s*/g, ",").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")").trim().toLowerCase();
+  return dropWsBefore(tightenAround(collapseSpaces(value), ",").replace(/\(\s+/g, "("), ")").trim().toLowerCase();
+}
+
+/**
+ * Whether `selector` is `.fx-dom`, alone or parenting everything (`*`), as `/^\.fx-dom\s*>?\s*\*$/`
+ * reads it (#4009: the whitespace runs trade characters super-linearly).
+ */
+function isFxDomChild(selector: string): boolean {
+  const head = ".fx-dom";
+  if (!selector.startsWith(head)) return false;
+  let i = head.length;
+  while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+  if (selector.charAt(i) === ">") i++;
+  while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+  return selector.charAt(i) === "*" && i + 1 === selector.length;
+}
+
+/**
+ * Whether `selector` opens with `.fx-dom` parenting everything: the head, whitespace, an optional
+ * `>` and whitespace, then `*` (#4009: the whitespace runs trade characters super-linearly).
+ */
+function startsFxDom(selector: string): boolean {
+  const head = ".fx-dom";
+  if (!selector.startsWith(head)) return false;
+  let i = head.length;
+  while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+  if (selector.charAt(i) === ">") i++;
+  while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+  return selector.charAt(i) === "*";
 }
 
 const REDUCED = /prefers-reduced-motion\s*:\s*reduce/;
@@ -290,7 +382,7 @@ describe("B40 — fx.css", () => {
     const childRule = fx.rules.some(
       (rule) =>
         !isReduced(rule) &&
-        rule.selectors.some((s) => /^\.fx-dom\s*>?\s*\*$/.test(normSelector(s))) &&
+        rule.selectors.some((s) => isFxDomChild(normSelector(s))) &&
         normValue(rule.decls.get("position") ?? "") === "absolute",
     );
     const everyKind = Object.keys(DOM_KINDS).every((kind) =>
@@ -312,7 +404,7 @@ describe("B40 — fx.css", () => {
           !isReduced(rule) &&
           rule.selectors.some((s) => {
             const n = normSelector(s);
-            return n.includes(`.fx-${kind}`) || n.includes(`[data-fx=${kind}]`) || /^\.fx-dom\s*>?\s*\*/.test(n);
+            return n.includes(`.fx-${kind}`) || n.includes(`[data-fx=${kind}]`) || startsFxDom(n);
           }),
       );
       const values = rules.flatMap((rule) =>

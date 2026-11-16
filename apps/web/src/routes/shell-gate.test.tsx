@@ -314,7 +314,7 @@ describe("B40 the gate's error panel", () => {
 describe("R193 an emailed link that lands anywhere but /login", () => {
   function unsignedJwt(payload: Record<string, unknown>): string {
     const part = (value: unknown): string =>
-      btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
     return `${part({ alg: "HS256" })}.${part(payload)}.unsigned`;
   }
 
@@ -634,7 +634,7 @@ describe("the landing page's corner while a sleeping server wakes", () => {
 describe("the code screen when the device moves to another account", () => {
   function tokenFor(sub: string): string {
     const part = (value: unknown): string =>
-      btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
     return `${part({ alg: "HS256" })}.${part({ sub })}.sig`;
   }
 

@@ -14,6 +14,40 @@ import zhCN from "./i18n/zh-CN.json";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * `text` with each `{placeholder}` (no `}` inside counts) blanked, as `/\{[^}]+\}/g` with `" "` does
+ * (#4009: the class rescans a brace run from every position).
+ */
+function stripPlaceholders(text: string): string {
+  let out = "";
+  let at = 0;
+  for (;;) {
+    const open = text.indexOf("{", at);
+    if (open === -1) return out + text.slice(at);
+    const close = text.indexOf("}", open + 1);
+    if (close === -1) return out + text.slice(at);
+    if (close === open + 1) {
+      out += text.slice(at, open + 1);
+      at = open + 1;
+    } else {
+      out += `${text.slice(at, open)} `;
+      at = close + 1;
+    }
+  }
+}
+
+/**
+ * `word` without its edge non-alphanumerics, as `/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g` cuts them (#4009:
+ * the edge classes rescan from every position).
+ */
+function trimWord(word: string): string {
+  let start = 0;
+  while (start < word.length && !/[a-zA-Z0-9]/.test(word.charAt(start))) start++;
+  let end = word.length;
+  while (end > start && !/[a-zA-Z0-9]/.test(word.charAt(end - 1))) end--;
+  return word.slice(start, end);
+}
+
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
@@ -149,7 +183,7 @@ describe("WRITING.md the client's words for players", () => {
   it("R3230000 no label has a capital past its first word outside the allowlist", () => {
     const hits: { key: string; flagged: string[] }[] = [];
     for (const key of Object.keys(zhCN)) {
-      const words = key.replace(/\{[^}]+\}/g, " ").trim().split(/\s+/).filter(Boolean);
+      const words = stripPlaceholders(key).trim().split(/\s+/).filter(Boolean);
       if (words.length >= 2 && words.length <= 6 && !/[.?!]/.test(key) && !key.includes("\n")) {
         const flagged = strayCapitals(key);
         if (flagged.length > 0) {
@@ -243,7 +277,7 @@ const ALLOWED_WORDS = new Set<string>([
 ]);
 
 export function strayCapitals(text: string): string[] {
-  let stripped = text.replace(/\{[^}]+\}/g, " ");
+  let stripped = stripPlaceholders(text);
 
   for (const phrase of PHRASES_TO_REMOVE) {
     if (stripped.includes(phrase)) {
@@ -260,7 +294,7 @@ export function strayCapitals(text: string): string[] {
     for (const raw of laterWords) {
       const subwords = raw.split("-");
       for (const sub of subwords) {
-        const word = sub.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "");
+        const word = trimWord(sub);
         if (!word || !/^[A-Z]/.test(word)) continue;
         if (/^[A-Z0-9+/]+$/.test(word)) continue;
         if (word.length === 1) continue;

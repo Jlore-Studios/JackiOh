@@ -43,14 +43,44 @@ function shadowsOf(list: string): string[] {
   return out;
 }
 
+/**
+ * A keyframes body's `0% { … }` steps (#4009: `/([0-9]+%)\s*\{([^}]*)\}/g` rescans a digit run from
+ * every position).
+ */
+function keyframeSteps(body: string): [string, string][] {
+  const out: [string, string][] = [];
+  let at = 0;
+  while (at < body.length) {
+    const percent = body.indexOf("%", at);
+    if (percent === -1) return out;
+    let start = percent;
+    while (start > 0 && /[0-9]/.test(body.charAt(start - 1))) start--;
+    if (start === percent) {
+      at = percent + 1;
+      continue;
+    }
+    let i = percent + 1;
+    while (i < body.length && /\s/.test(body.charAt(i))) i++;
+    if (body.charAt(i) !== "{") {
+      at = percent + 1;
+      continue;
+    }
+    const close = body.indexOf("}", i + 1);
+    if (close === -1) return out;
+    out.push([body.slice(start, percent + 1), body.slice(i + 1, close)]);
+    at = close + 1;
+  }
+  return out;
+}
+
 const RIM = ':root:not([data-reduce-motion="true"]) .card-hand:has(.cf[data-rarity="Mythic"])::after';
 
 describe("R3351000 a Mythic's hand shimmer paints to one extent (cards.css)", () => {
   it("R3351000 the loop moves the rim's opacity and nothing else, so no step can change what it paints", () => {
     const body = blockOf("@keyframes cf-mythic-hand-shimmer");
-    const steps = [...body.matchAll(/([0-9]+%)\s*\{([^}]*)\}/g)].map((m) => ({
-      at: m[1] ?? "",
-      properties: (m[2] ?? "").split(";").map((declaration) => declaration.split(":")[0]?.trim() ?? "").filter((name) => name !== ""),
+    const steps = keyframeSteps(body).map(([at, declarations]) => ({
+      at,
+      properties: declarations.split(";").map((declaration) => declaration.split(":")[0]?.trim() ?? "").filter((name) => name !== ""),
     }));
     expect(steps.map((step) => step.at)).toEqual(["0%", "100%"]);
     for (const step of steps) expect(step.properties, step.at).toEqual(["opacity"]);
@@ -58,7 +88,8 @@ describe("R3351000 a Mythic's hand shimmer paints to one extent (cards.css)", ()
 
   it("R3351000 the rim is inset, so it paints inside the card's box at every step, in the colours and sizes R3345000 drew", () => {
     const rim = blockOf(RIM);
-    const list = /box-shadow:\s*([^;]+);/.exec(rim)?.[1] ?? "";
+    // No `\s*` before the capture (#4009): it trades characters with `[^;]+` super-linearly.
+    const list = (/box-shadow:([^;]+);/.exec(rim)?.[1] ?? "").trimStart();
     expect(shadowsOf(list)).toEqual([
       "inset 0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent)",
       "inset 0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent)",

@@ -42,9 +42,20 @@ export function cooldownWords(turns: number): string {
     : t("cooling down: {count} more turns", { count: String(turns) });
 }
 
+/** `text` without its trailing spaces and full stops (#4009: `/[\s.。]+$/` scans super-linearly). */
+function stripTrailingStops(text: string): string {
+  let end = text.length;
+  while (end > 0) {
+    const char = text.charAt(end - 1);
+    if (char !== "." && char !== "。" && !/\s/.test(char)) break;
+    end--;
+  }
+  return text.slice(0, end);
+}
+
 /** The words as one sentence, ending in a single full stop however the label ended ("。" for a Chinese reader). */
 function sentence(text: string): string {
-  return `${text.replace(/[\s.。]+$/, "")}${t(".")}`;
+  return `${stripTrailingStops(text)}${t(".")}`;
 }
 
 function capitalised(text: string): string {

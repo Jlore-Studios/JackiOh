@@ -55,9 +55,24 @@ function artDocument(id: string, motion: ArtMotion | null): { text: string; doc:
   return { text, doc: new DOMParser().parseFromString(text, "image/svg+xml") };
 }
 
-/** The properties a keyframes text sets. */
+/**
+ * The properties a keyframes text sets, as `/([a-z-]+)\s*:/gu` names them (#4009: the name plus
+ * optional whitespace before `:` scans super-linearly on long runs).
+ */
 function properties(keyframes: string): string[] {
-  return [...keyframes.matchAll(/([a-z-]+)\s*:/gu)].map((match) => match[1] ?? "");
+  const names: string[] = [];
+  let at = 0;
+  while (at < keyframes.length) {
+    const colon = keyframes.indexOf(":", at);
+    if (colon === -1) return names;
+    let start = colon;
+    while (start > 0 && /\s/.test(keyframes.charAt(start - 1))) start--;
+    let name = start;
+    while (name > 0 && /[a-z-]/.test(keyframes.charAt(name - 1))) name--;
+    if (name < start) names.push(keyframes.slice(name, start));
+    at = colon + 1;
+  }
+  return names;
 }
 
 describe("R2715001 the full-art cards' moving art", () => {
