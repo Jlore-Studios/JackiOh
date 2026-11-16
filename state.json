@@ -17544,12 +17544,9 @@
     "what": "review #4074 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-16T08:48:03Z",
+    "at": "2026-11-16T08:58:03Z",
     "notes": [
-      "delivered build #4009 on muse (run 43826171974): built",
-      "started review #4074 on muse (run 43834536397)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "#4074: `rust (classify)` red in CI run 43834336137; its other early jobs have until 2026-11-16T09:01:09Z to report"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18253,7 +18250,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T08:48:03Z",
+  "loop_tick": "2026-11-16T08:58:03Z",
   "machine_disk": {
     "issue": null,
     "reading": {
