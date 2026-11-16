@@ -16642,6 +16642,7 @@
     "4039": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16666,7 +16667,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "queued_at": "2026-11-16T01:50:31Z",
+      "queued_at": "2026-11-16T04:00:30Z",
       "requested_by": "squishy-squooby",
       "run_id": "43793236170",
       "runs_on": "ubuntu-latest",
