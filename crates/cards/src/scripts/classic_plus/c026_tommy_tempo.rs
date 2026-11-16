@@ -2,8 +2,8 @@
 //! that cast ends your turn (Radiant: after {actions} more action, R415). No open zone: to the hand
 //! uncast (R560). "Cry: Lose all your mana. Gain +{per} Health per mana lost" (#831, issue #3996): played
 //! or cast on draw (R1), it loses the mana left once its price is paid, all of it on a free cast, and
-//! gains that much Health times `per` (R831010; Radiant +2 a mana). Through v0.6.5 it gained
-//! +{per}/+{per} a mana, which `script_v0_6_5` keeps for those replays (R767000, R3996202).
+//! gains that much Health times `per` (R831010; Radiant +2 a mana). Through v0.6.5b it gained
+//! +{per}/+{per} a mana, which `script_v0_6_5b` keeps for those replays (R767000, R3996202).
 
 use jackioh_engine::effects::{buff, gain_mana};
 use jackioh_engine::prelude::*;
@@ -11,7 +11,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classicplus-026";
 
 /// The Cry: the mana left once the play's price is paid, on a cast on draw too (R831010), lost for
-/// `per` Health a mana (R3996202); `attack` also gives as much Attack, as the Cry did through v0.6.5.
+/// `per` Health a mana (R3996202); `attack` also gives as much Attack, as the Cry did through v0.6.5b.
 fn tempo(ctx: &EffectContext<'_>, attack: bool) -> Vec<Effect> {
     let lost = unspent_mana_of(&*ctx.state, ctx.controller);
     if lost <= 0 {
@@ -29,7 +29,7 @@ fn cast_on_draw(ctx: &EffectContext<'_>) -> bool {
     ctx.self_.as_ref().is_some_and(|me| is_cast_on_draw(&*ctx.state, me))
 }
 
-/// `attack`: the Cry also gives Attack, as it did through v0.6.5.
+/// `attack`: the Cry also gives Attack, as it did through v0.6.5b.
 fn tommy(attack: bool) -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
@@ -68,9 +68,9 @@ pub fn script() -> CardScripts {
     tommy(false)
 }
 
-/// R767000: through v0.6.5 the Cry gave +{per}/+{per} a mana lost (issue #3996, R3996202);
+/// R767000: through v0.6.5b the Cry gave +{per}/+{per} a mana lost (issue #3996, R3996202);
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     tommy(true)
 }
 
@@ -500,10 +500,10 @@ mod tests {
             }
         }
 
-        /// R767000, R3996202: through v0.6.5 the Cry gave +{per}/+{per} a mana lost, on both faces.
+        /// R767000, R3996202: through v0.6.5b the Cry gave +{per}/+{per} a mana lost, on both faces.
         #[test]
-        fn r767000_r3996202_the_script_kept_for_v0_6_5_gains_attack_and_health_for_each_mana_lost() {
-            crate::under_kept(TOMMY, script_v0_6_5(), || {
+        fn r767000_r3996202_the_script_kept_for_v0_6_5b_gains_attack_and_health_for_each_mana_lost() {
+            crate::under_kept(TOMMY, script_v0_6_5b(), || {
                 for (radiant, grown) in [(false, 5), (true, 10)] {
                     let mut s = scenario(json!({
                         "p1": { "hand": [{ "def": TOMMY, "radiant": radiant }, FILLER], "library": DECK },

@@ -4,14 +4,14 @@
 //! Radiant: "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand." — 3.
 //! Engine: the `chinese` rider (ME-CN) is set before the card moves, as the Radiant rider is, so a
 //! card the hand cap burns is Chinese in its graveyard too. The pool never holds this card (R387),
-//! and R673 applies. As the designer asked, the printed text never says Chinese. Through v0.6.5 each
-//! card also cost ({discount}) less, which `script_v0_6_5` keeps for those replays (R767000).
+//! and R673 applies. As the designer asked, the printed text never says Chinese. Through v0.6.5b each
+//! card also cost ({discount}) less, which `script_v0_6_5b` keeps for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-033";
 
-/// `discounted`: each card also costs `discount` less, as through v0.6.5.
+/// `discounted`: each card also costs `discount` less, as through v0.6.5b.
 fn first_day(radiant: bool, discounted: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -38,9 +38,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.6.5 each card it added cost ({discount}) less (issue #3996); `KEPT_SCRIPTS` folds
+/// R767000: through v0.6.5b each card it added cost ({discount}) less (issue #3996); `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     let base = first_day(false, true);
     let radiant = first_day(true, true);
     CardScripts { base, radiant }
@@ -151,17 +151,17 @@ mod tests {
                 assert_eq!(new_cards[0].cost_mod, 0);
             }
 
-            /// R767000: through v0.6.5 it added two, each costing ({discount}) less (issue #3996): the
-            /// kept script under v0.6.5's numbers.
+            /// R767000: through v0.6.5b it added two, each costing ({discount}) less (issue #3996): the
+            /// kept script under v0.6.5b's numbers.
             #[test]
-            fn r767000_the_script_kept_for_v0_6_5_discounts_each_card_it_adds() {
+            fn r767000_the_script_kept_for_v0_6_5b_discounts_each_card_it_adds() {
                 let old = |def: &mut CardDef| {
                     def.params = json_as(json!([
                         { "key": "cards", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 },
                         { "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 },
                     ]));
                 };
-                crate::under_kept_as(FIRST_DAY, script_v0_6_5(), old, || {
+                crate::under_kept_as(FIRST_DAY, script_v0_6_5b(), old, || {
                     for radiant in [false, true] {
                         let mut s = casting("first-day-kept", radiant);
                         let before = s.hand(P1).len();

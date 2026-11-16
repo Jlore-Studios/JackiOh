@@ -17,9 +17,9 @@
 //! Flying Unit of either side — it loses Flying (`lose_keyword`, kept through every zone) then
 //! takes the declared damage (R3567004); Iron Mandate fuses Yates into a declared friendly Unit,
 //! kept, with no Cry run (R3567002). "Activate N" is N uses a turn (R384, R1857003).
-//! Through v0.6.5 the Cry exiled every card named with M, O, U, S or E (`exile_named`, R3567000)
+//! Through v0.6.5b the Cry exiled every card named with M, O, U, S or E (`exile_named`, R3567000)
 //! and remembered the one Activate chosen at play, the only one Yates then had (R3567002);
-//! `script_v0_6_5` keeps that for those replays (R767000).
+//! `script_v0_6_5b` keeps that for those replays (R767000).
 //!
 //! *{Spawn voiceline: Every pack needs an alpha I don't see anyone else stepping up}*
 //! *{Attack voiceline: a mouse once bit my sister}*
@@ -32,13 +32,13 @@ use crate::query::TRAP_TYPES;
 
 pub const ID: &str = "stinkyscapeplus-004";
 
-/// Through v0.6.5, the exile's letters: a card whose name holds M, O, U, S or E, in either case.
+/// Through v0.6.5b, the exile's letters: a card whose name holds M, O, U, S or E, in either case.
 const MOUSE: &str = "MOUSE";
-/// The three Activates, in the order the card prints them; through v0.6.5 the Cry's modes too (R81).
+/// The three Activates, in the order the card prints them; through v0.6.5b the Cry's modes too (R81).
 const OVERWHELM: &str = "overwhelm";
 const WOLFS_MAW: &str = "wolfsMaw";
 const IRON_MANDATE: &str = "ironMandate";
-/// Through v0.6.5, what the Cry remembered: the chosen Activate, kept while Yates stays (R78).
+/// Through v0.6.5b, what the Cry remembered: the chosen Activate, kept while Yates stays (R78).
 const CHOSEN_KEY: &str = "yatesActivate";
 /// §6.2 Activate N, the script's literal, as S+ #11's (`ActivationUses` has no param); matches the declared `overwhelm`/`wolf`/`iron`.
 const OVERWHELM_USES: i32 = 1;
@@ -72,7 +72,7 @@ fn overwhelm_cards(ctx: &mut EffectContext<'_>) -> Vec<String> {
         .collect()
 }
 
-/// R3567002: through v0.6.5, an Activate Yates had only when the Cry remembered `mode`.
+/// R3567002: through v0.6.5b, an Activate Yates had only when the Cry remembered `mode`.
 fn chosen(mode: &'static str, chosen_only: bool) -> Option<HasHook> {
     chosen_only.then(|| read_hook(move |args| args.self_.memory.get(CHOSEN_KEY).and_then(Value::as_str) == Some(mode)))
 }
@@ -206,8 +206,8 @@ fn yates(radiant: bool) -> Script {
     }
 }
 
-/// R3567000, R3567002: through v0.6.5, the named exile, the traps, and the one Activate chosen at play.
-fn yates_v0_6_5(radiant: bool) -> Script {
+/// R3567000, R3567002: through v0.6.5b, the named exile, the traps, and the one Activate chosen at play.
+fn yates_v0_6_5b(radiant: bool) -> Script {
     Script {
         modes: vec![ModeDecl {
             kind: PromptKind::Mode,
@@ -248,12 +248,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.5, the named exile and one chosen Activate; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.6.5b, the named exile and one chosen Activate; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: yates_v0_6_5(false),
-        radiant: yates_v0_6_5(true),
+        base: yates_v0_6_5b(false),
+        radiant: yates_v0_6_5b(true),
     }
 }
 
@@ -729,9 +729,9 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.5 and before: the named exile and the one
+    /// R767000: the script kept for the replays of v0.6.5b and before: the named exile and the one
     /// Activate chosen at play.
-    mod v0_6_5 {
+    mod v0_6_5b {
         use super::*;
 
         /// Yates in hand under the kept script, both sides holding named, unnamed and CN cards.
@@ -754,7 +754,7 @@ mod tests {
 
         #[test]
         fn r3567000_r767000_the_cry_exiles_named_cards_and_spares_cn_unnamed_and_itself() {
-            crate::under_kept(ID, script_v0_6_5(), || {
+            crate::under_kept(ID, script_v0_6_5b(), || {
                 let mut s = kept_unplayed("s004-exile", false);
                 s.play(ID, json!({ "zone": 1, "modes": [OVERWHELM] }));
                 // The unnamed Rapid Draw stays in both hands, the CN-tagged Peptides in its...
@@ -788,7 +788,7 @@ mod tests {
 
         #[test]
         fn r3567002_r767000_only_the_chosen_activate_is_listed() {
-            crate::under_kept(ID, script_v0_6_5(), || {
+            crate::under_kept(ID, script_v0_6_5b(), || {
                 for radiant in [false, true] {
                     // The AI is offered a play for each mode...
                     let s = kept_unplayed("s004-modes", radiant);

@@ -1,4 +1,4 @@
-//! M #56 House Party (SPEC §8.8 row 56): (3) Spell, Common ((4) after v0.4.0f through v0.6.5).
+//! M #56 House Party (SPEC §8.8 row 56): (3) Spell, Common ((4) after v0.4.0f through v0.6.5b).
 //!   Base:    "Fill your board with Right-house defenders. They have Brittle {brittle}, and so do their
 //!            Reborn copies." — 1
 //!   Radiant: "Fill your board with Radiant Right-house defenders. They have Brittle {brittle}, and so do
@@ -8,8 +8,8 @@
 //!   (R3996100) gives each defender Brittle {brittle}, the declared number read as it resolves, its turn
 //!   cycle started as it lands (R385, R638), and the body its Reborn returns the same Brittle again, a
 //!   crumble's spent count included (R441); the base defender a Radiant one's Death summons is a new
-//!   card, no Reborn copy, and has none. Through v0.6.5 the defenders had no Brittle (issue #3996):
-//!   `script_v0_6_5` keeps that fill (R767000).
+//!   card, no Reborn copy, and has none. Through v0.6.5b the defenders had no Brittle (issue #3996):
+//!   `script_v0_6_5b` keeps that fill (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -41,9 +41,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.5 and every version before it ran, the defenders with no Brittle (issue
+/// R767000: the scripts v0.6.5b and every version before it ran, the defenders with no Brittle (issue
 /// #3996). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
         base: party(false, false),
         radiant: party(true, false),
@@ -161,10 +161,10 @@ mod tests {
             assert_eq!(brittle(&s, &copy), Some(1));
         }
 
-        /// R767000: through v0.6.5 the defenders had no Brittle (issue #3996).
+        /// R767000: through v0.6.5b the defenders had no Brittle (issue #3996).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_5_fills_the_board_with_defenders_without_brittle() {
-            crate::under_kept(super::super::ID, super::super::script_v0_6_5(), || {
+        fn r767000_the_script_kept_for_v0_6_5b_fills_the_board_with_defenders_without_brittle() {
+            crate::under_kept(super::super::ID, super::super::script_v0_6_5b(), || {
                 for radiant in [false, true] {
                     let s = partied(radiant);
                     for defender in row(&s) {

@@ -12,8 +12,8 @@
 //! (the leftmost open unit zone, else the leftmost empty Locked one, R688; a Flying Unit with its unit row
 //! full, the backrow, R2248000) and makes one forced attack on that Unit (R53), so it has no summoning
 //! sickness; the Activate is offered while it has a zone to enter and an enemy Unit stands (R430). The
-//! Radiant face summons the Radiant Drone Interceptor. Through v0.6.5 it was "Activate 2", twice a turn
-//! with no cooldown; `script_v0_6_5` keeps it for those replays (R767000).
+//! Radiant face summons the Radiant Drone Interceptor. Through v0.6.5b it was "Activate 2", twice a turn
+//! with no cooldown; `script_v0_6_5b` keeps it for those replays (R767000).
 
 use jackioh_engine::effects::{forced_attacks, summon};
 use jackioh_engine::prelude::*;
@@ -22,8 +22,8 @@ pub const ID: &str = "stinkyscapeplus-009";
 
 /// "Activate": 1 use a turn (R384, R1857003).
 const USES: i32 = 1;
-/// Through v0.6.5, "Activate 2": 2 uses a turn.
-const USES_V0_6_5: i32 = 2;
+/// Through v0.6.5b, "Activate 2": 2 uses a turn.
+const USES_V0_6_5B: i32 = 2;
 
 /// The Drone Interceptor token (S §8.10 T-drone-interceptor).
 const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
@@ -85,11 +85,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.5, twice a turn with no cooldown; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+/// R767000: through v0.6.5b, twice a turn with no cooldown; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: assemble(false, USES_V0_6_5, false),
-        radiant: assemble(true, USES_V0_6_5, false),
+        base: assemble(false, USES_V0_6_5B, false),
+        radiant: assemble(true, USES_V0_6_5B, false),
     }
 }
 
@@ -269,17 +269,17 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_5_is_used_twice_a_turn_with_no_cooldown() {
-            crate::under_kept(ID, script_v0_6_5(), || {
+        fn r767000_the_script_kept_for_v0_6_5b_is_used_twice_a_turn_with_no_cooldown() {
+            crate::under_kept(ID, script_v0_6_5b(), || {
                 let mut s = assembler(false, json!({ "field": [TOUGH] }));
                 let target = s.unit_at(P2, 1).id;
-                for _ in 0..USES_V0_6_5 {
+                for _ in 0..USES_V0_6_5B {
                     assert_eq!(activations(&s), 1);
                     s.activate(ID, at(&target));
                 }
                 assert_eq!(activations(&s), 0);
                 s.expect_refused_with(|s| s.activate(ID, at(&target)), "used 2 times");
-                assert_eq!(drones_on_field(&s), USES_V0_6_5 as usize);
+                assert_eq!(drones_on_field(&s), USES_V0_6_5B as usize);
                 // No cooldown: its user's next turn has its uses back.
                 next_turn_of(&mut s, P1);
                 assert_eq!(activations(&s), 1);

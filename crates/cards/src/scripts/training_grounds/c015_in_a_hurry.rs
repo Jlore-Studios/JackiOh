@@ -4,8 +4,8 @@
 //!   Radiant: "Fill your board with Radiant Rush Tokens. At the end of this turn, destroy them."
 //! "Fill your board" is one summon per unit zone, C+ #46.1's fill: each takes the leftmost open zone
 //! (R64), else a Locked one (R688, R1136000), and fizzles once none is left (§3.2), each remembered
-//! (rememberAs, R1126; §4.2, §7). Through v0.6.5 it summoned the declared `tokens`, 4 (issue #3996),
-//! which `script_v0_6_5` keeps for those replays (R767000).
+//! (rememberAs, R1126; §4.2, §7). Through v0.6.5b it summoned the declared `tokens`, 4 (issue #3996),
+//! which `script_v0_6_5b` keeps for those replays (R767000).
 //! End-of-turn delay destroys at §2.2 (R2198002, R350; off field forgotten, R11, R174; stolen still destroyed; END_OF_TURN_MARK, R437, R2321001; TG6 row 10).
 
 use jackioh_engine::prelude::*;
@@ -30,7 +30,7 @@ fn summoned(ctx: &mut EffectContext<'_>, tokens: i32) -> Vec<String> {
         .collect()
 }
 
-/// `fill`: one Rush Token per unit zone; else, as through v0.6.5, the declared `tokens`.
+/// `fill`: one Rush Token per unit zone; else, as through v0.6.5b, the declared `tokens`.
 fn hurry(fill: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -73,9 +73,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.5 and every version before it ran, summoning the declared `tokens` (issue
+/// R767000: the scripts v0.6.5b and every version before it ran, summoning the declared `tokens` (issue
 /// #3996). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
         base: hurry(false),
         radiant: hurry(false),
@@ -88,7 +88,7 @@ mod tests {
     use jackioh_engine::effects::{END_OF_TURN_MARK, END_OF_TURN_MARK_COLOR};
     use jackioh_engine::testkit::*;
 
-    use super::script_v0_6_5;
+    use super::script_v0_6_5b;
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -387,17 +387,17 @@ mod tests {
             );
         }
 
-        /// R767000: through v0.6.5 it summoned the declared `tokens`, 4 on both faces (issue #3996).
+        /// R767000: through v0.6.5b it summoned the declared `tokens`, 4 on both faces (issue #3996).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_5_summons_the_declared_four() {
+        fn r767000_the_script_kept_for_v0_6_5b_summons_the_declared_four() {
             crate::under_kept_as(
                 HURRY,
-                script_v0_6_5(),
+                script_v0_6_5b(),
                 |def| {
                     def.params = serde_json::from_value(json!([
                         { "key": "tokens", "base": 4, "radiant": 4, "better": "up", "step": 1, "min": 1 }
                     ]))
-                    .expect("the v0.6.5 params");
+                    .expect("the v0.6.5b params");
                 },
                 || {
                     for radiant in [false, true] {

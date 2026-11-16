@@ -13,8 +13,8 @@
 //! leftmost empty Locked one, R688; a Flying Unit with its unit row full, the backrow, R2248000) and makes
 //! one forced attack on that Unit (R53), so it has no summoning sickness; the Activate is offered while it
 //! has a zone to enter and an enemy Unit stands (R430). The Radiant face summons the Radiant Drone
-//! Interceptor. Through v0.6.5 it was "Activate: Summon a Drone Corvette to attack an enemy", once a turn
-//! with no cooldown; `script_v0_6_5` keeps it for those replays (R767000).
+//! Interceptor. Through v0.6.5b it was "Activate: Summon a Drone Corvette to attack an enemy", once a turn
+//! with no cooldown; `script_v0_6_5b` keeps it for those replays (R767000).
 
 use jackioh_engine::effects::{forced_attacks, summon};
 use jackioh_engine::prelude::*;
@@ -23,12 +23,12 @@ pub const ID: &str = "stinkyscapeplus-010";
 
 /// "Activate 2": 2 uses a turn (R384, R1857003).
 const USES: i32 = 2;
-/// Through v0.6.5, "Activate": 1 use a turn.
-const USES_V0_6_5: i32 = 1;
+/// Through v0.6.5b, "Activate": 1 use a turn.
+const USES_V0_6_5B: i32 = 1;
 
 /// The Drone Interceptor token (S §8.10 T-drone-interceptor), and its name for the Activate's label.
 const INTERCEPTOR: (&str, &str) = ("stinkyscape-t-drone-interceptor", "Drone Interceptor");
-/// The Drone Corvette token (S §8.10 T-drone-corvette), what it summoned through v0.6.5.
+/// The Drone Corvette token (S §8.10 T-drone-corvette), what it summoned through v0.6.5b.
 const CORVETTE: (&str, &str) = ("stinkyscape-t-drone-corvette", "Drone Corvette");
 
 /// R3537001: whether the drone has a zone to enter, as a summon with no named zone finds it
@@ -88,12 +88,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.5, a Drone Corvette once a turn with no cooldown; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.6.5b, a Drone Corvette once a turn with no cooldown; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: assemble(false, CORVETTE, USES_V0_6_5, false),
-        radiant: assemble(true, CORVETTE, USES_V0_6_5, false),
+        base: assemble(false, CORVETTE, USES_V0_6_5B, false),
+        radiant: assemble(true, CORVETTE, USES_V0_6_5B, false),
     }
 }
 
@@ -116,7 +116,7 @@ mod tests {
     const DRONE_ATTACK: i32 = 2;
     const RADIANT_DRONE_ATTACK: i32 = 4;
     const DRONE_HEALTH: i32 = 2;
-    /// What it summoned through v0.6.5, and that drone's attack.
+    /// What it summoned through v0.6.5b, and that drone's attack.
     const KEPT_DRONE: &str = CORVETTE.0;
     const KEPT_DRONE_ATTACK: i32 = 8;
 
@@ -290,8 +290,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_5_summons_a_corvette_once_a_turn_with_no_cooldown() {
-            crate::under_kept(ID, script_v0_6_5(), || {
+        fn r767000_the_script_kept_for_v0_6_5b_summons_a_corvette_once_a_turn_with_no_cooldown() {
+            crate::under_kept(ID, script_v0_6_5b(), || {
                 let mut s = assembler(false, json!({ "field": [TOUGH] }));
                 let target = s.unit_at(P2, 1).id;
                 s.activate(ID, at(&target));

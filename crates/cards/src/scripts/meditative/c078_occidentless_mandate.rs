@@ -9,10 +9,10 @@
 //!   Stack is not on the field (R13); a Unit immune to Spells is spared (B5 E35, MD-B1, R940).
 //! - **Tribal hate** (R1424): "non-CN" picks cards by lacking a tribal tag, and a card in Chinese has
 //!   it (R1176000).
-//! - **Kept for replays** (R767000): through v0.6.5 both faces exiled both sides and added a random CN
+//! - **Kept for replays** (R767000): through v0.6.5b both faces exiled both sides and added a random CN
 //!   card to their caster's hand for each of the caster's permanents exiled, counted first with the
 //!   exile's own scope (R1142, Frozen Wastes' pattern, C+ #12.6), the Radiant face's Radiant and
-//!   costing (`discount`) less (issue #3996); `script_v0_6_5` keeps that.
+//!   costing (`discount`) less (issue #3996); `script_v0_6_5b` keeps that.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -39,16 +39,16 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.5 and every version before it ran: both sides exiled, and a random CN card
+/// R767000: the scripts v0.6.5b and every version before it ran: both sides exiled, and a random CN card
 /// for each of the caster's permanents exiled (issue #3996). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: mandate_v0_6_5(false),
-        radiant: mandate_v0_6_5(true),
+        base: mandate_v0_6_5b(false),
+        radiant: mandate_v0_6_5b(true),
     }
 }
 
-fn mandate_v0_6_5(radiant: bool) -> Script {
+fn mandate_v0_6_5b(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let scope = non_cn_permanents("any");
@@ -76,7 +76,7 @@ fn mandate_v0_6_5(radiant: bool) -> Script {
 // M #78 Occidentless Mandate — SPEC §8.8 row 78, BUILD M10 row M 78.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script_v0_6_5};
+    use super::{ID, script_v0_6_5b};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -121,17 +121,17 @@ mod tests {
         out
     }
 
-    /// R767000: `run` under the script kept for v0.6.5, with the `discount` the card declared then (2, tuned
+    /// R767000: `run` under the script kept for v0.6.5b, with the `discount` the card declared then (2, tuned
     /// on its Radiant face).
     fn kept<T>(run: impl FnOnce() -> T) -> T {
         crate::under_kept_as(
             ID,
-            script_v0_6_5(),
+            script_v0_6_5b(),
             |def| {
                 def.params = serde_json::from_value(json!([
                     { "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }
                 ]))
-                .expect("the v0.6.5 params");
+                .expect("the v0.6.5b params");
             },
             run,
         )
@@ -249,9 +249,9 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.6.5 both faces exiled both sides and added a random CN card for each of the
+        /// R767000: through v0.6.5b both faces exiled both sides and added a random CN card for each of the
         /// caster's permanents exiled, the Radiant face's Radiant and (2) cheaper (issue #3996).
-        mod kept_for_v0_6_5 {
+        mod kept_for_v0_6_5b {
             use super::*;
 
             #[test]

@@ -11,8 +11,8 @@
 //!            The Cry (a Field Spell's, as Core #73's, run as it is played, R1) and the Activate (R384,
 //!            once a turn, its controller's alone, no cost) are each one `add_to_hand` of Meditative #39.1
 //!            Auspicious Rock, Radiant on the Radiant face as every other Rock source has it (M #39, #43,
-//!            #44), and the Feng Shui stays. It declares no number. Through v0.6.5 it had no Cry (issue
-//!            #3996), which `script_v0_6_5` keeps for those replays (R767000).
+//!            #44), and the Feng Shui stays. It declares no number. Through v0.6.5b it had no Cry (issue
+//!            #3996), which `script_v0_6_5b` keeps for those replays (R767000).
 //!   Luck:    through v0.5.11r the card also read "You have Luck {luck}" (ME-LUCK, R987), the `luck` static
 //!            flag and its tuned param; no card gives Luck now (R3140000), the engine keeping `luck_of`,
 //!            the flag and its fixture (`script_v0_5_11o`, R767000).
@@ -85,8 +85,8 @@ fn add_rock(radiant: bool) -> Effect {
     add_to_hand(json_as(json!({ "defId": ROCK, "radiant": radiant })))
 }
 
-/// The judge and the Activate, as v0.6.5 had them.
-fn face_v0_6_5(radiant: bool) -> Script {
+/// The judge and the Activate, as v0.6.5b had them.
+fn face_v0_6_5b(radiant: bool) -> Script {
     Script {
         activations: vec![rock(radiant)],
         ..judge()
@@ -97,7 +97,7 @@ fn face_v0_6_5(radiant: bool) -> Script {
 fn face(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| vec![add_rock(radiant)])),
-        ..face_v0_6_5(radiant)
+        ..face_v0_6_5b(radiant)
     }
 }
 
@@ -108,12 +108,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.12 to v0.6.5 ran, the Activate with no Cry (issue #3996); `KEPT_SCRIPTS`
+/// R767000: the scripts v0.5.12 to v0.6.5b ran, the Activate with no Cry (issue #3996); `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: face_v0_6_5(false),
-        radiant: face_v0_6_5(true),
+        base: face_v0_6_5b(false),
+        radiant: face_v0_6_5b(true),
     }
 }
 
@@ -776,10 +776,10 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.6.5 it had no Cry (issue #3996): played, it adds no Rock until it is activated.
+    /// R767000: through v0.6.5b it had no Cry (issue #3996): played, it adds no Rock until it is activated.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_5_adds_no_rock_as_it_is_played() {
-        crate::under_kept(ID, super::script_v0_6_5(), || {
+    fn r767000_the_script_kept_for_v0_6_5b_adds_no_rock_as_it_is_played() {
+        crate::under_kept(ID, super::script_v0_6_5b(), || {
             for radiant in [false, true] {
                 let mut s = played("meditative-040-kept", radiant);
                 assert!(rocks_of(&s, P1).is_empty(), "radiant {radiant}");

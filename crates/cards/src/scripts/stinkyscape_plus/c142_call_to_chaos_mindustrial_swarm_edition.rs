@@ -9,7 +9,7 @@
 //!            and a Swarm Golem; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!   Issue #3996 cut the two strongest entries' declared numbers (R3996200): `card3` 5 → 4 and `burn`
-//!   3 → 2, on both faces; the numbers are catalog data, so a replay of v0.6.5 reads its own.
+//!   3 → 2, on both faces; the numbers are catalog data, so a replay of v0.6.5b reads its own.
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MS_EFFECTS`,
 //! `subsystems/call_to_chaos_mindustrial_swarm.rs`): the roll, the announcement both players read (R436), the

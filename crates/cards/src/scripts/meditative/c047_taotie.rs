@@ -1,5 +1,5 @@
 //! M #47 饕餮 (SPEC §8.8 row 47): (4) Unit, CN, Legendary, 2/2 → 4/4 (0/1 → 0/2 from v0.5.12 through
-//! v0.6.5).
+//! v0.6.5b).
 //!
 //! Base:    "Activate: Fuse a random enemy Unit into this, then Freeze this."
 //! Radiant: "Activate: Fuse a random enemy Unit into this."
@@ -10,9 +10,9 @@
 //! or a Trap, face-up or face-down, and never an Immutable one, R1020). The base face then Freezes 饕餮
 //! (§6.3 Freeze), which costs it its attack this turn, or its next turn and that turn's Activate once it
 //! has attacked (R2246000). The fusion is R77 and R102's: this keeps its instance, zone, damage, Radiant
-//! flag and this turn's use; the eaten card ceases to exist with no Death. Through v0.6.5 it was "End of
+//! flag and this turn's use; the eaten card ceases to exist with no Death. Through v0.6.5b it was "End of
 //! turn: Fuse a random enemy Unit into this." (R62), the Radiant face then also fusing a random card of
-//! the opponent's library (`script_v0_6_5`), and through v0.5.11r the field ingredient was any enemy
+//! the opponent's library (`script_v0_6_5b`), and through v0.5.11r the field ingredient was any enemy
 //! permanent, a Field Spell or a Trap too (`script_v0_5_11o`), both kept for their replays (R767000).
 
 use jackioh_engine::effects::fuse_cards;
@@ -79,7 +79,7 @@ fn devour(freeze_self: bool) -> ActivationDecl {
     }
 }
 
-/// R767000: through v0.6.5, the end of turn's fusion (R62), the Radiant face's second meal from the
+/// R767000: through v0.6.5b, the end of turn's fusion (R62), the Radiant face's second meal from the
 /// opponent's library.
 fn taotie_end_of_turn(radiant: bool, field_ingredient: fn() -> Value) -> Script {
     Script {
@@ -117,9 +117,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.5 an end of turn ate a random enemy Unit, the Radiant face a random card of
+/// R767000: through v0.6.5b an end of turn ate a random enemy Unit, the Radiant face a random card of
 /// the opponent's library too; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
         base: taotie_end_of_turn(false, enemy_unit),
         radiant: taotie_end_of_turn(true, enemy_unit),
@@ -138,7 +138,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 // M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47, R468, R767000, R3996002.
 #[cfg(test)]
 mod tests {
-    use super::{DEVOUR, script_v0_5_11o, script_v0_6_5};
+    use super::{DEVOUR, script_v0_5_11o, script_v0_6_5b};
     use crate::js;
     use jackioh_engine::subsystems::activate::activate_actions_for;
     use jackioh_engine::testkit::*;
@@ -616,14 +616,14 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.6.5 and before, back to v0.5.12: an end of
+        /// R767000: the script kept for the replays of v0.6.5b and before, back to v0.5.12: an end of
         /// turn's fusion, the Radiant face's second meal from the opponent's deck.
-        mod v0_6_5 {
+        mod v0_6_5b {
             use super::*;
 
             #[test]
-            fn r767000_r1020_a_game_on_v0_6_5_eats_at_its_end_of_turn_only_its_own() {
-                crate::under_kept(TAOTIE, script_v0_6_5(), || {
+            fn r767000_r1020_a_game_on_v0_6_5b_eats_at_its_end_of_turn_only_its_own() {
+                crate::under_kept(TAOTIE, script_v0_6_5b(), || {
                     // Its opponent's end of turn eats nothing...
                     let mut s = scenario(json!({
                         "seed": "taotie-kept-their-end",
@@ -646,7 +646,7 @@ mod tests {
 
             #[test]
             fn r767000_r1020_radiant_also_fuses_a_random_card_of_the_opponents_deck() {
-                crate::under_kept(TAOTIE, script_v0_6_5(), || {
+                crate::under_kept(TAOTIE, script_v0_6_5b(), || {
                     let mut s = scenario(json!({
                         "seed": "taotie-radiant-deck",
                         "p1": { "field": [{ "def": TAOTIE, "radiant": true, "lane": 1 }], "library": [FILLER] },
@@ -669,7 +669,7 @@ mod tests {
 
             #[test]
             fn r767000_r23_radiant_never_eats_an_immutable_card_of_the_deck() {
-                crate::under_kept(TAOTIE, script_v0_6_5(), || {
+                crate::under_kept(TAOTIE, script_v0_6_5b(), || {
                     let mut s = scenario(json!({
                         "seed": "taotie-radiant-immutable",
                         "p1": { "field": [{ "def": TAOTIE, "radiant": true, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },

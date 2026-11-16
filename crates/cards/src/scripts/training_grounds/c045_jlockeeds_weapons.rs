@@ -14,7 +14,7 @@
 //! at 4 (Radiant 8), with no First Strike on either face, where Core #14 moved on its own way (issue
 //! #3137, part 3). `script_v0_5_11o` keeps the +3 / +6 aura with Rush and First Strike for the replays of
 //! v0.5.11r and before (R767000). Since issue #3996 it gives no Rush either: "Aura: Your Units have
-//! +{attack} Attack."; `script_v0_6_5` keeps the Rush for the replays of v0.6.5 and before (R767000).
+//! +{attack} Attack."; `script_v0_6_5b` keeps the Rush for the replays of v0.6.5b and before (R767000).
 //!
 //! An aura is §10.4 layer 5, gathered from every permanent in play by `aura_mods` in
 //! `engine/src/layers.rs` and recomputed on every read, so it covers units summoned later (BUILD
@@ -23,7 +23,7 @@
 //!
 //! "Your units": the controller's units in the `units` row or standing in the backrow (R1081000), so the
 //! aura skips its own backrow card and a stolen unit stops matching because `controller` is compared
-//! (R78 resets it on the way out). Rush from this aura, through v0.6.5, is what R83's "a Reborn body the
+//! (R78 resets it on the way out). Rush from this aura, through v0.6.5b, is what R83's "a Reborn body the
 //! board has granted Rush may attack again" refers to.
 
 use jackioh_engine::prelude::*;
@@ -65,9 +65,9 @@ pub fn script() -> CardScripts {
     weapons(vec![])
 }
 
-/// R767000: through v0.6.5 the aura granted Rush (issue #3996), and no First Strike since issue #3139;
+/// R767000: through v0.6.5b the aura granted Rush (issue #3996), and no First Strike since issue #3139;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     weapons(vec![Keyword::Rush])
 }
 
@@ -82,7 +82,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 // Rush since issue #3996; removed via #36 Magic Jammed.
 #[cfg(test)]
 mod tests {
-    use super::{script_v0_5_11o, script_v0_6_5};
+    use super::{script_v0_5_11o, script_v0_6_5b};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -297,10 +297,10 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.6.5 the aura gave Rush too (issue #3996), on both faces.
+    /// R767000: through v0.6.5b the aura gave Rush too (issue #3996), on both faces.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_5_grants_rush_and_no_first_strike() {
-        crate::under_kept("traininggrounds-045", script_v0_6_5(), || {
+    fn r767000_the_script_kept_for_v0_6_5b_grants_rush_and_no_first_strike() {
+        crate::under_kept("traininggrounds-045", script_v0_6_5b(), || {
             for radiant in [false, true] {
                 let mut s = scenario(json!({
                     "p1": {

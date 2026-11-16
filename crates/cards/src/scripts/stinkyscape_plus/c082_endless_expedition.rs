@@ -12,9 +12,9 @@
 //! (`TERMINUS_COST`) whatever it printed (R3569007), a Radiant one on the Radiant face. Quickdraw (R640)
 //! is a static flag beside the tag.
 //!
-//! Kept for replays (R767000): through v0.6.5 the card read "For the rest of the game, lose {mana} mana.
+//! Kept for replays (R767000): through v0.6.5b the card read "For the rest of the game, lose {mana} mana.
 //! Add a random Terminus card to your hand. It costs (2).", `loseMaxMana` lowering its caster's max mana
-//! (R3569008) and one card added (`script_v0_6_5`, issue #3996); through v0.6.4b that card cost (3)
+//! (R3569008) and one card added (`script_v0_6_5b`, issue #3996); through v0.6.4b that card cost (3)
 //! (`script_v0_6_4b`, issue #3951).
 
 use jackioh_engine::effects::for_rest_of_game;
@@ -63,9 +63,9 @@ fn expedition(radiant: bool) -> Script {
     }
 }
 
-/// Through v0.6.5: the caster's max mana lowered by the declared `mana` for the rest of the game
+/// Through v0.6.5b: the caster's max mana lowered by the declared `mana` for the rest of the game
 /// (R3569008), and one card added costing `cost`.
-fn expedition_v0_6_5(radiant: bool, cost: i32) -> Script {
+fn expedition_v0_6_5b(radiant: bool, cost: i32) -> Script {
     Script {
         static_flags: quickdraw(),
         cry: Some(hook(move |ctx| {
@@ -85,12 +85,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts after v0.6.4b through v0.6.5: max mana lowered for the rest of the game and one
+/// R767000: the scripts after v0.6.4b through v0.6.5b: max mana lowered for the rest of the game and one
 /// Terminus card added, costing (2) (issue #3996). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: expedition_v0_6_5(false, TERMINUS_COST),
-        radiant: expedition_v0_6_5(true, TERMINUS_COST),
+        base: expedition_v0_6_5b(false, TERMINUS_COST),
+        radiant: expedition_v0_6_5b(true, TERMINUS_COST),
     }
 }
 
@@ -98,8 +98,8 @@ pub fn script_v0_6_5() -> CardScripts {
 /// those replays under it.
 pub fn script_v0_6_4b() -> CardScripts {
     CardScripts {
-        base: expedition_v0_6_5(false, TERMINUS_COST_V0_6_4B),
-        radiant: expedition_v0_6_5(true, TERMINUS_COST_V0_6_4B),
+        base: expedition_v0_6_5b(false, TERMINUS_COST_V0_6_4B),
+        radiant: expedition_v0_6_5b(true, TERMINUS_COST_V0_6_4B),
     }
 }
 
@@ -157,7 +157,7 @@ mod tests {
         }
     }
 
-    /// R767000: `run` under a kept script, with the `mana` the card declared through v0.6.5 (1, both faces).
+    /// R767000: `run` under a kept script, with the `mana` the card declared through v0.6.5b (1, both faces).
     fn kept<T>(scripts: CardScripts, run: impl FnOnce() -> T) -> T {
         crate::under_kept_as(
             ID,
@@ -166,7 +166,7 @@ mod tests {
                 def.params = serde_json::from_value(json!([
                     { "key": "mana", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }
                 ]))
-                .expect("the v0.6.5 params");
+                .expect("the v0.6.5b params");
             },
             run,
         )
@@ -177,7 +177,7 @@ mod tests {
 
         #[test]
         fn r640_it_is_quickdraw() {
-            for scripts in [script(), script_v0_6_5(), script_v0_6_4b()] {
+            for scripts in [script(), script_v0_6_5b(), script_v0_6_4b()] {
                 assert_eq!(scripts.base.flags().quickdraw, Some(true));
                 assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
             }
@@ -236,11 +236,11 @@ mod tests {
             }
         }
 
-        /// R767000, R3569008: after v0.6.4b through v0.6.5 it lowered its caster's max mana for the rest of
+        /// R767000, R3569008: after v0.6.4b through v0.6.5b it lowered its caster's max mana for the rest of
         /// the game and added one card, costing (2) (issue #3996).
         #[test]
-        fn r767000_r3569008_the_script_kept_for_v0_6_5_lowers_max_mana_and_adds_one_2_cost_card() {
-            kept(script_v0_6_5(), || {
+        fn r767000_r3569008_the_script_kept_for_v0_6_5b_lowers_max_mana_and_adds_one_2_cost_card() {
+            kept(script_v0_6_5b(), || {
                 let mut s = game("expedition-kept-v0-6-5", false);
                 s.play(ID, json!({}));
                 // Cast for (1) from 4: 3 left of a max that fell from 4 to 3.

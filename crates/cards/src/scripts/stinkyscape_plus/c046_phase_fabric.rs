@@ -13,8 +13,8 @@
 //! Spell's own remaining grants are not turned away by it (R3547002). Issue #3951 added Divine Shield to
 //! both faces; through v0.6.4b neither gave it, which `script_v0_6_4b` keeps for those replays (R767000).
 //! Issue #3996 added Armor `armor` to both faces (§6.1: a granted Armor N, stacking with every other
-//! source), given with the rest before Immune to Spells; through v0.6.5 neither gave it, which
-//! `script_v0_6_5` keeps for those replays (R767000).
+//! source), given with the rest before Immune to Spells; through v0.6.5b neither gave it, which
+//! `script_v0_6_5b` keeps for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -60,9 +60,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.5, which gave no Armor (issue #3996). `KEPT_SCRIPTS` folds those
+/// R767000: the scripts through v0.6.5b, which gave no Armor (issue #3996). `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
         base: phase_fabric(false, true, false),
         radiant: phase_fabric(true, true, false),
@@ -218,10 +218,10 @@ mod tests {
             });
         }
 
-        /// R767000: through v0.6.5 it gave Divine Shield and no Armor (issue #3996), on both faces.
+        /// R767000: through v0.6.5b it gave Divine Shield and no Armor (issue #3996), on both faces.
         #[test]
-        fn r767000_the_script_kept_for_v0_6_5_gives_divine_shield_and_no_armor() {
-            crate::under_kept(FABRIC, super::super::script_v0_6_5(), || {
+        fn r767000_the_script_kept_for_v0_6_5b_gives_divine_shield_and_no_armor() {
+            crate::under_kept(FABRIC, super::super::script_v0_6_5b(), || {
                 for radiant in [false, true] {
                     let mut s = board(radiant, json!([VANILLA]), json!([]));
                     let unit = s.unit_at(P1, 1);

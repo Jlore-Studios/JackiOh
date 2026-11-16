@@ -9,8 +9,8 @@
 //! The Activate is once a turn on the base face and twice on the Radiant one (R384, R1857003). R3544000:
 //! its target is a declared enemy Unit, never a hero (R81, R1862000); the verb adds its Burn and deals no
 //! damage (R3540000). R3544001: Cleave puts the same Burn on each Unit beside the chosen one, read before
-//! the first Burn. The number is the declared `burn` (R386), read through `param`. Through v0.6.5 both
-//! faces were "Activate 2" (burn 4, Radiant 8); `script_v0_6_5` keeps the base face's two uses for those
+//! the first Burn. The number is the declared `burn` (R386), read through `param`. Through v0.6.5b both
+//! faces were "Activate 2" (burn 4, Radiant 8); `script_v0_6_5b` keeps the base face's two uses for those
 //! replays (R767000).
 
 use jackioh_engine::effects::{AfflictArgs, BoardScope, TargetSpec, adjacent_to_aimed, burn};
@@ -20,7 +20,7 @@ pub const ID: &str = "stinkyscapeplus-145";
 
 /// "Activate": 1 use a turn on the base face (R384, R1857003).
 const USES: i32 = 1;
-/// "Activate 2": 2 uses a turn on the Radiant face, and on both faces through v0.6.5.
+/// "Activate 2": 2 uses a turn on the Radiant face, and on both faces through v0.6.5b.
 const RADIANT_USES: i32 = 2;
 
 /// R3544001: the chosen enemy Unit's Burn, then the same Burn on each Unit beside it, read before the
@@ -72,8 +72,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.5, "Activate 2" on both faces; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+/// R767000: through v0.6.5b, "Activate 2" on both faces; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
         base: face(RADIANT_USES),
         radiant: face(RADIANT_USES),
@@ -219,8 +219,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_5_is_used_twice_a_turn() {
-            crate::under_kept(ID, script_v0_6_5(), || uses_a_turn(false, RADIANT_USES, BURN));
+        fn r767000_the_script_kept_for_v0_6_5b_is_used_twice_a_turn() {
+            crate::under_kept(ID, script_v0_6_5b(), || uses_a_turn(false, RADIANT_USES, BURN));
         }
 
         #[test]

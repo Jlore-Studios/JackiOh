@@ -40,19 +40,19 @@
 //! the mana, as Hearthstone's Overload is locked in as its card is played. With no enemy Unit to target the
 //! Spell fizzles whole (§8's Conventions), and nothing is lost.
 //!
-//! Kept for replays (R767000): from issue #3139 through v0.6.5 the base face read "Steal an enemy Unit.
+//! Kept for replays (R767000): from issue #3139 through v0.6.5b the base face read "Steal an enemy Unit.
 //! Set its stats to 2/2." (`set_stats` on the stolen Unit, a fixed number; 4/4 through v0.6.4b, issue
 //! #3951) and the Radiant face, literally, "Steal an enemy card.": any enemy permanent as Core #49's is
-//! (R3139002), not made Radiant (`script_v0_6_5`, `script_v0_6_4b`); `script_v0_5_11o` keeps the earlier
+//! (R3139002), not made Radiant (`script_v0_6_5b`, `script_v0_6_4b`); `script_v0_5_11o` keeps the earlier
 //! Unit-only steal, whose Radiant face made it Radiant, for the replays of v0.5.11r and before.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-052";
 
-/// From issue #3139 through v0.6.5: "Set its stats to 2/2", the Attack and Health the stolen Unit was set
+/// From issue #3139 through v0.6.5b: "Set its stats to 2/2", the Attack and Health the stolen Unit was set
 /// to (§6.3 Set stats, R2198000).
-const SET_TO_V0_6_5: i32 = 2;
+const SET_TO_V0_6_5B: i32 = 2;
 /// Through v0.6.4b (issue #3951): "Set its stats to 4/4".
 const SET_TO_V0_6_4B: i32 = 4;
 
@@ -114,10 +114,10 @@ fn mind_control(set_to: i32) -> CardScripts {
     }
 }
 
-/// R767000: the scripts after v0.6.4b through v0.6.5, setting the stolen Unit to 2/2 (issue #3996).
+/// R767000: the scripts after v0.6.4b through v0.6.5b, setting the stolen Unit to 2/2 (issue #3996).
 /// `KEPT_SCRIPTS` folds those versions' replays under it.
-pub fn script_v0_6_5() -> CardScripts {
-    mind_control(SET_TO_V0_6_5)
+pub fn script_v0_6_5b() -> CardScripts {
+    mind_control(SET_TO_V0_6_5B)
 }
 
 /// R767000: the scripts v0.5.12 to v0.6.4b ran, setting the stolen Unit to 4/4 (issue #3951).
@@ -151,7 +151,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 // at the next refresh, 2 on the base face and 1 on the Radiant; props (#25, #20, #45, #11, #8, #15, #41, #14).
 #[cfg(test)]
 mod tests {
-    use super::{script_v0_5_11o, script_v0_6_4b, script_v0_6_5};
+    use super::{script_v0_5_11o, script_v0_6_4b, script_v0_6_5b};
     use jackioh_engine::testkit::*;
 
     use crate::{filler, scenario};
@@ -411,12 +411,12 @@ mod tests {
         }
     }
 
-    /// R767000, R3139002: after v0.6.4b through v0.6.5 the base face set the stolen Unit to 2/2 and the
+    /// R767000, R3139002: after v0.6.4b through v0.6.5b the base face set the stolen Unit to 2/2 and the
     /// Radiant face stole any enemy permanent, a face-down Trap by its id alone (R177), not making it
     /// Radiant nor setting its stats; neither cost mana (issue #3996).
     #[test]
-    fn r767000_r3139002_the_script_kept_for_v0_6_5_sets_a_unit_to_2_2_and_its_radiant_face_steals_any_enemy_permanent() {
-        crate::under_kept(super::ID, script_v0_6_5(), || {
+    fn r767000_r3139002_the_script_kept_for_v0_6_5b_sets_a_unit_to_2_2_and_its_radiant_face_steals_any_enemy_permanent() {
+        crate::under_kept(super::ID, script_v0_6_5b(), || {
             let mut g = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL] },
                 "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },

@@ -8,8 +8,8 @@
 //!   pool (the non-token cards tagged Drone Core, R380), one draw of the match rng per card (R60), each
 //!   added Radiant on both faces (§5.2) to its controller's hand as it died; a full hand burns it (§2.4).
 //!   The count is the declared `cards`, read off the card as it died (R89, R386). The pool names no set,
-//!   so it reaches the set's Drone Cores because the set ships (R1420). Through v0.6.5 it was a Cry (R1)
-//!   (issue #3996), which `script_v0_6_5` keeps for those replays (R767000).
+//!   so it reaches the set's Drone Cores because the set ships (R1420). Through v0.6.5b it was a Cry (R1)
+//!   (issue #3996), which `script_v0_6_5b` keeps for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -36,9 +36,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.5 and every version before it ran, the cards added by a Cry (issue #3996).
+/// R767000: the scripts v0.6.5b and every version before it ran, the cards added by a Cry (issue #3996).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5() -> CardScripts {
+pub fn script_v0_6_5b() -> CardScripts {
     let researcher = Script {
         cry: Some(hook(|ctx| research(ctx))),
         ..Script::default()
@@ -152,11 +152,11 @@ mod tests {
             assert_eq!((stats.attack, stats.health), (3, 3));
         }
 
-        /// R767000, R1: through v0.6.5 it was a Cry (issue #3996): played it added the card, and a summon
+        /// R767000, R1: through v0.6.5b it was a Cry (issue #3996): played it added the card, and a summon
         /// added nothing.
         #[test]
-        fn r767000_r1_the_script_kept_for_v0_6_5_adds_as_it_is_played_and_not_as_it_is_recruited() {
-            crate::under_kept(RESEARCHER, super::super::script_v0_6_5(), || {
+        fn r767000_r1_the_script_kept_for_v0_6_5b_adds_as_it_is_played_and_not_as_it_is_recruited() {
+            crate::under_kept(RESEARCHER, super::super::script_v0_6_5b(), || {
                 let mut s = played(false);
                 assert_eq!(cores(&s).len(), 1);
                 destroy_it(&mut s);
