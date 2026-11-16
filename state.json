@@ -17518,6 +17518,8 @@
       }
     },
     "4075": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-16T08:01:31Z",
@@ -17531,8 +17533,11 @@
         "trail": "\": \"Read main's change to classify.rs\"}\n- Bash: {\"command\": \"grep -n 'classify' .github/workflows/ci.yml | head -10; sed -n 1240,1275p crates/tools/src/classify.rs\", \"description\": \"Read CI's classify step and the claims check\"}\n- Bash: {\"command\": \"sed -n 656,730p .github/workflows/ci.yml\", \"description\": \"Read CI's rust-classify job\"}\n- said: CI runs stage 1 and, when it leaves something unchecked, stage 2 against the base's build. Running stage 1 to see what it reads:\n- Bash: {\"command\": \"target/release/jackioh classify --base origin/main --json 2>&1 | tail -30\", \"description\": \"Run classify stage 1 as JSON\"}\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --json 2>/dev/null | tail -30\", \"description\": \"Run classify stage 1 as JSON via cargo\"}\n- said: Stage 1 reads `kind:ai` with `ai` unchecked, so CI will run stage 2. Checking what stage 2 and the claims check do with an AI change:\n- Bash: {\"command\": \"sed -n 1076,1100p crates/tools/src/classify.rs; grep -n 'Kind::Ai\\\\|\\\"ai\\\"' crates/tools/src/claims.rs | head -10; sed -n 1,30p crates/tools/src/claims.rs | grep -i 'ai\\\\b\\\\|AI' | head -\u2026\n- Bash: {\"command\": \"sed -n 1117,1175p crates/tools/src/classify.rs\", \"description\": \"Read the rest of classify's stage 2 check\"}\n- Bash: {\"command\": \"df -h /tmp . | tail -2; echo \\\"- classify: earlier 'Internal' was invalid (work was uncommitted; classify reads commits). Now stage 1 = kind:ai, unchecked ai; --claims needs --parent-bin\u2026\n- Bash: {\"command\": \"cd ../jackioh-wt/base-4024 && CARGO_TARGET_DIR=/tmp/base-target timeout 2400 cargo build -q --release -p jackioh-tools > /tmp/base-build.log 2>&1; echo \\\"BUILD_EXIT $?\\\" >> /tmp/base-bui\u2026\n- said: While the base builds, I'll re-run the smoke gate on the merged tree; its games are deterministic, so sharing the CPU only slows it.\n- Bash: {\"command\": \"timeout 3000 cargo jackioh gate > /tmp/gate2.log 2>&1; echo \\\"GATE_EXIT $?\\\" >> /tmp/gate2.log\", \"description\": \"Run the smoke AI gate on the merged tree\", \"timeout\": 3100000, \"run_in_ba\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q ^BUILD_EXIT /tmp/base-build.log; do sleep 10; done'; tail -3 /tmp/base-build.log; grep -E '^\\\\[gate|GATE_EXIT' /tmp/gate2.log | cut -c1-120\", \"descript\u2026\n- said: The base build is done, and the merged tree's smoke gate repeats 19/16/16 so far. Waiting for its perf lines, then running `classify --claims` with the base binary.\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q ^GATE_EXIT /tmp/gate2.log; do sleep 5; done'; grep -E '^\\\\[gate|GATE_EXIT|fail|problem' /tmp/gate2.log | cut -c1-150\", \"description\": \"Wait for the smo\u2026\n- said: The smoke gate exits 0 on the merged tree (19/16/16, perf unchanged). Now `classify --claims` with the base binary, as CI runs it:\n- Bash: {\"command\": \"echo \\\"- merged tree smoke gate exit 0: 19/16/16, perf slowest 208ms. Running classify --claims --parent-bin /tmp/base-target/release/jackioh.\\\" >> .bot-notes.md; timeout 1800 cargo jack\u2026\n- Bash: {\"command\": \"echo \\\"- classify --claims with --parent-bin: exit 0, stage2 ran, kind internal, no problems. Running base (8ee3c58f) smoke gate + branch full gate in bg.\\\" >> .bot-notes.md; cd ../jacki\u2026\n- Bash: {\"command\": \"timeout 5400 cargo jackioh gate --full > /tmp/gate-full2.log 2>&1; echo \\\"GATE_EXIT $?\\\" >> /tmp/gate-full2.log\", \"description\": \"Run the full AI gate on the branch\", \"timeout\": 5500000,\u2026\n- said: While they run, I'll put the measured gate numbers into the ruling note's Budget paragraph once the base comparison lands, as the plan asked.\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q ^GATE_EXIT /tmp/gate-base2.log; do sleep 10; done'; grep -E '^\\\\[gate (ai|hard)|GATE_EXIT' /tmp/gate-base2.log | cut -c1-120\", \"description\": \"Wait for\u2026\n- said: Current `main` scores 20/16/17 and the branch 19/16/16: the same one-game differences as before the merge. Writing those figures into the ruling note:\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4024/spec/rulings/R4024000.md\", \"old_string\": \"The AI's smoke gate (`cargo jackioh gate`) passed with the change.\", \"new_string\"\u2026\n- said: While the full gate runs, I'll check whether the smoke logs name the games each side lost, which would show which hard-vs-easy game flipped.\n- Bash: {\"command\": \"grep -n -i 'lost\\\\|not won\\\\|losing\\\\|seed' /tmp/gate2.log /tmp/gate-base2.log | cut -c1-200 | head -10\", \"description\": \"Look for losing seeds in the gate logs\"}\n- Bash: {\"command\": \"timeout 900 cargo jackioh spec check 2>&1 | tail -1; echo \\\"- base 8ee3c58f smoke gate: 20/16/17 (branch 19/16/16). R4024000 Budget paragraph now gives the numbers. Full gate on branch r\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q ^GATE_EXIT /tmp/gate-full2.log; do sleep 15; done'; grep -E '^\\\\[gate|^gate|GATE_EXIT' /tmp/gate-full2.log | cut -c1-140\", \"description\": \"Wait for the\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4024/spec/rulings/R4024000.md\", \"old_string\": \"where the build before it won 20, 16 and 17 of the same games, and its timed deci\u2026\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/base-4024 && rmdir ../jackioh-wt 2>/dev/null; rm -rf /tmp/base-target; git worktree list; git status --short; echo \\\"- full gate on branch exit \u2026\n- Bash: {\"command\": \"timeout 900 cargo jackioh spec check 2>&1 | tail -1; git diff main...HEAD --stat | cat; git diff main...HEAD | grep -E '^\\\\+.*(#\\\\[ignore|#\\\\[allow|\\\\.skip|\\\\.only)' | head\", \"descriptio\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('# Plan')\\ns=s[:i]+\\\"\\\"\\\"## State\\n\\n- Build pass 1 (opus), 2026-11-16: DONE. Branch = my work + \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI prices each side's copy of a card's Death and turn hooks on its own board, as it already does Activates\"} --> The AI now prices each player's copy of a card on that player's own board, for both \"when this dies\" text and start- or end-of-turn text\u2026"
       },
       "issue": 4024,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T09:08:26Z",
         "from_run": "43827998353",
         "gates": [
           {
@@ -17624,7 +17629,11 @@
         "source": "build",
         "until": "2026-11-16T09:37:18Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-16T09:07:18Z",
+      "run_id": "pending:55db1868-1794820080",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17643,6 +17652,9 @@
         "provider": "claude-8",
         "run": "43827998353"
       },
+      "started_at": "2026-11-16T09:08:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17656,9 +17668,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T08:50:30Z",
+    "at": "2026-11-16T09:08:26Z",
     "url": "",
-    "what": "review #4074 on muse"
+    "what": "review #4075 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-16T08:58:03Z",
