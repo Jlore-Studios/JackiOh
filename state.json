@@ -16038,17 +16038,8 @@
       ]
     },
     "4023": {
-      "action": "plan",
-      "asks": [
-        "c:6905083236"
-      ],
-      "build_next": {
-        "from_run": "43793672959",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-16T03:03:49Z",
-        "until": "2026-11-16T03:33:49Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T03:03:38Z",
         "difficulty": "hard",
@@ -16067,10 +16058,9 @@
         "reason": "planned on opus",
         "trail": "er_catalog\\\\|register_scripts\\\\|fn all_defs\\\\|fn all_scripts\\\" crates/engine/tests/rules/fixtures/harness.rs crates/engine/tests/rules/\u2026\n- Bash: {\"command\": \"sed -n '1240,1290p' crates/engine/tests/rules/fixtures/damage_combat.rs; sed -n '15,45p' crates/engine/tests/rules/fixtures/harness.rs\", \"description\": \"Read damage_combat playing() and \u2026\n- Bash: {\"command\": \"sed -n '60,130p' crates/engine/tests/rules/combat_forecast.rs; sed -n '100,165p' crates/engine/tests/rules/fixtures/combat.rs; grep -n \\\"damage_combat\\\" crates/engine/tests/rules/fixture\u2026\n- Bash: {\"command\": \"grep -n \\\"combat_forecast\\\\|AttackForecast\\\\|pub use query\\\\|unit_damage_cap\\\\|pub use damage\\\" crates/engine/src/lib.rs | head; grep -n \\\"pub use\\\" crates/engine/src/lib.rs | head -30\",\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4023/.bot-plan.md\", \"content\": \"# Draft plan #4023 (opus planner, in progress)\\n\\n## Findings so far\\n- AI: `Side` (candidates.rs:185) has no cap; `bl\u2026\n- Bash: {\"command\": \"grep -n \\\"damage_past_taunts\\\" crates/ai/src/lib.rs crates/ai/tests/ai/*.rs | head -20; grep -n \\\"Taunt\\\" crates/engine/src/wire/catalog_types.rs | head -3\", \"description\": \"Find damage_\u2026\n- Bash: {\"command\": \"grep -n \\\"damage_past_taunts\\\" -B 30 crates/ai/tests/ai/lethal.rs | sed -n '1,140p' | grep -n \\\"fn \\\\|scenario\\\\|json!\\\\|const \\\\|damage_past_taunts\\\\|use \\\" | head -40\", \"description\": \u2026\n- Bash: {\"command\": \"grep -n \\\"damage_past_taunts\\\\|fn taunt\\\\|fn .*taunt\\\" crates/ai/tests/ai/*.rs | head -30\", \"description\": \"List tests calling damage_past_taunts\"}\n- Bash: {\"command\": \"sed -n '380,500p' crates/ai/tests/ai/position_model.rs\", \"description\": \"Read position_model taunt tests pattern\"}\n- Bash: {\"command\": \"sed -n '325,380p' crates/ai/tests/ai/position_model.rs; grep -n \\\"^use\\\\|^ use\\\\|const AI\\\\|const HUMAN\\\\|^mod \\\\|^ mod \\\" crates/ai/tests/ai/position_model.rs | head -20\", \"description\"\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const AI\\\\|pub const HUMAN\\\" crates/ai/tests/ai/support.rs; grep -n \\\"fn board\\\" -A 10 crates/ai/tests/ai/position_model.rs | head -15; grep -n \\\"pub fn face_threat\\\\b\\\\|pu\u2026\n- Bash: {\"command\": \"ls crates/engine/tests/; grep -n \\\"combat_forecast\\\\|damage_pipeline\\\" crates/engine/tests/rules/mod.rs crates/engine/tests/*.rs | head; grep -n \\\"best_attack_order_past_taunts:\\\" crates\u2026\n- Bash: {\"command\": \"head -20 crates/engine/tests/rules.rs; head -12 crates/engine/tests/rules_2.rs; sed -n '860,880p' crates/ai/src/config.rs | head -5; grep -n \\\"pub const GREEDY_EVAL\\\\|pub const AI_EVAL\\\\\u2026\n- Bash: {\"command\": \"grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -10\", \"description\": \"Check what a Patch: title implies\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json,sys\\nd=json.load(open(sys.argv[1]))\\nfor k in ('core-020','core-030'):\\n c=d[k]; print(k, c['name'], c['base'])\\n\\\" crates/cards/catalog.json\", \"description\u2026\n- Bash: {\"command\": \"grep -n \\\"blow\\\\|trade_value\\\\|kills_and_survives\\\\|damage_past_taunts\\\\|per-hit\\\\|R2179005\\\" crates/ai/README.md crates/engine/README.md | head -20\", \"description\": \"Check READMEs menti\u2026\n- Bash: {\"command\": \"sed -n '115,135p' crates/ai/README.md\", \"description\": \"Read AI README taunt soak paragraph\"}\n- Bash: {\"command\": \"sed -n '1,120p' crates/ai/tests/ai/cleave.rs\", \"description\": \"Read cleave soak test pattern\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json,sys\\nd=json.load(open(sys.argv[1]))\\nfor k in ('classic-050','core-019','core-067','classicplus-049'):\\n c=d[k]; print(k, c['name'], c['base'])\\n\\\" crates/c\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn act\\\\b\\\\|pub fn act(\\\" -A 15 crates/ai/tests/ai/support.rs; grep -n \\\"pub fn register_cards\\\" -A 5 crates/ai/tests/ai/support.rs\", \"description\": \"Read AI test support a\u2026\n- Bash: {\"command\": \"sed -n '186,200p' crates/ai/tests/ai/support.rs; grep -n \\\"pub fn reduce\\\\b\\\\|pub fn reduce(\\\" crates/engine/src/*.rs | head -3\", \"description\": \"Read reduce result handling\"}\n- said: Writing a throwaway probe test (untracked, deleted right after) to confirm the engine forecast bug and the pre-fix AI numbers the plan's tests will hinge on.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4023/crates/ai/tests/zz_probe_4023.rs\", \"content\": \"// Planner's throwaway probe for #4023; deleted after the run.\\nuse jackioh_ai::*;\\nuse jackioh_en\u2026\n- Bash: {\"command\": \"timeout 590 cargo test -p jackioh-ai --test zz_probe_4023 -- --nocapture 2>&1 | grep -E \\\"PROBE|error|warning: unused|test result|panicked\\\" | head -40\", \"description\": \"Build and run th\u2026\n- Bash: {\"command\": \"cat >> crates/ai/tests/zz_probe_4023.rs <<'EOF'\\n\\nfn attack(state: &GameState, a: &str, t: &str, n: &str) -> GameState {\\n let r = reduce(state, &Action::new(ActionBody::Attack { attack\u2026\n- said: Played-out games give 0 and 4, matching the expected values. Removing the probe.\n- Bash: {\"command\": \"rm crates/ai/tests/zz_probe_4023.rs && git status --porcelain\", \"description\": \"Delete the probe and confirm a clean tree\"}\n- Bash: {\"command\": \"grep -n \\\"crates/engine\\\\|crates/ai/\\\\|Kind::Ai\\\\|Kind::Cards =>\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Check how classify treats engine and AI paths\"}\n- Bash: {\"command\": \"sed -n '600,660p' crates/tools/src/classify.rs\", \"description\": \"Read classify's play-code handling\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Verified by a throwaway probe (deleted)\\n- Poisonous Anime Armor -> First Strike 4/4: forecast dealt 0 kills false; real combat: AA survives (damage 1),\u2026\n- Bash: {\"command\": \"grep -n \\\"fn plain_unit\\\" -A 6 crates/engine/tests/rules/fixtures/damage_combat.rs | head -8; grep -n \\\"mod cleave\\\\|mod position_model\\\" crates/ai/tests/ai.rs crates/ai/tests/ai/mod.rs \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2 (the AI: crates/ai/src's combat reads and lethal walk) and rule 1 (an engine projection in crates/engine/src/subsystems/lethal.rs)\"} --> ## Goal The AI's combat reads apply Anime Armor's per-hit cap (`unit_damage_cap`, R2179005) after Armor, the same \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-16T01:58:10Z",
       "owner_why": "it plans it",
@@ -16083,12 +16073,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-16T01:49:26Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43793672959",
+      "run_id": "pending:375e7625-1794798423",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-16T02:41:12Z",
+      "started_at": "2026-11-16T03:07:27Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6905083236"
+      ]
     },
     "4024": {
       "action": "plan",
@@ -16685,9 +16677,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T03:06:48Z",
+    "at": "2026-11-16T03:07:27Z",
     "url": "",
-    "what": "build #4032 on claude-7"
+    "what": "build #4023 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-16T02:56:18Z",
