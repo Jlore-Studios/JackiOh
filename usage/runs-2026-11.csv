@@ -2397,3 +2397,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-16T10:28:40Z,43823506258,claude-6,opus,build,4035,hard,built,,150,237,42738,13870371,4.8,14,2,,,44.8,claude-3,fresh,cap,1
 2026-11-16T10:43:46Z,43850093234,claude-6,opus,review,4076,hard,approved,,7.1,4,1332,138746,3.6235,2,9,,,1.1,,none,,1
 2026-11-16T11:11:03Z,43854906372,claude-3,opus,review,4076,hard,reviewed,,1.7,29,9134,1066577,0.9454,1,2,,,,,none,,1
+2026-11-16T20:10:13Z,43920175814,claude-3,opus,plan,4079,hard,failed,,150,290,94763,48155796,39.8674,1,76,,,9.1,,fresh,,1
