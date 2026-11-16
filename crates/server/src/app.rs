@@ -50,6 +50,8 @@ pub struct App {
     pub route_health: api::http::RouteHealth,
     /// R1443: sign-ins by username, counted per address and, apart, per username.
     pub sign_in_limiter: api::http::RateLimiter,
+    /// R4008000: the wrong room, co-op room and lobby codes each account and address has tried.
+    pub code_guesses: api::guesses::CodeGuesses,
     /// The catalog this build ships, its version and the deployed commit.
     pub catalog: api::catalog::Catalog,
     /// §9.4's redemption circuit breaker (R106).
@@ -1257,6 +1259,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
             crate::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
             crate::config::USERNAME_SIGN_IN_WINDOW_MS,
         ),
+        code_guesses: api::guesses::CodeGuesses::default(),
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
         replays: api::replays::Replays::default(),

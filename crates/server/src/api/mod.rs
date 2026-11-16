@@ -17,6 +17,7 @@ pub mod dev;
 pub mod e2e;
 pub mod economy;
 pub mod game_records;
+pub mod guesses;
 pub mod health;
 pub mod http;
 pub mod news;

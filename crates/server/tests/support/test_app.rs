@@ -141,6 +141,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
             jackioh_server::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
             jackioh_server::config::USERNAME_SIGN_IN_WINDOW_MS,
         ),
+        code_guesses: jackioh_server::api::guesses::CodeGuesses::default(),
         catalog,
         breaker: Mutex::new(jackioh_server::api::codes::create_breaker_state()),
         replays: jackioh_server::api::replays::Replays::default(),

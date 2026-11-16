@@ -35,7 +35,10 @@ use time::OffsetDateTime;
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, RateLimiter, Req, create_rate_limiter, json as json_response,
 };
-use crate::config::{CHALLENGES_PER_HOUR, CHAT_MESSAGES_PER_MINUTE, FRIEND_REQUESTS_PER_HOUR, NANOS_PER_MS};
+use crate::config::{
+    CHALLENGES_PER_HOUR, CHAT_MESSAGES_PER_MINUTE, FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR,
+    FRIEND_REQUESTS_PER_HOUR, NANOS_PER_MS,
+};
 use crate::db::store::{Profile, StoreError, Tx};
 
 /// Unit conversions, not configuration (a day's and a millisecond's are `crate::config`'s).
@@ -49,6 +52,8 @@ const ISO_FORMAT: &str = "[year]-[month]-[day]T[hour]:[minute]:[second].[subseco
 pub struct Social {
     /// B43: `FRIEND_REQUESTS_PER_HOUR` friend requests an hour per account.
     pub friend_requests: RateLimiter,
+    /// R4008001: `FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR` friend requests an hour per address, all accounts.
+    pub friend_requests_by_address: RateLimiter,
     /// B53: `CHAT_MESSAGES_PER_MINUTE` chat messages a minute per sender.
     pub chat: RateLimiter,
     /// B48: `CHALLENGES_PER_HOUR` challenges an hour per challenger.
@@ -63,6 +68,10 @@ impl Default for Social {
     fn default() -> Social {
         Social {
             friend_requests: create_rate_limiter(FRIEND_REQUESTS_PER_HOUR, MS_PER_HOUR),
+            friend_requests_by_address: create_rate_limiter(
+                FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR,
+                MS_PER_HOUR,
+            ),
             chat: create_rate_limiter(CHAT_MESSAGES_PER_MINUTE, MS_PER_MINUTE),
             challenges: create_rate_limiter(CHALLENGES_PER_HOUR, MS_PER_HOUR),
             presence: presence::PresenceTouches::default(),

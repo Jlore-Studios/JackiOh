@@ -8,7 +8,7 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{FRIEND_REQUESTS_PER_HOUR, MAX_FRIENDS, PRESENCE_TTL_MS, TERMS_VERSION};
 use jackioh_server::db::store::StartMatchInput;
 
-use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app};
+use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app, json_request, send};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::store::{Account, account, advance, befriend, fake, uuid};
 
@@ -90,6 +90,26 @@ async fn request(app: &Arc<App>, from: &Account, username: &str) -> (u16, Value)
 /// `from` asks `to`; answers the request id.
 async fn requested(app: &Arc<App>, from: &Account, to: &Account) -> String {
     let (status, body) = request(app, from, &to.name).await;
+    assert_eq!(status, 201, "{body}");
+    body["requestId"].as_str().expect("a request id").to_string()
+}
+
+/// `requested`, from the address of `friend`'s own: R4008001's per-address limit counts every account
+/// behind one address, and a test that makes more requests than it allows names each its own.
+async fn requested_from_own_address(app: &Arc<App>, from: &Account, to: &Account, friend: u32) -> String {
+    let ip = format!("198.51.{}.{}", friend / 256, friend % 256);
+    let body = json!({ "username": to.name });
+    let (status, _headers, body) = send(
+        app,
+        json_request(
+            "POST",
+            "/api/friends/requests",
+            &body,
+            Some(&from.token),
+            Some(&ip),
+        ),
+    )
+    .await;
     assert_eq!(status, 201, "{body}");
     body["requestId"].as_str().expect("a request id").to_string()
 }
@@ -336,7 +356,7 @@ mod b43_a_request_by_name_and_tag {
         for k in 0..cap {
             let n = 1_000 + u32::try_from(k).expect("a small index");
             let pal = account(&app, n, "Pal").await;
-            let request_id = requested(&app, &pal, &hub).await;
+            let request_id = requested_from_own_address(&app, &pal, &hub, n).await;
             let (status, body) = accept(&app, &hub, &request_id).await;
             assert_eq!(status, 200, "friend {k}: {body}");
             if (k + 1) % ACCEPTS_PER_MINUTE == 0 {
