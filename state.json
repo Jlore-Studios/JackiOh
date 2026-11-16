@@ -16507,7 +16507,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "round_tier": "",
-      "run_id": "43783676772",
+      "run_id": "pending:5b51de4a-1794801063",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -16526,7 +16526,7 @@
         "provider": "claude-4",
         "run": "43783676772"
       },
-      "started_at": "2026-11-16T01:00:19Z",
+      "started_at": "2026-11-16T03:51:28Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
@@ -17159,9 +17159,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T03:42:35Z",
+    "at": "2026-11-16T03:51:28Z",
     "url": "",
-    "what": "build #4008 on claude-1"
+    "what": "plan #4035 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-16T03:31:40Z",
