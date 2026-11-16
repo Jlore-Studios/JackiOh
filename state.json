@@ -17413,6 +17413,8 @@
     "4074": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "053a3940445862a1d2dea6d33aeaa379965c2775",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T07:46:29Z",
