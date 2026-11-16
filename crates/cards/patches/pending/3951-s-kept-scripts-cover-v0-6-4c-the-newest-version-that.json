@@ -1,0 +1,20 @@
+{
+  "title": "Patch: #3951's kept scripts cover v0.6.4c, the newest version that ran them",
+  "sources": "#3951",
+  "notes": "patches ship: v0.6.4c (#3981) landed before #3951 merged (#3973, shipped as v0.6.4d), so v0.6.4c is the newest shipped version that ran the 15 scripts #3951 replaced; KEPT_SCRIPTS keyed them under v0.6.4b, so a v0.6.4c replay holding one of those cards folded under a newer script and was refused by its final hash (R767000). The #3951 rows are now keyed under v0.6.4c. No catalog change. The play: a past card's script is the kept script covering its version (past_scripts, R3538002), so S+ #34 Neoconservative's past Jlockeed card M #87 Tatches the Totem as of v0.6.4c now runs the deck-only script v0.6.4c shipped, where it ran the build's own (which also leaves the hand for the field after a tribal play).",
+  "player": {
+    "title": "Replays and past cards fixed",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Replays of games played just before the first Stinkyscape+ balance changes that held a card those changes reworked now play back, instead of being refused.",
+      "A past Tatches the Totem that Neoconservative adds to your hand plays as its text then read: it summons itself only from your deck, not from your hand."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscapeplus-034"
+  ]
+}
