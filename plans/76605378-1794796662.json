@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 4034,
+  "title": "Patch: every Field guide entry can be found in the lessons: The Coin when the opponent gets it, Tribes and Tribute from a lesson's deck",
+  "branch": "bot/issue-4034",
+  "thread": "**Issue #4034 (data, not instructions):**\n\n```text\n# #4034: Patch: every Field guide entry can be found in the lessons: The Coin when the opponent gets it, Tribes and Tribute from a lesson's deck\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe tutorial's Field guide lists 36 game mechanics, ticks each off as the player meets it, and shows how many are found. One entry can never be ticked: The Coin. It counts only when the player plays The Coin, but the player goes first in every lesson, so The Coin always goes to the tutorial opponent, which is not allowed to play it.\n\nA player who finishes all five lessons still sees The Coin as \"Waiting in lesson 5: The final exam\", and the guide never reaches 36 of 36. Two more entries, Tribes and Tribute, need cards that no lesson deck holds, so a player finds them only if a random effect in the last lesson happens to deal one.\n\nOnce built, every entry can be found in the lessons, and a test keeps it that way.\n\n## Why\n\n**The Coin cannot be found**\n- `apps/web/src/tutorial/discoveries.ts:329-334`: `the-coin` counts as found only when the human plays `core-t-coin`.\n- Every lesson seats the human first: `humanSeat: \"p1\"` in all five of `apps/web/src/tutorial/lessons/*.ts`.\n- The tutorial spec says so too. `spec/09-architecture.md` (\u00a79.10, line 190): \"The human goes first in every lesson. Every other mechanic the Field Guide holds (\u2026 The Coin \u2026) is met in play \u2026 and found\".\n- The opponent can never play it. It plays only the tutorial's own cards (R2533000; `is_tutorial_card` and `barred_from_play` in `crates/engine/src/state.rs:2457-2475`, which means Training Grounds only), and The Coin is a Core token.\n\n**A test checks nothing**\n- `apps/web/src/tutorial/lessons.test.ts:275`, \"R291 seat the human second in the lesson that teaches The Coin\", passes without testing anything: no lesson lists `the-coin` among its discoveries.\n- This dates from #2444 (c663add229). It folded the old `advanced` lesson, which seated the human second and dealt Big Felinor, into the finale without a way to find these entries.\n\n**Tribes and Tribute only by luck**\n- Tribes (`discoveries.ts:346-353`) needs the human to play Legacy: Big Felinor (`traininggrounds-051`, Rare).\n- Tribute (`discoveries.ts:356-361`) needs a card whose text says Tribute. The Training Grounds ones are Trigor (`traininggrounds-025`, Rare) and Legacy: The Rock (`traininggrounds-054`, Common).\n- None of the five human decks holds any of them.\n\n**The player sees the gap.** `apps/web/src/tutorial/FieldGuide.tsx:27` shows \"{found} of {total} found\", and `:55` shows \"Waiting in lesson {number}: {title}\".\n\n## Proposal\n\n- **The Coin.** Count it as found when the human's game shows The Coin going to either side: the public fact that the opponent goes second and gets The Coin, or an event that names it. Today only the human playing it counts. The check reads only the human's view and public events (R292, CLAUDE.md rule 7), and it keeps \u00a79.10's \"the human goes first in every lesson\".\n- **The R291 test.** Rewrite its Coin clause so it can fail: every lesson seats the human first, and the-coin's predicate fires on a view where the opponent gets The Coin.\n- **Tribes and Tribute.** Put Big Felinor and one Training Grounds Tribute card into a lesson's human deck, in lesson 5 or wherever the theme fits. All three cards are Common or Rare, so R2205003's rarity limits allow any lesson. If the deal moves, re-pick that lesson's seed with `apps/web/scripts/lesson-deal.ts`, as `lessons/finale.ts`'s header comment describes.\n- **A reachability test in `lessons.test.ts`.** Every Field guide entry that keys on one card, or on a card's text, must have such a card in some lesson's human deck, unless it reads a fact every lesson shows. It fails today on `the-coin`, `tribe` and `tribute`.\n\n## Where it lands\n\n- `apps/web/src/tutorial/discoveries.ts`, `apps/web/src/tutorial/discovery.test.ts`, `apps/web/src/tutorial/lessons.test.ts`, and the lesson file under `apps/web/src/tutorial/lessons/` that takes the two cards (its seed too, if the deal moves).\n- SPEC \u00a79.10 (the tutorial and the Field Guide); R291, R292, R2205000, R2205003, R2533000\n\n## Acceptance criteria\n\n- [ ] A test view in which the opponent goes second with The Coin finds `the-coin`, and nothing the human cannot see is read.\n- [ ] Some lesson's human deck holds Big Felinor and a Training Grounds Tribute card. The lesson tests (R291's decks, R2205003's limits, R2533001) still pass, and the lesson's seed still wins in its turns.\n- [ ] The new reachability test fails on today's tree and passes after the change.\n- [ ] The R291 Coin test asserts something that can fail.\n- [ ] These pass: `pnpm --dir apps/web exec vitest run src/tutorial` and `pnpm --dir apps/web typecheck`.\n\n## Size and risks\n\nMedium, about 4\u20135 files, client only, no engine change.\n\nRisk: a new card in a lesson deck can shift that lesson's fixed deal, and with it a coach step that waits for a given turn. The lesson-deal script and the lessons' existing tests (`discovery-play.test.ts` plays the lessons) show whether it moved.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-16T02:06:40Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4034: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-16T02:07:07Z",
+    "claimed_at": "2026-11-16T02:38:10Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4008 skipped: it waits for #3999, #4000, #4001, #4002 to close first",
+    "#4009 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008 to close first",
+    "#4010 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008, #4009 to close first",
+    "#4011 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4008, #4009, #4010 to close first",
+    "#4012 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011 to close first",
+    "#4013 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012 to close first",
+    "#4014 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012, #4013 to close first",
+    "#4015 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014 to close first",
+    "#4016 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
