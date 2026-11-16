@@ -16692,6 +16692,18 @@
       "asks": [],
       "ci_fixed_head": "e04668e6a120ef812609ca5283e4b7a27e750cfe",
       "ci_fixes": 1,
+      "cleared": {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "at": "2026-11-16T04:11:13Z",
+        "built_by": "muse",
+        "by": "`muse` (medium)",
+        "sha": "e04668e6a120ef812609ca5283e4b7a27e750cfe"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T01:51:35Z",
@@ -16707,6 +16719,7 @@
       "issue": 4037,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-16T02:34:11Z",
