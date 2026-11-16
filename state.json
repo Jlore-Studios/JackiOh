@@ -16479,7 +16479,7 @@
       "action": "build",
       "asks": [],
       "died": 1,
-      "failures": 1,
+      "failures": 0,
       "handoff": {
         "at": "2026-11-16T07:19:14Z",
         "family": "claude",
@@ -16502,7 +16502,9 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 4076,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-11-16T06:38:34Z",
       "round_tier": "strong",
       "run_id": "43823506258",
