@@ -36262,9 +36262,9 @@
     ],
     "idle_since": null,
     "last_run": "2026-11-15T23:44:40Z",
-    "provider": "claude-7",
+    "provider": null,
     "requested": false,
-    "run_id": "43776453229",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
