@@ -16462,9 +16462,11 @@
         "by": "`gemini` (medium)",
         "sha": "bab1d0782214015d3c1c8f5997ab64a3b059878a"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T22:50:25Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-16T01:21:39Z",
         "family": "gemini",
@@ -16474,6 +16476,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/crates/shared/data/short-forms.json\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/crates/shared/data/short-forms.json\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/crates/shared/data/short-forms.json\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/crates/shared/tests/face.rs\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && pnpm --dir apps/web test src/cards/textLimit.test.ts\n- said: I have started `pnpm --dir apps/web test src/cards/textLimit.test.ts` and am waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo test -p jackioh-shared --features jackioh-engine/testkit --test face r3941001_written_words_describe_their_cards_effect_honestly\n- said: I have started `cargo test -p jackioh-shared --features jackioh-engine/testkit --test face r3941001_written_words_describe_their_cards_effect_honestly` and am waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo test -p jackioh-shared --features jackioh-engine/testkit --test face\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo fmt --check\n- said: I have started `cargo fmt --check` and am waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo clippy -p jackioh-shared --features jackioh-engine/testkit --all-targets -- -D warnings\n- said: I have launched `cargo clippy -p jackioh-shared --features jackioh-engine/testkit --all-targets -- -D warnings` and am waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo jackioh classify --base origin/main --claims\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && git status\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/.bot-notes.md\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 160, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/.bot-notes.md\", \"StartLine\": 100}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the in-game short texts of Crawler, Oct, Thorium Reactor, Memory Leak and The Narcor Project say what the cards do\"} --> # Patch: the in-game short texts of Crawler, Oct, Thorium Reactor, Memory Leak and The Narcor Project say what the cards do ## What \u2026"
       },
+      "interruptions": 0,
       "issue": 3975,
       "kind": "review",
       "live": "reviewing",
