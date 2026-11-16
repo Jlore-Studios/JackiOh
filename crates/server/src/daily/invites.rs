@@ -28,7 +28,7 @@ use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first};
 use crate::app::App;
 use crate::config::{DAILY_CHALLENGE_TTL_DAYS, DAILY_MAX_ACTIVE_GAMES, DAILY_SEEK_TTL_DAYS, MS_PER_DAY};
 use crate::daily::games::{NewDaily, prepare_daily};
-use crate::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, QueueMode, Tx};
+use crate::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, ProfileStatus, QueueMode, Tx};
 use crate::social::friends::are_friends;
 use crate::social::live::push_social;
 use crate::social::{created, no_content, not_found, param, refused};
@@ -280,6 +280,14 @@ pub async fn accept(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&me)).await?;
     // R1689000: still friends as it starts.
     if !are_friends(&mut tx, &me, &invite.from_profile).await? {
+        tx.commit().await?;
+        return Err(not_found("no such daily challenge"));
+    }
+    // R4019000: a banned challenger's challenge waits out the ban: no game starts on it.
+    if !matches!(
+        tx.profiles_get_by_id(&invite.from_profile).await?,
+        Some(profile) if profile.status == ProfileStatus::Active
+    ) {
         tx.commit().await?;
         return Err(not_found("no such daily challenge"));
     }
