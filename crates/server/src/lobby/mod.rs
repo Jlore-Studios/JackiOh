@@ -578,9 +578,8 @@ pub async fn get_lobby(app: &Arc<App>, req: Req) -> ApiResult {
     let loaded = load(app, &code, &profile.id).await;
     // R4008000: a member reading their own lobby is not guessing.
     let own = matches!(&loaded, Ok(lobby) if is_member(lobby, &profile.id));
-    app.code_guesses.gate(&req, &profile.id, own)?;
-    let outcome = read_lobby(app, &profile.id, &code, loaded).await;
-    app.code_guesses.settle(&req, &profile.id, own, outcome)
+    app.code_guesses.claim(&req, &profile.id, own)?;
+    read_lobby(app, &profile.id, &code, loaded).await
 }
 
 /// `get_lobby`'s answer for the `loaded` lobby of `code`.

@@ -229,9 +229,8 @@ pub async fn get_room(app: &Arc<App>, req: Req) -> ApiResult {
     let found = room_of(app, &req, &profile.id).await;
     // R4008000: the host and the guest reading their own room are not guessing.
     let own = matches!(&found, Ok(room) if room.host == profile.id || room.guest.as_deref() == Some(profile.id.as_str()));
-    app.code_guesses.gate(&req, &profile.id, own)?;
-    let outcome = room_view(app, &profile.id, found).await;
-    app.code_guesses.settle(&req, &profile.id, own, outcome)
+    app.code_guesses.claim(&req, &profile.id, own)?;
+    room_view(app, &profile.id, found).await
 }
 
 /// `get_room`'s answer for the room `found`.
@@ -479,7 +478,7 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let room = one_tx!(app.db, |t| t.duos_rooms_get(&code).await?)?;
     let Some(room) = room.filter(|room| room.host == profile.id) else {
-        app.code_guesses.wrong(&req, &profile.id)?;
+        app.code_guesses.claim(&req, &profile.id, false)?;
         return Err(not_open());
     };
     if room.guest.is_some() {

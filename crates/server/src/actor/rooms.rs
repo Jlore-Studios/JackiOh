@@ -800,11 +800,11 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(None).await?;
     let Some(room) = tx.rooms_get(&code).await? else {
         tx.commit().await?;
-        app.code_guesses.wrong(&req, &profile_id)?;
+        app.code_guesses.claim(&req, &profile_id, false)?;
         return Ok(json_response(200, json!({ "cancelled": false })));
     };
     if room.host_profile_id != profile_id {
-        app.code_guesses.wrong(&req, &profile_id)?;
+        app.code_guesses.claim(&req, &profile_id, false)?;
         return Err(ApiError::new(
             ApiErrorCode::NotFound,
             "that room code is not open",

@@ -134,7 +134,7 @@ e2e/           Cypress: hotseat games and networked room-code games
 | Invite code brute force | 80-bit hashed codes, per-account and per-IP limits, verified email, circuit breaker (9.4) |
 | Multi-accounting to farm rating | Invite codes; watch for clusters of accounts sharing an IP hash |
 | Friend-request spam, or probing which names exist | Requests by exact username only, an hourly limit per account and per address ([[R4008001]]), and an unknown name answered as a block is (9.4) |
-| Guessing a room, co-op room or lobby code | A limit on distinct wrong codes per account and per address, past which every code lookup is refused, a right code's too; a request carries one guess ([[R4008000]]) |
+| Guessing a room, co-op room or lobby code | A limit on distinct codes tried, right or wrong, per account and per address, claimed before any answer, past which every code lookup is refused; a request carries one guess ([[R4008000]]) |
 | Unwanted chat | Friends only, a per-sender limit, the profanity mask, report and block (9.5) |
 | Ghosting through a watcher | A friend only, 1v1 or co-op, ranked or unranked, the friend's own seat only, `SPECTATE_DELAY_MS` behind, and the friend can unfriend or block, which ends a watch already running at once (9.5, [[R2615000]]); a watcher's emotes, one of five emoji at a time under a stricter limit about that delayed board, carry no more, an accepted cost ([[R2990000]]) |
 | Challenge spam | A per-account hourly limit, and a challenge's row deleted once its `CHALLENGE_TTL_MS` has passed (9.5) |

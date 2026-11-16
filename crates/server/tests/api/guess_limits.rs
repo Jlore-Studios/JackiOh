@@ -2,7 +2,10 @@
 //! holds a limit that counts guesses, per account and per address, and carries one guess a request or
 //! frame. `crates/server/README.md`, Guessable values, lists the doors; a new door adds its test here.
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::Poll;
 
 use serde_json::{Value, json};
 
@@ -10,9 +13,8 @@ use jackioh_server::actor::protocol::{ClientMessage, parse_client_message};
 use jackioh_server::app::App;
 use jackioh_server::config::{
     API_REQUESTS_PER_MINUTE, CODE_ALPHABET, CODE_ATTEMPTS_PER_IP_PER_HOUR,
-    CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, CODE_MISS_WINDOW_MS, CODE_MISSES_PER_ACCOUNT_PER_HOUR,
-    CODE_MISSES_PER_ADDRESS_PER_HOUR, FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR, FRIEND_REQUESTS_PER_HOUR,
-    ROOM_CODE_LENGTH,
+    CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, CODE_TRIES_PER_ACCOUNT_PER_HOUR, CODE_TRIES_PER_ADDRESS_PER_HOUR,
+    CODE_TRY_WINDOW_MS, FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR, FRIEND_REQUESTS_PER_HOUR, ROOM_CODE_LENGTH,
 };
 
 use crate::support::deps::{add_user, empty_test_app, json_request, send, test_app};
@@ -121,7 +123,7 @@ async fn r4008000_a_wrong_room_code_past_the_accounts_allowance_is_refused_for_e
     assert_eq!(status, 200, "{room}");
     let real = room["code"].as_str().expect("a room code").to_string();
 
-    for n in 0..CODE_MISSES_PER_ACCOUNT_PER_HOUR {
+    for n in 0..CODE_TRIES_PER_ACCOUNT_PER_HOUR {
         let path = format!("/api/rooms/{}/join", unheld_code(n));
         // The extra codes of the first body are read as nothing: they count for nothing.
         let body = if n == 0 {
@@ -132,10 +134,7 @@ async fn r4008000_a_wrong_room_code_past_the_accounts_allowance_is_refused_for_e
         let (status, body) = from_ip(&app, "POST", &path, &guest.token, IP, body).await;
         assert_eq!(status, 404, "{body}");
     }
-    let path = format!(
-        "/api/rooms/{}/join",
-        unheld_code(CODE_MISSES_PER_ACCOUNT_PER_HOUR)
-    );
+    let path = format!("/api/rooms/{}/join", unheld_code(CODE_TRIES_PER_ACCOUNT_PER_HOUR));
     let (status, body) = from_ip(&app, "POST", &path, &guest.token, IP, json!({ "mode": "random" })).await;
     assert_eq!((status, error_code(&body)), (429, "rate_limited"), "{body}");
     assert!(
@@ -148,7 +147,7 @@ async fn r4008000_a_wrong_room_code_past_the_accounts_allowance_is_refused_for_e
     assert_eq!(status, 429, "{body}");
 
     // The window passes (and the first room lapses with it): the host's new room joins.
-    advance(CODE_MISS_WINDOW_MS + 1).await;
+    advance(CODE_TRY_WINDOW_MS + 1).await;
     let (status, room) = from_ip(
         &app,
         "POST",
@@ -169,20 +168,87 @@ async fn r4008000_a_wrong_code_sent_again_counts_once_and_a_malformed_one_never(
     let app = empty_test_app().await;
     let who = account(&app, 1, "Pal").await;
     let again = unheld_code(1);
-    for _ in 0..CODE_MISSES_PER_ACCOUNT_PER_HOUR + 5 {
+    for _ in 0..CODE_TRIES_PER_ACCOUNT_PER_HOUR + 5 {
         assert_eq!(duos_get(&app, &who, IP, &again).await.0, 404);
     }
-    for _ in 0..CODE_MISSES_PER_ACCOUNT_PER_HOUR + 5 {
+    for _ in 0..CODE_TRIES_PER_ACCOUNT_PER_HOUR + 5 {
         assert_eq!(duos_get(&app, &who, IP, "ZZZ").await.0, 404);
     }
     assert_eq!(duos_get(&app, &who, IP, &unheld_code(2)).await.0, 404);
+}
+
+/// Every future started before any is awaited; the answers in order.
+async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
+    let mut futures: Vec<Pin<Box<F>>> = futures.into_iter().map(Box::pin).collect();
+    let mut outputs: Vec<Option<F::Output>> = futures.iter().map(|_| None).collect();
+    std::future::poll_fn(|cx| {
+        let mut pending = false;
+        for (future, output) in futures.iter_mut().zip(outputs.iter_mut()) {
+            if output.is_none() {
+                match future.as_mut().poll(cx) {
+                    Poll::Ready(value) => *output = Some(value),
+                    Poll::Pending => pending = true,
+                }
+            }
+        }
+        if pending { Poll::Pending } else { Poll::Ready(()) }
+    })
+    .await;
+    outputs
+        .into_iter()
+        .map(|output| output.expect("every future finished"))
+        .collect()
+}
+
+#[tokio::test(start_paused = true)]
+async fn r4008000_requests_sent_at_once_cannot_try_more_codes_than_the_allowance() {
+    let app = empty_test_app().await;
+    let who = account(&app, 1, "Pal").await;
+    // Every request is started before any is answered, so none can wait on another's count.
+    let burst = CODE_TRIES_PER_ACCOUNT_PER_HOUR * 4;
+    let codes: Vec<String> = (0..burst).map(unheld_code).collect();
+    let answers = join_all(codes.iter().map(|code| duos_get(&app, &who, IP, code)).collect()).await;
+    let answered = answers.iter().filter(|(status, _)| *status == 404).count();
+    let refused = answers.iter().filter(|(status, _)| *status == 429).count();
+    assert_eq!(
+        (answered, refused),
+        (
+            CODE_TRIES_PER_ACCOUNT_PER_HOUR,
+            burst - CODE_TRIES_PER_ACCOUNT_PER_HOUR
+        ),
+        "{answers:?}"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r4008000_a_right_code_counts_as_a_guess_as_a_wrong_one_does() {
+    let app = empty_test_app().await;
+    let guesser = account(&app, 1, "Pal").await;
+    // Co-op rooms nobody has joined are readable by a stranger; each is a code the guesser got right.
+    for n in 0..CODE_TRIES_PER_ACCOUNT_PER_HOUR {
+        let host = account(&app, 100 + n as u32, "Host").await;
+        let (status, room) = from_ip(
+            &app,
+            "POST",
+            "/api/duos/rooms",
+            &host.token,
+            OTHER_IP,
+            json!({ "difficulty": "easy", "random": true }),
+        )
+        .await;
+        assert_eq!(status, 201, "{room}");
+        let code = room["code"].as_str().expect("a code").to_string();
+        assert_eq!(duos_get(&app, &guesser, IP, &code).await.0, 200);
+    }
+    let (status, body) = duos_get(&app, &guesser, IP, &unheld_code(1)).await;
+    assert_eq!((status, error_code(&body)), (429, "rate_limited"), "{body}");
 }
 
 #[tokio::test(start_paused = true)]
 async fn r4008000_every_door_of_a_code_shares_one_allowance() {
     let app = empty_test_app().await;
     let who = account(&app, 1, "Pal").await;
-    for n in 0..CODE_MISSES_PER_ACCOUNT_PER_HOUR {
+    for n in 0..CODE_TRIES_PER_ACCOUNT_PER_HOUR {
         let which = n % DOORS;
         let (status, body) = door(&app, which, &who, IP, &unheld_code(n)).await;
         assert_ne!(status, 429, "door {which}: {body}");
@@ -205,10 +271,10 @@ async fn r4008000_the_address_holds_its_own_allowance_across_accounts() {
     let app = empty_test_app().await;
     let mut spent = 0;
     let mut k = 0;
-    while spent < CODE_MISSES_PER_ADDRESS_PER_HOUR {
+    while spent < CODE_TRIES_PER_ADDRESS_PER_HOUR {
         let pal = account(&app, 10 + k, "Pal").await;
         k += 1;
-        for _ in 0..CODE_MISSES_PER_ACCOUNT_PER_HOUR.min(CODE_MISSES_PER_ADDRESS_PER_HOUR - spent) {
+        for _ in 0..CODE_TRIES_PER_ACCOUNT_PER_HOUR.min(CODE_TRIES_PER_ADDRESS_PER_HOUR - spent) {
             let (status, body) = duos_get(&app, &pal, IP, &unheld_code(spent)).await;
             assert_eq!(status, 404, "{body}");
             spent += 1;
@@ -255,7 +321,7 @@ async fn r4008000_the_people_of_a_lobby_and_a_room_use_their_own_with_the_allowa
     .await;
     assert_eq!(status, 201, "{duos}");
 
-    for n in 0..CODE_MISSES_PER_ACCOUNT_PER_HOUR {
+    for n in 0..CODE_TRIES_PER_ACCOUNT_PER_HOUR {
         assert_eq!(duos_get(&app, &host, IP, &unheld_code(n)).await.0, 404);
     }
     let own = |body: &Value| body["code"].as_str().expect("a code").to_string();
