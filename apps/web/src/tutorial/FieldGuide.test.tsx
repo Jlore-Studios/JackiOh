@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
 
+import { AI_TUTORIAL, HERO_HEALTH } from "@jackioh/engine/config";
+
+import { LANES } from "../game/contract.ts";
 import { PRACTICE_IDLE_STATE, type PracticeControllerState } from "../practice/controller.ts";
 import type { PracticeSnapshot } from "../practice/protocol.ts";
 import { baseView, card, emptySide, resetIds } from "../test/fixtures.ts";
@@ -152,6 +155,18 @@ describe("R2205002 the Field guide", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(button).toHaveFocus();
+  });
+
+  it("R2205002 the Field guide fills the lane and health numbers", () => {
+    markFound(["play-unit", "hero-health"]);
+    render(<FieldGuideButton testid={tutorialTestid.fieldGuidePath} />);
+    fireEvent.click(screen.getByTestId(tutorialTestid.fieldGuidePath));
+    const play = screen.getByTestId(tutorialTestid.fieldGuideEntry("play-unit"));
+    expect(play).toHaveTextContent(String(LANES.length));
+    expect(play.textContent).not.toContain("{lanes}");
+    const health = screen.getByTestId(tutorialTestid.fieldGuideEntry("hero-health"));
+    expect(health).toHaveTextContent(String(HERO_HEALTH));
+    expect(health).toHaveTextContent(String(AI_TUTORIAL.heroHealth ?? HERO_HEALTH));
   });
 
   it("R2205002 Close closes it too, and what it lists follows the device's progress", () => {
