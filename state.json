@@ -6655,6 +6655,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-15T20:08:20Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
