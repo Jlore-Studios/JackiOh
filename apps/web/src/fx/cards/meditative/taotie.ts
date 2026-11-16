@@ -1,11 +1,12 @@
 // R3405001: Meditative #47 饕餮 Taotie (`meditative-047`, entrance "bronzeCauldron", bespoke "taotie", a
 // toxic steam on its tile), a Legendary Unit's signature. A verdigris bronze cauldron drops and slams onto
 // its zone in a gout of steam, and the taotie's jawless horned face rises from it, its eyes kindling green.
-// At the end of each turn its maw yawns: a green-bronze vortex opens under the enemy Unit it eats and drags
-// its card back, tumbling, off its zone into the face, whose brow spirals flare as its stats swell. A card
-// the board does not show (the Radiant face's second course, from the opponent's deck) is dragged from the
-// opponent's deck pile instead. It keys on a fusion its own card is in (the turn hook's in a game, its play's
-// in the gallery), never on a card's definition, and draws card backs alone (R202).
+// As its Activate eats (its end of turn through v0.6.5b) its maw yawns: a green-bronze vortex opens under the
+// enemy Unit it eats and drags its card back, tumbling, off its zone into the face, whose brow spirals flare
+// as its stats swell. A card the board does not show (through v0.6.5b, the Radiant face's second course, from
+// the opponent's deck) is dragged from the opponent's deck pile instead. It keys on a fusion its own card is
+// in (the Activate's in a game, its play's in the gallery), never on a card's definition, and draws card
+// backs alone (R202).
 
 import { HIDDEN_ID, animTestid, locateInstance } from "../../../game/animations.ts";
 import { sideOf } from "../../../game/contract.ts";

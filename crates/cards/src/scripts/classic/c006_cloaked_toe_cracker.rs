@@ -89,7 +89,7 @@ mod tests {
     const TWO_TRAP: &str = "classic-052"; // Final Gambit: Trap that answers nothing these tests do (Unlicensed Experimentation, core-085 since issue #3136)
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const TESLA: &str = "classic-005"; // Tesla: a Field Trap
-    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const FIELD_SPELL: &str = "stand-in (3) Field Spell";
     const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
     const WARDRUM: &str = "classicplus-037"; // Wardrum: Divine Shield, "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
@@ -158,10 +158,10 @@ mod tests {
             #[test]
             fn the_opponent_s_traps_and_your_field_spells_and_spells_are_untouched() {
                 let s = scenario(json!({
-                    "p1": { "hand": [MANA_WELL, STOCKPILE], "field": [CRACKER] },
+                    "p1": { "hand": [FIELD_SPELL, STOCKPILE], "field": [CRACKER] },
                     "p2": { "hand": [TWO_TRAP, STOCKPILE] },
                 }));
-                assert_eq!(cost_of(&s, MANA_WELL), 3);
+                assert_eq!(cost_of(&s, FIELD_SPELL), 3);
                 assert_eq!(cost_of(&s, STOCKPILE), 1);
                 assert_eq!(cost_of(&s, TWO_TRAP), 2);
             }
@@ -343,12 +343,12 @@ mod tests {
             #[test]
             fn a_spell_a_field_spell_or_the_opponent_s_trap_gains_nothing() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [STOCKPILE, MANA_WELL], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
+                    "p1": { "hand": [STOCKPILE, FIELD_SPELL], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [SHEEPISH, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
                 }));
                 s.play(STOCKPILE, json!({}));
                 s.expect_mana(P1, 3);
-                s.play(MANA_WELL, json!({ "zone": 1 }));
+                s.play(FIELD_SPELL, json!({ "zone": 1 }));
                 s.expect_mana(P1, 0);
                 s.end_turn();
                 s.play(SHEEPISH, json!({ "zone": 1 }));

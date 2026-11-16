@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DAILY_SWEEP_CRON,
+  forServer,
   HEALTH_PATH,
   MODULE_CACHE_CONTROL,
   READY_PATH,
@@ -71,6 +72,21 @@ describe.each(ENVIRONMENTS)("wrangler.jsonc, $label", ({ worker, name, origin })
     expect(Object.keys(worker.vars).sort()).toEqual([...SERVER_VARS].sort());
     expect(worker.vars.PUBLIC_ORIGINS).toBe(origin);
     for (const secret of SERVER_SECRETS) expect(worker.vars).not.toHaveProperty(secret);
+  });
+
+  // #4005 (R190): more trusted hops than the Worker writes would hand the rate limits' key back to
+  // whatever the caller put in the header.
+  it("trusts exactly as many X-Forwarded-For entries as the Worker writes", () => {
+    const spoofed = new Request(`${origin}/api/catalog`, {
+      headers: { "X-Forwarded-For": "203.0.113.9, 198.51.100.1", "CF-Connecting-IP": "192.0.2.7" },
+    });
+    const written = forServer(spoofed).headers.get("X-Forwarded-For")?.split(",") ?? [];
+    expect(worker.vars.TRUSTED_PROXY_HOPS).toBe(String(written.length));
+  });
+
+  // #3999: a version's preview address would run the Worker, and reach the server, at an address of its own.
+  it("has no preview address", () => {
+    expect(worker.preview_urls).toBe(false);
   });
 });
 

@@ -26,11 +26,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts through v0.6.5b, whose Walls' bonus a set or a Buff multiplied (issue #3935).
+/// R767000: the scripts through v0.6.5c, whose Walls' bonus a set or a Buff multiplied (issue #3935).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5b() -> CardScripts {
-    let base = super::c065_thorium_wall::embiggened_wall_v0_6_5b();
-    let radiant = super::c065_thorium_wall::embiggened_wall_v0_6_5b();
+pub fn script_v0_6_5c() -> CardScripts {
+    let base = super::c065_thorium_wall::embiggened_wall_v0_6_5c();
+    let radiant = super::c065_thorium_wall::embiggened_wall_v0_6_5c();
     CardScripts { base, radiant }
 }
 

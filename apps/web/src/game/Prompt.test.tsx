@@ -4,6 +4,7 @@
 // `zone`, `tribute`, `direction`, `x` and `embiggen` are the card's own play choices, driven by the
 // in-flight `Interaction` with `view.pending` null, and submit a `play`.
 
+import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import Prompt from "./Prompt.tsx";
 import { IDLE, type Interaction } from "./actions.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, testid } from "./contract.ts";
+import { withCatalog } from "../test/board.tsx";
 import { baseView, card, emptySide, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 afterEach(cleanup);
@@ -279,29 +281,58 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h3", modes: ["board"] });
   });
 
-  it("#24 Efficiency Dividend's options say X, 4X and X on its base face and 2X, 8X and X+1 on its Radiant face (§8 #24)", () => {
+  it("#24 Efficiency Dividend's choices read printed and live params from the card (§8 #24)", () => {
+    const def = CATALOG["core-024"];
+    const damage = def?.params?.find((param) => param.key === "damage");
+    const heal = def?.params?.find((param) => param.key === "heal");
+    if (def === undefined || damage === undefined || heal === undefined || heal.step === undefined) {
+      throw new Error("core-024 must declare damage and a stepped heal param");
+    }
+
     const modes = ["damage", "heal", "mana"];
-    const pickerFor = (radiant: boolean): void => {
+    const pickerFor = (radiant: boolean, params?: Record<string, number>): void => {
       const view = viewWith({
-        you: emptySide("p1", { hand: [card({ instanceId: "h24", defId: "core-024", radiant })] }),
+        you: emptySide("p1", {
+          hand: [card({ instanceId: "h24", defId: "core-024", radiant, ...(params === undefined ? {} : { params }) })],
+        }),
       });
       const interaction = playing(
         modes.map((mode): ActionBody => ({ type: "play", instanceId: "h24", x: 2, modes: [mode] })),
         "h24",
       );
-      render(<Prompt view={view} interaction={interaction} onAction={vi.fn()} />);
+      render(withCatalog(<Prompt view={view} interaction={interaction} onAction={vi.fn()} />));
+    };
+    const expectOption = (option: string, label: string, detail: string): void => {
+      const choice = screen.getByTestId(`prompt-option-${option}`);
+      expect(choice.querySelector(".choice-card-name")).toHaveTextContent(label);
+      expect(choice.querySelector(".choice-card-text")).toHaveTextContent(detail);
     };
 
     pickerFor(false);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal X damage.");
-    expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by four times X.");
-    expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X mana next turn.");
+    expectOption("damage", "Deal X damage", "Deal X damage.");
+    expectOption("heal", `Heal ${String(heal.base)}X`, `Heal a target by ${String(heal.base)} times X.`);
+    expectOption("mana", "Mana next turn", "Gain X mana next turn.");
     cleanup();
 
     pickerFor(true);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal twice X damage.");
-    expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by eight times X.");
-    expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X plus 1 mana next turn.");
+    expectOption("damage", `Deal ${String(damage.radiant)}X damage`, `Deal ${String(damage.radiant)}X damage.`);
+    expectOption("heal", `Heal ${String(heal.radiant)}X`, `Heal a target by ${String(heal.radiant)} times X.`);
+    expectOption("mana", "Mana next turn", "Gain X plus 1 mana next turn.");
+    cleanup();
+
+    const pending = viewWith({
+      pending: pendingFor("mode", [{ key: "mode:heal", label: "Heal" }], {
+        sourceDefId: def.id,
+        sourceRadiant: true,
+      }),
+    });
+    render(withCatalog(<Prompt view={pending} onAction={vi.fn()} />));
+    expectOption("mode:heal", "Heal", `Heal a target by ${String(heal.radiant)} times X.`);
+    cleanup();
+
+    const liveHeal = heal.base + heal.step;
+    pickerFor(false, { damage: damage.base, heal: liveHeal });
+    expectOption("heal", `Heal ${String(liveHeal)}X`, `Heal a target by ${String(liveHeal)} times X.`);
   });
 
   it("an option no card text covers is its own word, capitalised", () => {

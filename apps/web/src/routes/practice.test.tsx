@@ -3120,8 +3120,9 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
         />,
       );
 
-    // Human first leaves no pending AI step after both mulligans.
-    visit("?seed=r658-reload&difficulty=medium&deck=random&seat=p1");
+    // Human first leaves no pending AI step after both mulligans. (Issue #3996's costs re-dealt `r658-reload`'s
+    // random decks into a game whose AI moves before the snapshot, so the seed moved on.)
+    visit("?seed=r658-reload-2&difficulty=medium&deck=random&seat=p1");
     route();
     await mulliganPicker();
     fireEvent.click(screen.getByTestId("prompt-submit"));

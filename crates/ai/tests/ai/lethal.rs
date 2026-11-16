@@ -861,6 +861,8 @@ mod hero_ineligible_attacks {
         let sick = fresh(&ready, "core-032");
         assert_eq!(ready_gap(&sick, AI), 7.0);
         assert_eq!(ready_gap_by_legal_actions(&sick, AI), 7.0);
-        assert_eq!(face_threat(&sick, AI), 0);
+        // R3937000: next turn Prem Panther's 5 destroys Tommy Tempo alone and Tempo Timmy's 3 goes face,
+        // the line `ready_gap` reads this turn; the old order counted 0.
+        assert_eq!(face_threat(&sick, AI), 3);
     }
 }

@@ -1,27 +1,31 @@
 //! SPEC §8.12 S+ #21 Jlockeed Shredder-12, a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    12/16, Tribute 1, Pierce; "End of turn: Deal {damage} damage to all enemies, twice."
-//!   Radiant: 24/32, Tribute 1, Pierce; the same.
+//!   Base:    12/16, Tribute 2, Pierce; "End of turn: Deal {damage} damage to all enemies, twice."
+//!   Radiant: 24/32, Tribute 2, Pierce; the same.
 //!
-//! Tribute 1 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
+//! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
 //! printed Tribute (R366). The end of turn is #13's shape: one `damage_all` per pass (R51, R59), and
 //! "twice" is two passes, so every enemy takes two damage instances, the hero last in each (R3553000).
+//! Issue #3996 raised the Tribute from 1; `script_v0_6_5b` keeps Tribute 1 for the replays of v0.6.5b and
+//! before (R767000).
 
 use jackioh_engine::effects::damage_all;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-021";
 
-/// "Tribute 1" (R101, R366: printed, declared nowhere).
-const TRIBUTE: i32 = 1;
+/// "Tribute 2" (R101, R366: printed, declared nowhere), since issue #3996.
+const TRIBUTE: i32 = 2;
+/// "Tribute 1", through v0.6.5b.
+const TRIBUTE_V0_6_5B: i32 = 1;
 /// "twice": two end-of-turn passes over every enemy (R3553000, R1748003: a printed word).
 const TWICE: i32 = 2;
 
 /// R3553000: two `damage_all` passes of the declared number `damage`, each one instance per enemy
-/// unit and the enemy hero, the hero last (R51, R59).
-fn shredder() -> Script {
+/// unit and the enemy hero, the hero last (R51, R59); `tribute` to play it.
+fn shredder(tribute: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
-            tribute: Some(TRIBUTE),
+            tribute: Some(tribute),
             ..StaticFlags::default()
         }),
         end_of_turn: Some(hook(|ctx| {
@@ -35,13 +39,20 @@ fn shredder() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = shredder();
+    let base = shredder(TRIBUTE);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.6.5b it was Tribute 1 (issue #3996); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_5b() -> CardScripts {
+    let base = shredder(TRIBUTE_V0_6_5B);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
 // S+ #21 Jlockeed Shredder-12 — SPEC §8.12 row S+ 21 (R3553000; R51, R59, R101, R366).
-// End-of-turn double AoE over enemy units and hero; Tribute 1 to play.
+// End-of-turn double AoE over enemy units and hero; Tribute 2 to play (1 through v0.6.5b).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,19 +157,42 @@ mod tests {
             );
         }
 
-        #[test]
-        fn r101_it_needs_tribute_1() {
-            let mut s = scenario(json!({
-                "p1": { "hand": [ID], "field": [VANILLA], "library": [FILLER] },
+        /// p1 holds the Shredder (`radiant` its face) beside two Units to tribute.
+        fn to_play(radiant: bool) -> Scenario {
+            scenario(json!({
+                "p1": { "hand": [{ "def": ID, "radiant": radiant }], "field": [VANILLA, VANILLA], "library": [FILLER] },
                 "p2": { "hand": [FILLER], "library": [FILLER] },
-            }));
-            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
-            // No tribute is refused; one Unit pays it.
-            s.expect_refused(|s| s.play(ID, json!({ "zone": 2 })));
-            let first = s.unit_at(PlayerId::P1, 1).id;
-            s.play(ID, json!({ "zone": 2, "tributes": [first.as_str()] }));
-            s.expect_in_zone(ID, "field");
-            s.expect_in_zone(first.as_str(), "graveyard");
+            }))
+        }
+
+        #[test]
+        fn r101_it_needs_tribute_2_on_both_faces() {
+            for radiant in [false, true] {
+                let mut s = to_play(radiant);
+                assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
+                let [first, second] = [1, 2].map(|lane| s.unit_at(PlayerId::P1, lane).id);
+                // No tribute, or one, is refused; two Units pay it.
+                s.expect_refused(|s| s.play(ID, json!({ "zone": 3 })));
+                s.expect_refused(|s| s.play(ID, json!({ "zone": 3, "tributes": [first.as_str()] })));
+                s.play(ID, json!({ "zone": 3, "tributes": [first.as_str(), second.as_str()] }));
+                s.expect_in_zone(ID, "field");
+                s.expect_in_zone(first.as_str(), "graveyard");
+                s.expect_in_zone(second.as_str(), "graveyard");
+            }
+        }
+
+        /// R767000: through v0.6.5b one Unit paid it (issue #3996).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_5b_needs_tribute_1() {
+            crate::under_kept(ID, script_v0_6_5b(), || {
+                let mut s = to_play(false);
+                assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_5B);
+                let first = s.unit_at(PlayerId::P1, 1).id;
+                s.play(ID, json!({ "zone": 3, "tributes": [first.as_str()] }));
+                s.expect_in_zone(ID, "field");
+                s.expect_in_zone(first.as_str(), "graveyard");
+                assert!(s.unit(PlayerId::P1, 2).is_some(), "the second Unit stays");
+            });
         }
     }
 

@@ -25,9 +25,10 @@ use crate::auth::AuthUser;
 use crate::config::{
     API_MAX_BODY_BYTES, API_REJECTION_ALERT_THRESHOLD, API_REJECTION_ALERT_WINDOW_MS,
     API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, KNOWN_PROFILES_MAX, MAX_TRUSTED_PROXY_HOPS,
-    RATING_START,
+    RATING_START, ROUTE_FAILING_ALERT_COUNT, ROUTE_FAILING_ALERT_MS,
 };
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
+use crate::loops::FailureRun;
 
 // Errors
 
@@ -890,6 +891,74 @@ impl Default for KnownProfiles {
     }
 }
 
+/// The method column of a socket upgrade's run in `RouteHealth`: none of the four is an HTTP method.
+pub const SOCKET_METHOD: &str = "WS";
+
+/// #3826: each route's run of internal errors. A route that answers "something went wrong" to every
+/// request (opening packs after a bad migration, say) wrote a `handler.threw` warning per request and
+/// told nobody; once a route has answered at least `ROUTE_FAILING_ALERT_COUNT` internal errors in a
+/// row over at least `ROUTE_FAILING_ALERT_MS`, with no other answer between, this raises one alert,
+/// `api.route.failing`, and its next answer of any other kind logs `api.route.recovered`. A 4xx
+/// refusal is an answer: it ends the run. The four socket upgrades report here too, under
+/// `SOCKET_METHOD`.
+///
+/// The key is `(method, pattern)`, the route's own pattern and never the request's path, so ids and
+/// codes cannot grow the map: `GET` and `PUT` of one pattern are two routes, since a healthy `GET`
+/// would otherwise hide a failing `PUT`. A route's entry is dropped on its first answer that is not
+/// an internal error, so the map holds the routes failing now, at most the `ROUTES` table and the four
+/// sockets. The alert's data holds no id and no address: it reaches only the email, and the issue it
+/// opens is public (`log_alert`). One per `App`, for the limiter's reason.
+#[derive(Default)]
+pub struct RouteHealth {
+    runs: Mutex<IndexMap<(&'static str, &'static str), FailureRun>>,
+}
+
+impl RouteHealth {
+    /// One internal error from `pattern`, answered or refused to a socket; `message` is what the alert
+    /// says when this one completes the run.
+    pub fn threw(&self, method: &'static str, pattern: &'static str, message: &str) {
+        let completed = lock(&self.runs).entry((method, pattern)).or_default().failed(
+            now_ms(),
+            ROUTE_FAILING_ALERT_COUNT,
+            ROUTE_FAILING_ALERT_MS,
+        );
+        if let Some((failures, failing_for_ms)) = completed {
+            log_alert(
+                "api.route.failing",
+                json!({
+                    "method": method,
+                    "pattern": pattern,
+                    "failures": failures,
+                    "failingForMs": failing_for_ms,
+                    "message": message,
+                }),
+            );
+        }
+    }
+
+    /// One answer from `pattern` that is not an internal error: it ends the route's run, and logs the
+    /// recovery if the run had alerted.
+    pub fn answered(&self, method: &'static str, pattern: &'static str) {
+        let ended = lock(&self.runs).swap_remove(&(method, pattern));
+        if let Some((failures, failed_for_ms)) = ended.and_then(|mut run| run.ok(now_ms())) {
+            log_info(
+                "api.route.recovered",
+                json!({
+                    "method": method,
+                    "pattern": pattern,
+                    "failures": failures,
+                    "failedForMs": failed_for_ms,
+                }),
+            );
+        }
+    }
+
+    /// How many routes are in a run of internal errors now, so a test can see the bound.
+    pub fn failing_routes(&self) -> usize {
+        lock(&self.runs).len()
+    }
+}
+
 /// SPEC §11 R2478000: the R109 key of the account `user_id` was last resolved to, and its R192
 /// wait, when `known_profiles` knows it and its budget is spent; `None` otherwise. Only looked at,
 /// never counted: what the map lets by is counted against the profile the store answers (R157).
@@ -1140,12 +1209,19 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
         )
         .await;
         return match outcome {
-            Ok(response) => response,
+            Ok(response) => {
+                app.route_health.answered(method, pattern);
+                response
+            }
             Err(error) if error.code == ApiErrorCode::Internal => {
                 log_warn("handler.threw", json!({ "path": path, "message": error.message }));
+                app.route_health.threw(method, pattern, &error.message);
                 error_response(&ApiError::internal("something went wrong"))
             }
-            Err(error) => error_response(&error),
+            Err(error) => {
+                app.route_health.answered(method, pattern);
+                error_response(&error)
+            }
         };
     }
 

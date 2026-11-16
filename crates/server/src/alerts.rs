@@ -430,6 +430,10 @@ pub fn meaning(event: &str) -> &'static str {
             "GitHub refused CREATE_ISSUES_TOKEN, so neither bug reports nor alerts can open issues until \
              it is renewed (crates/server/README.md, A match its log does not reproduce)."
         }
+        "api.route.failing" => {
+            "An API route, or a socket's upgrade, answered an internal error to every request for a minute \
+             or more (#3826); the email names it."
+        }
         "client.error" => {
             "A player's browser crashed: a screen the error boundary caught, an uncaught error or an \
              unhandled promise rejection (POST /api/client-errors, #3619). The message, a trimmed stack \
@@ -704,6 +708,7 @@ mod tests {
             "game_records.fold_poison",
             "bug.reports.refused",
             "bug.found",
+            "api.route.failing",
             "client.error",
         ] {
             assert_ne!(meaning(event), fallback, "{event}");

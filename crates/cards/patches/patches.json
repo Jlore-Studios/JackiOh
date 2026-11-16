@@ -28483,5 +28483,555 @@
       "stinkyscape-041"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.5c",
+    "date": "2026-11-16",
+    "title": "Patch: Stinkyscape+ Balance Changes II",
+    "source": "#3996",
+    "notes": "The designer's second Stinkyscape+ balance pass (#3996). Costs, stats and numbers on 25 cards; script changes, each keeping its v0.6.5b script (R767000), on Profe Yates, Drone Assembler v4 and v5, Fire Beam v5, Taotie, House Party, In a hurry, Endless Expedition, Feng Shui, Core Researcher, Legacy: Snom Bunny Mind Control, Occidentless Mandate, Tommy Tempo, Jlockeed Shredder-12, ZolarKeth, Legacy: Jlockeed's Weapons, First Day of Xuexiao, Phase Fabric, Call to Chaos (Mindustrial-Swarm Edition) and Appropriations; Icarus gains Immune to Spells. Rulings R3996000-R3996002, R3996100, R3996101, R3996200-R3996202.",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes II",
+      "new": [],
+      "balance": [
+        "Crawler Swarm and Crawler Assembly Line cost (3), up from (2).",
+        "Crawler costs (1), up from (0), and its Death deals 1 damage (Radiant 2), down from 2 (Radiant 4).",
+        "Galaxy is 2/2 (Radiant 4/4), down from 5/5 (Radiant 10/10).",
+        "Beam v5 deals 9 damage (Radiant 18), down from 11 (Radiant 22).",
+        "Spiritually 中国 summons 3 random CN Units, down from 5.",
+        "Silly Silas is 4/4 (Radiant 8/8), up from 2/2 (Radiant 4/4).",
+        "The Propagation's Hornet is 2/3 (Radiant 4/6), down from 3/3 (Radiant 6/6).",
+        "Heroic Power costs (1), up from (0).",
+        "Shield Amplifier gains +2/+2 (Radiant +4/+4) when it survives an attack, down from +3/+3 (Radiant +6/+6).",
+        "Jlockeed Shredder-10 is 4/6 (Radiant 8/12), down from 5/7 (Radiant 10/14); Legacy: Jlockeed Shredder-10 is 6/10 (Radiant 12/20), down from 8/10 (Radiant 16/20).",
+        "Drone Core V costs (4), up from (3).",
+        "Fuse has Armor 3 (Radiant 6), down from 5 (Radiant 10).",
+        "State of the Game is 2/2 (Radiant 4/4), down from 3/3 (Radiant 6/6).",
+        "Shadiris costs (4), up from (3); Felinor Feelings costs (3), up from (2).",
+        "Jlockeed Shredder-12 needs Tribute 2, up from 1; ZolarKeth gains Tribute 1.",
+        "Call to Chaos (Mindustrial-Swarm Edition): its Jlockeed effect summons or casts 4 cards, down from 5, and its Burn is 2, down from 3.",
+        "Appropriations' four choices are about 15% weaker on both faces.",
+        "Phase Weaver costs (0), Twinspell (1), Income Tax (2), Mana Well (2), Mountaintop Garden (2), The Perfect Pair (0), Field of Dreams (1) and Wondrous Wand (1, Embiggened 3), each down by 1.",
+        "Icarus is 4/12 (Radiant 8/24), up from 2/8 (Radiant 4/16), and gains Immune to Spells."
+      ],
+      "changes": [
+        "Profe Yates's Cry exiles one permanent you choose, then summons its Traps, and all three of its Activates are always available.",
+        "Drone Assembler v5: Activate 2: summon a Drone Interceptor (Radiant: a Radiant one) to attack an enemy, with an extra turn of cooldown. It summoned a Drone Corvette.",
+        "Drone Assembler v4: Activate: summon a Drone Interceptor to attack an enemy, once a turn with an extra turn of cooldown, instead of twice a turn.",
+        "Fire Beam v5 Burns 6 on both faces; the base face activates once a turn, the Radiant face twice.",
+        "饕餮 is 2/2 (Radiant 4/4): Activate: fuse a random enemy Unit into it, then Freeze it (the Radiant face doesn't Freeze). It fused at the end of your turn.",
+        "Tommy Tempo's Cry gains +1 Health (Radiant +2) per mana lost, no longer Attack.",
+        "Core Researcher adds its Drone Core cards on its Death instead of its Cry.",
+        "House Party costs (3), down from (4); its Right-house defenders and their Reborn copies have Brittle 1.",
+        "Occidentless Mandate no longer adds CN cards to your hand; the Radiant face exiles only enemy permanents.",
+        "Legacy: Jlockeed's Weapons no longer gives Rush.",
+        "First Day of 学校 adds 3 random CN cards, up from 2, at their printed cost.",
+        "Legacy: Snom Bunny Mind Control costs (3): steal an enemy Unit; next turn you lose 2 mana (Radiant 1).",
+        "Endless Expedition: now and at the start of each of your turns for the rest of the game, add a random Terminus card that costs (2) to your hand. It no longer costs you mana.",
+        "Feng Shui costs (3), up from (2), and gains Cry: add an Auspicious Rock (Radiant: a Radiant one) to your hand.",
+        "Phase Fabric also gives Armor 2 (Radiant 4).",
+        "In a hurry fills your board with Rush Tokens instead of summoning 4."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "1dc9cc542b89b96c25fbb85c0464a2193d74f4b8"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-009",
+      "classic-032",
+      "classic-041",
+      "classicplus-029",
+      "classicplus-040",
+      "classicplus-073",
+      "core-006",
+      "core-013",
+      "core-023",
+      "core-052",
+      "core-076",
+      "core-079",
+      "core-093",
+      "core-098",
+      "meditative-001",
+      "meditative-032",
+      "meditative-033",
+      "meditative-040",
+      "meditative-047",
+      "meditative-056",
+      "meditative-058",
+      "meditative-059",
+      "meditative-078",
+      "meditative-081",
+      "meditative-084",
+      "meditativeplus-003",
+      "meditativeplus-022",
+      "stinkyscape-031",
+      "stinkyscape-038",
+      "stinkyscape-042",
+      "stinkyscape-053",
+      "stinkyscape-058",
+      "stinkyscape-080",
+      "stinkyscape-092",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-t-reknite",
+      "stinkyscapeplus-026",
+      "stinkyscapeplus-040",
+      "stinkyscapeplus-046",
+      "stinkyscapeplus-057",
+      "stinkyscapeplus-071",
+      "stinkyscapeplus-082",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-107",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-135",
+      "stinkyscapeplus-136",
+      "stinkyscapeplus-137",
+      "stinkyscapeplus-142",
+      "stinkyscapeplus-145",
+      "stinkyscapeplus-160",
+      "stinkyscapeplus-165",
+      "traininggrounds-015",
+      "traininggrounds-048",
+      "traininggrounds-052"
+    ],
+    "changes": [
+      {
+        "id": "core-006",
+        "name": "Mana Well",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-076",
+        "name": "Field of Dreams",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "core-079",
+        "name": "Twinspell",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-009",
+        "name": "Income Tax",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-032",
+        "name": "Felinor Feelings",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-041",
+        "name": "State of the Game",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-032",
+        "name": "Spiritually 中国",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-033",
+        "name": "First Day of 学校",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-040",
+        "name": "Feng Shui",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-047",
+        "name": "饕餮",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-056",
+        "name": "House Party",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-078",
+        "name": "Occidentless Mandate",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-003",
+        "name": "Wondrous Wand",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-022",
+        "name": "Mountaintop Garden",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-026",
+        "name": "ZolarKeth",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-031",
+        "name": "Drone Core V",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-038",
+        "name": "Shield Amplifier",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-042",
+        "name": "Core Researcher",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-058",
+        "name": "Beam v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-080",
+        "name": "Galaxy",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-092",
+        "name": "The Propagation's Hornet",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "traininggrounds-015",
+        "name": "In a hurry",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-045",
+        "name": "Legacy: Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-048",
+        "name": "Legacy: Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "traininggrounds-052",
+        "name": "Legacy: Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-004",
+        "name": "Profe Yates",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-009",
+        "name": "Drone Assembler v4",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-010",
+        "name": "Drone Assembler v5",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-021",
+        "name": "Jlockeed Shredder-12",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-046",
+        "name": "Phase Fabric",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-057",
+        "name": "Phase Weaver",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-082",
+        "name": "Endless Expedition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-107",
+        "name": "Fuse",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-120",
+        "name": "Crawler",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-135",
+        "name": "Crawler Swarm",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-136",
+        "name": "Crawler Assembly Line",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-137",
+        "name": "The Perfect Pair",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-142",
+        "name": "Call to Chaos (Mindustrial-Swarm Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-145",
+        "name": "Fire Beam v5",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-160",
+        "name": "Icarus",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-165",
+        "name": "Shadiris",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      }
+    ]
   }
 ]

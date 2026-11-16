@@ -462,9 +462,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen before
         // (C #46's and C #54's among them, R749), less C #59's tokens and C #75's draw, which both faces
         // print (#2020), and C+ #68's `setCost`, which both faces print since issue #3951; and the Meditative
-        // set's twenty-one (twenty-three until #3140 made M #81's draw both faces', twenty-two until issue
-        // #3951 made M #19.1's `mana` both faces'), less M #1's draw (both faces), with M #37's and M #38's
-        // `setCost` (R1748003).
+        // set's twenty (twenty-three until #3140 made M #81's draw both faces', twenty-two until issue
+        // #3951 made M #19.1's `mana` both faces', twenty-one until issue #3996 took M #78's `discount`
+        // away), less M #1's draw (both faces), with M #37's and M #38's `setCost` (R1748003).
         let meditative = radiant_only
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
@@ -484,7 +484,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         // M #49.1's `radiants`, gone with its start-of-turn text.
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (42, 21),
+            (42, 20),
             "{radiant_only:#?}"
         );
     }
@@ -691,7 +691,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classic-029", EITHER_WAY),
         ("classic-064", EITHER_WAY),
         ("traininggrounds-034", EITHER_WAY),
-        ("traininggrounds-052", EITHER_WAY),
         ("classicplus-t-ai-03", AI_PRINTED),
         ("classicplus-t-ai-04", AI_PRINTED),
         ("classicplus-t-ai-05", AI_PRINTED),

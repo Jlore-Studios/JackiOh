@@ -3,6 +3,7 @@
 import type { ActionBody, CardView, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 
 import { sideView, type Side } from "../game/contract.ts";
+import type { Params } from "../i18n/i18n.ts";
 import type { CoachAnchor, CoachCtx, CoachStep, CoachTip } from "./coach.ts";
 
 export function isMyTurn(view: PlayerView): boolean {
@@ -83,6 +84,7 @@ type Common = {
   id: string;
   title: CoachStep["title"];
   text: StepText;
+  params?: Params;
   when?: (ctx: CoachCtx) => boolean;
   anchor?: CoachStep["anchor"];
   holdAi?: boolean;

@@ -22,7 +22,9 @@ use jackioh_engine::{
     temporary_number, unit_view,
 };
 
-use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
+use crate::candidates::{
+    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of,
+};
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
     NextSwing, Prices, coming_mana, evaluate_priced, float_credit, heal_converted, heal_worth, kill_worth,
@@ -58,6 +60,54 @@ fn lifesteal_value(state: &GameState, healer: PlayerId, amount: i32) -> f64 {
     }
 }
 
+/// One attack on a unit as the static trader reads it (`fight`).
+pub(crate) struct Fight {
+    pub(crate) a: Side,
+    pub(crate) t: Side,
+    pub(crate) combat: Exchange,
+    /// The attacker's blow on the target.
+    pub(crate) out: Blow,
+    /// Whether the blow destroys the target: never when a First Strike defender destroys the attacker
+    /// first.
+    pub(crate) kills: bool,
+    /// Whether the strike back destroys the attacker: never when a First Strike attacker destroys the
+    /// target first.
+    pub(crate) dies: bool,
+    /// Whether the blow lands at all (§4.3 step 1).
+    pub(crate) lands: bool,
+}
+
+/// §4.3 for `attacker` hitting the Unit `target`: each blow through `blow` (its cap included, R2179005),
+/// First Strike deciding who strikes first and no strike back on a Ranged attacker unless the target is
+/// Ranged too (R783000).
+pub(crate) fn fight(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> Fight {
+    let a = side_of(state, attacker);
+    let t = side_of(state, target);
+    // R1120, R1283: each strike as the combat reads it, the bonus and the lane multiplier included.
+    let combat = exchange(state, attacker, &a.view, target, &t.view);
+    let out = blow(&a, combat.hit, combat.poisonous, &t);
+    let mut kills = out.kills;
+    let mut dies =
+        takes_strike_back(state, attacker, target) && blow(&t, combat.strike_back, t.poisonous, &a).kills;
+    if a.first_strike && !t.first_strike && kills {
+        dies = false;
+    }
+    if t.first_strike && !a.first_strike && dies {
+        kills = false;
+    }
+    // §4.3 step 1: an attacker a First Strike defender destroys first strikes nothing at all.
+    let lands = !(t.first_strike && !a.first_strike && dies);
+    Fight {
+        a,
+        t,
+        combat,
+        out,
+        kills,
+        dies,
+        lands,
+    }
+}
+
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
 /// (`kill_worth`, #1796), less what its own death removes when it dies too, with First Strike deciding
 /// who strikes first and no strike back on a Ranged attacker unless the target is Ranged too (R783000).
@@ -78,22 +128,15 @@ pub(crate) fn trade_value(
             splash_kills: false,
         };
     };
-    let a = side_of(state, attacker);
-    let t = side_of(state, target);
-    // R1120, R1283: each strike as the combat reads it, the bonus and the lane multiplier included.
-    let combat = exchange(state, attacker, &a.view, target, &t.view);
-    let out = blow(&a, combat.hit, combat.poisonous, &t);
-    let mut kills = out.kills;
-    let mut dies =
-        takes_strike_back(state, attacker, target) && blow(&t, combat.strike_back, t.poisonous, &a).kills;
-    if a.first_strike && !t.first_strike && kills {
-        dies = false;
-    }
-    if t.first_strike && !a.first_strike && dies {
-        kills = false;
-    }
-    // §4.3 step 1: an attacker a First Strike defender destroys first strikes nothing at all.
-    let lands = !(t.first_strike && !a.first_strike && dies);
+    let Fight {
+        a,
+        t,
+        combat,
+        out,
+        kills,
+        dies,
+        lands,
+    } = fight(state, attacker, target);
     // §4.4 step 5: a Trample attacker's hit counts on a unit only up to its health, the rest being step
     // 9's hit on the hero.
     let trample = has_keyword(&a.view.keywords, KeywordKind::Trample);

@@ -46,6 +46,7 @@ const CN_JADE_WELL: &str = "meditative-044";
 const MONEY_MACHINE: &str = "meditative-054";
 const GACHAHOLIC: &str = "meditative-101";
 const ALUNETH: &str = "meditative-080";
+const TAOTIE: &str = "meditative-047"; // 饕餮
 const YILES_VIRUS: &str = "meditative-049-2";
 const MAESTRO: &str = "meditative-069";
 const EVER_GROWING_TREE: &str = "meditative-075";
@@ -56,7 +57,7 @@ const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 101] = [
+const ACTIVATE_CARDS: [&str; 102] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,
@@ -88,6 +89,7 @@ const ACTIVATE_CARDS: [&str; 101] = [
     CN_JADE_WELL,
     GACHAHOLIC,
     ALUNETH,
+    TAOTIE,
     YILES_VIRUS,
     MAESTRO,
     EVER_GROWING_TREE,
@@ -1553,6 +1555,40 @@ mod m80_aluneth {
     }
 }
 
+/// R3996002: M #47 饕餮's Activate (both faces), once a turn with no price, as a client uses it: it eats the
+/// enemy Unit, keeping its instance, and the base face then freezes itself.
+mod m_n47_taotie {
+    use super::*;
+
+    fn devours(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "field": [on(TAOTIE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "field": [VANILLA], "hand": [FILLER], "library": [X, X] },
+        }));
+        let id = s.card(TAOTIE).id.clone();
+        let meal = s.card(VANILLA).id.clone();
+        activate_listed(&mut s, TAOTIE, any);
+        s.expect_in_zone(meal.as_str(), "gone");
+        s.expect_in_zone(id.as_str(), "field");
+        assert_eq!(
+            s.card(id.as_str()).frozen.is_some(),
+            !radiant,
+            "only the base face freezes itself"
+        );
+        assert!(listed(&s, &id).is_empty(), "once a turn");
+    }
+
+    #[test]
+    fn r3996002_base_eats_an_enemy_unit_then_freezes_itself() {
+        devours(false);
+    }
+
+    #[test]
+    fn r3996002_radiant_eats_an_enemy_unit() {
+        devours(true);
+    }
+}
+
 mod m_n49_2_yiles_virus {
     use super::*;
 
@@ -2333,9 +2369,8 @@ mod stinkyscape {
         const SHIPYARD: &str = "stinkyscapeplus-157";
         const ICARUS: &str = "stinkyscapeplus-160";
 
-        /// What the abilities make: the drones, a Crawler, a Radi and a Warhero Token.
+        /// What the abilities make: the drone, a Crawler, a Radi and a Warhero Token.
         const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-        const CORVETTE: &str = "stinkyscape-t-drone-corvette";
         const CRAWLER: &str = "stinkyscapeplus-120";
         const RADI: &str = "stinkyscapeplus-060";
         const WARHERO: &str = "stinkyscapeplus-t-warhero-token";
@@ -2426,16 +2461,18 @@ mod stinkyscape {
             1,
             radiant
         ));
+        // R3996001: v4 once a turn and v5 twice, each with an extra turn cooldown that leaves this turn's
+        // uses alone.
         both_faces!(sp_n9_drone_assembler_v4, |radiant: bool| assembles(
             ASSEMBLER_V4,
             INTERCEPTOR,
-            2,
+            1,
             radiant
         ));
         both_faces!(sp_n10_drone_assembler_v5, |radiant: bool| assembles(
             ASSEMBLER_V5,
-            CORVETTE,
-            1,
+            INTERCEPTOR,
+            2,
             radiant
         ));
 
@@ -2755,9 +2792,10 @@ mod stinkyscape {
             1,
             radiant
         ));
+        // Once a turn on the base face, twice on the Radiant one.
         both_faces!(sp_n145_fire_beam_v5, |radiant: bool| burns(
             FIRE_BEAM_V5,
-            2,
+            if radiant { 2 } else { 1 },
             radiant
         ));
 
@@ -2848,24 +2886,40 @@ mod stinkyscape {
             uses_left(&s, &id, 1);
         });
 
-        /// S+ #4 Profe Yates in p1's hand with only itself to lose to its Cry's exile, p1's `own` Units and
-        /// p2's `enemy` Units on the field (Tylannt: no M, O, U, S or E in its name).
+        /// S+ #4 Profe Yates in p1's hand, p1's `own` Units and p2's `enemy` Units on the field, and a Mana
+        /// Well in p2's backrow for its Cry to exile.
         fn yates_in_hand(radiant: bool, own: Value, enemy: Value) -> Scenario {
             open(scenario(json!({
                 "seed": "listed-s004",
                 "p1": { "mana": 10, "hand": [on(YATES, radiant)], "field": own, "library": [X, X] },
-                "p2": { "field": enemy, "hand": [FILLER], "library": [X, X] },
+                "p2": { "field": enemy, "backrow": [MANA_WELL], "hand": [FILLER], "library": [X, X] },
             })))
         }
 
-        // R3567003: Overwhelm freezes every Unit in its lane and the lanes beside it, both sides, itself too.
+        /// R3996000: Yates played into `zone`, its Cry exiling p2's Mana Well.
+        fn play_yates(s: &mut Scenario, zone: i32) {
+            let well = s.backrow(P2, 1).expect("p2's Mana Well").id;
+            s.play(
+                YATES,
+                json!({ "zone": zone, "targets": [{ "pick": "instance", "instanceId": well }] }),
+            );
+            s.expect_in_zone(well.as_str(), "exile");
+        }
+
+        /// The listed `activate` of `ability`.
+        fn ability(ability: &'static str) -> impl Fn(&ActionBody) -> bool {
+            move |action: &ActionBody| ability_of(action).as_deref() == Some(ability)
+        }
+
+        // R3567003: Overwhelm freezes every Unit in its lane and the lanes beside it, both sides, itself too,
+        // and a frozen Yates lists no Activate (R2246000).
         both_faces!(sp_n4_profe_yates_overwhelm, |radiant: bool| {
             let own = json!([at_lane(TYLANNT, false, 1), at_lane(TYLANNT, false, 4)]);
             let enemy = json!([at_lane(TYLANNT, false, 2), at_lane(TYLANNT, false, 5)]);
             let mut s = yates_in_hand(radiant, own, enemy);
-            s.play(YATES, json!({ "zone": 2, "modes": ["overwhelm"] }));
+            play_yates(&mut s, 2);
             let id = s.card(YATES).id.clone();
-            activate_listed(&mut s, YATES, any);
+            activate_listed(&mut s, YATES, ability("overwhelm"));
             let frozen = |player: PlayerId, lane: i32| s.unit_at(player, lane).frozen.is_some();
             assert_eq!(
                 [
@@ -2877,7 +2931,13 @@ mod stinkyscape {
                 ],
                 [true, true, false, true, false]
             );
-            uses_left(&s, &id, 1);
+            assert!(listed(&s, &id).is_empty(), "a frozen Yates lists no Activate");
+            let shown: Vec<Value> = viewed(&s, &id)
+                .iter()
+                .filter(|view| view["ability"] == json!("overwhelm"))
+                .map(|view| view["usesLeft"].clone())
+                .collect();
+            assert_eq!(shown, vec![json!(0)], "Overwhelm's one use spent");
         });
 
         // R3567004: Wolf's Maw pulls a Flying Unit down: it loses Flying and takes the declared damage.
@@ -2888,7 +2948,7 @@ mod stinkyscape {
                 .expect("the enemy Unit stands")
                 .granted_keywords
                 .push(Keyword::Flying);
-            s.play(YATES, json!({ "zone": 1, "modes": ["wolfsMaw"] }));
+            play_yates(&mut s, 1);
             activate_listed(&mut s, YATES, aimed_at(&flyer));
             let pulled = s.card(&flyer);
             assert!(!jackioh_engine::layers::unit_has(
@@ -2902,7 +2962,7 @@ mod stinkyscape {
         // R3567002: Iron Mandate fuses Yates into a friendly Unit, kept: the host takes its stats.
         both_faces!(sp_n4_profe_yates_iron_mandate, |radiant: bool| {
             let mut s = yates_in_hand(radiant, json!([at_lane(TYLANNT, radiant, 2)]), json!([]));
-            s.play(YATES, json!({ "zone": 1, "modes": ["ironMandate"] }));
+            play_yates(&mut s, 1);
             let (yates, host) = (s.unit_at(P1, 1).id, s.unit_at(P1, 2).id);
             let (own, grafted) = (s.stats(&host).attack, s.stats(&yates).attack);
             activate_listed(&mut s, YATES, aimed_at(&host));

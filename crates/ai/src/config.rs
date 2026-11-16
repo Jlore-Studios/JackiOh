@@ -377,6 +377,12 @@ pub struct EvalWeights {
     /// that Ignores Taunt (S+ #121 Toxopid) is bound by no Taunt, Defense Position's included. Off, both
     /// count as before.
     pub static_attack_flags_read: bool,
+    /// R3937000, #3937: whether `damage_past_taunts_with` (so `face_threat`, the threat and pressure terms,
+    /// `wall_switches`, `ready_gap` and the learned features) walks the Taunts as the opponent would: an
+    /// attacker a Taunt stops whole (Armor, or a First Strike that destroys it) waits until the Taunt falls,
+    /// and the larger of two orders counts, smallest first and each Taunt broken first by the smallest
+    /// attacker that destroys it alone. Off, the old order, and a stopped attacker is spent.
+    pub best_attack_order_past_taunts: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -579,6 +585,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     gauntlet_bars_face_attacks: true,
     brittle_crumbles_before_swing: true,
     static_attack_flags_read: true,
+    best_attack_order_past_taunts: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -848,7 +855,7 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
-/// `static_attack_flags_read`) is off.
+/// `static_attack_flags_read`, `best_attack_order_past_taunts`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -863,6 +870,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     gauntlet_bars_face_attacks: false,
     brittle_crumbles_before_swing: false,
     static_attack_flags_read: false,
+    best_attack_order_past_taunts: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {

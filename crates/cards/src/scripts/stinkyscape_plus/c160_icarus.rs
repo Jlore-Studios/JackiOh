@@ -1,10 +1,14 @@
-//! SPEC §8.12 S+ #160 Icarus (Unit 2/8 → 4/16, cost 4, Legendary), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Tribute 3
+//! SPEC §8.12 S+ #160 Icarus (Unit 4/12 → 8/24, cost 4, Legendary; 2/8 → 4/16 until issue #3996), a card of
+//! the Stinkyscape+ set (R1420, R3535000).
+//!   Base:    "Tribute 3, Immune to Spells
 //!            Activate 1: Summon a Radi. It triggers its Cry.
 //!            Cry: Discover an Epic Weapon; Equip it into this."
-//!   Radiant: "Tribute 3
+//!   Radiant: "Tribute 3, Immune to Spells
 //!            Activate 1: Summon a Radiant Radi. It triggers its Cry.
 //!            Cry: Discover a Legendary Weapon; Equip it into this."
+//!
+//! Immune to Spells (§6.1, E35) is catalog data since issue #3996, printed on both faces: no Spell picks
+//! it or reaches it, while its own Cry and Activate, a Unit's abilities, are no Spell's.
 //!
 //! Tribute 3 is the play validator's (§6.3, R101), read off `staticFlags.tribute` (R366). The Cry is
 //! `equip_picks` (R1841002, R1862002), one Discover of three from the Weapon-tagged cards of the rarity
@@ -104,6 +108,36 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const CRYO: &str = "stinkyscapeplus-022"; // Cryofluid: a Spell that declares one Unit, for the "no Spell picks it" check.
+
+    /// Issue #3996: Immune to Spells is printed on both faces, so no Spell may pick it (E35), and the
+    /// Cry's Weapon, equipped by no Spell, still lands.
+    #[test]
+    fn it_is_immune_to_spells_on_both_faces_so_no_spell_picks_it() {
+        for radiant in [false, true] {
+            let s = weapon_board(
+                "s160-immune",
+                json!({ "field": [{ "def": ID, "radiant": radiant }, VANILLA], "hand": [CRYO], "mana": 10 }),
+                json!({}),
+            );
+            let icarus = s.card(ID).clone();
+            assert!(
+                s.stats(&icarus).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::ImmuneToSpells),
+                "radiant {radiant}"
+            );
+            let cryo = s.card(CRYO).id.clone();
+            let picks: Vec<Selection> = legal_actions(s.state(), P1)
+                .into_iter()
+                .flat_map(|action| match action {
+                    ActionBody::Play { instance_id, targets, .. } if instance_id == cryo => targets.unwrap_or_default(),
+                    _ => Vec::new(),
+                })
+                .collect();
+            assert!(!picks.contains(&Selection::Instance { instance_id: icarus.id.clone() }), "radiant {radiant}");
+            let vanilla = s.unit_at(P1, 2).id;
+            assert!(picks.contains(&Selection::Instance { instance_id: vanilla }), "radiant {radiant}");
+        }
+    }
 
     /// The S+ Rare, Epic and Legendary Weapons (§8.12): each rarity's pool is these three.
     const RARE: [&str; 3] = ["stinkyscapeplus-008", "stinkyscapeplus-143", "stinkyscapeplus-146"];
@@ -170,6 +204,8 @@ mod tests {
             let host = s.unit_at(P1, 4).id;
             pick_for(&mut s, host.as_str(), &EPIC);
             assert!(s.state().pending.is_none());
+            let kinds: Vec<KeywordKind> = s.stats(host.as_str()).keywords.iter().map(|keyword| keyword.kind()).collect();
+            assert!(kinds.contains(&KeywordKind::ImmuneToSpells), "its own Immune to Spells stays: {kinds:?}");
         }
 
         #[test]

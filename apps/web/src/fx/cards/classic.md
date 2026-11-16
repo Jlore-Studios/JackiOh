@@ -32,7 +32,7 @@ gallery plays every entry.
 | `classic-006` | Cloaked Toe Cracker | Unit | none: vanilla | — | none: vanilla | the census agrees: its reveal is its entrance, and its Aura shows nothing |
 | `classic-007` | InfiniScepter | Field Spell | signature; entrance sceptrePlant; bespoke sceptreLocket; aura sceptreLoop zone | 1.51 | vanish | signature (#3389): a crystal sceptre spins down and plants, its locket opening; its Cry draws the Spell into the locket, each Activate sends a copy out; the held Spell turns in its loop |
 | `classic-008` | Pickle | Spell | cast curse Dark/curse | 1.19 | none: vanilla | cast: its effect waits a turn, so its play shows nothing; a curse in Dark's curse sub-look says the threat |
-| `classic-009` | Income Tax | Trap | signature; bespoke taxSeizure | 1.74 | none: vanilla | signature (#3389): as it fires, a strongbox lid flies open, a chain and a crimson seal close on the other hand, and each card it takes is yanked across, a card back; a face-down Trap wears no aura |
+| `classic-009` | Income Tax | Trap | signature; bespoke taxSeizure | 1.62 | none: vanilla | signature (#3389): as it fires, a strongbox lid flies open, a chain and a crimson seal close on the other hand, and each card it takes is yanked across, a card back; a face-down Trap wears no aura |
 | `classic-010` | Exile | Trap | cast negate | 1.16 | negate | cast: the census agrees (negate) |
 | `classic-011` | Mind Melt | Spell | cast vanish | 1.08 | vanish | cast: the census agrees (vanish) |
 | `classic-012` | Book of Blood | Spell | cast bolt Dark/blood | 1.35 | lance | cast: it hits one Unit, a bolt; the census's lance counted its Lifesteal heal as a second target; blood sub-look |
@@ -55,7 +55,7 @@ gallery plays every entry.
 | `classic-029` | Book of Vital Kill | Spell | cast drain Dark/blood | 1.35 | none: no motif reads healthSet | cast: no census family reads healthSet, which drain (#2786) reads; blood sub-look |
 | `classic-030` | Recycle | Spell | bespoke recycleLoop | 1.19 | none: no motif reads shuffledIn | bespoke: its graveyard visibly loops into the deck, where #2793's send flies a made card from the caster's hero |
 | `classic-031` | Cookie Guild | Unit | cry conjure | 1.16 | none: no motif reads summoned | cry: no census family reads summoned, which conjure (#2786) reads |
-| `classic-032` | Felinor Feelings | Spell | cast tether Beast/felinor | 1.28 | none: vanilla | cast: its steal found no free lane in the census's games; tether draws a steal; felinor sub-look |
+| `classic-032` | Felinor Feelings | Spell | cast tether Beast/felinor | 1.36 | none: vanilla | cast: its steal found no free lane in the census's games; tether draws a steal; felinor sub-look |
 | `classic-033` | Joro | Unit | signature; entrance silkDrop; bespoke webRedirect; aura silkWeb tile | 1.40 | none: vanilla | signature (#3389): nothing shows in the hand; a thread drops and it swings down into its zone, and a web snaps from the Spell's aim to it as it takes the target; a faint web in its zone |
 | `classic-034` | Ancient Acquisition | Spell | cast recall Nerd/ink | 1.19 | none: no motif reads addedToHand | cast: a card back from the graveyard, which recall (R2794000) reads; #2793's send flies a made card from the hero; ink sub-look |
 | `classic-035` | Prep | Spell | cast flight | 1.00 | none: no motif reads modifierChanged | cast: its Embiggened draw, which flight (#2786) reads |

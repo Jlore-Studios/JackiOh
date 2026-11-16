@@ -15,8 +15,8 @@
 //! printed face (§10.4 layer 2, read off the definition, never `face_of` or `unit_view`, or the layers
 //! recurse), none once a Set stats has replaced the stat line (R3935000), so a set stands at exactly its
 //! stats and a Buff or Nerf counts once, through layer 1. A Vanilla takes both back to the printed stats
-//! (R115) while the size stays (R3546002). Armor 2 on the Radiant face is catalog data. Through v0.6.5b
-//! the bonus was three times `face_of`, which a set or a Buff multiplied (issue #3935); `script_v0_6_5b`
+//! (R115) while the size stays (R3546002). Armor 2 on the Radiant face is catalog data. Through v0.6.5c
+//! the bonus was three times `face_of`, which a set or a Buff multiplied (issue #3935); `script_v0_6_5c`
 //! keeps that for those replays (R767000).
 
 use jackioh_engine::prelude::*;
@@ -47,9 +47,9 @@ pub fn embiggened_wall() -> Script {
     }
 }
 
-/// R767000: the Walls' shared text through v0.6.5b: three times `face_of`, which a set or a Buff
+/// R767000: the Walls' shared text through v0.6.5c: three times `face_of`, which a set or a Buff
 /// multiplied (issue #3935).
-pub fn embiggened_wall_v0_6_5b() -> Script {
+pub fn embiggened_wall_v0_6_5c() -> Script {
     Script {
         conditional_keywords: embiggened_giga(),
         set_stat: Some(read_hook(|a| {
@@ -84,12 +84,12 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts through v0.6.5b, whose bonus a set or a Buff multiplied (issue #3935).
+/// R767000: the scripts through v0.6.5c, whose bonus a set or a Buff multiplied (issue #3935).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5b() -> CardScripts {
+pub fn script_v0_6_5c() -> CardScripts {
     CardScripts {
-        base: embiggened_wall_v0_6_5b(),
-        radiant: embiggened_wall_v0_6_5b(),
+        base: embiggened_wall_v0_6_5c(),
+        radiant: embiggened_wall_v0_6_5c(),
     }
 }
 
@@ -284,10 +284,10 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.6.5b a set was multiplied by the size (issue #3935).
+    /// R767000: through v0.6.5c a set was multiplied by the size (issue #3935).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_5b_multiplies_a_set() {
-        crate::under_kept(ID, script_v0_6_5b(), || {
+    fn r767000_the_script_kept_for_v0_6_5c_multiplies_a_set() {
+        crate::under_kept(ID, script_v0_6_5c(), || {
             let mut s = fixture::embiggened(ID, false, "s65-kept");
             fixture::set_all(&mut s, 3, 3);
             s.expect_stats(ID, json!({ "attack": 12, "maxHealth": 12 }));

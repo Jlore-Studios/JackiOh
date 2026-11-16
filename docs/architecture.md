@@ -653,7 +653,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `graphql_public` only.
 2. **Enable email/password auth with confirmations.** Auth → Providers → Email: enabled,
    "Confirm email" on. Hosted: configure SMTP now. SPEC §9.4 makes a verified email a precondition of
-   redemption, so this is not optional.
+   redemption, so this is not optional. Supabase refuses a password over 72 bytes, counted in bytes as
+   bcrypt reads them, which is the client's own limit (`AUTH_PASSWORD_MAX_LENGTH`; #4000). Leave SSO
+   (SAML 2.0) off: nothing here uses it, and both projects had it off on 2026-11-16 (#4001).
    Then Auth → URL Configuration, which decides where every emailed link lands:
    - **Site URL:** the site's origin (`site_url` in `infra/supabase.tf`). Left at its default
      (`http://localhost:3000`), every confirmation and reset link pointed at the reader's own machine.
@@ -679,7 +681,9 @@ step that is not yet implemented says which BUILD task delivers it.
      the Redirect URLs above already allow, and it is a PKCE link (R323).
    - **Two-step sign-in (R665).** Auth → Multi-Factor: **TOTP (App Authenticator)** enabled (it is
      on by default on a new project). Leave phone MFA off: the client offers only an authenticator
-     app, and the server's `aal2` rule counts only a verified TOTP factor.
+     app, and the server's `aal2` rule counts only a verified TOTP factor. Supabase Auth never records
+     a used code: its v2.197.0 takes the same code again in a new challenge for about 90 seconds
+     (#4003; what to do about it is #4041).
    - **OAuth providers (R666),** for each provider wanted: create an OAuth app at the provider
      (Google Cloud console, GitHub developer settings, Discord developer portal, …) whose
      authorised redirect URI is `https://<ref>.supabase.co/auth/v1/callback`; then Auth → Sign In /
@@ -697,13 +701,21 @@ step that is not yet implemented says which BUILD task delivers it.
      same address, then try the password. If the password still signs in, Supabase kept an
      unconfirmed account's password through linking (a pre-account takeover); do not enable
      providers until that is resolved.
+     Microsoft (`azure`, which `OAUTH_PROVIDER_LABELS` still names) stays off in both projects: it is
+     the provider the nOAuth attack was found on, where an `email` claim a user can set to any address
+     was trusted as their identity. Before turning it on, repeat #4002's check on staging: make an
+     email-and-password account for an address, then sign in with Microsoft for that same address. The
+     Microsoft sign-in must not land in the existing account unless Microsoft truly verified the
+     address; if it does, leave Microsoft off.
    - **Roblox (R3147000),** a custom OIDC provider, since Supabase has no built-in one: at
      create.roblox.com → Creations → OAuth 2.0 Apps, an app with the scopes `openid` and `profile`
      and the redirect URL `https://<ref>.supabase.co/auth/v1/callback` (each project's own); then
      Auth → Sign In / Providers → Custom Providers → a new OIDC provider with the identifier
      `custom:roblox` exactly (the client sends that name, and it cannot be changed later), the issuer
      `https://apis.roblox.com/oauth/`, the app's client id and secret, and the scopes `openid profile`.
-     Roblox gives third-party apps no email address, so its sign-in never matches an account by one:
+     Keep those two scopes: Roblox names an address only for its `email` scope, so with `openid profile`
+     alone its sign-in carries none and never matches an account by one (#4002; asking for `email` would
+     let automatic linking join a Roblox sign-in to the account holding that address):
      a Roblox sign-up is a new pending account with no address, which adds one on the code screen
      (R3147001), and a player who already has an account links Roblox from `/account` (R3147002).
      Both projects have it (#3147).

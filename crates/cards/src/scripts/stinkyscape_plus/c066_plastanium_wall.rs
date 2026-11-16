@@ -40,12 +40,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.5b, whose Walls' bonus a set or a Buff multiplied (issue #3935).
+/// R767000: the scripts through v0.6.5c, whose Walls' bonus a set or a Buff multiplied (issue #3935).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_5b() -> CardScripts {
+pub fn script_v0_6_5c() -> CardScripts {
     CardScripts {
-        base: plastanium_wall(super::c065_thorium_wall::embiggened_wall_v0_6_5b()),
-        radiant: plastanium_wall(super::c065_thorium_wall::embiggened_wall_v0_6_5b()),
+        base: plastanium_wall(super::c065_thorium_wall::embiggened_wall_v0_6_5c()),
+        radiant: plastanium_wall(super::c065_thorium_wall::embiggened_wall_v0_6_5c()),
     }
 }
 
