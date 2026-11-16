@@ -16880,6 +16880,8 @@
       }
     },
     "4047": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T02:19:25Z",
@@ -16893,8 +16895,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a private lobby stays on screen when one refresh fails, instead of turning into an error card\"} -->\n- ## What changed and why\n- A failed re-read of a private lobby no longer swaps the screen for the \"could not be read\" error card. In `useLobbyRead` ([LobbyScreen.tsx](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4021/apps/web/src/lobby/LobbyScreen.tsx)), a non-404 failure while the shown read is `ready` now leaves\u2026\n- ## How you tested it\n- - `pnpm --dir apps/web test src/lobby/LobbyScreen.test.tsx`: 25 passed (22 existing + 3 new).\n- - Revert check: with the old failure branch temporarily restored, the two re-read tests fail (error card replaces the lobby; the inline refusal is lost on remount) and pass again with the fix; the 404 test passes both ways, as intended.\n- - `cargo jackioh spec check`: ok (2208 rulings, 5608 proofs, 70280 citations).\n- - `pnpm --dir apps/web typecheck`: exit 0 with `NODE_OPTIONS=--max-old-space-size=5120`; the default 2 GB Node heap OOMs on this box, which is environmental (whole-program check, untouched by a 13-line diff).\n- - `pnpm exec eslint` on both touched files and `cargo fmt --check`: exit 0.\n- ## Decisions the issue did not settle\n- - The refusal-survival test installs `fakeSockets()` without going live, so the socket-down poll stays on fake timers and the plan's 3-entry serve array lines up exactly; going live would have spent one read on the live-transition. Rejected alternative: adding an extra lobby entry to go live, which\u2026\n- - The 404 test delivers the `lobby` push synchronously right after the `social` frame with no `leave` wait between, since the live-transition read may already have closed the lobby; both reads consume the 404 either way.\n- - Left the existing socket-down interval untouched, accepting the rare redundant GET the plan's risks section already names.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4021 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4021/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4021,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T03:39:27Z",
         "from_run": "43791462838",
         "gates": [
           {
@@ -16953,8 +16958,15 @@
         "source": "build",
         "until": "2026-11-16T04:05:03Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-16T03:35:03Z",
+      "run_id": "pending:bed89d8a-1794800340",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-16T03:39:27Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17140,9 +17152,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T03:38:48Z",
+    "at": "2026-11-16T03:39:27Z",
     "url": "",
-    "what": "review #4046 on gpt"
+    "what": "review #4047 on muse"
   },
   "last_sweep": {
     "at": "2026-11-16T03:02:45Z",
