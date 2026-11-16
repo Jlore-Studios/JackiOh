@@ -17600,16 +17600,9 @@
     "what": "suggestions (ai) on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-16T06:46:41Z",
+    "at": "2026-11-16T06:57:28Z",
     "notes": [
-      "#4024 is held for `claude-8` until 02:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered review #4068 on claude-1 (run 43818267339): stopped",
-      "delivered review #4055 on claude-7 (run 43807744854): approved",
-      "started revise #4055 on claude-7 (run 43819412529)",
-      "started suggest on claude-3 (run 43819472169)",
-      "started suggest on claude-1 (its run is not listed yet)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-16T08:00:00Z; it can start a build or a plan again in 1h 08m; `claude-1` is busy; `claude-4` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-16T07:28:34Z; `claude-6` is busy; `claude-5` 7-day usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 2h 08m; `muse` is idle, but nothing queued is for it; `agy` is idle, but nothing queued is for it; `gpt` is idle, but nothing queued is for it; `claude-2` 5-hour usage is 92%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-16T10:50:00Z; it can start a build or a plan again in 3h 58m; waiting for their owners: #4024 held for `claude-8` until 02:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "pruned 1 plan file(s) older than 7 days"
+      "#4024 is held for `claude-8` until 02:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18313,7 +18306,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T06:46:41Z",
+  "loop_tick": "2026-11-16T06:57:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
