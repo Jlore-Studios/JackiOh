@@ -14042,6 +14042,13 @@
     "4065": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-16T22:40:57Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "The rule rates the AI's decisions and search as hard, and this changes both."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
