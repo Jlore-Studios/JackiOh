@@ -402,6 +402,19 @@ pub const CODE_ATTEMPTS_PER_IP_PER_HOUR: i64 = 20;
 /// §9.4: the rolling window both attempt limits above are counted over, in seconds.
 pub const CODE_ATTEMPT_WINDOW_SECONDS: i64 = 3600;
 
+// Guessable values (#4008, R4008000): the codes a caller can only learn by being told them. A limit here
+// counts guesses (distinct wrong codes), never requests or frames.
+
+/// R4008000: distinct wrong room, co-op room and lobby codes one account may try in
+/// `CODE_MISS_WINDOW_SECONDS`; once spent, every code lookup of the account is 429 `rate_limited`.
+pub const CODE_MISSES_PER_ACCOUNT_PER_HOUR: usize = 10;
+/// R4008000: distinct wrong codes one address (R190) may try across all its accounts in the same window.
+pub const CODE_MISSES_PER_ADDRESS_PER_HOUR: usize = 60;
+/// R4008000: the window both code-miss limits above are counted over, in seconds.
+pub const CODE_MISS_WINDOW_SECONDS: i64 = 3600;
+/// R4008000: `CODE_MISS_WINDOW_SECONDS` in milliseconds, the unit the limiters count in.
+pub const CODE_MISS_WINDOW_MS: i64 = CODE_MISS_WINDOW_SECONDS * 1000;
+
 // ---------------------------------------------------------------------------------------------
 // Retention: how long the server keeps rows nothing reads any more. Not in SPEC, and no R-row
 // (the play telemetry's period is R1442's). The privacy policy must state these same periods.
@@ -1289,6 +1302,8 @@ pub const OPEN_MATCH_REAP_GRACE_MS: i64 = OPEN_MATCH_REAP_GRACE_SECONDS * 1000;
 
 /// B43: friend requests one account may send in an hour; the next is 429.
 pub const FRIEND_REQUESTS_PER_HOUR: usize = 20;
+/// R4008001: friend requests one address (R190) may send in an hour across all its accounts; the next is 429.
+pub const FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR: usize = 60;
 /// B43: friends one account may hold; a request or an accept past it is 409 `friend_cap`.
 pub const MAX_FRIENDS: i64 = 200;
 /// B47: a friend is online while their last heartbeat is at most this old.

@@ -575,22 +575,31 @@ pub async fn get_lobby(app: &Arc<App>, req: Req) -> ApiResult {
     let Some(code) = code_of(&req) else {
         return Err(not_open());
     };
-    match load(app, &code, &profile.id).await {
+    let loaded = load(app, &code, &profile.id).await;
+    // R4008000: a member reading their own lobby is not guessing.
+    let own = matches!(&loaded, Ok(lobby) if is_member(lobby, &profile.id));
+    app.code_guesses.gate(&req, &profile.id, own)?;
+    let outcome = read_lobby(app, &profile.id, &code, loaded).await;
+    app.code_guesses.settle(&req, &profile.id, own, outcome)
+}
+
+/// `get_lobby`'s answer for the `loaded` lobby of `code`.
+async fn read_lobby(app: &App, profile_id: &str, code: &str, loaded: Result<Lobby, ApiError>) -> ApiResult {
+    match loaded {
         Ok(lobby) => {
-            if !is_member(&lobby, &profile.id)
-                && (empty_place(&lobby).is_none() || lobby.started_at.is_some())
+            if !is_member(&lobby, profile_id) && (empty_place(&lobby).is_none() || lobby.started_at.is_some())
             {
                 return Err(not_open());
             }
-            Ok(ok(view(app, &lobby, &profile.id).await?))
+            Ok(ok(view(app, &lobby, profile_id).await?))
         }
         Err(error) if error.code == ApiErrorCode::NotFound => {
-            let exists = one_tx!(app.db, |t| t.lobbies_get(&code).await?.is_some())?;
+            let exists = one_tx!(app.db, |t| t.lobbies_get(code).await?.is_some())?;
             if exists {
                 // A lobby the caller may not reach is never a room's code either.
                 return Err(error);
             }
-            Ok(ok(classic_room(app, &code, &profile.id).await?))
+            Ok(ok(classic_room(app, code, profile_id).await?))
         }
         Err(error) => Err(error),
     }
@@ -604,7 +613,10 @@ pub async fn enter(app: &Arc<App>, req: Req) -> ApiResult {
     let Some(code) = code_of(&req) else {
         return Err(not_open());
     };
-    let lobby = load(app, &code, &profile.id).await?;
+    let lobby = app
+        .code_guesses
+        .lookup(&req, &profile.id, load(app, &code, &profile.id))
+        .await?;
     if lobby.host == profile.id {
         if lobby.started_at.is_some() {
             return Err(not_open());

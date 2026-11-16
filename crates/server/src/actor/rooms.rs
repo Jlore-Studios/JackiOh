@@ -459,7 +459,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     assert_free_to_play(app, &profile_id).await?;
 
     let typed = req.params.get("code").cloned().unwrap_or_default();
-    let room = joinable_room(app, &typed).await?;
+    let room = app
+        .code_guesses
+        .lookup(&req, &profile_id, joinable_room(app, &typed))
+        .await?;
     if room.host_profile_id == profile_id {
         return Err(ApiError::new(
             ApiErrorCode::Conflict,
@@ -797,9 +800,11 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(None).await?;
     let Some(room) = tx.rooms_get(&code).await? else {
         tx.commit().await?;
+        app.code_guesses.wrong(&req, &profile_id)?;
         return Ok(json_response(200, json!({ "cancelled": false })));
     };
     if room.host_profile_id != profile_id {
+        app.code_guesses.wrong(&req, &profile_id)?;
         return Err(ApiError::new(
             ApiErrorCode::NotFound,
             "that room code is not open",

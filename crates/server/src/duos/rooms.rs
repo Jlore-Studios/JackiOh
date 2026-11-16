@@ -226,9 +226,19 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
 /// `GET /api/duos/rooms/:code`: the room as its lobby shows it, the match id once the guest joined.
 pub async fn get_room(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let room = room_of(app, &req, &profile.id).await?;
+    let found = room_of(app, &req, &profile.id).await;
+    // R4008000: the host and the guest reading their own room are not guessing.
+    let own = matches!(&found, Ok(room) if room.host == profile.id || room.guest.as_deref() == Some(profile.id.as_str()));
+    app.code_guesses.gate(&req, &profile.id, own)?;
+    let outcome = room_view(app, &profile.id, found).await;
+    app.code_guesses.settle(&req, &profile.id, own, outcome)
+}
+
+/// `get_room`'s answer for the room `found`.
+async fn room_view(app: &App, profile_id: &str, found: Result<DuosRoom, ApiError>) -> ApiResult {
+    let room = found?;
     // §13.9: a joined room is its two people's; to anyone else it is as gone as an unknown code.
-    let member = room.host == profile.id || room.guest.as_deref() == Some(profile.id.as_str());
+    let member = room.host == profile_id || room.guest.as_deref() == Some(profile_id);
     if room.guest.is_some() && !member {
         return Err(not_open());
     }
@@ -397,7 +407,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let choice = read_choice(&req.body)?;
     let joiner_seed = seed_override_of(app, &req.body)?;
-    let room = room_of(app, &req, &profile.id).await?;
+    let room = app
+        .code_guesses
+        .lookup(&req, &profile.id, room_of(app, &req, &profile.id))
+        .await?;
     if room.host == profile.id {
         return refused(
             409,
@@ -466,6 +479,7 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let room = one_tx!(app.db, |t| t.duos_rooms_get(&code).await?)?;
     let Some(room) = room.filter(|room| room.host == profile.id) else {
+        app.code_guesses.wrong(&req, &profile.id)?;
         return Err(not_open());
     };
     if room.guest.is_some() {
