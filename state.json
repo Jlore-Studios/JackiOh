@@ -16304,6 +16304,13 @@
     "4032": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43793521024",
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-16T03:04:31Z",
+        "until": "2026-11-16T03:34:31Z"
+      },
       "difficulty_by": {
         "at": "2026-11-16T03:04:21Z",
         "difficulty": "hard",
