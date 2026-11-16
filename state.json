@@ -38230,7 +38230,8 @@
       "2026-11-16T06:41:26Z,43818267339,claude-1,opus,review,4068,hard,stopped,stop,0,0,0,0,,72,72,,,1.6,,none,,0",
       "2026-11-16T06:36:45Z,43807744854,claude-7,opus,review,4055,hard,approved,,52.3,56,21869,2422280,2.8546,38,2,,,1,,fresh,,3",
       "2026-11-16T07:03:28Z,43819543103,claude-1,opus,suggest,,,suggested,,9.4,38,23089,2619905,8.247,74,95,,,,,none,,1",
-      "2026-11-16T07:03:17Z,43819472169,claude-3,opus,suggest,,,interrupted,refusal,10.8,0,0,0,15.1362,66,100,,,,,none,,1"
+      "2026-11-16T07:03:17Z,43819472169,claude-3,opus,suggest,,,interrupted,refusal,10.8,0,0,0,15.1362,66,100,,,,,none,,1",
+      "2026-11-16T06:59:39Z,43807808878,claude-1,sonnet+opus,review,4054,medium,approved,,49.1,165,67634,7371448,6.8224,40,90,,,2.5,,fresh,,5"
     ]
   },
   "version": 1
