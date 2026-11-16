@@ -14016,9 +14016,7 @@
     },
     "4064": {
       "action": "plan",
-      "asks": [
-        "c:6931085090"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T22:41:43Z",
         "difficulty": "hard",
@@ -14041,24 +14039,26 @@
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "muse",
-      "owner_since": "2026-11-16T22:22:36Z",
-      "owner_why": "it plans it",
+      "owner": "claude-6",
+      "owner_since": "2026-11-16T22:44:23Z",
+      "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
       "pending_request": false,
       "planned_at": "2026-11-16T22:41:46Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "claude-6",
       "queued_at": "2026-11-16T22:19:16Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43969469972",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-16T22:22:36Z",
+      "run_id": "pending:0b14bf9b-1794869044",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-16T22:44:23Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6931085090"
+      ]
     },
     "4065": {
       "action": "plan",
@@ -14734,9 +14734,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T22:43:51Z",
+    "at": "2026-11-16T22:44:23Z",
     "url": "",
-    "what": "plan #4079 on claude-3"
+    "what": "plan #4064 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-16T22:30:14Z",
