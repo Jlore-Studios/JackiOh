@@ -1,4 +1,4 @@
-// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000, R3447000).
+// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000, R3447000, R4077000).
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -142,6 +142,59 @@ describe("R3185000 CardStatsBlock", () => {
     expect(screen.getByTestId(statsTestid.cardStatsTier)).not.toHaveClass("stats-tier");
     expect(screen.getByTestId(statsTestid.cardStatsAdjusted)).toHaveTextContent("—");
     expect(screen.getByText("60%")).toBeInTheDocument();
+  });
+});
+
+describe("R4077000 a card no deck holds reads its Created figures", () => {
+  /** A token's Created row: 50 seats made one and won 30 (24 of the 40 that used one, 6 of the 10 that did not). */
+  const TOKEN = {
+    id: "core-t-sheep",
+    name: "Sheep",
+    cost: 1,
+    rarity: "token",
+    set: "core",
+    games: 50,
+    createdPlayedGames: 40,
+    createdPlayedWinRate: 0.6,
+    createdNotPlayedGames: 10,
+    createdNotPlayedWinRate: 0.6,
+    createdPlayedRadiantGames: 0,
+    createdPlayedRadiantWinRate: null,
+    createdPlayedNormalGames: 40,
+    createdPlayedNormalWinRate: 0.6,
+    createdPlayedDelta: null,
+    adjustedWinRate: 0.4871,
+    adjustedLow: 0.43,
+    adjustedHigh: 0.54,
+    tier: "C",
+    hasEnoughGames: true,
+    window: { from: "0.2.0", liveGames: 1200, source: "live", counted: ["0.2.0"] },
+  };
+
+  function serveCreated(created: Record<string, unknown>, cards: Record<string, unknown>[] = []): void {
+    const body = { ...mockStatsResponse(SPARK_PUP), cards, created: [created] };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })));
+  }
+
+  it("R4077000 a token shows the seats that made one: its games, tier, adjusted and win rate, and how many used one", async () => {
+    serveCreated(TOKEN);
+    render(<CardStatsBlock cardId="core-t-sheep" />);
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures()).toEqual([
+      ["Games", "50"],
+      ["Tier", "C"],
+      ["Adjusted win rate", "48.7%"],
+      ["Win rate", "60%"],
+      ["Play rate", "80%"],
+    ]);
+  });
+
+  it("R4077000 a card a deck holds keeps its deck figures, Created copies or not", async () => {
+    serveCreated({ ...TOKEN, id: "core-001" }, [SPARK_PUP]);
+    render(<CardStatsBlock cardId="core-001" />);
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures()[0]).toEqual(["Games", "60"]);
+    expect(figures()[1]).toEqual(["Tier", "A"]);
   });
 });
 

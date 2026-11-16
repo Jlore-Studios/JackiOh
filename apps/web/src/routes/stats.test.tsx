@@ -2350,19 +2350,22 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
    */
   const RUSH = {
     ...created("core-t-rush", "Rush Token", 30, 0.6, 25, 0.52),
+    // R4077000: the server's tier and adjusted rate, read against the Created cards.
+    tier: "B",
+    adjustedWinRate: 0.521,
     createdPlayedRadiantGames: 8,
     createdPlayedRadiantWinRate: 0.75,
     createdPlayedNormalGames: 22,
     createdPlayedNormalWinRate: 12 / 22,
   };
   /** 40 seats, each used one, 28 won (70%). */
-  const SHEEP = created("core-t-sheep", "Sheep Token", 40, 0.7, 0, null);
-  /** 12 seats, too few for a rate however many won. */
-  const GHOUL = created("core-t-ghoul", "Ghoul Token", 12, 0.9, 0, null);
+  const SHEEP = { ...created("core-t-sheep", "Sheep Token", 40, 0.7, 0, null), tier: "A", adjustedWinRate: 0.533 };
+  /** 12 seats, too few for a rate however many won: no tier, and its adjusted rate unshown. */
+  const GHOUL = { ...created("core-t-ghoul", "Ghoul Token", 12, 0.9, 0, null), tier: null, adjustedWinRate: 0.6 };
   /** The Coin, which the catalog holds as no card: 40 seats, 30 used it (50%) and 10 did not (30%), 18 won (45%). */
-  const COIN = created("coin", "The Coin", 30, 0.5, 10, 0.3);
+  const COIN = { ...created("coin", "The Coin", 30, 0.5, 10, 0.3), tier: "D", adjustedWinRate: 0.471 };
   /** A Created copy of a deck card: no token. 30 seats, each used it, 15 won. */
-  const COPY = created("core-001", "Spark Pup", 30, 0.5, 0, null);
+  const COPY = { ...created("core-001", "Spark Pup", 30, 0.5, 0, null), tier: "C", adjustedWinRate: 0.49 };
 
   /** Answers the card statistics with `body`, and anything else with nothing. */
   function serveCards(body: unknown): void {
@@ -2385,7 +2388,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     };
   }
 
-  const COLUMNS = ["Games", "Win rate ↓", "Used", "Not used", "Used Radiant", "Used normal", "Used vs not used"];
+  const COLUMNS = ["Games", "Tier", "Adjusted ↓", "Win rate", "Used", "Not used", "Used Radiant", "Used normal", "Used vs not used"];
 
   it("R3887000 the Tokens and Other created cards list a catalog card as plain text, and The Coin keeps its name", async () => {
     window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
@@ -2407,8 +2410,10 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(within(coin).getByRole("rowheader")).toHaveTextContent("The Coin");
   });
 
-  it("R2089000 R2370000 R3324002 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its win rate", async () => {
-    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
+  it("R2089000 R2370000 R3324002 R4077000 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
+    const tiers = { center: 0, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 };
+    const field = { center: 0.052, spread: 0.041, cards: 36, baseline: 0.552 };
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, tiers: { ...tiers, created: field }, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
     render(<StatsRoute />);
 
     const tokens = await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
@@ -2422,7 +2427,14 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     // The tokens come first.
     expect(tokens.compareDocumentPosition(others) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    // One table, the same columns, opened on Win rate, best first, a row under the floor last.
+    // R4077000: each section says what its tiers are read against, from the server's Created field.
+    for (const panel of [tokens, others]) {
+      expect(within(panel).getByTestId(statsTestid.createdTiersNote)).toHaveTextContent(
+        "win 55.2% of their games, +5.2 points against the average deck, and real ones differ by about 4.1 points",
+      );
+    }
+
+    // One table, the same columns, opened on Adjusted, best first, a row under the floor last (R4077000).
     const tokenTable = within(tokens).getByTestId(statsTestid.tokensTable);
     const otherTable = within(others).getByTestId(statsTestid.createdTable);
     expect(within(tokenTable).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(["Token", ...COLUMNS]);
@@ -2430,17 +2442,17 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(rowsOf(tokenTable)).toEqual({
       ids: ["core-t-sheep", "core-t-rush", "core-t-ghoul"],
       cells: [
-        ["40", "70%", "70%", "—", "—", "70%", "—"],
+        ["40", "A", "53.3%", "70%", "70%", "—", "—", "70%", "—"],
         // The 8 Radiant seats are below R654's floor: no 75%.
-        ["55", "56%", "60%", "52%", "—", "55%", "+8%"],
-        ["12", "—", "—", "—", "—", "—", "—"],
+        ["55", "B", "52.1%", "56%", "60%", "52%", "—", "55%", "+8%"],
+        ["12", "—", "—", "—", "—", "—", "—", "—", "—"],
       ],
     });
     expect(rowsOf(otherTable)).toEqual({
       ids: ["core-001", "coin"],
       cells: [
-        ["30", "50%", "50%", "—", "—", "50%", "—"],
-        ["40", "45%", "50%", "—", "—", "50%", "—"],
+        ["30", "C", "49.0%", "50%", "50%", "—", "—", "50%", "—"],
+        ["40", "D", "47.1%", "45%", "50%", "—", "—", "50%", "—"],
       ],
     });
 
