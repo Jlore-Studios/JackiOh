@@ -13670,18 +13670,18 @@
     "rarity": "Legendary",
     "flavor": "Nature",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "meditative-039-1"
     ],
     "loc": 35,
     "base": {
       "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.\nActivate: Add an Auspicious Rock to your hand.\nYour last element, your opponent's last element."
+      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.\nCry: Add an Auspicious Rock to your hand.\nActivate: Add an Auspicious Rock to your hand.\nYour last element, your opponent's last element."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily.\nActivate: Add a Radiant Auspicious Rock to your hand.\nYour last element, your opponent's last element."
+      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily.\nCry: Add a Radiant Auspicious Rock to your hand.\nActivate: Add a Radiant Auspicious Rock to your hand.\nYour last element, your opponent's last element."
     }
   },
   "meditative-041": {
@@ -14408,18 +14408,28 @@
     "rarity": "Common",
     "flavor": "Physical",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "refs": [
       "core-003"
+    ],
+    "params": [
+      {
+        "key": "brittle",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
     ],
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Fill your board with Right-house defenders."
+      "text": "Fill your board with Right-house defenders. They have Brittle {brittle}, and so do their Reborn copies."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Radiant Right-house defenders."
+      "text": "Fill your board with Radiant Right-house defenders. They have Brittle {brittle}, and so do their Reborn copies."
     }
   },
   "meditative-057": {
@@ -15257,25 +15267,14 @@
     "flavor": "Dark",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "discount",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Exile every non-CN permanent. Add a random CN card to your hand for each of yours exiled this way."
+      "text": "Exile every non-CN permanent."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile every non-CN permanent. Add a random Radiant CN card to your hand for each of yours exiled this way. Each costs ({discount}) less."
+      "text": "Exile every enemy non-CN permanent."
     }
   },
   "meditative-079": {
@@ -20240,8 +20239,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "read": "cry"
+        "min": 1
       }
     ],
     "loc": 19,
@@ -20249,13 +20247,13 @@
       "attack": 3,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
+      "text": "Death: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
     },
     "radiant": {
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
+      "text": "Death: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
     }
   },
   "stinkyscape-043": {
@@ -27387,24 +27385,14 @@
     "refs": [
       "core-t-rush"
     ],
-    "params": [
-      {
-        "key": "tokens",
-        "base": 4,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 50,
     "base": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them."
+      "text": "Fill your board with Rush Tokens. At the end of this turn, destroy them."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. At the end of this turn, destroy them."
+      "text": "Fill your board with Radiant Rush Tokens. At the end of this turn, destroy them."
     }
   },
   "traininggrounds-016": {
@@ -28678,15 +28666,25 @@
     "rarity": "Rare",
     "flavor": "Dark",
     "token": false,
-    "cost": 4,
+    "cost": 3,
+    "params": [
+      {
+        "key": "loss",
+        "base": 2,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Set its stats to 2/2."
+      "text": "Steal an enemy Unit. Next turn, lose ({loss}) mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy card."
+      "text": "Steal an enemy Unit. Next turn, lose ({loss}) mana."
     }
   },
   "traininggrounds-053": {
@@ -32353,22 +32351,12 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game, lose {mana} mana. Add a random Terminus card to your hand. It costs (2)."
+      "text": "Now and at the start of each of your turns for the rest of the game: Add a random Terminus card to your hand. It costs (2)."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game, lose {mana} mana. Add a random Radiant Terminus card to your hand. It costs (2)."
-    },
-    "params": [
-      {
-        "key": "mana",
-        "base": 1,
-        "radiant": 1,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ]
+      "text": "Now and at the start of each of your turns for the rest of the game: Add a random Radiant Terminus card to your hand. It costs (2)."
+    }
   },
   "stinkyscapeplus-083": {
     "id": "stinkyscapeplus-083",
