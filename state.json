@@ -17600,6 +17600,8 @@
       }
     },
     "4068": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-16T04:41:57Z",
@@ -17613,8 +17615,11 @@
         "trail": "main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web-changed.log 2>&1\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\.only\\\\|\\\\.skip\\\\|eslint-disable\\\\|ts-ignore\\\\|ts-expect-error\\\" apps/web/src/inbox apps/web/src/daily/NotificationSettings.test.tsx apps/web/src/net/notifications.ts e2e/cy\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('## Log')\\nnew_state='''## State\\n\\n- Run 4 (opus, 2026-11-16 from ~04:45 UTC) built the wh\u2026\n- Bash: {\"command\": \"tail -5 /tmp/web-changed.log | cut -c1-200\", \"description\": \"Check the web test progress\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -8\", \"description\": \"Read what classify needs\"}\n- Bash: {\"command\": \"timeout 900 cargo jackioh classify --base origin/main --claims 2>&1 | tail -8\", \"description\": \"Run classify with claims against main\", \"timeout\": 1000000}\n- Bash: {\"command\": \"grep -n \\\"/api/social\\\\|/api/daily\\\\|/api/lobbies\\\\|/api/friends\\\" docs/v0.3.0/SURFACE.md | head -5; echo \\\"---\\\"; tail -3 /tmp/web-changed.log | cut -c1-200\", \"description\": \"Confirm SU\u2026\n- Bash: {\"command\": \"git diff apps/web/README.md e2e/README.md | grep \\\"^[+-]\\\" | cut -c1-300 | head -40\", \"description\": \"Review the web and e2e README diffs\"}\n- Bash: {\"command\": \"grep -rln \\\"e2e/README.md\\\\|shard-specs\\\\|cypress/e2e\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head; grep -rn \\\"57-inbox\\\\|57-\\\" scripts/shard-specs.mjs 2>/dev/null | he\u2026\n- Bash: {\"command\": \"grep -n \\\"cypress/e2e\\\\|e2e/README\\\" apps/web/src/net/ci-scope.test.ts | head -5; ls scripts | grep -i shard; grep -rn \\\"SMOKE\\\" scripts/*.mjs 2>/dev/null | head -3\", \"description\": \"Che\u2026\n- Bash: {\"command\": \"grep -cE \\\"\\u2713|\\u2717|\\u00d7\\\" /tmp/web-changed.log; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/web-changed.log | head\", \"description\": \"Count finished web test files\"}\n- Bash: {\"command\": \"wc -c /tmp/web-changed.log; grep -v \\\"Not implemented\\\" /tmp/web-changed.log | tail -5 | cut -c1-200\", \"description\": \"Look at the web test log\"}\n- Bash: {\"command\": \"grep -n \\\"it(\\\\\\\"R4039\\\\|/api/notifications/read\\\\|upTo\\\" apps/web/src/inbox/RecentSection.test.tsx | head -20; grep -n \\\"it(\\\\\\\"R4039\\\" apps/web/src/together/socialSocket.test.ts\", \"des\u2026\n- Bash: {\"command\": \"timeout 1500 bash -c 'until grep -q \\\"^exit\\\" /tmp/web-changed.log; do sleep 15; done'; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/web-changed.log | head -20\", \"description\": \"Wait fo\u2026\n- Bash: {\"command\": \"ps aux --sort=-%cpu | head -8 | cut -c1-200; wc -c /tmp/web-changed.log\", \"description\": \"Check what is using the CPU\"}\n- Bash: {\"command\": \"nproc; date -u +%H:%M; grep -v \\\"Not implemented\\\" /tmp/web-changed.log | tail -3 | cut -c1-200\", \"description\": \"Check core count and time\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nfor a,b in [(\\\"- 05:20 server code written\\\",\\\"- 05:00 server code written\\\"),(\\\"- 05:55 server tests written\\\",\\\"- 05:10 server t\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit\\\" /tmp/web-changed.log; do sleep 15; done'; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/web-changed.log | head -20\", \"description\": \"Wait mor\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck > /tmp/tc.log 2>&1; echo \\\"typecheck exit $?\\\"; tail -3 /tmp/tc.log; pnpm exec eslint apps/web e2e > /tmp/eslint.log 2>&1; echo \\\"eslint exit $?\\\"; tail -5 \u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- 05:45 harness web vitest --changed: 396 files, 7823 passed, 140 skipped, exit 0. typecheck exit 0, eslint exit 0. Next: workspace clippy, tools acceptance\u2026\n- Bash: {\"command\": \"git diff crates/server/src/daily/invites.rs crates/server/src/social/friends.rs crates/server/src/lobby/mod.rs | grep \\\"^[+-]\\\" | head -120\", \"description\": \"Review the writers' diffs\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit\\\" /tmp/clippy-ws.log; do sleep 15; done'; tail -3 /tmp/clippy-ws.log\", \"description\": \"Wait for workspace clippy\", \"timeout\": 600000}\n- Bash: {\"command\": \"(cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts > /tmp/ws-test.log 2>&1; echo \\\"exit $?\\\" >> /tmp/ws-test.log; git status --porcelain -- apps/web/src/wire >> \u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^wire-checked\\\" /tmp/ws-test.log; do sleep 20; done'; grep -E \\\"test result: FAILED|panicked|^exit|^error\\\" /tmp/ws-test.log | head; grep -c \\\"test r\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^wire-checked\\\" /tmp/ws-test.log; do sleep 20; done'; grep -E \\\"test result: FAILED|panicked|^exit|^error\\\" /tmp/ws-test.log | head; grep -c \\\"test r\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^wire-checked\\\" /tmp/ws-test.log; do sleep 20; done'; grep -E \\\"test result: FAILED|panicked|^exit|^error\\\" /tmp/ws-test.log | head; grep -c \\\"test r\u2026\n- Bash: {\"command\": \"sed -n '/^exit 0/,$p' /tmp/ws-test.log; grep -E \\\"test result\\\" /tmp/ws-test.log | awk '{s+=$4} END {print \\\"passed total:\\\", s}'; cargo jackioh catalog check 2>&1 | tail -1; cargo jacki\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; git status --short | grep -E \\\"^\\\\?\\\\?|^ M|^A\\\" | grep -E \\\"\\\\.github/|\\\\.harness/|\\\\.squishy/|bot/|\\\\.claude/|crates/(engine|cards|ai|shared)/|apps/web\u2026\n- Bash: {\"command\": \"docker ps -a --format '{{.Names}}' | head; git worktree list | head\", \"description\": \"Check for leftover containers and worktrees\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('## Log')\\nnew_state='''## State\\n\\n- Run 4 (opus, 2026-11-16 04:45-06:10 UTC) built the wh\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: in-game notifications that are kept until read: a feed in the inbox, toasts, the tab title and desktop notifications while JackiOh is open, in place of email\"} --> ## What changed JackiOh now keeps a notification feed for each account on the server and \u2026"
       },
       "issue": 4039,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-16T06:39:29Z",
         "from_run": "43805657782",
         "gates": [
           {
@@ -17706,7 +17711,11 @@
         "source": "build",
         "until": "2026-11-16T07:07:52Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-16T06:37:52Z",
+      "run_id": "pending:244206ad-1794811140",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17725,6 +17734,9 @@
         "provider": "claude-1",
         "run": "43805657782"
       },
+      "started_at": "2026-11-16T06:39:29Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17738,9 +17750,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T06:16:09Z",
+    "at": "2026-11-16T06:39:29Z",
     "url": "",
-    "what": "suggestions (tests) on muse"
+    "what": "review #4068 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-16T06:11:34Z",
