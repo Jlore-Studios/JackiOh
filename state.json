@@ -16847,10 +16847,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "gpt"
+        ],
         "reviews": [],
         "sha": "8fa65e7ca269b594068aae480e9aec0bfaf87bcb",
-        "tiers": {}
+        "tiers": {
+          "gpt": "medium"
+        }
       }
     },
     "4048": {
