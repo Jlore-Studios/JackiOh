@@ -16076,12 +16076,17 @@
     "what": "revise #3994 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-16T00:06:40Z",
+    "at": "2026-11-16T00:15:01Z",
     "notes": [
       "#4031 is held for `claude-3` until 18:50 (it refused a call)",
-      "started revise #3994 on claude-7 (its run is not listed yet)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-16T00:50:00Z; `claude-7` is busy; `claude-8` is idle, but nothing queued is for it; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` is idle, but nothing queued is for it; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #4031 held for `claude-3` until 18:50 (it refused a call)",
-      "pruned 4 plan file(s) older than 7 days"
+      "delivered revise #3994 on claude-7 (run 43778571516): interrupted",
+      "delivered suggest on claude-7 (run 43776453229): suggested",
+      "found the run of #3994: 43778571516",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-16T00:50:00Z; `claude-7` 5-hour usage is 62%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-16T00:50:00Z; it can start a build or a plan again in 32m; `claude-8` is idle, but nothing queued is for it; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` is idle, but nothing queued is for it; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3994 held for `claude-7` until 18:50 (5-hour usage is 62%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)); #4031 held for `claude-3` until 18:50 (it refused a call)",
+      "pruned 5 plan file(s) older than 7 days",
+      "#4034: typed it Task",
+      "#4033: typed it Task",
+      "#4032: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16787,7 +16792,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-16T00:06:40Z",
+  "loop_tick": "2026-11-16T00:15:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
