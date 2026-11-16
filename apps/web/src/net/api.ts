@@ -1725,8 +1725,29 @@ export type PublicCreatedStat = {
   createdPlayedNormalWinRate: number | null;
   /** Used's win rate less Not used's, as a fraction; null until both sides have `minSample` games. */
   createdPlayedDelta: number | null;
+  /**
+   * R4082000: the made games' win rate read against the Created cards (`tiers.created`), an average one reading
+   * 50%, and its 95% range; absent from a server deployed before it.
+   */
+  adjustedWinRate?: number | null;
+  adjustedLow?: number | null;
+  adjustedHigh?: number | null;
+  /** R4082000: the card's balance tier from its adjusted rate and range (R3022000); null below the floor. */
+  tier?: CardTier | null;
   hasEnoughGames: boolean;
   window: PublicCardWindow;
+};
+
+/** R4082000: what a Created card a card's text makes is read against, as fractions. */
+export type PublicCreatedTiers = {
+  /** How much more the seats that make an average Created card win than the average deck; 0 when too few were read. */
+  center: number;
+  /** The spread (one standard deviation) of real Created cards' lifts; the deck cards' when too few were read. */
+  spread: number;
+  /** The Created cards the field was read from; 0 when too few, and each is read against the average deck. */
+  cards: number;
+  /** The win rate of the seats that make an average Created card, which reads 50%. */
+  baseline: number;
 };
 
 /** R3022000: what the tiers are read against: the field of every card in the report, and the band, as fractions. */
@@ -1741,6 +1762,8 @@ export type PublicStatsTiers = {
   baseline?: number;
   bandLow: number;
   bandHigh: number;
+  /** R4082000: the field the Created cards are read against; absent from a server deployed before it. */
+  created?: PublicCreatedTiers;
 };
 
 /** R654, R1367000: which records a window's figures count. */

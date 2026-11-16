@@ -4076,6 +4076,8 @@
   "Tokens made during the game.": "对局中生成的衍生物。",
   "Every other card made during the game: generated and Discovered cards, copies and The Coin.": "对局中生成的其他卡牌：生成的卡牌、发现的卡牌、复制品和幸运币。",
   "Win rate is of the seats that made one, used or not; Used of those that used one, Not used of those that made one and used none. Each needs {minSample} games.": "胜率是生成过它的玩家的胜率，无论是否使用；已使用是使用了其中一张的玩家的胜率，未使用是生成过但一张都没有使用的玩家的胜率。每项均需 {minSample} 局。",
+  "Tier and Adjusted read each card against the other Created cards, whose average reads 50%: a seat makes one only after playing what makes it, so the seats that make an average one win {baseline} of their games, {center} points against the average deck, and real ones differ by about {spread} points. The Coin and the cards only a rule makes are read against the average deck.": "梯队和校正胜率以其他创造的卡牌为基准衡量每张卡牌，其平均水平记为 50%：玩家只有在打出能生成它的卡牌之后才会生成它，因此生成一张平均水平卡牌的玩家胜率为 {baseline}，相对平均卡组为 {center} 个百分点，而实际卡牌之间相差约 {spread} 个百分点。幸运币以及只由规则生成的卡牌以平均卡组为基准。",
+  "Tier and Adjusted read each card against the average deck, as too few Created cards have enough games to read them against each other.": "梯队和校正胜率以平均卡组为基准衡量每张卡牌，因为局数足够的创造卡牌太少，无法彼此比较。",
   "Tokens this card makes": "这张卡牌生成的衍生物",
   "No token you hold covers it, and the Chase Shard bar isn't full": "你持有的代币都不够买它，追猎碎片进度条也还没满",
   "Fleet track": "舰队进度轨道",
