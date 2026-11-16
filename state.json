@@ -16302,17 +16302,8 @@
       "waiting_comment": 6903257445
     },
     "4032": {
-      "action": "plan",
-      "asks": [
-        "c:6905100930"
-      ],
-      "build_next": {
-        "from_run": "43793521024",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-16T03:04:31Z",
-        "until": "2026-11-16T03:34:31Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-16T03:04:21Z",
         "difficulty": "hard",
@@ -16331,10 +16322,9 @@
         "reason": "planned on opus",
         "trail": "es/tools/src/classify.rs; grep -n \\\"fn changed_files\\\\|diff\\\\\\\", \\\\\\\"--name\\\\|\\\\\\\"diff\\\\\\\"\\\" crates/tools/src/classify.rs | head\", \"description\": \"Read classify's hea\u2026\n- Bash: {\"command\": \"grep -rln \\\"hero_hit_amount\\\\|damage_pool_left\\\" crates/*/tests crates/tools/src 2>/dev/null | head; grep -rn \\\"project_\\\" crates/engine/src/lib.rs | head -3\", \"description\": \"Look for A\u2026\n- Bash: {\"command\": \"grep -rn \\\"forecast\\\" spec/0*.md spec/1[02]*.md 2>/dev/null | cut -c1-500 | head -8\", \"description\": \"Find spec text describing the combat forecast\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn find_def\\\" -A25 crates/engine/src/catalog.rs | head -40\", \"description\": \"Check whether find_def reads a state-pinned catalog\"}\n- Bash: {\"command\": \"grep -rn \\\"projected_damage\\\\|is_lethal\\\\|combat_forecast\\\\|lethal_attackers_of\\\" crates/engine/tests/rules/*.rs crates/cards/src/scripts/stinkyscape_plus/*.rs crates/ai/tests 2>/dev/nul\u2026\n- Bash: {\"command\": \"grep -rln \\\"damage_pool\\\\|damagePool\\\\|damage_burns\\\\|damageBurns\\\\|stinkyscapeplus-042\\\\|stinkyscapeplus-151\\\\|stinkyscapeplus-153\\\" crates/ai crates/engine/tests crates/cards/tests 2>/\u2026\n- Bash: {\"command\": \"grep -n \\\"damage_pool\\\\|damagePool\\\\|damage_burns\\\" -B3 -A3 crates/ai/src/shadow_ban.rs | head -30\", \"description\": \"See why the AI's shadow ban mentions pools\"}\n- Bash: {\"command\": \"grep -n \\\"042\\\\|151\\\\|153\\\\|Projector\\\\|Rounds\\\" crates/ai/src/shadow_ban.rs | head\", \"description\": \"Check whether the AI shadow-bans the involved cards\"}\n- Bash: {\"command\": \"grep -n \\\"damage_pool\\\\|damagePool\\\" crates/engine/tests/rules/pools.rs | head -5; grep -n \\\"is_lethal\\\\|projected\\\" crates/engine/tests/rules/duos.rs | head -5\", \"description\": \"Check p\u2026\n- Bash: {\"command\": \"grep -n \\\"fn hero_burn_of\\\\|fn burn_on\\\\b\\\\|pub fn burn_on\\\" crates/engine/src/query.rs | head -3; grep -n \\\"HERO_HEALTH\\\" crates/engine/src/config.rs | head -2\", \"description\": \"Check B\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4032/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: the \\u00a74.4 lethal projection in crates/engine/src (da\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count the draft plan's words and characters\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4032/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: the \\u00a74.4 lethal projection in crates/engine/src (da\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; awk '/^```rust/{f=1} f{n+=NF} /^ ```$/{f=0} END{print \\\"code words:\\\", n}' .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\nstart=s.index('## Goal'); end=s.index('## Files to touch')\\ngoal='''## Goal\\n\\\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4032/.bot-plan.md\", \"offset\": 80, \"limit\": 200}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\na=s.index('## Done when'); b=s.index('## Risks')\\ns=s[:a]+'''## Done when\\n\\n- [ ] T1\\u20\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\na=s.index('3. **`crates/engine/src/query.rs`**'); b=s.index('4. **`crates/engine/tests/ru\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4032/.bot-plan.md\", \"offset\": 1, \"limit\": 40}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(''' /// R4032000: \\u00a74.4 steps 1 to 4 of one hit as `land` reads them afte\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\ns=s.replace('''--plays <its ids>`. and hand-writes''','''--plays <its ids>` and hand-writ\u2026\n- Bash: {\"command\": \"awk 'BEGIN{c=0} /^ *```/{c=!c; next} !c{print}' .bot-plan.md | tr -s ' |`*-' ' ' | wc -w; wc -c .bot-plan.md\", \"description\": \"Count prose words outside code blocks\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4032/.bot-plan.md\", \"offset\": 86, \"limit\": 110}\n- Bash: {\"command\": \"cat rustfmt.toml; cargo fmt --check -p jackioh-cards 2>&1 | head -5; echo \\\"exit: $?\\\"\", \"description\": \"Check rustfmt config and that the cards crate is formatted\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\nrep=[('''- **T2 `r4032000_the_hits_of_one_attack_share_the_one_pool`**\\n - `trampler` on \u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\na=s.index(' - **Body**, one paragraph:'); b=s.index(' - **`spec/pending/4032.md`:**')\\ns=\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\nrep=[('''Departures from the earlier plan: `damage_pool` is not refactored (a side's soak\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\nrep=[('''- **Hidden information.** `acting_texts_of` drops face-down text (R1487000), as \u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4032/.bot-plan.md'\\ns=open(p).read()\\na='''None. Decisions, with the rejected alternative: a per-side total (not per-card takes\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4032/.bot-plan.md\"}\n- Bash: {\"command\": \"grep -n \\\"pub mod query\\\\|pub mod afflictions\\\\|mod afflictions\\\" crates/engine/src/lib.rs; grep -n \\\"R1122\\\" spec/rulings/R1122.md | head -2; sed -n 1,6p spec/rulings/R1122.md | cut -c1\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: the \u00a74.4 lethal projection in crates/engine/src (damage.rs, lethal.rs, query.rs) that My Pawn, the glow, the forecast and the AI read\"} --> ## Goal My Pawn (#96), the R662 glow and the R3100000 forecast all read one read-only projection, `damag\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-16T01:56:39Z",
       "owner_why": "it plans it",
@@ -16347,12 +16337,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-16T01:50:55Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43793521024",
+      "run_id": "pending:c0e05f36-1794798385",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-16T02:39:39Z",
+      "started_at": "2026-11-16T03:06:48Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6905100930"
+      ]
     },
     "4033": {
       "action": "build",
@@ -16693,9 +16685,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T03:06:12Z",
+    "at": "2026-11-16T03:06:48Z",
     "url": "",
-    "what": "build #4034 on agy"
+    "what": "build #4032 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-16T02:56:18Z",
