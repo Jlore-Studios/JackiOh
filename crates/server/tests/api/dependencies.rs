@@ -10,7 +10,15 @@ use std::path::PathBuf;
 
 /// Crates that encrypt with a block mode outside an AEAD, or bind OpenSSL, which offers CBC beside the
 /// rustls the server uses.
-const BLOCK_MODE_CRATES: &[&str] = &["block-modes", "block-padding", "cbc", "ecb", "native-tls", "openssl", "openssl-sys"];
+const BLOCK_MODE_CRATES: &[&str] = &[
+    "block-modes",
+    "block-padding",
+    "cbc",
+    "ecb",
+    "native-tls",
+    "openssl",
+    "openssl-sys",
+];
 
 /// Crates that parse XML.
 const XML_CRATES: &[&str] = &[
@@ -32,21 +40,37 @@ fn locked_crates() -> BTreeSet<String> {
     let text = std::fs::read_to_string(&lock).expect("the workspace's Cargo.lock");
     let crates: BTreeSet<String> = text
         .lines()
-        .filter_map(|line| line.strip_prefix("name = \"")?.strip_suffix('"').map(str::to_string))
+        .filter_map(|line| {
+            line.strip_prefix("name = \"")?
+                .strip_suffix('"')
+                .map(str::to_string)
+        })
         .collect();
     // The AEAD the server does use, so a lock file this misreads cannot pass as one with nothing banned.
-    assert!(crates.contains("ring"), "Cargo.lock read as {} names without ring", crates.len());
+    assert!(
+        crates.contains("ring"),
+        "Cargo.lock read as {} names without ring",
+        crates.len()
+    );
     crates
 }
 
 fn locked_among(banned: &[&str]) -> Vec<String> {
     let crates = locked_crates();
-    banned.iter().filter(|name| crates.contains(**name)).map(|name| name.to_string()).collect()
+    banned
+        .iter()
+        .filter(|name| crates.contains(**name))
+        .map(|name| name.to_string())
+        .collect()
 }
 
 #[test]
 fn no_locked_crate_encrypts_with_a_bare_block_mode() {
-    assert_eq!(locked_among(BLOCK_MODE_CRATES), Vec::<String>::new(), "use an AEAD: AES-GCM or ChaCha20-Poly1305 through ring");
+    assert_eq!(
+        locked_among(BLOCK_MODE_CRATES),
+        Vec::<String>::new(),
+        "use an AEAD: AES-GCM or ChaCha20-Poly1305 through ring"
+    );
 }
 
 #[test]
