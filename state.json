@@ -14432,7 +14432,7 @@
       "planned_tier": "strong",
       "provider": "claude-3",
       "round_tier": "",
-      "run_id": "pending:c879803c-1794871246",
+      "run_id": "43978536278",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-16T23:21:07Z",
       "stop_requested": false,
