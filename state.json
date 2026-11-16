@@ -17535,13 +17535,14 @@
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-3",
       "queued_at": "2026-11-16T10:33:28Z",
-      "run_id": "43850093234",
+      "run_id": "pending:1db59ce3-1794827207",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 300,
-      "started_at": "2026-11-16T10:34:33Z",
+      "started_at": "2026-11-16T11:07:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17568,9 +17569,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-16T10:34:33Z",
+    "at": "2026-11-16T11:07:13Z",
     "url": "",
-    "what": "review #4076 on claude-6"
+    "what": "spot-check #4076 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-16T10:57:56Z",
@@ -37564,7 +37565,15 @@
         "n": 300,
         "pr": 4076,
         "queued_at": "2026-11-16T11:04:34Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:1db59ce3-1794827207",
         "sha": "d9f6d0c37b386996fb3790356c4ab9456e4ce2db",
+        "started_at": "2026-11-16T11:07:13Z",
         "status": "queued",
         "title": "Patch: daily super run failed",
         "tries": 0
