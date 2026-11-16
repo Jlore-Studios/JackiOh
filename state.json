@@ -16818,6 +16818,8 @@
     "4047": {
       "action": "review",
       "asks": [],
+      "audit_tier": "medium",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16834,16 +16836,25 @@
       },
       "interruptions": 0,
       "issue": 4021,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The stale-lobby and live-socket retry policy contradicts the current failed-read ruling and lacks the required new ruling and spec amendment.",
+          "evidence": "R3792000 states that an unreachable lobby read replaces the lobby immediately with the failure card; lines 135 and 161-167 instead preserve a ready lobby and schedule another read even while the socket is live. R3730000 and R3214000 only specify polling while no socket exists. CLAUDE.md rule 3 therefore requires the lowest free issue-block ruling, R4021000, named proving tests, amendments to the affected ruling text, and spec/pending/4021.md.",
+          "severity": "blocking",
+          "where": "apps/web/src/lobby/LobbyScreen.tsx:135"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "gpt",
-      "queued_at": "2026-11-16T04:49:47Z",
+      "queued_at": "2026-11-16T04:59:47Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "43806637943",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-16T04:52:02Z",
       "stop_requested": false,
       "taken_asks": [],
