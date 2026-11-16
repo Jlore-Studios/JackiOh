@@ -7,7 +7,9 @@
 // since #3128's costs, whose deals and AI's plays moved, "-133" was; since the Stinkyscape+ release (#3596),
 // whose cards join those random effects' pools and whose Fruit pools keep to the five Grapes (R382), "-159"
 // was; since #3837's costs and stats (Legacy: Speciesist and Legacy: Jlockeed Shredder-10 among them), on
-// which Call to Chaos went unplayed there, "-175" is, every Legendary and Mythic played.
+// which Call to Chaos went unplayed there, "-175" was; since #4034, which adds Legacy: Big Felinor
+// and Legacy: The Rock to the human deck so Tribes and Tribute can be met in lessons, "-47" is, every
+// Legendary and Mythic played.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -17,7 +19,7 @@ export const lesson: TutorialLesson = {
   title: "The final exam",
   summary: "Legendary and Mythic cards, random effects, Quickdraw and copies: everything at once.",
   discoveries: ["quickdraw", "legendary", "random", "copying"],
-  seed: "tg-finale-175",
+  seed: "tg-finale-47",
   humanSeat: "p1",
   poolHold: false,
   humanDeck: [
