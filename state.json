@@ -16000,6 +16000,13 @@
     "4025": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43789390155",
+        "model": "sonnet",
+        "provider": "claude-1",
+        "since": "2026-11-16T02:07:32Z",
+        "until": "2026-11-16T02:37:32Z"
+      },
       "difficulty_by": {
         "at": "2026-11-16T02:07:19Z",
         "difficulty": "medium",
