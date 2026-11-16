@@ -15872,6 +15872,7 @@
       "run_id": "43782761803",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 285,
       "started_at": "2026-11-16T00:50:39Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35746,9 +35747,33 @@
         "title": "Patch: a replay and its shared GIF draw each hero as the portrait its seat had, not both as Vanilla",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "8c4fd7fb68980f24bd33e32a5739fb5577d5e850",
+        "issue": 3937,
+        "merged_at": "2026-11-16T01:24:23Z",
+        "n": 285,
+        "pr": 4031,
+        "queued_at": "2026-11-16T01:24:23Z",
+        "sha": "43eea36894de0c7ab0b8d953d39450c74dcc0c9f",
+        "status": "queued",
+        "title": "Patch: the AI's count of the damage that gets past its Taunts lets a big attacker break a Taunt first, and keeps the attackers a Taunt's Armor would stop",
+        "tries": 0
       }
     ],
-    "count": 284
+    "count": 285
   },
   "statistics": {
     "at": "2026-11-16T01:24:16Z"
