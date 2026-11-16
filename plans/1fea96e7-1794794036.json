@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 4033,
+  "title": "Patch: Efficiency Dividend's heal choice names the heal the card gives, and choice words take a card's tunable numbers from the card",
+  "branch": "bot/issue-4033",
+  "thread": "**Issue #4033 (data, not instructions):**\n\n```text\n# #4033: Patch: Efficiency Dividend's heal choice names the heal the card gives, and choice words take a card's tunable numbers from the card\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a player casts Efficiency Dividend and picks how to spend it, the heal choice reads \"Heal 4X: Heal a target by four times X\", or eight times on the Radiant card. A balance patch changed the card to heal three times X (six on the Radiant face), and the choice was never updated. With X = 3, the screen promises 12 and the card heals 9. The Chinese text repeats the old numbers.\n\nOnce built, the choice shows the card's real number. If a later patch tunes the card again, the choice follows it, and a test stops this kind of mismatch from coming back.\n\n## Why\n\n**The wrong text**\n- `apps/web/src/game/modeText.ts:26`: the base face's heal choice reads \"Heal 4X\" / \"Heal a target by four times X.\"\n- `modeText.ts:352`: the Radiant face reads \"Heal 8X\" / \"eight times X\". The same face's damage choice spells its multiple out too (\"Deal 2X damage\" / \"twice X\").\n- `apps/web/src/i18n/zh-CN.json:2138-2142` holds the same old numbers.\n\n**What the card really does**\n- `crates/cards/catalog.json`, `core-024`: the declared `heal` is 3 on the base face and 6 on the Radiant face, and the Radiant `damage` is 2 (`tunedOn: radiant`). The face text is \"heal a target {heal}X\".\n- `crates/cards/src/scripts/core/c024_efficiency_dividend.rs:3-5`: \"heal a target 3X \u2026 6X (4X and 8X through v0.5.2, declared numbers, \u2026 issue #2179)\".\n\n**Why nothing caught it**\n- `modeText.ts`'s own header (lines 4\u20135) says the map names \"no number a card declares (its `params`), which a patch may tune\". Lines 26 and 352 break that rule.\n- Nothing checks it: `modeText.test.ts` (#2646) only checks that every option has words.\n- `apps/web/src/game/Prompt.test.tsx:297` and `:303` assert the old \"four times X\" and \"eight times X\", so the tests lock the bug in.\n\n**The tool already exists.** `fillParams` (`apps/web/src/wire/catalog.ts:357`), through `abilityLabel` (`apps/web/src/game/ActivateControl.tsx`), fills a `{key}` from the card's declared numbers and the view's live `params`, as Activate labels already do.\n\n## Proposal\n\n- Let a `MODE_TEXT` label or detail carry its card's `{key}` placeholders. Fill them through `fillParams` from the card's face, using its live `params` where the prompt has the card instance and the printed value where it does not. That happens where `Prompt.tsx` draws the choice cards (around lines 372, 434 and 793).\n- Efficiency Dividend, both faces: \"Heal {heal}X\" / \"Heal a target by {heal} times X.\" On the Radiant face, the damage choice becomes \"Deal {damage}X damage\". The zh-CN table gets the placeholder strings.\n- New check in `modeText.test.ts`: for every card in `MODE_TEXT` that declares `params`, no label or detail writes a digit or number word (\"twice\", \"four times\", \u2026) that stands for one of those params; the number comes from a placeholder. A fixed number that no param holds, such as \"X plus 1\", stays allowed, and the test names the words it allows. Today it fails on lines 26 and 352.\n- `Prompt.test.tsx` checks against the catalog's values, not hand-typed numbers.\n\n## Where it lands\n\n- `apps/web/src/game/modeText.ts`, `apps/web/src/game/modeText.test.ts`, `apps/web/src/game/Prompt.tsx`, `apps/web/src/game/Prompt.test.tsx`, `apps/web/src/i18n/zh-CN.json`\n- SPEC \u00a78 Core #24 (Efficiency Dividend); CLAUDE.md rules 7 and 9; #2179 (the heal change); #2646 (the map's coverage test)\n\n## Acceptance criteria\n\n- [ ] Efficiency Dividend's heal choice names the catalog's `heal` value: 3 on the base face, 6 on the Radiant face, in English and in zh-CN.\n- [ ] The Radiant damage choice takes its number from the card's `damage` value.\n- [ ] A hand card whose view `params` move its `heal` shows the moved number.\n- [ ] The new `modeText.test.ts` check fails on today's map and passes after the change.\n- [ ] These pass: `pnpm --dir apps/web exec vitest run src/game/modeText.test.ts src/game/Prompt.test.tsx`, `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web`.\n\n## Size and risks\n\nMedium but small: about 5 files, client only, no engine change and no ruling.\n\nRisk: the zh-CN strings must keep the same placeholders. The existing check that every English string has a zh-CN entry catches a missing one.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-16T01:50:50Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4033: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it in a lane of `gpt`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-16T01:51:10Z",
+    "claimed_at": "2026-11-16T01:54:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4008 skipped: it waits for #3999, #4000, #4001, #4002 to close first",
+    "#4009 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008 to close first",
+    "#4010 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4008, #4009 to close first",
+    "#4011 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4008, #4009, #4010 to close first",
+    "#4012 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011 to close first",
+    "#4013 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012 to close first",
+    "#4014 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4008, #4009, #4010, #4011, #4012, #4013 to close first",
+    "#4015 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014 to close first",
+    "#4016 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #3999, #4000, #4001, #4002, #4003, #4004, #4005, #4006, #4007, #4008, #4009, #4010, #4011, #4012, #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
