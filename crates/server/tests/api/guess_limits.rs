@@ -18,7 +18,7 @@ use jackioh_server::config::{
 };
 
 use crate::support::deps::{add_user, empty_test_app, json_request, send, test_app};
-use crate::support::store::{Account, account, advance, fake, uuid};
+use crate::support::store::{Account, account, advance, fake, fake_ref, uuid};
 
 /// One address the tests use for the second address; the first is the harness's default.
 const OTHER_IP: &str = "198.51.100.9";
@@ -177,8 +177,10 @@ async fn r4008000_a_wrong_code_sent_again_counts_once_and_a_malformed_one_never(
     assert_eq!(duos_get(&app, &who, IP, &unheld_code(2)).await.0, 404);
 }
 
-/// Every future started before any is awaited; the answers in order.
-async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
+/// Every future started before any is awaited; the answers in order. `release` runs once each has been
+/// polled once, so a future held up by what `release` frees is held up with the others, not run alone.
+async fn join_all<F: Future>(futures: Vec<F>, release: impl FnOnce()) -> Vec<F::Output> {
+    let mut release = Some(release);
     let mut futures: Vec<Pin<Box<F>>> = futures.into_iter().map(Box::pin).collect();
     let mut outputs: Vec<Option<F::Output>> = futures.iter().map(|_| None).collect();
     std::future::poll_fn(|cx| {
@@ -190,6 +192,9 @@ async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
                     Poll::Pending => pending = true,
                 }
             }
+        }
+        if let Some(release) = release.take() {
+            release();
         }
         if pending { Poll::Pending } else { Poll::Ready(()) }
     })
@@ -204,10 +209,16 @@ async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
 async fn r4008000_requests_sent_at_once_cannot_try_more_codes_than_the_allowance() {
     let app = empty_test_app().await;
     let who = account(&app, 1, "Pal").await;
-    // Every request is started before any is answered, so none can wait on another's count.
+    // The store is held while every request starts, so each stops inside its lookup; once all wait there
+    // the store is freed and they finish one after another, none having counted before the others began.
+    let store = fake_ref(&app).lock().await;
     let burst = CODE_TRIES_PER_ACCOUNT_PER_HOUR * 4;
     let codes: Vec<String> = (0..burst).map(unheld_code).collect();
-    let answers = join_all(codes.iter().map(|code| duos_get(&app, &who, IP, code)).collect()).await;
+    let answers = join_all(
+        codes.iter().map(|code| duos_get(&app, &who, IP, code)).collect(),
+        move || drop(store),
+    )
+    .await;
     let answered = answers.iter().filter(|(status, _)| *status == 404).count();
     let refused = answers.iter().filter(|(status, _)| *status == 429).count();
     assert_eq!(
