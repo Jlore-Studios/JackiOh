@@ -14177,6 +14177,7 @@
     "4062": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-17T00:12:32Z",
         "difficulty": "medium",
