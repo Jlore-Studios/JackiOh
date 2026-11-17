@@ -12552,6 +12552,13 @@
     "4108": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T19:16:25Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-rule line holds: no engine rules, no AI, no cross-crate design, no migration, far under 40 files \u2014 two predicates, two tests, wording fixes."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
