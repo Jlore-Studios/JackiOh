@@ -16126,9 +16126,18 @@
     "what": "review #4104 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T01:32:18Z",
+    "at": "2026-11-17T01:42:04Z",
     "notes": [
-      "delivered review #4100 on claude-8 (run 43993268185): approved"
+      "delivered review #4090 on claude-2 (run 43995175861): approved",
+      "delivered review #4099 on claude-7 (run 43992042945): approved",
+      "delivered build #4011 on muse (run 43990585949): built",
+      "delivered review #4097 on muse (run 43990504063): approved",
+      "delivered build #4072 on muse (run 43983061683): built",
+      "started review #4103 on muse (run 43998316543)",
+      "started review #4104 on muse (run 43998415712)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 1 of 2 waiting run(s) (run 43997904695 on bot/issue-4011); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16832,7 +16841,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T01:32:18Z",
+  "loop_tick": "2026-11-17T01:42:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
