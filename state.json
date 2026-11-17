@@ -13532,6 +13532,8 @@
       }
     },
     "4135": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T19:17:31Z",
@@ -13545,8 +13547,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a friend's 2v2 lobby keeps offering Join on their row while any of its three guest seats is empty, not only until the first guest enters\"} -->\n- What changed and why: `lobbies_open_of_hosts` (the one read behind `GET /api/friends` rows) dropped any lobby whose `guest` seat filled, so a 2v2 lobby vanished from the host's friends row at the first entrant. Both stores now list an unstarted, unexpired lobby when `guest` is empty, or when its fo\u2026\n- - [store.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4108/crates/server/src/lobby/store.rs): Postgres predicate binds `FORMAT_TWO_V_TWO` (`2v2`) as `$3`; the fake mirrors it gated on `settings.format()`, deliberately not a bare \"any of `others` is empty\" since `others` is always emp\u2026\n- - [friends.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4108/crates/server/src/social/friends.rs), [README](https://github.com/Jlore-Studios/JackiOh/blob/main/crates/server/README.md), [R3732001.md](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4108/spec/rulings/R3732001.md\u2026\n- - New tests named `r3732001_\u2026` in the files R3732001 lists: contract case pins partial-2v2 listed / full, started, seated-1v1, seated-co-op unlisted; API test has Cyd and Dov enter Bea's 2v2 while Ada's row keeps `lobbyCode`, then Eli fills it and the code is gone.\n- How tested (commands run, output seen): `cargo test -p jackioh-server --test server api::friends::r3732001` \u2192 4 passed; `cargo test -p jackioh-server --test server_store lobbies` \u2192 12 passed, with both the memory and postgres halves running and green here, so the new SQL was exercised against real \u2026\n- Decisions: followed the plan exactly, no departures and no open choices. One reviewer note: the focused suites passed before a whitespace-only rustfmt collapse in the new contract test; `cargo fmt --check` verifies that edit is formatting-only, and the full package suite passed after it.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4108 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4108/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4108,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T20:31:09Z",
         "from_run": "44157006077",
         "gates": [
           {
@@ -13605,8 +13610,15 @@
         "source": "build",
         "until": "2026-11-17T21:00:07Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-17T20:30:07Z",
+      "run_id": "pending:a8949b2c-1794947442",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-17T20:31:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -13620,9 +13632,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T20:21:05Z",
+    "at": "2026-11-17T20:31:09Z",
     "url": "",
-    "what": "build #4116 on claude-4"
+    "what": "review #4135 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T20:17:34Z",
