@@ -13627,6 +13627,7 @@
       "run_id": "44172322557",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 325,
       "started_at": "2026-11-17T20:43:33Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -34268,9 +34269,33 @@
         "title": "Patch (part 13 of 20): Math.random only where nothing is secret, held by lint, and a nonce is never proof of who sent it",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "84d57a9ab1cb2d94b6902664d933980518144983",
+        "issue": 4115,
+        "merged_at": "2026-11-17T22:15:05Z",
+        "n": 325,
+        "pr": 4136,
+        "queued_at": "2026-11-17T22:15:05Z",
+        "sha": "77cb282e6d7df24dc42d90af2d8e4b0ffd2baf0b",
+        "status": "queued",
+        "title": "Patch: Heroic Power's powers, the Anomaly titles and the other words the client translates from a table read in Chinese for a Chinese reader, held by a test",
+        "tries": 0
       }
     ],
-    "count": 324
+    "count": 325
   },
   "statistics": {
     "at": "2026-11-17T22:10:39Z"
