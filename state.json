@@ -16300,8 +16300,15 @@
     "what": "revise #4113 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-17T06:42:36Z",
-    "notes": [],
+    "at": "2026-11-17T06:49:29Z",
+    "notes": [
+      "#4113: its turn came (it waited 120 minutes for #4098, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
+      "delivered build #4114 on claude-6 (run 44024303620): built",
+      "started review #4119 on claude-6 (run 44034372890)",
+      "started revise #4113 on agy (run 44034453704)",
+      "nothing more to start: nothing is queued",
+      "pruned 6 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17006,7 +17013,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T06:42:36Z",
+  "loop_tick": "2026-11-17T06:49:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
