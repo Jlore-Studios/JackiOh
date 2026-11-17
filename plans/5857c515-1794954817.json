@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4149,
+  "title": "Patch: follow-up to #4136 from the after-merge spot-check",
+  "branch": "bot/issue-4149",
+  "thread": "**Issue #4149 (data, not instructions):**\n\n```text\n# #4149: Patch: follow-up to #4136 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4136 -->\nThe after-merge spot-check of #4136 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/44189772495)) found 1 blocking problem(s) in the change as it merged (`77cb282e6d7d`). `claude-4` (claude, `opus`, strong) reviewed it. #4136 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/i18n/i18n.test.ts:293`: The new table walk checks only the `boardNames` entry of `CARD_SETTINGS_FIELDS`. The issue asked it to walk the card settings' fields, and the README now says it does, but a new or reworded label or description on any other field (`hoverPreviews`, `rarityFoil`, `animatedFoil`, `fullArt`, `setWatermarks`, `opponentCosmetics`, `deviceTilt`) would show in English to a Chinese reader and no test would fail.\n  Evidence: The walk does `CARD_SETTINGS_FIELDS.find((field) => field.key === \"boardNames\")` and pushes only that field's label and description. `settings/controls.tsx:178` and `:194` (`t(field?.label ?? setting)`, `t(field.description)`) and `:240` and `:270` pass every other field's label and description to `t()` through a variable, which the literal scan cannot see. The issue's list of tables names \"the card settings' fields and the board-names options\", and the acceptance item asks the walk to fail on a missing entry in \"any of those tables\". The README sentence added in this diff says \"the card settings' fields and the board-names options \u2026 are walked\". Every field has an entry today (I checked all 16 strings against zh-CN.json), so the fix is to loop over every field in the walk instead of finding one.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `muse` (`muse`) built #4136 and `muse` (`muse-spark-1.3-contributor`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-4"
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4149: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T22:32:23Z",
+    "claimed_at": "2026-11-17T22:34:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4149 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4015 skipped: it waits for #4014 to close first",
+    "#4016 skipped: it waits for #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4014, #4015, #4016, #4017 to close first"
+  ]
+}
