@@ -594,8 +594,7 @@ fn r3286000_a_won_mini_boss_dealt_no_drop_rolls_gold_or_better_or_none() {
     });
     assert!(
         content.passives.iter().any(|p| {
-            matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic)
-                && !p.unobtainable
+            matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic) && !p.unobtainable
         }),
         "a lower relic is still open"
     );
@@ -1160,10 +1159,7 @@ fn r4067000_a_curse_listed_twice_is_refused() {
 fn r4067000_distinct_curses_are_accepted_unchanged() {
     let content = content();
     let mut distinct = setup(&content);
-    distinct.curses = vec![
-        content.curses[0].id.clone(),
-        content.curses[1].id.clone(),
-    ];
+    distinct.curses = vec![content.curses[0].id.clone(), content.curses[1].id.clone()];
     assert_eq!(
         run_check_setup(&distinct, &RunUnlocks::default(), &content),
         Ok(())
@@ -1177,8 +1173,7 @@ fn r4067000_distinct_curses_are_accepted_unchanged() {
     let base = RUN_SCORE_ROW + i64::from(RUN_SCORE_FIGHT.fight);
     assert_eq!(
         run_score(&scored, &content),
-        base * (i64::from(PERCENT) + i64::from(points) * RUN_SCORE_CURSE_POINT_PERCENT)
-            / i64::from(PERCENT)
+        base * (i64::from(PERCENT) + i64::from(points) * RUN_SCORE_CURSE_POINT_PERCENT) / i64::from(PERCENT)
     );
 }
 
