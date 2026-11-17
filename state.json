@@ -36853,14 +36853,6 @@
         "provider": "claude-1",
         "run_id": "44026287245",
         "taken_asks": []
-      },
-      "3": {
-        "area": "tests",
-        "count": 1,
-        "last_run": "2026-11-17T05:46:34Z",
-        "provider": "claude-7",
-        "run_id": "44026452988",
-        "taken_asks": []
       }
     },
     "taken_asks": []
