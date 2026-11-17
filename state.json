@@ -13662,14 +13662,15 @@
     "what": "plan #4014 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-17T20:17:34Z",
+    "at": "2026-11-17T20:28:02Z",
     "notes": [
-      "delivered plan #4116 on claude-4 (run 44161504918): planned",
-      "delivered build #4112 on muse (run 44161052730): built",
-      "started review #4133 on muse (run 44168264601)",
-      "started build #4116 on claude-4 (run 44168385898)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered build #4109 on muse (run 44157117078): built",
+      "delivered build #4108 on muse (run 44157006077): built",
+      "started review #4135 on muse (run 44170148437)",
+      "started review #4134 on muse (run 44170262804)",
+      "started review #4128 on claude-3 (run 44170372301)",
+      "started plan #4014 on claude-3 (run 44170484729)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14375,7 +14376,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T20:17:34Z",
+  "loop_tick": "2026-11-17T20:28:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
