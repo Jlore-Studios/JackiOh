@@ -12727,17 +12727,8 @@
       "suggestion": true
     },
     "4112": {
-      "action": "plan",
-      "asks": [
-        "c:6958351307"
-      ],
-      "build_next": {
-        "from_run": "44159140231",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-17T19:37:39Z",
-        "until": "2026-11-17T20:07:39Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-17T19:37:28Z",
         "difficulty": "medium",
@@ -12756,10 +12747,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Two files, one skip-list line plus tests; none of the hard clauses (engine rules, AI, cross-crate design, migration, 40+ files) applies.\"} -->\n- ## Goal\n- A pull request that changes only the mutation-testing tooling (`.cargo/mutants.toml`, `scripts/mutants.sh`, `scripts/mutants-runner.sh`) or the pool probe (`scripts/pool-probe.sh`) scopes to `full=false`, so `ci.yml` runs only `bot selftest` beside `mutants.yml`'s own run. Beside other files those \u2026\n- ## Files to touch\n- | File | New / change | What changes there |\n- |---|---|---|\n- | `scripts/ci-scope.sh` | change | One new case line in `skipped()`; header: new skip-list class paragraph, and updated lines on what `.cargo/` and the scripts turn on |\n- | `apps/web/src/net/ci-scope.test.ts` | change | Three new `it` blocks: four-files skip, shared-beside-mutants.toml, run-beside-mutants.sh |\n- Do not touch anything else: not `mutants.yml` (its `pull_request.paths` already covers three of the four), not `.cargo/config.toml`, not `.github/mutants-floor.txt`, not any crate, app, `e2e/`, or `spec/` file. No spec section or ruling governs this change; the proof the header must restate is the \u2026\n- ## Steps\n- 1. In `scripts/ci-scope.sh`, function `skipped()`, add one case line immediately before `*) return 1 ;;` (after the `.github/workflows/pr-title.yml) ;;` line), matching the bare style of the surrounding lines (no comment; the header carries the explanation):\n- `.cargo/mutants.toml | scripts/mutants.sh | scripts/mutants-runner.sh | scripts/pool-probe.sh) ;;`\n- Make no other body change. Skipped files `continue` in the per-file loop before any `on` case, so `.cargo/*` (run-everything line), `*) on web`, and `*) on e2e` can no longer catch them.\n- 2. In the same file's header, extend the skip-list paragraph (the block ending \"but for the five record files and reports of `analysis/fixtures/`\") with a new class: the mutation-testing tooling, which `mutants.yml` runs and checks on its own trigger (`.cargo/mutants.toml`, `scripts/mutants.sh`, `s\u2026\n- 3. In the same header, update the run-everything paragraph (\"Run everything but the db suites: the workspace's `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo/`, ...\") so `.cargo/` reads `.cargo/ but .cargo/mutants.toml`, and update the `clippy` paragraph (\"any Rust source, manifest, loc\u2026\n- 4. In the same header, update the `e2e` paragraph's \"the scripts no build runs\" line so it names the scripts that stay off-e2e after this change: `scripts/browse.sh`, `scripts/promote-production.sh`, `scripts/promote-staging.sh`, `scripts/server-image.sh`, `scripts/worktree.sh` (the four mutation/p\u2026\n- 5. In `apps/web/src/net/ci-scope.test.ts`, after the \"skips the heavy jobs for a diff of the night bot's own files and nothing else\" test, add `it(\"skips the heavy jobs for a diff of only the mutation-testing tooling or the pool probe\", ...)`: for each of `.cargo/mutants.toml`, `scripts/mutants.sh`\u2026\n- 6. In the same test file add `it(\"scopes a shared-crate change beside .cargo/mutants.toml as the shared crate alone\", ...)`: assert `answerFor(\".cargo/mutants.toml\")` equals `every(false)`, and `answerFor(\"crates/shared/src/lib.rs\", \".cargo/mutants.toml\")` equals `answerFor(\"crates/shared/src/lib.r\u2026\n- 7. In the same test file add the run pairing: assert `answerFor(\"scripts/mutants.sh\")` equals `every(false)`, and `answerFor(\"crates/run/src/lib.rs\", \"scripts/mutants.sh\")` equals `answerFor(\"crates/run/src/lib.rs\")`. Note for the builder: the beside-equality already holds today (probed: both give \u2026\n- ## Tests\n- - New tests, all in `apps/web/src/net/ci-scope.test.ts`: the four-files skip test (step 5), the shared-beside test (step 6), the run-beside test (step 7). Each pair's alone-assertion fails on today's script (probed: mutants.toml alone turns on full/clippy/all-RUST/web/web_promote/e2e; each script a\u2026\n- - Unchanged tests that must keep passing: the cargo-settings test (`.cargo/config.toml` still turns on full, clippy, all RUST, web, web_promote, e2e), the runs-everything row holding `.github/mutants-floor.txt`, and the `WEB`/`E2E` named-paths scans (no source under `apps/web/src`, `e2e/`, or `apps\u2026\n- - Command: `pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts`.\n- ## Done when\n- - [ ] The four files alone, and each beside `bot/harness/state.py`, give `full=false` (empty `onFor`).\n- - [ ] `crates/shared/src/lib.rs` beside `.cargo/mutants.toml` scopes exactly as without it; same for `crates/run/src/lib.rs` beside `scripts/mutants.sh`.\n- - [ ] `.cargo/config.toml` and `.github/mutants-floor.txt` scope exactly as today; the web/e2e named-paths tests pass unchanged.\n- - [ ] The vitest file above passes; the header names all four paths and why each is listed.\n- - [ ] No file outside the two listed above changed.\n- ## Risks\n- - A future CI job that reads one of the four files would silently skip while the file stays listed; the header warning from step 2 is the mitigation, per the script's own rule.\n- - `ci.yml`'s `changes` job runs `main`'s copy of the script, so this pull request itself still runs everything; the effect starts on later pull requests. That is expected, not a failure.\n- - A push to `main` and the daily super run always run everything regardless; untouched.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4112 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4112/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-17T19:29:28Z",
       "owner_why": "it plans it",
@@ -12772,12 +12762,14 @@
       "provider": "muse",
       "queued_at": "2026-11-17T19:19:21Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44159140231",
+      "run_id": "pending:fc8dc653-1794944381",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-17T19:29:28Z",
+      "started_at": "2026-11-17T19:40:05Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6958351307"
+      ]
     },
     "4113": {
       "action": "revise",
@@ -13216,9 +13208,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T19:39:28Z",
+    "at": "2026-11-17T19:40:05Z",
     "url": "",
-    "what": "build #4115 on muse"
+    "what": "build #4112 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T19:26:24Z",
