@@ -17829,6 +17829,10 @@
         {
           "at": "2026-11-17T03:45:42Z",
           "minutes": 59.3
+        },
+        {
+          "at": "2026-11-17T04:47:27Z",
+          "minutes": 57.6
         }
       ],
       "tokens_spent": [
@@ -18356,17 +18360,24 @@
           "cost": 0.0,
           "input": 790967,
           "output": 44591
+        },
+        {
+          "at": "2026-11-17T04:47:27Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 201867,
+          "output": 16523
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-17T04:49:46Z",
-          "utilization": 0.13
+          "utilization": 0.36
         },
-        "observed_at": "2026-11-17T03:45:42Z",
+        "observed_at": "2026-11-17T04:47:27Z",
         "seven_day": {
           "resets_at": "2026-11-21T00:22:39Z",
-          "utilization": 0.8
+          "utilization": 0.86
         },
         "status": "allowed"
       }
@@ -36853,6 +36864,17 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-17T03:47:44Z,agy,usage-command,before,44012646933,13,2026-11-17T04:49:46Z,80,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-17T03:57:54Z,agy,usage-command,call,44012646933,21,2026-11-17T04:49:46Z,82,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-17T04:07:58Z,agy,usage-command,call,44012646933,23,2026-11-17T04:49:46Z,83,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-17T04:18:01Z,agy,usage-command,call,44012646933,27,2026-11-17T04:49:46Z,83,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-17T04:28:05Z,agy,usage-command,call,44012646933,30,2026-11-17T04:49:46Z,86,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-17T04:38:09Z,agy,usage-command,call,44012646933,33,2026-11-17T04:49:46Z,86,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-17T04:45:29Z,agy,usage-command,after,44012646933,36,2026-11-17T04:49:46Z,86,2026-11-21T00:22:39Z,allowed,100,100,"
+    ]
   },
   "version": 1
 }
