@@ -37293,6 +37293,12 @@
         "number": 4063,
         "title": "Patch: spoken battle lines show as text bubbles",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-17T19:01:29Z",
+        "number": 4107,
+        "title": "Patch: the dev dashboard's admin routes answer only through the dashboard's own Worker, behind Cloudflare Access, and no longer on the player site",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-17T17:16:38Z",
