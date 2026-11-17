@@ -16357,6 +16357,8 @@
     "4122": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "ac8b3b7ab2c72bd5f1ff9683265858830cd67aa0",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-17T05:17:51Z",
