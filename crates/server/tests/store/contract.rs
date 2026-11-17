@@ -9647,6 +9647,95 @@ mod lobbies {
         assert!(q!(harness, t => t.lobbies_open_of_hosts(&["not-a-uuid".to_string()], now)).is_empty());
     }
 
+    /// R3732001: a 2v2 lobby stays listed until every guest seat is taken. A seated 1v1 or co-op
+    /// lobby (whose `others` are always empty) stays unlisted, as do a full and a started 2v2.
+    async fn r3732001_lists_two_v_two_lobbies_with_an_empty_seat(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let second = active_profile(harness, None).await;
+        let third = active_profile(harness, None).await;
+        let fourth = active_profile(harness, None).await;
+        let now = harness.now();
+        let two_v_two = |code: &str, at: i64| -> Lobby {
+            from(spread(
+                j(&lobby(code, &host.id, FORMAT_COOP, at, now + 900_000)),
+                json!({ "settings": { "format": "2v2" } }),
+            ))
+        };
+        for (code, at) in [
+            ("LOBBFA", now - 1_000),
+            ("LOBBFB", now - 2_000),
+            ("LOBBFC", now - 3_000),
+            ("LOBBFD", now - 4_000),
+            ("LOBBFE", now - 5_000),
+            ("LOBBFF", now - 6_000),
+            ("LOBBFG", now - 7_000),
+        ] {
+            let made = if code == "LOBBFE" {
+                lobby(code, &host.id, FORMAT_DUEL, at, now + 900_000)
+            } else if code == "LOBBFF" {
+                lobby(code, &host.id, FORMAT_COOP, at, now + 900_000)
+            } else {
+                two_v_two(code, at)
+            };
+            assert!(q!(harness, t => t.lobbies_create(&made)));
+        }
+        let seat = |code: &str, at: i64, over: Value| -> Lobby {
+            let format = if code == "LOBBFE" {
+                lobby(code, &host.id, FORMAT_DUEL, at, now + 900_000)
+            } else if code == "LOBBFF" {
+                lobby(code, &host.id, FORMAT_COOP, at, now + 900_000)
+            } else {
+                two_v_two(code, at)
+            };
+            from(spread(j(&format), over))
+        };
+        let empty = |profile: Option<String>| json!({ "profile": profile, "pick": null, "ready": false });
+        // LOBBFA: guest and guest2 taken, guest3 empty. LOBBFB: guest and guest3 taken, guest2
+        // empty. LOBBFC: every guest seat taken. LOBBFD: started with an empty seat. LOBBFE and
+        // LOBBFF: a seated 1v1 and co-op lobby, whose `others` are always empty. LOBBFG: untouched.
+        for (code, at, over) in [
+            (
+                "LOBBFA",
+                now - 1_000,
+                json!({
+                    "guest": guest.id,
+                    "others": [empty(Some(second.id.clone())), empty(None)],
+                    "rev": 1,
+                }),
+            ),
+            (
+                "LOBBFB",
+                now - 2_000,
+                json!({
+                    "guest": guest.id,
+                    "others": [empty(None), empty(Some(third.id.clone()))],
+                    "rev": 1,
+                }),
+            ),
+            (
+                "LOBBFC",
+                now - 3_000,
+                json!({
+                    "guest": guest.id,
+                    "others": [empty(Some(second.id.clone())), empty(Some(third.id.clone()))],
+                    "rev": 1,
+                }),
+            ),
+            ("LOBBFD", now - 4_000, json!({ "rev": 1, "startedAt": now })),
+            ("LOBBFE", now - 5_000, json!({ "guest": guest.id, "rev": 1 })),
+            ("LOBBFF", now - 6_000, json!({ "guest": fourth.id, "rev": 1 })),
+        ] {
+            assert!(q!(harness, t => t.lobbies_update(&seat(code, at, over), 0)));
+        }
+
+        let codes = |lobbies: Vec<Lobby>| lobbies.into_iter().map(|row| row.code).collect::<Vec<_>>();
+        assert_eq!(
+            codes(q!(harness, t => t.lobbies_open_of_hosts(std::slice::from_ref(&host.id), now))),
+            ["LOBBFA", "LOBBFB", "LOBBFG"]
+        );
+    }
+
     /// Migration 0090: a deleted profile takes the lobbies it hosts or sits in.
     async fn r3730000_a_deleted_profile_takes_its_lobbies(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
@@ -9735,6 +9824,7 @@ mod lobbies {
         r3730000_creates_reads_updates_by_revision_and_deletes,
         r3730004_counts_lists_and_reaps,
         r3732001_lists_open_lobbies_of_hosts,
+        r3732001_lists_two_v_two_lobbies_with_an_empty_seat,
         r3730000_a_deleted_profile_takes_its_lobbies,
         r3731000_a_two_v_two_lobby_keeps_its_other_team,
     );
