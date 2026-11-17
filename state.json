@@ -16543,12 +16543,13 @@
     "what": "build #4013 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T16:01:16Z",
+    "at": "2026-11-17T16:10:01Z",
     "notes": [
-      "#4013 needs a plan",
-      "started plan #4013 on muse (run 44121177971)",
+      "delivered plan #4013 on muse (run 44121177971): planned",
+      "started build #4013 on muse (run 44123005536)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "#4127: typed it Task",
+      "#4126: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17254,7 +17255,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T16:01:16Z",
+  "loop_tick": "2026-11-17T16:10:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
