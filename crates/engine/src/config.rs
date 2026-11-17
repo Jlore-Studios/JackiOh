@@ -737,6 +737,10 @@ pub const LAST_FACE_UP_SKIPPED_TAGS: &[Tag] = &[Tag::Ai];
 /// R884000: an "Activate N" a Buff or KY's Constant took past it counts this many uses too.
 pub const ACTIVATE_UNLIMITED_CAP: i32 = 100;
 
+/// R4079000: the most a doubling or tripling of a Unit's stat takes it to (S #119 Unsecure System, S #10.2
+/// Divine Spirit).
+pub const MULTIPLIED_STAT_CAP: i32 = 999;
+
 // ---- v0.2.0 constants: damage and combat (E5, E6, E35, E37) ----
 
 /// B5 E5, E9, R460: how many times one hit may be redirected before it lands where it stands. Each

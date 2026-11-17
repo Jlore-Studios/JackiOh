@@ -35,6 +35,7 @@ describe("#3341 the board's card height is the budget in game/config.ts", () => 
     expect(css).toContain(clampOf("desktop", heightTerm("desktop")));
     expect(css).toContain(clampOf("desktop", `min(${heightTerm("desktop")}, ${widthTerm})`));
     expect(css).toContain(clampOf("tablet", heightTerm("tablet")));
+    expect(css).toContain(clampOf("tabletEnded", heightTerm("tabletEnded")));
     expect(css).toContain(clampOf("base", heightTerm("base")));
     expect(css).toContain(clampOf("phone", heightTerm("phone")));
     expect(css).toContain(clampOf("phone", heightTerm("phone", " - var(--board-rail-phone-h)")));

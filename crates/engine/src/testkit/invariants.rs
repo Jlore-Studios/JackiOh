@@ -660,7 +660,8 @@ fn price_held(card: &CardInstance) -> Vec<&'static str> {
 }
 
 /// R636, R3556008: whether an aura gives Windfury: a unit gone by an action's end may have attacked
-/// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217).
+/// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217), and so may an animated
+/// card back in its backrow by then (R383, M #66 Fiery Waraxe, fuzz seed 1013, #4079).
 fn aura_gives_windfury(state: &GameState) -> bool {
     crate::layers::aura_entries(state).iter().any(|entry| {
         entry
@@ -3225,7 +3226,12 @@ impl InvariantMonitor {
                             || find_instance(state, &attacker_id).is_some_and(|attacker| {
                                 crate::scripts::script_of(state, attacker).after_attack.is_some()
                                     || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
-                            });
+                            })
+                            // R3543003, R781004: a unit that drew its keywords (`note_drawn_windfury`) and is
+                            // gone by the end may have drawn Frenzy (a Drone Corvette, Duos seed 1778, #4079).
+                            || (self.drawn_windfury.contains(&attacker_id)
+                                && find_instance(state, &attacker_id)
+                                    .is_none_or(|card| card.zone.z() != ZoneName::Field));
                         if answers {
                             self.credit_kill(&attacker_id);
                         }
@@ -3448,8 +3454,13 @@ impl InvariantMonitor {
                     };
                     // R3550001: a Unit that "can attack N times per turn" declares N attacks.
                     // R636, R3556008: one gone by the end may have had an aura's Windfury, read where the action left it.
-                    let gone =
-                        find_instance(state, declarer).is_none_or(|card| card.zone.z() != ZoneName::Field);
+                    // R383: an animated card back in its backrow by the action's end is read as a gone unit (fuzz
+                    // seed 1013, #4079).
+                    let gone = find_instance(state, declarer).is_none_or(|card| {
+                        card.zone.z() != ZoneName::Field
+                            || (!matches!(card.zone, Zone::Field { row: Row::Units, .. })
+                                && crate::animated::face_type_of(state, card) != CardType::Unit)
+                    });
                     let per_turn = if self.windfury.get(declarer) == Some(&current)
                         || (gone && aura_gives_windfury(state))
                     {

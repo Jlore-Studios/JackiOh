@@ -66,16 +66,17 @@ use crate::scripts::meditative_plus::{
     c022_mountaintop_garden,
 };
 use crate::scripts::stinkyscape::{
-    c004_olivian_expanse, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c023_warp_disruptor,
-    c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix,
-    c036_drone_core_x, c042_core_researcher, c045_drone_commander, c046_circadian_halfcycler, c050_beam_v3,
-    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
-    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
-    c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447,
-    c112_job_application, c115_scornboi, c116_megabase, c129_jlockeeds_missile_pod, c140_rush_token_launcher,
-    c143_book_launcher, c149_wildar, c153_stimmycheck, c154_dice_of_doom, c163_swear_loyalities,
-    c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
+    c004_olivian_expanse, c010_2_divine_spirit, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior,
+    c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii,
+    c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
+    c046_circadian_halfcycler, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
+    c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
+    c061_flak_v5, c074_paragon_x, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack,
+    c111_shockwave447, c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system,
+    c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck,
+    c154_dice_of_doom, c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid,
+    c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette,
+    t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
@@ -102,8 +103,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142),
 /// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000), #3802, #3837
 /// (R3837000, R3837003, R3837005), #3800 (R3800003, R3800004, S+ #104), #3869
-/// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002), #3935 (R3935000) and #3996
-/// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202).
+/// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002), #3935 (R3935000), #3996
+/// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202) and #4079 (R4079000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -933,6 +934,17 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c040_appropriations::ID,
         "v0.6.5b",
         c040_appropriations::script_v0_6_5b,
+    ),
+    // #4079 (R4079000): the last scripts before the doubling cap.
+    (
+        c119_unsecure_system::ID,
+        "v0.6.6d",
+        c119_unsecure_system::script_v0_6_6d,
+    ),
+    (
+        c010_2_divine_spirit::ID,
+        "v0.6.6d",
+        c010_2_divine_spirit::script_v0_6_6d,
     ),
 ];
 

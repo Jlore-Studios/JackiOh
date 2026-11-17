@@ -2060,19 +2060,45 @@ pub fn side_snapshot_instances_mut(side: &mut SideSnapshot) -> Vec<&mut CardInst
 pub fn rename_in_board_history(state: &mut GameState, from: &str, to: &str) {
     for snapshot in state.board_history.iter_mut().flatten() {
         for player in PLAYER_IDS {
-            let side = &mut snapshot.sides[player];
-            for card in side_snapshot_instances_mut(side) {
-                if card.id == from {
-                    card.id = to.to_string();
-                }
-            }
-            for home in side.homes.iter_mut().flatten() {
-                if home.instance_id == from {
-                    home.instance_id = to.to_string();
-                }
+            rename_in_side(&mut snapshot.sides[player], from, to);
+        }
+    }
+    // R227, R3550007: Bogos Binted's Cry keeps its side in memory, so a card set again under a fresh id goes
+    // back as itself (Duos seed 1616, #4079). Only a note it renamed is written back.
+    let key = crate::subsystems::board_history::SIDE_SNAPSHOT_KEY;
+    for player in PLAYER_IDS {
+        for card in side_cards_mut(&mut state.players[player]) {
+            let Some(slot) = card.memory.get_mut(key).and_then(|note| note.get_mut("side")) else {
+                continue;
+            };
+            let Ok(mut side) = serde_json::from_value::<SideSnapshot>(slot.clone()) else {
+                continue;
+            };
+            if rename_in_side(&mut side, from, to)
+                && let Ok(renamed) = serde_json::to_value(&side)
+            {
+                *slot = renamed;
             }
         }
     }
+}
+
+/// `rename_in_board_history` on one side: its cards and their homes. Whether it renamed anything.
+fn rename_in_side(side: &mut SideSnapshot, from: &str, to: &str) -> bool {
+    let mut renamed = false;
+    for card in side_snapshot_instances_mut(side) {
+        if card.id == from {
+            card.id = to.to_string();
+            renamed = true;
+        }
+    }
+    for home in side.homes.iter_mut().flatten() {
+        if home.instance_id == from {
+            home.instance_id = to.to_string();
+            renamed = true;
+        }
+    }
+    renamed
 }
 
 /// R174, R212, R436: what a queued trigger answering an event carries — the cards the event names,

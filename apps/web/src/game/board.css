@@ -2964,6 +2964,12 @@ button.modifier-badge[data-open="true"] {
     grid-template-rows: auto 1fr auto auto auto;
   }
 
+  /* R434: at the game's end the opponent's hand turns face up, a hand card tall, so the field rows give that height
+     back (four field rows and both hands, 1.3 each). At 768x1024 the board ran 92px past its box (#4079). */
+  .board:has(> .hand-opponent[data-revealed="true"]) {
+    --card-h: clamp(60px, calc((100cqh - 305px) / 6.6), 113px);
+  }
+
   .board > * {
     grid-column: 1 / -1;
   }
