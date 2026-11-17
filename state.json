@@ -36769,7 +36769,8 @@
       "2026-11-17T02:36:55Z,44003362499,agy,gemini-3.8-flash-high,plan,4057,medium,planned,,6.9,224795,39922,0,,5,8,77,78,171.2,agy,none,,1",
       "2026-11-17T02:27:10Z,44000325296,claude-4,opus,revise,4090,hard,built,,19.2,102,25797,5081505,2.4372,0,5,,,7.6,claude-2,fresh,other,1",
       "2026-11-17T02:33:16Z,43998415712,muse,muse-spark-1.3-contributor,review,4104,medium,built,,36.7,0,0,0,,6,1,14,15,2.1,,none,,5",
-      "2026-11-17T02:47:27Z,44005067861,claude-8,opus,review,4106,medium,reviewed,,1.1,12,5634,318809,0.4989,2,3,,,,,none,,1"
+      "2026-11-17T02:47:27Z,44005067861,claude-8,opus,review,4106,medium,reviewed,,1.1,12,5634,318809,0.4989,2,3,,,,,none,,1",
+      "2026-11-17T02:45:39Z,44004979129,claude-8,opus+sonnet,review,4104,medium,reviewed,,0.7,14,4647,416608,0.2899,1,2,,,2,muse,none,,1"
     ]
   },
   "version": 1
