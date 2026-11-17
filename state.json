@@ -14124,6 +14124,13 @@
     "4057": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T02:38:54Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "No hard rule holds: testkit invariant gathering and fuzz planted tests with no engine rule changes."
+      },
       "failures": 1,
       "forced": false,
       "handoff": {
