@@ -33848,14 +33848,6 @@
         "provider": "claude-7",
         "run_id": "44155044349",
         "taken_asks": []
-      },
-      "2": {
-        "area": "server",
-        "count": 1,
-        "last_run": "2026-11-17T19:07:16Z",
-        "provider": "claude-8",
-        "run_id": "44155147178",
-        "taken_asks": []
       }
     },
     "taken_asks": []
