@@ -59,6 +59,15 @@
 #
 # Past the skip list, each changed file turns lines on, and a line no file turned on is false:
 #
+#  - A diff in which every file is one `cargo jackioh patches ship` or `patches cut` writes runs `full`
+#    and only rust_cards_lib, rust_cards, rust_server and rust_tools_wasm, plus web when
+#    apps/web/.env.production is in it (#4094, an owner-decided cut of per-pull-request coverage: the
+#    WASM module and the client embed the catalog, yet web, e2e, the engine's and the AI's groups and every
+#    db line stay off; the push to `main` and the daily super run still run everything). Those files are
+#    crates/cards/patches/'s v*.json, patches.json, shipped.json, index.json, card_metrics/, records/ and
+#    pending/, crates/server/.env.example and apps/web/.env.production, and both patches.json and
+#    shipped.json must be in the diff, as no other pull request edits them. Any other file in the diff
+#    scopes as below.
 #  - Run everything but the db suites: the workspace's Cargo.toml, Cargo.lock, rust-toolchain.toml,
 #    .cargo/, anything under .github/ that is not on the skip list, and this script. Of these, only
 #    .github/ and this script run infra too: the terraform steps read no cargo file.
@@ -94,7 +103,7 @@
 #    (radiant_standard.rs), spec/07-tokens.md (the catalog test's table of tokens, R1177001) and
 #    spec/08-catalog.md (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
-#    tools' patches tests read) tools, wasm, the first as well as server; crates/server/tests/'s
+#    tools' patches tests read; the ship case above takes precedence) tools, wasm, the first as well as server; crates/server/tests/'s
 #    actor/, api/, bots/, loops/ and support/ (acceptance.rs holds their helpers to support/'s,
 #    #2385) tools, wasm as well as server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
@@ -227,6 +236,54 @@ on() {
   done
 }
 
+# Prints every line: full, and the rest by what was turned on.
+emit() {
+  echo "full=true"
+  case " $turned " in
+    *" db_sql "* | *" db_store "* | *" db_deploy "*) echo "db=true" ;;
+    *) echo "db=false" ;;
+  esac
+  for name in $LINES; do
+    case "$name" in
+      full | db) continue ;;
+    esac
+    case " $turned " in
+      *" $name "*) echo "$name=true" ;;
+      *) echo "$name=false" ;;
+    esac
+  done
+}
+
+# True for a diff in which every file is one `cargo jackioh patches ship` or `patches cut` writes
+# (#4094), and both history files are in it, which no other pull request edits.
+ships() {
+  saw_patches=false
+  saw_shipped=false
+  for file in $files; do
+    case "$file" in
+      crates/cards/patches/patches.json) saw_patches=true ;;
+      crates/cards/patches/shipped.json) saw_shipped=true ;;
+      crates/cards/patches/index.json | crates/cards/patches/v*.json | crates/cards/patches/card_metrics/* | \
+        crates/cards/patches/records/* | crates/cards/patches/pending/* | \
+        crates/server/.env.example | apps/web/.env.production) ;;
+      *) return 1 ;;
+    esac
+  done
+  [ "$saw_patches" = true ] && [ "$saw_shipped" = true ]
+}
+
+if ships; then
+  echo "ci-scope: a patches ship or cut (#4094): only the cards, the server and the tools read what it writes" >&2
+  on rust_cards_lib rust_cards rust_server rust_tools_wasm
+  for file in $files; do
+    case "$file" in
+      apps/web/.env.production) on web ;;
+    esac
+  done
+  emit
+  exit 0
+fi
+
 for file in $files; do
   skipped "$file" && continue
 
@@ -324,17 +381,4 @@ if git diff --no-renames -U0 "$base...$head" -- apps crates e2e 2>/dev/null |
   on rust_tools_wasm
 fi
 
-echo "full=true"
-case " $turned " in
-  *" db_sql "* | *" db_store "* | *" db_deploy "*) echo "db=true" ;;
-  *) echo "db=false" ;;
-esac
-for name in $LINES; do
-  case "$name" in
-    full | db) continue ;;
-  esac
-  case " $turned " in
-    *" $name "*) echo "$name=true" ;;
-    *) echo "$name=false" ;;
-  esac
-done
+emit

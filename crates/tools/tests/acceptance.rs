@@ -608,6 +608,62 @@ fn ci_scope_check_finds_a_crate_or_a_path_dependency_the_map_lacks() {
     );
 }
 
+/// What `patches ship` wrote for v0.6.6d (#4089, #4094).
+const SHIP_FILES: [&str; 6] = [
+    "crates/cards/patches/card_metrics/v0.6.6d.json",
+    "crates/cards/patches/patches.json",
+    "crates/cards/patches/pending/tag-scan.json",
+    "crates/cards/patches/shipped.json",
+    "crates/cards/patches/v0.6.6d.json",
+    "crates/server/.env.example",
+];
+
+fn scope_of(paths: &[&str]) -> Vec<(String, bool)> {
+    let files: Vec<(&str, &str)> = paths.iter().map(|path| (*path, "x\n")).collect();
+    scope_lines(&files)
+}
+
+fn line_is(lines: &[(String, bool)], name: &str) -> bool {
+    lines
+        .iter()
+        .find(|(line, _)| line == name)
+        .unwrap_or_else(|| panic!("no `{name}` line"))
+        .1
+}
+
+#[test]
+fn ci_scope_narrows_a_patches_ship_to_the_groups_that_read_what_it_writes() {
+    let lines = scope_of(&SHIP_FILES);
+    let on: Vec<&str> = lines
+        .iter()
+        .filter(|(_, value)| *value)
+        .map(|(name, _)| name.as_str())
+        .collect();
+    assert_eq!(
+        on,
+        [
+            "full",
+            "rust_cards_lib",
+            "rust_cards",
+            "rust_server",
+            "rust_tools_wasm"
+        ]
+    );
+    for name in ["e2e", "web", "db_deploy", "rust_ai_slow", "clippy"] {
+        assert!(!line_is(&lines, name), "{name}");
+    }
+}
+
+#[test]
+fn ci_scope_leaves_a_patches_ship_plus_an_unrelated_file_at_its_old_scope() {
+    let mut paths = SHIP_FILES.to_vec();
+    paths.push("crates/engine/src/state.rs");
+    let lines = scope_of(&paths);
+    for name in ["e2e", "web", "rust_ai_slow", "rust_engine", "db_deploy"] {
+        assert!(line_is(&lines, name), "{name}");
+    }
+}
+
 /// The file paths `text` includes: the literal after `include_str!(` or `include_bytes!(`, which is
 /// relative to the file (`false`), or after `env!("CARGO_MANIFEST_DIR"),` in a `concat!`, which is
 /// relative to the crate (`true`), each with its line. A marker followed by anything but a string
