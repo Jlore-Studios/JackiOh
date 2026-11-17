@@ -38,7 +38,6 @@ import {
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
-import type { CardTier } from "../wire/generated/CardTier.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -66,7 +65,7 @@ import { PlainCard, PlainTextButton, usePlainText } from "../stats/PlainText.tsx
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
-import { TierChip, adjustedText } from "../stats/TierChip.tsx";
+import { TierChip, adjustedText, percentText, tierRank } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -185,19 +184,6 @@ function RangeText({ low, high, digits, testid }: { low?: number | null; high?: 
       {`${(low * 100).toFixed(digits)}–${(high * 100).toFixed(digits)}%`}
     </span>
   );
-}
-
-/** R3022000: the tiers from the top, S (above the band, a nerf candidate) to F (below it, a buff candidate). */
-const TIER_ORDER: readonly CardTier[] = ["S", "A", "B", "C", "D", "F"];
-
-/** R3022000: a tier's place from the bottom, so a descending sort puts S first; -1 for none. */
-function tierRank(tier: CardTier | null | undefined): number {
-  return tier ? TIER_ORDER.length - TIER_ORDER.indexOf(tier) : -1;
-}
-
-/** R3022000: a band edge or a spread as the tiers' note reads it, a percent to a tenth at most ("45%", "52.5%"). */
-function percentText(fraction: number): string {
-  return `${String(Number((fraction * 100).toFixed(1)))}%`;
 }
 
 /** R3184001: under a tier, the share of the card's Adjusted range inside the tier's band, to a whole percent; nothing without one. */
@@ -1161,26 +1147,33 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                             <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
                             {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
                           </td>
+                          {/* R4084000: the bar lives in the Adjusted cell, sized by the adjusted rate on the same 0–100% scale the Win rate bar used. */}
                           <td className="stats-td" data-testid={statsTestid.adjustedCell}>
-                            {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
-                            {showRanges && card.hasEnoughGames && (
-                              <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                            {card.hasEnoughGames && typeof card.adjustedWinRate === "number" ? (
+                              <div className="stats-winrate-cell">
+                                <span className="stats-winrate-text">{adjustedText(card.adjustedWinRate)}</span>
+                                <div className="stats-confidence-bar">
+                                  <div
+                                    className="stats-confidence-fill"
+                                    style={{ width: `${Math.round(card.adjustedWinRate * 100)}%` }}
+                                  />
+                                </div>
+                                {showRanges && (
+                                  <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                                )}
+                              </div>
+                            ) : (
+                              "—"
                             )}
                           </td>
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
-                              <div className="stats-winrate-cell">
+                              <>
                                 <span className="stats-winrate-text">{Math.round(card.winRate * 100)}%</span>
-                                <div className="stats-confidence-bar">
-                                  <div
-                                    className="stats-confidence-fill"
-                                    style={{ width: `${Math.round(card.winRate * 100)}%` }}
-                                  />
-                                </div>
                                 {showRanges && (
                                   <RangeText low={card.winRateLow} high={card.winRateHigh} digits={WIN_RATE_RANGE_DIGITS} testid={statsTestid.winRateRange} />
                                 )}
-                              </div>
+                              </>
                             ) : (
                               <span className="stats-not-enough">{t("not enough games")}</span>
                             )}
@@ -1239,6 +1232,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               <>
                 <CreatedPanel
                   kind="tokens"
+                  field={tiers?.created}
                   created={tokenCards}
                   minSample={minSample}
                   nameOf={shownName}
@@ -1246,6 +1240,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 />
                 <CreatedPanel
                   kind="other"
+                  field={tiers?.created}
                   created={otherCreatedCards}
                   minSample={minSample}
                   nameOf={shownName}

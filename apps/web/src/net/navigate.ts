@@ -11,9 +11,19 @@ import { moveOverBackEntry, popBackLayer } from "./backLayers.ts";
 
 const NAVIGATED = "jackioh:navigated";
 
+/**
+ * `path` without its trailing slashes (#4009: `/\/+$/` scans super-linearly on a long slash run).
+ * Every address the client normalises goes through here.
+ */
+export function stripTrailingSlashes(path: string): string {
+  let end = path.length;
+  while (end > 0 && path.charCodeAt(end - 1) === 0x2f) end--;
+  return path.slice(0, end);
+}
+
 export function currentPath(): string {
   if (typeof window === "undefined") return "/";
-  return window.location.pathname.replace(/\/+$/, "") || "/";
+  return stripTrailingSlashes(window.location.pathname) || "/";
 }
 
 function splitTarget(path: string): { pathname: string; search: string } {
@@ -21,7 +31,7 @@ function splitTarget(path: string): { pathname: string; search: string } {
   const rawPath = at === -1 ? path : path.slice(0, at);
   const query = at === -1 ? "" : path.slice(at + 1);
   return {
-    pathname: rawPath.replace(/\/+$/, "") || "/",
+    pathname: stripTrailingSlashes(rawPath) || "/",
     search: query.length === 0 ? "" : `?${query}`,
   };
 }
@@ -209,7 +219,7 @@ export function useSearch(): string {
 export const SITE_ORIGIN = "https://staging.jackioh.com";
 
 export function originOf(configured: unknown): string {
-  return typeof configured === "string" && configured.length > 0 ? configured.replace(/\/+$/u, "") : SITE_ORIGIN;
+  return typeof configured === "string" && configured.length > 0 ? stripTrailingSlashes(configured) : SITE_ORIGIN;
 }
 
 /**

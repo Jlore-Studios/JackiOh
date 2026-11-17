@@ -209,8 +209,9 @@ describe("R507 the patch mark", () => {
     expect(cut).toMatch(/text-decoration:\s*line-through/);
     // Not R277's Radiant gold, and not R279's dotted reference line.
     const cards = readFileSync(resolve(HERE, "../cards/cards.css"), "utf8");
-    const gold = /--mark-ink:\s*([^;]+);/.exec(cards)?.[1];
-    const teal = /--patch-mark-ink:\s*([^;]+);/.exec(css)?.[1];
+    // No `\s*` before the captures (#4009): they trade characters with `[^;]+` super-linearly.
+    const gold = /--mark-ink:([^;]+);/.exec(cards)?.[1]?.trimStart();
+    const teal = /--patch-mark-ink:([^;]+);/.exec(css)?.[1]?.trimStart();
     expect(teal).toBeDefined();
     expect(teal).not.toBe(gold);
     expect(mark).not.toMatch(/dotted/);

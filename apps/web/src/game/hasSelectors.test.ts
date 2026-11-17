@@ -46,18 +46,63 @@ function splitTop(text: string, at: (ch: string) => boolean): string[] {
   return parts.map((p) => p.trim()).filter((p) => p !== "");
 }
 
+/**
+ * Every style rule's prelude in `css` (#4009: `/([^{};]+)\{/g` rescans a run from every position).
+ */
+function preludesOf(css: string): string[] {
+  const out: string[] = [];
+  let pos = 0;
+  for (;;) {
+    const open = css.indexOf("{", pos);
+    if (open === -1) return out;
+    let start = open;
+    while (start > pos && css.charAt(start - 1) !== "{" && css.charAt(start - 1) !== "}" && css.charAt(start - 1) !== ";") start--;
+    if (start < open) out.push(css.slice(start, open));
+    pos = open + 1;
+  }
+}
+
+/**
+ * `selector` with its combinators spaced (`a>b` to `a > b`), as the `\s*([>+~])\s*` to `" $1 "`
+ * rewrite does (#4009: the pattern rescans whitespace runs from every position).
+ */
+function spaceCombinators(selector: string): string {
+  let out = "";
+  let i = 0;
+  let spaced = false;
+  while (i < selector.length) {
+    const char = selector.charAt(i);
+    if (char === ">" || char === "+" || char === "~") {
+      if (!spaced) {
+        let end = out.length;
+        while (end > 0 && /\s/.test(out.charAt(end - 1))) end--;
+        out = out.slice(0, end);
+      }
+      out += ` ${char} `;
+      spaced = true;
+      i++;
+      while (i < selector.length && /\s/.test(selector.charAt(i))) i++;
+    } else {
+      out += char;
+      spaced = false;
+      i++;
+    }
+  }
+  return out;
+}
+
 /** Every selector in a sheet: each style rule's prelude, nested ones included, split at its commas. */
 function selectorsOf(css: string): string[] {
   const code = css.replace(/\/\*[\s\S]*?\*\//g, " ");
-  return [...code.matchAll(/([^{};]+)\{/g)]
-    .map((match) => (match[1] ?? "").trim())
+  return preludesOf(code)
+    .map((prelude) => prelude.trim())
     .filter((prelude) => !prelude.startsWith("@") && !/^(from|to|\d[\d.]*%)(\s*,\s*(from|to|\d[\d.]*%))*$/.test(prelude))
     .flatMap((prelude) => splitTop(prelude, (ch) => ch === ","));
 }
 
 /** A selector's compounds, its combinators (` `, `>`, `+`, `~`) dropped. */
 function compoundsOf(selector: string): string[] {
-  return splitTop(selector.replace(/\s*([>+~])\s*/g, " $1 "), (ch) => /\s/.test(ch)).filter((part) => !/^[>+~]$/.test(part));
+  return splitTop(spaceCombinators(selector), (ch) => /\s/.test(ch)).filter((part) => !/^[>+~]$/.test(part));
 }
 
 /** A compound's functional pseudo-classes (`:is(…)`, `:not(…)`), each with its argument, and the rest of it. */

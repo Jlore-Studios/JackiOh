@@ -31,10 +31,19 @@ const DEFAULT_HTTP_URL = "http://localhost:8787";
  * `VITE_SERVER_HTTP_URL` is public (`crates/server/src/env.rs` `PUBLIC_ENV_VARS`). The default is
  * the port `crates/server` listens on, which `e2e/support/config.ts` points at.
  */
+/**
+ * `base` without its trailing slashes (#4009: `/\/+$/` scans super-linearly on a long slash run).
+ */
+function stripTrailingSlashes(base: string): string {
+  let end = base.length;
+  while (end > 0 && base.charCodeAt(end - 1) === 0x2f) end--;
+  return base.slice(0, end);
+}
+
 export function apiBaseUrl(): string {
   const configured: unknown = import.meta.env.VITE_SERVER_HTTP_URL;
   const base = typeof configured === "string" && configured.length > 0 ? configured : DEFAULT_HTTP_URL;
-  return base.replace(/\/+$/, "");
+  return stripTrailingSlashes(base);
 }
 
 const DEFAULT_WS_URL = "ws://localhost:8787/ws/match";
@@ -55,7 +64,7 @@ export function serverSocketUrl(path: string, base: string = matchSocketUrl()): 
     return url.toString();
   } catch {
     // A relative test address.
-    return MATCH_SOCKET_PATH.test(base) ? base.replace(MATCH_SOCKET_PATH, path) : `${base.replace(/\/+$/u, "")}${path}`;
+    return MATCH_SOCKET_PATH.test(base) ? base.replace(MATCH_SOCKET_PATH, path) : `${stripTrailingSlashes(base)}${path}`;
   }
 }
 
@@ -1725,8 +1734,29 @@ export type PublicCreatedStat = {
   createdPlayedNormalWinRate: number | null;
   /** Used's win rate less Not used's, as a fraction; null until both sides have `minSample` games. */
   createdPlayedDelta: number | null;
+  /**
+   * R4082000: the made games' win rate read against the Created cards (`tiers.created`), an average one reading
+   * 50%, and its 95% range; absent from a server deployed before it.
+   */
+  adjustedWinRate?: number | null;
+  adjustedLow?: number | null;
+  adjustedHigh?: number | null;
+  /** R4082000: the card's balance tier from its adjusted rate and range (R3022000); null below the floor. */
+  tier?: CardTier | null;
   hasEnoughGames: boolean;
   window: PublicCardWindow;
+};
+
+/** R4082000: what a Created card a card's text makes is read against, as fractions. */
+export type PublicCreatedTiers = {
+  /** How much more the seats that make an average Created card win than the average deck; 0 when too few were read. */
+  center: number;
+  /** The spread (one standard deviation) of real Created cards' lifts; the deck cards' when too few were read. */
+  spread: number;
+  /** The Created cards the field was read from; 0 when too few, and each is read against the average deck. */
+  cards: number;
+  /** The win rate of the seats that make an average Created card, which reads 50%. */
+  baseline: number;
 };
 
 /** R3022000: what the tiers are read against: the field of every card in the report, and the band, as fractions. */
@@ -1741,6 +1771,8 @@ export type PublicStatsTiers = {
   baseline?: number;
   bandLow: number;
   bandHigh: number;
+  /** R4082000: the field the Created cards are read against; absent from a server deployed before it. */
+  created?: PublicCreatedTiers;
 };
 
 /** R654, R1367000: which records a window's figures count. */

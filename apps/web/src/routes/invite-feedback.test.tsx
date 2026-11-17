@@ -1203,7 +1203,7 @@ describe("R3147001 an account with no email address adds one before its code", (
 
 describe("R3147002 the code screen offers a new account's way back to an older one", () => {
   function base64url(text: string): string {
-    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/(?:==?)?$/, "");
   }
 
   function tokenFor(provider: string): string {

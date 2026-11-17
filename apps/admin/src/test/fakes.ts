@@ -58,7 +58,8 @@ export function fakeFetch(routes: Record<string, Route> = {}): FakeFetch {
 /** An unsigned JWT whose payload holds `claims`, as the provider's access tokens are shaped. */
 export function jwt(claims: Record<string, unknown>): string {
   const part = (value: unknown): string =>
-    btoa(JSON.stringify(value)).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
+    // btoa pads with at most two `=`, so one bounded match strips them all (#4009).
+    btoa(JSON.stringify(value)).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/(?:==?)?$/u, "");
   return `${part({ alg: "HS256", typ: "JWT" })}.${part(claims)}.signature`;
 }
 

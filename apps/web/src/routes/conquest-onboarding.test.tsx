@@ -35,6 +35,18 @@ const here = dirname(fileURLToPath(import.meta.url));
 const VALIDATOR_PATH = resolve(here, "../../../../crates/engine/src/validator.rs");
 const RUST_TOKENS = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^'\\\n]|\\.)'|"((?:[^"\\]|\\.)*)"/g;
 
+/**
+ * Prose without its edge whitespace and punctuation, as `/^[\s;:,."()]+|[\s;:,."()]+$/g` cuts them
+ * (#4009: the edge classes rescan from every position).
+ */
+function trimProse(text: string): string {
+  let start = 0;
+  while (start < text.length && (/\s/.test(text.charAt(start)) || ";:,.\"()".includes(text.charAt(start)))) start++;
+  let end = text.length;
+  while (end > start && (/\s/.test(text.charAt(end - 1)) || ";:,.\"()".includes(text.charAt(end - 1)))) end--;
+  return text.slice(start, end);
+}
+
 function getValidatorFragments(): string[] {
   const source = readFileSync(VALIDATOR_PATH, "utf8");
   const unescaped = (t: string): string => t.replace(/\\(["'\\])/g, "$1");
@@ -45,7 +57,8 @@ function getValidatorFragments(): string[] {
   for (const literal of literals) {
     for (const piece of literal.split(/\{[^{}]*\}/)) {
       const trimmed = piece.trim();
-      const prose = trimmed.replace(/^[\s;:,."()]+|[\s;:,."()]+$/g, "");
+      // Prose without its edge punctuation (#4009: the edge classes rescan from every position).
+      const prose = trimProse(trimmed);
       if (prose.length < 9) continue;
       if (!/[A-Za-z]\s[A-Za-z]/.test(prose)) continue;
       fragments.add(trimmed);

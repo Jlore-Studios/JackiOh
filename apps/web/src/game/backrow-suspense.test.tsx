@@ -68,7 +68,22 @@ describe("R2111000 the set", () => {
     const set = keyframes(ANIM, "jk-trap-set");
     // #3633: Game marks its root `data-card-played` where this rule read `.game:has([data-animating="cardPlayed"])`.
     const delay = /\.game\[data-card-played\] \.zone\[data-animating="summoned"\]::after \{ animation-delay: calc\((\d+)ms/.exec(ANIM)?.[1];
-    const landing = /(\d+)% \{ transform: translateY\(0\) scale\(1\.03, 0\.94\);/.exec(set)?.[1];
+    // The landing keyframe's percent: digits before its literal (#4009: `/(\d+)% …/` rescans a
+    // digit run from every position).
+    const marker = "% { transform: translateY(0) scale(1.03, 0.94);";
+    let landing: string | undefined;
+    let from = 0;
+    for (;;) {
+      const found = set.indexOf(marker, from);
+      if (found === -1) break;
+      let digits = found;
+      while (digits > 0 && /[0-9]/.test(set.charAt(digits - 1))) digits--;
+      if (digits < found) {
+        landing = set.slice(digits, found);
+        break;
+      }
+      from = found + 1;
+    }
     expect(delay).toBeDefined();
     expect(landing).toBeDefined();
     expect(Number(delay) + (Number(landing) * ANIMATIONS.summoned.durationMs) / 100).toBe(PAIR_OFFSET_MS);

@@ -106,13 +106,22 @@ function nonEmpty(value: string | undefined): string | undefined {
   return trimmed === undefined || trimmed === "" ? undefined : trimmed;
 }
 
+/**
+ * `host` without its trailing slashes (#4009: `/\/+$/` scans super-linearly on a long slash run).
+ */
+function stripTrailingSlashes(host: string): string {
+  let end = host.length;
+  while (end > 0 && host.charCodeAt(end - 1) === 0x2f) end--;
+  return host.slice(0, end);
+}
+
 /** The site a notice names: the host of the first browser origin (`jackioh.com`, `staging.jackioh.com`; `alerts.rs`' `site_of`). */
 export function siteOf(origins: string | undefined): string {
   const first = (origins ?? "").split(",")[0]?.trim() ?? "";
   if (first === "") return UNNAMED_SITE;
   const at = first.indexOf("://");
   const host = at === -1 ? first : first.slice(at + 3);
-  return host.replace(/\/+$/u, "");
+  return stripTrailingSlashes(host);
 }
 
 /** The issue's title, which the next notice searches for: one open issue per site. */

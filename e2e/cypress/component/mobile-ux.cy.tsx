@@ -85,9 +85,28 @@ const GLOW_LEGAL: Legal = [
   { type: "concede" },
 ];
 
-/** A computed `box-shadow`, one entry per layer (commas inside `rgb(...)` are not separators). */
+/**
+ * A computed `box-shadow`, one entry per layer: split at each comma with no `)` before the next
+ * `(` ahead of it, as `/,(?![^(]*\))/` does (#4009: the lookahead rescans ahead from every comma).
+ */
 function shadowLayers(shadow: string): string[] {
-  return shadow.split(/,(?![^(]*\))/).map((layer) => layer.trim());
+  const closesFirst: boolean[] = new Array<boolean>(shadow.length).fill(false);
+  let first: string | null = null;
+  for (let i = shadow.length - 1; i >= 0; i--) {
+    closesFirst[i] = first === ")";
+    const char = shadow.charAt(i);
+    if (char === "(" || char === ")") first = char;
+  }
+  const out: string[] = [];
+  let start = 0;
+  for (let i = 0; i < shadow.length; i++) {
+    if (shadow.charAt(i) === "," && !closesFirst[i]) {
+      out.push(shadow.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  out.push(shadow.slice(start).trim());
+  return out;
 }
 
 function expectShadow(testid: string, check: (shadow: string) => void): void {

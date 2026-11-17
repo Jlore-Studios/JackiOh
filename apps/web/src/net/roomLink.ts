@@ -12,7 +12,7 @@ import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
 import { isQueueMode, type QueueMode } from "./api.ts";
 import type { Account } from "./gate.ts";
-import { currentPath, lobbyCodeOf, navigate, paths } from "./navigate.ts";
+import { currentPath, lobbyCodeOf, navigate, paths, stripTrailingSlashes } from "./navigate.ts";
 import { getStored, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
 
 const ROOM_PARAM = "room";
@@ -41,7 +41,7 @@ export function lobbyLinkUrl(code: string): string {
 
 /** R3730006: the code a lobby path names, canonical, or null for none. */
 function lobbyCodeOfPath(pathname: string): string | null {
-  const raw = lobbyCodeOf(pathname.replace(/\/+$/u, "") || "/");
+  const raw = lobbyCodeOf(stripTrailingSlashes(pathname) || "/");
   return raw === null ? null : canonicalCode(raw, ROOM_CODE_FORMAT);
 }
 
@@ -179,6 +179,17 @@ export function useKeptLinkOpensLobby(account: Account): void {
 }
 
 /**
+ * A link candidate without the sentence's trailing punctuation (`.`, `,`, `)`, …). A character
+ * scan, not `/[.,;:!?)\]]+$/`: a message is another player's text, and the class-plus-anchor scans
+ * super-linearly on a long punctuation run (#4009).
+ */
+export function stripTrailingPunct(candidate: string): string {
+  let end = candidate.length;
+  while (end > 0 && ".,;:!?)]".includes(candidate.charAt(end - 1))) end--;
+  return candidate.slice(0, end);
+}
+
+/**
  * R2094000, R3730006: the first room link of this site (`/play?room=…`, `/together?coop=…` or
  * `/lobby/CODE`) a message holds, as the path of the lobby it opens, built as a path, never markup.
  */
@@ -187,7 +198,7 @@ export function findRoomLinkInText(text: string, origin: string): { path: string
   if (candidates === null) return null;
   for (let candidate of candidates) {
     // Trailing punctuation the sentence added is not the link's: "here: <link> (room code …)."
-    candidate = candidate.replace(/[.,;:!?)\]]+$/u, "");
+    candidate = stripTrailingPunct(candidate);
     let url: URL;
     try {
       url = new URL(candidate, origin);
@@ -195,7 +206,7 @@ export function findRoomLinkInText(text: string, origin: string): { path: string
       continue;
     }
     if (url.origin !== origin) continue;
-    const bare = url.pathname.replace(/\/+$/u, "") || "/";
+    const bare = stripTrailingSlashes(url.pathname) || "/";
     if (bare === paths.play) {
       const room = roomLinkOf(url.search);
       if (room !== null) return { path: lobbyLinkPath(room.code) };

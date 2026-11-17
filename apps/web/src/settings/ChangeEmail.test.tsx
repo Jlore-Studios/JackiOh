@@ -10,7 +10,7 @@ import ChangeEmail, { changeEmailTestid as T, tokenEmail } from "./ChangeEmail.t
 const URL_ = "https://project.supabase.co";
 
 function base64url(text: string): string {
-  return btoa(text).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
+  return btoa(text).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/(?:==?)?$/u, "");
 }
 
 /** An unsigned token carrying `claims`: the component only reads them for display. */
@@ -156,7 +156,9 @@ describe("R663 changing the account's email from the settings", () => {
 
   it("R663 reads a claim whose base64url holds both - and _, and no empty or non-string email", () => {
     // This payload's base64url has a "-" and a "_", the two characters base64 writes as "+" and "/".
-    expect(tokenFor("x~~~~?@ex.co").split(".")[1]).toMatch(/-.*_/u);
+    const segment = tokenFor("x~~~~?@ex.co").split(".")[1] ?? "";
+    const dash = segment.indexOf("-");
+    expect(dash !== -1 && segment.indexOf("_", dash + 1) !== -1).toBe(true);
     expect(tokenEmail(tokenFor("x~~~~?@ex.co"))).toBe("x~~~~?@ex.co");
     expect(tokenEmail(tokenWith({ sub: "u1", email: "" }))).toBeNull();
     expect(tokenEmail(tokenWith({ sub: "u1", email: ["a@b.co"] }))).toBeNull();

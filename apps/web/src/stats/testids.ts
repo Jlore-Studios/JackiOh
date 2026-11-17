@@ -33,6 +33,10 @@ export const statsTestid = {
   createdTable: "stats-created-table",
   tokensPanel: "stats-tokens-panel",
   tokensTable: "stats-tokens-table",
+  /** R4082000: a Created row's tier and adjusted win rate, and the line that says what they are read against. */
+  createdTierCell: "stats-created-tier-cell",
+  createdAdjustedCell: "stats-created-adjusted-cell",
+  createdTiersNote: "stats-created-tiers-note",
   /** R3324003: the Columns toggles. */
   columnGames: "stats-column-games",
   columnPlayRate: "stats-column-play-rate",

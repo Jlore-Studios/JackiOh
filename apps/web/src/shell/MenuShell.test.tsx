@@ -41,6 +41,29 @@ function block(css: string, selector: string, from = 0): string {
   return css.slice(css.indexOf("{", start) + 1, css.indexOf("}", start));
 }
 
+/**
+ * The `@media` queries of a sheet, in order, as `/@media\s*([^{]+)\{/g` names them (#4009: the
+ * class plus whitespace rescans a brace-free run).
+ */
+function mediaQueries(css: string): string[] {
+  const out: string[] = [];
+  let at = 0;
+  for (;;) {
+    const found = css.indexOf("@media", at);
+    if (found === -1) return out;
+    let i = found + "@media".length;
+    while (/\s/.test(css.charAt(i))) i++;
+    const open = css.indexOf("{", i);
+    if (open === -1) return out;
+    if (open > i) {
+      out.push(css.slice(i, open).trim());
+      at = open + 1;
+    } else {
+      at = found + 1;
+    }
+  }
+}
+
 /** The paths the shell leaves out, each with its reason: a board's, a game's flow, or a dev screen. */
 const OUTSIDE_SHELL: Readonly<Record<string, string>> = {
   practice: "practice's setup shares its game's path, a board (isBoardPath)",
@@ -197,7 +220,7 @@ describe("R3728000 the shell's widths and insets", () => {
   const css = sheet("shell/menu-shell.css");
 
   it("R3728000 the three layouts are the named breakpoints: a rail over 600 px, icons alone to 1024, a tab bar at 600 and under", () => {
-    const queries = [...css.matchAll(/@media\s*([^{]+)\{/g)].map((match) => (match[1] ?? "").trim());
+    const queries = mediaQueries(css);
     expect(queries).toEqual([over("phone"), `${over("phone")} and ${upTo("tablet")}`, over("tablet"), upTo("phone")]);
     const rail = css.indexOf(`@media ${over("phone")} {`);
     expect(block(css, ".menu-shell:not([data-board])", rail)).toContain("grid-template-columns: var(--shell-rail-w) minmax(0, 1fr);");
@@ -258,13 +281,40 @@ describe("R3728000 the shell's widths and insets", () => {
     expect(status).toContain(aboveTheBar);
     expect(status).toContain("translate: calc(var(--shell-start, 0px) / 2 - 50%) 0;");
     // Each width it takes, in the editor and the workshop, leaves the rail out, so it never lies over the rail or the sidebar.
-    const widths = [deckbuilder, sheet("game/deckbuilder/workshop.css")].flatMap((code) =>
-      [...code.matchAll(/\.db-deck-status\s*\{([^}]*)\}/g)].flatMap((rule) => [...(rule[1] ?? "").matchAll(/max-width:\s*([^;]+);/g)]),
-    );
+    // Rule scans as character loops (#4009: the class-heavy patterns rescan brace-free runs).
+    const widths: string[] = [];
+    for (const code of [deckbuilder, sheet("game/deckbuilder/workshop.css")]) {
+      const chunks = code.split("}");
+      if (!code.endsWith("}")) chunks.pop();
+      for (const chunk of chunks) {
+        let start = 0;
+        let open = chunk.indexOf("{", start);
+        while (open !== -1) {
+          const selector = chunk.slice(start, open).trimEnd();
+          const status = ".db-deck-status";
+          if (selector.endsWith(status) && selector.length > status.length) {
+            const body = chunk.slice(open + 1);
+            let at = 0;
+            for (;;) {
+              // No `\s*` before the capture (#4009): it trades characters with `[^;]+` super-linearly.
+              const found = body.indexOf("max-width:", at);
+              if (found === -1) break;
+              const semi = body.indexOf(";", found);
+              if (semi === -1) break;
+              widths.push(body.slice(found + "max-width:".length, semi).trimStart());
+              at = semi + 1;
+            }
+            break;
+          }
+          start = open + 1;
+          open = chunk.indexOf("{", start);
+        }
+      }
+    }
     // The editor's, the workshop's over 1024 px, its own from 601 to 1024 px (R3734001, the rail 148 px there) and its
     // own from 601 to 760 px (R3956000, the sidebar 232 px there).
     expect(widths).toHaveLength(6);
-    for (const width of widths) expect(width[1]).toMatch(/^calc\(100vw - var\(--shell-start, 0px\) - \d+px\)$/);
+    for (const width of widths) expect(width).toMatch(/^calc\(100vw - var\(--shell-start, 0px\) - \d+px\)$/);
 
     // The undo toast (R2119000, on the workshop and Play together) is over the bar's layer, so it took the middle tabs' taps.
     expect(block(sheet("undo/undo.css"), ".undo-toast-region")).toContain(aboveTheBar);
