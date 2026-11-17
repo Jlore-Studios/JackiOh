@@ -15092,15 +15092,8 @@
       }
     },
     "4092": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43984353895",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-17T00:11:57Z",
-        "until": "2026-11-17T00:41:57Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15112,10 +15105,9 @@
         "reason": "planned on sonnet",
         "trail": "oml\"}\n- Grep: {\"pattern\": \"46-menus|47-tap|specs? 46|\\\\b46 and 47|46/47|46, 47|SMOKE\", \"path\": \"/home/runner/work/_temp/work/item-4092\", \"glob\": \"!{node_modules,target,.git}/**\", \"output_mode\": \"files_with_matches\u2026\n- Grep: {\"pattern\": \"smoke\", \"path\": \"/home/runner/work/_temp/work/item-4092\", \"glob\": \"!{node_modules,target,.git,spec/rulings,spec/11-rulings.md,spec/INDEX.md}/**\", \"output_mode\": \"count\", \"-i\": true, \"hea\u2026\n- Bash: {\"command\": \"grep -rnE \\\"smoke\\\" e2e/README.md docs/v0.3.0/README.md docs/v0.3.0/SURFACE.md docs/v0.4.0/README.md CLAUDE.md BUILD.md scripts/ci-scope.sh e2e/cypress.config.ts apps/web/src/net/ci-scop\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4092/bot/tests/test_ci_matrix.py\", \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4092/e2e/README.md\", \"offset\": 40, \"limit\": 40}\n- Bash: {\"command\": \"git log --oneline -8 -- scripts/ci-shards.toml; echo ---; git log --oneline -8 -- bot/tests/test_ci_matrix.py; echo ---; git log -3 --format='%h %an %s' -- scripts/ci-shards.toml\"}\n- Bash: {\"command\": \"cd e2e && for k in 1 2 3; do echo \\\"3: $k\\\"; node scripts/shard-specs.mjs --smoke $k 3; echo; done; for k in 1 2; do echo \\\"2: $k\\\"; node scripts/shard-specs.mjs --smoke $k 2; echo; done\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4092 && git show --stat --format='%h %an %s%n%b' eef28c3240 | head -40; git show --stat --format='%h %an %s' 424f1a9f6f | head\"}\n- Bash: {\"command\": \"grep -n \\\"e2e_smoke\\\\|e2e smoke\\\\|smoke\\\" .github/ci/matrix.py | head -20; grep -n \\\"smoke\\\" .github/workflows/ci.yml | head -50; grep -n \\\"smoke\\\" .github/workflows/ci-duration.yml .git\u2026\n- Bash: {\"command\": \"grep -rnE \\\"shard-specs|shardSpecs|smokeSpecs\\\" --include=* -I . 2>/dev/null --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git | grep -v \\\"^./e2e/scripts/shard-specs.mjs\u2026\n- Bash: {\"command\": \"grep -rnE \\\"\\\\b46\\\\b.*\\\\b47\\\\b|\\\\b47\\\\b.*\\\\b46\\\\b|46-menus|47-tap\\\" -I . --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git --exclude-dir=rulings --exclude=11-rulings.md \u2026\n- Bash: {\"command\": \"grep -rnE \\\"smoke|SMOKE|every pull request|per pull request\\\" spec/rulings/R1581000.md spec/rulings/R2122000.md spec/rulings/R3728000.md spec/rulings/R3956000.md spec/rulings/R3957000.md\u2026\n- Bash: {\"command\": \"sed -n 1,20p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts; echo ======; sed -n 1,20p e2e/cypress/e2e/47-tap-areas.cy.ts; echo =====; sed -n 1,16p e2e/cypress/e2e/51-menu-shell.cy.ts; ec\u2026\n- Bash: {\"command\": \"sed -n 25,40p spec/rulings/R1581000.md; echo =====; sed -n 28,42p spec/rulings/R2122000.md; echo ====; sed -n 1,15p spec/rulings/R1581000.md; echo ====; sed -n 260,272p docs/polish/10-me\u2026\n- Bash: {\"command\": \"sed -n 20,40p .github/workflows/ci.yml; grep -n \\\"SMOKE\\\\|shard-specs\\\\|smoke\\\" apps/web/src/net/ci-scope.test.ts crates/tools/tests/acceptance.rs | head -20\"}\n- Bash: {\"command\": \"grep -n \\\"e2e\\\\|Cypress\\\\|smoke\\\" docs/v0.3.0/README.md | cut -c1-300 | head -30; echo ====; sed -n 140,150p docs/v0.3.0/README.md | cut -c1-300; sed -n 160,185p docs/v0.3.0/README.md | \u2026\n- Bash: {\"command\": \"cat vitest.config.ts 2>/dev/null | head -60; ls e2e; grep -rn \\\"e2e/scripts\\\\|e2e/support\\\" apps/web/src --include=*.test.ts -l | head\"}\n- Bash: {\"command\": \"grep -n \\\"pull request\\\\|per PR\\\\|PR smoke\\\\|daily\\\" e2e/README.md | cut -c1-260; echo ===; grep -n \\\"^| 46\\\\|^| 47\\\\|^| 51\\\" e2e/README.md | cut -c1-900\"}\n- Bash: {\"command\": \"cd e2e && node -e '\\nimport(\\\"./scripts/shard-specs.mjs\\\").then(m=>{\\n const every=require(\\\"fs\\\").readdirSync(\\\"cypress/e2e\\\").filter(n=>n.endsWith(\\\".cy.ts\\\"));\\n const six=every.filte\u2026\n- tool error: Exit code 1 1 19-queue-modes-and-series.cy.ts 2 51-menu-shell.cy.ts 3 01-hotseat-full-game.cy.ts 4 06-room-code.cy.ts,10-invite-gate.cy.ts,13-practice-vs-ai.cy.ts file:///home/runner/work/_temp/work/\u2026\n- Bash: {\"command\": \"grep -nE \\\"pull request|daily|on every|per PR\\\" spec/rulings/R3728000.md spec/rulings/R3956000.md spec/rulings/R3957000.md spec/rulings/R3351000.md spec/rulings/R3218000.md spec/rulings/\u2026\n- Bash: {\"command\": \"sed -n 18,30p e2e/cypress/e2e/51-menu-shell.cy.ts; echo ====; sed -n 46,52p e2e/cypress/e2e/47-tap-areas.cy.ts; echo ===; grep -n \\\"BUILD.md\\\" /dev/null; grep -n \\\"smoke\\\" BUILD.md | gre\u2026\n- tool error: Exit code 1 import { COLLECTION_SCREEN, FRIENDS_BUTTON, FRIENDS_CLOSE, FRIENDS_PANEL, PLAY_HUB, SHOP_PANEL, ts } from \"../../support/testids.ts\"; /** * R109 refuses an account past 300 requests a min\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4092/e2e && for k in 1 2 3 4 5 6 7 8; do echo \\\"$k: $(node scripts/shard-specs.mjs $k 8 | tr ',' '\\\\n' | sed 's#cypress/e2e/##; s#\\\\.cy\\\\.ts##' | tr \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4092 && sed -n 1219,1242p .github/workflows/ci.yml; grep -n \\\"folded back\\\\|split further\\\" .github/workflows/ci.yml .github/workflows/ci-duration.ym\u2026\n- Bash: {\"command\": \"grep -c \\\"shard-specs.mjs\\\" spec/11-rulings.md spec/INDEX.md; grep -n \\\"pending\\\\|fold\\\" spec/README.md | head -12 | cut -c1-240; ls spec/pending 2>/dev/null | head\"}\n- Bash: {\"command\": \"grep -nE \\\"SMOKE|smoke|46|47\\\" e2e/support/config.ts e2e/support/shell.ts e2e/support/stats.ts e2e/support/hitAreas.ts | cut -c1-260; grep -n \\\"smoke\\\\|SMOKE\\\" apps/web/README.md | head\"}\n- Bash: {\"command\": \"grep -rn \\\"ci-shards\\\\|shard-specs\\\\|e2e/README\\\" crates/tools/tests crates/tools/src apps/web/src/net/ci-scope.test.ts bot/go/tests 2>/dev/null | cut -c1-220 | head\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4092/.bot-plan.md\", \"content\": \"# Draft plan #4092 (see the final message for the full plan)\\n\\nFindings:\\n- SMOKE in e2e/scripts/shard-specs.mjs:27; \u2026\n- said: **Part of this needs a person:** the issue's step 2 (lower `[e2e] smoke`) and step 5 (the `ci.yml` header) can't be finished by the bot. Neither blocks the rest. - **Step 2:** `bot/tests/test_ci_matrix.py` is under `bot/` and pins the live count. Lowering `smoke` to 3 would make the required `bot s\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-17T00:02:32Z",
       "owner_why": "it plans it",
@@ -15128,9 +15120,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-16T23:55:52Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43984353895",
+      "run_id": "pending:fd4647c3-1794874508",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-17T00:02:32Z",
+      "started_at": "2026-11-17T00:15:34Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15350,9 +15342,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T00:14:53Z",
+    "at": "2026-11-17T00:15:34Z",
     "url": "",
-    "what": "review #4095 on claude-4"
+    "what": "build #4092 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-17T00:00:37Z",
