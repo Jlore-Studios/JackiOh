@@ -14,6 +14,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
+import { stripTrailingSlashes } from "./navigate.ts";
 import {
   forgetRead,
   freshRead,
@@ -31,15 +32,6 @@ const DEFAULT_HTTP_URL = "http://localhost:8787";
  * `VITE_SERVER_HTTP_URL` is public (`crates/server/src/env.rs` `PUBLIC_ENV_VARS`). The default is
  * the port `crates/server` listens on, which `e2e/support/config.ts` points at.
  */
-/**
- * `base` without its trailing slashes (#4009: `/\/+$/` scans super-linearly on a long slash run).
- */
-function stripTrailingSlashes(base: string): string {
-  let end = base.length;
-  while (end > 0 && base.charCodeAt(end - 1) === 0x2f) end--;
-  return base.slice(0, end);
-}
-
 export function apiBaseUrl(): string {
   const configured: unknown = import.meta.env.VITE_SERVER_HTTP_URL;
   const base = typeof configured === "string" && configured.length > 0 ? configured : DEFAULT_HTTP_URL;

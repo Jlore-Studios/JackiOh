@@ -47,6 +47,7 @@ import {
 } from "../net/api.ts";
 import { Dialog } from "../game/Dialog.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
+import { collectionFrom } from "../game/deckbuilder/loadout.ts";
 import { pageWake } from "../game/net.ts";
 import { readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, MODE_LABEL, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
@@ -152,12 +153,6 @@ export type LobbyData = {
 
 type LobbyLoad = { kind: "loading" } | { kind: "ready"; data: LobbyData } | { kind: "failed"; message: string };
 
-function collectionOf(entries: readonly { cardId: string; quantity: number }[]): Collection {
-  const owned: Record<string, number> = {};
-  for (const entry of entries) owned[entry.cardId] = entry.quantity;
-  return owned;
-}
-
 /** A collection failure skips only the client verdict; the catalog is the one the client ships (game/currentCatalog.ts). */
 export function useLobbyData(token: string): [LobbyLoad, () => void] {
   const [load, setLoad] = useState<LobbyLoad>({ kind: "loading" });
@@ -167,7 +162,7 @@ export function useLobbyData(token: string): [LobbyLoad, () => void] {
     Promise.all([
       attempt(() => getDecks(token)),
       attempt(() => getCollection(token))
-        .then((collection): Collection | null => collectionOf(collection.entries))
+        .then((collection): Collection | null => collectionFrom(collection.entries))
         .catch(() => null),
     ]).then(
       ([decks, collection]) => {

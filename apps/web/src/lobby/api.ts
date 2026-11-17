@@ -16,8 +16,6 @@ import type { PlayerRef } from "../net/social.ts";
  */
 export type LobbySettings = { format: "duel"; mode: QueueMode } | { format: "coop"; difficulty: Difficulty } | { format: "2v2" };
 
-export type LobbyFormat = LobbySettings["format"];
-
 /** A seat's role: a 1v1 or co-op lobby's two, and a 2v2's four (R3731000), in the server's seat order. */
 export type LobbyRole = "host" | "guest" | "guest2" | "guest3";
 

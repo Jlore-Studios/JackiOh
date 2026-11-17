@@ -72,10 +72,6 @@ export function readPracticeResumeState(): PracticeResume | null {
   }
 }
 
-export function readPracticeResume(): PracticeStartConfig | null {
-  return readPracticeResumeState()?.config ?? null;
-}
-
 /** R765: lessons clear because they cannot resume. */
 export function writePracticeResume(config: PracticeStartConfig, options: { saved?: boolean } = {}): void {
   if (config.lesson !== undefined) {

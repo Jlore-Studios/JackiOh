@@ -20,7 +20,7 @@ use jackioh_server::db::store::{ProfileKind, QueueMode};
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
-use crate::support::store::{fake, from, store, table, to_json};
+use crate::support::store::{fail_on, fake, from, stop_failing, store, table, to_json};
 
 const MATCH_ID: &str = "match-glitch";
 const P1: &str = "profile-1";
@@ -694,6 +694,47 @@ mod glitchs_void {
         held.idle().await;
         assert_eq!(late.close_code(), Some(MATCH_VOIDED_CLOSE_CODE));
         assert_eq!(late.of_type("view"), Vec::<Value>::new());
+    }
+
+    /// #4114 (`docs/implicit-states.md`, A12): `on_void`'s promise. A void whose delete the store failed
+    /// leaves the row live, so the next socket rebuilds the actor, which folds to the same void, closes
+    /// the socket with the void's close and forgets the match again, this time for good.
+    #[tokio::test]
+    async fn r679_a_void_the_store_failed_to_forget_is_voided_again_by_the_next_socket() {
+        let w = world(void_decks()).await;
+        fail_on(&w.app, "matches.forgetVoided", "down").await;
+        play_the_void(&w).await;
+        assert!(!w.app.matches.has(MATCH_ID));
+        assert!(
+            match_row(&w.app, MATCH_ID).await.is_some(),
+            "the failed delete leaves the row live"
+        );
+        stop_failing(&w.app).await;
+
+        let late = create_fake_socket();
+        w.app
+            .matches
+            .attach(&w.app, MATCH_ID, P1, late.socket())
+            .await
+            .expect("the live row rebuilds its actor");
+        w.app
+            .matches
+            .get(MATCH_ID)
+            .expect("the rebuilt actor, until its void runs")
+            .idle()
+            .await;
+        assert_eq!(late.close_code(), Some(MATCH_VOIDED_CLOSE_CODE));
+        assert_eq!(late.of_type("view"), Vec::<Value>::new());
+        assert!(!w.app.matches.has(MATCH_ID));
+        assert_eq!(match_row(&w.app, MATCH_ID).await, None);
+
+        let again = w
+            .app
+            .matches
+            .attach(&w.app, MATCH_ID, P1, create_fake_socket().socket())
+            .await;
+        let refusal = again.expect_err("the voided match is gone");
+        assert!(format!("{refusal:?}").contains("no such match"), "{refusal:?}");
     }
 
     #[tokio::test]

@@ -393,7 +393,7 @@ pub(crate) async fn start_coop_match(
             // R1523000: the record holds the match now, so the ledger holds both seats until its
             // ending.
             lease.commit();
-            registry(app).start(app, row, state, pinned);
+            registry(app).start(app, row, state, pinned).await;
         }
         CoopStartOutcome::Blocked | CoopStartOutcome::Unavailable => {}
     }

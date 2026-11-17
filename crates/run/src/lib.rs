@@ -1847,8 +1847,7 @@ fn fight_won(state: &mut RunState, content: &RunContent, report: &FightReport, r
     let least = (kind == RunNodeKind::MiniBoss).then_some(RUN_MINI_BOSS_DROP_TIER);
     let artifact = match node.artifact {
         Some(id) if !held_ids(state).contains(&id.as_str()) => Some(id),
-        Some(_) => roll_reward_artifact(state, content, kind, least, rng),
-        None => roll_reward_artifact(state, content, kind, least, rng),
+        _ => roll_reward_artifact(state, content, kind, least, rng),
     };
     state.phase = RunPhase::Reward {
         artifact,
