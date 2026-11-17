@@ -12715,6 +12715,13 @@
     "4111": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T19:50:57Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Line 1: the invariant lives in the engine crate's testkit, and the 2000-seed sweep may surface real forecast bugs whose fixes go in `query.rs` or `damage.rs`, which are engine rules."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
