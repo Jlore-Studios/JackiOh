@@ -14956,10 +14956,8 @@
       "run_id": "43965758333",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-16T22:00:26Z",
-      "strike_log": [
-        "CI still failed after 2 fix(es)"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "4087": {
