@@ -1280,4 +1280,201 @@ begin
 end $$;
 rollback;
 
+\echo '=== CHECK 22 (#4012): no public view bypasses RLS — every view runs as its caller ==='
+-- A Postgres view runs with its owner's rights unless it is created with
+-- security_invoker = true, so a view over an RLS table shows every row to a
+-- caller whose policies should filter them. Materialized views cannot carry
+-- RLS or security_invoker at all and are CHECK 23's alone.
+select c.relname as view_without_security_invoker
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relkind = 'v'
+   and not (coalesce(c.reloptions, '{}') @> array['security_invoker=true'])
+ order by 1;
+do $$
+declare
+  offenders text;
+begin
+  -- Failing case first: a plain view must be named.
+  create view public.check22_probe as select 1;
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'v'
+     and not (coalesce(c.reloptions, '{}') @> array['security_invoker=true']);
+  if offenders is null or position('check22_probe' in offenders) = 0 then
+    raise exception
+      'FAIL (CHECK 22): the probe view was not detected (saw %) — the detector matches nothing',
+      coalesce(offenders, '(none)');
+  end if;
+
+  -- A security_invoker view must be ignored.
+  create view public.check22_ok with (security_invoker = true) as select 1;
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'v'
+     and not (coalesce(c.reloptions, '{}') @> array['security_invoker=true']);
+  if offenders is distinct from 'check22_probe' then
+    raise exception
+      'FAIL (CHECK 22): the security_invoker probe leaked or vanished (saw %)',
+      coalesce(offenders, '(none)');
+  end if;
+  drop view public.check22_ok;
+  drop view public.check22_probe;
+
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'v'
+     and not (coalesce(c.reloptions, '{}') @> array['security_invoker=true']);
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 22): public view(s) without security_invoker = true: % — a view runs as its owner past RLS',
+      offenders;
+  end if;
+
+  raise notice 'OK (CHECK 22): no public view without security_invoker = true';
+end $$;
+
+\echo '=== CHECK 23 (#4012): no public materialized view ==='
+-- A materialized view can carry neither RLS nor security_invoker, so any one
+-- in public is a snapshot of rows no policy filters. None exists today; one
+-- appearing is the failure.
+select c.relname as public_matview
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relkind = 'm'
+ order by 1;
+do $$
+declare
+  offenders text;
+begin
+  -- Failing case first: a materialized view must be named.
+  create materialized view public.check23_probe as select 1;
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'm';
+  if offenders is distinct from 'check23_probe' then
+    raise exception
+      'FAIL (CHECK 23): the probe materialized view was not detected (saw %) — the detector matches nothing',
+      coalesce(offenders, '(none)');
+  end if;
+  drop materialized view public.check23_probe;
+
+  select string_agg(c.relname, ', ' order by c.relname) into offenders
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'm';
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 23): public materialized view(s): % — a materialized view can carry neither RLS nor security_invoker',
+      offenders;
+  end if;
+
+  raise notice 'OK (CHECK 23): no public materialized view';
+end $$;
+
+\echo '=== CHECK 24 (#4012): every SECURITY DEFINER function in public or app pins its search_path ==='
+-- A SECURITY DEFINER function without a pinned search_path is hijackable by
+-- any role that can create objects in a schema it resolves through. This
+-- reads the catalog where CHECK 17 follows a hand-maintained list, so a stale
+-- list cannot hide a function; the predicate is CHECK 17's (line 920).
+select p.proname as definer_without_search_path
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname in ('public', 'app') and p.prosecdef
+   and not (coalesce(p.proconfig, '{}'::text[]) @> array['search_path=""'])
+ order by 1;
+do $$
+declare
+  offenders text;
+begin
+  -- Failing case first: a DEFINER function with no SET clause must be named.
+  create function app.check24_probe() returns int
+    language sql security definer
+    as $fn$ select 1 $fn$;
+  select string_agg(p.proname, ', ' order by p.proname) into offenders
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname in ('public', 'app') and p.prosecdef
+     and not (coalesce(p.proconfig, '{}'::text[]) @> array['search_path=""']);
+  if offenders is null or position('check24_probe' in offenders) = 0 then
+    raise exception
+      'FAIL (CHECK 24): the probe function was not detected (saw %) — the detector matches nothing',
+      coalesce(offenders, '(none)');
+  end if;
+  drop function app.check24_probe();
+
+  select string_agg(n.nspname || '.' || p.proname, ', ' order by n.nspname, p.proname)
+    into offenders
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname in ('public', 'app') and p.prosecdef
+     and not (coalesce(p.proconfig, '{}'::text[]) @> array['search_path=""']);
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 24): SECURITY DEFINER function(s) without a pinned search_path: %',
+      offenders;
+  end if;
+
+  raise notice 'OK (CHECK 24): every SECURITY DEFINER function in public and app pins its search_path';
+end $$;
+
+\echo '=== CHECK 25 (#4012): no SECURITY DEFINER function in public or app is executable by a client role outside the allowlist ==='
+-- A function defaults to EXECUTE for PUBLIC, so a DEFINER function no
+-- migration ever revoked stays callable by anon and authenticated: a client
+-- path into privileged code. Read the ACLs directly as CHECK 6 does — a null
+-- proacl IS the default PUBLIC grant, via acldefault. Scoped to public/app:
+-- auth.uid() in auth is granted to clients by design.
+select p.proname as function_name,
+       coalesce(g.rolname, 'PUBLIC') as grantee
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+  left join pg_roles g on g.oid = a.grantee
+ where n.nspname in ('public', 'app')
+   and p.prosecdef
+   and coalesce(g.rolname, 'PUBLIC') in ('anon', 'authenticated', 'PUBLIC')
+   and not (n.nspname = 'app' and p.proname = 'profile_is_active' and p.pronargs = 0
+            and coalesce(g.rolname, 'PUBLIC') = 'authenticated')
+ order by 1, 2;
+do $$
+declare
+  offenders text;
+  measured  bigint;
+begin
+  -- The allowlist: the zero-argument app.profile_is_active() stays callable
+  -- by authenticated alone because the RLS policies of 0002/0003/0004 call
+  -- it, and it is DEFINER so it reads public.profiles (0001) without
+  -- recursing into policies. Any other grantee (anon, PUBLIC), any overload
+  -- with arguments, and any other function still fail this check.
+  -- app.current_profile_id() is also granted to authenticated but is
+  -- SECURITY INVOKER, so it is out of this check's scope.
+  -- No synthetic probe: the schema itself is the failing case until 0094 —
+  -- app.on_profile_activated() (0002, the pending-to-active launch-grant
+  -- trigger) never had PUBLIC execute revoked.
+  select string_agg(format('%s.%s:%s', n.nspname, p.proname,
+                           coalesce(g.rolname, 'PUBLIC')),
+                    ', ' order by n.nspname, p.proname, coalesce(g.rolname, 'PUBLIC'))
+    into offenders
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    left join pg_roles g on g.oid = a.grantee
+   where n.nspname in ('public', 'app')
+     and p.prosecdef
+     and coalesce(g.rolname, 'PUBLIC') in ('anon', 'authenticated', 'PUBLIC')
+     and not (n.nspname = 'app' and p.proname = 'profile_is_active' and p.pronargs = 0
+              and coalesce(g.rolname, 'PUBLIC') = 'authenticated');
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 25): SECURITY DEFINER function(s) executable by a client role outside the allowlist: % — revoke PUBLIC execute; the server calls them as service_role',
+      offenders;
+  end if;
+
+  -- Vacuity guard: "no offender" means nothing if there is no DEFINER
+  -- function in scope to measure.
+  select count(*) into measured
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname in ('public', 'app') and p.prosecdef;
+  if measured = 0 then
+    raise exception
+      'FAIL (CHECK 25): no SECURITY DEFINER function in public or app — the migrations did not apply, so this check measured nothing';
+  end if;
+
+  raise notice 'OK (CHECK 25): % SECURITY DEFINER function(s) in public/app, none executable by a client role outside the allowlist', measured;
+end $$;
+
 \echo '=== ALL CHECKS RAN ==='
