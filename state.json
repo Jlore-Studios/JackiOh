@@ -12595,17 +12595,8 @@
       ]
     },
     "4109": {
-      "action": "plan",
-      "asks": [
-        "c:6957986876"
-      ],
-      "build_next": {
-        "from_run": "44154943812",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-17T19:15:46Z",
-        "until": "2026-11-17T19:45:46Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-17T19:15:36Z",
         "difficulty": "medium",
@@ -12624,10 +12615,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "oh_ml/data.py` | change | New constant `MIN_SPREAD`; `Standardizer.fit` floors varying scales at it |\n- | `training/ml/jackioh_ml/fit.py` | change | New `feature_pulls`; `run` writes `report[\"pulls\"]` and `report[\"largestPull\"]`; `render` adds the top-ten section |\n- | `training/ml/retrain.sh` | change | The three `summary.json` writes gain the largest pull |\n- | `training/ml/tests/test_data.py` | change | New test for the floor |\n- | `training/ml/tests/test_fit.py` | change | New test for the pull table and its `report.md` section |\n- | `training/ml/README.md` | change | Fit section: the floor and the pull table |\n- | `docs/learned-eval.md` | change | D5: the floor; D7: the pull table |\n- | `training/learn.md` | change | Step 3's report line names the pull table |\n- Do not touch `crates/`, `apps/`, `e2e/`, `spec/`, `.github/`, `.harness/`, `.squishy/` or `bot/`. Spec context only, unchanged: SPEC \u00a79.9, R1010000 (feature layout), R1012001 (correction share). No new ruling: this changes the trainer only and settles no rules question, so cite no new R-id in any c\u2026\n- ## Steps\n- 1. `training/ml/jackioh_ml/data.py`: add `MIN_SPREAD = 0.25` beside `CHUNK_ROOMS`-style constants with a comment: it is the spread of a 0/1 feature present in about one row in sixteen (sqrt(1/16\u00b715/16) \u2248 0.24, rounded up), so one count moves a standardized input by at most 1/0.25 = 4 units. Change \u2026\n- 2. `training/ml/jackioh_ml/fit.py`: add `def feature_pulls(float_weights: dict, positions: D.Positions, rows: np.ndarray) -> dict[str, float]`. Inside, build `net = Q.unpacked(Q.quantize(float_weights))` (top-level `from . import export as E` and `from . import quantize as Q`; neither imports `fit`\u2026\n- 3. Same file, `run`: after the seeds loop, `save(best_model, \"model.pt\")` first (hoist that one call above the report writes; leave the seed and `model-b` saves where they are), then `float_weights = E.from_model(out / \"model.pt\")` and `pulls = feature_pulls(float_weights, positions, valid_rows)` (\u2026\n- 4. Same file, `render`: add a `## Feature pulls` section after the learning-curve table: one line defining a pull (median points for one more count over the validation rows, full correction, integer network), then a `| feature | pull |` table of the ten largest by size (`+1` decimal), ties by name.\n- 5. `training/ml/retrain.sh`: at the fit stop (line 118) and tests stop (line 148), read the pull with `python3 -c` from `$out/fit/report.json` into `$pull` and write `{\"stage\":..., \"gain\":..., \"screened\":false, \"largestPull\":$pull}`. In the screen-stage heredoc (line 177), load `fit_report` the sam\u2026\n- 6. `training/ml/tests/test_data.py`: add `test_standardizer_floors_rare_features_at_min_spread`. Build a small dense array: feature A with one 1 in 10,000 rows (spread \u2248 0.01), feature B alternating 0/1 (spread 0.5), feature C constant. Assert `scale[A] == D.MIN_SPREAD`, `scale[B] \u2248 0.5`, `scale[C]\u2026\n- 7. `training/ml/tests/test_fit.py`: add `test_report_lists_every_dense_features_pull`. Run `F.run` on the fixture with `seeds=(1,)`, `curve=()`; assert `report[\"pulls\"]` has exactly the fixture's dense names with finite values, `report.json` matches, `report.md` holds the `## Feature pulls` table w\u2026\n- 8. Docs, briefly: `training/ml/README.md` fit section (floor value and reason in one line; `pulls`/`largestPull` keys and the top-ten section in two); `docs/learned-eval.md` D5 (standardized inputs floored at `MIN_SPREAD`) and D7 (the pull table is read from the integer network at full correction);\u2026\n- 9. Probe printout (not a test): run `/tmp/probe_pulls.py` over the committed `crates/ai/src/learned/weights.json` and the 284 fixture rows mapped into the weights' `denseNames` order by name (missing names 0), perturbing one feature at a time with `quantize.unpacked`/`correction` and converting at \u2026\n- ## Tests\n- - `training/ml/tests/test_data.py`, `test_standardizer_floors_rare_features_at_min_spread`: asserts the floor, the kept common spread, and 1.0 for constants.\n- - `training/ml/tests/test_fit.py`, `test_report_lists_every_dense_features_pull`: asserts the full table, the ten-row `report.md` section, and integer-arithmetic parity on one feature.\n- - Commands: `uv run --project training/ml pytest training/ml/tests`. If torch's CPU wheel cannot install, run `cd training/ml && python3 -m pytest tests/test_data.py` (numpy only) and state which suite ran.\n- ## Done when\n- - [ ] `MIN_SPREAD` exists with its reason; rare features get it, common ones keep theirs, constants keep 1.0.\n- - [ ] Both new tests pass; the data test fails on the old floor.\n- - [ ] `report.json`/`report.md`/`summary.json` carry pulls as above at fit, tests and screen stages.\n- - [ ] The quoted probe table reproduces the issue's swings; the quoted pytest output is green.\n- - [ ] `git status --short -- crates` is empty; no file outside the table changed.\n- ## Risks\n- - Pulls cost one Python integer forward per validation row per feature (about 16M on a 100k-game export, hours). The naive loop stays because the pull must be the integer arithmetic that ships; the lane's next run measures the wall time, and a follow-up vectorizes only if it strains the 6-hour job.\n- - The largest pull in `summary.json` comes from the best-validation net even if another seed ships; seed nets are alike in strength, so the run's record stays comparable.\n- - Torch is required for the fit test; the data test alone proves the floor if the wheel is uninstallable.\n- ## Open questions\n- None. The floor's value (0.25) is the judgement call the issue asks the builder to take once, not a person.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4109 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4109/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-17T19:06:07Z",
       "owner_why": "it plans it",
@@ -12640,12 +12630,14 @@
       "provider": "muse",
       "queued_at": "2026-11-17T19:04:43Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44154943812",
+      "run_id": "pending:077ae654-1794943065",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-17T19:06:07Z",
+      "started_at": "2026-11-17T19:18:09Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6957986876"
+      ]
     },
     "4113": {
       "action": "revise",
@@ -12997,9 +12989,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T19:17:31Z",
+    "at": "2026-11-17T19:18:09Z",
     "url": "",
-    "what": "build #4108 on muse"
+    "what": "build #4109 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T19:02:04Z",
