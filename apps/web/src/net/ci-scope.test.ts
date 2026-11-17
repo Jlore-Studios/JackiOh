@@ -628,6 +628,64 @@ describe("scripts/ci-scope.sh", () => {
     expect(tools({ "crates/server/src/x.rs": "pub const X: u32 = 1;\n" })).toBe(false);
     expect(tools({ "docs/x.json": "readFileSync(\n" })).toBe(false);
   });
+
+  // #4094: what `patches ship` (v0.6.6d, #4089) wrote.
+  const SHIP = [
+    "crates/cards/patches/card_metrics/v0.6.6d.json",
+    "crates/cards/patches/patches.json",
+    "crates/cards/patches/pending/tag-scan.json",
+    "crates/cards/patches/shipped.json",
+    "crates/cards/patches/v0.6.6d.json",
+    "crates/server/.env.example",
+  ];
+  const SHIP_ON: Name[] = ["full", "rust_cards_lib", "rust_cards", "rust_server", "rust_tools_wasm"];
+
+  it("#4094 runs only the cards, server and tools groups for a patches ship diff", () => {
+    expect(onFor(...SHIP)).toEqual(SHIP_ON);
+    const answer = answerFor(...SHIP);
+    for (const line of ["e2e", "web", "web_promote", "rust_ai", "rust_ai_slow", "rust_engine", "rust_engine_rules", "clippy", "db", "db_deploy", "infra"] as const) {
+      expect(answer[line], line).toBe(false);
+    }
+  });
+
+  it("#4094 turns web on for a ship that changes apps/web/.env.production, and e2e stays off", () => {
+    const files = [...SHIP, "apps/web/.env.production"];
+    expect(onFor(...files)).toEqual([...SHIP_ON, "web"]);
+    expect(answerFor(...files).e2e).toBe(false);
+  });
+
+  it("#4094 treats a patches cut's files the same way", () => {
+    const cut = [
+      "crates/cards/patches/v0.6.7.json",
+      "crates/cards/patches/patches.json",
+      "crates/cards/patches/shipped.json",
+      "crates/cards/patches/index.json",
+      "crates/cards/patches/card_metrics/v0.6.7.json",
+      "crates/cards/patches/records/v0.6.7.json",
+      "crates/server/.env.example",
+    ];
+    expect(onFor(...cut)).toEqual(SHIP_ON);
+  });
+
+  it("#4094 scopes a ship plus one unrelated file as it does without the ship case", () => {
+    const engine = "crates/engine/src/state.rs";
+    const answer = answerFor(...SHIP, engine);
+    for (const line of ["full", "clippy", "web", "e2e", "db_deploy", ...RUST] as const) {
+      expect(answer[line], line).toBe(true);
+    }
+    expect(answer).toEqual(answerFor(engine, "crates/cards/patches/v0.6.6d.json", "crates/server/.env.example"));
+    expect(answerFor("crates/cards/patches/aliases.json", ...SHIP).e2e).toBe(true);
+    expect(answerFor("apps/web/src/main.tsx", ...SHIP).e2e).toBe(true);
+  });
+
+  it("#4094 leaves a diff without both patches.json and shipped.json on today's scope", () => {
+    const partial = answerFor("crates/cards/patches/v0.6.6d.json", "crates/cards/patches/patches.json");
+    expect(partial.e2e).toBe(true);
+    expect(partial.rust_ai).toBe(true);
+    const env = answerFor("crates/server/.env.example");
+    expect(env.db_deploy).toBe(true);
+    expect(env.e2e).toBe(true);
+  });
 });
 
 // The paths the web's and the client's sources name

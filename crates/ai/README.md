@@ -18,8 +18,10 @@ The Death, the turn-hook, the activation, the attack-hook and the awakening pric
 R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
 through the search to the scorers that read them, with the two facts about the root they ride with: whether it
 holds a Starship (`starship_root`, R3038003) and whether its view names mostly cards the network has no row
-for (`unknown_root`, R3479000); a call outside a decision passes `Prices::NONE` (plain
-`evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
+for (`unknown_root`, R3479000). `decide` takes them from `decision_prices` on its `probe_world`, and
+`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`:
+`cargo jackioh positions` scores its rows with them (R4070000). Any other call outside a decision passes
+`Prices::NONE` (plain `evaluate`, the probes, the baselines) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
