@@ -24,7 +24,7 @@ use super::duos::{
     settle,
 };
 use crate::support::deps::{add_user, empty_test_app, fake_auth};
-use crate::support::store::{Account, account, befriend, fake, uuid};
+use crate::support::store::{Account, account, befriend, fake, store, uuid};
 
 /// RFC 6455's policy violation: a socket past its malformed budget (R835002).
 const CLOSE_POLICY_VIOLATED: u16 = 1008;
@@ -646,6 +646,79 @@ mod r3730000_lobbies {
         .await;
         assert_eq!(status, 204, "{body}");
         assert_eq!(next_of(&bob_ws, from_bob, "lobby", "Bob").await, word);
+    }
+
+    // R4072000: the move onto the running catalog tells every member over `/ws/social`.
+    #[tokio::test(start_paused = true)]
+    async fn r4072000_the_move_reaches_every_member() {
+        let app = empty_test_app().await;
+        let (ana, bob, cy) = three_friends(&app).await;
+        let served = serve(&app);
+        let (ana_ws, bob_ws, cy_ws) = (
+            connected(&served, &ana).await,
+            connected(&served, &bob).await,
+            connected(&served, &cy).await,
+        );
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &ana.token,
+            json!({ "format": "duel", "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/enter"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        for who in [&ana, &bob] {
+            let (status, body) = api(
+                &app,
+                "POST",
+                &format!("/api/lobbies/{code}/pick"),
+                &who.token,
+                json!({ "mode": "random" }),
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+            let (status, body) = api(
+                &app,
+                "POST",
+                &format!("/api/lobbies/{code}/ready"),
+                &who.token,
+                json!({ "ready": true }),
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+        }
+        // Fake a lobby made before a deploy: its stored catalog is older.
+        let lobby = store!(&app, tx => tx.lobbies_get(&code).await.expect("lobbies.get")).expect("the lobby");
+        let rev = lobby.rev;
+        let mut aged = lobby.clone();
+        aged.catalog_version = "v-before-the-deploy".to_string();
+        assert!(store!(&app, tx => tx.lobbies_update(&aged, rev).await.expect("lobbies.update")));
+        let (from_ana, from_bob, from_cy) = (ana_ws.received(), bob_ws.received(), cy_ws.received());
+
+        let (status, body) = api(
+            &app,
+            "GET",
+            &format!("/api/lobbies/{code}"),
+            &ana.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let word = json!({ "type": "lobby", "code": code });
+        assert_eq!(next_of(&ana_ws, from_ana, "lobby", "Ana").await, word);
+        assert_eq!(next_of(&bob_ws, from_bob, "lobby", "Bob").await, word);
+        assert_told_nothing(&cy_ws, from_cy, "Cy").await;
     }
 
     #[tokio::test(start_paused = true)]
