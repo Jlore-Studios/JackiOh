@@ -175,6 +175,50 @@ pub(crate) fn crumbles_before_swing(
     brittle_due_by(unit, state.turn + wait)
 }
 
+/// R4065000: whether the first tick of the unit's own Burn and Toxic (`tick_damage`, as `afflicted` reads it:
+/// Burn meets its Armor, Toxic pierces it, its own cap holds each hit and an unspent Divine Shield negates the
+/// first) destroys it at the start of its controller's next turn, before that turn's attacks, with no body
+/// back that may attack at once: every start of its controller's turns ticks (`afflictions::tick_at_turn_start`,
+/// R3540001), so no turn number is asked. An Indestructible unit takes none. With `on_turn_swings` the player
+/// on turn still has this turn's attacks to come, after this turn's tick, as in `crumbles_before_swing`. With
+/// `w.pool_and_conversion_read`, its side's damage pools meet the tick refilled, as `afflicted` reads them
+/// (R4064000). An unspent Reborn brings its body back summoning sick (R83), which keeps it out unless the body
+/// has Charge, or Rush when `at_hero` is false: then it still counts, at the unit's own reads, as before.
+pub(crate) fn afflicted_before_swing(
+    state: &GameState,
+    unit: &CardInstance,
+    view: &UnitView,
+    on_turn_swings: bool,
+    at_hero: bool,
+    w: &EvalWeights,
+) -> bool {
+    let (burn, toxic) = (burn_on(unit), toxic_on(unit));
+    if (burn == 0 && toxic == 0)
+        || has_keyword(&view.keywords, KeywordKind::Indestructible)
+        || (on_turn_swings && state.active == unit.controller)
+    {
+        return false;
+    }
+    let mut shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
+    let pool = refilled_pool(state, unit.controller, w);
+    let (taken, _) = tick_damage(view, unit_damage_cap(state, unit), burn, toxic, &mut shield, pool);
+    if taken < view.health {
+        return false;
+    }
+    if !has_keyword(&view.keywords, KeywordKind::Reborn) {
+        return true;
+    }
+    let (_, body) = reborn_return(state, unit);
+    !(has_keyword(&body.keywords, KeywordKind::Charge)
+        || (!at_hero && has_keyword(&body.keywords, KeywordKind::Rush)))
+}
+
+/// R1124, R4065001: whether a hit from `unit` exiles the Unit it damages, read as `damage.rs`'s step 7 reads
+/// it (`exiles_on_damage`, Meditative #72 The Banisher), when `w.exile_on_damage_read` is on.
+pub(crate) fn exiles_what_it_damages(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> bool {
+    w.exile_on_damage_read && flags_of(state, unit).exiles_on_damage == Some(true)
+}
+
 /// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
 /// only the switch's exertion, so it can switch and still attack in the same turn.
 pub(crate) fn deft_in_defense(view: &UnitView) -> bool {
@@ -472,6 +516,41 @@ fn awaken_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices:
     }
 }
 
+/// R3540001: what one turn-start tick of `burn` and then `toxic` deals `view`'s unit, its own `cap` holding
+/// each hit (R2179005), and whether it spent the unit's Divine Shield: Burn's hit meets its Armor and Toxic's
+/// pierces it, an unspent `shield` negates the first hit it meets (and is spent), and its side's damage pools,
+/// with `pool` left at the tick (`refilled_pool`, R4064000), soak what they can of each hit. One reading for
+/// the worth (`afflicted`, R3822000) and the threat (`afflicted_before_swing`, R4065000).
+fn tick_damage(
+    view: &UnitView,
+    cap: Option<i32>,
+    burn: i32,
+    toxic: i32,
+    shield: &mut bool,
+    pool: i32,
+) -> (i32, bool) {
+    let mut taken: i32 = 0;
+    let mut popped = false;
+    let mut left = pool;
+    for (amount, piercing) in [(burn, false), (toxic, true)] {
+        if amount <= 0 {
+            continue;
+        }
+        if *shield {
+            *shield = false;
+            popped = true;
+            continue;
+        }
+        let hit = if piercing {
+            amount
+        } else {
+            amount.saturating_sub(view.armor).max(0)
+        };
+        taken = taken.saturating_add(soaked(&mut left, cap.map_or(hit, |cap| hit.min(cap))));
+    }
+    (taken, popped)
+}
+
 /// R3822000: `value`, a unit's worth inside its Brittle share, less what its Burn and Toxic will deal it
 /// over its controller's next `AI_AFFLICTION_TICKS` turn starts, and the share the unit keeps: 1, or
 /// `1 − unit_doomed / n` when the nth tick kills it. Each tick is R3540001's, before the start-of-turn
@@ -503,23 +582,11 @@ fn afflicted(
     let mut share = 1.0;
     for tick in 1..=AI_AFFLICTION_TICKS {
         let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
-        let mut left = pool;
-        for (amount, piercing) in [(burning, false), (toxic, true)] {
-            if amount <= 0 {
-                continue;
-            }
-            if shield {
-                shield = false;
-                spent = w.keyword.divine_shield;
-                continue;
-            }
-            let hit = if piercing {
-                amount
-            } else {
-                amount.saturating_sub(view.armor).max(0)
-            };
-            taken = taken.saturating_add(soaked(&mut left, cap.map_or(hit, |cap| hit.min(cap))));
+        let (hit, popped) = tick_damage(view, cap, burning, toxic, &mut shield, pool);
+        if popped {
+            spent = w.keyword.divine_shield;
         }
+        taken = taken.saturating_add(hit);
         if taken >= view.health {
             share = 1.0 - w.unit_doomed / f64::from(tick);
             break;
@@ -1220,10 +1287,12 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
 /// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
 /// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
-/// under way: the player on turn has made this turn's attacks. With `w.static_attack_flags_read`, a unit that
-/// can only attack the Unit across lands nothing on a hero (R3550001), and one that Ignores Taunt is bound by no
-/// Taunt (R3560007). With `w.pool_and_conversion_read`, each hit meets §4.4 steps 3a and 3b as the walk's doc
-/// says, each side's pools read as they will stand when the attacks come (R4064000, R4064001).
+/// under way: the player on turn has made this turn's attacks. With `w.affliction_kills_before_swing`, nor does
+/// a unit the first tick of its own Burn and Toxic destroys first (`afflicted_before_swing`, R4065000), read the
+/// same way. With `w.static_attack_flags_read`, a unit that can only attack the Unit across lands nothing on a
+/// hero (R3550001), and one that Ignores Taunt is bound by no Taunt (R3560007). With
+/// `w.pool_and_conversion_read`, each hit meets §4.4 steps 3a and 3b as the walk's doc says, each side's pools
+/// read as they will stand when the attacks come (R4064000, R4064001).
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1250,6 +1319,12 @@ fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_t
         }
         // R3793000, #3793: a unit its own Brittle tick destroys before it can swing deals nothing.
         if w.brittle_crumbles_before_swing && crumbles_before_swing(state, unit, &view, on_turn_swings) {
+            continue;
+        }
+        // R4065000, #4065: nor does one the first tick of its own Burn and Toxic destroys first.
+        if w.affliction_kills_before_swing
+            && afflicted_before_swing(state, unit, &view, on_turn_swings, true, w)
+        {
             continue;
         }
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
@@ -1313,7 +1388,9 @@ pub fn damage_past_taunts(
 /// says, the larger of its two orders counting. With `w.pool_and_conversion_read`, a hit that Burns or is
 /// Toxic instead deals nothing (§4.4 step 3a, R4064001), and the defender's damage pools soak what they
 /// have left, once across the walk's hits in the order it counts them (step 3b, R4064000); the attacks
-/// are this turn's, so each side's pools are read as they stand now.
+/// are this turn's, so each side's pools are read as they stand now. With `w.exile_on_damage_read`
+/// (R4065001), a hit or a Cleave splash from an attacker that exiles what it damages removes the Taunt it
+/// damages, with no Reborn body back, and a First Strike Taunt that does stops an attacker it damages whole.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
@@ -1413,7 +1490,7 @@ fn soak_past_taunts(
         // R3937000: the smallest attacker that destroys this Taunt alone, when a smaller one comes first.
         if w.best_attack_order_past_taunts
             && let Some(at) = bound.iter().position(|(attacker, attack, _)| {
-                breaks_alone(state, attacker, *attack, &stands[i], pool, &pools)
+                breaks_alone(state, attacker, *attack, &stands[i], pool, &pools, w)
             })
             && at > 0
         {
@@ -1427,17 +1504,20 @@ fn soak_past_taunts(
         // R3937000: the attackers this Taunt stops whole, waiting until it is destroyed.
         let mut stopped: Vec<(&CardInstance, i32, bool)> = Vec::new();
         let mut poisoned = false;
-        while stands[i].health > 0 && !poisoned {
+        // R4065001: an exiling hit removes the Taunt whole: no Reborn body comes back.
+        let mut exiled = false;
+        while stands[i].health > 0 && !poisoned && !exiled {
             let Some((attacker, attack, may_hit_hero)) = bound.next() else {
                 break;
             };
-            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view, &pools) {
+            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view, &pools, w) {
                 if w.best_attack_order_past_taunts {
                     stopped.push((attacker, attack, may_hit_hero));
                 }
                 continue;
             }
             let keywords = unit_view(state, attacker).keywords;
+            let exiling = exiles_what_it_damages(state, attacker, w);
             let pierce = pierces(state, Some(attacker), None);
             // R4064001: a hit that Burns or is Toxic instead deals the Taunt nothing.
             let converts = pools.converts(state, attacker);
@@ -1483,6 +1563,8 @@ fn soak_past_taunts(
                 } else {
                     None
                 };
+                // R4065001: an exiling splash by these weights' flag, not `side_of`'s `AI_EVAL`.
+                from.exiles = exiling;
                 for neighbour in cleaved_neighbours(state, attacker, &stands[i].unit) {
                     let Some(j) = stands.iter().position(|stand| stand.unit.id == neighbour.id) else {
                         continue;
@@ -1502,6 +1584,7 @@ fn soak_past_taunts(
                         poisonous: false,
                         pierce: false,
                         cap: unit_damage_cap(state, &stands[j].unit),
+                        exiles: false,
                         converts: None,
                         pool,
                     };
@@ -1524,8 +1607,8 @@ fn soak_past_taunts(
                         if splash.kills {
                             // §4.5 step 4: a destroyed Reborn neighbour comes back and binds what
                             // is left, unless its body has no Taunt. Only a later stand is ever
-                            // removed, so `i` stays valid.
-                            if has_keyword(&stands[j].view.keywords, KeywordKind::Reborn) {
+                            // removed, so `i` stays valid. An exiled one never comes back (R1124).
+                            if !exiling && has_keyword(&stands[j].view.keywords, KeywordKind::Reborn) {
                                 match reborn_body(state, &stands[j].unit) {
                                     Some((body, view)) => stands[j] = TauntStand::of(body, view),
                                     None => {
@@ -1551,17 +1634,20 @@ fn soak_past_taunts(
             }
             // Step 7: Poisonous destroys with any damage dealt.
             poisoned = has_keyword(&keywords, KeywordKind::Poisonous);
+            // R1124, R4065001: an exiling hit removes it with any damage dealt.
+            exiled = exiling;
             stands[i].health -= dealt;
         }
         unbound.extend(bound);
         // R3937000: a destroyed Taunt frees the attackers that waited on it (a Reborn body binds them again).
-        if stands[i].health <= 0 || poisoned {
+        if stands[i].health <= 0 || poisoned || exiled {
             unbound.extend(stopped);
         }
         unbound.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
         free = unbound;
         // §4.5 step 4: a destroyed Reborn Taunt comes back and binds what is left.
         if (stands[i].health <= 0 || poisoned)
+            && !exiled
             && has_keyword(&stands[i].view.keywords, KeywordKind::Reborn)
             && let Some((body, view)) = reborn_body(state, &stands[i].unit)
         {
@@ -1598,8 +1684,9 @@ fn dealt_to(state: &GameState, attack: i32, stand: &TauntStand, pierce: bool) ->
 
 /// R3937000: whether `attacker`'s one hit of `attack` destroys `stand` as the walk left it: no Divine Shield
 /// takes it, no First Strike destroys the attacker first, and what gets past the Armor is the stand's
-/// health or more, or any of it from a Poisonous attacker. With `pools.read`, a hit that converts destroys
-/// nothing (R4064001), and the defender's `pool` left soaks what it can first (R4064000).
+/// health or more, or any of it from a Poisonous attacker or, by `w`'s flag, one that exiles what it
+/// damages (R4065001). With `pools.read`, a hit that converts destroys nothing (R4064001), and the
+/// defender's `pool` left soaks what it can first (R4064000).
 fn breaks_alone(
     state: &GameState,
     attacker: &CardInstance,
@@ -1607,10 +1694,11 @@ fn breaks_alone(
     stand: &TauntStand,
     mut pool: i32,
     pools: &WalkPools,
+    w: &EvalWeights,
 ) -> bool {
     if stand.shield
         || pools.converts(state, attacker)
-        || falls_to_first_strike(state, attacker, &stand.unit, &stand.view, pools)
+        || falls_to_first_strike(state, attacker, &stand.unit, &stand.view, pools, w)
     {
         return false;
     }
@@ -1622,21 +1710,24 @@ fn breaks_alone(
     };
     dealt > 0
         && (dealt >= stand.health
-            || has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Poisonous))
+            || has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Poisonous)
+            || exiles_what_it_damages(state, attacker, w))
 }
 
 /// §4.3 step 1 and R93, as `subsystems::lethal`'s private `falls_to_first_strike` reads it: a First Strike Taunt
 /// strikes an attacker without it first, and an attacker that falls there never lands its hit. The strike back runs
 /// the §4.4 steps that can stop it (Divine Shield, Armor, which a Pierce Taunt skips, R346, the attacker's own cap,
-/// R2179005, Indestructible, the zero rule); a Poisonous Taunt destroys with any damage. A Ranged attacker takes
-/// none from a non-Ranged Taunt (R783000). With `pools.read`, a Taunt whose hits convert destroys nothing
-/// (R4064001), and the attacker's whole pool meets its strike back (R4064000).
+/// R2179005, Indestructible, the zero rule); a Poisonous Taunt destroys with any damage, and by `w`'s flag one
+/// that exiles what it damages removes with any (R4065001; `subsystems::lethal`'s copy does not read the exile).
+/// A Ranged attacker takes none from a non-Ranged Taunt (R783000). With `pools.read`, a Taunt whose hits
+/// convert destroys nothing (R4064001), and the attacker's whole pool meets its strike back (R4064000).
 fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
     taunt: &CardInstance,
     view: &UnitView,
     pools: &WalkPools,
+    w: &EvalWeights,
 ) -> bool {
     if pools.converts(state, taunt) {
         return false;
@@ -1662,7 +1753,10 @@ fn falls_to_first_strike(
     let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
     let mut left = pools.attacker;
     let dealt = soaked(&mut left, dealt);
-    dealt > 0 && (has_keyword(&view.keywords, KeywordKind::Poisonous) || dealt >= mine.health)
+    dealt > 0
+        && (has_keyword(&view.keywords, KeywordKind::Poisonous)
+            || exiles_what_it_damages(state, taunt, w)
+            || dealt >= mine.health)
 }
 
 /// §4.5 step 4: the body a destroyed Reborn unit comes back as, a reset instance (R78) without Reborn
