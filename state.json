@@ -15906,7 +15906,7 @@
       }
     },
     "4105": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -15925,23 +15925,15 @@
       "failures": 0,
       "feedback_since": "2026-11-17T00:36:46Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-17T06:20:10Z",
-        "lifted": "2026-11-17T06:04:16Z",
-        "owner": "claude-8",
-        "since": "2026-11-17T04:20:10Z",
-        "until": "2026-11-17T06:00:00Z",
-        "why": "5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "issue": 4093,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-17T04:16:21Z",
-      "run_id": "44000002677",
+      "run_id": "pending:8fe6b42b-1794895568",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15962,16 +15954,9 @@
         "run": "43989033226"
       },
       "source": "conflict",
-      "started_at": "2026-11-17T02:02:09Z",
+      "started_at": "2026-11-17T06:06:44Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-17T04:16:21Z",
-        "until": "2026-11-17T04:46:21Z",
-        "why": "it waited 120 minutes for #4098, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -16152,9 +16137,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T05:55:43Z",
+    "at": "2026-11-17T06:06:44Z",
     "url": "",
-    "what": "suggestions (rules) on muse"
+    "what": "revise #4105 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-17T05:53:43Z",
