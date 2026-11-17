@@ -16308,6 +16308,8 @@
       "verdict_rounds": 0
     },
     "4121": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T09:47:25Z",
@@ -16321,8 +16323,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: deflake the pinned-endings-channel corpus test\"} -->\n- Changed [crates/tools/src/fuzz.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4120/crates/tools/src/fuzz.rs) only, in `a_corpus_record_uses_its_pinned_endings_channel_flag`: deleted both `ENDINGS_TERMINAL_REASONS` assertions (the flaky channel-outcome check and the vacuous no-channel hal\u2026\n- How tested (all run, all green):\n- - `cargo test -p jackioh-tools --bin jackioh a_corpus_record_uses_its_pinned_endings_channel_flag` \u2014 1 passed.\n- - `cargo test -p jackioh-tools --bin jackioh fuzz_regression_corpus` \u2014 5 passed, 1 ignored; the ignore is the pre-existing daily `the_checked_in_corpus_lints_clean_and_every_record_replays` (`#[ignore = \"daily: ... (#4093)\"]`), untouched by this change.\n- - `cargo fmt --check` \u2014 clean.\n- - `cargo clippy -p jackioh-tools --all-targets -- -D warnings` \u2014 clean.\n- Decisions: followed the plan exactly, no departures. The rejected `play_game_with_options` log-check alternative stays rejected for the plan's reasons (needs new plumbing for the same residual chance). Reviewer note: the surviving hash assertion keeps the accepted ~1\u20133% residual chance documented i\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4120 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4120/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4120,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T10:13:55Z",
         "from_run": "44058800388",
         "gates": [
           {
@@ -16381,8 +16386,15 @@
         "source": "build",
         "until": "2026-11-17T10:42:59Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-17T10:12:59Z",
+      "run_id": "pending:dd58ff97-1794910412",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-17T10:13:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16396,9 +16408,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T09:57:19Z",
+    "at": "2026-11-17T10:13:55Z",
     "url": "",
-    "what": "build #4012 on muse"
+    "what": "review #4121 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T10:04:00Z",
