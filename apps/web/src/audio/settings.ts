@@ -6,7 +6,7 @@
 
 import { useSyncExternalStore } from "react";
 
-import { isRecord } from "../wire/json.ts";
+import { isRecord, isSafeKey } from "../wire/json.ts";
 import { AUDIO_SETTINGS_KEY, MUSIC_STATIONS } from "./constants.ts";
 import type { AudioSettings, MusicStation } from "./types.ts";
 import { getStored, setStored } from "../net/storage.ts";
@@ -104,6 +104,8 @@ export function readAudioSettings(): AudioSettings {
 export function writeAudioSettings(patch: Partial<AudioSettings>): AudioSettings {
   const merged: Record<string, unknown> = { ...readAudioSettings() };
   for (const [key, value] of Object.entries(patch)) {
+    // Issue #4015: a key from outside (the account's copy) never becomes an object key.
+    if (!isSafeKey(key)) continue;
     if (value !== undefined) merged[key] = value;
   }
   const next = Object.freeze(parseAudioSettings(merged));

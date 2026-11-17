@@ -1420,3 +1420,26 @@ describe("the catalog a deck was last saved under (R2097000)", () => {
     expect("catalogVersion" in (bare?.decks[0]?.item ?? {})).toBe(false);
   });
 });
+
+describe("#4015 prototype pollution", () => {
+  it("mirror with proto ids restores nothing polluted", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      mirrorKey(PROFILE),
+      `{"v":1,"decks":[` +
+        `{"item":{"id":"__proto__","name":"Hostile","cards":[],"portrait":null,"createdAt":2,"updatedAt":2},"dirty":true},` +
+        `{"item":{"id":"constructor","name":"Hostile","cards":[],"portrait":null,"createdAt":3,"updatedAt":3},"dirty":true},` +
+        `{"item":{"id":"d1","name":"Real","cards":[],"portrait":null,"createdAt":1,"updatedAt":1},"dirty":true}],` +
+        `"trios":[{"item":{"id":"__proto__","name":"Hostile","deckIds":[null,null,null],"createdAt":4,"updatedAt":4},"dirty":true}],` +
+        `"deletedDecks":[],"deletedTrios":[]}`,
+    );
+    const mirrored = parseMirror(storage.getItem(mirrorKey(PROFILE)));
+    expect(mirrored?.decks.map((entry) => entry.item.id)).toEqual(["d1"]);
+    expect(mirrored?.trios).toEqual([]);
+    const server = fakeServer();
+    const store = open({ api: server.api, storage, server: response() });
+    expect(store.getSnapshot().decks.map((deck) => deck.id)).toEqual(["d1"]);
+    expect(store.getSnapshot().trios).toEqual([]);
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+});

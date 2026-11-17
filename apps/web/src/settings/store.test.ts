@@ -106,6 +106,18 @@ describe("stored settings", () => {
     }
   });
 
+  it("parseSettings ignores proto keys (#4015)", () => {
+    window.localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      `{"dragToPlay":false,"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}}}`,
+    );
+    __resetSettingsForTests();
+    const read = readSettings();
+    expect(read.dragToPlay).toBe(false);
+    expect(read).not.toHaveProperty("polluted");
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("follows another tab's storage event and ignores other keys", () => {
     const listener = vi.fn();
     const stop = subscribeSettings(listener);

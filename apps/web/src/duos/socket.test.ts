@@ -768,3 +768,15 @@ describe("R3731002 a 2v2's team B people have disconnect graces too", () => {
     expect(h.client.snapshot().clock?.graceDeadlines).toEqual({ a1: null, a2: null, b1: 40, b2: null });
   });
 });
+
+describe("#4015 prototype pollution", () => {
+  it("a duos frame with proto keys does not pollute", () => {
+    expect(parseDuosFrame('{"type":"nope","__proto__":{"polluted":true}}')).toBeNull();
+    expect(parseDuosFrame('{"type":"nope","constructor":{"prototype":{"polluted":true}}}')).toBeNull();
+    expect(parseDuosFrame('{"type":"watchers","count":2,"__proto__":{"polluted":true}}')).toEqual({
+      type: "watchers",
+      count: 2,
+    });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+});
