@@ -14148,17 +14148,8 @@
       ]
     },
     "4062": {
-      "action": "plan",
-      "asks": [
-        "c:6932740802"
-      ],
-      "build_next": {
-        "from_run": "43981401087",
-        "model": "gpt-5.6-sol",
-        "provider": "gpt",
-        "since": "2026-11-17T00:12:42Z",
-        "until": "2026-11-17T00:42:42Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-17T00:12:32Z",
         "difficulty": "medium",
@@ -14177,10 +14168,9 @@
         "reason": "planned on gpt-5.6-sol",
         "trail": "sed -n '5050,5205p' crates/tools/src/fuzz.rs sed -n '540\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n 'start|endings channel|dungeon|last board|Glitch board|dealt' crates/tools/fuzz-corpus/*.json && git log --oneline --all -- crates/tools/f\u2026` (exit 0)\n- said: The current corpus has 17 records, not the issue text\u2019s older count, and two records explicitly document that replay lost a dealt start or the endings channel. I\u2019m checking the exact setup plumbing now so the plan can specify a compatible data shape and identify whether the strongest regression fix\u2026\n- ran `/bin/bash -lc \"rg -n \\\"GameSetup|create_options\\\\(|fold_args\\\\(|play_game\\\\(|check_replay\\\\(|check_serial_restart\\\\(\\\" crates/tools/src/fuzz.rs\"` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"pub struct (CreateGameOptions|FoldArgs|Handicap|LastBoardEntry|PerPlayerOpt|DeckMark)\\\" crates/engine crates/run && rg -n \\\"struct PerPl\u2026` (exit 0)\n- ran `/bin/bash -lc 'rg -n \"struct FoldArgs|type FoldArgs|pub use .*FoldArgs\" crates/engine/src && rg -n \"pub struct Handicap\" -A120 crates/engine/src/config.rs | ta\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '740,825p' crates/engine/src/replay.rs && sed -n '400,475p' crates/engine/src/config.rs\"` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"last_boards|glitch_boards|LastBoardInput|LastBoardEntry\\\" crates/engine/src | rg \\\"validate|invalid|unknown|create\\\" | head -n 120 && rg\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '2660,2875p' crates/engine/src/state.rs sed -n '1,220p' crates/engine/src/subsystems/last_boards.rs rg -n \\\"validate.*last|fused|parse.*f\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"pub mod last_boards|last_boards::\\\" crates/engine/src/subsystems/mod.rs crates/engine/src/lib.rs crates/engine/src/prelude.rs && sed -n \u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n '\"'^### 9'\"\\\\.3|\"'^### 9'\"\\\\.4' spec/09-architecture.md rg -n '\"'^### 10'\"\\\\.7|\"'^### 10'\"\\\\.8' spec/10-engine-guide.md sed -n '1,180p' sp\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,58p' spec/09-architecture.md sed -n '178,210p' spec/10-engine-guide.md sed -n '1,140p' spec/rulings/R0564.md sed -n '1,120p' spec/ruli\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,240p' CONTRIBUTING.md rg -n \\\"\"'^(##|###).*([Pp]lan|[Pp]atch|[Rr]uling|[Tt]itle)|issue #|Patch:\" docs/issues-and-patches.md | head -n \u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"fn decks_for_seed|fn deal_deck|FUZZ_POOL\\\" crates/tools/src/fuzz.rs | head -n 60 sed -n '380,500p' crates/tools/src/fuzz.rs sed -n '4860\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"pub struct Rng|impl Rng|fn hash_seed|xoshiro|mulberry\\\" crates/engine/src -g '*.rs' && rg -n 'seed-160|seed 160|160' crates/tools/fuzz-c\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,130p' crates/engine/src/rng.rs && sed -n '1,120p' crates/tools/fuzz-corpus/seed-1708-v0.3.1.json && git show 891a888a64\"'^:crates/tool\u2026` (exit 0)\n- ran `/bin/bash -lc \"node - <<'NODE' function seedToInt(seed){const units=[];for(let i=0;i<seed.length;i++)units.push(seed.charCodeAt(i));let h=(1779033703 \"'^ units\u2026` (exit 0)\n- ran `/bin/bash -lc \"node - <<'NODE' function s2(seed){let h=(1779033703 \"'^ seed.length)>>>0;for(let i=0;i<seed.length;i++){h=Math.imul((h''^seed.charCodeAt(i))>>>0\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"impl Failure|run_start_note|\\\\\\\"handicaps\\\\\\\"|\\\\\\\"deckMarks\\\\\\\"|\\\\\\\"start\\\\\\\"\\\" crates/tools/src/fuzz.rs | head -n 100 sed -n '2630,2715\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '3065,3110p' crates/tools/src/fuzz.rs sed -n '1170,1235p' crates/tools/src/fuzz.rs sed -n '1235,1435p' crates/tools/src/fuzz.rs\"` (exit 0)\n- ran `/bin/bash -lc \"node - <<'NODE' function s2(seed){let h=(1779033703 \"'^ seed.length)>>>0;for(let i=0;i<seed.length;i++){h=Math.imul((h''^seed.charCodeAt(i))>>>0\u2026` (exit 0)\n- said: The cleanest real regression fixture is already in the corpus: `seed-8-v0.4.12d.json` records an actual failure \u201cfrom the dealt start\u201d and explicitly says today\u2019s corpus loses it. I\u2019ll plan to convert that historical record to the new pinned shape (`dealt` for both seats), rather than inventing a s\u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4062/.bot-plan.md\n- ran `/bin/bash -lc \"sed -n '1,320p' .bot-plan.md && git status --short --ignored .bot-plan.md && rg -n \\\"pub use .*state|LastBoardInput\\\" crates/engine/src/lib.rs |\u2026` (exit 0)\n- ran `/bin/bash -lc \"git show --stat --oneline 891a888a64 && git show 891a888a64 -- crates/tools/fuzz-corpus/seed-8-v0.4.12d.json crates/tools/src/fuzz.rs | sed -n '\u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4062/.bot-plan.md\n- ran `/bin/bash -lc 'wc -w -c .bot-plan.md && git status --short --ignored .bot-plan.md && rg -n \"seed-8-v0.4.12d|replays from the plain|corpus record\" crates/tools/\u2026` (exit 0)\n- ran `/bin/bash -lc \"node - <<'NODE' function s2(seed){let h=(1779033703 \"'^ seed.length)>>>0;for(let i=0;i<seed.length;i++){h=Math.imul((h''^seed.charCodeAt(i))>>>0\u2026` (exit 0)\n- said: The corpus also contains a second real mismatch: seed 3760 explicitly records an endings-channel failure but says regress omits that channel. I\u2019m folding that known fact into the plan as `start: plain, endings: true`; this gives the builder two honest historical fixtures\u2014one for a non-plain start a\u2026\n- ran `/bin/bash -lc 'rg -n \"''^Make|seed-8|a_corpus_record|checked_in|Done when|Open questions|None'\"\\\\.\\\" .bot-plan.md\"` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4062/.bot-plan.md\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4062/.bot-plan.md\n- ran `/bin/bash -lc \"sed -n '1,240p' .bot-plan.md wc -w -c .bot-plan.md git diff --stat git status --short --ignored .bot-plan.md\"` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4062/.bot-plan.md\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"The change stays in the jackioh-tools fuzz corpus and its documentation; it changes no engine rules, AI, cross-crate contract, migration, or large file set.\"} --> ## Goal Allow each 1v1 fuzz corpus record to preserve the exact start that produced its failu\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "gpt",
       "owner_since": "2026-11-16T23:41:03Z",
       "owner_why": "it plans it",
@@ -14193,12 +14183,14 @@
       "provider": "gpt",
       "queued_at": "2026-11-16T23:39:08Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43981401087",
+      "run_id": "pending:9e5ee42a-1794874588",
       "runs_on": "night-vm-gpt",
-      "started_at": "2026-11-16T23:41:03Z",
+      "started_at": "2026-11-17T00:16:53Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6932740802"
+      ]
     },
     "4064": {
       "action": "build",
@@ -15334,9 +15326,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T00:16:14Z",
+    "at": "2026-11-17T00:16:53Z",
     "url": "",
-    "what": "build #4094 on claude-8"
+    "what": "build #4062 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-17T00:00:37Z",
