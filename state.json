@@ -15867,9 +15867,11 @@
     "4104": {
       "action": "review",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-16T23:53:01Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-17T01:36:02Z",
         "family": "muse",
@@ -15879,6 +15881,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a private lobby left open across an update moves onto the new card patch, instead of refusing every Start as \\\"update required\\\"\"} -->\n- ## What changed\n- - [lobby/mod.rs](crates/server/src/lobby/mod.rs): `load` now moves an unstarted lobby whose `catalog_version` differs from the running one onto the running catalog on first read/touch after a patch. It clears every seat's pick and Ready (seats, teams, settings stay), writes through the revision com\u2026\n- - [R4072000.md](spec/rulings/R4072000.md) (new), [pending/4072.md](spec/pending/4072.md) (new): the ruling with its three rejected alternatives (re-freezing saved decks, keeping passing picks, closing the lobby). [R3730002.md](spec/rulings/R3730002.md) and [R3730003.md](spec/rulings/R3730003.md) ea\u2026\n- - Tests: six API tests plus one social-socket test, all named `r4072000_\u2026`, with an `age_catalog` helper that fakes a pre-deploy lobby via `lobbies_get`/`lobbies_update`.\n- ## How tested\n- - `cargo test -p jackioh-server --test server r4072000` \u2014 7 passed, 0 failed.\n- - `cargo test -p jackioh-server --test server api::lobbies::` \u2014 24 passed; `actor::social_live::` \u2014 19 passed.\n- - `cargo test -p jackioh-server` (full crate) \u2014 132 + 7 + 2 + 1830 + 743 passed, 0 failed.\n- - `cargo fmt --check -p jackioh-server` clean; `cargo clippy -p jackioh-server --all-targets -- -D warnings` clean.\n- - `cargo jackioh spec check` \u2014 `2231 rulings, 5665 proofs, 70816 citations in 4578 files, 30053 links: ok`.\n- ## Decisions\n- - Followed the plan exactly with no departures; the only judgment call inside it was checking the `changed` conflict by `code == Conflict` plus `details.reason == \"changed\"` (via a small `changed()` helper), since `write`'s only Conflict is that reason.\n- - Reviewer note: the race test asserts `rev == aged_rev + 1`, so it proves the move happens exactly once regardless of interleave; the started-lobby test asserts the stored row keeps the old catalog string after a read.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4072 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4072/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4072,
       "kind": "review",
       "live": "reviewing",
