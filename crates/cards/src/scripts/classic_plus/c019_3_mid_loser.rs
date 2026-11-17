@@ -17,9 +17,9 @@ fn own_lucky(ctx: &EffectContext<'_>) -> i32 {
     ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me))
 }
 
-/// R767000: through v0.6.2b its own Lucky counted only on the field, so a cast with no open unit zone
+/// R767000: through v0.6.4 its own Lucky counted only on the field, so a cast with no open unit zone
 /// flipped without it (#3835).
-fn own_lucky_v0_6_2b(ctx: &EffectContext<'_>) -> i32 {
+fn own_lucky_v0_6_4(ctx: &EffectContext<'_>) -> i32 {
     match ctx.live_self() {
         Some(me) if me.zone.z() == ZoneName::Field => {
             numbered_sum(&unit_view(&*ctx.state, me).keywords, KeywordKind::Lucky).unwrap_or(0)
@@ -40,8 +40,8 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     cry_with(ctx, own_lucky)
 }
 
-fn cry_v0_6_2b(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    cry_with(ctx, own_lucky_v0_6_2b)
+fn cry_v0_6_4(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    cry_with(ctx, own_lucky_v0_6_4)
 }
 
 fn cry_with(ctx: &mut EffectContext<'_>, own: fn(&EffectContext<'_>) -> i32) -> Vec<Effect> {
@@ -85,10 +85,10 @@ pub fn script() -> CardScripts {
     scripts(cry)
 }
 
-/// R767000, #3835: through v0.6.2b the coin read the card's own Lucky only on the field;
+/// R767000, #3835: through v0.6.4 the coin read the card's own Lucky only on the field;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
-    scripts(cry_v0_6_2b)
+pub fn script_v0_6_4() -> CardScripts {
+    scripts(cry_v0_6_4)
 }
 
 // C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3 (R1, R411).
@@ -538,11 +538,11 @@ mod tests {
             assert_eq!(moved, 2);
         }
 
-        /// R767000: a game played through v0.6.2b folds under the kept script, whose coin read the card's
+        /// R767000: a game played through v0.6.4 folds under the kept script, whose coin read the card's
         /// own Lucky only on the field: there the same cast flips once.
         #[test]
-        fn r767000_a_game_on_v0_6_2b_flips_the_cast_s_coin_once() {
-            crate::under_kept(MID, script_v0_6_2b(), || {
+        fn r767000_a_game_on_v0_6_4_flips_the_cast_s_coin_once() {
+            crate::under_kept(MID, script_v0_6_4(), || {
                 let (rolls, moved) = cast_radiant_onto_a_full_board();
                 assert_eq!(rolls.len(), 1, "one coin");
                 assert_eq!(rolls[0].faces.len(), 1, "no Lucky flip");

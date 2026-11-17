@@ -653,12 +653,17 @@ jobs:
   # and a `patches ship` among them has taken those fragments out of pending/, so every card they
   # changed read as unclaimed (#3317, 109 of them). `pull-requests: write` and `issues: write` for
   # its labels alone; the job runs no code but this repository's own build.
+  # Its timeout is a ceiling, not its budget. Stage 2 plays `FORCED_GAMES` (40) games on both builds
+  # for each card script whose code a change touches (crates/tools/src/classify.rs), about 20 seconds
+  # a script on 4 cores. So a refactor across 20 scripts runs past ten minutes. That is what #4090
+  # renamed, and its classify step was cancelled twice at 8m10s to 8m15s. ci-duration.yml still
+  # reports a run past ten minutes.
   rust-classify:
     name: rust (classify)
     needs: [changes, rust-build, rust-base-build]
     if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != '_production' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write

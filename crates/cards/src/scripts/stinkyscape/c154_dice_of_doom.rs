@@ -12,14 +12,14 @@
 //! the instance first gains Lucky +1 for good (`gain_keyword_for_good`, R386, kept in every zone,
 //! R1438), counting toward this play's roll. A hit adds one of each card of the Terminus pool
 //! (`query::terminus_cards`, R3869000), in its order, at `costOverride` 0, a full hand burning the rest
-//! (§2.4); through v0.6.2b it added the seven S #4 named by id (R1857002; `script_v0_6_2b`, kept,
+//! (§2.4); through v0.6.3b it added the seven S #4 named by id (R1857002; `script_v0_6_3b`, kept,
 //! R767000). The dice are reported to both players as one batch before the Lucky
 //! gain and the Terminus cards, every roll of each die with the one it kept (R2652001).
 
 use jackioh_engine::effects::{add_to_hand, gain_keyword_for_good};
 use jackioh_engine::prelude::*;
 
-use crate::scripts::stinkyscape::c004_olivian_expanse::TERMINUS_CARDS_V0_6_2B;
+use crate::scripts::stinkyscape::c004_olivian_expanse::TERMINUS_CARDS_V0_6_3B;
 
 pub const ID: &str = "stinkyscape-154";
 
@@ -31,7 +31,7 @@ const HIT: i32 = 67;
 /// "Embiggened (1): This also gains Lucky +1 for good."
 const LUCKY_GAIN: i32 = 1;
 
-/// The roll; `kept`, the script through v0.6.2b.
+/// The roll; `kept`, the script through v0.6.3b.
 fn roll(ctx: &mut EffectContext<'_>, kept: bool) -> Vec<Effect> {
     let gain = if ctx.embiggened { LUCKY_GAIN } else { 0 };
     let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me)) + luck_of(&*ctx.state, ctx.controller) + gain;
@@ -52,8 +52,8 @@ fn roll(ctx: &mut EffectContext<'_>, kept: bool) -> Vec<Effect> {
         )));
     }
     if hit {
-        // R3869000: the Terminus pool, one of each; R767000: through v0.6.2b, the seven named by id.
-        let cards = if kept { TERMINUS_CARDS_V0_6_2B.map(str::to_string).to_vec() } else { crate::query::pool_ids(&crate::query::terminus_cards()) };
+        // R3869000: the Terminus pool, one of each; R767000: through v0.6.3b, the seven named by id.
+        let cards = if kept { TERMINUS_CARDS_V0_6_3B.map(str::to_string).to_vec() } else { crate::query::pool_ids(&crate::query::terminus_cards()) };
         effects.extend(cards.iter().map(|def_id| add_to_hand(json_as(json!({ "defId": def_id, "costOverride": 0 })))));
     }
     effects
@@ -71,7 +71,7 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![bounce(json_as(json!({ "target": { "of": "self" } })))]
 }
 
-/// Both faces; `kept`, the script through v0.6.2b.
+/// Both faces; `kept`, the script through v0.6.3b.
 fn faces(kept: bool) -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
@@ -89,15 +89,15 @@ fn faces(kept: bool) -> CardScripts {
 
 pub fn script() -> CardScripts { faces(false) }
 
-/// R767000: through v0.6.2b a hit added the seven Terminus cards S #4 named by id; `KEPT_SCRIPTS` folds
+/// R767000: through v0.6.3b a hit added the seven Terminus cards S #4 named by id; `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_2b() -> CardScripts { faces(true) }
+pub fn script_v0_6_3b() -> CardScripts { faces(true) }
 
 // S #154 Dice of Doom — SPEC §8.10 row S 154, BUILD M12 row S 154 (R1870007).
 #[cfg(test)]
 mod tests {
-    use super::{HIT, ID, RADIANT_SIDES, script_v0_6_2b};
-    use crate::scripts::stinkyscape::c004_olivian_expanse::TERMINUS_CARDS_V0_6_2B;
+    use super::{HIT, ID, RADIANT_SIDES, script_v0_6_3b};
+    use crate::scripts::stinkyscape::c004_olivian_expanse::TERMINUS_CARDS_V0_6_3B;
     use jackioh_engine::rng::Rng;
     use jackioh_engine::testkit::*;
     use jackioh_engine::zones::move_to_zone;
@@ -400,24 +400,24 @@ mod tests {
             let defs: Vec<String> = added(&s).into_iter().map(|card| card.def_id).collect();
             assert_eq!(defs, pool[..HAND_CAP as usize].to_vec(), "an empty hand fills with the first ten");
             assert!(pool.iter().any(|id| id.starts_with("stinkyscapeplus-")), "the pool holds S+ cards");
-            for id in TERMINUS_CARDS_V0_6_2B {
+            for id in TERMINUS_CARDS_V0_6_3B {
                 assert!(pool.contains(&id.to_string()), "{id}");
             }
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_2b_adds_the_seven_it_named() {
-            crate::under_kept(ID, script_v0_6_2b(), || {
+        fn r767000_the_script_kept_for_v0_6_3b_adds_the_seven_it_named() {
+            crate::under_kept(ID, script_v0_6_3b(), || {
                 let seed = seed_where("dice-of-doom-kept", |seed| hits(seed, false));
                 let s = rolled(&seed, false, json!({}));
                 let defs: Vec<String> = s
                     .hand(P1)
                     .into_iter()
                     .map(|card| card.def_id)
-                    .filter(|def_id| TERMINUS_CARDS_V0_6_2B.contains(&def_id.as_str()))
+                    .filter(|def_id| TERMINUS_CARDS_V0_6_3B.contains(&def_id.as_str()))
                     .collect();
-                assert_eq!(defs, TERMINUS_CARDS_V0_6_2B.map(str::to_string).to_vec(), "one of each, in order");
-                assert_eq!(s.hand(P1).len(), 1 + TERMINUS_CARDS_V0_6_2B.len(), "the filler and the seven");
+                assert_eq!(defs, TERMINUS_CARDS_V0_6_3B.map(str::to_string).to_vec(), "one of each, in order");
+                assert_eq!(s.hand(P1).len(), 1 + TERMINUS_CARDS_V0_6_3B.len(), "the filler and the seven");
             });
         }
     }

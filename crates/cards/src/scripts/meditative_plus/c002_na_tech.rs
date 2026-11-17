@@ -15,28 +15,28 @@
 //!
 //! The fallback (#3869, R3869005): an end the table cannot name is a random non-token card of the sets
 //! that ship, never NA Tech, the end the table names or the other ingredient (`distinct`), so the two
-//! ends stay distinct, as R142 had it before #2521. Through v0.6.2b a missing end was a named card,
+//! ends stay distinct, as R142 had it before #2521. Through v0.6.3b a missing end was a named card,
 //! Core #75 Infinite Reserves for the lowest and Core #35 Lunar Eclipse for the highest, unless the
-//! other end was that card (R2521007; `script_v0_6_2b`, kept, R767000).
+//! other end was that card (R2521007; `script_v0_6_3b`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditativeplus-002";
 
-/// R767000, R2521007: the highest end through v0.6.2b when the table named none: Core #35 Lunar
+/// R767000, R2521007: the highest end through v0.6.3b when the table named none: Core #35 Lunar
 /// Eclipse, 33/48, the leader of v0.4.0's provisional table, as M #50 CN Tech's.
-pub const FALLBACK_LEADER_V0_6_2B: &str = "core-035";
-/// R767000, R2521007: the lowest end through v0.6.2b when the table named none: Core #75 Infinite
+pub const FALLBACK_LEADER_V0_6_3B: &str = "core-035";
+/// R767000, R2521007: the lowest end through v0.6.3b when the table named none: Core #75 Infinite
 /// Reserves, 7/43, that table's trailer.
-pub const FALLBACK_TRAILER_V0_6_2B: &str = "core-075";
+pub const FALLBACK_TRAILER_V0_6_3B: &str = "core-075";
 
-/// R3869005: a missing end is random (`None`); R767000: through v0.6.2b (`kept`) it was `card`, unless
+/// R3869005: a missing end is random (`None`); R767000: through v0.6.3b (`kept`) it was `card`, unless
 /// the other end was that card already.
 fn fallback(kept: bool, card: &str, other_end: Option<&str>) -> Option<String> {
     (kept && other_end != Some(card)).then(|| card.to_string())
 }
 
-/// The Cry; `kept`, the script through v0.6.2b.
+/// The Cry; `kept`, the script through v0.6.3b.
 fn tech(radiant: bool, kept: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -44,9 +44,9 @@ fn tech(radiant: bool, kept: bool) -> Script {
             let mut skipped = vec![ID];
             skipped.extend(named_leader.as_deref());
             let named_trailer = win_rate_trailer(&*ctx.state, &skipped);
-            // R3869005: a missing end is random; R767000: through v0.6.2b, its hard-coded card.
-            let leader = named_leader.clone().or_else(|| fallback(kept, FALLBACK_LEADER_V0_6_2B, named_trailer.as_deref()));
-            let trailer = named_trailer.or_else(|| fallback(kept, FALLBACK_TRAILER_V0_6_2B, named_leader.as_deref()));
+            // R3869005: a missing end is random; R767000: through v0.6.3b, its hard-coded card.
+            let leader = named_leader.clone().or_else(|| fallback(kept, FALLBACK_LEADER_V0_6_3B, named_trailer.as_deref()));
+            let trailer = named_trailer.or_else(|| fallback(kept, FALLBACK_TRAILER_V0_6_3B, named_leader.as_deref()));
             // R1183001: a named end is its own pool; a missing one is any card but the named ones.
             let named: Vec<&str> = [trailer.as_deref(), leader.as_deref()].into_iter().flatten().collect();
             let pool = |end: &Option<String>| match end {
@@ -72,9 +72,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.2b a missing end was Lunar Eclipse or Infinite Reserves (R2521007);
+/// R767000: through v0.6.3b a missing end was Lunar Eclipse or Infinite Reserves (R2521007);
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_3b() -> CardScripts {
     CardScripts {
         base: tech(false, true),
         radiant: tech(true, true),
@@ -96,8 +96,8 @@ mod tests {
     const MIDDLE: &str = "core-002";
     const FILLER: &str = "core-005";
     /// Core #35 Lunar Eclipse and Core #75 Infinite Reserves: v0.4.0's table's two ends.
-    const LUNAR_ECLIPSE: &str = FALLBACK_LEADER_V0_6_2B;
-    const INFINITE_RESERVES: &str = FALLBACK_TRAILER_V0_6_2B;
+    const LUNAR_ECLIPSE: &str = FALLBACK_LEADER_V0_6_3B;
+    const INFINITE_RESERVES: &str = FALLBACK_TRAILER_V0_6_3B;
 
     /// R3869005: whether `id` may stand in for a missing end: a non-token card of a set that ships,
     /// never NA Tech.
@@ -270,15 +270,15 @@ mod tests {
         }
 
         #[test]
-        fn r767000_r2521007_the_script_kept_for_v0_6_2b_fuses_infinite_reserves_and_lunar_eclipse() {
+        fn r767000_r2521007_the_script_kept_for_v0_6_3b_fuses_infinite_reserves_and_lunar_eclipse() {
             register_win_rates(table(vec![]));
-            crate::under_kept(ID, script_v0_6_2b(), || {
+            crate::under_kept(ID, script_v0_6_3b(), || {
                 let mut s = casting("na-tech-kept", false, 1);
                 let card = fused(&mut s);
                 assert_eq!(
                     ingredients(&s, &card),
                     vec![(INFINITE_RESERVES.to_string(), false), (LUNAR_ECLIPSE.to_string(), false)],
-                    "the same two on every seed through v0.6.2b"
+                    "the same two on every seed through v0.6.3b"
                 );
             });
             clear_overrides();
