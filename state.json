@@ -12965,6 +12965,13 @@
     "4118": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T19:52:21Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Worker-only change in apps/edge plus three doc paragraphs: none of the hard rule's lines (engine, AI, cross-crate design, migration, about 40 files) holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
