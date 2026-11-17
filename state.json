@@ -16172,7 +16172,11 @@
       "issue": 4114,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-6",
+      "merge_owner_gave_up": {
+        "at": "2026-11-17T08:59:56Z",
+        "provider": "claude-6",
+        "sha": "449a1d49dea9c5f3a9a7f1f5754be1ebeb76dac9"
+      },
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-17T06:50:53Z",
