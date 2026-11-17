@@ -12994,15 +12994,14 @@
     "what": "build #4109 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T19:02:04Z",
+    "at": "2026-11-17T19:14:43Z",
     "notes": [
-      "started plan #4108 on muse (run 44154836394)",
-      "started plan #4109 on muse (run 44154943812)",
-      "started suggest on claude-7 (run 44155044349)",
-      "started suggest on claude-8 (run 44155147178)",
-      "started suggest on claude-1 (run 44155255275)",
+      "delivered plan #4109 on muse (run 44154943812): planned",
+      "delivered plan #4108 on muse (run 44154836394): planned",
+      "started build #4108 on muse (run 44157006077)",
+      "started build #4109 on muse (run 44157117078)",
       "nothing more to start: nothing is queued",
-      "pruned 12 plan file(s) older than 7 days"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -13708,7 +13707,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T19:02:04Z",
+  "loop_tick": "2026-11-17T19:14:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
