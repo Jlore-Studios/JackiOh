@@ -25,7 +25,9 @@ use crate::support::engine::{
     install_test_cards,
 };
 use crate::support::socket::{FakeSocket, create_fake_socket};
-use crate::support::store::{advance_and_yield, fake, from, store, table, to_json};
+use crate::support::store::{
+    advance_and_yield, fail_on, fake, fake_ref, from, stop_failing, store, table, to_json,
+};
 
 const MATCH_ID: &str = "match-recovery";
 
@@ -361,6 +363,63 @@ async fn results(h: &Harness) -> Vec<Value> {
 
 mod m6_t4_crash_recovery {
     use super::*;
+
+    /// #4114 (`docs/implicit-states.md`, A6): a rebuild the store fails is answered to its socket and
+    /// kept nowhere, neither as an actor nor as a cached failure, so the next socket rebuilds the match.
+    #[tokio::test(start_paused = true)]
+    async fn a_rebuild_the_store_fails_is_not_kept_and_the_next_socket_rebuilds() {
+        let h = start_match(StartOptions::default()).await;
+        h.app.matches.stop(MATCH_ID).await;
+        fail_on(&h.app, "matches.actions", "down").await;
+        let refused = h
+            .app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", create_fake_socket().socket())
+            .await
+            .expect_err("the store is down");
+        assert!(refused.to_string().contains("down"), "{refused}");
+        assert_eq!(h.app.matches.live(), Vec::<String>::new());
+
+        stop_failing(&h.app).await;
+        let back = create_fake_socket();
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-2", back.socket())
+            .await
+            .expect("the next socket rebuilds the match");
+        actor_of(&h).await.idle().await;
+        assert_eq!(last_view(&back)["viewer"], "p2");
+    }
+
+    /// #4114 (`docs/implicit-states.md`, A10): the restart drain checkpoints and stops every live match
+    /// with 1001 (`crates/server/README.md`). A rebuild already reading the store when the drain runs
+    /// lands after it; it is checkpointed and stopped too, never left live in a process that is going
+    /// away, and the socket it was built for hears 1001 and reconnects to the next process.
+    #[tokio::test(start_paused = true)]
+    async fn a_rebuild_in_flight_across_the_restart_drain_is_stopped_too() {
+        let h = start_match(StartOptions::default()).await;
+        h.app.matches.stop(MATCH_ID).await;
+
+        let guard = fake_ref(&h.app).lock().await;
+        let app = Arc::clone(&h.app);
+        let rebuilding = tokio::spawn(async move { app.matches.actor_for(&app, MATCH_ID).await });
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(h.app.matches.stop_all().await, 0);
+        drop(guard);
+
+        let actor = rebuilding
+            .await
+            .expect("the rebuild ran")
+            .expect("the rebuild folded the match");
+        assert_eq!(h.app.matches.live(), Vec::<String>::new());
+        let late = create_fake_socket();
+        actor.attach(PlayerId::P2, late.socket());
+        actor.idle().await;
+        assert_eq!(late.close_code(), Some(1001));
+        assert!(views(&late).is_empty());
+    }
 
     #[tokio::test(start_paused = true)]
     async fn a_start_the_engine_refuses_writes_no_match_row_and_registers_no_actor() {

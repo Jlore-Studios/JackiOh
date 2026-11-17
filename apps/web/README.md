@@ -435,7 +435,7 @@ them to its controller's own view of a card acting on the field) wears one contr
 left this turn ("∞" for Activate ♾️; on a card listing several, the sum of its usable abilities'), the
 ability's words (its `{key}`s filled from the card's `params`) as tooltip and accessible name. It is
 `activate-<instanceId>` with its badge `activate-uses-<instanceId>`; each ability counts its own uses and
-cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the ability a press names. It is
+cooldown (R1751000). It is
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
 view's `reason`, and a press shows that reason in the board's reason line and sends nothing (R3768000). A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,

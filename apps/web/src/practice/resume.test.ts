@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   PRACTICE_RESUME_STORAGE_KEY,
   clearPracticeResume,
-  readPracticeResume,
   readPracticeResumeState,
   writePracticeResume,
 } from "./resume.ts";
@@ -26,17 +25,17 @@ const CONFIG: PracticeStartConfig = {
 
 describe("R668 the practice game to resume, on the device", () => {
   it("R668 keeps the setup only (no last board), and clears", () => {
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
     writePracticeResume({ ...CONFIG, lastBoard: [{ defId: "core-008", radiant: false }] });
-    expect(readPracticeResume()).toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null).toEqual(CONFIG);
     clearPracticeResume();
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 
   it("R668 a lesson is never remembered: writing one forgets the free game", () => {
     writePracticeResume(CONFIG);
     writePracticeResume({ ...CONFIG, lesson: "basics" });
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 
   it("R668 reads anything malformed as no game", () => {
@@ -49,18 +48,18 @@ describe("R668 the practice game to resume, on the device", () => {
       JSON.stringify({ ...CONFIG, lesson: "basics" }),
     ]) {
       window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, raw);
-      expect(readPracticeResume(), raw).toBeNull();
+      expect(readPracticeResumeState()?.config ?? null, raw).toBeNull();
     }
   });
 
   it("R924000 a random deck's pick is kept, a game kept before the picker reads as it was, and a bad pick is malformed", () => {
     const picked: PracticeStartConfig = { ...CONFIG, deck: { kind: "random", leanSet: "Classic" } };
     writePracticeResume(picked);
-    expect(readPracticeResume()).toEqual(picked);
+    expect(readPracticeResumeState()?.config ?? null).toEqual(picked);
 
     const kept = { ...CONFIG, deck: { kind: "random", leanNewest: true } };
     window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(kept));
-    expect(readPracticeResume()).toEqual(kept);
+    expect(readPracticeResumeState()?.config ?? null).toEqual(kept);
 
     for (const deck of [
       { kind: "random", leanSet: "Boss" },
@@ -68,45 +67,45 @@ describe("R668 the practice game to resume, on the device", () => {
       { kind: "random", leanNewest: "yes" },
     ]) {
       window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, deck }));
-      expect(readPracticeResume(), JSON.stringify(deck)).toBeNull();
+      expect(readPracticeResumeState()?.config ?? null, JSON.stringify(deck)).toBeNull();
     }
   });
 
   it("R923000 a sandbox game is kept as one, and a sandbox flag that is not true is malformed", () => {
     writePracticeResume({ ...CONFIG, sandbox: true });
-    expect(readPracticeResume()).toEqual({ ...CONFIG, sandbox: true });
+    expect(readPracticeResumeState()?.config ?? null).toEqual({ ...CONFIG, sandbox: true });
     writePracticeResume(CONFIG);
-    expect(readPracticeResume(), "a game that is no sandbox keeps no flag").toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null, "a game that is no sandbox keeps no flag").toEqual(CONFIG);
     window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, sandbox: false }));
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 
   it("R1303001 a game on a server seed is kept as one, so its end is claimed after a reload, and a flag that is not true is malformed", () => {
     writePracticeResume({ ...CONFIG, earning: true, lastBoard: [{ defId: "core-008", radiant: false }] });
-    expect(readPracticeResume()).toEqual({ ...CONFIG, earning: true });
+    expect(readPracticeResumeState()?.config ?? null).toEqual({ ...CONFIG, earning: true });
     writePracticeResume(CONFIG);
-    expect(readPracticeResume(), "a game on no server seed keeps no flag").toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null, "a game on no server seed keeps no flag").toEqual(CONFIG);
     window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, earning: false }));
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 
   it("R2882000 today's deal is kept as one, and a day that is not a string is malformed", () => {
     writePracticeResume({ ...CONFIG, dailyDeal: "2026-11-03" });
-    expect(readPracticeResume()).toEqual({ ...CONFIG, dailyDeal: "2026-11-03" });
+    expect(readPracticeResumeState()?.config ?? null).toEqual({ ...CONFIG, dailyDeal: "2026-11-03" });
     writePracticeResume(CONFIG);
-    expect(readPracticeResume(), "a game that is no daily deal keeps no day").toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null, "a game that is no daily deal keeps no day").toEqual(CONFIG);
     window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, dailyDeal: 3 }));
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 
   it("R3976000 a game is kept with its portraits, and portraits naming an unknown one are malformed", () => {
     writePracticeResume({ ...CONFIG, portraits: { p1: "gary", p2: "shredder" } });
-    expect(readPracticeResume()).toEqual({ ...CONFIG, portraits: { p1: "gary", p2: "shredder" } });
+    expect(readPracticeResumeState()?.config ?? null).toEqual({ ...CONFIG, portraits: { p1: "gary", p2: "shredder" } });
     writePracticeResume(CONFIG);
-    expect(readPracticeResume(), "a game kept before its portraits were dealt with it keeps none").toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null, "a game kept before its portraits were dealt with it keeps none").toEqual(CONFIG);
     for (const portraits of [{ p1: "gary", p2: "nobody" }, { p1: "gary" }, ["gary", "shredder"], "gary", null]) {
       window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, portraits }));
-      expect(readPracticeResume(), JSON.stringify(portraits)).toBeNull();
+      expect(readPracticeResumeState()?.config ?? null, JSON.stringify(portraits)).toBeNull();
     }
   });
 
@@ -116,7 +115,7 @@ describe("R668 the practice game to resume, on the device", () => {
     writePracticeResume(CONFIG, { saved: true });
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: true });
     // The setup alone, whichever: a resume names the game, never where it was left.
-    expect(readPracticeResume()).toEqual(CONFIG);
+    expect(readPracticeResumeState()?.config ?? null).toEqual(CONFIG);
     // Picked up again, the player is in it once more.
     writePracticeResume(CONFIG);
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: false });
@@ -146,6 +145,6 @@ describe("R668 the practice game to resume, on the device", () => {
     expect(() => {
       writePracticeResume(CONFIG);
     }).not.toThrow();
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 });

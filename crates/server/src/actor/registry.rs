@@ -11,6 +11,7 @@
 //! drains them (SURFACE §11.3).
 
 use std::panic::AssertUnwindSafe;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use indexmap::IndexMap;
@@ -80,6 +81,9 @@ pub struct Registry {
     actors: Mutex<IndexMap<String, MatchActor>>,
     /// In-flight rebuilds, so two sockets arriving together fold the log once, not twice.
     rebuilding: Mutex<IndexMap<String, Rebuild>>,
+    /// #4114: bumped by each `stop_all` under the actors lock, so a rebuild in flight across a drain
+    /// stops what it built.
+    drains: AtomicU64,
 }
 
 impl Default for Registry {
@@ -325,6 +329,7 @@ impl Registry {
         Registry {
             actors: Mutex::new(IndexMap::new()),
             rebuilding: Mutex::new(IndexMap::new()),
+            drains: AtomicU64::new(0),
         }
     }
 
@@ -379,6 +384,8 @@ impl Registry {
     }
 
     async fn rebuild(&self, app: &Arc<App>, match_id: &str) -> Result<MatchActor, RebuildError> {
+        // #4114: a drain that runs while this rebuild reads and folds never saw its actor.
+        let drains = self.drains.load(Ordering::SeqCst);
         let store = |error: crate::db::store::StoreError| RebuildError::Internal(error.to_string());
         let (match_row, log, mode, bots, saved, daily) = one_tx!(app.db, |t| {
             let match_row = t.matches_get(match_id).await?;
@@ -555,7 +562,21 @@ impl Registry {
                 dealt_cards,
             },
         );
-        lock(&self.actors).insert(match_id.to_string(), actor.clone());
+        let kept = {
+            let mut actors = lock(&self.actors);
+            let kept = self.drains.load(Ordering::SeqCst) == drains;
+            if kept {
+                actors.insert(match_id.to_string(), actor.clone());
+            }
+            kept
+        };
+        if !kept {
+            // #4114: the restart drain ran while this rebuild was in flight. Its actor goes the way the
+            // drain's did, so the socket `attach` hands it hears 1001 (S10) and reconnects to the next
+            // process.
+            Registry::drain_one(match_id, &actor).await;
+            return Ok(actor);
+        }
         let from_seq = from.unwrap_or(0);
         tracing::info!(event = "match.rebuilt", matchId = %match_id, actions = actions, fromSeq = from_seq);
         Ok(actor)
@@ -617,20 +638,28 @@ impl Registry {
     /// #861 drain: stops every actor as `stop` does, 1001 to open sockets, its queue drained so a
     /// result being written lands. `halt` sets `stopped` first, so `on_socket_gone` stores no grace.
     /// Next process rebuilds from log (§9.5) or checkpoint (#1169); unreturned seats start grace (R744).
+    /// A rebuild in flight across the drain stops what it built the same way (#4114).
     pub async fn stop_all(&self) -> usize {
-        let actors: Vec<(String, MatchActor)> = lock(&self.actors).drain(..).collect();
+        let actors: Vec<(String, MatchActor)> = {
+            let mut actors = lock(&self.actors);
+            self.drains.fetch_add(1, Ordering::SeqCst);
+            actors.drain(..).collect()
+        };
         let count = actors.len();
         let mut stopping = tokio::task::JoinSet::new();
         for (match_id, actor) in actors {
-            stopping.spawn(async move {
-                // #1169: stored before 1001 frames for immediate reconnect.
-                actor.checkpoint().await;
-                actor.stop().await;
-                tracing::info!(event = "match.stopped", matchId = %match_id);
-            });
+            stopping.spawn(async move { Registry::drain_one(&match_id, &actor).await });
         }
         while stopping.join_next().await.is_some() {}
         count
+    }
+
+    /// #861, #1169: one actor of the restart drain: checkpointed before its 1001 frames, so a socket
+    /// that reconnects at once finds it stored, then stopped.
+    async fn drain_one(match_id: &str, actor: &MatchActor) {
+        actor.checkpoint().await;
+        actor.stop().await;
+        tracing::info!(event = "match.stopped", matchId = %match_id);
     }
 
     /// Hands a socket to the seat this profile holds, rebuilding if not in memory (SURFACE §11.2).

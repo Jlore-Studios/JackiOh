@@ -170,15 +170,6 @@ export function byTestid(id: string): Element | null {
   return document.querySelector(testidSelector(id));
 }
 
-/**
- * R384, R510, R1751000: the `ability` an Activate control names. Under R1751000, board Activate
- * controls on cards with multiple abilities target `{ on: "activate", instanceId }` (without ability)
- * to open the Discover choice modal; `namedAbility` is retained for backwards compatibility.
- */
-export function namedAbility(abilityCount: number, ability: string): string | undefined {
-  return abilityCount > 1 ? ability : undefined;
-}
-
 export function sideOf(view: PlayerView, player: PlayerId): Side {
   return player === view.viewer ? "you" : "opponent";
 }

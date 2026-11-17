@@ -21,7 +21,7 @@ import {
   type AnimationQueue,
   type RunnerSignal,
 } from "../game/animations.ts";
-import { followPointer } from "../cards/pointerFrame.ts";
+import { followPointer, pointerFrames } from "../cards/pointerFrame.ts";
 import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import { rootVars, type RootVars } from "../game/rootVars.ts";
 import { boardShakeSink, resolveAnchor } from "./anchors.ts";
@@ -95,17 +95,6 @@ export const FX_HOLD_MARK = "data-fx-hold";
 
 export function defaultNow(): number {
   return performance.now();
-}
-
-/** `requestAnimationFrame`, or a source that never fires where there is none (no timers: R200). */
-export function defaultFrames(): FxFrameSource {
-  if (typeof window.requestAnimationFrame !== "function") {
-    return { request: () => 0, cancel: () => undefined };
-  }
-  return {
-    request: (callback) => window.requestAnimationFrame(callback),
-    cancel: (handle) => window.cancelAnimationFrame(handle),
-  };
 }
 
 export function defaultVisibility(): FxVisibility {
@@ -223,7 +212,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       surface,
       domRoot,
       now: s.now ?? defaultNow,
-      frames: s.frames ?? defaultFrames(),
+      frames: s.frames ?? pointerFrames(),
       visibility: s.visibility ?? defaultVisibility(),
       measure: s.measure ?? resolveAnchor,
       shakeSink: s.shakeSink ?? boardShakeSink(document),
@@ -426,7 +415,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   // before: tilt tracks each face on its own (cards/tilt.ts, R3344001). #3610: the pointer is handled once a frame, the
   // newest move's, on the layer's frame source (never a timer: a source that never fires gives no pointer, R200).
   useEffect(() => {
-    const follow = followPointer(live.current.seams?.frames ?? defaultFrames(), (event) => {
+    const follow = followPointer(live.current.seams?.frames ?? pointerFrames(), (event) => {
       setShedPointer({ x: event.clientX, y: event.clientY });
     });
     const onMove = (event: PointerEvent): void => {

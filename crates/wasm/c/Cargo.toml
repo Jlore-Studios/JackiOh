@@ -21,12 +21,13 @@ preview = ["jackioh-wasm-core/preview"]
 duos = ["jackioh-wasm-core/duos"]
 
 [dependencies]
-jackioh-engine = { workspace = true }
 jackioh-cards = { workspace = true }
 # By path, not through the workspace: the crate sits inside `crates/wasm`.
 jackioh-wasm-core = { path = "../core" }
 
 [dev-dependencies]
+# The tests read the engine's numbers by name (`config::DECK_SIZE`).
+jackioh-engine = { workspace = true }
 serde_json = { workspace = true }
 # The tests read the shared logic's numbers from `constants` by name (#3098).
 jackioh-shared = { workspace = true }

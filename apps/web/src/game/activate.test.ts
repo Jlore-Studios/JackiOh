@@ -20,7 +20,7 @@ import {
   plagueKey,
   type Interaction,
 } from "./actions.ts";
-import { namedAbility, testid } from "./contract.ts";
+import { testid } from "./contract.ts";
 import { planDrag, resolveDrop } from "./drag/model.ts";
 import { baseView, card, emptySide, faceUpBackrow, heroPower, unit } from "../test/fixtures.ts";
 
@@ -100,8 +100,6 @@ describe("R384 the Activate control is lit by the activations legalActions lists
     ];
     const interaction = onClickTarget(view, twoLegal, IDLE, { on: "activate", instanceId: "act2" }).interaction;
     expect(outstandingNeed(interaction)).toEqual({ kind: "ability", min: 1, max: 1, abilities: ["ping", "turtle"] });
-    expect(namedAbility(1, "ping")).toBeUndefined();
-    expect(namedAbility(2, "ping")).toBe("ping");
   });
 
   it("R384 nothing lights when legal lists no activation, whatever the view says is usable", () => {

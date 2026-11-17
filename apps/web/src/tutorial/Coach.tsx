@@ -15,6 +15,7 @@ import {
 } from "react";
 
 import { LANES, byTestid, testid } from "../game/contract.ts";
+import { queryList } from "../game/mediaQuery.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import {
   COACH_BUBBLE_MIN_HEIGHT_PX,
@@ -72,11 +73,7 @@ function visibleRect(element: Element | null, prompt: Element | null): Rect | nu
 export type CoachDock = "panel" | "float";
 
 function dockQuery(): MediaQueryList | null {
-  try {
-    return typeof window.matchMedia === "function" ? window.matchMedia(COACH_DOCK_QUERY) : null;
-  } catch {
-    return null;
-  }
+  return queryList(COACH_DOCK_QUERY);
 }
 
 function currentDock(): CoachDock {

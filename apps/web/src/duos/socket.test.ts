@@ -331,6 +331,16 @@ describe("the co-op socket's reconnect", () => {
     expect(h.pending()).toBe(0);
   });
 
+  it("R3694000 a co-op close with 1001, a restart's drain, reconnects with a backoff", () => {
+    const h = connected();
+    h.socket().drop(1001, "the server is restarting");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    expect(h.pending()).toBe(1);
+
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+  });
+
   it("R1441 a reconnect waits its backoff plus up to RECONNECT_JITTER of it more", () => {
     const h = connected({ random: () => 0.5 });
     h.socket().drop(1006);
@@ -559,6 +569,26 @@ describe("a co-op socket refused for its sign-in", () => {
       afterRetry.client.setToken("newer");
       expect(afterRetry.sockets).toHaveLength(2);
       expect(afterRetry.client.snapshot().connection).toBe("refused");
+    }
+  });
+
+  it("R1115000 a co-op socket opened after a 4401 forgets the refusal: a renewal once the seat is taken or the match is gone opens nothing", () => {
+    for (const [code, connection] of [
+      [SEAT_TAKEN_CLOSE_CODE, "elsewhere"],
+      [4410, "closed"],
+    ] as const) {
+      const h = connected();
+      h.socket().drop(4401, "sign in first");
+      // The page's Reconnect opens a socket on the same token, and the server takes it this time.
+      h.client.connect();
+      h.socket().open();
+      h.socket().drop(code, "gone");
+      expect(h.client.snapshot().connection).toBe(connection);
+
+      h.client.setToken("new");
+      expect(h.sockets, String(code)).toHaveLength(2);
+      expect(h.client.snapshot().connection).toBe(connection);
+      expect(h.pending()).toBe(0);
     }
   });
 });
