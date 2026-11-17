@@ -56,6 +56,53 @@ export default defineConfig(
     },
   },
   {
+    // Item 13 of #3897 (#4013): a secret made with a predictable generator can be guessed.
+    // Nothing unguessable uses `Math.random` anywhere the client, the Worker or the admin app
+    // runs it; anything that needs to be unguessable uses `crypto.getRandomValues` or
+    // `crypto.randomUUID`. The files that use it today are allowlisted below, each with why
+    // its value is not a secret.
+    files: ["apps/web/src/**/*.{ts,tsx,js}", "apps/edge/**/*.{ts,tsx}", "apps/admin/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "Math",
+          property: "random",
+          message:
+            "Nothing unguessable uses Math.random: use crypto.getRandomValues or crypto.randomUUID (#4013).",
+        },
+      ],
+    },
+  },
+  {
+    // #4013 allowlist: today's `Math.random` uses, each cosmetic or timing, never a secret.
+    files: [
+      // Sound variation and trigger-line picks (R655, R1088): heard, not a secret.
+      "apps/web/src/audio/cues.ts",
+      // Cosmetic trigger-line rng (R1088): heard, not a secret.
+      "apps/web/src/audio/director.ts",
+      // Effect pitch variation (R655): heard, not a secret.
+      "apps/web/src/audio/engine.ts",
+      // Local practice portraits and persona (R642, R645): shown, not a secret.
+      "apps/web/src/practice/emotes.ts",
+      // Reconnect jitter (R1441) delays only, and nonces are per-seat dedup keys (R4013000): neither a secret.
+      "apps/web/src/game/net.ts",
+      // Viewer-local cosmetic outcomes (R3348001): seen only, not a secret.
+      "apps/web/src/game/arena/play.ts",
+      // Reconnect jitter (R1441): timing only, not a secret.
+      "apps/web/src/together/socialSocket.ts",
+      // Reconnect jitter (R1441): timing only, not a secret.
+      "apps/web/src/duos/socket.ts",
+      // Local non-daily run seed (DR2): no opponent, nothing to guess.
+      "apps/web/src/dungeon/seed.ts",
+      // Decorative landing fan deal (R374): layout only, not a secret.
+      "apps/web/src/routes/landing.tsx",
+    ],
+    rules: {
+      "no-restricted-properties": "off",
+    },
+  },
+  {
     // Plain `.mjs` scripts are Node tools, not library code: they legitimately use `console`, the
     // web globals Node exposes, and the process APIs.
     files: ["**/*.mjs"],
