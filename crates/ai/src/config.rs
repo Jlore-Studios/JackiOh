@@ -383,6 +383,15 @@ pub struct EvalWeights {
     /// and the larger of two orders counts, smallest first and each Taunt broken first by the smallest
     /// attacker that destroys it alone. Off, the old order, and a stopped attacker is spent.
     pub best_attack_order_past_taunts: bool,
+    /// R4064000, R4064001, #4064: whether the static reads of a hit (the Taunt walk under
+    /// `damage_past_taunts_with`, so `face_threat`, the threat and pressure terms, `wall_switches`,
+    /// `ready_gap` and the learned features; `blow`, `kills_and_survives`, the reply's `fight`, `trade_value`
+    /// and `face_value`; `coming_hero_ticks` and `afflicted`) follow §4.4 steps 3a and 3b. A hit from a
+    /// source whose damage Burns or is Toxic deals nothing and counts as the counter it adds, and each side's
+    /// damage pools (S+ #42 Force Projector, S+ #123 Oct) soak what they have left, once across its hits in
+    /// the order they are counted, refilled where that side's turn starts before they land. Off, every hit
+    /// is damage and no pool soaks, as before.
+    pub pool_and_conversion_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -586,6 +595,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     brittle_crumbles_before_swing: true,
     static_attack_flags_read: true,
     best_attack_order_past_taunts: true,
+    pool_and_conversion_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -865,7 +875,7 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
-/// `static_attack_flags_read`, `best_attack_order_past_taunts`) is off.
+/// `static_attack_flags_read`, `best_attack_order_past_taunts`, `pool_and_conversion_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -881,6 +891,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     brittle_crumbles_before_swing: false,
     static_attack_flags_read: false,
     best_attack_order_past_taunts: false,
+    pool_and_conversion_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {

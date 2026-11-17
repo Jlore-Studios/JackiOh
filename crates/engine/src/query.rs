@@ -416,7 +416,7 @@ pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Optio
 pub use crate::plague::{permanents_on_field, plague_multiplier_of, plague_on, plague_on_field};
 
 // Burn and Toxic (Stinkyscape+ E2, R3540000), ruled by `afflictions.rs`.
-pub use crate::afflictions::{burn_on, hero_burn_of, hero_toxic_of, toxic_on};
+pub use crate::afflictions::{burn_on, converts_to, hero_burn_of, hero_toxic_of, toxic_on};
 
 // Readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
 
@@ -553,9 +553,29 @@ pub fn own_turn_redirect_left(state: &GameState, card: &CardInstance) -> Option<
 /// turn: its declared `pool` (R386) less what it has soaked on its controller's current turn, at
 /// least 0. `None` for a card with no pool.
 pub fn damage_pool_left(state: &GameState, card: &CardInstance) -> Option<i32> {
+    Some((damage_pool_cap(state, card)? - crate::damage::damage_pool_used(state, card)).max(0))
+}
+
+/// R3550004: `card`'s whole damage pool, its declared `pool` (R386), at least 0: what it soaks once it
+/// refills at the start of its controller's turn. `None` for a card with no pool.
+fn damage_pool_cap(state: &GameState, card: &CardInstance) -> Option<i32> {
     let pool = crate::scripts::flags_of(state, card).damage_pool?;
-    let cap = crate::params::declared_or(state, card, "pool", pool).max(0);
-    Some((cap - crate::damage::damage_pool_used(state, card)).max(0))
+    Some(crate::params::declared_or(state, card, "pool", pool).max(0))
+}
+
+/// R4064000: what `player`'s damage pools (R3550004) may soak between them, read off the cards §4.4
+/// step 3b reads: what each has left this turn, or, `refilled`, its whole pool (its next turn start).
+pub fn damage_pool_of(state: &GameState, player: PlayerId, refilled: bool) -> i32 {
+    crate::damage::acting_texts_of(state, player)
+        .iter()
+        .filter_map(|card| {
+            if refilled {
+                damage_pool_cap(state, card)
+            } else {
+                damage_pool_left(state, card)
+            }
+        })
+        .sum()
 }
 
 /// R3572002: the game-wide worth of a Warhero Token before its face doubles it (R3548002): 0 until

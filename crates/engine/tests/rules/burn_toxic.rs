@@ -540,6 +540,32 @@ mod r3540003_conversion {
     }
 }
 
+mod r4064001_the_conversion_read {
+    use super::*;
+    use jackioh_engine::afflictions::Affliction;
+
+    #[test]
+    fn r4064001_converts_to_names_the_counter_a_sources_hits_become() {
+        let s = board(
+            "r4064001-converts-to",
+            json!({ "field": [VOLCANIC, NOXIOUS, BOTH, PLAIN] }),
+            json!({}),
+        );
+        let read: Vec<Option<Affliction>> = (1..=4)
+            .map(|lane| query::converts_to(s.state(), s.card(id_at(&s, P1, lane))))
+            .collect();
+        assert_eq!(
+            read,
+            [
+                Some(Affliction::Burn),
+                Some(Affliction::Toxic),
+                Some(Affliction::Burn),
+                None
+            ]
+        );
+    }
+}
+
 mod r3540004_vanilla {
     use super::*;
 
