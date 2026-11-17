@@ -13757,6 +13757,8 @@
       }
     },
     "4138": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T20:21:05Z",
@@ -13770,8 +13772,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && sed -n 1,80p .bot-notes.md | cut -c1-300 && wc -l .bot-journal.md\"}\n- Bash: {\"command\": \"tail -30 .bot-notes.md | cut -c1-300; echo ----; tail -40 .bot-journal.md | cut -c1-300; git status --short; git log --oneline -1\"}\n- Bash: {\"command\": \"grep -n \\\"State\\\\|## Log\\\" .bot-notes.md | head\"}\n- Bash: {\"command\": \"wc -l crates/tools/src/run_sim.rs; sed -n 1,60p crates/tools/src/run_sim.rs\"}\n- Grep: {\"pattern\": \"^(pub )?(fn|struct|enum|const|use|mod|impl)|^ (fn|const|use) |#\\\\[test\\\\]|#\\\\[ignore\", \"path\": \"/home/runner/work/_temp/work/item-4116/crates/tools/src/run_sim.rs\", \"output_mode\": \"conte\u2026\n- Bash: {\"command\": \"sed -n 200,262p crates/tools/src/run_sim.rs; sed -n 400,435p crates/tools/src/run_sim.rs; sed -n 490,615p crates/tools/src/run_sim.rs\"}\n- Bash: {\"command\": \"cat > /tmp/edit1.py <<'EOF'\\nimport re\\np='crates/tools/src/run_sim.rs'\\ns=open(p).read()\\nold_block=''' let next = run_reduce(&state, content, &action)?;\\n let (final_hp, turns) = match\u2026\n- Bash: {\"command\": \"cat > /tmp/edit2.py <<'EOF'\\nn=open('.bot-notes.md').read()\\nstart=n.index(\\\" /// The runs, from `run-sim --from 0`\\\")\\nend=n.index(\\\"```\\\\n\\\",start)\\nblock=n[start:end]\\nassert block.rs\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## State (rewritten in place)\\n- Run 2 (sonnet): steps 1-3 applied (fight_row refactor, header paragraph, test block in run_sim.rs, cargo fmt run). Next: \u2026\n- Bash: {\"command\": \"grep -n \\\"at the tiny budget; the daily run\\\" crates/tools/README.md | cut -c1-80; grep -n \\\"a guide to tuning the strawmen, not a target\\\\.\\\" spec/15-dungeon-run.md | cut -c1-60\"}\n- Bash: {\"command\": \"cat > /tmp/edit3.py <<'EOF'\\np='crates/tools/README.md'\\ns=open(p).read()\\nold=\\\"at the tiny budget; the daily run\\\"\\nassert s.count(old)==1\\nnew=(\\\"at the tiny budget and holds the enem\u2026\n- Bash: {\"command\": \"grep -n \\\"tier_row\\\\|RUN_TIERS\\\\|RUN_ELITE_TIERS\\\" crates/run/src/config.rs | head -50\"}\n- Bash: {\"command\": \"sed -n 160,215p crates/run/src/config.rs\"}\n- Bash: {\"command\": \"cp crates/run/src/config.rs /tmp/config.rs.orig\\necho \\\"- step 6: break-checks of the bands (config.rs backed up at /tmp/config.rs.orig; restore by cp; verify git diff --stat crates/run \u2026\n- Bash: {\"command\": \"sed -i 's|^ with_health(AI_DIFFICULTY.hard, 50), // 15, the final boss$| tier_row(2, 0, -2, 2, 10), // 15, the final boss|' crates/run/src/config.rs\\ngit diff --stat crates/run\\ncargo te\u2026\n- Bash: {\"command\": \"echo \\\"- step 6 done: all 3 edits failed the test, crates/run restored (git diff empty). Next: fmt/clippy/spec check/classify/workspace tests\\\" >> .bot-notes.md\\ngit diff --stat crates/r\u2026\n- Bash: {\"command\": \"(cargo run --release -p jackioh-tools -- spec check 2>&1 | tail -8); git fetch -q origin main 2>&1 | tail -1; git rev-parse --verify -q origin/main\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo run --release -p jackioh-tools -- classify --base origin/main --claims 2>&1 | tail -15; cargo run --release -p jackioh-tools -- patches check 2>&1 | tail -3\", \"timeout\": 600000}\n- Bash: {\"command\": \"./target/release/jackioh classify --base origin/main --claims; echo exit=$?; git status --short\"}\n- Bash: {\"command\": \"cargo run --release -q -p jackioh-tools -- classify --base origin/main --claims; echo exit=$?\"}\n- Bash: {\"command\": \"cargo test -p jackioh-tools --features jackioh-engine/testkit,jackioh-engine/ts 2>&1 | grep -E \\\"^test result|FAILED|failed|panicked\\\" | head\", \"timeout\": 900000}\n- Bash: {\"command\": \"git status --short; git diff --stat; echo \\\"- run 2 complete: all steps done, fmt/clippy/spec check/classify/patches check/tools tests green. Only the final report remains.\\\" >> .bot-not\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: hold the dungeon run's enemy tiers to run-sim win-rate bands\"} --> ## What changed A new per-PR test, `the_enemy_tiers_hold_run_sims_win_rate_bands`, plays 30 fixed fights with the practice AI. It uses `TEST_BUDGET` and `AI_SKILL_MAX`, on the seeds of t\u2026"
       },
       "issue": 4116,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T21:24:34Z",
         "from_run": "44168385898",
         "gates": [
           {
@@ -13863,7 +13868,11 @@
         "source": "build",
         "until": "2026-11-17T21:53:30Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-17T21:23:30Z",
+      "run_id": "pending:09b161d6-1794950649",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -13882,6 +13891,9 @@
         "provider": "claude-4",
         "run": "44168385898"
       },
+      "started_at": "2026-11-17T21:24:34Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -13895,9 +13907,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T21:15:33Z",
+    "at": "2026-11-17T21:24:34Z",
     "url": "",
-    "what": "build #4110 on claude-3"
+    "what": "review #4138 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-17T21:13:34Z",
