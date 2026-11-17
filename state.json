@@ -12690,6 +12690,13 @@
     "4110": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T19:51:39Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's mulligan decisions in crates/ai/src, which shifts every game whose opening hand hit the exception or the one-drop cap (pinned fixtures included)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
