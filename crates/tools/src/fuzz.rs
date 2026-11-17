@@ -5672,16 +5672,12 @@ pub(crate) mod tests {
             without_record.endings = false;
             let without =
                 replay_record(&without_record).unwrap_or_else(|failure| panic!("{}", failure.message));
-            assert!(
-                ENDINGS_TERMINAL_REASONS.contains(&with.reason.as_str()),
-                "seed 3760's pinned channel ended by {}",
-                with.reason
-            );
-            assert!(
-                !ENDINGS_TERMINAL_REASONS.contains(&without.reason.as_str()),
-                "seed 3760 without the channel ended by {}",
-                without.reason
-            );
+            // No assertion on the terminal reason: whether this seed's channel game ends
+            // through the channel is chance (ENDINGS_END_CHANCE per step), so any
+            // game-altering card, engine or policy change can flip it; the second
+            // half was vacuous besides (check_termination already refuses those
+            // reasons without the channel). The hash comparison below is the
+            // property of the change: it proves replay_record uses record.endings.
             assert_ne!(with.hash, without.hash, "replay_record ignored record.endings");
         }
 
