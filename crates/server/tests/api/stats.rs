@@ -3068,3 +3068,121 @@ mod r3049000_the_win_rate_snapshot {
         assert_eq!(card["games"], json!(row.games));
     }
 }
+
+/// #4011 (cache poisoning): every route answered through `cached_ok` is `public`, so shared
+/// caches key on the URL alone. The same path and query must answer byte-identical bodies
+/// whatever else the request carries.
+mod cache_poisoning {
+    use super::*;
+    use axum::http::{HeaderName, HeaderValue};
+    use jackioh_server::config::PLAY_RATES_REFRESH_SECONDS;
+
+    use crate::support::deps::{json_request, send};
+
+    /// `GET path` carrying `headers`, signed in when `token` is `Some`.
+    async fn get_with(
+        app: &Arc<App>,
+        path: &str,
+        token: Option<&str>,
+        headers: &[(&str, &str)],
+    ) -> (u16, HeaderMap, Value) {
+        let mut request = json_request("GET", path, &Value::Null, token, None);
+        for (name, value) in headers {
+            request.headers_mut().insert(
+                name.parse::<HeaderName>().expect("a header name"),
+                HeaderValue::from_str(value).expect("a header value"),
+            );
+        }
+        send(app, request).await
+    }
+
+    /// The same `path` seven ways: bare, signed in, another language, a cookie, forged
+    /// forward/rewrite headers, an unknown query parameter, and all of those at once.
+    async fn seven_ways(app: &Arc<App>, path: &str) -> Vec<(u16, HeaderMap, Value)> {
+        let poisoned = if path.contains('?') {
+            format!("{path}&poison=1")
+        } else {
+            format!("{path}?poison=1")
+        };
+        let forwarded = [
+            ("x-forwarded-host", "evil.example"),
+            ("x-forwarded-for", "203.0.113.9"),
+            ("x-original-url", "/api/admin"),
+            ("x-rewrite-url", "/api/admin"),
+        ];
+        let mut all = vec![("accept-language", "fr-FR"), ("cookie", "sid=abc")];
+        all.extend(forwarded);
+        vec![
+            get_with(app, path, None, &[]).await,
+            get_with(app, path, Some(USER_TOKEN), &[]).await,
+            get_with(app, path, None, &[("accept-language", "fr-FR")]).await,
+            get_with(app, path, None, &[("cookie", "sid=abc")]).await,
+            get_with(app, path, None, &forwarded).await,
+            get_with(app, &poisoned, None, &[]).await,
+            get_with(app, &poisoned, Some(USER_TOKEN), &all).await,
+        ]
+    }
+
+    /// Every variant answers 200 with `public, max-age=<ttl>` and the same bytes (`cached_ok`
+    /// sends `body.to_string()`, so equal serializations are byte-identity).
+    fn assert_same_bytes(responses: &[(u16, HeaderMap, Value)], ttl: i64) {
+        let expected = format!("public, max-age={ttl}");
+        let mut bodies = Vec::with_capacity(responses.len());
+        for (status, headers, body) in responses {
+            assert_eq!(*status, 200);
+            assert_eq!(cache_control(headers), Some(expected.as_str()));
+            bodies.push(serde_json::to_string(body).expect("a body serializes"));
+        }
+        for body in &bodies[1..] {
+            assert_eq!(body, &bodies[0]);
+        }
+    }
+
+    #[tokio::test]
+    async fn cache_poisoning_cards_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
+        let responses = seven_ways(&app, "/api/stats/cards").await;
+        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+    }
+
+    #[tokio::test]
+    async fn cache_poisoning_card_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
+        let responses = seven_ways(&app, "/api/stats/cards/core-001").await;
+        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+    }
+
+    #[tokio::test]
+    async fn cache_poisoning_play_rates_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
+        let responses = seven_ways(&app, "/api/stats/play-rates").await;
+        assert_same_bytes(&responses, PLAY_RATES_REFRESH_SECONDS);
+    }
+
+    #[tokio::test]
+    async fn cache_poisoning_games_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
+        let responses = seven_ways(&app, "/api/stats/games").await;
+        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+    }
+
+    #[tokio::test]
+    async fn cache_poisoning_players_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        let alice_id = seed_profile(&app, "u-alice", "Alice_Wonder").await;
+        put_player_stats(
+            &app,
+            &alice_id,
+            json!({ "games": 50, "wins": 30, "losses": 20 }),
+            false,
+            1000,
+        )
+        .await;
+        let responses = seven_ways(&app, "/api/stats/players").await;
+        assert_same_bytes(&responses, PLAYER_STATS_CACHE_TTL_SECONDS);
+    }
+}
