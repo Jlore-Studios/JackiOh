@@ -16048,14 +16048,14 @@
     "what": "spot-check #4106 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-17T02:24:24Z",
+    "at": "2026-11-17T02:37:39Z",
     "notes": [
-      "#4103: green and waiting for a person to merge it, so `muse` gives up its claim on it",
-      "delivered review #4106 on muse (run 44000099520): approved",
-      "delivered review #4101 on claude-3 (run 43995283820): approved",
-      "delivered plan #4057 on agy (run 43981325072): failed",
-      "started revise #4101 on claude-3 (run 44003269632)",
-      "started plan #4057 on agy (run 44003362499)",
+      "delivered plan #4057 on agy (run 44003362499): planned",
+      "delivered revise #4090 on claude-4 (run 44000325296): built",
+      "delivered review #4104 on muse (run 43998415712): built",
+      "started build #4057 on agy (run 44004883683)",
+      "started review #4104 on claude-8 (run 44004979129)",
+      "started review #4106 on claude-8 (run 44005067861)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -16761,7 +16761,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T02:24:24Z",
+  "loop_tick": "2026-11-17T02:37:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
