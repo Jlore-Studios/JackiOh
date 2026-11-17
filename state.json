@@ -14868,10 +14868,17 @@
     },
     "4086": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-17T05:06:49Z",
+        "branch": "bot/issue-4086",
+        "head": "c1b7f0b4ad63f42367ebb6004f9ac913b46d09b8",
+        "issue": 4086,
+        "item": 4090,
+        "pr": 4090,
+        "why": "A person must change `.github/workflows/ci.yml` so that `rust (classify)` can finish stage 2 for a change that touches about 20 card scripts. One way is to split stage 2's forced games across parallel jobs. Each card's 40 games are independent, the way `--selfplay-side` split self-play in #2651, and that is the house rule in ci.yml's header (\"a piece that grows is split further \u2026 never folded back into one long job\"). The quicker way is to raise the `rust-classify` job's `timeout-minutes` from 10 to 15 or more. After either change lands, re-run CI on #4090. Its code needs no change."
+      },
       "asks": [],
       "died": 0,
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-16T23:28:50Z",
         "family": "claude",
@@ -14882,13 +14889,9 @@
         "trail": "\n- Bash: {\"command\": \"sed -n 50,70p crates/tools/src/patches.rs\", \"description\": \"Read repo_root\"}\n- Bash: {\"command\": \"cd /tmp/jackioh-head && CARGO_TARGET_DIR=/tmp/jackioh-head/target cargo build --release -p jackioh-tools > /tmp/head-build.out 2>&1 && /tmp/jackioh-head/target/release/jackioh classify -\u2026\n- Bash: {\"command\": \"rm -f /tmp/jackioh-head-bin; for c in \\\"spec check\\\" \\\"patches check\\\" \\\"names --check\\\" \\\"catalog check\\\"; do echo \\\"== $c\\\"; cargo jackioh $c 2>&1 | grep -v 'Compiling\\\\|Finished\\\\|Run\u2026\n- Bash: {\"command\": \"cargo jackioh names --check >/dev/null 2>&1; echo \\\"names exit=$?\\\"; cargo jackioh catalog check >/dev/null 2>&1; echo \\\"catalog exit=$?\\\"\", \"description\": \"Confirm names and catalog che\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 2: `cargo test -p jackioh-cards` green (9907 lib + 1202 cross); clippy -p jackioh-cards green; spec/patches/names/catalog checks ok. classify needs it\u2026\n- Bash: {\"command\": \"git grep -n 'script_v0_6_0b\\\\|script_v0_6_0g\\\\|script_v0_6_1b\\\\|script_v0_6_2b\\\\|V0_6_2B\\\\|ZONES_V0_6_0C\\\\|well_v0_6_1b\\\\|non_unit_plays_v0_6_2b\\\\|own_lucky_v0_6_2b\\\\|cry_v0_6_2b\\\\|attac\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/classify3.out 2>/dev/null || grep -q 'error' /tmp/head-build.out 2>/dev/null; do sleep 15; done; tail -3 /tmp/head-build.out; cut -c1-800 /tmp/classify3.out 2\u2026\n- Bash: {\"command\": \"grep -n 'history\\\\.rs\\\\|KEPT_SCRIPTS\\\\|past_scripts\\\\|past card\\\\|R3538002' crates/tools/src/classify.rs | head -30\", \"description\": \"See how classify treats history.rs and past cards\"}\n- Bash: {\"command\": \"sed -n 340,380p crates/tools/src/classify.rs; grep -n 'fn check\\\\b\\\\|fn check(' crates/tools/src/classify.rs\", \"description\": \"Read classify's past-version handling and check()\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4086/crates/tools/src/classify.rs\", \"offset\": 1084, \"limit\": 135}\n- Bash: {\"command\": \"grep -n -i 'past' crates/tools/README.md | cut -c1-250 | head -10; grep -rn 'pub fn past_ids\\\\|past_ids(' crates --include=*.rs | grep -v '^crates/cards/src/history.rs' | head\", \"descrip\u2026\n- Bash: {\"command\": \"sed -n 370,420p crates/engine/src/catalog.rs; grep -rln 'past_ids_of\\\\|past_card\\\\|PastCard' crates/cards/src/scripts | head\", \"description\": \"Read how scripts reach past ids\"}\n- Bash: {\"command\": \"cat >> /tmp/jackioh-head/crates/cards/src/history.rs <<'EOF'\\n\\n#[cfg(test)]\\nmod probe_4086 {\\n use super::*;\\n\\n #[test]\\n fn probe_past_ids_in_the_widened_windows() {\\n crate::registe\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/probe.out 2>/dev/null; do sleep 15; done; grep -E 'PROBE|test result|error|panicked|exit=' /tmp/probe.out | sort | uniq | head -80\", \"description\": \"Block unt\u2026\n- Bash: {\"command\": \"grep -n 'play_code\\\\b\\\\|play_code =' crates/tools/src/classify.rs | head -20; grep -n 'fn is_play_path\\\\|fn play_path\\\\|INTERNAL_PATHS\\\\|fn plays_code' crates/tools/src/classify.rs | hea\u2026\n- Bash: {\"command\": \"sed -n 480,560p crates/tools/src/classify.rs; grep -n 'fn area\\\\b\\\\|fn area(' crates/tools/src/classify.rs\", \"description\": \"Read classify's area logic\"}\n- Bash: {\"command\": \"sed -n 267,340p crates/tools/src/classify.rs\", \"description\": \"Read area() and code_changed()\"}\n- Bash: {\"command\": \"cd /tmp/jackioh-head && git checkout -- crates/cards/src/history.rs && git status --short | head -3; /tmp/jackioh-head/target/release/jackioh classify --base cbfc5d595b54937f103f76a7c997\u2026\n- Bash: {\"command\": \"sed -n 1,25p crates/cards/src/scripts/stinkyscape_plus/c033_true_conservative.rs | cut -c1-200; echo ===; ls crates/cards/src/scripts/stinkyscape_plus/ | grep -i neocon; sed -n 1,20p cra\u2026\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets -- -D warnings > /tmp/clippy.out 2>&1; echo \\\"exit=$?\\\" >> /tmp/clippy.out; tail -4 /tmp/clippy.out\", \"description\": \"Run workspace clippy\", \"timeo\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 2: classify (head built in /tmp/jackioh-head) says `classify: Internal`, exit 0 with --claims -> NO fragment (a claim classify does not show fails --c\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/classify4.out 2>/dev/null; do sleep 15; done; cut -c1-3000 /tmp/classify4.out | tail -30\", \"description\": \"Block until classify --json finishes\", \"timeout\": 6\u2026\n- Bash: {\"command\": \"tail -4 /tmp/clippy.out; head -c 1500 /tmp/classify4.out | grep -v Compiling | head -20\", \"description\": \"Check clippy result and classify's stderr\"}\n- Bash: {\"command\": \"cargo jackioh golden check 2>&1 | grep -v 'Compiling\\\\|Finished\\\\|Running' | tail -5; echo \\\"exit=${PIPESTATUS[0]}\\\"\", \"description\": \"Run the golden replay check\", \"timeout\": 1800000}\n- Bash: {\"command\": \"git grep -ln '\\\"v0\\\\.6\\\\.0c\\\"\\\\|\\\"v0\\\\.6\\\\.1\\\"\\\\|\\\"v0\\\\.6\\\\.1b\\\"\\\\|\\\"v0\\\\.6\\\\.2\\\"\\\\|\\\"v0\\\\.6\\\\.2b\\\"\\\\|\\\"v0\\\\.6\\\\.2c\\\"\\\\|\\\"v0\\\\.6\\\\.3\\\"\\\\|\\\"v0\\\\.6\\\\.3b\\\"\\\\|\\\"v0\\\\.6\\\\.4\\\"\\\\|\\\"v0\\\\.5\\\\.1b\\\u2026\n- Bash: {\"command\": \"git worktree remove --force /tmp/jackioh-base && git worktree remove --force /tmp/jackioh-head && git worktree list; rm -f /tmp/classify-head; git status --short | wc -l; cargo fmt --che\u2026\n- Bash: {\"command\": \"ls -d /tmp/jackioh-base /tmp/jackioh-head 2>&1; git diff --stat | tail -1\", \"description\": \"Confirm the extra worktrees are gone\"}\n- said: Final review of the diff's text edits before writing the report.\n- Bash: {\"command\": \"git diff -U0 -- spec BUILD.md | grep '^[-+]' | grep -v '^+++\\\\|^---' | grep -o '.\\\\{0,60\\\\}v0[._][56][._][0-9][a-z]*.\\\\{0,30\\\\}' | head -60\", \"description\": \"Review the spec text changes\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Goal')\\nstate=\\\"\\\"\\\"## State\\n\\n- Run 2 (build, opus), 2026-11-16: DONE. All plan steps built\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: six more kept-script blocks cover the newest version that ran them\"} --> ## What changed Six `KEPT_SCRIPTS` blocks are now keyed to the newest shipped version that ran their scripts. So is a seventh block, #2179's, which the planner found. Replays from \u2026"
       },
       "interruptions": 0,
-      "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-6",
-      "owner_since": "2026-11-17T04:46:48Z",
-      "owner_why": "its approval shipped `c1b7f0b4ad63`, and the last approver owns the merge, so it fixes what CI found",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-16T21:59:29Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
       "planned_by_id": "claude-8",
@@ -14897,19 +14900,14 @@
       "pr": 4090,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-16T21:24:35Z",
-      "requested_by": "squishy-squooby",
-      "round_tier": "strong",
       "run_id": "43965758333",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-16T22:00:26Z",
-      "stop_requested": false,
       "strike_log": [
         "CI still failed after 2 fix(es)"
       ],
       "strikes": 1,
-      "taken_asks": [],
-      "verdict_rounds": 1
+      "taken_asks": []
     },
     "4087": {
       "action": "review",
@@ -15029,17 +15027,16 @@
     },
     "4090": {
       "action": "revise",
+      "archived": {
+        "at": "2026-11-17T05:06:49Z",
+        "branch": "bot/issue-4086",
+        "head": "c1b7f0b4ad63f42367ebb6004f9ac913b46d09b8",
+        "issue": 4086,
+        "pr": 4090,
+        "why": "A person must change `.github/workflows/ci.yml` so that `rust (classify)` can finish stage 2 for a change that touches about 20 card scripts. One way is to split stage 2's forced games across parallel jobs. Each card's 40 games are independent, the way `--selfplay-side` split self-play in #2651, and that is the house rule in ci.yml's header (\"a piece that grows is split further \u2026 never folded back into one long job\"). The quicker way is to raise the `rust-classify` job's `timeout-minutes` from 10 to 15 or more. After either change lands, re-run CI on #4090. Its code needs no change."
+      },
       "asks": [],
       "audit_tier": "",
-      "ci_early": false,
-      "ci_fixed_head": "c1b7f0b4ad63f42367ebb6004f9ac913b46d09b8",
-      "ci_fixes": 3,
-      "ci_on_head": true,
-      "ci_reruns": {
-        "c8923848495ba37b5695ff73e06227b5c4dd7017": 1
-      },
-      "ci_run_id": 44016233581,
-      "ci_sha": "c1b7f0b4ad63f42367ebb6004f9ac913b46d09b8",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -15054,46 +15051,18 @@
       },
       "died": 0,
       "difficulty": "hard",
-      "failures": 0,
       "feedback_since": "2026-11-17T03:16:26Z",
-      "forced": false,
       "interruptions": 0,
       "issue": 4086,
-      "kind": "revise",
       "last_findings": [],
       "live": "fixing-ci",
-      "merge_owner": "claude-6",
-      "pending_request": false,
       "provider": "claude-6",
-      "question": "",
-      "queued_at": "2026-11-17T04:46:45Z",
-      "requested_by": "jgoetzmann-bot",
-      "round_tier": "strong",
+      "question": "A person must change `.github/workflows/ci.yml` so that `rust (classify)` can finish stage 2 for a change that touches about 20 card scripts. One way is to split stage 2's forced games across parallel jobs. Each card's 40 games are independent, the way `--selfplay-side` split self-play in #2651, and that is the house rule in ci.yml's header (\"a piece that grows is split further \u2026 never folded back into one long job\"). The quicker way is to raise the `rust-classify` job's `timeout-minutes` from 10 to 15 or more. After either change lands, re-run CI on #4090. Its code needs no change.",
       "run_id": "44019781274",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "session": {
-        "action": "revise",
-        "artifact": 14298157564,
-        "artifact_bytes": 257730,
-        "artifact_name": "work",
-        "at": "2026-11-17T04:18:28Z",
-        "bytes": 326192,
-        "cwd": "/home/runner/work/_temp/work/item-4090",
-        "ended": "built: built and checked; its own review run, on this subscription, reviews it next",
-        "head": "c1b7f0b4ad63f42367ebb6004f9ac913b46d09b8",
-        "id": "285355dc-8eb6-4603-862a-c6e750043d92",
-        "kind": "build",
-        "model": "opus",
-        "project": "-home-runner-work--temp-work-item-4090",
-        "provider": "claude-6",
-        "run": "44009030916"
-      },
-      "source": "ci",
       "started_at": "2026-11-17T04:49:04Z",
-      "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "claude"
