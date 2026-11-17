@@ -1643,6 +1643,86 @@ mod i14_a_listed_action_reduce_refuses {
             "{found:?}"
         );
     }
+
+    #[test]
+    fn i14_branch_reports_unit_token_in_graveyard_on_accepted_branch_action() {
+        let g = board();
+        let found = listed_refused(
+            g.state(),
+            PlayerId::P1,
+            &[ActionBody::EndTurn],
+            |state, action| {
+                let mut result = reduce(state, action);
+                let token = new_instance(
+                    &mut result.state,
+                    RUSH_TOKEN,
+                    action.player_id,
+                    Zone::Graveyard {
+                        player: action.player_id,
+                    },
+                );
+                result.state.players[action.player_id].graveyard.push(token);
+                result
+            },
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 branch: after "), "{}", found[0]);
+        assert!(found[0].contains("(listed, not played)"), "{}", found[0]);
+        assert!(found[0].contains("I11 unit token in pile:"), "{}", found[0]);
+        assert!(found[0].contains("p1"), "{}", found[0]);
+        assert!(
+            found[0].contains(&format!("turn {}", g.state().turn)),
+            "{}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&format!("seed {}", g.state().seed)),
+            "{}",
+            found[0]
+        );
+    }
+
+    #[test]
+    fn i14_branch_reports_orphaned_work_on_accepted_branch_action() {
+        let g = board();
+        let found = listed_refused(
+            g.state(),
+            PlayerId::P1,
+            &[ActionBody::EndTurn],
+            |state, action| {
+                let mut result = reduce(state, action);
+                result.state.work.push(WorkItem {
+                    id: "w-planted".to_string(),
+                    seq: 0,
+                    owner: action.player_id,
+                    resume: Resume {
+                        def_id: "core-051".to_string(),
+                        hook: "resume".to_string(),
+                        step: "orphaned".to_string(),
+                        radiant: false,
+                        instance_id: None,
+                        data: indexmap::IndexMap::new(),
+                    },
+                });
+                result
+            },
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 branch: after "), "{}", found[0]);
+        assert!(found[0].contains("(listed, not played)"), "{}", found[0]);
+        assert!(found[0].contains("I7 orphaned work:"), "{}", found[0]);
+        assert!(found[0].contains("p1"), "{}", found[0]);
+        assert!(
+            found[0].contains(&format!("turn {}", g.state().turn)),
+            "{}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&format!("seed {}", g.state().seed)),
+            "{}",
+            found[0]
+        );
+    }
 }
 
 /// R127, R436: a Cry run out of a graveyard runs with no card (`self` null), so the `chaosRolled` a
