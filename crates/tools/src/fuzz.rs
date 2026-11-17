@@ -3747,6 +3747,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn plays_the_seeded_games_to_a_result_and_replays_each_to_the_same_hash_short_wave() {
             let ran = wave_size(None);
             let wave = play_wave(first_seed(None), ran, &Forcing::default());
@@ -5032,6 +5033,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn the_checked_in_corpus_lints_clean_and_every_record_replays() {
             let regress = regress(Path::new(CORPUS_DIR)).unwrap_or_else(|error| panic!("{error:#}"));
             assert_eq!(
@@ -5062,6 +5064,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn r180_seeds_with_one_seat_on_medium_or_hard_no_throw_a_real_ending_and_a_replay_that_matches() {
             let from = first_seed(None);
             let size = wave_size(None);
@@ -5314,6 +5317,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_game_from_each_start_plays_monitor_clean_and_folds_back_to_its_live_hash() {
             register_all();
             let plain = {
@@ -5343,6 +5347,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_planted_portal_to_the_past_is_cast_from_a_manufactured_last_board_and_the_game_folds_back() {
             register_all();
             let _preview = preview_every_set();
@@ -5671,6 +5676,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_run_start_game_plays_monitor_clean_and_folds_back_to_its_live_hash() {
             register_all();
             let waves: [(SetupOf, PlaySeed); 2] = [
@@ -5697,6 +5703,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_run_seed_played_alone_is_counted_as_run_in_the_summary_and_the_json() {
             register_all();
             let waves: [(SetupOf, PlayWave); 2] = [
@@ -5954,6 +5961,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn the_gate_s_channel_games_log_its_actions_and_fold_back_from_a_concede_and_an_accepted_draw() {
             register_all();
             let _preview = preview_every_set();
@@ -5993,6 +6001,7 @@ pub(crate) mod tests {
         }
 
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn a_planted_listener_s_opponent_emotes_through_the_channel_and_the_game_folds_back() {
             install_listener();
             let _preview = preview_every_set();
@@ -6679,6 +6688,7 @@ pub(crate) mod tests {
 
         /// #2426: the report is the same whatever the thread count, over the same seeds.
         #[test]
+        #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
         fn the_coverage_is_the_same_on_one_thread_and_on_four() {
             let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
             let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();

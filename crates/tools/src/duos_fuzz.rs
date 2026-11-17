@@ -1249,6 +1249,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn a_duos_channel_game_concedes_as_a_team_and_one_reaches_the_ceiling_and_each_folds_back() {
         // #1572: each seed's game is folded and checkpointed by `fuzz_duos_seed`, so an empty
         // failure list means a concede and a ceiling ending both fold back to the live hash.

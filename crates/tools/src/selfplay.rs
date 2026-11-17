@@ -422,6 +422,7 @@ mod tests {
 
     /// R1006001: the same base and count give the same lines whatever the thread count.
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r1006001_the_same_base_and_count_give_byte_identical_lines_on_one_or_four_threads() {
         let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();

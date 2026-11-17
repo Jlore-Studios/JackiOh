@@ -645,9 +645,9 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
 ## Commands
 
 ```
-cargo test -p jackioh-ai                      # every AI test (the unit tests, tests/ai.rs, ai_slow.rs) but the daily ones
+cargo test -p jackioh-ai                      # every AI test (the unit tests, tests/ai.rs, ai_slow.rs) but the ignored ones
 cargo test -p jackioh-ai -- --include-ignored # and the daily ones: the many-game sweeps, `#[ignore = "daily: …"]`
-cargo test -p jackioh-ai --test ai_slow       # one binary: CI gives each its own job (#873)
+cargo test -p jackioh-ai --test ai_slow       # one binary: CI gives each its own job (#873); the fast tests per PR (`rust (test ai slow)`), the many-game and sweep tests are `#[ignore = "daily: …"]` (#4093), run by `-- --ignored`
 cargo jackioh gate                            # the three gates and the perf gate at smoke size
 cargo jackioh gate --full                     # at full size (the daily super run plays it in shards)
 cargo jackioh gate --duos                     # the Duos gate: the Easy AI team against a random team and a greedy team (--games N)

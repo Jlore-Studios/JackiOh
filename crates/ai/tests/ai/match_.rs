@@ -106,6 +106,7 @@ mod play_match_b26 {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn b26_an_ai_vs_greedy_gate_game_is_deterministic_and_folds_to_its_hash_with_nothing_rejected() {
         register_cards();
         let config = game_config(Matchup::AiVsGreedy, 1, AI_GATE_BUDGET, AI_GATE.seed_series);
