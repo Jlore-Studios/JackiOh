@@ -15484,7 +15484,7 @@
       }
     },
     "4098": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -15510,24 +15510,25 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4062,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-17T08:29:21Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "44047205621",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:4100bf58-1794907745",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 315,
-      "started_at": "2026-11-17T08:29:40Z",
+      "started_at": "2026-11-17T09:29:30Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -16242,9 +16243,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T08:29:40Z",
+    "at": "2026-11-17T09:29:30Z",
     "url": "",
-    "what": "revise #4098 on muse"
+    "what": "spot-check #4098 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-17T09:21:24Z",
@@ -36496,7 +36497,15 @@
         "n": 315,
         "pr": 4098,
         "queued_at": "2026-11-17T09:22:33Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:4100bf58-1794907745",
         "sha": "a5d9d4864f12d1d31da6e5cabefdf280434c0b8d",
+        "started_at": "2026-11-17T09:29:30Z",
         "status": "queued",
         "title": "Patch: the fuzz regression corpus keeps the start its seed drew, not only its decks",
         "tries": 0
