@@ -659,10 +659,10 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
 | `claude-1` | Claude Code, `opus` at `xhigh` (fix passes at `high`), and `sonnet` at `high` (medium; [the Sonnet effort test](#the-sonnet-effort-test)) | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | all of 5 hours (100%) in its hours, no weekly cap |
-| `claude-2` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
+| `claude-2` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week; switched off from 2026-11-17 (`off_from`), the wake's ping aside |
 | `claude-3` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
 | `claude-4` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week; from Sunday 17:00 until its week resets on Monday at 09:00 UTC, 80% of 5 hours, 90% of the week and its sessions' last hours up to 90% (`late_week`); never past 90% of either (`hard_cap`) |
+| `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week; from Sunday 17:00 until its week resets on Monday at 09:00 UTC, 80% of 5 hours, 90% of the week and its sessions' last hours up to 90% (`late_week`); never past 90% of either (`hard_cap`); switched off from 2026-11-17 (`off_from`), the wake's ping aside |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-7` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-8` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_8` | any time | 85% of 5 hours, no weekly cap |
@@ -804,7 +804,9 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
 - `enabled: false`: turns it off.
 - `off_from` (a date) and `off_reason`: from that day, in the bot's time zone, it takes no new
   work, and the planner opens one issue with the reason, asking a person what it should do now.
-  No subscription sets it now.
+  The wake still pings it ([The wake](#subscriptions)), since only `enabled: false` and a
+  suspension stop that. claude-2 and claude-5 set it from 2026-11-17, halted to keep their weekly
+  usage for the owner.
 - `usage_since` (a UTC time): when its plan last changed. A usage reading taken before it is the
   old plan's, so no cap holds on it, and the next run reads the new plan's usage afresh. Without
   it, a subscription the old plan had used up keeps waiting for that plan's reset, and since only
