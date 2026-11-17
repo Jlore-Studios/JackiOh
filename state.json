@@ -13778,9 +13778,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T21:52:43Z",
+    "at": "2026-11-17T22:02:15Z",
     "url": "",
-    "what": "suggestions (rules) on muse"
+    "what": "suggestions (ai) on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T21:50:08Z",
@@ -34568,9 +34568,9 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-17T21:41:20Z",
-    "last_area": "rules",
-    "last_run": "2026-11-17T21:41:20Z",
+    "idle_since": "2026-11-17T22:02:15Z",
+    "last_area": "ai",
+    "last_run": "2026-11-17T22:02:15Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -34589,6 +34589,14 @@
         "last_run": "2026-11-17T21:52:43Z",
         "provider": "muse",
         "run_id": "44184372894",
+        "taken_asks": []
+      },
+      "3": {
+        "area": "ai",
+        "count": 1,
+        "last_run": "2026-11-17T22:02:15Z",
+        "provider": "muse",
+        "run_id": "pending:72ac3d59-1794952904",
         "taken_asks": []
       }
     },
