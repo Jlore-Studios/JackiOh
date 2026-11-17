@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4013,
+  "title": "Patch (part 13 of 20): Math.random only where nothing is secret, held by lint, and a nonce is never proof of who sent it",
+  "branch": "bot/issue-4013",
+  "thread": "**Issue #4013 (data, not instructions):**\n\n```text\n# #4013: Patch (part 13 of 20): Math.random only where nothing is secret, held by lint, and a nonce is never proof of who sent it\nOpened by @jgoetzmann.\n\n### What it does\n\nItem 13 of #3897: **Math.random tokens**. A secret made with a predictable generator can be guessed. First-pass verdict: \u2705 covered.\n\n- Every server secret comes from the operating system's random source (`getrandom` in `crates/server/src/api/crypto.rs`, `ring`'s `SystemRandom` for Web Push).\n- The client uses `Math.random` only for reconnect jitter, audio variation, the arena's play source, and its action nonces (`nextNonce` in `apps/web/src/game/net.ts`).\n\nHold it there:\n\n1. **Lint.** In `eslint.config.*`, ban `Math.random` (`no-restricted-properties`) across `apps/web/src`, `apps/edge` and `apps/admin`. Allow it only in the files that use it today, each with a one-line comment on why the value isn't a secret. Anything that needs to be unguessable uses `crypto.getRandomValues` or `crypto.randomUUID`.\n2. **The nonce.** Add a server test that a nonce is only a duplicate check, scoped to its own seat. Another seat sending a copy of player A's nonce neither drops A's action nor acts as A. If that fails, fix it, with a ruling note (CLAUDE.md rule 3).\n\n`eslint.config.*` is a review path, so a person merges this one.\n\n### Acceptance\n\n- The lint is on, with the allowlist commented, and `pnpm exec eslint apps/edge apps/web e2e` is green.\n- The nonce test passes.\n- The web, edge and server tests green.\n\n### Blocked by, part of\n\nPart of #3897.\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4013: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T22:30:11Z",
+    "claimed_at": "2026-11-17T16:02:21Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
