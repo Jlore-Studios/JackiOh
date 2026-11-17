@@ -15052,7 +15052,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-17T00:17:43Z",
+      "feedback_since": "2026-11-17T02:04:47Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4086,
@@ -15086,7 +15086,7 @@
         "provider": "claude-2",
         "run": "43986466819"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-17T02:04:47Z",
       "stop_requested": false,
       "taken_asks": [],
