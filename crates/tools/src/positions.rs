@@ -483,6 +483,7 @@ mod tests {
     /// R1006003: a log that no longer reaches its hash is dropped, as is a game without a result or on
     /// a catalog this build does not carry.
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r1006003_a_game_that_does_not_replay_has_no_result_or_an_unknown_catalog_is_dropped() {
         let (game, _) = played(2);
         let build = jackioh_cards::catalog_version();
@@ -510,6 +511,7 @@ mod tests {
     /// going: the features and hand eval after the reply as the search simulates it, which is the
     /// seat's next turn, the same rows on every fold.
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r1006006_reply_rows_are_the_search_s_simulated_replies_one_per_turn_end() {
         let (game, _) = played(3);
         let build = jackioh_cards::catalog_version();

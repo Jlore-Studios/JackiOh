@@ -186,6 +186,7 @@ mod the_lethal_solvers_walks {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn ready_gap_counts_exactly_the_units_legal_actions_lists_an_attack_for_from_either_seat() {
         let mut states: Vec<GameState> = vec![wide_board()];
         states.extend(random_policy_states("lethal-ready-gap", 3, 600));
@@ -432,6 +433,7 @@ mod the_positions_the_search_merges {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn two_one_step_children_with_one_signature_score_the_same_and_offer_the_same_moves() {
         register_cards();
         let mut merged = 0;
