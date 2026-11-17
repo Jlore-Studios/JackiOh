@@ -2423,3 +2423,11 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-16T23:41:56Z,43981098327,muse,muse-spark-1.3-contributor,plan,4072,medium,planned,,2.4,0,0,0,,0,0,12,12,3,,none,,1
 2026-11-16T23:40:51Z,43977169498,muse,muse-spark-1.3-contributor,build,4010,medium,built,,28,0,0,0,,0,0,12,12,1482.3,muse,none,,1
 2026-11-16T23:59:17Z,43981022841,claude-8,opus,review,4090,hard,approved,,18,57,20802,2986993,1.8612,26,29,,,1.1,,none,,1
+2026-11-17T00:07:48Z,43984519379,claude-8,opus,plan,4094,medium,planned,,1.8,27,13946,744259,0.4325,30,31,,,7.1,,fresh,,1
+2026-11-17T00:09:25Z,43984353895,claude-7,opus,plan,4092,medium,planned,,3.7,38,30247,1594496,0.822,3,5,,,6.7,,fresh,,1
+2026-11-17T00:01:37Z,43981401087,gpt,gpt-5.6-sol,plan,4062,medium,planned,,12,4557266,35655,0,,,,62,62,1.9,,none,,1
+2026-11-17T00:07:11Z,43974230016,claude-4,opus,build,4070,hard,built,,33.9,4,2682,142564,3.6356,11,18,,,34.5,claude-4,fresh,,1
+2026-11-17T00:11:29Z,43982978603,muse,muse-spark-1.3-contributor,review,4091,medium,approved,,16.9,0,0,0,,1,1,12,13,0.8,,none,,1
+2026-11-17T00:17:26Z,43975814555,claude-1,opus,build,4066,hard,built,,37.4,83,20063,2685721,1.4232,8,10,,,44.4,claude-1,fresh,,1
+2026-11-17T00:27:22Z,43986082011,claude-4,opus,review,4095,hard,approved,,10.1,34,9753,1327946,1.0444,18,20,,,1.1,,none,,1
+2026-11-17T00:31:02Z,43984436923,claude-8,opus,plan,4093,medium,planned,,25.5,42,14315,1237292,0.5147,30,34,,,6.9,,fresh,,1
