@@ -16771,13 +16771,13 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-11-17T01:41:03Z",
-      "free": 46304690176,
-      "percent": 55,
-      "total": 102888095744
+      "at": "2026-11-17T01:54:07Z",
+      "free": 63631343616,
+      "percent": 49,
+      "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43990504063",
-    "runner": "night-vm-muse-3-b2",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43992113326",
+    "runner": "night-vm-gpt",
     "shown": null
   },
   "machine_memory": [
