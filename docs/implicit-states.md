@@ -349,21 +349,24 @@ as here with "co-op".
 **Checked at** `b0e998a29b`, plus #4114's pull request.
 
 **Files:** `crates/server/src/actor/registry.rs` (`start`, `rebuild`, `actor_for`, `attach`, `stop`,
-`stop_all`, `reap_finished`, `forget`), `crates/server/src/duos/registry.rs` (the same for a co-op match,
-with no `stop_all`).
+`stop_all`, `drain`, `reap_finished`, `forget`), `crates/server/src/duos/registry.rs` (the same for a
+co-op match, with no `stop_all`: its `drain` stops each actor as `stop` does), `crates/server/src/app.rs`
+(`serve_until`, the restart drain's order).
 
 **Fields,** per match id: `actors[id]` (the live actor in memory, or none); `rebuilding[id]` (a rebuild in
 flight, shared by every caller that finds it); the store's row (none, live or finished; a void deletes it,
 R679), its log (purged from a finished match after `MATCH_ACTION_RETENTION_DAYS`, R1285000) and its
-checkpoint (#1169); and, since #4114, the registry's `drains` count.
+checkpoint (#1169); and, since #4114, the registry's `draining` mark, set by the restart drain and never
+cleared.
 
 **What moves it:** `start` (the row written, the actor inserted, §9.2); `actor_for` (an actor in memory is
 returned, else one rebuild folds the row's log or checkpoint and inserts it, §9.5); `attach` (`actor_for`,
-then the seat's socket); `stop` (the actor leaves memory, the log stays); `stop_all`, the restart drain
-(every actor checkpointed, then stopped with 1001); `reap_finished` (a finished actor past its rematch
+then the seat's socket); `stop` (the actor leaves memory, the log stays); `drain`, the restart drain (the
+registry marked draining, then `stop_all`: every actor checkpointed, then stopped with 1001); `stop_all`
+alone (the same without the mark, which a test calls to drain and rebuild in one process); `reap_finished` (a finished actor past its rematch
 window leaves with `MATCH_OVER_CLOSE_CODE`, R3694000); `forget` (a void's actor leaves without `stop`,
-R679); the retention purge; a restart (memory empty, the store as it was). Its rows are A1 to A13, never
-`R<n>`.
+R679); the retention purge; a restart (memory empty, the store as it was). Its rows are A1 to A13 (and
+A10b, A10c), never `R<n>`.
 
 | # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
 |---|---|---|---|---|
@@ -376,13 +379,27 @@ R679); the retention purge; a restart (memory empty, the store as it was). Its r
 | A7 | a `rebuilding` entry whose creator was dropped | Reachable only if the call that made the entry is cancelled mid-rebuild. Every production caller runs where nothing cancels it (a socket's `on_upgrade` task) except the bot loop's `kick_off_bot_match`, which `stop_loops` aborts in the restart drain, after which the process ends | **Unspecified**: the entry is never removed, so the next caller initialises the cell again and the actor it caches is handed to every later `actor_for` that misses the map, a stopped one after a `stop` | — (for a person) |
 | A8 | a live actor in memory | Reachable: `start`, or a rebuild | Every socket for the match reaches it (§9.2: one actor per match) | `crates/server/tests/actor/match_actor.rs::m6_t4_the_match_actor::two_websocket_clients_complete_a_scripted_game` |
 | A9 | `start` and a rebuild of the same id at once | Reachable only as a race: a socket for the id between `start`'s row write and its insert | **Unspecified**: whichever inserts second wins the map, and a socket attached to the other plays on an actor no one else reaches (§9.2 asks for one) | — (for a person) |
-| A10 | a rebuild in flight across `stop_all` | Was reachable: the drain runs while a rebuild reads the store, and the rebuild inserts after it | Every live match checkpointed and stopped with 1001 (`crates/server/README.md`, the drain; `stop_all`'s doc: no grace stored) | **#4114: was a mismatch, fixed**: the rebuilt actor was left live after the drain, never checkpointed nor stopped, so the shutdown's `close_all` closed its socket while it still ran and its `on_socket_gone` stored a grace the drained matches do not. `stop_all` now bumps `drains` under the actors lock, and a rebuild that sees it moved drains its own actor (checkpointed, stopped), which `attach` then closes 1001 (S10). `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_in_flight_across_the_restart_drain_is_stopped_too` (new; failed before the fix: `left: ["match-recovery"] right: []`, the rebuilt actor still live after the drain) |
+| A10 | a rebuild in flight across the restart drain | Was reachable: the drain runs while a rebuild reads the store, and the rebuild inserts after it | Every live match checkpointed and stopped with 1001 (`crates/server/README.md`, the drain; `stop_all`'s doc: no grace stored) | **#4114: was a mismatch, fixed**: the rebuilt actor was left live after the drain, never checkpointed nor stopped, so the shutdown's `close_all` closed its socket while it still ran and its `on_socket_gone` stored a grace the drained matches do not. `drain` now marks the registry draining before `stop_all`, and a rebuild that finds the mark as it inserts (under the actors lock) drains its own actor instead (checkpointed, stopped), which `attach` then closes 1001 (S10). `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_in_flight_across_the_restart_drain_is_stopped_too` (new; failed before the fix: `left: ["match-recovery"] right: []`, the rebuilt actor still live after the drain) |
+| A10b | a rebuild begun after the restart drain | Was reachable: `serve_until` runs `stop_accepting`, `stop_loops`, `server.await`, then the drain; axum's graceful shutdown waits on no upgraded socket, so a socket upgraded just before `stop_accepting` whose `authenticate_upgrade` outlasts the rest reaches `attach`, and its rebuild, after the drain | As A10 | **#4114: was a mismatch, fixed** by the same mark. A count bumped by each `stop_all` (this pull request's first fix) caught only a rebuild that read it before the drain; this one read the bumped count and inserted a live actor. `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_begun_after_the_restart_drain_is_stopped_too` (new; failed without the mark: `left: ["match-recovery"] right: []`) |
+| A10c | a match `start`s once the restart drain has begun | Was reachable by the code's order: `stop_all` drains each actor's queue so a result being written lands (its doc), and a series game's result starts the series' next game (`results.rs`'s `resume_series`, `series.rs`'s `start_series_game`), which inserted its actor after `stop_all` had taken the map. The test reaches it through `start` after `drain`, not through a series' last result | As A10: the row is written, so the next process rebuilds it | **#4114: was a mismatch, fixed** by the same mark: `start` drains the actor it made instead of keeping it (`Registry::keep`). `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_match_started_after_the_restart_drain_is_stopped_too` (new; failed without the mark: `left: ["match-started-late"] right: []`) |
 | A11 | a rebuild in flight across `stop`, a reap or `forget` | Reachable only as a race | **Unspecified**: the rebuild inserts what it read, a fold of the store's log (§9.5), so nothing is lost; a voided match's row is gone, so its rebuild answers not found | — |
 | A12 | a void whose delete the store failed | Reachable: the store fails `forgetVoided` | The row stays live, so the next socket rebuilds the actor, which folds to the same void and voids it again (`on_void`'s comment, R679) | `crates/server/tests/actor/glitch.rs::glitchs_void::r679_a_void_the_store_failed_to_forget_is_voided_again_by_the_next_socket` (new) |
 | A13 | a series game started again under the same id | Reachable: a voided Conquest game | The series plays the same game again, a new actor under the old id (R679) | `crates/server/tests/actor/glitch.rs::glitchs_void::r679_a_voided_conquest_game_never_happened_the_series_plays_the_same_game_again` |
 
-The co-op registry holds A6, A7, A9 and A11 the same way; with no `stop_all` (the drain stops each co-op
-actor with `stop`), its A10 is A11's race.
+The co-op registry holds A6, A7, A9 and A11 the same way. **#4114: its A10 and A10b were a mismatch,
+fixed**: the drain stopped each co-op actor with `stop` from a `live()` snapshot, so a co-op rebuild that
+landed after that loop was left live and could write its log after the store closed (#936, the drain's own
+comment). Its A10c was found unreachable: every co-op `start` is a request's (a room's join, the lobby's
+start, the co-op rematch in `duos/again.rs`), which `server.await` finishes before the drain; the same mark
+guards it anyway. `DuosRegistry::drain` now marks the registry draining and stops every actor in memory, and
+`start` or a rebuild that finds the mark stops its own actor (`DuosRegistry::keep`), which `attach` then
+closes 1001.
+`crates/server/tests/actor/duos.rs::registry_states_4114::a_coop_rebuild_in_flight_across_the_restart_drain_is_stopped_too`
+(new; failed without the mark: "left live after the drain"),
+`…::registry_states_4114::a_coop_rebuild_begun_after_the_restart_drain_is_stopped_too` (new; failed without
+the mark: `left: None right: Some(1001)`, the socket greeted on a live actor) and
+`…::registry_states_4114::a_coop_match_started_after_the_restart_drain_is_stopped_too` (new; failed
+without the mark: "left live after the drain").
 
 ## 9. The practice game kept for a resume
 
@@ -466,13 +483,13 @@ Each reads an older record; nothing is removed.
   If any reads as a decision instead, it needs a ruling in a pull request of its own. #4114's: N15 (both
   socket clients forget a 4401's refusal once a socket opens after it, so a renewal never opens a socket
   from `elsewhere` or onto a gone match; R1115000's "a refusal is its handshake's", R3767000, R679) and
-  A10 (a rebuild that lands after the restart drain is checkpointed and stopped as the drain's are; the
-  server README's drain line and `stop_all`'s doc).
+  A10, A10b and A10c, in both registries (a match that `start` or a rebuild makes once the restart
+  drain has begun, a rebuild in flight across it or begun after it among them, is checkpointed and
+  stopped as the drain's are; the server README's drain line and `stop_all`'s doc). The co-op A10c has
+  no production path found; the mark guards it anyway.
 - **Mismatches named, not fixed:** K9b (a practice save of another deck on the same seed, seat,
   difficulty and sandbox resumes, where R668 names the deck in the page's setup: `host.rs`'s `resume`
-  never compares it; comparing it must first say how an older record's deck, normalised on read, compares);
-  the co-op registry's A10 (the drain stops co-op actors with `stop` from `live()`, so a co-op rebuild
-  landing after that loop is left live; it has no `stop_all` to count drains in).
+  never compares it; comparing it must first say how an older record's deck, normalised on read, compares).
 - **Unspecified:** D7 (an abandoned run keeps its HP, while a lost fight drops it to 0); L9 and L12 (a
   queued tab with no session, or answered signed out, forgets its queue); L11 (a failed read neither
   counts nor breaks R897000's row); G4 and G15 (a selection, and a drag, kept when a prompt opens in the

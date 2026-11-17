@@ -1585,13 +1585,11 @@ where
     let drained = tokio::time::timeout(drain, async {
         stop_loops(running).await;
         let served = server.await;
-        let matches = app.matches.stop_all().await;
+        // #4114: `drain`, not `stop_all`, so a match started or rebuilt after it is stopped too.
+        let matches = app.matches.drain().await;
         // #936: the co-op actors too, so none writes its log after the store closes; each match's
         // log stays, and the next boot folds it back (`duos::registry`).
-        let duos = crate::duos::registry::registry(&app);
-        for match_id in duos.live() {
-            duos.stop(&match_id).await;
-        }
+        crate::duos::registry::registry(&app).drain().await;
         actor::ws_server::close_all(&app);
         actor::ws_server::all_closed(&app).await;
         // R2422000: a claim's check and pay outlive its request, so they are waited for apart.

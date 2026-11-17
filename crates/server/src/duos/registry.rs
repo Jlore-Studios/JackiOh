@@ -12,6 +12,7 @@
 //! `MATCH_OVER_CLOSE_CODE` (R3694000).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
 
 use jackioh_engine::ReplayRefusal;
@@ -63,6 +64,9 @@ pub struct DuosRegistry {
     actors: Mutex<IndexMap<String, DuosActor>>,
     /// In-flight rebuilds, so two sockets arriving together fold the log once.
     rebuilding: Mutex<IndexMap<String, Rebuild>>,
+    /// #4114: set by `drain`, the restart drain, and never cleared, so an actor that `start` or a
+    /// rebuild makes after it (a rebuild in flight across it or begun after it) is stopped, not kept.
+    draining: AtomicBool,
     /// B41: the finished matches' replays opened lately.
     pub replays: DuosReplayCache,
 }
@@ -126,7 +130,9 @@ fn logged_actions(log: &[DuosActionRow]) -> Result<Vec<DuosAction>, DuosAttachEr
 impl DuosRegistry {
     /// Creates the actor of a match whose row a join just wrote (B33), on the state it began with,
     /// under the catalog it was dealt from.
-    pub fn start(&self, app: &Arc<App>, row: DuosMatch, state: DuosState, pinned: Pinned) -> DuosActor {
+    /// #4114: once the restart drain has begun, the actor is stopped instead of kept; the row is
+    /// written, so the next process folds it back.
+    pub async fn start(&self, app: &Arc<App>, row: DuosMatch, state: DuosState, pinned: Pinned) -> DuosActor {
         let match_id = row.id.clone();
         let actor = create_duos_actor(
             Arc::clone(app),
@@ -137,7 +143,11 @@ impl DuosRegistry {
                 pinned,
             },
         );
-        lock(&self.actors).insert(match_id.clone(), actor.clone());
+        if !self.keep(&match_id, &actor) {
+            actor.stop().await;
+            tracing::info!(event = "duos.stopped", matchId = %match_id);
+            return actor;
+        }
         tracing::info!(event = "duos.started", matchId = %match_id);
         actor
     }
@@ -202,9 +212,28 @@ impl DuosRegistry {
                 pinned,
             },
         );
-        lock(&self.actors).insert(match_id.to_string(), actor.clone());
+        if !self.keep(match_id, &actor) {
+            // #4114: the restart drain began before this rebuild landed, so it never saw this actor. It
+            // is stopped as the drain's were, so the socket `attach` hands it hears 1001 and reconnects
+            // to the next process, and it writes nothing after the store closes (#936).
+            actor.stop().await;
+            tracing::info!(event = "duos.stopped", matchId = %match_id);
+            return Ok(actor);
+        }
         tracing::info!(event = "duos.rebuilt", matchId = %match_id, actions = actions);
         Ok(actor)
+    }
+
+    /// #4114: inserts `actor` unless the restart drain has begun, and answers whether it did. The mark is
+    /// read under the actors lock, so an actor inserted before `drain` takes the map is stopped with it,
+    /// and one that finds the mark is the caller's to stop.
+    fn keep(&self, match_id: &str, actor: &DuosActor) -> bool {
+        let mut actors = lock(&self.actors);
+        let kept = !self.draining.load(Ordering::SeqCst);
+        if kept {
+            actors.insert(match_id.to_string(), actor.clone());
+        }
+        kept
     }
 
     /// The live actor, folded back from the store when it is not in memory.
@@ -300,6 +329,21 @@ impl DuosRegistry {
         let Some(actor) = actor else { return };
         actor.stop().await;
         tracing::info!(event = "duos.stopped", matchId = %match_id);
+    }
+
+    /// #936, #4114: the restart drain (`app::serve_until`): marks the registry draining, then stops every
+    /// actor in memory as `stop` does; the logs stay and the next process folds them back. From then on
+    /// `start` and a rebuild stop the actor they make instead of keeping it (`keep`). Answers how many
+    /// it stopped.
+    pub async fn drain(&self) -> usize {
+        self.draining.store(true, Ordering::SeqCst);
+        let actors: Vec<(String, DuosActor)> = lock(&self.actors).drain(..).collect();
+        let count = actors.len();
+        for (match_id, actor) in actors {
+            actor.stop().await;
+            tracing::info!(event = "duos.stopped", matchId = %match_id);
+        }
+        count
     }
 
     /// Drops finished actors with no open socket and no watcher still owed the result's view
