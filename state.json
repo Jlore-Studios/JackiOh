@@ -34321,7 +34321,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-17T22:32:21Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4149,
         "head": "84d57a9ab1cb2d94b6902664d933980518144983",
         "issue": 4115,
         "merged_at": "2026-11-17T22:15:05Z",
@@ -34334,12 +34337,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:ac4124ec-1794954252",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44189772495",
         "sha": "77cb282e6d7df24dc42d90af2d8e4b0ffd2baf0b",
         "started_at": "2026-11-17T22:24:34Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Heroic Power's powers, the Anomaly titles and the other words the client translates from a table read in Chinese for a Chinese reader, held by a test",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 325
