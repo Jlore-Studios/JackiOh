@@ -67,15 +67,14 @@ the same rng. The caller reads `options.rng.cursor()` back afterwards.
 The AI never concedes and never offers a draw, and it declines every draw offer at once (R188). It
 answers its mulligan as soon as the mulligans open (R265, R266): `mulligan_keep_curved` sends back
 every card costing more than `mulligan_keep_bound`, `AI_MULLIGAN.keep_max_cost` plus the seat's mana
-bonus within its mana cap (R2977000), except the one proven card one dearer the shaped keep holds,
-and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
-the cheapest card when none is an early play, counted in the seat's crystals (its mana bonus and,
-going second, The Coin). A card's cost there is its `mulligan_cost` (R3936000): its mana cost, or,
-while it has Tribute X (`tribute_cost_of`, Nerfs, Buffs and Floats counted), the larger of that and X
-plus `AI_MULLIGAN_TRIBUTE_ALLOWANCE`, so a Tribute 3 three-drop goes back and a one-mana Tribute 2
-card is neither a one-drop nor an early play. The shaped exception, read off the printed cost, never
-takes a card its Tribute made dearer, and the greedy baseline's `mulligan_keep` reads mana alone.
-Nothing here reads a difficulty, and a handicap only as the seat's mana (the
+bonus within its mana cap (R2977000), nothing dearer (R4110000), and keeps the cheap ones to
+`AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only the cheapest card when none is an early
+play, counted in the seat's crystals (its mana bonus and, going second, The Coin), ranked by
+`hand_card_value` under `AI_EVAL`, ties in hand order (R4110000). A card's cost there is its
+`mulligan_cost` (R3936000): its mana cost, or, while it has Tribute X (`tribute_cost_of`, Nerfs,
+Buffs and Floats counted), the larger of that and X plus `AI_MULLIGAN_TRIBUTE_ALLOWANCE`, so a
+Tribute 3 three-drop goes back and a one-mana Tribute 2 card is neither a one-drop nor an early play.
+The greedy baseline's `mulligan_keep` reads mana alone. Nothing here reads a difficulty, and a handicap only as the seat's mana (the
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
 opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
@@ -374,8 +373,8 @@ ships before the AI is trained on it is listing it there. It held the Stinkyscap
 empty since. `shape`
 (R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
 `src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
-practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still
-reads `shaped_weight` (`mulligan_keep_shaped`).
+practice, the quality gates and both seats of an arena or a promotion deal unshaped. Nothing else reads
+`shaped_weight`: the mulligan ranks by `hand_card_value` (R4110000).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block
