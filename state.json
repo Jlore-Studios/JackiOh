@@ -12848,17 +12848,8 @@
       "verdict_rounds": 2
     },
     "4115": {
-      "action": "plan",
-      "asks": [
-        "c:6958359084"
-      ],
-      "build_next": {
-        "from_run": "44159029243",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-17T19:38:29Z",
-        "until": "2026-11-17T20:08:29Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-17T19:38:18Z",
         "difficulty": "medium",
@@ -12877,10 +12868,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": " private |\n- | [apps/web/src/cards/marks.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4115/apps/web/src/cards/marks.ts) | change | `MARK_WORDS` is already exported; no change expected, verify the walk can import it |\n- | [apps/web/src/cards/anomalies.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4115/apps/web/src/cards/anomalies.ts) | change | `ANOMALIES` is already exported; no change expected, verify |\n- | [apps/web/README.md](/home/agent-muse/actions-runner/_work/_temp/work/item-4115/apps/web/README.md) | change | Internationalisation section: the check covers variable-fed tables, new tables join the walk |\n- Do not touch `crates/`, `apps/edge`, `e2e/`, `spec/`, `.github/`, `.harness/`, `.squishy/`, `bot/`. No spec change: presentation only ([CLAUDE.md rule 7](about:blank)); no ruling: no Hearthstone-default decision is made. Governing spec: none; related tests cite R711000.\n- ## Steps\n- 1. In `apps/web/src/i18n/i18n.test.ts`, extend `literals()` (lines 47\u201352) with two branches beside the `isConditionalExpression` line: if `ts.isBinaryExpression(node)` and the operator is `QuestionQuestionToken` or `BarBarToken`, return `[...literals(node.left), ...literals(node.right)]`. Copy the \u2026\n- 2. In the same file, extend the guard test `it(\"R711000 the t() guard \u2026\")` (line 253) probe text with a `??` line such as `const f = t(field?.label ?? \"Names on the board\");` and expect `\"Names on the board\"` in the parsed keys. Keep the existing expectations.\n- 3. Export for the walk: add `export` to `BOARD_NAMES_OPTIONS` in `apps/web/src/settings/controls.tsx` (line 276) and to `DEFAULT_ORDER` in `apps/web/src/cards/inspect/CardList.tsx` (line 81). `DRAW_TEXT`, `MARK_WORDS`, `ANOMALIES`, `MODE_TEXT`, `RADIANT_MODE_TEXT` are already exported; leave them.\n- 4. In `apps/web/src/i18n/i18n.test.ts` add `it(\"R711000 every table-fed sentence has a zh-CN entry\", \u2026)` importing `MODE_TEXT` and `RADIANT_MODE_TEXT` from `../game/modeText.ts`, `ANOMALIES` from `../cards/anomalies.ts`, `MARK_WORDS` from `../cards/marks.ts`, `DRAW_TEXT` from `../game/DrawOffer.tsx\u2026\n- 5. In `apps/web/src/game/modeText.test.ts`, inside the #2646 loop (the `it(\"\u2026has MODE_TEXT's words\")` tests, lines 107\u2013119), add one assertion per visited option: `modeText(id, option, radiant === \"radiant\")` label and detail each satisfy `Object.hasOwn(zhCN, text)` where `zhCN` is imported from `.\u2026\n- 6. In the same file add `it(\"R711000 Heroic Power's prompt names each power as its Chinese face does\", \u2026)`: read `crates/cards/chinese.json` with `readFileSync` + `JSON.parse` (path relative to the test file: `../../../../crates/cards/chinese.json`), take `[\"core-098\"].base` and `.radiant`, and for\u2026\n- 7. Add the dictionary entries in `apps/web/src/i18n/zh-CN.json` (keep keys sorted as the file is; values: power/card names exactly as `crates/cards/chinese.json` prints them \u2014 \u63a2\u9669\u5730\u56fe, \u751f\u547d\u5206\u6d41, \u7a33\u56fa\u5c04\u51fb and the rest; keywords exactly as `crates/cards/chinese-terms.json` \u2014 \u66b4\u6012 for Frenzy, \u987a\u5288 for Cleave, \u7075\u5de7 for\u2026\n- 8. Demonstrate the walk fails: temporarily add a made-up entry to one table, run the walk, observe the `\"<table>: <value>\"` failure, then remove it. Say in the PR what the made-up entry was and the failure line.\n- 9. Update `apps/web/README.md` Internationalisation (line 1461 paragraph): after the sentence ending `naming its file and line`, add that tables whose words reach `t()` through a variable (`modeText.ts`, `ANOMALIES`, mark words, `DRAW_TEXT`, the card settings' fields and board-names options, `CardL\u2026\n- ## Tests\n- - [apps/web/src/i18n/i18n.test.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4115/apps/web/src/i18n/i18n.test.ts): extended guard test asserts `??`/`||` operands are read; new `it(\"R711000 every table-fed sentence has a zh-CN entry\")` fails naming table and value on a missing entry.\n- - [apps/web/src/game/modeText.test.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4115/apps/web/src/game/modeText.test.ts): per-option dictionary assertion inside the #2646 loop (both faces, Heroic Power's 14 among them); `it(\"R711000 Heroic Power's prompt names each power as its Chinese\u2026\n- - Commands: `pnpm --dir apps/web test src/i18n/i18n.test.ts src/game/modeText.test.ts` and `pnpm --dir apps/web typecheck`, plus `cargo fmt --check` if any Rust file was touched (none expected).\n- ## Done when\n- - [ ] Every `modeText.ts` option label and detail on both faces has a zh-CN entry, Heroic Power's 14 included.\n- - [ ] A test finds each power name in Heroic Power's Chinese face, so prompt and card agree.\n- - [ ] The ten Anomaly titles, board-names label/hint/options, both blocked-draw texts, `Newest first`, Duo name and text have entries.\n- - [ ] The walk fails naming table and value on a made-up entry; the PR shows that failure then removes it.\n- - [ ] `literals()` follows `??` and `||`; the R711000 scan passes over the whole client.\n- - [ ] The two `pnpm` commands above pass.\n- ## Risks\n- - Translation quality: the sentence entries are new Chinese; a native reader may revise later \u2014 note it in the PR, do not stall on it.\n- - Widened `literals()` may surface misses beyond the counted ~98; add those entries too and report the final count in the PR.\n- - Old-replay-only strings (Profe Yates) are translated anyway; replays read in the reader's language.\n- - `Prompt.tsx:394` translates before filling `{key}`s, so no entry may drop or rename a placeholder; the token-match test guards this.\n- ## Open questions\n- None. All sources (Chinese faces, glossary, tables, check shape) are named above; no person-only step exists.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4115 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4115/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-17T19:28:50Z",
       "owner_why": "it plans it",
@@ -12893,12 +12883,14 @@
       "provider": "muse",
       "queued_at": "2026-11-17T19:19:36Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44159029243",
+      "run_id": "pending:eac92b08-1794944339",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-17T19:28:50Z",
+      "started_at": "2026-11-17T19:39:28Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6958359084"
+      ]
     },
     "4116": {
       "asks": [
@@ -13224,9 +13216,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T19:30:09Z",
+    "at": "2026-11-17T19:39:28Z",
     "url": "",
-    "what": "plan #4110 on agy"
+    "what": "build #4115 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T19:26:24Z",
