@@ -14,6 +14,8 @@ const VANILLA: &str = "core-008";
 const ARCHIVIST: &str = "core-030";
 const BIG: &str = "core-025";
 const ATTACKER: &str = "classicplus-006";
+/// S+ #42 Force Projector, a Field Spell: the first 5 damage its side would take each turn is nullified.
+const PROJECTOR: &str = "stinkyscapeplus-042";
 
 /// A library for each side, so an end of turn draws a card and no fatigue moves a number.
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
@@ -128,6 +130,24 @@ fn r4065000_armor_meets_burn_and_toxic_pierces_it() {
     assert_eq!(face_threat_with(s.state(), HUMAN, &OFF), 7);
     s.end_turn();
     assert!(in_graveyard(s.state(), HUMAN, VANILLA));
+}
+
+/// R4064000: the human's Force Projector refills at its start of turn, before the tick, and soaks the whole Burn
+/// 5, so the 4/4 stands and still swings: read as `afflicted` reads the tick, it still counts, and with the pool
+/// read off it is left out as on a board without the Projector. The engine leaves it at full health.
+#[test]
+fn r4065000_a_unit_its_damage_pool_keeps_standing_still_counts() {
+    const NO_POOL: EvalWeights = EvalWeights {
+        pool_and_conversion_read: false,
+        ..AI_EVAL
+    };
+    let mut guarded = burning(json!({ "burn": 5 }));
+    guarded["backrow"] = json!([{ "def": PROJECTOR, "faceUp": true }]);
+    let mut s = game(walled(), guarded);
+    assert_eq!(face_threat(s.state(), HUMAN), 7);
+    assert_eq!(face_threat_with(s.state(), HUMAN, &NO_POOL), 3);
+    s.end_turn();
+    assert_eq!(s.stats(theirs(&s, 2)).health, 4);
 }
 
 /// An unspent Divine Shield takes the Burn's hit and Indestructible takes none, so the 4/4 still swings. With

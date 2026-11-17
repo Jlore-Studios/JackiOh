@@ -3,14 +3,14 @@
 //! then on the snapshot it fought with (R78, R89); never for a Cleave splash nor an attack on the hero. The
 //! attacker's hook runs first. Meditative #49.3 AI Girlfriend (MD-C26, R1026) is its user.
 
-use jackioh_engine::combat::AFTER_ATTACKED_WORK;
+use jackioh_engine::combat::{AFTER_ATTACK_WORK, AFTER_ATTACKED_WORK, ALLY_ATTACK_WORK};
 use jackioh_engine::effects::forced_attacks_on;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
-    answer, cleave_veteran, defender, defender_asker, grunt, notes, playing, recorder, replays_to,
-    round_trip, veteran,
+    ally_noter, answer, cleave_veteran, death_asker, defender, defender_asker, grunt, notes, playing,
+    recorder, replays_to, round_trip, veteran,
 };
 use crate::rules::fixtures::harness::{by, input, live_mut, put, sink_for, slot};
 
@@ -198,6 +198,124 @@ mod script_after_attacked {
         game.play(input(json!({
             "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "none" }], "playerId": "p2"
         })));
+        assert!(replays_to(&game.start, &game.log, game.state()));
+    }
+
+    #[test]
+    fn r1026_r113_a_deaths_question_in_the_closing_check_still_runs_the_defenders_hook() {
+        let mut state = playing("dc-attacked-death-pause");
+        let striker = put(
+            &mut state,
+            &cleave_veteran.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        let target = put(
+            &mut state,
+            &defender.id,
+            slot(P2, Row::Units, 2),
+            Default::default(),
+        );
+        // Beside the target: the Cleave kills it, and its Death asks in the check that closes the combat.
+        let doomed = put(
+            &mut state,
+            &death_asker.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        let mut game = recorder(&state);
+        game.play(input(json!({
+            "type": "attack", "attackerId": striker.id, "targetId": target.id, "playerId": "p1"
+        })));
+        let paused = game.state().clone();
+        assert_eq!(notes(&paused), vec!["death:ask"]);
+        assert_eq!(paused.pending.as_ref().map(|pending| pending.player_id), Some(P2));
+        let owed: Vec<&str> = paused
+            .work
+            .iter()
+            .map(|item| item.resume.hook.as_str())
+            .filter(|hook| [AFTER_ATTACK_WORK, AFTER_ATTACKED_WORK].contains(hook))
+            .collect();
+        assert_eq!(owed, vec![AFTER_ATTACK_WORK, AFTER_ATTACKED_WORK]);
+        let resumed = answer(&round_trip(&paused)).state;
+        assert_eq!(
+            notes(&resumed),
+            vec![
+                "death:ask".to_string(),
+                "death:answered".to_string(),
+                format!("after:{}:true:p1", doomed.id),
+                format!("attacked:{}:false:true:field", striker.id),
+            ]
+        );
+        assert!(resumed.work.is_empty());
+        let pending = paused.pending.as_ref().expect("expected a prompt");
+        game.play(input(json!({
+            "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "none" }], "playerId": "p2"
+        })));
+        assert_eq!(notes(game.state()), notes(&resumed));
+        assert!(replays_to(&game.start, &game.log, game.state()));
+    }
+
+    #[test]
+    fn r1026_r113_r2199000_a_paused_check_runs_the_attacker_the_defender_then_the_ally_holder() {
+        let mut state = playing("dc-attacked-death-pause-ally");
+        put(
+            &mut state,
+            &ally_noter.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let striker = put(
+            &mut state,
+            &cleave_veteran.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        let target = put(
+            &mut state,
+            &defender.id,
+            slot(P2, Row::Units, 2),
+            Default::default(),
+        );
+        let doomed = put(
+            &mut state,
+            &death_asker.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        let mut game = recorder(&state);
+        game.play(input(json!({
+            "type": "attack", "attackerId": striker.id, "targetId": target.id, "playerId": "p1"
+        })));
+        let paused = game.state().clone();
+        assert_eq!(notes(&paused), vec!["death:ask"]);
+        let owed: Vec<&str> = paused
+            .work
+            .iter()
+            .map(|item| item.resume.hook.as_str())
+            .filter(|hook| [AFTER_ATTACK_WORK, AFTER_ATTACKED_WORK, ALLY_ATTACK_WORK].contains(hook))
+            .collect();
+        assert_eq!(
+            owed,
+            vec![AFTER_ATTACK_WORK, AFTER_ATTACKED_WORK, ALLY_ATTACK_WORK]
+        );
+        let resumed = answer(&round_trip(&paused)).state;
+        assert_eq!(
+            notes(&resumed),
+            vec![
+                "death:ask".to_string(),
+                "death:answered".to_string(),
+                format!("after:{}:true:p1", doomed.id),
+                format!("attacked:{}:false:true:field", striker.id),
+                format!("ally:{}:false:true:p1", striker.id),
+            ]
+        );
+        assert!(resumed.work.is_empty());
+        let pending = paused.pending.as_ref().expect("expected a prompt");
+        game.play(input(json!({
+            "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "none" }], "playerId": "p2"
+        })));
+        assert_eq!(notes(game.state()), notes(&resumed));
         assert!(replays_to(&game.start, &game.log, game.state()));
     }
 }
