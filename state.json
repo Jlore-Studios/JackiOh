@@ -16014,6 +16014,7 @@
       "run_id": "44000099520",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 310,
       "started_at": "2026-11-17T02:02:57Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36190,9 +36191,33 @@
         "title": "Patch: the learned evaluation's training rows carry the hand eval the search corrects, with the decision's Death, turn-hook, Activate, attack-hook and awakening prices",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "67ae74199e3d5687f40513f62b8a1dd7799b0fb3",
+        "issue": 4058,
+        "merged_at": "2026-11-17T02:43:10Z",
+        "n": 310,
+        "pr": 4106,
+        "queued_at": "2026-11-17T02:43:10Z",
+        "sha": "a1317054e12df3f6111ece31e9d71844c3fb013b",
+        "status": "queued",
+        "title": "Patch: the fuzz holds a replayed or restored game to the whole live state, not only to its hash",
+        "tries": 0
       }
     ],
-    "count": 309
+    "count": 310
   },
   "statistics": {
     "at": "2026-11-17T02:41:37Z"
