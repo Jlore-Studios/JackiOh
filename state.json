@@ -16571,10 +16571,8 @@
     "what": "review #4123 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T11:44:02Z",
-    "notes": [
-      "#4123: green and waiting for a person to merge it, so `muse` gives up its claim on it"
-    ],
+    "at": "2026-11-17T11:51:20Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17279,7 +17277,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T11:44:02Z",
+  "loop_tick": "2026-11-17T11:51:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
