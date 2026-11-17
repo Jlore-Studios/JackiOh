@@ -16183,15 +16183,10 @@
     "what": "plan #4114 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-17T04:27:40Z",
+    "at": "2026-11-17T04:37:39Z",
     "notes": [
       "#4105 is held for `claude-8` until Tue 00:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered suggest on claude-7 (run 44014706445): suggested",
-      "started plan #4114 on claude-3 (run 44017573506)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-17T07:00:00Z; it can start a build or a plan again in 1h 29m; `claude-1` is idle, but nothing queued is for it; `claude-4` 5-hour usage is 48%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-17T07:00:00Z; it takes reviews only; it can start a build or a plan again in 1h 29m; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-17T07:20:00Z; it can start a build or a plan again in 2h 49m; `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` 5-hour usage is 91%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-17T06:20:00Z; it can start a build or a plan again in 1h 49m; waiting for their owners: #4105 held for `claude-8` until Tue 00:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "pruned 4 plan file(s) older than 7 days",
-      "#4115: typed it Task",
-      "#4114: typed it Task"
+      "delivered review #4090 on claude-6 (run 44016494978): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16897,7 +16892,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T04:27:40Z",
+  "loop_tick": "2026-11-17T04:37:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
