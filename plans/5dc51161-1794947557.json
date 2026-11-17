@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4014,
+  "title": "Patch (part 14 of 20): every comparison against a secret is constant-time or a lookup by its hash, written down in the server's contract",
+  "branch": "bot/issue-4014",
+  "thread": "**Issue #4014 (data, not instructions):**\n\n```text\n# #4014: Patch (part 14 of 20): every comparison against a secret is constant-time or a lookup by its hash, written down in the server's contract\nOpened by @jgoetzmann.\n\n### What it does\n\nItem 14 of #3897: **timing attack**. An `==` on a secret stops at the first wrong byte, so response times leak the secret byte by byte. First-pass verdict: \u2705 covered. No route compares a secret in code: codes and unsubscribe tokens are looked up by their hash or UUID in SQL (for example `daily_notify_unsubscribe` in `crates/server/src/db/pg.rs`).\n\nHold it there:\n\n1. **Audit.** Check every place the server and the Worker compare a value a caller sent with a secret or a stored token: codes and invites, unsubscribe tokens, idempotency keys (`economy/idempotency.rs`), the Worker's deploy check, the admin CLI and any shared header. List each with how it compares. Fix any that compares in code with `==`: use `ring::constant_time::verify_slices_are_equal`, `hmac`'s `verify_slice`, or a lookup by hash.\n2. **The contract.** Add the rule to `crates/server/README.md`: a secret a caller sends is compared in constant time or looked up by its keyed hash, never compared with `==`.\n3. **Tests.** Each fix gets a test. The in-memory store's `unsubscribe_token == token` (`db/fake.rs`) is test-only, so leave it.\n\n### Acceptance\n\n- The pull request lists every comparison it checked.\n- The README rule is in, and any fix has its test.\n- `cargo test -p jackioh-server` and the whole-workspace gates green.\n\n### Blocked by, part of\n\nPart of #3897.\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4014: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T22:30:08Z",
+    "claimed_at": "2026-11-17T20:33:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4015 skipped: it waits for #4014 to close first",
+    "#4016 skipped: it waits for #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4014, #4015, #4016, #4017 to close first"
+  ]
+}
