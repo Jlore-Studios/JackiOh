@@ -14759,9 +14759,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-16T17:36:32Z",
-      "owner_why": "it plans it",
+      "owner": "claude-1",
+      "owner_since": "2026-11-17T05:17:51Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-17T08:40:00Z; it can start again only in 3h 22m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-17T05:16:49Z",
         "interrupt": "usage",
@@ -14773,9 +14773,9 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-1",
       "round_tier": "strong",
-      "run_id": "44019862206",
+      "run_id": "pending:23d5d2d9-1794892641",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -14794,7 +14794,7 @@
         "provider": "claude-3",
         "run": "44019862206"
       },
-      "started_at": "2026-11-17T04:49:50Z",
+      "started_at": "2026-11-17T05:17:51Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
@@ -16165,9 +16165,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T05:08:26Z",
+    "at": "2026-11-17T05:17:51Z",
     "url": "",
-    "what": "plan #4114 on claude-6"
+    "what": "build #4079 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-17T05:05:37Z",
