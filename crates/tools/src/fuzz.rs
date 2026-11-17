@@ -5796,13 +5796,14 @@ pub(crate) mod tests {
                     .unwrap_or_else(|failure| panic!("{}", failure.message))
                     .hash
             );
-            let plain = CorpusRecord {
-                start: StartKind::Plain,
-                last_boards: None,
-                ..record
-            };
-            let plain = replay_record(&plain).unwrap_or_else(|failure| panic!("{}", failure.message));
-            assert_ne!(replayed.hash, plain.hash);
+            let mut other = record.clone();
+            other.last_boards = Some((pinned.1, pinned.0));
+            assert_eq!(lint_record(&other), Vec::<String>::new());
+            let other = replay_record(&other).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(
+                replayed.hash, other.hash,
+                "replay_record ignored the literal pinned last boards"
+            );
         }
     }
 
