@@ -15511,6 +15511,8 @@
       }
     },
     "4099": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T00:15:34Z",
@@ -15524,8 +15526,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && sed -n 1,40p .bot-notes.md | cut -c1-300 | head -60 && git status --short | head\", \"description\": \"Look at worktree and notes\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4092/e2e/scripts/shard-specs.mjs\", \"limit\": 70}\n- Bash: {\"command\": \"sed -n '/^## State/,/^## Log/p' .bot-notes.md | cut -c1-200 | head -30; cat .bot-journal.md | cut -c1-300 | tail -20; sed -n 45,65p scripts/ci-shards.toml\", \"description\": \"Read state, j\u2026\n- Bash: {\"command\": \"grep -n '^## ' .bot-notes.md; sed -n 20,60p bot/tests/test_ci_matrix.py | head -5; sed -n 1,12p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts; sed -n 1,14p e2e/cypress/e2e/47-tap-areas.c\u2026\n- Bash: {\"command\": \"sed -n 55,62p e2e/README.md; sed -n 30,34p spec/rulings/R1581000.md; sed -n 34,39p spec/rulings/R2122000.md; sed -n 155p docs/v0.3.0/README.md; grep -rnE '46.*47|SMOKE|smoke' --include=*\u2026\n- Bash: {\"command\": \"grep -rnE 'SMOKE|smoke (list|spec|shard)|e2e smoke|shard-specs' --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git --exclude-dir=.github --exclude-dir=bot --exclude-dir=t\u2026\n- Bash: {\"command\": \"grep -rniE 'smoke|per pull request' e2e --include=*.ts --include=*.tsx --include=*.md --include=*.mjs --include=*.json -l --exclude-dir=node_modules | head; echo ---; grep -rnE '\\\\b(46|4\u2026\n- Bash: {\"command\": \"sed -n 1500,1510p BUILD.md | cut -c1-400; grep -n 'every pull request' spec/11-rulings.md | grep -E 'R1581000|R2122000' | cut -c1-100; grep -noE '.{120}(SMOKE|every pull request).{80}' s\u2026\n- Bash: {\"command\": \"sed -n 500p spec/11-rulings.md | grep -oE '.{150}pull request.{100}'; sed -n 772p spec/11-rulings.md | grep -oE '.{150}pull request.{100}'; echo; grep -n 'Proof' spec/rulings/R1581000.md\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ndef sub(path, old, new, count=1):\\n s = open(path).read()\\n assert s.count(old) == count, (path, old[:40], s.count(old))\\n open(path, 'w').write(s.replace(o\u2026\n- Bash: {\"command\": \"cd e2e && for k in 1 2 3 4; do node scripts/shard-specs.mjs --smoke $k 4; echo; done; for K in 3 2; do echo K=$K; for k in $(seq 1 $K); do node scripts/shard-specs.mjs --smoke $k $K; ech\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4092 && python3 - <<'EOF'\\npath='scripts/ci-shards.toml'\\ns=open(path).read()\\nold=s[s.index(\\\"# `e2e smoke (k/K)`\\\"):s.index(\\\"[e2e]\\\\n\\\")]\\nnew=\\\"\\\u2026\n- Bash: {\"command\": \"ls e2e/scripts; grep -rln 'shard-specs\\\\|ci-shards' --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git --exclude-dir=training --exclude-dir=reviews . 2>/dev/null | head -\u2026\n- Bash: {\"command\": \"grep -nE 'shard-specs|ci-shards' e2e/cypress/e2e/58-notifications.cy.ts e2e/cypress/e2e/44-watch.cy.ts e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts apps/web/src/net/ci-scope.test.ts scr\u2026\n- Bash: {\"command\": \"cd e2e && echo smoke46_47: $(for k in 1 2 3 4; do node scripts/shard-specs.mjs --smoke $k 4; done | grep -cE '/(46|47)-'); echo full8: $(for k in 1 2 3 4 5 6 7 8; do node scripts/shard-s\u2026\n- Bash: {\"command\": \"pnpm exec eslint e2e 2>&1 | tail -5; pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts 2>&1 | tail -6; cargo fmt --check 2>&1 | tail -2; cargo jackioh patches check 2>&1 | tai\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web apps/web/src/net/ci-scope.test.ts 2>&1 | tail -15\", \"description\": \"Run ci-scope test from root\", \"timeout\": 300000}\n- Bash: {\"command\": \"pnpm exec vitest run --project web apps/web/src/net/ci-scope.test.ts 2>&1 | grep -iE 'error|failed to|resolve' | head -5\", \"description\": \"Find why the test fails to load\"}\n- Bash: {\"command\": \"(time sh scripts/build-wasm.sh) 2>&1 | tail -8\", \"description\": \"Build WASM module so the web test can load\", \"timeout\": 600000}\n- Bash: {\"command\": \"pnpm exec vitest run --project web apps/web/src/net/ci-scope.test.ts 2>&1 | tail -8; git status --short | grep -v '^ M'\", \"description\": \"Rerun ci-scope test and check for stray files\", \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate=\\\"\\\"\\\"## State\\n\\nBuild pass 1 (sonnet) finished the plan: SMOKE is 01, 06, 10, 13, 19, 51; `ci-shards.toml` comment rewritt\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: e2e smoke drops specs 46 and 47 to the daily run\"} --> ## What changed A pull request's `e2e smoke` now plays only specs 01, 06, 10, 13, 19 and 51. Specs 46 (every menu on one screen) and 47 (tap areas) run only in `super.yml`'s daily split, as the issu\u2026"
       },
       "issue": 4092,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T00:59:26Z",
         "from_run": "43986177762",
         "gates": [
           {
@@ -15617,7 +15622,11 @@
         "source": "build",
         "until": "2026-11-17T01:28:32Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-17T00:58:32Z",
+      "run_id": "pending:55051e53-1794877144",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15636,6 +15645,9 @@
         "provider": "claude-7",
         "run": "43986177762"
       },
+      "started_at": "2026-11-17T00:59:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15649,9 +15661,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T00:48:55Z",
+    "at": "2026-11-17T00:59:26Z",
     "url": "",
-    "what": "spot-check #4095 on claude-1"
+    "what": "review #4099 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-17T00:44:15Z",
