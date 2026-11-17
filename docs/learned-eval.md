@@ -266,6 +266,11 @@ never breaks the AI. Since `FEATURES_VERSION` 3 (#3112, R3112000) it also has ke
 (its type, cost, tags, keywords, printed stats and Radiant face), so it shares what the network
 learned of cards like it.
 
+Dense inputs standardize by their own spread, floored at `MIN_SPREAD` 0.25 (the spread of a 0/1
+feature in about one row in sixteen), so one more count of even a rare keyword moves a standardized
+input by at most 4 units instead of swinging a line by hundreds of points through a spread near
+zero (#4109). A feature that never varies keeps a spread of one.
+
 ### D6. Where it plugs into the search
 
 | Option | Calls replaced | Risk |
@@ -365,6 +370,12 @@ question, so it needs no quantisation. Quantise only a network worth shipping. I
 the browser's download small, and part 6's parity fixture (#1011) proves agreement either way. The
 weights go in as text (`include_str!`, rule 4). i8 stored as base64 in a JSON field keeps that
 small.
+
+Every fit also reports each dense feature's pull: the median change in hand-eval points from one
+more count of the feature over the validation rows, read from the integer network at the full
+correction. `report.json` holds the whole table (`pulls`) and the largest by size (`largestPull`),
+`report.md` lists the ten largest, and `summary.json` names the largest pull at every stage that
+writes it, so the next refit cannot relearn a rare keyword's outsized swing unseen (#4109).
 
 ### D8. Where the training code lives, and in what language
 

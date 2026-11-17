@@ -57,6 +57,14 @@ the seat's board, both ways; and #1009's decision:
 `<out>/model-seed<N>.pt` each seed's: `retrain.sh` ships the best by validation whose integer network passes
 the AI's tests with the switch on (#466).
 
+Dense features standardize by their own spread, floored at `MIN_SPREAD` 0.25 (the spread of a
+0/1 feature in about one row in sixteen), so one count moves a standardized input by at most 4
+units; a feature that never varies keeps a spread of one. `report.json` holds `pulls`, every dense
+feature's pull (the median change in hand-eval points from one more count of it, over the validation
+rows, read from the integer network at the full correction), and `largestPull`, the largest by size;
+`report.md` lists the ten largest, and `retrain.sh` copies `largestPull` into `summary.json` at
+every stage it writes.
+
 ## The integer network
 
 `python -m jackioh_ml.quantize --weights <float weights.json> --out <integer weights.json>
