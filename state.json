@@ -36839,7 +36839,8 @@
       "2026-11-17T03:41:48Z,agy,usage-command,after,44004883683,13,2026-11-17T04:49:46Z,80,2026-11-21T00:22:39Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-17T03:31:36Z,44010371287,claude-7,sonnet+opus,review,4099,medium,approved,,0.8,17,3931,513602,0.5634,12,13,,,1.1,claude-7,none,,1"
+      "2026-11-17T03:31:36Z,44010371287,claude-7,sonnet+opus,review,4099,medium,approved,,0.8,17,3931,513602,0.5634,12,13,,,1.1,claude-7,none,,1",
+      "2026-11-17T03:42:10Z,44004883683,agy,gemini-3.8-flash-high,build,4057,medium,built,,59.3,790967,44591,0,,8,13,78,80,183.6,agy,none,,1"
     ]
   },
   "version": 1
