@@ -2543,3 +2543,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-17T22:03:28Z,44184372894,muse,muse-spark-1.3-contributor,suggest,,,suggested,,8.8,0,0,0,,0,0,20,20,,,none,,1
 2026-11-17T22:00:21Z,44182318261,claude-4,opus,suggest,,,suggested,,17.6,66,51137,5146870,9.2762,18,38,,,,,none,,1
 2026-11-17T22:02:21Z,44174265645,claude-3,sonnet+opus,build,4014,medium,built,,26.3,63,17439,2210198,0.6719,6,10,,,2784.6,claude-3,fresh,,1
+2026-11-17T22:14:52Z,44161165772,agy,gemini-3.8-flash-high,plan,4130,medium,failed,,150.3,328007,75027,0,,0,4,87,88,10.4,,none,,1
+2026-11-17T22:29:02Z,44189772495,claude-4,opus,review,4136,medium,reviewed,,1.7,21,9543,710350,0.787,39,40,,,,,none,,1
+2026-11-17T22:24:03Z,44188079483,claude-3,sonnet+opus,review,4147,medium,approved,,7.1,44,8404,1396595,0.9312,12,13,,,0.9,,none,,1
+2026-11-17T22:35:34Z,44191312387,muse,muse-spark-1.3-contributor,plan,4149,medium,planned,,1,0,0,0,,1,1,20,21,1.7,,none,,1
