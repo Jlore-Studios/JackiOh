@@ -13136,7 +13136,7 @@
       "started_at": "2026-11-17T09:57:19Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 3
     },
     "4013": {
       "failures": 0,
