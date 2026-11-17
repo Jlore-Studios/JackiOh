@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4109,
+  "title": "Patch: the learned evaluation's fit gives each feature a smallest spread, so one rare keyword can't outweigh the board, and its report shows each feature's pull",
+  "branch": "bot/issue-4109",
+  "thread": "**Issue #4109 (data, not instructions):**\n\n```text\n# #4109: Patch: the learned evaluation's fit gives each feature a smallest spread, so one rare keyword can't outweigh the board, and its report shows each feature's pull\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe practice AI judges where each line it considers ends up with its hand-written evaluation, corrected by a small network trained on its own games. In the network that ships today, a few rarely seen counts dominate that correction. One more enemy unit with Crater makes a line look about 133 points worse, and one more of the AI's own Untributable units makes it look 163 points better. A whole hero at full life is worth 30 points, and one more Taunt moves the score by about 1. So when a line adds or removes one of those rare cards, the AI can pick a clearly worse line. Once this is built, the next retrain can no longer learn swings that size from a handful of rows. Every run's report also shows which features pull hardest, so the maintainer can spot a problem like this without decoding the weights by hand. Players notice nothing until the next network passes the gate and ships.\n\n## Why\n\n- `training/ml/jackioh_ml/data.py:241-245`: `Standardizer.fit` divides each dense feature by its own spread, floored at `1e-9`. A count present in about one row in 10,000 has a spread near 0.01, so one count of it becomes an input of about 100.\n- I reproduced this on `crates/ai/src/learned/weights.json` (format 2, `featuresVersion` 2, fitted on v0.3.17). The probe used `quantize.unpacked` and `quantize.correction`, the same integer arithmetic as `crates/ai/src/learned/int.rs`, over the 284 rows of `training/ml/tests/fixtures/positions.jsonl`, mapped into the v2 layout by name. It added 1 to one dense feature at a time. The table gives the median change in hand-eval points at `LEARNED_CORRECTION_SHARE` (0.5), where points = hand + share\u00b7(b + net)\u00b7U/a (R1010000, R1012001):\n\n| one more | points |\n|---|---|\n| `own.kw.Untributable` | +162.8 |\n| `enemy.kw.Crater` | \u2212132.6 |\n| `enemy.kw.Untributable` | \u2212109.1 |\n| `seat_acts` | +67.0 |\n| `enemy.kw.Temporary` | +47.8 |\n| `own.extra_turns` | \u221222.0 |\n| `enemy.kw.Taunt` | +1.0 |\n| `own.units` | +0.8 |\n| `own.life` | +0.7 |\n\n  A full hero is 30 points (`evaluate.rs`, `hero_value`).\n- Of 800 non-token cards, 6 carry Crater, 2 Untributable and 1 Temporary. A Nerf can also add Crater to a Unit, Field Spell or Trap in a hand (R2657005). So these counts are rare in the training rows but do come up in play.\n- Nothing in the fit, its report or `summary.json` shows a feature's pull, so the next refit can learn the same thing again unseen. The standardizer has no test: nothing in `training/ml/tests/` names it.\n- `retrain.sh:27-30` already notes that each seed 'misjudges a puzzle or two of its own'. A network this sensitive to rare counts fits that note. Still, nothing in the tree records why the learn runs since generation 13 (2026-10-21, `training/history/learn.jsonl`) have not promoted.\n\n## Proposal\n\n1. `data.py`: add a named `MIN_SPREAD`. Proposed: 0.25, the spread of a 0/1 feature present in about one row in sixteen, so one count moves an input by at most four units. `Standardizer.fit` floors every varying feature's scale at it, and a feature that never varies keeps a spread of one, as today. Choose the value once, up front, and write down why. Do not screen several values and keep the best (`training/improve.md`, How you measure).\n2. `fit.py`: the report gains each dense feature's pull. A pull is the median, over the validation rows, of the change in hand-eval points from one more count of that feature. It is read from the integer network `quantize` would ship (`correction`), at the full correction (U/a). `report.json` holds the whole table and `report.md` the ten largest by size.\n3. `retrain.sh`: `summary.json` names the largest pull (feature and points) at every stage that writes it, including the fit's stop and the tests' stop. The run's summary page already prints `summary.json`, so the pull shows there.\n4. `training/ml/README.md` and `docs/learned-eval.md` (D5, D7) describe the floor and the table.\n\nNothing in Rust changes. The scale travels through `export.py`, and `quantize.py` folds it into the first layer, so the shipped network and its parity fixture stay as they are until the lane promotes a new one.\n\nRejected: clamping the correction at play time in `crates/ai/src/learned.rs`. That would change the generation-13 AI on main without a gate, and it would hide the problem rather than stop the fit from learning it.\n\n## Where it lands\n\n- `training/ml/jackioh_ml/data.py`, `training/ml/jackioh_ml/fit.py`, `training/ml/retrain.sh`\n- `training/ml/tests/test_data.py`, `training/ml/tests/test_fit.py`\n- `training/ml/README.md`, `docs/learned-eval.md` (D5, D7), `training/learn.md` (step 3's report)\n- SPEC \u00a79.9 changes only if it comes to describe the standardizer; it does not today\n\n## Acceptance criteria\n\n- [ ] `MIN_SPREAD` is one named constant in `data.py`, with its reason. `Standardizer.fit` floors a varying feature's scale at it, and a constant feature keeps 1.0.\n- [ ] A test in `test_data.py` fails on today's `1e-9` floor. In it, a feature present in 1 of 10,000 rows gets scale `MIN_SPREAD`, a common feature keeps its own spread, and a constant one gets 1.0.\n- [ ] `report.json` holds a pull for every dense name and `report.md` lists the ten largest. A test in `test_fit.py` checks both on the fixture's end-to-end fit.\n- [ ] The PR quotes the pull table of the committed `weights.json` over the fixture, which shows the swings above. It is a printout, not a test: a test would break when the lane next ships weights.\n- [ ] `summary.json` names the largest pull at the fit, tests and screen stages.\n- [ ] `uv run --project training/ml pytest training/ml/tests` passes, and the PR quotes its output.\n- [ ] No file under `crates/` changes.\n\n## Size and risks\n\nSmall: about 5 lines in `data.py`, 40 to 60 in `fit.py` and `retrain.sh`, 60 to 80 lines of tests, plus doc lines. Risks:\n\n- It changes every future fit. The lane's own next run measures it: the run retrains with `retrain.sh` on main, and its screen and gate judge the result against the network on main, as for any refit. A worse network does not ship, and the maintainer has to do nothing. A run on an earlier export (`learn.yml` with `export_run`) would measure it sooner, but only a person can dispatch one.\n- The floor's value is a judgement call, made once.\n- No CI job runs `training/ml/tests`: `ci.yml` never names them, and `scripts/ci-scope.sh` treats `training/` as docs. So the builder's own run is the proof. Adding them to CI is a person's change under `.github/`.\n- The fit tests need torch's CPU wheel through `uv`. If the builder cannot install it, the `data.py` test runs on numpy alone, and the PR says which tests ran.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:04:19Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4109: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T19:04:43Z",
+    "claimed_at": "2026-11-17T19:06:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
