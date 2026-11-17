@@ -15460,13 +15460,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
-        "builder": "gpt",
-        "built_by": "gpt",
+        "approvals": [
+          "muse"
+        ],
+        "builder": "",
+        "built_by": "",
         "rejections": [],
-        "reviews": [],
-        "sha": "c49998c2e025823b2e05262be52beab3f2638fd1",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "44000205959",
+            "tier": "medium"
+          }
+        ],
+        "sha": "133a4cdeb526722a00fdf6a5e8a428c85aa29cba",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4099": {
