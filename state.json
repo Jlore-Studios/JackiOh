@@ -15470,6 +15470,7 @@
           }
         ],
         "head": "c49998c2e025823b2e05262be52beab3f2638fd1",
+        "interruptions": 0,
         "kind": "build",
         "model": "gpt-5.6-sol",
         "provider": "gpt",
