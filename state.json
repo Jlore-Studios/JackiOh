@@ -15916,6 +15916,8 @@
       }
     },
     "4101": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-16T23:29:50Z",
@@ -15929,8 +15931,11 @@
         "trail": "e is restored (`AI_EVAL` has both flags `true` again). Running the flags-off gate in the background.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; /tmp/jackioh-off gate > /tmp/gate-off.log 2>&1; echo exit=$? >> /tmp/gate-off.log\", \"description\": \"Run the smoke gate with both new flags off\"\u2026\n- said: While that runs, testing the crates that drive the AI (`jackioh-shared` first), since their tests could pin AI decisions.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; timeout 2400 cargo test -p jackioh-shared > /tmp/shared.log 2>&1; echo exit=$?; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/shared.log | grep -E 'test res\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/shared.log | grep -E '^error' -A12 | head -40\", \"description\": \"Show the shared crate's build error\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; timeout 2400 cargo test -p jackioh-shared --features jackioh-engine/testkit > /tmp/shared.log 2>&1; echo exit=$?; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /\u2026\n- said: `jackioh-shared` passes. Checking the comparison gate.\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/gate-off.log | grep -v 'pinned\\\\]' | tail -8\", \"description\": \"Read the flags-off gate's progress\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; git grep -l 'jackioh_ai' -- crates/tools crates/run crates/wasm | head -20\", \"description\": \"Find tools, run and wasm files using the AI\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; grep -n 'jackioh_ai\\\\|AI_EVAL\\\\|EvalWeights' crates/wasm/core/src/constants.rs | head; grep -rn 'AI_EVAL\\\\b' crates/wasm crates/server/src | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; timeout 3000 cargo test -p jackioh-tools --features jackioh-engine/testkit,jackioh-engine/ts > /tmp/tools.log 2>&1; echo exit=$? >> /tmp/tools.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; git grep -n 'gauntlet_bars_face_attacks\\\\|static_attack_flags_read' -- docs apps e2e training analysis | head\", \"description\": \"Check docs for \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Next: compare gate with both flags off (temporary build copied to /tmp,\u2026\n- said: Waiting on the tools tests; meanwhile a last look at the R4065001 note against what the code does.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; sed -n 8,30p spec/rulings/R4065001.md | cut -c1-300\", \"description\": \"Reread the R4065001 note body\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; grep -n 'candidate_actions\\\\|trade_value\\\\|stands_down\\\\|GREEDY_EVAL\\\\|evaluate' crates/ai/src/baselines.rs | head -20\", \"description\": \"See wh\u2026\n- said: The greedy baseline orders its candidates with `candidate_actions`, which reads `AI_EVAL`'s flags, so I'll state that leak plainly in both notes, along with the gate numbers.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; python3 - <<'EOF'\\ngate = \\\"\\\\n\\\\n**Gate.** The smoke gate (`cargo jackioh gate`, fixed seeds) on base `f94a31821f`, with both of issue #4065's\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; tail -3 /tmp/tools.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g'\", \"description\": \"Check the tools tests' progress\"}\n- said: While the tools crate compiles, drafting the PR description.\n- Write: {\"file_path\": \"/tmp/pr-4065.md\", \"content\": \"The AI's static reads now match what `reduce` does in two cases it got wrong: a unit that the first tick of its own Burn and Toxic destroys before it can \u2026\n- Bash: {\"command\": \"tail -3 /tmp/tools.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | cut -c1-200\", \"description\": \"Check the tools tests' progress\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"tools crate tests finishing\", \"timeout_ms\": 600000, \"command\": \"until grep -q '^exit=' /tmp/tools.log; do sleep 5; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/tools.log | grep -E 'test re\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -q '^exit=' /tmp/tools.log; do sleep 5; done; sed 's/\\x1b\\[[0-9;]*m//g' /tmp/tools.log\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/tools.log; do sleep 5; done; echo finished\", \"description\": \"Wait for the tools tests to finish\", \"timeout\": 3000000, \"run_in_background\": true}\n- said: The tools tests are still running; I'll wait for their notification before the final checks.\n- Bash: {\"command\": \"tail -2 /tmp/tools.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | cut -c1-200\", \"description\": \"Check the tools tests' progress\"}\n- Bash: {\"command\": \"timeout 590 bash -c \\\"until grep -q '^exit=' /tmp/tools.log; do sleep 5; done\\\"; tail -2 /tmp/tools.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | cut -c1-200\", \"description\": \"Wait up to ten minut\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/tools.log | grep -E 'test result' | awk '{p+=$4; f+=$6; i+=$8} END {print \\\"passed=\\\"p, \\\"failed=\\\"f, \\\"ignored=\\\"i}'; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/t\u2026\n- said: The tools tests pass (609 passed, 8 ignored, 0 failed) and `apps/web/src/wire` is unchanged. Final re-run of the spec check and format check after the last note edits.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; cargo fmt --check && echo fmt-ok; cargo jackioh spec check 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail -1; cargo jackioh patches check 2>&1 | sed\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4065; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"- jackioh-shared tests green (needs --features jackioh-engine/testkit\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI's threat math drops a unit its own Burn or Toxic destroys before it can attack, and counts The Banisher's hit on a Unit as an exile\"} --> The AI's quick reads now match what `reduce` does in two cases it got wrong: - a unit that the first tick of\u2026"
       },
       "issue": 4065,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T01:23:56Z",
         "from_run": "43979771743",
         "gates": [
           {
@@ -16022,7 +16027,11 @@
         "source": "build",
         "until": "2026-11-17T01:50:41Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-17T01:20:41Z",
+      "run_id": "pending:b5fddf04-1794878602",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16041,6 +16050,9 @@
         "provider": "claude-3",
         "run": "43979771743"
       },
+      "started_at": "2026-11-17T01:23:56Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16190,9 +16202,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T01:23:07Z",
+    "at": "2026-11-17T01:23:56Z",
     "url": "",
-    "what": "review #4090 on claude-2"
+    "what": "review #4101 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-17T01:10:46Z",
