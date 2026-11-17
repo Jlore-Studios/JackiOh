@@ -16481,7 +16481,7 @@
     "what": "review #4123 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T13:49:52Z",
+    "at": "2026-11-17T13:57:59Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17187,7 +17187,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T13:49:52Z",
+  "loop_tick": "2026-11-17T13:57:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
