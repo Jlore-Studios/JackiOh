@@ -16530,10 +16530,12 @@
     "what": "plan #4013 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T15:53:53Z",
+    "at": "2026-11-17T16:01:16Z",
     "notes": [
-      "delivered plan #4124 on claude-3 (run 44107136578): blocked",
-      "runner gate: started 1 of 1 waiting run(s) (run 44119697547 on halt-claude-2-and-5)"
+      "#4013 needs a plan",
+      "started plan #4013 on muse (run 44121177971)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17239,7 +17241,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T15:53:53Z",
+  "loop_tick": "2026-11-17T16:01:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
