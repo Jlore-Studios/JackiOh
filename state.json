@@ -13946,6 +13946,8 @@
       "verdict_rounds": 0
     },
     "4150": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T22:43:23Z",
@@ -13959,8 +13961,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4136 from the after-merge spot-check\"} -->\n- ## What changed and why\n- The `R711000 every table-fed sentence has a zh-CN entry` test in [apps/web/src/i18n/i18n.test.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4149/apps/web/src/i18n/i18n.test.ts) walked only the `boardNames` entry of `CARD_SETTINGS_FIELDS`, so a new or reworded label/description on any of\u2026\n- ## How I tested it\n- - Temporary negative probe (reverted): changed the `hoverPreviews` label to `\"Hover previews probe\"` and ran `pnpm --dir apps/web test src/i18n/i18n.test.ts`. The table-fed test failed with exactly `CARD_SETTINGS_FIELDS: \"Hover previews probe\"`, proving the walk is now sensitive to any field.\n- - After reverting the probe: `pnpm --dir apps/web test src/i18n/i18n.test.ts` is green, 7 passed in 1 file.\n- - `git diff` confirms the only changed file is `apps/web/src/i18n/i18n.test.ts` (3 insertions, 4 deletions).\n- ## Decisions and reviewer notes\n- - No decisions beyond the plan; I followed it exactly and departed nowhere.\n- - One thing to look at twice: failure messages for the `boardNames` field's own label/description now read `CARD_SETTINGS_FIELDS:` instead of `boardNames:` (intended, matching how the other tables are named); the board-names option labels still report as `boardNames:`.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4149 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4149/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4149,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T23:07:59Z",
         "from_run": "44192806364",
         "gates": [
           {
@@ -14019,8 +14024,15 @@
         "source": "build",
         "until": "2026-11-17T23:37:11Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-17T23:07:11Z",
+      "run_id": "pending:f80b6dd0-1794956858",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-17T23:07:59Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -14034,9 +14046,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T22:58:36Z",
+    "at": "2026-11-17T23:07:59Z",
     "url": "",
-    "what": "plan #4015 on muse"
+    "what": "review #4150 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T22:57:30Z",
