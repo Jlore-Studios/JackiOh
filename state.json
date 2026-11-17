@@ -10322,15 +10322,8 @@
       "verdict_rounds": 1
     },
     "4015": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44195159152",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-17T23:06:26Z",
-        "until": "2026-11-17T23:36:26Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -10342,10 +10335,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": ", `parseCounts` (~line 40): inside the `Object.entries` loop, add `if (!isSafeKey(id)) continue;` before the count check. In `parsePlayerStats` (~line 60), in the `value.cards` loop, add the same guard before `parseCounters`. Import `isSafeKey` from `../wire/json.ts`.\n- 4. `apps/web/src/game/deckbuilder/sync.ts`, `entriesFrom` (~line 283): after `const item = read(raw.item)`, add `if (item === null || !isSafeKey((item as { id: string }).id)) continue;`. Import `isSafeKey` alongside `isRecord`. `merge`, `deckFrom`, `trioFrom`, and `pickedDeckCosmetics` need no othe\u2026\n- 5. Verify-no-change entry points by reading each and confirming the stated safe shape; do not edit them: `settings/store.ts parseSettings` (loops fixed `SETTING_KEYS`), `cards/cosmetics.ts cardPicksFrom` (`Map.set`) and `normalize*` (fixed keys), `cards/settings.ts parse` (fixed `SETTING_KEYS`), `g\u2026\n- 6. Add the tests listed in **Tests** below, one `it` per entry point, each feeding `{\"__proto__\": {\"polluted\": true}}` and `{\"constructor\": {\"prototype\": {\"polluted\": true}}}` (adapted to the input shape: raw JSON string for storage parsers, `cardId`/`id` field values for keyed folds, frame JSON te\u2026\n- 7. Run the focused checks (exact commands in **Tests**), then `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/edge apps/web e2e`. Write the PR description as the entry-point list: each entry point, safe-or-fixed verdict, and what it does now.\n- ## Tests\n- - `apps/web/src/wire/json.test.ts`: `it(\"isSafeKey refuses proto keys\")` \u2014 `__proto__`, `constructor`, `prototype` false; `\"p1\"`, `\"card-1\"` true.\n- - `apps/web/src/cards/loadouts.test.ts`: `it(\"parseCardLoadouts drops proto cardIds\")` \u2014 payload with `cards: [{cardId: \"__proto__\", \u2026}, {cardId: \"real\", \u2026}]` and `stamps` with `__proto__`/`constructor` entries; assert real card present, `({}).polluted` undefined. `it(\"holder merge keeps proto out\"\u2026\n- - `apps/web/src/stats/store.test.ts`: `it(\"parsePlayerStats drops proto card ids\")` \u2014 cards map with `__proto__` and `constructor` keys plus one real id; assert real counted, no pollution.\n- - `apps/web/src/game/deckbuilder/sync.test.ts`: `it(\"mirror with proto ids restores nothing polluted\")` \u2014 `parseMirror` on a mirror JSON whose deck/trio entries use `__proto__` ids plus one real dirty entry; assert real restored, no pollution.\n- - `apps/web/src/settings/store.test.ts`: `it(\"parseSettings ignores proto keys\")` \u2014 JSON with `__proto__`/`constructor` plus `dragToPlay: false`; assert setting applied, no pollution.\n- - `apps/web/src/cards/cosmetics.test.tsx`: `it(\"stored card picks ignore proto ids\")` \u2014 storage JSON keyed by `__proto__` plus a real card id; assert real resolved, no pollution.\n- - `apps/web/src/cards/settings.test.ts`: `it(\"card settings ignore proto keys\")` \u2014 same shape as settings test.\n- - `apps/web/src/game/deckbuilder/deckCode.test.ts`: `it(\"decodeDeckCode refuses proto-shaped junk unchanged\")` \u2014 `decodeDeckCode('{\"__proto__\":{\"polluted\":true}}', catalog, null)` returns the existing not-a-code message; no pollution.\n- - `apps/web/src/net/roomLink.test.ts`: `it(\"room/coop links ignore proto params\")` \u2014 searches like `?room=\u2026&__proto__=x`, `?coop=\u2026&constructor[prototype]=\u2026`; assert link parses (or null for bad code) and no pollution; `readRoomLink` with sessionStorage holding `{\"__proto__\":\u2026,\"code\":\"\u2026\",\"mode\":null\u2026\n- - Frame parsers (`game/net.test.ts`, `duos/socket.test.ts`, `together/socialSocket.test.ts`): `it(\"\u2026frame with proto keys does not pollute\")` \u2014 text frames containing top-level `__proto__`/`constructor` keys; assert null or a well-formed frame, plus no pollution.\n- - `apps/edge/src/routing.test.ts`: `it(\"forServer ignores hostile headers\")` \u2014 request carrying `X-Forwarded-For: evil` and a `__proto__` header; assert forwarded-for replaced by `CF-Connecting-IP` (or deleted) and no pollution. `apps/edge/src/alerts.test.ts`: `it(\"emailOf with proto field names do\u2026\n- - Commands: `pnpm --dir apps/web test src/wire/json.test.ts`, `pnpm --dir apps/web test src/cards/loadouts.test.ts`, `pnpm --dir apps/web test src/stats/store.test.ts`, `pnpm --dir apps/web test src/game/deckbuilder/sync.test.ts`, `pnpm --dir apps/web test src/settings/store.test.ts`, `pnpm --dir a\u2026\n- ## Done when\n- - [ ] Each entry point named in the task is listed in the PR with its verdict and current behavior.\n- - [ ] Each entry point has its pollution test, asserting `({}).polluted` is `undefined` and normal reads unchanged.\n- - [ ] `pnpm --dir apps/web test`, `pnpm --dir apps/web typecheck`, `pnpm exec vitest run --project edge`, `pnpm exec eslint apps/edge apps/web e2e` green.\n- - [ ] No crate, spec note, or forbidden path changed; no test weakened, no lint suppression added.\n- ## Risks\n- - Spread/`Object.assign` copies of a parsed `__proto__` own-property are own data properties, not prototype sets, but later keyed reads (`catalog.cards[\"__proto__\"]` returning `Object.prototype`) can crash or mis-resolve: the guards keep such keys out before they are stored, and frame parsers never\u2026\n- - `Map`-keyed stores (card picks, deck merge) are already safe; the fix normalizes on skipping at parse time so serialized snapshots never carry the keys either.\n- - Fixed-key readers (settings, cosmetics, session, URL params) change nothing, avoiding behavior drift; their tests pin that.\n- - Worker scope is header/env passthrough with no body-to-object fold; tests pin passthrough rather than adding parsing.\n- ## Open questions\n- None. The item stays medium: no engine rules, no AI, no cross-crate design, no migration, and well under 40 files.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4015 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4015/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-17T22:58:36Z",
       "owner_why": "it plans it",
@@ -10358,9 +10350,9 @@
       "provider": "muse",
       "queued_at": "2026-11-15T22:30:25Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44195159152",
+      "run_id": "pending:ebb9f8c7-1794956892",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-17T22:58:36Z",
+      "started_at": "2026-11-17T23:08:34Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14046,9 +14038,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T23:07:59Z",
+    "at": "2026-11-17T23:08:34Z",
     "url": "",
-    "what": "review #4150 on muse"
+    "what": "build #4015 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T22:57:30Z",
