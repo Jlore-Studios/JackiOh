@@ -13926,8 +13926,13 @@
     "what": "plan #4015 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T22:50:12Z",
-    "notes": [],
+    "at": "2026-11-17T22:57:30Z",
+    "notes": [
+      "#4015 needs a plan",
+      "started plan #4015 on muse (run 44195159152)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -14632,7 +14637,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T22:50:12Z",
+  "loop_tick": "2026-11-17T22:57:30Z",
   "machine_disk": {
     "issue": null,
     "reading": {
