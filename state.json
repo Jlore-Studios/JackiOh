@@ -13422,6 +13422,9 @@
       ],
       "verdict_rounds": 0
     },
+    "4132": {
+      "suggestion": true
+    },
     "4133": {
       "action": "review",
       "asks": [],
