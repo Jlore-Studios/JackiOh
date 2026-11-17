@@ -12763,17 +12763,8 @@
       ]
     },
     "4111": {
-      "action": "plan",
-      "asks": [
-        "c:6958392515"
-      ],
-      "build_next": {
-        "from_run": "44163655255",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-17T21:05:02Z",
-        "until": "2026-11-17T21:35:02Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-17T21:04:53Z",
         "difficulty": "hard",
@@ -12792,28 +12783,29 @@
         "reason": "planned on opus",
         "trail": "on\": \"Create the v2 plan file\"}\n- Read: {\"file_path\": \"/tmp/i18-plan-v2.md\"}\n- Write: {\"file_path\": \"/tmp/i18-plan-v2.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: it fixes the combat forecast in crates/engine/src/query.rs and adds an invariant to the \u2026\n- Bash: {\"command\": \"wc -w /tmp/i18-plan-v2.md; cat /tmp/i18-4000.txt | cut -c1-2500\", \"description\": \"Count words and check the sweep\"}\n- Bash: {\"command\": \"grep -v \\\"^JUDGED\\\" /tmp/i18-4000*.err 2>/dev/null | tail -2; date\", \"description\": \"Check sweep progress\"}\n- Monitor: {\"command\": \"until [ -s /tmp/i18-4000.json ]; do sleep 5; done; echo gate-2001-4000-finished\", \"description\": \"gate seeds 2001\\u20134000 finished\", \"timeout_ms\": 600000}\n- Bash: {\"command\": \"ls /tmp/i18-4000*; date\", \"description\": \"Check sweep files\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/i18-plan-v2.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\"**Prototype.** The planner ran I18 in an untracked copy of HEAD. The issue's first-cut filter drifted on 23 o\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/i18-plan-v2.md'\\ns=open(p).read()\\nstart=s.index(\\\"## Tests\\\")\\nend=s.index(\\\"## Open questions\\\")\\nnew_tests = \\\"\\\"\\\"## Tests\\n\\n**`crates/engine/tests/rules/\u2026\n- Bash: {\"command\": \"python3 -c \\\"\\nimport json;d=json.load(open('/tmp/i18-4000.json'));print('passed',d['passed'],'failures',len(d['failures']))\\nfor f in d['failures']: print(f['seed'],f['stage'],f['messag\u2026\n- said: Seeds 2001\u20134000 of the gate are clean too (14,302 attacks judged). The handicapped half is running. Meanwhile I'm trimming the plan to fit the word limit.\n- Read: {\"file_path\": \"/tmp/i18-plan-v2.md\", \"offset\": 1, \"limit\": 75}\n- Read: {\"file_path\": \"/tmp/i18-plan-v2.md\", \"offset\": 76, \"limit\": 90}\n- Bash: {\"command\": \"wc -c /tmp/i18-plan-v2.md; sed -n '166,240p' /tmp/i18-plan-v2.md | head -20\", \"description\": \"Check the plan's character count\"}\n- Bash: {\"command\": \"grep -v \\\"^JUDGED\\\" /tmp/i18-4000--handicap.err 2>/dev/null | tail -1; date\", \"description\": \"Check handicap 2001\\u20134000 progress\"}\n- Bash: {\"command\": \"ls -la /tmp/i18-4000*; tail -c 300 /tmp/i18-4000--handicap.err 2>/dev/null\", \"description\": \"Check the handicap sweep files\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/i18-plan-v2.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\" - Line 2: \\\"I1\\u2013I18\\\".\\n - Add the header sentence \\\"`played_attack.rs` (#4111): what an attack did, rea\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ns=open('/tmp/i18-plan-v2.md').read()\\nno_fence=re.sub(r'```.*?```','',s,flags=re.S)\\nno_code=re.sub(r'`[^`]*`','X',no_fence)\\nprint('words total',len(s.spli\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/i18-plan-v2.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\"Do not touch:\\n\\n- `.github/`, `.harness/`, `.squishy/`, `bot/`, `.claude/`;\\n- `spec/11-rulings.md`, `spec/I\u2026\n- Bash: {\"command\": \"cd /tmp/i18proto && /home/runner/work/JackiOh/JackiOh/target/release/jackioh fuzz --from 1 --seeds 1 2>&1 | grep -E \\\"JUDGED|passed\\\" | head -3\", \"description\": \"Check seed 1's judged co\u2026\n- Bash: {\"command\": \"cd /tmp/i18proto && python3 - <<'EOF'\\np='crates/engine/src/damage.rs'\\ns=open(p).read()\\nold=\\\" let take = after.min(left - pools.soaked[side]).max(0);\\\"\\nassert s.count(old)==1\\ns=s.re\u2026\n- Bash: {\"command\": \"cat /tmp/i18-4000.txt | cut -c1-2500; grep -v \\\"^JUDGED\\\" /tmp/i18-4000--handicap.err | tail -1\", \"description\": \"Read the handicap 2001\\u20134000 result\"}\n- Bash: {\"command\": \"cd /tmp/i18proto && /home/runner/work/JackiOh/JackiOh/target/release/jackioh fuzz --seeds 30 --cards stinkyscapeplus-042 --json > /tmp/i18-revert.json 2>/tmp/i18-revert.err; echo \\\"exit \u2026\n- Bash: {\"command\": \"for f in crates/engine/src/testkit/invariants.rs crates/engine/src/query.rs crates/engine/src/damage.rs crates/tools/src/fuzz.rs; do git show HEAD:$f > /tmp/i18proto/$f; done; cd /tmp/i1\u2026\n- Bash: {\"command\": \"cd /tmp/i18proto && diff -rq --exclude=target <(cd /home/runner/work/_temp/work/item-4111 && git ls-files crates | head -0) /dev/null >/dev/null 2>&1; for d in crates; do diff -rq /home/\u2026\n- Bash: {\"command\": \"cat /tmp/i18-4000.txt | cut -c1-2500; grep -v \\\"^JUDGED\\\" /tmp/i18-4000--handicap.err | tail -1\", \"description\": \"Check the handicap sweep\"}\n- Bash: {\"command\": \"cd /tmp/i18proto && cargo build --release -p jackioh-tools 2>&1 | grep -E \\\"^error|Finished\\\" -A 8 | head -10; grep -c \\\"I18 forecast drift\\\" /home/runner/work/JackiOh/JackiOh/target/rel\u2026\n- Bash: {\"command\": \"cat /tmp/i18-4000.txt | cut -c1-2500\", \"description\": \"Read the full 2001\\u20134000 results\"}\n- said: Seeds 2001\u20134000 are clean in both waves (12,998 handicapped attacks judged). The shared target now holds HEAD-built artifacts. Timing HEAD's 200-seed gate as the baseline.\n- Bash: {\"command\": \"cd /tmp/i18proto && s=$(date +%s.%N); /home/runner/work/JackiOh/JackiOh/target/release/jackioh fuzz --seeds 200 > /tmp/i18-base.txt 2>&1; e=$?; echo \\\"exit $e took $(echo \\\"$(date +%s.%N\u2026\n- said: HEAD's baseline is 37 s against 36 s with the prototype I18, so the cost is within noise. Finalizing the plan with these numbers.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/i18-plan-v2.md'\\ns=open(p).read()\\nrep={\\n\\\"\\\"\\\"| `--from 1 --seeds 2000 --handicap` | clean | 13,256 |\\n\\nSWEEP4000\\n\\\"\\\"\\\":\\\"\\\"\\\"| `--from 1 --seeds 2000 --h\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/i18-plan-v2.md'\\ns=open(p).read()\\na=\\\"| `--from 1 --seeds 2000` | clean but #8 | 14,259 |\\\"\\nassert s.count(a)==1\\ns=s.replace(a,\\\"| `--from 1 --seeds 2000` |\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/i18-plan-v2.md'\\ns=open(p).read()\\na='`\\\" forecast attacks judged: 3\\\\n\\\"`'\\nassert s.count(a)==1\\ns=s.replace(a,'`\\\" forecast attacks judged: 3\\\\\\\\n\\\"`')\\nope\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: it fixes the combat forecast in crates/engine/src/query.rs and adds an invariant to the engine's testkit\"} --> ## Goal Add I18 to the testkit's `InvariantMonitor`. On every plain 1v1 attack the fuzz plays, the `combat_forecast` entry the seat w\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-6",
-      "owner_since": "2026-11-17T19:43:16Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-1",
+      "owner_since": "2026-11-17T21:06:02Z",
+      "owner_why": "handed off from `claude-6`: `claude-6` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-17T21:04:55Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_by_id": "claude-6",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-6",
+      "provider": "claude-1",
       "queued_at": "2026-11-17T19:20:56Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44163655255",
+      "run_id": "pending:77da662c-1794949535",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-17T19:54:42Z",
+      "started_at": "2026-11-17T21:06:02Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6958392515"
+      ]
     },
     "4112": {
       "action": "build",
@@ -13729,9 +13721,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T20:54:45Z",
+    "at": "2026-11-17T21:06:02Z",
     "url": "",
-    "what": "build #4014 on claude-3"
+    "what": "build #4111 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-17T20:50:28Z",
