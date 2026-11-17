@@ -36833,9 +36833,9 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-17T04:06:07Z",
+    "idle_since": "2026-11-17T04:05:20Z",
     "last_area": "ai",
-    "last_run": "2026-11-17T04:06:07Z",
+    "last_run": "2026-11-17T04:05:20Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -36846,14 +36846,6 @@
         "last_run": "2026-11-17T04:05:20Z",
         "provider": "claude-7",
         "run_id": "44014706445",
-        "taken_asks": []
-      },
-      "2": {
-        "area": "tests",
-        "count": 1,
-        "last_run": "2026-11-17T04:06:07Z",
-        "provider": "claude-5",
-        "run_id": "44014799314",
         "taken_asks": []
       }
     },
