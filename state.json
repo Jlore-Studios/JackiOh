@@ -35466,7 +35466,9 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-17T00:57:01Z",
         "every": 5,
+        "findings": 0,
         "head": "bebe0cd62f06ae598473437677812182afbaff1b",
         "issue": 4070,
         "merged_at": "2026-11-17T00:48:35Z",
@@ -35479,12 +35481,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:b87a3930-1794876514",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43990668393",
         "sha": "7dbfb6252f543a5b1a0357491a1b5393d5fc11a3",
         "started_at": "2026-11-17T00:48:55Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the learned evaluation's training rows carry the hand eval the search corrects, with the decision's Death, turn-hook, Activate, attack-hook and awakening prices",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 305
