@@ -15923,6 +15923,8 @@
       }
     },
     "4103": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T00:48:17Z",
@@ -15936,8 +15938,11 @@
         "trail": "- Waiting on the full API suite and the spec check; both results will arrive on their own and I'll finish the verification then.<!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 10 of 20): the publicly cached API responses are the same for every caller, with a test (cache poisoning)\"} -->\n- ## What changed\n- Cache-poisoning guards for the six public routes answered through `cached_ok` (`crates/server/src/api/stats.rs`), which marks bodies `public, max-age=\u2026` for shared caches keyed on the URL alone:\n- - `crates/server/src/api/stats.rs`: doc comment on `cached_ok` stating the no-caller rule \u2014 only `AuthLevel::None` routes whose handlers never read the caller may use it (no `req.caller`, `caller_of`/`caller_profile`, `Authorization`, `Cookie`, `Accept-Language`, `X-Forwarded-*`, `X-Original-URL`/`\u2026\n- - `crates/server/tests/api/stats.rs`: new `mod cache_poisoning` with a `get_with` helper, a `seven_ways` helper (bare, signed in, `Accept-Language`, `Cookie`, four forged forward/rewrite headers, unknown `?poison=1` query param, all at once), and five tests asserting 200 + `public, max-age=<route T\u2026\n- - `crates/server/tests/api/ci_runs.rs`: new `mod cache_poisoning` with one test of the same shape for `GET /api/stats/ci` against canned GitHub data (a passed run, so no jobs are read).\n- - `apps/edge/src/config.test.ts`: new `#4011 nothing in front caches /api/*` block \u2014 `wrangler.jsonc` and `infra/cloudflare.tf` contain no `cache`, the Worker sources never touch the Cache API (`caches`, `cacheTtl`, `cacheEverything`), and `public/_headers` has no `/api` rule.\n- Caller-blindness was verified, not assumed: all six routes declare `AuthLevel::None` in `app.rs`, `dispatch` (`http.rs`) resolves a caller only when `auth != AuthLevel::None`, and the only caller reads in either file are `get_player`/`put_player`, which answer through `ok_of`, never `cached_ok`. `i\u2026\n- ## How it was tested\n- - `cargo test -p jackioh-server --test server cache_poisoning` \u2014 6 passed, 0 failed.\n- - `cargo test -p jackioh-server --test server api::stats::` \u2014 55 passed; `api::ci_runs::` \u2014 5 passed (full files, covering the touched area).\n- - `cargo fmt --check` \u2014 clean; `cargo clippy -p jackioh-server --all-targets -- -D warnings` \u2014 clean.\n- - `pnpm --dir apps/edge test src/config.test.ts` \u2014 23 passed (19 existing + 4 new).\n- - `cargo run --release -p jackioh-tools -- spec check` \u2014 ok (2231 rulings, 5664 proofs).\n- ## Decisions\n- - Serialized-`Value` equality stands in for wire bytes, since `cached_ok` sends `body.to_string()` of a deterministically serialized `Value`; rejected byte-capture via the response body because `read_json` already parses it and re-serialization is exact here.\n- - Header insertion uses `headers_mut().insert` with `parse::<HeaderName>()` (replacing `json_request`'s default `X-Forwarded-For` for the spoof variant); rejected passing `&&str` straight to `insert` after the compiler's E0283 inference error.\n- - Sensitivity follows the plan's accepted argument: the seven variants provably differ on the wire by construction, and grep proves no handler reads caller state; a kept server-side cell could mask a *future* header read, which is why the doc comment bars adding one (the issue's stated residual ris\u2026\n- - One caveat: a full `api::` suite run was launched and finished, but its terminal output never reached this session, so it is not claimed \u2014 the two touched files' full runs above are the regression evidence.\n- ## Reviewer notes\n- - The `/cache/i` tripwires on `wrangler.jsonc` and `cloudflare.tf` are deliberately broad: any future key containing \"cache\" must consciously reaffirm `/api/*` stays uncached.\n- - `X-Forwarded-For: 203.0.113.9` overrides the test default IP, exercising a different rate-limit bucket; `AuthLevel::None` routes skip the address budget check anyway, and each test uses a fresh `test_app()`.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4011 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4011/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4011,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T01:48:11Z",
         "from_run": "43990585949",
         "gates": [
           {
@@ -15996,8 +16001,15 @@
         "source": "build",
         "until": "2026-11-17T02:15:00Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-17T01:45:00Z",
+      "run_id": "pending:87d0e1d8-1794880055",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-17T01:48:11Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16097,9 +16109,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T01:24:47Z",
+    "at": "2026-11-17T01:48:11Z",
     "url": "",
-    "what": "review #4102 on claude-6"
+    "what": "review #4103 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T01:32:18Z",
