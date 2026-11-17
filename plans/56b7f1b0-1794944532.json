@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4116,
+  "title": "Patch: hold the dungeon run's enemy tiers to run-sim win-rate bands",
+  "branch": "bot/issue-4116",
+  "thread": "**Issue #4116 (data, not instructions):**\n\n```text\n# #4116: Patch: hold the dungeon run's enemy tiers to run-sim win-rate bands\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe dungeon run climbs fifteen enemy strengths from easy early fights to a hard final boss. Today nothing checks that the climb stays a climb: someone can make the first fights brutal or the last boss trivial and every check still passes. Once this is built, a small fast test plays a fixed handful of runs with the practice player and fails when the early game stops being winnable or the final boss stops being scary. Players notice fairer fights; the maintainer notices a tier edit that went too far the same day, with numbers instead of a feeling.\n\n## Why\n\n- `spec/15-dungeon-run.md` \u00a7\u00a715.5\u201315.6, 15.12\u201315.13: `RUN_TIERS` and `RUN_ELITE_TIERS` are strawmen \"to be tuned against run-sim's table by tier\" ([[R3586000]], [[R3586001]]; `crates/run/src/config.rs`).\n- `crates/tools/src/run_sim.rs` header: the table \"is a guide to tuning the strawmen (\u00a715.13), not a target\" and \"a lost fight is data\" \u2014 only unclean fights, dead ends, and files that do not fold are faults.\n- The daily test (`the_daily_sweep_plays_whole_runs_at_full_budget_and_prints_the_report`) only asserts faults are empty and the report mentions wins; the per-PR tests play single fights at `TEST_BUDGET`, never whole-run difficulty.\n- `crates/run/src/fight_tests.rs` holds tier structure (boss tiers equal practice tiers, every elite row stands on a normal tier and is stronger, `R3586001`) but no difficulty: shape without slope.\n\n## Proposal\n\nAdd one non-ignored test beside the existing run-sim tests that plays a fixed small set of whole runs at `TEST_BUDGET` and full player skill from fixed `run-sim-{n}` seeds, then asserts wide sanity bands on the tally it already prints: tier-1 normal fights stay clearly winnable (floor), the final-boss tier stays clearly hard (ceiling), and elites stay harder than the normal tier they stand on. Bands are named constants next to the test (no magic numbers), set with margin after measuring, not exact targets. No game rules change; tier tuning stays the designer's call, and a deliberate difficulty change updates the bands in the same patch.\n\n## Where it lands\n\n- `crates/tools/src/run_sim.rs`: band constants plus one test using the existing `sweep`/`tally` helpers at `TEST_BUDGET`.\n- Reads but does not change `crates/run/src/config.rs` (`RUN_TIERS`, `RUN_ELITE_TIERS`, `RUN_ACT_TIERS`) and `spec/15-dungeon-run.md` \u00a7\u00a715.5, 15.6, 15.12, 15.13 ([[R3586000]], [[R3586001]]).\n\n## Acceptance criteria\n\n- [ ] A new non-`ignored` test plays fixed seeds at `TEST_BUDGET` and asserts the three bands (early-tier floor, final-boss ceiling, elites harder than their normal tier).\n- [ ] Weakening tier 1 (or strengthening it past the floor) fails the test; trivializing the final boss fails the test.\n- [ ] The test is deterministic (fixed seeds, fixed skill and budget, seed-ordered output) and finishes in seconds per PR; the daily full-budget sweep is unchanged.\n- [ ] `cargo test -p jackioh-tools --bin jackioh run_sim`, `cargo fmt --check`, and `cargo clippy -p jackioh-tools --all-targets -- -D warnings` pass.\n\n## Size and risks\n\nMedium, one file plus its constants. Main risk is overfitting to AI skill (the docs warn the AI plays better or worse than a person), so bands stay wide sanity rails, not tuned targets; a second risk is seed rot as content lands, handled by keeping the seed set fixed and updating bands explicitly with any deliberate retune. Rejected alternative: asserting exact win rates or retuning the tiers in the same patch \u2014 exact rates would flap with AI changes, and the numbers remain the designer's strawmen to tune.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:19:50Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4116: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T19:20:13Z",
+    "claimed_at": "2026-11-17T19:42:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
