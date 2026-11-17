@@ -36712,7 +36712,8 @@
     ],
     "runs": [
       "2026-11-17T02:22:05Z,44000099520,muse,muse-spark-1.3-contributor,review,4106,medium,approved,,17,0,0,0,,6,6,14,14,2.2,,none,,1",
-      "2026-11-17T02:19:21Z,43995283820,claude-3,opus,review,4101,hard,approved,,52.1,4,461,128052,1.7921,60,65,,,3.2,,none,,1"
+      "2026-11-17T02:19:21Z,43995283820,claude-3,opus,review,4101,hard,approved,,52.1,4,461,128052,1.7921,60,65,,,3.2,,none,,1",
+      "2026-11-17T02:20:07Z,43981325072,agy,gemini-3.8-flash-high,plan,4057,medium,failed,,150.3,356304,51531,0,,0,5,75,77,2.2,,none,,1"
     ]
   },
   "version": 1
