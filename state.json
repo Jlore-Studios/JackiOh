@@ -15666,15 +15666,16 @@
     "what": "review #4098 on gpt"
   },
   "last_sweep": {
-    "at": "2026-11-17T00:44:15Z",
+    "at": "2026-11-17T00:56:14Z",
     "notes": [
-      "delivered plan #4011 on muse (run 43989108558): planned",
-      "delivered review #4096 on claude-1 (run 43987795693): approved",
-      "delivered build #4067 on muse (run 43983133818): built",
-      "started review #4097 on muse (run 43990504063)",
-      "started build #4011 on muse (run 43990585949)",
-      "started review #4095 on claude-1 (run 43990668393)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4095 on claude-1 (run 43990668393): reviewed",
+      "delivered build #4062 on gpt (run 43986355961): built",
+      "delivered build #4092 on claude-7 (run 43986177762): built",
+      "started review #4099 on claude-7 (run 43992042945)",
+      "started review #4098 on gpt (run 43992113326)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days",
+      "#4096: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16378,7 +16379,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T00:44:15Z",
+  "loop_tick": "2026-11-17T00:56:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
