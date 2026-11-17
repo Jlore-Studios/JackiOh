@@ -47,7 +47,15 @@
 # them, no job does; training/history/ is not among them), and the notebooks' project, analysis/
 # (#445: no file in crates/, apps/, e2e/, spec/ or a per-pull-request job reads it; super.yml's
 # `notebooks` job runs its tests once a day), but for the five record files and reports of
-# analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to.
+# analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to, and the
+# mutation-testing tooling, which mutants.yml runs and checks on its own trigger
+# (.cargo/mutants.toml, scripts/mutants.sh, scripts/mutants-runner.sh), and the pool probe
+# (scripts/pool-probe.sh), which a person runs. Nothing in crates/, apps/, e2e/ or spec/ reads
+# any of the four: only comments name them (crates/run/src/tests.rs:987,
+# crates/engine/src/testkit/pool_probe.rs:7, the two Stryker configs, .github/mutants-floor.txt's
+# header, mutants.yml itself), and no per-pull-request job runs them (no workflow names
+# pool-probe.sh; `grep mutants .github/workflows/ci.yml` finds nothing). A later CI job that
+# starts reading one of these files must take it off the list in the same pull request.
 # Nothing a test, a build or a check reads is on the list, and nothing under crates/: ci.yml's
 # `rust (classify)` (#1370) reads every change to the cards, the engine and the AI, and runs exactly
 # when `full` does. The other docs are
@@ -69,7 +77,7 @@
 #    shipped.json must be in the diff, as no other pull request edits them. Any other file in the diff
 #    scopes as below.
 #  - Run everything but the db suites: the workspace's Cargo.toml, Cargo.lock, rust-toolchain.toml,
-#    .cargo/, anything under .github/ that is not on the skip list, and this script. Of these, only
+#    .cargo/ but .cargo/mutants.toml, anything under .github/ that is not on the skip list, and this script. Of these, only
 #    .github/ and this script run infra too: the terraform steps read no cargo file.
 #  - infra: infra/, which nothing else reads (no web or e2e line turns on for it).
 #  - The db suites, each on what its script exercises (each script's header says): the migrations
@@ -88,7 +96,7 @@
 #    a pull request leaves runs in the daily super run (docs/v0.3.0/README.md §7), and its skip
 #    passes the check.
 #  - clippy: any Rust source, manifest, lockfile, clippy.toml, rustfmt.toml, the toolchain or
-#    .cargo/.
+#    .cargo/ but .cargo/mutants.toml.
 #  - The Rust test groups follow the crate graph (`cargo metadata`, dev-dependencies included): a
 #    group runs when the change is in a crate it tests or in any crate those build on. The engine or
 #    the cards run every group (the engine's tests build on the cards and read their catalog); the AI
@@ -150,7 +158,9 @@
 #    them), the web's unit tests, the docs, spec/,
 #    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (the Dockerfile,
 #    wrangler.jsonc and the Worker, apps/edge/: e2e smoke boots jackioh-server itself, behind no
-#    Worker), the lint and unit-test configs, and the scripts no build runs.
+#    Worker), the lint and unit-test configs, and the scripts no build runs (scripts/browse.sh,
+#    scripts/promote-production.sh, scripts/promote-staging.sh, scripts/server-image.sh,
+#    scripts/worktree.sh).
 #
 # apps/web/src/net/ci-scope.test.ts holds every line both ways, and holds `web` and `e2e` to every
 # repository path their sources name; crates/tools/tests/acceptance.rs holds the Rust groups to
@@ -207,6 +217,7 @@ skipped() {
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
     .github/workflows/triage.yml | .github/workflows/ci-duration.yml) ;;
     .github/workflows/pr-title.yml) ;;
+    .cargo/mutants.toml | scripts/mutants.sh | scripts/mutants-runner.sh | scripts/pool-probe.sh) ;;
     *) return 1 ;;
   esac
 }

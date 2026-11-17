@@ -163,6 +163,23 @@ describe("scripts/ci-scope.sh", () => {
     expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
   });
 
+  it("skips the heavy jobs for a diff of only the mutation-testing tooling or the pool probe", () => {
+    for (const file of [".cargo/mutants.toml", "scripts/mutants.sh", "scripts/mutants-runner.sh", "scripts/pool-probe.sh"]) {
+      expect(onFor(file), file).toEqual([]);
+      expect(onFor("bot/harness/state.py", file), `bot + ${file}`).toEqual([]);
+    }
+  });
+
+  it("scopes a shared-crate change beside .cargo/mutants.toml as the shared crate alone", () => {
+    expect(answerFor(".cargo/mutants.toml")).toEqual(every(false));
+    expect(answerFor("crates/shared/src/lib.rs", ".cargo/mutants.toml")).toEqual(answerFor("crates/shared/src/lib.rs"));
+  });
+
+  it("scopes a run-crate change beside scripts/mutants.sh as the run crate alone", () => {
+    expect(answerFor("scripts/mutants.sh")).toEqual(every(false));
+    expect(answerFor("crates/run/src/lib.rs", "scripts/mutants.sh")).toEqual(answerFor("crates/run/src/lib.rs"));
+  });
+
   // One case per file: each makes four processes, so a case never nears vitest's time limit.
   it.each([
     "crates/engine/src/reduce.rs",
