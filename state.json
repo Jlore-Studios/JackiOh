@@ -15194,6 +15194,14 @@
       "started_at": "2026-11-17T00:03:42Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "4095": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-16T22:52:56Z",
+      "issue": 4070,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
