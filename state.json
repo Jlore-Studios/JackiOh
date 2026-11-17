@@ -15085,15 +15085,8 @@
       "taken_asks": []
     },
     "4093": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43984436923",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-17T00:35:53Z",
-        "until": "2026-11-17T01:05:53Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15105,10 +15098,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; ls; cat .bot-plan.md 2>/dev/null | head -50; sed -n 1,60p crates/ai/tests/ai_slow.rs; grep -n \\\"fn \\\\|#\\\\[test\\\\]\\\\|ignore\\\\|^mod \\\" crates/ai/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; grep -n \\\"#\\\\[test\\\\]\\\\|#\\\\[ignore\\\\|^\\\\s*fn \\\\|^\\\\s*pub fn \\\" crates/ai/tests/ai/{match_,shadow_ban,tutorial_tier,lethal,duos_gate}.rs | grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; ls target 2>/dev/null | head; nproc; grep -rn \\\"ai slow\\\\|ai_slow\\\\|tools fuzz\\\" --include=*.md --include=*.rs --include=*.toml --include=*.yml\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; grep -n \\\"ignore\\\" crates/ai/tests/ai/{match_,shadow_ban,tutorial_tier,lethal,duos_gate}.rs crates/tools/src/{fuzz,positions,duos_fuzz,selfplay\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; (RUSTC_BOOTSTRAP=1 cargo test -p jackioh-ai --test ai_slow --no-run > /tmp/build_ai.log 2>&1; echo done >> /tmp/build_ai.log) & sleep 1; echo s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; sed -n 760,800p crates/tools/tests/acceptance.rs; grep -n \\\"daily\\\" crates/tools/tests/acceptance.rs | head -20; grep -c \\\"#\\\\[test\\\\]\\\" crates\u2026\n- Bash: {\"command\": \"sleep 60; tail -5 /tmp/build_ai.log\"}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -5 /tmp/build_ai.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you s\u2026\n- Monitor: {\"query\": \"select:Monitor\", \"max_results\": \"1\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; tail -3 /tmp/build_ai.log; pgrep -fa \\\"cargo|rustc\\\" | head -3\"}\n- Bash: {\"command\": \"until grep -q \\\"^done\\\" /tmp/build_ai.log; do sleep 5; done; tail -4 /tmp/build_ai.log\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; (time RUSTC_BOOTSTRAP=1 cargo test -p jackioh-ai --test ai_slow -- -Z unstable-options --report-time) > /tmp/ai_slow_run.log 2>&1; grep -E \\\"<[\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/ai_slow_run.log | grep -E \\\"test result|^real|ignored\\\" | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; for t in r390_a_real_pass_2_game r186_ceaseless_void two_one_step_children b26_an_ai_vs_greedy ready_gap_counts r977000_a_decision_slow_by_the_\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; for t in r390_a_real_pass_2_game r186_ceaseless_void two_one_step_children b26_an_ai_vs_greedy ready_gap_counts r977000_a_decision_slow_by_the_\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; for t in ready_gap_counts_exactly r977000_a_decision_the_clock_found_slow r977000_without_a_retimer; do RUSTC_BOOTSTRAP=1 cargo test -p jackioh\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; (time RUSTC_BOOTSTRAP=1 cargo test -p jackioh-tools --bin jackioh -- fuzz:: positions:: --skip duos_fuzz:: -Z unstable-options --report-time) >\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; (time RUSTC_BOOTSTRAP=1 cargo test -p jackioh-tools --bin jackioh -- fuzz:: positions:: --skip duos_fuzz:: --test-threads=1 -Z unstable-options\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; (time RUSTC_BOOTSTRAP=1 cargo test -p jackioh-tools --bin jackioh -- duos_fuzz:: selfplay:: --test-threads=1 -Z unstable-options --report-time)\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; grep -n \\\"ignore\\\" crates/tools/src/spec.rs | head; grep -rn \\\"ai slow\\\\|ai_slow\\\" crates/ai/README.md scripts/ci-scope.sh crates/ai/tests/ai/m\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; grep -n \\\"regress\\\\|fuzz --seeds\\\\|fuzz 200\\\" .github/workflows/ci.yml | head; sed -n 6308,6316p crates/tools/src/fuzz.rs; grep -n \\\"fn a_run_s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; grep -rn \\\"\\\\-\\\\-regress\\\" .github/workflows | head -5; grep -n \\\"r1006006\\\\|r1006003\\\\|r1006001\\\" -r spec/rulings/R1006*.md | grep -i \\\"proven\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; grep -n \\\"fn r186_giga_glowy\\\\|fn b25_sweep_card_on_tempo\\\\|fn r977000_a_decision_slow_by\\\\|fn r977000_a_decision_the_clock\\\\|fn r977000_withou\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4093; echo \\\"Plan drafted in final message; measurements: /tmp/*.log. ai ignore list: giga, timmy, 3x r977000, ready_gap, b26 vs greedy, two_one_step\u2026\n- said: ## Goal The `ai slow` and `tools fuzz` groups, and the two over-10-second tests in `tools duos, selfplay`, stop running per pull request. Every test the builder marks `#[ignore = \"daily: off per-PR CI by owner decision (#4093), no per-PR stand-in\"]` still runs each day in `super.yml`'s `--ignored` \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-17T00:03:07Z",
       "owner_why": "it plans it",
@@ -15121,9 +15113,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-16T23:56:11Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43984436923",
+      "run_id": "pending:9f81276b-1794875783",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-17T00:03:07Z",
+      "started_at": "2026-11-17T00:36:46Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15385,9 +15377,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T00:27:32Z",
+    "at": "2026-11-17T00:36:46Z",
     "url": "",
-    "what": "review #4096 on claude-1"
+    "what": "build #4093 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-17T00:24:38Z",
