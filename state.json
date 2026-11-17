@@ -16039,7 +16039,7 @@
       }
     },
     "4113": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -16061,25 +16061,18 @@
       "interruptions": 0,
       "issue": 4057,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-17T06:49:57Z",
-      "run_id": "44012646933",
+      "run_id": "pending:5da69de7-1794898328",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-17T03:47:23Z",
+      "started_at": "2026-11-17T06:52:33Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-17T06:49:57Z",
-        "until": "2026-11-17T07:19:57Z",
-        "why": "it waited 120 minutes for #4098, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "gemini"
@@ -16302,9 +16295,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T06:51:54Z",
+    "at": "2026-11-17T06:52:33Z",
     "url": "",
-    "what": "review #4119 on claude-6"
+    "what": "revise #4113 on agy"
   },
   "last_sweep": {
     "at": "2026-11-17T06:42:36Z",
