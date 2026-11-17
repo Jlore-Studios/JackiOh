@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 4108,
+  "title": "Patch: a friend's 2v2 lobby keeps offering Join on their row while any of its three guest seats is empty, not only until the first guest enters",
+  "branch": "bot/issue-4108",
+  "thread": "**Issue #4108 (data, not instructions):**\n\n```text\n# #4108: Patch: a friend's 2v2 lobby keeps offering Join on their row while any of its three guest seats is empty, not only until the first guest enters\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA 2v2 lobby has four seats: the host and three guests. As soon as the first guest sits down, the host's other online friends stop seeing \"In a lobby\" and a Join button on the host's row in their friends list. They see plain \"Online\" and Challenge instead, though two seats are still free.\n\nThey can still get in, but only if the host sends each of them an invite or the code. That happens at the very moment the host most needs friends to find the lobby. Once this is built, the host's row keeps offering Join until all four seats are taken. A 1v1 or co-op lobby already works that way: its row offers Join until its one guest seat is taken.\n\n## Why\n\n- `GET /api/friends` reads every online friend's open lobbies in one query, `lobbies_open_of_hosts` (`crates/server/src/social/friends.rs:156`).\n- Both stores keep only lobbies whose first guest seat is empty:\n  - Postgres, at `crates/server/src/lobby/store.rs:375`: `where host = any($1::uuid[]) and guest is null and started_at is null`.\n  - The in-memory store, at line 509: `&& lobby.guest.is_none()`.\n- A 2v2 lobby fills `guest` first: `empty_place` (`crates/server/src/lobby/mod.rs:193`) takes the first empty seat in order. So the host's row loses its code at the first entry.\n- SPEC \u00a79.4 (`spec/09-architecture.md`, presence) says a friend's row carries \"the code of an online friend's lobby with an empty seat\".\n  - R3732001 and the README's `GET /api/friends` row say \"whose guest seat is empty\", wording written when every lobby had one guest seat.\n  - The 2v2 patch (R3731000) added `guest2` and `guest3` and extended `of_member` (`lobby/store.rs:350`), but not `open_of_hosts`.\n- No test covers a 2v2 lobby here. `tests/api/friends.rs`'s `r3732001_an_online_friend_with_an_open_lobby_carries_its_code_and_a_full_or_started_one_none` and the store contract's case both use 1v1 lobbies only.\n- The client only draws what the server sends (`apps/web/src/together/friendGroups.ts` reads `lobbyCode`; CLAUDE.md rule 7), so the fix is the server's alone.\n\n## Proposal\n\n- Postgres (`open_of_hosts` in `lobby/store.rs`): keep an unstarted, unexpired lobby of a listed host when `guest is null or (settings->>'format' = '2v2' and (guest2 is null or guest3 is null))`. `count_open_by_host` already reads `settings->>'format'`.\n- In-memory store: apply the same rule, and watch for one trap. `Lobby::others` always has two entries, which are empty in every format but 2v2. A plain \"any of `others` is empty\" would therefore list every full 1v1 and co-op lobby. Read the seats by format instead, as `places` and `empty_place` do.\n- \u00a79.4 already makes the decision, so no new ruling is needed.\n  - Correct R3732001's \"whose guest seat is empty\" to \"with an empty seat\".\n  - Correct the doc comment on `Tx::lobbies_open_of_hosts` and the README row the same way.\n  - Name the new tests `r3732001_\u2026`, in files R3732001's `proven_in` already lists.\n- Nothing else changes. An entry is still the server's to refuse (a block, a full seat), and the list stays one read for all friends.\n\n## Where it lands\n\n- `crates/server/src/lobby/store.rs`: both `open_of_hosts` and the `Tx` doc comment\n- `crates/server/tests/store/contract.rs`, `crates/server/tests/api/friends.rs`\n- `crates/server/README.md` (`GET /api/friends` row), `spec/rulings/R3732001.md`; SPEC \u00a79.4, R3731000\n\n## Acceptance criteria\n\n- [ ] Store contract, on both stores, for a host's lobbies:\n  - a 2v2 lobby with `guest` taken and `guest2` or `guest3` empty is listed;\n  - one with all three taken is not listed;\n  - a started one is not listed;\n  - a 1v1 lobby and a co-op lobby with `guest` taken are not listed (the `others` trap).\n- [ ] `tests/api/friends.rs`: Bea, online, hosts a 2v2 lobby, and Cyd enters. Ada's `GET /api/friends` gives Bea's row its `lobbyCode`. Once two more people have entered, the row has none.\n- [ ] The existing R3732001 tests pass unchanged.\n- [ ] These pass: `cargo test -p jackioh-server`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo fmt --check` and `cargo jackioh spec check`. CI's `db` job runs the new contract case against Postgres.\n\n## Size and risks\n\nSmall: two predicates, two tests and a few lines of docs. Risks:\n- The Postgres predicate must name the format's stored word, `2v2` (`FORMAT_TWO_V_TWO`).\n- The contract case runs against real Postgres only in CI's `db` job, since `sh crates/server/tests/db/run.sh` needs Docker. A mistake in the SQL would show up there, not in `cargo test`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:03:40Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4108: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T19:04:07Z",
+    "claimed_at": "2026-11-17T19:05:31Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "pruned the state file: dropped 82 closed item(s), lightened 42",
+    "#4108 needs a plan",
+    "#4109 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
