@@ -51,8 +51,10 @@
 //!      sampled with it; a seat barred to the tutorial's cards (R2533000) is not asked.
 //!   I14 every action `legal_actions` lists, `reduce` accepts (§10.2; #3062), I8's converse: each seat's
 //!      listing is reduced on a copy of the state, at most `I14_ACTION_CAP` of a long one spread over it,
-//!      and a refusal or a panic is reported with the action and the seed. Run at setup (the mulligan's
-//!      subsets) and every `I14_GATE_STRIDE`-th state; not in Duos.
+//!      verifying that `reduce` accepts it without refusal or panic, and verifying the resulting state
+//!      and events with the stateless invariants (I5, I7, I10, I11, I16 and I17; #4057); invariants
+//!      requiring shadow history (I2, I3, I4, I9's health tally, I12) remain on the played path. Run at
+//!      setup (the mulligan's subsets) and every `I14_GATE_STRIDE`-th state; not in Duos.
 //!   I15 every Activate ability a seat may see is held to the listing (§10.8, R384, R3061000): while it may
 //!      act, each shown on a unit or backrow top of either side is `usable` exactly when `legal_actions`
 //!      lists an `activate` of it and carries `reason` exactly when not; read off I6's view and listing in
@@ -827,6 +829,101 @@ fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> 
             ));
         }
     }
+    found
+}
+
+/// I5: the check that ends the game is the last thing that happens (§2.5, R216).
+fn game_over_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if let Some(over) = events
+        .iter()
+        .position(|event| matches!(event, GameEvent::GameOver { .. }))
+        && over + 1 < events.len()
+    {
+        let later: Vec<&str> = events[over + 1..]
+            .iter()
+            .map(|event| event.event_type().as_str())
+            .collect();
+        found.push(format!(
+            "I5 event after game over: {} followed gameOver on turn {} (§2.5, R216)",
+            later.join(", "),
+            state.turn
+        ));
+    }
+    found
+}
+
+/// I7: a live game with no prompt open owes no paused sequence (§9.3, §10.3, R113).
+fn orphaned_work_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if state.result.is_none()
+        && state.pending.is_none()
+        && state.mulligan.is_none()
+        && (!state.work.is_empty() || state.work_cursor != 0)
+    {
+        let owed: Vec<String> = state
+            .work
+            .iter()
+            .map(|item| {
+                format!(
+                    "{} ({}, {}, {})",
+                    item.id, item.resume.def_id, item.resume.hook, item.resume.step
+                )
+            })
+            .collect();
+        found.push(format!(
+            "I7 orphaned work: {} item(s) owed [{}] with work cursor {} on turn {} and no prompt open \
+             (§9.3, §10.3, R113)",
+            state.work.len(),
+            owed.join(", "),
+            state.work_cursor,
+            state.turn
+        ));
+    }
+    found
+}
+
+/// I10: no prompt held by the opponent while its holder is not the active player (§10.6, R1279000).
+fn opponent_prompt_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if state.result.is_none()
+        && let Some(pending) = &state.pending
+        && pending.player_id != state.active
+        && prompt_owner_of(pending) != pending.player_id
+    {
+        let asked_by = pending.resume.instance_id.as_deref();
+        let asker = match asked_by.and_then(|id| find_instance(state, id)) {
+            Some(card) => name_of(card),
+            None => format!(
+                "{} ({})",
+                asked_by.unwrap_or("no instance"),
+                pending.resume.def_id
+            ),
+        };
+        found.push(format!(
+            "I10 opponent prompt off turn: {asker} opened prompt {} for {}, held for {}, on turn {} while {} \
+             is the active player (§10.6, R1279000)",
+            pending.id,
+            pending.player_id,
+            prompt_owner_of(pending),
+            state.turn,
+            state.active
+        ));
+    }
+    found
+}
+
+/// The stateless invariants gathered for one post-action state (§10.2, #4057): I5, I7, I10, I11, I16
+/// and I17. Each reads only the state and the action's events, so it runs on both the played path and
+/// every branch action I14 reduces.
+pub fn branch_state_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    found.extend(game_over_findings(events, state));
+    found.extend(orphaned_work_findings(state));
+    found.extend(opponent_prompt_findings(state));
+    found.extend(unit_token_pile_findings(state));
+    found.extend(card_record_findings(state));
+    found.extend(state_check_findings(events, state));
     found
 }
 
@@ -1807,8 +1904,9 @@ fn sampled(legal: &[ActionBody], rotate: u32) -> Vec<&ActionBody> {
         .collect()
 }
 
-/// I14 for one seat (§10.2; #3062): each action of `legal` (at most `I14_ACTION_CAP`, spread over the list)
-/// sent to `reducer` on a copy of `state`; each it refuses or panics on is a finding. Empty when clean.
+/// I14 for one seat (§10.2; #3062, #4057): each action of `legal` (at most `I14_ACTION_CAP`, spread over the
+/// list) sent to `reducer` on a copy of `state`; each it refuses, panics on, or leaves with a stateless
+/// invariant violation on the resulting board is a finding. Empty when clean.
 pub fn listed_refused(
     state: &GameState,
     player: PlayerId,
@@ -1829,6 +1927,13 @@ pub fn listed_refused(
                          lists it, and reduce refused it: {error} (§10.2)",
                         state.turn, state.seed
                     ));
+                } else {
+                    for finding in branch_state_findings(&result.events, &result.state) {
+                        found.push(format!(
+                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
+                            state.turn, state.seed
+                        ));
+                    }
                 }
             }
             Err(payload) => found.push(format!(
@@ -2940,23 +3045,6 @@ impl InvariantMonitor {
             self.attack = None;
         }
 
-        // I5: the check that ends the game is the last thing that happens (§2.5, R216).
-        if let Some(over) = events
-            .iter()
-            .position(|event| matches!(event, GameEvent::GameOver { .. }))
-            && over + 1 < events.len()
-        {
-            let later: Vec<&str> = events[over + 1..]
-                .iter()
-                .map(|event| event.event_type().as_str())
-                .collect();
-            found.push(format!(
-                "I5 event after game over: {} followed gameOver on turn {} (§2.5, R216)",
-                later.join(", "),
-                self.turn
-            ));
-        }
-
         for (index, event) in events.iter().enumerate() {
             match event {
                 GameEvent::TurnStarted { player, turn, .. } => {
@@ -3464,64 +3552,7 @@ impl InvariantMonitor {
             }
         }
 
-        // I7: a live game with no prompt open owes no paused sequence (§9.3, §10.3, R113).
-        if state.result.is_none()
-            && state.pending.is_none()
-            && state.mulligan.is_none()
-            && (!state.work.is_empty() || state.work_cursor != 0)
-        {
-            let owed: Vec<String> = state
-                .work
-                .iter()
-                .map(|item| {
-                    format!(
-                        "{} ({}, {}, {})",
-                        item.id, item.resume.def_id, item.resume.hook, item.resume.step
-                    )
-                })
-                .collect();
-            found.push(format!(
-                "I7 orphaned work: {} item(s) owed [{}] with work cursor {} on turn {} and no prompt open \
-                 (§9.3, §10.3, R113)",
-                state.work.len(),
-                owed.join(", "),
-                state.work_cursor,
-                state.turn
-            ));
-        }
-
-        // I10: no prompt held by the opponent while its holder is not the active player (§10.6, R1279000).
-        if state.result.is_none()
-            && let Some(pending) = &state.pending
-            && pending.player_id != state.active
-            && prompt_owner_of(pending) != pending.player_id
-        {
-            let asked_by = pending.resume.instance_id.as_deref();
-            let asker = match asked_by.and_then(|id| find_instance(state, id)) {
-                Some(card) => name_of(card),
-                None => format!(
-                    "{} ({})",
-                    asked_by.unwrap_or("no instance"),
-                    pending.resume.def_id
-                ),
-            };
-            found.push(format!(
-                "I10 opponent prompt off turn: {asker} opened prompt {} for {}, held for {}, on turn {} while {} \
-                 is the active player (§10.6, R1279000)",
-                pending.id,
-                pending.player_id,
-                prompt_owner_of(pending),
-                state.turn,
-                state.active
-            ));
-        }
-
-        // I11: a definition-level Unit token never reaches an off-field pile (§3, §3.2, R11).
-        found.extend(unit_token_pile_findings(state));
-        // I16: every card's own record agrees with the pile that holds it (§3.2, R78, R766).
-        found.extend(card_record_findings(state));
-        // I17: the state check ran and the numbers are in range (§2.3, §4.5, R63, R69).
-        found.extend(state_check_findings(events, state));
+        found.extend(branch_state_findings(events, state));
         // A chosen action can confirm at most this one reduction. In Duos, `after` also visits the
         // untouched duel, so no marker may survive to match another duel's later event.
         self.chosen_exertion = None;

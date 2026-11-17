@@ -4801,6 +4801,129 @@ pub(crate) mod tests {
             assert!(text.contains("[invariant]"), "{text}");
         }
 
+        /// A reducer that accepts one listed action (I14) but returns a state with a Unit token in a
+        /// graveyard (#4057): the played game stays clean, but the branch check catches it.
+        fn plants_branch_token_in_graveyard(state: &GameState, action: &Action) -> ReduceResult {
+            let mut result = reduce(state, action);
+            if action.nonce == I14_NONCE && matches!(action.body, ActionBody::Concede) {
+                let token = jackioh_engine::state::new_instance(
+                    &mut result.state,
+                    "core-t-rush",
+                    action.player_id,
+                    jackioh_engine::wire::Zone::Graveyard {
+                        player: action.player_id,
+                    },
+                );
+                result.state.players[action.player_id].graveyard.push(token);
+            }
+            result
+        }
+
+        #[test]
+        fn a_reducer_that_plants_a_unit_token_in_graveyard_on_a_branch_fails_the_seed_in_the_invariant_stage()
+        {
+            register_all();
+            let Some(failure) =
+                fuzz_deal_probed(1, decks_for_seed(1), plants_branch_token_in_graveyard).err()
+            else {
+                panic!("a reducer that plants a unit token on a branch must fail seed 1 (I14, #4057)");
+            };
+            assert_eq!(failure.stage, FailureStage::Invariant, "{}", failure.message);
+            assert!(
+                failure.message.starts_with("I14 branch: after "),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("concede"), "{}", failure.message);
+            assert!(
+                failure.message.contains("(listed, not played)"),
+                "{}",
+                failure.message
+            );
+            assert!(
+                failure.message.contains("I11 unit token in pile:"),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("p1"), "{}", failure.message);
+            assert!(failure.message.contains("turn 0"), "{}", failure.message);
+            assert!(
+                failure.message.contains("seed jackioh-fuzz-1"),
+                "{}",
+                failure.message
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("example: seed 1 ("), "{text}");
+            assert!(text.contains("[invariant]"), "{text}");
+        }
+
+        /// A reducer that accepts one listed action (I14) but leaves work owed with no prompt open (I7)
+        /// on the branch only (#4057): the played action stays clean, which proves the finding comes
+        /// from the branch.
+        fn leaves_branch_work_owed(state: &GameState, action: &Action) -> ReduceResult {
+            let mut result = reduce(state, action);
+            if action.nonce == I14_NONCE
+                && matches!(action.body, ActionBody::EndTurn)
+                && result.state.result.is_none()
+                && result.state.pending.is_none()
+                && result.state.mulligan.is_none()
+            {
+                result.state.work.push(jackioh_engine::state::WorkItem {
+                    id: "w-planted".to_string(),
+                    seq: 0,
+                    owner: action.player_id,
+                    resume: jackioh_engine::state::Resume {
+                        def_id: "core-051".to_string(),
+                        hook: "resume".to_string(),
+                        step: "orphaned".to_string(),
+                        radiant: false,
+                        instance_id: None,
+                        data: indexmap::IndexMap::new(),
+                    },
+                });
+            }
+            result
+        }
+
+        #[test]
+        fn a_reducer_that_leaves_work_owed_on_a_branch_fails_the_seed_in_the_invariant_stage() {
+            register_all();
+            let Some(failure) = fuzz_deal_probed(1, decks_for_seed(1), leaves_branch_work_owed).err() else {
+                panic!("a reducer that leaves work owed on a branch must fail seed 1 (I14, #4057)");
+            };
+            assert_eq!(failure.stage, FailureStage::Invariant, "{}", failure.message);
+            assert!(
+                failure.message.starts_with("I14 branch: after "),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("endTurn"), "{}", failure.message);
+            assert!(
+                failure.message.contains("(listed, not played)"),
+                "{}",
+                failure.message
+            );
+            assert!(
+                failure.message.contains("I7 orphaned work:"),
+                "{}",
+                failure.message
+            );
+            assert!(
+                failure.message.contains("p1") || failure.message.contains("p2"),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains("turn "), "{}", failure.message);
+            assert!(
+                failure.message.contains("seed jackioh-fuzz-1"),
+                "{}",
+                failure.message
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("example: seed 1 ("), "{text}");
+            assert!(text.contains("[invariant]"), "{text}");
+        }
+
         /// A reducer that accepts the prompt-open probe's forged actions, which the real game
         /// refuses (§9.3, R79): a `Play` or `EndTurn` sent while a non-mulligan prompt is open.
         fn takes_prompt_open_plays(state: &GameState, action: &Action) -> ReduceResult {
