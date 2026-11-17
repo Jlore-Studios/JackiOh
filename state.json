@@ -13292,13 +13292,14 @@
       },
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-11-17T17:08:24Z",
-      "run_id": "44133819533",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:62868abd-1794947519",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 320,
-      "started_at": "2026-11-17T17:09:19Z",
+      "started_at": "2026-11-17T20:32:25Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -13644,9 +13645,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T20:31:47Z",
+    "at": "2026-11-17T20:32:25Z",
     "url": "",
-    "what": "review #4134 on muse"
+    "what": "spot-check #4128 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-17T20:17:34Z",
@@ -33943,7 +33944,15 @@
         "n": 320,
         "pr": 4128,
         "queued_at": "2026-11-17T20:29:52Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:62868abd-1794947519",
         "sha": "094e51ea835b3dcc7d3168aa5605eb981aeb79b0",
+        "started_at": "2026-11-17T20:32:25Z",
         "status": "queued",
         "title": "Patch (part 13 of 20): Math.random only where nothing is secret, held by lint, and a nonce is never proof of who sent it",
         "tries": 0
