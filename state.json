@@ -13879,11 +13879,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-17T22:32:23Z",
+        "at": "2026-11-17T22:42:24Z",
         "difficulty": "medium",
-        "provider": "claude-4",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4136, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-line holds: test-only loop in one web file, no engine rules, AI, migration, cross-crate design, or size."
       },
       "failures": 0,
       "forced": false,
