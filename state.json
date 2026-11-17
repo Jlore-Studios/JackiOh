@@ -15858,7 +15858,11 @@
       "issue": 4011,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "muse",
+      "merge_owner_gave_up": {
+        "at": "2026-11-17T02:25:15Z",
+        "provider": "muse",
+        "sha": "49b1b248f7608198af4415c81741e91100f81f17"
+      },
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-17T01:45:00Z",
