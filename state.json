@@ -13700,6 +13700,14 @@
         "sha": "3ba457aecb72fd5be60925b829923889eea5c083",
         "tiers": {}
       }
+    },
+    "4137": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-17T19:53:26Z",
+      "issue": 4118,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
