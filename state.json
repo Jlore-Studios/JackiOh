@@ -13037,15 +13037,8 @@
       "verdict_rounds": 1
     },
     "4011": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43989108558",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-17T00:45:14Z",
-        "until": "2026-11-17T01:15:14Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13057,10 +13050,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "e=\u2026`, so shared caches key on the URL alone. Done means each of those six routes has a test proving the same path and query yields a byte-identical body whatever else the requ\u2026\n- ## Files to touch\n- | File | New / change | What changes |\n- |---|---|---|\n- | `crates/server/src/api/stats.rs` | change | Doc comment on `cached_ok` (line 537): the no-caller rule |\n- | `crates/server/tests/api/stats.rs` | change | New `mod cache_poisoning`: a `get_with` helper plus five per-route tests |\n- | `crates/server/tests/api/ci_runs.rs` | change | New `mod cache_poisoning`: one test for `GET /api/stats/ci` |\n- | `apps/edge/src/config.test.ts` | change | New `#4011` describe block: four front-cache checks |\n- Must not touch: anything under `.github/`, `.harness/`, `.squishy/` or `bot/`; `infra/cloudflare.tf` (read-only evidence, it already has no cache rules); `spec/` and `spec/rulings/` (no game-rules decision here, so no ruling note); the private `get_player`/`put_player` handlers. Governing code: `cr\u2026\n- ## Steps\n- 1. Re-verify the six call sites and their caller-blindness. Run `grep -n \"cached_ok\" crates/server/src/api/stats.rs crates/server/src/api/ci_runs.rs` (expect the definition plus call sites at `get_cards`, `get_games`, `get_card`, `get_play_rates`, `get_players`, `get_ci_runs`) and `grep -n \"req\\.he\u2026\n- 2. In `crates/server/src/api/stats.rs`, add a doc comment on `cached_ok` stating exactly this rule: only `AuthLevel::None` routes whose handlers never read the caller may use it \u2014 no `req.caller`, `caller_of`/`caller_profile`, `Authorization`, `Cookie`, `Accept-Language`, `X-Forwarded-*`, `X-Origin\u2026\n- 3. In `crates/server/tests/api/stats.rs`, add `mod cache_poisoning` (pattern: the existing `mod r654_public_card_and_player_stats` at line 274; reuse `test_app`, `USER_TOKEN`, `make_game_record`, `RecordOptions`, `insert_records`, `seed_profile`, `put_player_stats`, `cache_control`). Add helper `ge\u2026\n- 4. Write the five tests: `cache_poisoning_cards_same_bytes_whatever_the_caller_carries` (`/api/stats/cards`, TTL `CARD_STATS_CACHE_TTL_SECONDS`); `cache_poisoning_card_same_bytes_whatever_the_caller_carries` (`/api/stats/cards/core-001`, same TTL); `cache_poisoning_play_rates_same_bytes_whatever_th\u2026\n- 5. In `crates/server/tests/api/ci_runs.rs`, add `mod cache_poisoning` reusing `run`, `job`, `runs`, `call`, `test_app`, `CI_RUNS_CACHE_TTL_SECONDS`. Test `cache_poisoning_ci_runs_same_bytes_whatever_the_caller_carries`: can with `answer_runs(runs(vec![run(7, 1, \"completed\", Some(\"success\"))]))` (a \u2026\n- 6. In `apps/edge/src/config.test.ts`, add `describe(\"#4011 nothing in front caches /api/*\", \u2026)` following the file's existing `readFileSync(join(ROOT, \u2026))` pattern: (a) raw `wrangler.jsonc` text does not match `/cache/i`; (b) `infra/cloudflare.tf` text does not match `/cache/i` (today it has no cac\u2026\n- 7. Run: `cargo fmt --check`; `cargo test -p jackioh-server --test server api::stats::cache_poisoning`; `cargo test -p jackioh-server --test server api::ci_runs::cache_poisoning`; `cargo clippy -p jackioh-server --all-targets -- -D warnings`; `pnpm --dir apps/edge test src/config.test.ts`; `cargo ja\u2026\n- ## Tests\n- - `crates/server/tests/api/stats.rs`, `mod cache_poisoning`: the five `cache_poisoning_*_same_bytes_whatever_the_caller_carries` tests above; each asserts 200 + `public, max-age=<TTL>` + one identical serialized body across 7 header/query variants. Command: `cargo test -p jackioh-server --test serv\u2026\n- - `crates/server/tests/api/ci_runs.rs`, `mod cache_poisoning`: `cache_poisoning_ci_runs_same_bytes_whatever_the_caller_carries`, same shape against canned GitHub data. Command: `cargo test -p jackioh-server --test server api::ci_runs::cache_poisoning`.\n- - `apps/edge/src/config.test.ts`, `#4011` describe: four static assertions over `wrangler.jsonc`, `infra/cloudflare.tf`, the Worker's sources, and `_headers`. Command: `pnpm --dir apps/edge test src/config.test.ts`.\n- ## Done when\n- - [ ] All six cached routes have a per-route byte-identical-body test covering signed-in, `Accept-Language`, `Cookie`, the four forward/rewrite headers, and an unknown query param, and each passes.\n- - [ ] `cached_ok`'s doc comment states the no-caller rule.\n- - [ ] The edge config test pins no `/api/*` caching in front (tf, wrangler, Worker source, `_headers`) and passes.\n- - [ ] `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, both server test filters, the edge file test, and `cargo jackioh spec check` are green.\n- ## Risks\n- - Kept server-side cells (`kept_window`, play-rates/CI kept answers) mean a repeat request can pass even if a future handler reads a header after the cache lookup; the tests still catch any header-dependent body built per request, which is the poisoning vector that matters, and the doc comment bars\u2026\n- - Varying `X-Forwarded-For` changes the rate-limit address hash, not the body; a fresh `test_app()` per test plus 7 sequential requests stays far under the limiter, but keep one app per test, not one shared across tests.\n- - `serde_json::to_string` equality stands in for wire bytes; it is exact here because `cached_ok` sends `body.to_string()` of a deterministically-serialized `Value`.\n- - The `/cache/i` tripwires on config files will fire on any future legitimate key containing \"cache\"; that is deliberate \u2014 the builder of that change must then consciously reaffirm `/api/*` stays uncached.\n- ## Open questions\n- - None. Every check the task asks for fits a file the bot may change; `infra/cloudflare.tf` needs reading only, since it already contains no cache rules.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4011 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4011/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-17T00:37:21Z",
       "owner_why": "it plans it",
@@ -13073,9 +13065,9 @@
       "provider": "muse",
       "queued_at": "2026-11-15T22:29:49Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43989108558",
+      "run_id": "pending:a68cb917-1794876473",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-17T00:37:21Z",
+      "started_at": "2026-11-17T00:48:17Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15436,9 +15428,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T00:47:41Z",
+    "at": "2026-11-17T00:48:17Z",
     "url": "",
-    "what": "review #4097 on muse"
+    "what": "build #4011 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T00:34:14Z",
