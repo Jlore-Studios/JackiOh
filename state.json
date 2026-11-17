@@ -16356,6 +16356,14 @@
           "muse": "medium"
         }
       }
+    },
+    "4122": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-17T05:17:51Z",
+      "issue": 4079,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
