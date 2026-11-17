@@ -15,7 +15,8 @@ use serde_json::Value;
 
 use crate::config::{AI_EVAL, AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
 use crate::evaluate::{
-    Prices, can_swing, crumbles_before_swing, deft_in_defense, face_threat, feng_shui_acts, feng_shui_verdict,
+    Prices, afflicted_before_swing, can_swing, crumbles_before_swing, deft_in_defense,
+    exiles_what_it_damages, face_threat, feng_shui_acts, feng_shui_verdict,
 };
 use crate::lethal::ready_gap;
 use crate::reply::{face_value, trade_value};
@@ -192,6 +193,8 @@ pub(crate) struct Side {
     pub(crate) pierce: bool,
     /// R2179005: its own guard's cap on each hit it takes, after Armor (§4.4 step 3, `unit_damage_cap`).
     pub(crate) cap: Option<i32>,
+    /// R1124, R4065001: its hits exile the Unit they damage (`exiles_what_it_damages`, by `AI_EVAL`'s flag).
+    pub(crate) exiles: bool,
 }
 
 pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
@@ -203,6 +206,7 @@ pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
         poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
         pierce: pierces(state, Some(unit), None),
         cap: unit_damage_cap(state, unit),
+        exiles: exiles_what_it_damages(state, unit, &AI_EVAL),
         view,
     }
 }
@@ -216,7 +220,8 @@ pub(crate) struct Blow {
 
 /// §4.4 steps 1 to 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
 /// (`exchange`'s), Poisonous when `poisonous`, and whether it kills. Step 2's Armor is skipped when
-/// `from` pierces (R346), and step 3 caps it at `to`'s own cap (R2179005).
+/// `from` pierces (R346), and step 3 caps it at `to`'s own cap (R2179005). A blow from a side that
+/// exiles what it damages removes `to` with any damage dealt, as a Poisonous one does (R1124, R4065001).
 pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
     if amount <= 0 {
         return Blow {
@@ -245,7 +250,7 @@ pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow
         (amount - to.view.armor).max(0)
     };
     let dealt = to.cap.map_or(dealt, |cap| dealt.min(cap));
-    let kills = dealt >= to.view.health || (poisonous && dealt > 0);
+    let kills = dealt >= to.view.health || ((poisonous || from.exiles) && dealt > 0);
     Blow {
         dealt,
         kills,
@@ -277,7 +282,8 @@ pub(crate) fn cleaved_neighbours(
 /// reads (`exchange`). Divine Shield or Indestructible on the target means no kill; a Ranged attacker
 /// survives any target that is not Ranged (R783000). Either side's hit skips the other's Armor when
 /// it pierces (§4.4 step 2, R346), and each side's hit is capped by the side it hits (§4.4 step 3,
-/// R2179005).
+/// R2179005). A hit from a side that exiles what it damages removes with any damage, as a Poisonous one
+/// does (R1124, R4065001).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
@@ -296,7 +302,7 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     if dealt <= 0 {
         return false;
     }
-    let kills = dealt >= t.health || combat.poisonous;
+    let kills = dealt >= t.health || combat.poisonous || exiles_what_it_damages(state, attacker, &AI_EVAL);
     if !kills {
         return false;
     }
@@ -323,7 +329,7 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     if taken <= 0 {
         return true;
     }
-    if has_keyword(&t.keywords, KeywordKind::Poisonous) {
+    if has_keyword(&t.keywords, KeywordKind::Poisonous) || exiles_what_it_damages(state, target, &AI_EVAL) {
         return false;
     }
     taken < a.health
@@ -1038,13 +1044,22 @@ pub fn wall_switches(state: &GameState, seat: PlayerId, candidates: &[ActionBody
 /// R2021000: whether `enemy` could attack `target` on its controller's next turn: it is in Attack
 /// Position, or Defense Position with Deft (R49); it may swing at all (`can_swing`: not Frozen through
 /// that turn, R1174000); its own Brittle tick does not destroy it first (`crumbles_before_swing`,
-/// R3793000, by `AI_EVAL`'s flag: only the search asks); and no restriction bars it from `target` (a
+/// R3793000, by `AI_EVAL`'s flag: only the search asks), nor the first tick of its own Burn and Toxic
+/// (`afflicted_before_swing`, R4065000, by `AI_EVAL`'s flag too); and no restriction bars it from `target` (a
 /// Dormant card, R1839000, or a Flying unit only a Flying or Ranged unit may attack, R783002).
 fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &AttackTarget) -> bool {
     let view = unit_view(state, enemy);
     (view.position == Position::Atk || deft_in_defense(&view))
         && can_swing(state, enemy, &view)
         && !(AI_EVAL.brittle_crumbles_before_swing && crumbles_before_swing(state, enemy, &view, false))
+        && !(AI_EVAL.affliction_kills_before_swing
+            && afflicted_before_swing(
+                state,
+                enemy,
+                &view,
+                false,
+                matches!(target, AttackTarget::Hero { .. }),
+            ))
         && attack_restriction(state, enemy, target).is_ok()
 }
 
@@ -1055,6 +1070,7 @@ mod tests {
 
     use super::*;
     use crate::config::AI_REPLY;
+    use crate::evaluate::{kill_worth, unit_worth};
     use crate::reply::fight;
 
     /// Classic #73 Nurse Cleaver, with Rush, Cleave and Lifesteal: a 3/4 since issue #3136, set back to the 3/6
@@ -1377,5 +1393,145 @@ mod tests {
             }
         }
         assert_eq!(checked, bodies.len() * bodies.len());
+    }
+
+    /// Meditative #72 The Banisher, a 2/1 (Radiant 4/2 with Cleave) whose damage exiles the Unit it hits.
+    const BANISHER: &str = "meditative-072";
+    /// Classic+ #6 Wrong-House Attacker, whose Radiant face is a 2/2 with Rush, Lifesteal, Poisonous and Reborn.
+    const WRONG_HOUSE: &str = "classicplus-006";
+
+    /// A 5/5 Mr. Vanilla.
+    fn five() -> Value {
+        json!({ "def": VANILLA, "statsOverride": { "attack": 5, "health": 5 } })
+    }
+
+    /// R4065001: The Banisher's 2 back exiles the 5/5 that kills it, so the attack is no tier 1 kill, and the
+    /// static trader prices it as losing the whole 5/5, its Reborn body included. A plain 2/1 is the free kill.
+    #[test]
+    fn r4065001_a_five_five_into_the_banisher_is_no_free_kill() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({ "p1": { "field": [five()] }, "p2": { "field": [BANISHER] } }));
+        s.card_mut(VANILLA).granted_keywords.push(Keyword::Reborn);
+        let (five_five, banisher) = (s.card(VANILLA).clone(), s.card(BANISHER).clone());
+        let state = s.state();
+        assert!(!kills_and_survives(state, &five_five, &banisher));
+        assert_eq!(attack_tier(state, PlayerId::P1, &five_five.id, &banisher.id), 4);
+        assert!(fight(state, &five_five, &banisher).dies);
+        let trade = trade_value(state, &five_five, &banisher.id, Prices::NONE);
+        assert!(trade.kills);
+        let gain = kill_worth(state, &banisher, &AI_EVAL, Prices::NONE);
+        let expected = gain - unit_worth(state, &five_five, &AI_EVAL, Prices::NONE);
+        assert!(
+            (trade.value - expected).abs() < 1e-9,
+            "{} vs {expected}",
+            trade.value
+        );
+        assert!(trade.value < gain - kill_worth(state, &five_five, &AI_EVAL, Prices::NONE));
+        assert_eq!(even_trade(state, &five_five.id, &banisher.id, Prices::NONE), None);
+        s.attack(&five_five, &banisher)
+            .expect_in_zone(&five_five, "exile")
+            .expect_in_zone(&banisher, "graveyard");
+
+        let s = scenario(json!({
+            "p1": { "field": [five()] },
+            "p2": { "field": [{ "def": OOMEN, "statsOverride": { "attack": 2, "health": 1 } }] },
+        }));
+        assert!(kills_and_survives(s.state(), s.card(VANILLA), s.card(OOMEN)));
+    }
+
+    /// R4065001, §4.4 steps 1 to 4 and 7: The Banisher's blow exiles with any damage dealt, as a Poisonous one
+    /// destroys, and nothing when a Divine Shield, Indestructible or Armor takes it; a cap of 1 lets 1 through.
+    /// A Reborn 4/4 it exiles is priced whole, and the engine exiles it with no body back.
+    #[test]
+    fn r4065001_the_banishers_blow_exiles_only_what_it_damages() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({ "p1": { "field": [BANISHER] }, "p2": { "field": [VANILLA] } }));
+        let from = side_of(s.state(), s.card(BANISHER));
+        assert!(from.exiles && !side_of(s.state(), s.card(VANILLA)).exiles);
+        let read = |change: fn(&mut Side)| {
+            let mut to = side_of(s.state(), s.card(VANILLA));
+            change(&mut to);
+            let out = blow(&from, 2, false, &to);
+            (out.dealt, out.kills, out.pops_shield)
+        };
+        assert_eq!(read(|_| {}), (2, true, false));
+        assert_eq!(read(|to| to.shield = true), (0, false, true));
+        assert_eq!(read(|to| to.indestructible = true), (0, false, false));
+        assert_eq!(read(|to| to.view.armor = 2), (0, false, false));
+        assert_eq!(read(|to| to.cap = Some(1)), (1, true, false));
+
+        s.card_mut(VANILLA).granted_keywords.push(Keyword::Reborn);
+        let (banisher, vanilla) = (s.card(BANISHER).clone(), s.card(VANILLA).clone());
+        let state = s.state();
+        let trade = trade_value(state, &banisher, &vanilla.id, Prices::NONE);
+        let expected = unit_worth(state, &vanilla, &AI_EVAL, Prices::NONE)
+            - kill_worth(state, &banisher, &AI_EVAL, Prices::NONE);
+        assert!(trade.kills);
+        assert!(
+            (trade.value - expected).abs() < 1e-9,
+            "{} vs {expected}",
+            trade.value
+        );
+        s.attack(&banisher, &vanilla)
+            .expect_in_zone(&vanilla, "exile")
+            .expect_in_zone(&banisher, "graveyard");
+        assert!(s.unit(PlayerId::P2, 1).is_none());
+    }
+
+    /// R4065001, R63: a Radiant Banisher's Cleave splash exiles each neighbour it damages, so its attack on the
+    /// 4/4 between Reno and the Archivist kills by its splash, and the engine exiles all three.
+    #[test]
+    fn r4065001_a_radiant_banishers_splash_exiles_the_neighbours() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "p1": { "field": [{ "def": BANISHER, "radiant": true }] },
+            "p2": { "field": [
+                { "def": RENO, "lane": 1 },
+                { "def": VANILLA, "lane": 2 },
+                { "def": ARCHIVIST, "lane": 3 },
+            ] },
+        }));
+        let banisher = s.card(BANISHER).clone();
+        let [reno, vanilla, archivist] = [RENO, VANILLA, ARCHIVIST].map(|def| s.card(def).clone());
+        let trade = trade_value(s.state(), &banisher, &vanilla.id, Prices::NONE);
+        assert!(trade.kills && trade.splash_kills);
+        s.attack(&banisher, &vanilla)
+            .expect_in_zone(&reno, "exile")
+            .expect_in_zone(&vanilla, "exile")
+            .expect_in_zone(&archivist, "exile");
+    }
+
+    /// R4065000: an enemy 4/4 its Burn 5 destroys at its controller's next start could attack nothing on that
+    /// turn, and the engine destroys it there; Burn 3 leaves it to swing. A Radiant Wrong-House Attacker's
+    /// Reborn body comes back with Rush (R83), so it could still attack a Unit, never the hero.
+    #[test]
+    fn r4065000_a_unit_its_burn_destroys_first_could_attack_no_one_next_turn() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({ "p1": { "field": [OOMEN] }, "p2": { "field": [VANILLA] } }));
+        let at_oomen = AttackTarget::Unit {
+            instance: s.card(OOMEN).clone(),
+        };
+        let could = |s: &Scenario| could_attack_next_turn(s.state(), s.card(VANILLA), &at_oomen);
+        assert!(could(&s));
+        s.card_mut(VANILLA).counters.burn = Some(5);
+        assert!(!could(&s));
+        s.card_mut(VANILLA).counters.burn = Some(3);
+        assert!(could(&s));
+        s.card_mut(VANILLA).counters.burn = Some(5);
+        let vanilla = s.card(VANILLA).clone();
+        s.end_turn().expect_in_zone(&vanilla, "graveyard");
+
+        let s = scenario(json!({
+            "p1": { "field": [OOMEN] },
+            "p2": { "field": [{ "def": WRONG_HOUSE, "radiant": true, "counters": { "burn": 5 } }] },
+        }));
+        let (attacker, oomen) = (s.card(WRONG_HOUSE), s.card(OOMEN).clone());
+        let hero = AttackTarget::Hero { player: PlayerId::P1 };
+        assert!(could_attack_next_turn(
+            s.state(),
+            attacker,
+            &AttackTarget::Unit { instance: oomen }
+        ));
+        assert!(!could_attack_next_turn(s.state(), attacker, &hero));
     }
 }

@@ -70,8 +70,8 @@ pub(crate) struct Fight {
     /// Whether the blow destroys the target: never when a First Strike defender destroys the attacker
     /// first.
     pub(crate) kills: bool,
-    /// Whether the strike back destroys the attacker: never when a First Strike attacker destroys the
-    /// target first.
+    /// Whether the strike back destroys the attacker (or exiles it, R4065001): never when a First Strike
+    /// attacker destroys the target first.
     pub(crate) dies: bool,
     /// Whether the blow lands at all (§4.3 step 1).
     pub(crate) lands: bool,
@@ -109,9 +109,10 @@ pub(crate) fn fight(state: &GameState, attacker: &CardInstance, target: &CardIns
 }
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
-/// (`kill_worth`, #1796), less what its own death removes when it dies too, with First Strike deciding
-/// who strikes first and no strike back on a Ranged attacker unless the target is Ranged too (R783000).
-/// A hit that kills nothing is worth a little per point dealt, so a second attacker can finish what the
+/// (`kill_worth`, #1796; its whole `unit_worth` when the attacker exiles what it damages, R4065001), less
+/// what its own death removes when it dies too (its whole `unit_worth` when the target's strike back
+/// exiles it), with First Strike deciding who strikes first and no strike back on a Ranged attacker
+/// unless the target is Ranged too (R783000). A hit that kills nothing is worth a little per point dealt, so a second attacker can finish what the
 /// first started. A Cleave splash is priced at `AI_REPLY.cleave_share` of what it kills or unshields
 /// (R63), a Trample excess as a face hit and a Lifesteal heal by `heal_worth` (#1820). The move order
 /// reads `kills` and `splash_kills` too (`candidates.rs`'s even trades, #1779, #1821).
@@ -167,8 +168,17 @@ pub(crate) fn trade_value(
         }
     }
 
+    // R1124, R4065001: what a blow that exiles removes is the whole unit, with no Death left behind and no
+    // Reborn body back (`unit_worth`), where a kill removes `kill_worth`.
+    let removed = |side: &Side, unit: &CardInstance| {
+        if side.exiles {
+            unit_worth(state, unit, &AI_EVAL, prices)
+        } else {
+            kill_worth(state, unit, &AI_EVAL, prices)
+        }
+    };
     let mut value = if kills {
-        kill_worth(state, target, &AI_EVAL, prices)
+        removed(&a, target)
     } else {
         AI_REPLY.chip_per_damage * f64::from(out.dealt.min(t.view.health))
     };
@@ -176,7 +186,7 @@ pub(crate) fn trade_value(
         value += AI_EVAL.keyword.divine_shield;
     }
     if dies {
-        value -= kill_worth(state, attacker, &AI_EVAL, prices);
+        value -= removed(&t, attacker);
     }
     // §4.4 step 9: what the attack's hits deal beyond each unit's health goes on to the target's hero
     // through its Armor and caps (`projected_damage`: a Cleave's hits too, R176, and nothing when a

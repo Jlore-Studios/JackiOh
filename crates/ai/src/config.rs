@@ -370,6 +370,12 @@ pub struct EvalWeights {
     /// `unit_worth` is untouched: its Brittle share already discounts the unit. Off, every unit that may
     /// swing counts, as before.
     pub brittle_crumbles_before_swing: bool,
+    /// R4065000, #4065: whether `face_threat` and `could_attack_next_turn` (so the threat and pressure terms,
+    /// `wall_switches`, `stands_down` and the learned features) leave out a unit the first tick of its own Burn
+    /// and Toxic destroys at the start of its controller's next turn, before it can attack
+    /// (`afflicted_before_swing`). `unit_worth` is untouched: its affliction discount already prices the unit
+    /// (R3822000). Off, every unit that may swing counts, as before.
+    pub affliction_kills_before_swing: bool,
     /// R3550001, R3560007, #3909: whether `face_threat` and `damage_past_taunts_with` read the two static
     /// attack flags the engine applies outside the plain Taunt walk. A unit that can only attack the Unit
     /// directly across (S+ #37 Scorch) never may hit a hero, so `face_threat` asks `attack_restriction` of
@@ -383,6 +389,12 @@ pub struct EvalWeights {
     /// and the larger of two orders counts, smallest first and each Taunt broken first by the smallest
     /// attacker that destroys it alone. Off, the old order, and a stopped attacker is spent.
     pub best_attack_order_past_taunts: bool,
+    /// R1124, R4065001, #4065: whether a hit from a source that exiles what it damages (`exiles_on_damage`,
+    /// Meditative #72 The Banisher) reads as a Poisonous one in the AI's combat reads (`blow` through `Side`,
+    /// `kills_and_survives`, the Taunt walk of `damage_past_taunts_with` and its Cleave splash, `breaks_alone`,
+    /// `falls_to_first_strike`), and whether `trade_value` prices what it exiles at its whole `unit_worth`,
+    /// with no Death left behind and no Reborn body back. Off, such a hit reads as plain damage, as before.
+    pub exile_on_damage_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -584,8 +596,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     deft_defense_attacks: true,
     gauntlet_bars_face_attacks: true,
     brittle_crumbles_before_swing: true,
+    affliction_kills_before_swing: true,
     static_attack_flags_read: true,
     best_attack_order_past_taunts: true,
+    exile_on_damage_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -855,7 +869,8 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
-/// `static_attack_flags_read`, `best_attack_order_past_taunts`) is off.
+/// `affliction_kills_before_swing`, `static_attack_flags_read`, `best_attack_order_past_taunts`,
+/// `exile_on_damage_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -869,8 +884,10 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     deft_defense_attacks: false,
     gauntlet_bars_face_attacks: false,
     brittle_crumbles_before_swing: false,
+    affliction_kills_before_swing: false,
     static_attack_flags_read: false,
     best_attack_order_past_taunts: false,
+    exile_on_damage_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
