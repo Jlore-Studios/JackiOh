@@ -18,8 +18,8 @@ One JSON file per record, named `seed-<seed>-<catalogVersion>.json` (one file ea
 | `dealt` | Required only for `dealt`: `["p1"]`, `["p2"]` or `["p1", "p2"]` (R433). |
 | `lastBoards` | Required only for `last-boards`: p1's literal entries then p2's, each entry `{ "defId", "radiant" }` (R417, R564). |
 | `glitchBoards` | Required only for `glitch-boards`: the two literal boards in the same shape (R678). |
-| `handicaps` | Required only for `run`: the per-seat dungeon-fight handicaps (R180, R2922000, R2922001). |
-| `deckMarks` | Required only for `run`: the per-seat lists of `{ "index", "radiant", "upgrades" }` (R2702000). |
+| `handicaps` | Required only for `run`: an explicit dungeon-fight handicap for each seat (R180, R2922000, R2922001). |
+| `deckMarks` | Required only for `run`: an explicit per-seat list of `{ "index", "radiant", "upgrades" }` (R2702000); use an empty list when a seat has no marks. |
 | `endings` | Optional boolean: whether the seed took the endings channel. Omitted means `false`, preserving every legacy record. |
 | `found` | Which run failed, how, and the issue that fixed or filed it. |
 | `retired` | Optional: which ids left the catalog, and in which patch. |
@@ -38,7 +38,8 @@ which adds it.
 
 When a patch removes or renames an id a record holds, the lint fails it. This includes a board id and every ingredient, recursively, of
 a fused board id that is no longer rebuildable. Add `"retired": "<which ids, which patch>"` to the record. A retired record is listed
-and not replayed. Never edit its decks, boards or other pinned inputs, and never delete the file: the record is what the failure was.
+and not replayed. Retirement excuses only those missing catalog ids: start-field consistency, deck sizes, handicaps and marks still lint.
+Never edit its decks, boards or other pinned inputs, and never delete the file: the record is what the failure was.
 
 ## Running it
 

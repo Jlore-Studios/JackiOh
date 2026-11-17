@@ -3296,6 +3296,25 @@ impl CorpusRecord {
     }
 }
 
+/// Engine validation of a record's handicaps, deck sizes and marks. A retired record may name a
+/// deck id the live catalog no longer has, so give only those missing ids a non-token stand-in: the
+/// lint below still reports them for a live record, while every catalog-independent setup check runs
+/// for both live and retired records.
+fn validate_record_setup(record: &CorpusRecord) -> Result<(), String> {
+    // R1420: validate against the live catalog with every set previewed, the way `fuzz_deal` deals.
+    let _preview = preview_every_set();
+    let Some(stand_in) = FUZZ_POOL.iter().find_map(|id| CATALOG.get(id)).cloned() else {
+        return Err("the fuzz pool has no non-token card to validate a retired record with".to_string());
+    };
+    let mut catalog = (*CATALOG).clone();
+    for id in record.decks.0.iter().chain(&record.decks.1) {
+        if !catalog.contains_key(id) {
+            catalog.insert(id.clone(), stand_in.clone());
+        }
+    }
+    validate_setup(&record.create_options(), &catalog, SetupKind::Recorded).map_err(|error| error.message)
+}
+
 /// One line per problem with `record`: its shape, then its ids against the live catalog.
 fn lint_record(record: &CorpusRecord) -> Vec<String> {
     let mut problems: Vec<String> = Vec::new();
@@ -3337,6 +3356,24 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
         && !DEALT_SEATS.contains(&dealt.as_slice())
     {
         problems.push("dealt must be [\"p1\"], [\"p2\"] or [\"p1\",\"p2\"]".to_string());
+    }
+    if record.start == StartKind::Run {
+        if record.handicaps.as_ref().is_some_and(|handicaps| {
+            PLAYER_IDS
+                .into_iter()
+                .any(|player| handicaps.get(player).is_none())
+        }) {
+            problems.push("run start requires handicaps for p1 and p2".to_string());
+        }
+        if record
+            .deck_marks
+            .as_ref()
+            .is_some_and(|marks| PLAYER_IDS.into_iter().any(|player| marks.get(player).is_none()))
+        {
+            problems.push(
+                "run start requires deckMarks for p1 and p2 (use an empty list for no marks)".to_string(),
+            );
+        }
     }
 
     let decks = [("p1", &record.decks.0), ("p2", &record.decks.1)];
@@ -3381,10 +3418,8 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
         }
         Some(_) => {}
         None => {
-            let mut unknown_deck = false;
             for &id in &ids {
                 if !CATALOG.contains_key(id) {
-                    unknown_deck = true;
                     problems.push(format!(
                         "\"{id}\" names no catalog card: mark the record retired, never edit its decks"
                     ));
@@ -3400,14 +3435,10 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
                     }
                 }
             }
-            if !unknown_deck {
-                // R1420: the live catalog with every set previewed, the way `fuzz_deal` deals.
-                let _preview = preview_every_set();
-                if let Err(error) = validate_setup(&record.create_options(), &CATALOG, SetupKind::Recorded) {
-                    problems.push(error.message);
-                }
-            }
         }
+    }
+    if let Err(problem) = validate_record_setup(record) {
+        problems.push(problem);
     }
     problems
 }
@@ -4917,6 +4948,20 @@ pub(crate) mod tests {
                 ),
                 (
                     CorpusRecord {
+                        handicaps: Some(PerPlayerOpt::default()),
+                        ..sound_run(1)
+                    },
+                    "run start requires handicaps for p1 and p2",
+                ),
+                (
+                    CorpusRecord {
+                        deck_marks: Some(PerPlayerOpt::default()),
+                        ..sound_run(1)
+                    },
+                    "run start requires deckMarks for p1 and p2",
+                ),
+                (
+                    CorpusRecord {
                         dealt: Some(vec![PlayerId::P1]),
                         ..sound(1)
                     },
@@ -5033,6 +5078,93 @@ pub(crate) mod tests {
             ));
             retired_board.retired = Some("core-gone left the catalog".to_string());
             assert_eq!(lint_record(&retired_board), Vec::<String>::new());
+
+            let retired_run = || {
+                let mut record = sound_run(1);
+                record.decks.0[0] = "core-gone".to_string();
+                record.retired = Some("core-gone left the catalog".to_string());
+                record
+            };
+            let retired_cases = [
+                (
+                    {
+                        let mut record = retired_run();
+                        record
+                            .handicaps
+                            .as_mut()
+                            .and_then(|handicaps| handicaps.get_mut(PlayerId::P1))
+                            .expect("a run record handicaps p1")
+                            .hero_armor = Some(-1);
+                        record
+                    },
+                    "heroArmor",
+                ),
+                (
+                    {
+                        let mut record = retired_run();
+                        record
+                            .handicaps
+                            .as_mut()
+                            .and_then(|handicaps| handicaps.get_mut(PlayerId::P1))
+                            .expect("a run record handicaps p1")
+                            .deck_size += 1;
+                        record
+                    },
+                    "its handicap",
+                ),
+                (
+                    {
+                        let mut record = retired_run();
+                        record.deck_marks.as_mut().expect("a run record sets marks").p1 =
+                            Some(vec![DeckMark {
+                                index: record.decks.0.len(),
+                                radiant: true,
+                                upgrades: 0,
+                            }]);
+                        record
+                    },
+                    "deck mark index",
+                ),
+                (
+                    {
+                        let mut record = retired_run();
+                        record.deck_marks.as_mut().expect("a run record sets marks").p1 = Some(vec![
+                            DeckMark {
+                                index: 0,
+                                radiant: true,
+                                upgrades: 0,
+                            },
+                            DeckMark {
+                                index: 0,
+                                radiant: false,
+                                upgrades: 1,
+                            },
+                        ]);
+                        record
+                    },
+                    "two deck marks name index",
+                ),
+                (
+                    {
+                        let mut record = retired_run();
+                        record.deck_marks.as_mut().expect("a run record sets marks").p1 =
+                            Some(vec![DeckMark {
+                                index: 0,
+                                radiant: false,
+                                upgrades: -1,
+                            }]);
+                        record
+                    },
+                    "deck mark upgrades",
+                ),
+            ];
+            for (record, phrase) in retired_cases {
+                let problems = lint_record(&record).join("\n");
+                assert!(
+                    problems.contains(phrase),
+                    "expected retired record problem {phrase:?} in {problems:?}"
+                );
+            }
         }
 
         #[test]
@@ -5089,6 +5221,13 @@ pub(crate) mod tests {
             assert!(!seed_8.endings);
             let replayed = replay_record(seed_8).unwrap_or_else(|failure| panic!("{}", failure.message));
             assert_eq!(replayed.start, StartKind::Dealt);
+            let mut p1_only = seed_8.clone();
+            p1_only.dealt = Some(vec![PlayerId::P1]);
+            let p1_only = replay_record(&p1_only).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(
+                replayed.hash, p1_only.hash,
+                "replay_record ignored the pinned dealt seats"
+            );
 
             let seed_3760 = records
                 .iter()
@@ -5110,44 +5249,65 @@ pub(crate) mod tests {
                 .find(|(_, record)| record.seed == 3760)
                 .map(|(_, record)| record)
                 .expect("the checked-in corpus keeps seed 3760");
-            let options = record.create_options();
-            let setup = GameSetup {
-                start: record.start,
-                endings: true,
-                recorded: true,
-                ..GameSetup::plain(record.seed)
-            };
-            let with = play_game_with_options(&setup, &options, reduce)
-                .unwrap_or_else(|failure| panic!("{}", failure.message));
-            let without = play_game_with_options(
-                &GameSetup {
-                    endings: false,
-                    ..setup
-                },
-                &options,
-                reduce,
-            )
-            .unwrap_or_else(|failure| panic!("{}", failure.message));
-            let from_channel = |action: &Action| {
-                matches!(
-                    action.action_type().as_str(),
-                    "concede"
-                        | "offerDraw"
-                        | "answerDraw"
-                        | "emote"
-                        | "timeout"
-                        | "disconnectExpired"
-                        | "ceilingReached"
-                        | "setAutoEndTurn"
-                )
-            };
+            let with = replay_record(record).unwrap_or_else(|failure| panic!("{}", failure.message));
+            let mut without_record = record.clone();
+            without_record.endings = false;
+            let without =
+                replay_record(&without_record).unwrap_or_else(|failure| panic!("{}", failure.message));
             assert!(
-                with.log.iter().any(from_channel),
-                "seed 3760's pinned channel sent no channel action"
+                ENDINGS_TERMINAL_REASONS.contains(&with.reason.as_str()),
+                "seed 3760's pinned channel ended by {}",
+                with.reason
             );
             assert!(
-                without.log.iter().all(|action| !from_channel(action)),
-                "the policy alone sent a channel-only action"
+                !ENDINGS_TERMINAL_REASONS.contains(&without.reason.as_str()),
+                "seed 3760 without the channel ended by {}",
+                without.reason
+            );
+            assert_ne!(with.hash, without.hash, "replay_record ignored record.endings");
+        }
+
+        #[test]
+        fn a_corpus_record_uses_its_pinned_run_handicaps_and_deck_marks() {
+            register_all();
+            let mut record = sound_run(1);
+            record
+                .handicaps
+                .as_mut()
+                .and_then(|handicaps| handicaps.get_mut(PlayerId::P1))
+                .expect("a run record handicaps p1")
+                .hero_armor = Some(7);
+            record.deck_marks.as_mut().expect("a run record sets marks").p1 = Some(vec![DeckMark {
+                index: 0,
+                radiant: true,
+                upgrades: 1,
+            }]);
+            assert_eq!(lint_record(&record), Vec::<String>::new());
+            let pinned = replay_record(&record).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_eq!(pinned.start, StartKind::Run);
+
+            let mut other_handicap = record.clone();
+            other_handicap
+                .handicaps
+                .as_mut()
+                .and_then(|handicaps| handicaps.get_mut(PlayerId::P1))
+                .expect("a run record handicaps p1")
+                .hero_armor = Some(8);
+            assert_eq!(lint_record(&other_handicap), Vec::<String>::new());
+            let other_handicap =
+                replay_record(&other_handicap).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(
+                pinned.hash, other_handicap.hash,
+                "replay_record ignored the pinned handicaps"
+            );
+
+            let mut no_marks = record;
+            no_marks.deck_marks.as_mut().expect("a run record sets marks").p1 = Some(Vec::new());
+            assert_eq!(lint_record(&no_marks), Vec::<String>::new());
+            let no_marks = replay_record(&no_marks).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(
+                pinned.hash, no_marks.hash,
+                "replay_record ignored the pinned deck marks"
             );
         }
     }
