@@ -815,6 +815,56 @@ mod r3732001_a_friends_row_says_more {
             assert!(entry.get("lobbyCode").is_none(), "{why}: {entry}");
         }
     }
+
+    #[tokio::test]
+    async fn r3732001_a_two_v_two_lobby_keeps_its_code_until_every_seat_is_taken() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let cyd = account(&app, 3, "Cyd").await;
+        let dov = account(&app, 4, "Dov").await;
+        let eli = account(&app, 5, "Eli").await;
+        befriend(&app, &ada, &bea).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &bea.token,
+            json!({ "format": "2v2" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        heartbeat(&app, &bea).await;
+
+        // The first two entrants each leave an empty seat, so the row keeps the code.
+        for who in [&cyd, &dov] {
+            let (status, body) = api(
+                &app,
+                "POST",
+                &format!("/api/lobbies/{code}/enter"),
+                &who.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 200, "{body}");
+            let entry = friend_entry(&lists(&app, &ada).await, &bea.id);
+            assert_eq!(entry["lobbyCode"], json!(code), "{entry}");
+        }
+
+        // The third fills the last seat, and the row names no lobby.
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/enter"),
+            &eli.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let entry = friend_entry(&lists(&app, &ada).await, &bea.id);
+        assert!(entry.get("lobbyCode").is_none(), "{entry}");
+    }
 }
 
 // B47 — status

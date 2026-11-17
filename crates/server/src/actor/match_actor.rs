@@ -409,7 +409,7 @@ fn answer_message(nonce: &str, answer: ActionAnswer) -> ServerMessage {
             "the action could not be recorded; try again",
             Some(nonce),
         ),
-        // Only a co-op host answers so; a 1v1 nonce is the seat's, whoever sends it.
+        // R4013000: a 1v1 nonce is its own seat's duplicate check, as a co-op host's is: another seat's copy is taken.
         ActionAnswer::NonceTaken => error_message(
             SocketErrorCode::Malformed,
             "that nonce is already taken",
@@ -471,9 +471,9 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     );
 
     let next_seq = log.iter().fold(0, |highest, row| highest.max(row.seq)) + 1;
-    let acked: Vec<(String, i64)> = log
+    let acked: Vec<(String, PlayerId, i64)> = log
         .iter()
-        .map(|row| (row.action.nonce.clone(), row.seq))
+        .map(|row| (row.action.nonce.clone(), row.action.player_id, row.seq))
         .collect();
 
     let portraits = match_row

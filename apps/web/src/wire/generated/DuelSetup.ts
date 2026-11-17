@@ -34,9 +34,9 @@ finished: boolean,
  */
 nextSeq: number, 
 /**
- * The nonce and seq of every row already in the log, in log order (§9.3).
+ * The nonce, seat and seq of every row already in the log, in log order (§9.3, R4013000).
  */
-acked: Array<[string, number]>, 
+acked: Array<[string, string, number]>, 
 /**
  * The clocks as the store holds them: only the grace deadlines are read back (R744).
  */
