@@ -34601,14 +34601,6 @@
         "provider": "claude-8",
         "run_id": "44182646907",
         "taken_asks": []
-      },
-      "5": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-17T21:43:16Z",
-        "provider": "muse",
-        "run_id": "44182753653",
-        "taken_asks": []
       }
     },
     "taken_asks": []
