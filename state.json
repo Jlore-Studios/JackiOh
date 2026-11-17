@@ -10279,15 +10279,8 @@
       "verdict_rounds": 1
     },
     "4014": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44170484729",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-17T20:51:30Z",
-        "until": "2026-11-17T21:21:30Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -10299,10 +10292,9 @@
         "reason": "planned on sonnet",
         "trail": "crates/server/tests/api\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; git log --oneline -15 | cat; git log -5 --format='%h %s' -- crates/server/README.md | cat\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -rln \\\"share\\\" crates/server/src --include=*.rs | head; grep -n \\\"revoke_code\\\" -B2 -A30 crates/server/src/cli/moderate.rs | sed -n 1,80p\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; find / -maxdepth 7 -type d -name \\\"jsonwebtoken-*\\\" 2>/dev/null | head -3; grep -n \\\"code_guesses\\\\|guess\\\" crates/server/README.md | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; sed -n 278,322p crates/server/README.md | cut -c1-900\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -n \\\"code_hash\\\" crates/server/src/db/pg.rs | head -20; grep -ln \\\"redeem_invite_code\\\" crates/server/migrations/*.sql; grep -n \\\"code_has\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -n \\\"username-signin\\\\|username_signin\\\\|sign_in_with_password\\\\|password\\\" crates/server/src/api/auth.rs | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -rnE \\\"(body_hash|code_hash|ip_hash|unsubscribe_token|password|pepper|secret|access_token|refresh_token|bearer|_key|signature|digest|mac)\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -rnE \\\"assert(_eq|_ne)?!\\\" crates/server/src --include=*.rs -l | head -3; grep -n \\\"mod tests\\\" crates/server/src/api/crypto.rs crates/ser\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; sed -n 85,115p crates/server/src/actor/checkpoint.rs; ls crates/server/tests; sed -n 1,30p crates/server/tests/api/guess_limits.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -n \\\"IdempotencyKeyReused\\\\|idempotency_key_reused\\\" crates/server/tests/api/packs.rs crates/server/tests/api/news.rs crates/server/tests/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -rn \\\"dependencies\\\\|guess_limits\\\" .github/ci/rust-test.toml scripts/ci-scope.sh 2>/dev/null | head; sed -n 1,40p .github/ci/rust-test.to\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -n \\\"SHARED_TEST_HELPERS\\\" -A25 crates/tools/tests/acceptance.rs | head -60\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; sed -n 60,130p crates/server/tests/api/guess_limits.rs | head -5; grep -n \\\"unsubscribe\\\" crates/server/tests/api/guess_limits.rs | head; grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -rn \\\"server/README\\\\|README.md\\\" crates/server/tests crates/server/src --include=*.rs | head; grep -rn \\\"crates/server/README\\\" crates/to\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -rln \\\"3897\\\" --include=*.md . 2>/dev/null | grep -v node_modules | head; grep -rn \\\"timing attack\\\\|timing-attack\\\" --include=*.md . 2>/d\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; timeout 60 cargo fetch --locked 2>&1 | tail -3; ls ~/.cargo/registry/src/*/ 2>/dev/null | grep -E \\\"^(jsonwebtoken|ring)-\\\"\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -n \\\"pub async fn rooms_get\\\\|pub async fn duos_rooms_get\\\\|pub async fn lobbies_get\\\" -A8 crates/server/src/db/pg.rs crates/server/src/du\u2026\n- said: Network works, so I can read the real sources. I'll check how `jsonwebtoken` verifies an HS256 signature and confirm ring's function signature.\n- Bash: {\"command\": \"cd ~/.cargo/registry/src/*/jsonwebtoken-11.1.0 && grep -rn \\\"verify_slice\\\\|ct_eq\\\\|constant_time\\\\|verify_slices_are_equal\\\\|== signature\\\\|signature ==\\\" src | head; cd ../ring-0.17.14\u2026\n- tool error: Exit code 2 src/crypto/rust_crypto/hmac.rs:80: verifier.verify_slice(signature).map_err(signature::Error::from_source) grep: src/constant_time.rs: No such file or directory\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -n \\\"fn rooms_get\\\\|fn lobbies_get\\\\|fn duos_rooms_get\\\" crates/server/src/db/*.rs crates/server/src/lobby/store.rs crates/server/src/duos\u2026\n- Bash: {\"command\": \"cd ~/.cargo/registry/src/*/ring-0.17.14 && grep -rn \\\"pub fn verify_slices_are_equal\\\" -B2 -A8 src | head -24; cd /home/runner/work/_temp/work/item-4014; sed -n 3668,3682p crates/server/\u2026\n- Bash: {\"command\": \"cd ~/.cargo/registry/src/*/ring-0.17.14 && sed -n 1,25p src/deprecated_constant_time.rs; grep -n \\\"constant_time\\\" src/lib.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -n \\\"^name = \\\\\\\"subtle\\\\\\\"\\\" Cargo.lock; grep -n \\\"\\\\\\\"subtle\\\\\\\"\\\" -B12 Cargo.lock | grep \\\"^[0-9]*-name\\\" | head -20; grep -n \\\"^name =\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; ls deny.toml supply-chain 2>&1 | head -3; grep -rn \\\"\\\\-\\\\-locked\\\\|--frozen\\\" .github/workflows/*.yml scripts/*.sh 2>/dev/null | head -8; sed \u2026\n- Bash: {\"command\": \"cd ~/.cargo/registry/src/*/hmac-0.13.0 && grep -n \\\"pub use\\\\|verify_slice\\\\|CtOutput\\\" src/lib.rs | head -20; cd ../subtle-2.6.1 && grep -n \\\"impl<T: ConstantTimeEq> ConstantTimeEq for \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; grep -rn \\\"server/Cargo.toml\\\\|workspace.dependencies\\\" crates/tools/tests crates/tools/src crates/server/tests scripts 2>/dev/null | head -8; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4014; sed -n 40,70p crates/server/tests/api/mod.rs; grep -n \\\"cfg(test)\\\" crates/server/src/api/*.rs | head -5; sed -n 1,12p crates/server/src/api/mo\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4014/.bot-plan.md\", \"content\": \"# Plan draft, issue #4014 (planner's notes; final message holds the whole plan)\\n\\nFindings so far (all read from code\u2026\n- said: ## Goal Every comparison of a caller-sent value against a secret or a stored token is constant-time or a lookup by hash or UUID, and the server's contract (`crates/server/README.md`) says so. The audit found one comparison to fix: the idempotency body hash is compared with `!=` in `crates/server/sr\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-17T20:33:03Z",
       "owner_why": "it plans it",
@@ -10315,9 +10307,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-15T22:30:08Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44170484729",
+      "run_id": "pending:24b250fc-1794948858",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-17T20:33:03Z",
+      "started_at": "2026-11-17T20:54:45Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -13844,9 +13836,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T20:54:06Z",
+    "at": "2026-11-17T20:54:45Z",
     "url": "",
-    "what": "review #4137 on claude-4"
+    "what": "build #4014 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-17T20:40:05Z",
