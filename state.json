@@ -36988,11 +36988,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [],
-    "runs": [
-      "2026-11-17T08:59:50Z,44047205621,muse,muse-spark-1.3-contributor,revise,4098,medium,approved,,27.8,0,0,0,,3,5,17,17,0.3,muse,none,,2"
-    ]
-  },
   "version": 1
 }
