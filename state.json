@@ -14150,6 +14150,13 @@
     "4062": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T00:12:32Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "The change stays in the jackioh-tools fuzz corpus and its documentation; it changes no engine rules, AI, cross-crate contract, migration, or large file set."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
