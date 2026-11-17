@@ -13926,13 +13926,12 @@
     "what": "build #4149 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T22:31:31Z",
+    "at": "2026-11-17T22:41:32Z",
     "notes": [
-      "delivered review #4136 on claude-4 (run 44189772495): reviewed",
-      "delivered review #4147 on claude-3 (run 44188079483): approved",
-      "started plan #4149 on muse (run 44191312387)",
+      "delivered plan #4149 on muse (run 44191312387): planned",
+      "started build #4149 on muse (run 44192806364)",
       "nothing more to start: nothing is queued",
-      "#4149: typed it Task"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14638,7 +14637,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T22:31:31Z",
+  "loop_tick": "2026-11-17T22:41:32Z",
   "machine_disk": {
     "issue": null,
     "reading": {
