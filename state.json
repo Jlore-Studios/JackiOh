@@ -16472,13 +16472,30 @@
           "muse": "medium"
         }
       }
+    },
+    "4124": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "claude-3",
+      "owner_since": "2026-11-17T14:48:16Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "claude-3",
+      "run_id": "pending:938c6200-1794926874",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-17T14:48:16Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T10:40:04Z",
+    "at": "2026-11-17T14:48:16Z",
     "url": "",
-    "what": "review #4123 on muse"
+    "what": "plan #4124 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-17T14:39:57Z",
