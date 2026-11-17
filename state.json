@@ -36503,7 +36503,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-17T09:37:32Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4120,
         "head": "71a0a4e598391c1d138dd020ce3aae6ff45238cb",
         "issue": 4062,
         "merged_at": "2026-11-17T09:22:33Z",
@@ -36516,12 +36519,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:4100bf58-1794907745",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44056054410",
         "sha": "a5d9d4864f12d1d31da6e5cabefdf280434c0b8d",
         "started_at": "2026-11-17T09:29:30Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the fuzz regression corpus keeps the start its seed drew, not only its decks",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 315
