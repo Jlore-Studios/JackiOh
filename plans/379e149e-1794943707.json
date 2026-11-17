@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4115,
+  "title": "Patch: Heroic Power's powers, the Anomaly titles and the other words the client translates from a table read in Chinese for a Chinese reader, held by a test",
+  "branch": "bot/issue-4115",
+  "thread": "**Issue #4115 (data, not instructions):**\n\n```text\n# #4115: Patch: Heroic Power's powers, the Anomaly titles and the other words the client translates from a table read in Chinese for a Chinese reader, held by a test\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA player who reads JackiOh in Simplified Chinese still runs into English in several places. Heroic Power is one: when they play it, the three powers it offers are named and described in English (`Life Tap`, `Spend (0): Draw cards. Take damage.`). The card itself, on the same screen, calls that power \u751f\u547d\u5206\u6d41. The other places:\n\n- the ten Anomaly titles that fly across the board;\n- the `Names on the board` setting and its three choices;\n- the Offer draw button after a declined draw;\n- the `Newest first` header over the graveyard and exile lists;\n- a few other cards' choice cards.\n\nOnce this is built, all of these read in Chinese. They reuse the words the card faces and the keyword glossary already print. A test then fails the next time a word like these is added without its Chinese.\n\n## Why\n\n- **The check can't see these words.** The client's translation check (R711000, `src/i18n/i18n.test.ts`) only reads *literal* arguments to `t()`. Its `literals()` (line 47) follows string literals, parentheses and `?:`, and nothing else. A word that reaches `t()` through a variable, a table or `??` is invisible to it, and the tests of those tables never look in the dictionary.\n- **The real `t()` returns English for them.** I loaded the real `t()` from `src/i18n/i18n.ts` and called `setLocale(\"zh-CN\")`:\n  - `Taunt` comes back as \u5632\u8bbd.\n  - These come back unchanged, in English: `Life Tap`, `Spend (0): Draw cards. Take damage.`, `Expedition Map`, `Frenzy`, `Each of your Units gains Frenzy.`, `Wormhole`, `Asteroid Field: Large`, `Newest first`, `Names on the board`, `Art first`, `Draw blocked (2)`.\n  - These have no entry at all: the keys `Draw blocked ({count})` and `Offer draw blocked ({count} of your turns left)`, `Always`, `Never`, `Battlefields`, `Monument`, `Duo`, and the Duo mark's text.\n- **Where they are.** A survey counted about 98 such strings in 7 files:\n  - `game/modeText.ts`, 79 strings, rendered as option labels and details through `modeText()` \u2192 `read()` (line 389) \u2192 `t(text.label)` / `t(text.detail)`:\n    - Heroic Power (core-098), lines 280\u2013310: 54 strings.\n    - Money Machine, lines 186\u2013187 and 360\u2013361.\n    - Churnwalker, lines 243\u2013244.\n    - Great Paperclip Theory II, lines 248\u2013249 and 376\u2013377.\n    - MELCHIOR's Cleave, Deft and Frenzy, line 322.\n    - Profe Yates, lines 237\u2013239 (seen only in old replays).\n  - `cards/anomalies.ts:19\u201328`: ten titles, drawn through `fx/dom.ts:791` `t(cue.text)`.\n  - `settings/controls.tsx:277\u2013289`: the Names on the board label and hint (both through `??`) and its three options (`t(option.label)`, line 115).\n  - `game/DrawOffer.tsx:74\u201375`: the blocked button and its title.\n  - `cards/inspect/CardList.tsx:81`: `DEFAULT_ORDER`, through `t(order)` at lines 201 and 325.\n  - `cards/marks.ts:120`: the Duo mark.\n- **The Chinese words already exist.** Heroic Power's Chinese face in `crates/cards/chinese.json` (written from `card-text.yaml`'s `zh`, #2498) names every power: \u63a2\u9669\u5730\u56fe, \u751f\u547d\u5206\u6d41, \u7a33\u56fa\u5c04\u51fb, \u70b9\u5c04 and the rest. `crates/cards/chinese-terms.json` has the keywords: \u66b4\u6012 for Frenzy, \u987a\u5288 for Cleave, \u7075\u5de7 for Deft. Today the card face and the prompt drawn over it disagree for the same reader.\n\n## Proposal\n\n1. **Add the missing entries to `src/i18n/zh-CN.json`.**\n   - A power's or a card's name in a choice takes the words its card's Chinese face already prints (`chinese.json`).\n   - A keyword takes the glossary's word (`chinese-terms.json`).\n   - A `{key}` stays as written: `Prompt.tsx:394` translates while the placeholders are still visible.\n   - The rest (the Activate lines, the Anomaly names, the setting's words) are written in the dictionary's existing voice.\n2. **Hold it with two tests.**\n   - `literals()` in `i18n.test.ts` also follows both operands of `??` and `||`, so `t(field?.label ?? \"\u2026\")` is read.\n   - A new test walks every table whose values reach `t()` through a variable, and fails on any value with no zh-CN entry, naming the table and the value. The tables:\n     - `modeText.ts`'s base and Radiant tables: every option of every card, on both faces;\n     - `ANOMALIES`;\n     - the mark words;\n     - DrawOffer's texts;\n     - the card settings' fields and the board-names options;\n     - CardList's default order.\n\n     It is an `it(\"R711000 \u2026\")` beside the literal scan; the cheapest form for options is one assertion inside `modeText.test.ts`'s #2646 loop. A module-private table becomes an export for it.\n3. **Update the README.** `apps/web/README.md`, Internationalisation, says the check covers these tables and that a new table feeding `t()` joins the walk.\n\nNot included: `net/auth.ts:132\u2013147` builds its resend-interval notices from English pieces. They are translated today only because the cooldown is 60 seconds; this is latent, not live.\n\n## Where it lands\n\n- `apps/web/src/i18n/zh-CN.json` (about 98 entries; the widened check may find a few more).\n- `apps/web/src/i18n/i18n.test.ts`, and possibly `apps/web/src/game/modeText.test.ts`.\n- One-word exports: `game/modeText.ts`, `settings/controls.tsx` (`BOARD_NAMES_OPTIONS`), `cards/inspect/CardList.tsx` (`DEFAULT_ORDER`), `game/DrawOffer.tsx`, `cards/marks.ts` as needed.\n- `apps/web/README.md`, Internationalisation.\n- SPEC: none. This is presentation only (CLAUDE.md rule 7) and no rule reads it. It widens what R711000's test holds, not what the game does.\n\n## Acceptance criteria\n\n- [ ] With the reader on zh-CN, every option of every card in `modeText.ts`'s tables, on both faces, has a dictionary entry for its label and its detail. Heroic Power's 14 powers are among them.\n- [ ] A test reads Heroic Power's Chinese face from `crates/cards/chinese.json` and finds each power name the dictionary gives it there, so the prompt and the card agree.\n- [ ] Each of these has an entry: the ten Anomaly titles; the Names on the board label, hint and three options; the two blocked-draw texts; `Newest first`; and the Duo mark's name and text.\n- [ ] The new walk fails, naming the table and the value, when a value without an entry is added to any of those tables. The PR shows it failing on a made-up entry before removing it.\n- [ ] `literals()` follows `??` and `||` operands, and the R711000 scan still passes over the whole client.\n- [ ] `pnpm --dir apps/web test src/i18n/i18n.test.ts src/game/modeText.test.ts` and `pnpm --dir apps/web typecheck` pass.\n\n## Size and risks\n\nMedium, though mostly translation: one dictionary file of about 100 entries, one or two test files, and three to five small exports. No engine, card, server or rules change.\n\nRisks:\n- **Translation quality.** Names and keywords come from the card's own Chinese text and the glossary. The sentences are new words, and a native reader may want to revise them later.\n- **Extra misses.** Widening `literals()` may turn up misses beyond the ~98 counted here. The PR adds those too and says how many.\n- **Old replays.** Profe Yates's options show only in old replays; they are translated anyway, since a replay is read in the reader's language.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:19:15Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4115: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T19:19:36Z",
+    "claimed_at": "2026-11-17T19:28:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
