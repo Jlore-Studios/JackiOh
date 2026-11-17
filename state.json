@@ -13961,6 +13961,24 @@
         "sha": "9f5b0fc1981f4ded4d0b2a9d5fecbb7204b7bb02",
         "tiers": {}
       }
+    },
+    "4149": {
+      "difficulty_by": {
+        "at": "2026-11-17T22:32:23Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #4136, a medium change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-17T22:32:23Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 4136,
+      "stop_requested": false
     }
   },
   "labels_synced": "e752b3263433d01e",
