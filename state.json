@@ -14155,8 +14155,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "agy",
-      "owner_since": "2026-11-16T23:40:31Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-17T06:49:57Z",
+      "owner_why": "its turn came (it waited 120 minutes for #4098, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-17T02:38:57Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -16060,18 +16060,26 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4057,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-11-17T03:46:07Z",
+      "queued_at": "2026-11-17T06:49:57Z",
       "run_id": "44012646933",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "source": "conflict",
       "started_at": "2026-11-17T03:47:23Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-17T06:49:57Z",
+        "until": "2026-11-17T07:19:57Z",
+        "why": "it waited 120 minutes for #4098, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "gemini"
@@ -16091,17 +16099,6 @@
         "tiers": {
           "gemini": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          4098
-        ],
-        "ends": "2026-11-17T06:47:50Z",
-        "from_run": "44012646933",
-        "head": "58f4eb81e7341cc7bb9dad89a3eabadf2a677f2b",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-17T04:47:50Z"
       }
     },
     "4114": {
