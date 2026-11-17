@@ -12939,6 +12939,13 @@
     "4116": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T20:18:23Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "One tools file (a test and an extracted helper) plus three doc lines; no engine, AI, cross-crate, migration or 40-file change, so none of the five hard lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
