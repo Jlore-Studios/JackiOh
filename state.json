@@ -16196,6 +16196,7 @@
         "by": "`claude` (strong)",
         "sha": "449a1d49dea9c5f3a9a7f1f5754be1ebeb76dac9"
       },
+      "closed_at": "2026-11-17T09:50:46Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -16210,6 +16211,7 @@
         "provider": "claude-6",
         "sha": "449a1d49dea9c5f3a9a7f1f5754be1ebeb76dac9"
       },
+      "merged": true,
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-17T06:50:53Z",
