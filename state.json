@@ -16001,6 +16001,8 @@
       }
     },
     "4105": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T00:36:46Z",
@@ -16014,8 +16016,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -60; ls\"}\n- Bash: {\"command\": \"mkdir -p /tmp/w && cat > /tmp/w/ins.py <<'EOF'\\nimport re,sys\\nL='#[ignore = \\\"daily: off per-PR CI by owner decision (#4093), no per-PR stand-in\\\"]'\\nM={\\n\\\"crates/ai/tests/ai/shadow_ba\u2026\n- Bash: {\"command\": \"git diff | grep -B2 -A2 '^+' | head -60; sed -n 1,30p crates/ai/tests/ai_slow.rs; grep -n \\\"ai_slow\\\" -B3 -A3 crates/ai/README.md; grep -n \\\"rust. check does\\\" -B4 -A4 crates/tools/fuzz-\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\ndef sub(f,a,b):\\n s=open(f).read(); assert a in s; open(f,\\\"w\\\").write(s.replace(a,b,1))\\nsub(\\\"crates/ai/tests/ai_slow.rs\\\",\\\"\\\"\\\"B32), at AI_GATE_BUDGET. CI runs \u2026\n- Bash: {\"command\": \"cat > .bot-notes.md.new <<'EOF'\\n## State\\nEdits done (22 ignore lines in 7 files, ai_slow.rs header, ai README, fuzz-corpus README). Left: run verification (ai_slow, tools fuzz/position\u2026\n- Monitor: {\"command\": \"until [ \\\"$(grep -c wall /tmp/w/run1.log)\\\" -ge 4 ]; do sleep 20; done; cat /tmp/w/run1.log\", \"timeout_ms\": 3000000, \"description\": \"wait for first test batch\"}\n- tool error: Quoted text in this command can't be checked before it runs\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until [ \\\"$(grep -c wall /tmp/w/run1.log)\\\" -ge 4 ]; do sleep 20; done; cat /tmp/w/run1.log\", \"description\": \"Wait for first test batch\", \"timeout\": 3000000, \"run_in_background\": true}\n- said: Edits are made and the tests are building and running now. I'll report when the first batch finishes.\n- Bash: {\"command\": \"sleep 580; cat /tmp/w/run1.log\", \"timeout\": 600000}\n- tool error: <tool_use_error>Blocked: sleep 580 followed by: cat /tmp/w/run1.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you starte\u2026\n- said: Waiting for the background job to notify me.\n- Monitor: {\"command\": \"until [ \\\"$(grep -c wall /tmp/w/run1.log)\\\" -ge 4 ]; do sleep 20; done; cat /tmp/w/run1.log\", \"description\": \"first test batch finishing\", \"timeout_ms\": 600000}\n- tool error: Quoted text in this command can't be checked before it runs\n- Bash: {\"command\": \"cat /tmp/w/run1.log\"}\n- Bash: {\"command\": \"timeout 500 bash -c 'until [ \\\"$(grep -c wall /tmp/w/run1.log)\\\" -ge 4 ]; do sleep 15; done'; cat /tmp/w/run1.log\", \"timeout\": 520000}\n- Bash: {\"command\": \"(for c in \\\"cargo test -p jackioh-ai --test ai_slow -- --ignored\\\" \\\"cargo test -p jackioh-tools --bin jackioh -- fuzz:: positions:: duos_fuzz:: selfplay:: --ignored\\\" \\\"cargo jackioh sp\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until [ \\\"$(grep -c wall /tmp/w/run2.log)\\\" -ge 4 ]; do sleep 15; done'; cat /tmp/w/run2.log\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo test -p jackioh-tools --bin jackioh -- the_days_extra_seeds_keep_every_pool_card --ignored 2>&1 | grep -vE \\\"^\\\\s*(Compiling|Finished)\\\" | head -30\", \"timeout\": 600000}\n- Bash: {\"command\": \"git status --short; python3 -I - <<'EOF'\\ns=open(\\\".bot-notes.md\\\").read()\\ni=s.index(\\\"## Goal\\\")\\nopen(\\\".bot-notes.md\\\",\\\"w\\\").write(\\\"## State\\\\nAll edits done and verified. ai_slow:\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the `tools fuzz` and `ai slow` test groups move to the daily run\"} --> ## What changed I marked the slow tests in the three groups `#[ignore = \"daily: off per-PR CI by owner decision (#4093), no per-PR stand-in\"]`, as the issue instructed. Nothing is de\u2026"
       },
       "issue": 4093,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T02:02:09Z",
         "from_run": "43989033226",
         "gates": [
           {
@@ -16107,7 +16112,11 @@
         "source": "build",
         "until": "2026-11-17T02:29:44Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-17T01:59:44Z",
+      "run_id": "pending:9ccc86d8-1794880880",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16126,6 +16135,9 @@
         "provider": "claude-8",
         "run": "43989033226"
       },
+      "started_at": "2026-11-17T02:02:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16225,9 +16237,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T01:49:00Z",
+    "at": "2026-11-17T02:02:09Z",
     "url": "",
-    "what": "review #4104 on muse"
+    "what": "review #4105 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-17T01:42:04Z",
