@@ -16497,10 +16497,8 @@
     "what": "review #4123 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T13:28:21Z",
-    "notes": [
-      "delivered review #4122 on claude-1 (run 44065548626): approved"
-    ],
+    "at": "2026-11-17T13:35:47Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17205,7 +17203,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T13:28:21Z",
+  "loop_tick": "2026-11-17T13:35:47Z",
   "machine_disk": {
     "issue": null,
     "reading": {
