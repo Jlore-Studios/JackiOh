@@ -16519,9 +16519,11 @@
         "by": "`muse` (medium)",
         "sha": "17177375845216815f09cfad85d0eccb50c2193d"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T09:57:19Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-17T10:37:24Z",
         "family": "muse",
@@ -16531,6 +16533,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 12 of 20): the schema invariants refuse a view that bypasses RLS and a SECURITY DEFINER function left open\"} -->\n- ## What changed\n- - [01_schema_invariants.sql](crates/server/tests/sql/01_schema_invariants.sql): appended CHECK 22 (no `public` view without `security_invoker = true`), CHECK 23 (no `public` materialized view), CHECK 24 (every `SECURITY DEFINER` function in `public`/`app` pins `search_path`, reading the catalog whe\u2026\n- - [0094_revoke_on_profile_activated.sql](crates/server/migrations/0094_revoke_on_profile_activated.sql) (new): `REVOKE ALL ON FUNCTION app.on_profile_activated() FROM PUBLIC` plus `GRANT EXECUTE ... TO service_role`. A survey of all migrations confirmed the plan's prediction: `on_profile_activated`\u2026\n- - Wiring: one `MIGRATIONS` entry in [migrate.rs](crates/server/src/db/migrate.rs), the `0028-0094` loop plus refuse-unknown entry in [run.sh](crates/server/tests/sql/run.sh), and the `PINNED` row (`2ac06ed4`) in [migrations_pinned.rs](crates/server/tests/store/migrations_pinned.rs).\n- - CHECK 25's allowlist holds exactly `app.profile_is_active()` for `authenticated` (the 0002/0003/0004 RLS policies call it, and it is `DEFINER` so it reads `profiles` without recursing into policies). `app.current_profile_id()` is also granted to `authenticated` but is `SECURITY INVOKER`, so it is\u2026\n- ## Testing\n- - `cargo test -p jackioh-server --test server_store migrations_pinned`: 9 passed, 0 failed (the failure output first reported the new checksum, which I copied into `PINNED`).\n- - `cargo fmt --check`: clean. `cargo clippy -p jackioh-server --all-targets -- -D warnings`: clean. `sh -n` on `run.sh`: OK.\n- - Full-file parse of `01_schema_invariants.sql` (78 statements) and migration 0094 (2 statements) with `pglast`, which embeds the real Postgres grammar. This caught one genuine bug: CHECK 24's probe used `as $$ select 1 $$` inside a `DO $$` body, which would close the outer string early in real Pos\u2026\n- - **Not run: `sh crates/server/tests/sql/run.sh` and `sh crates/server/tests/db/run.sh`.** This machine has no Docker (`docker: not found`), no root/sudo, and no Postgres binaries, so the container suites cannot execute here. By the survey above, pre-0094 CHECK 25 fails naming exactly `app.on_profi\u2026\n- ## Decisions\n- - Followed the plan's no-synthetic-probe call for CHECK 25; added only small vacuity guards in the file's stated convention (CHECK 25 counts in-scope `DEFINER` functions; every probe asserts the detector names it).\n- - Left CHECK 2's \"0001-0093\" heading and 83-table list untouched: 0094 adds no tables.\n- - Rejected widening CHECK 25 to the `auth` schema: `auth.uid()` is granted to clients by design and would false-positive.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4012 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4012/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4012,
       "kind": "review",
       "live": "reviewing",
