@@ -33945,7 +33945,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-17T20:40:57Z",
         "every": 5,
+        "findings": 0,
         "head": "4b6f56753f723fd91d2924c11269b1b2a825d1da",
         "issue": 4013,
         "merged_at": "2026-11-17T20:29:52Z",
@@ -33958,12 +33960,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:62868abd-1794947519",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44170372301",
         "sha": "094e51ea835b3dcc7d3168aa5605eb981aeb79b0",
         "started_at": "2026-11-17T20:32:25Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch (part 13 of 20): Math.random only where nothing is secret, held by lint, and a nonce is never proof of who sent it",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 320
