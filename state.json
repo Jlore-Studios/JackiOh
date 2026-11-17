@@ -16064,10 +16064,16 @@
     "what": "suggestions (server) on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-17T02:51:42Z",
+    "at": "2026-11-17T03:00:36Z",
     "notes": [
-      "delivered review #4106 on claude-8 (run 44005067861): reviewed",
-      "delivered review #4104 on claude-8 (run 44004979129): reviewed"
+      "#4090: approved and green, so its strikes are cleared",
+      "started suggest on claude-8 (run 44007331359)",
+      "started suggest on claude-1 (run 44007436335)",
+      "started suggest on claude-8 (run 44007534701)",
+      "started suggest on claude-1 (run 44007639078)",
+      "started suggest on claude-4 (run 44007747069)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16771,7 +16777,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T02:51:42Z",
+  "loop_tick": "2026-11-17T03:00:36Z",
   "machine_disk": {
     "issue": null,
     "reading": {
