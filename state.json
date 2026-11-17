@@ -16307,10 +16307,11 @@
     "what": "revise #4098 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T07:35:23Z",
+    "at": "2026-11-17T07:43:22Z",
     "notes": [
-      "delivered revise #4113 on agy (run 44034453704): approved",
-      "runner gate: started 1 of 1 waiting run(s) (run 44040041210 on bot/issue-4057)"
+      "started revise #4098 on muse (run 44041062351)",
+      "nothing more to start: nothing is queued",
+      "pruned 10 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17016,7 +17017,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T07:35:23Z",
+  "loop_tick": "2026-11-17T07:43:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
