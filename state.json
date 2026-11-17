@@ -13912,11 +13912,10 @@
     "what": "review #4138 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-17T21:13:34Z",
+    "at": "2026-11-17T21:22:27Z",
     "notes": [
-      "#4137: green and waiting for a person to merge it, so `claude-4` gives up its claim on it",
-      "delivered build #4110 on claude-6 (run 44166525696): interrupted",
-      "started build #4110 on claude-3 (run 44177924361)",
+      "delivered build #4116 on claude-4 (run 44168385898): built",
+      "started review #4138 on claude-4 (run 44179515491)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -14624,7 +14623,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T21:13:34Z",
+  "loop_tick": "2026-11-17T21:22:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
