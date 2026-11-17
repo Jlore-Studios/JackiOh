@@ -158,7 +158,7 @@ pub(crate) fn clear_afflictions(sink: &mut EngineSink<'_>, card_id: &str) {
 
 /// R3540003, §4.4 step 3a: what the damage `source` deals turns into, if it states a conversion. A source
 /// that states both burns.
-pub(crate) fn converts_to(state: &GameState, source: &CardInstance) -> Option<Affliction> {
+pub fn converts_to(state: &GameState, source: &CardInstance) -> Option<Affliction> {
     let flags = crate::scripts::flags_of(state, source);
     if flags.damage_burns == Some(true) {
         Some(Affliction::Burn)

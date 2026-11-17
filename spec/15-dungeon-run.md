@@ -112,7 +112,7 @@ Embers buy the next level at `RUN_LEVEL_EMBERS`, up to the ladder's top.
 
 Artifacts: at most `RUN_STARTER_ARTIFACTS_MAX`, distinct, worth at most `RUN_STARTER_ARTIFACT_POINTS` by `RUN_TIER_POINTS`. Each is Combat or Economic, not Unobtainable, and a starter or extracted ([[§15.4]]).
 
-Curses: any of the content's ([[§15.9]]).
+Curses: any of the content's, each at most once ([[§15.9]], [[R4067000]]).
 
 The start screen offers the named starting decks of `RUN_PRESET_DECKS` (placeholders until the designer's lists): each holds `RUN_STARTER_SIZE` distinct cards of `RUN_STARTER_CARDS` fitting level 1's slots, so any player may pick any of them from their first run, then tweak the picks in the builder.
 

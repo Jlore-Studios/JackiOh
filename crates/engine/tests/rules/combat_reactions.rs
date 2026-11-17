@@ -355,6 +355,36 @@ mod r3550004_a_per_turn_damage_pool {
     }
 }
 
+mod r4064000_a_sides_damage_pool {
+    use super::*;
+
+    /// `player`'s pools as `query::damage_pool_of` reads them: (left now, refilled).
+    fn pools_of(s: &Scenario, player: PlayerId) -> (i32, i32) {
+        (
+            damage_pool_of(s.state(), player, false),
+            damage_pool_of(s.state(), player, true),
+        )
+    }
+
+    #[test]
+    fn r4064000_damage_pool_of_reads_the_rest_or_the_refilled_pools() {
+        let mut s = board(
+            "r4064000-pool-of",
+            json!({ "field": [PLAIN], "backrow": face_up(POOL) }),
+            json!({ "field": [RANGER] }),
+        );
+        assert_eq!(pools_of(&s, P1), (POOL_SIZE, POOL_SIZE));
+        assert_eq!(pools_of(&s, P2), (0, 0));
+        s.end_turn();
+        // The ranger's 3 on the hero leaves 2 of the pool this turn; the whole pool comes back at p1's turn.
+        s.attack(id_at(&s, P2, 1).as_str(), "hero");
+        s.expect_health(P1, HERO_HEALTH);
+        assert_eq!(pools_of(&s, P1), (POOL_SIZE - 3, POOL_SIZE));
+        s.end_turn();
+        assert_eq!(pools_of(&s, P1), (POOL_SIZE, POOL_SIZE));
+    }
+}
+
 mod r4022000_a_pool_is_spent_only_by_a_hit_that_lands {
     use super::*;
 

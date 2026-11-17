@@ -176,7 +176,7 @@ use jackioh_engine::{
 use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_STARTER_SIZE, RUN_TIERS};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 use crate::agent::panic_message;
 use crate::changed;
@@ -1517,6 +1517,18 @@ fn check_replay(setup: &GameSetup, run: &GameRun) -> Result<(), FuzzFailure> {
             at,
         ));
     }
+    // What `hash_state` leaves out (`applied`, `opening`, `generators`) still has to fold back:
+    // a fold that rebuilds the hash but not the whole match did not reproduce it (§9.3).
+    if replayed.state != run.state {
+        return Err(FuzzFailure::new(
+            FailureStage::Replay,
+            format!(
+                "replay: {} — folding (seed, log) did not reproduce the match (§9.3)",
+                join_state_diff(&run.state, &replayed.state)
+            ),
+            at,
+        ));
+    }
     Ok(())
 }
 
@@ -1548,9 +1560,96 @@ pub(crate) fn round_trip<S: Serialize + for<'de> Deserialize<'de>>(state: &S) ->
         .map_err(|error| format!("the round trip could not parse the state back: {error}"))
 }
 
-/// `state` restored by `restore`, required to hash as `state` does under `hash`: the restored
-/// state, or the mismatch. Every wave restores with `round_trip`; a test plants a lossy one.
-pub(crate) fn verify_round_trip<S>(
+/// The top-level fields where two serialized states differ (`serde_json::to_value` of each),
+/// in key order: the left value's keys, then keys only the right value holds. One entry per
+/// differing field — `{field} differs`, naming the first differing entry inside `applied` and
+/// `generators`, the records `hash_state` leaves out — so a failure names what the hash cannot
+/// see (§9.3). Empty when the two values are equal.
+pub(crate) fn state_diff(live: &Value, other: &Value) -> Vec<String> {
+    let (Value::Object(left), Value::Object(right)) = (live, other) else {
+        if live == other {
+            return Vec::new();
+        }
+        return vec!["state differs".to_string()];
+    };
+    let mut out = Vec::new();
+    for key in left
+        .keys()
+        .chain(right.keys().filter(|key| !left.contains_key(*key)))
+    {
+        if left.get(key) == right.get(key) {
+            continue;
+        }
+        out.push(match key.as_str() {
+            "applied" => match (left.get(key), right.get(key)) {
+                (Some(Value::Array(before)), Some(Value::Array(after))) => {
+                    match first_applied_at(before, after) {
+                        Some(at) => format!("applied differs (first at {at})"),
+                        None => "applied differs".to_string(),
+                    }
+                }
+                _ => "applied differs".to_string(),
+            },
+            "generators" => match (left.get(key), right.get(key)) {
+                (Some(Value::Object(before)), Some(Value::Object(after))) => {
+                    match first_generator_at(before, after) {
+                        Some(at) => format!("generators differs (first at {at})"),
+                        None => "generators differs".to_string(),
+                    }
+                }
+                _ => "generators differs".to_string(),
+            },
+            _ => format!("{key} differs"),
+        });
+    }
+    out
+}
+
+/// The first generator whose root differs or is missing on one side, in key order: the left map's
+/// keys, then keys only the right map holds. That key is the Created card's instance id.
+fn first_generator_at(before: &Map<String, Value>, after: &Map<String, Value>) -> Option<String> {
+    before
+        .keys()
+        .chain(after.keys().filter(|key| !before.contains_key(*key)))
+        .find(|key| before.get(*key) != after.get(*key))
+        .cloned()
+}
+
+/// The first index where two `applied` logs differ: the live entry's nonce when it carries one,
+/// else its `#{index}`; when one log is a strict prefix of the other, the first missing index.
+fn first_applied_at(before: &[Value], after: &[Value]) -> Option<String> {
+    for (index, (one, another)) in before.iter().zip(after.iter()).enumerate() {
+        if one != another {
+            let at = one
+                .get("nonce")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("#{index}"));
+            return Some(at);
+        }
+    }
+    (before.len() != after.len()).then(|| format!("#{}", before.len().min(after.len())))
+}
+
+/// `state_diff` between two states, joined for a failure message: never empty, so a mismatch
+/// names a field rather than reporting a bare inequality.
+pub(crate) fn join_state_diff<S: Serialize>(live: &S, other: &S) -> String {
+    let diff = match (serde_json::to_value(live), serde_json::to_value(other)) {
+        (Ok(live), Ok(other)) => state_diff(&live, &other),
+        _ => Vec::new(),
+    };
+    if diff.is_empty() {
+        "state differs".to_string()
+    } else {
+        diff.join(", ")
+    }
+}
+
+/// `state` restored by `restore`, required to hash as `state` does under `hash` and then to equal
+/// it: the restored state, or the mismatch. The equality arm catches what the hash leaves out
+/// (`applied`, `opening`, `generators`), which `hash_state` skips by design. Every wave restores
+/// with `round_trip`; a test plants a lossy one.
+pub(crate) fn verify_round_trip<S: Serialize + for<'de> Deserialize<'de> + PartialEq>(
     state: &S,
     hash: impl Fn(&S) -> String,
     restore: impl FnOnce(&S) -> Result<S, String>,
@@ -1558,8 +1657,19 @@ pub(crate) fn verify_round_trip<S>(
     let restored = restore(state)?;
     let (live, again) = (hash(state), hash(&restored));
     if again != live {
+        let mut message = format!("the round trip changed the state: hash {again} != {live}");
+        if let (Ok(live), Ok(again)) = (serde_json::to_value(state), serde_json::to_value(&restored)) {
+            let diff = state_diff(&live, &again);
+            if !diff.is_empty() {
+                message.push_str(&format!(" ({})", diff.join(", ")));
+            }
+        }
+        return Err(message);
+    }
+    if restored != *state {
         return Err(format!(
-            "the round trip changed the state: hash {again} != {live}"
+            "the round trip changed the state: {}",
+            join_state_diff(state, &restored)
         ));
     }
     Ok(restored)
@@ -1656,6 +1766,18 @@ fn check_serial_restart_with(
             at,
         ));
     }
+    // The restored game must resume to the live state whole, not only to its hash: a loss in
+    // `applied`, `opening` or `generators` survives the round trip and the continuation (§9.3).
+    if state != *live {
+        return Err(FuzzFailure::new(
+            FailureStage::Checkpoint,
+            format!(
+                "checkpoint: {} — the restored game diverged (§9.3)",
+                join_state_diff(live, &state)
+            ),
+            at,
+        ));
+    }
     if ms > CHECKPOINT_TIME_BOUND_MS {
         return Err(FuzzFailure::new(
             FailureStage::Checkpoint,
@@ -1678,7 +1800,8 @@ fn check_serial_restart_with(
 /// from turn 0 nor the continuation from the restored state: both are the game's own `fold` and
 /// `reduce`, which grow with its length and board, and a loaded runner stretched each past the bound
 /// (#1803: seed 1557 handicapped, the fold; #3712: seed 247, a Zephrys dry run on a 300-instance
-/// board, the continuation). The continuation is still held to the live hash and ending.
+/// board, the continuation). The continuation is still held to the live hash, the ending and
+/// the whole live state.
 pub const CHECKPOINT_TIME_BOUND_MS: u128 = 5_000;
 
 /// The most events one action may emit. Bounds runaway growth before settle cap (§10.3),
@@ -3745,6 +3868,62 @@ pub(crate) mod tests {
         }
     }
 
+    mod state_diff_tests {
+        use super::*;
+
+        #[test]
+        fn state_diff_names_exactly_the_fields_that_differ() {
+            let live = json!({
+                "turn": 3,
+                "generators": {"card-a": "root-a", "card-b": "root-b"},
+                "opening": null,
+            });
+            let other = json!({
+                "turn": 4,
+                "generators": {"card-a": "root-changed", "card-c": "root-c"},
+                "opening": null,
+            });
+            // One entry per differing top-level key, in key order: the changed generator's card
+            // id is named, the missing `card-b` and the extra `card-c` add no second entry, and
+            // the equal `opening` is never named.
+            assert_eq!(
+                state_diff(&live, &other),
+                [
+                    "generators differs (first at card-a)".to_string(),
+                    "turn differs".to_string(),
+                ]
+            );
+            assert!(state_diff(&live, &live.clone()).is_empty());
+        }
+
+        #[test]
+        fn state_diff_names_the_first_applied_entry_that_differs() {
+            let live = json!({ "applied": [{"nonce": "n1"}, {"nonce": "n2"}] });
+            // Same length, one entry's body changed: the live entry's nonce names it.
+            let changed = json!({ "applied": [{"nonce": "n1"}, {"nonce": "n2", "events": [1]}] });
+            assert_eq!(
+                state_diff(&live, &changed),
+                ["applied differs (first at n2)".to_string()]
+            );
+            // No nonce to name: the index names it.
+            let anonymous = json!({ "applied": [1, 2] });
+            let anonymous_changed = json!({ "applied": [1, 3] });
+            assert_eq!(
+                state_diff(&anonymous, &anonymous_changed),
+                ["applied differs (first at #1)".to_string()]
+            );
+            // The other log is a strict prefix of the live one: the first missing index.
+            let prefix = json!({ "applied": [{"nonce": "n1"}] });
+            assert_eq!(
+                state_diff(&live, &prefix),
+                ["applied differs (first at #1)".to_string()]
+            );
+            // A shape that is not an array on both sides names no entry.
+            let not_a_log = json!({ "applied": {"nonce": "n1"} });
+            assert_eq!(state_diff(&live, &not_a_log), ["applied differs".to_string()]);
+        }
+    }
+
     mod fuzz_serial_restart {
         use std::cell::Cell;
 
@@ -3805,6 +3984,90 @@ pub(crate) mod tests {
             assert!(error.contains("the round trip changed the state"), "{error}");
         }
 
+        /// A planted lossy restore: the JSON round trip, then the Created cards' record dropped.
+        /// `hash_state` skips `generators` by design, so the hash cannot see the loss.
+        fn lossy_without_generators(state: &GameState) -> Result<GameState, String> {
+            let mut restored = round_trip(state)?;
+            restored.generators.clear();
+            Ok(restored)
+        }
+
+        /// A planted lossy restore: the JSON round trip, then the applied-action record emptied.
+        /// `hash_state` skips `applied` by design, so the hash cannot see the loss.
+        fn lossy_without_applied(state: &GameState) -> Result<GameState, String> {
+            let mut restored = round_trip(state)?;
+            restored.applied.clear();
+            Ok(restored)
+        }
+
+        #[test]
+        fn a_lossy_round_trip_that_drops_generators_fails_naming_generators() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            assert!(
+                !run.state.generators.is_empty(),
+                "seed 1 must create a card, or this plants nothing"
+            );
+            let restored = lossy_without_generators(&run.state).expect("the planted restore builds");
+            assert_eq!(
+                hash_state(&restored),
+                hash_state(&run.state),
+                "today's hash is blind to a dropped generators record"
+            );
+            let error = verify_round_trip(&run.state, hash_state, lossy_without_generators)
+                .expect_err("a round trip that drops generators must fail it");
+            assert!(error.contains("the round trip changed the state"), "{error}");
+            assert!(error.contains("generators"), "{error}");
+        }
+
+        #[test]
+        fn a_lossy_round_trip_that_empties_applied_fails_naming_applied() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            assert!(
+                !run.state.applied.is_empty(),
+                "seed 1 must apply an action, or this plants nothing"
+            );
+            let restored = lossy_without_applied(&run.state).expect("the planted restore builds");
+            assert_eq!(
+                hash_state(&restored),
+                hash_state(&run.state),
+                "today's hash is blind to an emptied applied record"
+            );
+            let error = verify_round_trip(&run.state, hash_state, lossy_without_applied)
+                .expect_err("a round trip that empties applied must fail it");
+            assert!(error.contains("the round trip changed the state"), "{error}");
+            assert!(error.contains("applied"), "{error}");
+        }
+
+        #[test]
+        fn a_replay_that_loses_generators_fails_naming_generators() {
+            let _preview = preview_every_set();
+            let mut run = seed_one();
+            assert!(
+                !run.state.generators.is_empty(),
+                "seed 1 must create a card, or this plants nothing"
+            );
+            run.state.generators.clear();
+            let Err(failure) = check_replay(&GameSetup::gate(1), &run) else {
+                panic!("a replay that loses the generators record must fail");
+            };
+            assert_eq!(failure.stage, FailureStage::Replay, "{}", failure.message);
+            assert!(failure.message.contains("generators"), "{}", failure.message);
+        }
+
+        #[test]
+        fn a_replay_that_empties_applied_fails_naming_applied() {
+            let _preview = preview_every_set();
+            let mut run = seed_one();
+            run.state.applied.clear();
+            let Err(failure) = check_replay(&GameSetup::gate(1), &run) else {
+                panic!("a replay that empties the applied record must fail");
+            };
+            assert_eq!(failure.stage, FailureStage::Replay, "{}", failure.message);
+            assert!(failure.message.contains("applied"), "{}", failure.message);
+        }
+
         #[test]
         fn a_restored_game_that_misses_the_live_hash_fails_in_the_checkpoint_stage() {
             let _preview = preview_every_set();
@@ -3820,6 +4083,36 @@ pub(crate) mod tests {
                 "{}",
                 failure.message
             );
+        }
+
+        #[test]
+        fn a_checkpoint_continuation_that_loses_generators_fails_naming_generators() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            assert!(
+                !run.state.generators.is_empty(),
+                "seed 1 must create a card, or this plants nothing"
+            );
+            let mut live = run.state.clone();
+            live.generators.clear();
+            let Err(failure) = seed_one_checkpoint(&run, &run.log, &live) else {
+                panic!("a checkpoint that loses the generators record must fail");
+            };
+            assert_eq!(failure.stage, FailureStage::Checkpoint, "{}", failure.message);
+            assert!(failure.message.contains("generators"), "{}", failure.message);
+        }
+
+        #[test]
+        fn a_checkpoint_continuation_that_loses_applied_fails_naming_applied() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            let mut live = run.state.clone();
+            live.applied.clear();
+            let Err(failure) = seed_one_checkpoint(&run, &run.log, &live) else {
+                panic!("a checkpoint that loses the applied record must fail");
+            };
+            assert_eq!(failure.stage, FailureStage::Checkpoint, "{}", failure.message);
+            assert!(failure.message.contains("applied"), "{}", failure.message);
         }
 
         #[test]

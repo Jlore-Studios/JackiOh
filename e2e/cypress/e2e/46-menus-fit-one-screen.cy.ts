@@ -4,8 +4,9 @@
 // list of cards and a menu's own region scroll inside the menu, never the page. A menu inside the menus'
 // shell draws its navigation inside the window (`expectShellNav`, support/shell.ts); practice's setup and
 // a series are outside the shell. Not asked: the boards, and the static legal pages (spec 38 holds those
-// to axe). Per pull request: SMOKE in scripts/shard-specs.mjs holds 46. Networked: the signed-in menus
-// need `E2E=1 cargo run --release -p jackioh-server`.
+// to axe). Daily only (issue #4092): a pull request's `e2e smoke` plays only SMOKE in
+// scripts/shard-specs.mjs, which does not hold 46, since it took a smoke shard to itself (7 minutes);
+// super.yml plays it. Networked: the signed-in menus need `E2E=1 cargo run --release -p jackioh-server`.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
