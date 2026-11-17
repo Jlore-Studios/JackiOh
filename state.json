@@ -12850,6 +12850,13 @@
     "4115": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T19:38:18Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium for the rest: client-only dictionary plus tests and small exports, no engine, AI, cross-crate, migration or 40-file work"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
