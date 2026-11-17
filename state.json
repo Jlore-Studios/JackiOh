@@ -15200,6 +15200,8 @@
       "taken_asks": []
     },
     "4095": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-16T22:52:56Z",
@@ -15213,8 +15215,11 @@
         "trail": "mmand\": \"grep -n 'parent-bin\\\\|parent_bin' crates/tools/src/classify*.rs 2>/dev/null | head -5; ls crates/tools/src | grep -i classif\", \"description\": \"Check classify's parent binary option\"}\n- Bash: {\"command\": \"sed -n 1,30p crates/tools/src/classify.rs; sed -n 125,150p crates/tools/src/classify.rs\", \"description\": \"Read classify's header and args\"}\n- Bash: {\"command\": \"export GIT_INDEX_FILE=target/4070/tmp-index; git read-tree HEAD && git add -A && T=$(git write-tree) && C=$(git commit-tree \\\"$T\\\" -p HEAD -m \\\"tmp classify 4070\\\") && echo \\\"$C\\\" > targ\u2026\n- Bash: {\"command\": \"export GIT_INDEX_FILE=target/4070/tmp-index; T=$(git write-tree) && C=$(GIT_AUTHOR_NAME=tmp GIT_AUTHOR_EMAIL=tmp@invalid GIT_COMMITTER_NAME=tmp GIT_COMMITTER_EMAIL=tmp@invalid git commit\u2026\n- Bash: {\"command\": \"target/4070/jackioh-after classify --base origin/main --head \\\"$(cat target/4070/tmp-commit)\\\" --parent-bin target/4070/jackioh-base --claims 2>&1 | tail -15\", \"description\": \"Run classi\u2026\n- said: While classify runs, the practice-claim fixture test in the server:\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server api::practice 2>&1 | grep -E '^test result|FAILED|panicked|^error' | head -10\", \"description\": \"Run the server's practice-claim fixture tests\",\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4070/ecc6316a-6906-41fe-a400-7f9e16f72d5c/tasks/bis87ulkf.output\", \"description\": \"Read classify output\"}\n- said: Classify wants the checkout to sit at the head commit. I'll give it a detached worktree at the throwaway commit, and remove it afterwards.\n- Bash: {\"command\": \"git worktree add --detach target/4070/head \\\"$(cat target/4070/tmp-commit)\\\" 2>&1 | tail -1 && cd target/4070/head && ../jackioh-after classify --base origin/main --parent-bin ../jackioh\u2026\n- Bash: {\"command\": \"echo \\\"- spec check ok. classify --claims running from detached worktree target/4070/head (tmp commit object via temp index; REMOVE the worktree after: git worktree remove --force target\u2026\n- Monitor: {\"command\": \"until grep -q 'EXIT' target/4070/classify.out 2>/dev/null; do sleep 15; done; tail -12 target/4070/classify.out\", \"description\": \"classify --claims result\", \"timeout_ms\": 600000}\n- Bash: {\"command\": \"tail -20 target/4070/classify.out\", \"description\": \"Read classify result\"}\n- said: `classify --claims` says **Internal** (exit 0), so no patch fragment is needed. Removing the throwaway worktree:\n- Bash: {\"command\": \"git worktree remove --force target/4070/head && git worktree prune && git worktree list; rm -f target/4070/tmp-index; git status --short\", \"description\": \"Remove the temporary classify w\u2026\n- Monitor: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4070/ecc6316a-6906-41fe-a400-7f9e16f72d5c/tasks/bjj0brnew.output ] && ! pgrep -f 'cargo test -p jackioh-server' >/dev/null; \u2026\n- Bash: {\"command\": \"cargo build -p jackioh-server --tests 2>&1 | tail -1\", \"description\": \"Block on the server test build lock\", \"timeout\": 600000}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4070/ecc6316a-6906-41fe-a400-7f9e16f72d5c/tasks/bjj0brnew.output\", \"description\": \"Read practice test output\"}\n- Bash: {\"command\": \"cd target/4070 && { echo BEFORE; ( time ./jackioh-base positions logs/selfplay-fold-4070-1-40.jsonl --every reply --out before.jsonl ) 2>&1 | tail -5; echo AFTER; ( time ./jackioh-after \u2026\n- Bash: {\"command\": \"echo \\\"- server api::practice 48 pass; classify --claims: Internal (exit 0); tmp worktree removed. Folds (before/after/1-thread) running -> target/4070/folds.out.\\\" >> .bot-notes.md\", \"d\u2026\n- Monitor: {\"command\": \"until grep -q DONE target/4070/folds.out 2>/dev/null; do sleep 15; done; cat target/4070/folds.out\", \"description\": \"fold timings finished\", \"timeout_ms\": 600000}\n- Bash: {\"command\": \"git diff crates/tools/src/positions.rs | sed -n 1,140p\", \"description\": \"Review positions.rs diff\"}\n- Bash: {\"command\": \"sed -n 355,380p crates/tools/src/selfplay.rs\", \"description\": \"Check how selfplay calls fold_game\"}\n- Bash: {\"command\": \"grep -n 'wrap_up_after_ms\\\\|holds_starship\\\\|death_prices' docs/v0.3.0/SURFACE.md docs/architecture.md crates/ai/README.md | head\", \"description\": \"Check whether surface docs list ai fun\u2026\n- Bash: {\"command\": \"cat target/4070/folds.out; grep -n 'features_of\\\\|simulate_reply\\\\|evaluate_priced' docs/v0.3.0/SURFACE.md | head -5\", \"description\": \"Read fold timings and check SURFACE coverage\"}\n- said: The folds ran: 362 rows both before and after, with the one-thread fold byte-identical to the default one. The fold went from 1.86 s to 4.15 s wall on 4 cores. Now the comparison:\n- Bash: {\"command\": \"cd target/4070 && python3 -I compare.py before.jsonl after.jsonl\", \"description\": \"Compare before and after rows\"}\n- said: 310 of the 362 rows' `hand` moved. The largest move, 123.0, is big enough to check before I report it. I'll see whether that row's reply played differently or the price alone moved it:\n- Bash: {\"command\": \"cat > inspect.py <<'EOF'\\nimport json, sys\\ndef rows(p):\\n return {(r[\\\"game\\\"], r[\\\"seat\\\"], r[\\\"step\\\"]): r for r in map(json.loads, open(p).read().splitlines()[1:])}\\na, b = rows(sys.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4070 && python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State')\\nj=s.index('## Log')\\nstate='''## State\\n\\n- DONE (run 3, opus,\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the learned evaluation's training rows carry the hand eval the search corrects, with the decision's Death, turn-hook, Activate, attack-hook and awakening prices\"} --> ## What changed The training rows that `cargo jackioh positions` writes now hold the s\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the learned evaluation's training rows carry the hand eval the search corrects, with the decision's Death, turn-hook, Activate, attack-hook and awakening prices\"} --> ## What changed The training rows that `cargo jackioh positions` writes now hold the s\u2026"
       },
       "issue": 4070,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T00:14:53Z",
         "from_run": "43974230016",
         "gates": [
           {
@@ -15306,7 +15311,11 @@
         "source": "build",
         "until": "2026-11-17T00:43:44Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-17T00:13:44Z",
+      "run_id": "pending:20f3c543-1794874464",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15325,6 +15334,9 @@
         "provider": "claude-4",
         "run": "43974230016"
       },
+      "started_at": "2026-11-17T00:14:53Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15338,9 +15350,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T00:03:42Z",
+    "at": "2026-11-17T00:14:53Z",
     "url": "",
-    "what": "plan #4094 on claude-8"
+    "what": "review #4095 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-17T00:00:37Z",
