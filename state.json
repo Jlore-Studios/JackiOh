@@ -16613,12 +16613,9 @@
     "what": "review #4123 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T10:37:59Z",
+    "at": "2026-11-17T10:47:25Z",
     "notes": [
-      "delivered build #4012 on muse (run 44060313076): built",
-      "started review #4123 on muse (run 44066950485)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "#4123: `rust (test server api 4/4)` red in CI run 44066789783; its other early jobs have until 2026-11-17T10:48:28Z to report"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17324,7 +17321,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T10:37:59Z",
+  "loop_tick": "2026-11-17T10:47:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
