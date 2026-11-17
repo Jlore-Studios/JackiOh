@@ -294,7 +294,7 @@ Today, beating the final boss ends the run, won.
 
 The designer's content replaces the placeholders.
 
-**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's, each act's and each tier's win rate, HP cost and turns, the elites apart ([[R3586001]]), the max HP at each boss, the rows reached, the fights on each run's route, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target.
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's, each act's and each tier's win rate, HP cost and turns, the elites apart ([[R3586001]]), the max HP at each boss, the rows reached, the fights on each run's route, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target. A per-pull-request test holds the strawmen to wide win-rate bands at the tiny budget: tier 1's first fights stay clearly winnable, the final boss clearly hard and an elite harder than the normal fight at its tier ([[R3586000]], [[R3586001]]); a deliberate retune of the tiers moves the bands in the same patch.
 
 ### 15.13 Open questions
 
