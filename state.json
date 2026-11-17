@@ -16308,12 +16308,13 @@
     "what": "plan #4012 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T09:36:32Z",
+    "at": "2026-11-17T09:45:25Z",
     "notes": [
-      "delivered review #4098 on claude-3 (run 44056054410): reviewed",
-      "started plan #4120 on muse (run 44057423579)",
-      "nothing more to start: nothing is queued",
-      "#4120: typed it Task"
+      "#4012 needs a plan",
+      "delivered plan #4120 on muse (run 44057423579): planned",
+      "started build #4120 on muse (run 44058800388)",
+      "started plan #4012 on muse (run 44058888995)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17019,7 +17020,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T09:36:32Z",
+  "loop_tick": "2026-11-17T09:45:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
