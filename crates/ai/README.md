@@ -18,8 +18,10 @@ The Death, the turn-hook, the activation, the attack-hook and the awakening pric
 R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
 through the search to the scorers that read them, with the two facts about the root they ride with: whether it
 holds a Starship (`starship_root`, R3038003) and whether its view names mostly cards the network has no row
-for (`unknown_root`, R3479000); a call outside a decision passes `Prices::NONE` (plain
-`evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
+for (`unknown_root`, R3479000). `decide` takes them from `decision_prices` on its `probe_world`, and
+`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`:
+`cargo jackioh positions` scores its rows with them (R4070000). Any other call outside a decision passes
+`Prices::NONE` (plain `evaluate`, the probes, the baselines) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
@@ -126,7 +128,15 @@ attacker that destroys it alone first, and an attacker its Armor or First Strike
 until it falls, then goes on to the next Taunt or the hero (`best_attack_order_past_taunts`, R3937000,
 #3937; off in `GREEDY_EVAL`). A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
-static trader's. A unit's Death
+static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
+(`pool_and_conversion_read`, R4064000, R4064001, #4064; off in `GREEDY_EVAL`). A hit from a source whose
+damage Burns or is Toxic (S+ #151 Volcanic Rounds, #153 Noxious Rounds, `converts_to`) deals nothing, kills
+nothing and heals nothing, though a Divine Shield still takes it: the walk's attacker waits at its Taunt, and
+the reply prices the counter instead, on a unit by `counter_price` (what `afflicted` takes off it with that
+much more on) and on a hero by `hero_ticks_added`. Each side's damage pools (S+ #42 Force Projector, #123
+Oct) soak what they have left (`query::damage_pool_of`), one pool a side spent once across a read's hits in
+the order it counts them (`Side.pool`, `Blow.soaked`, the walk's `WalkPools`): as they stand now for this
+turn's attacks, refilled where that side's turn starts before the hits land. A unit's Death
 counts by what it leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003), once for each controller, so each side's copy reads
@@ -196,8 +206,8 @@ Burn and Toxic count by the ticks still to come over `AI_AFFLICTION_TICKS` of th
 point they will deal it, up to its health, and a Divine Shield they spend costs that share of its keyword
 worth; Armor meets Burn, Toxic pierces it, the unit's own cap holds both, and an Indestructible unit takes
 none. A unit the nth tick kills keeps `1 − unit_doomed / n` of itself, or its Brittle share if that is
-smaller. `coming_hero_ticks` reads a hero's ticks through `projected_hero_damage`, leaving it at least 1
-life, and `hero_side` loses `hero_affliction` of that life's cost on the hero curve; the enemy's also counts
+smaller. `coming_hero_ticks` reads a hero's ticks through `projected_hero_damage` and its side's refilled
+pools (R4064000), as `afflicted` reads a unit's, leaving it at least 1 life, and `hero_side` loses `hero_affliction` of that life's cost on the hero curve; the enemy's also counts
 at `enemy_health`. The reply already plays one tick a side. `GREEDY_EVAL` keeps all three at 0, and the
 learned features leave both counters out until a refit (R3535002).
 While a Feng Shui acts on either side (Meditative #40, R984), the seat's next face-up play counts by the

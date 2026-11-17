@@ -2367,11 +2367,8 @@ fn combatant_hooks(
             check_only: None,
         };
         if is_paused(sink) {
+            // R1026, R113: owed behind the check, and the defender's `afterAttacked` is owed after it below.
             owe_engine_hook(sink, &owed);
-            // A Frenzy-only attacker still lets the defender's `afterAttacked` be owed after it.
-            if hooked {
-                return;
-            }
         } else {
             run_after_attack(sink, &owed, None);
         }
