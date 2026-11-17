@@ -12729,6 +12729,13 @@
     "4112": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T19:37:28Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Two files, one skip-list line plus tests; none of the hard clauses (engine rules, AI, cross-crate design, migration, 40+ files) applies."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
