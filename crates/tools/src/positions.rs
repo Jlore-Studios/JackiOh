@@ -632,6 +632,7 @@ mod tests {
     /// R4070000: a decision row is priced as a decision there prices it, and one whose root prices
     /// nothing keeps the unpriced hand eval it held before.
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r4070000_a_row_whose_root_prices_nothing_keeps_the_hand_it_had() {
         let (game, live) = played(3);
         let rows =
