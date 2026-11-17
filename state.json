@@ -13409,6 +13409,7 @@
       "provider": "agy",
       "queued_at": "2026-11-17T19:30:21Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "44161165772",
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-17T19:40:43Z",
@@ -13420,7 +13421,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:6958628341"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "4133": {
       "action": "review",
