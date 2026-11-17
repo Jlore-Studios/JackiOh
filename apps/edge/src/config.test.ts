@@ -110,6 +110,31 @@ describe("the server's probes the Worker calls", () => {
   });
 });
 
+describe("#4011 nothing in front caches /api/*", () => {
+  it("caches nothing in wrangler.jsonc", () => {
+    const wrangler = readFileSync(join(ROOT, "wrangler.jsonc"), "utf8");
+    expect(wrangler).not.toMatch(/cache/i);
+  });
+
+  it("caches nothing in infra/cloudflare.tf", () => {
+    const tf = readFileSync(join(ROOT, "infra/cloudflare.tf"), "utf8");
+    expect(tf).not.toMatch(/cache/i);
+  });
+
+  it("never calls the Cache API from the Worker", () => {
+    const sources = ["apps/edge/src/index.ts", "apps/edge/src/routing.ts"]
+      .map((file) => readFileSync(join(ROOT, file), "utf8"))
+      .join("\n");
+    expect(sources).not.toMatch(/\bcaches\b/);
+    expect(sources).not.toMatch(/cacheTtl|cacheEverything/i);
+  });
+
+  it("gives /api/* no rule in public/_headers", () => {
+    const headers = readFileSync(join(ROOT, "apps/web/public/_headers"), "utf8");
+    expect(headers).not.toMatch(/^\/api/m);
+  });
+});
+
 describe("#3183 the module's cache rule", () => {
   // The Worker gives the module `_headers`' rule for every built file should the binding's answer lack it.
   it("is the one public/_headers gives /assets/*", () => {
