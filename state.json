@@ -13601,9 +13601,11 @@
         "by": "`muse` (medium)",
         "sha": "84d57a9ab1cb2d94b6902664d933980518144983"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T19:39:28Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-17T20:33:29Z",
         "family": "muse",
@@ -13613,6 +13615,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Heroic Power's powers, the Anomaly titles and the other words the client translates from a table read in Chinese for a Chinese reader, held by a test\"} -->\n- What changed and why: with the reader on zh-CN, Heroic Power's 14 power options, the ten Anomaly titles, the Names-on-the-board setting words, the blocked-draw texts, `Newest first`, the Duo mark and the other table-fed option words now come back in Chinese instead of English. Power and card names \u2026\n- Files: [zh-CN.json](apps/web/src/i18n/zh-CN.json) (+97 entries, 4347 \u2192 4444), [i18n.test.ts](apps/web/src/i18n/i18n.test.ts) (`??`/`||` in `literals()`, guard probe lines, new walk test), [modeText.test.ts](apps/web/src/game/modeText.test.ts) (per-option zh-CN assertions in both #2646 tests, Heroic\u2026\n- How tested (commands I ran, output I saw):\n- - `pnpm --dir apps/web test src/i18n/i18n.test.ts src/game/modeText.test.ts` \u2192 2 files, 12/12 passed (final run; the literal scan took 3.3s).\n- - `pnpm --dir apps/web typecheck` \u2192 clean (needs `NODE_OPTIONS=--max-old-space-size=6144` on this box; default heap OOMs in `tsc`).\n- - `pnpm exec eslint` on the five touched web files \u2192 clean; `cargo fmt --check` \u2192 clean.\n- - Walk demo: temporarily added a `demo` option to core-087, the walk failed with `modeText: \"Made-up demo words\"` and `modeText: \"Made-up demo detail.\"` at `i18n.test.ts:300`, then removed it (`git diff` confirms `modeText.ts` unmodified).\n- Decisions the issue didn't settle (rejected alternative in parentheses): guard-probe uses stable made-up `??`/`||` keys instead of real words (so the probe never needs dictionary entries); `sentencesIn` skips empty-string literals since `t(x ?? \"\")` means \"nothing to show\" (rejected: a silly `\"\": \"\u2026\n- Reviewer look-twice: translation quality of the ~30 new sentences (Anomaly names, Activate lines, setting words) \u2014 a native reader may want to revise; the Heroic-face agreement test pins the 14 power names to the card faces. Also note the literal-scan test parses the whole client in ~3\u20135.5s and fla\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4115 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4115/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4115,
       "kind": "review",
       "live": "reviewing",
