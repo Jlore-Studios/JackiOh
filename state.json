@@ -16249,11 +16249,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-17T09:37:34Z",
+        "at": "2026-11-17T09:46:26Z",
         "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4098, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: one test-only change outside engine rules, AI, cross-crate design, migration, or 40+ files, so medium."
       },
       "failures": 0,
       "forced": false,
