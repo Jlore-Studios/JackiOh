@@ -13343,6 +13343,8 @@
       ]
     },
     "4133": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T19:40:05Z",
@@ -13356,8 +13358,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a pull request that changes only the mutation-testing settings or scripts no longer runs the CI jobs that never read them\"} -->\n- What changed and why: `scripts/ci-scope.sh` treated `.cargo/mutants.toml` as a build setting (via `.cargo/*`) and `scripts/mutants.sh`, `scripts/mutants-runner.sh`, `scripts/pool-probe.sh` as web/e2e sources (via `*`), so mutation-audit PRs ran almost every check although no per-PR job reads those \u2026\n- How tested: `pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts` passes, 338/338 (needed `sh scripts/build-wasm.sh` first; the first run failed on the missing WASM bundle before any test). I also probed the script directly in a throwaway repo: each file alone scopes all-false, both pairin\u2026\n- Decisions: none beyond the plan; followed it exactly. One note for the reviewer: the e2e off-list in the header now enumerates the five scripts from the body case, so a future script added there needs the header updated too.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4112 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4112/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4112,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T20:20:25Z",
         "from_run": "44161052730",
         "gates": [
           {
@@ -13416,8 +13421,15 @@
         "source": "build",
         "until": "2026-11-17T20:49:24Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-17T20:19:24Z",
+      "run_id": "pending:817dab56-1794946798",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-17T20:20:25Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -13431,9 +13443,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T20:10:44Z",
+    "at": "2026-11-17T20:20:25Z",
     "url": "",
-    "what": "build #4110 on claude-6"
+    "what": "review #4133 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T20:08:39Z",
