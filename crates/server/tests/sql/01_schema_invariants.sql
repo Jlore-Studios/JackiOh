@@ -1427,16 +1427,19 @@ select p.proname as function_name,
  where n.nspname in ('public', 'app')
    and p.prosecdef
    and coalesce(g.rolname, 'PUBLIC') in ('anon', 'authenticated', 'PUBLIC')
-   and (n.nspname, p.proname) not in (('app', 'profile_is_active'))
+   and not (n.nspname = 'app' and p.proname = 'profile_is_active' and p.pronargs = 0
+            and coalesce(g.rolname, 'PUBLIC') = 'authenticated')
  order by 1, 2;
 do $$
 declare
   offenders text;
   measured  bigint;
 begin
-  -- The allowlist: app.profile_is_active() stays callable by authenticated
-  -- because the RLS policies of 0002/0003/0004 call it, and it is DEFINER so
-  -- it reads public.profiles (0001) without recursing into policies.
+  -- The allowlist: the zero-argument app.profile_is_active() stays callable
+  -- by authenticated alone because the RLS policies of 0002/0003/0004 call
+  -- it, and it is DEFINER so it reads public.profiles (0001) without
+  -- recursing into policies. Any other grantee (anon, PUBLIC), any overload
+  -- with arguments, and any other function still fail this check.
   -- app.current_profile_id() is also granted to authenticated but is
   -- SECURITY INVOKER, so it is out of this check's scope.
   -- No synthetic probe: the schema itself is the failing case until 0094 —
@@ -1453,7 +1456,8 @@ begin
    where n.nspname in ('public', 'app')
      and p.prosecdef
      and coalesce(g.rolname, 'PUBLIC') in ('anon', 'authenticated', 'PUBLIC')
-     and (n.nspname, p.proname) not in (('app', 'profile_is_active'));
+     and not (n.nspname = 'app' and p.proname = 'profile_is_active' and p.pronargs = 0
+              and coalesce(g.rolname, 'PUBLIC') = 'authenticated');
   if offenders is not null then
     raise exception
       'FAIL (CHECK 25): SECURITY DEFINER function(s) executable by a client role outside the allowlist: % — revoke PUBLIC execute; the server calls them as service_role',
