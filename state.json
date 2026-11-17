@@ -13293,6 +13293,7 @@
       "run_id": "44133819533",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 320,
       "started_at": "2026-11-17T17:09:19Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -33803,9 +33804,33 @@
         "title": "Patch: the fuzz regression corpus keeps the start its seed drew, not only its decks",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "4b6f56753f723fd91d2924c11269b1b2a825d1da",
+        "issue": 4013,
+        "merged_at": "2026-11-17T20:29:52Z",
+        "n": 320,
+        "pr": 4128,
+        "queued_at": "2026-11-17T20:29:52Z",
+        "sha": "094e51ea835b3dcc7d3168aa5605eb981aeb79b0",
+        "status": "queued",
+        "title": "Patch (part 13 of 20): Math.random only where nothing is secret, held by lint, and a nonce is never proof of who sent it",
+        "tries": 0
       }
     ],
-    "count": 319
+    "count": 320
   },
   "statistics": {
     "at": "2026-11-17T20:23:17Z"
