@@ -15243,8 +15243,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-17T00:03:07Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-17T04:16:21Z",
+      "owner_why": "its turn came (it waited 120 minutes for #4098, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-17T00:35:46Z",
       "planned_by": "`claude-8` (claude, `sonnet`, medium)",
@@ -15939,12 +15939,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4093,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-11-17T01:59:44Z",
+      "queued_at": "2026-11-17T04:16:21Z",
       "run_id": "44000002677",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15965,9 +15965,17 @@
         "provider": "claude-8",
         "run": "43989033226"
       },
+      "source": "conflict",
       "started_at": "2026-11-17T02:02:09Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-17T04:16:21Z",
+        "until": "2026-11-17T04:46:21Z",
+        "why": "it waited 120 minutes for #4098, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -15987,17 +15995,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          4098
-        ],
-        "ends": "2026-11-17T04:14:47Z",
-        "from_run": "44000002677",
-        "head": "da34f235caf4297f2994447f023d35f5ab304afc",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-17T02:14:47Z"
       }
     },
     "4106": {
