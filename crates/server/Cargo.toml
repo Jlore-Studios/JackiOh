@@ -40,6 +40,8 @@ time = { workspace = true }
 getrandom = { workspace = true }
 # The daily games' Web Push (`src/daily/webpush.rs`, RFC 8291 and RFC 8292).
 ring = { workspace = true }
+# `api::crypto::constant_time_eq` (README.md, Conventions: comparing secrets).
+subtle = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }

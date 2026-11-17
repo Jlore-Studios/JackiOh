@@ -313,6 +313,24 @@ R190's, hashed.
 Left out: a UUID id (122 bits, and ownership-checked, so a wrong one is 404 as an unknown one is); the auth provider's sign-in, sign-up, reset, email
 confirmation and authenticator code (the provider's own dashboard limits, not this crate's); and the e2e-only `/api/auth/signin`.
 
+**Comparing secrets** (#4014, part of #3897). A secret a caller sends is compared in constant time or looked up by its keyed hash, never compared with
+`==` or `!=` (the rule is in Conventions). The table lists every comparison the audit checked, the Worker's among them; a new door that takes a secret adds
+its row, and `tests/api/secret_comparisons.rs` fails on an equality operator beside the name of a hash, a token, a pepper or a password in `src/`.
+
+| Value | Where | How it is compared |
+| --- | --- | --- |
+| An invite code | `POST /api/codes/redeem`, `mint-code`, `moderate revoke-code` | `Hashes::code` (HMAC-SHA256 under `<CODE_PEPPER>:code`), then SQL `where code_hash = …` (`app.redeem_invite_code`, `codes_find_by_hash`, `codes_revoke_by_hash`): a lookup by keyed hash. |
+| An unsubscribe token | `GET` and `POST /api/daily/unsubscribe` | Parsed as a UUID, then SQL `where unsubscribe_token = $1::uuid` (`daily_notify_unsubscribe`): a lookup. The in-memory store's `==` (`db/fake.rs`) is test-only and is left. |
+| A room's, co-op room's or lobby's code | the code doors above | SQL lookup by the code (`rooms_get`, `duos_rooms_get`, `lobbies_get`; the in-memory stores' `==` are test-only). A code is 30 bits and short-lived, behind the per-account and per-address guess limits, and is not stored hashed. |
+| `Idempotency-Key` | `economy/idempotency.rs` | The key is looked up in SQL by account and UUID (`economy_idempotency_get`). The stored body's HMAC against the request's was `!=` and is now `api::crypto::constant_time_eq`: the one fix of this audit. |
+| The session JWT and passwords | `auth.rs` | `jsonwebtoken` checks an HS256 signature with `hmac`'s `verify_slice`, and an ES256 or RS256 one against the provider's published public keys. A password goes to the provider (`password_grant`), which compares it. `SUPABASE_SECRET_KEY`, `CREATE_ISSUES_TOKEN`, the Resend keys and `VAPID_PRIVATE_KEY` are only sent out, never compared. |
+| Fixtures | `E2eAuth` in `auth.rs`, `db/fake.rs` | `E2eAuth` compares a fixture password and looks tokens up in a map; `E2E=1` with `NODE_ENV=production` refuses to boot (`env.rs`), so it is unreachable in production. `db/fake.rs` is test-only. Both are left. |
+| Not secrets | `actor/checkpoint.rs`, `DEV_PROFILE_IDS`, CORS origins | An FNV-1a checksum of the server's own stored row; profile ids of an already verified session; public origins. |
+| The Worker | `apps/edge`, `apps/admin/worker` | `apps/edge` compares the running server's `x-deployed-commit` (its own answer, a public commit SHA) with `DEPLOYED_COMMIT`. `apps/admin/worker` matches paths only. Neither compares a caller's value with a secret, and no shared-secret header exists: `/daily-sweep` is reachable only through the Worker, which forwards only `/api` and `/ws` from the public. |
+
+A lookup in Postgres is not constant-time at the byte level; the keyed hash, the UUID's 122 bits and the guess limits above are what keep it from being a
+side channel worth timing.
+
 **Custom cards are gone** (#2956, migration 0082). `/api/custom-cards` answers as any unknown route does,
 and the store has no custom-card methods. Players' saved custom cards were deleted with their table, with no
 export. The server never ran a game that used one (R915005: they played in practice only) and never stored one,
@@ -1504,3 +1522,9 @@ the card and deck slot cosmetics, the full arts and the portraits, the registry 
   `aes128gcm` (`daily/webpush.rs`) is the only one. Nothing parses XML from a player or another
   service; a parser that ever does disables DTDs and external entities (XXE). `tests/api/dependencies.rs`
   keeps both kinds of crate out of `Cargo.lock` (#4006, #4007).
+- A secret a caller sends (an invite code, an unsubscribe token, a key, a password, a bearer token) is compared in constant time
+  or looked up by its keyed hash, never compared with `==` or `!=`, which stop at the first wrong byte, so response times would
+  leak it byte by byte. In code that is `api::crypto::constant_time_eq` (`subtle`; `ring::constant_time` is deprecated) or
+  `hmac`'s `verify_slice`; otherwise the store looks it up in SQL (Comparing secrets lists each). The floor on a
+  redemption's response (`REDEMPTION_RESPONSE_FLOOR_MS`, R107) is a different thing: it hides how long a lookup took. `tests/api/secret_comparisons.rs` fails on `==` or
+  `!=` beside the name of a hash, token, pepper or password in `src/` (#4014).
