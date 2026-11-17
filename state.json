@@ -13670,7 +13670,11 @@
       "issue": 4118,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-4",
+      "merge_owner_gave_up": {
+        "at": "2026-11-17T21:14:07Z",
+        "provider": "claude-4",
+        "sha": "ac2673dd05234be22370292923e23926afb5162e"
+      },
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-17T20:53:06Z",
