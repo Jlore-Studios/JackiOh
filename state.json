@@ -15817,16 +15817,12 @@
     "what": "review #4100 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-17T00:56:14Z",
+    "at": "2026-11-17T01:06:42Z",
     "notes": [
-      "delivered review #4095 on claude-1 (run 43990668393): reviewed",
-      "delivered build #4062 on gpt (run 43986355961): built",
-      "delivered build #4092 on claude-7 (run 43986177762): built",
-      "started review #4099 on claude-7 (run 43992042945)",
-      "started review #4098 on gpt (run 43992113326)",
+      "delivered build #4094 on claude-8 (run 43986266540): built",
+      "started review #4100 on claude-8 (run 43993268185)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days",
-      "#4096: closed, so `bot:merging` is off"
+      "runner gate: started 1 of 1 waiting run(s) (run 43993127222 on bot/issue-4094)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16530,7 +16526,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T00:56:14Z",
+  "loop_tick": "2026-11-17T01:06:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
