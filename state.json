@@ -13192,25 +13192,36 @@
       }
     },
     "4130": {
-      "asks": [
-        "c:6958628341"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "agy",
+      "owner_since": "2026-11-17T19:40:43Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-17T19:30:21Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:939904d7-1794944419",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-17T19:40:43Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6958628341"
+      ]
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T19:40:05Z",
+    "at": "2026-11-17T19:40:43Z",
     "url": "",
-    "what": "build #4112 on muse"
+    "what": "plan #4130 on agy"
   },
   "last_sweep": {
     "at": "2026-11-17T19:26:24Z",
