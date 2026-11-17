@@ -12577,6 +12577,13 @@
     "4109": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-17T19:15:36Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line applies: nothing under crates/engine or crates/ai changes, single-area training fit, about 8 files, so medium for the rest."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
