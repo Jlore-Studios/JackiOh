@@ -33,14 +33,22 @@ custom domains and Access are `infra/cloudflare.tf`'s.
   got a 500). An open WebSocket counts as a request in flight, so a live match, a watcher or a co-op room keeps it
   awake, and a signed-in tab keeps it awake with its presence beat (`PRESENCE_HEARTBEAT_MS`, 45 s).
   Memory and disk are billed only while it is awake.
-- **A deploy reaches the running server.** A container keeps the image it started with, so the
-  first request after a deploy asks the running server's `/healthz` for its `x-deployed-commit`; if
-  that is not the Worker's `DEPLOYED_COMMIT`, it stops the old server (giving it `RETIRE_WAIT_MS` to
-  drain) and the request starts the new one. Live matches rebuild from their seed and log when
-  their sockets return (SPEC §9.5). A check that fails (the old server does not answer `/healthz` with a success
-  within `IMAGE_CHECK_TIMEOUT_MS`, or the stop errors) is logged (`server.image_check_failed`,
-  `server.retire_failed`), the request goes through, and a later request asks again, no sooner than
-  `IMAGE_CHECK_RETRY_MS` after the last try.
+- **A deploy reaches the running server.** A container keeps the image and the settings it started
+  with, so the first request after a deploy asks the running server's `/healthz` for its
+  `x-deployed-commit`; if that is not the Worker's `DEPLOYED_COMMIT`, it stops the old server (giving
+  it `RETIRE_WAIT_MS` to drain) and the request starts the new one. Live matches rebuild from their
+  seed and log when their sockets return (SPEC §9.5). #4118: a server on the deployed commit is
+  stopped the same way when the Worker's settings are not the ones it started with, which is what a
+  redeploy after changing a secret needs (a redeploy names the same commit). The Worker keeps a SHA-256
+  fingerprint of the container's environment in the object's storage (`SETTINGS_FINGERPRINT_KEY`,
+  never logged or sent), stores it when no server runs or a retire settles, and logs
+  `server.settings_changed`, naming no setting, when a running server's differs. A missing
+  fingerprint counts as changed. One that cannot be read leaves the server running
+  (`server.settings_unreadable`) and a later request asks again; one that cannot be written
+  (`server.settings_unwritten`) costs at most one extra restart at a later deploy. A check that fails
+  (the old server does not answer `/healthz` with a success within `IMAGE_CHECK_TIMEOUT_MS`, or the stop
+  errors) is logged (`server.image_check_failed`, `server.retire_failed`), the request goes through,
+  and a later request asks again, no sooner than `IMAGE_CHECK_RETRY_MS` after the last try.
 - **Once a day** (`triggers.crons`) the Worker requests `/readyz`, which wakes the server: its hourly
   loops run, and the Supabase project sees a query, so a quiet week does not pause a free project.
 - **Once an hour** (`DAILY_SWEEP_CRON`, #3727) the Worker posts to the server's `/daily-sweep`
@@ -85,7 +93,8 @@ are optional too: the daily games' "your move" email and Web Push (#3727, `docs/
 says how to make the VAPID pair); with one unset its channel is off.
 `DATABASE_URL` is Supabase's pooler URI (Connect -> Session pooler), which works over IPv4; the
 direct database host is IPv6 only. A container reads its settings when it starts, so after changing
-one, deploy again (or wait for the next sleep).
+one, deploy again: the first request after the deploy restarts a running server whose settings
+changed (above).
 
 ## Commands
 

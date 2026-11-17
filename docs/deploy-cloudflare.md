@@ -352,7 +352,8 @@ later, so Render would stop billing:
   next daily promotion deploys main as it stands: if the revert cannot be on main before the next
   daily super run passes, disable `promote-production.yml` until it is (section 2.1).
 - **Change a secret:** `wrangler secret put` (section 4, step 3), then redeploy that site (Run
-  workflow on deploy staging, or promote production with **redeploy**).
+  workflow on deploy staging, or promote production with **redeploy**); the first request after it
+  restarts a running server on the new settings.
 - **Move staging by hand:** Actions -> promote staging -> Run workflow. With no `sha` it moves
   `_staging` to main's newest green commit now, whatever the two-hour pace; a `sha` given must be on
   main and have a green push-to-main CI run. Its push deploys staging.
