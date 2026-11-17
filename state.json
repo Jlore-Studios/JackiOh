@@ -15827,6 +15827,7 @@
         "by": "`muse` (medium)",
         "sha": "49b1b248f7608198af4415c81741e91100f81f17"
       },
+      "closed_at": "2026-11-17T09:45:21Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -15841,6 +15842,7 @@
         "provider": "muse",
         "sha": "49b1b248f7608198af4415c81741e91100f81f17"
       },
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-17T01:45:00Z",
