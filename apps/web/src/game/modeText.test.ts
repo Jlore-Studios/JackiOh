@@ -5,10 +5,15 @@
 // cardModes.json, and the ones an engine prompt asks as a card resolves, built at run time and so
 // listed here by hand, each from its script.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
+import zhCN from "../i18n/zh-CN.json";
 import CARD_MODES from "./cardModes.json";
 import { DISCOVER_OPTION_LIMIT } from "./contract.ts";
 import { MODE_TEXT, RADIANT_MODE_TEXT, modeText } from "./modeText.ts";
@@ -111,11 +116,75 @@ describe("#2646 every short choice card has its words", () => {
     expect(missing).toEqual([]);
     // The export is read, and holds the cards it should: Pocket Chaos's three on both faces.
     expect(DECLARED["core-087"]).toMatchObject({ base: [["health", "board", "library"]] });
+    // R711000: every visited option's label and detail has a zh-CN entry, on both faces.
+    const untranslated = Object.entries(DECLARED).flatMap(([id, faces]) =>
+      typeof faces === "string"
+        ? []
+        : (["base", "radiant"] as const).flatMap((face) =>
+            (faces[face] ?? []).flatMap((options) =>
+              options.length <= DISCOVER_OPTION_LIMIT && !drawnOtherwise(options)
+                ? options.flatMap((option) => {
+                    const text = modeText(id, option, face === "radiant");
+                    const words = text.detail === undefined ? [text.label] : [text.label, text.detail];
+                    return words.filter((word) => !Object.hasOwn(zhCN, word)).map((word) => `${id} ${face} ${option}: ${word}`);
+                  })
+                : [],
+            ),
+          ),
+    );
+    expect(untranslated).toEqual([]);
   });
 
   it("#2646 every option an engine Choose one offers has MODE_TEXT's words", () => {
     const missing = ENGINE_MODES.flatMap(({ id, faces, options }) => faces.flatMap((face) => options.flatMap((option) => (modeText(id, option, face === "radiant").detail === undefined ? [`${id} ${face} ${option}`] : []))));
     expect(missing).toEqual([]);
+    // R711000: every engine-offered option's label and detail has a zh-CN entry, on both faces (Heroic Power's 14 among them).
+    const untranslated = ENGINE_MODES.flatMap(({ id, faces, options }) =>
+      faces.flatMap((face) =>
+        options.flatMap((option) => {
+          const text = modeText(id, option, face === "radiant");
+          const words = text.detail === undefined ? [text.label] : [text.label, text.detail];
+          return words.filter((word) => !Object.hasOwn(zhCN, word)).map((word) => `${id} ${face} ${option}: ${word}`);
+        }),
+      ),
+    );
+    expect(untranslated).toEqual([]);
+  });
+
+  it("R711000 Heroic Power's prompt names each power as its Chinese face does", () => {
+    const faces = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../crates/cards/chinese.json"), "utf8")) as Record<
+      string,
+      { base: string; radiant: string }
+    >;
+    const heroic = faces["core-098"];
+    expect(heroic).toBeDefined();
+    if (heroic === undefined) throw new Error("core-098 has no entry in crates/cards/chinese.json");
+    // Each base power's dictionary name is printed on the card's Chinese face, so the prompt and the card agree.
+    const base = [
+      "Expedition Map",
+      "Life Tap",
+      "Ping",
+      "Steady Shot",
+      "Ranching",
+      "Cat Cafe",
+      "Witness Value",
+      "Stitching",
+      "Armor Up",
+      "Die Insect",
+      "KY Brainstorm",
+      "Pluck",
+      "Terminus Tricks",
+      "End Times",
+    ];
+    for (const name of base) {
+      const shown: unknown = zhCN[name as keyof typeof zhCN];
+      expect(typeof shown, `no zh-CN entry for Heroic Power "${name}"`).toBe("string");
+      expect(heroic.base, `Heroic Power "${name}" reads differently on its Chinese face`).toContain(shown as string);
+    }
+    // The Radiant face renames Armor Up to Tank Up (R3134002); its name agrees the same way.
+    const tankUp: unknown = zhCN["Tank Up"];
+    expect(typeof tankUp, 'no zh-CN entry for Heroic Power "Tank Up"').toBe("string");
+    expect(heroic.radiant, 'Heroic Power "Tank Up" reads differently on its Radiant Chinese face').toContain(tankUp as string);
   });
 
   it("#2646 an option nobody wrote words for still has none, so the tests above can fail", () => {

@@ -78,7 +78,7 @@ export type CardListProps = {
 };
 
 /** A pile's entries come newest first (the board's `Pile`). */
-const DEFAULT_ORDER = "Newest first";
+export const DEFAULT_ORDER = "Newest first";
 
 /** What a card back in the list is called (R312). */
 const UNKNOWN_NAME = "Unknown card";
