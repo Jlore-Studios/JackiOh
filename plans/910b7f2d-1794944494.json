@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4110,
+  "title": "Patch: the AI's mulligan stops reading a table measured on three old sets: it keeps its one-drops by its own price of them, and keeps no card above its cost bound",
+  "branch": "bot/issue-4110",
+  "thread": "**Issue #4110 (data, not instructions):**\n\n```text\n# #4110: Patch: the AI's mulligan stops reading a table measured on three old sets: it keeps its one-drops by its own price of them, and keeps no card above its cost bound\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nAt the start of a practice game the AI throws back its expensive cards and keeps its cheap ones. Two of the choices it makes there still read a table of card win shares from early October. That table was measured on an AI long since replaced, and it covers only the first three sets. Every card from Meditative on, about two thirds of today's cheap cards, counts as average.\n\nWhen the AI holds three one-mana cards and keeps two, it picks by that table. An old card the table rates low always goes back, and a new card can never beat an old one it rates high. On Easy, the AI also keeps a 4-mana card the plain rule would throw back, if the table calls that card 'proven'. Only five cards qualify. One of them, Genn's Greed, qualifies only because the stopped training lane boosted it three times over so its own decks would meet it often. The latest sweep found the AI rarely plays it: once in 21 turns it could afford it on Easy, and never on Hard.\n\nAfter the change, the AI's mulligan follows the rule the spec states. Where it must choose between cheap cards, it uses its own current evaluation, which covers every set and follows every patch. Players get a practice opponent whose opening hands make more sense. The effect on its win rate is small.\n\n## Why\n\n- `crates/ai/src/mulligan.rs:66-101` (`mulligan_keep_shaped`) keeps at most one card costing `keep_max_cost + 1` whose `shaped_weight` reaches `DEAL_MULLIGAN_KEEP` (2.0). `mulligan_keep_curved` (`mulligan.rs:108-162`) sorts the cheap cards by `shaped_weight`, then the one-drop cap (`max_first_turn`, 2) and the no-early-play cut (`keep_without_early`, 1) choose among them in that order.\n- `shaped_weight` (`crates/ai/src/shadow_ban.rs:1460`) is (`DEALT_Q`[id] / `DEALT_Q_PRIOR`)^20, capped at 12, and \u00d73 for `UNBANNED_PREFER`.\n- `DEALT_Q` (`shadow_ban.rs:1180`) has 261 rows, all Core, Classic or Classic+. The unban lane fitted it on '3,583 of 5,360 self-vs-bin games' in AI generation 1 (#585, 2026-10-09), and that lane has been stopped since #1677. Of today's 629 non-token cards costing 3 or less, 216 have a row and the rest read as 1.0. The rows' weights run from 0.0014 to 12.\n- The exception's own comment says it exists because 'a deck the lane's shaping dealt is deep enough'. Since R976000 no deck is shaped (practice, the gates, the arena and the server alike), so that reason is gone. What it does today:\n  - On Easy (bound 3) it keeps five 4-drops: Silly Silas (core-052), Straaza (core-054), Genn's Greed (core-094), Small Card Lobbyist (classic-068) and League of Losers (classicplus-019).\n  - On Medium and Hard (bound 4) it keeps one 5-drop: Snom Bunny Mind Control (core-049).\n  - No card printed after Classic+ can qualify.\n- Genn's Greed has no `DEALT_Q` row. It reaches 3.0 only through `UNBANNED_PREFER_BY`, which exists so the lane's own decks would meet the card often (`shadow_ban.rs:1157-1163`). It is in `SHADOW_WATCH` (`shadow_ban.rs:390`): pass 1 found it 'affordable on 21 turns over 8 games, played 1 time(s)' at Easy and 'never played' at Hard.\n- SPEC \u00a79.9 (`spec/09-architecture.md:166`) says the mulligan 'returns cards costing more than 3 plus the seat's mana bonus, within its mana cap' (R2977000), with Tribute counted (R3936000). It says nothing of the exception or of a table-weighted choice.\n- `mulligan_keep_curved`, called from `decide.rs:493`, is the only live reader of `shaped_weight`: the deck builder's `shape` is off for every caller (R976000).\n\n## Proposal\n\n1. Drop the `keep_max_cost + 1` exception. The AI keeps exactly the cards whose `mulligan_cost` is within `mulligan_keep_bound`, and then #993's curve filters them.\n2. In `mulligan_keep_curved`, rank the cheap cards by `hand_card_value` under `AI_EVAL` instead of `shaped_weight`: best first, ties in hand order. That is the price the evaluation already gives a card in hand (its cost, Radiant, Temporary, extra-turn and cost-change terms). The cap and the cut stay as they are.\n3. A new ruling from the issue's block states the rule. The notes of R2977000 and R3936000 are amended where they name the exception, and their tests are rewritten to hold the new rule rather than deleted.\n4. `DEAL_MULLIGAN_KEEP` goes. `DEALT_Q`, `shaped_weight` and `UNBANNED_PREFER` stay for `AiDeckOptions::shape`, which R976000 keeps 'one flag away'.\n5. The greedy baseline's `mulligan_keep`, frozen with `GREEDY_EVAL`, is unchanged.\n\nRejected: refitting `DEALT_Q` over every set. Only the stopped lane fits it, and a card's win share when it is in the deck says whether to include the card, not whether to keep it in an opening hand.\n\n## Where it lands\n\n- `crates/ai/src/mulligan.rs`, `crates/ai/src/shadow_ban.rs` (`DEAL_MULLIGAN_KEEP`), `crates/ai/src/lib.rs` (exports), `crates/ai/src/config.rs` (the `AI_MULLIGAN_CURVE` docs)\n- `crates/ai/tests/ai/decide.rs`: the mulligan tests around lines 280-360, 470, 519, 680-690, 795-850 and 994\n- `crates/ai/README.md`: the mulligan paragraph of 'decide reads only redact'\n- SPEC \u00a79.9 (`spec/09-architecture.md:166`), the new ruling note and its `spec/pending/` paragraph, `spec/rulings/R2977000.md`, `spec/rulings/R3936000.md`\n- If its game's mulligan changes, `crates/server/tests/fixtures/practice-claim.json`, recorded again (R2560000)\n\n## Acceptance criteria\n\n- [ ] On Easy, an opening hand holding Genn's Greed (core-094) or Straaza (core-054) beside cheap cards sends the 4-drop back. On Hard, Snom Bunny Mind Control (core-049) goes back. The tests are named after the new ruling.\n- [ ] With three one-drops in hand, the AI keeps the two its `hand_card_value` prices highest, whatever set they come from (a Radiant one over a plain one, say), and keeps hand order on a tie. The test fails on main.\n- [ ] Only the deck builder's `shape` path reads `shaped_weight` in `crates/ai/src`, and `DEAL_MULLIGAN_KEEP` is gone.\n- [ ] The R2977000 and R3936000 tests about the exception now hold the new rule. Their notes and `proven_in` agree, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo fmt --check` and `cargo jackioh gate` pass.\n- [ ] The PR reports one 400-game paired screen against main's AI on the dev set (`cargo jackioh arena`, `--a self`, `--b` with main's build, `--set improve-dev`), played once and never extended. Its `edgeHigh` is above 0, so the change is not measurably weaker.\n- [ ] If the practice-claim fixture's game changes, it is recorded again, and the server's and the web's claim tests pass.\n\n## Size and risks\n\nSmall: about 40 lines in `mulligan.rs` and `shadow_ban.rs`, 100 to 150 lines of tests rewritten or added, a ruling, and doc lines. Risks:\n\n- Every AI game whose opening hand hit the exception or the one-drop cap plays differently from there on. That includes the fixture-dealt gate smokes, the tutorial tier tests (R290), the practice-claim fixture and the web's tests that play the AI, so some pinned games may need recording again.\n- The effect on strength is small, and a 400-game screen is noisy (about \u00b10.08). The case rests on removing stale inputs; the screen only guards against making the AI worse.\n- The screen needs main's `jackioh` built in a second worktree (`scripts/worktree.sh`): one full release build, then about an hour of games.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:18:42Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4110: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model",
+    "#4110: handed off from its owner `agy` (`agy` is busy: its lanes are all taken); `claude-6` owns it from this run"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T19:19:24Z",
+    "claimed_at": "2026-11-17T19:41:58Z",
+    "previous_provider": "agy",
+    "handed_off": "handed off from `agy`: `agy` is busy: its lanes are all taken"
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
