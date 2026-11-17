@@ -14122,17 +14122,8 @@
       "verdict_rounds": 1
     },
     "4057": {
-      "action": "plan",
-      "asks": [
-        "c:6932726728"
-      ],
-      "build_next": {
-        "from_run": "44003362499",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-17T02:39:04Z",
-        "until": "2026-11-17T03:09:04Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-17T02:38:54Z",
         "difficulty": "medium",
@@ -14151,10 +14142,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -rn \"I10 opponent prompt\" crates/\n- said: \n- read_file: {\"EndLine\": 2810, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/crates/cards/tests/cross/invariants.rs\", \"StartLine\": 2760}\n- said: \n- read_file: {\"EndLine\": 810, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/crates/engine/src/testkit/invariants.rs\", \"StartLine\": 765}\n- said: \n- read_file: {\"EndLine\": 845, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/crates/engine/src/testkit/invariants.rs\", \"StartLine\": 810}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -n \"new_instance\" crates/engine/src/testkit/mod.rs\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -n \"new_instance\" crates/cards/tests/cross/invariants.rs\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -rn \"WorkItem\" crates/cards/tests/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -n \"WorkItem\" crates/engine/src/testkit/mod.rs\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -n \"state::\" crates/engine/src/testkit/mod.rs\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/crates/engine/src/testkit/mod.rs\", \"StartLine\": 1}\n- said: \n- read_file: {\"EndLine\": 1670, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/crates/cards/tests/cross/invariants.rs\", \"StartLine\": 1630}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -n -C 5 \"I14_ACTION_CAP\" spec/10-engine-guide.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -rn \"I14\" spec/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -n -C 5 \"I14\" crates/tools/README.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -rn \"10.7\" spec/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -n \"^## 10\\.\" spec/10-engine-guide.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && grep -n \"^### 10\\.\" spec/10-engine-guide.md\n- said: \n- read_file: {\"EndLine\": 205, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/spec/10-engine-guide.md\", \"StartLine\": 188}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/.bot-plan.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && git status\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No hard rule holds: testkit invariant gathering and fuzz planted tests with no engine rule changes.\"} --> # Plan issue #4057 ## Goal Extend the fuzz monitor (`I14`) so that every action from `legalActions` that `reduce` accepts on a state copy is checked a\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-16T23:40:31Z",
       "owner_why": "it plans it",
@@ -14168,16 +14158,18 @@
       "queued_at": "2026-11-16T23:38:16Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "44003362499",
+      "run_id": "pending:5eac1dd8-1794883272",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-17T02:29:26Z",
+      "started_at": "2026-11-17T02:41:51Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6932726728"
+      ],
       "verdict_rounds": 0
     },
     "4058": {
@@ -16045,9 +16037,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T02:29:26Z",
+    "at": "2026-11-17T02:41:51Z",
     "url": "",
-    "what": "plan #4057 on agy"
+    "what": "build #4057 on agy"
   },
   "last_sweep": {
     "at": "2026-11-17T02:24:24Z",
