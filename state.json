@@ -16078,14 +16078,16 @@
     "what": "plan #4057 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-17T02:12:35Z",
+    "at": "2026-11-17T02:24:24Z",
     "notes": [
-      "#4104: `rust (test server api 1/4)`, `rust` red in CI run 43998128521; its other early jobs have until 2026-11-17T02:15:04Z to report",
-      "delivered review #4098 on muse (run 44000205959): reviewed",
-      "delivered review #4105 on claude-8 (run 44000002677): approved",
-      "delivered review #4103 on muse (run 43998316543): approved",
-      "started revise #4099 on claude-7 (run 44001832935)",
-      "nothing more to start: nothing is queued"
+      "#4103: green and waiting for a person to merge it, so `muse` gives up its claim on it",
+      "delivered review #4106 on muse (run 44000099520): approved",
+      "delivered review #4101 on claude-3 (run 43995283820): approved",
+      "delivered plan #4057 on agy (run 43981325072): failed",
+      "started revise #4101 on claude-3 (run 44003269632)",
+      "started plan #4057 on agy (run 44003362499)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16789,7 +16791,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T02:12:35Z",
+  "loop_tick": "2026-11-17T02:24:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
