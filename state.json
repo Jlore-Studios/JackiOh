@@ -16608,10 +16608,8 @@
     "what": "review #4123 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T10:47:25Z",
-    "notes": [
-      "#4123: `rust (test server api 4/4)` red in CI run 44066789783; its other early jobs have until 2026-11-17T10:48:28Z to report"
-    ],
+    "at": "2026-11-17T10:54:07Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17316,7 +17314,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T10:47:25Z",
+  "loop_tick": "2026-11-17T10:54:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
