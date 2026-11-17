@@ -15394,13 +15394,13 @@
     "what": "plan #4011 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T00:24:38Z",
+    "at": "2026-11-17T00:34:14Z",
     "notes": [
-      "delivered review #4091 on muse (run 43982978603): approved",
-      "delivered build #4066 on claude-1 (run 43975814555): built",
-      "started review #4096 on claude-1 (run 43987795693)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #4095 on claude-4 (run 43986082011): approved",
+      "delivered plan #4093 on claude-8 (run 43984436923): planned",
+      "started build #4093 on claude-8 (run 43989033226)",
+      "started plan #4011 on muse (run 43989108558)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16104,7 +16104,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T00:24:38Z",
+  "loop_tick": "2026-11-17T00:34:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
