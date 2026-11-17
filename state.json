@@ -16542,6 +16542,8 @@
       "taken_asks": []
     },
     "4128": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T16:11:55Z",
@@ -16555,8 +16557,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 13 of 20): Math.random only where nothing is secret, held by lint, and a nonce is never proof of who sent it\"} -->\n- ## What changed and why\n- **Lint holds `Math.random` to today's cosmetic/timing uses.** [eslint.config.js](/home/agent-muse/actions-runner/_work/_temp/work/item-4013/eslint.config.js) bans `Math.random` (`no-restricted-properties`) across `apps/web/src`, `apps/edge` and `apps/admin`, with one allowlist block of the 10 files\u2026\n- **A 1v1 nonce is now only its own seat's duplicate check ([R4013000](/home/agent-muse/actions-runner/_work/_temp/work/item-4013/spec/rulings/R4013000.md)).** The new test failed on current code as expected: the 1v1 machine deduped nonces globally, so player B copying player A's nonce got A's ack. T\u2026\n- ## How tested (commands I ran, what they printed)\n- - `pnpm exec eslint apps/edge apps/web e2e` and `pnpm exec eslint apps/admin`: both exit 0, before and after all other edits.\n- - `cargo test -p jackioh-server --test server r4013000`: FAILED before the fix (p2 got no taken error \u2014 it received p1's ack), ok after.\n- - `cargo test -p jackioh-server --test server an_action_with_a_reused_nonce`: ok (owner resends still dedup).\n- - `cargo test -p jackioh-server --test server actor::match_actor`: 97 passed, 0 failed.\n- - `cargo test -p jackioh-shared --features jackioh-engine/testkit`: 946 passed, 0 failed (includes the `s9_3_a_resent_nonce...` machine test).\n- - `cargo test -p jackioh-shared --features ts,jackioh-engine/testkit`: 1230 passed, 0 failed; wire diff kept.\n- - `cargo fmt --check`: clean. `cargo clippy -p jackioh-shared -p jackioh-server --all-targets -- -D warnings`: exit 0. `cargo jackioh spec check`: \"2238 rulings, 5678 proofs, 70992 citations in 4580 files, 30171 links: ok\".\n- ## Decisions the issue did not settle\n- - Kept the `panicked` set global (a panicked nonce still answers `Panicked` to both seats), copied from duos rather than redesigned: a panic is the host's failure, not a seat's.\n- - Kept first-writer-wins with no migration: the store's `(match_id, nonce)` unique key stays global per R776000 (verified in `migrations/0004_matches.sql`), so per-seat-independent nonces were rejected; the later sender is told taken. Nonces are unique per tab in practice, so this costs nothing hon\u2026\n- - Skipped the web typecheck: `grep` for `.acks`/`acked` in `apps/web/src` and `apps/edge` finds no reader of those fields (only substrings like \"attacked\"), so nothing consumes the reshaped tuples.\n- - Note: plain `cargo test -p jackioh-shared` (and `--features ts` alone) does not compile the `practice`/`face` test targets on this tree \u2014 they need `jackioh-engine/testkit`, which the repo's documented workspace invocation always enables. Pre-existing gating, unrelated to this change; reported, n\u2026\n- ## For the reviewer\n- Worth a second look: the `begin_apply` seat comparison uses the resolved engine seat (`ActionBy::Home` is mapped through the Glitch swap before `apply`), and `on_logged` stores `action.player_id` \u2014 the same seat \u2014 so a swap between send and log cannot split them. Checkpoint compatibility holds: `Ch\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4013 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4013/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4013,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T17:09:19Z",
         "from_run": "44123005536",
         "gates": [
           {
@@ -16615,8 +16620,15 @@
         "source": "build",
         "until": "2026-11-17T17:38:24Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-17T17:08:24Z",
+      "run_id": "pending:c255b699-1794935335",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-17T17:09:19Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16630,9 +16642,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T16:11:55Z",
+    "at": "2026-11-17T17:09:19Z",
     "url": "",
-    "what": "build #4013 on muse"
+    "what": "review #4128 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T16:59:47Z",
