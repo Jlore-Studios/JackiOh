@@ -15209,7 +15209,7 @@
       "started_at": "2026-11-17T00:36:46Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "4094": {
       "action": "build",
