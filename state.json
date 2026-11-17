@@ -13721,15 +13721,14 @@
     "what": "review #4136 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-17T20:28:02Z",
+    "at": "2026-11-17T20:40:05Z",
     "notes": [
-      "delivered build #4109 on muse (run 44157117078): built",
-      "delivered build #4108 on muse (run 44157006077): built",
-      "started review #4135 on muse (run 44170148437)",
-      "started review #4134 on muse (run 44170262804)",
-      "started review #4128 on claude-3 (run 44170372301)",
-      "started plan #4014 on claude-3 (run 44170484729)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4128 on claude-3 (run 44170372301): reviewed",
+      "delivered review #4133 on muse (run 44168264601): approved",
+      "delivered build #4115 on muse (run 44160942999): built",
+      "started review #4136 on muse (run 44172322557)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14435,7 +14434,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T20:28:02Z",
+  "loop_tick": "2026-11-17T20:40:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
