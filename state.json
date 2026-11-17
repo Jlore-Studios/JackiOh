@@ -21702,10 +21702,6 @@
       "refused_until": "2026-11-17T08:40:00Z",
       "spent": [
         {
-          "at": "2026-11-08T20:24:06Z",
-          "minutes": 27.5
-        },
-        {
           "at": "2026-11-08T21:11:57Z",
           "minutes": 85.2
         },
@@ -22500,16 +22496,13 @@
         {
           "at": "2026-11-17T09:37:27Z",
           "minutes": 2.9
+        },
+        {
+          "at": "2026-11-17T15:54:35Z",
+          "minutes": 62.0
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-07T18:51:45Z",
-          "cache": 13620268,
-          "cost": 6.7577,
-          "input": 135,
-          "output": 93073
-        },
         {
           "at": "2026-11-07T18:52:29Z",
           "cache": 8775170,
@@ -23902,14 +23895,21 @@
           "cost": 1.4278,
           "input": 37,
           "output": 15798
+        },
+        {
+          "at": "2026-11-17T15:54:35Z",
+          "cache": 134037,
+          "cost": 2.6855,
+          "input": 4,
+          "output": 3704
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-17T14:30:00Z",
-          "utilization": 0.03
+          "resets_at": "2026-11-17T19:50:00Z",
+          "utilization": 0.05
         },
-        "observed_at": "2026-11-17T09:37:27Z",
+        "observed_at": "2026-11-17T15:54:35Z",
         "status": "allowed"
       }
     },
@@ -37237,6 +37237,17 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-17T14:50:58Z,claude-3,stream,call,44107136578,0,2026-11-17T19:50:00Z,,,allowed,,,",
+      "2026-11-17T14:51:13Z,claude-3,stream,call,44107136578,1,2026-11-17T19:50:00Z,,,allowed,,,",
+      "2026-11-17T14:52:28Z,claude-3,stream,call,44107136578,2,2026-11-17T19:50:00Z,,,allowed,,,",
+      "2026-11-17T15:24:45Z,claude-3,stream,call,44107136578,3,2026-11-17T19:50:00Z,,,allowed,,,",
+      "2026-11-17T15:26:15Z,claude-3,stream,call,44107136578,4,2026-11-17T19:50:00Z,,,allowed,,,",
+      "2026-11-17T15:28:00Z,claude-3,stream,call,44107136578,5,2026-11-17T19:50:00Z,,,allowed,,,",
+      "2026-11-17T15:52:41Z,claude-3,stream,call,44107136578,5,2026-11-17T19:50:00Z,,,allowed,,,"
+    ]
   },
   "version": 1
 }
