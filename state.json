@@ -36743,6 +36743,9 @@
     "readings": [
       "2026-11-17T03:30:35Z,claude-7,ping,before,44010371287,12,2026-11-17T03:40:00Z,,,allowed,100,,",
       "2026-11-17T03:30:57Z,claude-7,stream,call,44010371287,13,2026-11-17T03:40:00Z,,,allowed,100,,"
+    ],
+    "runs": [
+      "2026-11-17T03:31:36Z,44010371287,claude-7,sonnet+opus,review,4099,medium,approved,,0.8,17,3931,513602,0.5634,12,13,,,1.1,claude-7,none,,1"
     ]
   },
   "version": 1
