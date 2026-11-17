@@ -34696,6 +34696,9 @@
     "readings": [
       "2026-11-17T20:23:34Z,claude-4,ping,before,44168385898,14,2026-11-17T23:20:00Z,,,allowed,70,,",
       "2026-11-17T20:30:06Z,claude-4,stream,call,44168385898,15,2026-11-17T23:20:00Z,,,allowed,70,,"
+    ],
+    "runs": [
+      "2026-11-17T21:14:18Z,44168385898,claude-4,sonnet+opus,build,4116,medium,built,,15.3,40,8431,1216717,0.4061,14,15,,,60.9,claude-4,fresh,,1"
     ]
   },
   "version": 1
