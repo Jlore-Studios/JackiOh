@@ -16065,9 +16065,11 @@
         "by": "`gemini` (medium)",
         "sha": "58f4eb81e7341cc7bb9dad89a3eabadf2a677f2b"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T02:41:51Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-17T03:42:10Z",
         "family": "gemini",
@@ -16077,6 +16079,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- said: \n- read_file: {\"EndLine\": 140, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/spec/10-engine-guide.md\", \"StartLine\": 136}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/spec/10-engine-guide.md\"}\n- said: \n- read_file: {\"EndLine\": 16, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/crates/tools/README.md\", \"StartLine\": 13}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/crates/tools/README.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo test -p jackioh-engine --features testkit i7_ && cargo test -p jackioh-engine --features testkit i10_ && cargo test -p jackioh-en\u2026\n- said: Running engine tests for lifted invariants (I7, I10, I11, I16, I17). Waiting for tests to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && git grep \"i10_\" crates/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo test -p jackioh-cards --test cards r1279000_i10_\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo fmt\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check\n- said: Running `cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check`. Waiting for checks to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo clippy -p jackioh-engine -p jackioh-cards -p jackioh-tools --all-targets -- -D warnings\n- said: Running `cargo clippy -p jackioh-engine -p jackioh-cards -p jackioh-tools --all-targets -- -D warnings`. Waiting for clippy to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo jackioh fuzz --seeds 200\n- said: Running `cargo jackioh fuzz --seeds 200` to measure post-change performance. Waiting for the fuzz run to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && cargo jackioh fuzz --handicap --seeds 200\n- said: Running `cargo jackioh fuzz --handicap --seeds 200` to measure post-change performance. Waiting for the run to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4057 && git diff\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4057/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the fuzz monitor checks the board after every listed action it tries, not only that the action is accepted\"} --> ### What changed and why Previously, the invariant monitor's `I14` probe in `listed_refused` reduced up to `I14_ACTION_CAP` (32) listed acti\u2026"
       },
+      "interruptions": 0,
       "issue": 4057,
       "kind": "review",
       "live": "reviewing",
