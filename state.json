@@ -16475,23 +16475,25 @@
     },
     "4124": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-17T15:54:50Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "in `.github/workflows/super.yml`, line 84, change `FUZZ_SEEDS: \"10000\"` to `FUZZ_SEEDS: \"12500\"`, along with the comment and two doc lines below, in one pull request on `main`. The bot may not edit `.github/`, and nothing outside it can fix this job without weakening the test."
+      },
       "asks": [],
-      "in_lane": true,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-17T14:48:16Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-17T15:54:39Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "in `.github/workflows/super.yml`, line 84, change `FUZZ_SEEDS: \"10000\"` to `FUZZ_SEEDS: \"12500\"`, along with the comment and two doc lines below, in one pull request on `main`. The bot may not edit `.github/`, and nothing outside it can fix this job without weakening the test.",
       "run_id": "44107136578",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-17T14:48:16Z",
-      "stop_requested": false,
       "taken_asks": []
     }
   },
