@@ -256,7 +256,28 @@ describe("WRITING.md the client's words for players", () => {
 });
 
 const cardNames = Object.values(CATALOG).map((c) => c.name);
-const PHRASES_TO_REMOVE = [...cardNames, "Play together"].sort((a, b) => b.length - a.length);
+// #4115: proper names the client shows that are no catalog card — Heroic Power's powers, Profe
+// Yates's old-replay choices, and the Anomaly boards. Each is removed whole, like "Play together",
+// so its ordinary words stay flagged in any other label.
+const PROPER_NAMES = [
+  "Expedition Map",
+  "Life Tap",
+  "Steady Shot",
+  "Cat Cafe",
+  "Witness Value",
+  "Armor Up",
+  "Die Insect",
+  "KY Brainstorm",
+  "Terminus Tricks",
+  "End Times",
+  "Tank Up",
+  "Wolf's Maw",
+  "Iron Mandate",
+  "Wrecked Spice Platform",
+  "Drone Hideouts",
+  "Frontier Outpost",
+];
+const PHRASES_TO_REMOVE = [...cardNames, "Play together", ...PROPER_NAMES].sort((a, b) => b.length - a.length);
 
 const cardTypes = Object.values(CATALOG).flatMap((c) => (c.type ? c.type.split(/\s+/) : []));
 const cardTags = Object.values(CATALOG).flatMap((c) => (c.tags ?? []).flatMap((t) => t.split(/\s+/)));

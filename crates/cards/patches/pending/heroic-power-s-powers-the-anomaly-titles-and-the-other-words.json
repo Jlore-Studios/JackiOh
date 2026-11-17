@@ -1,0 +1,17 @@
+{
+  "title": "Patch: Heroic Power's powers, the Anomaly titles and the other words the client translates from a table read in Chinese for a Chinese reader, held by a test",
+  "sources": "#4115",
+  "notes": "Client-only translation coverage: about 97 new zh-CN dictionary entries for words that reach t() through a table or ?? (Heroic Power's powers on both faces, the Anomaly titles, the board-names setting words, the blocked-draw texts, Newest first, the Duo mark), the literals() scan widened to ?? and ||, a table-walk test holding every table-fed word to a dictionary entry, and one-word exports (BOARD_NAMES_OPTIONS, DEFAULT_ORDER) so the walk can reach them. No engine, card, server or rules change.",
+  "player": {
+    "title": "More Chinese across the client",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Players reading in Simplified Chinese now see Heroic Power's powers, the Anomaly titles and the board-names setting in Chinese."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}
