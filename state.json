@@ -14150,6 +14150,13 @@
     "4062": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43981401087",
+        "model": "gpt-5.6-sol",
+        "provider": "gpt",
+        "since": "2026-11-17T00:12:42Z",
+        "until": "2026-11-17T00:42:42Z"
+      },
       "difficulty_by": {
         "at": "2026-11-17T00:12:32Z",
         "difficulty": "medium",
