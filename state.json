@@ -12690,6 +12690,13 @@
     "4110": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44163543829",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-17T20:09:39Z",
+        "until": "2026-11-17T20:39:39Z"
+      },
       "difficulty_by": {
         "at": "2026-11-17T20:09:31Z",
         "difficulty": "hard",
