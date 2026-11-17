@@ -205,7 +205,7 @@ mod i2_an_animated_card_back_in_its_backrow_under_a_windfury_aura {
         if dome {
             backrow.push(json!({ "def": DOME, "lane": 2 }));
         }
-        let g = scenario(json!({
+        let mut g = scenario(json!({
             "active": "p2",
             "p1": { "backrow": backrow },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
@@ -213,6 +213,11 @@ mod i2_an_animated_card_back_in_its_backrow_under_a_windfury_aura {
         let waraxe = backrow_at(&g, PlayerId::P1, 1, "the Waraxe");
         let prey = g.unit_at(PlayerId::P2, 1);
         let mut monitor = create_invariant_monitor(g.state());
+        // The animation stamps its entry (`animated::step_into_units`), and the card keeps it back in its backrow.
+        let turn = g.state().turn;
+        find_instance_mut(g.state_mut(), &waraxe.id)
+            .expect("the Waraxe")
+            .summoned_turn = Some(turn);
         let moved = |kind: &str| {
             event(json!({
                 "type": kind, "player": "p1", "instanceId": waraxe.id, "defId": WARAXE,

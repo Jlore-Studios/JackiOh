@@ -184,13 +184,13 @@ mod tests {
     #[test]
     fn r4079000_divine_spirit_multiplies_health_only_up_to_the_cap() {
         for radiant in [false, true] {
-            let (s, unit) = spirited(radiant, 600);
+            let (mut s, unit) = spirited(radiant, 600);
             s.expect_stats(
                 &unit,
                 json!({ "health": MULTIPLIED_STAT_CAP, "maxHealth": MULTIPLIED_STAT_CAP }),
             );
         }
-        let (s, unit) = spirited(true, 300);
+        let (mut s, unit) = spirited(true, 300);
         s.expect_stats(&unit, json!({ "health": 900, "maxHealth": 900 }));
     }
 
@@ -202,7 +202,7 @@ mod tests {
         #[test]
         fn r767000_a_game_on_v0_6_6d_doubles_health_past_the_cap() {
             crate::under_kept(ID, script_v0_6_6d(), || {
-                let (s, unit) = spirited(false, 600);
+                let (mut s, unit) = spirited(false, 600);
                 s.expect_stats(&unit, json!({ "health": 1200, "maxHealth": 1200 }));
             });
         }
