@@ -5752,7 +5752,6 @@ pub(crate) mod tests {
 
     mod fuzz_starting_states {
         use super::*;
-        use jackioh_cards::CATALOG_VERSION;
 
         /// The seeds CI's `cargo jackioh fuzz --seeds 200` plays.
         const CI_SEEDS: u32 = 200;
