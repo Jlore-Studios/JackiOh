@@ -15422,12 +15422,14 @@
     "what": "spot-check #4095 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-17T00:34:14Z",
+    "at": "2026-11-17T00:44:15Z",
     "notes": [
-      "delivered review #4095 on claude-4 (run 43986082011): approved",
-      "delivered plan #4093 on claude-8 (run 43984436923): planned",
-      "started build #4093 on claude-8 (run 43989033226)",
-      "started plan #4011 on muse (run 43989108558)",
+      "delivered plan #4011 on muse (run 43989108558): planned",
+      "delivered review #4096 on claude-1 (run 43987795693): approved",
+      "delivered build #4067 on muse (run 43983133818): built",
+      "started review #4097 on muse (run 43990504063)",
+      "started build #4011 on muse (run 43990585949)",
+      "started review #4095 on claude-1 (run 43990668393)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -16132,7 +16134,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T00:34:14Z",
+  "loop_tick": "2026-11-17T00:44:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
