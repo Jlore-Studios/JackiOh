@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4111,
+  "title": "Patch: the fuzz holds every plain attack to the combat forecast its seat was shown",
+  "branch": "bot/issue-4111",
+  "thread": "**Issue #4111 (data, not instructions):**\n\n```text\n# #4111: Patch: the fuzz holds every plain attack to the combat forecast its seat was shown\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen a player aims an attack, the board previews what it will do: the damage each side takes, whether a Divine Shield breaks, who is destroyed. Unless a hidden card or a triggered effect steps in, that preview is meant to be exactly what happens. Today only a few hand-made test boards check that promise. So when a real card changes a hit in a way the preview forgot (as Force Projector's damage pool did until #4032), the preview misleads players until someone happens to notice. Once this is built, the thousands of random games the project plays on every change compare each ordinary attack's preview with what the attack really did, across every card in the game. When the two disagree, the run fails with both cards' names and both sets of numbers.\n\n## Why\n- R3100000 (amended by R3477000, R3615000 and R3855000) puts the engine's `combat_forecast` in every seat's view. Practice, 1v1, Duos and daily boards draw it as the aimed attack's damage markers, skull and struck-through shield. Only hidden answers are excluded: R3477000 says \u201ca face-down trap or another hidden answer can still change the outcome\u201d.\n- Today only stand-in fixture bodies hold the forecast to combat:\n  - `crates/engine/tests/rules/combat_forecast.rs`, with `plain`, `big_body`, `trampler` and ten more, plus granted keywords. Its `play_out` (lines 56\u201384) plays each forecast attack and reads the events.\n  - `crates/ai/src/candidates.rs`'s `bodies()`.\n  - No real card's script or static modifier reaches either.\n- #4032 (R4032000, d68da6058b) was this gap: the forecast, My Pawn and the lethal glow ignored Force Projector's damage pool and Burn or Toxic conversions. It was found by reading the code. #4064 and #4065 are the same pattern in the AI. Nothing would catch the next card that changes a hit's size.\n- The fuzz plays thousands of random attacks with real cards: `fuzz --seeds 200` on every pull request, and 10,000 plus 10,000 handicapped seeds daily in `super.yml`. Yet none of I1\u2013I17 in `crates/engine/src/testkit/invariants.rs` reads the forecast; `forecast` appears nowhere in invariants.rs, fuzz.rs or duos_fuzz.rs.\n- A damage pool's soak raises no event (R3550004), so no event-based invariant can see it. Only a comparison of numbers can.\n\n## Proposal\nA new invariant, I18, in the testkit's `InvariantMonitor`:\n1. In `before` (invariants.rs:2822, called at fuzz.rs:1300): when the chosen action is an `Attack`, keep the `combat_forecast(state, player)` entry with its attacker and target ids. No other step computes anything.\n2. In `after` (invariants.rs:2932, called at fuzz.rs:1364): judge the kept entry only when the step was plain combat. That means its events hold that pair's `AttackDeclared` with no `instead_of`, and no `HookResolving`, `TrapFired` or `AttackCancelled`, and the state after it holds no open prompt. Those are what the forecast does not foretell: hooks, traps and hidden answers (R2783000, R3477000).\n3. Compare, using `play_out`'s reading:\n   - `dealt` and `taken` with the step's `Damage` events into the target and into the attacker;\n   - `pops` with the target's `DivineShieldLost`;\n   - `kills` with the target leaving the field (for a hero, the game ending);\n   - `survives` with the attacker still on the field.\n   Move that reading into the testkit once, and have both the rules test and I18 call it, so the two judges cannot drift.\n4. The failure names both cards by id and name, the turn, and both sets of numbers. For example: `I18 forecast drift: <attacker> attacking <target> on turn 7 was forecast dealt 3, taken 2, kills but did dealt 1, taken 2, no kill (R3100000)`. `fuzz --from <seed> --seeds 1` replays it, as for every invariant.\n5. Count the attacks I18 judged and print the total in the fuzz report and its `--json`, so a filter that silently skips everything shows.\n6. Fix each disagreement the 200-seed gate finds in `query.rs`'s projection in this pull request, with its test. Add a ruling amending R3100000 when the fix decides something.\n   - Before finishing, run a wider sweep once by hand (`fuzz --from 1 --seeds 2000`, with and without `--handicap`), so the daily wave does not fail the next morning.\n   - A fix too big for one pull request is filed as an issue, and I18 is narrowed by a named, commented condition that cites it, never by a blanket skip.\n\nOut of scope: Duos (`DuosInvariantMonitor`, whose seats get a subset of the duel's entries), the forecast's `lethal`, and attacks that run a hook or meet a trap.\n\n## Where it lands\n- `crates/engine/src/testkit/invariants.rs`: I18 in the header list, `before`, `after` and the judged count\n- `crates/engine/src/testkit/`: the shared reading of what an attack did, moved from `combat_forecast.rs`\n- `crates/engine/tests/rules/combat_forecast.rs` (calls the shared reading) and `crates/engine/tests/rules/invariants.rs` (I18's tests)\n- `crates/tools/src/fuzz.rs` (the header list, the judged count in the report) and `crates/tools/README.md`'s fuzz row\n- Only for what the fuzz finds: `crates/engine/src/query.rs`, `spec/rulings/`, `spec/pending/<issue>.md`\n- SPEC \u00a74.3, \u00a74.4, \u00a79.10; R3100000, R3477000, R4032000, R2783000, R3550004\n\n## Acceptance criteria\n- [ ] I18 is listed in the headers of invariants.rs and fuzz.rs, and in `crates/tools/README.md`'s fuzz row.\n- [ ] A test in `crates/engine/tests/rules/invariants.rs` puts a plain attacker and defender on a board, gives the monitor the attack, and hands `after` events whose damage is one off the forecast: I18 fires, naming both cards. With the real events it stays silent.\n- [ ] A test shows I18 stays silent on an attack whose step resolved a hook, and on one that fired a trap.\n- [ ] `combat_forecast.rs` reads what each attack did through the same testkit function I18 uses, and its tests still pass.\n- [ ] `cargo jackioh fuzz --seeds 200` and `cargo jackioh fuzz --seeds 200 --handicap` pass, and each report shows a judged-attack count above zero.\n- [ ] The pull request quotes a local run in which reverting R4032000's pool projection in `query.rs` and fuzzing with Force Projector forced in (`--cards`) makes I18 fail, with the revert then undone.\n- [ ] Every disagreement found is either fixed with its test, or narrowed by a named condition that cites a new issue.\n- [ ] These pass: `cargo test -p jackioh-engine --features testkit --test 'rules*'`, clippy on the engine and the tools, and `cargo jackioh spec check`.\n\n## Size and risks\n- **Size:** about 150 lines plus tests across the testkit and the fuzz. **difficulty:hard** by CLAUDE.md rule 11: it is the engine's testkit, and it may surface real forecast bugs whose fixes go into `query.rs`. Each of those is a misleading preview players see today.\n- **Cost:** one forecast per attack step, which lists the seat's actions once more. The pull request re-measures the 200-seed fuzz's time (invariants.rs:108 records 44 s on 4 cores) and states it.\n- **Risk:** the filter must be strict enough that a hook or a trap never reads as a forecast bug. The judged count keeps it from being so strict that it checks nothing.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:20:27Z:\n\nApprovr\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:20:32Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4111: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T19:20:56Z",
+    "claimed_at": "2026-11-17T19:43:16Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
