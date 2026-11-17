@@ -16505,6 +16505,8 @@
     "4123": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "17177375845216815f09cfad85d0eccb50c2193d",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T09:57:19Z",
