@@ -145,7 +145,7 @@ impl Tx<'_> {
         lobby_dispatch!(self, of_member(profile_id, at))
     }
 
-    /// R3732001: the unstarted, unexpired lobbies of `hosts` with an empty guest seat, newest first,
+    /// R3732001: the unstarted, unexpired lobbies of `hosts` with an empty seat, newest first,
     /// the code breaking a tie: a friend's row reads whether it holds one (`GET /api/friends`), by one
     /// read for every friend.
     pub async fn lobbies_open_of_hosts(&mut self, hosts: &[String], at: i64) -> StoreResult<Vec<Lobby>> {
@@ -182,7 +182,7 @@ mod pg {
     use sqlx::postgres::PgRow;
     use time::OffsetDateTime;
 
-    use super::{Lobby, LobbyMember, LobbyPick};
+    use super::{FORMAT_TWO_V_TWO, Lobby, LobbyMember, LobbyPick};
     use crate::auth::is_uuid;
     // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`).
     use crate::db::pg::{PgTx, json, json_or_null, ms_of, run_as, uuid_text, uuid_text_or_null};
@@ -372,12 +372,15 @@ mod pg {
             "select ",
             lobby_columns!(),
             " from public.lobbies
-              where host = any($1::uuid[]) and guest is null and started_at is null
+              where host = any($1::uuid[]) and started_at is null
+                and (guest is null
+                     or (settings->>'format' = $3::text and (guest2 is null or guest3 is null)))
                 and expires_at > to_timestamp($2::double precision / 1000.0)
               order by created_at desc, code"
         ))
         .bind(hosts)
         .bind(at)
+        .bind(FORMAT_TWO_V_TWO)
         .fetch_all(&mut **t)
         .await?;
         rows.iter().map(lobby_of).collect()
@@ -396,7 +399,7 @@ mod pg {
 }
 
 mod fake {
-    use super::Lobby;
+    use super::{FORMAT_TWO_V_TWO, Lobby};
     use crate::db::fake::FakeTx;
     use crate::db::store::StoreError;
 
@@ -506,7 +509,11 @@ mod fake {
             .iter()
             .filter(|lobby| {
                 hosts.contains(&lobby.host)
-                    && lobby.guest.is_none()
+                    // R3731000: a 2v2's other team (`others`) is empty in every other format, so
+                    // only its format may read it; a seated 1v1 or co-op lobby stays unlisted.
+                    && (lobby.guest.is_none()
+                        || (lobby.settings.format() == FORMAT_TWO_V_TWO
+                            && lobby.others.iter().any(|member| member.profile.is_none())))
                     && lobby.started_at.is_none()
                     && lobby.expires_at > at
             })

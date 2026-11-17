@@ -56,7 +56,7 @@ pub struct Friend {
     /// R3732001: the turn of the 1v1 match the friend is in, while the viewer may watch it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub turn: Option<i32>,
-    /// R3732001: the code of an online friend's lobby (R3730000) whose guest seat is empty and which
+    /// R3732001: the code of an online friend's lobby (R3730000) with an empty seat and which
     /// has not started, which the friend may enter as anyone holding the code may.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lobby_code: Option<String>,
