@@ -13841,14 +13841,15 @@
     "what": "build #4014 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-17T20:40:05Z",
+    "at": "2026-11-17T20:50:28Z",
     "notes": [
-      "delivered review #4128 on claude-3 (run 44170372301): reviewed",
-      "delivered review #4133 on muse (run 44168264601): approved",
-      "delivered build #4115 on muse (run 44160942999): built",
-      "started review #4136 on muse (run 44172322557)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "#4136: `rust (classify)` red in CI run 44172108032; its other early jobs have until 2026-11-17T20:53:05Z to report",
+      "delivered plan #4014 on claude-3 (run 44170484729): planned",
+      "delivered review #4135 on muse (run 44170148437): approved",
+      "delivered build #4118 on claude-4 (run 44163434725): built",
+      "started review #4137 on claude-4 (run 44174156952)",
+      "started build #4014 on claude-3 (run 44174265645)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14554,7 +14555,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T20:40:05Z",
+  "loop_tick": "2026-11-17T20:50:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
