@@ -1,7 +1,8 @@
 //! The combat forecast (R3100000, SPEC §9.10): what each attack a seat may declare would do, projected
 //! from the board and held to the engine's own combat. The tutorial's coach names an attack by it and does
 //! no combat maths of its own (CLAUDE.md rule 7). Every case plays the forecast attack for real and reads
-//! what the reducer did: the damage events, the Divine Shield lost and who is left on the field.
+//! what the reducer did through the testkit's `PlayedAttack::read`, the reading the fuzz's I18 shares
+//! (#4111): the damage events, the Divine Shield lost and who is left on the field.
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -13,7 +14,9 @@ use crate::rules::fixtures::combat::{
     armored, big_body, charger, first_striker, indestructible, lifestealer, plain, poisonous, rusher,
     shielded, taunter, trampler, zero_attack,
 };
-use crate::rules::fixtures::combat_judge::{combat_judge_game, snare};
+use crate::rules::fixtures::combat_judge::{
+    banisher, combat_judge_game, register_combat_judge_fixtures, snare,
+};
 use crate::rules::fixtures::combat_reactions::{POOL, POOL_SIZE, register_e6_fixtures};
 use crate::rules::fixtures::damage_combat;
 use crate::rules::fixtures::harness::{act_ok, live, new_game, put, slot};
@@ -39,58 +42,10 @@ fn forecast_of(state: &GameState, attacker_id: &str, target_id: &str) -> Option<
         .find(|entry| entry.attacker_id == attacker_id && entry.target_id == target_id)
 }
 
-fn on_field(state: &GameState, id: &str) -> bool {
-    find_instance(state, id).is_some_and(|card| matches!(card.zone, Zone::Field { .. }))
-}
-
 /// What the engine's combat did when `attacker_id` attacked `target_id`, as the forecast reports it.
-#[derive(Debug, PartialEq, Eq)]
-struct Played {
-    dealt: i32,
-    taken: i32,
-    kills: bool,
-    survives: bool,
-    pops: bool,
-}
-
-fn play_out(state: &GameState, attacker_id: &str, target_id: &str) -> Played {
+fn play_out(state: &GameState, attacker_id: &str, target_id: &str) -> PlayedAttack {
     let after = act_ok(state, attack_of(attacker_id, target_id));
-    let sum_into = |id: &str| -> i32 {
-        after
-            .events
-            .iter()
-            .filter_map(|event| match event {
-                GameEvent::Damage {
-                    target_id, amount, ..
-                } if target_id == id => Some(*amount),
-                _ => None,
-            })
-            .sum()
-    };
-    let pops = after.events.iter().any(
-        |event| matches!(event, GameEvent::DivineShieldLost { instance_id } if instance_id == target_id),
-    );
-    let kills = match target_id.strip_prefix("hero-") {
-        Some(_) => after.state.result.is_some(),
-        None => !on_field(&after.state, target_id),
-    };
-    Played {
-        dealt: sum_into(target_id),
-        taken: sum_into(attacker_id),
-        kills,
-        survives: on_field(&after.state, attacker_id),
-        pops,
-    }
-}
-
-fn played_as_forecast(forecast: &AttackForecast) -> Played {
-    Played {
-        dealt: forecast.dealt,
-        taken: forecast.taken,
-        kills: forecast.kills,
-        survives: forecast.survives,
-        pops: forecast.pops,
-    }
+    PlayedAttack::read(&after.events, &after.state, attacker_id, target_id)
 }
 
 fn grant(state: &mut GameState, id: &str, keyword: Keyword) {
@@ -119,7 +74,7 @@ mod r3100000_the_forecast_is_the_engine_s_own_combat {
         assert!(!forecast.pops);
         assert_eq!((forecast.attacker_size, forecast.target_size), (15, 6));
         assert_eq!(
-            played_as_forecast(&forecast),
+            PlayedAttack::forecast(&forecast),
             play_out(&state, &striker.id, &wall.id)
         );
     }
@@ -135,7 +90,7 @@ mod r3100000_the_forecast_is_the_engine_s_own_combat {
         assert!(!forecast.kills);
         assert!(!forecast.survives, "7 damage destroys a 3-health unit");
         assert_eq!(
-            played_as_forecast(&forecast),
+            PlayedAttack::forecast(&forecast),
             play_out(&state, &striker.id, &wall.id)
         );
     }
@@ -154,7 +109,7 @@ mod r3100000_the_forecast_is_the_engine_s_own_combat {
         );
         assert!(forecast.pops);
         assert_eq!(
-            played_as_forecast(&forecast),
+            PlayedAttack::forecast(&forecast),
             play_out(&state, &striker.id, &shield.id)
         );
 
@@ -179,7 +134,7 @@ mod r3100000_the_forecast_is_the_engine_s_own_combat {
         assert!(forecast.kills && forecast.survives && !forecast.pops);
         assert_eq!(forecast.target_size, 0);
         assert_eq!(
-            played_as_forecast(&forecast),
+            PlayedAttack::forecast(&forecast),
             play_out(&state, &striker.id, "hero-p2")
         );
 
@@ -187,7 +142,7 @@ mod r3100000_the_forecast_is_the_engine_s_own_combat {
         let forecast = forecast_of(&state, &striker.id, "hero-p2").expect("the hero may be attacked");
         assert!(!forecast.kills, "3 damage leaves the hero at 1");
         assert_eq!(
-            played_as_forecast(&forecast),
+            PlayedAttack::forecast(&forecast),
             play_out(&state, &striker.id, "hero-p2")
         );
     }
@@ -288,7 +243,7 @@ mod r3100000_the_forecast_is_the_engine_s_own_combat {
         assert_eq!((forecast.dealt, forecast.taken), (4, 1));
         assert!(forecast.kills && forecast.survives);
         assert_eq!(
-            played_as_forecast(&forecast),
+            PlayedAttack::forecast(&forecast),
             play_out(&state, &guard.id, &striker.id)
         );
     }
@@ -384,7 +339,7 @@ fn r3100000_every_forecast_attack_is_what_the_engine_s_combat_does() {
         for forecast in combat_forecast(&state, P1).attacks {
             let target = &forecast.target_id;
             assert_eq!(
-                played_as_forecast(&forecast),
+                PlayedAttack::forecast(&forecast),
                 play_out(&state, &forecast.attacker_id, target),
                 "{seed}: {} on {target}: attacker {:?}, defender {:?}",
                 forecast.attacker_id,
@@ -425,7 +380,7 @@ fn put_pool(state: &mut GameState, player: PlayerId) -> CardInstance {
 fn forecast_played(state: &GameState, attacker_id: &str, target_id: &str) -> AttackForecast {
     let forecast = forecast_of(state, attacker_id, target_id).expect("the attack is legal");
     assert_eq!(
-        played_as_forecast(&forecast),
+        PlayedAttack::forecast(&forecast),
         play_out(state, attacker_id, target_id),
         "{attacker_id} on {target_id}"
     );
@@ -534,5 +489,76 @@ mod r4032000_the_forecast_reads_the_pool_and_conversion {
         assert_eq!(forecast.dealt, 0);
         assert!(!forecast.kills);
         assert!(!combat_forecast(&state, P1).lethal);
+    }
+}
+
+/// `board` with the combat judge's fixtures (`cj-banisher`, a 2/2 whose damage exiles what it lands
+/// on) registered on top, after `new_game` has registered the engine's own.
+fn banisher_board(seed: &str) -> GameState {
+    let state = board(seed);
+    register_combat_judge_fixtures();
+    state
+}
+
+mod r4111000_the_forecast_reads_exile_on_damage {
+    use super::*;
+
+    /// The forecast's (dealt, taken, kills, survives), held to what the engine's combat does with it.
+    fn forecast_and_play(state: &GameState, attacker_id: &str, target_id: &str) -> (i32, i32, bool, bool) {
+        let forecast = forecast_played(state, attacker_id, target_id);
+        (forecast.dealt, forecast.taken, forecast.kills, forecast.survives)
+    }
+
+    #[test]
+    fn r4111000_a_banisher_s_blow_exiles_the_unit_it_damages() {
+        let mut state = banisher_board("r4111000-blow");
+        let exiler = put(&mut state, &banisher.id, slot(P1, Row::Units, 1), json!({})); // 2/2
+        let wall = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({})); // 3/3
+        // 2 is short of 3 health, but the exile removes the wall all the same (R1124).
+        assert_eq!(
+            forecast_and_play(&state, &exiler.id, &wall.id),
+            (2, 3, true, false)
+        );
+    }
+
+    #[test]
+    fn r4111000_a_banisher_s_strike_back_exiles_its_attacker() {
+        let mut state = banisher_board("r4111000-back");
+        let striker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({})); // 3/3
+        let exiler = put(&mut state, &banisher.id, slot(P2, Row::Units, 1), json!({})); // 2/2
+        // 2 back leaves a 3-health attacker standing, but exiled.
+        assert_eq!(
+            forecast_and_play(&state, &striker.id, &exiler.id),
+            (3, 2, true, false)
+        );
+    }
+
+    #[test]
+    fn r4111000_a_first_strike_banisher_exiles_its_attacker_before_its_blow() {
+        let mut state = banisher_board("r4111000-first-strike");
+        let striker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({})); // 5/10
+        let exiler = put(&mut state, &banisher.id, slot(P2, Row::Units, 1), json!({})); // 2/2
+        grant(&mut state, &exiler.id, Keyword::FirstStrike);
+        // §4.3 step 1: the banisher's 2 comes first and marks the 10-health attacker, which lands nothing.
+        assert_eq!(
+            forecast_and_play(&state, &striker.id, &exiler.id),
+            (0, 2, false, false)
+        );
+    }
+
+    #[test]
+    fn r4111000_a_hit_that_deals_nothing_exiles_nothing() {
+        let mut state = banisher_board("r4111000-nothing");
+        let exiler = put(&mut state, &banisher.id, slot(P1, Row::Units, 1), json!({})); // 2/2
+        let wall = put(&mut state, &armored.id, slot(P2, Row::Units, 1), json!({})); // 7/7 Armor 7
+        let shield = put(&mut state, &shielded.id, slot(P2, Row::Units, 2), json!({})); // 2/2 Divine Shield
+        // Armor takes the whole blow: nothing lands, so nothing is marked (R1124).
+        assert_eq!(
+            forecast_and_play(&state, &exiler.id, &wall.id),
+            (0, 7, false, false)
+        );
+        let forecast = forecast_played(&state, &exiler.id, &shield.id);
+        assert_eq!(forecast.dealt, 0);
+        assert!(forecast.pops && !forecast.kills);
     }
 }

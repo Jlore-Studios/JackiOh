@@ -1054,7 +1054,8 @@ pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
     CombatForecast { attacks, lethal }
 }
 
-/// One attack's forecast, its ids left empty for the caller.
+/// One attack's forecast, its ids left empty for the caller. A blow of 1 or more from a source that
+/// exiles what it damages removes its target as a Poisonous one destroys it (R1124, R4111000), either way.
 fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> AttackForecast {
     let mine = unit_view(state, attacker);
     let attacker_size = mine.attack + mine.health;
@@ -1077,8 +1078,13 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
     let hit = (mine.attack + bonus.attack) * crate::combat::lane_multiplier_for(state, attacker, defender);
     let back = theirs.attack * crate::combat::lane_multiplier_for(state, defender, attacker);
     let strikes_back = crate::combat::takes_strike_back(state, attacker, defender);
-    // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land.
-    let falls = strikes_back && falls_to_first_strike(state, attacker, defender);
+    // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land,
+    // and so does one whose first blow exiles it (R1124, R4111000).
+    let exiled_first = has_keyword(&theirs.keywords, KeywordKind::FirstStrike)
+        && !has_keyword(&mine.keywords, KeywordKind::FirstStrike)
+        && exiles_on_damage(state, defender)
+        && hit_on_unit(state, defender, attacker, back) > 0;
+    let falls = strikes_back && (falls_to_first_strike(state, attacker, defender) || exiled_first);
     let mut dealt = if falls {
         0
     } else {
@@ -1089,7 +1095,7 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         dealt = dealt.min(theirs.health.max(0));
     }
     let poisons = bonus.poisonous || has_keyword(&mine.keywords, KeywordKind::Poisonous);
-    let kills = dealt > 0 && (poisons || dealt >= theirs.health);
+    let kills = dealt > 0 && (poisons || exiles_on_damage(state, attacker) || dealt >= theirs.health);
     // One First Strike attacker that destroys its target is not struck back (§4.3 step 1).
     let strikes_first = has_keyword(&mine.keywords, KeywordKind::FirstStrike)
         && !has_keyword(&theirs.keywords, KeywordKind::FirstStrike);
@@ -1098,8 +1104,10 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
     } else {
         hit_on_unit(state, defender, attacker, back)
     };
-    let survives =
-        taken <= 0 || (taken < mine.health && !has_keyword(&theirs.keywords, KeywordKind::Poisonous));
+    let survives = taken <= 0
+        || (taken < mine.health
+            && !has_keyword(&theirs.keywords, KeywordKind::Poisonous)
+            && !exiles_on_damage(state, defender));
     AttackForecast {
         attacker_id: String::new(),
         target_id: String::new(),
@@ -1111,6 +1119,12 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         attacker_size,
         target_size: theirs.attack + theirs.health,
     }
+}
+
+/// R1124, R4111000: whether `source`'s damage exiles the Unit it lands on (Meditative #72 The Banisher),
+/// which the forecast counts as it counts Poisonous: any blow of 1 or more removes its target.
+fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
+    crate::scripts::flags_of(state, source).exiles_on_damage == Some(true)
 }
 
 /// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.

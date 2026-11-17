@@ -1,5 +1,7 @@
 //! `jackioh_engine::testkit` (feature `testkit`, SURFACE §8): `scenario` (the harness), `invariants` (the
-//! I1–I17 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
+//! I1–I18 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
+//! `played_attack.rs` (#4111) is the one reading of what an attack did, which I18 and the combat
+//! forecast's rules tests both hold `combat_forecast` to (R3100000).
 //!
 //! `register_scripts` and `register_catalog` (`scenario.rs`) set the thread-local override that
 //! `catalog::registered_catalog()` and `scripts::script_of()` consult first under this feature, so they win
@@ -23,6 +25,7 @@ pub mod glow;
 pub mod golden;
 pub mod invariants;
 pub mod pick;
+pub mod played_attack;
 pub mod pool_probe;
 pub mod preview;
 pub mod scenario;
@@ -36,6 +39,7 @@ pub use crate::*;
 pub use duos_scenario::*;
 pub use glow::*;
 pub use invariants::*;
+pub use played_attack::*;
 pub use pool_probe::*;
 pub use preview::*;
 pub use scenario::*;
