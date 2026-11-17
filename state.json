@@ -16188,21 +16188,14 @@
     "what": "revise #4099 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-17T01:56:37Z",
+    "at": "2026-11-17T02:12:35Z",
     "notes": [
-      "CI on #4090: #4090: queued a CI fix",
-      "delivered review #4102 on claude-6 (run 43995392613): approved",
-      "delivered review #4098 on gpt (run 43992113326): interrupted",
-      "delivered build #4093 on claude-8 (run 43989033226): built",
-      "delivered build #4058 on muse (run 43983204340): built",
-      "started review #4105 on claude-8 (run 44000002677)",
-      "started review #4106 on muse (run 44000099520)",
-      "started review #4098 on muse (run 44000205959)",
-      "started revise #4090 on claude-4 (run 44000325296)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#4099: auto-merge is off and it is out of the merge queue, so `bot:merging` is off",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "#4104: `rust (test server api 1/4)`, `rust` red in CI run 43998128521; its other early jobs have until 2026-11-17T02:15:04Z to report",
+      "delivered review #4098 on muse (run 44000205959): reviewed",
+      "delivered review #4105 on claude-8 (run 44000002677): approved",
+      "delivered review #4103 on muse (run 43998316543): approved",
+      "started revise #4099 on claude-7 (run 44001832935)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16906,7 +16899,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T01:56:37Z",
+  "loop_tick": "2026-11-17T02:12:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
