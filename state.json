@@ -15149,15 +15149,8 @@
       "taken_asks": []
     },
     "4094": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43984519379",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-17T00:11:16Z",
-        "until": "2026-11-17T00:41:16Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15169,10 +15162,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"wc -l scripts/ci-scope.sh && sed -n 1,140p scripts/ci-scope.sh; ls .bot-plan.md 2>&1\"}\n- tool error: Exit code 2 340 scripts/ci-scope.sh #!/bin/sh # `sh scripts/ci-scope.sh <base> <head>`: prints one `<name>=true|false` line per job it scopes, # which ci.yml's `changes` job appends to $GITHUB_OUTPUT\u2026\n- Bash: {\"command\": \"sed -n 140,340p scripts/ci-scope.sh\"}\n- Bash: {\"command\": \"cd crates/tools; ls src src/* | head -80; grep -rn \\\"fn ship\\\\|fn cut\\\\|\\\\\\\"ship\\\\\\\"\\\\|\\\\\\\"cut\\\\\\\"\\\" src | head -20; git show --stat HEAD~1 f94a31821f | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; git show --stat f94a31821f | tail -12; sed -n 2025,2130p crates/tools/src/patches.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; sed -n 2340,2480p crates/tools/src/patches.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; sed -n 2130,2260p crates/tools/src/patches.rs; grep -n \\\"fn bump_sites\\\\|fn rebuild_derived\\\\|fn patch_paths\\\\|PATCHES_REL: \\\\|const .*REL\\\\|VE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; sed -n 405,460p crates/tools/src/patches.rs; sed -n 1040,1075p crates/tools/src/patches.rs; ls crates/cards/patches | head -20; ls crates/cards\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; grep -n \\\"technical.json\\\\|aliases.json\\\" crates/tools/src/patches.rs | head; grep -n \\\"crates/cards/patches\\\\|patches/\\\" apps/web/src/net/ci-s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; grep -rln \\\"cards/patches\\\\|patches/\\\\|shipped.json\\\\|patches.json\\\" --include=*.rs --include=*.toml --include=*.ts --include=*.tsx --include=*\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; grep -n \\\"patches\\\" crates/server/build.rs crates/server/tests/api/catalog.rs crates/server/tests/api/game_records.rs crates/server/src/env.rs \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; sed -n 1,120p apps/web/src/net/ci-scope.test.ts; grep -n \\\"^ it(\\\\|^describe\\\\|^function\\\\|^const \\\" apps/web/src/net/ci-scope.test.ts | sed -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; grep -n \\\"patches\\\\|env\\\\.\\\\(example\\\\|production\\\\)\\\" apps/web/src/net/ci-scope.test.ts | head -20; sed -n 124,140p apps/web/src/net/ci-scope.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4094; sed -n 1,30p crates/tools/tests/acceptance.rs; sed -n 560,640p crates/tools/tests/acceptance.rs\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4094/.bot-plan.md\", \"content\": \"Draft for #4094. Findings: ship/cut write crates/cards/patches/{v*.json, patches.json, shipped.json, index.json, card_\u2026\n- said: # Plan for #4094: a `patches ship` pull request runs only the checks that read what it changes ## Goal `scripts/ci-scope.sh` gets a case for a diff in which every file is one that `cargo jackioh patches ship` or `patches cut` writes. That diff prints `full=true` and turns on only `rust_cards_lib`, \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-17T00:03:42Z",
       "owner_why": "it plans it",
@@ -15185,9 +15177,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-16T23:56:34Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43984519379",
+      "run_id": "pending:f89596e9-1794874549",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-17T00:03:42Z",
+      "started_at": "2026-11-17T00:16:14Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15342,9 +15334,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T00:15:34Z",
+    "at": "2026-11-17T00:16:14Z",
     "url": "",
-    "what": "build #4092 on claude-7"
+    "what": "build #4094 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-17T00:00:37Z",
