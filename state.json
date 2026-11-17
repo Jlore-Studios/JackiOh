@@ -13610,6 +13610,14 @@
         "sha": "713d91d67ef3d2da5b8a8399e0ea1695a6c6900c",
         "tiers": {}
       }
+    },
+    "4136": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-17T19:39:28Z",
+      "issue": 4115,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
