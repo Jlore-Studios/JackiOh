@@ -15213,13 +15213,14 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-1",
       "queued_at": "2026-11-17T00:13:44Z",
-      "run_id": "43986082011",
+      "run_id": "pending:b87a3930-1794876514",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 305,
-      "started_at": "2026-11-17T00:14:53Z",
+      "started_at": "2026-11-17T00:48:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15416,9 +15417,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T00:48:17Z",
+    "at": "2026-11-17T00:48:55Z",
     "url": "",
-    "what": "build #4011 on muse"
+    "what": "spot-check #4095 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-17T00:34:14Z",
@@ -35475,7 +35476,15 @@
         "n": 305,
         "pr": 4095,
         "queued_at": "2026-11-17T00:48:35Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:b87a3930-1794876514",
         "sha": "7dbfb6252f543a5b1a0357491a1b5393d5fc11a3",
+        "started_at": "2026-11-17T00:48:55Z",
         "status": "queued",
         "title": "Patch: the learned evaluation's training rows carry the hand eval the search corrects, with the decision's Death, turn-hook, Activate, attack-hook and awakening prices",
         "tries": 0
