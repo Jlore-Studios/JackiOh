@@ -15484,6 +15484,7 @@
     "4098": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "muse",
@@ -15500,25 +15501,29 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-17T00:16:53Z",
+      "feedback_since": "2026-11-17T07:44:45Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4062,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-17T07:44:25Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "medium",
       "run_id": "44041062351",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-17T07:44:45Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
