@@ -22,6 +22,7 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
+use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::config::{
     BRITTLE_TICK, BURN_DECAY, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH,
     JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
@@ -36,16 +37,16 @@ use jackioh_engine::{
     SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
     active_brittle_count, active_units_of, acts_to_awaken, animated_with_stats, armor_of, attack_restriction,
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, brittle_due_by, burn_on, cannot_attack,
-    card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of,
-    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
-    first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of,
-    hero_armor_of, hero_burn_of, hero_toxic_of, is_dormant_starship, is_extra_turn_card, is_slumbering,
-    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
-    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook,
-    unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
-    yard_at_turn_start,
+    card_at, card_keywords, card_type_of_face, converts_to, credit_lapsing, damage_pool_of, death_hook_of,
+    dormant_starship_of, effective_cost, effective_life, exit_mark, face_of, find_def, find_instance,
+    find_instance_mut, first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword,
+    heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_dormant_starship, is_extra_turn_card,
+    is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of,
+    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
+    own_cost, pierces, pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
+    settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on,
+    trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused,
+    with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -475,8 +476,10 @@ fn awaken_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices:
 /// `1 − unit_doomed / n` when the nth tick kills it. Each tick is R3540001's, before the start-of-turn
 /// triggers: Burn's hit, dropping by `BURN_DECAY` after it, then Toxic's; an unspent Divine Shield
 /// negates the first (its worth goes), Armor meets Burn's and Toxic pierces it, the unit's own cap holds
-/// both (R2179005), and an Indestructible unit takes none. Nothing is read with no counter or both
-/// weights at 0.
+/// both (R2179005), and an Indestructible unit takes none. With `w.pool_and_conversion_read`, its side's
+/// damage pools soak what they can of each tick's hits, refilled at the turn start before it (R4064000);
+/// each unit is read alone, as if no other tick had spent them first. Nothing is read with no counter or
+/// both weights at 0.
 fn afflicted(
     state: &GameState,
     unit: &CardInstance,
@@ -492,12 +495,14 @@ fn afflicted(
         return (value, 1.0);
     }
     let cap = unit_damage_cap(state, unit);
+    let pool = refilled_pool(state, unit.controller, w);
     let mut shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
     let mut spent = 0.0;
     let mut taken: i32 = 0;
     let mut share = 1.0;
     for tick in 1..=AI_AFFLICTION_TICKS {
         let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        let mut left = pool;
         for (amount, piercing) in [(burning, false), (toxic, true)] {
             if amount <= 0 {
                 continue;
@@ -512,7 +517,7 @@ fn afflicted(
             } else {
                 amount.saturating_sub(view.armor).max(0)
             };
-            taken = taken.saturating_add(cap.map_or(hit, |cap| hit.min(cap)));
+            taken = taken.saturating_add(soaked(&mut left, cap.map_or(hit, |cap| hit.min(cap))));
         }
         if taken >= view.health {
             share = 1.0 - w.unit_doomed / f64::from(tick);
@@ -987,23 +992,75 @@ fn yard_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &
 /// turn starts, each tick a hit as `projected_hero_damage` reads it (Burn's through Armor, Toxic's
 /// piercing it, R3540001; the divisors and caps for both), at most all but 1 of its life: the reply
 /// already plays out a tick that kills. 0 at a zero `hero_affliction`, with neither counter, or at 1 life.
+/// With `w.pool_and_conversion_read`, the side's damage pools soak what they can of each tick's hits,
+/// refilled at the turn start before it (R4064000).
 fn coming_hero_ticks(state: &GameState, player: PlayerId, w: &EvalWeights) -> i32 {
-    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
+    hero_ticks(
+        state,
+        player,
+        hero_burn_of(state, player),
+        hero_toxic_of(state, player),
+        w,
+    )
+}
+
+/// `coming_hero_ticks` with `burn` and `toxic` on `player`'s hero in place of the counters it has.
+fn hero_ticks(state: &GameState, player: PlayerId, burn: i32, toxic: i32, w: &EvalWeights) -> i32 {
     let life = effective_life(state, player);
     if w.hero_affliction == 0.0 || (burn == 0 && toxic == 0) || life <= 1 {
         return 0;
     }
+    let pool = refilled_pool(state, player, w);
     let mut taken: i32 = 0;
     for tick in 1..=AI_AFFLICTION_TICKS {
         let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        let mut left = pool;
         if burning > 0 {
-            taken = taken.saturating_add(subsystems::projected_hero_damage(state, player, burning, false));
+            let hit = subsystems::projected_hero_damage(state, player, burning, false);
+            taken = taken.saturating_add(soaked(&mut left, hit));
         }
         if toxic > 0 {
-            taken = taken.saturating_add(subsystems::projected_hero_damage(state, player, toxic, true));
+            let hit = subsystems::projected_hero_damage(state, player, toxic, true);
+            taken = taken.saturating_add(soaked(&mut left, hit));
         }
     }
     taken.min(life - 1)
+}
+
+/// R4064001: the life `amount` more of `kind` on `player`'s hero takes over the coming ticks
+/// (`coming_hero_ticks`), past what its counters take already: what a hit that Burns or is Toxic instead
+/// costs a hero.
+pub(crate) fn hero_ticks_added(
+    state: &GameState,
+    player: PlayerId,
+    kind: Affliction,
+    amount: i32,
+    w: &EvalWeights,
+) -> i32 {
+    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
+    let (more_burn, more_toxic) = match kind {
+        Affliction::Burn => (burn.saturating_add(amount), toxic),
+        Affliction::Toxic => (burn, toxic.saturating_add(amount)),
+    };
+    hero_ticks(state, player, more_burn, more_toxic, w) - hero_ticks(state, player, burn, toxic, w)
+}
+
+/// R4064000: what `player`'s damage pools soak of one turn start's ticks, refilled first (the refill,
+/// `turns_started`, comes before the tick, R3540001); 0 without `w.pool_and_conversion_read`.
+fn refilled_pool(state: &GameState, player: PlayerId, w: &EvalWeights) -> i32 {
+    if w.pool_and_conversion_read {
+        damage_pool_of(state, player, true)
+    } else {
+        0
+    }
+}
+
+/// R4064000: what is left of `hit` once damage pools with `left` to soak take what they can, taken off
+/// `left` (§4.4 step 3b).
+fn soaked(left: &mut i32, hit: i32) -> i32 {
+    let take = hit.min(*left).max(0);
+    *left -= take;
+    hit - take
 }
 
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor, less
@@ -1164,7 +1221,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
 /// under way: the player on turn has made this turn's attacks. With `w.static_attack_flags_read`, a unit that
 /// can only attack the Unit across lands nothing on a hero (R3550001), and one that Ignores Taunt is bound by no
-/// Taunt (R3560007).
+/// Taunt (R3560007). With `w.pool_and_conversion_read`, each hit meets §4.4 steps 3a and 3b as the walk's doc
+/// says, each side's pools read as they will stand when the attacks come (R4064000, R4064001).
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1204,7 +1262,9 @@ fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_t
             attacks.push((unit, view.attack, may_hit_hero));
         }
     }
-    damage_past_taunts_with(state, attacker.opponent(), &attacks, w)
+    // R4064000: the attacks are this turn's only when the player on turn still has them to come.
+    let swings_now = state.active == attacker && on_turn_swings;
+    damage_past_taunts_from(state, attacker.opponent(), &attacks, w, swings_now)
 }
 
 /// §4.5 step 4: a Reborn unit comes back at 1 health.
@@ -1249,18 +1309,71 @@ pub fn damage_past_taunts(
 /// bonuses (R1120) stay out. A hit that may not hit the hero (R1849005, #1823) lands nothing past the Taunts.
 /// With `w.static_attack_flags_read`, an attacker that Ignores Taunt (R3560007) is bound by none, Defense
 /// Position's included. With `w.best_attack_order_past_taunts` (R3937000) the walk runs as the flag's doc
-/// says, the larger of its two orders counting.
+/// says, the larger of its two orders counting. With `w.pool_and_conversion_read`, a hit that Burns or is
+/// Toxic instead deals nothing (§4.4 step 3a, R4064001), and the defender's damage pools soak what they
+/// have left, once across the walk's hits in the order it counts them (step 3b, R4064000); the attacks
+/// are this turn's, so each side's pools are read as they stand now.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
     attacks: &[(&CardInstance, i32, bool)],
     w: &EvalWeights,
 ) -> i32 {
-    let (smallest_first, breaker_behind) = soak_past_taunts(state, defender, attacks, w, false);
+    damage_past_taunts_from(state, defender, attacks, w, true)
+}
+
+/// `damage_past_taunts_with`, `swings_now` saying whether the attacks are this turn's: when not, each side
+/// whose turn starts before they land meets them with its damage pools refilled (R4064000, `WalkPools`).
+fn damage_past_taunts_from(
+    state: &GameState,
+    defender: PlayerId,
+    attacks: &[(&CardInstance, i32, bool)],
+    w: &EvalWeights,
+    swings_now: bool,
+) -> i32 {
+    let pools = WalkPools::of(state, defender, swings_now, w);
+    let (smallest_first, breaker_behind) = soak_past_taunts(state, defender, attacks, w, false, pools);
     if !breaker_behind {
         return smallest_first;
     }
-    smallest_first.max(soak_past_taunts(state, defender, attacks, w, true).0)
+    smallest_first.max(soak_past_taunts(state, defender, attacks, w, true, pools).0)
+}
+
+/// R4064000: the damage pools (§4.4 step 3b) a walk of `defender`'s Taunts meets, and whether it reads
+/// them and the conversions (step 3a, R4064001) at all (`w.pool_and_conversion_read`).
+#[derive(Clone, Copy)]
+struct WalkPools {
+    read: bool,
+    /// What the defender's pools soak between its Taunts and its hero.
+    defender: i32,
+    /// What the attacker's pools soak of one First Strike Taunt's strike back.
+    attacker: i32,
+}
+
+impl WalkPools {
+    /// `swings_now`: the attacks are this turn's. A side's pools refill first when its turn starts
+    /// before the swings: the attacker's always, the defender's when the attacker is on turn with this
+    /// turn's attacks made.
+    fn of(state: &GameState, defender: PlayerId, swings_now: bool, w: &EvalWeights) -> Self {
+        if !w.pool_and_conversion_read {
+            return Self {
+                read: false,
+                defender: 0,
+                attacker: 0,
+            };
+        }
+        let attacker = defender.opponent();
+        Self {
+            read: true,
+            defender: damage_pool_of(state, defender, state.active == attacker && !swings_now),
+            attacker: damage_pool_of(state, attacker, !swings_now),
+        }
+    }
+
+    /// R4064001: whether `source`'s hits Burn or are Toxic instead of dealing damage, as the walk reads it.
+    fn converts(&self, state: &GameState, source: &CardInstance) -> bool {
+        self.read && converts_to(state, source).is_some()
+    }
 }
 
 /// `damage_past_taunts_with`'s walk in one order (R3937000), and whether a Taunt had a lone breaker behind a
@@ -1271,6 +1384,7 @@ fn soak_past_taunts(
     attacks: &[(&CardInstance, i32, bool)],
     w: &EvalWeights,
     breaker_first: bool,
+    pools: WalkPools,
 ) -> (i32, bool) {
     let mut breaker_behind = false;
     let mut free: Vec<(&CardInstance, i32, bool)> = attacks.to_vec();
@@ -1283,6 +1397,8 @@ fn soak_past_taunts(
     stands.sort_by_key(|stand| stand.view.health + stand.view.armor);
 
     let mut total = 0;
+    // R4064000: what the defender's pools have left as the walk's hits land, in the order it counts them.
+    let mut pool = pools.defender;
     let mut i = 0;
     while i < stands.len() {
         let target = AttackTarget::Unit {
@@ -1295,9 +1411,9 @@ fn soak_past_taunts(
         });
         // R3937000: the smallest attacker that destroys this Taunt alone, when a smaller one comes first.
         if w.best_attack_order_past_taunts
-            && let Some(at) = bound
-                .iter()
-                .position(|(attacker, attack, _)| breaks_alone(state, attacker, *attack, &stands[i]))
+            && let Some(at) = bound.iter().position(|(attacker, attack, _)| {
+                breaks_alone(state, attacker, *attack, &stands[i], pool, &pools)
+            })
             && at > 0
         {
             if breaker_first {
@@ -1314,7 +1430,7 @@ fn soak_past_taunts(
             let Some((attacker, attack, may_hit_hero)) = bound.next() else {
                 break;
             };
-            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view) {
+            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view, &pools) {
                 if w.best_attack_order_past_taunts {
                     stopped.push((attacker, attack, may_hit_hero));
                 }
@@ -1322,14 +1438,36 @@ fn soak_past_taunts(
             }
             let keywords = unit_view(state, attacker).keywords;
             let pierce = pierces(state, Some(attacker), None);
+            // R4064001: a hit that Burns or is Toxic instead deals the Taunt nothing.
+            let converts = pools.converts(state, attacker);
             // R3937000: a hit the Taunt's Armor would take whole waits, with no hit and no splash yet; a
-            // Divine Shield still takes it, so it still goes in to pop one.
+            // Divine Shield still takes it, so it still goes in to pop one. R4064001: so does one that
+            // converts.
             if w.best_attack_order_past_taunts
                 && !stands[i].shield
-                && dealt_to(state, attack, &stands[i], pierce) <= 0
+                && (converts || dealt_to(state, attack, &stands[i], pierce) <= 0)
             {
                 stopped.push((attacker, attack, may_hit_hero));
                 continue;
+            }
+            // The hit on the Taunt, worked out before its splash: it lands first (§4.4 step 10), so it and
+            // its Trample excess meet the pools first (R4064000). Step 1: a Divine Shield takes the whole
+            // hit, one that converts included; step 3a (R4064001): one that converts is the Taunt's
+            // counter, no damage. Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346);
+            // a hit it takes whole is no damage instance at all (R1361). Step 3b: the pools soak what they
+            // have left of the rest, never on an Indestructible Taunt.
+            let dealt = if stands[i].shield || converts {
+                0
+            } else if has_keyword(&stands[i].view.keywords, KeywordKind::Indestructible) {
+                dealt_to(state, attack, &stands[i], pierce)
+            } else {
+                soaked(&mut pool, dealt_to(state, attack, &stands[i], pierce))
+            };
+            // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
+            if has_keyword(&keywords, KeywordKind::Trample) && dealt > stands[i].health {
+                let excess =
+                    subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
+                total += soaked(&mut pool, excess);
             }
             // The splash belongs to the attack rather than to the hit (R63), so it lands even when
             // the hit on the Taunt itself is stopped below. Only live neighbouring Taunts matter:
@@ -1338,7 +1476,12 @@ fn soak_past_taunts(
                 // Combat-only bonuses stay out of the threat model, so the splash is Poisonous
                 // from the attacker's own keyword alone.
                 let poisonous = has_keyword(&keywords, KeywordKind::Poisonous);
-                let from = side_of(state, attacker);
+                let mut from = side_of(state, attacker);
+                from.converts = if pools.read {
+                    converts_to(state, attacker)
+                } else {
+                    None
+                };
                 for neighbour in cleaved_neighbours(state, attacker, &stands[i].unit) {
                     let Some(j) = stands.iter().position(|stand| stand.unit.id == neighbour.id) else {
                         continue;
@@ -1358,20 +1501,24 @@ fn soak_past_taunts(
                         poisonous: false,
                         pierce: false,
                         cap: unit_damage_cap(state, &stands[j].unit),
+                        converts: None,
+                        pool,
                     };
                     let splash = blow(&from, attack, poisonous, &to);
+                    pool -= splash.soaked;
                     if splash.pops_shield {
                         stands[j].shield = false;
                     } else {
                         // Step 9: what Trample lands beyond the neighbour's health is a hit on
-                        // the hero (R63), as for the main hit below.
+                        // the hero (R63), as for the main hit above.
                         if has_keyword(&keywords, KeywordKind::Trample) && splash.dealt > stands[j].health {
-                            total += subsystems::projected_hero_damage(
+                            let excess = subsystems::projected_hero_damage(
                                 state,
                                 defender,
                                 splash.dealt - stands[j].health,
                                 pierce,
                             );
+                            total += soaked(&mut pool, excess);
                         }
                         if splash.kills {
                             // §4.5 step 4: a destroyed Reborn neighbour comes back and binds what
@@ -1398,15 +1545,8 @@ fn soak_past_taunts(
                 stands[i].shield = false;
                 continue;
             }
-            // Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346); a hit it takes
-            // whole is no damage instance at all (R1361).
-            let dealt = dealt_to(state, attack, &stands[i], pierce);
             if dealt <= 0 {
                 continue;
-            }
-            // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
-            if has_keyword(&keywords, KeywordKind::Trample) && dealt > stands[i].health {
-                total += subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
             }
             // Step 7: Poisonous destroys with any damage dealt.
             poisoned = has_keyword(&keywords, KeywordKind::Poisonous);
@@ -1431,11 +1571,15 @@ fn soak_past_taunts(
     }
 
     for (attacker, hit, may_hit_hero) in &free {
-        if !may_hit_hero {
+        // R4064001: a hit that Burns or is Toxic instead deals the hero nothing.
+        if !may_hit_hero || pools.converts(state, attacker) {
             continue;
         }
         let pierce = pierces(state, Some(attacker), None);
-        total += subsystems::projected_hero_damage(state, defender, *hit, pierce);
+        total += soaked(
+            &mut pool,
+            subsystems::projected_hero_damage(state, defender, *hit, pierce),
+        );
     }
     (total, breaker_behind)
 }
@@ -1453,12 +1597,28 @@ fn dealt_to(state: &GameState, attack: i32, stand: &TauntStand, pierce: bool) ->
 
 /// R3937000: whether `attacker`'s one hit of `attack` destroys `stand` as the walk left it: no Divine Shield
 /// takes it, no First Strike destroys the attacker first, and what gets past the Armor is the stand's
-/// health or more, or any of it from a Poisonous attacker.
-fn breaks_alone(state: &GameState, attacker: &CardInstance, attack: i32, stand: &TauntStand) -> bool {
-    if stand.shield || falls_to_first_strike(state, attacker, &stand.unit, &stand.view) {
+/// health or more, or any of it from a Poisonous attacker. With `pools.read`, a hit that converts destroys
+/// nothing (R4064001), and the defender's `pool` left soaks what it can first (R4064000).
+fn breaks_alone(
+    state: &GameState,
+    attacker: &CardInstance,
+    attack: i32,
+    stand: &TauntStand,
+    mut pool: i32,
+    pools: &WalkPools,
+) -> bool {
+    if stand.shield
+        || pools.converts(state, attacker)
+        || falls_to_first_strike(state, attacker, &stand.unit, &stand.view, pools)
+    {
         return false;
     }
     let dealt = dealt_to(state, attack, stand, pierces(state, Some(attacker), None));
+    let dealt = if has_keyword(&stand.view.keywords, KeywordKind::Indestructible) {
+        dealt
+    } else {
+        soaked(&mut pool, dealt)
+    };
     dealt > 0
         && (dealt >= stand.health
             || has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Poisonous))
@@ -1468,13 +1628,18 @@ fn breaks_alone(state: &GameState, attacker: &CardInstance, attack: i32, stand: 
 /// strikes an attacker without it first, and an attacker that falls there never lands its hit. The strike back runs
 /// the §4.4 steps that can stop it (Divine Shield, Armor, which a Pierce Taunt skips, R346, the attacker's own cap,
 /// R2179005, Indestructible, the zero rule); a Poisonous Taunt destroys with any damage. A Ranged attacker takes
-/// none from a non-Ranged Taunt (R783000).
+/// none from a non-Ranged Taunt (R783000). With `pools.read`, a Taunt whose hits convert destroys nothing
+/// (R4064001), and the attacker's whole pool meets its strike back (R4064000).
 fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
     taunt: &CardInstance,
     view: &UnitView,
+    pools: &WalkPools,
 ) -> bool {
+    if pools.converts(state, taunt) {
+        return false;
+    }
     if view.attack <= 0
         || !has_keyword(&view.keywords, KeywordKind::FirstStrike)
         || !takes_strike_back(state, attacker, taunt)
@@ -1494,6 +1659,8 @@ fn falls_to_first_strike(
         (view.attack - mine.armor).max(0)
     };
     let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
+    let mut left = pools.attacker;
+    let dealt = soaked(&mut left, dealt);
     dealt > 0 && (has_keyword(&view.keywords, KeywordKind::Poisonous) || dealt >= mine.health)
 }
 

@@ -3,13 +3,14 @@
 //! never concedes, offers or accepts a draw) and minus the mulligan, which `decide` answers itself.
 
 use indexmap::{IndexMap, IndexSet};
+use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::{
     ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, FengShuiOutcome, GameState, KeywordKind,
     PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
-    attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, effective_cost,
-    effective_life, find_instance, find_instance_mut, has_keyword, is_locked, lane_multiplier_for,
-    legal_actions, midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, subsystems,
-    takes_strike_back, unit_damage_cap, unit_view,
+    attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, converts_to,
+    damage_pool_of, effective_cost, effective_life, find_instance, find_instance_mut, has_keyword, is_locked,
+    lane_multiplier_for, legal_actions, midlane_lanes_of, pierces, position_after_switch, row_size, slot_of,
+    subsystems, takes_strike_back, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -192,10 +193,17 @@ pub(crate) struct Side {
     pub(crate) pierce: bool,
     /// R2179005: its own guard's cap on each hit it takes, after Armor (§4.4 step 3, `unit_damage_cap`).
     pub(crate) cap: Option<i32>,
+    /// R4064001: the counter its hits turn into instead of damage (§4.4 step 3a, `converts_to`), read
+    /// with `AI_EVAL.pool_and_conversion_read`.
+    pub(crate) converts: Option<Affliction>,
+    /// R4064000: what its side's damage pools have left for a hit on it (§4.4 step 3b, `damage_pool_of`),
+    /// read with `AI_EVAL.pool_and_conversion_read`; 0 without it.
+    pub(crate) pool: i32,
 }
 
 pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
     let view = unit_view(state, unit);
+    let read = AI_EVAL.pool_and_conversion_read;
     Side {
         shield: has_keyword(&view.keywords, KeywordKind::DivineShield),
         indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
@@ -203,41 +211,45 @@ pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
         poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
         pierce: pierces(state, Some(unit), None),
         cap: unit_damage_cap(state, unit),
+        converts: if read { converts_to(state, unit) } else { None },
+        pool: if read {
+            damage_pool_of(state, unit.controller, false)
+        } else {
+            0
+        },
         view,
     }
 }
 
 /// What one blow does (`blow`'s answer).
+#[derive(Default)]
 pub(crate) struct Blow {
     pub(crate) dealt: i32,
     pub(crate) kills: bool,
     pub(crate) pops_shield: bool,
+    /// R4064000: what the target side's damage pools took of it.
+    pub(crate) soaked: i32,
+    /// R4064001: the counter it adds instead of damage, of `from.converts`'s kind.
+    pub(crate) converted: i32,
 }
 
 /// §4.4 steps 1 to 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
 /// (`exchange`'s), Poisonous when `poisonous`, and whether it kills. Step 2's Armor is skipped when
-/// `from` pierces (R346), and step 3 caps it at `to`'s own cap (R2179005).
+/// `from` pierces (R346), and step 3 caps it at `to`'s own cap (R2179005). Then a hit that converts
+/// deals nothing and is its counter (step 3a, R4064001), and `to.pool` soaks what it can of the rest
+/// (step 3b, R4064000).
 pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
     if amount <= 0 {
-        return Blow {
-            dealt: 0,
-            kills: false,
-            pops_shield: false,
-        };
+        return Blow::default();
     }
     if to.shield {
         return Blow {
-            dealt: 0,
-            kills: false,
             pops_shield: true,
+            ..Blow::default()
         };
     }
     if to.indestructible {
-        return Blow {
-            dealt: 0,
-            kills: false,
-            pops_shield: false,
-        };
+        return Blow::default();
     }
     let dealt = if from.pierce {
         amount
@@ -245,11 +257,23 @@ pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow
         (amount - to.view.armor).max(0)
     };
     let dealt = to.cap.map_or(dealt, |cap| dealt.min(cap));
+    // R4064001, §4.4 step 3a: a hit that converts deals nothing and spends no pool; what is left is its
+    // counter.
+    if from.converts.is_some() {
+        return Blow {
+            converted: dealt,
+            ..Blow::default()
+        };
+    }
+    // R4064000, step 3b: the target side's pools soak what they have left.
+    let soaked = dealt.min(to.pool).max(0);
+    let dealt = dealt - soaked;
     let kills = dealt >= to.view.health || (poisonous && dealt > 0);
     Blow {
         dealt,
         kills,
-        pops_shield: false,
+        soaked,
+        ..Blow::default()
     }
 }
 
@@ -277,13 +301,19 @@ pub(crate) fn cleaved_neighbours(
 /// reads (`exchange`). Divine Shield or Indestructible on the target means no kill; a Ranged attacker
 /// survives any target that is not Ranged (R783000). Either side's hit skips the other's Armor when
 /// it pierces (§4.4 step 2, R346), and each side's hit is capped by the side it hits (§4.4 step 3,
-/// R2179005).
+/// R2179005). With `AI_EVAL.pool_and_conversion_read`, a hit that Burns or is Toxic instead kills
+/// nothing (step 3a, R4064001), and each side's damage pools soak what they have left of the hit on it
+/// (step 3b, R4064000).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
     if has_keyword(&t.keywords, KeywordKind::DivineShield)
         || has_keyword(&t.keywords, KeywordKind::Indestructible)
     {
+        return false;
+    }
+    let read = AI_EVAL.pool_and_conversion_read;
+    if read && converts_to(state, attacker).is_some() {
         return false;
     }
     let combat = exchange(state, attacker, &a, target, &t);
@@ -293,6 +323,11 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
         (combat.hit - t.armor).max(0)
     };
     let dealt = unit_damage_cap(state, target).map_or(dealt, |cap| dealt.min(cap));
+    let dealt = if read {
+        dealt - dealt.min(damage_pool_of(state, target.controller, false))
+    } else {
+        dealt
+    };
     if dealt <= 0 {
         return false;
     }
@@ -320,6 +355,13 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
         (combat.strike_back - a.armor).max(0)
     };
     let taken = unit_damage_cap(state, attacker).map_or(taken, |cap| taken.min(cap));
+    let taken = if !read {
+        taken
+    } else if converts_to(state, target).is_some() {
+        0
+    } else {
+        taken - taken.min(damage_pool_of(state, attacker.controller, false))
+    };
     if taken <= 0 {
         return true;
     }
@@ -1377,5 +1419,243 @@ mod tests {
             }
         }
         assert_eq!(checked, bodies.len() * bodies.len());
+    }
+
+    /// S+ #42 Force Projector, a Field Spell: the first 5 damage its side would take each turn is nullified.
+    const PROJECTOR: &str = "stinkyscapeplus-042";
+    /// S+ #151 Volcanic Rounds, a 3/1: "Damage dealt Burns."
+    const VOLCANIC: &str = "stinkyscapeplus-151";
+    /// S+ #153 Noxious Rounds, a 1/1: "Damage dealt is Toxic."
+    const NOXIOUS: &str = "stinkyscapeplus-153";
+    /// A 3/3 with no text.
+    const THREE_THREE: &str = "stand-in (1) 3/3";
+    /// The life p1's hero starts `armed` boards at, below its starting life so a heal shows.
+    const ARMED_LIFE: i32 = 20;
+
+    /// p1's `attacker`, given `attacker_keywords`, facing p2's `target`, given `target_keywords`, as `duel`
+    /// sets them, with a face-up Force Projector in p1's and p2's backrows as `pools` says and p1's hero at
+    /// `ARMED_LIFE`: the scenario and the two units' ids.
+    fn armed(
+        attacker: Value,
+        attacker_keywords: &[Keyword],
+        target: Value,
+        target_keywords: &[Keyword],
+        pools: (bool, bool),
+    ) -> (Scenario, String, String) {
+        jackioh_cards::register_all();
+        let mut p1 = json!({ "health": ARMED_LIFE, "field": [attacker] });
+        let mut p2 = json!({ "field": [target] });
+        for (side, pool) in [(&mut p1, pools.0), (&mut p2, pools.1)] {
+            if pool {
+                side["backrow"] = json!([{ "def": PROJECTOR, "faceUp": true }]);
+            }
+        }
+        let mut s = scenario(json!({ "seed": "ai-pools-and-conversion", "p1": p1, "p2": p2 }));
+        for player in [PlayerId::P1, PlayerId::P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        let attacker_id = active_units_of(s.state(), PlayerId::P1)[0].id.clone();
+        let target_id = active_units_of(s.state(), PlayerId::P2)[0].id.clone();
+        for (id, keywords) in [(&attacker_id, attacker_keywords), (&target_id, target_keywords)] {
+            s.card_mut(id.as_str())
+                .granted_keywords
+                .extend(keywords.iter().cloned());
+        }
+        (s, attacker_id, target_id)
+    }
+
+    /// A Rounds card overridden to a 6/2, as its Radiant face is.
+    fn rounds_six_two(rounds: &str) -> Value {
+        json!({ "def": rounds, "statsOverride": { "attack": 6, "health": 2 } })
+    }
+
+    /// R4064000, §4.4 step 3b: p2's Force Projector soaks a blow of 4 on its 3/3 whole, and the 1 it would
+    /// have left takes 1 of a blow of 3, which then kills nothing.
+    #[test]
+    fn r4064000_one_pool_soaks_two_blows_once() {
+        let (s, attacker, target) = armed(json!(VANILLA), &[], json!(THREE_THREE), &[], (false, true));
+        let from = side_of(s.state(), s.card(attacker.as_str()));
+        let mut to = side_of(s.state(), s.card(target.as_str()));
+        assert_eq!((from.pool, to.pool), (0, 5));
+        let first = blow(&from, 4, false, &to);
+        assert_eq!((first.dealt, first.soaked, first.kills), (0, 4, false));
+        to.pool -= first.soaked;
+        let second = blow(&from, 3, false, &to);
+        assert_eq!((second.dealt, second.soaked, second.kills), (2, 1, false));
+    }
+
+    /// R4064001, §4.4 step 3a: a 6/2 Rounds unit's hit on a 3/3 is its Burn (or Toxic) 6, no damage: no kill
+    /// in `blow`, `kills_and_survives` or `trade_value`, whose Lifesteal heals nothing, and the counter is
+    /// worth something. A Divine Shield still takes the hit (step 1), and the engine plays it alike.
+    #[test]
+    fn r4064001_a_converted_blow_kills_nothing_and_heals_nothing() {
+        for rounds in [VOLCANIC, NOXIOUS] {
+            let (s, attacker, target) = armed(
+                rounds_six_two(rounds),
+                &[],
+                json!(THREE_THREE),
+                &[],
+                (false, false),
+            );
+            let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
+            let read = blow(&side_of(state, a), 6, false, &side_of(state, t));
+            assert_eq!(
+                (read.dealt, read.kills, read.soaked, read.converted),
+                (0, false, 0, 6),
+                "{rounds}"
+            );
+            assert!(!kills_and_survives(state, a, t), "{rounds}");
+            assert!(!trade_value(state, a, &target, Prices::NONE).kills, "{rounds}");
+
+            let shielded = |keywords: &[Keyword]| {
+                let (s, attacker, target) = armed(
+                    rounds_six_two(rounds),
+                    keywords,
+                    json!(THREE_THREE),
+                    &[],
+                    (false, false),
+                );
+                trade_value(s.state(), s.card(attacker.as_str()), &target, Prices::NONE)
+            };
+            let plain = shielded(&[Keyword::DivineShield]);
+            let lifesteal = shielded(&[Keyword::DivineShield, Keyword::Lifesteal]);
+            assert!(!plain.kills && plain.value > 0.0, "{rounds}: {}", plain.value);
+            assert!((lifesteal.value - plain.value).abs() < 1e-9, "{rounds}");
+
+            let (s, attacker, target) = armed(
+                rounds_six_two(rounds),
+                &[],
+                json!(THREE_THREE),
+                &[Keyword::DivineShield],
+                (false, false),
+            );
+            let popped = blow(
+                &side_of(s.state(), s.card(attacker.as_str())),
+                6,
+                false,
+                &side_of(s.state(), s.card(target.as_str())),
+            );
+            assert!(popped.pops_shield && popped.converted == 0, "{rounds}");
+
+            let (mut s, attacker, target) = armed(
+                rounds_six_two(rounds),
+                &[Keyword::DivineShield, Keyword::Lifesteal],
+                json!(THREE_THREE),
+                &[],
+                (false, false),
+            );
+            s.attack(attacker.as_str(), target.as_str());
+            let struck = s.card(target.as_str());
+            assert_eq!(unit_view(s.state(), struck).health, 3, "{rounds}");
+            let counter = if rounds == VOLCANIC {
+                jackioh_engine::burn_on(struck)
+            } else {
+                jackioh_engine::toxic_on(struck)
+            };
+            assert_eq!(counter, 6, "{rounds}");
+            assert_eq!(
+                s.state().players[PlayerId::P1].hero.health,
+                ARMED_LIFE,
+                "{rounds}"
+            );
+        }
+    }
+
+    /// R4064001, R4064000: against a hero at 6, a 6/2 Rounds unit's hit is no win but is worth the life
+    /// its counter's ticks take; a 6/4 Mr. Vanilla's is the win, and behind p2's Force Projector it deals
+    /// 1, as the engine deals it.
+    #[test]
+    fn r4064001_r4064000_face_value_reads_the_counter_and_the_pool() {
+        const LIFE: i32 = 6;
+        let at_six = |attacker: Value, pool: bool| {
+            let (mut s, attacker, _) = armed(attacker, &[], json!(THREE_THREE), &[], (false, pool));
+            s.state_mut().players[PlayerId::P2].hero.health = LIFE;
+            (s, attacker)
+        };
+        for rounds in [VOLCANIC, NOXIOUS] {
+            let (s, attacker) = at_six(rounds_six_two(rounds), false);
+            let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
+            assert!(value > 0.0 && value < AI_EVAL.win, "{rounds}: {value}");
+        }
+        let vanilla = json!({ "def": VANILLA, "statsOverride": { "attack": 6, "health": 4 } });
+        let (s, attacker) = at_six(vanilla.clone(), false);
+        let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
+        assert!((value - AI_EVAL.win).abs() < 1e-9, "{value}");
+
+        let (mut s, attacker) = at_six(vanilla, true);
+        let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
+        assert!((value - AI_REPLY.face_per_damage).abs() < 1e-9, "{value}");
+        s.attack(attacker.as_str(), "hero");
+        assert_eq!(s.state().players[PlayerId::P2].hero.health, LIFE - 1);
+    }
+
+    /// The bodies `r4064000_r4064001_the_trade_reads_agree_with_the_combat_forecast` sets against each
+    /// other: a name, a card and the keywords granted it.
+    fn pool_bodies() -> Vec<(&'static str, &'static str, Vec<Keyword>)> {
+        vec![
+            ("Mr. Vanilla", VANILLA, vec![]),
+            ("Volcanic Rounds", VOLCANIC, vec![]),
+            ("Noxious Rounds", NOXIOUS, vec![]),
+            ("Divine Shield", VANILLA, vec![Keyword::DivineShield]),
+            ("Poisonous", VANILLA, vec![Keyword::Poisonous]),
+            ("First Strike", VANILLA, vec![Keyword::FirstStrike]),
+            ("Indestructible", VANILLA, vec![Keyword::Indestructible]),
+            (
+                "First Strike Volcanic Rounds",
+                VOLCANIC,
+                vec![Keyword::FirstStrike],
+            ),
+            ("Poisonous Noxious Rounds", NOXIOUS, vec![Keyword::Poisonous]),
+        ]
+    }
+
+    /// R4064000, R4064001: on every legal attack of one body on another, with or without a Force Projector
+    /// on either side, the static trader's kill and death (`trade_value`, `fight`) and the move order's tier
+    /// 1 read (`kills_and_survives`) are the engine's combat forecast's (R4032000), the damage pools and the
+    /// conversions among Divine Shield, Poisonous, First Strike and Indestructible.
+    #[test]
+    fn r4064000_r4064001_the_trade_reads_agree_with_the_combat_forecast() {
+        let bodies = pool_bodies();
+        let settings = [(false, false), (true, false), (false, true), (true, true)];
+        let mut checked = 0;
+        for pools in settings {
+            for (a, attacker_card, attacker_keywords) in &bodies {
+                for (t, target_card, target_keywords) in &bodies {
+                    let (s, attacker_id, target_id) = armed(
+                        json!(attacker_card),
+                        attacker_keywords,
+                        json!(target_card),
+                        target_keywords,
+                        pools,
+                    );
+                    let state = s.state();
+                    let attacker = find_instance(state, &attacker_id).expect("the attacker");
+                    for entry in combat_forecast(state, PlayerId::P1).attacks {
+                        if entry.target_id.starts_with("hero-") {
+                            continue;
+                        }
+                        assert_eq!(entry.target_id, target_id, "{a} into {t}, {pools:?}");
+                        let target = find_instance(state, &entry.target_id).expect("the target");
+                        assert_eq!(
+                            trade_value(state, attacker, &entry.target_id, Prices::NONE).kills,
+                            entry.kills,
+                            "{a} into {t}, {pools:?}: trade_value's kill, {entry:?}"
+                        );
+                        assert_eq!(
+                            fight(state, attacker, target).dies,
+                            !entry.survives,
+                            "{a} into {t}, {pools:?}: fight's death, {entry:?}"
+                        );
+                        assert_eq!(
+                            kills_and_survives(state, attacker, target),
+                            entry.kills && entry.survives,
+                            "{a} into {t}, {pools:?}: kills_and_survives, {entry:?}"
+                        );
+                        checked += 1;
+                    }
+                }
+            }
+        }
+        assert_eq!(checked, settings.len() * bodies.len() * bodies.len());
     }
 }

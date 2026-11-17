@@ -45,6 +45,7 @@ pub mod outside_data;
 pub mod pierce;
 pub mod pinned;
 pub mod policy;
+pub mod pools_and_conversion;
 pub mod position_model;
 pub mod prompts_v020;
 pub mod puzzles;
