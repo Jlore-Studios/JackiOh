@@ -14,7 +14,7 @@
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::api::crypto::digest;
+use crate::api::crypto::{constant_time_eq, digest};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, ok_of, to_json};
 use crate::app::App;
 use crate::config::IDEMPOTENCY_KEY_TTL_HOURS;
@@ -122,7 +122,9 @@ pub async fn replayed<T>(
     let Some(row) = tx.economy_idempotency_get(profile_id, &request.key).await? else {
         return Ok(None);
     };
-    if row.route != request.route || row.body_hash != request.body_hash {
+    // The body hash is an HMAC under `CODE_PEPPER` of what the caller sent, so it is compared in constant time
+    // (README.md, Conventions); the route is a static string and no secret.
+    if row.route != request.route || !constant_time_eq(&row.body_hash, &request.body_hash) {
         return Err(ApiError::new(
             ApiErrorCode::IdempotencyKeyReused,
             "this Idempotency-Key was sent with another request",
