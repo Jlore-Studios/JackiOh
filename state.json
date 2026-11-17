@@ -10293,6 +10293,13 @@
     "4014": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44170484729",
+        "model": "sonnet",
+        "provider": "claude-3",
+        "since": "2026-11-17T20:51:30Z",
+        "until": "2026-11-17T21:21:30Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
