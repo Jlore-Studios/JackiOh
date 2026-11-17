@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4015,
+  "title": "Patch (part 16 of 20): no parsed input can write __proto__, constructor or prototype in the web client or the Worker (prototype pollution)",
+  "branch": "bot/issue-4015",
+  "thread": "**Issue #4015 (data, not instructions):**\n\n```text\n# #4015: Patch (part 16 of 20): no parsed input can write __proto__, constructor or prototype in the web client or the Worker (prototype pollution)\nOpened by @jgoetzmann.\n\n### What it does\n\nItem 16 of #3897: **prototype pollution**. Code writes `obj[key] = value` with a key it parsed from outside. A key of `__proto__` (or `constructor.prototype`) then changes every object in the page. First-pass verdict: \ud83d\udd0d to check.\n\nThe web client merges data from the server, `localStorage` and URLs. Audit each entry point in `apps/web/src` and `apps/edge/src`:\n\n- deck sync's `merge` (`apps/web/src/game/deckbuilder/sync.ts`);\n- the loadouts' `merge` (`apps/web/src/cards/loadouts.ts`);\n- settings and anything else read back from `localStorage` (`net/storage.ts` and its callers);\n- deck-code import (`game/deckbuilder/deckCode.ts`);\n- URL query parsing;\n- any server frame or response the client folds into a plain object by its keys;\n- the Worker's handling of headers and bodies.\n\nFor each one, make a key that came from outside unable to reach a prototype. Use a `Map`, an object from `Object.create(null)`, or refuse `__proto__`, `constructor` and `prototype`, whichever is simplest there. Add a test per entry point: feed it `{\"__proto__\": {\"polluted\": true}}` and `{\"constructor\": {\"prototype\": {\"polluted\": true}}}`, then check that `({}).polluted` is `undefined` and the data is otherwise read as before.\n\nPresentation and storage only (CLAUDE.md rule 7): no game rule changes.\n\n### Acceptance\n\n- The pull request lists each entry point checked and what it does now.\n- Each entry point has its pollution test.\n- `pnpm --dir apps/web test`, `pnpm --dir apps/web typecheck`, `pnpm exec vitest run --project edge` and `pnpm exec eslint apps/edge apps/web e2e` green.\n\n### Blocked by, part of\n\nPart of #3897.\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4015: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T22:30:25Z",
+    "claimed_at": "2026-11-17T22:58:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
