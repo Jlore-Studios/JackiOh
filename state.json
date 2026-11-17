@@ -15218,6 +15218,7 @@
       "run_id": "43986082011",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 305,
       "started_at": "2026-11-17T00:14:53Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35454,9 +35455,33 @@
         "title": "Patch: daily super run failed",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "bebe0cd62f06ae598473437677812182afbaff1b",
+        "issue": 4070,
+        "merged_at": "2026-11-17T00:48:35Z",
+        "n": 305,
+        "pr": 4095,
+        "queued_at": "2026-11-17T00:48:35Z",
+        "sha": "7dbfb6252f543a5b1a0357491a1b5393d5fc11a3",
+        "status": "queued",
+        "title": "Patch: the learned evaluation's training rows carry the hand eval the search corrects, with the decision's Death, turn-hook, Activate, attack-hook and awakening prices",
+        "tries": 0
       }
     ],
-    "count": 304
+    "count": 305
   },
   "statistics": {
     "at": "2026-11-17T00:37:15Z"
