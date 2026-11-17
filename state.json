@@ -16066,16 +16066,10 @@
     "what": "spot-check #4106 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-17T02:37:39Z",
+    "at": "2026-11-17T02:51:42Z",
     "notes": [
-      "delivered plan #4057 on agy (run 44003362499): planned",
-      "delivered revise #4090 on claude-4 (run 44000325296): built",
-      "delivered review #4104 on muse (run 43998415712): built",
-      "started build #4057 on agy (run 44004883683)",
-      "started review #4104 on claude-8 (run 44004979129)",
-      "started review #4106 on claude-8 (run 44005067861)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #4106 on claude-8 (run 44005067861): reviewed",
+      "delivered review #4104 on claude-8 (run 44004979129): reviewed"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16779,7 +16773,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-17T02:37:39Z",
+  "loop_tick": "2026-11-17T02:51:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
