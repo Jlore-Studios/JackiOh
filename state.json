@@ -36369,14 +36369,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-17T00:18:28Z,claude-8,ping,before,43986266540,32,2026-11-17T01:20:00Z,,,allowed,85,,",
-      "2026-11-17T00:22:00Z,claude-8,stream,call,43986266540,33,2026-11-17T01:20:00Z,,,allowed,100,,"
-    ],
-    "runs": [
-      "2026-11-17T01:02:31Z,43986266540,claude-8,sonnet+opus,build,4094,medium,built,,7.3,58,10508,1844621,0.5231,32,33,,,19.7,claude-8,fresh,,1"
-    ]
-  },
   "version": 1
 }
