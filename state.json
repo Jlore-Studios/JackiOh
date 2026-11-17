@@ -12688,17 +12688,8 @@
       ]
     },
     "4110": {
-      "action": "plan",
-      "asks": [
-        "c:6958344096"
-      ],
-      "build_next": {
-        "from_run": "44163543829",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-17T20:09:39Z",
-        "until": "2026-11-17T20:39:39Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-17T20:09:31Z",
         "difficulty": "hard",
@@ -12717,10 +12708,9 @@
         "reason": "planned on opus",
         "trail": "ion\": \"Read R976000 front matter and find tut\u2026\n- Bash: {\"command\": \"git grep -n \\\"JACKIOH_RECORD_[A-Z_]*\\\\|UPDATE_FIXTURES\\\\|JACKIOH_BLESS\\\" -- crates apps e2e scripts | grep -o \\\"JACKIOH_[A-Z_]*\\\" | sort | uniq -c\", \"description\": \"List fixture re-recor\u2026\n- Bash: {\"command\": \"grep -n \\\"arena\\\" crates/tools/README.md | head -30\", \"description\": \"Read the arena command's documentation\"}\n- Bash: {\"command\": \"sed -n 1,40p scripts/worktree.sh; nproc; ls target 2>/dev/null | head\", \"description\": \"Read worktree script and check build cache\"}\n- Bash: {\"command\": \"grep -n \\\"out\\\\b\\\\|default_value\\\\|training-out\\\\|fn run\\\" crates/tools/src/arena.rs | head -30\", \"description\": \"Check arena's default output directory\"}\n- Bash: {\"command\": \"sed -n 8,24p crates/tools/src/arena.rs\", \"description\": \"Read arena header on outputs\"}\n- Bash: {\"command\": \"sed -n 405,445p crates/ai/tests/ai/match_.rs; git grep -n \\\"mulligan\\\" -- crates/ai/tests crates/tools/src crates/server/tests | grep -v \\\"^crates/ai/tests/ai/decide.rs\\\" | cut -c1-200 |\u2026\n- Bash: {\"command\": \"git grep -n \\\"DEAL_SHAPE\\\\|UNBANNED_PREFER\\\\|DEALT_Q\\\\b\\\\|dealt-pool model\\\\|DEALT_Q_PRIOR\\\" -- crates/tools crates/ai/src/deck.rs crates/ai/tests | cut -c1-200 | head -20\", \"description\u2026\n- Bash: {\"command\": \"git grep -n \\\"shadow_ban.rs\\\" -- crates/tools/src | cut -c1-180 | head -10; grep -n \\\"The unban lane's dealt-pool model\\\" crates/ai/src/shadow_ban.rs\", \"description\": \"Check sweep writer\u2026\n- Bash: {\"command\": \"grep -n \\\"fn shadow_ban_rs_is_what_its_reports_of_record_dictate\\\" -A30 crates/tools/src/sweep.rs | head -45; grep -n \\\"fn rewrite\\\\|fn write_shadow\\\\|fn splice\\\\|TABLE_END\\\\|END_MARK\\\\|\u2026\n- Bash: {\"command\": \"grep -n \\\"^| \\\\`classify\\\" crates/tools/README.md | cut -c1-2500\", \"description\": \"Read classify command documentation\"}\n- Bash: {\"command\": \"sed -n 478,505p crates/ai/src/decide.rs; sed -n 40,56p crates/ai/src/lib.rs; grep -n \\\"^use\\\\|^ \\\" crates/ai/src/evaluate.rs | sed -n 1,5p; grep -n \\\"pub mod evaluate\\\\|mod evaluate\\\" cr\u2026\n- Bash: {\"command\": \"ls spec/rulings/ | grep -c .; ls spec/rulings/R411* 2>/dev/null; git grep -n \\\"R4110\\\" -- crates apps spec e2e | head\", \"description\": \"Check ruling numbers free in the issue's block\"}\n- Bash: {\"command\": \"grep -h \\\"^cards:\\\" spec/rulings/*.md | grep -o \\\"C+ #[0-9]*\\\\|\\\\bC #[0-9]*\\\\|CL #[0-9]*\\\" | sort | uniq -c | sort -rn | head -5; grep -l \\\"^cards:.*C+ #19\\\\b\\\" spec/rulings/*.md | head \u2026\n- Bash: {\"command\": \"grep -n -o \\\"[^.]*\\\\(one-drop\\\\|first-turn\\\\|#993\\\\|AI_MULLIGAN_CURVE\\\\|early play\\\\)[^.]*\\\\.\\\" spec/09-architecture.md | cut -c1-400 | head\", \"description\": \"Find the curve's descriptio\u2026\n- Bash: {\"command\": \"grep -n \\\"OPENING_HAND\\\\|OPENING_COINS\\\\|pub const STARTING_HAND\\\" crates/engine/src/config.rs | head\", \"description\": \"Check opening hand sizes in engine config\"}\n- Bash: {\"command\": \"sed -n 55,70p crates/engine/src/config.rs\", \"description\": \"Read opening draw constants\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json,re\\nd=json.load(open('crates/cards/catalog.json'))\\nsrc=open('crates/ai/src/shadow_ban.rs').read()\\nstart=src.index('pub const DEALT_Q: &[(&str, f64)] =\u2026\n- Bash: {\"command\": \"awk 'NR>=820 && NR<=880 && /pub struct|pub radiant|pub cost_mod|pub def_id/ {print NR\\\": \\\"$0}' crates/engine/src/state.rs\", \"description\": \"Confirm CardInstance radiant field\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct CardInstance\\\" -A40 crates/engine/src/state.rs | grep -n \\\"radiant\\\\|cost_mod\\\\|def_id\\\\|pub struct\\\" \", \"description\": \"Find CardInstance fields\"}\n- Bash: {\"command\": \"sed -n 1,12p crates/ai/tests/ai/mod.rs; ls crates/ai/tests/; grep -n \\\"#\\\\[ignore\\\\|#\\\\[test\\\\]\\\" crates/ai/tests/ai/tutorial_tier.rs | head; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/ai/\u2026\n- Bash: {\"command\": \"ls crates/ai/tests/fixtures | head; git grep -ln \\\"fixtures/\\\" -- crates/ai/tests | head\", \"description\": \"List AI test fixtures\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/ai/tests/ai/pinned.rs | cut -c1-200\", \"description\": \"Read pinned game tests header\"}\n- Bash: {\"command\": \"sed -n 1975,2030p crates/server/tests/api/practice.rs\", \"description\": \"Read the server's practice claim fixture test\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn verify\\\" crates/server/src/ | head -3; f=$(grep -rln \\\"pub fn verify\\\" crates/server/src/ | head -1); grep -n \\\"ai_moves\\\\|decide\\\\|mulligan\\\" $f | head -20\", \"descript\u2026\n- Bash: {\"command\": \"sed -n 150,200p crates/server/src/economy/practice.rs; grep -n \\\"ai_moves\\\\|decide\\\\|ai_action\\\\|jackioh_ai\\\" crates/server/src/economy/practice.rs | head -20\", \"description\": \"Read prac\u2026\n- Bash: {\"command\": \"grep -n \\\"Ai\\\\b\\\\|AI change\\\\|selfplay\\\" crates/tools/src/claims.rs | head -20\", \"description\": \"Check how claims treat AI changes\"}\n- Bash: {\"command\": \"grep -n \\\"Kind::Ai\\\\|ChangeKind::Ai\\\\|\\\\\\\"AI\\\\\\\"\\\" crates/tools/src/classify.rs | head -10; grep -n \\\"fn check_claims\\\\|pub fn claims\\\\|plays differently\\\" crates/tools/src/claims.rs | h\u2026\n- Bash: {\"command\": \"sed -n 40,80p crates/tools/src/claims.rs\", \"description\": \"Read the claims check logic\"}\n- Bash: {\"command\": \"sed -n 630,665p crates/tools/src/classify.rs\", \"description\": \"Read classify's kind decision\"}\n- Bash: {\"command\": \"grep -n \\\"mulligan\\\" crates/ai/README.md docs/architecture.md docs/v0.3.0/SURFACE.md 2>/dev/null | cut -c1-220\", \"description\": \"Find mulligan mentions in docs\"}\n- Bash: {\"command\": \"sed -n 392,412p crates/ai/README.md\", \"description\": \"Read README on generation and fixture after AI changes\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\nLater findings:\\n- Server claim test does not re-run AI (R2560000); only web claim.test.ts depends on the AI.\\n- classify: AI change -> Kind::Ai, no fragme\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2, the AI: it changes the mulligan decisions in crates/ai/src/mulligan.rs\"} --> ## Goal The AI's mulligan follows SPEC \u00a79.9. - **Bound:** it keeps exactly the hand cards whose `mulligan_cost` is within `mulligan_keep_bound`. The \"one dearer\" except\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-17T19:41:58Z",
       "owner_why": "handed off from `agy`: `agy` is busy: its lanes are all taken",
@@ -12733,12 +12723,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-17T19:19:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44163543829",
+      "run_id": "pending:d55bfaae-1794946217",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-17T19:54:04Z",
+      "started_at": "2026-11-17T20:10:44Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6958344096"
+      ]
     },
     "4111": {
       "action": "plan",
@@ -13321,9 +13313,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T19:54:42Z",
+    "at": "2026-11-17T20:10:44Z",
     "url": "",
-    "what": "plan #4111 on claude-6"
+    "what": "build #4110 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-17T20:01:37Z",
