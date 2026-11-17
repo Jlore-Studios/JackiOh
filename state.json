@@ -12728,7 +12728,9 @@
     },
     "4112": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6958351307"
+      ],
       "build_next": {
         "from_run": "44159140231",
         "model": "muse-spark-1.3-contributor",
@@ -12775,9 +12777,7 @@
       "started_at": "2026-11-17T19:29:28Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6958351307"
-      ]
+      "taken_asks": []
     },
     "4113": {
       "action": "revise",
