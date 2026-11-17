@@ -15492,10 +15492,10 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-17T02:13:56Z",
-        "built_by": "",
+        "at": "2026-11-17T08:28:42Z",
+        "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "133a4cdeb526722a00fdf6a5e8a428c85aa29cba"
+        "sha": "3e9f5dbc53bf30c3f396a0c786d59743370c9ead"
       },
       "cross_rounds": 0,
       "died": 0,
