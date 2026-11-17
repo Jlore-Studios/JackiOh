@@ -15421,7 +15421,6 @@
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed": true,
         "claimed_at": "2026-11-17T00:59:59Z",
         "from_run": "43986355961",
         "gates": [
@@ -15479,7 +15478,7 @@
         "rounds_used": 0,
         "since": "2026-11-17T00:57:44Z",
         "source": "build",
-        "until": "2026-11-17T01:27:44Z"
+        "until": "2026-11-17T01:58:53Z"
       },
       "pending_request": false,
       "provider": "gpt",
