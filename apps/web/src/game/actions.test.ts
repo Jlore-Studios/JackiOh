@@ -524,6 +524,40 @@ describe("R446 a Unit placed on your Ivory Tower by clicking the Tower", () => {
   });
 });
 
+describe("R3864000 R391 a Tribute played into its own zone by clicking the unit standing in it", () => {
+  // e2e spec 48 (#4079): the one Tribute is fixed, so the play asks only its zone, and the unit's own zone is one.
+  const view = seatedView({
+    you: emptySide("p1", {
+      hand: [card({ instanceId: "h1", defId: "traininggrounds-054", cost: 4 })],
+      units: [unit("p1", { instanceId: "u1" }), null, null, null, null],
+    }),
+    opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1" }), null, null, null, null] }),
+  });
+  const rock = (lane: number): ActionBody => ({
+    type: "play",
+    instanceId: "h1",
+    zone: { row: "units", lane },
+    tributes: ["u1"],
+  });
+  const legal: ActionBody[] = [1, 2, 3, 4, 5].map(rock);
+  const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+  it("R3864000 R391 asks only the zone, and a click on the unit plays it into the unit's own zone", () => {
+    expect(outstandingNeed(playing)?.kind).toBe("zone");
+    const result = onClickTarget(view, legal, playing, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
+
+    expect(result.action).toEqual(rock(1));
+    expect(result.interaction).toEqual(IDLE);
+  });
+
+  it("R3864000 an opponent's unit changes nothing", () => {
+    const result = onClickTarget(view, legal, playing, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 });
+
+    expect(result.action).toBeUndefined();
+    expect(result.interaction).toBe(playing);
+  });
+});
+
 describe("the attack flow", () => {
   const view = seatedView();
 

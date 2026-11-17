@@ -1,0 +1,20 @@
+{
+  "title": "A doubling stops at 999 Attack or Health",
+  "sources": "#4079",
+  "notes": "R4079000: Unsecure System's doubling and Divine Spirit's doubling or tripling take a Unit's stat no higher than MULTIPLIED_STAT_CAP (999), after ten doublings in handicapped fuzz seed 9203 reached 3,066 Attack, past GROWTH_NUMBER_BOUND; the v0.6.6d scripts are kept for replays (R767000).",
+  "player": {
+    "title": "Doubling capped at 999",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Unsecure System and Divine Spirit now raise a Unit's Attack or Health to at most 999."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscape-119",
+    "stinkyscape-010-2"
+  ]
+}

@@ -177,6 +177,15 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
     expect(screen.getByTestId("hand-opponent")).toHaveAttribute("data-revealed", "true");
   });
 
+  it("R434 at tablet portrait an ended board's field rows give the revealed hand its height", () => {
+    // #4079 (practice-table at 768x1024): the face-up hand is a hand card tall, so the four field rows shrink to
+    // leave both hands their 1.3 rows each; the rule is the tablet-portrait block's alone.
+    const rules = boardRules();
+    const ended = rules.filter((rule) => rule.selectors.includes('.board:has(> .hand-opponent[data-revealed="true"])'));
+    expect(ended).toHaveLength(1);
+    expect(ended[0]?.body).toContain("--card-h: clamp(60px, calc((100cqh - 305px) / 6.6), 113px)");
+  });
+
   it("R434 the flip is scaled by --anim-scale and stopped under reduced motion, which leaves the face up", () => {
     const rules = boardRules();
     const flip = rules.find((rule) => rule.selectors.includes(".hand-flip") && rule.body.includes("animation:"));

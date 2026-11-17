@@ -246,6 +246,24 @@ describe("R3220000 the dialog convention", () => {
     expect(readSheet("src/game/notices.css")).not.toMatch(/concede-(?:scrim|dialog)/);
     expect(readSheet("src/practice/practice.css")).not.toMatch(/practice-leave|practice-result-scrim|practice-result__(title|reason|actions)/);
   });
+
+  // #4079 (e2e spec 42): a tavern shell is its own stacking context, so the scrim's --z-dialog counts only
+  // inside it, and the toasts beside the shell drew over the Together page's chat.
+  it("R3220000 a tavern shell holding a dialog takes --z-dialog, over the toasts", () => {
+    const sheet = readSheet("src/game/dialog.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+    const holding = /\.tavern\.app-shell:has\(>\s*\.dialog-scrim\)\s*\{([^}]*)\}/.exec(sheet)?.[1] ?? "";
+    expect(holding).toMatch(/z-index:\s*var\(--z-dialog\);/);
+    const tavern = readSheet("src/auth/tavern.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+    const shell = /\.tavern\.app-shell\s*\{([^}]*)\}/.exec(tavern)?.[1] ?? "";
+    expect(shell, "a positioned shell, so its z-index applies").toMatch(/position:\s*relative;/);
+    const token = (name: string): number => {
+      const line = readSheet("src/surfaces.css")
+        .split("\n")
+        .find((text) => text.trim().startsWith(`--z-${name}:`));
+      return Number(line?.split(":")[1]?.replace(";", "").trim());
+    };
+    expect(token("toast")).toBeLessThan(token("dialog"));
+  });
 });
 
 /** A dialog with a button that opens a second one over it, as the item preview opens its Looks. */

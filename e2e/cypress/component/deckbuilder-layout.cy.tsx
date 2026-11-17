@@ -116,6 +116,9 @@ function mountWorkshop(decks: readonly (readonly string[])[], names: readonly st
 
 const POOL_ITEMS = `${ts(CARD_POOL)} .db-item`;
 const POOL_TEXTS = `${ts(CARD_POOL)} .card-text`;
+/** The row stops one walk command takes, inside its 60 s timeout whatever the pool's size (#4079: one walk of every
+    row reached 60 s at 799 cards; #2226). */
+const ROWS_PER_WALK = 40;
 
 function fitted(text: HTMLElement): boolean {
   return text.style.getPropertyValue("--cf-fit") !== "";
@@ -124,7 +127,7 @@ function fitted(text: HTMLElement): boolean {
 /** #263: off-screen faces fit only after nearing the screen; visit each grid row before checking. */
 function fitEveryPoolCard(): void {
   cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
-  cy.document().then({ timeout: 60_000 }, async (doc) => {
+  cy.document().then((doc) => {
     const view = doc.defaultView;
     if (view === null) return;
     const frame = (): Promise<void> =>
@@ -137,10 +140,17 @@ function fitEveryPoolCard(): void {
     // One stop per row: a row's items share its top and near the screen together (#2226: one stop per
     // item outran the 60 s timeout once the pool passed 570 cards).
     const rows = items.filter((item, index) => index === 0 || item.offsetTop !== items[index - 1]?.offsetTop);
-    for (const item of [...rows, ...rows.slice(0, 1)]) {
-      item.scrollIntoView({ block: "center" });
-      await frame();
-      await frame();
+    const stops = [...rows, ...rows.slice(0, 1)];
+    // Each command walks ROWS_PER_WALK stops, so no one of them nears its timeout as the pool grows.
+    for (let start = 0; start < stops.length; start += ROWS_PER_WALK) {
+      const chunk = stops.slice(start, start + ROWS_PER_WALK);
+      cy.wrap(null, { log: false }).then({ timeout: 60_000 }, async () => {
+        for (const item of chunk) {
+          item.scrollIntoView({ block: "center" });
+          await frame();
+          await frame();
+        }
+      });
     }
   });
   cy.get(POOL_TEXTS).should(($texts) => {

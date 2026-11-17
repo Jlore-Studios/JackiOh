@@ -681,6 +681,73 @@ mod r3550007_a_side_snapshot_and_its_restore {
         let kept = id_at(&s, P1, 1);
         assert!(s.card(kept.as_str()).radiant, "the rebuilt side is Radiant");
     }
+
+    /// R227: the Cry's snapshot names the trap by the id it had then; set again face down under a fresh
+    /// id, it is still that card, so the Death puts it back once (Duos fuzz seed 1616, #4079).
+    #[test]
+    fn r227_r3550007_a_trap_set_again_under_a_fresh_id_after_the_cry_goes_back_as_itself_not_as_a_second_copy()
+     {
+        let mut s = board(
+            "r3550007-re-set",
+            json!({
+                "field": [PLAIN],
+                "backrow": [{ "def": GAMBIT, "lane": 1, "faceUp": false }],
+                "hand": [BOGOS],
+            }),
+            json!({}),
+        );
+        let bogos = hand_id(&s, P1, BOGOS);
+        s.play(bogos.as_str(), json!({ "zone": 2 }));
+        let bogos = id_at(&s, P1, 2);
+        let old = backrow_id(&s, P1, 1);
+        // Back to the hand, out of it ("a card that is in no pile", as `fresh_face_down_id` asks) and set again.
+        let state = s.state_mut();
+        let mut trap = find_instance(state, &old).cloned().expect("the Gambit");
+        move_to_zone(state, &mut trap, OffFieldZone::Hand, MoveToZoneOptions::default());
+        let at = state
+            .players
+            .p1
+            .hand
+            .iter()
+            .position(|held| held.id == old)
+            .expect("the Gambit went back to the hand");
+        let mut moved = state.players.p1.hand.remove(at);
+        fresh_face_down_id(state, &mut moved);
+        let fresh = moved.id.clone();
+        place_on_field(
+            state,
+            &mut moved,
+            ZoneSlot {
+                player: P1,
+                row: Row::Backrow,
+                lane: 1,
+            },
+            PlaceOnFieldOptions::default(),
+        );
+        assert_ne!(fresh, old);
+
+        apply_now(s.state_mut(), destroy(&bogos));
+        assert_eq!(
+            backrow_id(&s, P1, 1),
+            fresh,
+            "the trap stands back in its zone as itself"
+        );
+        assert!(
+            find_instance(s.state(), &old).is_none(),
+            "no copy under the old id"
+        );
+        let side = &s.state().players.p1;
+        let gambits = side
+            .backrow
+            .iter()
+            .flatten()
+            .chain(side.units.iter().flatten().flatten())
+            .chain(&side.hand)
+            .chain(&side.graveyard)
+            .filter(|card| card.def_id == GAMBIT)
+            .count();
+        assert_eq!(gambits, 1, "one Gambit, not a second copy");
+    }
 }
 
 mod r3550003_cooldown_view {
