@@ -15106,6 +15106,13 @@
     "4094": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43984519379",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-17T00:11:16Z",
+        "until": "2026-11-17T00:41:16Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
