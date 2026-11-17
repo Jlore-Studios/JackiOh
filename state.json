@@ -13533,7 +13533,16 @@
       "feedback_since": "2026-11-17T19:17:31Z",
       "issue": 4108,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "713d91d67ef3d2da5b8a8399e0ea1695a6c6900c",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
