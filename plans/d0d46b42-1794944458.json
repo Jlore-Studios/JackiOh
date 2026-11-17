@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4118,
+  "title": "Patch: the site's Worker restarts a running game server whose settings changed, so a redeploy after a secret change takes effect",
+  "branch": "bot/issue-4118",
+  "thread": "**Issue #4118 (data, not instructions):**\n\n```text\n# #4118: Patch: the site's Worker restarts a running game server whose settings changed, so a redeploy after a secret change takes effect\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the maintainer changes one of the live site's secret settings, the runbook says to redeploy. Examples: taking a developer off the list of accounts that may use the admin dashboard, swapping in a new database password, or turning on alert emails. Today, if anyone is online at that moment, the redeploy leaves the running game server alone. It keeps using the old settings until the site has been idle for five minutes, and on a busy day that can be hours. The deploy still reports success, so nothing says the change hasn't landed.\n\nFor example, a developer taken off the admin list can still set ratings and take down news posts after the redeploy, until the server next sleeps.\n\nOnce this is built, the first request after the deploy notices that the settings changed and restarts the server on the new ones. A code change already gets the same restart today. Live matches pick up from their saved logs when the players' connections return, as they do after any deploy.\n\n## Why\n\n- **The server reads its settings once, when it boots.**\n  - The Worker passes them in at container start only (`apps/edge/src/index.ts:65`, `override envVars = containerEnv(this.env)`).\n  - The server parses them once (`crates/server/src/main.rs:107`, `app::load_server_env`).\n- **The Worker restarts a running server only when the commit differs.** `retireOlderImage` keeps any server whose `/healthz` names the deployed commit (`index.ts:195`: `if (running === (this.env.DEPLOYED_COMMIT ?? null)) return true;`). The test `leaves a server on the deployed commit running` (`index.test.ts:155`) pins this. No test changes a setting.\n- **A redeploy names the same commit.**\n  - promote production's `redeploy` input is \"Build and deploy production even if it does not move\" (`.github/workflows/promote-production.yml:91-95`), and the deploy passes `DEPLOYED_COMMIT:$(git rev-parse HEAD)` (`:361-363`).\n  - deploy staging's manual run deploys `_staging`'s commit again (`deploy-staging.yml:174`).\n  - The live check then waits only for that commit in `x-deployed-commit`, which a running server already reports, so it passes.\n- **The runbook depends on the redeploy to apply a setting.**\n  - In `docs/deploy-cloudflare.md`:\n    - \"Change a secret ... then redeploy\" (around line 354).\n    - A dev account's `DEV_PROFILE_IDS` (around line 368).\n    - The alert emails (around line 379).\n    - The staging drill that sets a bad `DATABASE_URL`, redeploys and expects one alert (around line 388). With the server awake, nothing restarts, so the drill proves nothing.\n    - The database restore: \"Redeploy: ... The server boots against the restored database\" (around line 402). Without a restart, the server keeps its in-memory seats and matches from before the restore.\n  - `apps/edge/README.md` (Settings): \"A container reads its settings when it starts, so after changing one, deploy again (or wait for the next sleep).\"\n- **Revoking a developer doesn't revoke them while the server is awake.** `DEV_PROFILE_IDS` gates every admin route: `admin_caller` (`crates/server/src/api/admin.rs:47`) asks `dev_caller`, which reads `app.env.dev_profile_ids` (`crates/server/src/api/dev.rs:63`). That covers rating set and reset, news posts, take-downs and grants.\n- **A busy site never sleeps.** The server stops only after `SLEEP_AFTER` (5 minutes) with no request. An open socket, or a signed-in tab's presence beat every 45 seconds, keeps it awake (`apps/edge/README.md`, \"It sleeps\").\n\nThe repository's own model is that a container keeps running across a Worker deploy (`index.ts:166-169`, and the README's \"A deploy reaches the running server\"). This proposal rests on that model. If the platform ever does restart the container on a deploy, the new check finds nothing to do.\n\n## Proposal\n\nAll of the change is in the site's Worker. The server, the schema and the workflows stay as they are.\n\n1. **Add a fingerprint helper.** `routing.ts` gains a pure, async `settingsFingerprint(settings)`: the SHA-256 (`crypto.subtle`) hex digest of `containerEnv(settings)` as JSON with its keys sorted. Every setting the container gets is then in it, and vitest holds it.\n2. **Keep the fingerprint in the object's storage**, under a prefixed key beside `TOLD_AT_KEY` (say `jackioh:server.settings:fingerprint`). It is never logged or sent anywhere.\n3. **Change `retireOlderImage`:**\n   - **No server running:** store the current fingerprint (the next start uses these settings) and settle.\n   - **Running on another commit:** retire it, as today.\n   - **Running on the deployed commit:** read the stored fingerprint.\n     - If it equals the current one, keep the server.\n     - If it differs or is absent, retire it on the same path (SIGTERM, `RETIRE_WAIT_MS`, then destroy). Log `server.settings_changed`, naming no setting. Store the current fingerprint once the retire settles.\n   - **Storage faults:**\n     - A read that rejects keeps the server and logs `server.settings_unreadable`. A storage fault must not restart a live site.\n     - A write that rejects is logged. It costs at most one extra restart at a later deploy.\n4. **Update the docs.**\n   - `apps/edge/README.md`: \"A deploy reaches the running server\" now covers changed settings too, and Settings drops \"(or wait for the next sleep)\".\n   - `docs/architecture.md`'s paragraph on the image check says the same.\n   - `docs/deploy-cloudflare.md`'s redeploy steps stay as written; they now do what they say.\n\n**Decisions (rejected alternatives):**\n\n- **Where the fingerprint lives:** in the object's storage. The other way was to pass a digest to the container and have `/healthz` report it, as `DEPLOYED_COMMIT` is. That needs a change to the server's environment and health route for no gain, and it puts a digest of the secrets on a server response.\n- **A missing fingerprint while running:** counts as changed. That costs at most one restart. Keeping the server would let a failed write hide a later secret change.\n- **Rulings:** none needed. The spec doesn't decide the Worker's operation; it is operational, as `crates/server/src/bug_reports.rs` says of itself.\n\n## Where it lands\n\n- `apps/edge/src/index.ts` (`retireOlderImage`, a storage key beside `TOLD_AT_KEY`)\n- `apps/edge/src/routing.ts` (`settingsFingerprint`)\n- `apps/edge/src/index.test.ts`, `apps/edge/src/routing.test.ts`\n- `apps/edge/README.md`, `docs/architecture.md` (the image check paragraph near line 266), `docs/deploy-cloudflare.md` (the operations list)\n- No SPEC section and no ruling. Nothing under `.github/`.\n\n## Acceptance criteria\n\n- [ ] A running server on the deployed commit whose stored fingerprint differs from the Worker's settings is stopped with SIGTERM, given `RETIRE_WAIT_MS` and destroyed if still up. The request then starts the new one (test).\n- [ ] The same commit with the same fingerprint is left running. `leaves a server on the deployed commit running` still passes, with a storage that holds the fingerprint.\n- [ ] Changing any one of `SERVER_VARS` or `SERVER_SECRETS` changes the fingerprint. The same settings in another key order give the same fingerprint (`routing.test.ts`).\n- [ ] When no server runs, the check stores the current fingerprint. A new object on the same storage, with the same settings and a running server, leaves that server running: no restart loop (test).\n- [ ] A storage read that rejects leaves the server running. A write that rejects still answers the request. Neither log line carries a setting's value or the fingerprint (tests).\n- [ ] The edge README and `docs/architecture.md` say a deploy restarts a server whose settings changed. \"Or wait for the next sleep\" is gone.\n- [ ] `pnpm exec vitest run --project edge`, `pnpm --dir apps/edge typecheck` and `pnpm exec eslint apps/edge` pass.\n\n## Size and risks\n\n- **Size:** small to medium. About 40 lines in the Worker, half a dozen tests and three doc paragraphs, all in one app.\n- **Restarts:** a redeploy that changes a setting now restarts the server. Every live match rebuilds from its log when its sockets return, which is what every code deploy already does. A same-settings redeploy restarts nothing, as now. The fingerprint is written once the retire settles, and the check runs once per object, so a restart cannot loop.\n- **Platform assumption:** if Cloudflare ever restarts containers on every deploy, the check simply always finds the fingerprint current.\n- **Out of scope:** a request's total wait across the image check and the start can pass the client's 75-second timeout during a deploy. That is a separate fix.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:30:38Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4118: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T19:31:03Z",
+    "claimed_at": "2026-11-17T19:41:21Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
