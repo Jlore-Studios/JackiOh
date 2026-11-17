@@ -1045,6 +1045,47 @@ mod m6_t4_the_match_actor {
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
     }
 
+    // R4013000: a nonce is only its own seat's duplicate check.
+    #[tokio::test(start_paused = true)]
+    async fn r4013000_a_nonce_copied_by_the_other_seat_is_taken() {
+        let h = harness(Options::default()).await;
+        let body = json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") });
+        h.p1.clear();
+        h.p2.clear();
+
+        send(&h, &h.p1, "shared-nonce", body.clone()).await;
+        let base = i64::try_from(h.base).expect("a small base");
+        assert_eq!(
+            acks(&h.p1).last().cloned().expect("an ack"),
+            json!({ "type": "ack", "nonce": "shared-nonce", "seq": base + 1 })
+        );
+        assert_eq!(h.rows().await.len(), 1);
+        let views_after_first = views(&h.p1).len();
+
+        // The other seat copies the nonce: its action is neither dropped for the owner nor
+        // applied as the owner — it is answered taken.
+        send(&h, &h.p2, "shared-nonce", json!({ "type": "endTurn" })).await;
+        assert_eq!(
+            errors(&h.p2).last().cloned().expect("a taken error"),
+            json!({
+                "type": "error",
+                "code": "malformed",
+                "message": "that nonce is already taken",
+                "nonce": "shared-nonce",
+            })
+        );
+        assert_eq!(acks(&h.p2), Vec::<Value>::new());
+        assert_eq!(h.rows().await.len(), 1);
+        assert_eq!(views(&h.p1).len(), views_after_first);
+
+        // The owner's own resend still dedups to its original ack.
+        send(&h, &h.p1, "shared-nonce", body).await;
+        let owner_acks = acks(&h.p1);
+        assert_eq!(owner_acks.len(), 2);
+        assert_eq!(owner_acks[0], owner_acks[1]);
+        assert_eq!(h.rows().await.len(), 1);
+    }
+
     // M6-T4 acceptance 4
 
     #[tokio::test(start_paused = true)]

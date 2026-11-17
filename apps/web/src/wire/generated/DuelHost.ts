@@ -24,9 +24,9 @@ export type DuelHost = { matchId: string, seed: string, game: GameState, ranked:
  */
 bots: PerPlayer<BotSeat | null>, nextSeq: number, 
 /**
- * Each nonce's seq, so a resend writes no second row.
+ * Each nonce's seat and seq, so a resend by its seat writes no second row (R4013000).
  */
-acks: { [nonce in string]?: number }, 
+acks: { [nonce in string]?: [string, number] }, 
 /**
  * R1253000: nonces whose reduce panicked, answered `Panicked` again.
  */
