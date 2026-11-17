@@ -15475,7 +15475,7 @@
         "provider": "gpt",
         "round_tier": "medium",
         "rounds_on": 4062,
-        "rounds_used": 0,
+        "rounds_used": 2,
         "since": "2026-11-17T00:57:44Z",
         "source": "build",
         "until": "2026-11-17T01:58:53Z"
