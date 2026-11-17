@@ -36200,7 +36200,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-17T02:52:52Z",
         "every": 5,
+        "findings": 0,
         "head": "67ae74199e3d5687f40513f62b8a1dd7799b0fb3",
         "issue": 4058,
         "merged_at": "2026-11-17T02:43:10Z",
@@ -36213,12 +36215,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:0bc6296e-1794883375",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44005067861",
         "sha": "a1317054e12df3f6111ece31e9d71844c3fb013b",
         "started_at": "2026-11-17T02:43:27Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the fuzz holds a replayed or restored game to the whole live state, not only to its hash",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 310
