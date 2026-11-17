@@ -7,7 +7,10 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 
+from jackioh_ml import data as D
+from jackioh_ml import export as E
 from jackioh_ml import fit as F
+from jackioh_ml import quantize as Q
 
 FIXTURE = Path(__file__).parent / "fixtures" / "positions.jsonl"
 ROOT = Path(__file__).resolve().parents[3]
@@ -59,6 +62,41 @@ def test_lambda_one_fits_the_outcomes_alone(tmp_path):
     report = F.run([str(FIXTURE)], tmp_path, ROOT, seeds=(1,), curve=(5,), td_lambda=1.0, log=lambda _: None)
     assert report["tdLambda"] == 1.0
     assert report["models"]["c"]["name"].endswith("on the outcomes")
+
+
+def test_report_lists_every_dense_features_pull(tmp_path):
+    report = F.run([str(FIXTURE)], tmp_path, ROOT, seeds=(1,), curve=(), log=lambda _: None)
+    positions = D.load([FIXTURE])
+    assert set(report["pulls"]) == set(positions.dense_names)
+    assert all(np.isfinite(list(report["pulls"].values())))
+    saved = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
+    assert saved["pulls"] == report["pulls"]
+    assert saved["largestPull"] == report["largestPull"]
+    largest = max(positions.dense_names, key=lambda name: abs(report["pulls"][name]))
+    assert report["largestPull"] == {"feature": largest, "points": report["pulls"][largest]}
+
+    body = (tmp_path / "report.md").read_text(encoding="utf-8").split("## Feature pulls")[1].split("##", 1)[0]
+    rows = [line for line in body.splitlines() if line.startswith("| ") and not line.startswith("| feature")]
+    rows = [line for line in rows if not set(line) <= set("|-")]
+    expected = sorted(report["pulls"].items(), key=lambda kv: (-abs(kv[1]), kv[0]))[:10]
+    assert rows == [f"| {name} | {points:+.1f} |" for name, points in expected]
+
+    # Integer-arithmetic parity on one feature: the report's pull is the median the shipped
+    # arithmetic gives over the fit's validation rows.
+    train_all, _ = D.split_by_game(positions, F.HELD_OUT)
+    _, valid_rows = F._validation_split(positions, train_all)
+    float_weights = E.from_model(tmp_path / "model.pt")
+    net = Q.unpacked(Q.quantize(float_weights))
+    name, j = positions.dense_names[0], 0
+    deltas = []
+    for r in valid_rows:
+        dense = [int(x) for x in positions.dense[r]]
+        sparse = [[positions.keys[k], int(c)] for k, c in zip(positions.sparse_idx[positions.sparse_ptr[r] : positions.sparse_ptr[r + 1]],
+                                                              positions.sparse_val[positions.sparse_ptr[r] : positions.sparse_ptr[r + 1]])]
+        base = Q.correction(net, dense, sparse)
+        dense[j] += 1
+        deltas.append((Q.correction(net, dense, sparse) - base) * float_weights["handUnit"] / float_weights["handA"])
+    assert abs(report["pulls"][name] - float(np.median(deltas))) <= 1e-9
 
 
 def test_each_relabel_refits_on_the_targets_the_fit_before_it_gives(tmp_path, monkeypatch):

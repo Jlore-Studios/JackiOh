@@ -30,6 +30,11 @@ import numpy as np
 
 #: Rows of dense features read before they are packed into an array.
 CHUNK_ROWS = 20_000
+#: The smallest spread a varying dense feature standardizes by. A 0/1 feature present in about
+#: one row in sixteen has a spread of sqrt(1/16 * 15/16) ~= 0.24, so at this floor one count moves
+#: a standardized input by at most 1/0.25 = 4 units: a rare keyword can no longer swing a line by
+#: hundreds of hand-eval points through a spread near zero (#4109). Chosen once, up front.
+MIN_SPREAD = 0.25
 #: A row's seat as its number in `Positions.seat`.
 SEATS = {"p1": 0, "p2": 1}
 
@@ -232,8 +237,8 @@ class Vocabulary:
 
 @dataclass
 class Standardizer:
-    """Dense features to zero mean and unit spread, fitted on the training rows. A feature that
-    never varies gets a spread of one."""
+    """Dense features to zero mean and unit spread, fitted on the training rows. A varying
+    feature's spread is floored at `MIN_SPREAD`; a feature that never varies gets one."""
 
     mean: np.ndarray
     scale: np.ndarray
@@ -242,7 +247,7 @@ class Standardizer:
     def fit(dense: np.ndarray) -> "Standardizer":
         mean = dense.mean(axis=0, dtype=np.float64)
         std = dense.std(axis=0, dtype=np.float64)
-        return Standardizer(mean=mean, scale=np.where(std > 1e-9, std, 1.0))
+        return Standardizer(mean=mean, scale=np.where(std > MIN_SPREAD, std, np.where(std > 1e-9, MIN_SPREAD, 1.0)))
 
     def apply(self, dense: np.ndarray) -> np.ndarray:
         return ((dense - self.mean) / self.scale).astype(np.float32)

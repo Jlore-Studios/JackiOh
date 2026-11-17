@@ -37,6 +37,8 @@ import torch
 from torch import nn
 
 from . import data as D
+from . import export as E
+from . import quantize as Q
 from .models import Batch, HandModel, LinearModel, NetModel
 
 #: R-free numbers of the fit, named once (CLAUDE.md rule 9's spirit).
@@ -359,6 +361,32 @@ def decide(report: dict) -> dict:
     return {"band": band, "a": a, "b": b, "c": c, "spread": spread, "gain": gain, "curveFalling": falling, "verdict": verdict}
 
 
+def feature_pulls(float_weights: dict, positions: D.Positions, rows: np.ndarray) -> dict[str, float]:
+    """Each dense feature's pull: the median change in hand-eval points from one more count of it,
+    over `rows`. Read from the integer network `quantize` would ship (`correction`) at the full
+    correction (`handUnit / handA`, as `points` maps it), so the table shows the pull the shipped
+    network actually has."""
+    rows = np.asarray(rows, dtype=np.int64)
+    if not len(rows) or float_weights.get("handA", 0.0) == 0.0:
+        return {name: 0.0 for name in positions.dense_names}
+    net = Q.unpacked(Q.quantize(float_weights))
+    factor = float_weights["handUnit"] / float_weights["handA"]
+    dense = [[int(x) for x in positions.dense[r]] for r in rows]
+    sparse = [[[positions.keys[k], int(c)] for k, c in zip(positions.sparse_idx[positions.sparse_ptr[r] : positions.sparse_ptr[r + 1]],
+                                                           positions.sparse_val[positions.sparse_ptr[r] : positions.sparse_ptr[r + 1]])]
+              for r in rows]
+    base = [Q.correction(net, dense[i], sparse[i]) for i in range(len(rows))]
+    pulls: dict[str, float] = {}
+    for j, name in enumerate(positions.dense_names):
+        deltas = np.empty(len(rows))
+        for i in range(len(rows)):
+            bumped = dense[i].copy()
+            bumped[j] += 1
+            deltas[i] = (Q.correction(net, bumped, sparse[i]) - base[i]) * factor
+        pulls[name] = float(np.median(deltas))
+    return pulls
+
+
 def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS, curve: tuple[int, ...] = CURVE_GAMES,
         width: int = 16, head: tuple[int, ...] = (16,), td_lambda: float = TD_LAMBDA, td_relabels: int = TD_RELABELS,
         log: Callable[[str], None] = print) -> dict:
@@ -453,17 +481,22 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
 
     report["misjudged"] = misjudged(positions, predict(hand, data), load_catalog(root))
     report["decision"] = decide(report)
-    report["seconds"] = round(time.time() - started, 1)
-
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
-    (out / "report.md").write_text(render(report), encoding="utf-8")
     def save(model: NetModel, name: str) -> None:
         torch.save({"state": model.state_dict(), "width": width, "head": list(head), "vocab": vocab.keys,
                     "mean": scaler.mean.tolist(), "scale": scaler.scale.tolist(), "denseNames": positions.dense_names,
                     "featuresVersion": positions.features_version, "catalogs": sorted(positions.catalogs)}, out / name)
 
+    out.mkdir(parents=True, exist_ok=True)
     save(best_model, "model.pt")
+    pulls = feature_pulls(E.from_model(out / "model.pt"), positions, valid_rows)
+    report["pulls"] = pulls
+    # The largest pull, by size; ties go to the earlier dense name, so the record is stable.
+    largest = max(positions.dense_names, key=lambda name: abs(pulls[name])) if pulls else None
+    report["largestPull"] = {"feature": largest, "points": pulls[largest]} if largest is not None else {"feature": None, "points": 0.0}
+    report["seconds"] = round(time.time() - started, 1)
+
+    (out / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
+    (out / "report.md").write_text(render(report), encoding="utf-8")
     # Every seed's network too, for retrain.sh: it ships the best by validation whose integer network
     # passes the AI's tests with the switch on (#466).
     for seed, net in seed_nets:
@@ -506,6 +539,14 @@ def render(report: dict) -> str:
     lines += ["", "## Learning curve of (c)", "", "| games fitted | log loss, turns 4-10 | all |", "|---|---|---|"]
     for p in report["curve"]:
         lines.append(f"| {p['games']:,} | {_fmt(p['heldOut']['turns 4-10']['logLoss'])} | {_fmt(p['heldOut']['all']['logLoss'])} |")
+    pulls = report.get("pulls", {})
+    top = sorted(pulls.items(), key=lambda kv: (-abs(kv[1]), kv[0]))[:10]
+    lines += ["", "## Feature pulls", "",
+              "A pull is the median change in hand-eval points from one more count of the feature, over the "
+              "validation rows, read from the integer network at the full correction; the ten largest by size:",
+              "", "| feature | pull |", "|---|---|"]
+    for name, points in top:
+        lines.append(f"| {name} | {points:+.1f} |")
     d = report["decision"]
     lines += ["", "## Decision", "",
               f"In {d['band']}: (a) {_fmt(d['a'])}, (b) {_fmt(d['b'])}, (c) {_fmt(d['c'])} (mean of {len(report['seeds'])} seeds, "
