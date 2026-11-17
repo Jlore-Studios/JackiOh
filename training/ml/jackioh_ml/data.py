@@ -238,16 +238,17 @@ class Vocabulary:
 @dataclass
 class Standardizer:
     """Dense features to zero mean and unit spread, fitted on the training rows. A varying
-    feature's spread is floored at `MIN_SPREAD`; a feature that never varies gets one."""
+    feature's spread is floored at `floor` (`MIN_SPREAD` for a real fit); a feature that never
+    varies gets one."""
 
     mean: np.ndarray
     scale: np.ndarray
 
     @staticmethod
-    def fit(dense: np.ndarray) -> "Standardizer":
+    def fit(dense: np.ndarray, floor: float = MIN_SPREAD) -> "Standardizer":
         mean = dense.mean(axis=0, dtype=np.float64)
         std = dense.std(axis=0, dtype=np.float64)
-        return Standardizer(mean=mean, scale=np.where(std > MIN_SPREAD, std, np.where(std > 1e-9, MIN_SPREAD, 1.0)))
+        return Standardizer(mean=mean, scale=np.where(std > floor, std, np.where(std > 1e-9, floor, 1.0)))
 
     def apply(self, dense: np.ndarray) -> np.ndarray:
         return ((dense - self.mean) / self.scale).astype(np.float32)

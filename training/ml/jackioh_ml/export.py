@@ -101,7 +101,10 @@ def random_network(positions: Path, seed: int, width: int = 4, head: tuple[int, 
 
     rng = random.Random(seed)
     loaded = D.load([positions])
-    scaler = D.Standardizer.fit(loaded.dense)
+    # The raw spreads, without the real fit's `MIN_SPREAD` floor (#4109): this network predates the
+    # floor, so the committed parity fixture stays what this function writes, and the tiny spreads
+    # keep exercising `quantize`'s clipping path.
+    scaler = D.Standardizer.fit(loaded.dense, floor=1e-9)
     counts = Counter(loaded.keys[i] for i in loaded.sparse_idx)
     chosen = sorted(key for key, _ in counts.most_common(keys))
 
