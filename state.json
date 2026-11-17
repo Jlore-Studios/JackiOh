@@ -13818,6 +13818,7 @@
         "by": "`claude` (strong)",
         "sha": "9f5b0fc1981f4ded4d0b2a9d5fecbb7204b7bb02"
       },
+      "closed_at": "2026-11-17T22:51:47Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -13828,6 +13829,7 @@
       "kind": "review",
       "live": "reviewing",
       "merge_owner": "claude-3",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-17T22:13:31Z",
