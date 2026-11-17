@@ -51,7 +51,9 @@ cargo test -p jackioh-tools fuzz_regression_corpus
 `--regress` lints every record first: its start-specific fields, deck sizes, dealt seats, handicaps and marks, and its deck and board ids
 against the live catalog with every set previewed (R1420). Then it creates, fully folds and checkpoint-folds the same pinned options and
 runs the gate's checks: no panic, a real ending inside the cap, every invariant, and a log that folds back to the live hash. The tools'
-`cargo test` runs the same, so the `rust` check does.
+`cargo test` runs the same through
+`the_checked_in_corpus_lints_clean_and_every_record_replays`, but that test is `#[ignore = "daily: …"]` (#4093) and runs in the daily
+tests, so a pull request does not replay the corpus; the daily run does.
 
 ## Scope
 

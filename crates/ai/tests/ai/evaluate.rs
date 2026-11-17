@@ -2432,6 +2432,13 @@ mod r3822000_burn_and_toxic {
         }
     }
 
+    /// R4065000: the face threat reads the counters too, behind a flag of its own (a unit its first tick
+    /// destroys threatens nothing), so no counter is read with the three weights at 0 and that flag off.
+    const UNREAD: EvalWeights = EvalWeights {
+        affliction_kills_before_swing: false,
+        ..OFF
+    };
+
     #[test]
     fn r3822000_greedy_eval_and_zero_weights_read_no_counter() {
         assert_eq!(GREEDY_EVAL.unit_affliction, 0.0);
@@ -2442,7 +2449,7 @@ mod r3822000_burn_and_toxic {
         let plain = board(json!({ "p1": { "field": [vanilla] }, "p2": { "field": [vanilla] } }));
         let units = board(json!({ "p1": { "field": [afflicted] }, "p2": { "field": [afflicted] } }));
         let heroes = hero_countered(&hero_countered(&plain, AI, 4, 2), HUMAN, 5, 3);
-        for w in [&OFF, &GREEDY_EVAL] {
+        for w in [&UNREAD, &GREEDY_EVAL] {
             let scored = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, w);
             assert_eq!(scored(&units), scored(&plain));
             assert_eq!(scored(&heroes), scored(&plain));

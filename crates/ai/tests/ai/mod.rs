@@ -5,6 +5,7 @@
 
 pub mod activate;
 pub mod activations;
+pub mod affliction_threat;
 pub mod alt_play;
 pub mod answer_key;
 pub mod attack_hooks;
@@ -24,6 +25,7 @@ pub mod endings;
 pub mod evaluate;
 pub mod evaluate_v020;
 pub mod even_trades;
+pub mod exile;
 pub mod features;
 pub mod feng_shui;
 pub mod float_discount;
@@ -45,6 +47,7 @@ pub mod outside_data;
 pub mod pierce;
 pub mod pinned;
 pub mod policy;
+pub mod pools_and_conversion;
 pub mod position_model;
 pub mod prompts_v020;
 pub mod puzzles;

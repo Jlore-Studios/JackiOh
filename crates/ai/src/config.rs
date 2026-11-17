@@ -370,6 +370,12 @@ pub struct EvalWeights {
     /// `unit_worth` is untouched: its Brittle share already discounts the unit. Off, every unit that may
     /// swing counts, as before.
     pub brittle_crumbles_before_swing: bool,
+    /// R4065000, #4065: whether `face_threat` and `could_attack_next_turn` (so the threat and pressure terms,
+    /// `wall_switches`, `stands_down` and the learned features) leave out a unit the first tick of its own Burn
+    /// and Toxic destroys at the start of its controller's next turn, before it can attack
+    /// (`afflicted_before_swing`). `unit_worth` is untouched: its affliction discount already prices the unit
+    /// (R3822000). Off, every unit that may swing counts, as before.
+    pub affliction_kills_before_swing: bool,
     /// R3550001, R3560007, #3909: whether `face_threat` and `damage_past_taunts_with` read the two static
     /// attack flags the engine applies outside the plain Taunt walk. A unit that can only attack the Unit
     /// directly across (S+ #37 Scorch) never may hit a hero, so `face_threat` asks `attack_restriction` of
@@ -383,6 +389,21 @@ pub struct EvalWeights {
     /// and the larger of two orders counts, smallest first and each Taunt broken first by the smallest
     /// attacker that destroys it alone. Off, the old order, and a stopped attacker is spent.
     pub best_attack_order_past_taunts: bool,
+    /// R1124, R4065001, #4065: whether a hit from a source that exiles what it damages (`exiles_on_damage`,
+    /// Meditative #72 The Banisher) reads as a Poisonous one in the AI's combat reads (`blow` through `Side`,
+    /// `kills_and_survives`, the Taunt walk of `damage_past_taunts_with` and its Cleave splash, `breaks_alone`,
+    /// `falls_to_first_strike`), and whether `trade_value` prices what it exiles at its whole `unit_worth`,
+    /// with no Death left behind and no Reborn body back. Off, such a hit reads as plain damage, as before.
+    pub exile_on_damage_read: bool,
+    /// R4064000, R4064001, #4064: whether the static reads of a hit (the Taunt walk under
+    /// `damage_past_taunts_with`, so `face_threat`, the threat and pressure terms, `wall_switches`,
+    /// `ready_gap` and the learned features; `blow`, `kills_and_survives`, the reply's `fight`, `trade_value`
+    /// and `face_value`; `coming_hero_ticks` and `afflicted`) follow §4.4 steps 3a and 3b. A hit from a
+    /// source whose damage Burns or is Toxic deals nothing and counts as the counter it adds, and each side's
+    /// damage pools (S+ #42 Force Projector, S+ #123 Oct) soak what they have left, once across its hits in
+    /// the order they are counted, refilled where that side's turn starts before they land. Off, every hit
+    /// is damage and no pool soaks, as before.
+    pub pool_and_conversion_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -584,8 +605,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     deft_defense_attacks: true,
     gauntlet_bars_face_attacks: true,
     brittle_crumbles_before_swing: true,
+    affliction_kills_before_swing: true,
     static_attack_flags_read: true,
     best_attack_order_past_taunts: true,
+    exile_on_damage_read: true,
+    pool_and_conversion_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -781,6 +805,16 @@ pub const AI_ATTACK_HOOK_PROBE_NODES: usize = 24;
 /// each own hand Unit with one, and a spawn more per such hand Unit (one node, two on a full unit row).
 pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 
+/// R4070000: the most nodes a decision's root prices spend, every probe's cap above together: the counter
+/// `decide::decision_prices_at` prices a state on outside a decision (`cargo jackioh positions`), so each
+/// probe runs to its own cap, as it does in a decision whose budget leaves it that many.
+pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
+    + AI_TURN_HOOK_PROBE_NODES
+    + AI_ACTIVATION_PROBE_NODES
+    + AI_HAND_ACTIVATION_PROBE_NODES
+    + AI_ATTACK_HOOK_PROBE_NODES
+    + AI_AWAKEN_PROBE_NODES;
+
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -855,7 +889,8 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
-/// `static_attack_flags_read`, `best_attack_order_past_taunts`) is off.
+/// `affliction_kills_before_swing`, `static_attack_flags_read`, `best_attack_order_past_taunts`,
+/// `exile_on_damage_read`, `pool_and_conversion_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -869,8 +904,11 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     deft_defense_attacks: false,
     gauntlet_bars_face_attacks: false,
     brittle_crumbles_before_swing: false,
+    affliction_kills_before_swing: false,
     static_attack_flags_read: false,
     best_attack_order_past_taunts: false,
+    exile_on_damage_read: false,
+    pool_and_conversion_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {

@@ -6,7 +6,8 @@
 //!
 //! Each position is one JSON line (`PositionRow`): seed, seat, turn, step, `FEATURES_VERSION`, the
 //! seat's features (read only from `redact`, R185), the hand eval's score over the true state, a world
-//! the seat cannot tell from its determinizations (R1006004), and the seat's outcome (1, ½ or 0).
+//! the seat cannot tell from its determinizations (R1006004), priced as the decision at its root prices
+//! it (R4070000), and the seat's outcome (1, ½ or 0).
 //! `--every turn` (the default) writes the seat's first main-phase decision of its turn, `decision`
 //! every main-phase decision, `reply` the position after the opponent's reply as the search simulates
 //! it (R1006006). A header line (`PositionsHeader`) names the features. `--policy` (#1171) adds each
@@ -21,8 +22,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, bail};
 use jackioh_ai::{
     AI_EVAL, FEATURES_VERSION, LEARNED, NextSwing, POLICY_KEYS_VERSION, PolicyLabel, Prices,
-    create_node_counter, dense_names, evaluate, features_of, hidden_card_ids, policy_label, simulate_reply,
-    unknown_cards,
+    create_node_counter, decision_prices_at, dense_names, evaluate_priced, features_of, hidden_card_ids,
+    policy_label, simulate_reply, unknown_cards,
 };
 use jackioh_engine::{
     ActionBody, CreateGameOptions, GameResult, GameState, Phase, PlayerId, begin_game, catalog_for,
@@ -91,7 +92,8 @@ pub struct PositionRow {
     pub catalog: String,
     pub dense: Vec<i32>,
     pub sparse: Vec<(String, i32)>,
-    /// The hand eval's score for the seat (R1006004).
+    /// The hand eval's score for the seat (R1006004), priced as the decision at the row's root prices it
+    /// (R4070000).
     pub hand: f64,
     /// The game's outcome for the seat: 1, 0.5 or 0.
     pub outcome: f64,
@@ -190,13 +192,15 @@ fn position_seat(state: &GameState, every: Every, turned: &mut Vec<(i32, PlayerI
 }
 
 /// R1006004: the row for `seat` at `state`: the features over `redact(state, seat)` and the hand
-/// eval over the true state, a world the seat cannot tell from its determinizations.
+/// eval over the true state, a world the seat cannot tell from its determinizations. R4070000: priced
+/// with `prices`, the prices of the decision at the row's root.
 pub(crate) fn row_at(
     state: &GameState,
     seat: PlayerId,
     step: usize,
     game: &SelfplayGame,
     outcome: f64,
+    prices: &Prices,
 ) -> PositionRow {
     let next = if state.active == seat {
         NextSwing::Seat
@@ -213,7 +217,7 @@ pub(crate) fn row_at(
         catalog: game.catalog.clone(),
         dense: found.dense,
         sparse: found.sparse,
-        hand: evaluate(state, seat, next, &AI_EVAL),
+        hand: evaluate_priced(state, seat, next, &AI_EVAL, prices),
         outcome,
         policy: None,
     }
@@ -225,24 +229,26 @@ const REPLY_NODES: usize = 2000;
 
 /// R1006006: the row for the seat whose turn just ended at `end`, after the opponent's reply as the
 /// search simulates it, scored as `reply_score` scores a line. `None` when the reply ends the game or
-/// runs out of nodes.
+/// runs out of nodes. R4070000: `prices` are those of the decision that ended the turn, so the reply is
+/// played and the row scored as that decision's search plays and scores its End Turn line.
 fn reply_row(
     end: &GameState,
     seat: PlayerId,
     step: usize,
     game: &SelfplayGame,
+    prices: &Prices,
 ) -> Result<Option<PositionRow>, Dropped> {
     let Some(outcome) = outcome_for(game.result, seat) else {
         return Err(Dropped::NoResult);
     };
     let counter = create_node_counter(REPLY_NODES, None);
-    let Some(after) = simulate_reply(end, seat, &counter, &hidden_card_ids(end, seat), Prices::NONE) else {
+    let Some(after) = simulate_reply(end, seat, &counter, &hidden_card_ids(end, seat), prices) else {
         return Ok(None);
     };
     if after.result.is_some() {
         return Ok(None);
     }
-    Ok(Some(row_at(&after, seat, step, game, outcome)))
+    Ok(Some(row_at(&after, seat, step, game, outcome, prices)))
 }
 
 /// R1006003: `game` folded under its catalog, its rows if it reaches its hash. With `policy`, a row
@@ -275,25 +281,29 @@ pub(crate) fn fold_game(
                     let Some(outcome) = outcome_for(game.result, seat) else {
                         return Err(Dropped::NoResult);
                     };
-                    let mut row = row_at(&state, seat, step, game, outcome);
+                    // R4070000: priced as a decision of the seat's here prices its search.
+                    let prices = decision_prices_at(&state, seat);
+                    let mut row = row_at(&state, seat, step, game, outcome, &prices);
                     if policy && action.player_id == seat {
                         row.policy = Some(policy_label(&state, seat, &action.body));
                     }
                     rows.push(row);
                 }
+                // R4070000: the prices of the decision that ended the turn, on the state it chose End
+                // Turn at, priced only at a turn's end (`then`, not `then_some`).
                 let ended_by = (every == Every::Reply
                     && action.body == ActionBody::EndTurn
                     && action.player_id == state.active
                     && state.phase == Phase::Main
                     && state.result.is_none())
-                .then_some(state.active);
+                .then(|| (state.active, decision_prices_at(&state, state.active)));
                 let result = reduce(&state, action);
                 if result.error.is_some() {
                     return Err(Dropped::NotReplayed);
                 }
                 state = result.state;
-                if let Some(seat) = ended_by
-                    && let Some(row) = reply_row(&state, seat, step + 1, game)?
+                if let Some((seat, prices)) = &ended_by
+                    && let Some(row) = reply_row(&state, *seat, step + 1, game, prices)?
                 {
                     rows.push(row);
                 }
@@ -404,7 +414,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_ai::{MatchHooks, card_id_of_key, dev_game_config, play_match};
+    use jackioh_ai::{
+        AI_GATE_BUDGET, MatchHooks, card_id_of_key, decision_prices, det_ground, dev_game_config, evaluate,
+        play_match, probe_world, redact,
+    };
     use jackioh_engine::find_instance;
 
     use crate::arena::TEST_BUDGET;
@@ -483,6 +496,7 @@ mod tests {
     /// R1006003: a log that no longer reaches its hash is dropped, as is a game without a result or on
     /// a catalog this build does not carry.
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r1006003_a_game_that_does_not_replay_has_no_result_or_an_unknown_catalog_is_dropped() {
         let (game, _) = played(2);
         let build = jackioh_cards::catalog_version();
@@ -510,6 +524,7 @@ mod tests {
     /// going: the features and hand eval after the reply as the search simulates it, which is the
     /// seat's next turn, the same rows on every fold.
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r1006006_reply_rows_are_the_search_s_simulated_replies_one_per_turn_end() {
         let (game, _) = played(3);
         let build = jackioh_cards::catalog_version();
@@ -530,6 +545,127 @@ mod tests {
         for row in &rows {
             assert!(turns.iter().any(|turn| turn.turn > 0) && row.turn > 0);
         }
+    }
+
+    /// Whether `prices` price nothing: no Death, turn hook, Activate, attack hook or awakening, whatever
+    /// the two root flags, which change no hand eval.
+    fn prices_nothing(prices: &Prices) -> bool {
+        *prices
+            == Prices {
+                starship_root: prices.starship_root,
+                unknown_root: prices.unknown_root,
+                ..Prices::default()
+            }
+    }
+
+    /// R4070000: a reply row is played and scored with the prices of the decision that ended the turn,
+    /// on the state it chose End Turn at, as that decision's search plays and scores its End Turn line;
+    /// those prices are a full-budget decision's, and where they price a Death or a turn hook the row's
+    /// hand eval is not the unpriced one it held before.
+    #[test]
+    fn r4070000_reply_rows_are_scored_with_the_prices_of_the_decision_that_ended_the_turn() {
+        let (game, live) = played(1);
+        let rows =
+            fold_game(game, Every::Reply, jackioh_cards::catalog_version(), false).expect("it replays");
+        assert!(!rows.is_empty());
+        let mut moved = 0usize;
+        for row in &rows {
+            let (before, _) = live
+                .iter()
+                .find(|(_, step)| *step + 1 == row.step)
+                .expect("a live state before every turn's end");
+            let ended = &game.log[row.step - 1];
+            assert_eq!(ended.body, ActionBody::EndTurn, "step {}", row.step);
+            let end = reduce(before, ended).state;
+            let prices = decision_prices_at(before, row.seat);
+            let public = redact(before, row.seat);
+            let probe = probe_world(&public, row.seat, &det_ground(&public, row.seat));
+            assert_eq!(
+                prices,
+                decision_prices(
+                    &public,
+                    &probe,
+                    row.seat,
+                    &create_node_counter(AI_GATE_BUDGET.nodes, None)
+                ),
+                "step {}: every probe's cap prices as a full budget does",
+                row.step
+            );
+            let after = simulate_reply(
+                &end,
+                row.seat,
+                &create_node_counter(REPLY_NODES, None),
+                &hidden_card_ids(&end, row.seat),
+                &prices,
+            )
+            .expect("the row's reply runs to its end");
+            let next = if after.active == row.seat {
+                NextSwing::Seat
+            } else {
+                NextSwing::Enemy
+            };
+            assert_eq!(
+                row.hand,
+                evaluate_priced(&after, row.seat, next, &AI_EVAL, &prices),
+                "step {}",
+                row.step
+            );
+            assert_eq!(
+                row.dense,
+                features_of(&after, row.seat).dense,
+                "step {}",
+                row.step
+            );
+            if (!prices.deaths.is_empty() || !prices.turn_hooks.is_empty())
+                && row.hand != evaluate(&after, row.seat, next, &AI_EVAL)
+            {
+                moved += 1;
+            }
+        }
+        assert!(
+            moved > 0,
+            "no row of {} priced a Death or a turn hook",
+            rows.len()
+        );
+    }
+
+    /// R4070000: a decision row is priced as a decision there prices it, and one whose root prices
+    /// nothing keeps the unpriced hand eval it held before.
+    #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
+    fn r4070000_a_row_whose_root_prices_nothing_keeps_the_hand_it_had() {
+        let (game, live) = played(3);
+        let rows =
+            fold_game(game, Every::Decision, jackioh_cards::catalog_version(), false).expect("it replays");
+        let mut unpriced = 0usize;
+        for row in &rows {
+            let (state, _) = live
+                .iter()
+                .find(|(_, step)| *step == row.step)
+                .expect("a live state at every row's step");
+            let next = if state.active == row.seat {
+                NextSwing::Seat
+            } else {
+                NextSwing::Enemy
+            };
+            let prices = decision_prices_at(state, row.seat);
+            assert_eq!(
+                row.hand,
+                evaluate_priced(state, row.seat, next, &AI_EVAL, &prices),
+                "step {}",
+                row.step
+            );
+            if prices_nothing(&prices) {
+                assert_eq!(
+                    row.hand,
+                    evaluate(state, row.seat, next, &AI_EVAL),
+                    "step {}",
+                    row.step
+                );
+                unpriced += 1;
+            }
+        }
+        assert!(unpriced > 0, "every one of {} rows priced something", rows.len());
     }
 
     /// R1171000: `--policy` labels every decision row with the label the live game gives there, the
