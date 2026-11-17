@@ -781,6 +781,16 @@ pub const AI_ATTACK_HOOK_PROBE_NODES: usize = 24;
 /// each own hand Unit with one, and a spawn more per such hand Unit (one node, two on a full unit row).
 pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 
+/// R4070000: the most nodes a decision's root prices spend, every probe's cap above together: the counter
+/// `decide::decision_prices_at` prices a state on outside a decision (`cargo jackioh positions`), so each
+/// probe runs to its own cap, as it does in a decision whose budget leaves it that many.
+pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
+    + AI_TURN_HOOK_PROBE_NODES
+    + AI_ACTIVATION_PROBE_NODES
+    + AI_HAND_ACTIVATION_PROBE_NODES
+    + AI_ATTACK_HOOK_PROBE_NODES
+    + AI_AWAKEN_PROBE_NODES;
+
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
