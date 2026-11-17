@@ -13039,6 +13039,13 @@
     "4011": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43989108558",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-17T00:45:14Z",
+        "until": "2026-11-17T01:15:14Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
