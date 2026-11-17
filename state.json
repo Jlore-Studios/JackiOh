@@ -14832,9 +14832,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-2",
-      "owner_since": "2026-11-17T01:57:11Z",
-      "owner_why": "its approval shipped `c8923848495b`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "claude-4",
+      "owner_since": "2026-11-17T02:04:47Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "pending_request": false,
       "planned_at": "2026-11-16T21:59:29Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -14975,7 +14975,7 @@
       }
     },
     "4090": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -15005,15 +15005,15 @@
       "issue": 4086,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-2",
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-4",
       "question": "",
       "queued_at": "2026-11-17T01:57:09Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "43995175861",
+      "run_id": "pending:cb45f5e5-1794881043",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15034,7 +15034,7 @@
         "run": "43986466819"
       },
       "source": "ci",
-      "started_at": "2026-11-17T01:23:07Z",
+      "started_at": "2026-11-17T02:04:47Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -16249,9 +16249,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T02:03:47Z",
+    "at": "2026-11-17T02:04:47Z",
     "url": "",
-    "what": "review #4098 on muse"
+    "what": "revise #4090 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-17T01:42:04Z",
