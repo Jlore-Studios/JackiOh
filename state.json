@@ -14270,6 +14270,8 @@
       }
     },
     "4153": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-17T23:08:34Z",
@@ -14283,8 +14285,11 @@
         "trail": "- File list is exactly as planned \u2014 all changes are in `apps/web` and `apps/edge`, no forbidden paths. Waiting on the test run now; I'll continue with the remaining suites, the fail-without-fix checks, typecheck, and eslint once it reports back.<!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 16 of\u2026\n- ## What changed\n- Shared helper: `apps/web/src/wire/json.ts` gains `UNSAFE_KEYS` (`__proto__`, `constructor`, `prototype`) and `isSafeKey(key)`.\n- Real fixes (outside-keyed writes onto plain objects now skip unsafe keys):\n- - `cards/loadouts.ts` \u2014 `parseCardLoadouts` drops entries whose `cardId` is unsafe, in both the `cards` and `stamps` loops.\n- - `stats/store.ts` \u2014 `parseCounts` and `parsePlayerStats` skip unsafe card ids (cards map and `longestGamePlayed`).\n- - `game/deckbuilder/sync.ts` \u2014 `entriesFrom` drops mirror entries with unsafe ids (defense in depth; `merge` itself is `Map`-keyed).\n- - Three more the plan's audit missed, found by sweeping every `obj[key] =` fold in `apps/web`/`apps/edge`: `cards/cardPicksSync.ts` `accountCopy` (server answer folded by `cardId`), `settings/accountSync.ts` `readClock` (localStorage clock) and `accountCopy` (server groups), and the `writeAudioSett\u2026\n- Verified safe, pinned by tests, no code change: settings/store (`parseSettings` loops fixed keys), card settings, cosmetics (account picks are `Map`-keyed; account/settings writers loop fixed kinds), deck codes (binary body; catalog-keyed reads use trusted ids), room/co-op links (`URLSearchParams.g\u2026\n- Each entry point has a pollution test feeding `{\"__proto__\": {\"polluted\": true}}` and `{\"constructor\": {\"prototype\": {\"polluted\": true}}}` (shaped to the input: storage JSON, `cardId` values, frame text, query strings, header/field maps) asserting `({}).polluted` is `undefined` plus one legitimate \u2026\n- ## How I tested\n- - `pnpm --dir apps/web test` on all 16 touched files: 483 passed (first batch 3 files/25, second 13 files/458).\n- - `pnpm exec vitest run --project edge`: 4 files, 126 passed.\n- - `pnpm --dir apps/web typecheck`: clean (needs `NODE_OPTIONS=--max-old-space-size=8192` on this 7 GB box; the default heap OOMs \u2014 environmental, not a code issue).\n- - `pnpm exec eslint apps/edge apps/web e2e`: clean.\n- - Fail-without-fix check: temporarily reverted each guard \u2014 the loadouts (2), stats, mirror, card-picks-sync, and account-sync-clock tests fail unguarded and pass with the guard. Full web suite and fuzz left to CI per repo instructions.\n- ## Decisions\n- - Skip unsafe keys rather than null-prototype objects or `Map`s: smallest diff, and serialized shapes stay unchanged. Rejected `Object.create(null)` (would ripple through consumers expecting plain objects) and throwing on hostile input (tolerant readers must never crash).\n- - No ruling note: this hardens parsing without deciding any game semantics, so there is no Hearthstone-fallback decision to record; tests are named `#4015`, not `R<n>`, so `spec check` is unaffected.\n- - Extra guards beyond the plan (`cardPicksSync`, `accountSync`, audio/fx) are included because the plan's step 5 explicitly calls for guarding any `obj[outsideKey]` fold found; noted here as the departure.\n- ## Reviewer notes\n- - Two tests pass both with and without their guard and are pinning-only: the account-sync group-smuggle test (the `{at, values}` shape rebuild drops smuggled group ids before any lookup) and the audio/fx writer tests (the merged object always owns every fixed key, so the prototype can never shadow \u2026\n- - `sync.ts` casts `(item as { id: string }).id` in `entriesFrom` because the helper is generic over deck/trio items; both parsers guarantee a string id or return null first.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4015 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4015/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4015,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-17T23:58:45Z",
         "from_run": "44196702757",
         "gates": [
           {
@@ -14343,8 +14348,15 @@
         "source": "build",
         "until": "2026-11-18T00:27:59Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-17T23:57:59Z",
+      "run_id": "pending:fe179d6c-1794959906",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-17T23:58:45Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -14358,9 +14370,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-17T23:49:58Z",
+    "at": "2026-11-17T23:58:45Z",
     "url": "",
-    "what": "review #4152 on claude-3"
+    "what": "review #4153 on muse"
   },
   "last_sweep": {
     "at": "2026-11-17T23:48:05Z",
