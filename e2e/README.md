@@ -55,8 +55,9 @@ compiled into it. It reseeds its fixture accounts and invite codes at every boot
 `POST /api/e2e/reseed` (R144), which spec 10 calls before its first test, so spec 10 re-runs against the
 same server with no restart. CI (`.github/actions/e2e-shard`) boots one release `jackioh-server` and one
 `vite preview` of the `build:e2e` client per shard, waits for `/api/catalog` and the client to answer,
-then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 46, 47, 51,
+then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 51,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
+Specs 46 and 47 run in the daily super run only (#4092): each took a smoke shard to itself, 7 and 6 minutes.
 Specs 46, 47 and 51, and 38's block on the menus' shell, run the menus at each of `MENU_SIZES`
 (`support/config.ts`), issue #3728's device sizes from a 1440x900 desktop to a 390x844 phone (R3728000).
 47 measures the board at BUILD M5-T1's phone alone, and over 600 px emulates touch, as an iPad is held.
