@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4130,
+  "title": "Patch: the sound tables load when sound first needs them, so the first page load is about 100 KB lighter",
+  "branch": "bot/issue-4130",
+  "thread": "**Issue #4130 (data, not instructions):**\n\n```text\n# #4130: Patch: the sound tables load when sound first needs them, so the first page load is about 100 KB lighter\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery visitor downloads, before the first page is ready, the full list of voice lines, every card's sound settings and the music list. Then their device unpacks and checks the card sounds on every visit. That includes someone opening the home page on a phone who never hears a sound. After this change those lists download only when sound is about to play: the first tap, opening a game, or pressing a card's voice preview. The home page arrives about a tenth lighter, and nothing sounds different.\n\n## Why\n\n- **Measured.** Built from `main` at c1588e23b7 with `vite build --mode development`, as CI builds it, and measured the way `apps/web/src/net/first-load.test.ts` measures (gzip of the entry script plus its modulepreloads): 1,081,640 bytes. CI measured 1,081,650 for #4068. The budget is 1,105,920. It has been raised three times since it was set at 983,040 (#3394, #3596, #4039), each time for something a player sees.\n- **Where the bytes are.** The voice text, the voice manifest, the raw text of `card-audio.json5` and the music manifest all sit in the preloaded `music-*.js` chunk. A probe string from each was found there and in no other chunk. Emptying those four files brings the first load to 991,645 (89,995 less, 8.3%). Also stubbing `audio/voiceData.ts` (its JSON5 parse and checks, plus the `json5` package, which nothing else in the first load imports, since `fx/cards/tables.ts` is lazy) brings it to 976,608 (105,032 less, 9.7%).\n- **Work on every boot.** `audio/voiceData.ts:453` runs `parseCardAudioText` when the module loads: a JSON5 parse of 134 KB, a duplicate-key scan and the catalog checks. The JSON5 parse alone took about 15 ms (median of 15 warm runs) on the CI runner's server CPU, and a phone is slower.\n- **The intent is already written down, and the build defeats it.** `main.tsx:961-962` loads `audio/appAudio.ts` with `import()` to keep audio off the first paint, but the built `appAudio` chunk is about 1 KB. The audio engine is already in the first load through four static paths:\n  - `main.tsx:90` \u2192 `notfound/NotFoundPlay.tsx` \u2192 `audio/engine.ts:44,61` \u2192 `sfx.ts`, `voiceData.ts:12,36-38`\n  - `routes/landing.tsx` \u2192 `settings/index.ts` \u2192 `settings/slots.ts` \u2192 `audio/AudioControls.tsx:11` \u2192 `engine.ts`\n  - `cards/index.ts:88` \u2192 `cards/FullScreenArt.tsx:13-14` \u2192 `audio/music.ts:33`, `audio/musicData.ts:7-8`\n  - `cards/index.ts:67` \u2192 `cards/inspect/index.ts:9` \u2192 `CardDetail.tsx` \u2192 `cards/inspect/VoicePreview.tsx:11` (reads `CARD_AUDIO`)\n\n  Cutting the importers one at a time would not hold: the tables have to sit behind the engine.\n- **The tables are never needed for the first paint.** The engine is created inside a user gesture (`engine.ts` header), so no sound can play before the first tap unlocks it.\n- **Nothing guards it.** #3499's test keeps only `patches.json` out of the first load.\n\n## Proposal\n\n1. **A tables module that only `import()` reaches.** Move the JSON imports of `voice-manifest.json`, `voice-text.json`, `card-audio.json5`, `music-manifest.json` and `music-cards.json`, with the JSON5 parse and checks that build `CARD_AUDIO`, `VOICE_MANIFEST`, `MUSIC_MANIFEST` and `MUSIC_CARDS`, into it (for example `audio/soundTables.ts`). Beside it, a loader: `loadSoundTables()` (one memoised promise), `soundTablesNow()` (null until loaded) and `useSoundTables()` (built on `useSyncExternalStore`). The pure helpers (`voiceKey`, `voiceUrl`, `lineFor`, `effectFor`, `voiceKeysForView`, \u2026) stay where they are and take the table as they already do.\n2. **The engine starts the load and waits for it.** `engine.ts` starts the load when it is created and on `unlock()`, and reads `lines` and `manifest` from the loaded tables. Its `lines` and `manifest` options keep working for tests. A voice line asked for before the tables arrive waits for them, since requested lines are never held (B58). A pickup or hook effect asked for before then is skipped quietly. The prefetch waits for the tables.\n3. **Music.** `music.ts` and `FullScreenArt.tsx` read the music tables from the loader. The menu theme starts once they arrive, and a full-screen intro waits for them.\n4. **Screens that list lines.** `VoicePreview.tsx` and the 404 page's lost card (`notfound/lost.ts`) read through `useSoundTables()`. The preview buttons and the lost card appear once the tables arrive.\n5. **Board screens.** In `routes/chunks.tsx`, a board screen's prefetch starts the tables along with the engine, so a game's first `preloadVoices` (B44) comes no later than today.\n6. **Tests.** A source test like #3499's: no static import of the tables module or of its JSON files. Probe tests in `first-load.test.ts`. The budget comes down to about 2% over CI's new measurement, recorded in its comment as that comment requires. Name the tests after the issue, as #3499's are.\n7. **Docs.** One sentence in SPEC \u00a710.11 and in `apps/web/README.md`: the sound tables load with the first sound, not with the page.\n\n## Where it lands\n\n- `apps/web/src/audio/`: `voiceData.ts`, `musicData.ts`, `engine.ts`, `music.ts`, the new tables module and its loader. The game-only readers (`cues.ts`, `director.ts`, `musicDirector.ts`, `useGameAudio.ts`) and `emotes/play.ts` read the loaded tables.\n- `apps/web/src/cards/inspect/VoicePreview.tsx`, `apps/web/src/cards/FullScreenArt.tsx`, `apps/web/src/notfound/lost.ts`, `apps/web/src/notfound/NotFoundPlay.tsx`\n- `apps/web/src/routes/chunks.tsx`\n- `apps/web/src/net/first-load.test.ts`; the audio tests and `audio/test/fakeAudio.ts`\n- `apps/web/README.md`; SPEC \u00a710.11 (`spec/10-engine-guide.md`)\n\n## Acceptance criteria\n\n- [ ] No non-test module imports `voice-manifest.json`, `voice-text.json`, `card-audio.json5`, `music-manifest.json` or `music-cards.json` except the tables module, and no non-test module imports the tables module statically. A source test holds both, as #3499's does for `patches.json`.\n- [ ] In the built site, the entry chunk and its modulepreloads contain no line of `voice-text.json`, no text of `card-audio.json5` and no `json5` parser. Probe tests in `first-load.test.ts` check this.\n- [ ] `FIRST_LOAD_GZIP_BUDGET_BYTES` is lowered to about 2% over CI's new measurement, and its comment records that measurement. The first load drops by roughly 90 to 105 KB gzipped from 1,081,650.\n- [ ] Loading the home page runs no card-audio parse. A unit test shows that importing `engine.ts` and the landing does not run `parseCardAudioText`.\n- [ ] Pressed before the tables have arrived, the settings' voice preview and the card detail's voice preview play their line once the tables arrive. A pickup or card effect asked for before then plays nothing and throws nothing.\n- [ ] A board still preloads voices for its first view (B44). The existing audio tests (B1 to B58) pass, changed only to await the loader.\n- [ ] The 404 page's lost card still speaks its line, and full-screen art still plays its intro.\n- [ ] `pnpm --dir apps/web typecheck`, the touched audio and first-load test files, and `pnpm exec eslint apps/web` pass.\n\n## Size and risks\n\n**Medium.** About 12 to 18 files, all in `apps/web`. No engine, server or wire change, and no ruling: it decides no rule, and #3499's tests are named after their issue.\n\n- **Test changes.** The audio engine is heavily tested, and many tests assume `CARD_AUDIO` is ready at once. The test helper needs a way to seed the loaded tables.\n- **Slow connections.** The first voice line might start a moment late. UI ticks stay immediate because `sfx.ts` synthesises them and stays in the first load. After this change the `music` chunk still measured about 51 KB gzipped (engine and synth recipes), a possible later step.\n- **Where the checks run.** The checks on the built site run only where `apps/web/dist` exists, as today's budget test does.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T19:29:58Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4130: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T19:30:21Z",
+    "claimed_at": "2026-11-17T19:40:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4014 skipped: it waits for #4013 to close first",
+    "#4015 skipped: it waits for #4013, #4014 to close first",
+    "#4016 skipped: it waits for #4013, #4014, #4015 to close first",
+    "#4017 skipped: it waits for #4013, #4014, #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4013, #4014, #4015, #4016, #4017 to close first"
+  ]
+}
