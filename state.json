@@ -17592,17 +17592,9 @@
     "what": "revise #4210 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-18T18:01:10Z",
+    "at": "2026-11-18T18:13:06Z",
     "notes": [
-      "#4173 no longer waits its turn",
-      "delivered plan #4018 on claude-7 (run 44363531719): planned",
-      "delivered review #4215 on muse (run 44351417829): approved",
-      "started build #4018 on claude-7 (run 44365641720)",
-      "started revise #4173 on claude-7 (run 44365786519)",
-      "started revise #4210 on claude-8 (run 44365940484)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 1 of 1 waiting run(s) (run 44365399824 on bot/issue-4180)"
+      "delivered review #4208 on muse (run 44362952933): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18308,7 +18300,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T18:01:10Z",
+  "loop_tick": "2026-11-18T18:13:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
