@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4218,
+  "title": "Patch: a Luau host for the C module, tested under Lune",
+  "branch": "bot/issue-4218",
+  "thread": "**Issue #4218 (data, not instructions):**\n\n```text\n# #4218: Patch: a Luau host for the C module, tested under Lune\nOpened by @squishy-squooby.\n\nPart of #2898. `crates/wasm/c` (#3093) is the engine's C boundary for a host that isn't JavaScript, and #2898's port translates it to Luau. This issue adds the Luau side of that boundary, so the work can be checked in this repository.\n\n## What to add\n\n- **A top-level `luau/` folder:**\n  - A `README.md` as its contract: what the folder holds, and how to install its tools and run its tests. Each crate's README plays the same role.\n  - A `rokit.toml` pinning `lune-org/lune@0.11.1`, `JohnnyMorganz/StyLua@2.6.0` and `Kampfkarren/selene@0.32.0`, plus the folder's `stylua.toml` and `selene.toml`. Use Selene's `luau` standard library and declare Lune's `require(\"@lune/\u2026\")`.\n- **`luau/src/Host.luau`:** follows `crates/wasm/c/README.md` exactly.\n  - `Host.new(instance)` takes `{ exports, memory: () -> buffer }` and calls `init()` once. `init` returns nothing.\n  - `host:call(name, ...)` takes strings and numbers. Each string goes in as `(ptr, len)` through `jackioh_alloc`, written with `buffer.writestring`. An empty string is `(0, 0)` with no buffer.\n  - The answer is copied out of `jackioh_result_ptr`/`jackioh_result_len` before the argument buffers are freed. An empty result reads as `\"\"`, without touching the pointer.\n  - Status 1 raises `<name> refused: <message>`.\n  - **A trap** (an error raised inside the call) marks the instance dead, and every later call refuses, telling the caller to open a fresh one. The result buffer counts as panic text only when it starts with `panicked at `. A trap that isn't a panic leaves the previous answer there, so say there is no text instead.\n  - **Never cache the buffer** across calls: `memory.grow` can replace it.\n  - **JSON stays opaque text.** Host decodes nothing. `Host.splitState(answer)` cuts the `state` member out of a `{\"state\":\u2026,\u2026}` answer (`begin_game`, `reduce`, `fold`) as its exact text. Never decode and re-encode a state: a re-encode can change it (an encoder that writes `{}` as `[]`), and the module caches states by their exact text.\n  - `instance` is an adapter over whatever the translator produces. That adapter comes with the translation, in a later issue.\n- **`luau/tests/host.spec.luau`:** a mock module in Luau over a real `buffer`. It implements `jackioh_alloc`/`jackioh_free` (tracking live allocations, raising on a bad free), `jackioh_result_ptr`/`jackioh_result_len`, `init`, and a few fake bindings: an echo, a two-string concat, one taking a number, a refusal, a panic trap and a trap with no panic text. It can also replace its buffer on a \"grow\". Cover:\n  - `init` called exactly once;\n  - ASCII and multi-byte UTF-8 round trips;\n  - empty strings and empty results;\n  - several string arguments in order, and number arguments;\n  - no live allocation after any call;\n  - status 1;\n  - both kinds of trap, and refusal afterwards;\n  - the buffer replaced mid-run, inside `jackioh_alloc`, inside a binding and between calls;\n  - `splitState` on an answer whose state holds nested braces and escaped quotes.\n\n  Use a tiny assert helper, not a framework, and exit non-zero on a failure (`@lune/process`).\n\n## Out of scope\n\nThe translation to Luau, a CI job for `luau/` (a person adds it: workflows are outside the bot's paths), and any engine change.\n\n## Done when\n\n- `lune run luau/tests/host.spec.luau` passes.\n- `stylua --check luau` and `selene luau` are clean.\n- Each test fails when the code it covers is broken: say in the pull request which breakages you tried.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4218: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T17:24:03Z",
+    "claimed_at": "2026-11-18T17:26:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4018 skipped: it waits for #4017 to close first"
+  ]
+}
