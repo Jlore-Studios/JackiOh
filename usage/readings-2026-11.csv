@@ -25308,3 +25308,6 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-18T08:30:04Z,claude-3,stream,call,44251961122,17,2026-11-18T11:30:00Z,,,allowed,,,
 2026-11-18T08:50:05Z,claude-3,stream,call,44251961122,18,2026-11-18T11:30:00Z,,,allowed,,,
 2026-11-18T09:04:29Z,claude-3,stream,call,44251961122,18,2026-11-18T11:30:00Z,,,allowed,,,
+2026-11-18T10:03:02Z,claude-8,ping,before,44281224777,30,2026-11-18T11:30:00Z,,,allowed,85,,
+2026-11-18T10:04:07Z,claude-8,stream,call,44281224777,31,2026-11-18T11:30:00Z,,,allowed,85,,
+2026-11-18T10:47:02Z,claude-8,stream,call,44281224777,32,2026-11-18T11:30:00Z,,,allowed,100,,
