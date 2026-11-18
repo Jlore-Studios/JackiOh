@@ -15327,6 +15327,13 @@
     "4168": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T05:36:42Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: not engine/AI, one endpoint plus its single-page call site, no migration, ~15 files"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
