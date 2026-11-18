@@ -14396,6 +14396,13 @@
     "4216": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T23:37:00Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Rule line 2 (The AI): the change is a decision path in crates/ai/src/skill.rs, so it is hard even though the item arrived labeled medium."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
