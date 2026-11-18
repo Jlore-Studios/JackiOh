@@ -10540,7 +10540,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-15T22:30:41Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:41af03ab-1795013231",
+      "run_id": "44328219674",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-18T14:47:46Z",
       "stop_requested": false,
