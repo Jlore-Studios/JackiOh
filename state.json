@@ -13441,11 +13441,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T00:14:39Z",
+        "at": "2026-11-18T00:39:41Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "CLAUDE.md rule 11 line 2: the AI, its decisions and its search \u2014 this rekeys the beam's dedup in crates/ai/src/search.rs"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Rule 2, the AI: it changes the beam search in crates/ai/src/search.rs, and with it the AI's decisions"
       },
       "failures": 0,
       "forced": false,
