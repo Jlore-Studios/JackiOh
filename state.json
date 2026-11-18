@@ -16147,9 +16147,11 @@
         "by": "`muse` (medium)",
         "sha": "7f6f0f76c45460752800ce86142739bf8cb5362c"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T05:39:18Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-18T06:49:34Z",
         "family": "muse",
@@ -16159,6 +16161,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 17 of 20): lint bans raw HTML sinks, and a test keeps the daily email plain text (template injection)\"} -->\n- ## What changed\n- **[`eslint.config.js`](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4016/eslint.config.js)** \u2014 one new block (item 17 of #3897, after the #4013 blocks) banning raw-HTML sinks over `apps/web/src`, `apps/edge` and `apps/admin` with the core rules, no new package:\n- - `no-restricted-syntax`: `dangerouslySetInnerHTML` JSX attributes, `innerHTML`/`outerHTML` assignments (reads stay legal), and `new Function`.\n- - `no-restricted-properties`: `insertAdjacentHTML` and `document.write`.\n- - `ignores: [\"**/*.test.{ts,tsx}\"]` \u2014 test files legitimately assign `innerHTML` for jsdom setup. No allowlist entries: zero hits in scoped non-test sources today.\n- **[`crates/server/tests/api/daily.rs`](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4016/crates/server/tests/api/daily.rs)** \u2014 new `daily_email_has_no_html_part_and_unsubscribe_page_reflects_no_token`: asserts every captured Resend body has no `html` key while `text` lists the game (with\u2026\n- ## How I tested it\n- - `pnpm exec eslint apps/edge apps/web e2e` \u2014 green (the task's acceptance command).\n- - Probed that all six bans actually fire (temp files with `innerHTML=`/`document.write`/`insertAdjacentHTML`, `new Function`, `dangerouslySetInnerHTML` each errored with the `(#4016)` message), then removed the probes.\n- - New test passes; existing guard `the_sweep_emails_once_per_account_and_none_when_off_or_without_email` passes.\n- - `cargo test -p jackioh-server` \u2014 exit 0, full green: integration binary 1848 passed / 0 failed / 1 ignored (a pre-existing daily `#[ignore]`), plus 134 + 7 + 2 + 745 in the other suites.\n- - `cargo fmt --check` and `cargo clippy -p jackioh-server --all-targets -- -D warnings` \u2014 clean.\n- ## Decisions the issue didn't settle\n- - The sweep emails **both** accounts of a fresh challenge (`emailed: 2`, not 1 \u2014 both sides get a \"your move\"-adjacent notification), so instead of asserting an exact count the test asserts `emailed >= 1` and checks **every** captured mail for the missing `html` part, finding the game line by match\u2026\n- - Exact-string asserts on the unsubscribe pages are intentionally brittle \u2014 any copy change must update the test deliberately, which is the point of pinning fixed strings.\n- - Web unit tests were not run: no web sources changed and the web-side change (ESLint config) is covered by the green acceptance lint; CI runs the web suite.\n- A reviewer should look twice at the `AssignmentExpression[left.property.name=\u2026]` selectors (they deliberately miss computed `el[\"innerHTML\"]` writes \u2014 acceptable, since zero uses exist today and a future need adds a commented exception) and at the copied page literals in the test, which must match \u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4016 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4016/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4016,
       "kind": "review",
       "live": "reviewing",
