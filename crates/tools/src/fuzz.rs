@@ -3901,7 +3901,7 @@ pub(crate) mod tests {
 
         #[test]
         fn seeds_widens_the_wave_past_the_gate_as_the_daily_run_asks() {
-            // super.yml plays each quarter of its 10,000 seeds as `--from <q> --seeds 2500` (#659).
+            // super.yml plays each quarter of its 12,500 seeds as `--from <q> --seeds 3125` (#659).
             assert_eq!(wave_size(Some(2500)), 2500);
             assert_eq!(wave_size(Some(WAVE_SEEDS)), WAVE_SEEDS);
             assert_eq!(wave_size(Some(1)), 1);
