@@ -16023,9 +16023,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T05:54:19Z",
+    "at": "2026-11-18T06:03:03Z",
     "url": "",
-    "what": "plan #4170 on claude-6"
+    "what": "suggestions (rules) on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-18T05:49:23Z",
@@ -37018,13 +37018,22 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-18T06:02:34Z",
-    "last_area": "tests",
-    "last_run": "2026-11-18T05:16:18Z",
+    "idle_since": "2026-11-18T06:03:03Z",
+    "last_area": "rules",
+    "last_run": "2026-11-18T06:03:03Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "rules",
+        "count": 2,
+        "last_run": "2026-11-18T06:03:03Z",
+        "provider": "claude-4",
+        "run_id": "pending:75139881-1794981758",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
