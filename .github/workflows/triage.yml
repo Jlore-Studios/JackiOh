@@ -14,8 +14,11 @@ on:
   # A label set while the issue is being opened sends `labeled` too.
   issues:
     types: [opened, labeled]
-  # _target: this repository's workflow runs, never code from the pull request.
-  pull_request_target:
+  # `pull_request`, not `_target` (GitHub blocks that in public repositories from 2026-12-02;
+  # infra/README.md, "pull_request_target"): the default branch's harness runs, never code from the
+  # pull request. A fork's pull request gets a read-only token, so labelling it fails and skips
+  # quietly, and one opened with a merge conflict runs nothing: dispatch either by number.
+  pull_request:
     types: [opened]
   workflow_dispatch:
     inputs:
