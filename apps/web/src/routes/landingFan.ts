@@ -2,10 +2,10 @@
 // Randomness is client-owned (CLAUDE.md rule 4) and injected so tests can deal deterministically.
 // R1017002 deals only the cards that print whole on a fan card, a full-art card (R2655001) favored.
 
-import { SHIPPED_SETS, type CardDef, type CardDefs, type Rarity } from "@jackioh/shared";
-import catalogJson from "@jackioh/cards/catalog.json";
+import { SHIPPED_SETS, type CardDef, type Rarity } from "@jackioh/shared";
 
 import { nameTier, overLimit, textTier, type LengthTier, type TextLimit } from "../cards/fit.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { isFullArtCard } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import {
@@ -32,16 +32,27 @@ export const FAN_CARD_MAX_PX = 158;
  */
 export const FAN_TEXT_LIMIT: TextLimit = { charsPerLine: 25, lines: 5 };
 
-/** JSON widens the unions to strings; the catalog is proved against SPEC §8 in crates/cards. */
-const CATALOG = catalogJson as unknown as CardDefs;
+/**
+ * #4180: the pools over the engine module's catalog (`game/currentCatalog.ts`), memoised like the
+ * `FITTING` map below: the module is in before the fan is dealt (`useEngineReady`), so reading them
+ * at import would throw.
+ */
+let core: readonly CardDef[] | null = null;
+let shipped: readonly CardDef[] | null = null;
 
-/** Core cards a deck may hold, tokens aside (§2.6). */
-export const FAN_POOL: readonly CardDef[] = Object.values(CATALOG).filter((def) => !def.token && def.set === "Core");
+/** Core cards a deck may hold, tokens aside (§2.6), in catalog order. */
+export function corePool(): readonly CardDef[] {
+  core ??= Object.values(currentCatalog().cards).filter((def) => !def.token && def.set === "Core");
+  return core;
+}
 
 /** R639: non-token cards from shipped sets, in catalog order, for experienced-player rotation. */
-export const ROTATION_POOL: readonly CardDef[] = Object.values(CATALOG).filter(
-  (def) => !def.token && (SHIPPED_SETS as readonly string[]).includes(def.set),
-);
+export function shippedPool(): readonly CardDef[] {
+  shipped ??= Object.values(currentCatalog().cards).filter(
+    (def) => !def.token && (SHIPPED_SETS as readonly string[]).includes(def.set),
+  );
+  return shipped;
+}
 
 /**
  * R1017002: whether both of `def`'s faces print whole on a fan card: a full-art face prints no words,
@@ -69,12 +80,12 @@ function fitting(name: string, pool: readonly CardDef[], fullArtOn: boolean): re
 
 /** R374's Core pool, R1017002: the cards in it that fit the fan. */
 export function fanPool(fullArtOn: boolean): readonly CardDef[] {
-  return fitting("core", FAN_POOL, fullArtOn);
+  return fitting("core", corePool(), fullArtOn);
 }
 
 /** R639's shipped pool, R1017002: the cards in it that fit the fan. */
 export function rotationPool(fullArtOn: boolean): readonly CardDef[] {
-  return fitting("shipped", ROTATION_POOL, fullArtOn);
+  return fitting("shipped", shippedPool(), fullArtOn);
 }
 
 /** Clamp a faulty `random` result of 1 so it cannot overrun. */
@@ -147,7 +158,7 @@ export function rotateFan(
   hand: readonly FanFace[],
   slot: number,
   random: RandomSource,
-  pool: readonly CardDef[] = ROTATION_POOL,
+  pool: readonly CardDef[] = shippedPool(),
   weigh: CardWeight = featureWeight,
 ): FanFace[] {
   if (hand.length === 0) return [...hand];
@@ -164,7 +175,7 @@ export function rotateFan(
 /** R374 draws one card per rarity in random order; sparse pools deal fewer cards rather than repeat. */
 export function dealLandingFan(
   random: RandomSource,
-  pool: readonly CardDef[] = FAN_POOL,
+  pool: readonly CardDef[] = corePool(),
   weigh: CardWeight = EVEN,
 ): FanFace[] {
   const byRarity = new Map<Rarity, CardDef[]>();

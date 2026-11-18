@@ -1,7 +1,8 @@
 // A card's words in Simplified Chinese (ME-CN, R1300–R1303) for the lists and filters that name cards, read from the two sidecars beside the catalog
-// (`@jackioh/cards/chinese.json` and `@jackioh/cards/chinese-terms.json`, which the aliases resolve to
-// crates/cards/), the way flavour.ts reads its own: the bundle carries the words, and no server is asked.
-// Presentation only (CLAUDE.md rule 7): no rule reads them.
+// (`crates/cards/chinese.json` and `crates/cards/chinese-terms.json`, loaded on demand by `loadCardTables`):
+// the bundle carries the words, and no server is asked. Presentation only (CLAUDE.md rule 7): no rule reads them.
+// #4180: the tables arrive through `import()`, so the English bundle carries none; an English reader never
+// downloads them, and every lookup falls back to the English until they arrive.
 //
 // The first table is keyed by catalog id: each card's and token's name and both faces' texts, each text with
 // exactly the `{key}`s its English face has (an English `{key|singular|plural}` is a plain `{key}` there, a
@@ -15,12 +16,10 @@
 // language, and for a reader who reads Chinese (R711000) every card is drawn from these tables, in a match
 // and in the collection alike.
 
-import chineseJson from "@jackioh/cards/chinese.json";
-import termsJson from "@jackioh/cards/chinese-terms.json";
-
 import type { CardDef, CardType, KeywordKind, Rarity, Tag } from "@jackioh/shared";
 
 import { getLocale, isZhCn, type Locale } from "../i18n/i18n.ts";
+import { loadersByStem, type Loader } from "../patches/loaders.ts";
 import { DORMANT_STARSHIP_ID, holdsDormantStarship } from "./fused.ts";
 import { isGlitch } from "./glitch.ts";
 
@@ -51,11 +50,82 @@ export type ChineseTerms = {
   readonly glossary: Readonly<Record<string, ChineseGlossaryEntry>>;
 };
 
-const { "//": _generated, ...entries } = chineseJson;
+/**
+ * #4180: the two sidecars' loaders, by stem (`loadersByStem`), through a lazy glob: Vite keeps both
+ * JSON files out of every bundle until `loadCardTables()` asks for them. Keep the glob path-based:
+ * Vite rejects package specifiers (patches/source.ts). The glob runs inside `loadCardTables()`,
+ * never at import: the GitHub-releases script (under `tsx`, where `import.meta.glob` does not
+ * exist) imports this module through `ChangeList.tsx` but never loads the tables.
+ */
+let tableLoaders: Record<string, Loader> | null = null;
 
-export const CHINESE: Readonly<Record<string, ChineseEntry>> = entries;
+function getTableLoaders(): Record<string, Loader> {
+  if (tableLoaders === null) {
+    tableLoaders = loadersByStem(import.meta.glob<unknown>("../../../../crates/cards/chinese*.json", { import: "default" }));
+  }
+  return tableLoaders;
+}
 
-export const CHINESE_TERMS: ChineseTerms = termsJson;
+/** The cards' table, filled in place by `loadCardTables()`: the same object `CARD_TABLES` reads. */
+export const CHINESE: Record<string, ChineseEntry> = {};
+
+/** The frame's table, filled in place by `loadCardTables()`: the same object `CARD_TABLES` reads. */
+export const CHINESE_TERMS = {} as ChineseTerms;
+
+let tablesReady = false;
+let pendingTables: Promise<void> | null = null;
+
+/** #4180, R711000: whether `loadCardTables()` has filled the tables: every lookup reads English until it has. */
+export function cardTablesReady(): boolean {
+  return tablesReady;
+}
+
+function isTable(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * #4180, R711000: loads the two sidecars once and fills `CHINESE` and `CHINESE_TERMS` in place, so the
+ * 20+ call sites and the tests keep reading the same objects. A failed download leaves the tables
+ * empty and clears the pending load, so the language stays as it was and the next call tries again.
+ */
+export function loadCardTables(): Promise<void> {
+  if (tablesReady) return Promise.resolve();
+  if (pendingTables !== null) return pendingTables;
+  let loaders: Record<string, Loader>;
+  try {
+    loaders = getTableLoaders();
+  } catch {
+    return Promise.reject(new Error("the Chinese card tables did not load"));
+  }
+  const cards = loaders["chinese"];
+  const terms = loaders["chinese-terms"];
+  if (cards === undefined || terms === undefined) {
+    return Promise.reject(new Error("the Chinese card tables did not load"));
+  }
+  pendingTables = Promise.all([cards(), terms()])
+    .then(([cardsTable, termsTable]) => {
+      if (!isTable(cardsTable) || !isTable(termsTable)) throw new Error("the Chinese card tables did not load");
+      const { "//": _generated, ...entries } = cardsTable;
+      Object.assign(CHINESE, entries);
+      Object.assign(CHINESE_TERMS, termsTable);
+      tablesReady = true;
+      pendingTables = null;
+    })
+    .catch((cause: unknown) => {
+      pendingTables = null;
+      throw cause;
+    });
+  return pendingTables;
+}
+
+/** Empties the tables, back to before `loadCardTables()`. Tests only. */
+export function resetCardTablesForTests(): void {
+  for (const key of Object.keys(CHINESE)) delete CHINESE[key];
+  for (const key of Object.keys(CHINESE_TERMS)) delete (CHINESE_TERMS as Record<string, unknown>)[key];
+  tablesReady = false;
+  pendingTables = null;
+}
 
 /** A language's card tables: the pair of sidecars beside the catalog (R1303). */
 export type CardTable = { readonly cards: Readonly<Record<string, ChineseEntry>>; readonly terms: ChineseTerms };
@@ -75,10 +145,11 @@ export function drawnInChinese(flagged: boolean): boolean {
 
 /**
  * R711000: the frame's words in the reader's language, or undefined where it has no card table. Read
- * where a label is built, never cached across a language switch.
+ * where a label is built, never cached across a language switch. #4180: undefined until the tables
+ * arrive, as `t()` is the English for a missing entry.
  */
 export function readerTerms(): ChineseTerms | undefined {
-  return CARD_TABLES[getLocale()]?.terms;
+  return tablesReady ? CARD_TABLES[getLocale()]?.terms : undefined;
 }
 
 /** R711000: a catalog card's name as the reader reads it: its entry's in Chinese, else the catalog's. */
@@ -99,7 +170,9 @@ const FUSED_LINE = "\n";
 const FUSED_NAME = " + ";
 
 function entryOf(defId: string): ChineseEntry | undefined {
-  return Object.hasOwn(CHINESE, defId) ? CHINESE[defId] : undefined;
+  // #4180: no entry until the tables arrive: every lookup falls back to the English, and the gates
+  // load them best-effort beside the module, so a failed chunk keeps reading English.
+  return tablesReady && Object.hasOwn(CHINESE, defId) ? CHINESE[defId] : undefined;
 }
 
 /** R468: a fused definition's ingredients' entries, in order, or null when one has none. */

@@ -7,7 +7,6 @@ import { lazy, useState, type ComponentType, type ReactElement } from "react";
 import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, stripTrailingSlashes, watchIdOf } from "../net/navigate.ts";
 import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
-import { loadWasm } from "../wasm/index.ts";
 import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -146,7 +145,8 @@ export function prefetchRoute(path: string): void {
   prefetched.add(name);
   void routeChunks[name]?.load().catch(() => undefined);
   if (ENGINE_CHUNKS.has(name)) {
-    void loadWasm().catch(() => undefined);
+    // #4180: the sound loader awaits the module before its chunk parses against the catalog,
+    // so one call starts both; `loadWasm()` is idempotent, and the test holds the single call.
     void loadSoundTables().catch(() => undefined);
   }
 }
@@ -160,7 +160,7 @@ export function startScreen(path: string, engine: boolean): void {
   const name = chunkAt(path);
   if (name !== null) void routeChunks[name]?.load().catch(() => undefined);
   if (engine) {
-    void loadWasm().catch(() => undefined);
+    // #4180: as above, the sound loader starts the module too.
     void loadSoundTables().catch(() => undefined);
   }
 }

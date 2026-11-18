@@ -824,6 +824,12 @@ pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
 /// hand full of Activates cannot starve the board's prices.
 pub const AI_HAND_ACTIVATION_PROBE_NODES: usize = 16;
 
+/// R4197000: the most nodes a decision's prompt-pick probe (`evaluate::prompt_activation_prices`) spends
+/// at the seat's own open prompt whose card can take a power: one answer, two turn ends and
+/// `AI_REPLY.visible_activations` uses for each of the three answers a Discover of a power offers. A slice
+/// of its own, since `AI_ACTIVATION_PROBE_NODES`' probes price nothing while a prompt is open.
+pub const AI_PROMPT_ACTIVATION_PROBE_NODES: usize = 24;
+
 /// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
 /// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with an
 /// attack hook, on either field.
@@ -841,6 +847,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
     + AI_TURN_HOOK_PROBE_NODES
     + AI_ACTIVATION_PROBE_NODES
     + AI_HAND_ACTIVATION_PROBE_NODES
+    + AI_PROMPT_ACTIVATION_PROBE_NODES
     + AI_ATTACK_HOOK_PROBE_NODES
     + AI_AWAKEN_PROBE_NODES;
 

@@ -240,9 +240,10 @@ mod tests {
     }
 
     /// Issue #4154: Tribute 1 on both faces (R101): with no unit to pay it the play is refused, and the unit
-    /// paid goes to the graveyard. Its Cry casts a random BUSTED card from the build's own list, which a
-    /// new version's list changes and which may move it off the field (v0.6.7's exiles it), so the play is
-    /// read off its `cardPlayed`, not off where it stands.
+    /// paid dies paying it. Its Cry casts a random BUSTED card from the build's own list, which a new
+    /// version's list changes and which may move both cards on (v0.6.7's exiles the board and the
+    /// graveyard), so the Tribute is read off the events: the paid unit's `destroyed` comes before
+    /// anything the Cry casts.
     #[test]
     fn issue_4154_both_faces_need_tribute_1() {
         crate::register_all();
@@ -254,12 +255,17 @@ mod tests {
             s.expect_refused_with(|s| s.play(ID, json!({ "zone": 1 })), "Tribute");
             let mut s = board(radiant, "xxfreshjack-tribute");
             let body = s.unit(P1, 2).expect("the body").id;
+            let from = s.events().len();
             s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
-            let played = s.events().iter().any(|event| {
-                matches!(event, GameEvent::CardPlayed { player: P1, def_id, .. } if def_id == ID)
-            });
-            assert!(played, "radiant {radiant}: the play was taken");
-            s.expect_in_zone(body.as_str(), "graveyard");
+            let events = &s.events()[from..];
+            let paid = events
+                .iter()
+                .position(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == body));
+            let cast = events
+                .iter()
+                .position(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id != ID))
+                .unwrap_or(events.len());
+            assert!(paid.is_some_and(|at| at < cast), "radiant {radiant}: the Tribute took the body first");
         }
     }
 

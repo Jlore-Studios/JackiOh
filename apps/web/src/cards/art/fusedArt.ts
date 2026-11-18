@@ -6,9 +6,10 @@
 // faces that hand CardArt a fused card's id need no change. A Starship keeps its own art already, from its
 // pieces and its launch (R2249000). Presentation only (CLAUDE.md rule 7): the engine's definition is whole.
 
-import type { Tag } from "@jackioh/shared";
+import type { CardDef, Tag } from "@jackioh/shared";
 
-import { CATALOG } from "../../wire/cards.ts";
+import { currentCatalog } from "../../game/currentCatalog.ts";
+import { wasmLoaded } from "../../wasm/index.ts";
 import { DORMANT_STARSHIP_ID, fusedParts, type DefOf } from "../fused.ts";
 import { STINKYSCAPE_PREFIX } from "./stinkyscape.ts";
 
@@ -51,14 +52,24 @@ export function artSubjectOf(subject: ArtSubject, defOf: DefOf | null): ArtSubje
  * ingredient the catalog knows. An id that is no fusion is left as it is. A digest id (R468) hides its ingredients,
  * so it has no art: null.
  */
+/**
+ * #4180: the module's catalog where the caller's definitions do not reach, or null before the
+ * module is in (ungated screens draw first, so this never throws): then only `defOf` answers,
+ * and a plain card still resolves to itself (`fusedParts` answers `[id]` for one).
+ */
+function knownCards(): Readonly<Record<string, CardDef>> | null {
+  return wasmLoaded() ? currentCatalog().cards : null;
+}
+
 export function fullScreenArtId(defId: string, defOf: DefOf | null): string | null {
-  if (CATALOG[defId] !== undefined) return defId;
-  const lookup: DefOf = (id) => defOf?.(id) ?? CATALOG[id];
+  const catalog = knownCards();
+  if (catalog?.[defId] !== undefined) return defId;
+  const lookup: DefOf = (id) => defOf?.(id) ?? catalog?.[id];
   const parts = fusedParts(defId, lookup);
   if (parts === null) return null;
   if (parts.length < 2) return defId;
   const host = artSubjectOf({ defId, name: undefined, tags: [] }, lookup).defId;
-  if (host !== defId && CATALOG[host] !== undefined) return host;
+  if (host !== defId && catalog?.[host] !== undefined) return host;
   if (parts.includes(DORMANT_STARSHIP_ID)) return DORMANT_STARSHIP_ID;
-  return parts.findLast((id) => CATALOG[id] !== undefined) ?? null;
+  return parts.findLast((id) => catalog?.[id] !== undefined) ?? null;
 }

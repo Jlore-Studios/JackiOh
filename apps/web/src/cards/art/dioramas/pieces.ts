@@ -13,9 +13,9 @@
 // its pieces as the whole moving picture does (index.ts).
 // Presentation only (CLAUDE.md rule 7): a piece is drawn from the card's id and face alone (R202).
 
-import { CATALOG } from "../../../wire/cards.ts";
+import { currentCatalog } from "../../../game/currentCatalog.ts";
 import type { ArtMotion, ArtRole } from "../motion.ts";
-import { artPlaneUri } from "../pictures.ts";
+import { artPlaneUri } from "../planes.ts";
 import { composeScene, SCENE_LAYER_ROLES, SCENE_LAYERS, sceneRecipeOf, type SceneShape } from "../scene.ts";
 import { isStinkyscapeArt, stinkyParts } from "../stinkyscape.ts";
 import { mindustrialOverlay, paintsUnderOverlay } from "../stinkyscapeplus.ts";
@@ -173,7 +173,8 @@ function scenePieces(defId: string, radiant: boolean): PicturePieces | null {
  * that draws it, its Mindustrial overlay's too, under the vignette.
  */
 function stinkyPieces(defId: string, radiant: boolean): PicturePieces | null {
-  const def = CATALOG[defId];
+  // #4180: the module's catalog, read in the call: pieces are drawn with the face, once it is in.
+  const def = currentCatalog().cards[defId];
   const overlaid = paintsUnderOverlay(defId);
   if (def === undefined || !(isStinkyscapeArt(defId) || overlaid)) return null;
   const parts = stinkyParts(defId, def.name, def.tags, def.type, radiant);

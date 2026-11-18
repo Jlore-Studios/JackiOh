@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { EARLIER_DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { cosmeticsOf } from "../../cards/cosmetics.ts";
-import { PORTRAIT_DEFS } from "../../emotes/portraits.ts";
+import { portraitDefs } from "../../emotes/portraits.ts";
 import { formatDateTime } from "../../i18n/i18n.ts";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
 import { navigate, newDeckPath } from "../../net/navigate.ts";
@@ -1384,12 +1384,12 @@ describe("issue #2099 undo and redo", () => {
     fireEvent.change(screen.getByTestId("deck-cosmetic-field"), { target: { value: "field-rain" } });
     fireEvent.click(undoButton());
     expect(screen.getByTestId("deck-cosmetic-field")).toHaveValue("");
-    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.shredder.def.name}`);
+    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", `Hero portrait: ${portraitDefs().shredder.def.name}`);
     fireEvent.click(undoButton());
     expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", first);
     fireEvent.click(redoButton());
     fireEvent.click(redoButton());
-    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.shredder.def.name}`);
+    expect(screen.getByTestId("portrait-current")).toHaveAttribute("title", `Hero portrait: ${portraitDefs().shredder.def.name}`);
     expect(screen.getByTestId("deck-cosmetic-field")).toHaveValue("field-rain");
   });
 
