@@ -15414,17 +15414,14 @@
     "what": "review #4158 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-18T04:09:02Z",
+    "at": "2026-11-18T04:21:31Z",
     "notes": [
-      "delivered plan #4174 on muse (run 44234455739): planned",
-      "delivered plan #4166 on claude-1 (run 44233277597): planned",
-      "delivered review #4172 on claude-4 (run 44233135085): approved",
-      "delivered build #4131 on claude-6 (run 44224552092): built",
-      "started review #4176 on claude-6 (run 44235802248)",
-      "started build #4166 on claude-1 (run 44235881817)",
-      "started build #4174 on muse (run 44235955123)",
+      "delivered review #4173 on claude-7 (run 44233064986): blocked",
+      "delivered review #4162 on muse (run 44229074855): approved",
+      "delivered review #4158 on agy (run 44221624197): built",
+      "started review #4158 on muse (run 44237215973)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16130,7 +16127,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T04:09:02Z",
+  "loop_tick": "2026-11-18T04:21:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
