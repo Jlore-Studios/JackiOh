@@ -14923,12 +14923,10 @@
     "what": "review #4231 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-18T22:43:07Z",
+    "at": "2026-11-18T22:51:41Z",
     "notes": [
-      "delivered revise #4231 on claude-3 (run 44404631725): built",
-      "started review #4231 on claude-3 (run 44414527945)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered review #4234 on claude-4 (run 44380753718): approved",
+      "runner gate: started 0 of 1 waiting run(s); run 44415701858 on bot/issue-4205: it waits on nothing this account may approve"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15634,7 +15632,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T22:43:07Z",
+  "loop_tick": "2026-11-18T22:51:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
