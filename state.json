@@ -17613,17 +17613,21 @@
     "what": "plan #4218 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-18T17:06:20Z",
+    "at": "2026-11-18T17:19:11Z",
     "notes": [
-      "#4197 is held for `claude-1` until 11:10 (5-hour usage is 86%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))",
-      "started suggest on claude-6 (run 44355163752)",
-      "started suggest on claude-8 (run 44355304054)",
-      "started suggest on claude-6 (run 44355448036)",
-      "started plan #4197 on claude-1 (run 44355624174)",
-      "started suggest on claude-4 (run 44355785668)",
-      "started suggest on muse (run 44355937490)",
+      "#4208: approved and green, so its strikes are cleared",
+      "delivered suggest on muse (run 44355937490): suggested",
+      "delivered suggest on claude-4 (run 44355785668): interrupted",
+      "delivered plan #4197 on claude-1 (run 44355624174): planned",
+      "delivered revise #4206 on muse (run 44351574315): built",
+      "delivered review #4210 on claude-8 (run 44344361333): approved",
+      "started revise #4208 on muse (run 44358322828)",
+      "started build #4197 on claude-1 (run 44358490772)",
+      "started plan #4218 on muse (run 44358640527)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "pruned 4 plan file(s) older than 7 days",
+      "#4216: typed it Task",
+      "runner gate: started 1 of 1 waiting run(s) (run 44358089328 on claude/relaxed-dirac-abgkpu)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18329,7 +18333,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T17:06:20Z",
+  "loop_tick": "2026-11-18T17:19:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
