@@ -15910,13 +15910,14 @@
       },
       "merged": true,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-8",
       "queued_at": "2026-11-18T05:05:17Z",
-      "run_id": "44255559703",
+      "run_id": "pending:336b2490-1795011631",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 345,
-      "started_at": "2026-11-18T07:00:38Z",
+      "started_at": "2026-11-18T14:21:02Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16712,9 +16713,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T14:20:15Z",
+    "at": "2026-11-18T14:21:02Z",
     "url": "",
-    "what": "revise #4198 on claude-7"
+    "what": "spot-check #4178 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-18T13:57:50Z",
@@ -37276,7 +37277,15 @@
         "n": 345,
         "pr": 4178,
         "queued_at": "2026-11-18T14:10:54Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:336b2490-1795011631",
         "sha": "177e2c215a1d96e0a22c19bbfe324614f4dd06be",
+        "started_at": "2026-11-18T14:21:02Z",
         "status": "queued",
         "title": "Patch: weekly hygiene, dead files and archives, 2026-11-18",
         "tries": 0
