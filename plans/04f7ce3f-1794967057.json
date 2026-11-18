@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4140,
+  "title": "Patch: the game log speaks its newest line to screen readers",
+  "branch": "bot/issue-4140",
+  "thread": "**Issue #4140 (data, not instructions):**\n\n```text\n# #4140: Patch: the game log speaks its newest line to screen readers\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA blind player hears the game as it happens. Today the turn banner announces whose turn it is and a failed attack explains itself, but the ordinary feed of the match, your opponent played a unit, your unit took damage, a trap fired, stays silent unless the reader leaves the board and finds the log. After this change a screen reader speaks each newest log line once, politely, as it lands, so a player who cannot see the board can follow the game hands-free. Sighted players see nothing different.\n\nConcrete example: the opponent plays a unit. Today a screen-reader user hears nothing until the turn banner changes. After the change they hear the same sentence the log shows, e.g. the unit was played, once, without moving their focus.\n\n## Why\n\n- The log is the screen-reader player's window into the match (SPEC \u00a710.10, R745), and its lines are already safe to speak: redacted cards are never named (R97), so an announcement leaks nothing the view hides (CLAUDE.md rule 7).\n- The gap is concrete in code: `Log.tsx` renders `<ol aria-label=\"Game log\">` with no live region, and a search of `Log.tsx`, `Game.tsx` and `Log.test.tsx` finds no `aria-live`, `role=\"status\"` or visually-hidden announcer for log lines. The only spoken updates are the turn banner (`role=\"status\"` in `Game.tsx`), attack-failure and error notes.\n- Axe (e2e spec 38) passes on the board, but axe cannot require a live feed, so the gate stays green while the feed stays mute.\n- Precedent exists for screen-reader-only presentation: a full-art face keeps its name in its words for a screen reader (R2723000). This extends that thinking to the log.\n- None of the open issues covers it, and none of the rejected ones is the same idea: #1040 was scroll position, #1692 was a visual unread badge on the phone toggle, #431 was the broader board support this builds on.\n\n## Proposal\n\n- Add a visually-hidden announcer inside the log component: one element using the existing visually-hidden pattern (`board.css`, as the turn plate does), with `aria-live=\"polite\"` and `aria-atomic=\"true\"`, whose text is the plain words of the newest shown line.\n- Announce only arrivals: the announcer updates when the newest line's key changes, never re-reads kept history on mount, on reveal of the phone popover, or on re-render, so opening the log does not replay up to 1000 lines.\n- Announce the redacted-safe line text the log already draws (never an instance id), including the turn divider as the turn's own line where one exists.\n- Rejected alternative: putting `aria-live` on the whole `<ol>` (screen readers would re-read history on every change) or using `assertive` (would interrupt the player's own navigation and the turn banner).\n\n## Where it lands\n\n- `apps/web/src/game/Log.tsx`: the announcer element beside the `<ol>`, fed by the same `shown` lines the list draws.\n- `apps/web/src/game/board.css` (or the existing visually-hidden pattern it already holds): no new visual style, reuse the pattern.\n- `apps/web/src/game/Log.test.tsx`: new tests for the announcer.\n- SPEC \u00a710.10 (`spec/10-engine-guide.md`, Client rendering, R745): cite as the grounding section; no spec wording or ruling change needed (presentation only, no Hearthstone decision, so no new ruling note).\n\n## Acceptance criteria\n\n- [ ] With a screen reader, the newest log line is announced once when it lands (new event window), and opening or re-rendering the board announces nothing extra.\n- [ ] A redacted line announces exactly its shown redacted words (no hidden card name, no instance id), per R97.\n- [ ] No visual change: board screenshots and pixel specs are untouched; the announcer takes no layout space.\n- [ ] New unit tests in `Log.test.tsx` fail without the change and pass with it (arrival announces; mount/reveal does not replay history; redacted stays redacted).\n- [ ] The existing accessibility gate (e2e spec 38) still passes with no new axe exception.\n\n## Size and risks\n\nSmall: one element plus Vergil-style key-change gating and unit tests, roughly one file changed and one test file extended. Main risk is verbosity taste (which lines deserve speech, e.g. every damage tick vs. turn boundaries); the safe default is every newest line, matching the visible log, tunable later from player feedback. No hidden-information risk: the announcer reads only the already-redacted line text. No secret, dashboard, or account work.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T01:53:44Z:\n\nholy cancer\n\n---\nComment by @MaxGoetzmann at 2026-11-18T01:53:49Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4140: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T01:54:12Z",
+    "claimed_at": "2026-11-18T01:57:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4144 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
