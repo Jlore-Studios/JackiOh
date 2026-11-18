@@ -29319,5 +29319,29 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.6g",
+    "date": "2026-11-18",
+    "title": "Patch: the sound tables load when sound first needs them, so the first page load is about 100 KB lighter",
+    "source": "#4130",
+    "notes": "The static sound tables and json5 parser load when sound first needs them, keeping them out of the first page load.",
+    "player": {
+      "title": "Faster initial page load",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Sound data and audio tables now load on demand rather than on first page visit, reducing the initial download size."
+      ]
+    },
+    "commits": [
+      "addbe49ae96824b638c54a8e93faae15da9ff9a6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
