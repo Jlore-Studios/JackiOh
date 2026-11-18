@@ -15397,11 +15397,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T05:50:44Z",
+        "at": "2026-11-18T06:20:42Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Line 2 of the rule: the change rewrites the AI's scoring decisions in crates/ai/src/ (evaluate.rs face_threat_from plus a new EvalWeights flag)."
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 2, the AI: it changes the evaluation every search decision reads (crates/ai/src/evaluate.rs)"
       },
       "failures": 0,
       "forced": false,
