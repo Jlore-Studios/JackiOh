@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4169,
+  "title": "Patch: live co-op games checkpoint so a restart folds only the tail",
+  "branch": "bot/issue-4169",
+  "thread": "**Issue #4169 (data, not instructions):**\n\n```text\n# #4169: Patch: live co-op games checkpoint so a restart folds only the tail\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA finished deploy or restart already lets a live 1v1 game resume quickly from a saved snapshot instead of replaying its whole history. Co-op and 2v2 games get the same treatment: while one is running the server snapshots it, and after a restart the reconnecting players resume from the snapshot plus only the moves since it. In a long four-player game this is the difference between a quick rejoin and staring at a loading board while the whole log replays.\n\n## Why\n\nThe co-op registry rebuilds a crashed or stopped actor by folding the match's entire action log, and there is no snapshot anywhere on that path: no checkpoint code in the co-op modules and no checkpoint table for co-op rows (the existing checkpoint migration covers 1v1 rows only). The shutdown drain stops co-op actors without writing one either. So every deploy or container restart forces every live co-op and 2v2 table through a full-log fold on rejoin, while 1v1 games and daily games already avoid exactly this cost with their snapshots.\n\n## Proposal\n\nMirror the 1v1 snapshot for co-op: a new table for co-op checkpoints written on the shutdown drain and periodically while a game runs, verified on rebuild (same rules build, catalog version, log position and integrity hash, else fold the whole log), and dropped when the game ends. Reuse the same verify-and-fold-tail shape so the two paths cannot drift.\n\n## Where it lands\n\n- `crates/server/src/duos/` (actor drain write, registry rebuild read), `crates/server/src/actor/checkpoint.rs` (shared verify shape)\n- A new migration for the co-op checkpoint table, `crates/server/src/db/` (Postgres and fake)\n- SPEC \u00a79.3/\u00a79.5 checkpoint paragraphs and \u00a713 where they describe rebuilds\n\n## Acceptance criteria\n\n- [ ] A restart mid-co-op-game rebuilds from the checkpoint and folds only later rows\n- [ ] A checkpoint that fails any check is refused and the whole log folds, as 1v1 does\n- [ ] Ending a co-op or 2v2 game drops its checkpoint row\n- [ ] Coverage in both store backends, including the multiplayer seats\n\n## Size and risks\n\nMedium: one migration, a small store surface, drain and rebuild wiring, tests. Main risk is the two checkpoint paths drifting apart, handled by sharing the verify logic. Rejected alternative: stuffing co-op snapshots into the 1v1 checkpoint table \u2014 the stored states differ, so a table of its own stays cleaner.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T05:21:35Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4169: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T05:21:51Z",
+    "claimed_at": "2026-11-18T05:26:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4178 is held for `claude-1` until Wed 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#4159 is held for `claude-3` until Wed 00:30 (it refused a call)",
+    "#4164 is held for `claude-3` until Wed 00:30 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
