@@ -959,6 +959,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c121_1_toxopid_leg::script_v0_6_6h,
     ),
     (c119_eclipse::ID, "v0.6.6h", c119_eclipse::script_v0_6_6h),
+    (
+        c081_radiant_saintess::ID,
+        "v0.6.6h",
+        c081_radiant_saintess::script_v0_6_6h,
+    ),
     (c109_xxfreshjack::ID, "v0.6.6h", c109_xxfreshjack::script_v0_6_6h),
     (
         c096_ocean_tsunami::ID,

@@ -316,9 +316,10 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
         // Both steals are due at the start of p1's next turn, in that order (R68); p2's fixture trap
         // returns all of p2's units to hand when the opponent takes one of p2's permanents.
         let mut s = scenario(json!({
-            // A (0) Spell keeps p1's turn open after the plays (R82): the Fanatics Can't Defend
-            // (R2657000), so they offer no switch to Defense Position.
-            "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO, "core-010"], "library": [RENO, RENO, RENO] },
+            // A (0) Spell keeps p1's turn open after the plays (R82), whether or not the Fanatics offer a
+            // switch to Defense Position (Can't Defend took it from R2657000 until #4154). The two (3)
+            // Fanatics (#4154) cost 6, past the 4 mana a turn gives.
+            "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO, "core-010"], "mana": 6, "library": [RENO, RENO, RENO] },
             "p2": { "field": [VANILLA, TEMPO_TIMMY], "hand": [RENO], "library": [RENO, RENO, RENO] },
         }));
         fixture(
@@ -442,7 +443,8 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
         // answers a Tempo Timmy dying by returning p2's units to hand: it names it by definition, since
         // Timmy dies on p1's side as p1's card (R2618000).
         let mut s = scenario(json!({
-            "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "mana": 7, "library": [RENO, RENO, RENO] },
+            // Two (3) Fanatics (#4154) and the 3 mana kept for Reno.
+            "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "mana": 9, "library": [RENO, RENO, RENO] },
             "p2": {
                 "field": [{ "def": TEMPO_TIMMY, "damage": 1 }, VANILLA],
                 "backrow": [{ "def": SUPPRESSIVE_AURA, "radiant": true }],

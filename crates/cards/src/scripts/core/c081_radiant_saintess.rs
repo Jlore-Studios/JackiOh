@@ -43,6 +43,15 @@ fn death(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     radiate_your_units(ctx, false)
 }
 
+/// R767000: through v0.6.6h "your other Units" was everyone of hers standing, so a Death another card ran
+/// while she stood made her Radiant too (issue #4154 left her out, R4154205).
+fn death_v0_6_6h(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    active_units_of(ctx.state, ctx.controller)
+        .iter()
+        .map(|unit| set_radiant(json_as(json!({ "instanceId": unit.id }))))
+        .collect()
+}
+
 /// "…and every card in your hand", v0.5.2's Radiant face: the controller's hand, read through
 /// `zoneCards` (a copy) and named card by card, as #29 does. Every card, so no rng is drawn (§9.3),
 /// and a card already Radiant is still named — `setRadiant` cues it without changing it (R177), which
@@ -56,7 +65,7 @@ fn radiate_your_hand(ctx: &EffectContext<'_>) -> Vec<Effect> {
 
 /// v0.5.2's Radiant Death: the board first, in the order the text names it, then the hand.
 fn radiant_death_v0_5_2(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let mut effects = radiate_your_units(ctx, false);
+    let mut effects = death_v0_6_6h(ctx);
     effects.extend(radiate_your_hand(ctx));
     effects
 }
@@ -73,12 +82,25 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: v0.5.3 to v0.6.6h, both faces' Death with her own standing body among "your other Units"
+/// (`death_v0_6_6h`).
+pub fn script_v0_6_6h() -> CardScripts {
+    let base = Script {
+        death: Some(hook(death_v0_6_6h)),
+        ..Script::default()
+    };
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
+
 /// R767000: through v0.5.2 the Radiant face's Death radiated the hand too; `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
         base: Script {
-            death: Some(hook(death)),
+            death: Some(hook(death_v0_6_6h)),
             ..Script::default()
         },
         radiant: Script {
@@ -371,6 +393,37 @@ mod tests {
 
     /// R767000: the script kept for the replays of v0.5.2 and before, whose Radiant Death radiated the
     /// hand too.
+    /// R4154205: S #70 Z'Zoth summons her and runs her Death where she stands: "your other Units" leaves
+    /// her out, so Z'Zoth turns Radiant and she does not; under the script kept for v0.6.6h (R767000) she
+    /// turns Radiant too.
+    mod r4154205_a_death_run_while_she_stands {
+        use super::*;
+
+        const ZZOTH: &str = "stinkyscape-070"; // Z'Zoth
+
+        /// Z'Zoth played into lane 1 with her in the graveyard: (Z'Zoth's face, hers) after its Cry.
+        fn radiant_after() -> (bool, bool) {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ZZOTH, STOCKPILE], "graveyard": [SAINTESS] },
+                "p2": { "hand": [STOCKPILE] },
+            }));
+            s.play(ZZOTH, json!({ "zone": 1 }));
+            let saintess = s.unit_at(P1, 2);
+            assert_eq!(saintess.def_id, SAINTESS, "she is summoned next to it");
+            (s.unit_at(P1, 1).radiant, saintess.radiant)
+        }
+
+        #[test]
+        fn r4154205_she_is_none_of_her_other_units() {
+            assert_eq!(radiant_after(), (true, false));
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_6h_counts_her_too() {
+            crate::under_kept(ID, script_v0_6_6h(), || assert_eq!(radiant_after(), (true, true)));
+        }
+    }
+
     mod n81_radiant_saintess_v0_5_2 {
         use super::*;
 

@@ -2284,12 +2284,10 @@ mod stinkyscape {
             "p2": { "hand": [FILLER], "library": [X, X] },
         }));
         let mana = s.state().players.p1.mana.current;
-        // A travel costs (1); the Radiant face's first each turn is free (R1847001).
+        // A travel costs (1), but the first each turn is free on both faces since #4154, the Radiant
+        // face's first two (R1847001, R4154203).
         activate_listed(&mut s, "stinkyscape-148", any);
-        assert_eq!(
-            s.state().players.p1.mana.current,
-            if radiant { mana } else { mana - 1 }
-        );
+        assert_eq!(s.state().players.p1.mana.current, mana);
     });
 
     mod s_t_dormant_starship {

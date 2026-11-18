@@ -7045,8 +7045,8 @@ stinkyscapeplus-004: # Profe Yates
     death: I'll never see the Northern Lights.
   zh:
     name: 耶茨教授
-    base: 战吼：放逐一个名称和文本中含有M、O、U、S和E的永久物（中国牌免疫）。然后召唤两张随机陷阱。
-    radiant: 战吼：放逐一个名称和文本中含有M、O、U、S和E的永久物（中国牌免疫）。然后召唤三张随机光辉陷阱。
+    base: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤两张随机陷阱。
+    radiant: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤三张随机光辉陷阱。
 stinkyscapeplus-005: # Dingleberry Droat
   flavour: He blends the whole fruit stand into one very expensive snack and calls it a business plan.
   voice:

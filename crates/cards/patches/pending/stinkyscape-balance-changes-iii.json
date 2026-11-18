@@ -37,7 +37,8 @@
       "Expedition123 also gives your hero 2 Armor (Radiant 4).",
       "Goetzmann Game Design's card costs (1) less.",
       "CN Jade Well's Auspicious Rocks come with Lucky 1.",
-      "Spiteful Stab gains Pierce."
+      "Spiteful Stab gains Pierce.",
+      "Dungeon run: a tier-1 Elite now draws every turn and has 18 health, up from every other turn and 16."
     ],
     "changes": [
       "Profe Yates's Cry exiles a permanent with M, O, U, S and E in its name and text (CN cards are immune; a face-down card never qualifies), and Yates has no Activates any more.",
@@ -137,8 +138,10 @@
   ],
   "plays": [
     "classicplus-040",
+    "core-081",
     "stinkyscape-089",
     "stinkyscape-111"
   ],
-  "rule": true
+  "rule": true,
+  "visual": true
 }

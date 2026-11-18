@@ -13,8 +13,9 @@ use jackioh_engine::testkit::*;
 
 const MAGIC_JAMMED: &str = "core-036";
 const MIND_CONTROL: &str = "core-049";
-/// Issue #3139: Snom Bunny Mind Control costs (5), past the 4 mana a turn gives, so a game gives p1 the mana.
-const MIND_CONTROL_COST: i32 = 5;
+/// Issue #3139: Snom Bunny Mind Control costs (6) (5 until #4154), past the 4 mana a turn gives, so a game
+/// gives p1 the mana.
+const MIND_CONTROL_COST: i32 = 6;
 const KPOP: &str = "core-050";
 const SILAS: &str = "core-052";
 const MROW: &str = "core-086";
@@ -467,8 +468,8 @@ mod r171_with_the_cards_that_change_control {
     #[test]
     fn r171_c49_radiant_making_a_stolen_c11_radiant_gives_it_charge_so_it_may_attack_the_hero_at_once() {
         let mut g = setup(json!({
-            // #49 costs (5): a sixth mana keeps Mr. Vanilla playable, so the turn does not auto-end
-            // (R82) and hand p2 a fatigue draw before the hero is read.
+            // #49 costs (6) (#4154): a seventh mana keeps Mr. Vanilla playable, so the turn does not
+            // auto-end (R82) and hand p2 a fatigue draw before the hero is read.
             "p1": { "hand": [{ "def": MIND_CONTROL, "radiant": true }, VANILLA], "mana": MIND_CONTROL_COST + 1 },
             "p2": { "field": [{ "def": TIMMY, "lane": 2 }, { "def": VANILLA, "lane": 4 }] },
         }));

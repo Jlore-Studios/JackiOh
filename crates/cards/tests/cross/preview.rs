@@ -923,12 +923,18 @@ mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
             "the fused card's preview",
         );
         // #31's half reads the fused card's own count of plays, none yet (R429): its 1st play, Fib(0 + 1 +
-        // 1) = 1. #70's half reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5.
+        // 1) = 1. #70's half reads 20 health (missing 10: +2) and one exiled card: 2 + 2 + 1 = 5. #70's
+        // label is its damage line, the last under its Pierce (issue #4154).
+        let stab_line = text_of(SPITEFUL_STAB, FaceKind::Base)
+            .rsplit('\n')
+            .next()
+            .unwrap_or_default()
+            .to_string();
         assert_eq!(
             json_of(&list),
             json!([
                 { "label": "Fib(times played + 1)", "value": 1 },
-                { "label": text_of(SPITEFUL_STAB, FaceKind::Base), "value": 5 },
+                { "label": stab_line, "value": 5 },
             ])
         );
         // A fused definition declares no numbers of its own (R102); its text writes its ingredients'

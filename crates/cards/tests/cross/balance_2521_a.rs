@@ -140,10 +140,12 @@ const NOT_PIECES: [&str; 15] = [
 
 // B17–B20: the weapons.
 /// B17, B18: the weapons that aim at one enemy Unit — id, name, damage on the base and Radiant faces.
+/// #4154 moved the three Beams' damage down: 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
+/// 12 and 16).
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
-    ("stinkyscape-050", "Beam v3", 5, 10),
-    ("stinkyscape-054", "Beam v4", 7, 14),
-    ("stinkyscape-058", "Beam v5", 9, 18),
+    ("stinkyscape-050", "Beam v3", 4, 8),
+    ("stinkyscape-054", "Beam v4", 6, 12),
+    ("stinkyscape-058", "Beam v5", 8, 16),
     (CANNON_V3, "Cannon v3", 5, 10),
     ("stinkyscape-056", "Cannon v4", 7, 14),
     ("stinkyscape-060", "Cannon v5", 9, 18),

@@ -1651,9 +1651,11 @@ mod tests {
             .expect_in_zone(&archivist, "exile");
     }
 
-    /// R4065000: an enemy 4/4 its Burn 5 destroys at its controller's next start could attack nothing on that
-    /// turn, and the engine destroys it there; Burn 3 leaves it to swing. A Radiant Wrong-House Attacker's
-    /// Reborn body comes back with Rush (R83), so it could still attack a Unit, never the hero.
+    /// R4065000: an enemy 4/4 its Burn 5 destroys at the end of the turn under way (R4154000) could attack
+    /// nothing on its controller's next turn, and the engine destroys it there; Burn 3 leaves it to swing. A
+    /// Radiant Wrong-House Attacker its Toxic 5 destroys at its controller's next start has its Reborn body
+    /// back with Rush (R83), so it could still attack a Unit, never the hero. One its Burn 5 destroys is back
+    /// before that turn starts, so it could attack the hero too.
     #[test]
     fn r4065000_a_unit_its_burn_destroys_first_could_attack_no_one_next_turn() {
         jackioh_cards::register_all();
@@ -1671,18 +1673,24 @@ mod tests {
         let vanilla = s.card(VANILLA).clone();
         s.end_turn().expect_in_zone(&vanilla, "graveyard");
 
-        let s = scenario(json!({
+        let mut s = scenario(json!({
             "p1": { "field": [OOMEN] },
-            "p2": { "field": [{ "def": WRONG_HOUSE, "radiant": true, "counters": { "burn": 5 } }] },
+            "p2": { "field": [{ "def": WRONG_HOUSE, "radiant": true, "counters": { "toxic": 5 } }] },
         }));
-        let (attacker, oomen) = (s.card(WRONG_HOUSE), s.card(OOMEN).clone());
+        let at_oomen = AttackTarget::Unit {
+            instance: s.card(OOMEN).clone(),
+        };
         let hero = AttackTarget::Hero { player: PlayerId::P1 };
-        assert!(could_attack_next_turn(
-            s.state(),
-            attacker,
-            &AttackTarget::Unit { instance: oomen }
-        ));
-        assert!(!could_attack_next_turn(s.state(), attacker, &hero));
+        let could = |s: &Scenario, target: &AttackTarget| {
+            could_attack_next_turn(s.state(), s.card(WRONG_HOUSE), target)
+        };
+        assert!(could(&s, &at_oomen));
+        assert!(!could(&s, &hero));
+        let attacker = s.card_mut(WRONG_HOUSE);
+        attacker.counters.toxic = None;
+        attacker.counters.burn = Some(5);
+        assert!(could(&s, &at_oomen));
+        assert!(could(&s, &hero));
     }
 
     /// S+ #42 Force Projector, a Field Spell: the first 5 damage its side would take each turn is nullified.

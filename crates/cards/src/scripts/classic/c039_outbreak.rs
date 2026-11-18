@@ -127,7 +127,7 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MENACE: &str = "core-019"; // Midrange Menace
     const PAWN: &str = "core-096"; // My Pawn: a Trap, answers only a lethal attack
-    const GROOM: &str = "classicplus-002"; // Groom Shroom: a (3) Trap that answers nothing here
+    const GROOM: &str = "classicplus-002"; // Groom Shroom: a Trap that answers nothing here
     const FILLER: &str = "core-005";
     const ANCHOR: &str = "core-010";
     const X: &str = "core-020";
