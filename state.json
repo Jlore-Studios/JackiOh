@@ -14634,7 +14634,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-18T21:41:35Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:6da4b496-1795038255",
+      "run_id": "44404631725",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
