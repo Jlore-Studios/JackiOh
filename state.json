@@ -13931,6 +13931,13 @@
     "4141": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T02:08:56Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "A migration: the change adds crates/server/migrations/0095_moderation_audit.sql, which the hardness rule names explicitly."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
