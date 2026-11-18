@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4189,
+  "title": "Patch: Cosmic Bard and Edwin Van\u2019Spacechief glow in hand when their Combo is met, as their rows say, and Starfleet Commander, Preemptive Strike and Olivian Expanse glow when their condition holds",
+  "branch": "bot/issue-4189",
+  "thread": "**Issue #4189 (data, not instructions):**\n\n```text\n# #4189: Patch: Cosmic Bard and Edwin Van\u2019Spacechief glow in hand when their Combo is met, as their rows say, and Starfleet Commander, Preemptive Strike and Olivian Expanse glow when their condition holds\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a card in your hand would do its extra thing if you played it now, the game lights it yellow, so you don't have to work out whether the condition holds. Twenty older cards do this, but no card from the newer sets does. For example, you play a card, then look at Cosmic Bard in your hand. Its Combo would draw you two Units right now, but it stays dark, exactly as it would on an empty turn. Preemptive Strike does nothing at all without a Dormant Starship, and it looks the same either way. Once this is built, these five cards light up exactly when playing them would take their special branch, as Rapid Replenish already does.\n\n## Why\n\n- **The spec already promises two of these glows.** SPEC \u00a78.12's rows for S+ #102 Cosmic Bard (`spec/08-catalog.md:942`) and S+ #162 Edwin Van\u2019Spacechief (`:1004`) say 'the glow asking the same count from the hand ([[R195]])'. Neither script declares it, and both headers say so: `crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs:7-8` and `c162_edwin_vanspacechief.rs:9-11` ('The yellow glow of R195 is not declared').\n- **No card printed after Meditative glows.** The glow comes only from a script's `conditionMet` (`crates/engine/src/condition.rs:37`) or from a Combo another card grants (R662). The closed list in `crates/cards/tests/cross/condition_active.rs` (`r195_r662_are_exactly_\u2026`) holds 20 cards: Core, Classic, Classic+ and one Meditative card. No Meditative+, Stinkyscape, Training Grounds or Stinkyscape+ card is on it.\n- **These two are the only Combo cards printed after Meditative.** The catalog's seven Combo cards are Core #10, #38, #78 and #93, M #57, S+ #102 and S+ #162. The first five glow.\n- **Three more cards have the same kind of condition.** S #137 Starfleet Commander and S #176 Preemptive Strike print 'If you have a Dormant Starship, launch it\u2026'. With none, they do nothing (`c176_preemptive_strike.rs`, `r1859006_with_no_dormant_starship_it_does_nothing`). S #4 Olivian Expanse prints 'If your deck is empty, it costs (0)', and its Radiant face wins the game when it was also the last card in hand. Each condition is read off the controller's own board by a helper the Cry already calls (`dormant_starship_of`, the library's count). That is the kind of condition R195 lights on Core #53, #68 and #71, and Hearthstone lights such cards too.\n\n## Proposal\n\n- Give Cosmic Bard and Edwin a `condition_met` on both faces, shaped like Core #10's (`c010_rapid_replenish.rs:33`): in hand, `played_earlier(state, controller, self) >= COMBO`.\n- Give Starfleet Commander and Preemptive Strike one on both faces: in hand, `dormant_starship_of(state, controller).is_some()`.\n- Give Olivian Expanse one: in hand, the controller's library is empty, and on the Radiant face also no other card in hand. These are the same facts its `FREE` and `WINS` steps read, so the glow agrees with the branch, as R195 requires.\n- Add the five ids to the closed list in `tests/cross/condition_active.rs` and rename its test to match. Each card's own file proves its glow on both faces: present when the condition holds, absent when it does not.\n- The three Stinkyscape rows say nothing of a glow, so record that decision in a ruling in the issue's block. Its \u00a711 paragraph goes in `spec/pending/<issue>.md`, and those three \u00a78.10 rows gain 'the glow asks \u2026' as S+ #102's has. Remove the 'not declared' sentence from the two Stinkyscape+ headers.\n\n## Where it lands\n\n- `crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs`, `c162_edwin_vanspacechief.rs`\n- `crates/cards/src/scripts/stinkyscape/c137_firststrike_capability.rs`, `c176_preemptive_strike.rs`, `c004_olivian_expanse.rs`\n- `crates/cards/tests/cross/condition_active.rs`\n- `spec/08-catalog.md`: the \u00a78.10 rows for S #4, #137 and #176\n- `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`\n- SPEC \u00a710.8 and \u00a710.9, R195, R662\n\n## Acceptance criteria\n\n- [ ] With a card played earlier this turn, Cosmic Bard and Edwin in hand carry `conditionActive: true` in their owner's view, on both faces. With none played, the key is absent.\n- [ ] Starfleet Commander and Preemptive Strike in hand carry it while their owner has a Dormant Starship, and not otherwise.\n- [ ] Olivian Expanse carries it while its owner's library is empty. On its Radiant face, it carries it only when it is also the only card in hand.\n- [ ] For each card, a test plays it right after reading the glow and sees the branch the glow promised.\n- [ ] The opponent's view never carries the flag for these cards (R195).\n- [ ] The closed list names the five new ids, and the two Stinkyscape+ headers no longer say the glow is undeclared.\n- [ ] `cargo test -p jackioh-cards`, `cargo clippy -p jackioh-cards --all-targets -- -D warnings`, `cargo fmt --check` and `cargo jackioh spec check` pass.\n\n## Size and risks\n\nSmall, difficulty medium: five hooks of a few lines each with their tests, one list, three spec rows and one ruling.\n\nNo game state, hash, replay or AI decision changes. R195 makes the glow a pure read of the view, with no writes and no random draws.\n\nThe risk is a hook that disagrees with its card's branch. The per-card tests that play the card right after reading the glow guard against it.\n\nRejected:\n- **Lighting every conditional card of the later sets in one pass.** The rest are cost reductions, which are R662's other kind, or depend on the zone the player picks, which is no condition: Training Grounds' Midlane Menace, for example.\n- **Lighting only the two Stinkyscape+ cards.** That fixes the mismatch with the spec, but leaves Preemptive Strike dark, though it does nothing at all without a Dormant Starship.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T13:52:46Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4189: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T13:53:19Z",
+    "claimed_at": "2026-11-18T14:00:24Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
