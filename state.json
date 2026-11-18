@@ -14921,9 +14921,9 @@
       "queued_at": "2026-11-18T02:19:02Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "44278867826",
+      "run_id": "pending:1072d77a-1795009305",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T09:45:06Z",
+      "started_at": "2026-11-18T13:42:19Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: no builder session in the run worked: built and checked; its own review run, on this subscription, reviews it next",
@@ -16467,9 +16467,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T12:04:25Z",
+    "at": "2026-11-18T13:42:19Z",
     "url": "",
-    "what": "review #4200 on claude-8"
+    "what": "build #4159 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-18T13:31:46Z",
