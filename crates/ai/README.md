@@ -249,11 +249,14 @@ first (#1778). Its root tries a play in every distinct placement (the zones besi
 across it), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
-are one position). A line that differs from an earlier one only in where its units stand is a lane variant
-(#1797): the evaluation reads no lane, so it takes no place in the beam, but when the beam keeps the earlier
-line, the first `AI_SEARCH.zone_variants` - 1 of them end their turn where they stand after it, below that
-line on a tie. So the placements the beam tries reach the reply, which prices a Cleave into a unit's
-neighbours; a lane the reply scores the same as a better one of that play is not a finalist of its own. The
+are one position). A line that differs from an earlier one only in where its cards stand is a lane variant
+(#1797; R4132000: a backrow card's lane, and which side of a standing unit a new one goes, included, read off
+`lane_free_signature`, which sorts each side's units and backrow cards and leaves out its empty zones): the
+evaluation reads no lane but through a unit's stats, which that signature keeps, so it takes no place in the
+beam, but when the beam keeps the earlier line, the first `AI_SEARCH.zone_variants` - 1 of them end their
+turn where they stand after it, below that line on a tie. So the placements the beam tries reach the reply,
+which prices a Cleave into a unit's neighbours; a lane the reply scores the same as a better one of that
+play is not a finalist of its own. The
 lethal solver's visited set still reads a position without its units' lanes. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
