@@ -14246,7 +14246,7 @@
       "started_at": "2026-11-18T00:55:33Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "muse",
