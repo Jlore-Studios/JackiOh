@@ -247,6 +247,13 @@ describe("refusals", () => {
     }
   });
 
+  it("decodeDeckCode refuses proto-shaped junk unchanged (#4015)", () => {
+    for (const text of ['{"__proto__":{"polluted":true}}', '{"constructor":{"prototype":{"polluted":true}}}']) {
+      expect(decodeDeckCode(text, catalog, collection)).toEqual({ ok: false, message: DECK_CODE_MESSAGES.notACode });
+    }
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("R255 a newer version says so", () => {
     const newer = `${DECK_CODE_PREFIX}${String(DECK_CODE_VERSION + 1)}.${code.slice(HEADER.length)}`;
     const result = decodeDeckCode(newer, catalog, collection);

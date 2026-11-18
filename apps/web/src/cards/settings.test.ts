@@ -140,6 +140,18 @@ describe("reading (B28)", () => {
     expect(read).toEqual(CARD_SETTINGS_DEFAULTS);
   });
 
+  it("card settings ignore proto keys (#4015)", async () => {
+    window.localStorage.setItem(
+      CARD_SETTINGS_KEY,
+      `{"hoverPreviews":false,"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}}}`,
+    );
+    const fresh = await freshSettings();
+    const read = fresh.readCardSettings();
+    expect(read.hoverPreviews).toBe(false);
+    expect(read).not.toHaveProperty("polluted");
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("B28 a value under any other key is not read", async () => {
     window.localStorage.setItem("jackioh.cards.settings.v0", JSON.stringify({ hoverPreviews: false, animatedFoil: false }));
     window.localStorage.setItem("jackioh.settings", JSON.stringify({ hoverPreviews: false, animatedFoil: false }));
