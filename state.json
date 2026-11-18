@@ -14920,7 +14920,11 @@
       "issue": 4141,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-3",
+      "merge_owner_gave_up": {
+        "at": "2026-11-18T03:58:42Z",
+        "provider": "claude-3",
+        "sha": "ce76274233b49d4e40431c3e07ec13cfcb82736d"
+      },
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-18T03:34:39Z",
