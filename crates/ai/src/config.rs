@@ -143,8 +143,9 @@ pub struct AiSearch {
     /// Plays identical but for `zone` keep the lowest lane of each placement, or its midlane lane when
     /// it has one (R2203001) (candidates.rs `placement_key`), at most this many (#1014; 3 let a Tribute
     /// play's sets outgrow the lethal allowance), everywhere but the search's root, which keeps every
-    /// placement (#1635). In the beam, a line that differs from an earlier one only in where its units
-    /// stand is a lane variant, at most this many of a position; it is closed beside the first (#1797).
+    /// placement (#1635). In the beam, a line that differs from an earlier one only in where its units or
+    /// backrow cards stand (left or right of a standing unit alike, R4132000) is a lane variant, at most
+    /// this many of a position; it is closed beside the first (#1797).
     pub zone_variants: i32,
     /// #1759, R1759000, R2021000: the stand-downs (a switch to Defense Position of a unit an enemy unit
     /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, beside

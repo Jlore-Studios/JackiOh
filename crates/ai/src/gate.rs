@@ -80,7 +80,8 @@ pub struct AiGate {
     pub smoke_seeds: i32,
     /// What `pnpm ai:gate` (JACKIOH_AI_GATE=full) runs.
     pub full_seeds: ByMatchup<i32>,
-    /// Target win share floors per matchup.
+    /// Target win share floors per matchup: the brief's, but Hard against Easy's, which the user
+    /// lowered from the brief's 80% (R4132001).
     pub brief_rate: ByMatchup<f64>,
     /// Measured win rate on tuning deals; lowering requires user sign-off (SPEC §9.9).
     pub measured_rate: ByMatchup<f64>,
@@ -112,7 +113,8 @@ pub const AI_GATE: AiGate = AiGate {
     brief_rate: ByMatchup {
         ai_vs_random: 0.95,
         ai_vs_greedy: 0.7,
-        hard_vs_easy: 0.8,
+        // R4132001: 15 of the smoke run's 20 and 38 of the full run's 50, not the brief's 16 and 40.
+        hard_vs_easy: 0.75,
     },
     measured_rate: ByMatchup {
         ai_vs_random: 0.945,

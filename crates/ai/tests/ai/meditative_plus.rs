@@ -386,18 +386,18 @@ fn supply_drop_beside_two_vanillas() -> GameState {
 
 /// The board above with two castable Vanillas beside Supply Drop: their plays in each lane outscore
 /// the cast on the static score and fill every place the reply scores, so the countdown, worth only
-/// once the reply weighs it, keeps a place of its own (R3696000).
+/// once the reply weighs it, keeps a place of its own (R3696000): the decision replies to one line
+/// past the shortlist.
+///
+/// R4132000: before that change, four of the six places held one board, both Vanillas attacking,
+/// with the Vanillas in each other's lanes or the second in lane 2 or 3, and the cast beat it after
+/// the reply. Those are one line now, and a place goes to a Vanilla set in Defense Position, which the
+/// reply scores above the cast, so the decision plays it.
 #[test]
-fn r3696000_the_ai_still_casts_supply_drop_in_combat_mode_with_two_castable_units_in_hand() {
+fn r3696000_beside_two_castable_units_the_supply_drop_line_still_keeps_a_place_among_the_replied_lines() {
     let state = supply_drop_beside_two_vanillas();
-    let drop = in_hand(&state, SUPPLY_DROP);
     let decision = decide_at(&state, "ai-supply-drop-combat");
-    assert!(
-        matches!(&decision.action, ActionBody::Play { instance_id, modes: Some(modes), .. }
-            if *instance_id == drop && *modes == ["combat"]),
-        "{:?}",
-        decision.action
-    );
+    assert!(decision.stats.replied > SHORTLIST, "{:?}", decision.stats);
 }
 
 /// The lines `shortlist_lines` takes at the browser's budget, before the payoff line (R3696000).
