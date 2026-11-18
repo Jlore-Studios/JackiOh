@@ -38790,7 +38790,8 @@
       "2026-11-18T18:02:39Z,muse,usage-command,after,44363392440,19,2026-11-18T19:03:00Z,38,2026-11-23T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-18T18:04:32Z,44362952933,muse,muse-spark-1.3-contributor,review,4208,medium,approved,,14.3,0,0,0,,19,19,38,38,1.1,muse,none,,1"
+      "2026-11-18T18:04:32Z,44362952933,muse,muse-spark-1.3-contributor,review,4208,medium,approved,,14.3,0,0,0,,19,19,38,38,1.1,muse,none,,1",
+      "2026-11-18T18:17:52Z,44363392440,muse,muse-spark-1.3-contributor,build,4218,medium,built,,9.9,0,0,0,,19,19,38,38,27.9,muse,none,,1"
     ]
   },
   "version": 1
