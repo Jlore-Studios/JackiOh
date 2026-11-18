@@ -36393,7 +36393,8 @@
     ],
     "runs": [
       "2026-11-18T04:19:41Z,44233064986,claude-7,opus,review,4173,hard,blocked,,28,107,31580,4715286,2.9364,28,33,,,1,,fresh,,2",
-      "2026-11-18T04:21:17Z,44229074855,muse,muse-spark-1.3-contributor,review,4162,medium,approved,,63.9,0,0,0,,8,11,28,29,0.9,,none,,5"
+      "2026-11-18T04:21:17Z,44229074855,muse,muse-spark-1.3-contributor,review,4162,medium,approved,,63.9,0,0,0,,8,11,28,29,0.9,,none,,5",
+      "2026-11-18T04:09:41Z,44221624197,agy,gemini-3.8-flash-high,review,4158,medium,built,,115,2286954,159537,0,,29,74,9,21,0.9,,none,,5"
     ]
   },
   "version": 1
