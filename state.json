@@ -15313,14 +15313,11 @@
     "what": "review #4158 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-18T04:21:31Z",
+    "at": "2026-11-18T04:32:07Z",
     "notes": [
-      "delivered review #4173 on claude-7 (run 44233064986): blocked",
-      "delivered review #4162 on muse (run 44229074855): approved",
-      "delivered review #4158 on agy (run 44221624197): built",
-      "started review #4158 on muse (run 44237215973)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "delivered review #4158 on muse (run 44237215973): reviewed",
+      "delivered review #4176 on claude-6 (run 44235802248): approved",
+      "delivered review #4175 on muse (run 44234372986): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16026,7 +16023,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T04:21:31Z",
+  "loop_tick": "2026-11-18T04:32:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
