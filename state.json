@@ -16400,10 +16400,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "at": "2026-11-18T08:58:11Z",
+        "at": "2026-11-18T10:51:12Z",
         "built_by": "claude-8",
         "by": "`claude` (strong)",
-        "sha": "85aa09b021f6cfd6f42fbafe9456f2442d439fbd"
+        "carried_from": "85aa09b021f6cfd6f42fbafe9456f2442d439fbd",
+        "resolved_by": "`claude` (strong)",
+        "sha": "37605cd19629024167a5429008002fcfe162d891"
       },
       "died": 0,
       "difficulty": "hard",
