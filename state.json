@@ -17020,8 +17020,11 @@
       "asks": [],
       "ci_early": false,
       "ci_fixed_head": "4daea4cfa110c2c3da09434b98356240ae7eece7",
-      "ci_fixes": 2,
+      "ci_fixes": 1,
       "ci_on_head": true,
+      "ci_reruns": {
+        "4daea4cfa110c2c3da09434b98356240ae7eece7": 1
+      },
       "ci_run_id": 44346639171,
       "ci_sha": "4daea4cfa110c2c3da09434b98356240ae7eece7",
       "cleared": {
