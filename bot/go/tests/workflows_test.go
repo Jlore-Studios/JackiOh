@@ -675,6 +675,42 @@ func TestWorkflows_PullRequestEventsUseTarget(t *testing.T) {
 	assertNotRegex(t, text, `^  pull_request:`)
 }
 
+// From 2026-12-02 GitHub blocks `pull_request_target` in public repositories unless an Actions
+// event policy allows it. The policy allows exactly the workflows infra/README.md lists
+// ("pull_request_target"), so a new one cannot start using it unseen, and none of them checks out
+// anything but the default branch.
+var workflowsTargetAllowed = []string{"bot-commands.yml", "lock-conversations.yml", "squishy-commands.yml"}
+
+var workflowsOnTarget = regexp.MustCompile(`(?m)^  pull_request_target:`)
+
+func TestWorkflows_PullRequestTargetOnlyWhereThePolicyAllowsIt(t *testing.T) {
+	paths, err := filepath.Glob(filepath.Join(workflowsDir, "*.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	using := []string{}
+	for _, path := range paths {
+		text := readText(t, path)
+		if !workflowsOnTarget.MatchString(text) {
+			continue
+		}
+		using = append(using, filepath.Base(path))
+		for _, ref := range workflowsFindall(workflowsRef, text) {
+			assertIn(t, "default_branch", ref, path)
+		}
+		assertNotIn(t, "secrets[", text, path)
+	}
+	sort.Strings(using)
+	assertEqual(t, using, workflowsTargetAllowed)
+	infra := readText(t, filepath.Join(config.RepoRoot, "infra", "README.md"))
+	section := infra[strIndex(t, infra, "\n## pull_request_target\n"):]
+	section = section[:strIndex(t, section[1:], "\n## ")+1]
+	for _, name := range workflowsTargetAllowed {
+		assertIn(t, "| `"+name+"` |", section)
+	}
+	assertEqual(t, strings.Count(section, ".yml` |"), len(workflowsTargetAllowed))
+}
+
 // ---------------------------------------------------------------------------- StatusIssueStepTests
 //
 // The pinned status issue is rewritten after every sweep, and never fails the sweep.
@@ -762,11 +798,12 @@ var (
 func TestWorkflows_IssuesAndPullRequestsWhenOpenedNeverTheirCode(t *testing.T) {
 	text := workflowsTriage(t)
 	assertRegex(t, text, `issues:\n\s+types: \[opened, labeled\]`)
-	assertRegex(t, text, `pull_request_target:\n\s+types: \[opened\]`)
+	// `pull_request`, not `_target` (infra/README.md, "pull_request_target"): the checkout below is
+	// the default branch's, never the pull request's.
+	assertRegex(t, text, `(?m)^  pull_request:\n\s+types: \[opened\]`)
+	assertNotRegex(t, text, workflowsOnTarget.String())
 	// A person can call it on any thread by number.
 	assertRegex(t, text, `workflow_dispatch:\n\s+inputs:\n\s+number:`)
-	// As the Python: no re.M, so `^` is the start of the file only.
-	assertNotRegex(t, text, `^  pull_request:`, "would run the pull request's code")
 	refs := workflowsFindall(workflowsRef, text)
 	assertEqual(t, len(refs), 1)
 	assertIn(t, "default_branch", refs[0])
@@ -951,10 +988,9 @@ func TestWorkflows_ALearnRunPlansAndBuildsMainAsItIsWhenItStarts(t *testing.T) {
 // ---------------------------------------------------------------------------- RequiredChecksTests
 
 var (
-	workflowsOnPullRequest = regexp.MustCompile(`(?m)^  pull_request:|^  pull_request_target:\n\s+types: \[[^\]]*` +
-		`\bsynchronize\b`)
-	workflowsJobTitle  = regexp.MustCompile(`(?m)^    name: (.+)$`)
-	workflowsInputName = regexp.MustCompile(`\$\{\{ inputs\.[\w-]+ == '[^']*' && '[^']*' \|\| '([^']*)' \}\}`)
+	workflowsOnPullRequest = regexp.MustCompile(`(?m)^  pull_request:`)
+	workflowsJobTitle      = regexp.MustCompile(`(?m)^    name: (.+)$`)
+	workflowsInputName     = regexp.MustCompile(`\$\{\{ inputs\.[\w-]+ == '[^']*' && '[^']*' \|\| '([^']*)' \}\}`)
 )
 
 func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing.T) {
@@ -966,8 +1002,6 @@ func TestWorkflows_EveryRequiredCheckIsAJobThatRunsOnEveryPullRequest(t *testing
 	}
 	for _, path := range paths {
 		text := readText(t, path)
-		// A `pull_request_target` workflow that runs again on every push counts too: the title
-		// check (`pr-title.yml`, #187), should it be made required.
 		if !workflowsOnPullRequest.MatchString(text) {
 			continue
 		}
