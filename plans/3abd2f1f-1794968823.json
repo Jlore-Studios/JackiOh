@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4159,
+  "title": "Patch: retire the learned evaluation and the policy prior; the AI plays on its hand-written evaluation alone",
+  "branch": "bot/issue-4159",
+  "thread": "**Issue #4159 (data, not instructions):**\n\n```text\n# #4159: Patch: retire the learned evaluation and the policy prior; the AI plays on its hand-written evaluation alone\nOpened by @MaxGoetzmann.\n\n## What it actually means\n\nThe practice opponent finishes its thinking with a small trained network that adjusts the scores of its hand-written judgment. This patch removes that network, and the training pipeline behind it, so the opponent plays on the hand-written judgment alone, which it already does for about half its decisions today. Players should see no difference in strength. The codebase loses a model that has not been retrained successfully in four weeks and cannot keep up with how often cards change.\n\n## Why\n\nThe owner decided this on 2026-11-18, after reviewing #4142 (rejected). The evidence:\n\n- **One promotion in four weeks.** The learn lane has started 70 runs on GitHub's runners. The only promotion on record is generation 13 (2026-10-21, 220/400 against its parent, `training/history/learn.jsonl`). `training/learn.md` expected one every three or four days.\n- **It cannot keep up with patches.** Most runs are cancelled, and the workflow is built to stop an export when a new patch or set lands (`learn.yml`, `plan`). Patches now ship daily (`patches cut`, R3944000), and a run's export needs about a day.\n- **Half the catalog is unknown to it.** The shipped network was fitted on catalog v0.3.17. 499 of the 978 cards (51%: all of Stinkyscape, Stinkyscape+ and Training Grounds) have no row in it, so a decision whose view shows mostly those cards already skips the correction (R3479000, `LEARNED_MAX_UNKNOWN_SHARE`).\n- **Its main gain goes stale fastest.** `docs/learned-eval.md` says the network adds a learned worth per card id. That is exactly the part each patch makes stale. The parts that survive a patch are what `AI_EVAL` already scores.\n- **The policy prior has never been switched on.** `AI_MOVE_ORDER` is `MoveOrder::Heuristic`, so `POLICY_PRIOR` (`crates/ai/src/policy.rs`, `policy/weights.json`, `training/ml/retrain_policy.sh`) is compiled in and never used. It comes from the same pipeline and goes with it.\n- **It costs runners and attention.** The learn export takes 10 of the organization's 60 hosted jobs. It also keeps producing upkeep issues (#4095, #4134, #4142).\n\n## What to remove\n\nIn the pure crates and tools (rule 4 still holds for what is left):\n\n- `crates/ai`: `learned.rs`, `learned/int.rs`, `learned/weights.json`, `policy.rs`, `policy/weights.json`, and their parts of `build.rs`. The config they own: `LEARNED_CORRECTION_SHARE`, `LEARNED_MAX_UNKNOWN_SHARE`, `LearnedReach`/`LEARNED_REACH`, `MoveOrder`/`AI_MOVE_ORDER`, `POLICY_RANK_CAP` and the rest. Their hooks in `decide.rs`, `search.rs`, `evaluate.rs`, `simulate.rs`, `reply.rs` and `lib.rs`. Also `features.rs`, if nothing but the network and the export read it once those go. Remove the tests that only exist for these (`crates/ai/tests/ai/learned.rs`, `features.rs`, the policy tests).\n- `crates/tools`: the commands that serve only training (`positions`, and `selfplay` if only the learn lane's export runs it). See the rule 13 note below.\n- `training/ml/` (the Python package, `retrain.sh`, `retrain_policy.sh`, `learn-promote.sh`) and `training/learn.md`.\n- The wasm, AI and server config the client reads: regenerate it and commit any diff in `apps/web/src/wire/`.\n\nIn the spec and docs:\n\n- SPEC \u00a79.9 (`spec/09-architecture.md`): the evaluation paragraph drops the learned correction, and the training text drops the learn lane.\n- Every ruling note that exists for the network or the prior is retired or amended, following `spec/README.md`. Among them: R1010000, R1012000\u2013R1012005, R1171000/R1171001, R3038003, R3112001/R3112002, R3479000, R4070000, and the learn-lane parts of R1679000 and R2566000. `grep -rl` finds the rest. Record the retirement as a ruling in this issue's block, with its proving test (for example, that `jackioh_ai` holds no network or prior). Keep `cargo jackioh spec check` green.\n- `training/README.md` (lane table and intro), `docs/learned-eval.md` (mark it retired and link here rather than delete it: it records a decision), `docs/v0.3.0/SURFACE.md` \u00a714, and any crate README that names the network.\n\n## Keep\n\n- **The card statistics feed.** `gather.yml` keeps filing development records on its own (R1976000), so no statistics go missing when the learn lane's import stops.\n- **The hand-written evaluation's weights (`AI_EVAL`), the shadow ban, the sweep of record (R1678000) and the quality gates.** Where a sweep or gate is triggered by a learn-lane promotion, it still runs after each set ships.\n\n## Strength check\n\nRemoving the correction changes AI decisions, so this is a `kind:ai` change.\n\n- Re-record what the AI's decisions pin, such as the practice-claim fixture (R1303002), and keep `cargo jackioh gate` green.\n- In the pull request, report one paired comparison between this branch and `main`: `promote`'s sequential test, or an 800-game paired screen on improve-dev.\n- If it shows a significant loss of strength (`edgeLow` above zero for `main`), stop and ask with `needs decision` rather than merge. Otherwise ship it.\n\n## Rule 13 and `.github/`\n\nThe owner approved retiring the learn lane's scheduled workflows. A bot cannot change `.github/`, so a person does that part:\n\n- remove or disable `.github/workflows/learn.yml` and `learn-set.yml`, plus `selfplay.yml` and `selfplay-shards.yml` if only the learn lane calls them;\n- take out the mentions in `db-size.yml` and `gather.yml`'s header;\n- update `docs/repository-secrets.md` if a secret is no longer read.\n\nIf `learn.yml` still exists on `main` when you build, **keep the `cargo jackioh` commands it calls** (`positions`, `selfplay`, `promote --lane learn`). Remove only the AI's use of the network, the prior and the docs, and say in the pull request which commands are left for the workflow follow-up.\n\n## Acceptance criteria\n\n- [ ] `crates/ai` compiles no trained weights: no `learned` or `policy` module, no `weights.json` under `crates/ai/src/`, and no `include_str!` of one.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` are green, with any `apps/web/src/wire/` diff committed.\n- [ ] `cargo jackioh spec check`, `cargo jackioh gate` and `cargo jackioh golden check` are green; `pnpm --dir apps/web typecheck` and `test` are green if the wasm surface changed.\n- [ ] The pull request reports the paired comparison against `main`.\n- [ ] SPEC \u00a79.9, `training/README.md` and `docs/learned-eval.md` no longer describe a live learned evaluation or learn lane.\n- [ ] `cargo jackioh classify --base origin/main --claims` passes (the `rust (classify)` check).\n\n## Size and risks\n\nHard: the AI, about 40 files or more across `crates/ai`, `crates/tools`, `training/`, `spec/` and docs.\n\n- **Fixtures.** AI decisions change wherever the correction applied, so recorded fixtures and claims move with it.\n- **Shared surfaces.** Watch the shared AI config surfaces the client reads (CLAUDE.md rule 9). Nothing in the engine changes.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4159: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T02:19:02Z",
+    "claimed_at": "2026-11-18T02:27:27Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
