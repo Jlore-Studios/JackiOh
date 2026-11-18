@@ -16400,7 +16400,9 @@
     },
     "4197": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6980572197"
+      ],
       "difficulty_by": {
         "at": "2026-11-18T14:14:03Z",
         "difficulty": "hard",
@@ -16440,9 +16442,7 @@
       "started_at": "2026-11-18T14:02:57Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6980572197"
-      ]
+      "taken_asks": []
     },
     "4198": {
       "action": "review",
