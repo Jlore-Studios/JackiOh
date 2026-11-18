@@ -16158,11 +16158,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T14:13:16Z",
+        "at": "2026-11-18T14:58:39Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's decisions (`crates/ai/src/reply.rs`, `simulate_reply_with`), so it can move pinned decisions and seeded AI fixtures."
+        "tier": "strong",
+        "why": "Rule line 2 (the AI): it changes the opponent model's decisions in crates/ai/src/reply.rs"
       },
       "failures": 0,
       "forced": false,
