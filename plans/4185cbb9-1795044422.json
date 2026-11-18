@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4196,
+  "title": "Patch: every pull request's perf smoke holds the two budgets that need no clock, a seat's view size and the replay fold's length, instead of judging none",
+  "branch": "bot/issue-4196",
+  "thread": "**Issue #4196 (data, not instructions):**\n\n```text\n# #4196: Patch: every pull request's perf smoke holds the two budgets that need no clock, a seat's view size and the replay fold's length, instead of judging none\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery pull request already runs a quick speed check on the game engine. Besides timings, it measures two things that come out exactly the same on every run: how much data the game sends one player for one board, and how many moves the longest of its test games takes to replay. The quick check works out both numbers and then ignores them. Only the next daily run compares them with their limits, and a daily run that fails holds up the next release to players until someone fixes it. Once this is built, a change that doubled what each player is sent, or made the test games run far longer, fails its own pull request, in front of its author, the same day. Today it turns up in the next morning's daily run.\n\n## Why\n\n- `crates/tools/src/perf.rs:592` reads `let failures = if smoke { Vec::new() } else { judge(&measures) };`, so `--smoke` judges no budget at all. Yet the module header (`perf.rs:12-13`) says the two work measures, each `view_for`'s JSON bytes and the fold's `reduce` calls, \"need no clock and cannot flake\", and both budgets hold \"at either profile\" (`perf.rs:97-102`).\n- The smoke run already computes both exactly as the judged run does. The bytes are taken once per state, outside the timed passes (`perf.rs:570-575`), and the fold's calls are the corpus game's log length (`perf.rs:587`), so neither depends on how many passes run.\n- The per-pull-request test, `perf_smoke_times_the_corpus_once` (`crates/tools/tests/perf.rs:37-63`), asserts `failures == []` (line 43), which cannot fail today. The judged run, `perf_holds_every_budget` (lines 65-72), is `#[ignore = \"daily: \u2026\"]`. It runs only in `super.yml`'s daily tests on `_staging`, where a red run blocks production's promotion and comes back to the bot as `priority:high` (`super.yml`'s header). There have been 16 \"daily super run failed\" fixes since 2026-10-20 (`git log --grep`).\n- The per-pull-request test already runs on every change to the engine, cards, AI, dungeon run, shared logic or tools: it is in the `tools, wasm` group (`.github/ci/rust-test.toml:170-173`), which `scripts/ci-scope.sh:331-337` turns on. Judging there needs no workflow change.\n- The work measures drift and nobody sees it. On `main` at 8c6074f25b, `target/release/jackioh perf --smoke` gave the same values on all three runs: `view_for bytes` median 7,001 (budget 14,000), and `fold reduce calls` 404 (budget 520, now 78% of it). The budget's comment (`perf.rs:100-102`) records 256 calls (fuzz seed 37), measured on 2026-11-09. The corpus's longest game is now seed 29's, at 404 actions: 58% longer after nine days of card changes, and no pull request saw it move.\n\n## Proposal\n\n1. In `perf.rs`, give `Measure` a way to say whether it needs the clock: the five timings do, `ViewForBytes` and `FoldReduceCalls` do not. Under `--smoke`, judge only the rows that need no clock: `failures` lists a crossed work budget and the command exits 1, as a judged run does. The full run still judges all seven. Smoke stays one pass, so the per-pull-request time does not change.\n2. The smoke table's first line says the clock budgets were not judged, in place of `smoke: no budget judged`, so the report says what it held.\n3. Tests:\n   - A unit test beside `every_measure_over_its_budget_fails_naming_its_median_p95_and_budget` sets every row at twice its budget and checks that the smoke verdict names exactly `VIEW_FOR_BYTES_BUDGET` and `FOLD_REDUCE_CALLS_BUDGET`. Another sets every row at its budget and checks that it passes.\n   - `perf_smoke_times_the_corpus_once` then holds today's corpus to both work budgets, and checks each of the two rows' medians against its budget by name.\n4. Docs:\n   - The `perf.rs` module header, the README's `perf` row (`--smoke` \"judges nothing\" becomes \"judges the two work budgets\") and `tests/perf.rs`'s header.\n   - The daily test's `daily:` reason names the per-pull-request test as what holds the work budgets on every pull request. `acceptance.rs` requires every `daily:` reason to name that.\n   - The work budgets' comments record today's reading (7,001 bytes; 404 calls, fuzz seed 29) beside the calibration's. The budget values stay as they are: loosening 520 to twice today's reading is the decision this leaves out.\n\nOut of scope, for a person: no workflow runs `jackioh perf` at release, so the `*_RELEASE` time budgets are judged only when someone runs `cargo jackioh perf` by hand. Holding them in CI would take a workflow line.\n\n## Where it lands\n\n- `crates/tools/src/perf.rs`: `Measure`, `measure()`, `judge`, `perf_table`, its unit tests and the work budgets' comments\n- `crates/tools/tests/perf.rs`\n- `crates/tools/README.md`: the `perf` row\n- No SPEC section or ruling: the budgets are tooling (#3429), and no game rule changes.\n\n## Acceptance criteria\n\n- [ ] Under `--smoke`, a `view_for bytes` or `fold reduce calls` row over its budget is a failure that names its constant, and the run exits 1 (a unit test over rows).\n- [ ] Under `--smoke`, none of the five timings is a failure, even at twice its budget (the same unit test).\n- [ ] The full run still fails each of the seven measures over its budget: the existing unit tests are unchanged and pass.\n- [ ] `perf_smoke_times_the_corpus_once` passes on today's corpus. The pull request reports one manual run in which a work budget set below today's value fails it.\n- [ ] The README row, the module header, the test header and the `daily:` reason each say what the smoke run judges.\n- [ ] These pass: `cargo test -p jackioh-tools --test perf`, `cargo test -p jackioh-tools --bin jackioh perf::`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings` and `cargo fmt --check`.\n\n## Size and risks\n\nSmall: about 40 to 60 lines across one module, its integration test and one README row; `difficulty:medium`. No player-facing change and no engine change.\n\nThe intended effect is the only risk. A pull request that means to grow the view, or lengthen the corpus's longest game, past twice the calibrated value now fails its own CI and re-measures the budget, as `perf.rs`'s comment already asks, instead of failing the daily run. The fold-calls measure is the length of the longest random-policy game of seeds 1 to 40, so a card change can cross it without making the engine any slower. Today it sits at 404 of 520, and such a pull request would re-measure it as `perf.rs` describes.\n\nThe timings stay daily-only: one pass on a shared runner is too noisy to judge.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T23:21:15Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4196: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T23:21:41Z",
+    "claimed_at": "2026-11-18T23:27:26Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
