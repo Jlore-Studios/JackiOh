@@ -15313,6 +15313,8 @@
       }
     },
     "4177": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T04:14:33Z",
@@ -15326,8 +15328,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4160 from the after-merge spot-check\"} -->\n- ## What changed\n- [Log.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-4174/apps/web/src/game/Log.tsx): the announcer state went from a plain string to a keyed pair (`{ key, text }`), stored together on every new newest line key, and the live region now renders `<span key={said.key}>{said.text}</span>`. S\u2026\n- [Log.test.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-4174/apps/web/src/game/Log.test.tsx): added `#4174 repeated words still announce each arrival` in the `#4140` describe block.\n- ## How I tested it\n- - `pnpm --dir apps/web test src/game/Log.test.tsx` \u2014 50/50 pass with the fix.\n- - Negative control: temporarily reverted `Log.tsx` to the plain-string announcer and ran the new test alone \u2014 it fails (`AssertionError: expected null not to be null` at the `firstElementChild` assertion), then re-applied the fix and re-ran the file: 50/50 pass. Diff confirmed identical to the inte\u2026\n- - `pnpm --dir apps/web typecheck` \u2014 clean (note: it needs `NODE_OPTIONS=--max-old-space-size=6144` on this box; the default ~2GB heap OOMs and core-dumps, which is environmental, not a code problem).\n- - `pnpm exec eslint` on both touched files \u2014 clean. `cargo fmt --check` \u2014 clean.\n- - `git status` shows only the two intended files; no spec, ruling, crate, or config touched.\n- ## Decisions the issue did not settle\n- - The test covers two consecutive identical arrivals (mount `[lost(1)]`, then `[lost(1), lost(1)]`, then `[lost(1), lost(1), lost(1)]`, asserting node replacement each time) rather than the issue's minimal sketch of mount-then-one-arrival. Rejected the minimal version because its text assertion wou\u2026\n- - Asserted `firstElementChild` reference inequality instead of timers or text alone, per the plan's flakiness note. Rejected a text-only assertion as unable to distinguish the fixed from the broken behavior.\n- ## For the reviewer\n- Worth a second look: on mount the span renders with `key={null}` (unkeyed) and gains a real key on first arrival \u2014 React treats that as a replace, which is exactly the announce-once semantics the existing `#4140` tests confirm still hold (all green).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4174 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4174/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4174,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T04:44:06Z",
         "from_run": "44235955123",
         "gates": [
           {
@@ -15386,8 +15391,15 @@
         "source": "build",
         "until": "2026-11-18T05:13:02Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-18T04:43:02Z",
+      "run_id": "pending:bf7b16c5-1794977015",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-18T04:44:06Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15401,9 +15413,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T04:25:21Z",
+    "at": "2026-11-18T04:44:06Z",
     "url": "",
-    "what": "review #4158 on muse"
+    "what": "review #4177 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T04:32:07Z",
