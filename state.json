@@ -10527,6 +10527,13 @@
     "4017": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44328219674",
+        "model": "sonnet",
+        "provider": "claude-6",
+        "since": "2026-11-18T14:58:07Z",
+        "until": "2026-11-18T15:28:07Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
