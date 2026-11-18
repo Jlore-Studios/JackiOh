@@ -15144,11 +15144,10 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-3",
       "merge_owner_gave_up": {
-        "at": "2026-11-18T03:58:42Z",
+        "at": "2026-11-18T08:50:14Z",
         "provider": "claude-3",
-        "sha": "ce76274233b49d4e40431c3e07ec13cfcb82736d"
+        "sha": "d4e3ccaee3a4db8205d55be49c1902370ede3c3a"
       },
       "pending_request": false,
       "provider": "claude-3",
