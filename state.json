@@ -14963,17 +14963,8 @@
       }
     },
     "4161": {
-      "action": "plan",
-      "asks": [
-        "c:6969858488"
-      ],
-      "build_next": {
-        "from_run": "44244292327",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-18T05:34:56Z",
-        "until": "2026-11-18T06:04:56Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-18T05:34:49Z",
         "difficulty": "medium",
@@ -14992,10 +14983,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; ls .bot-plan.md 2>&1; wc -l crates/tools/src/fuzz.rs; grep -n \\\"CHANGED_\\\\|fn play_changed_cards\\\\|fn run_start_inputs\\\\|deckMarks\\\\|deck_marks\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 80,150p crates/tools/src/fuzz.rs; sed -n 150,340p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 495,700p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 700,1000p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 1060,1230p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 1020,1060p crates/tools/src/fuzz.rs; grep -n \\\"fn play_wave\\\\|fn play_handicap_wave\\\\|fn play_seed\\\\|fn play_one\\\\|fn report\\\\|struct Fa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 2330,2470p crates/tools/src/fuzz.rs; sed -n 2960,3260p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 2613,2720p crates/tools/src/fuzz.rs; sed -n 2780,2960p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; grep -rn \\\"pub struct DeckMark\\\" -B6 -A14 crates/engine/src | head -50; grep -rn \\\"deck_marks\\\" crates/engine/src --include=*.rs | grep -v \\\"^c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 2675,2740p crates/engine/src/state.rs; sed -n 2990,3010p crates/engine/src/state.rs; sed -n 3084,3140p crates/engine/src/state.rs; grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 520,560p crates/tools/src/golden.rs; grep -n \\\"fn run_deck_size\\\" -A22 crates/tools/src/fuzz.rs; grep -n \\\"StartKind::Run\\\\b\\\" crates/to\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; grep -n \\\"GameSetup {\\\" crates/tools/src/*.rs | head -30; grep -n \\\"[^a-zA-Z]Failure {\\\" crates/tools/src/*.rs | head -30; sed -n 3300,3335p cr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; for l in 3634 5265 5954 5990 6039 6063 6472 6855; do sed -n \\\"${l},$((l+8))p\\\" crates/tools/src/fuzz.rs | grep -n \\\"\\\\.\\\\.\\\\|}\\\" | head -3; ech\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; grep -rn \\\"core-090\\\\b\\\" crates/cards/src/scripts --include=*.rs -l | head -2; python3 - <<'E'\\nimport json\\nd=json.load(open('crates/cards/cat\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; sed -n 2720,2775p crates/tools/src/fuzz.rs; sed -n 3260,3300p crates/tools/src/fuzz.rs; sed -n 7035,7090p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; grep -rln \\\"CHANGED_WAVE_MAX_SEEDS\\\\|CHANGED_DEALS_PER_CARD\\\" --include=* . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\\|^./.git/\\\" | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; grep -rln \\\"fuzz --seeds\\\\|changed cards\\\" spec/*.md | head; grep -n \\\"changed cards\\\\|#3113\\\" spec/10-*.md | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4161; grep -rn \\\"fuzz::Args\\\\|fuzz::run(\\\" crates/ --include=*.rs | head; grep -n \\\"fn seatless\\\" -B2 -A12 crates/tools/src/fuzz.rs | head -30; sed -\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4161/.bot-plan.md\", \"content\": \"Draft #4161: all in crates/tools/src/fuzz.rs (+ README). Design: Forcing.radiant flag, GameSetup.radiant pinned count,\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Only crates/tools/src/fuzz.rs, its tests and crates/tools/README.md change; no engine, AI, cross-crate, migration or 40-file work, so none of the five hard lines holds.\"} --> ## Goal When a pull request changes a deckable card, `play_changed_cards` plays a\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-18T05:26:33Z",
       "owner_why": "it plans it",
@@ -15008,12 +14998,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-18T05:19:48Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44244292327",
+      "run_id": "pending:3647ea06-1794980369",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T05:26:33Z",
+      "started_at": "2026-11-18T05:39:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6969858488"
+      ]
     },
     "4162": {
       "action": "review",
@@ -15919,9 +15911,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T05:39:18Z",
+    "at": "2026-11-18T05:39:51Z",
     "url": "",
-    "what": "build #4016 on muse"
+    "what": "build #4161 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-18T05:23:20Z",
