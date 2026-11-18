@@ -14890,7 +14890,7 @@
     "4159": {
       "action": "build",
       "asks": [],
-      "failures": 0,
+      "failures": 1,
       "forced": false,
       "handoff": {
         "at": "2026-11-18T05:02:08Z",
