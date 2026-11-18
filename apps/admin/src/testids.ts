@@ -89,4 +89,9 @@ export const testids = {
   audit: "admin-audit",
   auditRow: "admin-audit-row",
   auditRefresh: "admin-audit-refresh",
+  auditProfile: "admin-audit-profile",
+  auditRoute: "admin-audit-route",
+  auditApply: "admin-audit-apply",
+  auditClear: "admin-audit-clear",
+  auditOlder: "admin-audit-older",
 } as const;

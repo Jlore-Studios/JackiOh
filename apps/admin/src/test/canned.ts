@@ -142,6 +142,7 @@ export const AUDIT: AuditResponse = {
     },
     { id: 6, profileId: "p-gone", username: "", route: "POST /api/admin/news", request: { title: "x" }, before: null, after: { id: "n-2" }, at: AT - 1 },
   ],
+  nextBeforeId: 6,
 };
 
 export const WALLET: WalletResponse = { jlore: 1234 };

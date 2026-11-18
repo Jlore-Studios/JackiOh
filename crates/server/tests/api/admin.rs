@@ -380,6 +380,106 @@ async fn r3074000_every_dev_and_admin_write_leaves_its_audit_row_and_a_read_none
         ids.windows(2).all(|pair| pair[0] > pair[1]),
         "newest first: {ids:?}"
     );
+    assert_eq!(audit["nextBeforeId"], Value::Null, "a short page names no cursor");
+}
+
+#[tokio::test]
+async fn audit_read_pages_by_cursor_and_filters() {
+    let (app, tokens) = admin_app(true).await;
+    let dev = &tokens.dev_aal2;
+    expect(&app, "POST", "/api/dev/jlore", dev, json!({ "jlore": 40 }), 200).await;
+    expect(
+        &app,
+        "PUT",
+        "/api/admin/rating",
+        dev,
+        json!({ "ladder": "random", "rating": 1700 }),
+        200,
+    )
+    .await;
+    expect(
+        &app,
+        "POST",
+        "/api/admin/news",
+        dev,
+        json!({ "title": "Hello", "summary": "A word from the team." }),
+        201,
+    )
+    .await;
+
+    // No params still answers the newest page as today, plus its cursor.
+    let first = expect(&app, "GET", "/api/admin/audit", dev, Value::Null, 200).await;
+    let actions = first["actions"].as_array().expect("actions");
+    assert_eq!(actions.len(), 3);
+    assert_eq!(first["nextBeforeId"], Value::Null, "a short page names no cursor");
+    let ids: Vec<i64> = actions.iter().filter_map(|row| row["id"].as_i64()).collect();
+    assert!(
+        ids.windows(2).all(|pair| pair[0] > pair[1]),
+        "newest first: {ids:?}"
+    );
+
+    // A second read with the cursor answers the next older page, with no repeats.
+    let older = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?before_id={}", ids[1]),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    let older = older["actions"].as_array().expect("actions");
+    assert_eq!(older.len(), 1);
+    assert_eq!(older[0]["id"], json!(ids[2]));
+
+    // The acting account narrows the read to its rows alone.
+    let by_profile = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?profile_id={DEV}"),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    let by_profile = by_profile["actions"].as_array().expect("actions");
+    assert_eq!(by_profile.len(), 3);
+    assert!(by_profile.iter().all(|row| row["profileId"] == DEV));
+    let nobody = expect(
+        &app,
+        "GET",
+        "/api/admin/audit?profile_id=no-such-account",
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert!(nobody["actions"].as_array().expect("actions").is_empty());
+
+    // The route narrows the read to its rows alone.
+    let by_route = expect(
+        &app,
+        "GET",
+        "/api/admin/audit?route=PUT%20%2Fapi%2Fadmin%2Frating",
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    let by_route = by_route["actions"].as_array().expect("actions");
+    assert_eq!(by_route.len(), 1);
+    assert_eq!(by_route[0]["route"], "PUT /api/admin/rating");
+
+    // A cursor that is no whole number is refused.
+    expect(
+        &app,
+        "GET",
+        "/api/admin/audit?before_id=abc",
+        dev,
+        Value::Null,
+        400,
+    )
+    .await;
 }
 
 // The hand-set rating (R3074001)

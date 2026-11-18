@@ -1599,7 +1599,8 @@ pub const DEV_RATING_MIN: f64 = 100.0;
 /// §14.10, R3074001: the highest rating a dev account may hand-set itself on a ladder, past every
 /// bot's (`SKILL_ELO_TABLE`). Exported to `serverConfig.ts`.
 pub const DEV_RATING_MAX: f64 = 3000.0;
-/// §14.10, R3074000: the newest audit rows `GET /api/admin/audit` answers.
+/// §14.10, R3074000: the page size of every `GET /api/admin/audit` read, the newest matching
+/// audit rows first, `nextBeforeId` naming the cursor of the next older page.
 pub const ADMIN_AUDIT_PAGE: i64 = 200;
 /// §14.13, R3074003: the newest posts `GET /api/admin/news` answers, taken down or not.
 pub const NEWS_POSTS_PAGE: i64 = 100;
