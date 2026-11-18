@@ -17008,9 +17008,11 @@
         "by": "`muse` (medium)",
         "sha": "4daea4cfa110c2c3da09434b98356240ae7eece7"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T14:17:55Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-18T14:55:36Z",
         "family": "muse",
@@ -17020,6 +17022,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Cosmic Bard and Edwin Van\u2019Spacechief glow in hand when their Combo is met, as their rows say, and Starfleet Commander, Preemptive Strike and Olivian Expanse glow when their condition holds\"} -->\n- What changed: five `condition_met` hooks, one per card, declared on both faces. Cosmic Bard and Edwin ask `played_earlier >= COMBO` from the hand, the same count their Cries read. Starfleet Commander and Preemptive Strike ask `dormant_starship_of(...).is_some()`, the same fact their Cries branch on\u2026\n- How tested (all commands run, all output seen):\n- - `cargo test -p jackioh-cards --lib -- <5 files>`: 48 passed, including 10 new `r4189000_\u2026` own-file tests that read the glow dark, then glowing, then play and assert the branch, plus opponent-view-clean.\n- - `cargo test -p jackioh-cards --test cards condition_active`: 88 passed, including 5 new cross mods (present/absent on both faces, play-after-glow branch, opponent view clean).\n- - Full `cargo test -p jackioh-cards`: 9925 lib + 1227 integration, 0 failed.\n- - `cargo clippy -p jackioh-cards --all-targets -- -D warnings`, `cargo fmt --check`, `cargo jackioh spec check` (2247 rulings, 5701 proofs: ok), `catalog check`, `patches check`: all pass.\n- Decisions the issue did not settle: the cross-file starship setup replicates `built_starship` inline with a Hit Job destroying an AP Rounds piece, using public testkit calls only (rejected: reaching into the crate-private helper, which integration tests cannot use). The c176 cross glow test asserts\u2026\n- Reviewer, look twice at: Olivian's Radiant off-by-one (hand 1 in the hook vs 0 at resolution) \u2014 covered by `r4189000_radiant_dark_with_a_second_card_in_hand\u2026` and the alone/glow test on both sides.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4189 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4189/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4189,
       "kind": "review",
       "live": "reviewing",
