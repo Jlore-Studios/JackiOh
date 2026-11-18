@@ -12461,8 +12461,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-3",
-      "owner_since": "2026-11-18T02:27:27Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-18T21:52:05Z",
+      "owner_why": "its turn came (it waited 120 minutes for #4230, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-18T03:13:10Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -14060,12 +14060,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4159,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-11-18T15:50:45Z",
+      "queued_at": "2026-11-18T21:52:05Z",
       "run_id": "44340543415",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -14086,9 +14086,17 @@
         "provider": "claude-3",
         "run": "44340543415"
       },
+      "source": "conflict",
       "started_at": "2026-11-18T15:51:54Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-18T21:52:05Z",
+        "until": "2026-11-18T22:22:05Z",
+        "why": "it waited 120 minutes for #4230, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -14108,17 +14116,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          4230
-        ],
-        "ends": "2026-11-18T21:49:33Z",
-        "from_run": "44340543415",
-        "head": "b8f462c86b8777e847bba639e571bd68d06f0a10",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-18T19:49:33Z"
       }
     },
     "4210": {
