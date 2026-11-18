@@ -16457,32 +16457,13 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "built_by": "claude-8",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/09-architecture.md"
-          ],
-          "from": "85aa09b021f6cfd6f42fbafe9456f2442d439fbd",
-          "main": "320e811c8e494ccd4417096ceeab2006af788797"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-8",
-            "run": "44281224777",
-            "tier": "strong"
-          }
-        ],
+        "reviews": [],
         "sha": "37605cd19629024167a5429008002fcfe162d891",
-        "tiers": {
-          "claude": "strong"
-        }
+        "tiers": {}
       }
     }
   },
