@@ -14742,6 +14742,7 @@
       "run_id": "44225657521",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 330,
       "started_at": "2026-11-18T02:46:07Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35256,9 +35257,33 @@
         "title": "Patch: Heroic Power's powers, the Anomaly titles and the other words the client translates from a table read in Chinese for a Chinese reader, held by a test",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "cc70f27b7895a629d5564d0a1654b448315fb195",
+        "issue": 4140,
+        "merged_at": "2026-11-18T03:24:16Z",
+        "n": 330,
+        "pr": 4160,
+        "queued_at": "2026-11-18T03:24:16Z",
+        "sha": "254b7862576b26fa0d81d5945ce1f51d36f6d0cf",
+        "status": "queued",
+        "title": "Patch: the game log speaks its newest line to screen readers",
+        "tries": 0
       }
     ],
-    "count": 329
+    "count": 330
   },
   "statistics": {
     "at": "2026-11-18T03:21:00Z"
