@@ -94,6 +94,33 @@ describe("B54 which controls answer with a sound", () => {
   });
 });
 
+describe("volume sliders announce percentages and follow mute", () => {
+  const SLIDERS = ["audio-master", "audio-sfx", "audio-crowd", "audio-voice", "audio-music"] as const;
+
+  it("announces each volume slider as a percentage", () => {
+    render(<AudioControls />);
+    for (const id of SLIDERS) {
+      const slider = screen.getByTestId<HTMLInputElement>(id);
+      expect(slider.getAttribute("aria-valuetext"), id).toBe(`${slider.value}%`);
+    }
+    expect(screen.getByTestId("audio-master").getAttribute("aria-valuetext")).toBe("80%");
+
+    fireEvent.change(screen.getByTestId("audio-master"), { target: { value: "25" } });
+    expect(screen.getByTestId("audio-master").getAttribute("aria-valuetext")).toBe("25%");
+  });
+
+  it("disables all five volume sliders while muted, and re-enables on unmute", () => {
+    render(<AudioControls />);
+    for (const id of SLIDERS) expect(screen.getByTestId<HTMLInputElement>(id).disabled, id).toBe(false);
+
+    fireEvent.click(screen.getByTestId("audio-mute"));
+    for (const id of SLIDERS) expect(screen.getByTestId<HTMLInputElement>(id).disabled, id).toBe(true);
+
+    fireEvent.click(screen.getByTestId("audio-mute"));
+    for (const id of SLIDERS) expect(screen.getByTestId<HTMLInputElement>(id).disabled, id).toBe(false);
+  });
+});
+
 describe("R631 the station picker", () => {
   it("R631 a value the picker does not offer writes nothing and tells no one", () => {
     render(<AudioControls />);

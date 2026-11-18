@@ -119,8 +119,12 @@ reseeds the database itself. Both steps are idempotent.
   without writing anything, and a pending account is never unbanned — that would skip the
   invite gate and R111's launch grant, so ban pending accounts only to stop abuse. Like
   `mint-code` it reads the whole environment, because a `CODE_PEPPER` that differs from the
-  running server's revokes a hash redemption will never look up. Stdout is the audit trail:
-  the CLI has no log pipeline, so the line it prints is the record of the lever.
+  running server's revokes a hash redemption will never look up. A lever that changes something
+  leaves two records: the line it prints, and one `admin_actions` row in its own transaction
+  (R3074000's audit, migration 0096) with no profile, its route (`MODERATE_ROUTES`, such as `CLI
+  moderate ban`), the request and the state before and after; a revoked code by its stored hash,
+  never the code. A lever that changes nothing (an `already …`, an unknown profile or code, a
+  pending account's unban) writes no row. The dev dashboard's Audit page shows the rows.
   `moderate chat-reports` is the one read among them, and writes nothing: every chat report the
   store holds (B53), oldest first, each with when and why it was made, the reporter's and the
   sender's profile ids and the message as stored. A report goes with its message after
@@ -230,7 +234,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET` | `/api/admin/leaderboard` | active | `?ladder=`: every season row of the ladder, highest rating first, `{ season, ladder, rows: [{ profileId, username, kind: person \| bot, rating, games, wins, losses, draws, rank, handSet, you, bot: { strength, persona, retired } \| null }] }`: the one read that marks a bot (R3074002) |
 | `GET`, `POST` | `/api/admin/news` | active | the newest `NEWS_POSTS_PAGE` posts, `{ posts: [{ id, title, summary, postedAt, postedBy, takenDownAt }] }`; `POST { title, summary }` posts one with no reward, checked as `news.json`'s entries are, 201 `{ post }`, 400 naming every problem (R3074003) |
 | `DELETE` | `/api/admin/news/:postId` | active | takes a post down, `{ post }`; 404 for no such post, 409 for one down already (R3074003) |
-| `GET` | `/api/admin/audit` | active | the newest `ADMIN_AUDIT_PAGE` audit rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>` (all optional: `before_id` an exclusive upper bound on the row id, the other two exact matches), `{ actions: [{ id, profileId, username, route, request, before, after, at }], nextBeforeId: <id> \| null }`, newest first; `nextBeforeId` is the last row's id when the page is full, else `null` (R3074000) |
+| `GET` | `/api/admin/audit` | active | the newest `ADMIN_AUDIT_PAGE` audit rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>` (all optional: `before_id` an exclusive upper bound on the row id, the other two exact matches), `{ actions: [{ id, profileId, username, route, request, before, after, at }], nextBeforeId: <id> \| null }`, newest first; `nextBeforeId` is the last row's id when the page is full, else `null` (R3074000); a moderation lever's row (`CLI moderate …`, #4141) has `profileId` and `username` empty |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step, the cosmetic bar to its current step's size (R1305000, R1305001, R2728000), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000), and a playmat, backdrop and card back the account owns (R1833000, R1834001) |
 | `POST` | `/api/decks/sync` | active | the deck workshop's autosave pass in one request (R3212001): `{ decks, trios, deletedTrios, deletedDecks }`, each deck and trio its `PUT` body with its `id`, each deletion an id, at most `DECK_SYNC_ITEMS_MAX` items in all (else 400, running none); run in that order, each as its own `PUT` or `DELETE` in its own transaction; answers the four lists index-aligned, each item `{ id, deck }`, `{ id, trio }`, `{ id, deleted }` or, refused, `{ id, status, error }` as its route would answer; a refused item refuses alone, and a server fault fails the request. No spend: no turn, no key |
@@ -1460,6 +1464,11 @@ Migration 0088 widens the `cards` tag check once more, as 0083 did, with #3535's
 (R3535002) — Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and
 Paperclip — so `seed-catalog` can write the set's entries the day it ships (#3573, R3535000), and comments
 `cards.set_id` with the eight sets that ship.
+
+Migration 0096 widens `admin_actions_route_check` by the four moderation lever routes, each named exactly, as
+`check_route` holds them (`MODERATE_ROUTES`), so `jackioh-server moderate` writes its audit rows (#4141), and
+rewrites no row. `tests/sql/58_moderation_audit.sql` checks the routes taken, the near names refused and the
+re-apply.
 
 ## Tests
 

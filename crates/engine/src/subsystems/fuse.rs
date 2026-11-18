@@ -1136,6 +1136,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 // R3539004: a fusion a shipyard is in is still a yard.
                 starship_yard: flags(|f| f.starship_yard),
                 immune_to_spell_damage: flags(|f| f.immune_to_spell_damage),
+                immune_to_toxic: flags(|f| f.immune_to_toxic),
                 destroyed_exiled: flags(|f| f.destroyed_exiled),
                 enemy_destroyed_exiled: flags(|f| f.enemy_destroyed_exiled),
                 reflects_damage: flags(|f| f.reflects_damage),

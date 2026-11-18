@@ -100,6 +100,15 @@
   margin: 0;
 }
 
+.audio-controls__row input[type="range"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audio-controls__row:has(input[type="range"]:disabled) {
+  opacity: 0.5;
+}
+
 .audio-controls__row select {
   grid-column: 2 / 4;
   min-width: 0;

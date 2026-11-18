@@ -32,13 +32,12 @@ trap backrow. This file binds every agent, not only Claude.
   notes, and §1.1 (`spec/01-overview.md`) is the rules on one page, each line linking its section: start
   there. Section references (§) point here. If a doc disagrees with the spec, the spec wins and the doc is
   the bug.
-- Each crate's and app's `README.md` (`crates/*`, `apps/admin`, `apps/edge`, `apps/web`, `e2e`) is its contract: read it
-  before you change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform
-  (#1708), and `bot/go/README.md`, for the bots' harness in Go (#467). Also: `docs/issues-and-patches.md`
-  (titles, labels, patch and ruling numbers), `docs/architecture.md`, `training/README.md` and
-  `docs/v0.3.0/SURFACE.md` (every boundary between the crates and the client). Before you ask a person to
-  add a repository secret, read `docs/repository-secrets.md`: every secret and variable the workflows read,
-  what it is and which workflows read it, held to the workflows by the bot selftest.
+- Each crate's and app's `README.md` (`crates/*`, `apps/admin`, `apps/edge`, `apps/web`, `e2e`) is its
+  contract: read it before you change that code. So are `infra/README.md` (the hosts' dashboard settings as
+  Terraform) and `bot/go/README.md` (the bots' harness). Also: `docs/issues-and-patches.md` (titles, labels,
+  patch and ruling numbers), `docs/architecture.md`, `training/README.md` and `docs/v0.3.0/SURFACE.md`
+  (every boundary between the crates and the client). Before you ask a person for a repository secret, read
+  `docs/repository-secrets.md`.
 - The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md`, the design briefs `docs/*-set*.md`) are
   what REVIEW Part A checks the spec against; read them only when the task is about them.
 
@@ -51,24 +50,23 @@ trap backrow. This file binds every agent, not only Claude.
    the spec does not make follows Hearthstone semantics and gets a note in the same PR, numbered with the
    lowest free in its issue's block (issue N owns R(N×1000) to R(N×1000+999)), and a proving test named after
    it (`fn r58_…` in Rust, an `it("R58 …")` in TypeScript); its §11 paragraph goes in `spec/pending/<N>.md`,
-   since `spec-fold.yml` writes `spec/11-rulings.md` and `spec/INDEX.md` on `main` daily and a branch leaves
-   both alone. `spec/README.md`, Adding a ruling, has the details; `cargo jackioh spec check` fails on any
-   mismatch between the notes, their tests and the R-ids cited in `crates/`, `apps/web/src/` or `e2e/`,
-   comments included.
-4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/run` (the dungeon run) and
-   `crates/shared` (the logic the server and the client share, #2956; its `README.md` holds the host contract)
-   are pure:
-   no clock, I/O, environment, threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
-   the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice` in state.
-   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the five (none of
-   the others takes `jackioh-shared`, which takes the engine, the cards, the AI and the run) and, behind a
-   `ts` feature (the engine's, `jackioh-run`'s and `jackioh-shared`'s own, off by default), `ts-rs`; its `clippy.toml` bans
-   what would break purity, tests included. The only statics are the catalog and the script registry,
-   `OnceLock`s set once by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under
-   among them, each built once on first use), and two thread-locals of the engine's, each set for one
-   call and put back after it (the shipped catalog a replay is folding under, R767000; and whether the
-   step in flight holds its game's random pools, `catalog::with_pool_hold`, R2201001). Data reaches a pure
-   crate only at compile time
+   since `spec-fold.yml` writes `spec/11-rulings.md`, `spec/INDEX.md` and `spec/CARDS.md` on `main` daily
+   and a branch leaves all three alone. `spec/README.md`, Adding a ruling, has the details; `cargo jackioh
+   spec check` fails on any mismatch between the notes, their tests and the R-ids cited in `crates/`,
+   `apps/web/src/`, `apps/edge/src/` or `e2e/`, comments included.
+4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/run` (the dungeon run) and `crates/shared` (the logic
+   the server and the client share; its `README.md` holds the host contract) are pure: no clock, I/O,
+   environment, threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw
+   goes through the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice`
+   in state. Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the five
+   (none of the others takes `jackioh-shared`, which takes the engine, the cards, the AI and the run) and,
+   behind a `ts` feature (the engine's, `jackioh-run`'s and `jackioh-shared`'s own, off by default),
+   `ts-rs`; its `clippy.toml` bans what would break purity, tests included. The only statics are the
+   catalog and the script registry, `OnceLock`s set once by `jackioh_cards::register_all()` (the older
+   shipped catalogs a replay folds under among them, each built once on first use; `crates/engine/README.md`,
+   Purity, lists them), and the engine's two thread-locals outside its testkit, `catalog.rs`'s `FOLDING`
+   (R767000) and `POOL_HOLD` (R2201001), each set for one call and put back after it (`RULE_4_STATICS` in
+   `crates/tools/tests/acceptance.rs` fails on any other). Data reaches a pure crate only at compile time
    (`include_str!`, `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
 5. Card scripts return `Vec<Effect>` built from the engine's effects module (`jackioh_engine::effects`, in
    reach through `jackioh_engine::prelude`): a hook reads its `EffectContext` and the engine's read helpers
@@ -110,37 +108,36 @@ Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules 
 
 ## Commands
 
-`rust-toolchain.toml`, `package.json` and `bot/go/go.mod` pin the toolchains. `cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
+`cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
 
 ```
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint
-cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the hotseat fixture's fold included; rewrites apps/web/src/wire/ (commit any diff)
+cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the hotseat fixture's fold included; rewrites the engine's types in apps/web/src/wire/ (commit any diff)
+cargo test -p jackioh-run --features ts && cargo test -p jackioh-shared --features ts,jackioh-engine/testkit   # the run's and the shared logic's types in apps/web/src/wire/generated/, which neither the line above nor CI rewrites (commit any diff)
 cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored   # the daily tests: the many-game sweeps marked #[ignore = "daily: …"]
 cargo jackioh catalog check        # catalog.json's shape and its census of cards and tokens by set
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
 cargo jackioh names                # name comments beside each card's id, written from catalog.json (--check fails on a stale one)
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
-cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too); `golden record` + `golden check --file` compare two builds
+cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too)
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
-cargo jackioh perf                 # the engine's and the replay fold's speed on a frozen corpus, each median held to its budget (#3429); --smoke once, --json
-cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names it a micro (a major if a set ships) after merge, and the daily `patches cut` rolls the micros into the day's patch (R3944000)
+cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>" [--plays <ids>] [--rule] [--visual]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); its player note is written by hand (docs/ADDING_CARDS.md)
 cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
 sh scripts/mutants.sh --in-diff    # cargo-mutants on the lines the branch changed since origin/main: does a test fail when each is wrong (#3490); fails on a survivor
-sh scripts/mutants.sh <area> [k]   # one area's shard k of mutation testing (cargo-mutants; Stryker for web-* and edge); `areas` lists them, mutants.yml runs each weekly
 sh scripts/build-wasm.sh           # the engine as WebAssembly into apps/web/src/wasm/pkg (the web's dev, build, build:e2e and test run it first)
 JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh   # the C module (crates/wasm/c, the one a Roblox port translates) alone; fails on any import; CI's `web (wasm c module)`
 pnpm --dir apps/web dev            # http://localhost:5173: hotseat at /dev/hotseat, the AI at /practice
 pnpm --dir apps/web build          # the production bundle
-pnpm --dir apps/web typecheck
+pnpm --dir apps/web typecheck      # CI also runs apps/edge's and apps/admin's typecheck, and e2e's typecheck and typecheck:component
 pnpm --dir apps/web test           # the web's unit tests (vitest, jsdom)
-pnpm exec eslint apps/edge apps/web e2e
+pnpm exec eslint apps/web apps/edge apps/admin e2e
 cd bot/go && go test ./...                             # the bot selftest's harness suite, the skills' frontmatter included; inside a bot's run, unset HARNESS_HOME and HARNESS_DRY_RUN first
-cd bot && python3 -m unittest discover -s tests -t .   # the bot selftest's Python suites: what stays Python (bot/machine's Lambdas and scripts, .github/hygiene's branch rule)
+cd bot && python3 -m unittest discover -s tests -t .   # the bot selftest's Python suites (bot/tests/)
 sh crates/server/tests/sql/run.sh          # schema, RLS and trigger invariants (Docker: a throwaway postgres:16)
 sh crates/server/tests/db/run.sh           # the server's store against postgres:16 (Docker; KEEP_DB=1 keeps it)
-cargo jackioh fuzz --from <seed> --seeds 1   # replay one failing fuzz seed (--handicap for the handicapped wave)
+cargo jackioh fuzz --from <seed> --seeds 1   # replay one failing fuzz seed (--handicap or --duos for those waves)
 ```
 
 The rest are in `crates/tools/README.md` (every `cargo jackioh` command), `docs/ADDING_CARDS.md`
@@ -154,7 +151,7 @@ cargo test -p jackioh-cards c002_speciesist                         # one card's
 cargo test -p jackioh-engine --features testkit --test 'rules*' r58 # by ruling: every test whose name holds r58
 cargo test -p jackioh-server --test server actor::                  # one area of the server suite
 sh scripts/pool-probe.sh                                            # the cards', AI's, server's and tools' tests with every random pool rotated one place (#3117)
-pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web test file
+pnpm --dir apps/web test src/game/animations.test.ts                # one web test file (its pretest builds the WASM engine)
 pnpm exec vitest run --project edge                                 # the Worker's tests (apps/edge)
 ```
 
@@ -163,12 +160,11 @@ pnpm exec vitest run --project edge                                 # the Worker
 ```
 # Cypress; the root `pnpm install` covers e2e/
 E2E=1 pnpm --dir apps/web dev                  # http://localhost:5173, serves /dev/hotseat
-E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match, /ws/duos, /ws/watch; the networked specs need it (e2e/README.md lists them)
+E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match, /ws/duos, /ws/watch, /ws/social; the networked specs need it (e2e/README.md lists them)
 cargo build --release -p jackioh-tools         # target/release/jackioh: the specs that check the browser's log run its `replay`
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component                  # component/pixel specs, no server needed
 pnpm --dir apps/web build:e2e && pnpm --dir apps/web exec vite preview --port 5173 --strictPort   # a built client, as CI serves it
-pnpm --dir e2e probe:frames                                                             # the busy-board frame probe (spec 50, issue #3605): build:e2e + preview on :4173 + the spec; -- --json for the JSON report
 ```
 
 `vite dev` reloads the page whenever `apps/web/src` changes, restarting a hotseat game at turn 0, so serve a
@@ -178,21 +174,18 @@ has the rest, the server's fixture reseed among it.
 ### CI
 
 Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, `web`, `e2e smoke`, `db` and
-`bot selftest`. A pull request lands through `main`'s merge queue (`infra/github.tf`), which runs them again on
-`main` with every pull request ahead of it and this one on top (`ci.yml`'s `merge_group`): one the queue takes
-out failed there, against the newer `main`, and its fix starts from merging `main`. So merge `main` into a pull
-request only when GitHub shows a conflict or the queue took it out: one that merges cleanly needs no update,
-since the queue tests it on the newest `main`, and every push runs its CI again on the organization's shared
-runners. Turn auto-merge on once it is ready, so the queue takes it as soon as its checks pass. A pull request's CI,
-`main`'s and the super run may show "Waiting" before they start: the runner gate lets only six CI and CD runs
-go at once, the merge queue's builds and the deploys first (they never wait), then staging's and production's
-checks, then `main`'s CI, then pull requests' (bot/README.md "The runner gate"). Run
+`bot selftest` (`infra/github.tf`). A pull request lands through `main`'s merge queue, which runs them again on
+`main` with every pull request ahead of it and this one on top (`ci.yml`'s `merge_group`). So merge `main` into
+a pull request only when GitHub shows a conflict or the queue took it out (it failed against the newer
+`main`): every push runs its CI again on the organization's shared runners. Turn auto-merge on once it is
+ready. A run that shows "Waiting" is held by the runner gate (bot/README.md, "The runner gate"). Run
 `cargo jackioh classify --base origin/main --claims` before pushing: on a pull request `rust` runs it as
 `rust (classify)` (R1370000). A pull request runs only the jobs that read what it changes (`scripts/ci-scope.sh`,
 whose header says what turns each on; #751), so a file a test newly reads from outside its crate goes in the
 script's map in the same pull request, and a path joins its skip list (a pull request of only those paths skips
 every job but `bot selftest`) only with proof that nothing in `crates/`, `apps/`, `e2e/` or `spec/` reads it. A
-push to `main` runs everything. Everything slow or statistical runs daily in `super.yml`, whose header lists it,
+push to `main` runs what the queue's build of the same commit did not, or everything when it cannot tell
+(`.github/ci/main_scope.py`, #3564). Everything slow or statistical runs daily in `super.yml`, whose header lists it,
 and on every pull request into `_production` (`docs/deploy-cloudflare.md` §2.1). A test moves there
 (`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test keeps
 its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does, `ci.yml`'s
@@ -215,13 +208,14 @@ the eight-minute budget of every job.
 
 The night bot (`@jgoetzmann-bot`, `.harness/`) and Squishy (`@squishy-squooby`, `.squishy/`) are one harness,
 `bot/go/`, under two configs; `bot/README.md` says which issues each takes. `human` keeps every bot off an
-issue, and `bot:build` queues one for the night bot, so add `bot:build` only when you mean to queue it.
+issue, `bot:build` queues one for the night bot and `squishy:build` one for Squishy, so add either only when
+you mean to queue it.
 
 A bot's builder or reviewer leaves `.github/`, `.harness/`, `.squishy/`, `bot/` and `.claude/` alone, except
 that Squishy may change `.claude/skills/` (the full lists are `forbidden_paths` in each bot's `config.json`):
 the harness puts such a change back, and the deliver job refuses to push one. When the task is nothing but
-such a change, or needs a secret, a dashboard or an account, stop with `"human_required": true` (your prompt
-shows the line) and say what a person must do.
+such a change, or needs a secret, a dashboard or an account, stop the way your prompt says (a builder's
+`"human_required": true`) and say what a person must do.
 
 ## Parallel work
 

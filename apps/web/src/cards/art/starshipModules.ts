@@ -35,9 +35,10 @@ export type StarshipModule = {
 const PREFIX = "stinkyscape-";
 
 /**
- * Every piece definition's module, by its id: the 47 cards that print Starship Piece (stinkyscape.ts
- * `STARSHIP_PIECES`) and the three Jlockeed weapons that are pieces only when Embiggened (#127 to #129). The
- * tier is the one the card's name marks (`tierOf`), 1 where it marks none.
+ * Every piece definition's module, by its id: the 46 cards that print Starship Piece (stinkyscape.ts
+ * `STARSHIP_PIECES`), the Orca (079), which #4154 took the keyword from and whose card still draws its
+ * module, and the three Jlockeed weapons that are pieces only when Embiggened (#127 to #129). The tier is
+ * the one the card's name marks (`tierOf`), 1 where it marks none.
  */
 export const STARSHIP_MODULE_IDS: Readonly<Record<string, readonly [ModuleKind, number]>> = Object.fromEntries(
   (

@@ -1,8 +1,8 @@
 //! Stinkyscape #50 Beam v3 (SPEC §8.10 row 50). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn
-//!            cooldown." — damage 5
-//!   Radiant: the same text — damage 10
+//!            cooldown." — damage 4 (5 until issue #4154)
+//!   Radiant: the same text — damage 8 (10 until issue #4154)
 //!
 //! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
@@ -142,8 +142,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     /// The printed `damage`, and the Radiant face's.
-    const DAMAGE: i32 = 5;
-    const RADIANT_DAMAGE: i32 = 10;
+    const DAMAGE: i32 = 4;
+    const RADIANT_DAMAGE: i32 = 8;
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     /// R3291000: an ability's id, and the card and face its `printed_on` names, if any.

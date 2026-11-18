@@ -147,9 +147,9 @@ mod tests {
     }
 
     #[test]
-    fn r3565003_armor_4_and_3_stack_to_7() {
-        for radiant in [false, true] {
-            assert_eq!(on_field(radiant, json!([])).stats(ID).armor, 7, "radiant {radiant}");
+    fn r3565003_armor_4_and_3_stack_to_7_radiant_4_and_6_to_10() {
+        for (radiant, armor) in [(false, 7), (true, 10)] {
+            assert_eq!(on_field(radiant, json!([])).stats(ID).armor, armor, "radiant {radiant}");
         }
     }
 
@@ -249,7 +249,8 @@ mod tests {
     #[test]
     fn flying_only_ranged_or_flying_attackers() {
         for radiant in [false, true] {
-            let mut s = on_field(radiant, json!(["stand-in (0) 3/9", "stand-in (0) 9/9 Ranged"]));
+            // 12 gets past either face's Armor (7, Radiant 10).
+            let mut s = on_field(radiant, json!(["stand-in (0) 3/9", "stand-in (0) 12/9 Ranged"]));
             s.end_turn();
             let (grounded, ranged) = (s.unit_at(P2, 1).id, s.unit_at(P2, 2).id);
             s.expect_refused(|s| s.attack(grounded.as_str(), ID));

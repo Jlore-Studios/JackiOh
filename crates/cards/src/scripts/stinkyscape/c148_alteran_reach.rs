@@ -1,16 +1,19 @@
 //! S #148 Alteran Reach (SPEC §8.10 row S 148; §6.1 Indestructible, §6.2 Quickdraw, §6.3, R46, R640,
-//! R1847000–R1847002): (1) Field Spell, Wincon, Quickdraw, Mythic, a card of the Stinkyscape set.
-//!   Base:    "Indestructible\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain
-//!            its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the
-//!            Universe to your hand."
-//!   Radiant: "Indestructible\nYour first travel each turn is free.\nActivate ♾️: …", the base face's
-//!            text with the free travel added.
+//! R1847000–R1847002, R4154203): (1) Field Spell, Wincon, Quickdraw, Mythic, a card of the Stinkyscape
+//! set.
+//!   Base:    "Indestructible\nYour first travel each turn is free.\nActivate ♾️: Pay (1) to travel one
+//!            node along your starscape map and gain its reward.\nThe 20th node is the edge of the
+//!            universe: reaching it adds an Edge of the Universe to your hand."
+//!   Radiant: the same, with "Your first two travels each turn are free."
 //!
 //! Engine: Indestructible is a catalog keyword (R46), and Quickdraw the static flag `setup.rs` reads,
 //! dealing it in the opening hand (R640). The travel is `subsystems::starscape_abilities`: an Activate
 //! ♾️ for `STARSCAPE_TRAVEL_MANA` (R1847002) that moves its controller one node along their map, the
 //! player's and not the card's, charted from the match rng at their first travel (R1847000), and gives
-//! the node's reward (R1847001).
+//! the node's reward (R1847001). Issue #4154 took its cost from (0) to (1), a number, and gave the base
+//! face the free first travel each turn the Radiant face had, the Radiant face two
+//! (`starscape_abilities_free`, R4154203); through v0.6.6h the base face had none and the Radiant face
+//! one, which `script_v0_6_6h` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -19,30 +22,44 @@ pub const ID: &str = "stinkyscape-148";
 /// S #148.1 Edge of the Universe, the card the map's edge adds (R1847001).
 const EDGE_OF_THE_UNIVERSE: &str = "stinkyscape-148-1";
 
-fn alteran_reach(radiant: bool) -> Script {
+/// R4154203: how many of its controller's travels each turn are free, on each face since issue #4154.
+const FREE_TRAVELS: i32 = 1;
+const RADIANT_FREE_TRAVELS: i32 = 2;
+
+/// `activations`: the travel abilities the face declares.
+fn alteran_reach(activations: Vec<ActivationDecl>) -> Script {
     Script {
         // R640: dealt in the opening hand in place of a draw.
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        // R1847002: the paid travel; on the Radiant face a free first travel each turn switches with it.
-        activations: subsystems::starscape_abilities(radiant, EDGE_OF_THE_UNIVERSE),
+        // R1847002, R4154203: the paid travel, and the free one that switches with it.
+        activations,
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: alteran_reach(false),
-        radiant: alteran_reach(true),
+        base: alteran_reach(subsystems::starscape_abilities_free(FREE_TRAVELS, EDGE_OF_THE_UNIVERSE)),
+        radiant: alteran_reach(subsystems::starscape_abilities_free(RADIANT_FREE_TRAVELS, EDGE_OF_THE_UNIVERSE)),
+    }
+}
+
+/// R767000: the scripts through v0.6.6h, the base face's travels all paid and the Radiant face's first
+/// each turn free (issue #4154). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
+    CardScripts {
+        base: alteran_reach(subsystems::starscape_abilities(false, EDGE_OF_THE_UNIVERSE)),
+        radiant: alteran_reach(subsystems::starscape_abilities(true, EDGE_OF_THE_UNIVERSE)),
     }
 }
 
 // S #148 Alteran Reach — SPEC §8.10 row S 148, BUILD M12 row S 148.
 #[cfg(test)]
 mod tests {
-    use super::{EDGE_OF_THE_UNIVERSE, ID, script};
+    use super::{EDGE_OF_THE_UNIVERSE, ID, script, script_v0_6_6h};
     use jackioh_engine::subsystems::starscape::{
         STARSCAPE_FREE_TRAVEL_ABILITY, STARSCAPE_TRAVEL_ABILITY, starscape_amount,
     };
@@ -250,7 +267,7 @@ mod tests {
                 let health = s.state().players.p1.hero.health;
                 let before = mana(&s);
                 travel(&mut s);
-                assert_eq!(mana(&s), before - STARSCAPE_TRAVEL_MANA, "a travel costs (1)");
+                assert_eq!(mana(&s), before, "the first travel this turn is free (R4154203)");
                 assert_eq!(
                     s.state().players.p1.hero.health,
                     health + starscape_amount(StarscapeReward::Heal).unwrap_or(0),
@@ -295,7 +312,8 @@ mod tests {
             fn r1847001_any_number_of_travels_a_turn_while_the_mana_lasts() {
                 let mut s = board("s148-many", false);
                 set_map(&mut s, heal_path(), 0);
-                let travels = mana(&s) / STARSCAPE_TRAVEL_MANA;
+                // The first travel is free (R4154203), each after it paid.
+                let travels = mana(&s) / STARSCAPE_TRAVEL_MANA + 1;
                 for _ in 0..travels {
                     travel(&mut s);
                 }
@@ -357,6 +375,39 @@ mod tests {
             }
 
             #[test]
+            fn r4154203_the_first_travel_each_turn_is_free_and_the_next_costs_1() {
+                let mut s = board("s148-base-free", false);
+                set_map(&mut s, heal_path(), 0);
+                s.state_mut().players.p1.mana.current = STARSCAPE_TRAVEL_MANA;
+                assert_eq!(activations(&s), vec![(STARSCAPE_FREE_TRAVEL_ABILITY.to_string(), true)]);
+                travel(&mut s);
+                assert_eq!(mana(&s), STARSCAPE_TRAVEL_MANA, "the first travel this turn is free");
+                assert_eq!(activations(&s), vec![(STARSCAPE_TRAVEL_ABILITY.to_string(), true)]);
+                travel(&mut s);
+                assert_eq!(mana(&s), 0, "the second costs its mana");
+                s.expect_refused_with(travel, "more than your mana");
+
+                s.end_turn().end_turn();
+                assert_eq!(s.state().active, P1);
+                s.state_mut().players.p1.mana.current = 0;
+                travel(&mut s);
+                assert_eq!(at(&s, P1), 3, "a new turn's first travel is free again");
+            }
+
+            /// R767000: through v0.6.6h the base face's every travel cost (1) (issue #4154).
+            #[test]
+            fn r767000_the_script_kept_for_v0_6_6h_charges_every_base_travel() {
+                crate::under_kept(ID, script_v0_6_6h(), || {
+                    let mut s = board("s148-kept-base", false);
+                    set_map(&mut s, heal_path(), 0);
+                    let before = mana(&s);
+                    travel(&mut s);
+                    assert_eq!(mana(&s), before - STARSCAPE_TRAVEL_MANA);
+                    assert_eq!(activations(&s), vec![(STARSCAPE_TRAVEL_ABILITY.to_string(), true)]);
+                });
+            }
+
+            #[test]
             fn declares_no_numbers() {
                 assert!(crate::card_def(ID).params.is_none());
             }
@@ -371,21 +422,49 @@ mod tests {
             }
 
             #[test]
-            fn r1847002_the_first_travel_each_turn_is_free_and_the_next_costs_1() {
+            fn r4154203_the_first_two_travels_each_turn_are_free_and_the_next_costs_1() {
                 let mut s = board("s148-free", true);
                 set_map(&mut s, heal_path(), 0);
                 s.state_mut().players.p1.mana.current = STARSCAPE_TRAVEL_MANA;
                 travel(&mut s);
-                assert_eq!(mana(&s), STARSCAPE_TRAVEL_MANA, "the first travel this turn is free");
                 travel(&mut s);
-                assert_eq!(mana(&s), 0, "the second costs its mana");
+                assert_eq!(mana(&s), STARSCAPE_TRAVEL_MANA, "the first two travels this turn are free");
+                travel(&mut s);
+                assert_eq!(mana(&s), 0, "the third costs its mana");
                 s.expect_refused_with(travel, "more than your mana");
 
                 s.end_turn().end_turn();
                 assert_eq!(s.state().active, P1);
                 s.state_mut().players.p1.mana.current = 0;
                 travel(&mut s);
-                assert_eq!(at(&s, P1), 3, "a new turn's first travel is free again");
+                travel(&mut s);
+                assert_eq!(at(&s, P1), 5, "a new turn's first two travels are free again");
+            }
+
+            #[test]
+            fn r4154203_a_travel_no_ability_made_spends_the_free_travels_when_it_is_the_turns_first() {
+                let mut s = board("s148-chart-first", true);
+                let turn = s.state().turn;
+                s.state_mut().players.p1.starscape = Some(StarscapeMap {
+                    nodes: heal_path(),
+                    at: 2,
+                    travelled_on: turn,
+                });
+                assert_eq!(activations(&s), vec![(STARSCAPE_TRAVEL_ABILITY.to_string(), true)]);
+            }
+
+            /// R767000: through v0.6.6h the Radiant face's first travel each turn alone was free.
+            #[test]
+            fn r767000_the_script_kept_for_v0_6_6h_frees_one_radiant_travel() {
+                crate::under_kept(ID, script_v0_6_6h(), || {
+                    let mut s = board("s148-kept-radiant", true);
+                    set_map(&mut s, heal_path(), 0);
+                    s.state_mut().players.p1.mana.current = STARSCAPE_TRAVEL_MANA;
+                    travel(&mut s);
+                    assert_eq!(mana(&s), STARSCAPE_TRAVEL_MANA, "the first is free");
+                    travel(&mut s);
+                    assert_eq!(mana(&s), 0, "the second costs its mana");
+                });
             }
 
             #[test]
@@ -397,8 +476,9 @@ mod tests {
                 assert_eq!(legal_abilities(&s), vec![STARSCAPE_FREE_TRAVEL_ABILITY.to_string()]);
 
                 travel(&mut s);
-                assert_eq!(activations(&s), vec![(STARSCAPE_TRAVEL_ABILITY.to_string(), true)]);
-                assert_eq!(legal_abilities(&s), vec![STARSCAPE_TRAVEL_ABILITY.to_string()]);
+                // R4154203: the second travel this turn is free too.
+                assert_eq!(activations(&s), vec![(STARSCAPE_FREE_TRAVEL_ABILITY.to_string(), true)]);
+                assert_eq!(legal_abilities(&s), vec![STARSCAPE_FREE_TRAVEL_ABILITY.to_string()]);
 
                 travel(&mut s);
                 assert_eq!(at(&s, P1), STARSCAPE_EDGE_TRAVELS);

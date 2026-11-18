@@ -328,7 +328,7 @@ mod tests {
             #[test]
             fn r2618000_aura_judged_by_owner_a_stolen_unit_of_theirs_dying_on_your_side_is_yours_and_reaches_your_graveyard() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }], "mana": 8 },
+                    "p1": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }], "mana": 9 },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
                 }));
                 let vanilla = s.card(VANILLA).clone();
@@ -346,7 +346,7 @@ mod tests {
             fn r2618000_aura_judged_by_owner_a_unit_of_yours_they_stole_dying_on_their_side_is_exiled() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }, VANILLA] },
-                    "p2": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "mana": 8 },
+                    "p2": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "mana": 9 },
                     "active": "p2",
                 }));
                 let vanilla = s.card(VANILLA).clone();
