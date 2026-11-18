@@ -17585,7 +17585,7 @@
       "started_at": "2026-11-18T17:52:00Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "4221": {
       "action": "plan",
