@@ -14770,7 +14770,16 @@
       "feedback_since": "2026-11-18T02:14:24Z",
       "issue": 4155,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "cac6cbec8299f3a0bf9b7c3cf1825d712a24df00",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
