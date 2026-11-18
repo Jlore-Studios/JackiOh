@@ -16077,6 +16077,13 @@
     "4187": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T14:13:16Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's decisions (`crates/ai/src/reply.rs`, `simulate_reply_with`), so it can move pinned decisions and seeded AI fixtures."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
