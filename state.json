@@ -17593,6 +17593,14 @@
       "started_at": "2026-11-18T17:38:17Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "4227": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-18T17:52:00Z",
+      "issue": 4218,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
