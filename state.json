@@ -14708,11 +14708,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T05:35:30Z",
+        "at": "2026-11-18T06:02:02Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Engine rules (combat resolution and its forecasts in crates/engine/src) and the AI's attack candidates (crates/ai/src) \u2014 rules 1 and 2."
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "Rule 1 and rule 2: it changes combat resolution in crates/engine/src (combat.rs, query.rs, lethal.rs) and the AI's exchange in crates/ai/src"
       },
       "failures": 0,
       "forced": false,
