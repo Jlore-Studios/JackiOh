@@ -16081,15 +16081,16 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-7",
       "queued_at": "2026-11-18T06:52:14Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "44254631388",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:4fbb7889-1794988407",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 340,
-      "started_at": "2026-11-18T06:52:58Z",
+      "started_at": "2026-11-18T07:53:47Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16247,9 +16248,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T07:45:35Z",
+    "at": "2026-11-18T07:53:47Z",
     "url": "",
-    "what": "suggestions (ai) on claude-4"
+    "what": "spot-check #4192 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-18T07:42:38Z",
@@ -36768,7 +36769,15 @@
         "n": 340,
         "pr": 4192,
         "queued_at": "2026-11-18T07:46:13Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:4fbb7889-1794988407",
         "sha": "ba7a755b2895a77d08a8c1bbd6eb40e1e36223f8",
+        "started_at": "2026-11-18T07:53:47Z",
         "status": "queued",
         "title": "Patch: the changed-cards fuzz wave also plays each changed card on its Radiant face",
         "tries": 0
