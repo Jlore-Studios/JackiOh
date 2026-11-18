@@ -16407,11 +16407,9 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "at": "2026-11-18T10:51:12Z",
+        "at": "2026-11-18T12:13:23Z",
         "built_by": "claude-8",
         "by": "`claude` (strong)",
-        "carried_from": "85aa09b021f6cfd6f42fbafe9456f2442d439fbd",
-        "resolved_by": "`claude` (strong)",
         "sha": "37605cd19629024167a5429008002fcfe162d891"
       },
       "died": 0,
