@@ -9,6 +9,10 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { soundTablesNow } from "../audio/soundTablesLoader.ts";
+import "../audio/engine.ts";
+import "../routes/landing.tsx";
+
 const WEB = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const SRC = join(WEB, "src");
 const BUILT = join(WEB, "dist");
@@ -81,6 +85,10 @@ it("#4130 no non-test module imports sound tables or raw sound data files static
     return staticDataImport.test(text) || rawDataImport.test(text) || staticTablesImport.test(text);
   });
   expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+});
+
+it("#4130 importing engine.ts and the landing does not run parseCardAudioText", () => {
+  expect(soundTablesNow()).toBeNull();
 });
 
 describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
