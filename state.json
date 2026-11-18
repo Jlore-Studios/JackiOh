@@ -37582,6 +37582,12 @@
         "number": 4163,
         "title": "Patch: run-sim holds each dungeon curse and the starting Combat artifact to tier-1 win-rate bands",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-18T13:55:41Z",
+        "number": 4186,
+        "title": "Patch: strict servers need the two-step code for the dev tools too",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-18T13:51:12Z",
