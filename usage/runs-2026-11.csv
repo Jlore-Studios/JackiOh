@@ -2687,3 +2687,9 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-18T16:30:59Z,44344683463,muse,muse-spark-1.3-contributor,revise,4208,medium,built,,6.6,0,0,0,,11,11,35,35,0.6,muse,none,,1
 2026-11-18T16:35:36Z,44322867952,muse,muse-spark-1.3-contributor,build,4180,medium,built,,136,0,0,0,,1,11,31,35,25,muse,none,,1
 2026-11-18T16:34:58Z,44320172817,agy,gemini-3.8-flash-high,plan,4181,medium,failed,,150.3,509967,86789,0,,0,7,24,26,9.3,,none,,1
+2026-11-18T16:48:59Z,44349363987,muse,muse-spark-1.3-contributor,review,4208,medium,approved,,10.9,0,0,0,,11,11,35,35,1.4,muse,none,,1
+2026-11-18T17:17:49Z,44355937490,muse,muse-spark-1.3-contributor,suggest,,,suggested,,5.3,0,0,0,,15,16,36,36,,,none,,1
+2026-11-18T17:18:38Z,44355785668,claude-4,opus,suggest,,,interrupted,5-hour cap,4.5,0,0,0,,54,70,,,,,none,,1
+2026-11-18T17:19:29Z,44355624174,claude-1,opus,plan,4197,hard,planned,,6.2,40,40777,5039570,9.2951,1,8,,,197.4,claude-1,resumed,,1
+2026-11-18T17:13:53Z,44351574315,muse,muse-spark-1.3-contributor,revise,4206,medium,built,,24.2,0,0,0,,11,16,35,36,10.8,muse,none,,1
+2026-11-18T17:07:56Z,44344361333,claude-8,opus,review,4210,hard,approved,,18.6,69,16927,2331133,2.1732,17,1,,,1.3,,fresh,,3
