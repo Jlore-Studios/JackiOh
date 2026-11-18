@@ -17968,6 +17968,8 @@
       }
     },
     "4232": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T18:04:16Z",
@@ -17981,8 +17983,13 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && cat .bot-notes.md 2>/dev/null | head -80\"}\n- Bash: {\"command\": \"sed -n 80,200p .bot-notes.md; echo ----; cat .bot-journal.md | head -30; git status --short; sed -n 60,140p crates/server/src/username/mod.rs; cat spec/rulings/R1434.md\"}\n- Bash: {\"command\": \"grep -n \\\"fn r14\\\\|^mod tests\\\\|^use\\\\|^ use\\\" crates/server/src/username/mod.rs | head -40; wc -l crates/server/src/username/mod.rs; tail -30 crates/server/src/username/mod.rs\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/src/username/mod.rs'\\ns=open(p,encoding='utf-8').read()\\nold='''/// R1434: the key two base names clash on, the NFKC form of the full case fold of the\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n# STATE (build pass, sonnet)\\n- Done: username_key fix + 2 tests in crates/server/src/username/mod.rs; R1434.md proven_in + sentence. Next: run the plan's\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server username 2>&1 | tail -30\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo test -p jackioh-server --lib r1434 2>&1 | tail -12\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo fmt --check && echo FMT_OK; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -5; cargo jackioh spec check 2>&1 | tail -5\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo test -p jackioh-server 2>&1 | grep -E \\\"^test result|FAILED|failed|panicked\\\" | head -20\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo test -p jackioh-server 2>&1 | grep -E \\\"^test result\\\" ; git status --short\", \"timeout\": 900000}\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- DONE: all plan commands green (server tests 140 lib / 1858 api / 762 store; fmt, clippy, spec check). Property test 0.43s. Only the two planned files chan\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a property test holds the username key stable when applied twice (the Spotify Unicode takeover)\"} --> `username_key` was not stable when applied twice, so I fixed it and added the property test the issue asks for. ## What changed **The bug.** `username_\u2026"
       },
       "issue": 4018,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-18T19:00:39Z",
+      "run_id": "pending:c92634ec-1795028411",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18001,6 +18008,9 @@
         "provider": "claude-7",
         "run": "44365641720"
       },
+      "started_at": "2026-11-18T19:00:58Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18014,9 +18024,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T18:40:14Z",
+    "at": "2026-11-18T19:00:58Z",
     "url": "",
-    "what": "review #4230 on claude-1"
+    "what": "review #4232 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T18:48:23Z",
