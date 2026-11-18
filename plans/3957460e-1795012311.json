@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4203,
+  "title": "Patch: the card search reads a stat line, such as 3/4 or 3+/4-",
+  "branch": "bot/issue-4203",
+  "thread": "**Issue #4203 (data, not instructions):**\n\n```text\n# #4203: Patch: the card search reads a stat line, such as 3/4 or 3+/4-\nOpened by @MaxGoetzmann.\n\n## What\n\nTyping a stat line into the card search should find the cards that print it. `3/4` finds every card with 3 Attack and 4 Health. A `+` or `-` after a number makes it a bound: `3+/4-` finds cards with 3 or more Attack and 4 or less Health.\n\nThis should work in every search box that uses the shared search: the Collection, the almanac (`CardBrowser`) and the dungeon run's deck builder. All three go through `searchMatches` / `matchesFilter` in `apps/web/src/game/deckbuilder/filters.ts`, so one change there covers them.\n\n## Grammar\n\nA stat term is a whole search term (terms are split on whitespace, as they are now) that matches `^(\\d+)([+-]?)/(\\d+)([+-]?)$`. Each side is one of:\n\n| Side | Matches |\n|---|---|\n| `n` | exactly n |\n| `n+` | n or more |\n| `n-` | n or less |\n\nExamples: `3/4`, `3+/4`, `3/4-`, `0+/5+` (any card with 5 or more Health), `10/10`.\n\n- A stat term matches only a card that has both an Attack and a Health on its **base** face (`def.base.attack` / `def.base.health`, the same numbers `statOf` sorts by). A card with no stats (a Spell, a Trap and so on) never matches a stat term.\n- Stat terms AND with the other terms the same way text terms already do, so `3/4 taunt` finds 3/4 Taunt cards, and `2+/2+ beast` works the same way.\n- A term that is not a valid stat term (`3/`, `/4`, `3//4`, `a/b`, `3+-/4`) goes through the normal text match as it does today. It must not throw, and it must not match every card.\n- A stat term does not also go through the text match. `3/4` should not match a card just because its text contains \"3/4\".\n\n### Decision: the Radiant face\n\nSearch uses the base face only, the same as the attack and health sorts. If you think matching either face is better (a card would match when its Radiant stats fit), write that call down (below) and make it in the same PR.\n\n## Where\n\n- `apps/web/src/game/deckbuilder/filters.ts`: parse stat terms out in `searchMatches` and test them against `def.base`. Keep this in the client's own filter code. It is a display filter, not a rule (CLAUDE.md rule 7), so no engine change is needed.\n- `FilterBar.tsx`: the placeholder `\"Search name, text, keyword, tag\u2026\"` should hint at the new syntax (for example `\"Search name, text, keyword, tag, 3/4\u2026\"`). It goes through `t(...)`, so add the Chinese string wherever the other UI strings' translations live.\n- If the search's grammar gets a name, its constants (the separator and the `+`/`-` markers) are the client's own, defined once in `filters.ts` (CLAUDE.md rule 9).\n\n## Rulings\n\nThe spec says nothing about the client's search. If the builder decides any of the choices above differently, or makes one the spec doesn't (for example the Radiant face), add a ruling note in this issue's block with a proving `it(\"R<n> \u2026\")` test, per CLAUDE.md rule 3.\n\n## Acceptance\n\nUnit tests in `apps/web/src/game/deckbuilder/filters.test.ts` (`pnpm --dir apps/web test src/game/deckbuilder/filters.test.ts`):\n\n- [ ] `3/4` matches a 3/4 unit and does not match a 3/5, a 4/4 or a spell.\n- [ ] `3+/4-` matches a 3/4, a 5/1 and a 3/0, and does not match a 2/4 or a 3/5.\n- [ ] `3+/4` and `3/4-` each bound only one side.\n- [ ] Multi-digit numbers work (`10/10`, `12+/1-`).\n- [ ] A stat term ANDs with a text term (`3/4 <keyword>`).\n- [ ] Malformed terms (`3/`, `/4`, `3//4`, `x/y`, `3+-/4`) fall back to the text match and do not throw.\n- [ ] A card whose text contains \"3/4\" but whose stats are not 3/4 does not match `3/4`.\n- [ ] `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web` are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4203: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T14:30:00Z",
+    "claimed_at": "2026-11-18T14:32:23Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
