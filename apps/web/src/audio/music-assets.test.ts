@@ -9,10 +9,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { MUSIC_BUDGET_BYTES, MUSIC_INTRO_LEGENDARY_MAX_S, MUSIC_INTRO_MAX_S, MUSIC_INTRO_MIN_S, MUSIC_STATIONS } from "./constants.ts";
-import { MENU_TRACK, MUSIC_CARDS, MUSIC_MANIFEST, RESULT_TRACKS, dangerTrack, parseMusicCards, parseMusicManifest, startTrack, stationTracks } from "./musicData.ts";
+import { MENU_TRACK, RESULT_TRACKS, dangerTrack, parseMusicCards, parseMusicManifest, startTrack, stationTracks } from "./musicData.ts";
+import { MUSIC_CARDS, MUSIC_MANIFEST } from "./soundTables.ts";
+import { loadSoundTables } from "./soundTablesLoader.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WEB = resolve(here, "../..");
@@ -29,6 +31,10 @@ const CHECK_TIMEOUT_MS = 60_000;
 
 const entries = Object.entries(MUSIC_MANIFEST.files);
 const scratch: string[] = [];
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 afterAll(() => {
   for (const dir of scratch) rmSync(dir, { recursive: true, force: true });

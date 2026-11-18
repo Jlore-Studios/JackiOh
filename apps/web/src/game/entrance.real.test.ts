@@ -15,7 +15,10 @@ import { describe, expect, it } from "vitest";
 import { createMusicDirector } from "../audio/musicDirector.ts";
 import { createSoundDirector } from "../audio/director.ts";
 import { DEFAULT_AUDIO_SETTINGS } from "../audio/settings.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 import { devDeck, realPort } from "../audio/test/realGame.ts";
+
+await loadSoundTables();
 import type { SfxId, SfxParams, SoundSink } from "../audio/types.ts";
 import { cueCard } from "../audio/useGameAudio.ts";
 import { catalogFacts } from "../fx/FxLayer.tsx";

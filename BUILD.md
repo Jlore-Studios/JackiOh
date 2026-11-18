@@ -631,7 +631,7 @@ Acceptance: `animations.test.ts` asserts every `GameEvent["type"]` has a row (fa
 ### M6 — Server, accounts, collection, loadouts, match actor (`apps/server`, `packages/validator`)
 
 **M6-T1 Auth and invite gate.** Files: `server/src/api/auth.ts`, `codes.ts`, migrations for `profiles`, `invite_codes`, `code_attempts`.
-Managed auth provider for email/password; `profiles.status ∈ pending | active | banned`; redemption transaction per §9.4 (verified email required, per-account 5/h, per-IP 20/h, identical error and timing for missing/expired/exhausted, global circuit breaker); 16-char codes from a 32-symbol alphabet without 0/O/1/I/l, stored hashed.
+Managed auth provider for email/password; `profiles.status ∈ pending | active | banned`; redemption transaction per §9.4 (verified email required, per-account 5/h, per-IP 20/h, identical error and timing for missing/expired/exhausted; no global breaker, only the operator's pause, R4131000); 16-char codes from a 32-symbol alphabet without 0/O/1/I/l, stored hashed.
 Acceptance: integration tests for each rejection step; timing test shows the three failure responses within 5 ms of each other over 50 samples; a pending account cannot call collection, loadout or queue endpoints (403).
 
 **M6-T2 Collection ledger.** Files: `server/src/api/collection.ts`, migrations `cards`, `collection`, `collection_grants`.

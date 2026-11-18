@@ -9,6 +9,7 @@ import { CATALOG } from "@jackioh/cards";
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import { getAudioEngine } from "../audio/engine.ts";
+import { useSoundTables } from "../audio/soundTablesLoader.ts";
 import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
 import { readerName } from "../cards/chinese.ts";
@@ -124,6 +125,7 @@ function WayOutCard({ way, faceUp }: { way: WayOut; faceUp: boolean }): ReactEle
 
 /** The lost card: tapped, it says its line through the audio engine (muting is the engine's, R630). */
 function LostCard({ path }: { path: string }): ReactElement | null {
+  const tables = useSoundTables();
   const defId = lostCardFor(path);
   const def = CATALOG[defId];
   const [speaking, setSpeaking] = useState(false);
@@ -138,8 +140,8 @@ function LostCard({ path }: { path: string }): ReactElement | null {
       window.clearTimeout(timer);
     };
   }, [speaking]);
-  if (def === undefined) return null;
-  const line = lostCardLine(defId);
+  if (def === undefined || tables === null) return null;
+  const line = lostCardLine(defId, tables.cardAudio);
   const flavour = flavourFor(defId)?.flavour;
   const speak = (): void => {
     if (line === null) return;

@@ -401,7 +401,8 @@ than the screen does ([[R203]]).
 - **Autoplay.** Nothing plays before the first user gesture, on any screen. The audio context is
   created and resumed inside that gesture, which is what iOS requires. Nothing is scheduled while
   the context is suspended (before the first gesture takes, or after the system interrupts it): a
-  cue asked for then is dropped, never saved up to play all at once when it resumes.
+  cue asked for then is dropped, never saved up to play all at once when it resumes. The sound tables
+  load with the first sound, not with the page.
 - **Music** ([[R631]]). Music plays on its own bus, under the master volume and mute. Every screen
   without a board plays the main menu theme. On a board, each player hears music driven by their
   own view: their station, their hero's health and their turn. A priority stack decides what plays:

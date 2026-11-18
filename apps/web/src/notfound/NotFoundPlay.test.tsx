@@ -27,6 +27,8 @@ vi.mock("../net/navigate.ts", async (importOriginal) => ({
   navigate: navigateTo,
 }));
 
+const { loadSoundTables } = await import("../audio/soundTablesLoader.ts");
+await loadSoundTables();
 const { GlitchPath, NotFoundPlay, notFoundTestid } = await import("./NotFoundPlay.tsx");
 const { GLITCH_SETTLE_STEP_MS, LOST_CARDS, WAYS_OUT, glitchedPath, lostCardFor, lostCardLine } = await import("./lost.ts");
 

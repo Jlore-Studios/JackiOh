@@ -6,7 +6,13 @@
 import { vi, type Mock } from "vitest";
 
 import type { SpeechPort } from "../engine.ts";
+import { SOUND_TABLES } from "../soundTables.ts";
+import { setSoundTablesForTests, type SoundTables } from "../soundTablesLoader.ts";
 import type { AudioEngine } from "../types.ts";
+
+export function seedSoundTables(tables: SoundTables = SOUND_TABLES): void {
+  setSoundTablesForTests(tables);
+}
 
 // Strictness
 

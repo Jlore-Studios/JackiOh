@@ -2,7 +2,7 @@
 // line does; an emoji is a synthesized effect (R1345). The SoundSink is a two-method seam, so the
 // engine here is a pair of spies.
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   EMOJI_EMOTE_IDS,
@@ -14,7 +14,9 @@ import {
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import type { SfxId, SoundSink } from "../audio/types.ts";
-import { CARD_AUDIO, emoteVoiceDef } from "../audio/voiceData.ts";
+import { CARD_AUDIO } from "../audio/soundTables.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
+import { emoteVoiceDef } from "../audio/voiceData.ts";
 import {
   EMOTE_BUBBLE_MAX_MS,
   EMOTE_BUBBLE_MIN_MS,
@@ -27,6 +29,10 @@ import {
   voiceBubbleMs,
   voiceBubbleText,
 } from "./play.ts";
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 /** A SoundSink that records: exactly what engine.ts implements and a test can spy on. */
 function sink(): SoundSink & {

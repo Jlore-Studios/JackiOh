@@ -123,7 +123,14 @@ export function adminApi(token: TokenSource) {
     news: () => call<NewsResponse>("/api/admin/news"),
     postNews: (title: string, summary: string) => call<{ post: NewsPost }>("/api/admin/news", "POST", { title, summary }),
     takeDownNews: (id: string) => call<{ post: NewsPost }>(`/api/admin/news/${encodeURIComponent(id)}`, "DELETE"),
-    audit: () => call<AuditResponse>("/api/admin/audit"),
+    audit: (query?: { beforeId?: number; profileId?: string; route?: string }) => {
+      const params = new URLSearchParams();
+      if (query?.beforeId !== undefined) params.set("before_id", String(query.beforeId));
+      if (query?.profileId !== undefined && query.profileId !== "") params.set("profile_id", query.profileId);
+      if (query?.route !== undefined && query.route !== "") params.set("route", query.route);
+      const text = params.toString();
+      return call<AuditResponse>(text === "" ? "/api/admin/audit" : `/api/admin/audit?${text}`);
+    },
 
     // The holdings and the Dev tools (SPEC §14.10, R1300000), with exactly apps/web/src/net/api.ts's bodies.
     wallet: () => call<WalletResponse>("/api/wallet"),

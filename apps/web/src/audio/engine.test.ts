@@ -57,6 +57,7 @@ import {
   type FakeNode,
   type FakeSpeech,
 } from "./test/fakeAudio.ts";
+import { deferSoundTablesForTests, setSoundTablesForTests } from "./soundTablesLoader.ts";
 import type { AudioEngine, PlayedCue, SfxId, SfxParams, VoiceKey, CardAudioTable, PlayableLineKind, VoiceManifest } from "./types.ts";
 import { must } from "../test/stubServer.ts";
 
@@ -227,6 +228,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  setSoundTablesForTests(null);
   for (const engine of engines.splice(0)) {
     try {
       engine.dispose();
@@ -1951,5 +1953,36 @@ describe("R3346000 a play's impact on the effects bus", () => {
     expect(log.filter((cue) => cue.kind === "voice")).toHaveLength(1);
     expect(sfxIds.length).toBeLessThan(SFX_MAX_VOICES);
     expect(audio.violations).toEqual([]);
+  });
+
+  describe("#4130 lazy sound tables loading in engine", () => {
+    it("#4130 a voice line requested before tables arrive queues and plays when tables load", async () => {
+      const deferred = deferSoundTablesForTests();
+      const r = rig({ engine: { lines: undefined, manifest: undefined } });
+      const audio = unlocked(r);
+      const bus = buses(audio);
+      expect(r.engine.playVoice("core-004", "play", 0)).toBe(true);
+      expect(voiceSources(audio, bus.voice)).toHaveLength(0);
+
+      deferred.resolve({
+        cardAudio: LINES,
+        voiceManifest: MANIFEST,
+        musicManifest: { version: 1, format: "", files: {} },
+        musicCards: {},
+      });
+      await settle();
+
+      expect(voiceSources(audio, bus.voice).length).toBeGreaterThan(0);
+      expect(audio.violations).toEqual([]);
+    });
+
+    it("#4130 an effect or pickup requested before tables arrive returns false quietly and logs nothing", () => {
+      setSoundTablesForTests(null);
+      const r = rig({ engine: { lines: undefined, manifest: undefined } });
+      unlocked(r);
+      expect(r.engine.playEffect("core-004", "play", 0)).toBe(false);
+      expect(r.engine.playPickup("core-004")).toBe(false);
+      expect(r.engine.log()).toEqual([]);
+    });
   });
 });

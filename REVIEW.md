@@ -153,7 +153,7 @@ For each row, name the test(s) that prove it, or trace a fixture state through t
 
 ### B6 Server (SPEC §9; BUILD M6–M7)
 
-- Invite redemption: each of the six transaction steps has a test; failure responses identical in body and within 5 ms; circuit breaker test.
+- Invite redemption: each of the six transaction steps has a test; failure responses identical in body and within 5 ms; a test that failures spread over many addresses pause nothing (R4131000).
 - Collection: no client-writable path; grants and collection written atomically.
 - Validator: single module imported by web and server; unique index enforced at SQL level.
 - Match actor: crash-and-fold test; nonce dedupe; per-player view; decks frozen into the ticket; clock, grace, reaper, results for every terminal reason.

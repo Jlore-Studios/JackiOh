@@ -9,6 +9,7 @@ import { pollWhileVisible } from "../game/net.ts";
 import { ApiRequestError } from "../net/api.ts";
 import { readFailureOf } from "../net/gate.ts";
 import { attempt } from "../net/errors.ts";
+import { isSafeKey } from "../wire/json.ts";
 
 /** The session refused a social route outright: signed out (401), or an account that is not active (403). */
 export function isRefusedSession(cause: unknown): boolean {
@@ -22,6 +23,8 @@ export function unreadCountsOf(answer: unknown): Readonly<Record<string, number>
   if (typeof unread !== "object" || unread === null) return {};
   const counts: Record<string, number> = {};
   for (const [friendId, count] of Object.entries(unread)) {
+    // Issue #4015: a friend id from outside (the social read) never becomes an object key.
+    if (!isSafeKey(friendId)) continue;
     if (typeof count === "number" && Number.isFinite(count)) counts[friendId] = count;
   }
   return counts;

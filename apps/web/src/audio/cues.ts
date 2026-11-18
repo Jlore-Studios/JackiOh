@@ -55,7 +55,7 @@ import {
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
-import { MUSIC_CARDS } from "./musicData.ts";
+import { soundTablesNow } from "./soundTablesLoader.ts";
 import type {
   CardAudioTable,
   CardHook,
@@ -304,7 +304,7 @@ function playImpact(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueC
  */
 function entranceSting(defId: string, rarity: Rarity | PrintedRarity | undefined, delayMs: number): readonly SoundCue[] {
   if (rarity !== "Legendary" && rarity !== "Mythic") return NONE;
-  if (MUSIC_CARDS[defId]?.intro !== undefined) return NONE;
+  if (soundTablesNow()?.musicCards?.[defId]?.intro !== undefined) return NONE;
   return [sfx("entrance", rarity === "Mythic" ? { mythic: true } : undefined, delayMs)];
 }
 
