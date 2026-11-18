@@ -22,7 +22,7 @@ import { BROADSIDE_SOUNDS, starshipSounds } from "./starshipSounds.ts";
 import { FakeAudio } from "./test/fakeAudio.ts";
 import type { CardHook, PlayableLineKind, SfxId, SfxParams, SoundCue, SoundSink } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
-import { CARD_AUDIO } from "./voiceData.ts";
+import { CARD_AUDIO } from "./soundTables.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];

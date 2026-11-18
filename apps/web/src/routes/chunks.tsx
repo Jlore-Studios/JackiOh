@@ -8,6 +8,7 @@ import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, stripTr
 import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
 import { loadWasm } from "../wasm/index.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
@@ -144,7 +145,10 @@ export function prefetchRoute(path: string): void {
   if (name === null || prefetched.has(name)) return;
   prefetched.add(name);
   void routeChunks[name]?.load().catch(() => undefined);
-  if (ENGINE_CHUNKS.has(name)) void loadWasm().catch(() => undefined);
+  if (ENGINE_CHUNKS.has(name)) {
+    void loadWasm().catch(() => undefined);
+    void loadSoundTables().catch(() => undefined);
+  }
 }
 
 /**
@@ -155,7 +159,10 @@ export function prefetchRoute(path: string): void {
 export function startScreen(path: string, engine: boolean): void {
   const name = chunkAt(path);
   if (name !== null) void routeChunks[name]?.load().catch(() => undefined);
-  if (engine) void loadWasm().catch(() => undefined);
+  if (engine) {
+    void loadWasm().catch(() => undefined);
+    void loadSoundTables().catch(() => undefined);
+  }
 }
 
 const INTENT_EVENTS = ["pointerenter", "focus", "touchstart"] as const;

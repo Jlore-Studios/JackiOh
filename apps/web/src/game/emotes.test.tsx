@@ -9,10 +9,12 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, EmoteId, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 import { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE, EMOTE_IDS, PORTRAIT_IDS, PORTRAITS } from "@jackioh/shared";
+
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 
 import { flavourFor } from "../cards/flavour.ts";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "../cards/inspect/constants.ts";
@@ -75,6 +77,10 @@ const FACE_ATTACK: readonly ActionBody[] = [
   { type: "attack", attackerId: "u1", targetId: "hero-p2" },
   END_TURN,
 ];
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 afterEach(() => {
   cleanup();

@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 
 import { BANNED_RULES_WORDS, BANNED_WORDS_MAX_SHARE, CARD_HOOK_NAMES, VOICE_MAX_WORDS } from "./constants.ts";
 import { SFX_IDS } from "./sfx.ts";
-import { withVoiceText } from "./voiceData.ts";
+import { withVoiceText } from "./soundTables.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(here, "../../../..");
