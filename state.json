@@ -14954,10 +14954,11 @@
     "what": "revise #4230 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-18T21:15:20Z",
+    "at": "2026-11-18T21:20:26Z",
     "notes": [
-      "delivered plan #4221 on claude-8 (run 44398215295): interrupted",
-      "delivered review #4206 on muse (run 44392259166): reviewed"
+      "#4221 is held for `claude-8` until 16:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "#4215: approved and green, so its strikes are cleared",
+      "#4206: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15663,7 +15664,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T21:15:20Z",
+  "loop_tick": "2026-11-18T21:20:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
