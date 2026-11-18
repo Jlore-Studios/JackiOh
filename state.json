@@ -14541,6 +14541,13 @@
     "4224": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T23:37:46Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium for the rest: a server actor plus its test and doc paragraphs, no engine rules, AI, migration, or cross-crate design"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
