@@ -115,8 +115,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn base_enters_at_4_4_radiant_unchanged() {
-            for (radiant_face, size) in [(false, 4), (true, 8)] {
+        fn base_enters_at_3_3_radiant_at_6_6() {
+            for (radiant_face, size) in [(false, 3), (true, 6)] {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TOP, "radiant": radiant_face }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -130,17 +130,19 @@ mod tests {
         mod base {
             use super::*;
 
+            /// A 4/4's hit of 4 through Armor 2 deals 2: the 3/3 is left at 1.
             #[test]
-            fn has_armor_2_a_4_damage_hit_leaves_it_at_2() {
+            fn has_armor_2_a_4_damage_hit_leaves_it_at_1() {
                 let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
                 assert_eq!(s.stats(top(&s)).armor, 2);
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 2 }));
+                s.expect_stats(&target, json!({ "health": 1 }));
             }
 
+            /// Armor 3 lets 1 of the 4/4's 4 through: the 3/3 is left at 2.
             #[test]
             fn r386_its_armor_is_tuned_as_a_numbered_keyword_an_upgrade_makes_it_armor_3() {
                 let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
@@ -151,7 +153,7 @@ mod tests {
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 3 }));
+                s.expect_stats(&target, json!({ "health": 2 }));
             }
 
             #[test]
@@ -213,8 +215,9 @@ mod tests {
                 assert!(attack_targets(&s, &across.id).contains(&loser.id));
                 s.expect_refused_with(|s| s.attack(&beside, &loser), "lane");
                 s.attack(&across, &loser);
+                // 4 through Armor 2: the 3/3 is left at 1.
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 2 }));
+                s.expect_stats(&loser, json!({ "health": 1 }));
             }
 
             #[test]
@@ -320,7 +323,7 @@ mod tests {
                 );
                 s.play(WHIRLWIND, json!({}));
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 8 }));
+                s.expect_stats(&loser, json!({ "health": 6 }));
                 s.play(NETHER, json!({}));
                 assert_eq!(s.unit(P2, 3).map(|unit| unit.def_id), Some(TOP.to_string()));
                 assert!(s.unit(P2, 1).is_none());
@@ -328,7 +331,7 @@ mod tests {
 
             #[test]
             fn s6_1_a_unit_still_reaches_it_a_cry_targets_it_and_a_unit_s_sweep_destroys_it() {
-                // Radiant Twisted Sorcerer's 8 through the Radiant Top Loser's Armor 4 leaves 4.
+                // Radiant Twisted Sorcerer's 8 through the Radiant Top Loser's Armor 4 deals 4: the 6/6 is left at 2.
                 let mut s = top_loser(json!({ "hand": [{ "def": SORCERER, "radiant": true }, FILLER] }), true, json!({}));
                 let loser = top(&s);
                 s.play(
@@ -336,7 +339,7 @@ mod tests {
                     json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": loser.id }] }),
                 );
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 4 }));
+                s.expect_stats(&loser, json!({ "health": 2 }));
                 let mut felinor = top_loser(json!({ "hand": [BIG_FELINOR, FILLER] }), true, json!({}));
                 let loser = top(&felinor);
                 felinor.play(BIG_FELINOR, json!({ "zone": 1 }));
@@ -349,8 +352,9 @@ mod tests {
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
+                // The Menace's 9 through Armor 4 deals 5: the 6/6 is left at 1.
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 3 }));
+                s.expect_stats(&target, json!({ "health": 1 }));
             }
 
             #[test]
@@ -368,7 +372,8 @@ mod tests {
             ) {
                 let mut aura = top_loser(json!({ "backrow": [{ "def": AURA, "lane": 1 }] }), true, json!({}));
                 let loser = top(&aura);
-                aura.expect_stats(&loser, json!({ "attack": 7, "health": 7 }));
+                // The 6/6 shrinks to 5/5.
+                aura.expect_stats(&loser, json!({ "attack": 5, "health": 5 }));
 
                 let mut s = scenario(json!({
                     "active": "p2",

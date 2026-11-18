@@ -103,7 +103,7 @@ mod tests {
                 "hand": [{ "def": ID, "radiant": radiant }, FILLER],
                 "field": [{ "def": "core-008", "lane": 1 }],
                 "library": filler(8),
-                "mana": 3,
+                "mana": 4,
             },
             "p2": {
                 "hand": [FILLER],

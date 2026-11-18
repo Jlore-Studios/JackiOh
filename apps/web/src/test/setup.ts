@@ -11,12 +11,17 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach } from "vitest";
 
+import { loadCardTables } from "../cards/chinese.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { loadWasmSync } from "../wasm/index.ts";
 
 // A path, not `new URL(…, import.meta.url)`: Vite rewrites that into an asset URL against the page's
 // origin, which `readFileSync` refuses.
 loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../wasm/pkg/jackioh_wasm_bg.wasm")));
+
+// #4180: the Chinese card tables load on demand in the client, but every test reads them as already
+// there, the way the engine module is: the setup awaits them before any test file is imported.
+await loadCardTables();
 
 let reducedMotion = false;
 

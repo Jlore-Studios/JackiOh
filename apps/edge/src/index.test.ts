@@ -712,6 +712,23 @@ describe("the Worker's routes", () => {
     expect(forwarded.headers.has("X-Forwarded-For")).toBe(false);
     expect(await answer.text()).toBe("from the server");
   });
+
+  it("#4017 forwards a socket's ?token= to the server and logs nothing that holds it", async () => {
+    const fetch = vi.fn((_request: Request) => Promise.resolve(new Response("from the server")));
+    const env = routedEnv(fetch);
+    const spies = (["log", "info", "warn", "error", "debug"] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation(() => undefined),
+    );
+    try {
+      await worker.fetch(new Request("https://jackioh.com/ws/match?matchId=m1&token=SECRET-TOKEN"), env);
+
+      const forwarded = fetch.mock.calls[0]?.[0] as Request;
+      expect(new URL(forwarded.url).searchParams.get("token")).toBe("SECRET-TOKEN");
+      for (const spy of spies) expect(JSON.stringify(spy.mock.calls)).not.toContain("SECRET-TOKEN");
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+  });
 });
 
 describe("the daily wake-up", () => {

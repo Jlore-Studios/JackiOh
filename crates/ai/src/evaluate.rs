@@ -15,7 +15,10 @@
 //! A passed line's Float is credited for what it took toward an own Float-discount card still out of
 //! reach (`float_credit`, #3695). The Burn and Toxic still to come on a unit or a hero count by the ticks
 //! they will deal (`afflicted`, `coming_hero_ticks`, R3822000). While a Feng Shui acts, the seat's next
-//! face-up play counts by the verdict its last element gives it (`feng_shui_outlook`, R3951100).
+//! face-up play counts by the verdict its last element gives it (`feng_shui_outlook`, R3951100). An own
+//! dead Tradable card counts less than its price (`dead_in_hand`, R4154400), an own card that sells from the
+//! hand as the Credits its sale brings (`hand_sale_worth`, R4154401), and a permanent a Living Bomb destroys
+//! at its controller's next turn start as a Brittle 1 one (`plague_doomed`, R4154402).
 //! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
 //! handicap or a difficulty (R180).
 
@@ -24,8 +27,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::IndexSet;
 use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::config::{
-    BRITTLE_TICK, BURN_DECAY, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH,
-    JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+    BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT,
+    JADE_BEAUTY_AT, MAX_MANA, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::float::float_cuts_in_hand;
@@ -42,18 +45,20 @@ use jackioh_engine::{
     find_instance_mut, first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword,
     heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship,
     is_extra_turn_card, is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
-    launched_starship_of, left_field_after, legal_actions, lost_refreshes_left, modifier_is_live,
-    outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard, query_cost, queue_hook,
-    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
-    takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view,
-    units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    is_tradable, launched_starship_of, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, plague_on,
+    playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, sell_quote, sells_from_hand,
+    settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on,
+    trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused,
+    with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS, AI_TURN_HOOK_PROBE_NODES,
+    EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -130,6 +135,54 @@ fn brittle_share(card: &CardInstance, w: &EvalWeights) -> f64 {
     }
 }
 
+/// R4154402: whether a Living Bomb (`AI_PLAGUE_BOMBS`) lies in either backrow at all, the cheap test
+/// `plague_doomed` and the move order ask before anything else.
+pub(crate) fn plague_bomb_on_field(state: &GameState) -> bool {
+    PLAYER_IDS.into_iter().any(|player| {
+        state.players[player]
+            .backrow
+            .iter()
+            .flatten()
+            .any(|card| AI_PLAGUE_BOMBS.contains(&card.def_id.as_str()))
+    })
+}
+
+/// R4154402, R400: whether a Living Bomb will destroy `card`, a permanent, at the start of its controller's
+/// next turn: it carries a Plague Counter (`plague_on`), it is not Indestructible (R46), and a card of
+/// `AI_PLAGUE_BOMBS` holds the hook that fires then where the engine's trigger queue would find it
+/// (`trigger_holders_with_hook`: face-up, its text on, the face that prints the hook), the start-of-turn
+/// hook of one its controller holds (the base face's) or the start-of-the-opponent's-turn hook of one the
+/// other side holds (either face's). Each destroys every permanent with a Plague Counter that the player
+/// whose turn starts controls. Plague Counters are public (R471) and so is a face-up Living Bomb.
+pub fn plague_doomed(state: &GameState, card: &CardInstance) -> bool {
+    if plague_on(card) <= 0
+        || !plague_bomb_on_field(state)
+        || unit_has(state, card, KeywordKind::Indestructible)
+    {
+        return false;
+    }
+    let bomb_holds = |hook: HookName, side: PlayerId| {
+        trigger_holders_with_hook(state, hook, Some(side))
+            .into_iter()
+            .any(|holder| {
+                matches!(holder.zone, TriggerZone::Backrow | TriggerZone::Field)
+                    && AI_PLAGUE_BOMBS.contains(&holder.card.def_id.as_str())
+            })
+    };
+    bomb_holds(HookName::StartOfTurn, card.controller)
+        || bomb_holds(HookName::StartOfOpponentTurn, card.controller.opponent())
+}
+
+/// R4154402: the share of itself a permanent keeps while a Living Bomb will destroy it at the start of its
+/// controller's next turn (`plague_doomed`): Brittle 1's (`brittle_discount`), since a crumble comes at that
+/// same stage. 1 otherwise, and 1 at a zero `brittle_discount` (the frozen baseline's), which reads nothing.
+fn plague_share(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+    if w.brittle_discount == 0.0 || !plague_doomed(state, card) {
+        return 1.0;
+    }
+    1.0 - w.brittle_discount
+}
+
 /// Whether the unit may attack at all: no "Can't attack" keyword, no E35 status bars it, and it is
 /// not Frozen through its controller's next turn (R1174000: one that thaws at this turn's cleanup
 /// swings next turn).
@@ -182,8 +235,10 @@ pub(crate) fn crumbles_before_swing(
 /// R3540001), so no turn number is asked. An Indestructible unit takes none. With `on_turn_swings` the player
 /// on turn still has this turn's attacks to come, after this turn's tick, as in `crumbles_before_swing`. With
 /// `w.pool_and_conversion_read`, its side's damage pools meet the tick refilled, as `afflicted` reads them
-/// (R4064000). An unspent Reborn brings its body back summoning sick (R83), which keeps it out unless the body
-/// has Charge, or Rush when `at_hero` is false: then it still counts, at the unit's own reads, as before.
+/// (R4064000). An unspent Reborn brings its body back summoning sick (R83) when the Toxic tick at its
+/// controller's turn start kills it, which keeps it out unless the body has Charge, or Rush when `at_hero` is
+/// false; a Burn that kills it alone ticks at the end of the turn under way (R4154000), so its body is back
+/// before that turn starts and swings. Either way a body that swings counts, at the unit's own reads, as before.
 pub(crate) fn afflicted_before_swing(
     state: &GameState,
     unit: &CardInstance,
@@ -199,14 +254,23 @@ pub(crate) fn afflicted_before_swing(
     {
         return false;
     }
-    let mut shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
+    let shielded = has_keyword(&view.keywords, KeywordKind::DivineShield);
     let pool = refilled_pool(state, unit.controller, w);
-    let (taken, _) = tick_damage(view, unit_damage_cap(state, unit), burn, toxic, &mut shield, pool);
+    let cap = unit_damage_cap(state, unit);
+    let mut shield = shielded;
+    let (taken, _) = tick_damage(view, cap, burn, toxic, &mut shield, pool);
     if taken < view.health {
         return false;
     }
     if !has_keyword(&view.keywords, KeywordKind::Reborn) {
         return true;
+    }
+    // R4154000: a Burn the tick at the end of the turn under way kills brings the Reborn body back before its
+    // controller's next turn starts, so it is not summoning sick then and swings, the hero included.
+    let mut shield = shielded;
+    let (burned, _) = tick_damage(view, cap, burn, 0, &mut shield, pool);
+    if burned >= view.health {
+        return false;
     }
     let (_, body) = reborn_return(state, unit);
     !(has_keyword(&body.keywords, KeywordKind::Charge)
@@ -552,9 +616,10 @@ fn tick_damage(
 }
 
 /// R3822000: `value`, a unit's worth inside its Brittle share, less what its Burn and Toxic will deal it
-/// over its controller's next `AI_AFFLICTION_TICKS` turn starts, and the share the unit keeps: 1, or
-/// `1 − unit_doomed / n` when the nth tick kills it. Each tick is R3540001's, before the start-of-turn
-/// triggers: Burn's hit, dropping by `BURN_DECAY` after it, then Toxic's; an unspent Divine Shield
+/// over the next `AI_AFFLICTION_TICKS` ticks, and the share the unit keeps: 1, or `1 − unit_doomed / n`
+/// when the nth tick kills it. Each tick is Burn's hit, the first tick alone, since a Burn hits once at
+/// the end of the turn and is gone (R4154000, `burning_at`), then Toxic's at its controller's turn start
+/// (R3540001); an unspent Divine Shield
 /// negates the first (its worth goes), Armor meets Burn's and Toxic pierces it, the unit's own cap holds
 /// both (R2179005), and an Indestructible unit takes none. With `w.pool_and_conversion_read`, its side's
 /// damage pools soak what they can of each tick's hits, refilled at the turn start before it (R4064000);
@@ -581,7 +646,7 @@ fn afflicted(
     let mut taken: i32 = 0;
     let mut share = 1.0;
     for tick in 1..=AI_AFFLICTION_TICKS {
-        let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        let burning = burning_at(burn, tick);
         let (hit, popped) = tick_damage(view, cap, burning, toxic, &mut shield, pool);
         if popped {
             spent = w.keyword.divine_shield;
@@ -594,6 +659,12 @@ fn afflicted(
     }
     let lost = spent + w.health * f64::from(taken.min(view.health.max(0)));
     (value - w.unit_affliction * lost, share)
+}
+
+/// R4154000: the Burn the `tick`th projected tick deals: the whole count on the first, since a Burn hits
+/// once at the end of the turn and is then removed, and none after it.
+fn burning_at(burn: i32, tick: i32) -> i32 {
+    if tick == 1 { burn } else { 0 }
 }
 
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
@@ -656,9 +727,17 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
     // death too. R2565000: and what one firing of its turn hooks gives, a firing that harms it a debt.
     // R3822000: less what its Burn and Toxic will deal it; a unit a tick kills keeps the smaller of that
     // share and its Brittle one, both ends coming at the same stage.
+    // R4154402: a unit a Living Bomb destroys at its controller's next turn start keeps Brittle 1's share
+    // too, the smallest counting, and its Plague Counters, the destroy waiting, bank it nothing.
     let (value, doom) = afflicted(state, unit, &view, value, w);
-    value * brittle_share(unit, w).min(doom)
-        + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
+    let plague = plague_share(state, unit, w);
+    let counters = if plague < 1.0 {
+        0.0
+    } else {
+        w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
+    };
+    value * brittle_share(unit, w).min(doom).min(plague)
+        + counters
         + w.death * death_price(state, unit, w, prices)
         + w.turn_hook * turn_hook_price(state, unit, w, prices)
 }
@@ -790,6 +869,65 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
     (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift + turn - shift)
         * brittle_share(card, w)
         * kept
+}
+
+/// R4154400, §2.3: the crystals a turn adds to a seat's maximum until it reaches `MAX_MANA`.
+const CRYSTALS_PER_TURN: i32 = 1;
+
+/// R4154400, §2.3: the crystals `side`'s next refresh brings, read off the public counts and never through
+/// the handicap (R180), as `lost_crystals` reads them: this turn's maximum, `CRYSTALS_PER_TURN` more while it
+/// is under `MAX_MANA`, moved by the next-turn rider (`rider_crystals`). Temporary mana a later play might
+/// make is not counted.
+fn next_turn_crystals(side: &PlayerState) -> i32 {
+    let max = side.mana.max;
+    let grown = if max < MAX_MANA {
+        max + CRYSTALS_PER_TURN
+    } else {
+        max
+    };
+    grown + rider_crystals(side)
+}
+
+/// R4154400: whether `card`, in `seat`'s own hand, is a dead Tradable card: Tradable now (`is_tradable`, a
+/// lent Tradable included, R1864002) with an own cost (`own_cost`; an X-cost card has none) that neither this
+/// turn's crystals nor its next refresh's (`next_turn_crystals`) pay for. A Trade swaps it for a card drawn
+/// and puts it back in the deck, under the top (R2657003), so the move order tries that Trade before the
+/// plays (`candidates.rs`) and `material` holds it at `dead_tradable_discount` off.
+pub fn dead_in_hand(state: &GameState, seat: PlayerId, card: &CardInstance) -> bool {
+    own_cost(state, card).is_some_and(|cost| cost > next_turn_crystals(&state.players[seat]))
+        && is_tradable(state, card)
+}
+
+/// R4154401: what a card that sells from the hand (`sells_from_hand`, Stinkyscape #89 Spice, R1861000) is
+/// worth in its holder's hand while the Marketplace quotes it (`sell_quote`): the Credits its sale brings
+/// now, at `market_credit` each, since a sale is on offer every turn of its holder's at no mana. `None`
+/// without `w.hand_sale_credits` (the frozen baseline's) or a quote: then it is priced as any hand card.
+pub fn hand_sale_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> Option<f64> {
+    if !w.hand_sale_credits || !sells_from_hand(state, card) {
+        return None;
+    }
+    sell_quote(state, card).map(|credits| w.market_credit * f64::from(credits))
+}
+
+/// An own hand card's place in `material`: `doomed_hand_card_value`, but a card that sells from the hand at
+/// what its sale brings (`hand_sale_worth`, R4154401), and a dead Tradable card at `dead_tradable_discount`
+/// off (`dead_in_hand`, R4154400; no reading at a zero share).
+fn own_hand_card_value(
+    state: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    doomed: bool,
+    w: &EvalWeights,
+) -> f64 {
+    if let Some(credits) = hand_sale_worth(state, card, w) {
+        return credits;
+    }
+    let value = doomed_hand_card_value(state, card, doomed, w);
+    if w.dead_tradable_discount != 0.0 && dead_in_hand(state, seat, card) {
+        value * (1.0 - w.dead_tradable_discount)
+    } else {
+        value
+    }
 }
 
 /// R3951100: whether a Feng Shui acts on either side of the field (Meditative #40, R984), which
@@ -1081,7 +1219,7 @@ fn hero_ticks(state: &GameState, player: PlayerId, burn: i32, toxic: i32, w: &Ev
     let pool = refilled_pool(state, player, w);
     let mut taken: i32 = 0;
     for tick in 1..=AI_AFFLICTION_TICKS {
-        let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        let burning = burning_at(burn, tick);
         let mut left = pool;
         if burning > 0 {
             let hit = subsystems::projected_hero_damage(state, player, burning, false);
@@ -1201,8 +1339,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         let def = find_def(Some(state), &card.def_id);
         match def {
             Some(def) if readable_by(state, card, seat) => {
-                value += brittle_share(card, w)
-                    * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
+                // R4154402: a card a Living Bomb destroys at its controller's next turn start keeps Brittle
+                // 1's share, the smaller of that and its own Brittle share counting.
+                let kept = brittle_share(card, w).min(plague_share(state, card, w));
+                value += kept * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
                 // R2477000, R2565000: what one firing of its turn hooks gives its controller, as the root
                 // priced it; either side's, since a card the seat can read is one it may price.
                 value += w.turn_hook * turn_hook_price(state, card, w, prices);
@@ -1212,7 +1352,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 value += w.death * death_price(state, card, w, prices);
                 // R2603000: what one use of its Activate gives its controller, as the root priced it, inside
                 // its Brittle share as a unit's is (R2564000); either side's.
-                value += brittle_share(card, w) * w.activation * activation_price(state, card, w, prices);
+                value += kept * w.activation * activation_price(state, card, w, prices);
                 // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share), with stats (R2280000).
                 if w.animated_share != 0.0 && animated_with_stats(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w, prices);
@@ -1241,7 +1381,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     let doomed = discards_hand(state, player);
     if player == seat {
         for card in &side.hand {
-            value += doomed_hand_card_value(state, card, doomed, w);
+            value += own_hand_card_value(state, seat, card, doomed, w);
         }
         // R3951100: the verdict the seat's next face-up play would get (no reading at a zero share).
         if w.feng_shui_outlook != 0.0 {

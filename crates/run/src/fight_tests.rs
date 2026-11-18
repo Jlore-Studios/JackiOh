@@ -282,8 +282,9 @@ fn r3586001_tiers_5_10_and_15_are_easys_mediums_and_hards_resources() {
 
 #[test]
 fn r3586001_every_elite_row_stands_on_a_normal_tier_and_is_stronger() {
-    // R3586001: one elite row for each tier an elite can stand on (every tier but a boss's), rising,
-    // each at least as strong as that tier's normal row in every field and with more health.
+    // R3586001: one elite row for each tier an elite can stand on (every tier but a boss's), none weaker
+    // than the one before, each at least as strong as that tier's normal row in every field and with more
+    // health.
     let tiers: Vec<usize> = RUN_ELITE_TIERS.iter().map(|(tier, _)| *tier).collect();
     let expected: Vec<usize> = (1..=RUN_TIERS.len())
         .filter(|tier| !tier.is_multiple_of(RUN_ACT_TIERS + 1))

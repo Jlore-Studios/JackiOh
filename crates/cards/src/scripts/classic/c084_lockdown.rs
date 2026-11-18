@@ -1,6 +1,8 @@
-//! C #84 Lockdown (SPEC §8.6 row 84). (2) Field Spell, Rare.
-//!   Base:    "Indestructible\nAfter a permanent is played, Lock its zone.\nActivate: Tribute this."
-//!   Radiant: "Indestructible\nAfter your opponent plays a permanent, Lock its zone.\nActivate: Tribute this."
+//! C #84 Lockdown (SPEC §8.6 row 84). (1) Field Spell, Rare ((2) until issue #4154).
+//!   Base:    "Indestructible, Crater\nAfter a permanent is played, Lock its zone.\nActivate: Tribute this."
+//!   Radiant: "Indestructible, Crater\nAfter your opponent plays a permanent, Lock its zone.\nActivate: Tribute this."
+//!
+//! Crater, catalog data since issue #4154: it Locks its own backrow zone as it enters (R1850006).
 //!
 //! A trigger on `cardPlayed` Locks the zone the permanent entered; the card stays (§3.2, §6.3). A cast
 //! by an effect counts (R70); a summon that is not a play does not; Lockdown does not answer its own
@@ -224,13 +226,14 @@ mod tests {
             assert!(lock_events(&s).is_empty());
         }
 
-        /// R119 Lockdown does not answer its own arrival
+        /// R119 Lockdown's trigger does not answer its own arrival; since issue #4154 its Crater Locks the zone
+        /// it enters, once, as any Field Spell's Crater does (R1850006).
         #[test]
         fn r119_lockdown_does_not_answer_its_own_arrival() {
             let mut s = scenario(json!({ "p1": { "hand": [LOCKDOWN, STOCKPILE], "library": spare_library() }, "p2": spare() }));
             s.play(LOCKDOWN, json!({ "zone": 1 }));
-            assert!(lock_events(&s).is_empty());
-            assert!(!locked(&s, P1, Row::Backrow, 1));
+            assert_eq!(lock_events(&s), ["p1 backrow 1"], "its Crater alone");
+            assert!(locked(&s, P1, Row::Backrow, 1));
         }
 
         /// R70 a summon that is no play locks nothing: a Cry's token, a Recruit, a Reborn

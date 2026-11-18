@@ -1458,6 +1458,8 @@ mod tests {
             );
             assert_eq!(crate::upgrade_number(&mut s, HEROIC, "ping"), 2);
             let insect = set_power(&mut s, &card, "insect");
+            // Book of Buff Buffs 3 times since issue #4154: a step back to its old 4 keeps this game's draws.
+            step_param(s.card_mut(BOOK_OF_BUFF), "times", 1);
             s.play(BOOK_OF_BUFF, json!({ "targets": pick::instance(&insect) }));
             let drawn = drawn_numbers(&s);
             let live = s.card(card.id.as_str()).clone();

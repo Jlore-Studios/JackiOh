@@ -350,7 +350,7 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
 }
 
 /// R3570003: one random pick of a pool, each Spell cast as `castRandom`'s are (R452) and each permanent
-/// summoned with no Cry (R1) — S+ #142 entry 4's "Summon or cast 4 random Jlockeed cards", whose pool
+/// summoned with no Cry (R1) — S+ #142 entry 4's "Summon or cast 3 random Jlockeed cards", whose pool
 /// holds Units. The pick is `cast_one_random`'s (`may_cast_now`, never the casting card's own definition,
 /// R387, the run's unique-draw tally, R3563000), made before the type is known; a permanent that finds no
 /// zone lands nowhere (R64), the draw spent as a summon of a random pool's pick spends it.

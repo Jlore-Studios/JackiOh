@@ -8,7 +8,7 @@ import catalogJson from "@jackioh/cards/catalog.json";
 import { PORTRAITS, PORTRAIT_IDS, portraitOrDefault, type PortraitId } from "@jackioh/shared";
 import type { CardDef } from "@jackioh/shared";
 
-import { PORTRAIT_DEFS } from "./portraits.ts";
+import { portraitDefs } from "./portraits.ts";
 
 const catalog = catalogJson as unknown as Record<string, CardDef>;
 
@@ -24,10 +24,10 @@ const ROSTER: Record<PortraitId, { cardName: string; defId: string }> = {
 
 describe("R641 the portrait roster", () => {
   it("R641 all six PORTRAIT_IDS resolve to a real catalog card def, by name", () => {
-    expect(Object.keys(PORTRAIT_DEFS).sort()).toEqual([...PORTRAIT_IDS].sort());
+    expect(Object.keys(portraitDefs()).sort()).toEqual([...PORTRAIT_IDS].sort());
 
     for (const id of PORTRAIT_IDS) {
-      const { defId, def } = PORTRAIT_DEFS[id];
+      const { defId, def } = portraitDefs()[id];
       expect(def.name, id).toBe(PORTRAITS[id].cardName);
       // And the resolution is a catalog entry — the same object the Almanac would draw.
       expect(catalog[defId]?.name, `${id} -> ${defId}`).toBe(def.name);
@@ -37,7 +37,7 @@ describe("R641 the portrait roster", () => {
   it("R641 the launch roster maps to the issue's cards, each portrait its own card", () => {
     const seen = new Set<string>();
     for (const id of PORTRAIT_IDS) {
-      const { defId, def } = PORTRAIT_DEFS[id];
+      const { defId, def } = portraitDefs()[id];
       const expected = ROSTER[id];
       expect(def.name, id).toBe(expected.cardName);
       expect(defId, id).toBe(expected.defId);

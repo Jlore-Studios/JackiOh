@@ -50,16 +50,9 @@ mod tests {
         }))
     }
 
-    /// S+ #121 Toxopid (Mythic), and the Crawler it adds to its owner's hand the first time it enters one
-    /// (R3560000): that card is its own trigger's add, no pick of the Book's.
-    const TOXOPID: &str = "stinkyscapeplus-121";
-    const CRAWLER: &str = "stinkyscapeplus-120";
-
-    /// The `addedToHand` events of p1 in the last step, as `(instanceId, defId)`, the Book's picks: a Toxopid
-    /// among them leaves out the Crawler its arrival adds.
+    /// The `addedToHand` events of p1 in the last step, as `(instanceId, defId)`, the Book's picks.
     fn added(s: &Scenario) -> Vec<(String, String)> {
-        let found: Vec<(String, String)> = s
-            .last_events()
+        s.last_events()
             .iter()
             .filter_map(|event| match event {
                 GameEvent::AddedToHand { player: PlayerId::P1, instance_id, def_id, .. } => {
@@ -67,9 +60,7 @@ mod tests {
                 }
                 _ => None,
             })
-            .collect();
-        let toxopid = found.iter().any(|(_, def_id)| def_id == TOXOPID);
-        found.into_iter().filter(|(_, def_id)| !toxopid || def_id != CRAWLER).collect()
+            .collect()
     }
 
     fn added_cards(s: &Scenario) -> Vec<CardInstance> {

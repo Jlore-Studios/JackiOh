@@ -19,7 +19,7 @@ import "../cards/inspect/inspect.css";
 import { DialogClose } from "../game/Dialog.tsx";
 import { t } from "../i18n/i18n.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
-import { PORTRAIT_DEFS } from "./portraits.ts";
+import { portraitDefs } from "./portraits.ts";
 import { EmoteMenu, MuteMenu } from "./ui.tsx";
 import "./portrait.css";
 
@@ -65,7 +65,7 @@ export function HeroInspect({
   const closeRef = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeRef);
   const nameId = useId();
-  const { defId, def } = PORTRAIT_DEFS[portrait];
+  const { defId, def } = portraitDefs()[portrait];
   const flavour = flavourFor(defId)?.flavour;
 
   return createPortal(

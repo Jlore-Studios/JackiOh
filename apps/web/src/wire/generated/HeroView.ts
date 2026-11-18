@@ -11,7 +11,7 @@ export type HeroView = { health: number,
  */
 armor: number, 
 /**
- * R3540000: the Burn on this hero, absent at none; it ticks at the start of its owner's turn.
+ * R3540000: the Burn on this hero, absent at none; it ticks once at the end of the turn (R4154000).
  */
 burn?: number, 
 /**

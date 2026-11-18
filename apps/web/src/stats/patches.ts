@@ -4,7 +4,11 @@
 // collecting. R3324001: the current patch is the newest version listed. R3447000: a card's figures name the patch
 // they were collected on.
 
-import { CATALOG_VERSION } from "@jackioh/cards";
+// The client's own catalog version, without the catalog: the patch-meta virtual module holds just
+// the version and the added ids (`patch-meta.ts`), so the stats page's tabs do not bundle the
+// 848 KB catalog into the entry (`CardDetail` opens from engine-free screens, #4180).
+import { PATCH_VERSION } from "#jackioh-patch-meta";
+
 import type { PublicStatsCardsResponse } from "../net/api.ts";
 import { STATS_PATCH_MIN_GAMES, STATS_PATCHES_OFFERED } from "./config.ts";
 
@@ -57,7 +61,7 @@ export function collectedOn(patches: readonly PatchWindow[], counted: readonly s
 /** R3324001: the current patch: the newest version the server lists, else the client's own catalog version. */
 export function currentVersion(patches: readonly PatchWindow[]): string {
   const newest = patches[0];
-  return newest === undefined ? CATALOG_VERSION : patchTarget(newest) || CATALOG_VERSION;
+  return newest === undefined ? PATCH_VERSION : patchTarget(newest) || PATCH_VERSION;
 }
 
 /** The patch before (older) and after (newer) the one at `shown`, where there is one. */

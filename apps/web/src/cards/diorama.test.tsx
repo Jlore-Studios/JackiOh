@@ -25,7 +25,7 @@ import { setReducedMotion } from "../test/setup.ts";
 import { DIORAMAS, dioramaOf, dioramaSliceUri } from "./art/dioramas/index.ts";
 import { liftedSlice, sliceWindowUri } from "./art/dioramas/lift.ts";
 import { fmt } from "./art/hash.ts";
-import { artPlaneUri } from "./art/pictures.ts";
+import { artPlaneUri } from "./art/planes.ts";
 import { CardFace } from "./CardFace.tsx";
 import {
   CARD_DEPTH_STEP_CQW,

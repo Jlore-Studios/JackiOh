@@ -45,9 +45,10 @@ import {
   visiblePool,
 } from "../game/deckbuilder/filters.ts";
 import { CARD_POOL, DB_FILTERS, filterSetId, poolCardId } from "../game/deckbuilder/testids.ts";
-import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
+import AlmanacRoute from "./almanac.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
 
-const MEDITATIVE: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.set === "Meditative" && def.id !== GLITCH_DEF_ID);
+const MEDITATIVE: readonly CardDef[] = Object.values(currentCatalog().cards).filter((def) => def.set === "Meditative" && def.id !== GLITCH_DEF_ID);
 
 /** The ids the grid shows, in its order. */
 function shownIds(): string[] {
@@ -96,7 +97,7 @@ describe("the Almanac with the Meditative set previewed", SLOW_GRID, () => {
   });
 
   it("R1380 the deck builder's pool and filter bar offer the set", () => {
-    const pool = visiblePool(ALMANAC_CATALOG, null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
+    const pool = visiblePool(currentCatalog(), null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
     expect(pool).toContain("meditative-027");
     // L3: a token is in no deck, so the pool never offers it.
     expect(CATALOG["meditative-028-1"]?.token).toBe(true);

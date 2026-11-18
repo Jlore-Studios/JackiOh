@@ -38,12 +38,13 @@ import { closeInspect } from "../cards/index.ts";
 import FilterBar from "../game/deckbuilder/FilterBar.tsx";
 import { ALMANAC_CHIP_TAGS, DECK_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, FILTER_SETS, visiblePool } from "../game/deckbuilder/filters.ts";
 import { CARD_POOL, DB_FILTERS, filterSetId, filterTagId, poolCardId } from "../game/deckbuilder/testids.ts";
-import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
+import AlmanacRoute from "./almanac.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
 
 /** The shelf renders every card of the shipped sets, so a render here takes longer than vitest's default. */
 const SLOW = 30_000;
 
-const STINKYSCAPE_PLUS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.set === "Stinkyscape+");
+const STINKYSCAPE_PLUS: readonly CardDef[] = Object.values(currentCatalog().cards).filter((def) => def.set === "Stinkyscape+");
 
 /** The ids the grid shows, in its order. */
 function shownIds(): string[] {
@@ -93,7 +94,7 @@ describe("the Almanac with the Stinkyscape+ set previewed (R3572000)", () => {
   }, SLOW);
 
   it("R3572000 the deck builder's pool and filter bar offer the set, and no token of it", () => {
-    const pool = visiblePool(ALMANAC_CATALOG, null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
+    const pool = visiblePool(currentCatalog(), null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
     expect(pool).toContain("stinkyscapeplus-001");
     // L3: a token is in no deck, so the pool never offers it.
     expect(CATALOG["stinkyscapeplus-133-1"]?.token).toBe(true);
@@ -115,7 +116,7 @@ describe("the Almanac with the Stinkyscape+ set previewed (R3572000)", () => {
     expect(DECK_CHIP_TAGS).not.toContain("Automa-ζ");
     expect(ALMANAC_CHIP_TAGS).toContain("Automa-ζ");
 
-    const pool = visiblePool(ALMANAC_CATALOG, null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
+    const pool = visiblePool(currentCatalog(), null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
     render(<FilterBar filter={DEFAULT_FILTER} onFilter={() => {}} sort={DEFAULT_SORT} onSort={() => {}} count={pool.length} />);
     for (const tag of deckable) expect(chips("Tag"), tag).toContain(tag);
     expect(chips("Tag")).not.toContain("Automa-ζ");

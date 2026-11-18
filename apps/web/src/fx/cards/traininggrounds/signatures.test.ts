@@ -180,7 +180,7 @@ describe("R3400001 Training Grounds' signatures", () => {
     // A Call it casts: the inner play rolls a smaller pair, its roll a smaller face.
     const env = envOf();
     env.memory.remember([played("p1", "outer", CHAOS)]);
-    const inner = plan([played("p1", "inner", CHAOS), { type: "chaosRolled", player: "p1", instanceId: "inner", defId: CHAOS, effects: ["Gain 6 mana and draw 2 cards"] }], D, [], view, env);
+    const inner = plan([played("p1", "inner", CHAOS), { type: "chaosRolled", player: "p1", instanceId: "inner", defId: CHAOS, effects: ["Gain 5 mana and draw 2 cards"] }], D, [], view, env);
     expect(inner[0]?.cues[0]).toMatchObject({ figure: "die", size: "small" });
     expect(inner[1]?.cues[1]).toMatchObject({ figure: "dieFace", size: "small" });
   });

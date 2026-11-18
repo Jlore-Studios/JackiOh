@@ -58,3 +58,25 @@ pub fn trigger_cry(args: TriggerCryArgs) -> Effect {
 pub fn has_triggerable_cry(state: &GameState, card: &CardInstance) -> bool {
     cry_place_of(state, card).is_some()
 }
+
+/// `trigger_death`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct TriggerDeathArgs {
+    /// The card whose Death runs, on its stay when the running script began (R174).
+    pub instance_id: String,
+}
+
+/// R4154205 (Stinkyscape #70 Z'Zoth's "Trigger their Deaths"): run the Death of the card `instanceId`
+/// names, read as it stands, without its dying (`state_check::run_death_hooks`): its controller's, as a
+/// Death the state check collects runs. A card an earlier effect took off the field, or one with no
+/// Death, runs nothing.
+pub fn trigger_death(args: TriggerDeathArgs) -> Effect {
+    Effect::new("triggerDeath", move |ctx| {
+        let Some(card) = instance_on_its_stay(ctx, &args.instance_id) else {
+            return;
+        };
+        crate::state_check::run_death_hooks(ctx, std::slice::from_ref(&card));
+    })
+}

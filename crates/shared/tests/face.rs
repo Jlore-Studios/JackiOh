@@ -1196,7 +1196,7 @@ fn r3941001_a_written_face_prints_its_words_filled_and_keeps_its_whole_text() {
         played.short.map(|short| short.full),
         face.short.map(|short| short.full)
     );
-    let radiant = printed("stinkyscapeplus-120", true, Locale::En);
+    let radiant = printed("stinkyscapeplus-089", true, Locale::En);
     let spans = radiant.short.expect("a written Radiant face").spans;
     assert!(
         marked(&spans).iter().any(|mark| mark.contains("Radiant")),
@@ -1270,17 +1270,17 @@ fn r3941001_every_written_face_names_only_its_faces_numbers() {
 /// Short forms must not mislead on targets, conditions or outcomes.
 #[test]
 fn r3941001_written_words_describe_their_cards_effect_honestly() {
-    // S+ #120 Crawler: Death hits only the last Unit damaged, never a hero or generic "target" (R3560003).
+    // S+ #61.1 Shawarma Law: a Unit eats at most three, so no fourth Shawarma freezes it (R4154302).
     for radiant in [false, true] {
-        let face = printed("stinkyscapeplus-120", radiant, Locale::En);
-        let short = face.short.expect("Crawler has written words").full;
+        let face = printed("stinkyscapeplus-061-1", radiant, Locale::En);
+        let short = face.short.expect("Shawarma Law has written words").full;
         assert!(
-            short.contains("to the last Unit it damaged."),
-            "Crawler (radiant: {radiant}) must specify 'to the last Unit it damaged.', got: {short}"
+            short.contains("no more"),
+            "Shawarma Law (radiant: {radiant}) must say the Units stop at three, got: {short}"
         );
         assert!(
-            !short.contains("target"),
-            "Crawler (radiant: {radiant}) must not suggest heroes count with 'target', got: {short}"
+            !short.contains("Freeze"),
+            "Shawarma Law (radiant: {radiant}) must not promise a Freeze, got: {short}"
         );
     }
 

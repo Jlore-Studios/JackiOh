@@ -13,7 +13,7 @@ import type { CardDef } from "@jackioh/shared";
 import { RADIANT_GOLD_HUE_MAX_DEG, RADIANT_GOLD_HUE_MIN_DEG, RADIANT_GOLD_LIGHTNESS_MAX, RADIANT_GOLD_LIGHTNESS_MIN, RADIANT_GOLD_SATURATION_MIN } from "../constants.ts";
 import { CardArt } from "./CardArt.tsx";
 import { proceduralCardArtUri } from "../../patches/cardArt.ts";
-import { artPlaneUri } from "./pictures.ts";
+import { artPlaneUri } from "./planes.ts";
 import { ART_DETAIL_MAX_BYTES, artElements } from "./richness.ts";
 import { stinkyscapeSvg } from "./stinkyscape.ts";
 import {

@@ -10,7 +10,7 @@ import type { PortraitId } from "@jackioh/shared";
 import { CardArt } from "../cards/art/CardArt.tsx";
 import { PORTRAIT_BREATH_MS, PORTRAIT_MOTE_DRIFT_MS } from "./config.ts";
 import { PORTRAIT_LOOKS, PORTRAIT_MOTES } from "./portraitLook.ts";
-import { PORTRAIT_DEFS } from "./portraits.ts";
+import { portraitDefs } from "./portraits.ts";
 import "./portrait.css";
 
 export function PortraitArt({
@@ -20,7 +20,7 @@ export function PortraitArt({
   portrait: PortraitId;
   className?: string;
 }): ReactElement {
-  const { defId, def } = PORTRAIT_DEFS[portrait];
+  const { defId, def } = portraitDefs()[portrait];
   const look = PORTRAIT_LOOKS[portrait];
   const style = {
     "--portrait-ground-1": look.ground[0],
