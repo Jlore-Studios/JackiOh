@@ -16517,8 +16517,11 @@
     "what": "review #4195 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-18T09:29:18Z",
-    "notes": [],
+    "at": "2026-11-18T09:36:10Z",
+    "notes": [
+      "#4202: typed it Task",
+      "#4202: the production countdown, so `tracking`"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17223,7 +17226,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T09:29:18Z",
+  "loop_tick": "2026-11-18T09:36:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
