@@ -14966,17 +14966,8 @@
       }
     },
     "4233": {
-      "action": "plan",
-      "asks": [
-        "c:6994522154"
-      ],
-      "build_next": {
-        "from_run": "44420527949",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-18T23:39:36Z",
-        "until": "2026-11-19T00:09:36Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-18T23:39:26Z",
         "difficulty": "medium",
@@ -14995,10 +14986,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "[NotificationKind], subject: &str, actor: Option<&str>, at: i64) -> StoreResult<u64>`. It marks un\u2026\n- 2. **Unread leaves out dead invites** (same file): change `notifications_unread(&mut self, profile_id: &str)` to `notifications_unread(&mut self, profile_id: &str, now: i64)`. pg stays one statement: `COUNT` where `read_at IS NULL` except `kind = 'lobbyInvite'` whose lobby row is missing, started, \u2026\n- 3. **Pre-read at insert** (same file + `notifications/mod.rs`): add `pub read: bool` to `NewNotification` and to `Notice` (`false` in `Notice::new`, plus `pub fn read(mut self) -> Notice`). `write()` copies it; pg `add` inserts `read_at = created_at` when set (else `NULL`), fake sets `read_at` the \u2026\n- 4. **Mark helper** (`notifications/mod.rs`, beside `notify`, copying its log style): `pub async fn mark_subject(app: &App, profile_id: &str, kinds: &[NotificationKind], subject: &str, actor: Option<&str>)`. Opens its own tx after the act's commit, calls `notifications_mark_subject` at `now_ms()`, c\u2026\n- 5. **Daily games** (`daily/games.rs`): in `game_json()`'s tx before commit, call `tx.notifications_mark_subject(me, &[DailyMove, DailyEnded], &loaded.match_row.id, None, now)`; same in `expired_json()` with the stored id. Every `act()` answer renders through one of these, so `act()` needs no separa\u2026\n- 6. **Daily challenges** (`daily/invites.rs`): in `accept()`, after commit and `push_social`, call `mark_subject(app, &me, &[DailyChallenge], &invite.id, None)`. In shared `close()`, after commit, only when `state == Declined` call the same (cancel/seek-cancel paths mark nothing).\n- 7. **Friend requests** (`social/friends.rs`): in `accept_request()` after commit, `mark_subject(app, &me, &[FriendRequest], &request.id, Some(&sender_id))`. In shared `remove_request()` after commit, only when `request.to_profile == me` (a decline, not a sender's cancel), `mark_subject(app, &me, &[\u2026\n- 8. **Lobby** (`lobby/mod.rs` `enter`): after the successful `write()`, call `mark_subject(app, &profile.id, &[LobbyInvite], &code, None)`. Early returns (own lobby, already member, started, full) mark nothing.\n- 9. **Shared replay** (`api/replays.rs` `get_replay`): after the steps page is built successfully, when `reader != profile.id` (a friend reading via share, per `replay_reader`), call `mark_subject(app, &profile.id, &[ReplayShared], match_id, None)`. Refused/failed opens mark nothing.\n- 10. **Ruling + spec + README**: write `spec/rulings/R4233000.md` (id `R4233000`, title naming read-on-open, `cards: \"\u00a79.4, \u00a79.13, R4039000, R3210000, issue #4233\"`, `proven_in` listing the six test files below). Write `spec/pending/4233.md` with the `**[[R4233000]] \u2026 (issue #4233, 2026-11-18):**` p\u2026\n- ## Tests\n- - `crates/server/tests/store/contract.rs` (new `r4233000_*` fns in a `both_stores!` case): `r4233000_mark_subject_marks_only_matching_kind_subject_and_actor` (marks one challenge row, leaves another challenge's, another kind's, another account's, and read rows; second call changes 0; deletes nothin\u2026\n- - `crates/server/tests/api/daily.rs`: `r4233000_a_board_read_marks_its_move_rows_read` (B moves, A reads board, unread drops by one, reread changes nothing); `r4233000_an_action_marks_the_same_rows`; `r4233000_the_senders_own_ended_row_is_written_read` (A concedes: A has no unread `dailyEnded`, B k\u2026\n- - `crates/server/tests/api/friends.rs`: `r4233000_accepting_or_declining_a_friend_request_marks_only_that_senders_row`.\n- - `crates/server/tests/api/lobbies.rs`: `r4233000_entering_a_lobby_marks_its_invite_read`; `r4233000_a_dead_lobby_invite_is_not_counted` (started/expired lobby).\n- - `crates/server/tests/api/shares.rs`: `r4233000_a_friends_read_of_a_shared_replay_marks_its_row`.\n- - `crates/server/tests/actor/social_live.rs`: `r4233000_a_mark_pushes_the_new_count` (open `/ws/social`, cause a mark, next `social` frame carries the lower `notificationsUnread`).\n- - Commands: `cargo test -p jackioh-server --test server r4233000`, `cargo test -p jackioh-server --test server_store notifications`, `cargo test -p jackioh-server --test server r4039000`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo fmt --check`, `cargo jackioh spec check`.\n- ## Done when\n- - [ ] Board read and sent action mark that match's `dailyMove`/`dailyEnded` rows; reread changes nothing.\n- - [ ] Own-ending action's `dailyEnded` row is listed but already read; other player's stays unread.\n- - [ ] Challenge accept/decline, friend request accept/decline, lobby enter, and friend's shared-replay read mark only that subject (and sender where applicable).\n- - [ ] Dead lobby invites count nowhere; no other account changes; nothing unreads; nothing deleted.\n- - [ ] Each changing mark pushes the new social frame; a store failure leaves the act intact and is logged.\n- - [ ] Store contract passes on `Db::Fake` (and Pg under `tests/db/run.sh`).\n- - [ ] `cargo jackioh spec check` passes with R4233000 cited.\n- ## Risks\n- - Slow-timer board re-reads (R3840000) now write: contained by staying inside the read's own tx and matching only still-unread rows, so repeats change nothing and push nothing.\n- - Social read weight: `notifications_unread` stays a single statement and `social_snapshot` keeps its four Tx calls, holding R3210000's fixed reads.\n- - Inbox Recent loses \"new\" dots on rows dealt with elsewhere \u2014 intended by the issue.\n- - No migration: lookup stays within one account's \u2264100 rows on `notifications_profile_idx`.\n- - Possible overlap with #4085's follow-ups: if one already built this, close as duplicate instead.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4233 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4233/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-18T23:24:44Z",
       "owner_why": "it plans it",
@@ -15011,12 +15001,14 @@
       "provider": "muse",
       "queued_at": "2026-11-18T23:19:43Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44420527949",
+      "run_id": "pending:78baf887-1795045208",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-18T23:24:44Z",
+      "started_at": "2026-11-18T23:40:33Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6994522154"
+      ]
     },
     "4234": {
       "action": "review",
@@ -15106,9 +15098,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T23:28:06Z",
+    "at": "2026-11-18T23:40:33Z",
     "url": "",
-    "what": "plan #4188 on claude-1"
+    "what": "build #4233 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T23:23:37Z",
