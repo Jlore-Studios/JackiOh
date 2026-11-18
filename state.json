@@ -13365,6 +13365,9 @@
       "taken_asks": [],
       "verdict_rounds": 2
     },
+    "4188": {
+      "suggestion": true
+    },
     "4189": {
       "action": "build",
       "asks": [],
