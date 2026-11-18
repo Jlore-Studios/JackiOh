@@ -411,14 +411,6 @@
         "en": "Taunt\nEnd of turn: A random hand card costs ({discount}) less.\nEvolves at {zeroes|(0) Cost card|(0) Cost cards} in hand.\nEvolve: Poisonous."
       }
     },
-    "stinkyscapeplus-004": {
-      "base": {
-        "en": "Cry: Exile a permanent. Summon two random Traps.\nActivates: Overwhelm, Wolf's Maw and Iron Mandate."
-      },
-      "radiant": {
-        "en": "Cry: Exile a permanent. Summon three Radiant Traps.\nActivates: Overwhelm, Wolf's Maw and Iron Mandate."
-      }
-    },
     "stinkyscapeplus-007": {
       "base": {
         "en": "Armor 4\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
@@ -474,7 +466,7 @@
     },
     "stinkyscapeplus-080": {
       "base": {
-        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn."
+        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one each turn."
       },
       "radiant": {
         "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn."
@@ -612,8 +604,6 @@
     "stinkyscape-151 radiant",
     "traininggrounds-039 base",
     "traininggrounds-039 radiant",
-    "stinkyscapeplus-004 base",
-    "stinkyscapeplus-004 radiant",
     "stinkyscapeplus-061-1 radiant",
     "stinkyscapeplus-121 base",
     "stinkyscapeplus-121 radiant",

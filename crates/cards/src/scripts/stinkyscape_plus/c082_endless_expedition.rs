@@ -1,18 +1,21 @@
 //! SPEC §8.12 S+ #82 Endless Expedition (1) Spell, Quickdraw, Mythic, a card of the Stinkyscape+ set
-//! (R1420, R3535000; R3569007, R640, R458).
-//!   Base:    "Now and at the start of each of your turns for the rest of the game: Add a random
-//!            Terminus card to your hand. It costs (2)."
-//!   Radiant: "Now and at the start of each of your turns for the rest of the game: Add a random
-//!            Radiant Terminus card to your hand. It costs (2)."
+//! (R1420, R3535000; R3569007, R3569008, R4154101, R640, R458).
+//!   Base:    "For the rest of the game, you have ({mana}) less mana, and at the start of each of your
+//!            turns, add a random Terminus card to your hand. It costs (3)." — mana 1
+//!   Radiant: "For the rest of the game, you have ({mana}) less mana, and at the start of each of your
+//!            turns, add a random Radiant Terminus card to your hand. It costs (3)." — mana 1
 //!
-//! Engine: the Cry adds the card now and leaves `forRestOfGame` (C+ #52's, R458), a badge in the card's
-//! words (R169) whose step adds another at the start of each of its caster's turns from the next on, in
-//! R62's delayed stage, before the draw. Each card is one drawn from the Terminus pool, every Terminus
-//! card of the shipped sets, tokens included (R3552001, R380), through the generator (R387), costing
-//! (`TERMINUS_COST`) whatever it printed (R3569007), a Radiant one on the Radiant face. Quickdraw (R640)
-//! is a static flag beside the tag.
+//! Engine (R4154101): the Cry lowers its caster's max mana by the declared `mana` for the rest of the
+//! game (`loseMaxMana`, R3569008) and leaves `forRestOfGame` (C+ #52's, R458), a badge in the card's
+//! words (R169) whose step adds a card at the start of each of its caster's turns from the next on, in
+//! R62's delayed stage, before the draw; none comes now. Each card is one drawn from the Terminus pool,
+//! every Terminus card of the shipped sets, tokens included (R3552001, R380), through the generator
+//! (R387), costing (`TERMINUS_COST`) whatever it printed (R3569007), a Radiant one on the Radiant face.
+//! Quickdraw (R640) is a static flag beside the tag.
 //!
-//! Kept for replays (R767000): through v0.6.5b the card read "For the rest of the game, lose {mana} mana.
+//! Kept for replays (R767000): through v0.6.6e the card read "Now and at the start of each of your turns
+//! for the rest of the game: Add a random Terminus card to your hand. It costs (2).", with no mana lost
+//! (`script_v0_6_6e`, issue #4154); through v0.6.5b it read "For the rest of the game, lose {mana} mana.
 //! Add a random Terminus card to your hand. It costs (2).", `loseMaxMana` lowering its caster's max mana
 //! (R3569008) and one card added (`script_v0_6_5b`, issue #3996); through v0.6.4c that card cost (3)
 //! (`script_v0_6_4c`, issue #3951).
@@ -22,8 +25,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-082";
 
-/// "It costs (2)": the added card's cost.
-const TERMINUS_COST: i32 = 2;
+/// "It costs (3)": the added card's cost, since issue #4154.
+const TERMINUS_COST: i32 = 3;
+/// After v0.6.4c through v0.6.6e (issues #3951 to #4154): "It costs (2)".
+const TERMINUS_COST_V0_6_6E: i32 = 2;
 /// Through v0.6.4c (issue #3951): "it costs (3)".
 const TERMINUS_COST_V0_6_4C: i32 = 3;
 /// The step the start-of-turn add is re-entered under (`delayed`).
@@ -46,7 +51,8 @@ fn add_terminus(radiant: bool, cost: i32) -> Effect {
     })))
 }
 
-/// Issue #3996: the card now, and the rest-of-game step that adds one at each of the caster's turn starts.
+/// R4154101: the caster's max mana lowered by the declared `mana` for the rest of the game (R3569008),
+/// and the rest-of-game step that adds a card costing (3) at each of the caster's turn starts; none now.
 fn expedition(radiant: bool) -> Script {
     Script {
         static_flags: quickdraw(),
@@ -54,11 +60,29 @@ fn expedition(radiant: bool) -> Script {
             let face = if radiant { FaceKind::Radiant } else { FaceKind::Base };
             let label = fill_params(def_of(Some(&*ctx.state), ID), face, None);
             vec![
-                add_terminus(radiant, TERMINUS_COST),
+                lose_max_mana(json_as(json!({ "amount": param(ctx, "mana") }))),
                 for_rest_of_game(json_as(json!({ "step": EXPEDITION_STEP, "label": label }))),
             ]
         })),
         delayed: Some(hook(move |_ctx| vec![add_terminus(radiant, TERMINUS_COST)])),
+        ..Script::default()
+    }
+}
+
+/// Issue #3996, through v0.6.6e: the card now, and the rest-of-game step that adds one at each of the
+/// caster's turn starts, each costing (2).
+fn expedition_v0_6_6e(radiant: bool) -> Script {
+    Script {
+        static_flags: quickdraw(),
+        cry: Some(hook(move |ctx| {
+            let face = if radiant { FaceKind::Radiant } else { FaceKind::Base };
+            let label = fill_params(def_of(Some(&*ctx.state), ID), face, None);
+            vec![
+                add_terminus(radiant, TERMINUS_COST_V0_6_6E),
+                for_rest_of_game(json_as(json!({ "step": EXPEDITION_STEP, "label": label }))),
+            ]
+        })),
+        delayed: Some(hook(move |_ctx| vec![add_terminus(radiant, TERMINUS_COST_V0_6_6E)])),
         ..Script::default()
     }
 }
@@ -85,12 +109,21 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: the scripts after v0.6.5b through v0.6.6e: a Terminus card costing (2) now and at each of the
+/// caster's turn starts, no mana lost (issue #4154). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: expedition_v0_6_6e(false),
+        radiant: expedition_v0_6_6e(true),
+    }
+}
+
 /// R767000: the scripts after v0.6.4c through v0.6.5b: max mana lowered for the rest of the game and one
 /// Terminus card added, costing (2) (issue #3996). `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: expedition_v0_6_5b(false, TERMINUS_COST),
-        radiant: expedition_v0_6_5b(true, TERMINUS_COST),
+        base: expedition_v0_6_5b(false, TERMINUS_COST_V0_6_6E),
+        radiant: expedition_v0_6_5b(true, TERMINUS_COST_V0_6_6E),
     }
 }
 

@@ -11930,7 +11930,7 @@
     "rarity": "Legendary",
     "flavor": "Nerd",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "params": [
       {
         "key": "heal",
@@ -11969,11 +11969,11 @@
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      "text": "Tribute 1\nStart of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      "text": "Tribute 1\nStart of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     }
   },
   "meditative-008": {
@@ -16137,11 +16137,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 5 Armor and you heal it 5; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      "text": "One random effect: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 4 Armor and you heal it 4; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 5 Armor and you heal it 5; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 4 Armor and you heal it 4; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
     }
   },
   "meditative-095-1": {
@@ -19247,7 +19247,7 @@
     "rarity": "Legendary",
     "flavor": "Tech",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "refs": [
       "stinkyscape-018-1",
       "stinkyscape-018-2",
@@ -19256,11 +19256,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Summon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote to remove you."
+      "text": "Tribute 1\nSummon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote to remove you."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon a Radiant MELCHIOR, a Radiant BALTHASAR and a Radiant CASPER. They offer great strategic value, but they can vote to remove you."
+      "text": "Tribute 1\nSummon a Radiant MELCHIOR, a Radiant BALTHASAR and a Radiant CASPER. They offer great strategic value, but they can vote to remove you."
     }
   },
   "stinkyscape-018-1": {
@@ -22455,13 +22455,13 @@
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Tribute 1\nCry: Discard your hand. Fill your hand with random Stinkyscape Resources."
+      "text": "Tribute 2\nCry: Discard your hand. Fill your hand with random Stinkyscape Resources."
     },
     "radiant": {
       "attack": 12,
       "health": 12,
       "keywords": [],
-      "text": "Tribute 1\nCry: Discard your hand. Fill your hand with random Radiant Stinkyscape Resources."
+      "text": "Tribute 2\nCry: Discard your hand. Fill your hand with random Radiant Stinkyscape Resources."
     }
   },
   "stinkyscape-097": {
@@ -22986,13 +22986,13 @@
       "attack": 6,
       "health": 11,
       "keywords": [],
-      "text": "Cry: Cast a random BUSTED card from anywhere in the game's code."
+      "text": "Tribute 1\nCry: Cast a random BUSTED card from anywhere in the game's code."
     },
     "radiant": {
       "attack": 12,
       "health": 22,
       "keywords": [],
-      "text": "Cry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it."
+      "text": "Tribute 1\nCry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it."
     }
   },
   "stinkyscape-110": {
@@ -28198,11 +28198,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and replenish 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
+      "text": "One random effect: Summon 2 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and replenish 2 mana; add 3 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 5 mana and draw 2 cards; summon 4 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 2 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and replenish 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Summon 2 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and replenish 2 mana; add 3 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 5 mana and draw 2 cards; summon 4 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 2 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
     }
   },
   "traininggrounds-039-1": {
@@ -29108,24 +29108,14 @@
       "attack": 7,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Exile a permanent. Then summon two random Traps.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then summon two random Traps."
     },
     "radiant": {
       "attack": 14,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Exile a permanent. Then summon three random Radiant Traps.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
-    },
-    "params": [
-      {
-        "key": "damage",
-        "base": 4,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ]
+      "text": "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then summon three random Radiant Traps."
+    }
   },
   "stinkyscapeplus-005": {
     "id": "stinkyscapeplus-005",
@@ -31389,11 +31379,11 @@
     "loc": 66,
     "base": {
       "keywords": [],
-      "text": "End of turn: Every Unit eats a Shawarma, with one of these effects.\nFirst Shawarma: It gains +{health} Health.\nSecond Shawarma: It gains Can't attack.\nThird Shawarma: It gains Can't Defend and Brittle {brittle2}.\nEvery Shawarma after that: Freeze it."
+      "text": "End of turn: Every Unit eats a Shawarma, with one of these effects.\nFirst Shawarma: It gains +{health} Health.\nSecond Shawarma: It gains Can't attack.\nThird Shawarma: It gains Can't Defend and Brittle {brittle2}.\nA Unit eats at most three Shawarmas."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Every Unit eats a Shawarma, with one of these effects.\nFirst Shawarma: It gains +{health} Health.\nSecond Shawarma: It gains Can't attack.\nThird Shawarma: It gains Can't Defend and Brittle {brittle2}.\nEvery Shawarma after that: Freeze it.\nYour Units stop at one Shawarma."
+      "text": "End of turn: Every Unit eats a Shawarma, with one of these effects.\nFirst Shawarma: It gains +{health} Health.\nSecond Shawarma: It gains Can't attack.\nThird Shawarma: It gains Can't Defend and Brittle {brittle2}.\nA Unit eats at most three Shawarmas.\nYour Units stop at one Shawarma."
     },
     "params": [
       {
@@ -32289,7 +32279,7 @@
     "loc": 85,
     "base": {
       "keywords": [],
-      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the start of each of your turns."
+      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one at the start of each of your turns."
     },
     "radiant": {
       "keywords": [],
@@ -34121,30 +34111,22 @@
     "cost": 1,
     "loc": 87,
     "base": {
-      "attack": 1,
-      "health": 3,
-      "keywords": [
-        {
-          "kind": "Can't Defend"
-        }
-      ],
-      "text": "Can't Defend\nThe first time this enters your board each game, add a Toxopid to your hand.\nMay be played from your graveyard for (1).\nAfter this attacks, it dies.\nDeath: Deal {damage} damage to the last Unit this damaged."
+      "attack": 3,
+      "health": 1,
+      "keywords": [],
+      "text": "May be played from your graveyard for (1).\nDeath: Add a Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
     },
     "radiant": {
-      "attack": 2,
-      "health": 6,
-      "keywords": [
-        {
-          "kind": "Can't Defend"
-        }
-      ],
-      "text": "Can't Defend\nThe first time this enters your board each game, add a Radiant Toxopid to your hand.\nMay be played from your graveyard for (1).\nAfter this attacks, it dies.\nDeath: Deal {damage} damage to the last Unit this damaged."
+      "attack": 6,
+      "health": 2,
+      "keywords": [],
+      "text": "May be played from your graveyard for (1).\nDeath: Add a Radiant Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
     },
     "params": [
       {
-        "key": "damage",
-        "base": 1,
-        "radiant": 2,
+        "key": "reduce",
+        "base": 2,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -34183,7 +34165,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces cost. Each friendly Crawler that dies reduces it by (1).\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} anywhere on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "radiant": {
       "attack": 20,
@@ -34199,7 +34181,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces cost. Each friendly Crawler that dies reduces it by (1).\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "params": [
       {
@@ -34221,7 +34203,6 @@
       }
     ],
     "refs": [
-      "stinkyscapeplus-120",
       "stinkyscapeplus-121",
       "stinkyscapeplus-121-1"
     ]
@@ -35538,32 +35519,32 @@
     "params": [
       {
         "key": "card",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
       },
       {
         "key": "card2",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
       },
       {
         "key": "card3",
-        "base": 4,
-        "radiant": 4,
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
       },
       {
         "key": "card4",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35578,8 +35559,8 @@
       },
       {
         "key": "burn",
-        "base": 2,
-        "radiant": 2,
+        "base": 1,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1

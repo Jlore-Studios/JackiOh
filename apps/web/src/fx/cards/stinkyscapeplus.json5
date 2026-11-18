@@ -20,7 +20,7 @@
   "stinkyscapeplus-001": { cast: { motif: "bolt" } }, // Starfruit
   "stinkyscapeplus-002": "none: its Evolve runs from the state check, which no hookResolving marks; the evolve row draws it", // Lone Drifter
   "stinkyscapeplus-003": { cry: { motif: "bless", palette: "Beast/swarm" } }, // High Evolutionary
-  "stinkyscapeplus-004": { cry: { motif: "vanish", palette: "Beast/felinor" }, activate: { motif: "hex", palette: "Beast/felinor" } }, // Profe Yates
+  "stinkyscapeplus-004": { cry: { motif: "vanish", palette: "Beast/felinor" } }, // Profe Yates
   "stinkyscapeplus-005": { cry: { motif: "deal", palette: "Snack" } }, // Dingleberry Droat
   "stinkyscapeplus-006": { trigger: { motif: "send", palette: "Snack" } }, // Wines McCheese
   "stinkyscapeplus-006-1": "none: token; its own play is its Tipsy, and its fusing a hand trigger no hookResolving marks", // Fine Fermented Grape

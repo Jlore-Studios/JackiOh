@@ -1,4 +1,6 @@
-//! M #7 Introspection (SPEC §8.8 row 7, BUILD M10 row M 7). (4) Field Spell, Legendary.
+//! M #7 Introspection (SPEC §8.8 row 7, BUILD M10 row M 7). (3) Field Spell, Legendary, Tribute 1 since
+//! issue #4154 (R101: `staticFlags.tribute`, the play's cost; through v0.6.6e it cost (4) and asked none,
+//! `script_v0_6_6e`, R767000).
 //!   Base and Radiant: "Start of turn: Heal your hero and each of your Units {heal}. Draw
 //!   {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each
 //!   enemy." (1/2; 1/2; 1/2; 1/2)
@@ -61,8 +63,15 @@ fn introspect() -> Hook {
     })
 }
 
+/// "Tribute 1" (R101, R366: printed, declared nowhere), since issue #4154.
+const TRIBUTE: i32 = 1;
+
 pub fn script() -> CardScripts {
     let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE),
+            ..StaticFlags::default()
+        }),
         start_of_turn: Some(introspect()),
         ..Script::default()
     };
@@ -70,6 +79,16 @@ pub fn script() -> CardScripts {
     // The same script: the Radiant face differs only in its declared numbers, read through `param`.
     let radiant = base.clone();
 
+    CardScripts { base, radiant }
+}
+
+/// R767000: no Tribute through v0.6.6e (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    let base = Script {
+        start_of_turn: Some(introspect()),
+        ..Script::default()
+    };
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -158,6 +177,30 @@ mod tests {
 
         fn def_ids_of(s: &Scenario) -> Vec<String> {
             s.hand(P1).iter().map(|card| card.def_id.clone()).collect()
+        }
+
+        /// Issue #4154: Tribute 1 on both faces (R101): with no unit to pay it the play is refused, and one
+        /// unit pays it; the kept v0.6.6e script asks none (R767000).
+        #[test]
+        fn issue_4154_both_faces_need_tribute_1() {
+            const BODY: &str = "stand-in (1) 1/1";
+            for radiant in [false, true] {
+                let hand = json!([{ "def": INTROSPECTION, "radiant": radiant }, FILLER]);
+                let mut s = scenario(json!({ "p1": { "hand": hand }, "p2": { "hand": [FILLER] } }));
+                s.expect_refused_with(|s| s.play(INTROSPECTION, json!({ "zone": 1 })), "Tribute");
+                let mut s = scenario(json!({
+                    "p1": { "hand": hand, "field": [BODY] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                s.play(INTROSPECTION, json!({ "zone": 1, "tributes": [BODY] }));
+                s.expect_in_zone(INTROSPECTION, "field");
+                assert!(s.unit(P1, 1).is_none(), "radiant {radiant}: the unit paid for it");
+                crate::under_kept(INTROSPECTION, script_v0_6_6e(), || {
+                    let mut s = scenario(json!({ "p1": { "hand": hand }, "p2": { "hand": [FILLER] } }));
+                    s.play(INTROSPECTION, json!({ "zone": 1 }));
+                    s.expect_in_zone(INTROSPECTION, "field");
+                });
+            }
         }
 
         #[test]

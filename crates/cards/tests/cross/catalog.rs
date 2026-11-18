@@ -3203,7 +3203,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "7",
         "Introspection",
-        c(4),
+        c(3),
         T::FieldSpell,
         &[],
         R::Legendary,
@@ -5091,7 +5091,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "18",
         "Imitated Instrumentality",
-        c(4),
+        c(3),
         T::Spell,
         &[],
         R::Legendary,

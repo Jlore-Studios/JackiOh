@@ -1,55 +1,58 @@
 //! SPEC §8.12 S+ #4 Profe Yates, a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    7/7; "Cry: Exile a permanent. Then summon two random Traps.
-//!            Activate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.
-//!            Activate 3: Wolf's Maw: Pull a Flying Unit down and deal 4 damage to it. It loses
-//!            Flying. Activate: Iron Mandate: Fuse this into a Unit. This does not trigger
-//!            its Cry again."
-//!   Radiant: 14/14; "Cry: Exile a permanent. Then summon three random Radiant Traps." and the
-//!            same Activates.
+//!   Base:    7/7; "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are
+//!            immune). Then summon two random Traps."
+//!   Radiant: 14/14; "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are
+//!            immune). Then summon three random Radiant Traps."
 //!
-//! Engine: the Cry exiles one declared permanent of either side, a Unit or a backrow card
-//! (R81, TG #26 Path of Exile's pick, R3996000), then summons the traps — independent
-//! `summon_random` draws of non-token Traps/Field Traps of the shipped sets, each face down in
-//! the leftmost open backrow zone (R3567001). Its three Activates are its own, each offered
-//! while its target stands and spent on its own uses (R3996000, R1751000): Overwhelm freezes
-//! every Unit of both sides in its lane and the lanes beside it, Yates included (R3567003), so a
-//! frozen Yates uses no other Activate until it thaws (R2246000); Wolf's Maw grounds a declared
-//! Flying Unit of either side — it loses Flying (`lose_keyword`, kept through every zone) then
-//! takes the declared damage (R3567004); Iron Mandate fuses Yates into a declared friendly Unit,
-//! kept, with no Cry run (R3567002). "Activate N" is N uses a turn (R384, R1857003).
-//! Through v0.6.5b the Cry exiled every card named with M, O, U, S or E (`exile_named`, R3567000)
-//! and remembered the one Activate chosen at play, the only one Yates then had (R3567002);
-//! `script_v0_6_5b` keeps that for those replays (R767000).
+//! Engine: the Cry exiles one declared permanent of either side, a Unit or a backrow card (R81, TG
+//! #26 Path of Exile's pick, R3996000), that is face-up, carries no CN tag, and whose name and the
+//! text of the face it wears hold each of M, O, U, S and E in either case (R4154100): a face-down card
+//! is never offered, its name and text being hidden (R33). With none such standing the play names
+//! none and the Cry summons its traps all the same (R90). Then the traps: independent
+//! `summon_random` draws of non-token Traps/Field Traps of the shipped sets, each face down in the
+//! leftmost open backrow zone (R3567001). It has no Activate since issue #4154.
+//! Kept for replays (R767000): through v0.6.6e the Cry exiled any declared permanent and Yates had
+//! three Activates of its own, each offered while its target stood and spent on its own uses
+//! (R3996000, R1751000): Overwhelm froze every Unit of both sides in its lane and the lanes beside
+//! it, Yates included (R3567003); Wolf's Maw grounded a declared Flying Unit of either side, which
+//! lost Flying and took the declared damage (R3567004); Iron Mandate fused Yates into a declared
+//! friendly Unit, kept, with no Cry run (R3567002) (`script_v0_6_6e`). Through v0.6.5b the Cry exiled
+//! every card named with M, O, U, S or E (`exile_named`, R3567000) and remembered the one Activate
+//! chosen at play, the only one Yates then had (R3567002) (`script_v0_6_5b`).
 //!
 //! *{Spawn voiceline: Every pack needs an alpha I don't see anyone else stepping up}*
 //! *{Attack voiceline: a mouse once bit my sister}*
 //! *{Death voiceline: I will not see the Northern Lights again}*
 //! Its catalog row, sound, flavour and Chinese entries are already written.
 
+use jackioh_engine::preview::is_face_down;
 use jackioh_engine::prelude::*;
 
 use crate::query::TRAP_TYPES;
 
 pub const ID: &str = "stinkyscapeplus-004";
 
-/// Through v0.6.5b, the exile's letters: a card whose name holds M, O, U, S or E, in either case.
+/// The exile's letters: since issue #4154 a permanent whose name and text hold every one of them
+/// (R4154100), through v0.6.5b a card whose name holds any (R3567000), in either case.
 const MOUSE: &str = "MOUSE";
+/// R4154100: the Cry's target check, a permanent `holds_mouse` admits.
+const MOUSE_CHECK: &str = "mouse";
 /// The three Activates, in the order the card prints them; through v0.6.5b the Cry's modes too (R81).
 const OVERWHELM: &str = "overwhelm";
 const WOLFS_MAW: &str = "wolfsMaw";
 const IRON_MANDATE: &str = "ironMandate";
 /// Through v0.6.5b, what the Cry remembered: the chosen Activate, kept while Yates stays (R78).
 const CHOSEN_KEY: &str = "yatesActivate";
-/// §6.2 Activate N, the script's literal, as S+ #11's (`ActivationUses` has no param); matches the declared `overwhelm`/`wolf`/`iron`.
+/// Through v0.6.6e, §6.2 Activate N, the script's literal, as S+ #11's (`ActivationUses` has no param).
 const OVERWHELM_USES: i32 = 1;
 const WOLFS_MAW_USES: i32 = 3;
 const IRON_MANDATE_USES: i32 = 1;
 /// Traps the Cry summons: two, three Radiant ones on the Radiant face.
 const BASE_TRAPS: i32 = 2;
 const RADIANT_TRAPS: i32 = 3;
-/// Overwhelm's reach: Yates's lane and the lanes beside it.
+/// Through v0.6.6e, Overwhelm's reach: Yates's lane and the lanes beside it.
 const LANE_REACH: i32 = 1;
-/// Wolf's Maw's target check: a Flying Unit.
+/// Through v0.6.6e, Wolf's Maw's target check: a Flying Unit.
 const FLYING: &str = "flying";
 
 /// R3567003: Overwhelm's Units — every Unit of both sides, controller first, in Yates's lane
@@ -186,8 +189,46 @@ fn flying_check() -> IndexMap<&'static str, TargetCheck> {
     )])
 }
 
-/// R3996000: "Exile a permanent. Then summon two random Traps.", and the three Activates, each its own.
+/// R4154100: whether `card` is a permanent the Cry may exile: face-up, so that its name and text are
+/// public (R33), not CN, and its name and the text of the face it wears, its declared numbers filled
+/// in, hold every letter of `MOUSE` in either case.
+fn holds_mouse(state: &GameState, card: &CardInstance) -> bool {
+    if is_face_down(state, card) || tags_of(state, card).contains(&Tag::Cn) {
+        return false;
+    }
+    let def = def_of(Some(state), &card.def_id);
+    let face = if card.radiant { FaceKind::Radiant } else { FaceKind::Base };
+    let words = format!("{} {}", def.name, fill_params(def, face, None)).to_lowercase();
+    MOUSE.chars().all(|letter| words.contains(letter.to_ascii_lowercase()))
+}
+
+/// R4154100: "Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then
+/// summon two random Traps.", and no Activate.
 fn yates(radiant: bool) -> Script {
+    Script {
+        // A permanent of either side, as TG #26 Path of Exile's "Exile a permanent" (R81), that
+        // `holds_mouse` admits.
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "any", "of": ["unit", "backrow"], "check": MOUSE_CHECK }),
+        )],
+        cry: Some(hook(move |_ctx| {
+            let mut effects = vec![exile(json_as(json!({ "target": { "of": "chosen" } })))];
+            effects.extend(traps(radiant));
+            effects
+        })),
+        target_checks: IndexMap::from([(
+            MOUSE_CHECK,
+            target_check(|args| args.candidate.is_some_and(|card| holds_mouse(args.state, card))),
+        )]),
+        ..Script::default()
+    }
+}
+
+/// R3996000: through v0.6.6e, "Exile a permanent. Then summon two random Traps.", and the three
+/// Activates, each its own.
+fn yates_v0_6_6e(radiant: bool) -> Script {
     Script {
         // A permanent of either side, as TG #26 Path of Exile's "Exile a permanent" (R81).
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))],
@@ -248,6 +289,15 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: after v0.6.5b through v0.6.6e, the exile of any declared permanent and the three
+/// Activates; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: yates_v0_6_6e(false),
+        radiant: yates_v0_6_6e(true),
+    }
+}
+
 /// R767000: through v0.6.5b, the named exile and one chosen Activate; `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_6_5b() -> CardScripts {
@@ -257,7 +307,7 @@ pub fn script_v0_6_5b() -> CardScripts {
     }
 }
 
-// S+ #4 Profe Yates — SPEC §8.12 row 4 (R3996000; R3567000–R3567004, R767000).
+// S+ #4 Profe Yates — SPEC §8.12 row 4 (R4154100; R3996000, R3567000–R3567004, R767000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -265,7 +315,7 @@ mod tests {
     use jackioh_engine::subsystems::ai_policy::policy_actions;
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, give_flying, scenario};
+    use crate::{filler, give_flying, merged, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -280,8 +330,20 @@ mod tests {
     const PEPTIDES: &str = "meditative-036"; // CN Peptides
     /// A Field Spell: a backrow permanent for the Cry to exile.
     const MANA_WELL: &str = "core-006"; // Mana Well
-    /// A Trap, set face down.
+    /// A Trap, set face down; its name and text hold M, O, U, S and E.
     const SHEEPISH: &str = "core-041"; // Sheepish
+    /// A Unit whose name holds M, O, U, S and E.
+    const MUSHROOM: &str = "classicplus-020"; // Mushroom Power
+    /// A Unit whose name holds no O, U, S or E, and which prints no text.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    /// A Unit whose M, O, U, S and E are split between its name and its text.
+    const SPECIESIST: &str = "core-002"; // Speciesist
+    /// A CN-tagged Unit whose name and text hold M, O, U, S and E.
+    const LAR: &str = "classicplus-076"; // Brother Lar
+    /// A Unit whose base face prints the U its Radiant face lacks.
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    /// A Trap whose name and text hold M, O, U, S and E, which no Unit's play reveals.
+    const SHADOWSTEP: &str = "classic-014"; // Shadowstep
 
     const MODES: [&str; 3] = [OVERWHELM, WOLFS_MAW, IRON_MANDATE];
 
@@ -343,25 +405,62 @@ mod tests {
     mod cry {
         use super::*;
 
-        #[test]
-        fn r3996000_the_cry_exiles_the_declared_enemy_unit_and_nothing_else() {
-            let mut s = unplayed("s004-exile-unit", false);
-            let theirs = s.unit_at(P2, 4).id;
-            s.play(ID, json!({ "zone": 1, "targets": pick::id(&theirs) }));
-            s.expect_in_zone(theirs.as_str(), "exile");
-            assert_eq!(exile_count(&s, P2), 1);
-            assert_eq!(exile_count(&s, P1), 0);
-            // No card is exiled for its name any more: Stockpile stays in both hands.
-            for player in [P1, P2] {
-                assert!(s.hand(player).iter().any(|card| card.def_id == STOCKPILE));
+        /// p1's Yates (`radiant` its face) in hand beside p1's `mine` Units, facing p2's side `theirs`.
+        fn facing(seed: &str, radiant: bool, mine: Value, theirs: Value) -> Scenario {
+            scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "mana": 10,
+                    "hand": [{ "def": ID, "radiant": radiant }],
+                    "field": mine,
+                    "library": filler(4),
+                },
+                "p2": merged(json!({ "library": filler(4) }), theirs),
+            }))
+        }
+
+        /// The cards Yates's plays now offer to exile, each once.
+        fn offered(s: &Scenario) -> Vec<String> {
+            let mut out: Vec<String> = Vec::new();
+            for id in pick::instance_ids(&s.play_targets(ID)) {
+                if !out.contains(&id) {
+                    out.push(id);
+                }
             }
-            assert!(s.backrow(P2, 1).is_some_and(|card| card.def_id == MANA_WELL));
-            assert!(s.unit(P1, 2).is_some_and(|unit| unit.def_id == TYLANNT));
+            out
         }
 
         #[test]
-        fn r3996000_its_pick_may_be_a_permanent_of_its_own_side() {
-            let mut s = unplayed("s004-exile-own", false);
+        fn r4154100_it_exiles_a_declared_permanent_whose_name_and_text_hold_m_o_u_s_and_e() {
+            for radiant in [false, true] {
+                // Speciesist's letters are split between its name and its text; Mushroom Power's name
+                // holds all five.
+                let mut s = facing(
+                    "s004-mouse",
+                    radiant,
+                    json!([{ "def": MUSHROOM, "lane": 2 }]),
+                    json!({ "field": [{ "def": SPECIESIST, "lane": 4 }], "hand": [STOCKPILE] }),
+                );
+                let theirs = s.unit_at(P2, 4).id;
+                let mine = s.unit_at(P1, 2).id;
+                assert_eq!(offered(&s), vec![mine.clone(), theirs.clone()], "radiant {radiant}");
+                s.play(ID, json!({ "zone": 1, "targets": pick::id(&theirs) }));
+                s.expect_in_zone(theirs.as_str(), "exile");
+                // One permanent, and nothing off the field: Stockpile stays in p2's hand.
+                assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), 1, "radiant {radiant}");
+                assert!(s.hand(P2).iter().any(|card| card.def_id == STOCKPILE));
+                assert!(s.unit(P1, 2).is_some_and(|unit| unit.def_id == MUSHROOM));
+            }
+        }
+
+        #[test]
+        fn r4154100_its_pick_may_be_a_permanent_of_its_own_side() {
+            let mut s = facing(
+                "s004-mouse-own",
+                false,
+                json!([{ "def": MUSHROOM, "lane": 2 }]),
+                json!({ "field": [{ "def": VANILLA, "lane": 4 }] }),
+            );
             let mine = s.unit_at(P1, 2).id;
             s.play(ID, json!({ "zone": 1, "targets": pick::id(&mine) }));
             s.expect_in_zone(mine.as_str(), "exile");
@@ -369,61 +468,142 @@ mod tests {
         }
 
         #[test]
-        fn r3996000_its_pick_may_be_a_face_down_trap_and_a_cn_card_is_no_longer_spared() {
-            let mut s = scenario(json!({
-                "seed": "s004-exile-trap",
-                "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
-                "p2": {
-                    "backrow": [{ "def": SHEEPISH, "faceUp": false, "lane": 3 }],
-                    "field": [{ "def": "meditative-047", "lane": 1 }],
-                    "library": filler(4),
-                },
-            }));
-            let trap = s.backrow(P2, 3).expect("the face-down Trap").id;
-            s.play(ID, json!({ "zone": 1, "targets": pick::id(&trap) }));
-            s.expect_in_zone(trap.as_str(), "exile");
-            // 饕餮 carries the CN tag: a pick of its own, never spared.
-            let mut s = scenario(json!({
-                "seed": "s004-exile-cn",
-                "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
-                "p2": { "field": [{ "def": "meditative-047", "lane": 1 }], "library": filler(4) },
-            }));
-            let cn = s.unit_at(P2, 1).id;
-            s.play(ID, json!({ "zone": 1, "targets": pick::id(&cn) }));
-            s.expect_in_zone(cn.as_str(), "exile");
+        fn r4154100_a_permanent_missing_a_letter_is_neither_offered_nor_accepted() {
+            // Mr. Vanilla's name holds no O, U, S or E, and it prints no text.
+            let mut s = facing(
+                "s004-mouse-missing",
+                false,
+                json!([]),
+                json!({ "field": [{ "def": VANILLA, "lane": 4 }, { "def": SPECIESIST, "lane": 5 }] }),
+            );
+            let vanilla = s.unit_at(P2, 4).id;
+            let speciesist = s.unit_at(P2, 5).id;
+            assert_eq!(offered(&s), vec![speciesist]);
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&vanilla) })));
+            s.expect_in_zone(vanilla.as_str(), "field");
         }
 
         #[test]
-        fn r3996000_a_permanent_standing_must_be_picked_and_with_none_the_cry_still_summons_its_traps() {
-            // A board with a permanent: each Yates play the AI is offered names one, and no mode.
-            let s = unplayed("s004-offers", false);
-            let yates = s
-                .hand(P1)
-                .into_iter()
-                .find(|card| card.def_id == ID)
-                .expect("Yates")
-                .id;
-            let offered: Vec<ActionBody> = policy_actions(s.state(), P1, Default::default())
-                .into_iter()
-                .filter(|action| is_play_of(action, &yates))
-                .collect();
-            assert!(!offered.is_empty());
-            for action in &offered {
-                let ActionBody::Play { targets, modes, .. } = action else {
+        fn r4154100_the_text_read_is_the_face_the_card_wears() {
+            // Tempo Timmy's base face prints "Rush" (its U); its Radiant face prints "Charge" instead.
+            let mut s = facing(
+                "s004-mouse-face",
+                false,
+                json!([]),
+                json!({
+                    "field": [
+                        { "def": TIMMY, "lane": 4 },
+                        { "def": TIMMY, "radiant": true, "lane": 5 },
+                    ],
+                }),
+            );
+            let base = s.unit_at(P2, 4).id;
+            let radiant = s.unit_at(P2, 5).id;
+            assert_eq!(offered(&s), vec![base]);
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&radiant) })));
+        }
+
+        #[test]
+        fn r4154100_a_cn_card_is_immune_whatever_its_letters() {
+            // Brother Lar's name and text hold all five, and it is CN.
+            let mut s = facing(
+                "s004-mouse-cn",
+                false,
+                json!([{ "def": LAR, "lane": 2 }]),
+                json!({ "field": [{ "def": LAR, "lane": 4 }, { "def": SPECIESIST, "lane": 5 }] }),
+            );
+            let lar = s.unit_at(P2, 4).id;
+            let speciesist = s.unit_at(P2, 5).id;
+            assert_eq!(offered(&s), vec![speciesist]);
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&lar) })));
+            s.expect_in_zone(lar.as_str(), "field");
+        }
+
+        #[test]
+        fn r4154100_a_face_down_card_is_never_offered_a_face_up_one_is() {
+            // Shadowstep's name and text hold all five: face-down, on either side, it is hidden and never
+            // offered (to its own controller neither); face-up it may be exiled.
+            let mut s = scenario(json!({
+                "seed": "s004-mouse-face-down",
+                "p1": {
+                    "mana": 10,
+                    "hand": [ID],
+                    "backrow": [{ "def": SHADOWSTEP, "faceUp": false, "lane": 2 }],
+                    "library": filler(4),
+                },
+                "p2": {
+                    "backrow": [
+                        { "def": SHADOWSTEP, "faceUp": false, "lane": 3 },
+                        { "def": SHADOWSTEP, "faceUp": true, "lane": 4 },
+                    ],
+                    "library": filler(4),
+                },
+            }));
+            let hidden = s.backrow(P2, 3).expect("the face-down Trap").id;
+            let shown = s.backrow(P2, 4).expect("the face-up Trap").id;
+            assert_eq!(offered(&s), vec![shown.clone()]);
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&hidden) })));
+            s.play(ID, json!({ "zone": 1, "targets": pick::id(&shown) }));
+            s.expect_in_zone(shown.as_str(), "exile");
+            s.expect_in_zone(hidden.as_str(), "field");
+        }
+
+        #[test]
+        fn r4154100_with_none_eligible_the_play_names_none_and_the_traps_still_come() {
+            for radiant in [false, true] {
+                let mut s = scenario(json!({
+                    "seed": "s004-mouse-none",
+                    "p1": {
+                        "mana": 10,
+                        "hand": [{ "def": ID, "radiant": radiant }],
+                        "field": [{ "def": LAR, "lane": 2 }],
+                        "library": filler(4),
+                    },
+                    "p2": {
+                        "field": [{ "def": VANILLA, "lane": 4 }],
+                        "backrow": [{ "def": SHADOWSTEP, "faceUp": false, "lane": 3 }],
+                        "library": filler(4),
+                    },
+                }));
+                assert!(s.can_play(ID), "radiant {radiant}");
+                assert!(offered(&s).is_empty(), "radiant {radiant}");
+                s.play(ID, json!({ "zone": 1 }));
+                assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), 0);
+                let traps = if radiant { RADIANT_TRAPS } else { BASE_TRAPS };
+                assert_eq!(backrow_count(&s, P1), traps as usize, "radiant {radiant}");
+            }
+        }
+
+        #[test]
+        fn r4154100_while_one_is_eligible_every_play_names_one() {
+            let s = facing(
+                "s004-mouse-must",
+                false,
+                json!([]),
+                json!({ "field": [{ "def": VANILLA, "lane": 4 }, { "def": SPECIESIST, "lane": 5 }] }),
+            );
+            let plays = nonempty(s.plays_of(ID), "Yates's plays");
+            for play in &plays {
+                let ActionBody::Play { targets, .. } = play else {
                     unreachable!()
                 };
-                assert_eq!(targets.as_ref().map(Vec::len), Some(1), "{action:?}");
-                assert!(modes.as_ref().is_none_or(Vec::is_empty), "{action:?}");
+                assert_eq!(targets.as_ref().map(Vec::len), Some(1), "{play:?}");
             }
-            // An empty board: no pick, and the two Traps all the same.
-            let mut s = scenario(json!({
-                "seed": "s004-no-permanent",
-                "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
-                "p2": { "library": filler(4) },
-            }));
-            s.play(ID, json!({ "zone": 1 }));
-            assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), 0);
-            assert_eq!(backrow_count(&s, P1), BASE_TRAPS as usize);
+        }
+
+        #[test]
+        fn r4154100_it_has_no_activate_on_either_face() {
+            let scripts = script();
+            assert!(scripts.base.activations.is_empty());
+            assert!(scripts.radiant.activations.is_empty());
+            for radiant in [false, true] {
+                let mut s = unplayed("s004-no-activate", radiant);
+                let flyer = s.unit_at(P2, 4).id;
+                give_flying(&mut s, &flyer);
+                play_exiling_their_backrow(&mut s, 1);
+                let yates = s.unit_at(P1, 1).id;
+                assert!(abilities(&s, &yates).is_empty(), "radiant {radiant}");
+            }
         }
 
         #[test]
@@ -478,256 +658,386 @@ mod tests {
                 assert!(trap.radiant, "Radiant");
             }
         }
+    }
+
+    /// R767000: the script kept for the replays after v0.6.5b through v0.6.6e: the exile of any declared
+    /// permanent and the three Activates.
+    mod v0_6_6e {
+        use super::*;
+
+        /// `run` under the script kept for v0.6.6e, with the `damage` its Wolf's Maw read then (4, both
+        /// faces).
+        fn kept<T>(run: impl FnOnce() -> T) -> T {
+            crate::under_kept_as(
+                ID,
+                script_v0_6_6e(),
+                |def| {
+                    def.params = serde_json::from_value(json!([
+                        { "key": "damage", "base": 4, "radiant": 4, "better": "up", "step": 1, "min": 1 }
+                    ]))
+                    .expect("the v0.6.6e params");
+                },
+                run,
+            )
+        }
+
+        #[test]
+        fn r3996000_the_cry_exiles_the_declared_enemy_unit_and_nothing_else() {
+            kept(|| {
+                let mut s = unplayed("s004-exile-unit", false);
+                let theirs = s.unit_at(P2, 4).id;
+                s.play(ID, json!({ "zone": 1, "targets": pick::id(&theirs) }));
+                s.expect_in_zone(theirs.as_str(), "exile");
+                assert_eq!(exile_count(&s, P2), 1);
+                assert_eq!(exile_count(&s, P1), 0);
+                // No card is exiled for its name any more: Stockpile stays in both hands.
+                for player in [P1, P2] {
+                    assert!(s.hand(player).iter().any(|card| card.def_id == STOCKPILE));
+                }
+                assert!(s.backrow(P2, 1).is_some_and(|card| card.def_id == MANA_WELL));
+                assert!(s.unit(P1, 2).is_some_and(|unit| unit.def_id == TYLANNT));
+            });
+        }
+
+        #[test]
+        fn r3996000_its_pick_may_be_a_permanent_of_its_own_side() {
+            kept(|| {
+                let mut s = unplayed("s004-exile-own", false);
+                let mine = s.unit_at(P1, 2).id;
+                s.play(ID, json!({ "zone": 1, "targets": pick::id(&mine) }));
+                s.expect_in_zone(mine.as_str(), "exile");
+                assert!(s.unit(P2, 4).is_some(), "the enemy Unit stands");
+            });
+        }
+
+        #[test]
+        fn r3996000_its_pick_may_be_a_face_down_trap_and_a_cn_card_is_no_longer_spared() {
+            kept(|| {
+                let mut s = scenario(json!({
+                    "seed": "s004-exile-trap",
+                    "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
+                    "p2": {
+                        "backrow": [{ "def": SHEEPISH, "faceUp": false, "lane": 3 }],
+                        "field": [{ "def": "meditative-047", "lane": 1 }],
+                        "library": filler(4),
+                    },
+                }));
+                let trap = s.backrow(P2, 3).expect("the face-down Trap").id;
+                s.play(ID, json!({ "zone": 1, "targets": pick::id(&trap) }));
+                s.expect_in_zone(trap.as_str(), "exile");
+                // 饕餮 carries the CN tag: a pick of its own, never spared.
+                let mut s = scenario(json!({
+                    "seed": "s004-exile-cn",
+                    "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
+                    "p2": { "field": [{ "def": "meditative-047", "lane": 1 }], "library": filler(4) },
+                }));
+                let cn = s.unit_at(P2, 1).id;
+                s.play(ID, json!({ "zone": 1, "targets": pick::id(&cn) }));
+                s.expect_in_zone(cn.as_str(), "exile");
+            });
+        }
+
+        #[test]
+        fn r3996000_a_permanent_standing_must_be_picked_and_with_none_the_cry_still_summons_its_traps() {
+            kept(|| {
+                // A board with a permanent: each Yates play the AI is offered names one, and no mode.
+                let s = unplayed("s004-offers", false);
+                let yates = s
+                    .hand(P1)
+                    .into_iter()
+                    .find(|card| card.def_id == ID)
+                    .expect("Yates")
+                    .id;
+                let offered: Vec<ActionBody> = policy_actions(s.state(), P1, Default::default())
+                    .into_iter()
+                    .filter(|action| is_play_of(action, &yates))
+                    .collect();
+                assert!(!offered.is_empty());
+                for action in &offered {
+                    let ActionBody::Play { targets, modes, .. } = action else {
+                        unreachable!()
+                    };
+                    assert_eq!(targets.as_ref().map(Vec::len), Some(1), "{action:?}");
+                    assert!(modes.as_ref().is_none_or(Vec::is_empty), "{action:?}");
+                }
+                // An empty board: no pick, and the two Traps all the same.
+                let mut s = scenario(json!({
+                    "seed": "s004-no-permanent",
+                    "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
+                    "p2": { "library": filler(4) },
+                }));
+                s.play(ID, json!({ "zone": 1 }));
+                assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), 0);
+                assert_eq!(backrow_count(&s, P1), BASE_TRAPS as usize);
+            });
+        }
 
         #[test]
         fn r3996000_radiant_exiles_one_declared_permanent_too() {
-            let mut s = unplayed("s004-exile-radiant", true);
-            let theirs = s.unit_at(P2, 4).id;
-            s.play(ID, json!({ "zone": 1, "targets": pick::id(&theirs) }));
-            s.expect_in_zone(theirs.as_str(), "exile");
-            assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), 1);
+            kept(|| {
+                let mut s = unplayed("s004-exile-radiant", true);
+                let theirs = s.unit_at(P2, 4).id;
+                s.play(ID, json!({ "zone": 1, "targets": pick::id(&theirs) }));
+                s.expect_in_zone(theirs.as_str(), "exile");
+                assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), 1);
+            });
         }
-    }
-
-    mod activates {
-        use super::*;
 
         #[test]
         fn r3996000_all_three_activates_are_offered_on_both_faces() {
-            for radiant in [false, true] {
-                let mut s = unplayed("s004-all-three", radiant);
-                let flyer = s.unit_at(P2, 4).id;
-                give_flying(&mut s, &flyer);
-                play_exiling_their_backrow(&mut s, 1);
-                let yates = s.unit_at(P1, 1).id;
-                assert_eq!(
-                    abilities(&s, &yates),
-                    MODES.map(String::from).to_vec(),
-                    "radiant {radiant}"
-                );
-            }
+            kept(|| {
+                for radiant in [false, true] {
+                    let mut s = unplayed("s004-all-three", radiant);
+                    let flyer = s.unit_at(P2, 4).id;
+                    give_flying(&mut s, &flyer);
+                    play_exiling_their_backrow(&mut s, 1);
+                    let yates = s.unit_at(P1, 1).id;
+                    assert_eq!(
+                        abilities(&s, &yates),
+                        MODES.map(String::from).to_vec(),
+                        "radiant {radiant}"
+                    );
+                }
+            });
         }
 
         #[test]
         fn r3996000_each_activate_needs_its_own_target() {
-            // No Flying Unit: no Wolf's Maw; Iron Mandate fuses into the Tylannt.
-            let s = played("s004-no-flyer", false);
-            let yates = s.unit_at(P1, 1).id;
-            assert_eq!(
-                abilities(&s, &yates),
-                vec![OVERWHELM.to_string(), IRON_MANDATE.to_string()]
-            );
-            // No other friendly Unit either: Overwhelm alone.
-            let mut s = scenario(json!({
-                "seed": "s004-alone",
-                "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
-                "p2": { "field": [{ "def": TYLANNT, "lane": 3 }], "backrow": [MANA_WELL], "library": filler(4) },
-            }));
-            play_exiling_their_backrow(&mut s, 1);
-            let yates = s.unit_at(P1, 1).id;
-            assert_eq!(abilities(&s, &yates), vec![OVERWHELM.to_string()]);
+            kept(|| {
+                // No Flying Unit: no Wolf's Maw; Iron Mandate fuses into the Tylannt.
+                let s = played("s004-no-flyer", false);
+                let yates = s.unit_at(P1, 1).id;
+                assert_eq!(
+                    abilities(&s, &yates),
+                    vec![OVERWHELM.to_string(), IRON_MANDATE.to_string()]
+                );
+                // No other friendly Unit either: Overwhelm alone.
+                let mut s = scenario(json!({
+                    "seed": "s004-alone",
+                    "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
+                    "p2": { "field": [{ "def": TYLANNT, "lane": 3 }], "backrow": [MANA_WELL], "library": filler(4) },
+                }));
+                play_exiling_their_backrow(&mut s, 1);
+                let yates = s.unit_at(P1, 1).id;
+                assert_eq!(abilities(&s, &yates), vec![OVERWHELM.to_string()]);
+            });
         }
 
         #[test]
         fn r3996000_each_activate_spends_its_own_uses_and_a_frozen_yates_uses_none() {
-            let mut s = scenario(json!({
-                "seed": "s004-each-own",
-                "p1": {
-                    "mana": 10,
-                    "hand": [ID],
-                    "field": [{ "def": TYLANNT, "lane": 5 }],
-                    "library": filler(4),
-                },
-                "p2": {
-                    "field": [
-                        { "def": TYLANNT, "radiant": true, "lane": 1 },
-                        { "def": TYLANNT, "radiant": true, "lane": 2 },
-                        { "def": TYLANNT, "radiant": true, "lane": 3 },
-                    ],
-                    "backrow": [MANA_WELL],
-                    "library": filler(4),
-                },
-            }));
-            for lane in 1..=3 {
-                let id = s.unit_at(P2, lane).id;
-                give_flying(&mut s, &id);
-            }
-            play_exiling_their_backrow(&mut s, 1);
-            let yates = s.unit_at(P1, 1).id;
-            // Wolf's Maw's three uses leave Overwhelm and Iron Mandate theirs.
-            for lane in 1..=3 {
-                let target = s.unit_at(P2, lane).id;
-                s.activate(&yates, json!({ "ability": WOLFS_MAW, "targets": pick::id(&target) }));
-            }
-            assert_eq!(
-                abilities(&s, &yates),
-                vec![OVERWHELM.to_string(), IRON_MANDATE.to_string()]
-            );
-            // Overwhelm freezes Yates too (R3567003): it uses no Activate until it thaws (R2246000).
-            s.activate(&yates, json!({ "ability": OVERWHELM }));
-            assert!(s.card(&yates).frozen.is_some());
-            assert!(abilities(&s, &yates).is_empty());
-            let host = s.unit_at(P1, 5).id;
-            s.expect_refused_with(
-                |s| s.activate(&yates, json!({ "ability": IRON_MANDATE, "targets": pick::id(&host) })),
-                "Frozen",
-            );
+            kept(|| {
+                let mut s = scenario(json!({
+                    "seed": "s004-each-own",
+                    "p1": {
+                        "mana": 10,
+                        "hand": [ID],
+                        "field": [{ "def": TYLANNT, "lane": 5 }],
+                        "library": filler(4),
+                    },
+                    "p2": {
+                        "field": [
+                            { "def": TYLANNT, "radiant": true, "lane": 1 },
+                            { "def": TYLANNT, "radiant": true, "lane": 2 },
+                            { "def": TYLANNT, "radiant": true, "lane": 3 },
+                        ],
+                        "backrow": [MANA_WELL],
+                        "library": filler(4),
+                    },
+                }));
+                for lane in 1..=3 {
+                    let id = s.unit_at(P2, lane).id;
+                    give_flying(&mut s, &id);
+                }
+                play_exiling_their_backrow(&mut s, 1);
+                let yates = s.unit_at(P1, 1).id;
+                // Wolf's Maw's three uses leave Overwhelm and Iron Mandate theirs.
+                for lane in 1..=3 {
+                    let target = s.unit_at(P2, lane).id;
+                    s.activate(&yates, json!({ "ability": WOLFS_MAW, "targets": pick::id(&target) }));
+                }
+                assert_eq!(
+                    abilities(&s, &yates),
+                    vec![OVERWHELM.to_string(), IRON_MANDATE.to_string()]
+                );
+                // Overwhelm freezes Yates too (R3567003): it uses no Activate until it thaws (R2246000).
+                s.activate(&yates, json!({ "ability": OVERWHELM }));
+                assert!(s.card(&yates).frozen.is_some());
+                assert!(abilities(&s, &yates).is_empty());
+                let host = s.unit_at(P1, 5).id;
+                s.expect_refused_with(
+                    |s| s.activate(&yates, json!({ "ability": IRON_MANDATE, "targets": pick::id(&host) })),
+                    "Frozen",
+                );
+            });
         }
 
         #[test]
         fn r3567002_iron_mandate_fuses_yates_into_an_ally_without_its_cry() {
-            let mut s = scenario(json!({
-                "seed": "s004-iron",
-                "p1": {
-                    "mana": 10,
-                    "hand": [ID],
-                    "field": [{ "def": TYLANNT, "lane": 2 }],
-                    "library": filler(4),
-                },
-                "p2": { "hand": [RAPID], "backrow": [MANA_WELL], "library": filler(4) },
-            }));
-            play_exiling_their_backrow(&mut s, 1);
-            let yates = s.unit_at(P1, 1).id;
-            let host = s.unit_at(P1, 2).id;
-            let exiled = exile_count(&s, P1) + exile_count(&s, P2);
-            let backrow = backrow_count(&s, P1) + backrow_count(&s, P2);
-            let pick = pick::instance(s.card(&host));
-            s.activate(&yates, json!({ "ability": IRON_MANDATE, "targets": pick }));
-            // Yates fused into the Tylannt, kept: 6 + 7.
-            s.expect_stats(&host, json!({ "attack": 13 }));
-            s.expect_in_zone(&yates, "gone");
-            // No Cry ran again: no new exiles, no new traps.
-            assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), exiled);
-            assert_eq!(backrow_count(&s, P1) + backrow_count(&s, P2), backrow);
+            kept(|| {
+                let mut s = scenario(json!({
+                    "seed": "s004-iron",
+                    "p1": {
+                        "mana": 10,
+                        "hand": [ID],
+                        "field": [{ "def": TYLANNT, "lane": 2 }],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [RAPID], "backrow": [MANA_WELL], "library": filler(4) },
+                }));
+                play_exiling_their_backrow(&mut s, 1);
+                let yates = s.unit_at(P1, 1).id;
+                let host = s.unit_at(P1, 2).id;
+                let exiled = exile_count(&s, P1) + exile_count(&s, P2);
+                let backrow = backrow_count(&s, P1) + backrow_count(&s, P2);
+                let pick = pick::instance(s.card(&host));
+                s.activate(&yates, json!({ "ability": IRON_MANDATE, "targets": pick }));
+                // Yates fused into the Tylannt, kept: 6 + 7.
+                s.expect_stats(&host, json!({ "attack": 13 }));
+                s.expect_in_zone(&yates, "gone");
+                // No Cry ran again: no new exiles, no new traps.
+                assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), exiled);
+                assert_eq!(backrow_count(&s, P1) + backrow_count(&s, P2), backrow);
+            });
         }
 
         #[test]
         fn r3567003_overwhelm_freezes_its_lane_and_the_adjacent_ones_on_both_sides() {
-            let mut s = scenario(json!({
-                "seed": "s004-overwhelm",
-                "p1": {
-                    "mana": 10,
-                    "hand": [ID],
-                    "field": [{ "def": TYLANNT, "lane": 1 }, { "def": TYLANNT, "lane": 4 }],
-                    "library": filler(4),
-                },
-                "p2": {
-                    "field": [{ "def": TYLANNT, "lane": 2 }, { "def": TYLANNT, "lane": 5 }],
-                    "backrow": [MANA_WELL],
-                    "library": filler(4),
-                },
-            }));
-            play_exiling_their_backrow(&mut s, 2);
-            let yates = s.unit_at(P1, 2).id;
-            s.activate(&yates, json!({ "ability": OVERWHELM }));
-            assert!(s.card(&s.unit_at(P1, 1).id).frozen.is_some(), "lane 1 frozen");
-            assert!(s.card(&s.unit_at(P1, 4).id).frozen.is_none(), "lane 4 open");
-            assert!(s.card(&s.unit_at(P2, 2).id).frozen.is_some(), "lane 2 frozen");
-            assert!(s.card(&s.unit_at(P2, 5).id).frozen.is_none(), "lane 5 open");
-            assert!(s.card(&yates).frozen.is_some(), "Yates freezes too");
+            kept(|| {
+                let mut s = scenario(json!({
+                    "seed": "s004-overwhelm",
+                    "p1": {
+                        "mana": 10,
+                        "hand": [ID],
+                        "field": [{ "def": TYLANNT, "lane": 1 }, { "def": TYLANNT, "lane": 4 }],
+                        "library": filler(4),
+                    },
+                    "p2": {
+                        "field": [{ "def": TYLANNT, "lane": 2 }, { "def": TYLANNT, "lane": 5 }],
+                        "backrow": [MANA_WELL],
+                        "library": filler(4),
+                    },
+                }));
+                play_exiling_their_backrow(&mut s, 2);
+                let yates = s.unit_at(P1, 2).id;
+                s.activate(&yates, json!({ "ability": OVERWHELM }));
+                assert!(s.card(&s.unit_at(P1, 1).id).frozen.is_some(), "lane 1 frozen");
+                assert!(s.card(&s.unit_at(P1, 4).id).frozen.is_none(), "lane 4 open");
+                assert!(s.card(&s.unit_at(P2, 2).id).frozen.is_some(), "lane 2 frozen");
+                assert!(s.card(&s.unit_at(P2, 5).id).frozen.is_none(), "lane 5 open");
+                assert!(s.card(&yates).frozen.is_some(), "Yates freezes too");
+            });
         }
 
         #[test]
         fn r3567003_overwhelm_from_the_middle_lane_leaves_the_outer_lanes_open() {
-            let mut s = scenario(json!({
-                "seed": "s004-overwhelm-middle",
-                "p1": {
-                    "mana": 10,
-                    "hand": [ID],
-                    "field": [{ "def": TYLANNT, "lane": 1 }, { "def": TYLANNT, "lane": 5 }],
-                    "library": filler(4),
-                },
-                "p2": {
-                    "field": [
-                        { "def": TYLANNT, "lane": 2 },
-                        { "def": TYLANNT, "lane": 4 },
-                        { "def": TYLANNT, "lane": 5 },
-                    ],
-                    "backrow": [MANA_WELL],
-                    "library": filler(4),
-                },
-            }));
-            play_exiling_their_backrow(&mut s, 3);
-            let yates = s.unit_at(P1, 3).id;
-            s.activate(&yates, json!({ "ability": OVERWHELM }));
-            assert!(s.card(&s.unit_at(P1, 1).id).frozen.is_none(), "lane 1 open");
-            assert!(s.card(&s.unit_at(P1, 5).id).frozen.is_none(), "lane 5 open");
-            assert!(s.card(&s.unit_at(P2, 2).id).frozen.is_some(), "lane 2 frozen");
-            assert!(s.card(&s.unit_at(P2, 4).id).frozen.is_some(), "lane 4 frozen");
-            assert!(s.card(&s.unit_at(P2, 5).id).frozen.is_none(), "lane 5 open");
-            assert!(s.card(&yates).frozen.is_some(), "Yates freezes too");
+            kept(|| {
+                let mut s = scenario(json!({
+                    "seed": "s004-overwhelm-middle",
+                    "p1": {
+                        "mana": 10,
+                        "hand": [ID],
+                        "field": [{ "def": TYLANNT, "lane": 1 }, { "def": TYLANNT, "lane": 5 }],
+                        "library": filler(4),
+                    },
+                    "p2": {
+                        "field": [
+                            { "def": TYLANNT, "lane": 2 },
+                            { "def": TYLANNT, "lane": 4 },
+                            { "def": TYLANNT, "lane": 5 },
+                        ],
+                        "backrow": [MANA_WELL],
+                        "library": filler(4),
+                    },
+                }));
+                play_exiling_their_backrow(&mut s, 3);
+                let yates = s.unit_at(P1, 3).id;
+                s.activate(&yates, json!({ "ability": OVERWHELM }));
+                assert!(s.card(&s.unit_at(P1, 1).id).frozen.is_none(), "lane 1 open");
+                assert!(s.card(&s.unit_at(P1, 5).id).frozen.is_none(), "lane 5 open");
+                assert!(s.card(&s.unit_at(P2, 2).id).frozen.is_some(), "lane 2 frozen");
+                assert!(s.card(&s.unit_at(P2, 4).id).frozen.is_some(), "lane 4 frozen");
+                assert!(s.card(&s.unit_at(P2, 5).id).frozen.is_none(), "lane 5 open");
+                assert!(s.card(&yates).frozen.is_some(), "Yates freezes too");
+            });
         }
 
         #[test]
         fn r3567004_wolfs_maw_grounds_a_flying_unit_and_deals_it_damage() {
-            let mut s = scenario(json!({
-                "seed": "s004-wolf",
-                "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
-                "p2": {
-                    "field": [{ "def": TYLANNT, "radiant": true }],
-                    "backrow": [MANA_WELL],
-                    "library": filler(4),
-                },
-            }));
-            let flyer = s.unit_at(P2, 1).id;
-            give_flying(&mut s, &flyer);
-            play_exiling_their_backrow(&mut s, 1);
-            let yates = s.unit_at(P1, 1).id;
-            let pick = pick::instance(s.card(&flyer));
-            s.activate(&yates, json!({ "ability": WOLFS_MAW, "targets": pick }));
-            assert!(
-                !unit_has(s.state(), s.card(&flyer), KeywordKind::Flying),
-                "grounded"
-            );
-            assert_eq!(s.card(&flyer).damage, 4);
+            kept(|| {
+                let mut s = scenario(json!({
+                    "seed": "s004-wolf",
+                    "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
+                    "p2": {
+                        "field": [{ "def": TYLANNT, "radiant": true }],
+                        "backrow": [MANA_WELL],
+                        "library": filler(4),
+                    },
+                }));
+                let flyer = s.unit_at(P2, 1).id;
+                give_flying(&mut s, &flyer);
+                play_exiling_their_backrow(&mut s, 1);
+                let yates = s.unit_at(P1, 1).id;
+                let pick = pick::instance(s.card(&flyer));
+                s.activate(&yates, json!({ "ability": WOLFS_MAW, "targets": pick }));
+                assert!(
+                    !unit_has(s.state(), s.card(&flyer), KeywordKind::Flying),
+                    "grounded"
+                );
+                assert_eq!(s.card(&flyer).damage, 4);
+            });
         }
 
         #[test]
         fn r3567004_with_no_flying_unit_wolfs_maw_is_not_listed() {
-            let s = played("s004-wolf-none", false);
-            let yates = s.unit_at(P1, 1).id;
-            assert!(
-                !abilities(&s, &yates).contains(&WOLFS_MAW.to_string()),
-                "no Flying Unit, no Wolf's Maw"
-            );
+            kept(|| {
+                let s = played("s004-wolf-none", false);
+                let yates = s.unit_at(P1, 1).id;
+                assert!(
+                    !abilities(&s, &yates).contains(&WOLFS_MAW.to_string()),
+                    "no Flying Unit, no Wolf's Maw"
+                );
+            });
         }
 
         #[test]
         fn wolfs_maw_is_used_at_most_three_times_a_turn() {
-            let mut s = scenario(json!({
-                "seed": "s004-wolf-uses",
-                "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
-                "p2": {
-                    "field": [
-                        { "def": TYLANNT, "radiant": true },
-                        { "def": TYLANNT, "radiant": true },
-                        { "def": TYLANNT, "radiant": true },
-                    ],
-                    "backrow": [MANA_WELL],
-                    "library": filler(4),
-                },
-            }));
-            for lane in 1..=3 {
-                let id = s.unit_at(P2, lane).id;
-                give_flying(&mut s, &id);
-            }
-            // Radiant hosts survive the 4 damage.
-            play_exiling_their_backrow(&mut s, 1);
-            let yates = s.unit_at(P1, 1).id;
-            for lane in 1..=3 {
-                let target = s.unit_at(P2, lane).id;
+            kept(|| {
+                let mut s = scenario(json!({
+                    "seed": "s004-wolf-uses",
+                    "p1": { "mana": 10, "hand": [ID], "library": filler(4) },
+                    "p2": {
+                        "field": [
+                            { "def": TYLANNT, "radiant": true },
+                            { "def": TYLANNT, "radiant": true },
+                            { "def": TYLANNT, "radiant": true },
+                        ],
+                        "backrow": [MANA_WELL],
+                        "library": filler(4),
+                    },
+                }));
+                for lane in 1..=3 {
+                    let id = s.unit_at(P2, lane).id;
+                    give_flying(&mut s, &id);
+                }
+                // Radiant hosts survive the 4 damage.
+                play_exiling_their_backrow(&mut s, 1);
+                let yates = s.unit_at(P1, 1).id;
+                for lane in 1..=3 {
+                    let target = s.unit_at(P2, lane).id;
+                    let pick = pick::instance(s.card(&target));
+                    s.activate(&yates, json!({ "ability": WOLFS_MAW, "targets": pick }));
+                }
+                assert!(
+                    !abilities(&s, &yates).contains(&WOLFS_MAW.to_string()),
+                    "all three uses spent"
+                );
+                let target = s.unit_at(P2, 1).id;
                 let pick = pick::instance(s.card(&target));
-                s.activate(&yates, json!({ "ability": WOLFS_MAW, "targets": pick }));
-            }
-            assert!(
-                !abilities(&s, &yates).contains(&WOLFS_MAW.to_string()),
-                "all three uses spent"
-            );
-            let target = s.unit_at(P2, 1).id;
-            let pick = pick::instance(s.card(&target));
-            s.expect_refused(|s| s.activate(&yates, json!({ "ability": WOLFS_MAW, "targets": pick })));
+                s.expect_refused(|s| s.activate(&yates, json!({ "ability": WOLFS_MAW, "targets": pick })));
+            });
         }
     }
+
 
     /// R767000: the script kept for the replays of v0.6.5b and before: the named exile and the one
     /// Activate chosen at play.

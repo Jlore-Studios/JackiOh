@@ -18,8 +18,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-096";
 
-/// "Tribute 1" (§6.3): one of your units, or one Sheep Token.
-const TRIBUTE_COST: i32 = 1;
+/// "Tribute 2" (§6.3): two of your units, or one Sheep Token, since issue #4154.
+const TRIBUTE_COST: i32 = 2;
+/// "Tribute 1", from issue #3837 through v0.6.6e.
+const TRIBUTE_V0_6_6E: i32 = 1;
 
 fn face(radiant: bool, tribute: Option<i32>) -> Script {
     Script {
@@ -44,6 +46,15 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: Tribute 1 from issue #3837 through v0.6.6e (issue #4154); `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: face(false, Some(TRIBUTE_V0_6_6E)),
+        radiant: face(true, Some(TRIBUTE_V0_6_6E)),
+    }
+}
+
 /// R767000: no Tribute through v0.6.2c; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_2c() -> CardScripts {
     CardScripts {
@@ -58,27 +69,28 @@ mod tests {
     use jackioh_engine::effects::summon;
     use jackioh_engine::testkit::*;
 
-    use super::{ID, script_v0_6_2c};
+    use super::{ID, script_v0_6_2c, script_v0_6_6e};
     use crate::{filler, run_as, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
     const REKNITE: &str = "stinkyscape-t-reknite";
-    /// The unit its Tribute 1 takes.
+    /// The two units its Tribute 2 takes (one through v0.6.6e).
     const BODY: &str = "stand-in (1) 1/1";
+    const SECOND: &str = "stand-in (1) 2/2";
 
     fn tsunami(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": {
                 "hand": [{ "def": ID, "radiant": radiant }, FILLER, FILLER, FILLER, REKNITE, REKNITE],
-                "field": [BODY],
+                "field": [BODY, SECOND],
                 "library": filler(4),
             },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }))
     }
 
-    /// Issue #3837: Tribute 1, and with no unit to pay it the play is refused (R101).
+    /// Issue #3837: a Tribute, 2 since issue #4154, and with no unit to pay it the play is refused (R101).
     #[test]
     fn issue_3837_with_no_unit_to_tribute_it_cant_be_played() {
         for radiant in [false, true] {
@@ -96,7 +108,7 @@ mod tests {
         for radiant in [false, true] {
             let mut s = tsunami(radiant);
             let body = s.unit(P1, 1).expect("the body").id.clone();
-            s.play(ID, json!({ "tributes": [BODY] }));
+            s.play(ID, json!({ "tributes": [BODY, SECOND] }));
             s.expect_in_zone(&body, "graveyard").expect_in_zone(ID, "field");
             let kinds: Vec<GameEventType> = s.last_events().iter().map(|event| event.event_type()).collect();
             let died = kinds.iter().position(|kind| *kind == GameEventType::Destroyed);
@@ -104,6 +116,28 @@ mod tests {
             assert!(died.is_some() && discarded.is_some(), "radiant {radiant}");
             assert!(died < discarded, "radiant {radiant}");
         }
+    }
+
+    /// Issue #4154: Tribute 2 on both faces; one unit no longer pays it.
+    #[test]
+    fn issue_4154_both_faces_need_tribute_2() {
+        for radiant in [false, true] {
+            let mut s = tsunami(radiant);
+            s.expect_refused_with(|s| s.play(ID, json!({ "tributes": [BODY] })), "Tribute");
+            s.play(ID, json!({ "tributes": [BODY, SECOND] }));
+            s.expect_in_zone(ID, "field");
+            assert!(s.unit(P1, 2).is_none_or(|unit| unit.def_id != SECOND), "radiant {radiant}");
+        }
+    }
+
+    #[test]
+    fn r767000_the_kept_v0_6_6e_script_needs_tribute_1() {
+        crate::under_kept(ID, script_v0_6_6e(), || {
+            let mut s = tsunami(false);
+            s.play(ID, json!({ "tributes": [BODY] }));
+            s.expect_in_zone(ID, "field");
+            assert!(s.unit(P1, 2).is_some_and(|unit| unit.def_id == SECOND), "the second stays");
+        });
     }
 
     #[test]
@@ -129,7 +163,7 @@ mod tests {
     #[test]
     fn r2250000_r2250001_discards_the_hand_its_resources_paying_then_fills_it_with_resources() {
         let mut s = tsunami(false);
-        s.play(ID, json!({ "tributes": [BODY] }));
+        s.play(ID, json!({ "tributes": [BODY, SECOND] }));
         let graveyard = s.pile(P1, "graveyard");
         assert_eq!(graveyard.iter().filter(|card| card.def_id == FILLER).count(), 3);
         assert_eq!(graveyard.iter().filter(|card| card.def_id == REKNITE).count(), 2);
@@ -154,7 +188,7 @@ mod tests {
     #[test]
     fn radiant_radiant_resources() {
         let mut s = tsunami(true);
-        s.play(ID, json!({ "tributes": [BODY] }));
+        s.play(ID, json!({ "tributes": [BODY, SECOND] }));
         let hand = s.hand(P1);
         assert_eq!(hand.len(), HAND_CAP as usize);
         assert!(hand.iter().all(|card| card.radiant), "every Resource gained is Radiant");

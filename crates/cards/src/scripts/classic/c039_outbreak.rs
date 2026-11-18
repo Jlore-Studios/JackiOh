@@ -1,8 +1,8 @@
-//! C #39 Outbreak (SPEC §8.6 row 39). (1) Spell, Epic.
+//! C #39 Outbreak (SPEC §8.6 row 39). (3) Spell, Epic ((1) until issue #4154).
 //!   Base:    "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at
 //!            least its cost in Plague Counters, steal it. Otherwise, draw 1 per Plague Counter on it."
-//!            — 1 token
-//!   Radiant: the same text — 2 tokens
+//!            — 2 tokens (1 until issue #4154)
+//!   Radiant: the same text — 4 tokens (2 until issue #4154)
 //!
 //! The target is any permanent on either side, face-down ones included, declared with the play (R81); a face-down
 //! card its chooser may not read is offered by id alone and the placement never names it to them (R177).
@@ -127,7 +127,7 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MENACE: &str = "core-019"; // Midrange Menace
     const PAWN: &str = "core-096"; // My Pawn: a Trap, answers only a lethal attack
-    const UNLICENSED: &str = "classic-052"; // Final Gambit: Trap that answers nothing here (Unlicensed Experimentation, core-085 since issue #3136).
+    const GROOM: &str = "classicplus-002"; // Groom Shroom: a (3) Trap that answers nothing here
     const FILLER: &str = "core-005";
     const ANCHOR: &str = "core-010";
     const X: &str = "core-020";
@@ -168,8 +168,8 @@ mod tests {
         assert_eq!(crate::upgrade_number(&mut s, OUTBREAK, "drawPer"), 2);
         let targets = pick::card(&s, VANILLA);
         s.play(OUTBREAK, json!({ "targets": targets }));
-        assert_eq!(s.card(VANILLA).counters.plague, Some(2));
-        assert_eq!(drawn(&s), 4);
+        assert_eq!(s.card(VANILLA).counters.plague, Some(3));
+        assert_eq!(drawn(&s), 6);
     }
 
     #[test]
@@ -182,7 +182,7 @@ mod tests {
             crate::upgrade_number(&mut s, OUTBREAK, "drawPer");
             let targets = pick::card(&s, VANILLA);
             s.play(OUTBREAK, json!({ "targets": targets }));
-            assert_eq!(drawn(&s), 2, "the kept script draws its printed 1 a counter");
+            assert_eq!(drawn(&s), 3, "the kept script draws its printed 1 a counter");
         });
     }
 
@@ -193,7 +193,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn places_1_plague_counter_on_your_own_permanent_then_draws_one_card_per_token_on_it() {
+            fn places_2_plague_counters_on_your_own_permanent_then_draws_one_card_per_token_on_it() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 2 } }], "library": lib(5) },
                     "p2": { "hand": [ANCHOR] },
@@ -202,8 +202,8 @@ mod tests {
                 let targets = pick::card(&s, VANILLA);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
-                assert_eq!(s.card(VANILLA).counters.plague, Some(3));
-                assert_eq!(drawn(&s), 3);
+                assert_eq!(s.card(VANILLA).counters.plague, Some(4));
+                assert_eq!(drawn(&s), 4);
                 assert!(stolen_ids(&s).is_empty());
             }
 
@@ -217,7 +217,7 @@ mod tests {
                 let targets = pick::card(&s, VANILLA);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
-                assert_eq!(drawn(&s), 1);
+                assert_eq!(drawn(&s), 2);
                 assert_eq!(s.card(VANILLA).controller, P1);
             }
 
@@ -231,8 +231,8 @@ mod tests {
                 let targets = pick::card(&s, MENACE);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
-                assert_eq!(s.card(MENACE).counters.plague, Some(1));
-                assert_eq!(drawn(&s), 1);
+                assert_eq!(s.card(MENACE).counters.plague, Some(2));
+                assert_eq!(drawn(&s), 2);
                 assert!(stolen_ids(&s).is_empty());
             }
 
@@ -240,7 +240,7 @@ mod tests {
             fn r15_r171_an_enemy_permanent_reaching_its_cost_is_stolen_into_the_same_lane_an_entry_and_nothing_is_drawn() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(5) },
-                    "p2": { "hand": [ANCHOR], "field": [{ "def": MENACE, "lane": 2, "counters": { "plague": 2 } }] },
+                    "p2": { "hand": [ANCHOR], "field": [{ "def": MENACE, "lane": 2, "counters": { "plague": 1 } }] },
                 }));
                 let menace = s.card(MENACE).id.clone();
 
@@ -268,17 +268,17 @@ mod tests {
             }
 
             #[test]
-            fn c_27_a_pestilent_slime_doubles_the_placement_your_own_slime_takes_2_and_you_draw_2() {
+            fn c_27_a_pestilent_slime_doubles_the_placement_your_own_slime_takes_4_and_you_draw_4() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [OUTBREAK, ANCHOR], "field": [SLIME], "library": lib(3) },
+                    "p1": { "hand": [OUTBREAK, ANCHOR], "field": [SLIME], "library": lib(5) },
                     "p2": { "hand": [ANCHOR] },
                 }));
 
                 let targets = pick::card(&s, SLIME);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
-                assert_eq!(s.card(SLIME).counters.plague, Some(2));
-                assert_eq!(drawn(&s), 2);
+                assert_eq!(s.card(SLIME).counters.plague, Some(4));
+                assert_eq!(drawn(&s), 4);
             }
 
             #[test]
@@ -311,7 +311,7 @@ mod tests {
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(s.hand(P1).len(), 10);
-                assert_eq!(s.events().iter().filter(|event| matches!(event, GameEvent::Burned { .. })).count(), 1);
+                assert_eq!(s.events().iter().filter(|event| matches!(event, GameEvent::Burned { .. })).count(), 2);
             }
 
             #[test]
@@ -334,21 +334,21 @@ mod tests {
             fn r177_a_face_down_enemy_option_and_the_placement_on_it_never_name_it_to_you() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
-                    "p2": { "hand": [ANCHOR], "backrow": [{ "def": UNLICENSED, "faceUp": false }] },
+                    "p2": { "hand": [ANCHOR], "backrow": [{ "def": GROOM, "faceUp": false }] },
                 }));
-                let trap = s.card(UNLICENSED).id.clone();
+                let trap = s.card(GROOM).id.clone();
 
-                assert!(!serde_json::to_string(&s.view(P1)).expect("a view serializes").contains(UNLICENSED));
+                assert!(!serde_json::to_string(&s.view(P1)).expect("a view serializes").contains(GROOM));
                 s.play(OUTBREAK, json!({ "targets": [{ "pick": "instance", "instanceId": trap }] }));
 
                 assert!(stolen_ids(&s).is_empty());
-                assert_eq!(drawn(&s), 1);
-                assert_eq!(s.card(&trap).counters.plague, Some(1));
-                assert!(!serde_json::to_string(&s.view(P1)).expect("a view serializes").contains(UNLICENSED));
+                assert_eq!(drawn(&s), 2);
+                assert_eq!(s.card(&trap).counters.plague, Some(2));
+                assert!(!serde_json::to_string(&s.view(P1)).expect("a view serializes").contains(GROOM));
             }
 
             #[test]
-            fn r396_an_x_card_on_the_field_costs_the_x_it_was_played_for_a_buff_billy_played_for_3_is_not_stolen_by_1_token() {
+            fn r396_an_x_card_on_the_field_costs_the_x_it_was_played_for_a_buff_billy_played_for_3_is_not_stolen_by_2_tokens() {
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(4) },
@@ -361,14 +361,14 @@ mod tests {
                 let targets = pick::card(&s, BILLY);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
-                assert_eq!(s.card(BILLY).counters.plague, Some(1));
+                assert_eq!(s.card(BILLY).counters.plague, Some(2));
                 assert!(stolen_ids(&s).is_empty());
                 assert_eq!(s.card(BILLY).controller, P2);
-                assert_eq!(drawn_in(s.last_events()), 1);
+                assert_eq!(drawn_in(s.last_events()), 2);
             }
 
             #[test]
-            fn r396_c_87_a_plague_chalice_played_for_3_enters_with_3_plague_counters_so_1_more_reaches_its_x_and_steals_it() {
+            fn r396_c_87_a_plague_chalice_played_for_3_enters_with_3_plague_counters_so_2_more_pass_its_x_and_steal_it() {
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(4) },
@@ -380,7 +380,7 @@ mod tests {
                 let targets = pick::card(&s, CHALICE);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
-                assert_eq!(s.card(CHALICE).counters.plague, Some(4));
+                assert_eq!(s.card(CHALICE).counters.plague, Some(5));
                 assert_eq!(stolen_ids(&s), vec![s.card(CHALICE).id.clone()]);
                 assert_eq!(drawn_in(s.last_events()), 0);
             }
@@ -399,17 +399,17 @@ mod tests {
             }
 
             #[test]
-            fn r386_an_upgrade_places_2_an_enemy_2_cost_permanent_is_stolen() {
+            fn r386_an_upgrade_places_3_an_enemy_3_cost_permanent_is_stolen() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
-                    "p2": { "hand": [ANCHOR], "backrow": [{ "def": UNLICENSED, "faceUp": false }] },
+                    "p2": { "hand": [ANCHOR], "backrow": [{ "def": GROOM, "faceUp": false }] },
                 }));
                 step_param(s.card_mut(OUTBREAK), "tokens", 1);
-                let trap = s.card(UNLICENSED).id.clone();
+                let trap = s.card(GROOM).id.clone();
 
                 s.play(OUTBREAK, json!({ "targets": [{ "pick": "instance", "instanceId": trap }] }));
 
-                assert_eq!(s.card(&trap).counters.plague, Some(2));
+                assert_eq!(s.card(&trap).counters.plague, Some(3));
                 assert_eq!(stolen_ids(&s), vec![trap.clone()]);
             }
         }
@@ -418,24 +418,24 @@ mod tests {
             use super::*;
 
             #[test]
-            fn places_2_your_own_permanent_draws_2() {
+            fn places_4_your_own_permanent_draws_4() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "field": [VANILLA], "library": lib(3) },
+                    "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "field": [VANILLA], "library": lib(5) },
                     "p2": { "hand": [ANCHOR] },
                 }));
 
                 let targets = pick::card(&s, VANILLA);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
-                assert_eq!(s.card(VANILLA).counters.plague, Some(2));
-                assert_eq!(drawn(&s), 2);
+                assert_eq!(s.card(VANILLA).counters.plague, Some(4));
+                assert_eq!(drawn(&s), 4);
             }
 
             #[test]
-            fn places_2_an_enemy_3_cost_permanent_with_1_already_reaches_3_and_is_stolen() {
+            fn places_4_an_enemy_3_cost_permanent_passes_3_and_is_stolen() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "library": lib(3) },
-                    "p2": { "hand": [ANCHOR], "field": [{ "def": MENACE, "counters": { "plague": 1 } }] },
+                    "p2": { "hand": [ANCHOR], "field": [MENACE] },
                 }));
 
                 let targets = pick::card(&s, MENACE);
@@ -446,30 +446,30 @@ mod tests {
             }
 
             #[test]
-            fn r396_a_buff_billy_played_for_3_is_not_stolen_by_2_tokens_it_draws_2() {
+            fn r396_a_buff_billy_played_for_5_is_not_stolen_by_4_tokens_it_draws_4() {
                 let mut s = scenario(json!({
                     "active": "p2",
-                    "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "library": lib(4) },
-                    "p2": { "hand": [BILLY, ANCHOR], "library": lib(2) },
+                    "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "library": lib(6) },
+                    "p2": { "hand": [BILLY, ANCHOR], "library": lib(2), "mana": 10 },
                 }));
-                s.play(BILLY, json!({ "x": 3 }));
+                s.play(BILLY, json!({ "x": 5 }));
                 s.end_turn();
 
                 let targets = pick::card(&s, BILLY);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert!(stolen_ids(&s).is_empty());
-                assert_eq!(drawn_in(s.last_events()), 2);
+                assert_eq!(drawn_in(s.last_events()), 4);
             }
 
             #[test]
-            fn r386_an_upgrade_places_3_a_buff_billy_played_for_3_reaches_its_x_and_is_stolen() {
+            fn r386_an_upgrade_places_5_a_buff_billy_played_for_5_reaches_its_x_and_is_stolen() {
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "library": lib(4) },
-                    "p2": { "hand": [BILLY, ANCHOR], "library": lib(2) },
+                    "p2": { "hand": [BILLY, ANCHOR], "library": lib(2), "mana": 10 },
                 }));
-                s.play(BILLY, json!({ "x": 3 }));
+                s.play(BILLY, json!({ "x": 5 }));
                 s.end_turn();
                 step_param(s.card_mut(OUTBREAK), "tokens", 1);
 

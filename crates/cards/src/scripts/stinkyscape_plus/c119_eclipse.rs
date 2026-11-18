@@ -1,24 +1,24 @@
 //! SPEC §8.12 S+ #119 Eclipse, a card of the Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
-//! 7/15  
+//! 9/17 (7/15 until issue #4154)  
 //! **Tribute 3**  
 //! **Flying**  
 //! **Ranged**  
 //! **Pierce**  
-//! Dealing damage **Burns 5**  
+//! Dealing damage **Burns 7** (5 until issue #4154)  
 //! **Can’t Defend**  
 //! **Crater**  
 //! **Armor 3**  
 //! \~\~\~  
-//! 14/30  
+//! 18/34 (14/30 until issue #4154)  
 //! **Tribute 3**  
 //! **Flying**  
 //! **Ranged**  
 //! **Pierce**  
 //! **Rush**  
-//! Dealing damage **Burns 10**  
+//! Dealing damage **Burns 14** (10 until issue #4154)  
 //! **Can’t Defend**  
 //! **Crater**  
-//! **Armor 3**
+//! **Armor 6** (3 until issue #4154)
 //!
 //! Tribute 3 is the script's `tribute` (R101, R366). "Dealing damage Burns N" is read as the same rider
 //! (R3540002), N declared as `burns` (R386); Crater Locks its zone on arrival (R783010).
@@ -32,8 +32,11 @@ const TRIBUTE: i32 = 3;
 
 /// The printed Burns of each face, which the catalog declares as `burns` (R386); the engine reads the flag
 /// through `declared_or`, which moves it only by what a tune moved the declared number.
-const BASE_BURNS: i32 = 5;
-const RADIANT_BURNS: i32 = 10;
+const BASE_BURNS: i32 = 7;
+const RADIANT_BURNS: i32 = 14;
+/// Burns 5 (Radiant 10), through v0.6.6e (issue #4154).
+const BASE_BURNS_V0_6_6E: i32 = 5;
+const RADIANT_BURNS_V0_6_6E: i32 = 10;
 
 /// R3540002: "Damage also Burns N" as the `burnsOnDamage` flag.
 fn rides(burns: i32) -> Script {
@@ -54,6 +57,15 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: Burns 5 (Radiant 10) through v0.6.6e (issue #4154): the flag's printed number, which the
+/// declared `burns` only moves by a tune, so the replays of those versions fold under it (`KEPT_SCRIPTS`).
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: rides(BASE_BURNS_V0_6_6E),
+        radiant: rides(RADIANT_BURNS_V0_6_6E),
+    }
+}
+
 // S+ #119 Eclipse — SPEC §8.12 row 119.
 #[cfg(test)]
 mod tests {
@@ -65,8 +77,8 @@ mod tests {
     const FODDER: &str = "stand-in (0) 1/1";
     const WALL: &str = "stand-in (0) 40/60"; // strikes back for 40: only Ranged saves an attacker
     const ARMORED: &str = "stand-in (0) 40/60 Armor 5";
-    const ATTACK: [i32; 2] = [7, 14];
-    const HEALTH: [i32; 2] = [15, 30];
+    const ATTACK: [i32; 2] = [9, 18];
+    const HEALTH: [i32; 2] = [17, 34];
 
     /// The card on p1's field, p1 to move.
     fn on_field(radiant: bool, enemies: Value) -> Scenario {
@@ -130,7 +142,7 @@ mod tests {
     #[test]
     fn armor_is_printed() {
         assert_eq!(on_field(false, json!([])).stats(ID).armor, 3);
-        assert_eq!(on_field(true, json!([])).stats(ID).armor, 3);
+        assert_eq!(on_field(true, json!([])).stats(ID).armor, 6);
     }
 
     #[test]

@@ -4,20 +4,21 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::afflictions::Affliction;
+use jackioh_engine::effects::PLAGUE_PLACEMENT_HOOK;
 use jackioh_engine::{
     ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, FengShuiOutcome, GameState, KeywordKind,
     PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
     attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, converts_to,
-    damage_pool_of, effective_cost, effective_life, find_instance, find_instance_mut, has_keyword, is_locked,
-    lane_multiplier_for, legal_actions, midlane_lanes_of, pierces, position_after_switch, row_size, slot_of,
-    subsystems, takes_strike_back, unit_damage_cap, unit_view,
+    damage_pool_of, effective_cost, effective_life, find_instance, find_instance_mut, flags_of, has_keyword,
+    is_locked, lane_multiplier_for, legal_actions, midlane_lanes_of, pierces, position_after_switch,
+    row_size, slot_of, subsystems, takes_strike_back, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
 use crate::config::{AI_EVAL, AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
 use crate::evaluate::{
-    Prices, afflicted_before_swing, can_swing, crumbles_before_swing, deft_in_defense,
-    exiles_what_it_damages, face_threat, feng_shui_acts, feng_shui_verdict,
+    Prices, afflicted_before_swing, can_swing, crumbles_before_swing, dead_in_hand, deft_in_defense,
+    exiles_what_it_damages, face_threat, feng_shui_acts, feng_shui_verdict, plague_bomb_on_field,
 };
 use crate::lethal::ready_gap;
 use crate::reply::{face_value, trade_value};
@@ -468,6 +469,8 @@ fn source_cost(state: &GameState, action: &ActionBody) -> i32 {
 /// a play it rewards first, one it punishes last, and every other source between.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Auspice {
+    /// R4154403: the seat's own acting Feng Shui's Activate, a free Auspicious Rock, before every play.
+    Judge,
     Rewarded,
     Plain,
     Punished,
@@ -477,6 +480,9 @@ enum Auspice {
 /// its card would get now (`feng_shui_verdict`), an Activate or a power, which no Feng Shui judges, plain.
 /// Plain for every source with none acting, so the move order is unchanged without one.
 fn auspice(state: &GameState, seat: PlayerId, action: &ActionBody, judging: bool) -> Auspice {
+    if judging && judges_own_rock(state, seat, action) {
+        return Auspice::Judge;
+    }
     let ActionBody::Play { instance_id, .. } = action else {
         return Auspice::Plain;
     };
@@ -488,6 +494,18 @@ fn auspice(state: &GameState, seat: PlayerId, action: &ActionBody, judging: bool
         Some((FengShuiOutcome::Negative, _)) => Auspice::Punished,
         None => Auspice::Plain,
     }
+}
+
+/// R4154403: whether `action` is an Activate of a Feng Shui of `seat`'s own (a card whose running face holds
+/// the `feng_shui` flag, Meditative #40), whose every ability is free and adds an Auspicious Rock (M #39.1)
+/// to the hand: tried before the plays, the Rock in hand is a card whose element the next play can chain on
+/// (R981), and a level's `branching` cut never drops the turn's free card.
+fn judges_own_rock(state: &GameState, seat: PlayerId, action: &ActionBody) -> bool {
+    let ActionBody::Activate { instance_id, .. } = action else {
+        return false;
+    };
+    find_instance(state, instance_id)
+        .is_some_and(|card| card.controller == seat && flags_of(state, card).feng_shui == Some(true))
 }
 
 /// One source instance's variants (legal_actions order, then dealt by `enemy_first`), its cost and its
@@ -929,9 +947,10 @@ pub fn root_candidate_actions(state: &GameState, seat: PlayerId, prices: &Prices
 }
 
 /// The candidates `actions` in move order: hero attacks, winning trades and even trades (each attacker's
-/// best, #1779) ranked together by the opponent model's values, best first (#2825); then plays
-/// round-robin, answers, Trades of Tradable hand cards (R1838000), buys and sales at the Marketplace
-/// (R1853004), other attacks, position switches, endTurn.
+/// best, #1779) ranked together by the opponent model's values, best first (#2825); then the Trades of dead
+/// Tradable cards (R4154400), plays round-robin, answers (a Plague Counter's placement under a Living Bomb
+/// aimed at the enemy first, R4154402), the other Trades of Tradable hand cards (R1838000), buys and sales at
+/// the Marketplace (R1853004), other attacks, position switches, endTurn.
 fn in_move_order(
     state: &GameState,
     seat: PlayerId,
@@ -945,6 +964,8 @@ fn in_move_order(
     // R1838000: a hand card into the deck for a draw. The search tries it on its determinized worlds,
     // whose libraries are resampled (R185), so the card it would draw never steers it.
     let mut hand_trades: Vec<ActionBody> = Vec::new();
+    // R4154400: the Trades of dead Tradable cards (`dead_in_hand`), before the plays.
+    let mut dead_trades: Vec<ActionBody> = Vec::new();
     // R1853004: a buy or a sale at the Marketplace, for Credits and no mana. A purchase of the opponent's
     // is hidden from the seat (`observe::redact`), so it never steers the decision.
     let mut market_deals: Vec<ActionBody> = Vec::new();
@@ -973,6 +994,10 @@ fn in_move_order(
                 plays.push(action)
             }
             ActionBody::Answer { .. } => answers.push(action),
+            // R4154400: a Trade of a dead card first, ahead of the plays, so a line can play what it draws.
+            ActionBody::Trade { instance_id } if trades_dead_card(state, seat, instance_id) => {
+                dead_trades.push(action)
+            }
             ActionBody::Trade { .. } => hand_trades.push(action),
             ActionBody::MarketBuy { .. } | ActionBody::MarketSell { .. } => market_deals.push(action),
             ActionBody::EndTurn => ends.push(action),
@@ -1016,14 +1041,61 @@ fn in_move_order(
 
     let mut out: Vec<ActionBody> = Vec::new();
     out.extend(front.into_iter().map(|(action, _)| action));
+    out.extend(dead_trades);
     out.extend(round_robin(state, seat, &plays));
-    out.extend(answers);
+    out.extend(plague_aims_first(state, seat, answers));
     out.extend(hand_trades);
     out.extend(market_deals);
     out.extend(other_attacks.into_iter().map(|(_, (action, _))| action));
     out.extend(switches);
     out.extend(ends);
     out
+}
+
+/// R4154400: whether the hand card `instance_id` a Trade would put back is a dead Tradable card of `seat`'s
+/// (`dead_in_hand`), and the evaluation reads one (`dead_tradable_discount`).
+fn trades_dead_card(state: &GameState, seat: PlayerId, instance_id: &str) -> bool {
+    AI_EVAL.dead_tradable_discount != 0.0
+        && state.players[seat]
+            .hand
+            .iter()
+            .find(|card| card.id == instance_id)
+            .is_some_and(|card| dead_in_hand(state, seat, card))
+}
+
+/// R4154402: whether `answerer`'s open prompt places Plague Counters (`PLAGUE_PLACEMENT_HOOK`) while a Living
+/// Bomb lies on the field (`plague_bomb_on_field`), where a counter is a destroy waiting (`plague_doomed`).
+pub(crate) fn plague_placement_open(state: &GameState, answerer: PlayerId) -> bool {
+    state
+        .pending
+        .as_ref()
+        .is_some_and(|pending| pending.player_id == answerer && pending.resume.hook == PLAGUE_PLACEMENT_HOOK)
+        && plague_bomb_on_field(state)
+}
+
+/// R4154402: `answers`, the answers of `answerer`'s open prompt, those aimed at a permanent the answerer's
+/// enemy controls first, each group in its own order, while that prompt places a Plague Counter under a
+/// Living Bomb (`plague_placement_open`), so a level's `branching` cut keeps the enemy's permanents; the
+/// answers as they came otherwise. A face-down permanent is named by its id alone (R177), its controller
+/// public.
+pub(crate) fn plague_aims_first(
+    state: &GameState,
+    answerer: PlayerId,
+    answers: Vec<ActionBody>,
+) -> Vec<ActionBody> {
+    if !plague_placement_open(state, answerer) {
+        return answers;
+    }
+    let (enemy, own): (Vec<ActionBody>, Vec<ActionBody>) = answers.into_iter().partition(|answer| {
+        let ActionBody::Answer { selection, .. } = answer else {
+            return false;
+        };
+        selection.iter().any(|picked| {
+            matches!(picked, Selection::Instance { instance_id }
+                if find_instance(state, instance_id).is_some_and(|card| card.controller != answerer))
+        })
+    });
+    enemy.into_iter().chain(own).collect()
 }
 
 /// #1759: whether `action` switches a unit in Attack Position to Defense, a stand-down, when a unit of the

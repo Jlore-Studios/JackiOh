@@ -71,18 +71,18 @@ use crate::scripts::stinkyscape::{
     c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
     c046_circadian_halfcycler, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
     c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
-    c061_flak_v5, c074_paragon_x, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack,
-    c111_shockwave447, c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system,
-    c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck,
-    c154_dice_of_doom, c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid,
-    c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette,
-    t_drone_interceptor, t_narcor, t_red_narcor,
+    c061_flak_v5, c074_paragon_x, c083_halo, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami,
+    c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi, c116_megabase,
+    c119_unsecure_system, c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher,
+    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c163_swear_loyalities, c168_drone_hanger,
+    c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
+    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
     c037_scorch, c046_phase_fabric, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
     c067_phase_wall, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
-    c104_tireless_cultivation, c145_fire_beam_v5, c155_the_far_vagabond,
+    c097_selective_enrollment, c104_tireless_cultivation, c145_fire_beam_v5, c155_the_far_vagabond,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -948,6 +948,18 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4154 lead: the scripts before Stinkyscape+ Balance Changes III.
     // #4154 group A
+    (c059_repeater_v5::ID, "v0.6.6e", c059_repeater_v5::script_v0_6_6e),
+    (
+        c097_selective_enrollment::ID,
+        "v0.6.6e",
+        c097_selective_enrollment::script_v0_6_6e,
+    ),
+    (
+        c021_jlockeed_shredder_12::ID,
+        "v0.6.6e",
+        c021_jlockeed_shredder_12::script_v0_6_6e,
+    ),
+    (c047_taotie::ID, "v0.6.6e", c047_taotie::script_v0_6_6e),
     // #4154 group B
     // #4154 group C
 ];

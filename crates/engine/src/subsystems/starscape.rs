@@ -5,8 +5,10 @@
 //! travel (D14), shared by every card's travel and kept when the card leaves. It is charted once from
 //! the match rng and stored, so a simulation or a replay of a later travel sees the same map. A travel
 //! (R1847001) takes one node's reward, at the edge the card the ability names (a full hand burns it,
-//! §2.4); nothing travels past the edge. On the Radiant face the first travel each turn is free
-//! (R1847002), as two abilities `has` switches between (R752), so the card has one at a time.
+//! §2.4); nothing travels past the edge. A card may make its controller's first travels each turn free
+//! (R1847002: one on the Radiant face through v0.6.6e; since issue #4154 one on the base face and two on
+//! the Radiant face, R4154203), as two abilities `has` switches between (R752), so the card has one at a
+//! time.
 
 use crate::config::{STARSCAPE_EDGE_TRAVELS, STARSCAPE_REWARDS, STARSCAPE_TRAVEL_MANA};
 use crate::effects::travel_starscape;
@@ -16,6 +18,7 @@ use crate::script::{
     read_hook,
 };
 use crate::state::GameState;
+use crate::subsystems::activate::ability_uses_this_turn;
 use crate::wire::{PlayerId, StarscapeNodeView, StarscapeReward, StarscapeView};
 
 /// R1847002: the paid travel's ability id, the base face's only one.
@@ -80,14 +83,49 @@ fn travel_ability(
     }
 }
 
+/// R4154203: how many times the cards acting on `player`'s field have used a travel ability this turn,
+/// each card's own count of its uses (R1751000), free and paid alike.
+pub fn starscape_activations_this_turn(state: &GameState, player: PlayerId) -> i32 {
+    crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane)
+        .into_iter()
+        .map(|card| {
+            ability_uses_this_turn(state, card, STARSCAPE_FREE_TRAVEL_ABILITY)
+                + ability_uses_this_turn(state, card, STARSCAPE_TRAVEL_ABILITY)
+        })
+        .sum()
+}
+
+/// R1847002, R4154203: whether `player`'s next travel is free while their first `free` travels each turn
+/// are: before their first travel this turn, and after it while the travels their travel abilities made
+/// this turn number at least one and fewer than `free`. A travel no ability made (Meditative+ #1.5 Star
+/// Chart's) spends the first free travel when it is the turn's first, and counts toward no later one.
+pub fn starscape_travel_free(state: &GameState, player: PlayerId, free: i32) -> bool {
+    if free <= 0 {
+        return false;
+    }
+    if !starscape_traveled_this_turn(state, player) {
+        return true;
+    }
+    let made = starscape_activations_this_turn(state, player);
+    made >= 1 && made < free
+}
+
 /// R1847002: the abilities a card declares to travel its controller's map, the edge giving
 /// `edge_def_id`: the paid travel, and on the Radiant face a free one before this turn's first travel.
+/// The scripts through v0.6.6e (`starscape_abilities_free` since issue #4154).
 pub fn starscape_abilities(radiant: bool, edge_def_id: &'static str) -> Vec<ActivationDecl> {
+    starscape_abilities_free(i32::from(radiant), edge_def_id)
+}
+
+/// R1847002, R4154203: the abilities a card declares to travel its controller's map, the edge giving
+/// `edge_def_id`: the paid travel, and, when its controller's first `free` travels each turn are free
+/// (`starscape_travel_free`), a free one in its place while the next travel is.
+pub fn starscape_abilities_free(free: i32, edge_def_id: &'static str) -> Vec<ActivationDecl> {
     let paid = Some(ActivationCost {
         mana: Some(STARSCAPE_TRAVEL_MANA),
         ..ActivationCost::default()
     });
-    if !radiant {
+    if free <= 0 {
         return vec![travel_ability(
             STARSCAPE_TRAVEL_ABILITY,
             "Travel one node",
@@ -101,8 +139,8 @@ pub fn starscape_abilities(radiant: bool, edge_def_id: &'static str) -> Vec<Acti
             STARSCAPE_FREE_TRAVEL_ABILITY,
             "Travel one node (free)",
             None,
-            Some(read_hook(|a| {
-                !starscape_traveled_this_turn(a.state, a.self_.controller)
+            Some(read_hook(move |a| {
+                starscape_travel_free(a.state, a.self_.controller, free)
             })),
             edge_def_id,
         ),
@@ -110,8 +148,8 @@ pub fn starscape_abilities(radiant: bool, edge_def_id: &'static str) -> Vec<Acti
             STARSCAPE_TRAVEL_ABILITY,
             "Travel one node",
             paid,
-            Some(read_hook(|a| {
-                starscape_traveled_this_turn(a.state, a.self_.controller)
+            Some(read_hook(move |a| {
+                !starscape_travel_free(a.state, a.self_.controller, free)
             })),
             edge_def_id,
         ),
