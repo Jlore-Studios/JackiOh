@@ -15339,6 +15339,13 @@
     "4169": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T05:52:05Z",
+        "difficulty": "hard",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "Rule 4 applies: adds a database migration in crates/server/migrations/"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
