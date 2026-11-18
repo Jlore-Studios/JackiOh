@@ -14115,6 +14115,13 @@
     "4145": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T02:24:28Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: one tools-crate file plus a ruling note, no engine rules, AI, cross-crate design, migration, or 40-file spread"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
