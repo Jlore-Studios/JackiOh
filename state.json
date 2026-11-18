@@ -16893,7 +16893,7 @@
       "started_at": "2026-11-18T14:46:07Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "4204": {
       "action": "review",
