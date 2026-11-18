@@ -131,7 +131,7 @@ mod tests {
         fn s6_3_replace_each_copy_keeps_the_old_card_s_owner_and_controller() {
             crate::register_all();
             let mut s = setup(
-                json!({ "hand": [MIND_CONTROL, { "def": JUHAN }], "mana": 8 }),
+                json!({ "hand": [MIND_CONTROL, { "def": JUHAN }], "mana": 9 }),
                 false,
                 json!({ "field": [VANILLA] }),
             );

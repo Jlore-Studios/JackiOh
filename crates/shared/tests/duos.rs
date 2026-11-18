@@ -1141,6 +1141,54 @@ mod the_checkpoint {
         );
         assert_eq!(resumed, table.host);
     }
+
+    /// #4169: a co-op actor's checkpoint is keyed by the nonce of the log's newest row: the last of the
+    /// rows it was made with, then each row it logs; a refused action logs none and moves it not.
+    #[test]
+    fn the_newest_logged_rows_nonce_keys_the_checkpoint() {
+        use jackioh_shared::host::duos::DuosAck;
+
+        let resumed = DuosHost::new(
+            DuosSetup {
+                next_seq: 3,
+                acked: vec![
+                    DuosAck {
+                        nonce: "n-1".to_string(),
+                        seat: A1,
+                        seq: 1,
+                    },
+                    DuosAck {
+                        nonce: "n-2".to_string(),
+                        seat: DuosSeat::B1,
+                        seq: 2,
+                    },
+                ],
+                ..setup(opening("duos-save-2"))
+            },
+            EPOCH,
+        )
+        .0;
+        assert_eq!(resumed.last_nonce(), Some("n-2"));
+
+        let mut table = Table::new(setup(opening("duos-save-3")));
+        assert_eq!(table.host.last_nonce(), None);
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        let keep =
+            jackioh_shared::host::duos::keep_whole_hand(&table.host.legal(A1)).expect("a mulligan is legal");
+        assert!(matches!(table.act(A1, "keep-a1", keep), ActionAnswer::Ack { .. }));
+        assert_eq!(table.host.last_nonce(), Some("keep-a1"));
+        let early = table.act(
+            A2,
+            "early",
+            DuosActionBody::Duel {
+                body: ActionBody::EndTurn,
+            },
+        );
+        assert!(matches!(early, ActionAnswer::Illegal { .. }), "{early:?}");
+        assert_eq!(table.host.last_nonce(), Some("keep-a1"));
+    }
 }
 
 mod stop {

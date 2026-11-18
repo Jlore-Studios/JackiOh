@@ -53,6 +53,8 @@ pub const NERF: &str = "bt-nerf";
 pub const TOXICANT: &str = "bt-toxicant";
 /// A (0) Spell: "Burn and Toxic every enemy Unit and the enemy hero 3."
 pub const SCOURGE: &str = "bt-scourge";
+/// A (0) 2/20 Unit: "Immune to Toxic." (R4154001)
+pub const IMMUNE: &str = "bt-immune";
 
 fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
     let (base, radiant) = match stats {
@@ -146,6 +148,13 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
             }),
         ),
         (
+            IMMUNE,
+            flagged(StaticFlags {
+                immune_to_toxic: Some(true),
+                ..StaticFlags::default()
+            }),
+        ),
+        (
             BURNER,
             aimed(|| {
                 vec![effects::burn(json_as(
@@ -234,6 +243,7 @@ pub fn defs() -> Vec<CardDef> {
         card(35414, NERF, "Spell", None, json!([])),
         card(35415, TOXICANT, "Spell", None, json!([])),
         card(35416, SCOURGE, "Spell", None, json!([])),
+        card(35417, IMMUNE, "Unit", Some((2, 20)), json!([])),
     ]
 }
 

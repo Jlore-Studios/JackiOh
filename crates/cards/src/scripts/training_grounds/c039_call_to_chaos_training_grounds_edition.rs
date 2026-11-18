@@ -1,19 +1,22 @@
 //! SPEC §8.11 Training Grounds 39 Call to Chaos (Training-Grounds Edition) (R28, R87, R423, R436,
 //! R2200000–R2200004, R3135000), a card of the Training Grounds set (R1420, R2194000), which ships since
 //! its release (#2204). (4) Spell, Call to Chaos, Legendary.
-//!   Base:    "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand
+//!   Base:    "One random effect: Summon 2 Rush Tokens, then give your Units on the field, in your hand
 //!            and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and
-//!            replenish 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain
-//!            2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2
+//!            replenish 2 mana; add 3 random Training Grounds cards to your hand, which cost (1), and gain
+//!            2 mana; gain 5 mana and draw 2 cards; summon 4 random Training Grounds permanents; add 2
 //!            random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon
-//!            3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon
+//!            2 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon
 //!            a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add
 //!            a random Call to Chaos to your hand; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
 //! Through v0.5.11r the replenish was 4, the cards cost (0) with no mana, the mana 8, the permanents 6, the
 //! army 5 tokens, and entry 9 added a Call at (0) at once and at the start of every second turn; the
-//! numbers are the engine's (`config.rs`), so this file keeps no old script (R3135000, R767000).
+//! numbers are the engine's (`config.rs`), so this file keeps no old script (R3135000, R767000). Issue #4154
+//! cut entries 1, 2, 3, 4, 5 and 7 a step each (R4154304); through v0.6.6h the fortify and the army summoned 3
+//! Rush Tokens, the designs replenished 3, the cards were 4, the mana 6 and the permanents 5, which
+//! `script_v0_6_6h` keeps by rolling the engine's v0.6.6h table (`CHAOS_TG_EFFECTS_V0_6_6H`, R767000).
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_TG_EFFECTS`,
 //! `subsystems/call_to_chaos_training_grounds.rs`): the roll, the announcement both players read (R436),
@@ -24,30 +27,31 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-039";
 
+/// The card rolling `table`: §8.11's "One random effect" of the ten on the base face; on the Radiant face
+/// (R423) three different random effects of the ten, resolved in the order the list writes them.
+fn rolling(table: &'static [subsystems::ChaosEffectDef]) -> CardScripts {
+    let face = |radiant: bool| Script {
+        cry: Some(hook(move |_ctx| {
+            vec![subsystems::call_to_chaos(subsystems::CallToChaosArgs {
+                radiant: Some(radiant),
+                table: Some(table),
+            })]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        base: face(false),
+        radiant: face(true),
+    }
+}
+
 pub fn script() -> CardScripts {
-    // §8.11: "One random effect" of the ten.
-    let base = Script {
-        cry: Some(hook(|_ctx| {
-            vec![subsystems::call_to_chaos(subsystems::CallToChaosArgs {
-                radiant: Some(false),
-                table: Some(subsystems::CHAOS_TG_EFFECTS),
-            })]
-        })),
-        ..Script::default()
-    };
+    rolling(subsystems::CHAOS_TG_EFFECTS)
+}
 
-    // §8.11, R423: three different random effects of the ten, resolved in the order the list writes them.
-    let radiant = Script {
-        cry: Some(hook(|_ctx| {
-            vec![subsystems::call_to_chaos(subsystems::CallToChaosArgs {
-                radiant: Some(true),
-                table: Some(subsystems::CHAOS_TG_EFFECTS),
-            })]
-        })),
-        ..Script::default()
-    };
-
-    CardScripts { base, radiant }
+/// R767000, R4154304: what it rolled through v0.6.6h, before issue #4154 cut six of its entries.
+pub fn script_v0_6_6h() -> CardScripts {
+    rolling(subsystems::CHAOS_TG_EFFECTS_V0_6_6H)
 }
 
 // TG #39 Call to Chaos (Training-Grounds Edition) — SPEC §8.11 row 39, BUILD M13 row TG 39.
@@ -198,8 +202,40 @@ mod tests {
     }
 
     #[test]
-    fn r3135000_each_changed_entry_names_its_new_number_and_the_unchanged_ones_keep_theirs() {
+    fn r3135000_r4154304_each_changed_entry_names_its_new_number_and_the_unchanged_ones_keep_theirs() {
         let labels: Vec<&str> = subsystems::CHAOS_TG_EFFECTS.iter().map(|entry| entry.label).collect();
+        assert_eq!(
+            labels,
+            vec![
+                "Summon 2 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield",
+                "Fill your hand with Goetzmann Game Designs and replenish 2 mana",
+                "Add 3 random Training Grounds cards to your hand, which cost (1), and gain 2 mana",
+                "Gain 5 mana and draw 2 cards",
+                "Summon 4 random Training Grounds permanents",
+                "Add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana",
+                "Summon 2 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce",
+                "Summon a Training-Grounds Golem",
+                "At the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand",
+                "Cast a random Call to Chaos",
+            ]
+        );
+        assert_eq!(
+            (CHAOS_TG_RUSH_TOKENS, CHAOS_TG_REFRESH, CHAOS_TG_CARDS, CHAOS_TG_MANA, CHAOS_TG_PERMANENTS, CHAOS_TG_ARMY_TOKENS),
+            (2, 2, 3, 5, 4, 2)
+        );
+        // The printed text carries the same words, base and Radiant.
+        crate::register_all();
+        let def = crate::card_def(ID);
+        for text in [&def.base.text, &def.radiant.text] {
+            assert!(!text.contains("(0)") && !text.contains("second turn") && !text.contains("now and"), "{text}");
+        }
+    }
+
+    /// R767000, R4154304: the script kept for v0.6.6h rolls the table it had then, the six entries issue #4154
+    /// cut at their old numbers and the other four as today, under the same names in the same order.
+    #[test]
+    fn r767000_r4154304_the_script_kept_for_v0_6_6h_rolls_the_v0_6_6h_table() {
+        let labels: Vec<&str> = subsystems::CHAOS_TG_EFFECTS_V0_6_6H.iter().map(|entry| entry.label).collect();
         assert_eq!(
             labels,
             vec![
@@ -215,12 +251,29 @@ mod tests {
                 "Cast a random Call to Chaos",
             ]
         );
-        // The printed text carries the same words, base and Radiant.
-        crate::register_all();
-        let def = crate::card_def(ID);
-        for text in [&def.base.text, &def.radiant.text] {
-            assert!(!text.contains("(0)") && !text.contains("second turn") && !text.contains("now and"), "{text}");
-        }
+        let names = |table: &[subsystems::ChaosEffectDef]| -> Vec<&'static str> {
+            table.iter().map(|entry| entry.name).collect()
+        };
+        assert_eq!(names(subsystems::CHAOS_TG_EFFECTS_V0_6_6H), names(subsystems::CHAOS_TG_EFFECTS));
+        assert_eq!(
+            (
+                CHAOS_TG_RUSH_TOKENS_V0_6_6H,
+                CHAOS_TG_REFRESH_V0_6_6H,
+                CHAOS_TG_CARDS_V0_6_6H,
+                CHAOS_TG_MANA_V0_6_6H,
+                CHAOS_TG_PERMANENTS_V0_6_6H,
+                CHAOS_TG_ARMY_TOKENS_V0_6_6H
+            ),
+            (3, 3, 4, 6, 5, 3)
+        );
+        crate::under_kept(ID, script_v0_6_6h(), || {
+            let s = chaos("mana", side(false, json!([])), json!({ "hand": [VANILLA] }));
+            assert_eq!(s.state().players.p1.mana.current, 10 - CALL_PRICE + CHAOS_TG_MANA_V0_6_6H);
+            let s = chaos("army", side(false, json!([])), json!({ "hand": [VANILLA] }));
+            for lane in 1..=CHAOS_TG_ARMY_TOKENS_V0_6_6H {
+                assert_eq!(s.unit(P1, lane).map(|unit| unit.def_id), Some(RUSH_TOKEN.to_string()));
+            }
+        });
     }
 
     #[test]
@@ -282,8 +335,8 @@ mod tests {
             units.extend(s.state().players.p1.library.iter().cloned());
             let units: Vec<CardInstance> =
                 units.into_iter().filter(|card| crate::card_def(&card.def_id).type_ == CardType::Unit).collect();
-            // 3 tokens and the Vanilla on the field, the spare in hand, two in the deck.
-            assert_eq!(units.len(), 7);
+            // 2 tokens and the Vanilla on the field, the spare in hand, two in the deck.
+            assert_eq!(units.len(), 6);
             for card in &units {
                 assert!(has(&s, card, KeywordKind::Taunt), "{} Taunt", card.def_id);
                 assert!(has(&s, card, KeywordKind::DivineShield), "{} Divine Shield", card.def_id);
@@ -293,7 +346,7 @@ mod tests {
         }
 
         #[test]
-        fn r2200001_r3135000_entry_designs_fills_the_hand_then_replenishes_up_to_three() {
+        fn r2200001_r4154304_entry_designs_fills_the_hand_then_replenishes_up_to_two() {
             let mut p1 = side(false, json!([]));
             p1["mana"] = json!(CALL_PRICE);
             let s = chaos("designs", p1, json!({ "hand": [VANILLA] }));
@@ -301,10 +354,10 @@ mod tests {
             let hand = s.hand(P1);
             assert_eq!(hand.len() as i32, cap);
             assert_eq!(hand.iter().filter(|card| card.def_id == DESIGN).count() as i32, cap - 1);
-            // All of it spent on this card, then Replenish 3 gives back up to 3, never past max.
+            // All of it spent on this card, then Replenish 2 gives back up to 2, never past max.
             let mana = &s.state().players.p1.mana;
-            assert_eq!(CHAOS_TG_REFRESH, 3);
-            assert_eq!(mana.current, 3.min(mana.max));
+            assert_eq!(CHAOS_TG_REFRESH, 2);
+            assert_eq!(mana.current, 2.min(mana.max));
         }
 
         #[test]
@@ -317,12 +370,12 @@ mod tests {
         }
 
         #[test]
-        fn r2200000_r3135000_entry_cards_adds_four_training_grounds_cards_at_one_never_this_and_gains_two_mana() {
-            assert_eq!((CHAOS_TG_CARDS, CHAOS_TG_CARD_COST, CHAOS_TG_CARDS_MANA), (4, CARD_PRICE, 2));
+        fn r2200000_r4154304_entry_cards_adds_three_training_grounds_cards_at_one_never_this_and_gains_two_mana() {
+            assert_eq!((CHAOS_TG_CARDS, CHAOS_TG_CARD_COST, CHAOS_TG_CARDS_MANA), (3, CARD_PRICE, 2));
             for n in 0..GAMES {
                 let s = chaos_seeded(&format!("{SEED}-cards-{n}"), "cards");
                 let added = added_to(&s, P1);
-                assert_eq!(added.len(), 4);
+                assert_eq!(added.len(), 3);
                 for card in &added {
                     assert!(is_tg_card(&card.def_id), "{}", card.def_id);
                     assert!(!card.radiant);
@@ -346,30 +399,30 @@ mod tests {
                 }
                 let s = chaos(entry, p1, json!({ "hand": [VANILLA] }));
                 // The Call left the hand and nine cards remain: one room, so only one card was added.
-                assert!(added_to(&s, P1).len() < 4, "{entry}: the full hand burned some");
+                assert!(added_to(&s, P1).len() < 2, "{entry}: the full hand burned some");
                 assert_eq!(s.state().players.p1.mana.current, 10 - CALL_PRICE + gained, "{entry}");
             }
         }
 
         #[test]
-        fn r3135000_entry_mana_gains_six_past_max_and_draws_two() {
+        fn r4154304_entry_mana_gains_five_past_max_and_draws_two() {
             let s = chaos("mana", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let mana = &s.state().players.p1.mana;
-            assert_eq!((CHAOS_TG_MANA, CHAOS_TG_DRAW), (6, 2));
-            assert_eq!(mana.current, 10 - CALL_PRICE + 6);
+            assert_eq!((CHAOS_TG_MANA, CHAOS_TG_DRAW), (5, 2));
+            assert_eq!(mana.current, 10 - CALL_PRICE + 5);
             assert!(mana.current > mana.max);
             assert_eq!(s.state().players.p1.library.len(), 6 - 2);
         }
 
         #[test]
-        fn r2200000_r3135000_entry_permanents_summons_five_training_grounds_permanents_by_type() {
-            assert_eq!(CHAOS_TG_PERMANENTS, 5);
+        fn r2200000_r4154304_entry_permanents_summons_four_training_grounds_permanents_by_type() {
+            assert_eq!(CHAOS_TG_PERMANENTS, 4);
             let mut most = 0;
             for n in 0..GAMES {
                 let s = chaos_seeded(&format!("{SEED}-permanents-{n}"), "permanents");
                 let summoned = events_of(&s, "summoned");
                 assert!(!summoned.is_empty());
-                assert!(summoned.len() <= 5, "{}", summoned.len());
+                assert!(summoned.len() <= 4, "{}", summoned.len());
                 most = most.max(summoned.len());
                 for event in &summoned {
                     let def_id = event["defId"].as_str().unwrap_or("");
@@ -388,7 +441,7 @@ mod tests {
                     }
                 }
             }
-            assert_eq!(most, 5, "five picks, each in an open zone, are all summoned");
+            assert_eq!(most, 4, "four picks, each in an open zone, are all summoned");
         }
 
         #[test]
@@ -409,13 +462,13 @@ mod tests {
         }
 
         #[test]
-        fn r2200003_r3135000_entry_army_summons_three_tokens_and_every_unit_has_rush_trample_and_pierce_for_good() {
+        fn r2200003_r4154304_entry_army_summons_two_tokens_and_every_unit_has_rush_trample_and_pierce_for_good() {
             let mut s = chaos("army", side(false, json!([])), json!({ "hand": [VANILLA] }));
-            assert_eq!(CHAOS_TG_ARMY_TOKENS, 3);
-            for lane in 1..=3 {
+            assert_eq!(CHAOS_TG_ARMY_TOKENS, 2);
+            for lane in 1..=2 {
                 assert_eq!(s.unit(P1, lane).map(|unit| unit.def_id), Some(RUSH_TOKEN.to_string()));
             }
-            assert!(s.unit(P1, 4).is_none());
+            assert!(s.unit(P1, 3).is_none());
             let lent: Vec<Keyword> = s
                 .state()
                 .players
@@ -434,8 +487,9 @@ mod tests {
             s.state_mut().players.p2.auto_end_turn = Some(false);
             s.end_turn();
             s.end_turn();
-            s.play(VANILLA, json!({ "lane": 4 }));
-            let vanilla = s.unit(P1, 4).expect("the Vanilla");
+            // The leftmost open zone, beside the two tokens (R64).
+            s.play(VANILLA, json!({}));
+            let vanilla = s.unit(P1, 3).expect("the Vanilla");
             assert_eq!(vanilla.def_id, VANILLA);
             for kind in [KeywordKind::Rush, KeywordKind::Trample, KeywordKind::Pierce] {
                 assert!(has(&s, &vanilla, kind), "{kind:?}");
@@ -676,11 +730,11 @@ mod tests {
             // The two cards the Mana entry draws are not among them: the deck is Stockpiles.
             let added: Vec<CardInstance> =
                 added_to(&s, P1).into_iter().filter(|card| is_tg_card(&card.def_id)).collect();
-            assert_eq!(added.len(), 4 + 2);
+            assert_eq!(added.len(), 3 + 2);
             assert!(added.iter().all(|card| cost_of(&s, card) == CARD_PRICE));
             assert_eq!(added.iter().filter(|card| card.radiant).count(), 2);
-            // 10 less this card's 4, then +2, +6 and +1 in list order.
-            assert_eq!(s.state().players.p1.mana.current, 10 - CALL_PRICE + 2 + 6 + 1);
+            // 10 less this card's 4, then +2, +5 and +1 in list order.
+            assert_eq!(s.state().players.p1.mana.current, 10 - CALL_PRICE + 2 + 5 + 1);
             assert_eq!(s.state().players.p1.library.len(), 6 - 2);
         }
 

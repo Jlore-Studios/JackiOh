@@ -1007,7 +1007,7 @@ mod the_mulligans_curve {
         "classic-068",     // Small Card Lobbyist, 4
         "classicplus-019", // League of Losers, 4
     ];
-    const SNOM_BUNNY_MIND_CONTROL: &str = "core-049"; // 5: the old exception kept it at a bound of 4
+    const SNOM_BUNNY_MIND_CONTROL: &str = "core-049"; // 6 ((5) until issue #4154): the old exception kept it at a bound of 4
     const LATER: &str = "traininggrounds-001"; // Spikey Steven, 1, no row in the old table
     const PROVEN_ONE: &str = "core-015"; // Me and Mr Token, 1
 
@@ -1047,7 +1047,7 @@ mod the_mulligans_curve {
     #[test]
     fn r4110000_hard_sends_back_snom_bunny_mind_control() {
         costs_hold();
-        assert_eq!(query_cost(def_of(None, SNOM_BUNNY_MIND_CONTROL)), 5);
+        assert_eq!(query_cost(def_of(None, SNOM_BUNNY_MIND_CONTROL)), 6);
         let seed = "decide-r4110000-hard";
         let dealt = hard_p2_mulligan_with(
             seed,
@@ -1329,7 +1329,7 @@ mod draw_offers_b21 {
     }
 }
 
-/// R3822000: a unit its own Burn kills at the start of its controller's next turn is worth less than its
+/// R3822000: a unit its own Burn kills at the end of this turn (R4154000) is worth less than its
 /// twin without the counter, so of two equal kills the AI makes the one the Burn will not.
 mod r3822000_afflicted_targets {
     use super::*;

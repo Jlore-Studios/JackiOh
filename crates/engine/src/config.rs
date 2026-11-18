@@ -1153,12 +1153,17 @@ pub const CHAOS_MED_FUSE_COPIES: i32 = 1;
 pub const CHAOS_MED_CN_CARDS: i32 = 2;
 /// §8.8 row 95 entry 3: "Add 2 random Prime cards to your hand" (R1421).
 pub const CHAOS_MED_PRIME_CARDS: i32 = 2;
-/// §8.8 row 95 entry 4: "Your hero gains 5 Armor" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
-/// R3135001).
-pub const CHAOS_MED_HERO_ARMOR: i32 = 5;
-/// §8.8 row 95 entry 4: "and you heal it 5" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
-/// R3135001).
-pub const CHAOS_MED_HEAL: i32 = 5;
+/// §8.8 row 95 entry 4: "Your hero gains 4 Armor" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
+/// R3135001; 5 through v0.6.6h, `CHAOS_MED_HERO_ARMOR_V0_6_6H`, #4154, R4154305).
+pub const CHAOS_MED_HERO_ARMOR: i32 = 4;
+/// §8.8 row 95 entry 4: "and you heal it 4" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
+/// R3135001; 5 through v0.6.6h, `CHAOS_MED_HEAL_V0_6_6H`, #4154, R4154305).
+pub const CHAOS_MED_HEAL: i32 = 4;
+/// R4154305, R767000: entry 4's Armor through v0.6.6h, which the table the M #95 script kept for those
+/// replays builds (`CHAOS_MED_EFFECTS_V0_6_6H`) reads.
+pub const CHAOS_MED_HERO_ARMOR_V0_6_6H: i32 = 5;
+/// R4154305, R767000: entry 4's heal through v0.6.6h (`CHAOS_MED_EFFECTS_V0_6_6H`).
+pub const CHAOS_MED_HEAL_V0_6_6H: i32 = 5;
 /// §8.8 row 95 entry 6: "Summon 2 random Acclaimed cards" (R1243; 3 through v0.5.11r, #3135, R3135001).
 pub const CHAOS_MED_ACCLAIMED: i32 = 2;
 /// §8.8 row 95 entry 7: "then Nerf each card bounced", once each (R1244).
@@ -1198,30 +1203,33 @@ pub const CHAOS_SCAPE_WEAPONS: i32 = 2;
 pub const CHAOS_SCAPE_LOT_PRICE: i32 = 20;
 
 // Training Grounds #39 Call to Chaos (Training-Grounds Edition) (SPEC §8.11 row 39, issue #2200, #3135): its
-// table's numbers, as printed. The through-v0.5.11r numbers are in each doc (R3135000).
-/// §8.11 row 39 entry 1: "Summon 3 Rush Tokens", base faces.
-pub const CHAOS_TG_RUSH_TOKENS: i32 = 3;
-/// §8.11 row 39 entry 2: "replenish 3 mana" (§6.3 Replenish, R364; 4 through v0.5.11r).
-pub const CHAOS_TG_REFRESH: i32 = 3;
-/// §8.11 row 39 entry 3: "add 4 random Training Grounds cards to your hand" (R2200000).
-pub const CHAOS_TG_CARDS: i32 = 4;
+// table's numbers, as printed. The through-v0.5.11r numbers are in each doc (R3135000), and the through-v0.6.6h
+// ones issue #4154 cut are the `_V0_6_6H` constants after them, which the table the TG #39 script kept for those
+// replays builds (`CHAOS_TG_EFFECTS_V0_6_6H`) reads (R4154304, R767000).
+/// §8.11 row 39 entry 1: "Summon 2 Rush Tokens", base faces (3 through v0.6.6h).
+pub const CHAOS_TG_RUSH_TOKENS: i32 = 2;
+/// §8.11 row 39 entry 2: "replenish 2 mana" (§6.3 Replenish, R364; 4 through v0.5.11r, 3 through v0.6.6h).
+pub const CHAOS_TG_REFRESH: i32 = 2;
+/// §8.11 row 39 entry 3: "add 3 random Training Grounds cards to your hand" (R2200000; 4 through v0.6.6h).
+pub const CHAOS_TG_CARDS: i32 = 3;
 /// §8.11 row 39 entries 3 and 6: the added cards "cost (1)" (`costOverride`; (0) through v0.5.11r), apart from
 /// the price of any Call to Chaos entry 9 adds, which costs what it prints (R3135000).
 pub const CHAOS_TG_CARD_COST: i32 = 1;
 /// §8.11 row 39 entry 3: "and gain 2 mana", after the cards are added (R3135000).
 pub const CHAOS_TG_CARDS_MANA: i32 = 2;
-/// §8.11 row 39 entry 4: "gain 6 mana", which may pass max (§2.3; 8 through v0.5.11r).
-pub const CHAOS_TG_MANA: i32 = 6;
+/// §8.11 row 39 entry 4: "gain 5 mana", which may pass max (§2.3; 8 through v0.5.11r, 6 through v0.6.6h).
+pub const CHAOS_TG_MANA: i32 = 5;
 /// §8.11 row 39 entry 4: "and draw 2 cards".
 pub const CHAOS_TG_DRAW: i32 = 2;
-/// §8.11 row 39 entry 5: "summon 5 random Training Grounds permanents" (R2200000; 6 through v0.5.11r).
-pub const CHAOS_TG_PERMANENTS: i32 = 5;
+/// §8.11 row 39 entry 5: "summon 4 random Training Grounds permanents" (R2200000; 6 through v0.5.11r, 5
+/// through v0.6.6h).
+pub const CHAOS_TG_PERMANENTS: i32 = 4;
 /// §8.11 row 39 entry 6: "add 2 random Radiant Training Grounds cards to your hand".
 pub const CHAOS_TG_RADIANT_CARDS: i32 = 2;
 /// §8.11 row 39 entry 6: "and gain 1 mana", after the cards are added (R3135000).
 pub const CHAOS_TG_RADIANT_MANA: i32 = 1;
-/// §8.11 row 39 entry 7: "summon 3 Rush Tokens", base faces (5 through v0.5.11r).
-pub const CHAOS_TG_ARMY_TOKENS: i32 = 3;
+/// §8.11 row 39 entry 7: "summon 2 Rush Tokens", base faces (5 through v0.5.11r, 3 through v0.6.6h).
+pub const CHAOS_TG_ARMY_TOKENS: i32 = 2;
 /// §8.11 row 39 entry 9, R2200002, R3135000: "at the start of every turn of yours": the entry adds on the
 /// caster's own turns whose count since the entry resolved is a multiple of this (every second turn, 2,
 /// through v0.5.11r).
@@ -1230,6 +1238,18 @@ pub const CHAOS_TG_EVERY: i32 = 1;
 /// terminator (REVIEW A3.6), bounded as M #95's entry 9 is (`CALL_TO_CHAOS_ETERNAL_CAP`, R1241); a roll at
 /// the cap resolves into nothing.
 pub const CHAOS_TG_ALTERNATE_CAP: i32 = 3;
+/// R4154304, R767000: entry 1's Rush Tokens through v0.6.6h (`CHAOS_TG_EFFECTS_V0_6_6H`).
+pub const CHAOS_TG_RUSH_TOKENS_V0_6_6H: i32 = 3;
+/// R4154304, R767000: entry 2's Replenish through v0.6.6h.
+pub const CHAOS_TG_REFRESH_V0_6_6H: i32 = 3;
+/// R4154304, R767000: entry 3's cards through v0.6.6h.
+pub const CHAOS_TG_CARDS_V0_6_6H: i32 = 4;
+/// R4154304, R767000: entry 4's mana through v0.6.6h.
+pub const CHAOS_TG_MANA_V0_6_6H: i32 = 6;
+/// R4154304, R767000: entry 5's permanents through v0.6.6h.
+pub const CHAOS_TG_PERMANENTS_V0_6_6H: i32 = 5;
+/// R4154304, R767000: entry 7's Rush Tokens through v0.6.6h.
+pub const CHAOS_TG_ARMY_TOKENS_V0_6_6H: i32 = 3;
 
 // §8.12 row 142 S+ #142 Call to Chaos (Mindustrial-Swarm Edition), R3570000–R3570005.
 /// §8.12 row 142 entries 1, 2 and 6, R3570000: the price the cards the edition adds cost, `costOverride` (R65).
@@ -1593,18 +1613,21 @@ pub const MARKETPLACE_NERF_PRICE_PERCENT: i32 = 85;
 /// R1853005, R2250002: the copies a lot an effect added for the rest of the game holds, renewed at its
 /// owner's turn start.
 pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
-/// R1861000: the quote range a card that sells from the hand (`handSale`, Stinkyscape #89 Spice) draws
-/// each turn, its base face's: "its price is determined like all other Resources", so a Rare Resource's,
-/// Gellium's. `buy` is never read: such a card is no Resource and its lot, if any, is priced as a card.
+/// R1861000, R4154206: the quote range a card that sells from the hand (`handSale`, Stinkyscape #89 Spice)
+/// draws each turn, its base face's: "its price is determined like all other Resources", a Rare
+/// Resource's (Gellium's 3 to 10) through v0.6.6h, and since issue #4154 ("sells for ~25% more") that
+/// range's ends a quarter higher, rounded to the nearest Credit, a half up. `buy` is never read: such a
+/// card is no Resource and its lot, if any, is priced as a card.
 pub const HAND_SALE_PRICE: ResourcePrice = ResourcePrice {
-    sell_min: 3,
-    sell_max: 10,
+    sell_min: 4,
+    sell_max: 13,
     buy: 0,
 };
-/// R1861000: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's.
+/// R1861000, R4154206: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's 6 to 20 a quarter
+/// higher.
 pub const HAND_SALE_RADIANT_PRICE: ResourcePrice = ResourcePrice {
-    sell_min: 6,
-    sell_max: 20,
+    sell_min: 8,
+    sell_max: 25,
     buy: 0,
 };
 
@@ -2472,11 +2495,6 @@ pub const EMOTE_COOLDOWN_MS: i64 = 1500;
 pub const EMOTE_WINDOW_MS: i64 = 20_000;
 /// R643: at most this many emotes in a window.
 pub const EMOTE_WINDOW_MAX: usize = 5;
-
-// ---- Stinkyscape+ E2 (issue #3540): Burn and Toxic ----
-
-/// R3540001: what a Burn count drops by after each tick (8 → 5 → 2 → none).
-pub const BURN_DECAY: i32 = 3;
 
 // ---- Stinkyscape+ E5 (issue #3548) ----
 

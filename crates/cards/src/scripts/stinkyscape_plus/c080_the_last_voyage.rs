@@ -2,17 +2,20 @@
 //! Launch; R3539000–R3539002): (4) Spell, Terminus, Mythic.
 //!   Base:    "Exile your hand, deck and board, Dormant cards included. Summon {starships|random
 //!            Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a
-//!            random one now and at the start of each of your turns."
-//!   Radiant: the same, with "board and your opponent's board".
+//!            random one at the start of each of your turns."
+//!   Radiant: "Exile your hand, deck and board and your opponent's board, Dormant cards included.
+//!            Summon … They can't be launched by hand. Launch a random one now and at the start of each
+//!            of your turns."
 //!
 //! Engine: the board exile reaches Dormant cards (`exile_board`, R3539002) and spares only a card no
 //! effect reaches; the ten Terminus Starships are summoned already holding their fixed loadouts
 //! (`summon_starships`, R3539001; five worth 5 mana of Starship Pieces and five worth 6 since issue #3951,
 //! 5 to 12 through v0.6.4c, which `script_v0_6_4c` keeps for those replays, R767000), sealed against a
-//! launch by hand (R3539000); one launches at once
-//! and another at the start of each of its caster's turns (`launch_random_starship`, kept by
-//! `for_rest_of_game`, R3539002), a free launch (R1852006). The number summoned is the declared
-//! `starships`.
+//! launch by hand (R3539000); one launches at the start of each of its caster's turns from the next on
+//! (`launch_random_starship`, kept by `for_rest_of_game`, R3539002), a free launch (R1852006), and on
+//! the Radiant face one at once as well. The number summoned is the declared `starships`. Issue #4154
+//! took the base face's launch at once out; `script_v0_6_6h` keeps it for the replays of v0.6.6h and
+//! before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -125,7 +128,9 @@ pub fn terminus_hull() -> CardScripts {
 /// The badge its caster carries for the rest of the game.
 const BADGE: &str = "Start of turn: Launch a random Terminus Starship.";
 
-fn voyage(radiant: bool, blueprints: fn() -> Vec<StarshipBlueprint>) -> Script {
+/// One face: `radiant` also exiles the opponent's board, and `launch_now` launches one at once (the
+/// Radiant face's, and the base face's through v0.6.6h).
+fn voyage(radiant: bool, launch_now: bool, blueprints: fn() -> Vec<StarshipBlueprint>) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let starships = param(ctx, "starships");
@@ -143,9 +148,11 @@ fn voyage(radiant: bool, blueprints: fn() -> Vec<StarshipBlueprint>) -> Script {
                 "blueprints": blueprints(),
                 "count": starships,
             }))));
-            effects.push(launch_random_starship(json_as(json!({
-                "hulls": hull_ids(),
-            }))));
+            if launch_now {
+                effects.push(launch_random_starship(json_as(json!({
+                    "hulls": hull_ids(),
+                }))));
+            }
             effects.push(for_rest_of_game(json_as(json!({
                 "step": "launch",
                 "label": BADGE,
@@ -163,8 +170,17 @@ fn voyage(radiant: bool, blueprints: fn() -> Vec<StarshipBlueprint>) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: voyage(false, blueprints),
-        radiant: voyage(true, blueprints),
+        base: voyage(false, false, blueprints),
+        radiant: voyage(true, true, blueprints),
+    }
+}
+
+/// R767000: after v0.6.4c through v0.6.6h the base face launched one at once too (issue #4154).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
+    CardScripts {
+        base: voyage(false, true, blueprints),
+        radiant: voyage(true, true, blueprints),
     }
 }
 
@@ -177,8 +193,8 @@ pub fn blueprints_v0_6_4c() -> Vec<StarshipBlueprint> {
 /// folds those replays under it.
 pub fn script_v0_6_4c() -> CardScripts {
     CardScripts {
-        base: voyage(false, blueprints_v0_6_4c),
-        radiant: voyage(true, blueprints_v0_6_4c),
+        base: voyage(false, true, blueprints_v0_6_4c),
+        radiant: voyage(true, true, blueprints_v0_6_4c),
     }
 }
 
@@ -227,7 +243,7 @@ pub(crate) fn assert_terminus(id: &str, pieces: &[&str], radiant: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{ID, TERMINUS_STARSHIPS, blueprints};
+    use super::{ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6h};
     use crate::built_starship;
     use jackioh_engine::testkit::*;
 
@@ -333,8 +349,9 @@ mod tests {
         assert_eq!(defs, hulls);
     }
 
+    /// Issue #4154: the base face launches none at once.
     #[test]
-    fn r3539002_exiles_hand_deck_and_board_dormant_included_summons_ten_and_launches_one() {
+    fn r3539002_exiles_hand_deck_and_board_dormant_included_summons_ten_and_launches_none_now() {
         let (mut s, voyage_id, filler_id, library_ids, ship, vanilla_id, _) = voyaging(false);
         s.play(VOYAGE, json!({}));
         assert!(s.hand(P1).is_empty(), "the hand is exiled");
@@ -356,8 +373,8 @@ mod tests {
             .collect();
         assert!(graves.contains(&voyage_id), "the Spell itself resolves to its graveyard");
         assert_eq!(ships(&s).len(), 10, "ten Starships fill 5 backrow and 5 unit zones");
-        assert_eq!(launched_count(&s), 1, "one launches now");
-        assert_eq!(dormant_starships_of(s.state(), P1).len(), 9);
+        assert_eq!(launched_count(&s), 0, "none launches now");
+        assert_eq!(dormant_starships_of(s.state(), P1).len(), 10);
         assert_eq!(
             s.unit(P2, 1).map(|unit| unit.id),
             Some(vanilla_id),
@@ -366,19 +383,33 @@ mod tests {
     }
 
     #[test]
-    fn r3539002_launches_another_at_each_start_of_its_casters_turn_only() {
+    fn r3539002_launches_one_at_each_start_of_its_casters_turn_only() {
         let (mut s, _, _, _, _, _, _) = voyaging(false);
         s.play(VOYAGE, json!({}));
-        assert_eq!(launched_count(&s), 1);
+        assert_eq!(launched_count(&s), 0);
         s.end_turn();
-        assert_eq!(launched_count(&s), 1, "no launch at the opponent's start");
+        assert_eq!(launched_count(&s), 0, "no launch at the opponent's start");
         s.end_turn();
-        assert_eq!(launched_count(&s), 2, "another at its caster's next start");
+        assert_eq!(launched_count(&s), 1, "one at its caster's next start");
         s.end_turn();
         s.end_turn();
-        assert_eq!(launched_count(&s), 3, "and another at the one after");
+        assert_eq!(launched_count(&s), 2, "and another at the one after");
     }
 
+    /// R767000: through v0.6.6h the base face launched one at once too (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6h_launches_one_now_on_the_base_face() {
+        crate::under_kept(ID, script_v0_6_6h(), || {
+            let (mut s, _, _, _, _, _, _) = voyaging(false);
+            s.play(VOYAGE, json!({}));
+            assert_eq!(launched_count(&s), 1, "one launches now");
+            assert_eq!(dormant_starships_of(s.state(), P1).len(), 9);
+            s.end_turn().end_turn();
+            assert_eq!(launched_count(&s), 2, "another at its caster's next start");
+        });
+    }
+
+    /// The Radiant face still launches one at once.
     #[test]
     fn radiant_also_exiles_the_opponents_board_dormant_included() {
         let (mut s, _, _, _, _, vanilla_id, dormant_id) = voyaging(true);
@@ -393,6 +424,8 @@ mod tests {
         assert!(exile.contains(&vanilla_id));
         assert!(exile.contains(&dormant_id));
         assert_eq!(ships(&s).len(), 10);
-        assert_eq!(launched_count(&s), 1);
+        assert_eq!(launched_count(&s), 1, "one launches now");
+        s.end_turn().end_turn();
+        assert_eq!(launched_count(&s), 2, "another at its caster's next start");
     }
 }

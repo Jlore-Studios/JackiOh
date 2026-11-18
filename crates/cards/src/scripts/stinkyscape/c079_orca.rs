@@ -1,5 +1,5 @@
 //! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 3/3 → 6/6, cost 4, Embiggened (5), Epic.
-//!   Base:    "Starship Piece, Flying
+//!   Base:    "Flying
 //!            Cry: Choose one of 2 Miners and Equip it into this.
 //!            Embiggened (5): The Miners offered are Radiant."
 //!   Radiant: "… Cry: Choose one of 2 Miners and Equip it into this, twice. …"
@@ -8,8 +8,9 @@
 //! the pick is a fresh copy fused straight into this (R1086, R77), its Activate with it (R1751000). The
 //! Radiant face asks twice, the second offer once the first pick is in and without it. Embiggened
 //! (R1175000), the offer is Radiant (R469), the Cry reading the play's stamp (R81); its (5) is past
-//! `MAX_MANA`, so it is played so only with mana an effect gave (R1857001). Starship Piece and Flying are
-//! catalog keywords the engine plays; it stays a piece, the kept card being one (R1852001).
+//! `MAX_MANA`, so it is played so only with mana an effect gave (R1857001). Flying is a catalog keyword
+//! the engine plays. Issue #4154 took off its Starship Piece, so a Miner equipped into it leaves it no
+//! piece (R1852001) and its death fuses nothing.
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
@@ -109,7 +110,8 @@ mod tests {
     fn r1872002_its_cry_offers_two_miners_and_equips_the_one_chosen() {
         let (mut s, host) = played(false, false);
         answers(&mut s, &host, 1, false);
-        assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
+        // Issue #4154: no Starship Piece, and a Miner equipped into it makes it none (R1852001).
+        assert!(!unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
         s.activate(host.as_str(), json!({ "ability": "mine" }));
         assert_eq!(resources_in_hand_of(s.state(), P1).len(), 1);
     }
@@ -126,6 +128,7 @@ mod tests {
         let (mut s, host) = played(true, false);
         // The Radiant host wears its Miners' Radiant faces (R77).
         answers(&mut s, &host, 2, true);
-        assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
+        // Issue #4154: no Starship Piece, and a Miner equipped into it makes it none (R1852001).
+        assert!(!unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
     }
 }

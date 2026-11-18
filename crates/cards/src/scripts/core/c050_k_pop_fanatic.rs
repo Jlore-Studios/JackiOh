@@ -1,10 +1,10 @@
 //! #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R46, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282,
 //! R437, R767000, R1045000).
-//!   (2) Unit, Human, Epic, 1/1 → 2/2.
-//!   Base:    "Can't Defend; Cry: Allure an enemy permanent."
-//!   Radiant: "Divine Shield, Can't Defend; Cry: Allure an enemy permanent. Make it Radiant when you steal
-//!            it." (R275; "Divine Shield" and, since #2657, Can't Defend, R2657000, are printed in
-//!            `catalog.json`).
+//!   (3) Unit, Human, Epic, 1/1 → 2/2 ((2) until issue #4154).
+//!   Base:    "Cry: Allure an enemy permanent."
+//!   Radiant: "Divine Shield; Cry: Allure an enemy permanent. Make it Radiant when you steal it." (R275;
+//!            "Divine Shield" is printed in `catalog.json`; the Can't Defend both faces printed from #2657,
+//!            R2657000, went in issue #4154).
 //!
 //! Allure (§6.3, R963, R1045000) is a delayed steal that destroys a target with no open zone in its row
 //! (`otherwise: destroy`, R46). The target is declared at PLAY time (R81) over both enemy rows (§6.3),
@@ -428,8 +428,8 @@ mod tests {
         #[test]
         fn r76_base_it_fizzles_when_the_target_is_already_under_your_control() {
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 5.
-                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 7 },
+                // K-Pop Fanatic costs 3 and Snom Bunny Mind Control 6 (issue #4154).
+                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
@@ -531,13 +531,13 @@ mod tests {
             let CardScripts { base, radiant } = faces();
             assert_eq!(def.id, KPOP);
             assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.cost, CardCost::Fixed(2));
+            assert_eq!(def.cost, CardCost::Fixed(3));
             assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));
             assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(2)));
-            // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions), with
-            // Can't Defend on both faces since #2657 (R2657000).
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::CantDefend]);
-            assert_eq!(def.base.keywords, vec![Keyword::CantDefend]);
+            // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions); the
+            // Can't Defend both faces had from #2657 (R2657000) went in issue #4154.
+            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield]);
+            assert!(def.base.keywords.is_empty());
 
             let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }]);
             assert_eq!(serde_json::to_value(&base.targets).unwrap(), decl);
@@ -694,8 +694,8 @@ mod tests {
         #[test]
         fn r282_a_target_already_this_player_s_is_not_made_radiant_the_delayed_steal_took_nothing_r76() {
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 5.
-                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 7 },
+                // K-Pop Fanatic costs 3 and Snom Bunny Mind Control 6 (issue #4154).
+                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
@@ -848,7 +848,7 @@ mod tests {
         #[test]
         fn r437_r76_a_steal_that_fizzles_on_a_card_already_this_player_s_takes_the_mark_away_too() {
             let mut g = scenario(json!({
-                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 7 },
+                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
@@ -977,8 +977,8 @@ mod tests {
                 let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
                 state = act(&mut log, &state, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
             }
-            // With K-Pop Fanatic at (2), p1's 1 mana of turn 1 may pay for nothing, and the turn has then
-            // ended by itself (R82).
+            // With K-Pop Fanatic at (3) (issue #4154), p1's 1 mana of turn 1 may pay for nothing, and the turn
+            // has then ended by itself (R82).
             if state.active == P1 {
                 state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p1" }));
             }
@@ -996,6 +996,11 @@ mod tests {
                 json!({ "type": "play", "instanceId": token.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p2" }),
             );
             state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p2" }));
+            // K-Pop Fanatic costs (3): the turns pass until p1's begins with 3 mana.
+            while !(state.active == P1 && state.players.p1.mana.current >= 3) {
+                let active = state.active;
+                state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": active }));
+            }
             let fanatic = state
                 .players
                 .p1
@@ -1058,10 +1063,10 @@ mod tests {
             let old_base = "Cry: Choose an enemy permanent. At the start of your next turn, steal it.";
             let old_radiant = "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it and make it Radiant.";
 
-            assert_eq!(def.base.text, "Can't Defend\nCry: Allure an enemy permanent.");
+            assert_eq!(def.base.text, "Cry: Allure an enemy permanent.");
             assert_eq!(
                 def.radiant.text,
-                "Divine Shield, Can't Defend\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
+                "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
             );
             assert!(def.base.text.len() < old_base.len());
             assert!(def.radiant.text.len() < old_radiant.len());

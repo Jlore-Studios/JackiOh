@@ -863,8 +863,8 @@ mod hero_ineligible_attacks {
         let sick = fresh(&ready, "core-032");
         assert_eq!(ready_gap(&sick, AI), 7.0);
         assert_eq!(ready_gap_by_legal_actions(&sick, AI), 7.0);
-        // R3937000: next turn Prem Panther's 5 destroys Tommy Tempo alone and Tempo Timmy's 3 goes face,
-        // the line `ready_gap` reads this turn; the old order counted 0.
-        assert_eq!(face_threat(&sick, AI), 3);
+        // R3937000: next turn the smallest attacker that destroys Tommy Tempo (a 3/3 since issue #4154) alone,
+        // Tempo Timmy's 3, breaks it first and Prem Panther's 5 goes face.
+        assert_eq!(face_threat(&sick, AI), 5);
     }
 }

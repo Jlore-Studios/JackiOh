@@ -1,5 +1,5 @@
 //! M #87 Tatches the Totem (SPEC §8.8 row 87): (0) Unit ((1) until issue #3138), All Tribes (Human,
-//! Felinor, KY, CN, Jlockeed), Legendary, 0/3 → 0/6.
+//! Felinor, KY, CN, Jlockeed), Legendary, 0/4 → 0/8 (0/3 → 0/6 until issue #4154).
 //!
 //! Base:    "While in your hand or deck: After you play a card with a tribal tag, summon this.
 //!          End of turn: Buff {cards|random card|random cards} in your hand."
@@ -162,7 +162,7 @@ mod tests {
         /// from the deck as ever (a summon pays nothing).
         #[test]
         fn issue_3138_it_costs_0_plays_for_no_mana_and_is_summoned_from_the_deck_on_both_faces() {
-            for (radiant, health) in [(false, 3), (true, 6)] {
+            for (radiant, health) in [(false, 4), (true, 8)] {
                 let mut s = scenario(json!({
                     "p1": { "mana": 0, "hand": [{ "def": TATCHES, "radiant": radiant }, FILLER] },
                     "p2": { "hand": [FILLER] },
