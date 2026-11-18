@@ -35789,14 +35789,6 @@
         "run_id": "44227407535",
         "taken_asks": []
       },
-      "2": {
-        "area": "rules",
-        "count": 2,
-        "last_run": "2026-11-18T03:25:07Z",
-        "provider": "muse",
-        "run_id": "44230281185",
-        "taken_asks": []
-      },
       "3": {
         "area": "server",
         "count": 2,
