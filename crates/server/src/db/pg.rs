@@ -2456,20 +2456,6 @@ pub async fn codes_invite_clusters(t: &mut PgTx<'_>, since: i64) -> Result<Vec<I
         .collect()
 }
 
-pub async fn codes_count_failures(t: &mut PgTx<'_>, since: i64) -> Result<i64, StoreError> {
-    run_as(t, None).await?;
-    let row = sqlx::query(concat!(
-        "select count(*)::int as n from public.code_attempts
-          where succeeded = false and at >= ",
-        ts!("$1")
-    ))
-    .bind(since)
-    .fetch_optional(&mut **t)
-    .await
-    .map_err(db_error)?;
-    row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
-}
-
 /// A missing `app.settings` row is a store error: migration 0001 seeds it, so its absence means
 /// the database was never migrated.
 pub async fn redemption_set_enabled(t: &mut PgTx<'_>, enabled: bool) -> Result<bool, StoreError> {
@@ -8704,15 +8690,12 @@ mod tests {
 // information. Each is asserted in `tests/store/contract.rs` where it is observable.
 //
 //  * redemption limits. §9.4's "more than 5 attempts", "more than 20" and "the last hour" are written into
-//    `app.redeem_invite_code`'s body, and the breaker's knobs into `app.settings`, so neither can read
-//    `ApiLimits`; the in-memory store takes all three as options defaulting to the `src/config.rs` constants.
+//    `app.redeem_invite_code`'s body, so it cannot read `ApiLimits`; the in-memory store takes all three as
+//    options defaulting to the `src/config.rs` constants.
 //  * attempt reason. `CodeAttempt.reason` has no column in `public.code_attempts`: it is dropped on write,
 //    and `redeem` returns only a result code.
 //  * redemption's email check. The SQL reads `auth.users.email_confirmed_at` itself; the in-memory store uses
 //    `RedemptionSettings.email_verified`. The server refuses an unverified caller (R159) before either store.
-//  * redemption's circuit breaker. The SQL also refuses on its own count of recent failures (R106); the
-//    in-memory store has only the `app.settings.redemption_enabled` switch: the server's R106 breaker
-//    (`src/api/codes.rs`) runs first, and a counting fake would trip BUILD M6-T1's 150-failure timing test.
 //  * profile email. `public.profiles` has no email column (§9.4's managed auth provider owns it on
 //    `auth.users`), so `Profile.email` is read from there; `profiles_create` ignores its `email` argument and
 //    needs the `auth.users` row, because `profiles.id` references it.

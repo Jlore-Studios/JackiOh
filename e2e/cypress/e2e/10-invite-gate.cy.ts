@@ -154,7 +154,7 @@ describe("10 invite gate — a pending account", () => {
       headers: bearerHeaders(pendingToken()),
     }).should((response) => {
       expect(response.status).to.eq(200);
-      expect(response.body.redemptionEnabled, "§9.4's circuit breaker is closed").to.eq(true);
+      expect(response.body.redemptionEnabled, "redemption is not paused (R4131000)").to.eq(true);
       expect(response.body.retryAfterMs).to.eq(0);
     });
 
