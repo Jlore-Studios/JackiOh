@@ -14207,12 +14207,15 @@
     "what": "plan #4132 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-18T00:05:29Z",
+    "at": "2026-11-18T00:13:49Z",
     "notes": [
-      "#4132 needs a plan",
-      "delivered review #4152 on claude-3 (run 44202775866): approved",
-      "started plan #4132 on muse (run 44205177410)",
-      "nothing more to start: nothing is queued"
+      "delivered plan #4132 on muse (run 44205177410): planned",
+      "delivered review #4153 on muse (run 44203980559): approved",
+      "delivered review #4151 on claude-1 (run 44200627769): approved",
+      "started plan #4132 on claude-7 (run 44206592067)",
+      "nothing more to start: nothing is queued",
+      "#4152: closed, so `bot:merging` is off",
+      "runner gate: started 1 of 1 waiting run(s) (run 44206635847 on main)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14918,7 +14921,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T00:05:29Z",
+  "loop_tick": "2026-11-18T00:13:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
