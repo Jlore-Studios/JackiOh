@@ -17117,6 +17117,15 @@
       "failures": 0,
       "feedback_since": "2026-11-18T16:13:19Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-18T16:30:59Z",
+        "family": "muse",
+        "kind": "work",
+        "notes": "",
+        "provider": "muse",
+        "reason": "built and checked; its own review run, on this subscription, reviews it next",
+        "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the card search reads a stat line, such as 3/4 or 3+/4-\", \"ci_local\": \"passed\"} -->\n- No change made. The CI failure passes locally, and it is not this branch's doing.\n- - CI log: `web (unit 2/8)` failed on one test, `edge src/index.test.ts > #4118 the settings check on the first request > waits RETIRE_WAIT_MS for it, then destroys it`. It expected `library.stop` called with `SIGTERM` after 29s, but saw 0 calls. The aggregator `web` job then failed only because `UN\u2026\n- - This branch touches only `apps/web/src/game/deckbuilder/filters.ts` and `filters.test.ts` (`git diff 69a14a3...HEAD --name-only` shows those two files, nothing else). `apps/edge/src/` imports nothing from `deckbuilder/filters`, so the stat-term rewire cannot reach the edge retire path.\n- - Ran the failing check locally before anything else: `pnpm exec vitest run --project edge apps/edge/src/index.test.ts` passes 62/62. Ran it five more times, green every time. The single failing test with `-t \"waits RETIRE_WAIT_MS\"` also passes.\n- - Cause in the log: the test pumps only 100 `setImmediate` turns for the `settingsFingerprint` digest to settle before advancing fake timers. Under CI load (78 workers, 200s run) that window was missed, so `stop` had 0 calls at the 29s assert. Locally with no load it settles in time.\n- - Left the worktree untouched (`git status --porcelain` clean). No test skipped, weakened, or renamed.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4208 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4208/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
+      },
       "interruptions": 0,
       "issue": 4203,
       "kind": "revise",
