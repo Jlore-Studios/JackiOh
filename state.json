@@ -841,6 +841,12 @@
       "lines": [
         "/harness build Build this as R4131000 instead of the proposal above, and do not add the alert: there is no global circuit breaker anymore, only \u00a79.4 steps 2 and 3 blocking one profile or one address for its hour, plus the operator's `moderate redemption off`. The work is already done and green locally on `claude/relaxed-newton-zaa6kc` (commits 1f73d6ed and 45466cdb: migration 0095, server, tests, spec, R4131000; see the handoff above). Merge that branch into yours, check it against `main`, open the pull request and get its CI green."
       ]
+    },
+    "c:6966622224": {
+      "at": "2026-11-18T01:54:05Z",
+      "lines": [
+        "approve"
+      ]
     }
   },
   "items": {
