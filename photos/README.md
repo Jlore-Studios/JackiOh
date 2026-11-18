@@ -20,8 +20,3 @@ game shows into `apps/web/public/brand` (the web README says how).
 | `preview-*.png` | The lockup on dark and light, and the icons at their real small sizes |
 
 A PNG the game needs (a favicon, say) is copied into `apps/web/public` by the change that uses it.
-
-## `screens/`
-
-Screenshots of the client at 1280×720 and 390×844, taken when the logo went in: a loading screen
-(the account check), the 404, and the Shop's, Replays' and Statistics' skeletons mid-load.
