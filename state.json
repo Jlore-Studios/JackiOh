@@ -13380,6 +13380,13 @@
     "4188": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T23:36:10Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Rule line 2: it changes the AI's decisions and its search (crates/ai/src: evaluation threat term, wall_switches, decide, duos) and amends a ruling."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
