@@ -35776,7 +35776,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-18T03:59:03Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4174,
         "head": "cc70f27b7895a629d5564d0a1654b448315fb195",
         "issue": 4140,
         "merged_at": "2026-11-18T03:24:16Z",
@@ -35789,12 +35792,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:fd60a515-1794973802",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44233204663",
         "sha": "254b7862576b26fa0d81d5945ce1f51d36f6d0cf",
         "started_at": "2026-11-18T03:50:26Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the game log speaks its newest line to screen readers",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 331
