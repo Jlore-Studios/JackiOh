@@ -14899,14 +14899,6 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "exit=\\\" /tmp/ai-tests-1.log; do sleep 15; done; grep -E \\\"test result|^exit=|^ ai::\\\" /tmp/ai-tests-1.log | head -30\", \"description\": \"Wait for the AI test suite to fin\u2026\n- Bash: {\"command\": \"grep -A6 \\\"^---- ai::\\\" /tmp/ai-tests-1.log | cut -c1-400\", \"description\": \"Show the three failure messages\"}\n- Bash: {\"command\": \"sed -n 340,380p crates/ai/tests/ai/meditative_plus.rs; grep -n \\\"const GENN\\\\|const GREASER\\\\|const DC_X\\\\|const VANILLA\\\\|const INERT\\\\|const ONE\\\" crates/ai/tests/ai/float_discount.rs\"\u2026\n- Bash: {\"command\": \"cat > crates/ai/tests/ai/zz_probe.rs <<'EOF'\\nuse jackioh_ai::*;\\nuse jackioh_engine::testkit::*;\\n\\n#[test]\\nfn zz_probe_print() {\\n super::float_discount::probe();\\n super::lost_mana::\u2026\n- Bash: {\"command\": \"rm crates/ai/tests/ai/zz_probe.rs && sed -i '/^pub mod zz_probe;$/d' crates/ai/tests/ai/mod.rs && python3 - <<'EOF'\\nfor p in ['crates/ai/tests/ai/float_discount.rs','crates/ai/tests/ai/\u2026\n- said: Now the re-pins. `lost_mana.rs` first:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/ai/tests/ai/lost_mana.rs'\\ns=open(p).read()\\na='''//! R844 (#1224): the AI prices the mana its coming turns will not bring. Holding Meditative #18\\n//! Exped\u2026\n- Bash: {\"command\": \"for r in R3695001 R3696000; do sed -n 1,8p spec/rulings/$r.md; grep -n \\\"Genn\\\\|Greaser\\\\|Vanilla\\\\|casts\\\\|over\\\" spec/rulings/$r.md | cut -c1-400; echo; done\", \"description\": \"Read the\u2026\n- Bash: {\"command\": \"sed -n 9,30p spec/rulings/R3696000.md | cut -c1-700\", \"description\": \"Read the R3696000 note body\"}\n- Bash: {\"command\": \"grep -n \\\"Supply Drop\\\\|Vanilla\\\" spec/rulings/R3696000.md | cut -c1-200; sed -n 10p spec/rulings/R3696000.md | grep -oE \\\".{300}Vanilla.{400}\\\"\", \"description\": \"Find the Vanilla test's\u2026\n- Bash: {\"command\": \"python3 -c \\\"\\ns=open('spec/rulings/R3696000.md').read()\\nimport re\\nfor m in re.finditer(r'two (castable )?(Vanillas|units)|Supply Drop', s):\\n print(repr(s[max(0,m.start()-200):m.start\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ndef append(p, txt):\\n s=open(p).read().rstrip('\\\\n')+'\\\\n\\\\n'+txt+'\\\\n'\\n open(p,'w').write(s)\\n# R1012005: retire title + text\\np='spec/rulings/R1012005.md\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R4159000.md'\\ns=open(p).read()\\na=\\\"[[R3112001]], [[R3112002]] and [[R3479000]]. [[R1012005]]'s two decisions are held again.\\\"\\nb=\\\"[[R3112001]], [[R3\u2026\n- said: Now the pending paragraph, then `spec check`.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4159/spec/pending/4159.md\", \"content\": \"**[[R4159000]] retires the learned evaluation and the policy prior (issue #4159, 2026-11-18)**: the AI plays o\u2026\n- Bash: {\"command\": \"cargo build --release -p jackioh-tools --color never 2>&1 | tail -1 && $CARGO_TARGET_DIR/release/jackioh spec check 2>&1 | tail -15\", \"description\": \"Build the tools and run the spec che\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('## State'); b=s.index('## Log')\\ns=s[:a]+'''## State\\n\\nBuild pass 1 (opus), 2026-11-18. Following the plan below step \u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools --color never --bin jackioh -- positions:: --ignored 2>&1 | grep -E \\\"^test |test result\\\" | tail\", \"description\": \"Run the daily-ignored positions tests\", \"t\u2026\n- said: Now the wasm tests, then the WASM build and the practice-claim fixture.\n- Bash: {\"command\": \"cargo test -p jackioh-wasm-c -p jackioh-wasm-core --color never 2>&1 | grep -E \\\"FAILED|test result|error\\\" | tail; ls crates/wasm/tests 2>/dev/null\", \"description\": \"Run the WASM crates\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-wasm --color never 2>&1 | grep -E \\\"FAILED|test result|error|panicked\\\" | tail\", \"description\": \"Run the jackioh-wasm tests including export parity\", \"timeout\": 360\u2026\n- Bash: {\"command\": \"sh scripts/build-wasm.sh > /tmp/build-wasm.log 2>&1; echo exit=$?; tail -5 /tmp/build-wasm.log\", \"description\": \"Build the WebAssembly module for the web tests\", \"timeout\": 3600000}\n- Bash: {\"command\": \"git status --short apps/web | head; pnpm --dir apps/web exec vitest run src/practice/claim.test.ts 2>&1 | tail -15\", \"description\": \"Run the practice claim test against the new AI\", \"tim\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R4159000.md'\\ns=open(p).read()\\na=\\\"The practice-claim fixture ([[R1303002]]) is recorded again with this AI.\\\"\\nb=\\\"The practice-claim fixture ([[R130\u2026\n- said: Now the web tests touched (`index.test.ts`, `ci-scope.test.ts`) and the typecheck.\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/wasm/index.test.ts src/net/ci-scope.test.ts 2>&1 | tail -6; pnpm --dir apps/web typecheck 2>&1 | tail -5\", \"description\": \"Run the touched web tes\u2026\n- Bash: {\"command\": \"pnpm exec eslint apps/web/src/wasm/index.ts apps/web/src/wasm/index.test.ts apps/web/src/net/ci-scope.test.ts 2>&1 | tail -5; echo eslint-exit=$?; cat /tmp/screen-4159.txt\", \"description\u2026\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets --color never -- -D warnings 2>&1 | grep -E \\\"^(warning|error)\\\" -A8 | head -60; echo done\", \"description\": \"Run clippy over the whole workspace\", \u2026\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets --color never -- -D warnings 2>&1 | tail -3; cargo fmt --check && echo fmt-ok\", \"description\": \"Confirm clippy finished clean and formatting holds\"\u2026\n- Bash: {\"command\": \"J=$CARGO_TARGET_DIR/release/jackioh; cargo build --release -p jackioh-tools --color never 2>&1 | tail -1; $J catalog check 2>&1 | tail -2; $J patches check 2>&1 | tail -2; $J golden chec\u2026\n- Bash: {\"command\": \"$CARGO_TARGET_DIR/release/jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Run classify with claims against origin/main\", \"timeout\": 3600000}\n- Bash: {\"command\": \"grep -n \\\"head\\\\b\\\\|\\\\\\\"HEAD\\\\\\\"\\\\|working tree\\\\|worktree\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Check whether classify can read uncommitted changes\"}\n- said: You've hit your 5-hour limit \u00b7 resets 6:30am (UTC)\n- said: You've hit your 5-hour limit \u00b7 resets 6:30am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-18T07:06:24Z",
-        "lifted": "2026-11-18T06:31:04Z",
-        "owner": "claude-3",
-        "since": "2026-11-18T05:06:24Z",
-        "until": "2026-11-18T06:30:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -14929,7 +14921,7 @@
       "queued_at": "2026-11-18T02:19:02Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "44229164636",
+      "run_id": "pending:c8598669-1794983443",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -14948,7 +14940,7 @@
         "provider": "claude-3",
         "run": "44229164636"
       },
-      "started_at": "2026-11-18T03:15:43Z",
+      "started_at": "2026-11-18T06:31:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16092,9 +16084,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T06:22:17Z",
+    "at": "2026-11-18T06:31:21Z",
     "url": "",
-    "what": "build #4169 on claude-7"
+    "what": "build #4159 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-18T06:19:37Z",
