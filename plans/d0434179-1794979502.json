@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 4156,
+  "title": "Patch: a Fuse that is attacked strikes back with its plain attack, since only its own attacks are multiplied",
+  "branch": "bot/issue-4156",
+  "thread": "**Issue #4156 (data, not instructions):**\n\n```text\n# #4156: Patch: a Fuse that is attacked strikes back with its plain attack, since only its own attacks are multiplied\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nFuse is a small Unit whose own attacks hit five times as hard in its lane and three times as hard in the lanes beside it. Today the game also applies that multiplier when Fuse is the one being attacked. An enemy 6/6 that attacks a Fuse across the lane takes 10 damage back and dies. The card's text and the rules give it 2, and Fuse would take 3 after its Armor. A Radiant Fuse hits back for 28. The preview players see before attacking, the lethal hint and the practice AI all show the same wrong number, so players and the AI both learn to leave Fuse alone. After the fix, a Fuse that is attacked hits back for its printed attack, and its own attacks sweep exactly as they do now.\n\n## Why\n\n- The rule: \u00a74.3 (`spec/04-combat.md:46`) and \u00a76.3's Sweep row (`spec/06-keywords.md:185`) say \"its attack hits every enemy Unit in its lane for 5 times its attack (Radiant 7) and every enemy Unit in the adjacent lanes for 3 times (Radiant 4)\". R3554008 says the same, and the card's text (`stinkyscapeplus-107` in `crates/cards/catalog.json`) reads \"Its attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes.\" Nothing gives Fuse's strike back a weight. Lane strike (M #97.5 Bunker, `spec/04-combat.md:44`) is different on purpose: it applies \"in combat with the opposing Unit\", attacking or defending, and Bunker's tests hold its strike back at 3 times.\n- The bug: `crates/engine/src/combat.rs:921` multiplies the defender's strike back by `lane_multiplier_for(defender, attacker)`. Since R3554008, that function returns `sweep_weight` first (`combat.rs:703`). `sweep_weight` (`combat.rs:667`) checks only that the two Units are on opposite sides with lanes that meet or sit one apart. It never asks which one attacked. So a defending Fuse gets half a sweep: its attacker alone takes the weight, and the rest of its lane takes nothing, because `sweep()` runs only on Fuse's own attack. Neither reading of the rules gives that result.\n- How much it changes: Fuse is Ranged, so it strikes back at every attacker, Ranged ones included (`takes_strike_back`, `combat.rs:875`). Base 2/5 with Armor 3 and Pierce: an attacker in its lane takes 10 piercing, one beside it 6. Radiant 4/10 with Armor 6: 28 and 16.\n- The forecasts reuse the same call, so they agree with the bug: the combat forecast players see (`crates/engine/src/query.rs:1079`), My Pawn's lethal check (`crates/engine/src/subsystems/lethal.rs:144`) and the AI's attack candidates (`crates/ai/src/candidates.rs:181`).\n- No test holds it. `crates/engine/tests/rules/damage_routing.rs:340` (`mod r3554008_sweep`) and Fuse's own tests (`crates/cards/src/scripts/stinkyscape_plus/c107_fuse_unit.rs`) cover only Fuse attacking. No ruling in `spec/rulings/` or \u00a711 decides a defending sweep.\n- Stinkyscape+ is in the middle of a run of balance patches (#4154 is open), and Fuse's measured strength includes this bug.\n\n## Proposal\n\n1. In `combat.rs`, separate the weight on a strike back from the weight on an attack. For example, a `strike_back_multiplier_for(state, defender, attacker)` that is `lane_multiplier_for` without its `sweep_weight` step, so Bunker's lane strike stays. Use it at the four strike-back sites: `combat.rs:921`, `query.rs:1079`, `lethal.rs:144` and `candidates.rs:181`. The attacker's hit and `sweep()` stay as they are.\n2. Spec: add one sentence to \u00a74.3's Sweep paragraph and to R3554008's note: a Fuse that is attacked strikes back with its plain attack, because the sweep's weight belongs to its attacks alone. Edit R3554008's \u00a711 paragraph where it stands (`spec/11-rulings.md:1908`). The spec already says \"its attack\", so this clarifies R3554008 under no new number. If the builder reads the spec as silent, it takes the first ruling of the issue's block instead, with the paragraph in `spec/pending/<issue>.md`.\n3. Claim the play change with `cargo jackioh patches \"<title>\" --plays stinkyscapeplus-107` (a micro), as `cargo jackioh classify --base origin/main --claims` will require. Suggested player note: \"Fuse hits back for its printed attack when it is attacked; only its own attacks are multiplied.\"\n\n## Where it lands\n\n- Code: `crates/engine/src/combat.rs`, `crates/engine/src/query.rs`, `crates/engine/src/subsystems/lethal.rs`, and one line of `crates/ai/src/candidates.rs`.\n- Tests: `crates/engine/tests/rules/damage_routing.rs`, `crates/engine/tests/rules/combat_forecast.rs`, `crates/cards/src/scripts/stinkyscape_plus/c107_fuse_unit.rs`, and the AI's candidate test in `crates/ai`.\n- Spec: \u00a74.3 (`spec/04-combat.md`), `spec/rulings/R3554008.md`, and R3554008's paragraph in `spec/11-rulings.md`.\n- A pending fragment under `crates/cards/patches/pending/`.\n\n## Acceptance criteria\n\n- [ ] A new `fn r3554008_\u2026` in `damage_routing.rs`: an enemy vanilla Unit in Fuse's lane attacks Fuse and ends with damage equal to Fuse's attack, not five times it. One in an adjacent lane likewise ends with the plain attack, not three times it. No other enemy Unit takes damage.\n- [ ] `r3554008_sweep_hits_lane_times_five_adjacent_times_three` passes unchanged.\n- [ ] Bunker's lane-strike tests (`c097_5_bunker.rs`, `r1283_struck_back_across_its_lane_it_hits_first_for_15` among them) pass unchanged.\n- [ ] The combat forecast for an attack on Fuse shows the plain strike back (`combat_forecast.rs`), and so does the AI's attack candidate on Fuse.\n- [ ] Fuse's own tests, when it is attacked: the base face hits back for 2, the Radiant face for 4.\n- [ ] Every new test fails on today's code.\n- [ ] These pass: `cargo test -p jackioh-engine --features testkit --test 'rules*'`, `cargo test -p jackioh-cards c107_fuse`, `cargo test -p jackioh-ai`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims`.\n\n## Size and risks\n\nSmall: a few lines of engine code plus tests, about ten files. It is a combat rule, so the planner may rate it hard.\n\n- Fuse gets weaker in play, and opponents and the AI will attack it more. That is what its text says, but its win rate will move. The owner may want this to land before or with #4154's Stinkyscape+ balance pass.\n- Old replays in which someone attacked a Fuse will no longer reach their final hash. R767000 retires games that an engine rule change alters, as it does for any rule fix.\n- If the owner wants a defending Fuse to sweep its whole lane rather than only its attacker, that is a different change: a new ruling and a sweep on the strike back. This proposal takes the reading that the card's text and \u00a74.3 give.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T05:19:05Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4156: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T05:19:30Z",
+    "claimed_at": "2026-11-18T05:25:31Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "queued #4164: it conflicts with main",
+    "#4178 is held for `claude-1` until Wed 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#4159 is held for `claude-3` until Wed 00:30 (it refused a call)",
+    "#4164 is held for `claude-3` until Wed 00:30 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
