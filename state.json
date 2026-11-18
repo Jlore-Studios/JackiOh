@@ -16866,15 +16866,8 @@
       }
     },
     "4205": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44328064947",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-18T15:12:31Z",
-        "until": "2026-11-18T15:42:31Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16886,10 +16879,9 @@
         "reason": "planned on opus",
         "trail": "he) (owner|opponent)|no free \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4205/crates; grep -n \\\"No zone of p1's is free\\\" cards/src/scripts/meditative/c097_4_mega_church.rs; grep -n \\\"No free zone: it stays\\\" cards/src/scr\u2026\n- Bash: {\"command\": \"grep -n \\\"fn r1045000_an_indestructible_allured_unit_with_no_room_stays_where_it_is\\\" -B3 -A40 crates/cards/src/scripts/core/c050_k_pop_fanatic.rs\", \"description\": \"Read K-Pop's Indestru\u2026\n- said: I found 15 tests that assert the old behaviour and will need updating, 2 more that are at risk, and about 20 comment sites. Everything else that calls `steal` (about 40 more tests in engine, cards, ai, web and e2e) runs with room and keeps passing. No web or e2e test asserts a no-room steal. **One \u2026\n- Bash: {\"command\": \"grep -n -i \\\"steal\\\" crates/engine/README.md crates/cards/README.md crates/ai/README.md docs/architecture.md 2>/dev/null | cut -c1-200 | head\", \"description\": \"Check READMEs for steal co\u2026\n- Bash: {\"command\": \"sed -n 1136,1175p crates/cards/src/scripts/core/c050_k_pop_fanatic.rs; cat spec/rulings/R0282.md | sed -n 1,20p\", \"description\": \"Read K-Pop kept-script no-room test and R282\"}\n- Bash: {\"command\": \"sed -n 285,330p crates/engine/tests/rules/control_change.rs; sed -n 550,590p crates/engine/tests/rules/control_change.rs\", \"description\": \"Read control_change tests on left-behind cards\"}\n- Bash: {\"command\": \"sed -n 1203,1245p crates/engine/tests/rules/rulings_a.rs\", \"description\": \"Read rulings_a R15 test\"}\n- Bash: {\"command\": \"sed -n 145,175p crates/cards/src/scripts/meditative/c039_5_jade_beauty.rs; sed -n 170,200p crates/cards/src/scripts/classic/c040_mc_tech.rs\", \"description\": \"Read Jade Beauty and MC Tech\u2026\n- Bash: {\"command\": \"ls crates/engine/tests/rules/mod_*.rs; grep -n \\\"pub mod s\\\" crates/engine/tests/rules/mod_3.rs | head -30\", \"description\": \"Find where to register the new test module\"}\n- Bash: {\"command\": \"sed -n 1,16p crates/cards/src/scripts/core/c050_k_pop_fanatic.rs | grep \\\"^use\\\"; sed -n 1,30p crates/cards/src/scripts/core/c049_snom_bunny_mind_control.rs | grep -n \\\"^use\\\"; sed -n 17\u2026\n- Bash: {\"command\": \"sed -n 17,24p crates/cards/src/scripts/core/c050_k_pop_fanatic.rs; sed -n 20,32p crates/cards/src/scripts/core/c049_snom_bunny_mind_control.rs; grep -n \\\"pub use\\\\|ForEachCardArgs\\\\|Sele\u2026\n- Bash: {\"command\": \"sed -n 400,470p crates/engine/src/testkit/scenario.rs | grep -n \\\"pub [a-z_]*:\\\" \", \"description\": \"List scenario FieldEntry fields\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct Decision\\\" -A12 crates/ai/src/*.rs | grep -n \\\"pub \\\" | head; grep -n \\\"Play {\\\" -A8 crates/engine/src/wire/actions.rs 2>/dev/null | head -12 || grep -rn \\\"enum Acti\u2026\n- Bash: {\"command\": \"grep -rn \\\"reborn_spent: None\\\" crates apps --include=*.rs | head; grep -rn \\\"CardInstance {$\\\" crates --include=*.rs | grep -v \\\"fn \\\\|impl\\\\|struct\\\" | head\", \"description\": \"Find Card\u2026\n- Bash: {\"command\": \"grep -rln \\\"marked_exiled\\\\|markedExiled\\\" crates/wasm crates/shared crates/server apps/web/src --include=* 2>/dev/null | head\", \"description\": \"Check other mirrors of CardInstance field\u2026\n- Bash: {\"command\": \"sed -n 420,430p crates/engine/src/testkit/scenario.rs; grep -rn \\\"\\\\\\\"stack\\\\\\\": true\\\" crates/engine/tests/rules/*.rs | head -3\", \"description\": \"Check the scenario stack entry semantic\u2026\n- Bash: {\"command\": \"grep -n \\\"fn r15_\\\" crates/cards/src/scripts/meditative/c097_4_mega_church.rs crates/cards/src/scripts/classic/c040_mc_tech.rs crates/cards/src/scripts/classic/c039_outbreak.rs crates/ca\u2026\n- Bash: {\"command\": \"sed -n 830,837p crates/engine/src/play_steps.rs; sed -n 448,456p crates/engine/src/effects/delay.rs\", \"description\": \"Read the play_steps and delay comments to reword\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4205/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery steal of a card on the field that reaches the card but finds no destination for it (no free zone in i\u2026\n- Bash: {\"command\": \"ls crates/ai/tests/; for r in 12 13 15 46 59 68 76 171 282 462 803 963 1045000 1185003 1220 1423 1839000 1849002 1854002 2618000 3546003 360; do f=$(printf \\\"spec/rulings/R%04d.md\\\" $r);\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4205/.bot-plan.md\", \"content\": \"## Goal\\n\\nWhen a steal of a card on the field reaches the card but has nowhere to put it (no free zone in its row on \u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nold_start=s.index(' - `08-catalog.md`:')\\nold_end=s.index('12. **Patch**')\\ns=s[:old_start]+''' - `08-catalog.md`: rows \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4205/.bot-plan.md\", \"content\": \"## Goal\\n\\nWhen a steal of a card on the field reaches the card but has nowhere to put it (no free zone in its row on \u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"tr -s ' \\\\n\\\\t' '\\\\n' < .bot-plan.md | grep -c '[A-Za-z0-9]'\", \"description\": \"Count words excluding punctuation tokens\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na='- `R0963.md`: replace \\\"(`otherwise: destroy`'\\nassert a in s\\ns=s.replace(a,'- `R0963.md` (the text wraps after \\\"destroy,\\\"): \u2026\n- Bash: {\"command\": \"grep -n \\\"R0963.md\\\\|R3546003.md\\\" .bot-plan.md\", \"description\": \"Find the exact draft lines to patch\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace('- **`R0963.md`**: replace','- **`R0963.md`** (the text wraps after \\\"destroy,\\\"): replace',1)\\ns=s.replace('- **`R3546\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4205/.bot-plan.md\"}\n- said: ## Goal When a steal of a card on the field reaches the card but has nowhere to put it (no free zone in its row on the thief's side, R15; no fit for a GIGA, R3546003), the card is destroyed instead, and nothing prevents that destroy: - Indestructible does not save it: no R46 knock-down. - Untributa\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-18T14:46:56Z",
       "owner_why": "it plans it",
@@ -16902,9 +16894,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-18T14:44:18Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44328064947",
+      "run_id": "pending:97d7bc02-1795014846",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T14:46:56Z",
+      "started_at": "2026-11-18T15:14:43Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17009,9 +17001,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T15:03:05Z",
+    "at": "2026-11-18T15:14:43Z",
     "url": "",
-    "what": "build #4187 on claude-8"
+    "what": "build #4205 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-18T14:57:00Z",
