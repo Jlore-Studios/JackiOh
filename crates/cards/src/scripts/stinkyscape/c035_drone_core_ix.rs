@@ -1,4 +1,4 @@
-//! S #35 Drone Core IX (SPEC §8.10 row 35): (6) Spell, Drone Core, Legendary, a card of the
+//! S #35 Drone Core IX (SPEC §8.10 row 35): (7) Spell ((6) until issue #4154), Drone Core, Legendary, a card of the
 //! Stinkyscape set.
 //!   Base:    "Float reduces cost.\nSummon {corvettes|Drone Corvette|Drone Corvettes}." — corvettes 3
 //!   Radiant: "Float reduces cost.\nSummon {corvettes|Radiant Drone Corvette|Radiant Drone Corvettes}."
@@ -78,12 +78,12 @@ mod tests {
 
     #[test]
     fn r1563000_r2657002_a_float_of_2_makes_it_cost_two_less_in_hand_never_in_the_deck() {
-        fam::drone_float_two_less(CORE, 6);
+        fam::drone_float_two_less(CORE, 7);
     }
 
     #[test]
     fn r1563000_the_opponents_float_lowers_nothing() {
-        fam::drone_float_opponent(CORE, 6);
+        fam::drone_float_opponent(CORE, 7);
     }
 
     #[test]

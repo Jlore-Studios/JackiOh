@@ -480,8 +480,8 @@ core-050: # K-Pop Fanatic
     death: Tell my bias goodbye.
   zh:
     name: 韩流狂热粉
-    base: "无法守备\n战吼：迷惑一个敌方永久物。"
-    radiant: "圣盾，无法守备\n战吼：迷惑一个敌方永久物。当你夺取它时，使其变为光辉。"
+    base: 战吼：迷惑一个敌方永久物。
+    radiant: "圣盾\n战吼：迷惑一个敌方永久物。当你夺取它时，使其变为光辉。"
 core-051: # KY's Private Tutor
   flavour: Tutoring available in every subject except humility.
   voice:
@@ -676,8 +676,8 @@ core-070: # Spiteful Stab
     cast: This is for everything.
   zh:
     name: 恶毒刺击
-    base: 造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。
-    radiant: 造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。
+    base: "穿透\n造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。"
+    radiant: "穿透\n造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。"
     previews:
       Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile.: 造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。
 core-071: # Intern Stimmy
@@ -1346,8 +1346,8 @@ classic-037: # Last Hurrah
     cast: One last hurrah, together!
   zh:
     name: 最后的狂欢
-    base: 抽光你的牌库。在本回合结束时，弃掉{discard}张牌。
-    radiant: 抽光你的牌库。在你的下个回合结束时，弃掉{discard}张牌。
+    base: 抽光你的牌库。
+    radiant: 抽光你的牌库。使你手牌中的{flashback}张随机牌获得闪回。
 classic-038: # Jackiestan Auctioneer
   flavour: Going once, going twice, sold to the player in lane three.
   voice:
@@ -1774,8 +1774,8 @@ classic-084: # Lockdown
     cast: Nobody in, nobody out.
   zh:
     name: 全面封锁
-    base: "不可摧毁\n在一个永久物被打出后，锁定其区域。\n激活：献祭这张牌。"
-    radiant: "不可摧毁\n在你的对手打出一个永久物后，锁定其区域。\n激活：献祭这张牌。"
+    base: "不可摧毁，陨坑\n在一个永久物被打出后，锁定其区域。\n激活：献祭这张牌。"
+    radiant: "不可摧毁，陨坑\n在你的对手打出一个永久物后，锁定其区域。\n激活：献祭这张牌。"
 classic-085: # King Wagtoggle
   flavour: He trades cards with a handshake and a grin.
   voice:
@@ -2876,8 +2876,8 @@ meditative-001: # Disruptive Disruptor
     cast: Objection. Nobody touches that hand.
   zh:
     name: 捣乱的捣乱者
-    base: "光环：在你对手的回合中，你不会被迫弃牌。\n战吼：抽{draw}张牌。"
-    radiant: "光环：在你对手的回合中，你不会被迫弃牌。\n战吼：抽{draw}张牌并获得{mana}点法力值。"
+    base: "光环：在你对手的回合中，你不会被迫弃牌。\n激活：你的对手随机弃掉一张牌。"
+    radiant: "光环：在你对手的回合中，你不会被迫弃牌。\n激活：你的对手随机弃掉一张光辉牌；如果其没有光辉牌，则随机弃掉一张牌。"
 meditative-002: # Rampaging Rhino
   flavour: Every bruise costs it something. It keeps running anyway.
   voice:
@@ -2928,8 +2928,8 @@ meditative-007: # Introspection
     cast: Breathe in. Look within.
   zh:
     name: 内省
-    base: 回合开始时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
-    radiant: 回合开始时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。
+    base: "献祭1\n回合开始时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。"
+    radiant: "献祭1\n回合开始时：为你的英雄和你的每个单位恢复{heal}点生命值。抽{draw}张牌。你手牌中的牌的法力值消耗减少({discount})点。对每个敌人造成{damage}点伤害。"
 meditative-008: # Reach the Summit
   flavour: Every summit is only the floor of the next sky.
   voice:
@@ -2954,8 +2954,8 @@ meditative-010: # Double Counting
     cast: One, two, and one, two again.
   zh:
     name: 重复计算
-    base: 光环：你的战吼和亡语效果会额外触发{extra}次。
-    radiant: 光环：你的战吼和亡语效果会额外触发{extra}次。
+    base: "光环：你的战吼和亡语效果会额外触发{extra}次。\n激活：支付({price})点法力值，发现一张战吼或亡语牌。"
+    radiant: "光环：你的战吼和亡语效果会额外触发{extra}次。\n激活：发现一张战吼或亡语牌。"
 meditative-011: # Double Header
   flavour: Buy one ticket, watch two games, and keep the stub.
   voice:
@@ -3034,8 +3034,8 @@ meditative-019: # Expedition123
     cast: The long road it is.
   zh:
     name: 远征123
-    base: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。将一张时空裂隙置入你的手牌。
-    radiant: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。将一张光辉时空裂隙置入你的手牌。
+    base: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。你的英雄获得{armor}点护甲。将一张时空裂隙置入你的手牌。
+    radiant: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。你的英雄获得{armor}点护甲。将一张光辉时空裂隙置入你的手牌。
 meditative-019-1: # Temporal Rift
   flavour: Time folds once for everyone. Spend your fold well.
   voice:
@@ -3327,8 +3327,8 @@ meditative-044: # CN Jade Well
     cast: Drink from the deep green.
   zh:
     name: 玉之井
-    base: 激活：将一张鸿运石置入你的手牌。
-    radiant: 激活：将一张光辉鸿运石置入你的手牌。
+    base: 激活：将一张鸿运石置入你的手牌。它具有幸运{lucky}。
+    radiant: 激活：将一张光辉鸿运石置入你的手牌。它具有幸运{lucky}。
 meditative-045: # Knowledge Breaker
   flavour: Sit still. What you know is about to leave you.
   voice:
@@ -3365,7 +3365,7 @@ meditative-047: # 饕餮
     death: Still hungry. Always hungry.
   zh:
     name: 饕餮
-    base: 激活：将一个随机敌方单位融合进本牌，然后冻结本牌。
+    base: 激活：将一个随机敌方单位融合进本牌，然后冻结本牌。使用后，你的下个回合无法使用。
     radiant: 激活：将一个随机敌方单位融合进本牌。
 meditative-048: # Tranquility
   flavour: Breathe in. The storm waits its turn.
@@ -3695,8 +3695,8 @@ meditative-078: # Occidentless Mandate
     cast: By order of the mandate, clear the board.
   zh:
     name: 无西方法令
-    base: 放逐每个非中国永久物。
-    radiant: 放逐每个敌方非中国永久物。
+    base: 消灭每个非中国永久物。
+    radiant: 消灭每个敌方非中国永久物。
 meditative-079: # Touched by KY
   flavour: Once KY touches your mind, it never fits back in the box.
   voice:
@@ -3897,8 +3897,8 @@ meditative-095: # Call to Chaos (Meditative Edition)
     cast: Breathe in. Now roll the dice!
   zh:
     name: 混沌召唤（冥想版）
-    base: 一个随机效果：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得5点护甲，并为其恢复5点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
-    radiant: 三个不同的随机效果，按所列顺序结算：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得5点护甲，并为其恢复5点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
+    base: 一个随机效果：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得4点护甲，并为其恢复4点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
+    radiant: 三个不同的随机效果，按所列顺序结算：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得4点护甲，并为其恢复4点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
 meditative-095-1: # CN Golem
   flavour: Assembled overnight, smashing by noon.
   voice:
@@ -4125,8 +4125,8 @@ meditativeplus-002: # NA Tech
     cast: Best and worst, together. Balance achieved.
   zh:
     name: NA科技
-    base: 将胜率最低的牌与胜率最高的牌融合，并将其置入你的手牌。其法力值消耗为({setCost})。
-    radiant: 将一张胜率最低的光辉牌与一张胜率最高的光辉牌融合，并将其置入你的手牌。其法力值消耗为({setCost})。
+    base: 将胜率最低的牌与胜率最高的牌融合，并将其置入你的手牌。
+    radiant: 将一张胜率最低的光辉牌与一张胜率最高的光辉牌融合，并将其置入你的手牌。
 meditativeplus-003: # Wondrous Wand
   flavour: Wave it twice and mean it. The wand remembers what you wished for.
   voice:
@@ -4641,8 +4641,8 @@ stinkyscape-018: # Imitated Instrumentality
     cast: Three brains online. Please behave.
   zh:
     name: 仿制补完
-    base: 召唤梅尔基奥尔、巴尔塔萨和卡斯帕。它们能提供巨大的战略价值，但它们可以投票将你移出游戏。
-    radiant: 召唤光辉梅尔基奥尔、光辉巴尔塔萨和光辉卡斯帕。它们能提供巨大的战略价值，但它们可以投票将你移出游戏。
+    base: "献祭1\n召唤梅尔基奥尔、巴尔塔萨和卡斯帕。它们能提供巨大的战略价值，但它们可以投票将你移出游戏。"
+    radiant: "献祭1\n召唤光辉梅尔基奥尔、光辉巴尔塔萨和光辉卡斯帕。它们能提供巨大的战略价值，但它们可以投票将你移出游戏。"
 stinkyscape-018-1: # MELCHIOR
   flavour: The scientist in her counts the board. Lose the count, lose her trust.
   voice:
@@ -5039,8 +5039,8 @@ stinkyscape-059: # Repeater v5
     death: Barrels melted.
   zh:
     name: 连发炮v5
-    base: "星舰部件，装备\n激活4：对一个敌方单位造成{damage}点伤害，具有穿透。"
-    radiant: "星舰部件，装备\n激活4：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    base: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    radiant: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
 stinkyscape-060: # Cannon v5
   flavour: Its shells have names. Its crew does not.
   voice:
@@ -5149,8 +5149,8 @@ stinkyscape-070: # Z'Zoth
     death: I will be back.
   zh:
     name: 兹佐斯
-    base: 战吼：从你的墓地中召唤每个具有亡语的单位。
-    radiant: 战吼：从你的墓地中召唤每个具有亡语的单位。使它们获得复生。
+    base: 战吼：从你的墓地中召唤每个具有亡语的单位。触发它们的亡语。
+    radiant: 战吼：从你的墓地中召唤每个具有亡语的单位。使它们获得复生。触发它们的亡语两次。
 stinkyscape-071: # A'Zoth
   flavour: Every first word deserves an encore.
   voice:
@@ -5239,8 +5239,8 @@ stinkyscape-079: # Orca
     death: Orca is going under.
   zh:
     name: 虎鲸
-    base: "星舰部件，飞行\n战吼：从2张采矿机中选择一张，装备到此单位上。\n加码(5)：提供的采矿机为光辉。"
-    radiant: "星舰部件，飞行\n战吼：从2张采矿机中选择一张，装备到此单位上，重复两次。\n加码(5)：提供的采矿机为光辉。"
+    base: "飞行\n战吼：从2张采矿机中选择一张，装备到此单位上。\n加码(5)：提供的采矿机为光辉。"
+    radiant: "飞行\n战吼：从2张采矿机中选择一张，装备到此单位上，重复两次。\n加码(5)：提供的采矿机为光辉。"
 stinkyscape-080: # Galaxy
   flavour: A flagship with a mine shaft in its belly and a stock market in its bridge.
   voice:
@@ -5279,8 +5279,8 @@ stinkyscape-083: # Halo
     death: Ring shattered.
   zh:
     name: 光晕
-    base: 战吼：发现{weapons}张稀有武器牌，并将它们装备到此单位上。
-    radiant: 战吼：发现{weapons}张史诗武器牌，并将它们装备到此单位上。
+    base: 战吼：从2张稀有武器牌中选择一张，并将其装备到此单位上，重复{weapons}次。
+    radiant: 战吼：从2张史诗武器牌中选择一张，并将其装备到此单位上，重复{weapons}次。
 stinkyscape-084: # Power Cell
   flavour: Fully powered, and leaking scrap from every seam.
   voice:
@@ -5411,8 +5411,8 @@ stinkyscape-096: # Ocean Tsunami
     death: Low tide, at last.
   zh:
     name: 海洋海啸
-    base: "献祭1\n战吼：弃掉你的手牌。用随机臭臭星景资源填满你的手牌。"
-    radiant: "献祭1\n战吼：弃掉你的手牌。用随机光辉臭臭星景资源填满你的手牌。"
+    base: "献祭2\n战吼：弃掉你的手牌。用随机臭臭星景资源填满你的手牌。"
+    radiant: "献祭2\n战吼：弃掉你的手牌。用随机光辉臭臭星景资源填满你的手牌。"
 stinkyscape-097: # Asteroid Field
   flavour: Nobody flies into an asteroid field on purpose. Nobody flies out empty-handed, either.
   voice:
@@ -5535,8 +5535,8 @@ stinkyscape-109: # xxFreshJack
     death: GG, chat.
   zh:
     name: xxFreshJack
-    base: 战吼：施放一张来自游戏代码中任意位置的随机BUSTED牌。
-    radiant: 战吼：从游戏代码中的任意位置发现一张光辉BUSTED牌，并施放它。
+    base: "献祭1\n战吼：施放一张来自游戏代码中任意位置的随机BUSTED牌。"
+    radiant: "献祭1\n战吼：从游戏代码中的任意位置发现一张光辉BUSTED牌，并施放它。"
 stinkyscape-110: # iKwzki
   flavour: Everyone shines brighter standing next to her.
   voice:
@@ -5563,8 +5563,8 @@ stinkyscape-112: # Job Application
     cast: Thank you for applying. We'll be in touch.
   zh:
     name: 求职申请
-    base: "亡语：重新召唤这张牌，回到第1阶段。\n任务：第1阶段，上传简历。激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到4个回合后收到回复。\n任务：第2阶段，面试。从三个任务中随机抽取一个：打出一张法力值消耗与你的简历相同的牌；在一个回合内打出3张法力值消耗各不相同的牌；或者单次受到或造成12点或更多伤害。奖励：将你的简历置入你的手牌并将其强化{buffs}次。其法力值消耗为(0)。\n任务：第3阶段，录用通知。激活这张牌以接受录用，或者再投一份申请，回到第1阶段，且所有奖励变为三倍。奖励：从你的下个回合起，在你的每个回合开始时，将一张薪水支票置入你的手牌。"
-    radiant: "幸运1\n亡语：重新召唤这张牌，回到第1阶段。\n任务：第1阶段，上传简历。激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到4个回合后收到回复。\n任务：第2阶段，面试。从三个任务中随机抽取一个：打出一张法力值消耗与你的简历相同的牌；在一个回合内打出3张法力值消耗各不相同的牌；或者单次受到或造成12点或更多伤害。奖励：将你的简历置入你的手牌并将其强化{buffs}次。其法力值消耗为(0)。\n任务：第3阶段，录用通知。激活这张牌以接受录用，或者再投一份申请，回到第1阶段，且所有奖励变为三倍。奖励：从你的下个回合起，在你的每个回合开始时，将一张薪水支票置入你的手牌。"
+    base: "亡语：重新召唤这张牌，回到第1阶段。\n任务：第1阶段，上传简历。激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到2个回合后收到回复。\n任务：第2阶段，面试。从三个任务中随机抽取一个：打出一张法力值消耗与你的简历相同的牌；在一个回合内打出2张法力值消耗各不相同的牌；或者单次受到或造成8点或更多伤害。奖励：将你的简历置入你的手牌并将其强化{buffs}次。其法力值消耗为(0)。\n任务：第3阶段，录用通知。激活这张牌以接受录用，或者再投一份申请，回到第1阶段，且所有奖励变为三倍。奖励：从你的下个回合起，在你的每个回合开始时，将一张薪水支票置入你的手牌。"
+    radiant: "幸运1\n亡语：重新召唤这张牌，回到第1阶段。\n任务：第1阶段，上传简历。激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到2个回合后收到回复。\n任务：第2阶段，面试。从三个任务中随机抽取一个：打出一张法力值消耗与你的简历相同的牌；在一个回合内打出2张法力值消耗各不相同的牌；或者单次受到或造成8点或更多伤害。奖励：将你的简历置入你的手牌并将其强化{buffs}次。其法力值消耗为(0)。\n任务：第3阶段，录用通知。激活这张牌以接受录用，或者再投一份申请，回到第1阶段，且所有奖励变为三倍。奖励：从你的下个回合起，在你的每个回合开始时，将一张薪水支票置入你的手牌。"
     previews:
       Buff it {buffs|time|times}: 强化{buffs}次
       add a Paycheck: 将一张薪水支票
@@ -5963,8 +5963,8 @@ stinkyscape-148: # Alteran Reach
     cast: The stars stretch on forever.
   zh:
     name: 奥特兰疆域
-    base: "不可摧毁\n激活♾️：支付(1)点法力值，沿你的星图航行一个节点并获得其奖励。\n第20个节点是宇宙的尽头：抵达那里会将一张宇宙边缘置入你的手牌。"
-    radiant: "不可摧毁\n你每回合的第一次航行免费。\n激活♾️：支付(1)点法力值，沿你的星图航行一个节点并获得其奖励。\n第20个节点是宇宙的尽头：抵达那里会将一张宇宙边缘置入你的手牌。"
+    base: "不可摧毁\n你每回合的第一次航行免费。\n激活♾️：支付(1)点法力值，沿你的星图航行一个节点并获得其奖励。\n第20个节点是宇宙的尽头：抵达那里会将一张宇宙边缘置入你的手牌。"
+    radiant: "不可摧毁\n你每回合的前两次航行免费。\n激活♾️：支付(1)点法力值，沿你的星图航行一个节点并获得其奖励。\n第20个节点是宇宙的尽头：抵达那里会将一张宇宙边缘置入你的手牌。"
 stinkyscape-148-1: # Edge of the Universe
   flavour: You did not win the war. You just walked off the edge of the map.
   voice:
@@ -6119,7 +6119,7 @@ stinkyscape-165: # The Trade Union
     cast: Solidarity! Every card gets a fair trade.
   zh:
     name: 贸易联盟
-    base: "可交易\n光环：你手牌中的牌具有可交易。"
+    base: "可交易\n光环：你手牌中的牌具有可交易。你每回合最多可以交易{trades}张牌。"
     radiant: "可交易\n光环：你手牌中的牌具有可交易。你每回合最多可以交易{trades}张牌。"
 stinkyscape-166: # Scanning Probe Mk1
   flavour: Ping. Nothing. Ping. Nothing. Ping. Wait, what was that?
@@ -6809,8 +6809,8 @@ traininggrounds-039: # Call to Chaos (Training-Grounds Edition)
     cast: Class is chaos! Roll the dice!
   zh:
     name: 混沌召唤（训练场版）
-    base: 一个随机效果：召唤3个突袭衍生物，然后使你场上、手牌中和牌库中的单位获得嘲讽和圣盾；用高兹曼游戏设计填满你的手牌，并复原3点法力值；将4张随机训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得2点法力值；获得6点法力值并抽2张牌；召唤5个随机训练场永久物；将2张随机光辉训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得1点法力值；召唤3个突袭衍生物，并在本局对战的剩余时间内使你的单位拥有突袭、践踏和穿透；召唤一个训练场魔像；在本局对战的剩余时间内，你的每个回合开始时，将一张随机混沌召唤置入你的手牌；施放一张随机混沌召唤。
-    radiant: 三个不同的随机效果，按所列顺序结算：召唤3个突袭衍生物，然后使你场上、手牌中和牌库中的单位获得嘲讽和圣盾；用高兹曼游戏设计填满你的手牌，并复原3点法力值；将4张随机训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得2点法力值；获得6点法力值并抽2张牌；召唤5个随机训练场永久物；将2张随机光辉训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得1点法力值；召唤3个突袭衍生物，并在本局对战的剩余时间内使你的单位拥有突袭、践踏和穿透；召唤一个训练场魔像；在本局对战的剩余时间内，你的每个回合开始时，将一张随机混沌召唤置入你的手牌；施放一张随机混沌召唤。
+    base: 一个随机效果：召唤2个突袭衍生物，然后使你场上、手牌中和牌库中的单位获得嘲讽和圣盾；用高兹曼游戏设计填满你的手牌，并复原2点法力值；将3张随机训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得2点法力值；获得5点法力值并抽2张牌；召唤4个随机训练场永久物；将2张随机光辉训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得1点法力值；召唤2个突袭衍生物，并在本局对战的剩余时间内使你的单位拥有突袭、践踏和穿透；召唤一个训练场魔像；在本局对战的剩余时间内，你的每个回合开始时，将一张随机混沌召唤置入你的手牌；施放一张随机混沌召唤。
+    radiant: 三个不同的随机效果，按所列顺序结算：召唤2个突袭衍生物，然后使你场上、手牌中和牌库中的单位获得嘲讽和圣盾；用高兹曼游戏设计填满你的手牌，并复原2点法力值；将3张随机训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得2点法力值；获得5点法力值并抽2张牌；召唤4个随机训练场永久物；将2张随机光辉训练场牌置入你的手牌，它们的法力值消耗为(1)，并获得1点法力值；召唤2个突袭衍生物，并在本局对战的剩余时间内使你的单位拥有突袭、践踏和穿透；召唤一个训练场魔像；在本局对战的剩余时间内，你的每个回合开始时，将一张随机混沌召唤置入你的手牌；施放一张随机混沌召唤。
 traininggrounds-039-1: # Training-Grounds Golem
   flavour: Built to be hit in training. Nobody told it to stop hitting back.
   voice:
@@ -6827,8 +6827,8 @@ traininggrounds-040: # Goetzmann Game Design
     cast: Let me design you something.
   zh:
     name: 高兹曼游戏设计
-    base: 将一张随机牌置入你的手牌。
-    radiant: 将一张随机光辉牌置入你的手牌。
+    base: 将一张随机牌置入你的手牌。其法力值消耗减少({discount})点。
+    radiant: 将一张随机光辉牌置入你的手牌。其法力值消耗减少({discount})点。
 traininggrounds-041: # Legacy: Speciesist
   flavour: He has a strong opinion about everyone who isn't him, and none of them are good.
   voice:
@@ -7045,8 +7045,8 @@ stinkyscapeplus-004: # Profe Yates
     death: I'll never see the Northern Lights.
   zh:
     name: 耶茨教授
-    base: "战吼：放逐一个永久物。然后召唤两张随机陷阱。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
-    radiant: "战吼：放逐一个永久物。然后召唤三张随机光辉陷阱。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
+    base: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤两张随机陷阱。
+    radiant: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤三张随机光辉陷阱。
 stinkyscapeplus-005: # Dingleberry Droat
   flavour: He blends the whole fruit stand into one very expensive snack and calls it a business plan.
   voice:
@@ -7225,8 +7225,8 @@ stinkyscapeplus-021: # Jlockeed Shredder-12
     death: Budget cuts got me.
   zh:
     name: Jlockeed收割机-12
-    base: "献祭2，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
-    radiant: "献祭2，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    base: "献祭3，穿透\n结余使献祭需求减少1。\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    radiant: "献祭3，穿透\n结余使献祭需求减少1。\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
 stinkyscapeplus-022: # Cryofluid
   flavour: Cold, thick and a little too eager to help. Don't drink it, however thirsty.
   voice:
@@ -7599,8 +7599,8 @@ stinkyscapeplus-061-1: # Shawarma Law
     cast: Shawarma for everyone!
   zh:
     name: 沙瓦玛法则
-    base: "回合结束时：每个单位都吃一份美味的沙瓦玛，并产生以下效果之一。\n吃第一份沙瓦玛：获得+{health}点生命值。\n吃第二份沙瓦玛：获得无法攻击。\n吃第三份沙瓦玛：获得无法守备和易碎{brittle2}。\n之后每吃一份沙瓦玛：冻结。"
-    radiant: "回合结束时：每个单位都吃一份美味的沙瓦玛，并产生以下效果之一。\n吃第一份沙瓦玛：获得+{health}点生命值。\n吃第二份沙瓦玛：获得无法攻击。\n吃第三份沙瓦玛：获得无法守备和易碎{brittle2}。\n之后每吃一份沙瓦玛：冻结。\n友方单位自觉克制，吃一份沙瓦玛就停下。"
+    base: "回合结束时：每个单位都吃一份美味的沙瓦玛，并产生以下效果之一。\n吃第一份沙瓦玛：获得+{health}点生命值。\n吃第二份沙瓦玛：获得无法攻击。\n吃第三份沙瓦玛：获得无法守备和易碎{brittle2}。\n每个单位最多吃三份沙瓦玛。"
+    radiant: "回合结束时：每个单位都吃一份美味的沙瓦玛，并产生以下效果之一。\n吃第一份沙瓦玛：获得+{health}点生命值。\n吃第二份沙瓦玛：获得无法攻击。\n吃第三份沙瓦玛：获得无法守备和易碎{brittle2}。\n每个单位最多吃三份沙瓦玛。\n友方单位自觉克制，吃一份沙瓦玛就停下。"
 stinkyscapeplus-062: # Overdrive Projector
   flavour: A lamp that makes everything under it hurry up and regret it.
   voice:
@@ -7785,15 +7785,15 @@ stinkyscapeplus-079: # A Glimpse into the Endless Sea
     cast: Just wait. The sea remembers.
   zh:
     name: 无尽之海一瞥
-    base: 放逐你的牌库。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
-    radiant: 放逐你的牌库。你的英雄获得{armor}点护甲。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
+    base: 放逐你的牌库和所有永久物。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
+    radiant: 放逐你的牌库和所有永久物。你的英雄获得{armor}点护甲。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
 stinkyscapeplus-080: # The Last Voyage
   flavour: Every ship leaves port. This fleet just forgot to pack a return.
   voice:
     cast: All ships, last voyage. Sail!
   zh:
     name: 最后的航行
-    base: 放逐你的手牌、牌库和场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。现在发射一艘随机的，并在你的每个回合开始时再发射一艘。
+    base: 放逐你的手牌、牌库和场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。在你的每个回合开始时，发射一艘随机的。
     radiant: 放逐你的手牌、牌库、场上以及你对手的场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。现在发射一艘随机的，并在你的每个回合开始时再发射一艘。
 stinkyscapeplus-081: # Doomsayer
   flavour: He predicts the end every morning. Technically he keeps being early.
@@ -7811,8 +7811,8 @@ stinkyscapeplus-082: # Endless Expedition
     cast: Into the endless unknown!
   zh:
     name: 无尽远征
-    base: 现在以及在本局对战剩余时间内你的每个回合开始时：将一张随机终点牌置入你的手牌。其法力值消耗为(2)。
-    radiant: 现在以及在本局对战剩余时间内你的每个回合开始时：将一张随机光辉终点牌置入你的手牌。其法力值消耗为(2)。
+    base: 在本局对战剩余时间内，你的法力值减少({mana})点，并且在你的每个回合开始时，将一张随机终点牌置入你的手牌。其法力值消耗为(3)。
+    radiant: 在本局对战剩余时间内，你的法力值减少({mana})点，并且在你的每个回合开始时，将一张随机光辉终点牌置入你的手牌。其法力值消耗为(3)。
 stinkyscapeplus-083: # Offworld Replicant
   flavour: Always has a spare. It is also the spare.
   voice:
@@ -7949,8 +7949,8 @@ stinkyscapeplus-097: # Selective Enrollment
     cast: Only the finest few. Sorry, not you.
   zh:
     name: 择优招生
-    base: 将你的手牌填满随机光辉S级牌，若无则为A级牌。
-    radiant: 将你的手牌填满随机光辉S级牌，若无则为A级牌。它们的法力值消耗减少(2)点。
+    base: "结余减费。\n将你的手牌填满随机光辉S级牌，若无则为A级牌。"
+    radiant: "结余减费。\n将你的手牌填满随机光辉S级牌，若无则为A级牌。它们的法力值消耗减少(2)点。"
 stinkyscapeplus-098: # Doomed Ship
   flavour: The captain seated them at opposite ends. Fate had notes.
   voice:
@@ -8160,7 +8160,7 @@ stinkyscapeplus-119: # Eclipse
   zh:
     name: 日蚀
     base: "献祭3，飞行，远程，穿透，无法守备，陨坑，护甲3\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭3，飞行，远程，穿透，突袭，无法守备，陨坑，护甲3\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭3，飞行，远程，穿透，突袭，无法守备，陨坑，护甲6\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-120: # Crawler
   flavour: Cheap, loyal, and wildly excited about every single wall.
   voice:
@@ -8169,8 +8169,8 @@ stinkyscapeplus-120: # Crawler
     death: Splat, as planned.
   zh:
     name: 爬行者
-    base: "无法守备\n每局对战中，此单位第一次进入你的场上时，将一张巨毒蛛置入你的手牌。\n可以花费(1)从你的墓地中打出。\n此单位攻击后，它会死亡。\n亡语：对此单位最后伤害的单位造成{damage}点伤害。"
-    radiant: "无法守备\n每局对战中，此单位第一次进入你的场上时，将一张光辉巨毒蛛置入你的手牌。\n可以花费(1)从你的墓地中打出。\n此单位攻击后，它会死亡。\n亡语：对此单位最后伤害的单位造成{damage}点伤害。"
+    base: "可以花费(1)从你的墓地中打出。\n亡语：将一张巨毒蛛置入你的手牌。如果你的手牌中已有一张，则改为使其法力值消耗减少({reduce})点。"
+    radiant: "可以花费(1)从你的墓地中打出。\n亡语：将一张光辉巨毒蛛置入你的手牌。如果你的手牌中已有一张，则改为使其法力值消耗减少({reduce})点。"
 stinkyscapeplus-121: # Toxopid
   flavour: More legs than a centipede, with worse manners.
   voice:
@@ -8179,8 +8179,8 @@ stinkyscapeplus-121: # Toxopid
     death: Even giants fall.
   zh:
     name: 巨毒蛛
-    base: "陨坑，不可变，突袭\n每局对战中，此单位第一次进入你的手牌时，将一张爬行者置入你的手牌。\n结余减费。友方爬行者死亡时，此单位的法力值消耗减少(1)点。\n战吼：在场上任意位置召唤{legs}个巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n无视嘲讽。\n回合结束时：使所有敌人获得毒素{toxic}。"
-    radiant: "陨坑，不可变，突袭\n每局对战中，此单位第一次进入你的手牌时，将一张爬行者置入你的手牌。\n结余减费。友方爬行者死亡时，此单位的法力值消耗减少(1)点。\n战吼：在你对手的场上召唤{legs}个光辉巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n无视嘲讽。\n回合结束时：使所有敌人获得毒素{toxic}。"
+    base: "陨坑，不可变，突袭\n结余减费。\n战吼：在场上随机的空的单位区中召唤{legs}个巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n无视嘲讽。\n回合结束时：使所有敌人获得毒素{toxic}。"
+    radiant: "陨坑，不可变，突袭\n结余减费。\n战吼：在你对手场上随机的空的单位区中召唤{legs}个光辉巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n无视嘲讽。\n回合结束时：使所有敌人获得毒素{toxic}。"
 stinkyscapeplus-121-1: # Toxopid Leg
   flavour: Strictly a leg. Unreasonably proud of it.
   voice:
@@ -8189,8 +8189,8 @@ stinkyscapeplus-121-1: # Toxopid Leg
     death: Lost a leg.
   zh:
     name: 巨毒蛛腿
-    base: 陨坑，无法攻击，嘲讽
-    radiant: 陨坑，无法攻击，嘲讽
+    base: "陨坑，无法攻击，嘲讽\n毒素免疫。"
+    radiant: "陨坑，无法攻击，嘲讽\n毒素免疫。"
 stinkyscapeplus-122: # Quad
   flavour: Four rotors, one mission, zero interest in arguments.
   voice:
@@ -8350,7 +8350,7 @@ stinkyscapeplus-133-5: # Reignclipse
   zh:
     name: 君蚀
     base: "献祭3，不可变，法术免疫，远程，风怒，穿透，顺劈，护甲4，飞行，无法守备，陨坑，护甲3\n伤害同时附加燃烧{damage}。\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭3，不可变，法术免疫，远程，风怒，穿透，突袭，顺劈，护甲4，飞行，无法守备，陨坑，护甲3\n伤害同时附加燃烧{damage}。\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭3，不可变，法术免疫，远程，风怒，穿透，突袭，顺劈，护甲4，飞行，无法守备，陨坑，护甲6\n伤害同时附加燃烧{damage}。\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-134: # Basket of Crawlers
   flavour: They come pre-washed. They are still, somehow, not clean.
   voice:

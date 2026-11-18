@@ -280,7 +280,7 @@ mod tests {
                     !pool.iter().any(|def| def.id == VANILLA),
                     "a pool reads the printed tags"
                 );
-                // M 78's filter: "exile every non-CN permanent" spares it. (M 34's scopes are proven
+                // M 78's filter: "destroy every non-CN permanent" spares it. (M 34's scopes are proven
                 // in its own file, r923_a_granted_cn_unit_survives_and_is_buffed.)
                 let mandate = "meditative-078";
                 s.state_mut().players[P1].mana.current = 10;

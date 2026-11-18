@@ -1464,6 +1464,8 @@ fn sequence_opened(seed: &str) -> Session {
     asked.sandbox = Some(true);
     let mut session = Session::start(&asked).expect("starts");
     session.answer_mulligans();
+    // A seed whose coin gives the AI the first turn plays it, so the human is the one to act.
+    while session.ai_turn() {}
     let tools = [
         SandboxOp::SetMana {
             player: P1,

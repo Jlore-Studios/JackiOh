@@ -224,7 +224,7 @@ mod tests {
         }
 
         #[test]
-        fn r3540001_the_burn_ticks_at_the_start_of_its_owners_turn() {
+        fn r4154000_the_burn_ticks_at_the_end_of_the_turn() {
             let mut s = beam_on(false, json!({ "field": [TOUGH] }));
             let target = s.unit_at(P2, 1).id;
             s.activate(ID, at(&target));

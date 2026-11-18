@@ -167,8 +167,9 @@ mod tests {
             fn r411_mid_loser_s_cry_fires_when_this_summons_it_heads() {
                 let mut s = seeded_for(true, json!({}), false);
                 s.play(LEAGUE, json!({}));
+                // The 3/3 Mid Loser's heads: +3/+3.
                 let third = unit_or_blank(&s, P1, 3);
-                s.expect_stats(&third, json!({ "attack": 7, "health": 7 }));
+                s.expect_stats(&third, json!({ "attack": 6, "health": 6 }));
                 // Only the Mid Loser was buffed: the other four print no Cry.
                 for lane in [1, 2, 4, 5] {
                     assert_eq!(s.card(unit_or_blank(&s, P1, lane)).buffs, AttackHealth { attack: 0, health: 0 });
@@ -176,11 +177,12 @@ mod tests {
             }
 
             #[test]
-            fn r411_mid_loser_s_cry_fires_when_this_summons_it_tails_and_the_opponent_s_next_refresh_is_1_higher() {
+            /// Tails' −3/−3 leaves the 3/3 Mid Loser at 0/0: it ceases to exist at the state check (R11), the
+            /// other four stand, and the opponent's mana comes all the same.
+            fn r411_mid_loser_s_cry_fires_when_this_summons_it_tails_destroying_the_3_3_and_the_opponent_s_next_refresh_is_1_higher() {
                 let mut s = seeded_for(false, json!({}), false);
                 s.play(LEAGUE, json!({}));
-                let third = unit_or_blank(&s, P1, 3);
-                s.expect_stats(&third, json!({ "attack": 1, "health": 1 }));
+                assert_eq!(row(&s), row_ids(&[Some(FIVE[0]), Some(FIVE[1]), None, Some(FIVE[3]), Some(FIVE[4])]));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
             }
 
@@ -234,7 +236,7 @@ mod tests {
                     standing.as_ref().map(|unit| unit.id.clone())
                 );
                 let standing = standing.map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&standing, json!({ "attack": 4, "health": 4 }));
+                s.expect_stats(&standing, json!({ "attack": 3, "health": 3 }));
                 assert_eq!(s.state().rng_cursor, cursor);
             }
 
@@ -295,7 +297,7 @@ mod tests {
                     assert_eq!(s.unit(P1, lane).map(|unit| unit.radiant), Some(true));
                 }
                 let first = unit_or_blank(&s, P1, 1);
-                s.expect_stats(&first, json!({ "attack": 8, "health": 8 }));
+                s.expect_stats(&first, json!({ "attack": 6, "health": 6 }));
             }
 
             #[test]

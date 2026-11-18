@@ -20,9 +20,9 @@ use super::support::{AI, HUMAN, act, close};
 const INERT: &str = "stand-in (9) 1/1";
 /// A 1-cost 1/1, the issue's one-drop.
 const ONE: &str = "stand-in (1) 1/1";
-/// A 6-cost card with no text, Drone Core IX's price and no Float discount.
-const SIX: &str = "stand-in (6) Spell";
-/// S #35 Drone Core IX, 6 mana, "Float reduces cost" in hand.
+/// A 7-cost card with no text, Drone Core IX's price and no Float discount.
+const SEVEN: &str = "stand-in (7) Spell";
+/// S #35 Drone Core IX, 7 mana ((6) until issue #4154), "Float reduces cost" in hand.
 const DC_IX: &str = "stinkyscape-035";
 /// S #36 Drone Core X, 8 mana, "Float reduces cost" in hand.
 const DC_X: &str = "stinkyscape-036";
@@ -82,13 +82,13 @@ fn plays(actions: &[ActionBody], instance: &str) -> bool {
 fn r3695000_a_floating_line_with_a_float_card_out_of_reach_scores_no_lower_than_without_one() {
     // What Floating `float` adds to the passed line over spending every crystal.
     let gain = |hand: &[&str], float: i32| passed(&on_turn(9, hand, float)) - passed(&on_turn(9, hand, 0));
-    let crystals = on_turn(9, &[SIX], 0).players[AI].mana.max;
-    // Drone Core IX's 6 against the four crystals.
-    let distance = 6 - crystals;
-    assert_eq!(distance, 2);
+    let crystals = on_turn(9, &[SEVEN], 0).players[AI].mana.max;
+    // Drone Core IX's 7 against the four crystals.
+    let distance = 7 - crystals;
+    assert_eq!(distance, 3);
     for float in 1..=4 {
         let with = gain(&[DC_IX], float);
-        let without = gain(&[SIX], float);
+        let without = gain(&[SEVEN], float);
         assert!(
             with >= without,
             "Floating {float} scores {with} with Drone Core IX in hand, {without} without"
@@ -111,7 +111,7 @@ fn r3695000_a_floating_line_with_a_float_card_out_of_reach_scores_no_lower_than_
 #[test]
 fn r3695000_with_no_float_card_in_hand_every_score_is_as_before() {
     for float in 0..=4 {
-        let s = on_turn(9, &[SIX], float);
+        let s = on_turn(9, &[SEVEN], float);
         let end = ended(&s);
         close(
             passed(&s),
@@ -126,20 +126,20 @@ fn r3695000_float_credit_counts_the_distance_still_owed_and_nothing_else() {
     let fd = AI_EVAL.float_discount;
     let credit = |state: &GameState, float: i32| float_credit(&ended(state), AI, float, &AI_EVAL);
 
-    // Drone Core IX at 6 against 4 crystals: a Float of 3 brings it 2 nearer, the third crystal is past it.
-    let ix = on_turn(9, &[DC_IX], 3);
-    close(credit(&ix, 3), fd * 2.0);
+    // Drone Core IX at 7 against 4 crystals: a Float of 4 brings it 3 nearer, the fourth crystal is past it.
+    let ix = on_turn(9, &[DC_IX], 4);
+    close(credit(&ix, 4), fd * 3.0);
     assert_eq!(credit(&ix, 0), 0.0, "no Float, no credit");
-    assert_eq!(float_credit(&ended(&ix), AI, 3, &GREEDY_EVAL), 0.0);
+    assert_eq!(float_credit(&ended(&ix), AI, 4, &GREEDY_EVAL), 0.0);
 
     // An earlier discount leaves less to bring nearer, and a card already in reach none.
-    for (cost_mod, owed) in [(-1, 1.0), (-2, 0.0), (-5, 0.0)] {
+    for (cost_mod, owed) in [(-1, 2.0), (-2, 1.0), (-3, 0.0), (-5, 0.0)] {
         let mut s = ix.clone();
         s.players[AI].hand[0].cost_mod = cost_mod;
-        close(credit(&s, 3), fd * owed);
+        close(credit(&s, 4), fd * owed);
     }
 
-    // Each card counts its own distance: IX's 2 and X's 2 of the Float's 2.
+    // Each card counts its own distance: IX's 2 of its 3 and X's 2 of its 4, the Float's 2 each.
     close(credit(&on_turn(9, &[DC_IX, DC_X], 2), 2), fd * 4.0);
 
     // The crystals are the state's `mana.max`, never the handicap's (R180).

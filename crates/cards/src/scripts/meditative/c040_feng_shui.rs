@@ -192,10 +192,10 @@ mod tests {
     }
 
     #[test]
-    fn r985_r986_a_3_cost_legendary_cn_field_spell_that_declares_no_number() {
+    fn r985_r986_a_2_cost_legendary_cn_field_spell_that_declares_no_number() {
         crate::register_all();
         let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(3));
+        assert_eq!(def.cost, CardCost::Fixed(2));
         assert_eq!(def.type_, CardType::FieldSpell);
         assert_eq!(def.tags, vec![Tag::Cn]);
         assert_eq!(def.rarity, Rarity::Legendary);

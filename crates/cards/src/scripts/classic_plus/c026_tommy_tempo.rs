@@ -1,4 +1,4 @@
-//! C+ #26 Tommy Tempo (SPEC §8.7 row 26): (3) Unit, Human, Common, 4/4 → 8/8 (5/5 → 10/10 until issue #3138). Taunt, cast on draw;
+//! C+ #26 Tommy Tempo (SPEC §8.7 row 26): (3) Unit, Human, Common, 3/3 → 6/6 (4/4 → 8/8 until issue #4154, 5/5 → 10/10 until issue #3138). Taunt, cast on draw;
 //! that cast ends your turn (Radiant: after {actions} more action, R415). No open zone: to the hand
 //! uncast (R560). "Cry: Lose all your mana. Gain +{per} Health per mana lost" (#831, issue #3996): played
 //! or cast on draw (R1), it loses the mana left once its price is paid, all of it on a free cast, and
@@ -157,12 +157,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_3_4_4_taunt_human_unit_radiant_8_8_that_casts_itself_on_draw_on_both_faces() {
+        fn is_a_3_3_3_taunt_human_unit_radiant_6_6_that_casts_itself_on_draw_on_both_faces() {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(3));
             assert_eq!(
                 [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-                [Some(4), Some(4), Some(8), Some(8)]
+                [Some(3), Some(3), Some(6), Some(6)]
             );
             assert_eq!(def.base.keywords, vec![Keyword::Taunt]);
             let scripts = script();
@@ -195,34 +195,34 @@ mod tests {
             }
 
             #[test]
-            fn r831010_r3996202_cast_on_draw_at_your_start_of_turn_it_loses_the_4_refreshed_mana_and_is_a_4_8() {
+            fn r831010_r3996202_cast_on_draw_at_your_start_of_turn_it_loses_the_4_refreshed_mana_and_is_a_3_7() {
                 let mut s = drawn_at_start(false, json!({}));
                 s.end_turn();
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 4, "health": 8, "maxHealth": 8 }));
+                s.expect_stats(&tommy, json!({ "attack": 3, "health": 7, "maxHealth": 7 }));
                 assert_eq!(s.state().players[P1].mana.current, 0);
             }
 
             #[test]
-            fn r831010_r3996202_played_from_a_hand_it_loses_what_its_price_left_1_and_is_a_4_5() {
+            fn r831010_r3996202_played_from_a_hand_it_loses_what_its_price_left_1_and_is_a_3_4() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 s.play(TOMMY, json!({}));
                 s.expect_mana(P1, 0);
-                s.expect_stats(TOMMY, json!({ "attack": 4, "health": 5 }));
+                s.expect_stats(TOMMY, json!({ "attack": 3, "health": 4 }));
             }
 
             #[test]
-            fn r831010_with_no_mana_left_it_stays_a_4_4_and_nothing_is_lost() {
+            fn r831010_with_no_mana_left_it_stays_a_3_3_and_nothing_is_lost() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOMMY, FILLER], "library": DECK, "mana": 3 },
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 s.play(TOMMY, json!({}));
                 s.expect_mana(P1, 0);
-                s.expect_stats(TOMMY, json!({ "attack": 4, "health": 4 }));
+                s.expect_stats(TOMMY, json!({ "attack": 3, "health": 3 }));
             }
 
             #[test]
@@ -233,7 +233,7 @@ mod tests {
                 }));
                 step_param(s.card_mut(TOMMY), "per", 1);
                 s.play(TOMMY, json!({}));
-                s.expect_stats(TOMMY, json!({ "attack": 4, "health": 6 }));
+                s.expect_stats(TOMMY, json!({ "attack": 3, "health": 5 }));
             }
 
             #[test]
@@ -273,9 +273,9 @@ mod tests {
                 assert_eq!(s.card(&menace).damage, 0);
                 assert_eq!(s.state().active, P2);
                 s.expect_health(P1, 22);
-                // R831010, R3996202: the 3 mana Stockpile left are lost and grow it to 4/7.
+                // R831010, R3996202: the 3 mana Stockpile left are lost and grow it to 3/6.
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 4, "health": 7 }));
+                s.expect_stats(&tommy, json!({ "attack": 3, "health": 6 }));
             }
 
             #[test]
@@ -370,7 +370,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 8, "health": 16 }));
+                s.expect_stats(&tommy, json!({ "attack": 6, "health": 14 }));
                 s.expect_mana(P1, 0);
                 s.play(FREE, json!({}));
                 assert!(cut_short(&s));
@@ -388,7 +388,7 @@ mod tests {
                 }));
                 s.end_turn();
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&tommy, json!({ "attack": 8, "health": 16 }));
+                s.expect_stats(&tommy, json!({ "attack": 6, "health": 14 }));
                 assert!(!has_turn_ends(&s, P1));
                 assert!(!has_turn_ends(&s, P2));
                 let card = first_in_hand(&s, P2);
@@ -484,7 +484,7 @@ mod tests {
                 }));
                 s.play(TOMMY, json!({}));
                 s.expect_mana(P1, 0);
-                s.expect_stats(TOMMY, json!({ "attack": 8, "health": 10, "maxHealth": 10 }));
+                s.expect_stats(TOMMY, json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
             }
 
             #[test]
@@ -504,7 +504,7 @@ mod tests {
         #[test]
         fn r767000_r3996202_the_script_kept_for_v0_6_5b_gains_attack_and_health_for_each_mana_lost() {
             crate::under_kept(TOMMY, script_v0_6_5b(), || {
-                for (radiant, grown) in [(false, 5), (true, 10)] {
+                for (radiant, grown) in [(false, 4), (true, 8)] {
                     let mut s = scenario(json!({
                         "p1": { "hand": [{ "def": TOMMY, "radiant": radiant }, FILLER], "library": DECK },
                         "p2": { "hand": [FILLER], "library": DECK },

@@ -141,6 +141,10 @@ mod tests {
     const BOT: &str = "classicplus-019-5";
     const TOP: &str = "classicplus-019-1";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    /// A Unit the base Loser's 3 destroys, striking back for 2, which leaves the 3/3 Loser at 1.
+    const VICTIM: &str = "stand-in (1) 2/3";
+    /// A Unit that outlasts a hit or two and strikes back for 1, so the Loser lives to attack again.
+    const SPARRING: &str = "stand-in (1) 1/9";
     const FELINORS: &str = "core-012"; // Duplicating Felinors: seeded on the field, its Cry never fires (R1)
     const FIGHTER: &str = "classicplus-051"; // Jlockeed's J15 Fighter: Can't be attacked
     const MROW: &str = "core-086"; // "Miss" Mrow: Can't attack; Death: take control of the Unit that destroyed this
@@ -196,7 +200,7 @@ mod tests {
             let mut s = jungle(
                 json!([]),
                 radiant_face,
-                json!({ "field": [{ "def": FELINORS, "lane": 4 }, { "def": FELINORS, "lane": 5 }] }),
+                json!({ "field": [{ "def": SPARRING, "lane": 4 }, { "def": SPARRING, "lane": 5 }] }),
                 Some(&format!("jungle-every-{seed}")),
             );
             let id = loser(&s).id;
@@ -268,8 +272,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn base_enters_at_4_4_radiant_unchanged() {
-            for (radiant_face, size) in [(false, 4), (true, 8)] {
+        fn base_enters_at_3_3_radiant_at_6_6() {
+            for (radiant_face, size) in [(false, 3), (true, 6)] {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": JUNGLE, "radiant": radiant_face }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -286,8 +290,8 @@ mod tests {
             #[test]
             fn r53_on_a_success_it_makes_a_forced_attack_on_an_enemy_unit_no_exertion_sickness_ignored_the_target_strikes_back(
             ) {
-                // A 3/4: the 4/4 Loser's 4 kills it, and its strike back of 3 leaves the Loser at 1.
-                let mut s = jungle(json!([]), false, json!({ "field": [{ "def": FELINORS, "lane": 4 }] }), None);
+                // A 2/3: the 3/3 Loser's 3 kills it, and its strike back of 2 leaves the Loser at 1.
+                let mut s = jungle(json!([]), false, json!({ "field": [{ "def": VICTIM, "lane": 4 }] }), None);
                 let turn = s.state().turn;
                 loser_mut(&mut s).summoned_turn = Some(turn);
                 let victim = s.unit(P2, 4).expect("setup");
@@ -327,7 +331,7 @@ mod tests {
                     let mut s = jungle(
                         json!([]),
                         false,
-                        json!({ "field": [{ "def": TOP, "lane": 1 }, { "def": FELINORS, "lane": 5 }] }),
+                        json!({ "field": [{ "def": TOP, "lane": 1 }, { "def": SPARRING, "lane": 5 }] }),
                         Some(&format!("jungle-top-{seed}")),
                     );
                     let top = s.unit(P2, 1).map(|unit| unit.id);
@@ -344,7 +348,7 @@ mod tests {
                     let mut s = jungle(
                         json!([]),
                         false,
-                        json!({ "field": [{ "def": FIGHTER, "lane": 1 }, { "def": FELINORS, "lane": 5 }] }),
+                        json!({ "field": [{ "def": FIGHTER, "lane": 1 }, { "def": SPARRING, "lane": 5 }] }),
                         Some(&format!("jungle-fighter-{seed}")),
                     );
                     let fighter = s.unit(P2, 1).map(|unit| unit.id);
@@ -372,16 +376,16 @@ mod tests {
                 let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     false,
-                    json!({ "field": [{ "def": FELINORS, "lane": 4 }] }),
+                    json!({ "field": [{ "def": VICTIM, "lane": 4 }] }),
                     None,
                 );
                 let bot = unit_or_blank(&s, P1, 4);
                 s.end_turn();
                 assert_eq!(s.card(&bot).berserk, Some(true));
-                // The kill is the Jungle Loser's own on the base face.
+                // The kill is the Jungle Loser's own on the base face: the 3/3 Bot Loser gains nothing.
                 let death = s.events().iter().find(|event| event.event_type() == GameEventType::Destroyed);
                 assert_eq!(killer_of(death), Some(loser(&s).id));
-                s.expect_stats(&bot, json!({ "attack": 4 }));
+                s.expect_stats(&bot, json!({ "attack": 3 }));
             }
 
             /// R1081000: an enemy Unit standing in the backrow zone of your Bot Loser's lane is across from it.
@@ -390,10 +394,10 @@ mod tests {
                 let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     false,
-                    json!({ "field": [{ "def": VANILLA, "lane": 4 }] }),
+                    json!({ "field": [{ "def": VICTIM, "lane": 4 }] }),
                     None,
                 );
-                let vanilla = s.card(VANILLA).id.clone();
+                let vanilla = s.card(VICTIM).id.clone();
                 crate::stand_in_backrow(&mut s, &vanilla, 4);
                 let bot = unit_or_blank(&s, P1, 4);
                 s.end_turn();
@@ -406,7 +410,7 @@ mod tests {
                 let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     false,
-                    json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
+                    json!({ "field": [{ "def": VICTIM, "lane": 1 }] }),
                     None,
                 );
                 s.end_turn();
@@ -419,7 +423,7 @@ mod tests {
                 let mut s = jungle(
                     json!([{ "def": VANILLA, "lane": 4 }]),
                     false,
-                    json!({ "field": [{ "def": VANILLA, "lane": 4 }] }),
+                    json!({ "field": [{ "def": VICTIM, "lane": 4 }] }),
                     None,
                 );
                 s.end_turn();
@@ -503,7 +507,8 @@ mod tests {
                     matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == victim.id)
                 });
                 assert_eq!(killer_of(death), Some(bot.id.clone()));
-                s.expect_stats(&bot, json!({ "attack": 6 }));
+                // The 3/3 Bot Loser's +2 for the kill.
+                s.expect_stats(&bot, json!({ "attack": 5 }));
                 assert_eq!(s.card(&bot).berserk, None);
             }
 
@@ -518,8 +523,9 @@ mod tests {
                 s.end_turn();
                 let death = s.events().iter().find(|event| event.event_type() == GameEventType::Destroyed);
                 assert_eq!(killer_of(death), Some(loser(&s).id));
+                // Not its kill: the 3/3 Bot Loser stays at 3.
                 let bot = unit_or_blank(&s, P1, 4);
-                s.expect_stats(&bot, json!({ "attack": 4 }));
+                s.expect_stats(&bot, json!({ "attack": 3 }));
             }
 
             #[test]

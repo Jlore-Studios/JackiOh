@@ -1,4 +1,4 @@
-//! S #14 Arm of the Jempire (SPEC §8.10 row 14): (2) Unit, Human, Common, 4/5 → 8/10, of the
+//! S #14 Arm of the Jempire (SPEC §8.10 row 14): (2) Unit, Human, Common, 3/8 → 6/16 (4/5 → 8/10 until issue #4154), of the
 //! Stinkyscape set.
 //!   Base:    "When one of your Taunt Units is attacked, give it +{buff} Attack."
 //!   Radiant: "When one of your Taunt Units is attacked, give it +{buff} Attack."
@@ -87,7 +87,7 @@ mod tests {
             let arm = s.unit_at(P1, 1);
             s.attack(s.unit_at(P2, 1), &mine);
             s.attack(s.unit_at(P2, 2), &arm);
-            assert_eq!(attack_of(&s, &arm), 4, "the Arm has no Taunt of its own");
+            assert_eq!(attack_of(&s, &arm), 3, "the Arm has no Taunt of its own");
             assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Buffed { .. })));
         }
 
@@ -161,9 +161,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn buffs_by_4_and_is_8_10() {
+        fn buffs_by_4_and_is_6_16() {
             let mut s = board(true, json!([MENACE]), json!([VANILLA]));
-            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 8, "health": 10 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 6, "health": 16 }));
             let menace = s.unit_at(P1, 2);
             s.attack(s.unit_at(P2, 1), &menace);
             assert_eq!(attack_of(&s, &menace), 13);

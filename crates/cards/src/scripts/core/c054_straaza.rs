@@ -1,5 +1,5 @@
 //! #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275). Unit, cost 4,
-//! 8/8 → 16/16.
+//! 6/6 → 12/12 (8/8 → 16/16 until issue #4154).
 //!   Base:    "Cry: add 2 random (3) Cost Units to your hand; they cost 1"
 //!   Radiant: "Cry: add 2 random Radiant (3) Cost Units to your hand; they cost 0" — §8's
 //!            cell "They are Radiant and cost 0" (R275's raise: the cards' face and their price).
@@ -347,7 +347,7 @@ mod tests {
 
             s.play("core-054", json!({}));
 
-            s.expect_stats("core-054", json!({ "attack": 16, "health": 16, "maxHealth": 16 }));
+            s.expect_stats("core-054", json!({ "attack": 12, "health": 12, "maxHealth": 12 }));
         }
 
         #[test]
