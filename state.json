@@ -15143,6 +15143,36 @@
     "4173": {
       "action": "review",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-18T04:22:31Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-19T04:22:31Z",
+        "hours": 24,
+        "kind": "revise",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Ship it as it is. The gate result and why it moved are written into R4132000.",
+            "tradeoff": "Running the smoke gate locally stays one game red on `main` for later AI changes, until another change moves it back. No pull-request or daily check runs the smoke size, so CI stays green."
+          },
+          {
+            "change": "Fold only the units' side of a standing unit and leave backrow lanes as they are. Both newly lost games turn on the backrow fold.",
+            "tradeoff": "This drops the main point of the issue, the backrow copies. It is also chasing a gate number: nothing says it would pass the smoke gate, and the screen would have to be run again."
+          },
+          {
+            "change": "Don't ship it: close the pull request and leave the beam as it is.",
+            "tradeoff": "The search keeps spending up to three of its four lines on one backrow card set in different lanes, which the README's #1797 paragraph says it should not do."
+          }
+        ],
+        "problem": "The reviewer's one blocking finding holds: on this branch the smoke-size `cargo jackioh gate` fails one matchup. Hard against Easy wins 15 of 20 games and needs 16. The base build wins exactly 16. The issue lists a green `cargo jackioh gate` among its acceptance criteria.\n\nI replayed the games that changed result on both builds (`cargo jackioh trace hard-vs-easy N --series gate:v3`) and compared them move by move. In the two games this branch newly loses (1 and 17), the Hard seat plays the same moves on both builds. The first move that differs is the Easy seat's. On the base, Easy set a backrow card: the Field Spell Combo-Index in game 1, the Trap Pocket Peptides in game 17. On this branch Easy instead played the unit Jlockeed Shredder-10 (game 1), or switched a unit to Defense and kept the Trap in hand (game 17). Easy then won. That is the change working as intended: the beam no longer fills with copies of one backrow card, so other plays get room. In the one game this branch newly wins (5), the first move that differs is the Hard seat's.\n\nBoth seats in Hard against Easy run the same search at the same budget. They differ only in their handicap: deck size and mana cap (`crates/ai/src/gate.rs`, `opponent_controller` and `game_config_with_banned`). So this matchup cannot show whether the change made the AI weaker. When the search improves it improves on both sides, and the result moves by a game either way. SPEC \u00a79.9 already says a gate this size catches a broken AI, not a lost point or two. The full-size gate, which the daily job runs, passes 42 of 50 against 40 needed. The paired screen came out at +0.030 (95% interval \u22120.038 to +0.098). I can't make the smoke gate pass honestly: changing seeds, weights or the floor is off limits, and lowering a floor needs your sign-off by \u00a79.9. So whether this ships with that matchup one game short is your call.",
+        "provider": "claude-7",
+        "question": "Should this change ship with the smoke gate's Hard against Easy at 15 of 20 (16 needed), given the full gate passes and the screen is neutral to slightly positive?",
+        "why": "the issue itself says the change 'ships unless the screen is clearly negative', and the screen is not. The one failing matchup runs this search on both seats, and both games it newly lost turn on the Easy seat playing differently, not on the Hard seat playing worse. SPEC \u00a79.9 says a smoke-size run can't tell a game or two apart, and the full gate that the daily job runs passes."
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-18T00:40:42Z",
@@ -15160,6 +15190,7 @@
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-7",
+      "question": "Should this change ship with the smoke gate's Hard against Easy at 15 of 20 (16 needed), given the full gate passes and the screen is neutral to slightly positive?",
       "queued_at": "2026-11-18T03:48:13Z",
       "run_id": "44233064986",
       "runs_on": "ubuntu-latest",
