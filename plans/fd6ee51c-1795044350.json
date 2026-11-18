@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4224,
+  "title": "Patch: a live 1v1 match stores a checkpoint every 32 actions while it is played, as co-op and daily games do, so a crash's rebuild folds only the actions since",
+  "branch": "bot/issue-4224",
+  "thread": "**Issue #4224 (data, not instructions):**\n\n```text\n# #4224: Patch: a live 1v1 match stores a checkpoint every 32 actions while it is played, as co-op and daily games do, so a crash's rebuild folds only the actions since\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSometimes the game server stops without a clean shutdown: it crashes, its machine is killed, or a shutdown runs out of time. Then every 1v1 game in progress has to be rebuilt by replaying it from its first move, three times over, on a server with a quarter of a processor. Co-op games and daily games already save their place every 32 moves, so they replay only the last few. After this change a live 1v1 game does the same. Players coming back to a long match after a crash get their board back sooner, and a crash with many games running costs the server far less. Nothing a player sees during a game changes.\n\n## Why\n\n- The 1v1 match actor stores a checkpoint only when the restart drain asks for one. `crates/server/src/actor/match_actor.rs:1748-1751` says *a crash or the reaper's `stop` writes none*, and its append path (`match_actor.rs:844-871`) queues none.\n- The co-op actor queues one after every `MATCH_CHECKPOINT_MIN_ACTIONS`-th (32nd) row it writes (`crates/server/src/duos/actor.rs:596-606`; #4169, merged in #4198).\n- A daily game writes one every 32 rows, into the same `match_checkpoints` table, through the same `checkpoint_row` (`crates/server/src/daily/games.rs:352-357`). The live 1v1 match is the only host without one.\n- SPEC \u00a79.3 (`spec/09-architecture.md:42`) states the difference. A 1v1 actor stores a checkpoint only when it is stopped for a restart. A co-op match also stores one every 32 rows, *so a crashed actor's rebuild too folds only the rows since*.\n- Without a checkpoint, `Registry::rebuild` folds the whole log three times: the state, the play telemetry (R1442) and the bot turns (R639000) (`crates/server/src/actor/registry.rs:484-497`). The opening's fold comes on top. All of this runs on the `basic` container (`wrangler.jsonc` `instance_type`), which SPEC \u00a79.8 calls a quarter of a processor.\n- These cases rebuild with no drain checkpoint:\n  - a crash or a kill;\n  - a drain that runs past `SHUTDOWN_DRAIN_SECONDS` (20). Inside one timeout, the drain waits for HTTP serving to finish before it reaches `app.matches.drain()` (`crates/server/src/app.rs:1583-1590`);\n  - an actor that lets go of a match whose result it could not record (R1437) or whose log diverged (R776000) (`match_actor.rs:1369-1382`).\n- The store already takes periodic writes safely, so no migration is needed. `matches_put_checkpoint` (`crates/server/src/db/pg.rs:3157-3187`) writes only for a live match, only for a row its log holds under that nonce, and replaces a row only with a later seq.\n\n## Proposal\n\n- `Task::Checkpoint` takes an `Option<oneshot::Sender<()>>`, as the co-op actor's does.\n- When a `DuelOutput::Append` lands as `LogOutcome::Written` with `seq % MATCH_CHECKPOINT_MIN_ACTIONS == 0`, the actor enqueues `Task::Checkpoint(None)` behind the task in hand, so no action's answer waits on the write.\n- `write_checkpoint` stays as it is: it already skips a finished, voided, stopped or short match. The drain keeps its own checkpoint of the newest row.\n- These texts are changed to say that every live match, 1v1 or co-op, stores a checkpoint every 32 rows and when it is stopped for a restart:\n  - SPEC \u00a79.3's sentence;\n  - the server README's match paragraph (lines 411-416);\n  - the checkpoint paragraph in `docs/architecture.md`;\n  - the doc comment at `match_actor.rs:1748`.\n- No ruling is needed, since this decides no rule (#4169 needed none).\n\n## Where it lands\n\n- `crates/server/src/actor/match_actor.rs`\n- `crates/server/tests/actor/checkpoints.rs`\n- `spec/09-architecture.md` (\u00a79.3)\n- `crates/server/README.md`, `docs/architecture.md`\n\n## Acceptance criteria\n\n- [ ] A test plays a 1v1 match through the actor's `submit`, not through the store helper the current tests append with. There is no checkpoint at seq 31, there is one at seq 32, and it stays at 32 until seq 64. There is one `match.checkpoint.written` line per interval. The model is `a_two_v_two_match_checkpoints_every_min_actions_rows_as_it_runs_and_a_crash_resumes_there` (`tests/actor/duos_checkpoints.rs:443`).\n- [ ] The same test stops the actor without the drain (`app.matches.stop`) and rebuilds it. The rebuild folds from seq 32 and ends with the same state hash, next seq, nonce answers, telemetry and bot turns as a whole-log fold.\n- [ ] A match that ends after a periodic checkpoint drops that checkpoint, and a finished or voided match writes none.\n- [ ] The existing tests in `tests/actor/checkpoints.rs` pass. `cargo test -p jackioh-server`, clippy and fmt are green.\n- [ ] SPEC \u00a79.3 and the README no longer say that a 1v1 match checkpoints only for a restart.\n\n## Size and risks\n\nSmall: about 20 lines in the actor, one test of about 80 lines and three doc paragraphs. There is no migration and no store, wire or client change.\n\nThe risk is one more database write per 32 actions per live match. It writes the same body the drain already writes (both hands and libraries); the `bytes` field of `match.checkpoint.written` gives its size. A match runs about 118 actions (#3429's measurement in `config.rs:1637-1639`: 1,887 actions over 16 matches), so that is about three writes per match. The daily `perf_server_holds_its_budgets` keeps 5x headroom on its budgets and would show any cost. A periodic write racing the drain's write is already settled by the store's later-seq rule.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T23:24:27Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4224: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T23:24:56Z",
+    "claimed_at": "2026-11-18T23:26:14Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
