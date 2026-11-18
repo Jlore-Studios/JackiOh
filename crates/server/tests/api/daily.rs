@@ -1743,6 +1743,112 @@ async fn the_sweep_emails_once_per_account_and_none_when_off_or_without_email() 
     assert_eq!(settings["emailOn"], false, "{settings}");
 }
 
+/// #4016 (item 17 of #3897: template injection): the daily mail sends no HTML part, and the
+/// unsubscribe page's body is one of its fixed strings whatever `token` it is sent, `<script>`
+/// included. The mail's game lines carry the opponent's username and the match id as plain text
+/// (§9.4, R1432), so there is nothing to escape; the unsubscribe handler UUID-parses the token
+/// before it reaches the page, so a hostile token never reaches it either.
+#[tokio::test]
+async fn daily_email_has_no_html_part_and_unsubscribe_page_reflects_no_token() {
+    let (quiet, ada, bo) = two_friends().await;
+    let match_id = daily_game(&quiet, &ada, &bo, 1).await;
+
+    let (mail_api, seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        Some(quiet.db.clone()),
+        TestAppOptions {
+            mail_api: Some(format!("{mail_api}/emails")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(status, 200, "{swept}");
+    assert!(swept["emailed"].as_u64().unwrap_or_default() >= 1, "{swept}");
+
+    let mails: Vec<Value> = seen
+        .lock()
+        .expect("the requests")
+        .iter()
+        .map(|(_, _, body)| serde_json::from_slice(body).expect("a JSON mail"))
+        .collect();
+    // No HTML part is ever sent: the mail is plain text only. If an `html` part is ever added,
+    // this test must grow escaping asserts for the opponent username and the match id instead of
+    // dropping this assert.
+    for mail in &mails {
+        assert!(mail.get("html").is_none(), "{mail}");
+    }
+    let text = mails
+        .iter()
+        .filter_map(|mail| mail["text"].as_str())
+        .find(|text| text.contains(match_id.as_str()))
+        .expect("a mail listing the game");
+    assert!(text.contains("- Your game against "), "{text}");
+
+    let page_of = |body: &str| {
+        format!(
+            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>JackiOh</title></head><body>{body}</body></html>"
+        )
+    };
+    let not_ours = page_of(
+        "<p>That link is not one of ours any more. You can turn daily game emails off from the Daily screen.</p>",
+    );
+    // An empty, a garbage and a markup token all get exactly the fixed not-ours page.
+    for token in [
+        String::new(),
+        "not-a-uuid".to_string(),
+        "%3Cscript%3Ealert(1)%3C%2Fscript%3E".to_string(),
+    ] {
+        let (status, _headers, body) = call(
+            &app,
+            "GET",
+            &format!("/api/daily/unsubscribe?token={token}"),
+            None,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let body = body.as_str().expect("an HTML page");
+        assert_eq!(body, not_ours, "{body}");
+        assert!(!body.contains("alert(1)"), "{body}");
+        assert!(!body.contains("<script>"), "{body}");
+    }
+
+    // A well-formed but unknown token is echoed only inside the form's action URL.
+    let token = uuid::Uuid::new_v4().to_string();
+    let (status, _headers, body) = call(
+        &app,
+        "GET",
+        &format!("/api/daily/unsubscribe?token={token}"),
+        None,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body.as_str().expect("an HTML page"),
+        page_of(&format!(
+            "<p>Stop the emails about your daily games?</p>\
+             <form method=\"post\" action=\"/api/daily/unsubscribe?token={token}\">\
+             <input type=\"hidden\" name=\"List-Unsubscribe\" value=\"One-Click\">\
+             <button type=\"submit\">Turn off daily game emails</button></form>"
+        )),
+        "{body}"
+    );
+
+    // Posting a hostile token's link unsubscribes nobody: exactly the not-ours page.
+    let (status, _headers, body) = call(
+        &app,
+        "POST",
+        "/api/daily/unsubscribe?token=%3Cscript%3Ealert(1)%3C%2Fscript%3E",
+        None,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body.as_str().expect("an HTML page"), not_ours, "{body}");
+}
+
 /// A raw P-256 pair, base64url, as `daily::webpush`'s own tests cut it from a PKCS#8 document.
 fn vapid_pair() -> (String, String) {
     let pkcs8 = signature::EcdsaKeyPair::generate_pkcs8(
