@@ -20362,10 +20362,6 @@
       "refused_until": "2026-11-17T08:40:00Z",
       "spent": [
         {
-          "at": "2026-11-09T03:46:54Z",
-          "minutes": 1.4
-        },
-        {
           "at": "2026-11-09T04:10:21Z",
           "minutes": 65.3
         },
@@ -21160,16 +21156,13 @@
         {
           "at": "2026-11-18T03:34:23Z",
           "minutes": 22.4
+        },
+        {
+          "at": "2026-11-18T03:45:32Z",
+          "minutes": 5.1
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-08T05:19:04Z",
-          "cache": 29921586,
-          "cost": 9.8508,
-          "input": 271,
-          "output": 73886
-        },
         {
           "at": "2026-11-08T09:56:41Z",
           "cache": 5506353,
@@ -22562,15 +22555,22 @@
           "cost": 3.1601,
           "input": 134,
           "output": 37079
+        },
+        {
+          "at": "2026-11-18T03:45:32Z",
+          "cache": 663452,
+          "cost": 0.7535,
+          "input": 18,
+          "output": 5493
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-18T06:30:00Z",
-          "utilization": 0.78
+          "utilization": 0.98
         },
-        "observed_at": "2026-11-18T03:34:23Z",
-        "status": "allowed"
+        "observed_at": "2026-11-18T03:45:32Z",
+        "status": "allowed_warning"
       }
     },
     "claude-4": {
@@ -36040,7 +36040,11 @@
       "2026-11-18T03:39:32Z,claude-1,ping,before,44231705524,43,2026-11-18T07:00:00Z,,,allowed,100,,",
       "2026-11-18T03:39:52Z,claude-1,stream,call,44231705524,44,2026-11-18T07:00:00Z,,,allowed,100,,",
       "2026-11-18T03:40:37Z,claude-1,stream,call,44231705524,45,2026-11-18T07:00:00Z,,,allowed,100,,",
-      "2026-11-18T03:43:32Z,claude-1,stream,call,44231705524,46,2026-11-18T07:00:00Z,,,allowed,100,,"
+      "2026-11-18T03:43:32Z,claude-1,stream,call,44231705524,46,2026-11-18T07:00:00Z,,,allowed,100,,",
+      "2026-11-18T03:39:14Z,claude-3,stream,call,44231631406,95,2026-11-18T06:30:00Z,,,allowed_warning,,,",
+      "2026-11-18T03:39:29Z,claude-3,stream,call,44231631406,96,2026-11-18T06:30:00Z,,,allowed_warning,,,",
+      "2026-11-18T03:42:59Z,claude-3,stream,call,44231631406,97,2026-11-18T06:30:00Z,,,allowed_warning,,,",
+      "2026-11-18T03:43:44Z,claude-3,stream,call,44231631406,98,2026-11-18T06:30:00Z,,,allowed_warning,,,"
     ],
     "runs": [
       "2026-11-18T03:43:36Z,44231705524,claude-1,sonnet+opus,review,4165,medium,approved,,3.9,31,7428,1139540,0.9446,43,46,,,1.7,,none,,1"
