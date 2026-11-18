@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4187,
+  "title": "Patch: the AI expects an opponent facing lethal to switch a unit to Defense Position, not to swing it at the face",
+  "branch": "bot/issue-4187",
+  "thread": "**Issue #4187 (data, not instructions):**\n\n```text\n# #4187: Patch: the AI expects an opponent facing lethal to switch a unit to Defense Position, not to swing it at the face\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nBefore the computer opponent commits to a turn, it imagines how you will answer. Today it imagines that, if it could kill you next turn, you will still swing every unit you have at its face, even when switching one unit to defense would block the killing blow. Real players block, and so does the AI itself when it is the one in danger. So the AI talks itself into lines that \"set up lethal\" which a player answers with one switch, and it undervalues killing the one unit of yours that could block.\n\nExample: the AI has a 7/7 and you are at 7 health with a 4/4. The AI expects your 4/4 to hit it for 4 and stay open, so it counts next turn's kill as nearly done. In fact you put the 4/4 in Defense Position, its Taunt takes the 7/7's swing, and you live. Once this is built, the AI expects the block and prefers lines that remove or get around the blocker. Players notice it in close games at every practice tier and against ladder bots.\n\n## Why\n- `crates/ai/src/reply.rs:756-772` (`simulate_reply_with`): the opponent's reply tries a switch to Defense Position only when `ranked_attacks` returns nothing (`if attack.is_none() { match defense_switch(...) }`, #1696).\n- `ranked_attacks` (`reply.rs:330-352`) keeps every attack worth more than 0, and a hit on the hero always is (`AI_REPLY.face_per_damage` 1.0). So any unit that can reach the face attacks, which spends its one action of the turn: \"Each unit has one exertion a turn, an attack or a position switch\" (\u00a74.1, `spec/01-overview.md`). After that it can no longer wall.\n- The AI's own seat already walls when facing lethal: `wall_switches` (`crates/ai/src/candidates.rs:1056`, R2976000) keeps the switches to Defense that lower the threat. The AI's model of its opponent is the one place that never walls, so it plans against an opponent weaker than itself.\n- The cost falls where the AI is winning. A line scored after such a reply carries `AI_EVAL.lethal_on_board` (20) plus pressure (`crates/ai/src/evaluate.rs:2940-2945`), several units' worth that one switch takes away. So the AI over-ranks lines that leave a blocker standing.\n- No test covers it. The reply's switch tests (`crates/ai/tests/ai/reply.rs:777-838`) cover only a board with no attack worth making and a Deft unit, which may attack and then switch. None covers an ordinary unit that can hit the face while the seat threatens lethal. I found no screen of walls in the reply in `training/` or `docs/polish/3-ai.md`, whose reply step 4 describes only #1696's no-attack case.\n\n## Proposal\nIn `simulate_reply_with`, after the Deft switch and before the best ranked attack is taken:\n1. If the best ranked attack wins the game, take it, as now.\n2. Otherwise, when `wall_switches(&current, opp, &legal)` is not empty (it is empty unless the seat's `face_threat` reaches the opponent's `effective_life`), run `best_try` over its first `AI_REPLY.defense_switches` walls together with the best ranked attack. Judge them by the opponent's own evaluation, as #1696's switches are judged. Keep a wall when it beats both standing still and that attack. Then the loop goes on, and the units left attack as before.\n3. Off lethal nothing changes: no node is spent, and every reply is what it is today.\n\nThis follows Hearthstone semantics: a player facing lethal blocks rather than chips. It reuses R2976000's function and adds no evaluation weight and no constant. A new ruling in this issue's block records it.\n\nRejected:\n- A separate on/off flag: `AI_REPLY.defense_switches` at 0 already turns off every switch in the reply.\n- Trying every trade that kills the seat's lethal attacker in the same comparison: it costs more nodes, and the best ranked attack is already in the comparison whenever it is such a trade.\n\n## Where it lands\n- `crates/ai/src/reply.rs` (`simulate_reply_with`). `wall_switches` in `crates/ai/src/candidates.rs` is already `pub`.\n- `crates/ai/tests/ai/reply.rs` (the ruling's tests).\n- `crates/ai/README.md` (the reply paragraph), `docs/polish/3-ai.md` (the reply's step 4), and SPEC \u00a79.9 \"The opponent's reply\" (`spec/09-architecture.md`).\n- `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n- [ ] `fn r<n>_...`: on a handed-over board with the seat's `core-025` (7/7) in Attack Position and the opponent at 7 health with a `core-008` (Mr. Vanilla, 4/4) that can attack, `simulate_reply` leaves Mr. Vanilla in Defense Position and the seat's hero at 30. Before the change the reply ends with the seat at 26 and Mr. Vanilla in Attack. This is the board of `a_deft_unit_that_attacked_switches_to_defense_with_the_switch_it_has_left` with a plain unit in place of the Deft one.\n- [ ] A test where the opponent's attacks win the game: the reply still takes the win.\n- [ ] A test where the seat threatens no lethal: the reply and its `counter.used()` are unchanged. Every existing test in `tests/ai/reply.rs` passes as it is.\n- [ ] A test on the first board of the score a line gets after the reply (`reply_score`): `lethal_on_board` is no longer in it.\n- [ ] The ruling note with its `proven_in`, the `spec/pending/<issue>.md` paragraph, the README, `docs/polish/3-ai.md` and \u00a79.9 are updated, and `cargo jackioh spec check` is green.\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo fmt --check` and `cargo jackioh gate` (smoke) are green.\n\n## Size and risks\nSmall: about 20-30 lines in `reply.rs`, three or four tests, and docs. Difficulty hard (the AI).\n\nRisks:\n- It changes the AI's decisions wherever a reply faces lethal, so a pinned decision or a seeded AI fixture may move. The builder re-records only what the change explains, names each one, and moves no gate floor.\n- Each extra trial costs one node, only on lethal boards, inside the reply's own step cap (`AI_REPLY.max_steps`).\n- As with R2976000, a block that needs two walls stays out of reach while `lethal_threat` is one flat cliff.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T13:54:43Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4187: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T13:55:08Z",
+    "claimed_at": "2026-11-18T14:04:35Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
