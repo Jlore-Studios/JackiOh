@@ -38299,7 +38299,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-18T18:34:24Z",
         "every": 5,
+        "findings": 0,
         "head": "33a65b858c77d94a6782d1a724ecad86ec140fea",
         "issue": 4203,
         "merged_at": "2026-11-18T18:25:49Z",
@@ -38312,12 +38314,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:054fa1b5-1795026336",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44369670082",
         "sha": "c040adf45e9814c6cd7d3c4524f6e73851927ff4",
         "started_at": "2026-11-18T18:26:03Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the card search reads a stat line, such as 3/4 or 3+/4-",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 350
