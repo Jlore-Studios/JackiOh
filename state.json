@@ -14990,6 +14990,13 @@
     "4161": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T05:34:49Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Only crates/tools/src/fuzz.rs, its tests and crates/tools/README.md change; no engine, AI, cross-crate, migration or 40-file work, so none of the five hard lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
