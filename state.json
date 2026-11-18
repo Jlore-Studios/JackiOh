@@ -15352,16 +15352,27 @@
     "what": "plan #4166 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-18T03:33:05Z",
+    "at": "2026-11-18T03:44:00Z",
     "notes": [
-      "delivered suggest on muse (run 44230281185): suggested",
-      "delivered build #4141 on claude-3 (run 44224629795): built",
-      "delivered build #4144 on claude-1 (run 44223317605): built",
-      "started review #4164 on claude-3 (run 44231631406)",
-      "started review #4165 on claude-1 (run 44231705524)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-18T06:30:00Z; it can start a build or a plan again in 1h 52m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 5 plan file(s) older than 7 days",
-      "#4163: typed it Task"
+      "#4166 needs a plan",
+      "delivered review #4165 on claude-1 (run 44231705524): approved",
+      "delivered review #4164 on claude-3 (run 44231631406): approved",
+      "delivered suggest on muse (run 44230353874): suggested",
+      "delivered suggest on claude-1 (run 44227407535): suggested",
+      "delivered build #4143 on claude-4 (run 44221864760): built",
+      "delivered build #4132 on claude-7 (run 44209788366): built",
+      "started review #4173 on claude-7 (run 44233064986)",
+      "started review #4172 on claude-4 (run 44233135085)",
+      "started review #4160 on claude-1 (run 44233204663)",
+      "started plan #4166 on claude-1 (run 44233277597)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "#4171: typed it Task",
+      "#4170: typed it Task",
+      "#4169: typed it Task",
+      "#4168: typed it Task",
+      "#4167: typed it Task",
+      "#4166: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16067,7 +16078,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T03:33:05Z",
+  "loop_tick": "2026-11-18T03:44:00Z",
   "machine_disk": {
     "issue": null,
     "reading": {
