@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4141,
+  "title": "Patch: the moderate levers write their bans, revocations and redemption pauses to the admin audit",
+  "branch": "bot/issue-4141",
+  "thread": "**Issue #4141 (data, not instructions):**\n\n```text\n# #4141: Patch: the moderate levers write their bans, revocations and redemption pauses to the admin audit\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nToday banning an account, unbanning one, revoking an invite code, or pausing invite redemption leaves its only trace in the terminal where the command ran. If that scrollback is lost, nobody can later answer \"who banned this account, and when?\" Every smaller dev power already writes a row the dev dashboard's Audit page shows: granting XP, filling a collection, hand-setting a rating. After this change the four big levers do too. Each ban, unban, revocation and pause or resume appears on the same Audit page with what was asked and the state before and after, for example a ban row naming the account with `active` before and `banned` after.\n\n## Why\n\n- These levers are the strongest in the system: they shut players out and gate entry for everyone. They deserve at least the record a dev XP grant already gets (R3074000).\n- Two code facts pin the gap: `cli/moderate.rs` says \"Stdout is the audit trail\", while `admin_actions_append` refuses anything that is not an `/api/dev` or `/api/admin` route (`check_route` in `admin/store.rs`), and migration 0080's `admin_actions_route_check` says the same in SQL. So even a willing caller cannot record a lever run today.\n- The table already fits lever rows: `profile_id` is nullable (`on delete set null`), and `Audit.tsx` renders route, request, before and after as generic text, so the dashboard shows the new rows with no admin change.\n\n## Proposal\n\n- Each lever run writes one `admin_actions` row in the same transaction as the change it makes: ban and unban (the account, old status into new), revoke-code (the stored code hash, never the plaintext), redemption on and off (old state into new). The actor `profile_id` is NULL: the CLI runs as the operator and holds no profile; the route names the lever (for example `CLI moderate ban`).\n- A lever that changes nothing writes nothing: `already banned`, an unknown profile or code, and a refused unban of a pending account keep today's stdout line and add no row, matching how refused dev routes write nothing.\n- Widen the route guard in both places it lives: `check_route` in `admin/store.rs` gains the explicit lever names (an allow-list, not a loose prefix), and a new migration widens `admin_actions_route_check` the same way, since 0080 is checksum-pinned.\n- Update the `moderate.rs` header comment, which today promises stdout as the audit trail, to name both records.\n- No ruling note: this is operational record-keeping, like `alerts.rs`, which carries no R-row.\n\n## Where it lands\n\n- `crates/server/migrations/0095_moderation_audit.sql` (0094 is the newest today): the widened route check.\n- `crates/server/src/admin/store.rs`: `check_route` and a small constructor for lever rows reusing `admin_actions_append` (which already dispatches to the Postgres and fake stores together).\n- `crates/server/src/cli/moderate.rs`: one append beside each of the four writes, inside its transaction.\n- `crates/server/tests/store/contract.rs` and `crates/server/tests/store/moderate.rs`: fake and Postgres parity plus per-lever cases; `migrations_pinned.rs` gains the new file's line.\n- No `apps/admin` change: the Audit page renders the rows as they stand. SPEC needs no change (SPEC \u00a79.4 names the levers, \u00a714.10 and R3074000 name the audit; neither's rule changes).\n\n## Acceptance criteria\n\n- [ ] `ban`, `unban`, `revoke-code` and `redemption on|off` each write exactly one `admin_actions` row with the correct before and after when they change something, in the same transaction as the change.\n- [ ] No-ops and refusals (`already banned`, unknown profile or code, pending unban) write no row and print today's stdout line unchanged.\n- [ ] The rows are visible through `GET /api/admin/audit` as a dev account and on the dashboard's Audit page with no admin code change.\n- [ ] No row ever carries an invite code in plaintext, only the stored hash.\n- [ ] `cargo test -p jackioh-server`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo fmt --check`, and the `sql` suite (pinned checksums) pass.\n\n## Size and risks\n\nMedium: one migration, one small store addition, four call sites, and contract plus CLI tests. The main risk is the widened route check: keep it an explicit list of lever names so no other writer can smuggle rows in. The rejected alternative was a second audit table for CLI runs: it would need its own dashboard read path and trust-boundary review, while this table already has both. A decision the task left open: the operator is recorded as NULL rather than a named identity, because only holders of `DATABASE_URL` and `CODE_PEPPER` can run these commands, so who reduces to who holds the production environment, as today.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T01:54:13Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4141: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T01:54:34Z",
+    "claimed_at": "2026-11-18T01:59:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
