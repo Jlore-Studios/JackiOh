@@ -16119,7 +16119,7 @@
     "4181": {
       "action": "plan",
       "asks": [],
-      "failures": 1,
+      "failures": 2,
       "forced": false,
       "handoff": {
         "at": "2026-11-18T16:34:58Z",
