@@ -15428,11 +15428,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T05:34:13Z",
+        "at": "2026-11-18T07:08:40Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "rating rule line 2 (The AI): the fix gates trade_value scoring in crates/ai/src/reply.rs, changing AI reply and move-order decisions"
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "Rule 2 (the AI): it changes the opponent model's static trade read in crates/ai/src/reply.rs, which moves AI decisions"
       },
       "failures": 0,
       "forced": false,
