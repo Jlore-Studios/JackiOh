@@ -16334,14 +16334,14 @@
     "what": "review #4195 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-18T07:23:22Z",
+    "at": "2026-11-18T07:33:23Z",
     "notes": [
-      "delivered review #4193 on muse (run 44254560530): approved",
-      "delivered review #4191 on muse (run 44253413126): approved",
-      "started suggest on claude-4 (run 44258789443)",
-      "started suggest on claude-1 (run 44258864764)",
+      "#4193: green and waiting for a person to merge it, so `muse` gives up its claim on it",
+      "delivered review #4192 on muse (run 44254631388): reviewed",
+      "delivered build #4170 on claude-6 (run 44252228927): built",
+      "started review #4195 on claude-6 (run 44260148219)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17047,7 +17047,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T07:23:22Z",
+  "loop_tick": "2026-11-18T07:33:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
