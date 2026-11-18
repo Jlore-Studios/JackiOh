@@ -29295,5 +29295,29 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.6f",
+    "date": "2026-11-18",
+    "title": "Card loadouts and picks ignore prototype-pollution keys",
+    "source": "#4015",
+    "notes": "Hardens the card-looks parsers touched by #4015 (loadouts and card-picks sync under apps/web/src/cards/): outside card ids of __proto__, constructor or prototype are skipped before they become object keys. No picture renders differently for legitimate ids.",
+    "player": {
+      "title": "Steadier card loadouts",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Saved card looks with damaged data no longer risk changing other cards on the page."
+      ]
+    },
+    "commits": [
+      "179b6fcc2f583f94b1a39d41a406c04c01256494"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
