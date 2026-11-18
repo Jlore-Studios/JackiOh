@@ -16401,6 +16401,13 @@
     "4197": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T14:14:03Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Rule 2 (The AI): the change is to the AI's decisions and search in crates/ai/src/"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
