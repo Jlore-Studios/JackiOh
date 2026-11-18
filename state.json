@@ -14516,6 +14516,13 @@
     "4222": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T23:38:37Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "client-only presentation cut across ~12 web files; no engine rules, AI, migration, or 40-file scope"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
