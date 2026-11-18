@@ -17597,21 +17597,23 @@
     "what": "plan #4221 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-18T17:19:11Z",
+    "at": "2026-11-18T17:33:29Z",
     "notes": [
-      "#4208: approved and green, so its strikes are cleared",
-      "delivered suggest on muse (run 44355937490): suggested",
-      "delivered suggest on claude-4 (run 44355785668): interrupted",
-      "delivered plan #4197 on claude-1 (run 44355624174): planned",
-      "delivered revise #4206 on muse (run 44351574315): built",
-      "delivered review #4210 on claude-8 (run 44344361333): approved",
-      "started revise #4208 on muse (run 44358322828)",
-      "started build #4197 on claude-1 (run 44358490772)",
-      "started plan #4218 on muse (run 44358640527)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days",
-      "#4216: typed it Task",
-      "runner gate: started 1 of 1 waiting run(s) (run 44358089328 on claude/relaxed-dirac-abgkpu)"
+      "delivered suggest on claude-6 (run 44355448036): suggested",
+      "delivered suggest on claude-8 (run 44355304054): suggested",
+      "delivered suggest on claude-6 (run 44355163752): suggested",
+      "delivered review #4173 on claude-7 (run 44337798520): approved",
+      "delivered build #4205 on claude-4 (run 44333382825): interrupted",
+      "started plan #4221 on claude-8 (run 44360885218)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is idle, but nothing queued is for it; `claude-1` is busy; `claude-4` 5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-18T18:50:00Z; it can start a build or a plan again in 10m; `claude-6` is idle, but nothing queued is for it; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4205 held for `claude-4` until 11:50 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+      "pruned 2 plan file(s) older than 7 days",
+      "#4225: typed it Bug",
+      "#4224: typed it Bug",
+      "#4223: typed it Task",
+      "#4222: typed it Feature",
+      "#4221: typed it Bug",
+      "#4219: typed it Task",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18317,7 +18319,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T17:19:11Z",
+  "loop_tick": "2026-11-18T17:33:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
