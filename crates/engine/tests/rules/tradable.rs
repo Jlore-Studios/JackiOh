@@ -541,3 +541,53 @@ fn r2574000_view_marks_every_hand_card_of_the_viewer_passed_as_tradable() {
         );
     }
 }
+
+/// `legal` without the one Trade of `id`, as the I8 oracle reads a list that left a deal out.
+fn without_trade(legal: Vec<ActionBody>, id: &str) -> Vec<ActionBody> {
+    let left_out = trade_of(id);
+    assert!(legal.contains(&left_out), "the Trade of {id} was listed");
+    legal.into_iter().filter(|body| *body != left_out).collect()
+}
+
+#[test]
+fn i8_is_clean_when_the_trade_is_listed_and_when_the_turn_s_one_trade_is_made() {
+    let (state, spell, _unit) = holding("i8-trade-clean");
+    let legal = legal_actions(&state, P1);
+    assert!(legal.contains(&trade_of(&spell)));
+    assert_eq!(
+        unlisted_accepted(&state, P1, &legal),
+        Vec::<String>::new(),
+        "the listed Trade is the list's own"
+    );
+
+    let after = trade(&state, P1, &spell, "t1").state;
+    assert_eq!(trades_listed(&after, P1), Vec::<String>::new());
+    for card in &after.players.p1.hand {
+        assert!(
+            trade(&after, P1, &card.id, "t2").error.is_some(),
+            "the turn's one Trade is spent: {} is refused",
+            card.id
+        );
+    }
+    assert_eq!(
+        unlisted_accepted(&after, P1, &legal_actions(&after, P1)),
+        Vec::<String>::new(),
+        "every forged Trade is refused, so none is a finding"
+    );
+}
+
+#[test]
+fn i8_fires_on_a_trade_reduce_accepts_that_the_list_leaves_out() {
+    let (state, spell, _unit) = holding("i8-trade-fires");
+    let legal = without_trade(legal_actions(&state, P1), &spell);
+    let found = unlisted_accepted(&state, P1, &legal);
+    assert_eq!(
+        found.len(),
+        1,
+        "the plain Unit is not Tradable and is refused: {found:?}"
+    );
+    assert!(found[0].starts_with("I8 unlisted trade accepted"), "{}", found[0]);
+    assert!(found[0].contains(&spell), "{}", found[0]);
+    assert!(found[0].contains("R1838000"), "{}", found[0]);
+    assert!(found[0].contains("§10.2"), "{}", found[0]);
+}

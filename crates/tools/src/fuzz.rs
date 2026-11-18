@@ -21,10 +21,10 @@
 //! R2975000), I15 every Activate ability a view shows to the listing, `usable` exactly when an `activate`
 //! of it is listed (§10.8, R384, R3061000), I16 each card's own zone, owner and controller to the pile or
 //! slot that holds it, and a card off the field to R78's and R766's resets (§3.2). Only the costly I6 (no
-//! card a seat may not read in its view or legal actions, §10.8) and I8 (no unlisted play, attack, switch
-//! or activation `reduce` accepts, §4.1, §4.2, §10.2, §10.5) are sampled, by their strides; I13 and I15
-//! read I6's view and listing, so they ride I6's stride. I14 (every action `legalActions` lists is
-//! accepted by `reduce`, §10.2) is sampled too, at setup and by its stride.
+//! card a seat may not read in its view or legal actions, §10.8) and I8 (no unlisted play, attack, switch,
+//! activation, Trade or Marketplace deal `reduce` accepts, §4.1, §4.2, §6.3, §10.2, §10.5) are sampled,
+//! by their strides; I13 and I15 read I6's view and listing, so they ride I6's stride. I14 (every action
+//! `legalActions` lists is accepted by `reduce`, §10.2) is sampled too, at setup and by its stride.
 //! I17 holds what the state check leaves (§4.5): on a settled state no unit dead but R69's or R3539003's,
 //! no unit in Defense Position that §4.5 step 1 switches out of it (R2179000, R2657000, R3543002,
 //! R1849006) and no 1v1 hero at 0 that can lose; on every state no mana or card damage below 0 and no
