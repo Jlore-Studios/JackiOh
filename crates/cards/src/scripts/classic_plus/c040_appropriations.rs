@@ -456,7 +456,7 @@ mod tests {
             crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_6g(), || {
                 let mut s = appropriations(true, json!({}), json!({}));
                 s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Military"] }));
-                s.expect_stats(&unit(&s, P1, 1), json!({ "attack": 6 }));
+                s.expect_stats(unit(&s, P1, 1), json!({ "attack": 6 }));
                 assert_eq!(mine(&s, VANILLA, "hand").buffs.attack, 3);
             });
         }

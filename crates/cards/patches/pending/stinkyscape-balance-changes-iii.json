@@ -22,7 +22,7 @@
       "League of Losers' five Losers are each 3/3 (Radiant 6/6).",
       "Orca is no longer a Starship Piece.",
       "Open Enrollment costs (0), Feng Shui (2), Lockdown (1), Living Bomb (3), Basket of Crawlers (1), Field of Dreams (0) and Memory Leak (1); Lockdown gains Crater.",
-      "Eclipse is 9/17 (Radiant 18/34), its Radiant Armor is 6 and its damage Burns 7 (Radiant 14).",
+      "Eclipse is 9/17 (Radiant 18/34), its Radiant Armor is 6 (Radiant Reignclipse's Armor 3 is 6 too) and its damage Burns 7 (Radiant 14).",
       "Tatches the Totem is 0/4 (Radiant 0/8); Arm of the Jempire is 3/8 (Radiant 6/16).",
       "Jayaad is a Human; Toxopid Legs are Immune to Toxic.",
       "Repeater v5's Activate can be used 3 times a turn, down from 4.",
@@ -128,6 +128,7 @@
     "stinkyscapeplus-120",
     "stinkyscapeplus-121",
     "stinkyscapeplus-121-1",
+    "stinkyscapeplus-133-5",
     "stinkyscapeplus-134",
     "stinkyscapeplus-142",
     "traininggrounds-005",
@@ -136,7 +137,8 @@
   ],
   "plays": [
     "classicplus-040",
-    "stinkyscape-089"
+    "stinkyscape-089",
+    "stinkyscape-111"
   ],
   "rule": true
 }

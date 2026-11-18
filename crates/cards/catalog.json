@@ -21474,13 +21474,13 @@
       "attack": 5,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Summon every Unit with a Death from your graveyard. Trigger their Deaths."
+      "text": "Cry: Summon every Unit with a Death from your graveyard. Trigger each one's Death."
     },
     "radiant": {
       "attack": 10,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Summon every Unit with a Death from your graveyard. Give them Reborn. Trigger their Deaths twice."
+      "text": "Cry: Summon every Unit with a Death from your graveyard. Give them Reborn. Trigger each one's Death twice."
     }
   },
   "stinkyscape-071": {
@@ -35238,10 +35238,10 @@
         },
         {
           "kind": "Armor",
-          "n": 3
+          "n": 6
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage also Burns {damage}.\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 6\nDamage also Burns {damage}.\nDamage also Burns {burns}."
     },
     "params": [
       {

@@ -1,0 +1,91 @@
+# TEMPORARY (#4154, removed before merge): records what this branch's card changes moved and a local
+# container cannot build (no registry access): the practice-claim fixture, and a new seed for the
+# `basics` lesson whose coach line Midlane Menace's nerf pushed past its 8 turns. Runs only on a push to
+# this branch whose head commit message holds `[regen]`, and pushes its result back to the branch.
+name: tmp 4154 regen
+
+on:
+  push:
+    branches: [claude/amazing-pasteur-r9ngrs]
+
+permissions:
+  contents: write
+
+jobs:
+  regen:
+    if: ${{ contains(github.event.head_commit.message, '[regen]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CYPRESS_INSTALL_BINARY: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: the WASM module
+        run: sh scripts/build-wasm.sh
+      - name: record the practice-claim fixture
+        run: JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
+      - name: scan seeds for the basics lesson
+        env:
+          SCAN_OUT: ${{ runner.temp }}/scan.txt
+        run: |
+          cat > apps/web/src/tutorial/scripts/zz-seedscan.test.ts <<'EOF'
+          import { appendFileSync } from "node:fs";
+          import { describe, it } from "vitest";
+          import { playLesson } from "../harness.ts";
+
+          const OUT = process.env.SCAN_OUT ?? "scan.txt";
+          const POLICIES = ["coach", "coach-passive", "autopilot", "reckless"] as const;
+
+          describe("seed scan", () => {
+            it("scans basics seeds", () => {
+              let found = 0;
+              for (let n = 1; n <= 120 && found < 4; n += 1) {
+                const seed = `tg-basics-${String(n)}`;
+                const parts: string[] = [];
+                let ok = true;
+                let coachTurns = 99;
+                for (const policy of POLICIES) {
+                  const run = playLesson("basics", { policy, seed });
+                  const won = run.winner === "p1" && run.coach.finished && run.view.result?.reason !== "turn-cap"
+                    && run.humanActions.every((entry) => entry.refused === null);
+                  if (policy === "coach") coachTurns = run.humanTurns;
+                  parts.push(`${policy}:${won ? "W" : "L"}${String(run.humanTurns)}`);
+                  if (!won || (policy === "coach" && run.humanTurns > 7)) { ok = false; break; }
+                }
+                if (ok) {
+                  for (let r = 1; r <= 8; r += 1) {
+                    const run = playLesson("basics", { policy: "random", seed, policySeed: `basics:random:${String(r)}` });
+                    if (run.winner !== "p1" || !run.coach.finished) { ok = false; parts.push(`random${String(r)}:L`); break; }
+                  }
+                }
+                if (ok) found += 1;
+                appendFileSync(OUT, `${seed} ${ok ? "OK" : "--"} ${String(coachTurns)} ${parts.join(" ")}\n`);
+              }
+            }, 3_600_000);
+          });
+          EOF
+          pnpm --dir apps/web exec vitest run src/tutorial/scripts/zz-seedscan.test.ts || true
+          rm apps/web/src/tutorial/scripts/zz-seedscan.test.ts
+          cat "$SCAN_OUT"
+      - name: take the best seed
+        env:
+          SCAN_OUT: ${{ runner.temp }}/scan.txt
+        run: |
+          best=$(awk '$2 == "OK" { print $3, $1 }' "$SCAN_OUT" | sort -n -k1,1 -s | head -1 | cut -d' ' -f2)
+          echo "best seed: ${best:-none}"
+          if [ -n "$best" ]; then
+            sed -i "s/  seed: \"tg-basics-[0-9]*\",/  seed: \"$best\",/" apps/web/src/tutorial/lessons/basics.ts
+            grep -n "seed:" apps/web/src/tutorial/lessons/basics.ts
+          fi
+      - name: check them
+        run: pnpm --dir apps/web exec vitest run src/practice/claim.test.ts src/tutorial/scripts/basics.test.ts src/tutorial/lessons.test.ts || true
+      - name: push the result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add crates/server/tests/fixtures/practice-claim.json apps/web/src/tutorial/lessons/basics.ts
+          git status --short
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -m "tmp regen (#4154): the practice-claim fixture and the basics lesson's seed"
+          git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"

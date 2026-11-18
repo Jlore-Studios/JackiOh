@@ -47,13 +47,20 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.6g each pick was a Discover of three (issue #4154); `KEPT_SCRIPTS` folds those
-/// replays under it.
+/// R767000: after v0.5.9f through v0.6.6g each pick was a Discover of three (issue #4154); `KEPT_SCRIPTS`
+/// folds those replays under it.
 pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: arm(Rarity::Rare, None),
         radiant: arm(Rarity::Epic, None),
     }
+}
+
+/// R767000, R2657006: the same Discover of three through v0.5.9f, kept apart because those versions
+/// declared no `weapons` (it printed "Discover 3", which `param_or` reads); `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    script_v0_6_6g()
 }
 
 // Stinkyscape #83 Halo — SPEC §8.10 row 83, BUILD M12 row S 83 (#2521; R4154104, R1841002, R1751000,

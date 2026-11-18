@@ -119,7 +119,7 @@ destroys at its controller's next start, before it can attack, threatens no face
 (`brittle_crumbles_before_swing`, R3793000, #3793; off in `GREEDY_EVAL`). Nor does one the first tick of
 its own Burn and Toxic destroys there: they ask `afflicted_before_swing` too, which reads the tick through
 `tick_damage`, the reading `afflicted` prices it by, and keeps a unit whose Reborn body has Charge, or Rush
-where only a Unit is the target (`affliction_kills_before_swing`, R4065000, #4065; off in `GREEDY_EVAL`). A
+where only a Unit is the target, or that a Burn alone kills, its body back before its controller's turn (R4154000) (`affliction_kills_before_swing`, R4065000, #4065; off in `GREEDY_EVAL`). A
 hit from a source that exiles what it damages (M #72 The Banisher) reads as a Poisonous one in `blow`,
 `kills_and_survives`, the Taunt walk and its Cleave splash, `breaks_alone` and `falls_to_first_strike`
 (`exiles_what_it_damages`), and `trade_value` prices what it exiles at its whole `unit_worth`, with no Death

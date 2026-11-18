@@ -23,6 +23,11 @@ fn radiate_your_units(ctx: &EffectContext<'_>, include_self: bool) -> Vec<Effect
         ids.push(self_.id.clone());
     }
     ids.extend(active_units_of(ctx.state, ctx.controller).iter().map(|unit| unit.id.clone()));
+    // R4154205: a Death another card triggers while she stands (S #70 Z'Zoth's) leaves her out of "your
+    // other Units"; a Death she dies into finds her gone already (R78).
+    if !include_self && let Some(self_) = &ctx.self_ {
+        ids.retain(|id| *id != self_.id);
+    }
     ids.into_iter()
         .collect::<IndexSet<String>>()
         .into_iter()

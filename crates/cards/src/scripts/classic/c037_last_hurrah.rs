@@ -93,14 +93,14 @@ fn last_hurrah_discarding(turn: &'static str, counted: bool) -> Script {
     }
 }
 
-/// R767000: the scripts v0.6.6g and the versions after v0.5.11r ran, kept for their replays: `discard`
+/// R767000: the scripts v0.6.6g and the versions from v0.5.12 ran, kept for their replays: `discard`
 /// random cards at the end of this turn, on the Radiant face of the controller's next (issue #4154).
 pub fn script_v0_6_6g() -> CardScripts {
     CardScripts { base: last_hurrah_discarding("this", true), radiant: last_hurrah_discarding("next", true) }
 }
 
-/// R767000: the scripts v0.5.11r and the versions before it ran, kept for their replays: the delayed
-/// discard took the whole hand, both faces.
+/// R767000: the scripts v0.5.11s and the versions before it ran, kept for their replays (under v0.5.11r
+/// and v0.5.11s, the two rows of `KEPT_SCRIPTS`): the delayed discard took the whole hand, both faces.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts { base: last_hurrah_discarding("this", false), radiant: last_hurrah_discarding("next", false) }
 }

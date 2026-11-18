@@ -234,8 +234,10 @@ pub(crate) fn crumbles_before_swing(
 /// R3540001), so no turn number is asked. An Indestructible unit takes none. With `on_turn_swings` the player
 /// on turn still has this turn's attacks to come, after this turn's tick, as in `crumbles_before_swing`. With
 /// `w.pool_and_conversion_read`, its side's damage pools meet the tick refilled, as `afflicted` reads them
-/// (R4064000). An unspent Reborn brings its body back summoning sick (R83), which keeps it out unless the body
-/// has Charge, or Rush when `at_hero` is false: then it still counts, at the unit's own reads, as before.
+/// (R4064000). An unspent Reborn brings its body back summoning sick (R83) when the Toxic tick at its
+/// controller's turn start kills it, which keeps it out unless the body has Charge, or Rush when `at_hero` is
+/// false; a Burn that kills it alone ticks at the end of the turn under way (R4154000), so its body is back
+/// before that turn starts and swings. Either way a body that swings counts, at the unit's own reads, as before.
 pub(crate) fn afflicted_before_swing(
     state: &GameState,
     unit: &CardInstance,
@@ -251,14 +253,23 @@ pub(crate) fn afflicted_before_swing(
     {
         return false;
     }
-    let mut shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
+    let shielded = has_keyword(&view.keywords, KeywordKind::DivineShield);
     let pool = refilled_pool(state, unit.controller, w);
-    let (taken, _) = tick_damage(view, unit_damage_cap(state, unit), burn, toxic, &mut shield, pool);
+    let cap = unit_damage_cap(state, unit);
+    let mut shield = shielded;
+    let (taken, _) = tick_damage(view, cap, burn, toxic, &mut shield, pool);
     if taken < view.health {
         return false;
     }
     if !has_keyword(&view.keywords, KeywordKind::Reborn) {
         return true;
+    }
+    // R4154000: a Burn the tick at the end of the turn under way kills brings the Reborn body back before its
+    // controller's next turn starts, so it is not summoning sick then and swings, the hero included.
+    let mut shield = shielded;
+    let (burned, _) = tick_damage(view, cap, burn, 0, &mut shield, pool);
+    if burned >= view.health {
+        return false;
     }
     let (_, body) = reborn_return(state, unit);
     !(has_keyword(&body.keywords, KeywordKind::Charge)

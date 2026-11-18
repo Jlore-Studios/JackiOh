@@ -59,7 +59,7 @@ const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 104] = [
+const ACTIVATE_CARDS: [&str; 103] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,

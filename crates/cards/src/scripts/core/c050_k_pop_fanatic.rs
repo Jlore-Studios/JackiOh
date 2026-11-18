@@ -977,8 +977,8 @@ mod tests {
                 let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
                 state = act(&mut log, &state, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
             }
-            // With K-Pop Fanatic at (2), p1's 1 mana of turn 1 may pay for nothing, and the turn has then
-            // ended by itself (R82).
+            // With K-Pop Fanatic at (3) (issue #4154), p1's 1 mana of turn 1 may pay for nothing, and the turn
+            // has then ended by itself (R82).
             if state.active == P1 {
                 state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p1" }));
             }
@@ -996,6 +996,11 @@ mod tests {
                 json!({ "type": "play", "instanceId": token.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p2" }),
             );
             state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p2" }));
+            // K-Pop Fanatic costs (3): the turns pass until p1's begins with 3 mana.
+            while !(state.active == P1 && state.players.p1.mana.current >= 3) {
+                let active = state.active;
+                state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": active }));
+            }
             let fanatic = state
                 .players
                 .p1

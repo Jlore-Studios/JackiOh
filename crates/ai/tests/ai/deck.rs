@@ -703,7 +703,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         // Speciesist costs (3), Spiteful Stab, Argusland and Wardrum one less, and Ivory Tower (1); #3951
         // every pin: Wardrum, Jlarna, Jlockeed's Yamato Cannon and Cloaking Module cost one less; #3996
         // the easy, hard and themed pins: Mana Well, Twinspell, Field of Dreams and Income Tax cost one
-        // less, Felinor Feelings and Heroic Power one more).
+        // less, Felinor Feelings and Heroic Power one more; #4154 the human pin: Living Bomb (3), Snom
+        // Bunny Mind Control (6), K-Pop Fanatic (3), Lockdown and Memory Leak (1), Field of Dreams (0) and others
+        // move cost).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -719,18 +721,18 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-086",
                     "classic-089",
                     "classic-007",
-                    "classicplus-002",
-                    "classic-081",
+                    "classicplus-003",
+                    "classic-080",
                     "classicplus-013",
+                    "classicplus-042",
+                    "classicplus-078",
+                    "core-020",
+                    "core-012",
+                    "core-056",
+                    "classicplus-005",
                     "classicplus-037",
-                    "classicplus-077",
-                    "core-014",
-                    "core-007",
-                    "core-053",
-                    "classicplus-004",
-                    "classicplus-034",
-                    "core-073",
-                    "classicplus-029",
+                    "core-085",
+                    "classicplus-025",
                 ],
             ),
             (
@@ -831,7 +833,11 @@ mod r1370_a_deck_that_leans_on_a_set {
         // These pins are recorded deals, so they read the pools as they are, not as the pool probe (#3117)
         // rotates them: `gatedSets` (R1390) and R1420 keep a later set out of the pool they name, and a
         // set's release re-pins them by design, so a pool roll is not what they guard.
+        // Every pin is dealt before any is compared, so a patch that re-deals them reads every new deck and
+        // cursor in one failure.
         with_pool_shift(0, || {
+            let mut dealt = Vec::new();
+            let mut pinned = Vec::new();
             for (seed, size, literal, cursor, expected) in pins {
                 for literal in [literal.clone(), {
                     let mut with_null = literal.clone();
@@ -840,11 +846,13 @@ mod r1370_a_deck_that_leans_on_a_set {
                 }] {
                     let mut rng = create_rng(seed, 0);
                     let traced = build_ai_deck_traced(&mut rng, size, &options(literal.clone()));
-                    assert_eq!(traced.deck, expected, "{seed} {literal}");
-                    assert_eq!(rng.cursor(), cursor, "{seed} {literal}");
-                    assert_eq!(traced.lean_forced, 0, "{seed} {literal}");
+                    let label = format!("{seed} {literal}");
+                    dealt.push((label.clone(), traced.deck, rng.cursor(), traced.lean_forced));
+                    let expected: Vec<String> = expected.iter().map(|id| id.to_string()).collect();
+                    pinned.push((label, expected, cursor, 0));
                 }
             }
+            assert_eq!(dealt, pinned);
         });
         assert_eq!(AiDeckOptions::default().lean_set, None);
         assert_eq!(

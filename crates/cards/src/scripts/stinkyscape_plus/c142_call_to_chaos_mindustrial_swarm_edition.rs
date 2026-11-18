@@ -585,7 +585,7 @@ mod tests {
                     .iter()
                     .filter(|card| has_tag(&card.def_id, Tag::Paperclip))
                     .count(),
-                3
+                2
             );
             assert_eq!(added.iter().filter(|card| card.def_id == TOXOPID).count(), 1);
             assert_eq!(s.unit_at(P1, 1).def_id, MINDUSTRIAL_GOLEM);

@@ -127,9 +127,12 @@ mod tests {
                 added(&s).into_iter().map(|card| card.def_id).collect::<Vec<_>>()
             };
             assert_eq!(run("s71-same"), run("s71-same"));
-            let repeated = (0..400).any(|i| {
-                let cards = run(&format!("s71-rep-{i}"));
-                cards.iter().collect::<IndexSet<_>>().len() < cards.len()
+            // R3563000 makes one effect's draws unique while its rule holds; with it off they may repeat.
+            let repeated = with_unique_draws(false, || {
+                (0..400).any(|i| {
+                    let cards = run(&format!("s71-rep-{i}"));
+                    cards.iter().collect::<IndexSet<_>>().len() < cards.len()
+                })
             });
             assert!(repeated);
         }

@@ -487,8 +487,9 @@ mod tests {
             s.state_mut().players.p2.auto_end_turn = Some(false);
             s.end_turn();
             s.end_turn();
-            s.play(VANILLA, json!({ "lane": 4 }));
-            let vanilla = s.unit(P1, 4).expect("the Vanilla");
+            // The leftmost open zone, beside the two tokens (R64).
+            s.play(VANILLA, json!({}));
+            let vanilla = s.unit(P1, 3).expect("the Vanilla");
             assert_eq!(vanilla.def_id, VANILLA);
             for kind in [KeywordKind::Rush, KeywordKind::Trample, KeywordKind::Pierce] {
                 assert!(has(&s, &vanilla, kind), "{kind:?}");

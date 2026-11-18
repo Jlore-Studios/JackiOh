@@ -209,15 +209,15 @@ fn r4065000_the_side_on_turn_swings_before_its_tick() {
     s.attack(VANILLA, "hero").expect_health(AI, 3);
 }
 
-/// R83: the Reborn body of a 4/4 its Burn destroys comes back summoning sick, with no Rush or Charge, so it
-/// cannot attack on that turn.
+/// R83: the Reborn body of a 4/4 its Toxic destroys at its controller's turn start comes back summoning sick,
+/// with no Rush or Charge, so it cannot attack on that turn.
 #[test]
-fn r4065000_an_unspent_reborn_does_not_bring_the_swing_back() {
+fn r4065000_an_unspent_reborn_its_toxic_spends_does_not_bring_the_swing_back() {
     let mut s = game(
         side(30, json!([])),
         side(
             30,
-            json!([{ "def": VANILLA, "lane": 3, "counters": { "burn": 5 } }]),
+            json!([{ "def": VANILLA, "lane": 3, "counters": { "toxic": 5 } }]),
         ),
     );
     s.card_mut(theirs(&s, 3)).granted_keywords.push(Keyword::Reborn);
@@ -230,15 +230,45 @@ fn r4065000_an_unspent_reborn_does_not_bring_the_swing_back() {
     assert!(s.attacks_of(&body).is_empty(), "{:?}", s.attacks_of(&body));
 }
 
+/// R4154000: a Burn ticks at the end of the turn under way, so the Reborn body of a 4/4 its Burn destroys is back
+/// before its controller's turn starts: not summoning sick then, it swings, the hero included, and the face
+/// threat counts it.
+#[test]
+fn r4154000_a_reborn_body_its_burn_brings_back_swings_on_its_controllers_turn() {
+    let mut s = game(
+        side(30, json!([])),
+        side(
+            30,
+            json!([{ "def": VANILLA, "lane": 3, "counters": { "burn": 5 } }]),
+        ),
+    );
+    s.card_mut(theirs(&s, 3)).granted_keywords.push(Keyword::Reborn);
+    assert_eq!(face_threat(s.state(), HUMAN), 4);
+    assert_eq!(face_threat_with(s.state(), HUMAN, &OFF), 4);
+    s.end_turn();
+    assert_eq!(s.state().active, HUMAN);
+    let body = theirs(&s, 3);
+    assert_eq!((body.def_id.as_str(), s.stats(&body).health), (VANILLA, 1));
+    let hero = format!("hero-{}", AI.as_str());
+    assert!(
+        s.attacks_of(&body)
+            .iter()
+            .any(|attack| matches!(attack, ActionBody::Attack { target_id, .. } if *target_id == hero)),
+        "{:?}",
+        s.attacks_of(&body)
+    );
+}
+
 /// R83: a Reborn body with Rush may attack a Unit on the turn it comes back, never the hero: a Radiant
-/// Wrong-House Attacker its Burn destroys adds nothing to the face threat, and its body attacks the AI's unit.
+/// Wrong-House Attacker its Toxic destroys at its controller's turn start adds nothing to the face threat, and
+/// its body attacks the AI's unit.
 #[test]
 fn r4065000_a_reborn_body_with_rush_attacks_only_a_unit() {
     let mut s = game(
         side(30, json!([{ "def": VANILLA, "lane": 3 }])),
         side(
             30,
-            json!([{ "def": ATTACKER, "radiant": true, "lane": 2, "counters": { "burn": 5 } }]),
+            json!([{ "def": ATTACKER, "radiant": true, "lane": 2, "counters": { "toxic": 5 } }]),
         ),
     );
     assert_eq!(face_threat(s.state(), HUMAN), 0);

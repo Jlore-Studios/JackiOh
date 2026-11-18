@@ -257,12 +257,10 @@ mod tests {
         }
     }
 
-    /// R767000: a game on v0.6.6g plays it with no Tribute, under the kept script.
+    /// R767000: a game on v0.6.6g and before plays it with no Tribute, under the kept script.
     #[test]
-    fn issue_4154_a_fold_of_v0_6_6g_asks_no_tribute() {
-        crate::register_all();
-        let v0_6_6g = crate::shipped_catalog("v0.6.6g").expect("v0.6.6g is carried");
-        jackioh_engine::catalog::with_shipped(Some(v0_6_6g), || {
+    fn issue_4154_the_kept_v0_6_6g_script_asks_no_tribute() {
+        crate::under_kept(ID, script_v0_6_6g(), || {
             let mut s = board(false, "xxfreshjack-fold-6e");
             s.play(ID, json!({ "zone": 1 }));
             s.expect_in_zone(ID, "field");

@@ -367,20 +367,21 @@ mod tests {
                 assert_eq!(drawn_in(s.last_events()), 2);
             }
 
+            /// Played for 2, not 3: a Chalice holding 3 counters would counter Outbreak, a (3) since issue #4154.
             #[test]
-            fn r396_c_87_a_plague_chalice_played_for_3_enters_with_3_plague_counters_so_2_more_pass_its_x_and_steal_it() {
+            fn r396_c_87_a_plague_chalice_played_for_2_enters_with_2_plague_counters_so_2_more_reach_its_x_and_steal_it() {
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(4) },
                     "p2": { "hand": [CHALICE, ANCHOR], "library": lib(2) },
                 }));
-                s.play(CHALICE, json!({ "x": 3 }));
+                s.play(CHALICE, json!({ "x": 2 }));
                 s.end_turn();
 
                 let targets = pick::card(&s, CHALICE);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
-                assert_eq!(s.card(CHALICE).counters.plague, Some(5));
+                assert_eq!(s.card(CHALICE).counters.plague, Some(4));
                 assert_eq!(stolen_ids(&s), vec![s.card(CHALICE).id.clone()]);
                 assert_eq!(drawn_in(s.last_events()), 0);
             }

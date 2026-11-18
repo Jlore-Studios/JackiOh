@@ -243,10 +243,10 @@ mod tests {
             assert_eq!(theirs, vec![label]);
         }
 
-        /// R458, R62, R4154101: one at the start of each of the caster's turns from the next on, before the
-        /// draw, costing (3); the opponent's turns add none.
+        /// R458, R62, R3569007, R4154101: one at the start of each of the caster's turns from the next on,
+        /// before the draw, costing (3); the opponent's turns add none.
         #[test]
-        fn r4154101_each_of_your_turns_starts_with_a_3_cost_one_and_the_opponents_add_none() {
+        fn r3569007_r4154101_each_of_your_turns_starts_with_a_3_cost_one_and_the_opponents_add_none() {
             let mut s = game("expedition-turns", false);
             s.play(ID, json!({}));
             for turn in 1..=3 {

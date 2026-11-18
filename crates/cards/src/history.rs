@@ -1000,6 +1000,9 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c082_endless_expedition::script_v0_6_6g,
     ),
     (c002_na_tech::ID, "v0.6.6g", c002_na_tech::script_v0_6_6g),
+    // v0.5.9f and before declared no `weapons` (#2657 declared it in v0.5.10), so they fold under the
+    // same script kept at v0.5.9f, which covers only the versions that declare none.
+    (c083_halo::ID, "v0.5.9f", c083_halo::script_v0_5_9f),
     (c083_halo::ID, "v0.6.6g", c083_halo::script_v0_6_6g),
     (
         c078_occidentless_mandate::ID,
@@ -1018,6 +1021,12 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c079_a_glimpse_into_the_endless_sea::script_v0_6_6g,
     ),
     (c037_last_hurrah::ID, "v0.6.6g", c037_last_hurrah::script_v0_6_6g),
+    // v0.5.11s, before the counted discard of v0.5.12 (#3134), still discarded the whole hand.
+    (
+        c037_last_hurrah::ID,
+        "v0.5.11s",
+        c037_last_hurrah::script_v0_5_11o,
+    ),
     (
         c001_disruptive_disruptor::ID,
         "v0.6.6g",
