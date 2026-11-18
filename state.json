@@ -17486,24 +17486,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "built_by": "claude-8",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-8",
-            "run": "44344361333",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6e271288dc3078e13851182b4e8a5d793938890d",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "82a7f884c628a42b57f01df0c4e375a10b798bde",
+        "tiers": {}
       }
     },
     "4212": {
