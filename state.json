@@ -16179,6 +16179,13 @@
     "4189": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T14:16:31Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium for the rest: five hand-only hooks in one crate's card scripts plus tests and spec notes, no engine rules, no AI, no migration, far under 40 files"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
