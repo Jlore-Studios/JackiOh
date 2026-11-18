@@ -17130,7 +17130,7 @@
       "taken_asks": []
     },
     "4208": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -17160,7 +17160,7 @@
       "issue": 4203,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
@@ -17168,11 +17168,11 @@
       "queued_at": "2026-11-18T17:17:14Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "44349363987",
+      "run_id": "pending:9f2999e8-1795022624",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-18T16:37:21Z",
+      "started_at": "2026-11-18T17:24:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -17604,9 +17604,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T17:11:55Z",
+    "at": "2026-11-18T17:24:24Z",
     "url": "",
-    "what": "suggestions (ai) on muse"
+    "what": "revise #4208 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T17:06:20Z",
