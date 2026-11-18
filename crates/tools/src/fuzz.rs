@@ -134,6 +134,16 @@
 //! `CHANGED_PAIRS_MAX`. A change with no card plays and prints what it always did, and so does any run
 //! that names its own seeds, wave or cards.
 //!
+//! The wave deals every card on its normal face, so a Radiant face is played only when a game upgrades
+//! the card by chance. After it, the Radiant rotation (#4161, `play_radiant_rotation`) plays
+//! `CHANGED_RADIANT_DEALS_PER_CARD` games for each changed card, at most `CHANGED_RADIANT_MAX_SEEDS`
+//! seeds: each is a dungeon-fight start (#3283) with the changed cards forced into both decks and the
+//! forced indices (first in each deck) pinned Radiant through `deckMarks` (`GameSetup::radiant`), after
+//! the start's own draws so no stream moves. It goes through the same checks and fails the gate as the
+//! wave does; its `reproduce:` line ends in `--radiant`, which `--cards` takes to pin those cards for
+//! one seed. Which cards resolved Radiant is printed (`changed cards resolved Radiant: …; never: …`)
+//! and never fails the gate: the random policy may not play a card in a few games.
+//!
 //! # The daily top-up (#3113)
 //!
 //! The daily 1v1 run plays a fixed `FUZZ_SEEDS` (super.yml's, read by `workflow_seeds`), so each card
@@ -152,6 +162,8 @@
 //! event named, setup's included (`Coverage`). It never fails a seed, and played is not every hook run.
 //! A second line names the dealt ids no `cardResolved` showed `radiant` (#3283), so a Radiant face no
 //! game ever played is listed too.
+//! The changed cards' Radiant rotation (#4161) has its own summary, so its `coverage (Radiant faces)`
+//! line says which of them it played Radiant.
 //! The ids merge in seed order and the list is sorted, so any thread count gives the same report.
 
 use std::cell::RefCell;
@@ -188,7 +200,7 @@ use crate::fused_pairs;
 use crate::gate::MS_PER_SECOND;
 use crate::golden::{carrier_of, force_into, resolve_force};
 
-/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos | --regress] [--cards ids|set]`
+/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos | --regress] [--cards ids|set [--radiant]]`
 /// (SURFACE §12).
 #[derive(clap::Args, Debug)]
 pub struct Args {
@@ -214,6 +226,10 @@ pub struct Args {
     /// FORCED_SET_CARDS_PER_SEED a seed, in turn.
     #[arg(long, value_name = "IDS|SET", value_delimiter = ',', conflicts_with_all = ["duos", "regress"])]
     pub cards: Vec<String>,
+    /// Pin the `--cards` cards Radiant (#4161): every seed then starts as a dungeon fight with them
+    /// marked, which is how a failing seed of the changed cards' Radiant rotation is replayed.
+    #[arg(long, requires = "cards", conflicts_with_all = ["handicap", "duos", "regress"])]
+    pub radiant: bool,
     /// Replay the regression corpus (`crates/tools/fuzz-corpus/`, #1197) instead of a wave: each kept
     /// failure's pinned decks, literal start inputs and endings-channel choice.
     #[arg(long, conflicts_with_all = ["from", "seeds", "handicap", "duos"])]
@@ -237,8 +253,15 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     let ran = wave_size(args.seeds);
     let forcing = Forcing::from_cards(&args.cards)?;
+    let forcing = if args.radiant {
+        forcing.pinned_radiant()
+    } else {
+        forcing
+    };
     let wave = if args.handicap {
         play_handicap_wave(from, ran, &forcing)
+    } else if args.radiant {
+        play_radiant_wave(from, ran, &forcing)
     } else {
         play_wave(from, ran, &forcing)
     };
@@ -288,7 +311,7 @@ fn play_changed_cards(root: &Path) -> Vec<String> {
     let mut failed = Vec::new();
     let forcing = Forcing::from_changed(&changed.ids);
     if forcing.cards.is_empty() {
-        println!("changed cards: none a deck can hold, so no wave");
+        println!("changed cards: none a deck can hold, so no wave or Radiant rotation");
     } else {
         let seeds = rotation_seeds(forcing.cards.len(), forcing.per_seed, CHANGED_DEALS_PER_CARD)
             .min(CHANGED_WAVE_MAX_SEEDS);
@@ -307,10 +330,59 @@ fn play_changed_cards(root: &Path) -> Vec<String> {
                 wave.failures.len()
             ));
         }
+        failed.extend(play_radiant_rotation(&forcing));
     }
     if let Err(error) = fused_pairs::play_changed(&changed.ids) {
         failed.push(format!("{error:#}"));
     }
+    failed
+}
+
+/// The changed cards' Radiant rotation (#4161), after their wave: run-start games with each card forced
+/// into both decks and pinned Radiant, `CHANGED_RADIANT_DEALS_PER_CARD` deals each at most
+/// `CHANGED_RADIANT_MAX_SEEDS` seeds. The messages of what failed; which cards resolved Radiant is
+/// printed and never fails, since the random policy may not play a card in a few games.
+fn play_radiant_rotation(forcing: &Forcing) -> Vec<String> {
+    let radiant = forcing.pinned_radiant();
+    let seeds = rotation_seeds(
+        radiant.cards.len(),
+        radiant.per_seed,
+        CHANGED_RADIANT_DEALS_PER_CARD,
+    )
+    .min(CHANGED_RADIANT_MAX_SEEDS);
+    println!(
+        "changed cards (Radiant faces): {} pinned Radiant ({} a seed) over seeds 1..{seeds}: {}",
+        radiant.cards.len(),
+        radiant.per_seed,
+        shown_ids(&radiant.cards)
+    );
+    let wave = play_radiant_wave(1, seeds, &radiant);
+    print!("{}", wave.summary());
+    let mut failed = Vec::new();
+    if !wave.failures.is_empty() {
+        println!("{}", report(&wave.failures, seeds, wave.elapsed_ms));
+        failed.push(format!(
+            "the changed cards' Radiant rotation: {} of {seeds} seeds failed",
+            wave.failures.len()
+        ));
+    }
+    let (resolved, never): (Vec<String>, Vec<String>) = radiant
+        .cards
+        .iter()
+        .cloned()
+        .partition(|id| wave.coverage.radiant.contains(id));
+    let listed = |ids: &[String]| {
+        if ids.is_empty() {
+            "none".to_string()
+        } else {
+            shown_ids(ids)
+        }
+    };
+    println!(
+        "changed cards resolved Radiant: {}; never: {}",
+        listed(&resolved),
+        listed(&never)
+    );
     failed
 }
 
@@ -517,6 +589,16 @@ pub const CHANGED_DEALS_PER_CARD: u32 = 20;
 /// each fewer than `CHANGED_DEALS_PER_CARD` times, which keeps `rust (checks, fuzz 200)` in its budget.
 pub const CHANGED_WAVE_MAX_SEEDS: u32 = 100;
 
+/// How many games deal each changed card on its Radiant face (#4161): the Radiant rotation plays this
+/// many, or `CHANGED_RADIANT_MAX_SEEDS` seeds when that is fewer. The plain wave's copies are Radiant
+/// only by an in-game upgrade, so this small second batch pins them Radiant (`GameSetup::radiant`).
+pub const CHANGED_RADIANT_DEALS_PER_CARD: u32 = 6;
+
+/// The most seeds the Radiant rotation plays (#4161), about 7 seconds on the gate's runner, on top of
+/// `CHANGED_WAVE_MAX_SEEDS`'s wave: a change of many cards deals each fewer than
+/// `CHANGED_RADIANT_DEALS_PER_CARD` times, which keeps `rust (checks, fuzz 200)` in its budget.
+pub const CHANGED_RADIANT_MAX_SEEDS: u32 = 30;
+
 /// The greatest common divisor of `a` and `b`.
 fn gcd(a: usize, b: usize) -> usize {
     if b == 0 { a } else { gcd(b, a % b) }
@@ -547,9 +629,20 @@ pub(crate) struct Forcing {
     cards: Vec<String>,
     /// How many of `cards` one seed forces: all of an id list, `FORCED_SET_CARDS_PER_SEED` of a set's.
     per_seed: usize,
+    /// Whether the games pin the forced cards Radiant (#4161): each seed then starts as a dungeon
+    /// fight with the forced indices marked (`GameSetup::radiant`).
+    radiant: bool,
 }
 
 impl Forcing {
+    /// `self` with its games pinning the forced cards Radiant (#4161).
+    pub(crate) fn pinned_radiant(&self) -> Forcing {
+        Forcing {
+            radiant: true,
+            ..self.clone()
+        }
+    }
+
     /// What `--cards named` forces, or the default when it named nothing.
     pub(crate) fn from_cards(named: &[String]) -> anyhow::Result<Forcing> {
         if named.is_empty() {
@@ -581,6 +674,7 @@ impl Forcing {
                 named: named.to_vec(),
                 cards,
                 per_seed,
+                radiant: false,
             });
         }
         let cards = resolve_force(named).context("--cards")?;
@@ -591,6 +685,7 @@ impl Forcing {
             named: named.to_vec(),
             cards: cards.clone(),
             per_seed: cards.len(),
+            radiant: false,
         })
     }
 
@@ -611,6 +706,7 @@ impl Forcing {
             named: cards.clone(),
             per_seed: FORCED_SET_CARDS_PER_SEED.min(cards.len()),
             cards,
+            radiant: false,
         }
     }
 
@@ -656,15 +752,20 @@ impl Forcing {
             return None;
         }
         let named = self.named.join(",");
+        let pinned = if self.radiant {
+            ", pinned Radiant (each seed starts as a dungeon fight)"
+        } else {
+            ""
+        };
         if self.per_seed < self.cards.len() {
             Some(format!(
-                "  forced (--cards {named}): {} of its {} cards into both decks of each seed, in turn\n",
+                "  forced (--cards {named}): {} of its {} cards into both decks of each seed, in turn{pinned}\n",
                 self.per_seed,
                 self.cards.len()
             ))
         } else {
             Some(format!(
-                "  forced (--cards {named}): {} into both decks of every seed\n",
+                "  forced (--cards {named}): {} into both decks of every seed{pinned}\n",
                 self.cards.join(", ")
             ))
         }
@@ -675,7 +776,11 @@ impl Forcing {
         if self.cards.is_empty() {
             return Value::Null;
         }
-        json!({ "named": self.named, "cards": self.cards, "perSeed": self.per_seed })
+        let mut forced = json!({ "named": self.named, "cards": self.cards, "perSeed": self.per_seed });
+        if self.radiant {
+            forced["radiant"] = Value::Bool(true);
+        }
+        forced
     }
 }
 
@@ -886,6 +991,27 @@ fn run_start_inputs(
     (handicaps, marks)
 }
 
+/// Marks the first `count` deck indices of both seats Radiant (#4161), keeping a mark's drawn upgrades
+/// and adding one where the draw left none. Forced cards sit first in each deck (`golden::force_into`)
+/// and `run_deck_size` keeps a run deck at least as long as `forced`, so the indices are valid.
+fn pin_radiant(marks: Option<&mut PerPlayerOpt<Vec<DeckMark>>>, count: usize) {
+    let Some(marks) = marks else { return };
+    for player in PLAYER_IDS {
+        let list = marks.slot(player).get_or_insert_with(Vec::new);
+        for index in 0..count {
+            match list.iter_mut().find(|mark| mark.index == index) {
+                Some(mark) => mark.radiant = true,
+                None => list.push(DeckMark {
+                    index,
+                    radiant: true,
+                    upgrades: 0,
+                }),
+            }
+        }
+        list.sort_by_key(|mark| mark.index);
+    }
+}
+
 // The endings channel (#1572)
 
 /// The share of seeds, in both 1v1 waves, that take the endings channel (#1572), drawn from the
@@ -1045,6 +1171,9 @@ struct GameSetup {
     /// Whether the game is a corpus record's, made under the deck size it was found with and so
     /// created as a recorded game (`create_recorded_game`, R1705003).
     recorded: bool,
+    /// How many leading deck indices of a `Run` start are pinned Radiant (#4161): the forced cards,
+    /// which `force_into` puts first. 0 pins none.
+    radiant: usize,
 }
 
 impl GameSetup {
@@ -1061,7 +1190,19 @@ impl GameSetup {
             start: StartKind::Plain,
             endings: false,
             recorded: false,
+            radiant: 0,
         }
+    }
+
+    /// The Radiant rotation's game for `seed` (#4161): a dungeon fight whatever the seed draws, the
+    /// seed's own endings draw, and the first `pinned` indices of both decks marked Radiant.
+    fn radiant(seed: u32, pinned: usize) -> GameSetup {
+        GameSetup {
+            start: StartKind::Run,
+            radiant: pinned,
+            ..GameSetup::plain(seed)
+        }
+        .with_drawn_endings()
     }
 
     /// The handicapped wave's game for `seed`, with its rotation and the start the seed draws.
@@ -1072,6 +1213,7 @@ impl GameSetup {
             start: StartKind::Plain,
             endings: false,
             recorded: false,
+            radiant: 0,
         }
         .with_drawn_start()
         .with_drawn_endings()
@@ -1167,6 +1309,10 @@ impl GameSetup {
                 let (handicaps, marks) = run_start_inputs(&mut rng, options.handicaps.take(), &options.decks);
                 options.handicaps = Some(handicaps);
                 options.deck_marks = Some(marks);
+                // After `run_start_inputs`, so none of its draws move.
+                if self.radiant > 0 {
+                    pin_radiant(options.deck_marks.as_mut(), self.radiant);
+                }
             }
         }
         options
@@ -2356,6 +2502,9 @@ struct Failure {
     decks: Box<(Vec<String>, Vec<String>)>,
     /// The cards `--cards` forced into both decks of this seed (#2387); empty without it.
     forced: Vec<String>,
+    /// How many leading deck indices the failing game pinned Radiant (#4161); 0 outside the Radiant
+    /// rotation. Kept out of `signature`, like `start`.
+    radiant: usize,
     turn: i64,
     actions: i64,
 }
@@ -2376,6 +2525,7 @@ impl Failure {
         let setup = GameSetup {
             start: self.start,
             endings: self.endings,
+            radiant: self.radiant,
             ..drawn
         };
         setup.create_options((*self.decks).clone())
@@ -2396,13 +2546,14 @@ fn wave_name(handicapped: bool) -> &'static str {
 fn reproduce_command(seed: u32, handicapped: bool, forcing: &Forcing) -> String {
     let forced = forcing.for_seed(seed);
     format!(
-        "cargo jackioh fuzz --from {seed} --seeds 1{}{}",
+        "cargo jackioh fuzz --from {seed} --seeds 1{}{}{}",
         if handicapped { " --handicap" } else { "" },
         if forced.is_empty() {
             String::new()
         } else {
             format!(" --cards {}", forced.join(","))
-        }
+        },
+        if forcing.radiant { " --radiant" } else { "" }
     )
 }
 
@@ -2692,10 +2843,11 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
         if !first.forced.is_empty() {
             lines.push(format!("  forced: {}", first.forced.join(", ")));
             lines.push(format!(
-                "  reproduce: cargo jackioh fuzz --from {} --seeds 1{} --cards {}",
+                "  reproduce: cargo jackioh fuzz --from {} --seeds 1{} --cards {}{}",
                 first.seed,
                 if handicapped { " --handicap" } else { "" },
-                first.forced.join(",")
+                first.forced.join(","),
+                if first.radiant > 0 { " --radiant" } else { "" }
             ));
         }
         lines.push(format!("  message: {}", first.message));
@@ -2760,9 +2912,14 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
         .iter()
         .find_map(|failure| (!failure.forced.is_empty()).then(|| failure.forced.join(",")));
     lines.push(format!(
-        "Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1{}{}",
+        "Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1{}{}{}",
         if handicapped { " --handicap" } else { "" },
-        forced.map_or_else(String::new, |cards| format!(" --cards {cards}"))
+        forced.map_or_else(String::new, |cards| format!(" --cards {cards}")),
+        if failures.iter().any(|failure| failure.radiant > 0) {
+            " --radiant"
+        } else {
+            ""
+        }
     ));
     lines.join("\n")
 }
@@ -3017,6 +3174,27 @@ fn fuzz_handicap_deal(
     run_seed(&GameSetup::handicapped(seed), decks, probe)
 }
 
+/// One seed of the Radiant rotation (#4161) through the same checks: a dungeon-fight start with the
+/// seed's forced cards (first in each deck) pinned Radiant.
+fn fuzz_radiant_seed(seed: u32, forcing: &Forcing) -> Result<Passed, Failure> {
+    let pinned = forcing.for_seed(seed).len();
+    let decks = GameSetup::radiant(seed, pinned).decks(pinned);
+    forcing.play(seed, decks, |decks| {
+        fuzz_radiant_deal(seed, pinned, decks, reduce)
+    })
+}
+
+/// `decks` played as `seed`'s Radiant game with `pinned` indices marked, the probes' forged actions
+/// going through `probe`.
+fn fuzz_radiant_deal(
+    seed: u32,
+    pinned: usize,
+    decks: (Vec<String>, Vec<String>),
+    probe: Reducer,
+) -> Result<Passed, Failure> {
+    run_seed(&GameSetup::radiant(seed, pinned), decks, probe)
+}
+
 /// One game through the four assertions, whichever wave `setup` is of.
 fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<Passed, Failure> {
     run_seed_with_options(setup, &setup.create_options(decks), probe)
@@ -3101,6 +3279,7 @@ fn run_seed_with_options(
         message,
         decks: Box::new(options.decks.clone()),
         forced: Vec::new(),
+        radiant: setup.radiant,
         turn,
         actions,
     })
@@ -3139,6 +3318,11 @@ fn play_wave(from: u32, ran: u32, forcing: &Forcing) -> Wave {
 /// Plays the handicapped wave's seeds `from..from + ran` the same way.
 fn play_handicap_wave(from: u32, ran: u32, forcing: &Forcing) -> Wave {
     play_seeds(true, from, ran, forcing, |seed| fuzz_handicap_seed(seed, forcing))
+}
+
+/// Plays the Radiant rotation's seeds `from..from + ran` the same way (#4161).
+fn play_radiant_wave(from: u32, ran: u32, forcing: &Forcing) -> Wave {
+    play_seeds(false, from, ran, forcing, |seed| fuzz_radiant_seed(seed, forcing))
 }
 
 /// `seed` over `from..from + ran`, in parallel, gathered back in seed order into one wave's numbers.
@@ -5869,6 +6053,7 @@ pub(crate) mod tests {
                 decks: Box::new((Vec::new(), Vec::new())),
                 forced: Vec::new(),
                 turn: 4,
+                radiant: 0,
                 actions: 3,
             };
             let failed = Wave {
@@ -6129,6 +6314,7 @@ pub(crate) mod tests {
                 decks: Box::new((Vec::new(), Vec::new())),
                 forced: Vec::new(),
                 turn: 2,
+                radiant: 0,
                 actions: 1,
             };
             let text = report(std::slice::from_ref(&failure), 1, 0.0);
@@ -6178,6 +6364,7 @@ pub(crate) mod tests {
                 decks: Box::new(decks_for_seed(1)),
                 forced: Vec::new(),
                 turn: 2,
+                radiant: 0,
                 actions: 1,
             };
             for (start, endings, field) in [
@@ -6526,6 +6713,7 @@ pub(crate) mod tests {
                 decks: Box::new(decks),
                 forced: Vec::new(),
                 turn: 2,
+                radiant: 0,
                 actions: 1,
             };
             let wave_of = |failure: Failure| Wave {
@@ -7183,6 +7371,7 @@ pub(crate) mod tests {
 
     /// #3113: the pull request's gate also plays the cards its change touches.
     mod fuzz_changed_cards {
+        use super::fuzz_probe_stage::seatless;
         use super::*;
 
         fn ids(ids: &[&str]) -> Vec<String> {
@@ -7196,6 +7385,7 @@ pub(crate) mod tests {
                 handicap: false,
                 duos: false,
                 cards: Vec::new(),
+                radiant: false,
                 regress: false,
                 json: false,
             }
@@ -7220,6 +7410,7 @@ pub(crate) mod tests {
                     named: Vec::new(),
                     cards: (0..count).map(|n| format!("card-{n}")).collect(),
                     per_seed: per_seed.min(count),
+                    radiant: false,
                 };
                 let seeds = rotation_seeds(count, per_seed, CHANGED_DEALS_PER_CARD);
                 let mut dealt: IndexMap<String, u32> = IndexMap::new();
@@ -7281,6 +7472,203 @@ pub(crate) mod tests {
             assert!(
                 summary.contains("forced (--cards core-090): core-090 into both decks"),
                 "{summary}"
+            );
+        }
+
+        /// The deck marks a `Run` start at `seed` draws and pins `pinned` Radiant, both seats.
+        fn radiant_marks(seed: u32, pinned: usize, forcing: &Forcing) -> PerPlayerOpt<Vec<DeckMark>> {
+            let setup = GameSetup::radiant(seed, pinned);
+            let decks = forcing.deal(seed, setup.decks(pinned));
+            setup
+                .create_options(decks)
+                .deck_marks
+                .expect("a run start sets deck marks")
+        }
+
+        /// #4161: a Radiant game is a dungeon fight whose forced cards, first in both decks, are marked
+        /// Radiant; pinning none leaves the marks the run start drew.
+        #[test]
+        fn a_radiant_game_pins_its_forced_cards_radiant_in_both_decks() {
+            register_all();
+            let forcing = Forcing::from_changed(&ids(&["core-090"])).pinned_radiant();
+            let setup = GameSetup::radiant(1, 1);
+            assert_eq!(setup.start, StartKind::Run);
+            let decks = forcing.deal(1, setup.decks(1));
+            assert_eq!(decks.0[0], "core-090");
+            assert_eq!(decks.1[0], "core-090");
+            let options = setup.create_options(decks.clone());
+            assert_eq!(options.decks, decks);
+            let marks = options.deck_marks.expect("a run start sets deck marks");
+            for player in [PlayerId::P1, PlayerId::P2] {
+                let list = marks.get(player).expect("each seat has marks");
+                let first: Vec<&DeckMark> = list.iter().filter(|mark| mark.index == 0).collect();
+                assert_eq!(first.len(), 1, "{player:?}: {list:?}");
+                assert!(first[0].radiant, "{player:?}: {list:?}");
+                assert!(
+                    list.windows(2).all(|pair| pair[0].index < pair[1].index),
+                    "{list:?}"
+                );
+            }
+            // Pinning none is the plain run start's own draw.
+            let plain = GameSetup {
+                start: StartKind::Run,
+                ..GameSetup::plain(1)
+            };
+            assert_eq!(
+                radiant_marks(1, 0, &forcing),
+                plain
+                    .create_options(forcing.deal(1, plain.decks(1)))
+                    .deck_marks
+                    .unwrap()
+            );
+        }
+
+        /// #4161: the Radiant rotation plays the changed card Radiant-resolved, which its plain wave over
+        /// the same seeds does not (core-090 resolves Radiant by chance in none of them).
+        #[test]
+        fn a_radiant_rotation_resolves_the_changed_card_radiant() {
+            let forcing = Forcing::from_changed(&ids(&["core-090"]));
+            let wave = play_radiant_wave(1, CHANGED_RADIANT_DEALS_PER_CARD, &forcing.pinned_radiant());
+            assert!(
+                wave.failures.is_empty(),
+                "{}",
+                report(&wave.failures, CHANGED_RADIANT_DEALS_PER_CARD, wave.elapsed_ms)
+            );
+            assert!(wave.coverage.radiant.contains("core-090"), "{}", wave.summary());
+            assert_eq!(
+                wave.coverage.deals.get("core-090"),
+                Some(&CHANGED_RADIANT_DEALS_PER_CARD)
+            );
+            assert_eq!(
+                wave.starts.get("run"),
+                Some(&(CHANGED_RADIANT_DEALS_PER_CARD as usize))
+            );
+            let plain = play_wave(1, CHANGED_RADIANT_DEALS_PER_CARD, &forcing);
+            assert!(
+                !plain.coverage.radiant.contains("core-090"),
+                "{}",
+                plain.summary()
+            );
+        }
+
+        /// #4161: the rotation stays within its caps, which sit at or under the changed wave's.
+        #[test]
+        fn the_radiant_rotation_is_sized_within_its_caps() {
+            const {
+                assert!(CHANGED_RADIANT_DEALS_PER_CARD <= CHANGED_DEALS_PER_CARD);
+                assert!(CHANGED_RADIANT_MAX_SEEDS <= CHANGED_WAVE_MAX_SEEDS);
+            }
+            for count in [1, 10, 633] {
+                let per_seed = FORCED_SET_CARDS_PER_SEED.min(count);
+                let seeds = rotation_seeds(count, per_seed, CHANGED_RADIANT_DEALS_PER_CARD)
+                    .min(CHANGED_RADIANT_MAX_SEEDS);
+                assert!(
+                    seeds > 0 && seeds <= CHANGED_RADIANT_MAX_SEEDS,
+                    "{count} cards: {seeds}"
+                );
+            }
+        }
+
+        /// #4161: a failing Radiant seed's report has a `reproduce:` line with `--radiant`, its marks pin
+        /// the card, and `--cards ... --radiant` replays the identical game.
+        #[test]
+        fn a_radiant_failure_prints_a_reproduce_line_that_replays_it() {
+            register_all();
+            let _preview = preview_every_set();
+            let forcing = Forcing::from_changed(&ids(&["core-090"])).pinned_radiant();
+            let play = |seed: u32, forcing: &Forcing| {
+                let pinned = forcing.for_seed(seed).len();
+                let decks = GameSetup::radiant(seed, pinned).decks(pinned);
+                forcing.play(seed, decks, |decks| {
+                    fuzz_radiant_deal(seed, pinned, decks, seatless)
+                })
+            };
+            let (seed, failure) = (2..=SWEEP_SEEDS)
+                .find_map(|seed| play(seed, &forcing).err().map(|failure| (seed, failure)))
+                .expect("a Radiant seed must fail under the seatless probe reducer");
+            assert_eq!(failure.radiant, 1);
+            assert_eq!(failure.forced, ["core-090"]);
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(
+                text.contains(&format!(
+                    "  reproduce: cargo jackioh fuzz --from {seed} --seeds 1 --cards core-090 --radiant"
+                )),
+                "{text}"
+            );
+            assert!(
+                text.contains("Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1 --cards core-090 --radiant"),
+                "{text}"
+            );
+            let marks = failure.start_options().deck_marks;
+            assert!(
+                text.contains(&format!("  \"deckMarks\": {},", json!(marks))),
+                "{text}"
+            );
+            let marks = marks.expect("a run start has marks");
+            for player in [PlayerId::P1, PlayerId::P2] {
+                assert!(
+                    marks
+                        .get(player)
+                        .is_some_and(|list| list.iter().any(|mark| mark.index == 0 && mark.radiant)),
+                    "{player:?}"
+                );
+            }
+            let replay = Forcing::from_cards(&failure.forced).unwrap().pinned_radiant();
+            let again = play(seed, &replay)
+                .err()
+                .expect("the reproduce line replays the failure");
+            assert_eq!(again.decks, failure.decks);
+            assert_eq!(again.message, failure.message);
+            assert_eq!(again.forced, failure.forced);
+            assert_eq!(again.radiant, failure.radiant);
+        }
+
+        /// #4161: `--radiant` replays one seed, needs `--cards`, excludes the other waves, and changes
+        /// nothing in a run without it.
+        #[test]
+        fn the_radiant_flag_replays_one_seed_and_stays_out_of_the_other_runs() {
+            assert!(!plays_changed(&Args {
+                radiant: true,
+                cards: ids(&["core-090"]),
+                ..args()
+            }));
+            let forcing = Forcing::from_changed(&ids(&["core-090"]));
+            assert!(reproduce_command(3, false, &forcing).ends_with("--cards core-090"));
+            assert!(
+                reproduce_command(3, false, &forcing.pinned_radiant())
+                    .ends_with("--cards core-090 --radiant")
+            );
+            assert!(forcing.json().get("radiant").is_none());
+            assert_eq!(forcing.pinned_radiant().json()["radiant"], json!(true));
+            let plain = forcing.summary_line().unwrap();
+            assert_eq!(
+                plain,
+                "  forced (--cards core-090): core-090 into both decks of every seed\n"
+            );
+            let pinned = forcing.pinned_radiant().summary_line().unwrap();
+            assert!(pinned.contains("pinned Radiant"), "{pinned}");
+            let parse = |argv: &[&str]| {
+                <Args as clap::Args>::augment_args(clap::Command::new("t"))
+                    .try_get_matches_from(std::iter::once("t").chain(argv.iter().copied()))
+            };
+            assert!(parse(&["--cards", "core-090", "--radiant"]).is_ok());
+            assert!(parse(&["--radiant"]).is_err());
+            assert!(parse(&["--radiant", "--handicap", "--cards", "x"]).is_err());
+            assert!(parse(&["--radiant", "--regress", "--cards", "x"]).is_err());
+        }
+
+        /// #4161: no deckable changed card forces nothing, so the rotation plays no seed.
+        #[test]
+        fn the_empty_changed_forcing_plays_no_radiant_games() {
+            let forcing = Forcing::from_changed(&ids(&["no-such-card"]));
+            assert!(forcing.cards.is_empty());
+            assert_eq!(
+                rotation_seeds(
+                    forcing.cards.len(),
+                    forcing.per_seed,
+                    CHANGED_RADIANT_DEALS_PER_CARD
+                ),
+                0
             );
         }
 
