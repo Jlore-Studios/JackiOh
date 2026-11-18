@@ -104,6 +104,7 @@ import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
 import { MenuShell, menuShellOn } from "./shell/MenuShell.tsx";
 import { Skeleton, useShownAfterDelay, type SkeletonVariant } from "./skeleton/Skeleton.tsx";
+import { loadCardTables } from "./cards/chinese.ts";
 import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 
 import "./index.css";
@@ -362,13 +363,15 @@ type EngineLoad = "loading" | "ready" | "failed";
 /**
  * Holds a screen that calls the engine until its module is in. A module that did not arrive gets a panel
  * whose retry asks `loadWasm()` again in place: a failed download is not cached (`wasm/index.ts`).
+ * #4180, R1301: the Chinese card tables arrive beside the module, so a gated screen names a flagged
+ * view's card in Chinese.
  */
 function EngineGate({ children }: { children: ReactNode }): ReactElement {
   const [load, setLoad] = useState<EngineLoad>(() => (wasmLoaded() ? "ready" : "loading"));
   useEffect(() => {
     if (load !== "loading") return;
     let live = true;
-    void loadWasm().then(
+    void Promise.all([loadWasm(), loadCardTables()]).then(
       () => {
         if (live) setLoad("ready");
       },

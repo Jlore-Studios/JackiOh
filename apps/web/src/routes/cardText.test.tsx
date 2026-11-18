@@ -15,16 +15,17 @@ import { readCardSettings } from "../cards/settings.ts";
 import { DEFAULT_FILTER, DEFAULT_SORT, almanacPool } from "../game/deckbuilder/filters.ts";
 import { CARD_POOL, DB_SEARCH, poolCardId } from "../game/deckbuilder/testids.ts";
 import { at } from "../test/stubServer.ts";
-import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
+import AlmanacRoute from "./almanac.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { CARD_TEXT_KEY, cardTextTestid } from "./cardText.tsx";
 
 /** The whole grid (710 cards and tokens since #1884) renders slowly under jsdom. */
 const SLOW_GRID = { timeout: 30_000 } as const;
 
-const SHOWN = almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT);
+const SHOWN = almanacPool(currentCatalog(), DEFAULT_FILTER, DEFAULT_SORT);
 
 function faceOf(id: string) {
-  const def = ALMANAC_CATALOG.cards[id];
+  const def = currentCatalog().cards[id];
   if (def === undefined) throw new Error(`the catalog has no ${id}`);
   return faceModel({ defId: id, def, radiant: false });
 }
@@ -67,7 +68,7 @@ describe("R3838000 the Almanac's Show card text button", SLOW_GRID, () => {
     expect(toggle.closest("header")).not.toBeNull();
     expect(fullArtFaces()).toBeGreaterThan(0);
 
-    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: ALMANAC_CATALOG.cards[FULL_ART_ID!]!.name } });
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: currentCatalog().cards[FULL_ART_ID!]!.name } });
     const face = (): Element | null => screen.getByTestId(poolCardId(FULL_ART_ID!)).querySelector(".cf");
     expect(face()).toHaveAttribute("data-full-art", "true");
 

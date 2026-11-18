@@ -11,11 +11,10 @@
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 
-import catalogJson from "@jackioh/cards/catalog.json";
-import type { CardDef, CardDefs } from "@jackioh/shared";
-import type { CatalogSnapshot } from "@jackioh/validator";
+import type { CardDef } from "@jackioh/shared";
 
 import { AlwaysFullText, CardDefsProvider, closeInspect } from "../cards/index.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import CardBrowser from "../game/deckbuilder/CardBrowser.tsx";
 import {
   ALMANAC_CHIP_TAGS,
@@ -44,16 +43,6 @@ export const almanacTestid = {
 } as const;
 
 /**
- * The bundled catalog. A snapshot's `version` is what a save or a queue checks (§9.4); the almanac
- * makes neither, so nothing reads it.
- */
-export const ALMANAC_CATALOG: CatalogSnapshot = {
-  version: "bundled",
-  // JSON widens the unions to strings; the catalog is proved against SPEC §8 in crates/cards.
-  cards: catalogJson as unknown as CardDefs,
-};
-
-/**
  * The detail view's line under the glossary: the card's rarity; for a token, the rarity it prints
  * (if any) and that it never goes in a deck (L3), "Rare · Token · not deckable".
  */
@@ -72,7 +61,9 @@ export default function AlmanacRoute(): ReactElement {
   // card's page can be shared; it follows the address on every move (R2118000: the command menu opens
   // a card there).
   const linked = new URLSearchParams(useSearch()).get("card");
-  const detailCardId = linked !== null && Object.hasOwn(ALMANAC_CATALOG.cards, linked) ? linked : null;
+  // #4180: the module's catalog (`game/currentCatalog.ts`); the page sits behind `EngineGate`.
+  const catalog = currentCatalog();
+  const detailCardId = linked !== null && Object.hasOwn(catalog.cards, linked) ? linked : null;
   const winRates = useCardWinRates(sort.key);
   // R1956000: an active account's own cards, as the gated screens' ownership has them (main.tsx).
   const account = useAccount();
@@ -80,10 +71,10 @@ export default function AlmanacRoute(): ReactElement {
   const cardText = useCardText();
 
   const pool = useMemo(
-    () => almanacPool(ALMANAC_CATALOG, filter, sort, winRates.rates ?? undefined),
-    [filter, sort, winRates.rates, locale],
+    () => almanacPool(catalog, filter, sort, winRates.rates ?? undefined),
+    [catalog, filter, sort, winRates.rates, locale],
   );
-  const detailDef = detailCardId === null ? undefined : ALMANAC_CATALOG.cards[detailCardId];
+  const detailDef = detailCardId === null ? undefined : catalog.cards[detailCardId];
 
   const openDetail = useCallback((cardId: string) => {
     // At most one inspect overlay at a time, as in the deck editor.
@@ -93,7 +84,7 @@ export default function AlmanacRoute(): ReactElement {
 
   // R279: a reference in a card's text shows the card the catalog names.
   return (
-    <CardDefsProvider defs={ALMANAC_CATALOG.cards}>
+    <CardDefsProvider defs={catalog.cards}>
       <CardTextFaces shown={cardText.shown}>
         <AlwaysFullText>
           <div className="app-shell app-shell--wide tavern deckbuilder almanac" data-testid={almanacTestid.screen}>
@@ -104,7 +95,7 @@ export default function AlmanacRoute(): ReactElement {
             </header>
             <main className="almanac-main" aria-labelledby={PAGE_TITLE_ID}>
               <CardBrowser
-                catalog={ALMANAC_CATALOG}
+                catalog={catalog}
                 pool={pool}
                 filter={filter}
                 onFilter={setFilter}

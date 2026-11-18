@@ -2,10 +2,12 @@
 //
 // The sound tables (`card-audio.json5`, `voice-manifest.json`, `voice-text.json`, `music-manifest.json`,
 // `music-cards.json`) and the JSON5 parser load lazily on first sound, first unlock or route intent,
-// keeping ~100 KB gzipped off the entry bundle.
+// keeping ~100 KB gzipped off the entry bundle. #4180: the tables parse against the module's catalog,
+// so the loader awaits it before the chunk.
 
 import { useSyncExternalStore } from "react";
 
+import { loadWasm } from "../wasm/index.ts";
 import type { CardAudioTable, MusicCardEntry, MusicManifest, VoiceManifest } from "./types.ts";
 
 export type SoundTables = {
@@ -40,7 +42,10 @@ export function loadSoundTables(): Promise<SoundTables> {
   if (pendingLoad !== null) {
     return pendingLoad;
   }
-  pendingLoad = import("./soundTables.ts")
+  // The chunk parses at its top level against `currentCatalog()`, so the module comes first;
+  // both were already fetched together in `routes/chunks.tsx`, so only a cold first sound waits.
+  pendingLoad = loadWasm()
+    .then(() => import("./soundTables.ts"))
     .then((mod) => {
       cachedTables = mod.SOUND_TABLES ?? mod.default;
       pendingLoad = null;

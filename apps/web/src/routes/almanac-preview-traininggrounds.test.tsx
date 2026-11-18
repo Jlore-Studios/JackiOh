@@ -37,12 +37,13 @@ import { closeInspect } from "../cards/index.ts";
 import FilterBar from "../game/deckbuilder/FilterBar.tsx";
 import { DEFAULT_FILTER, DEFAULT_SORT, FILTER_SETS, visiblePool } from "../game/deckbuilder/filters.ts";
 import { CARD_POOL, DB_FILTERS, filterSetId, poolCardId } from "../game/deckbuilder/testids.ts";
-import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
+import AlmanacRoute from "./almanac.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
 
 /** The shelf renders every card of seven sets, so a render here takes longer than vitest's default. */
 const SLOW = 30_000;
 
-const TRAINING_GROUNDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.set === "Training Grounds");
+const TRAINING_GROUNDS: readonly CardDef[] = Object.values(currentCatalog().cards).filter((def) => def.set === "Training Grounds");
 
 /** The ids the grid shows, in its order. */
 function shownIds(): string[] {
@@ -92,7 +93,7 @@ describe("the Almanac with the Training Grounds set previewed (R2202001)", () =>
   }, SLOW);
 
   it("R2202001 the deck builder's pool and filter bar offer the set, and not its token", () => {
-    const pool = visiblePool(ALMANAC_CATALOG, null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
+    const pool = visiblePool(currentCatalog(), null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
     expect(pool).toContain("traininggrounds-036");
     // L3: a token is in no deck, so the pool never offers it.
     expect(CATALOG["traininggrounds-039-1"]?.token).toBe(true);

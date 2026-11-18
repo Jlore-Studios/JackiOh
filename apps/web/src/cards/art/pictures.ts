@@ -21,16 +21,9 @@
 // glowing tubes (`neonSvg`). None draws a colour of its own in Radiant's gold window (R2725004).
 // Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log (CLAUDE.md rule 7).
 
-import { CATALOG } from "../../wire/cards.ts";
 import { fmt, hashId } from "./hash.ts";
-import { motifFor } from "./motifs.ts";
-import type { ArtMotion, ArtRole } from "./motion.ts";
+import type { ArtRole } from "./motion.ts";
 import { ART_BOX } from "./procedural.ts";
-import { isStinkyscapeArt } from "./stinkyscape.ts";
-import { isStinkyscapePlusArt } from "./stinkyscapeplus.ts";
-import { proceduralArtUri, stinkyscapeArtUri, stinkyscapePlusArtUri, trainingGroundsArtUri } from "./svg.ts";
-import { compositionOf, themeFor } from "./themes.ts";
-import { isTrainingGroundsArt } from "./traininggrounds.ts";
 
 /**
  * R2943001: the look a Set showcase face draws its set in: Classic+ and Meditative+ share their parents' (`SHOWCASE_FAMILIES`).
@@ -105,32 +98,6 @@ export const PLANE_OF_ROLE: Readonly<Record<ArtRole, ArtPlane>> = {
   light: "nearest",
   motes: "nearest",
 };
-
-/**
- * R3345000: returns a data URI for one depth plane of `defId`'s picture. R3350000: or for its whole picture (`plane`
- * "whole"), which a Mythic's diorama cuts its slices from (dioramas/pieces.ts), moving as `motion` says (still with none).
- */
-export function artPlaneUri(defId: string, plane: ArtPlane | "whole", radiant: boolean = false, motion: ArtMotion | null = null): string {
-  const def = CATALOG[defId];
-  if (!def) return "";
-  const { name, type, tags } = def;
-  const theme = themeFor(tags, type);
-  if (isStinkyscapeArt(defId)) {
-    return stinkyscapeArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
-  }
-  if (isStinkyscapePlusArt(defId)) {
-    return stinkyscapePlusArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
-  }
-  if (isTrainingGroundsArt(defId)) {
-    return trainingGroundsArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
-  }
-  return proceduralArtUri(defId, theme, compositionOf(defId, type), radiant, motifFor(name, theme), motion, null, plane);
-}
-
-/** R3345000: `artPlaneUri` as a CSS `background-image` value (the effects layer holds no `url(` of its own: B27). */
-export function artPlaneBackground(defId: string, plane: ArtPlane, radiant: boolean = false): string {
-  return `url("${artPlaneUri(defId, plane, radiant)}")`;
-}
 
 /**
  * R2943001, R3344000: whether `part` draws a layer of `role`: the whole picture every layer, its backdrop every layer

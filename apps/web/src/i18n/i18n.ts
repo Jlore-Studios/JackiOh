@@ -41,7 +41,16 @@ export const LOCALES = {
   "zh-CN": {
     name: "简体中文",
     short: "中文",
-    load: async () => (await import("./zh-CN.json", { with: { type: "json" } })).default,
+    // #4180, R711000: the card tables arrive with the dictionary, so the first paint is already
+    // Chinese; a dynamic `import()` of the module, not a static one, keeps `i18n ↔ chinese` acyclic
+    // (`chinese.ts` value-imports `getLocale`/`isZhCn` from here).
+    load: async () => {
+      const [dictionary] = await Promise.all([
+        import("./zh-CN.json", { with: { type: "json" } }),
+        import("../cards/chinese.ts").then((mod) => mod.loadCardTables()),
+      ]);
+      return dictionary.default;
+    },
     day: { year: "numeric", month: "long", day: "numeric" },
   },
 } as const satisfies Record<string, LocaleSpec>;

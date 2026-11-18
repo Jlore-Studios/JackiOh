@@ -19,7 +19,8 @@ import {
 } from "../../constants.ts";
 import { artMotionOf } from "../../fullArt.ts";
 import { ART_MOVES, type ArtMotion } from "../motion.ts";
-import { ART_PLANES, artPlaneUri } from "../pictures.ts";
+import { ART_PLANES } from "../pictures.ts";
+import { artPlaneUri } from "../planes.ts";
 import { ART_DETAIL_MAX_BYTES } from "../richness.ts";
 import { group } from "../stinkyDraw.ts";
 import { DIORAMAS, dioramaSliceSvg, dioramaSliceUri, slicePieces } from "./index.ts";

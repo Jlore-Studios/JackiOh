@@ -16,7 +16,7 @@ import type { PortraitId } from "@jackioh/shared";
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
 import { PortraitArt } from "../emotes/PortraitArt.tsx";
-import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
+import { portraitDefs } from "../emotes/portraits.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -62,7 +62,7 @@ const SECTION_HEADINGS: readonly (readonly [SectionName, string])[] = [
 ];
 
 function isPortrait(value: string): value is PortraitId {
-  return Object.hasOwn(PORTRAIT_DEFS, value);
+  return Object.hasOwn(portraitDefs(), value);
 }
 
 /** A row's mode and time: "All random · 3 days per move". */

@@ -22,7 +22,7 @@ import { Icon } from "../cards/index.ts";
 import { useInspectTrigger } from "../cards/inspect/index.ts";
 import { HeroInspect } from "../emotes/HeroInspect.tsx";
 import { HeroPortrait, usePortraitReaction } from "../emotes/Portrait.tsx";
-import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
+import { portraitDefs } from "../emotes/portraits.ts";
 import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx";
 import { useSetting } from "../settings/store.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
@@ -81,7 +81,7 @@ export default function Hero(props: HeroProps): ReactElement {
   const portrait = emotes?.portrait ?? props.portrait ?? DEFAULT_PORTRAIT;
   const menu = emotes?.menu ?? null;
   const inspect = emotes?.inspect === true;
-  const portraitName = readerName(PORTRAIT_DEFS[portrait].def);
+  const portraitName = readerName(portraitDefs()[portrait].def);
 
   const testId = testid.hero(side);
   const legal = isLegal(props.highlight, testId);

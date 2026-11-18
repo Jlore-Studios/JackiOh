@@ -1,10 +1,12 @@
 // Whether the WebAssembly module is in (`loadWasm`, index.ts), for the engine-free screens that draw a card:
 // the landing page's fan and the not-found page's card. A card face is worked out by the module (jackioh-shared's
 // face model), so they draw it once the module has arrived, and the rest of their screen does not wait for it
-// (#778). A screen behind `EngineGate` never needs this.
+// (#778). A screen behind `EngineGate` never needs this. #4180, R1301: the Chinese card tables arrive beside
+// the module, so a flagged view's card draws Chinese from the first face.
 
 import { useEffect, useState } from "react";
 
+import { loadCardTables } from "../cards/chinese.ts";
 import { loadWasm, wasmLoaded } from "./index.ts";
 
 export function useEngineReady(): boolean {
@@ -12,7 +14,7 @@ export function useEngineReady(): boolean {
   useEffect(() => {
     if (ready) return undefined;
     let live = true;
-    loadWasm().then(
+    Promise.all([loadWasm(), loadCardTables()]).then(
       () => {
         // Stryker disable next-line ConditionalExpression: React 19 drops a state update on an unmounted component without a word, so setting ready after the cleanup shows nothing.
         if (live) setReady(true);
