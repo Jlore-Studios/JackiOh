@@ -16417,7 +16417,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-18T10:00:24Z",
+      "feedback_since": "2026-11-18T11:23:20Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4171,
@@ -16451,7 +16451,7 @@
         "provider": "claude-8",
         "run": "44281224777"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-18T11:23:20Z",
       "stop_requested": false,
       "taken_asks": [],
