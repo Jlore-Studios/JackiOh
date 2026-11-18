@@ -15554,6 +15554,7 @@
       "run_id": "44235802248",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 335,
       "started_at": "2026-11-18T04:13:15Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36234,9 +36235,33 @@
         "title": "Patch: the game log speaks its newest line to screen readers",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "d04490e5fdff330a5e4e51cd17437f6030cbad70",
+        "issue": 4131,
+        "merged_at": "2026-11-18T05:23:34Z",
+        "n": 335,
+        "pr": 4176,
+        "queued_at": "2026-11-18T05:23:34Z",
+        "sha": "1fd0162fbf018b3113e38d97a58a1a2ad723f4e3",
+        "status": "queued",
+        "title": "Patch: wrong invite codes block one profile or address for its hour, never everyone: redemption has no global circuit breaker (R4131000)",
+        "tries": 0
       }
     ],
-    "count": 334
+    "count": 335
   },
   "statistics": {
     "at": "2026-11-18T05:14:11Z"
