@@ -14090,6 +14090,13 @@
     "4144": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T02:25:10Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "No line of the rule holds: one tools file with its tests, plus one README row and one spec sentence. It changes no engine rules, AI, cross-crate contract or migration, and it is far under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
