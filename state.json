@@ -38718,14 +38718,6 @@
         "provider": "claude-8",
         "run_id": "44355304054",
         "taken_asks": []
-      },
-      "3": {
-        "area": "tests",
-        "count": 1,
-        "last_run": "2026-11-18T17:09:23Z",
-        "provider": "claude-6",
-        "run_id": "44355448036",
-        "taken_asks": []
       }
     },
     "taken_asks": []
