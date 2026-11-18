@@ -1011,7 +1011,7 @@ mod tests {
                         "backrow": [ITD],
                         "hand": [MIND_CONTROL, HIT_JOB, HIT_JOB, STOCKPILE],
                         "library": SPARE_LIBRARY,
-                        "mana": 11,
+                        "mana": 12,
                     },
                     "p2": spare(json!({ "field": [VANILLA, TIMMY] })),
                 }));

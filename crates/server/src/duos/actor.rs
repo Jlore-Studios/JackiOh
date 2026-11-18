@@ -18,6 +18,8 @@
 //! (B39). A friend's watcher of a person's seat is sent that seat's view `SPECTATE_DELAY_MS` late with no
 //! legal action, and nothing else the seat is sent (R2881000, as a 1v1 watch is). One serialized queue; the
 //! lock is never held across an `.await` or while a socket is closed (a close calls back into the actor).
+//! The restart drain, and every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row logged, store a checkpoint of the
+//! game that a rebuild resumes from (#4169, `duos::checkpoint`).
 
 use std::collections::VecDeque;
 use std::panic::AssertUnwindSafe;
@@ -46,11 +48,12 @@ use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket};
 use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
-    BOT_DECISION_DEADLINE_MS, DUOS_AI_BUDGET, MATCH_OVER_CLOSE_CODE, MATCH_RECORD_RESULT_ATTEMPTS,
-    MATCH_RECORD_RESULT_BACKOFF_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, SEAT_TAKEN_CLOSE_CODE,
-    SEAT_TAKEN_CLOSE_REASON,
+    BOT_DECISION_DEADLINE_MS, DUOS_AI_BUDGET, MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_OVER_CLOSE_CODE,
+    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
+    SEAT_TAKEN_CLOSE_CODE, SEAT_TAKEN_CLOSE_REASON,
 };
 use crate::db::store::StoreError;
+use crate::duos::checkpoint::{DuosCheckpointBody, checkpoint_row};
 use crate::duos::engine::{self, Pinned};
 use crate::duos::protocol::{
     DuosClientMessage, DuosServerMessage, GraceDeadlines, PingAt, PingKind, PingTarget, ack_message, encode,
@@ -159,6 +162,10 @@ enum Task {
         failed: bool,
     },
     Idle(oneshot::Sender<()>),
+    /// #4169: a checkpoint of the state after the log's newest row. `Some` is the restart drain's,
+    /// answered once it is written or passed over; `None` is the one every
+    /// `MATCH_CHECKPOINT_MIN_ACTIONS`-th row queues while the match is played.
+    Checkpoint(Option<oneshot::Sender<()>>),
 }
 
 impl Task {
@@ -172,6 +179,7 @@ impl Task {
             Task::Timer { key, .. } => format!("expiry:{}", timer_name(*key)),
             Task::Decided { .. } => "ai-move".to_string(),
             Task::Idle(_) => "idle".to_string(),
+            Task::Checkpoint(_) => "checkpoint".to_string(),
         }
     }
 }
@@ -431,6 +439,12 @@ impl DuosActor {
             Task::Idle(done) => {
                 let _ = done.send(());
             }
+            Task::Checkpoint(done) => {
+                self.write_checkpoint().await;
+                if let Some(done) = done {
+                    let _ = done.send(());
+                }
+            }
         }
     }
 
@@ -579,11 +593,17 @@ impl DuosActor {
                         }
                     }
                 };
+                // #4169: every MATCH_CHECKPOINT_MIN_ACTIONS-th row is checkpointed, queued behind this
+                // task so no answer waits on the write.
+                let due = outcome == LogOutcome::Written && seq % MATCH_CHECKPOINT_MIN_ACTIONS == 0;
                 let outputs = {
                     let mut core = self.lock();
                     self.step_in(&mut core, DuosHostEvent::Logged { outcome })
                 };
                 self.exec(outputs, answers).await;
+                if due {
+                    self.enqueue(Task::Checkpoint(None));
+                }
             }
             DuosHostOutput::Record { result, at } => self.on_record(&result, at).await,
             DuosHostOutput::CeilingDraw { at } => self.end_as_ceiling_draw(at).await,
@@ -1126,6 +1146,59 @@ impl DuosActor {
             return;
         }
         let _ = drained.await;
+    }
+
+    /// #4169: resolves once the checkpoint of the state after the log's newest row is written (or
+    /// passed over, `write_checkpoint`), after every task queued before it. The restart drain calls it
+    /// before `stop`; a crash or the reaper's `stop` writes none, and the next rebuild folds from the
+    /// last checkpoint there is (the drain's, or the last periodic one's) or from the start.
+    pub async fn checkpoint(&self) {
+        let (done, written) = oneshot::channel();
+        if self.shared.inbox.send(Task::Checkpoint(Some(done))).is_err() {
+            return;
+        }
+        let _ = written.await;
+    }
+
+    /// #4169: writes the checkpoint a rebuild resumes from (`duos::checkpoint`): the game after the
+    /// log's newest row. Skipped once the match is finished or the actor stopped, and below
+    /// `MATCH_CHECKPOINT_MIN_ACTIONS` rows. A failed write is logged (no state in the line) and costs
+    /// only the shortcut: the rebuild folds from the last checkpoint stored, or the whole log.
+    async fn write_checkpoint(&self) {
+        let (seq, nonce, body) = {
+            let core = self.lock();
+            let seq = core.host.next_seq() - 1;
+            if core.host.is_finished() || core.host.is_stopped() || seq < MATCH_CHECKPOINT_MIN_ACTIONS {
+                return;
+            }
+            let Some(nonce) = core.host.last_nonce() else {
+                return;
+            };
+            let body = DuosCheckpointBody {
+                state: core.host.game().clone(),
+            };
+            (seq, nonce.to_string(), body)
+        };
+        let match_id = self.match_id_str();
+        let row = match checkpoint_row(&self.shared.row, seq, &nonce, &body, now_ms()) {
+            Ok(row) => row,
+            Err(error) => {
+                tracing::warn!(event = "duos.checkpoint.failed", matchId = %match_id, seq = seq, message = %error);
+                return;
+            }
+        };
+        match one_tx!(self.shared.app.db, |t| t
+            .duos_matches_put_checkpoint(&row)
+            .await?)
+        {
+            Ok(true) => {
+                tracing::info!(event = "duos.checkpoint.written", matchId = %match_id, seq = seq, bytes = row.body.len());
+            }
+            Ok(false) => tracing::info!(event = "duos.checkpoint.kept", matchId = %match_id, seq = seq),
+            Err(error) => {
+                tracing::warn!(event = "duos.checkpoint.failed", matchId = %match_id, seq = seq, message = %error);
+            }
+        }
     }
 
     /// `seat`'s view as its socket would get it (without the clock).

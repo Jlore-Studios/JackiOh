@@ -350,8 +350,8 @@ as here with "co-op".
 
 **Files:** `crates/server/src/actor/registry.rs` (`start`, `rebuild`, `actor_for`, `attach`, `stop`,
 `stop_all`, `drain`, `reap_finished`, `forget`), `crates/server/src/duos/registry.rs` (the same for a
-co-op match, with no `stop_all`: its `drain` stops each actor as `stop` does), `crates/server/src/app.rs`
-(`serve_until`, the restart drain's order).
+co-op match; since #4169 it has a `stop_all` too, and its drain checkpoints each actor before it stops it,
+as a match's does), `crates/server/src/app.rs` (`serve_until`, the restart drain's order).
 
 **Fields,** per match id: `actors[id]` (the live actor in memory, or none); `rebuilding[id]` (a rebuild in
 flight, shared by every caller that finds it); the store's row (none, live or finished; a void deletes it,
@@ -393,7 +393,8 @@ comment). Its A10c was found unreachable: every co-op `start` is a request's (a 
 start, the co-op rematch in `duos/again.rs`), which `server.await` finishes before the drain; the same mark
 guards it anyway. `DuosRegistry::drain` now marks the registry draining and stops every actor in memory, and
 `start` or a rebuild that finds the mark stops its own actor (`DuosRegistry::keep`), which `attach` then
-closes 1001.
+closes 1001. Since #4169 each is checkpointed before it is stopped (`DuosRegistry::drain_one`), as a
+match's is.
 `crates/server/tests/actor/duos.rs::registry_states_4114::a_coop_rebuild_in_flight_across_the_restart_drain_is_stopped_too`
 (new; failed without the mark: "left live after the drain"),
 `…::registry_states_4114::a_coop_rebuild_begun_after_the_restart_drain_is_stopped_too` (new; failed without

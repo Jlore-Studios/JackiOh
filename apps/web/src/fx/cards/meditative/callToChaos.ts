@@ -29,7 +29,7 @@ const TUNING = { gravel: { count: 22, power: 1.1 } } as const;
 const TIMING = { tailMs: 400, crashAt: 0.4 } as const;
 
 /** The gallery's roll: one clause of the edition's ten. */
-const JADE_DIE_FIXTURE_EFFECT = "Your hero gains 5 Armor and you heal it 5";
+const JADE_DIE_FIXTURE_EFFECT = "Your hero gains 4 Armor and you heal it 4";
 
 export const jadeDie: CardRecipe = (event, p, play) => {
   const look = paletteLook(DIE_PALETTE) ?? FLAVOR_LOOKS.Hustle;

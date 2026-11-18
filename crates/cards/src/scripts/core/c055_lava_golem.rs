@@ -337,8 +337,9 @@ mod tests {
             s.end_turn();
             s.attack("core-054", "core-055");
 
-            s.expect_stats("core-055", json!({ "health": 2, "attack": 20, "maxHealth": 10 }));
-            // The 20-attack retaliation still kills the 8/8 attacker.
+            // Straaza (#54) is a 6/6 since issue #4154: its 6 lands on the 20/10.
+            s.expect_stats("core-055", json!({ "health": 4, "attack": 20, "maxHealth": 10 }));
+            // The 20-attack retaliation still kills the 6/6 attacker.
             s.expect_in_zone("core-054", "graveyard");
         }
 

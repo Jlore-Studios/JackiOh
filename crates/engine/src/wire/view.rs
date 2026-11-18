@@ -534,7 +534,7 @@ pub struct Counters {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub grade: Option<i32>,
-    /// R3540000: the Burn on the Unit, absent at none; it ticks at the start of its controller's turn.
+    /// R3540000: the Burn on the Unit, absent at none; it ticks once at the end of the turn (R4154000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub burn: Option<i32>,
@@ -1057,7 +1057,7 @@ pub struct HeroView {
     /// Long), which R124 adds up. So it drops back when a granting card leaves the backrow, exactly
     /// like a unit's `armor` above.
     pub armor: i32,
-    /// R3540000: the Burn on this hero, absent at none; it ticks at the start of its owner's turn.
+    /// R3540000: the Burn on this hero, absent at none; it ticks once at the end of the turn (R4154000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub burn: Option<i32>,

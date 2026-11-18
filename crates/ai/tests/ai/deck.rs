@@ -703,7 +703,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         // Speciesist costs (3), Spiteful Stab, Argusland and Wardrum one less, and Ivory Tower (1); #3951
         // every pin: Wardrum, Jlarna, Jlockeed's Yamato Cannon and Cloaking Module cost one less; #3996
         // the easy, hard and themed pins: Mana Well, Twinspell, Field of Dreams and Income Tax cost one
-        // less, Felinor Feelings and Heroic Power one more).
+        // less, Felinor Feelings and Heroic Power one more; #4154 the human pin: Living Bomb (3), Snom
+        // Bunny Mind Control (6), K-Pop Fanatic (3), Lockdown and Memory Leak (1), Field of Dreams (0) and others
+        // move cost).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -719,18 +721,18 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-086",
                     "classic-089",
                     "classic-007",
-                    "classicplus-002",
-                    "classic-081",
+                    "classicplus-003",
+                    "classic-080",
                     "classicplus-013",
+                    "classicplus-042",
+                    "classicplus-078",
+                    "core-020",
+                    "core-012",
+                    "core-056",
+                    "classicplus-005",
                     "classicplus-037",
-                    "classicplus-077",
-                    "core-014",
-                    "core-007",
-                    "core-053",
-                    "classicplus-004",
-                    "classicplus-034",
-                    "core-073",
-                    "classicplus-029",
+                    "core-085",
+                    "classicplus-025",
                 ],
             ),
             (
@@ -739,26 +741,26 @@ mod r1370_a_deck_that_leans_on_a_set {
                 json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
                 21,
                 &[
-                    "core-089",
+                    "core-090",
                     "classicplus-020",
                     "classic-021",
-                    "classic-070",
-                    "core-097",
+                    "classic-069",
+                    "core-096",
                     "core-068",
-                    "classic-013",
+                    "classic-012",
                     "core-015",
                     "core-004",
                     "core-052",
-                    "core-092",
-                    "classicplus-001",
+                    "core-091",
+                    "classic-086",
                     "classicplus-045",
                     "core-032",
-                    "classic-050",
-                    "classicplus-067",
+                    "classic-048",
+                    "classicplus-068",
                     "classic-020",
-                    "classicplus-071",
+                    "classicplus-067",
                     "core-038",
-                    "core-055",
+                    "core-053",
                 ],
             ),
             (
@@ -785,18 +787,18 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-040",
                     "core-020",
                     "classic-066",
-                    "classicplus-012",
+                    "classicplus-011",
                     "classic-077",
                     "classic-020",
                     "classicplus-003",
-                    "classic-061",
-                    "classicplus-018",
+                    "classic-058",
+                    "classicplus-005",
                     "classicplus-047",
-                    "core-026",
-                    "classic-006",
-                    "classic-005",
-                    "core-094",
-                    "classic-088",
+                    "core-025",
+                    "classic-032",
+                    "classic-018",
+                    "classic-015",
+                    "classicplus-012",
                 ],
             ),
             (
@@ -805,7 +807,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                 json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"], "theme": "Human" }),
                 20,
                 &[
-                    "classic-008",
+                    "classic-009",
                     "core-092",
                     "core-004",
                     "classicplus-028",
@@ -816,22 +818,26 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-026",
                     "classic-077",
                     "classic-066",
-                    "classicplus-037",
+                    "classicplus-043",
                     "core-002",
-                    "core-085",
-                    "core-075",
+                    "core-079",
+                    "core-074",
                     "core-066",
                     "classicplus-063",
-                    "core-093",
-                    "classic-056",
-                    "classicplus-017",
+                    "core-088",
+                    "classic-067",
+                    "classicplus-024",
                 ],
             ),
         ];
         // These pins are recorded deals, so they read the pools as they are, not as the pool probe (#3117)
         // rotates them: `gatedSets` (R1390) and R1420 keep a later set out of the pool they name, and a
         // set's release re-pins them by design, so a pool roll is not what they guard.
+        // Every pin is dealt before any is compared, so a patch that re-deals them reads every new deck and
+        // cursor in one failure.
         with_pool_shift(0, || {
+            let mut dealt = Vec::new();
+            let mut pinned = Vec::new();
             for (seed, size, literal, cursor, expected) in pins {
                 for literal in [literal.clone(), {
                     let mut with_null = literal.clone();
@@ -840,11 +846,13 @@ mod r1370_a_deck_that_leans_on_a_set {
                 }] {
                     let mut rng = create_rng(seed, 0);
                     let traced = build_ai_deck_traced(&mut rng, size, &options(literal.clone()));
-                    assert_eq!(traced.deck, expected, "{seed} {literal}");
-                    assert_eq!(rng.cursor(), cursor, "{seed} {literal}");
-                    assert_eq!(traced.lean_forced, 0, "{seed} {literal}");
+                    let label = format!("{seed} {literal}");
+                    dealt.push((label.clone(), traced.deck, rng.cursor(), traced.lean_forced));
+                    let expected: Vec<String> = expected.iter().map(|id| id.to_string()).collect();
+                    pinned.push((label, expected, cursor, 0));
                 }
             }
+            assert_eq!(dealt, pinned);
         });
         assert_eq!(AiDeckOptions::default().lean_set, None);
         assert_eq!(

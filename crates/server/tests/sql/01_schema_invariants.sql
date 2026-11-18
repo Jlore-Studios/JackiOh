@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 83 tables of migrations 0001-0093 ==='
+\echo '=== CHECK 2: the 84 tables of migrations 0001-0097 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -91,12 +91,13 @@ declare
   -- fleet_tracks and fleet_track_grants (0086, R3335001), and the daily games' daily_games,
   -- daily_invites, daily_notify and push_subscriptions (0089, SPEC §9.13, #3727), and a private
   -- lobby's lobbies (0090, R3730000), and the player mail's daily_email_days (0092, #3843), and the
-  -- in-game notification feed's notifications (0093, R4039000).
+  -- in-game notification feed's notifications (0093, R4039000), and the live co-op matches'
+  -- duos_match_checkpoints (0097, #4169).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
   -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084, 0085, 0087, 0088 and
-  -- 0091 add none.
+  -- 0091 add none, nor do 0094, 0095 and 0096.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -104,7 +105,7 @@ declare
     'card_cosmetics', 'card_proficiency', 'card_totals', 'cards', 'challenges',
     'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'cosmetic_grants',
     'cosmetics', 'daily_email_days', 'daily_games', 'daily_invites', 'daily_notify',
-    'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
+    'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_match_checkpoints', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
     'economy_counters', 'emote_events',
     'fleet_track_grants', 'fleet_tracks', 'friend_requests', 'friendships', 'game_record_batches', 'game_records', 'game_totals', 'hand_set_ratings', 'held_quests',
     'idempotency_keys', 'inventory',

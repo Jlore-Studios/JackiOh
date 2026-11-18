@@ -9108,6 +9108,150 @@ mod duos {
         }))
     }
 
+    /// #4169: a co-op checkpoint row as the actor writes one (its body opaque to the store).
+    fn checkpoint(match_id: &str, seq: i64, nonce: &str, body: &str, at: i64) -> MatchCheckpointRow {
+        from(json!({
+            "matchId": match_id,
+            "seq": seq,
+            "nonce": nonce,
+            "catalogVersion": "v-duos-checkpoint",
+            "rules": "fedcba9876543210",
+            "checkpointVersion": 1,
+            "body": body,
+            "bodyHash": format!("hash-of-{body}"),
+            "at": at,
+        }))
+    }
+
+    /// A stored checkpoint without its `at`, which only has to be a time: Postgres keeps it as a
+    /// `timestamptz`.
+    fn stored(row: Option<MatchCheckpointRow>) -> Option<Value> {
+        row.map(|row| {
+            let mut value = j(&row);
+            assert!(value["at"].is_number(), "{value}");
+            if let Value::Object(map) = &mut value {
+                map.remove("at");
+            }
+            value
+        })
+    }
+
+    /// #4169: a co-op match with its log's first `rows` rows, `n-1` on.
+    async fn logged_match(harness: &StoreHarness, row: &DuosMatch, rows: i64) {
+        q!(harness, t => t.duos_matches_create(row));
+        for seq in 1..=rows {
+            q!(harness, t => t.duos_actions_append(&logged(&row.id, seq, &format!("n-{seq}"), harness.now())));
+        }
+    }
+
+    /// #4169: every field comes back as written, and only a later seq's checkpoint replaces it.
+    async fn s6_a_coop_checkpoint_round_trips_and_only_a_later_seq_replaces_it(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now);
+        logged_match(harness, &row, 3).await;
+        let second = checkpoint(&row.id, 2, "n-2", "{\"at\":2}", now);
+        assert!(q!(harness, t => t.duos_matches_put_checkpoint(&second)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(second.clone()))
+        );
+
+        let earlier = checkpoint(&row.id, 1, "n-1", "{\"at\":1}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&earlier)));
+        let same = checkpoint(&row.id, 2, "n-2", "{\"at\":\"again\"}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&same)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(second.clone()))
+        );
+
+        let third = checkpoint(&row.id, 3, "n-3", "{\"at\":3}", now);
+        assert!(q!(harness, t => t.duos_matches_put_checkpoint(&third)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(third))
+        );
+    }
+
+    /// #4169: never for a row the log does not hold under that nonce, nor for a match that has ended or
+    /// is not there.
+    async fn s6_a_coop_checkpoint_is_stored_only_for_a_logged_row_of_a_live_match(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now);
+        logged_match(harness, &row, 1).await;
+        for refused in [
+            checkpoint(&row.id, 1, "other", "{}", now),
+            checkpoint(&row.id, 2, "n-2", "{}", now),
+            checkpoint(&id(), 1, "n-1", "{}", now),
+            checkpoint("not-a-uuid", 1, "n-1", "{}", now),
+        ] {
+            assert!(
+                !q!(harness, t => t.duos_matches_put_checkpoint(&refused)),
+                "{refused:?}"
+            );
+        }
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&row.id)).is_none());
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&id())).is_none());
+        assert!(q!(harness, t => t.duos_matches_checkpoint("not-a-uuid")).is_none());
+
+        let result = json!({ "outcome": "draw", "winner": null, "reason": "turnCap" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 1_000)));
+        let ended = checkpoint(&row.id, 1, "n-1", "{}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&ended)));
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&row.id)).is_none());
+    }
+
+    /// #4169: an ended co-op or 2v2 match is never rebuilt from its checkpoint, so its ending drops it,
+    /// and no later write puts it back; every other match keeps its own.
+    async fn s6_finishing_a_coop_or_two_v_two_match_drops_its_checkpoint_and_no_other(
+        harness: &StoreHarness,
+    ) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let b1 = active_profile(harness, None).await;
+        let b2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let coop = duos_match(&a1.id, &a2.id, now);
+        let made = duos_match(&a1.id, &a2.id, now);
+        let two_v_two: DuosMatch = from(spread(
+            j(&made),
+            json!({ "b1": b1.id, "b2": b2.id, "difficulty": "easy", "options": spread(j(&made.options), json!({ "teamB": "people" })) }),
+        ));
+        assert_eq!(two_v_two.team_b(), jackioh_shared::host::DuosTeamB::People);
+        let other = duos_match(&a1.id, &a2.id, now);
+        for row in [&coop, &two_v_two, &other] {
+            logged_match(harness, row, 2).await;
+            assert!(
+                q!(harness, t => t.duos_matches_put_checkpoint(&checkpoint(&row.id, 2, "n-2", "{}", now)))
+            );
+        }
+
+        let result = json!({ "outcome": "win", "winner": "a", "reason": "concede" });
+        for (ended, kept) in [(&coop, vec![&two_v_two, &other]), (&two_v_two, vec![&other])] {
+            assert!(q!(harness, t => t.duos_matches_finish(&ended.id, &result, now + 1_000)));
+            assert!(q!(harness, t => t.duos_matches_checkpoint(&ended.id)).is_none());
+            assert!(
+                !q!(harness, t => t.duos_matches_put_checkpoint(&checkpoint(&ended.id, 2, "n-2", "{}", now))),
+                "an ended match takes no checkpoint"
+            );
+            for row in kept {
+                assert_eq!(
+                    stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+                    stored(Some(checkpoint(&row.id, 2, "n-2", "{}", now)))
+                );
+            }
+        }
+        let ended = must(q!(harness, t => t.duos_matches_get(&two_v_two.id)), "the 2v2");
+        assert_eq!(
+            (ended.b1.as_str(), ended.b2.as_str()),
+            (b1.id.as_str(), b2.id.as_str())
+        );
+    }
+
     /// B33, B34: a code is held once; the claim is single-shot, never the host's and never past
     /// the expiry; only the host deletes an unjoined room; the reaper keeps a joined one longer.
     async fn s6_rooms_are_claimed_once_and_reaped(harness: &StoreHarness) {
@@ -9449,6 +9593,9 @@ mod duos {
         r1497000_a_profile_seated_in_a_live_co_op_match_is_not_deleted,
         r3731003_a_two_v_two_match_keeps_team_bs_people,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
+        s6_a_coop_checkpoint_round_trips_and_only_a_later_seq_replaces_it,
+        s6_a_coop_checkpoint_is_stored_only_for_a_logged_row_of_a_live_match,
+        s6_finishing_a_coop_or_two_v_two_match_drops_its_checkpoint_and_no_other,
     );
 }
 
@@ -12515,7 +12662,7 @@ mod dev_dashboard {
 
     fn action(profile_id: &str, route: &str, at: i64) -> NewAdminAction {
         NewAdminAction {
-            profile_id: profile_id.to_string(),
+            profile_id: Some(profile_id.to_string()),
             route: route.to_string(),
             request: json!({ "jlore": 5, "note": "kept as sent" }),
             before: json!({ "jlore": 0 }),
@@ -12902,6 +13049,294 @@ mod dev_dashboard {
         r3074001_a_hand_set_rating_keeps_the_first_earned_one_and_clears_once,
         r3074001_standings_mark_a_hand_set_ladder,
         r3074003_posts_are_kept_listed_and_taken_down_once,
+    );
+}
+
+mod moderate_audit {
+    //! #4141: each moderation lever (`cli::moderate`) that changes something writes one audit row with
+    //! no profile, through both stores; one that changes nothing writes none.
+
+    use super::*;
+    use jackioh_server::admin::store::{
+        AdminAction, MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE, MODERATE_REVOKE_CODE_ROUTE,
+        MODERATE_ROUTES, MODERATE_UNBAN_ROUTE, NewAdminAction,
+    };
+    use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
+    use jackioh_server::api::crypto::{canonical_invite_code, hashes_for_pepper};
+    use jackioh_server::cli::moderate::{ban_profile, revoke_code, set_redemption, unban_profile};
+
+    const PEPPER: &str = "moderate-audit-pepper-of-at-least-thirty-two-characters";
+    /// A profile id no account has: a uuid, since Postgres binds the id as one.
+    const UNKNOWN_PROFILE: &str = "d0000000-0000-4000-8000-000000414100";
+
+    /// The audit, newest first.
+    async fn audit(harness: &StoreHarness) -> Vec<AdminAction> {
+        q!(harness, t => t.admin_actions_recent(10))
+    }
+
+    /// `row` is a lever's: no profile, `route`, and the request and the states before and after.
+    fn assert_lever_row(
+        harness: &StoreHarness,
+        row: &AdminAction,
+        route: &str,
+        request: Value,
+        before: Value,
+        after: Value,
+    ) {
+        assert_eq!(
+            (
+                row.profile_id.as_deref(),
+                row.route.as_str(),
+                &row.request,
+                &row.before,
+                &row.after
+            ),
+            (None, route, &request, &before, &after),
+            "{}",
+            harness.name
+        );
+    }
+
+    /// A ban and an unban that change the status each write a row naming the account and the status
+    /// before and after; an `already …`, an unknown profile and a pending account's unban write none.
+    async fn ban_and_unban_write_a_row_each_and_a_no_op_none(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let id = profile.id.as_str();
+        let request = json!({ "profileId": id });
+
+        assert_eq!(
+            ban_profile(&harness.db, id).await.expect("the ban lands"),
+            format!("banned {id}")
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 1, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_BAN_ROUTE,
+            request.clone(),
+            json!({ "status": "active" }),
+            json!({ "status": "banned" }),
+        );
+
+        assert_eq!(
+            ban_profile(&harness.db, id)
+                .await
+                .expect("the second ban answers"),
+            format!("already banned {id}")
+        );
+        let error = ban_profile(&harness.db, UNKNOWN_PROFILE)
+            .await
+            .expect_err("an unknown profile is refused")
+            .to_string();
+        assert_eq!(error, format!("no such profile {UNKNOWN_PROFILE}"));
+        assert_eq!(audit(harness).await.len(), 1, "{}", harness.name);
+
+        assert_eq!(
+            unban_profile(&harness.db, id).await.expect("the unban lands"),
+            format!("unbanned {id}")
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 2, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_UNBAN_ROUTE,
+            request,
+            json!({ "status": "banned" }),
+            json!({ "status": "active" }),
+        );
+
+        assert_eq!(
+            unban_profile(&harness.db, id)
+                .await
+                .expect("the second unban answers"),
+            format!("already active {id}")
+        );
+        let pending = pending_profile(harness, None).await;
+        let error = unban_profile(&harness.db, &pending.id)
+            .await
+            .expect_err("a pending account is refused")
+            .to_string();
+        assert!(error.contains("pending"), "{}: {error}", harness.name);
+        let error = unban_profile(&harness.db, UNKNOWN_PROFILE)
+            .await
+            .expect_err("an unknown profile is refused")
+            .to_string();
+        assert_eq!(error, format!("no such profile {UNKNOWN_PROFILE}"));
+        assert_eq!(audit(harness).await.len(), 2, "{}", harness.name);
+
+        assert_eq!(
+            ban_profile(&harness.db, &pending.id)
+                .await
+                .expect("the pending ban lands"),
+            format!("banned {}", pending.id)
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 3, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_BAN_ROUTE,
+            json!({ "profileId": pending.id }),
+            json!({ "status": "pending" }),
+            json!({ "status": "banned" }),
+        );
+    }
+
+    /// A revoke writes one row naming the code by its stored hash, never the code in any spelling;
+    /// a second revoke, an unknown code and a malformed one write none.
+    async fn revoke_code_writes_the_hash_and_never_the_code(harness: &StoreHarness) {
+        let minted = mint_invite_code(
+            MintDeps {
+                db: &harness.db,
+                code_pepper: PEPPER,
+            },
+            MintInput::default(),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{}: a code is minted: {error}", harness.name));
+        let canonical = canonical_invite_code(&minted.formatted).expect("a minted code is canonical");
+        let hash = hashes_for_pepper(PEPPER).code(&canonical);
+
+        assert_eq!(
+            revoke_code(&harness.db, PEPPER, &minted.formatted)
+                .await
+                .expect("the revoke lands"),
+            format!("revoked {canonical}")
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 1, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_REVOKE_CODE_ROUTE,
+            json!({ "codeHash": hash }),
+            json!({ "revoked": false }),
+            json!({ "revoked": true }),
+        );
+        let written = serde_json::to_string(&rows[0]).expect("the row serializes");
+        for spelling in [
+            minted.formatted.clone(),
+            canonical.clone(),
+            canonical.replace('-', ""),
+        ] {
+            assert!(
+                !written.contains(&spelling),
+                "{}: the row holds the code {spelling}: {written}",
+                harness.name
+            );
+        }
+
+        assert_eq!(
+            revoke_code(&harness.db, PEPPER, &minted.formatted)
+                .await
+                .expect("the second revoke answers"),
+            format!("already revoked {canonical}")
+        );
+        let error = revoke_code(&harness.db, PEPPER, "ABCD-EFGH-JKLM-NPQR")
+            .await
+            .expect_err("an unminted code is refused")
+            .to_string();
+        assert!(error.contains("unknown code"), "{}: {error}", harness.name);
+        let error = revoke_code(&harness.db, PEPPER, "not-a-code")
+            .await
+            .expect_err("a malformed code is refused")
+            .to_string();
+        assert!(error.contains("not an invite code"), "{}: {error}", harness.name);
+        assert_eq!(audit(harness).await.len(), 1, "{}", harness.name);
+    }
+
+    /// Pausing and resuming redemption each write a row with the switch before and after; setting it
+    /// to where it already stands writes none.
+    async fn redemption_writes_a_row_only_when_the_switch_moves(harness: &StoreHarness) {
+        assert_eq!(
+            set_redemption(&harness.db, false)
+                .await
+                .expect("the switch flips"),
+            "redemption paused"
+        );
+        assert_eq!(
+            set_redemption(&harness.db, false)
+                .await
+                .expect("the switch answers"),
+            "redemption already paused"
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 1, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_REDEMPTION_ROUTE,
+            json!({ "enabled": false }),
+            json!({ "enabled": true }),
+            json!({ "enabled": false }),
+        );
+
+        assert_eq!(
+            set_redemption(&harness.db, true).await.expect("the switch flips"),
+            "redemption resumed"
+        );
+        assert_eq!(
+            set_redemption(&harness.db, true)
+                .await
+                .expect("the switch answers"),
+            "redemption already resumed"
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 2, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_REDEMPTION_ROUTE,
+            json!({ "enabled": true }),
+            json!({ "enabled": false }),
+            json!({ "enabled": true }),
+        );
+    }
+
+    /// The route guard takes each lever's route, with no profile, and refuses every name near one:
+    /// an allow list, not a prefix.
+    async fn the_route_guard_takes_each_lever_and_no_name_near_one(harness: &StoreHarness) {
+        for route in MODERATE_ROUTES {
+            q!(harness, t => t.admin_actions_append(&NewAdminAction::lever(
+                route,
+                json!({}),
+                json!({}),
+                json!({}),
+                harness.now(),
+            )));
+        }
+        for near in [
+            "CLI moderate ban ",
+            " CLI moderate ban",
+            "cli moderate ban",
+            "CLI moderate",
+            "CLI moderate ban extra",
+            "CLI moderate chat-reports",
+            "CLI moderate redemption on",
+            "CLI mint-code",
+        ] {
+            let outcome = call!(harness, t => t.admin_actions_append(&NewAdminAction::lever(
+                near,
+                json!({}),
+                json!({}),
+                json!({}),
+                harness.now(),
+            )));
+            assert!(outcome.is_err(), "{}: {near:?} was taken", harness.name);
+        }
+        let routes: Vec<String> = audit(harness).await.into_iter().map(|row| row.route).collect();
+        let mut levers: Vec<String> = MODERATE_ROUTES.iter().map(|route| route.to_string()).collect();
+        levers.reverse();
+        assert_eq!(routes, levers, "{}", harness.name);
+    }
+
+    both_stores!(
+        ban_and_unban_write_a_row_each_and_a_no_op_none,
+        revoke_code_writes_the_hash_and_never_the_code,
+        redemption_writes_a_row_only_when_the_switch_moves,
+        the_route_guard_takes_each_lever_and_no_name_near_one,
     );
 }
 

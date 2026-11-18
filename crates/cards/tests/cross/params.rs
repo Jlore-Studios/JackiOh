@@ -380,10 +380,11 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             }
         }
         // The thirteen numbers issue #556 marked and issue #1748's two (#21's discards and #42's chance,
-        // R1748003), and the Meditative set's own, which §8.8 tunes "on the base face only": M #14's draws,
-        // M #37's surcharge (R1748003), M #49.1's picks (#529) and M #76's marks. The held sets join batch
-        // by batch (Meditative+, R1178000; Stinkyscape, R1857000; Training Grounds, R2194000, its snapshots'
-        // among them, R2195003): each number is held to the rule above; the pinned lists are the shipped.
+        // R1748003), and the Meditative set's own, which §8.8 tunes "on the base face only": M #10's price
+        // (issue #4154, R4154211), M #14's draws, M #37's surcharge (R1748003), M #49.1's picks (#529) and
+        // M #76's marks. The held sets join batch by batch (Meditative+, R1178000; Stinkyscape, R1857000;
+        // Training Grounds, R2194000, its snapshots' among them, R2195003): each number is held to the rule
+        // above; the pinned lists are the shipped.
         base_only.retain(|entry| {
             !entry.starts_with("meditativeplus-")
                 && !entry.starts_with("stinkyscape-")
@@ -399,6 +400,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         assert_eq!(
             meditative,
             vec![
+                "meditative-010 price".to_string(),
                 "meditative-014 draws".to_string(),
                 "meditative-037 surcharge".to_string(),
                 "meditative-049-1 picks".to_string(),
@@ -461,10 +463,12 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen before
         // (C #46's and C #54's among them, R749), less C #59's tokens and C #75's draw, which both faces
-        // print (#2020), and C+ #68's `setCost`, which both faces print since issue #3951; and the Meditative
-        // set's twenty (twenty-three until #3140 made M #81's draw both faces', twenty-two until issue
-        // #3951 made M #19.1's `mana` both faces', twenty-one until issue #3996 took M #78's `discount`
-        // away), less M #1's draw (both faces), with M #37's and M #38's `setCost` (R1748003).
+        // print (#2020), and C+ #68's `setCost`, which both faces print since issue #3951, with C #37's
+        // `flashback`, the Radiant face's alone since issue #4154 (R4154201); and the Meditative set's
+        // nineteen (twenty until issue #4154 took M #1's Cry and its `mana` away, R4154207; twenty-three
+        // until #3140 made M #81's draw both faces', twenty-two until issue #3951 made M #19.1's `mana`
+        // both faces', twenty-one until issue #3996 took M #78's `discount` away), less M #1's draw (both
+        // faces), with M #37's and M #38's `setCost` (R1748003).
         let meditative = radiant_only
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
@@ -484,7 +488,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         // M #49.1's `radiants`, gone with its start-of-turn text.
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (42, 20),
+            (43, 19),
             "{radiant_only:#?}"
         );
     }
@@ -617,6 +621,10 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-004", PRICE),
         ("stinkyscape-012-3", PRICE),
         ("stinkyscape-149", PRICE),
+        // Issue #4154: S #18's and M #7's Tribute 1, a count R3535001 lists the same way for the
+        // Stinkyscape+ set's Tributes.
+        ("stinkyscape-018", PRICE),
+        ("meditative-007", PRICE),
         // R3535001: the held Stinkyscape+ set's costs, thresholds and launch prices, which no
         // Buff or Nerf moves (S+ #24's and #138's and #139's embiggen lines; #39's, #52's, #53's,
         // #57's, #59's, #68's, #69.1's, #75.1's, #82's, #97's, #98's, #103's, #104's, #128's,

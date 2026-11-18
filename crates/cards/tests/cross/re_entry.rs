@@ -154,8 +154,9 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
     #[test]
     fn r174_the_steal_fizzles_on_a_target_that_died_and_came_back_through_reborn_r76_r83() {
         jackioh_cards::register_all();
+        // K-Pop Fanatic (3 since #4154) and Hit Job (3).
         let mut g = scenario(json!({
-            "p1": { "hand": [KPOP, HIT_JOB, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY, "mana": 5 },
+            "p1": { "hand": [KPOP, HIT_JOB, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY, "mana": 6 },
             "p2": {
                 "hand": [VANILLA],
                 "field": [{ "def": RIGHT_HOUSE, "lane": 2 }, { "def": VANILLA, "lane": 4 }],
@@ -384,8 +385,9 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
             json!(REMINISCE),
         ];
         hand.extend(fillers.iter().map(|filler| json!(filler)));
+        // Snom Bunny Mind Control (6 since #4154), radiant Silas (4) and Reminisce (1).
         let mut g = scenario(json!({
-            "p1": { "hand": hand, "mana": 10, "library": LIBRARY },
+            "p1": { "hand": hand, "mana": 11, "library": LIBRARY },
             "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": LIBRARY },
         }));
         let seven = g.card(SEVEN_SEVEN).id.clone();

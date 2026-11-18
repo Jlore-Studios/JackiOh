@@ -97,6 +97,8 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
                 step={RANGE_STEP}
                 value={value}
                 data-testid={testid}
+                aria-valuetext={`${value}%`}
+                disabled={settings.muted}
                 onChange={(event: ChangeEvent<HTMLInputElement>) => {
                   const patch: Partial<AudioSettings> = {};
                   patch[key] = Number(event.currentTarget.value) / RANGE_MAX;

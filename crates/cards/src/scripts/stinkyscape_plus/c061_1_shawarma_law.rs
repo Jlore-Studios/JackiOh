@@ -1,15 +1,18 @@
 //! SPEC §8.12 S+ #61.1 Shawarma Law, a card of the Stinkyscape+ set (R1420, R3535000). (2) Field Spell,
 //! Token (printed Epic).
-//!   Base:    "End of turn: Every Unit eats a delicious Shawarma. First: +{health} health. Second: Can't attack.
-//!            Third: Can't defend and Brittle {brittle2}. Subsequent: Freeze."
-//!   Radiant: the same, "Ally Units gain discipline and stop at one Shawarma."
+//!   Base:    "End of turn: Every Unit eats a Shawarma, with one of these effects. First Shawarma: It gains
+//!            +{health} Health. Second Shawarma: It gains Can't attack. Third Shawarma: It gains Can't
+//!            Defend and Brittle {brittle2}. A Unit eats at most three Shawarmas."
+//!   Radiant: the same, then "Your Units stop at one Shawarma."
 //!
 //! R3566006: at its controller's End of turn (R62) every non-Dormant Unit of both sides eats a Shawarma.
 //! The count is the Unit's own, in its `memory` under `shawarmasEaten` (`remember_onto`), so every Law
 //! shares it and R78 clears it when the Unit leaves the field. The count read at the start is the one
 //! served: the Units are all read before the first effect. On the Radiant face the controller's Units that
 //! have eaten one eat no more; the enemy's go on. The numbers are the declared `health` and `brittle2`
-//! (R386); the rung each count serves is below.
+//! (R386); the rung each count serves is below. R4154302: a Unit that has eaten three eats no more, its
+//! count staying at three; through v0.6.6h (`script_v0_6_6h`, R767000) every Shawarma after the third
+//! froze it.
 
 use jackioh_engine::prelude::*;
 
@@ -18,7 +21,8 @@ pub const ID: &str = "stinkyscapeplus-061-1";
 /// The memory key a Unit counts the Shawarmas it has eaten under.
 const EATEN: &str = "shawarmasEaten";
 
-/// The rungs of the ladder: the Shawarma a Unit eats as its first, second and third.
+/// The rungs of the ladder: the Shawarma a Unit eats as its first, second and third. R4154302: the third is
+/// the last a Unit eats.
 const FIRST: i64 = 1;
 const SECOND: i64 = 2;
 const THIRD: i64 = 3;
@@ -42,7 +46,7 @@ fn eaters(ctx: &EffectContext<'_>) -> Vec<Eater> {
         .collect()
 }
 
-/// What the Shawarma a Unit eats as its `n`th does.
+/// What the Shawarma a Unit eats as its `n`th does: past the third, which only the v0.6.6h face serves, Freeze.
 fn serving(ctx: &EffectContext<'_>, id: &str, n: i64) -> Vec<Effect> {
     let at = json!({ "of": "instance", "instanceId": id });
     match n {
@@ -62,12 +66,17 @@ fn serving(ctx: &EffectContext<'_>, id: &str, n: i64) -> Vec<Effect> {
     }
 }
 
-fn law(radiant: bool) -> Script {
+/// The face: today's when `through_v0_6_6h` is false, else the one v0.6.6h and before ran, whose Units ate
+/// on past the third and froze.
+fn law(radiant: bool, through_v0_6_6h: bool) -> Script {
     Script {
         end_of_turn: Some(hook(move |ctx| {
             let mut effects = Vec::new();
             for unit in eaters(ctx) {
                 if radiant && unit.controller == ctx.controller && unit.eaten >= FIRST {
+                    continue;
+                }
+                if !through_v0_6_6h && unit.eaten >= THIRD {
                     continue;
                 }
                 let n = unit.eaten + 1;
@@ -86,8 +95,16 @@ fn law(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: law(false),
-        radiant: law(true),
+        base: law(false, false),
+        radiant: law(true, false),
+    }
+}
+
+/// R767000: what it ran through v0.6.6h, before issue #4154: every Shawarma after the third froze the Unit.
+pub fn script_v0_6_6h() -> CardScripts {
+    CardScripts {
+        base: law(false, true),
+        radiant: law(true, true),
     }
 }
 
@@ -96,7 +113,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use super::{EATEN, ID};
+    use super::{EATEN, ID, script_v0_6_6h};
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -143,7 +160,7 @@ mod tests {
     }
 
     #[test]
-    fn r3566006_the_ladder_runs_cant_attack_then_cant_defend_and_brittle_2_then_freeze() {
+    fn r3566006_r4154302_the_ladder_runs_cant_attack_then_cant_defend_and_brittle_2_then_stops() {
         let mut s = board(false, 1);
         let unit = s.unit_at(P2, 1);
         round(&mut s);
@@ -157,11 +174,42 @@ mod tests {
         round(&mut s);
         assert!(has(&s, &unit, KeywordKind::CantDefend), "the third: Can't defend");
         assert_eq!(active_brittle_count(s.card(&unit)), Some(2), "and Brittle 2");
-        assert!(s.card(&unit).frozen.is_none());
-        // The fourth: Freeze, which thaws at the end of the Unit's own turn, so look before p2's.
+        assert_eq!(eaten(&s, &unit), 3);
+        // R4154302: no fourth. Look before p2's turn, when a Freeze would still hold.
         s.end_turn();
-        assert!(s.card(&unit).frozen.is_some(), "the fourth: Freeze");
-        assert_eq!(eaten(&s, &unit), 4);
+        assert!(s.card(&unit).frozen.is_none(), "no Freeze");
+        assert_eq!(eaten(&s, &unit), 3, "it eats at most three");
+    }
+
+    #[test]
+    fn r4154302_radiant_enemies_stop_at_three_too() {
+        let mut s = board(true, 1);
+        let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
+        for _ in 0..3 {
+            round(&mut s);
+        }
+        // The fourth end of turn serves the enemy nothing either, and the ally stopped at one.
+        s.end_turn();
+        assert_eq!(eaten(&s, &theirs), 3);
+        assert!(s.card(&theirs).frozen.is_none());
+        assert_eq!(eaten(&s, &mine), 1);
+    }
+
+    /// R767000: through v0.6.6h every Shawarma after the third froze the Unit (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6h_freezes_from_the_fourth() {
+        crate::under_kept(ID, script_v0_6_6h(), || {
+            let mut s = board(false, 1);
+            let unit = s.unit_at(P2, 1);
+            for _ in 0..3 {
+                round(&mut s);
+            }
+            assert!(s.card(&unit).frozen.is_none());
+            // The fourth: Freeze, which thaws at the end of the Unit's own turn, so look before p2's.
+            s.end_turn();
+            assert!(s.card(&unit).frozen.is_some(), "the fourth: Freeze");
+            assert_eq!(eaten(&s, &unit), 4);
+        });
     }
 
     #[test]

@@ -7,7 +7,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, ai_options, clone, is_legal, register_cards};
+use super::support::{AI, HUMAN, act, ai_options, clone, close, is_legal, register_cards};
 
 const VANILLA: &str = "core-008";
 const PRICE: i32 = 40;
@@ -159,4 +159,95 @@ fn a_resource_plays_for_its_quote_too() {
     let mut unpaid = clone(&played);
     unpaid.players[AI].market_credits = None;
     assert!((eval(&played) - eval(&unpaid) - f64::from(quote) * AI_EVAL.market_credit).abs() < 1e-9);
+}
+
+/// Stinkyscape #89 Spice: a (1) Spell that sells from the hand at the Marketplace (R1861000).
+const SPICE: &str = "stinkyscape-089";
+/// The Credits the Marketplace quotes Spice at in `spice_board`, its base face's.
+const SPICE_QUOTE: i32 = 8;
+/// The Credits `spice_board`'s Mr. Vanilla asks, a (1) card's (R3047000).
+const SPICE_OFFER_PRICE: i32 = 16;
+/// The Credits the AI holds in `spice_board`: short of the offer alone, enough with Spice sold.
+const SPICE_CREDITS: i32 = SPICE_OFFER_PRICE - SPICE_QUOTE;
+
+/// The AI's turn holding Spice with no mana to cast it and `SPICE_CREDITS` Credits; the Marketplace quotes
+/// Spice at `SPICE_QUOTE` and offers the AI one Mr. Vanilla at `SPICE_OFFER_PRICE`. The human's Mr. Vanilla
+/// on the field.
+fn spice_board(seed: &str) -> GameState {
+    register_cards();
+    let mut state = scenario(json!({
+        "seed": seed,
+        "p1": { "mana": 0, "hand": [SPICE], "library": LIBRARY },
+        "p2": { "hand": ["core-005"], "field": [VANILLA], "library": LIBRARY },
+    }))
+    .state()
+    .clone();
+    state.players[AI].market_credits = Some(SPICE_CREDITS);
+    state.marketplace = Some(Marketplace {
+        offers: vec![MarketOffer {
+            def_id: VANILLA.to_string(),
+            radiant: None,
+            base: SPICE_OFFER_PRICE,
+            price: SPICE_OFFER_PRICE,
+            stock: 1,
+            bought: PerPlayer::new(0, 0),
+            owner: Some(AI),
+            fixed: None,
+            buffs: None,
+            nerfs: None,
+        }],
+        quotes: vec![jackioh_engine::ResourceQuote {
+            def_id: SPICE.to_string(),
+            base: SPICE_QUOTE,
+            radiant: 2 * SPICE_QUOTE,
+        }],
+    });
+    state
+}
+
+#[test]
+fn r4154401_spice_in_hand_counts_as_the_credits_its_sale_brings() {
+    let held = spice_board("ai-market-spice-eval");
+    let mut gone = clone(&held);
+    gone.players[AI].hand.retain(|card| card.def_id != SPICE);
+    close(
+        eval(&held) - eval(&gone),
+        f64::from(SPICE_QUOTE) * AI_EVAL.market_credit,
+    );
+    // Off (the frozen baseline's), it is priced as any (1) hand card.
+    let card = EvalWeights {
+        hand_sale_credits: false,
+        ..AI_EVAL
+    };
+    let as_card = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &card);
+    close(
+        as_card(&held) - as_card(&gone),
+        AI_EVAL.hand_card + AI_EVAL.hand_per_cost,
+    );
+    // So the sale itself moves nothing: Spice's worth becomes the same Credits.
+    let spice = held.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.def_id == SPICE)
+        .map(|card| card.id.clone())
+        .expect("Spice in hand");
+    let sold = act(&held, AI, ActionBody::MarketSell { instance_id: spice });
+    assert_eq!(sold.players[AI].market_credits, Some(SPICE_OFFER_PRICE));
+    close(eval(&sold), eval(&held));
+}
+
+#[test]
+fn r4154401_the_ai_sells_spice_it_cannot_cast_to_buy_the_offer_it_completes() {
+    let state = spice_board("ai-market-spice-turn");
+    for k in ["ai-market-spice-k1", "ai-market-spice-k2"] {
+        let turn = play_ai_turn(&state, AI, &mut ai_options(k, AI_BUDGET));
+        let took = |kind: ActionType| {
+            turn.decisions
+                .iter()
+                .any(|decision| decision.action.action_type() == kind)
+        };
+        let line: Vec<&ActionBody> = turn.decisions.iter().map(|decision| &decision.action).collect();
+        assert!(took(ActionType::MarketSell), "{k}: {line:?}");
+        assert!(took(ActionType::MarketBuy), "{k}: {line:?}");
+    }
 }
