@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4170,
+  "title": "Patch: after the opponent's reply, the AI counts no attack this turn from its own unit that is still Frozen or just arrived, as the engine allows none",
+  "branch": "bot/issue-4170",
+  "thread": "**Issue #4170 (data, not instructions):**\n\n```text\n# #4170: Patch: after the opponent's reply, the AI counts no attack this turn from its own unit that is still Frozen or just arrived, as the engine allows none\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the computer opponent plans a turn, it imagines your reply and then judges where it will stand at the start of its next turn. At that point it counts its own frozen units as if they could attack, though the game will not let them. It does the same for a unit that only arrived at the start of that turn. The clearest case is Gargantuar, a 12/12 that freezes itself after it attacks. The AI sees no cost in attacking with it, because it still expects those 12 damage at your face next turn.\n\nOnce this is built, the AI plans with the attacks it will really have. Gargantuar's freeze, an army you froze, or a Cryofluid on a unit that already attacked all count as the setbacks they are. Players facing the practice AI and the ladder bots see a little less wishful play. Nothing changes for a human's own moves.\n\n## Why\n\n- **Where the AI reads it.** The AI scores its finalists after the opponent's reply with `NextSwing::Seat` (`crates/ai/src/reply.rs:832-836`). That makes `on_turn_swings` true (`crates/ai/src/evaluate.rs:2925-2928`), so `face_threat_from` counts the attacks the seat makes this turn (`evaluate.rs:1303-1345`).\n- **Why the freeze check misses it.** The only freeze check there is `can_swing` (`evaluate.rs:136-140`), which asks the engine's `frozen_next_turn` (`crates/engine/src/freeze.rs:130-135`). That answers 'not frozen' for a unit that thaws at the cleanup of the turn under way. The answer is right at the end of a turn (R1174000) and wrong at its start. The engine refuses any Frozen attacker (`crates/engine/src/combat.rs:434`) and thaws it only at that turn's cleanup (`freeze.rs:114-125`).\n- **The cards that hit it.** A freeze that lands on the opponent's turn, or after the unit spent its attack, is stamped with its controller's next turn (`thaw_turn`, `freeze.rs:32-39`). The reply produces exactly that case:\n  - S+ #27 Gargantuar (After this attacks, Freeze it)\n  - S+ #22 Cryofluid played on an own unit after it attacked\n  - the opponent's S+ #91 Tsunami attacking, and S #175 Frost Module's Activate, inside the reply (`visible_activation`)\n  - S #146 Flash Freeze cast on the seat's own draw\n- **Summoning sickness has the same hole.** The comment at `evaluate.rs:1330-1331` (Nor is it summoning sick then) holds only for the end-of-turn read. At the seat's turn start, a unit that entered the field this turn (`is_sick`, `combat.rs:264`) cannot hit the hero without Charge, yet it is counted at the hero. Examples: the Rush Token of Core #58 Rush Token Farm, the Conscript of S+ #26 Jlockeed's Forever War, and Core #65 Masochism Mask's Spikey Pillow.\n- **The same fix already exists for Brittle, Burn and Toxic.** R3793000 and R4065000 gave `crumbles_before_swing` and `afflicted_before_swing` this frame for the same reason (`evaluate.rs:147-214`). The freeze and sickness reads never got it.\n- **Why it matters.** The pressure term counts these swings: `pressure_per_damage`, or `lethal_on_board` once they reach the enemy's life (`evaluate.rs:2940-2948`). So a reply-scored line can credit itself a lethal on board that it does not have.\n- **A stale header.** `crates/ai/tests/ai/freeze.rs` still says no card freezes, though a dozen shipped cards do.\n\n## Proposal\n\n1. Add an `EvalWeights` flag, on in `AI_EVAL` and off in `GREEDY_EVAL`, as R3793000's and R4065000's flags are. The greedy baseline the gates measure against then plays as it does today.\n2. With the flag on, `face_threat_from` changes only when `on_turn_swings` holds and the unit's controller is on turn, so its attacks are this turn's:\n   - a unit with any freeze stamp (`frozen.is_some()`) is left out, as the engine refuses its attack;\n   - a unit summoning sick this turn (`is_sick`) without Charge lands nothing on the hero.\n   Every other read stays as it is. `frozen_next_turn` and the end-of-turn frame are right, and `unit_worth` keeps pricing the unit as one that will swing again.\n3. Add a ruling note in the issue's block for the read, by Hearthstone semantics: a frozen minion misses the attack it would have made, and a minion summoned this turn attacks a hero only with Charge. Give it proving tests, put its paragraph in `spec/pending/<issue>.md`, and write a line in SPEC \u00a79.9's Evaluation bullet and the README beside R3793000's.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs` (`can_swing`, `face_threat_from`)\n- `crates/ai/src/config.rs` (the flag in `EvalWeights`, `AI_EVAL`, `GREEDY_EVAL`)\n- `crates/ai/tests/ai/freeze.rs` (the new tests and the header), plus a sickness test beside them\n- `crates/ai/README.md` (the evaluation paragraph), SPEC \u00a79.9 (Evaluation), a new `spec/rulings/R<n>.md` and `spec/pending/<issue>.md`\n- Read only: `crates/engine/src/freeze.rs`, `crates/engine/src/combat.rs`\n\n## Acceptance criteria\n\n- [ ] The AI is on turn, scored under `NextSwing::Seat`, and its unit is Frozen to thaw at this turn's cleanup: that unit adds nothing to the AI's face damage in `evaluate`. `face_threat`, the end-of-turn read, still counts it, as `r1174000_face_threat_leaves_out_a_unit_still_frozen_next_turn` holds today.\n- [ ] An engine-driven test: Gargantuar attacks and freezes itself, the opponent's reply plays out through `simulate_reply`, and the AI's score at its next turn counts none of Gargantuar's attack. This test fails on `main`.\n- [ ] Under the same frame, a unit that entered the field this turn adds nothing at the hero without Charge, and still counts with Charge.\n- [ ] Under `GREEDY_EVAL`, every one of these reads as it does on `main`.\n- [ ] The header of `tests/ai/freeze.rs` names the cards that freeze now.\n- [ ] These all pass: `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo fmt --check`, `cargo jackioh spec check` and `cargo jackioh gate` (smoke).\n- [ ] `cargo jackioh classify --base origin/main --claims` passes.\n\n## Size and risks\n\nSmall: one flag, about twenty lines in `face_threat_from`, three or four tests, the ruling and the docs.\n\nIt changes the AI's decisions in games where a freeze or a turn-start summon meets a line scored after the reply. Any pinned AI fixture whose game holds one may need its expected result updated, and the PR should say so.\n\nThis fixes a misread; it is not a measured strength gain. The gates catch only a broken AI, as SPEC \u00a79.9 says. It reads only units on the field, which the seat sees, so no hidden information is involved.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T05:20:23Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4170: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T05:20:42Z",
+    "claimed_at": "2026-11-18T05:42:08Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4178 is held for `claude-1` until Wed 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#4159 is held for `claude-3` until Wed 00:30 (it refused a call)",
+    "#4164 is held for `claude-3` until Wed 00:30 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
