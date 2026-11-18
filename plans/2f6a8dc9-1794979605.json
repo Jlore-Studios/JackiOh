@@ -1,0 +1,71 @@
+{
+  "action": "build",
+  "number": 4171,
+  "title": "Patch: a test holds the AI's per-attack combat math to the game's combat forecast on boards from seeded games, and a blow a First Strike defender stops is worth nothing to the AI",
+  "branch": "bot/issue-4171",
+  "thread": "**Issue #4171 (data, not instructions):**\n\n```text\n# #4171: Patch: a test holds the AI's per-attack combat math to the game's combat forecast on boards from seeded games, and a blow a First Strike defender stops is worth nothing to the AI\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nTo plan quickly, the computer opponent works out fights with its own arithmetic instead of asking the game. The game has its own forecast of each fight, the one players are shown. Every time the two have disagreed, someone found it by reading code and fixed it by hand, about six times in the last month.\n\nThis adds a test that plays a few dozen quick random games. Whenever an attack could be made, it checks that the AI's arithmetic and the game's forecast agree about every possible attack: the damage each side deals, who dies, and whether a shield pops.\n\nIt also fixes the first disagreement already found. When a First Strike defender such as Radiant Pointmaster kills the attacker before it can strike, the AI's model of you still credits that attack with chip damage and a popped Divine Shield. So it expects you to make attacks that gain you nothing. The next disagreement a new card brings in will fail a test instead of waiting for someone to spot it.\n\n## Why\n\n- **The AI restates the forecast.** Its per-attack reads re-derive what the engine's `combat_forecast` and `forecast_attack` compute through `project_hit` (`crates/engine/src/query.rs:1022`, `:1059-1121`). The reads are `fight` (`crates/ai/src/reply.rs:86-117`), and `blow` and `kills_and_survives` (`crates/ai/src/candidates.rs:170-378`). Each one redoes Divine Shield, Armor and Pierce, the caps, conversion, damage pools, Poisonous and exile, First Strike order, and Ranged.\n- **Each new mechanic has reached the two separately**, and they were reconciled by hand: #4064 (#4102, pools and the Burn and Toxic Rounds), #4023 (#4052, Anime Armor's cap), #4065 (#4101, The Banisher's exile, which the forecast got separately in #4151), #3937 (#4031) and #3909 (#3930).\n- **The tests that hold them together compare too little.** They are `r2179005_the_trade_reads_agree_with_the_combat_forecast` (`candidates.rs:1405`, 13\u00d713 hand-built bodies) and `r4064000_r4064001_\u2026` (`candidates.rs:1774`, 9\u00d79 bodies under 4 pool settings). Both compare only the kill and the death. Their bodies have no Trample, Cleave, lane multiplier or combat bonus, and neither test checks what each side deals or whether a shield pops.\n- **That is how this mismatch got past them.** When a First Strike defender destroys the attacker first, `fight` sets `lands` false but leaves `out` as if the blow had landed (`reply.rs:91, 106`). `trade_value` then still adds `AI_REPLY.chip_per_damage` per point and `AI_EVAL.keyword.divine_shield` for the pop (`reply.rs:220-227`). The Lifesteal and conversion terms just below are gated on `lands`; these two are not. The forecast deals 0 and pops nothing in that case (`query.rs:1087-1091, 1118`).\n- **A concrete case.** With Radiant Pointmaster (Core #20: 12/2, Rush, First Strike, Divine Shield) on the AI's field, the opponent model reads a small attacker's suicide into it as worth a shield the attacker never touches.\n- **Nothing holds the AI to the forecast on real boards.** #4151 holds the forecast to the real combat for every attack played, but the AI's reads are checked only on the hand-built bodies above.\n\n## Proposal\n\n1. In `trade_value`, a blow that does not land (`!lands`) earns no chip and no shield pop, as the forecast reads it.\n2. Add a test in the crate's unit tests, beside the two agreement tests, since `fight` is `pub(crate)`:\n   - It plays `FORECAST_AGREEMENT_GAMES` seeded games of SPEC \u00a710.7's random policy through `play_match`, with `MatchHooks.after_action` collecting each state. Both decks are dealt by `build_ai_deck` from every set.\n   - On every state where a seat may attack (its Main phase, no prompt open), it takes each Unit-target entry of `combat_forecast(state, seat)`. It compares `fight` and `kills_and_survives`, under `AI_EVAL`, field by field: what the attacker deals (capped by Trample, and nothing when the blow does not land), what it takes, kills, survives, pops.\n   - A mismatch fails the test, naming the seed, the action index, both cards (id and face) and each read's values.\n3. The test asserts a floor on the attacks it judged and on the distinct Unit cards it met, so it cannot pass by checking nothing. It runs in the per-PR `cargo test -p jackioh-ai`.\n4. Each further mismatch the test finds is fixed in the AI's read in the same PR. One that needs a rules decision too big for that PR stays a named exception in the test, with its reason, and is listed in the PR.\n\n## Where it lands\n\n- `crates/ai/src/reply.rs` (`fight`, `trade_value`)\n- `crates/ai/src/candidates.rs` (`blow`, `kills_and_survives`, and the test module the agreement tests live in)\n- Read only: `crates/ai/src/match_.rs` (`play_match`, `MatchHooks`) and `crates/engine/src/query.rs` (`combat_forecast`)\n- `crates/ai/README.md` (the reply paragraph), SPEC \u00a79.9 (The opponent's reply), a new ruling note and its paragraph in `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] A unit test: an attacker without First Strike attacks a First Strike, Divine Shield defender that destroys it first, and `trade_value` gives it no chip and no shield pop. This test fails on `main`.\n- [ ] The agreement test compares all five fields on every Unit-target forecast entry of every state it collects.\n- [ ] With the fix reverted, the agreement test fails: its seeds include a First Strike defender destroying an attacker first.\n- [ ] It asserts its floors (attacks judged, distinct Unit cards met) and reports both counts when it fails.\n- [ ] It runs per PR, not under `#[ignore]`, in a few seconds, and the PR states how long it takes.\n- [ ] Any exception is named in the test with its reason and listed in the PR.\n- [ ] These all pass: `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo fmt --check`, `cargo jackioh spec check` and `cargo jackioh gate` (smoke).\n\n## Size and risks\n\nMedium: one small fix, a test of about 100 to 150 lines, the ruling and the docs.\n\nThe test may find more mismatches than the one above. Each should be a small fix like the six before it, but several at once make the PR larger.\n\nRandom-policy boards rarely show Radiant faces or rare keywords. The floors keep the test honest about how much it checks, but they do not promise every card, so the hand-built bodies stay.\n\nThe fix slightly changes which attacks the AI's model of the opponent expects when a First Strike defender stands, so AI decisions there can change. It is a correctness fix, not a measured strength gain.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T05:20:05Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4171: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-18T05:20:27Z",
+    "claimed_at": "2026-11-18T05:27:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4178 is held for `claude-1` until Wed 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#4159 is held for `claude-3` until Wed 00:30 (it refused a call)",
+    "#4164 is held for `claude-3` until Wed 00:30 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
