@@ -13481,6 +13481,13 @@
     "4131": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T02:11:14Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "rule 4: the change contains database migration 0095 (crates/server/migrations/)"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
