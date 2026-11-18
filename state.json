@@ -35528,7 +35528,9 @@
           "provider": "claude-1"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-18T22:26:57Z",
         "every": 5,
+        "findings": 0,
         "head": "e78fcaecdce82e873ee66967924444326783d2d7",
         "issue": 4197,
         "merged_at": "2026-11-18T22:17:31Z",
@@ -35541,12 +35543,13 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:e291492c-1795040336",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44410442176",
         "sha": "6bb1b7218bdfb6637032f7782007f1063c6124d7",
         "started_at": "2026-11-18T22:19:19Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the AI picks Heroic Power's power by what it does on every turn after, not only by what it can do this turn",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 355
