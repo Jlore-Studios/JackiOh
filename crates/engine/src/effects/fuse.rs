@@ -648,7 +648,7 @@ pub struct FuseGeneratedArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub distinct: Option<bool>,
     /// R1183001: the fused hand card costs this (a `costOverride`, NA Tech's "It costs (2)" through
-    /// v0.6.6e), in place of `handPrice`. A card a full hand burns keeps no price, as R77's free one does
+    /// v0.6.6g), in place of `handPrice`. A card a full hand burns keeps no price, as R77's free one does
     /// not.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_override: Option<i32>,

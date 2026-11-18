@@ -1,8 +1,8 @@
 //! C #37 Last Hurrah (SPEC §8.6 row 37). Spell, cost 0, Epic.
 //!   Base:    "Draw your deck."
 //!   Radiant: "Draw your deck. Give {flashback} random cards in your hand Flashback." (flashback 4)
-//!   Through v0.6.6e: "Draw your deck. At the end of this turn (Radiant: of your next turn), discard
-//!   {discard|card|cards}." (`script_v0_6_6e`, kept, R767000; discard 4, 6 until issue #3951).
+//!   Through v0.6.6g: "Draw your deck. At the end of this turn (Radiant: of your next turn), discard
+//!   {discard|card|cards}." (`script_v0_6_6g`, kept, R767000; discard 4, 6 until issue #3951).
 //!   Through v0.5.11r: "… discard your hand." (`script_v0_5_11o`, kept, R767000).
 //!
 //! "Draw your deck" is R58's "draw your whole library": as many draws as the library holds when the
@@ -14,7 +14,7 @@
 //! Flashback for good (`gain_keyword_for_good`, R4154202): kept in their tuning, so a card played or
 //! discarded from the hand still has it in the graveyard (R215), where it is played once (R783012,
 //! R783013). The other player learns that cards of that hand gained it, never which (R177).
-//! Through v0.6.6e a delayed effect (§10.1, `discardHandAtTurnEnd`) discarded `discard` random cards of
+//! Through v0.6.6g a delayed effect (§10.1, `discardHandAtTurnEnd`) discarded `discard` random cards of
 //! the hand (R682, R3134000) at the end of the turn it was played on (Radiant: its controller's next).
 
 use jackioh_engine::effects::{discard_hand_at_turn_end, draw};
@@ -22,7 +22,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-037";
 
-/// The declared number the faces through v0.6.6e printed: how many cards the delayed discard took
+/// The declared number the faces through v0.6.6g printed: how many cards the delayed discard took
 /// (R3134000).
 const DISCARD: &str = "discard";
 /// The declared number the Radiant face prints since issue #4154: how many hand cards gain Flashback.
@@ -77,7 +77,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// One face through v0.6.6e: draw the deck, then the delayed discard at `turn`'s end (R458); `counted`
+/// One face through v0.6.6g: draw the deck, then the delayed discard at `turn`'s end (R458); `counted`
 /// is whether it takes `discard` cards (R3134000) rather than the whole hand, as v0.5.11r's did.
 fn last_hurrah_discarding(turn: &'static str, counted: bool) -> Script {
     Script {
@@ -93,9 +93,9 @@ fn last_hurrah_discarding(turn: &'static str, counted: bool) -> Script {
     }
 }
 
-/// R767000: the scripts v0.6.6e and the versions after v0.5.11r ran, kept for their replays: `discard`
+/// R767000: the scripts v0.6.6g and the versions after v0.5.11r ran, kept for their replays: `discard`
 /// random cards at the end of this turn, on the Radiant face of the controller's next (issue #4154).
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts { base: last_hurrah_discarding("this", true), radiant: last_hurrah_discarding("next", true) }
 }
 
@@ -108,14 +108,14 @@ pub fn script_v0_5_11o() -> CardScripts {
 // C #37 Last Hurrah — SPEC §8.6 row 37, BUILD M9 Classic row C 37: draws the whole deck (R58), the
 // cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
 // fatigue; nothing is discarded since issue #4154 (R4154201); radiant: `flashback` random cards of the
-// hand gain Flashback for good, kept into the graveyard (R4154202). The script kept for v0.6.6e discards
+// hand gain Flashback for good, kept into the graveyard (R4154202). The script kept for v0.6.6g discards
 // `discard` random cards at the end of this turn (radiant: the controller's next, R62, R682, R3134000),
 // and the one kept for v0.5.11r the whole hand (R767000).
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
 
-    use super::{script_v0_5_11o, script_v0_6_6e};
+    use super::{script_v0_5_11o, script_v0_6_6g};
     use crate::def_ids;
     use crate::merged;
     use crate::scenario;
@@ -181,12 +181,12 @@ mod tests {
         types.iter().rposition(|t| t == type_).map_or(-1, |at| at as i64)
     }
 
-    /// R767000: `run` under the scripts v0.6.6e ran and its declared `discard`, 4 on both faces (issue
+    /// R767000: `run` under the scripts v0.6.6g ran and its declared `discard`, 4 on both faces (issue
     /// #4154 took both off).
     fn discarding<T>(run: impl FnOnce() -> T) -> T {
         crate::under_kept_as(
             HURRAH,
-            script_v0_6_6e(),
+            script_v0_6_6g(),
             |def| {
                 def.params = Some(vec![json_as(json!({
                     "key": "discard", "base": 4, "radiant": 4, "better": "down", "step": 1, "min": 1,
@@ -425,8 +425,8 @@ mod tests {
             }
         }
 
-        /// R767000: the scripts kept for v0.6.6e, which discarded `discard` cards (issue #4154).
-        mod through_v0_6_6e {
+        /// R767000: the scripts kept for v0.6.6g, which discarded `discard` cards (issue #4154).
+        mod through_v0_6_6g {
             use super::*;
 
             mod base {

@@ -1,7 +1,7 @@
 //! #70 Spiteful Stab (SPEC §8.3, §3, §4.4, §10.9, R72, R81, R90): a Spell, cost 2 (3 until issue #3837).
 //! Issue #4154 gave both faces Pierce (R346, R4154213): printed in the catalog and read off the Spell as
 //! it resolves, and stated on the hit (`ignoreArmor`) as #44 True Strike's is, so §4.4 step 2 skips
-//! Armor; through v0.6.6e it had none, which `script_v0_6_6e` keeps (R767000).
+//! Armor; through v0.6.6g it had none, which `script_v0_6_6g` keeps (R767000).
 //!
 //! Base: "Deal 2 damage to a target, +1 per full 5 health your hero is below 30, +1 per card in your
 //! exile". Radiant (R275): 4, per full 3, +2 per card; the target and the 30 baseline are kept.
@@ -88,9 +88,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.6e, whose hit did not pierce (issue #4154). `KEPT_SCRIPTS` folds
+/// R767000: the scripts through v0.6.6g, whose hit did not pierce (issue #4154). `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: spiteful_stab(FaceKind::Base, false),
         radiant: spiteful_stab(FaceKind::Radiant, false),
@@ -212,15 +212,15 @@ mod tests {
             s.expect_stats(SPONGE, json!({ "health": 4, "maxHealth": 9 }));
         }
 
-        /// R767000: through v0.6.6e the hit had no Pierce (issue #4154).
+        /// R767000: through v0.6.6g the hit had no Pierce (issue #4154).
         #[test]
-        fn r767000_s4_4_under_the_script_kept_for_v0_6_6e_armor_absorbs_the_one_instance_once() {
-            // v0.6.6e printed no Pierce either, which the Spell's hit would read off it (R346).
+        fn r767000_s4_4_under_the_script_kept_for_v0_6_6g_armor_absorbs_the_one_instance_once() {
+            // v0.6.6g printed no Pierce either, which the Spell's hit would read off it (R346).
             let unprinted = |def: &mut CardDef| {
                 def.base.keywords.clear();
                 def.radiant.keywords.clear();
             };
-            crate::under_kept_as(STAB, super::super::script_v0_6_6e(), unprinted, || {
+            crate::under_kept_as(STAB, super::super::script_v0_6_6g(), unprinted, || {
                 // #25 prints Armor 7: 2 + floor(10/5) = 4 is absorbed whole, a non-event (R63), not four hits.
                 let mut s = board(json!({ "p1": { "hand": [STAB], "health": 20 }, "p2": { "field": ["core-025"] } }));
                 let targets = pick::unit_at(&s, P2, 1);

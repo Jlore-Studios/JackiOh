@@ -8,7 +8,7 @@
 //!               Radiant.
 //!   Healthcare: your Units on the field, in your hand and in your deck get +(⌊5X/3⌋−2) Health and Armor X.
 //!   Radiant:    +(⌊17X/5⌋−4) Attack; ⌊17X/5⌋−2 Books; 12X%; +⌊17X/5⌋ Health and Armor 2X.
-//! Issue #4154 cut each about 15% again, the Armor kept (R4154105); `script_v0_6_6e` keeps the numbers
+//! Issue #4154 cut each about 15% again, the Armor kept (R4154105); `script_v0_6_6g` keeps the numbers
 //! before it, +(2X−3) [+(4X−5)], 2X−3 [4X−3], 5X% [14X%] and +(2X−3) [+4X]. Issue #3996 cut each about
 //! 15% at X = 4 (R3996201); `script_v0_6_5b` keeps the numbers before it, +(2X−2) [+(4X−3)], 2X−2
 //! [4X−1], 6X% [16X%] and +(2X−2) [+(5X−1)].
@@ -45,9 +45,9 @@ struct Face {
 /// R4154105: ⌊5X/3⌋−2 [⌊17X/5⌋−4], ⌊5X/3⌋−2 [⌊17X/5⌋−2], ⌊17X/4⌋% [12X%], ⌊5X/3⌋−2 [⌊17X/5⌋], X [2X].
 const BASE: Face = Face { attack: (5, 3, 2), books: (5, 3, 2), percent: (17, 4, 0), health: (5, 3, 2), armor: (1, 1, 0) };
 const RADIANT: Face = Face { attack: (17, 5, 4), books: (17, 5, 2), percent: (12, 1, 0), health: (17, 5, 0), armor: (2, 1, 0) };
-/// R767000: the numbers through v0.6.6e, before #4154's nerf (R3996201).
-const BASE_V0_6_6E: Face = Face { attack: (2, 1, 3), books: (2, 1, 3), percent: (5, 1, 0), health: (2, 1, 3), armor: (1, 1, 0) };
-const RADIANT_V0_6_6E: Face = Face { attack: (4, 1, 5), books: (4, 1, 3), percent: (14, 1, 0), health: (4, 1, 0), armor: (2, 1, 0) };
+/// R767000: the numbers through v0.6.6g, before #4154's nerf (R3996201).
+const BASE_V0_6_6G: Face = Face { attack: (2, 1, 3), books: (2, 1, 3), percent: (5, 1, 0), health: (2, 1, 3), armor: (1, 1, 0) };
+const RADIANT_V0_6_6G: Face = Face { attack: (4, 1, 5), books: (4, 1, 3), percent: (14, 1, 0), health: (4, 1, 0), armor: (2, 1, 0) };
 /// R767000: the numbers through v0.6.5b, before #3996's nerf (R3996201).
 const BASE_V0_6_5B: Face = Face { attack: (2, 1, 2), books: (2, 1, 2), percent: (6, 1, 0), health: (2, 1, 2), armor: (1, 1, 0) };
 const RADIANT_V0_6_5B: Face = Face { attack: (4, 1, 3), books: (4, 1, 1), percent: (16, 1, 0), health: (5, 1, 1), armor: (2, 1, 0) };
@@ -64,7 +64,7 @@ const ALL: i32 = 100;
 
 /// A face's number at `x`: "2X−3" is `(2, 1, 3)` and "⌊5X/3⌋−2" `(5, 3, 2)`, the division rounding down
 /// (R4154105). No number is below 1 (R3135002): at X = 1 the base face's "⌊5X/3⌋−2" reads 1, not −1. The
-/// floor has stood since #3135, so it reads v0.6.5b's and v0.6.6e's faces as they ran (their "2X−2" and
+/// floor has stood since #3135, so it reads v0.6.5b's and v0.6.6g's faces as they ran (their "2X−2" and
 /// "2X−3" at X = 1 read 1 then too); no older kept face comes near it, so it moves none of their numbers.
 fn at((per_x, over, less): PerX, x: i32) -> i32 {
     (per_x * x / over - less).max(1)
@@ -119,13 +119,13 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.6e and the versions before it back to the one after v0.6.5b's ran, +(2X−3)
+/// R767000: the scripts v0.6.6g and the versions before it back to the one after v0.6.5b's ran, +(2X−3)
 /// Attack [+(4X−5)], 2X−3 Books [4X−3], 5X% [14X%] and +(2X−3) Health [+4X], each at least 1 (R3135002);
 /// `KEPT_SCRIPTS` folds those versions' replays under it (R4154105).
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
-        base: appropriations(BASE_V0_6_6E),
-        radiant: appropriations(RADIANT_V0_6_6E),
+        base: appropriations(BASE_V0_6_6G),
+        radiant: appropriations(RADIANT_V0_6_6G),
     }
 }
 
@@ -439,7 +439,7 @@ mod tests {
             assert!(listed(&s).contains(&json!({ "defId": MENACE, "radiant": false, "count": 1 })));
         }
 
-        /// R4154105: ⌊17X/5⌋−4 at X = 2 is 2 (4X−5's 3 through v0.6.6e).
+        /// R4154105: ⌊17X/5⌋−4 at X = 2 is 2 (4X−5's 3 through v0.6.6g).
         #[test]
         fn r4154105_radiant_17x_over_5_less_4_attack_and_rush() {
             let mut s = appropriations(true, json!({}), json!({}));
@@ -450,10 +450,10 @@ mod tests {
             assert_eq!(mine(&s, VANILLA, "hand").buffs.attack, 2);
         }
 
-        /// R767000, R3996201: through v0.6.6e the Radiant face's 4X−5 at X = 2 was 3.
+        /// R767000, R3996201: through v0.6.6g the Radiant face's 4X−5 at X = 2 was 3.
         #[test]
-        fn r767000_r3996201_the_kept_v0_6_6e_script_gives_radiant_4x_less_5_attack() {
-            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_6e(), || {
+        fn r767000_r3996201_the_kept_v0_6_6g_script_gives_radiant_4x_less_5_attack() {
+            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_6g(), || {
                 let mut s = appropriations(true, json!({}), json!({}));
                 s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Military"] }));
                 s.expect_stats(&unit(&s, P1, 1), json!({ "attack": 6 }));
@@ -599,7 +599,7 @@ mod tests {
             assert_eq!(events_json(&s).iter().filter(|event| event["type"] == "libraryOverflow").count(), 2);
         }
 
-        /// R4154105: ⌊17X/5⌋−2 at X = 2 is 4 (4X−3's 5 through v0.6.6e).
+        /// R4154105: ⌊17X/5⌋−2 at X = 2 is 4 (4X−3's 5 through v0.6.6g).
         #[test]
         fn r4154105_radiant_17x_over_5_less_2_books() {
             let mut s = appropriations(true, json!({ "library": [] }), json!({}));
@@ -673,8 +673,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_r3996201_the_kept_v0_6_6e_script_rolls_14x_so_every_card_turns_at_x_8_where_12x_leaves_some() {
-            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_6e(), || {
+        fn r767000_r3996201_the_kept_v0_6_6g_script_rolls_14x_so_every_card_turns_at_x_8_where_12x_leaves_some() {
+            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_6g(), || {
                 assert_eq!(culture(true, 8, 0), (5, 0));
             });
         }
@@ -780,7 +780,7 @@ mod tests {
             s.expect_stats(&theirs, json!({ "health": 3 }));
         }
 
-        /// R4154105: ⌊17X/5⌋ at X = 2 is 6 (4X's 8 through v0.6.6e); the Armor 2X is kept.
+        /// R4154105: ⌊17X/5⌋ at X = 2 is 6 (4X's 8 through v0.6.6g); the Armor 2X is kept.
         #[test]
         fn r4154105_radiant_17x_over_5_health_and_armor_2x() {
             let mut s = appropriations(true, json!({}), json!({}));
@@ -805,8 +805,8 @@ mod tests {
             (true, 4, 9, 11, 13, 8),
             (true, 6, 16, 18, 20, 12),
         ];
-        /// R767000, R3996201: the same through v0.6.6e: 2X−3 [4X−5], 2X−3 [4X−3], 2X−3 [4X] and X [2X].
-        const ROWS_V0_6_6E: [(bool, i32, i32, usize, i32, i32); 6] = [
+        /// R767000, R3996201: the same through v0.6.6g: 2X−3 [4X−5], 2X−3 [4X−3], 2X−3 [4X] and X [2X].
+        const ROWS_V0_6_6G: [(bool, i32, i32, usize, i32, i32); 6] = [
             (false, 1, 1, 1, 1, 1),
             (false, 4, 5, 5, 5, 4),
             (false, 6, 9, 9, 9, 6),
@@ -821,8 +821,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_r3996201_the_kept_v0_6_6e_script_at_x_1_4_and_6_on_both_faces() {
-            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_6e(), || played_rows(ROWS_V0_6_6E));
+        fn r767000_r3996201_the_kept_v0_6_6g_script_at_x_1_4_and_6_on_both_faces() {
+            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_6g(), || played_rows(ROWS_V0_6_6G));
         }
 
         /// Each row's Military, Education and Healthcare, played end to end.
@@ -858,18 +858,18 @@ mod tests {
                 let face = if radiant { super::super::RADIANT } else { super::super::BASE };
                 assert_eq!(super::super::at(face.percent, x), percent, "radiant {radiant} X {x}");
             }
-            // Through v0.6.6e: 5X% and 14X%.
-            let (base, radiant) = (super::super::BASE_V0_6_6E, super::super::RADIANT_V0_6_6E);
+            // Through v0.6.6g: 5X% and 14X%.
+            let (base, radiant) = (super::super::BASE_V0_6_6G, super::super::RADIANT_V0_6_6G);
             assert_eq!((super::super::at(base.percent, 4), super::super::at(radiant.percent, 4)), (20, 56));
         }
 
-        /// R4154105: no number of either face is above what it was through v0.6.6e at any X, the Armor the
+        /// R4154105: no number of either face is above what it was through v0.6.6g at any X, the Armor the
         /// same.
         #[test]
-        fn r4154105_no_number_is_above_its_v0_6_6e_value_at_any_x() {
+        fn r4154105_no_number_is_above_its_v0_6_6g_value_at_any_x() {
             let pairs = [
-                (super::super::BASE, super::super::BASE_V0_6_6E),
-                (super::super::RADIANT, super::super::RADIANT_V0_6_6E),
+                (super::super::BASE, super::super::BASE_V0_6_6G),
+                (super::super::RADIANT, super::super::RADIANT_V0_6_6G),
             ];
             for (now, then) in pairs {
                 for x in 1..=30 {
@@ -891,8 +891,8 @@ mod tests {
             for face in [
                 super::super::BASE,
                 super::super::RADIANT,
-                super::super::BASE_V0_6_6E,
-                super::super::RADIANT_V0_6_6E,
+                super::super::BASE_V0_6_6G,
+                super::super::RADIANT_V0_6_6G,
                 super::super::BASE_V0_6_5B,
                 super::super::RADIANT_V0_6_5B,
             ] {

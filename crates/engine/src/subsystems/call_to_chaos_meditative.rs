@@ -7,15 +7,15 @@
 //! later entry reads (R87), and a pause parks the rest (R113). Entry 9 is the engine's own rest-of-game
 //! effect (R458, R1241), stepped by `eternal_step`, so the table never leans on a card file.
 //!
-//! Issue #4154 cut entry 4's Armor and heal 5 → 4 (R4154305). The table it had through v0.6.6e,
-//! `CHAOS_MED_EFFECTS_V0_6_6E`, is the one the card's kept script rolls for those replays (R767000).
+//! Issue #4154 cut entry 4's Armor and heal 5 → 4 (R4154305). The table it had through v0.6.6g,
+//! `CHAOS_MED_EFFECTS_V0_6_6G`, is the one the card's kept script rolls for those replays (R767000).
 
 use serde_json::{Value, json};
 
 use crate::config::{
     CALL_TO_CHAOS_ETERNAL_CAP, CHAOS_MED_ACCLAIMED, CHAOS_MED_CN_CARDS, CHAOS_MED_COST,
-    CHAOS_MED_FUSE_COPIES, CHAOS_MED_HEAL, CHAOS_MED_HEAL_V0_6_6E, CHAOS_MED_HERO_ARMOR,
-    CHAOS_MED_HERO_ARMOR_V0_6_6E, CHAOS_MED_NERFS, CHAOS_MED_PRIME_CARDS,
+    CHAOS_MED_FUSE_COPIES, CHAOS_MED_HEAL, CHAOS_MED_HEAL_V0_6_6G, CHAOS_MED_HERO_ARMOR,
+    CHAOS_MED_HERO_ARMOR_V0_6_6G, CHAOS_MED_NERFS, CHAOS_MED_PRIME_CARDS,
 };
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::ForRestOfGameArgs;
@@ -177,7 +177,7 @@ fn build_prime() -> Effect {
 }
 
 /// 4. §6.1's Armor kept for the rest of the game (C+ #46's, R124), then an uncapped hero heal (§6.3), both
-///    4 since R4154305 (5 from R3135001 through v0.6.6e).
+///    4 since R4154305 (5 from R3135001 through v0.6.6g).
 fn armor_entry(armor: i32, heal: i32) -> Effect {
     entry("armor", move |_ctx| {
         vec![
@@ -194,9 +194,9 @@ fn build_armor() -> Effect {
     armor_entry(CHAOS_MED_HERO_ARMOR, CHAOS_MED_HEAL)
 }
 
-/// R4154305, R767000: entry 4 through v0.6.6e, 5 Armor and a heal of 5.
-fn build_armor_v0_6_6e() -> Effect {
-    armor_entry(CHAOS_MED_HERO_ARMOR_V0_6_6E, CHAOS_MED_HEAL_V0_6_6E)
+/// R4154305, R767000: entry 4 through v0.6.6g, 5 Armor and a heal of 5.
+fn build_armor_v0_6_6g() -> Effect {
+    armor_entry(CHAOS_MED_HERO_ARMOR_V0_6_6G, CHAOS_MED_HEAL_V0_6_6G)
 }
 
 /// 5. The Jade Beauty token's base face (Meditative #39.5); the Jade Counter is not touched.
@@ -329,9 +329,9 @@ pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     },
 ];
 
-/// R4154305, R767000: §8.8 row 95's ten entries as they were through v0.6.6e, before issue #4154 cut entry 4's
-/// Armor and heal: the card's kept script (`script_v0_6_6e`) rolls it for those replays.
-pub const CHAOS_MED_EFFECTS_V0_6_6E: &[ChaosEffectDef] = &[
+/// R4154305, R767000: §8.8 row 95's ten entries as they were through v0.6.6g, before issue #4154 cut entry 4's
+/// Armor and heal: the card's kept script (`script_v0_6_6g`) rolls it for those replays.
+pub const CHAOS_MED_EFFECTS_V0_6_6G: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "fuse",
         label: "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
@@ -350,7 +350,7 @@ pub const CHAOS_MED_EFFECTS_V0_6_6E: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "armor",
         label: "Your hero gains 5 Armor and you heal it 5",
-        build: build_armor_v0_6_6e,
+        build: build_armor_v0_6_6g,
     },
     ChaosEffectDef {
         name: "jade",

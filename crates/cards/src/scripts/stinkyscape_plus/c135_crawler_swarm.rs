@@ -5,7 +5,7 @@
 //!
 //! Engine: its Cry is one `fillBoard` of the Crawler (S+ #120): a Crawler in every empty unit zone of its
 //! caster's side, left to right (R64, R1136000), Radiant on the Radiant face. Their arrival adds nothing:
-//! each Crawler's Death adds or cheapens a Toxopid (R4154301; through v0.6.6e the first Crawler to arrive
+//! each Crawler's Death adds or cheapens a Toxopid (R4154301; through v0.6.6g the first Crawler to arrive
 //! each game added one, R3560000).
 
 use jackioh_engine::prelude::*;

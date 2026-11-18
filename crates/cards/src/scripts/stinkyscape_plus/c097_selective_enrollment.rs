@@ -9,7 +9,7 @@
 //! hand is full. The Radiant face's cards cost (2) less (`costMod`, a price, R1748003).
 //! "Float reduces cost" as S #35 Drone Core IX's (R1563000): a hand trigger on its owner's Float,
 //! never in the deck (R2657002), a `costMod` kept until a graveyard or exile (R766).
-//! Kept for replays (R767000): through v0.6.6e it cost (4) and had no Float (`script_v0_6_6e`,
+//! Kept for replays (R767000): through v0.6.6g it cost (4) and had no Float (`script_v0_6_6g`,
 //! issue #4154).
 
 use jackioh_engine::prelude::*;
@@ -64,8 +64,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.6e it had no Float; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+/// R767000: through v0.6.6g it had no Float; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: face(false, false),
         radiant: face(true, false),
@@ -182,10 +182,10 @@ mod tests {
         fam::drone_float_opponent(ID, PRINTED);
     }
 
-    /// R767000: through v0.6.6e it had no Float.
+    /// R767000: through v0.6.6g it had no Float.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6e_has_no_float() {
-        let kept = script_v0_6_6e();
+    fn r767000_the_script_kept_for_v0_6_6g_has_no_float() {
+        let kept = script_v0_6_6g();
         assert!(kept.base.hand_triggers.is_empty());
         assert!(kept.radiant.hand_triggers.is_empty());
         let current = script();

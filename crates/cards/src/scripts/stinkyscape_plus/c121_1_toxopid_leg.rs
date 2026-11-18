@@ -29,8 +29,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.6.6e the Leg had no script (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+/// R767000: through v0.6.6g the Leg had no script (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6g() -> CardScripts {
     let base = Script::default();
     let radiant = base.clone();
     CardScripts { base, radiant }

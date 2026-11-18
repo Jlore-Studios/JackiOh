@@ -13,9 +13,9 @@
 //! (R387), costing (`TERMINUS_COST`) whatever it printed (R3569007), a Radiant one on the Radiant face.
 //! Quickdraw (R640) is a static flag beside the tag.
 //!
-//! Kept for replays (R767000): through v0.6.6e the card read "Now and at the start of each of your turns
+//! Kept for replays (R767000): through v0.6.6g the card read "Now and at the start of each of your turns
 //! for the rest of the game: Add a random Terminus card to your hand. It costs (2).", with no mana lost
-//! (`script_v0_6_6e`, issue #4154); through v0.6.5b it read "For the rest of the game, lose {mana} mana.
+//! (`script_v0_6_6g`, issue #4154); through v0.6.5b it read "For the rest of the game, lose {mana} mana.
 //! Add a random Terminus card to your hand. It costs (2).", `loseMaxMana` lowering its caster's max mana
 //! (R3569008) and one card added (`script_v0_6_5b`, issue #3996); through v0.6.4c that card cost (3)
 //! (`script_v0_6_4c`, issue #3951).
@@ -27,8 +27,8 @@ pub const ID: &str = "stinkyscapeplus-082";
 
 /// "It costs (3)": the added card's cost, since issue #4154.
 const TERMINUS_COST: i32 = 3;
-/// After v0.6.4c through v0.6.6e (issues #3951 to #4154): "It costs (2)".
-const TERMINUS_COST_V0_6_6E: i32 = 2;
+/// After v0.6.4c through v0.6.6g (issues #3951 to #4154): "It costs (2)".
+const TERMINUS_COST_V0_6_6G: i32 = 2;
 /// Through v0.6.4c (issue #3951): "it costs (3)".
 const TERMINUS_COST_V0_6_4C: i32 = 3;
 /// The step the start-of-turn add is re-entered under (`delayed`).
@@ -69,20 +69,20 @@ fn expedition(radiant: bool) -> Script {
     }
 }
 
-/// Issue #3996, through v0.6.6e: the card now, and the rest-of-game step that adds one at each of the
+/// Issue #3996, through v0.6.6g: the card now, and the rest-of-game step that adds one at each of the
 /// caster's turn starts, each costing (2).
-fn expedition_v0_6_6e(radiant: bool) -> Script {
+fn expedition_v0_6_6g(radiant: bool) -> Script {
     Script {
         static_flags: quickdraw(),
         cry: Some(hook(move |ctx| {
             let face = if radiant { FaceKind::Radiant } else { FaceKind::Base };
             let label = fill_params(def_of(Some(&*ctx.state), ID), face, None);
             vec![
-                add_terminus(radiant, TERMINUS_COST_V0_6_6E),
+                add_terminus(radiant, TERMINUS_COST_V0_6_6G),
                 for_rest_of_game(json_as(json!({ "step": EXPEDITION_STEP, "label": label }))),
             ]
         })),
-        delayed: Some(hook(move |_ctx| vec![add_terminus(radiant, TERMINUS_COST_V0_6_6E)])),
+        delayed: Some(hook(move |_ctx| vec![add_terminus(radiant, TERMINUS_COST_V0_6_6G)])),
         ..Script::default()
     }
 }
@@ -109,12 +109,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts after v0.6.5b through v0.6.6e: a Terminus card costing (2) now and at each of the
+/// R767000: the scripts after v0.6.5b through v0.6.6g: a Terminus card costing (2) now and at each of the
 /// caster's turn starts, no mana lost (issue #4154). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
-        base: expedition_v0_6_6e(false),
-        radiant: expedition_v0_6_6e(true),
+        base: expedition_v0_6_6g(false),
+        radiant: expedition_v0_6_6g(true),
     }
 }
 
@@ -122,8 +122,8 @@ pub fn script_v0_6_6e() -> CardScripts {
 /// Terminus card added, costing (2) (issue #3996). `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: expedition_v0_6_5b(false, TERMINUS_COST_V0_6_6E),
-        radiant: expedition_v0_6_5b(true, TERMINUS_COST_V0_6_6E),
+        base: expedition_v0_6_5b(false, TERMINUS_COST_V0_6_6G),
+        radiant: expedition_v0_6_5b(true, TERMINUS_COST_V0_6_6G),
     }
 }
 
@@ -210,7 +210,7 @@ mod tests {
 
         #[test]
         fn r640_it_is_quickdraw() {
-            for scripts in [script(), script_v0_6_6e(), script_v0_6_5b(), script_v0_6_4c()] {
+            for scripts in [script(), script_v0_6_6g(), script_v0_6_5b(), script_v0_6_4c()] {
                 assert_eq!(scripts.base.flags().quickdraw, Some(true));
                 assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
             }
@@ -268,11 +268,11 @@ mod tests {
             }
         }
 
-        /// R767000: after v0.6.5b through v0.6.6e it lost no mana and added a card costing (2) now and at
+        /// R767000: after v0.6.5b through v0.6.6g it lost no mana and added a card costing (2) now and at
         /// each of its caster's turn starts (issue #4154).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_6e_adds_a_2_cost_card_now_and_each_turn_and_keeps_max_mana() {
-            crate::under_kept(ID, script_v0_6_6e(), || {
+        fn r767000_the_script_kept_for_v0_6_6g_adds_a_2_cost_card_now_and_each_turn_and_keeps_max_mana() {
+            crate::under_kept(ID, script_v0_6_6g(), || {
                 let mut s = game("expedition-kept-v0-6-6e", false);
                 s.play(ID, json!({}));
                 // Cast for (1) from 4: 3 left of a max that stays 4.
@@ -280,11 +280,11 @@ mod tests {
                 assert_eq!(s.state().players[P1].mana.current, 3);
                 let made = added(&s);
                 assert_eq!(made.len(), 1, "{made:?}");
-                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6E);
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6G);
                 s.end_turn().end_turn();
                 let made = added(&s);
                 assert_eq!(made.len(), 2, "{made:?}");
-                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6E);
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6G);
             });
         }
 
@@ -300,7 +300,7 @@ mod tests {
                 assert_eq!(s.state().players[P1].mana.current, 3);
                 let made = added(&s);
                 assert_eq!(made.len(), 1, "{made:?}");
-                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6E);
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6G);
                 s.end_turn().end_turn();
                 assert_eq!(s.state().active, P1);
                 // A turn on, the max stays lower and no card comes.

@@ -9,7 +9,7 @@
 //! which `script_v0_6_2c` keeps for those replays (R767000). MD-C15: an Activate needs a card that
 //! stays on the field as much as a start-of-turn text does, as R402 reasoned for C #78.
 //! Issue #4154 gave the Rock Lucky 1 on both faces (the add's `lucky` rider, R1438; the declared `lucky`,
-//! R386; R4154212); through v0.6.6e it had none, which `script_v0_6_6e` keeps (R767000).
+//! R386; R4154212); through v0.6.6g it had none, which `script_v0_6_6g` keeps (R767000).
 //! Tunes: lucky 1 ↑.
 
 use jackioh_engine::prelude::*;
@@ -59,9 +59,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the Activate through v0.6.6e, whose Rock had no Lucky (issue #4154). `KEPT_SCRIPTS` folds
+/// R767000: the Activate through v0.6.6g, whose Rock had no Lucky (issue #4154). `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: well(false, false),
         radiant: well(true, false),
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn r4154212_the_rock_has_lucky_1_more_on_either_face() {
         for radiant in [false, true] {
-            let plain = crate::under_kept(ID, script_v0_6_6e(), || rock_lucky(radiant));
+            let plain = crate::under_kept(ID, script_v0_6_6g(), || rock_lucky(radiant));
             assert_eq!(rock_lucky(radiant), plain + 1, "radiant {radiant}");
         }
         assert_eq!(rock_lucky(false), 1, "a base Rock prints none");
@@ -233,10 +233,10 @@ mod tests {
         assert_eq!(lucky_on(s.state(), &rock), 2);
     }
 
-    /// R767000: through v0.6.6e the Rock had no Lucky (issue #4154).
+    /// R767000: through v0.6.6g the Rock had no Lucky (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6e_adds_a_rock_without_lucky() {
-        crate::under_kept(ID, script_v0_6_6e(), || {
+    fn r767000_the_script_kept_for_v0_6_6g_adds_a_rock_without_lucky() {
+        crate::under_kept(ID, script_v0_6_6g(), || {
             let mut s = standing(false);
             s.activate(ID, json!({}));
             let rock = rocks_of(&s, P1).into_iter().next().expect("a Rock");

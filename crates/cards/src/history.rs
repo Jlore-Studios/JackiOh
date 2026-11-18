@@ -68,13 +68,13 @@ use crate::scripts::meditative_plus::{
 };
 use crate::scripts::stinkyscape::{
     c004_olivian_expanse, c010_2_divine_spirit, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior,
-    c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii,
-    c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
-    c046_circadian_halfcycler, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
-    c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
-    c061_flak_v5, c070_zzoth, c074_paragon_x, c083_halo, c086_prototype_x2, c094_tmack_trav,
-    c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi,
-    c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c140_rush_token_launcher,
+    c018_imitated_instrumentality, c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh,
+    c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c042_core_researcher,
+    c045_drone_commander, c046_circadian_halfcycler, c050_beam_v3, c051_repeater_v3, c052_cannon_v3,
+    c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5,
+    c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c083_halo, c086_prototype_x2,
+    c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application,
+    c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c140_rush_token_launcher,
     c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck, c154_dice_of_doom,
     c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid,
     c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette,
@@ -84,8 +84,8 @@ use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
     c037_scorch, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall,
     c066_plastanium_wall, c067_phase_wall, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c097_selective_enrollment, c104_tireless_cultivation, c120_crawler,
-    c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
+    c082_endless_expedition, c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse,
+    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -108,7 +108,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000), #3802, #3837
 /// (R3837000, R3837003, R3837005), #3800 (R3800003, R3800004, S+ #104), #3869
 /// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002), #3935 (R3935000), #3996
-/// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202) and #4079 (R4079000).
+/// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202), #4079 (R4079000)
+/// and #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -950,114 +951,137 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.6d",
         c010_2_divine_spirit::script_v0_6_6d,
     ),
-    // #4154 lead: the scripts before Stinkyscape+ Balance Changes III.
+    // #4154 lead (R4154001 and the Tribute and Burn numbers): the scripts before Stinkyscape+ Balance
+    // Changes III.
+    (
+        c121_1_toxopid_leg::ID,
+        "v0.6.6g",
+        c121_1_toxopid_leg::script_v0_6_6g,
+    ),
+    (c119_eclipse::ID, "v0.6.6g", c119_eclipse::script_v0_6_6g),
+    (c109_xxfreshjack::ID, "v0.6.6g", c109_xxfreshjack::script_v0_6_6g),
+    (
+        c096_ocean_tsunami::ID,
+        "v0.6.6g",
+        c096_ocean_tsunami::script_v0_6_6g,
+    ),
+    (
+        c018_imitated_instrumentality::ID,
+        "v0.6.6g",
+        c018_imitated_instrumentality::script_v0_6_6g,
+    ),
+    (
+        c007_introspection::ID,
+        "v0.6.6g",
+        c007_introspection::script_v0_6_6g,
+    ),
     // #4154 group A
-    (c059_repeater_v5::ID, "v0.6.6e", c059_repeater_v5::script_v0_6_6e),
+    (c059_repeater_v5::ID, "v0.6.6g", c059_repeater_v5::script_v0_6_6g),
     (
         c097_selective_enrollment::ID,
-        "v0.6.6e",
-        c097_selective_enrollment::script_v0_6_6e,
+        "v0.6.6g",
+        c097_selective_enrollment::script_v0_6_6g,
     ),
     (
         c021_jlockeed_shredder_12::ID,
-        "v0.6.6e",
-        c021_jlockeed_shredder_12::script_v0_6_6e,
+        "v0.6.6g",
+        c021_jlockeed_shredder_12::script_v0_6_6g,
     ),
-    (c047_taotie::ID, "v0.6.6e", c047_taotie::script_v0_6_6e),
-    (c004_profe_yates::ID, "v0.6.6e", c004_profe_yates::script_v0_6_6e),
+    (c047_taotie::ID, "v0.6.6g", c047_taotie::script_v0_6_6g),
+    (c004_profe_yates::ID, "v0.6.6g", c004_profe_yates::script_v0_6_6g),
     (
         c080_the_last_voyage::ID,
-        "v0.6.6e",
-        c080_the_last_voyage::script_v0_6_6e,
+        "v0.6.6g",
+        c080_the_last_voyage::script_v0_6_6g,
     ),
     (
         c082_endless_expedition::ID,
-        "v0.6.6e",
-        c082_endless_expedition::script_v0_6_6e,
+        "v0.6.6g",
+        c082_endless_expedition::script_v0_6_6g,
     ),
-    (c002_na_tech::ID, "v0.6.6e", c002_na_tech::script_v0_6_6e),
-    (c083_halo::ID, "v0.6.6e", c083_halo::script_v0_6_6e),
+    (c002_na_tech::ID, "v0.6.6g", c002_na_tech::script_v0_6_6g),
+    (c083_halo::ID, "v0.6.6g", c083_halo::script_v0_6_6g),
     (
         c078_occidentless_mandate::ID,
-        "v0.6.6e",
-        c078_occidentless_mandate::script_v0_6_6e,
+        "v0.6.6g",
+        c078_occidentless_mandate::script_v0_6_6g,
     ),
     (
         c040_appropriations::ID,
-        "v0.6.6e",
-        c040_appropriations::script_v0_6_6e,
+        "v0.6.6g",
+        c040_appropriations::script_v0_6_6g,
     ),
     // #4154 group B (R4154200 to R4154213): the scripts before Stinkyscape+ Balance Changes III.
     (
         c079_a_glimpse_into_the_endless_sea::ID,
-        "v0.6.6e",
-        c079_a_glimpse_into_the_endless_sea::script_v0_6_6e,
+        "v0.6.6g",
+        c079_a_glimpse_into_the_endless_sea::script_v0_6_6g,
     ),
-    (c037_last_hurrah::ID, "v0.6.6e", c037_last_hurrah::script_v0_6_6e),
+    (c037_last_hurrah::ID, "v0.6.6g", c037_last_hurrah::script_v0_6_6g),
     (
         c001_disruptive_disruptor::ID,
-        "v0.6.6e",
-        c001_disruptive_disruptor::script_v0_6_6e,
+        "v0.6.6g",
+        c001_disruptive_disruptor::script_v0_6_6g,
     ),
     (
         c148_alteran_reach::ID,
-        "v0.6.6e",
-        c148_alteran_reach::script_v0_6_6e,
+        "v0.6.6g",
+        c148_alteran_reach::script_v0_6_6g,
     ),
     (
         c112_job_application::ID,
-        "v0.6.6e",
-        c112_job_application::script_v0_6_6e,
+        "v0.6.6g",
+        c112_job_application::script_v0_6_6g,
     ),
     (
         c165_the_trade_union::ID,
-        "v0.6.6e",
-        c165_the_trade_union::script_v0_6_6e,
+        "v0.6.6g",
+        c165_the_trade_union::script_v0_6_6g,
     ),
     (
         c019_expedition123::ID,
-        "v0.6.6e",
-        c019_expedition123::script_v0_6_6e,
+        "v0.6.6g",
+        c019_expedition123::script_v0_6_6g,
     ),
-    (c070_zzoth::ID, "v0.6.6e", c070_zzoth::script_v0_6_6e),
+    (c070_zzoth::ID, "v0.6.6g", c070_zzoth::script_v0_6_6g),
     (
         c040_goetzmann_game_design::ID,
-        "v0.6.6e",
-        c040_goetzmann_game_design::script_v0_6_6e,
+        "v0.6.6g",
+        c040_goetzmann_game_design::script_v0_6_6g,
     ),
     (
         c010_double_counting::ID,
-        "v0.6.6e",
-        c010_double_counting::script_v0_6_6e,
+        "v0.6.6g",
+        c010_double_counting::script_v0_6_6g,
     ),
     (
         c044_cn_jade_well::ID,
-        "v0.6.6e",
-        c044_cn_jade_well::script_v0_6_6e,
+        "v0.6.6g",
+        c044_cn_jade_well::script_v0_6_6g,
     ),
     (
         c070_spiteful_stab::ID,
-        "v0.6.6e",
-        c070_spiteful_stab::script_v0_6_6e,
+        "v0.6.6g",
+        c070_spiteful_stab::script_v0_6_6g,
     ),
     // #4154 group C (R4154300, R4154301, R4154302, R4154304, R4154305): the last scripts before Stinkyscape+
     // Balance Changes III.
-    (c121_toxopid::ID, "v0.6.6e", c121_toxopid::script_v0_6_6e),
-    (c120_crawler::ID, "v0.6.6e", c120_crawler::script_v0_6_6e),
+    (c121_toxopid::ID, "v0.6.6g", c121_toxopid::script_v0_6_6g),
+    (c120_crawler::ID, "v0.6.6g", c120_crawler::script_v0_6_6g),
     (
         c061_1_shawarma_law::ID,
-        "v0.6.6e",
-        c061_1_shawarma_law::script_v0_6_6e,
+        "v0.6.6g",
+        c061_1_shawarma_law::script_v0_6_6g,
     ),
     (
         c039_call_to_chaos_training_grounds_edition::ID,
-        "v0.6.6e",
-        c039_call_to_chaos_training_grounds_edition::script_v0_6_6e,
+        "v0.6.6g",
+        c039_call_to_chaos_training_grounds_edition::script_v0_6_6g,
     ),
     (
         c095_call_to_chaos_meditative_edition::ID,
-        "v0.6.6e",
-        c095_call_to_chaos_meditative_edition::script_v0_6_6e,
+        "v0.6.6g",
+        c095_call_to_chaos_meditative_edition::script_v0_6_6g,
     ),
 ];
 

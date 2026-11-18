@@ -17,7 +17,7 @@
 //! `script_v0_6_4c` leaves out for the replays of v0.6.4c and before (R767000). Issue #4154 has both
 //! faces exile every permanent after the deck (R4154200): each side's board, the caster's first, by
 //! `exile_board` as S #80 The Last Voyage's, face-down and Dormant cards included and only a card no
-//! effect reaches spared; through v0.6.6e it exiled the deck alone, which `script_v0_6_6e` keeps.
+//! effect reaches spared; through v0.6.6g it exiled the deck alone, which `script_v0_6_6g` keeps.
 
 use jackioh_engine::prelude::*;
 
@@ -63,9 +63,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.6e, which exiled the deck and no permanent (issue #4154).
+/// R767000: the scripts through v0.6.6g, which exiled the deck and no permanent (issue #4154).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: glimpse(false, false),
         radiant: glimpse(true, false),
@@ -272,10 +272,10 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.6.6e the deck alone was exiled (issue #4154).
+        /// R767000: through v0.6.6g the deck alone was exiled (issue #4154).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_6e_leaves_the_board() {
-            crate::under_kept(ID, script_v0_6_6e(), || {
+        fn r767000_the_script_kept_for_v0_6_6g_leaves_the_board() {
+            crate::under_kept(ID, script_v0_6_6g(), || {
                 for radiant in [false, true] {
                     let (mut s, permanents) = boards("glimpse-board-kept", radiant);
                     s.play(ID, json!({}));

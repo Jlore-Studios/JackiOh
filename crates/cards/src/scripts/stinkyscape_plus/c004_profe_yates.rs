@@ -11,12 +11,12 @@
 //! none and the Cry summons its traps all the same (R90). Then the traps: independent
 //! `summon_random` draws of non-token Traps/Field Traps of the shipped sets, each face down in the
 //! leftmost open backrow zone (R3567001). It has no Activate since issue #4154.
-//! Kept for replays (R767000): through v0.6.6e the Cry exiled any declared permanent and Yates had
+//! Kept for replays (R767000): through v0.6.6g the Cry exiled any declared permanent and Yates had
 //! three Activates of its own, each offered while its target stood and spent on its own uses
 //! (R3996000, R1751000): Overwhelm froze every Unit of both sides in its lane and the lanes beside
 //! it, Yates included (R3567003); Wolf's Maw grounded a declared Flying Unit of either side, which
 //! lost Flying and took the declared damage (R3567004); Iron Mandate fused Yates into a declared
-//! friendly Unit, kept, with no Cry run (R3567002) (`script_v0_6_6e`). Through v0.6.5b the Cry exiled
+//! friendly Unit, kept, with no Cry run (R3567002) (`script_v0_6_6g`). Through v0.6.5b the Cry exiled
 //! every card named with M, O, U, S or E (`exile_named`, R3567000) and remembered the one Activate
 //! chosen at play, the only one Yates then had (R3567002) (`script_v0_6_5b`).
 //!
@@ -43,16 +43,16 @@ const WOLFS_MAW: &str = "wolfsMaw";
 const IRON_MANDATE: &str = "ironMandate";
 /// Through v0.6.5b, what the Cry remembered: the chosen Activate, kept while Yates stays (R78).
 const CHOSEN_KEY: &str = "yatesActivate";
-/// Through v0.6.6e, §6.2 Activate N, the script's literal, as S+ #11's (`ActivationUses` has no param).
+/// Through v0.6.6g, §6.2 Activate N, the script's literal, as S+ #11's (`ActivationUses` has no param).
 const OVERWHELM_USES: i32 = 1;
 const WOLFS_MAW_USES: i32 = 3;
 const IRON_MANDATE_USES: i32 = 1;
 /// Traps the Cry summons: two, three Radiant ones on the Radiant face.
 const BASE_TRAPS: i32 = 2;
 const RADIANT_TRAPS: i32 = 3;
-/// Through v0.6.6e, Overwhelm's reach: Yates's lane and the lanes beside it.
+/// Through v0.6.6g, Overwhelm's reach: Yates's lane and the lanes beside it.
 const LANE_REACH: i32 = 1;
-/// Through v0.6.6e, Wolf's Maw's target check: a Flying Unit.
+/// Through v0.6.6g, Wolf's Maw's target check: a Flying Unit.
 const FLYING: &str = "flying";
 
 /// R3567003: Overwhelm's Units — every Unit of both sides, controller first, in Yates's lane
@@ -226,9 +226,9 @@ fn yates(radiant: bool) -> Script {
     }
 }
 
-/// R3996000: through v0.6.6e, "Exile a permanent. Then summon two random Traps.", and the three
+/// R3996000: through v0.6.6g, "Exile a permanent. Then summon two random Traps.", and the three
 /// Activates, each its own.
-fn yates_v0_6_6e(radiant: bool) -> Script {
+fn yates_v0_6_6g(radiant: bool) -> Script {
     Script {
         // A permanent of either side, as TG #26 Path of Exile's "Exile a permanent" (R81).
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))],
@@ -289,12 +289,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.5b through v0.6.6e, the exile of any declared permanent and the three
+/// R767000: after v0.6.5b through v0.6.6g, the exile of any declared permanent and the three
 /// Activates; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
-        base: yates_v0_6_6e(false),
-        radiant: yates_v0_6_6e(true),
+        base: yates_v0_6_6g(false),
+        radiant: yates_v0_6_6g(true),
     }
 }
 
@@ -660,22 +660,22 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays after v0.6.5b through v0.6.6e: the exile of any declared
+    /// R767000: the script kept for the replays after v0.6.5b through v0.6.6g: the exile of any declared
     /// permanent and the three Activates.
-    mod v0_6_6e {
+    mod v0_6_6g {
         use super::*;
 
-        /// `run` under the script kept for v0.6.6e, with the `damage` its Wolf's Maw read then (4, both
+        /// `run` under the script kept for v0.6.6g, with the `damage` its Wolf's Maw read then (4, both
         /// faces).
         fn kept<T>(run: impl FnOnce() -> T) -> T {
             crate::under_kept_as(
                 ID,
-                script_v0_6_6e(),
+                script_v0_6_6g(),
                 |def| {
                     def.params = serde_json::from_value(json!([
                         { "key": "damage", "base": 4, "radiant": 4, "better": "up", "step": 1, "min": 1 }
                     ]))
-                    .expect("the v0.6.6e params");
+                    .expect("the v0.6.6g params");
                 },
                 run,
             )

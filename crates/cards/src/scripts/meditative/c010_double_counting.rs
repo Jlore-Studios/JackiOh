@@ -12,8 +12,8 @@
 //! Issue #4154 added the Activate (R384, once a turn; the base face's price the declared `price`, R386):
 //! a Discover (§6.3) of the shipped cards that print a Cry or a Death, read off each one's base face's
 //! script — a Death on any card, a Cry on a Unit or a Field Spell, since a Spell's resolution is no Cry
-//! (R822) — its pick to the hand on its base face (R4154211). Through v0.6.6e it had the Aura alone,
-//! which `script_v0_6_6e` keeps (R767000).
+//! (R822) — its pick to the hand on its base face (R4154211). Through v0.6.6g it had the Aura alone,
+//! which `script_v0_6_6g` keeps (R767000).
 
 use jackioh_engine::effects::{add_to_hand, discover_from_catalog};
 use jackioh_engine::prelude::*;
@@ -103,9 +103,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.6e, the Aura alone (issue #4154). `KEPT_SCRIPTS` folds those
+/// R767000: the scripts through v0.6.6g, the Aura alone (issue #4154). `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: counting(false, false),
         radiant: counting(false, false),
@@ -349,10 +349,10 @@ mod tests {
         assert!(s.hand(P1).iter().any(|card| card.def_id == options[0] && !card.radiant));
     }
 
-    /// R767000: through v0.6.6e it had no Activate (issue #4154).
+    /// R767000: through v0.6.6g it had no Activate (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6e_has_no_activate() {
-        let kept = super::script_v0_6_6e();
+    fn r767000_the_script_kept_for_v0_6_6g_has_no_activate() {
+        let kept = super::script_v0_6_6g();
         assert!(kept.base.activations.is_empty() && kept.radiant.activations.is_empty());
         assert!(kept.base.cry_death_extra.is_some());
     }

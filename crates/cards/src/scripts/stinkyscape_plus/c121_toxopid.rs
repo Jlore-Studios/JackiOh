@@ -25,7 +25,7 @@
 //! Indestructible while any Leg stands. R3560007: Ignores Taunt. Float and Toxic are the engine's.
 //!
 //! Issue #4154 placed the Legs at random and took out its first-hand-arrival Crawler and the discount
-//! each friendly Crawler death gave it. Through v0.6.6e (`script_v0_6_6e`, R767000) its first hand arrival
+//! each friendly Crawler death gave it. Through v0.6.6g (`script_v0_6_6g`, R767000) its first hand arrival
 //! each game added a Crawler (R3560000), each friendly Crawler death took 1 off it in hand and deck
 //! (R3560004), and its Cry opened one Mode prompt per Leg, each Leg exiling the pile below (R3560005).
 
@@ -33,20 +33,20 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-121";
 
-/// The Crawler its arrival added through v0.6.6e.
+/// The Crawler its arrival added through v0.6.6g.
 const CRAWLER: &str = "stinkyscapeplus-120";
 /// The Leg its Cry summons.
 const LEG: &str = "stinkyscapeplus-121-1";
-/// R3560000: the once-a-game hand-arrival mark (through v0.6.6e).
+/// R3560000: the once-a-game hand-arrival mark (through v0.6.6g).
 const HAND_KEY: &str = "stinkyscapeplus-121:hand";
-/// R3560004: what each friendly Crawler death took off (through v0.6.6e).
+/// R3560004: what each friendly Crawler death took off (through v0.6.6g).
 const DISCOUNT: i32 = 1;
-/// The v0.6.6e Cry's resume step.
+/// The v0.6.6g Cry's resume step.
 const LEG_STEP: &str = "toxopidLeg";
-/// The v0.6.6e Cry's data keys.
+/// The v0.6.6g Cry's data keys.
 const LEFT_KEY: &str = "legsLeft";
 const TAKEN_KEY: &str = "legsTaken";
-/// A unit zone's key, `own-<lane>` or `enemy-<lane>`: the v0.6.6e Cry's Mode options and the zones
+/// A unit zone's key, `own-<lane>` or `enemy-<lane>`: the v0.6.6g Cry's Mode options and the zones
 /// R4154300's draw names.
 const OWN: &str = "own";
 const ENEMY: &str = "enemy";
@@ -104,7 +104,7 @@ fn summon_legs(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     })]
 }
 
-/// R3560004 (through v0.6.6e): a friendly Crawler death cheapens this in hand and deck.
+/// R3560004 (through v0.6.6g): a friendly Crawler death cheapens this in hand and deck.
 fn crawler_died(id: &str) -> TriggerDef {
     TriggerDef::new(id, &[GameEventType::Destroyed], move |ctx, event| {
         let GameEvent::Destroyed {
@@ -123,7 +123,7 @@ fn crawler_died(id: &str) -> TriggerDef {
     })
 }
 
-/// R3560005 (through v0.6.6e): the prompt for one more Leg, `left` to go, `taken` already chosen.
+/// R3560005 (through v0.6.6g): the prompt for one more Leg, `left` to go, `taken` already chosen.
 fn ask_leg(ctx: &EffectContext<'_>, left: i32, taken: Vec<String>) -> Vec<Effect> {
     if left <= 0 {
         return vec![];
@@ -183,8 +183,8 @@ fn ask_leg(ctx: &EffectContext<'_>, left: i32, taken: Vec<String>) -> Vec<Effect
     })]
 }
 
-/// The face: today's when `through_v0_6_6e` is false, else the one v0.6.6e and before ran.
-fn toxopid(through_v0_6_6e: bool) -> Script {
+/// The face: today's when `through_v0_6_6g` is false, else the one v0.6.6g and before ran.
+fn toxopid(through_v0_6_6g: bool) -> Script {
     let mut script = Script {
         static_flags: Some(StaticFlags {
             ignores_taunt: Some(true),
@@ -208,7 +208,7 @@ fn toxopid(through_v0_6_6e: bool) -> Script {
         cry: Some(hook(summon_legs)),
         ..Script::default()
     };
-    if !through_v0_6_6e {
+    if !through_v0_6_6g {
         return script;
     }
     script.enters_hand = Some(hook(move |ctx| {
@@ -262,9 +262,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.6e, before issue #4154: the first-hand-arrival Crawler, the
+/// R767000: what it ran through v0.6.6g, before issue #4154: the first-hand-arrival Crawler, the
 /// Crawler-death discount and the Leg prompts.
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: toxopid(true),
         radiant: toxopid(true),
@@ -487,13 +487,13 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.6e and before (issue #4154).
-    mod kept_v0_6_6e {
+    /// R767000: the script kept for the replays of v0.6.6g and before (issue #4154).
+    mod kept_v0_6_6g {
         use super::*;
 
         #[test]
         fn r767000_r3560000_its_first_hand_arrival_added_a_crawler_once() {
-            crate::under_kept(ID, script_v0_6_6e(), || {
+            crate::under_kept(ID, script_v0_6_6g(), || {
                 for radiant in [false, true] {
                     let mut s = weapon_board(
                         "s121-hand",
@@ -515,7 +515,7 @@ mod tests {
 
         #[test]
         fn r767000_r3560004_a_friendly_crawler_dying_cheapened_it_in_the_deck() {
-            crate::under_kept(ID, script_v0_6_6e(), || {
+            crate::under_kept(ID, script_v0_6_6g(), || {
                 let mut s = weapon_board(
                     "s121-discount",
                     json!({
@@ -543,7 +543,7 @@ mod tests {
 
         #[test]
         fn r767000_r3560005_its_cry_asked_where_each_leg_lands() {
-            crate::under_kept(ID, script_v0_6_6e(), || {
+            crate::under_kept(ID, script_v0_6_6g(), || {
                 let mut s = weapon_board(
                     "s121-cry",
                     json!({ "mana": 10, "hand": [ID], "library": filler(4) }),

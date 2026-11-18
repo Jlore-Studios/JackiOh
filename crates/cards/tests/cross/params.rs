@@ -617,6 +617,10 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-004", PRICE),
         ("stinkyscape-012-3", PRICE),
         ("stinkyscape-149", PRICE),
+        // Issue #4154: S #18's and M #7's Tribute 1, a count R3535001 lists the same way for the
+        // Stinkyscape+ set's Tributes.
+        ("stinkyscape-018", PRICE),
+        ("meditative-007", PRICE),
         // R3535001: the held Stinkyscape+ set's costs, thresholds and launch prices, which no
         // Buff or Nerf moves (S+ #24's and #138's and #139's embiggen lines; #39's, #52's, #53's,
         // #57's, #59's, #68's, #69.1's, #75.1's, #82's, #97's, #98's, #103's, #104's, #128's,

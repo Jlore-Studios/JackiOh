@@ -26,7 +26,7 @@ fn busted_anywhere() -> CatalogQueryArgs {
 const TRIBUTE: i32 = 1;
 
 pub fn script() -> CardScripts {
-    let mut scripts = script_v0_6_6e();
+    let mut scripts = script_v0_6_6g();
     for face in [&mut scripts.base, &mut scripts.radiant] {
         face.static_flags = Some(StaticFlags {
             tribute: Some(TRIBUTE),
@@ -36,8 +36,8 @@ pub fn script() -> CardScripts {
     scripts
 }
 
-/// R767000: no Tribute through v0.6.6e (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+/// R767000: no Tribute through v0.6.6g (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: Script {
             cry: Some(hook(|_ctx| {
@@ -257,12 +257,12 @@ mod tests {
         }
     }
 
-    /// R767000: a game on v0.6.6e plays it with no Tribute, under the kept script.
+    /// R767000: a game on v0.6.6g plays it with no Tribute, under the kept script.
     #[test]
-    fn issue_4154_a_fold_of_v0_6_6e_asks_no_tribute() {
+    fn issue_4154_a_fold_of_v0_6_6g_asks_no_tribute() {
         crate::register_all();
-        let v0_6_6e = crate::shipped_catalog("v0.6.6e").expect("v0.6.6e is carried");
-        jackioh_engine::catalog::with_shipped(Some(v0_6_6e), || {
+        let v0_6_6g = crate::shipped_catalog("v0.6.6g").expect("v0.6.6g is carried");
+        jackioh_engine::catalog::with_shipped(Some(v0_6_6g), || {
             let mut s = board(false, "xxfreshjack-fold-6e");
             s.play(ID, json!({ "zone": 1 }));
             s.expect_in_zone(ID, "field");

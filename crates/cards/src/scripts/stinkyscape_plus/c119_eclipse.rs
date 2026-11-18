@@ -34,9 +34,9 @@ const TRIBUTE: i32 = 3;
 /// through `declared_or`, which moves it only by what a tune moved the declared number.
 const BASE_BURNS: i32 = 7;
 const RADIANT_BURNS: i32 = 14;
-/// Burns 5 (Radiant 10), through v0.6.6e (issue #4154).
-const BASE_BURNS_V0_6_6E: i32 = 5;
-const RADIANT_BURNS_V0_6_6E: i32 = 10;
+/// Burns 5 (Radiant 10), through v0.6.6g (issue #4154).
+const BASE_BURNS_V0_6_6G: i32 = 5;
+const RADIANT_BURNS_V0_6_6G: i32 = 10;
 
 /// R3540002: "Damage also Burns N" as the `burnsOnDamage` flag.
 fn rides(burns: i32) -> Script {
@@ -57,12 +57,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: Burns 5 (Radiant 10) through v0.6.6e (issue #4154): the flag's printed number, which the
+/// R767000: Burns 5 (Radiant 10) through v0.6.6g (issue #4154): the flag's printed number, which the
 /// declared `burns` only moves by a tune, so the replays of those versions fold under it (`KEPT_SCRIPTS`).
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
-        base: rides(BASE_BURNS_V0_6_6E),
-        radiant: rides(RADIANT_BURNS_V0_6_6E),
+        base: rides(BASE_BURNS_V0_6_6G),
+        radiant: rides(RADIANT_BURNS_V0_6_6G),
     }
 }
 

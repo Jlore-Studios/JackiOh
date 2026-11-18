@@ -12,8 +12,8 @@
 //! player's and not the card's, charted from the match rng at their first travel (R1847000), and gives
 //! the node's reward (R1847001). Issue #4154 took its cost from (0) to (1), a number, and gave the base
 //! face the free first travel each turn the Radiant face had, the Radiant face two
-//! (`starscape_abilities_free`, R4154203); through v0.6.6e the base face had none and the Radiant face
-//! one, which `script_v0_6_6e` keeps (R767000).
+//! (`starscape_abilities_free`, R4154203); through v0.6.6g the base face had none and the Radiant face
+//! one, which `script_v0_6_6g` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -47,9 +47,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.6e, the base face's travels all paid and the Radiant face's first
+/// R767000: the scripts through v0.6.6g, the base face's travels all paid and the Radiant face's first
 /// each turn free (issue #4154). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
+pub fn script_v0_6_6g() -> CardScripts {
     CardScripts {
         base: alteran_reach(subsystems::starscape_abilities(false, EDGE_OF_THE_UNIVERSE)),
         radiant: alteran_reach(subsystems::starscape_abilities(true, EDGE_OF_THE_UNIVERSE)),
@@ -59,7 +59,7 @@ pub fn script_v0_6_6e() -> CardScripts {
 // S #148 Alteran Reach — SPEC §8.10 row S 148, BUILD M12 row S 148.
 #[cfg(test)]
 mod tests {
-    use super::{EDGE_OF_THE_UNIVERSE, ID, script, script_v0_6_6e};
+    use super::{EDGE_OF_THE_UNIVERSE, ID, script, script_v0_6_6g};
     use jackioh_engine::subsystems::starscape::{
         STARSCAPE_FREE_TRAVEL_ABILITY, STARSCAPE_TRAVEL_ABILITY, starscape_amount,
     };
@@ -394,10 +394,10 @@ mod tests {
                 assert_eq!(at(&s, P1), 3, "a new turn's first travel is free again");
             }
 
-            /// R767000: through v0.6.6e the base face's every travel cost (1) (issue #4154).
+            /// R767000: through v0.6.6g the base face's every travel cost (1) (issue #4154).
             #[test]
-            fn r767000_the_script_kept_for_v0_6_6e_charges_every_base_travel() {
-                crate::under_kept(ID, script_v0_6_6e(), || {
+            fn r767000_the_script_kept_for_v0_6_6g_charges_every_base_travel() {
+                crate::under_kept(ID, script_v0_6_6g(), || {
                     let mut s = board("s148-kept-base", false);
                     set_map(&mut s, heal_path(), 0);
                     let before = mana(&s);
@@ -453,10 +453,10 @@ mod tests {
                 assert_eq!(activations(&s), vec![(STARSCAPE_TRAVEL_ABILITY.to_string(), true)]);
             }
 
-            /// R767000: through v0.6.6e the Radiant face's first travel each turn alone was free.
+            /// R767000: through v0.6.6g the Radiant face's first travel each turn alone was free.
             #[test]
-            fn r767000_the_script_kept_for_v0_6_6e_frees_one_radiant_travel() {
-                crate::under_kept(ID, script_v0_6_6e(), || {
+            fn r767000_the_script_kept_for_v0_6_6g_frees_one_radiant_travel() {
+                crate::under_kept(ID, script_v0_6_6g(), || {
                     let mut s = board("s148-kept-radiant", true);
                     set_map(&mut s, heal_path(), 0);
                     s.state_mut().players.p1.mana.current = STARSCAPE_TRAVEL_MANA;

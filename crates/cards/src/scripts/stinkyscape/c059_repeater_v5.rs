@@ -8,7 +8,7 @@
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the Activate's target is a declared enemy Unit (R81), never a hero (#2521). Pierce is
 //! `ignoreArmor` (R346). Activate 3 is three uses a turn (R384, R1857003), each hit its own state check;
-//! issue #4154 cut it from four, which `script_v0_6_6e` keeps for the replays of v0.6.6e and before
+//! issue #4154 cut it from four, which `script_v0_6_6g` keeps for the replays of v0.6.6g and before
 //! (R767000). The number is the declared `damage` (R386), read through `param`.
 
 use jackioh_engine::effects::{DamageEffectArgs, DamageFlagArgs, TargetSpec, damage};
@@ -19,8 +19,8 @@ pub const ID: &str = "stinkyscape-059";
 /// Activate 3 (R1857003): three uses a turn (issue #4154).
 const USES: i32 = 3;
 
-/// R767000: Activate 4 (R1857003): the four uses a turn it had through v0.6.6e.
-const USES_V0_6_6E: i32 = 4;
+/// R767000: Activate 4 (R1857003): the four uses a turn it had through v0.6.6g.
+const USES_V0_6_6G: i32 = 4;
 
 /// R767000: Activate 6 (R1857003): the six uses a turn it had through v0.5.11.
 const USES_V0_5_11: i32 = 6;
@@ -66,10 +66,10 @@ pub fn script() -> CardScripts {
     scripts(USES)
 }
 
-/// R767000: through v0.6.6e its Activate had `USES_V0_6_6E` uses a turn; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.6.6g its Activate had `USES_V0_6_6G` uses a turn; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_6e() -> CardScripts {
-    scripts(USES_V0_6_6E)
+pub fn script_v0_6_6g() -> CardScripts {
+    scripts(USES_V0_6_6G)
 }
 
 /// R767000: the chosen enemy's hit, through Armor, as v0.5.11 ran it: the enemy hero a target too,
@@ -155,9 +155,9 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_6e_has_four_uses_a_turn() {
-            crate::under_kept(ID, script_v0_6_6e(), || {
-                fam::rep_uses_a_turn(ID, "s059-v0-6-6e", false, USES_V0_6_6E, DAMAGE);
+        fn r767000_the_script_kept_for_v0_6_6g_has_four_uses_a_turn() {
+            crate::under_kept(ID, script_v0_6_6g(), || {
+                fam::rep_uses_a_turn(ID, "s059-v0-6-6e", false, USES_V0_6_6G, DAMAGE);
             });
         }
     }

@@ -8,7 +8,7 @@
 //! summons a Crawler (S+ #120) into its controller's side by R64: the leftmost open unit zone, else the
 //! leftmost empty Locked one (R688). It is offered only while the unit row has a zone to take the Crawler
 //! (R430, `first_entry_zone`), and refused otherwise. The Crawler's arrival adds nothing; its Death adds or
-//! cheapens a Toxopid (R4154301; through v0.6.6e the first Crawler to arrive each game added a Toxopid,
+//! cheapens a Toxopid (R4154301; through v0.6.6g the first Crawler to arrive each game added a Toxopid,
 //! R3560000). The Radiant face summons it Radiant.
 
 use jackioh_engine::effects::summon;
