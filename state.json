@@ -18619,10 +18619,6 @@
       "refused_until": "2026-11-13T06:20:00Z",
       "spent": [
         {
-          "at": "2026-11-03T14:45:26Z",
-          "minutes": 15.8
-        },
-        {
           "at": "2026-11-03T15:46:30Z",
           "minutes": 37.5
         },
@@ -19417,16 +19413,13 @@
         {
           "at": "2026-11-18T05:05:04Z",
           "minutes": 13.1
+        },
+        {
+          "at": "2026-11-18T07:08:01Z",
+          "minutes": 3.7
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-03T01:26:15Z",
-          "cache": 639693,
-          "cost": 0.7494,
-          "input": 24,
-          "output": 10148
-        },
         {
           "at": "2026-11-03T04:26:07Z",
           "cache": 9116769,
@@ -20819,16 +20812,22 @@
           "cost": 0.8938,
           "input": 42,
           "output": 11973
+        },
+        {
+          "at": "2026-11-18T07:08:01Z",
+          "cache": 794041,
+          "cost": 0.7912,
+          "input": 21,
+          "output": 3520
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-18T07:00:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-11-18T12:00:00Z",
+          "utilization": 0.29
         },
-        "observed_at": "2026-11-18T05:14:55Z",
-        "rejected_resets_at": "2026-11-18T07:00:00Z",
-        "status": "rejected"
+        "observed_at": "2026-11-18T07:08:01Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
@@ -37309,6 +37308,14 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-18T07:03:13Z,claude-1,ping,before,44255559703,16,2026-11-18T12:00:00Z,,,allowed,100,,",
+      "2026-11-18T07:03:37Z,claude-1,stream,call,44255559703,18,2026-11-18T12:00:00Z,,,allowed,100,,",
+      "2026-11-18T07:05:52Z,claude-1,stream,call,44255559703,26,2026-11-18T12:00:00Z,,,allowed,100,,",
+      "2026-11-18T07:06:52Z,claude-1,stream,call,44255559703,29,2026-11-18T12:00:00Z,,,allowed,100,,"
+    ]
   },
   "version": 1
 }
