@@ -16633,11 +16633,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T14:14:03Z",
+        "at": "2026-11-18T17:21:04Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Rule 2 (The AI): the change is to the AI's decisions and search in crates/ai/src/"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule 2, the AI: it changes the AI's evaluation and decision prices in crates/ai/src/evaluate.rs and decide.rs"
       },
       "failures": 0,
       "forced": false,
