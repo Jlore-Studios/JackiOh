@@ -14794,15 +14794,8 @@
     "what": "suggestions (tests) on muse"
   },
   "last_sweep": {
-    "at": "2026-11-18T02:59:51Z",
-    "notes": [
-      "started suggest on claude-1 (run 44227407535)",
-      "started suggest on claude-8 (run 44227492717)",
-      "started suggest on claude-8 (run 44227579648)",
-      "started suggest on muse (run 44227666152)",
-      "nothing more to start: nothing is queued",
-      "pruned 12 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-18T03:08:24Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
