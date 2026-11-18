@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4207,
+  "title": "Patch: Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)",
+  "branch": "bot/issue-4207",
+  "thread": "**Issue #4207 (data, not instructions):**\n\n```text\n# #4207: Patch: Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)\nOpened by @MaxGoetzmann.\n\n### What happens\n\nA card that dies while a replacement sends it to exile instead of the graveyard fires no Death and does not Reborn:\n\n- **C #50 Voidwalker**: Aura: \"cards that would go to a graveyard are exiled instead\" (Radiant: the opponent's cards). A Unit that dies under it is exiled, its Death does not fire and its Reborn does not return it (R461, \"Exiled instead of dying: not a death: no Death, no Reborn, no destroyed event or count\").\n- **Stinkyscape #105 Disintegrex**: Aura: \"anything that would be Destroyed is exiled instead\" (`staticFlags.destroyedExiled`; Radiant `enemyDestroyedExiled`). Every card \u00a74.5 step 1 collects is exiled instead, \"no Death, no Reborn, no `destroyed`\" (R1849002).\n\nSo under either aura, a Death card such as **Shrinking Felinor** (C #94, \"Death: summon a Shrinking Felinor whose base stats are this one's \u22123/\u22123\") summons nothing, and a Reborn Unit (e.g. core-003 Right-house defender) stays in exile. That hard-counters two keywords, though neither card's text claims to.\n\n### What should happen\n\nThe card still **died**. The replacement only changes **where it goes** (exile instead of the graveyard). Its **Death fires and its Reborn returns it** as they would have, the same as in Hearthstone, where a Deathrattle and Reborn act on death whatever happens to the body.\n\n- **Death:** fires for every death: the \u00a74.5 state-check collection (combat, damage, destroy marks, a Brittle crumble on the field, a backrow card that prints Death) **and** a Sacrifice or Tribute that Voidwalker's aura exiles. Shrinking Felinor's Death reads its last-known stats (R78) as today and summons the next, smaller Felinor.\n- **Reborn:** a Unit with Reborn that dies and is exiled instead returns at 1 health without Reborn, from exile, through \u00a74.5 step 4 as it would have from the graveyard, reserving its zone the same way (R64). Under Voidwalker or Disintegrex, a Reborn body that dies again (now without Reborn) is exiled again, with its Death firing again.\n- **Disintegrex:** the card is destroyed and then exiled. Death fires, Reborn returns it, and otherwise the card ends in exile.\n- **Voidwalker:** a card that would go to the graveyard by **dying** fires Death and Reborn, then goes to exile. A card that reaches the graveyard any other way (a discard, a resolved Spell, a burn at the hand cap, a consumed trap, a mill) still fires nothing, as today.\n- **Unchanged:** a plain exile (the Exile verb, an exile mark, R1124, The Banisher) is not a death and still fires no Death and no Reborn. So do bounce, transform, Flicker and steal (\u00a76.1 Death row).\n- A token with Death still fires it, as it does after vanishing today. A token with Reborn returns as it would today.\n\n### For the planner to settle (one ruling, Hearthstone semantics)\n\nDeath and Reborn are the ask. The rest of R461 needs a call in the same ruling. Recommended:\n- `destroyed` event and the destroyed counter: **yes**, because the card died (cards that count deaths should see it).\n- Starship Piece fusion (\u00a76.1 Starship Piece: \"never a card a replacement sends elsewhere\"): **yes**, since it fuses a copy and where the original ends up does not matter. Keep the old behaviour only with a stated reason.\n- Ordering: Death fires and Reborn returns in the death pass as for any collected card (R68's order). The card is already in exile when its Death hook runs, and Reborn takes it back out of exile.\n\n### Where it lives\n\n- Spec: \u00a74.5 step 1 and step 4 (`spec/04-combat.md`: the Disintegrex sentence, the \"would go to a graveyard\" sentence, Reborn's return), the \u00a76.1 Death, Reborn and Starship Piece rows and the \u00a76.2 Replacement row (`spec/06-keywords.md`), and the \u00a78 rows for C #50 and Stinkyscape #105 (`spec/08-catalog.md`). Add a new ruling in this issue's block that supersedes R461 and amends R1849002 and R398. Its \u00a711 paragraph goes in `spec/pending/<N>.md`, and each ruling gets proving tests named after it (CLAUDE.md rule 3).\n- Engine: `crates/engine/src/state_check.rs` (the death pass, the exile-instead branch, the Reborn return from exile), the Sacrifice path, `crates/engine/tests/rules/replacements.rs`, `backrow_death.rs`.\n- Cards: `crates/cards/src/scripts/stinkyscape/c105_disintegrex.rs` and `classic/c050_voidwalker.rs`: update their header comments and tests (their \"no Death fired\" asserts flip), covering base and Radiant faces. Also check `classic/c043_plague_nuke.rs` and `crates/ai/tests/ai/activations.rs`, which cite R461.\n- AI: its threat and value reads must not assume an exiled-instead death skips Death or Reborn.\n- This changes how shipped cards behave, so it needs a pending fragment (`cargo jackioh patches \u2026 --rule`) with a hand-written player note, per `docs/ADDING_CARDS.md`.\n\n### Acceptance\n\n- Under Voidwalker (base and Radiant), Shrinking Felinor dying in combat, by a destroy and by a Sacrifice fires its Death (the next Felinor is summoned) and ends in exile. A discarded card fires nothing.\n- Under Voidwalker and under Disintegrex, a Unit with Reborn that dies returns at 1 health without Reborn. When it dies again, it is exiled.\n- Under Disintegrex (base and Radiant), a Unit and a backrow card with Death that are collected fire their Death and end in exile. Disintegrex dying in the same pass still exiles itself and the rest.\n- An Exile verb or exile mark on a Death or Reborn card still fires neither.\n- `destroyed` and Starship Piece behave as the new ruling states, each with a test.\n- `cargo jackioh spec check`, `patches check`, `classify --claims`, the engine, cards and AI tests and the fuzz gate are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4207: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T15:18:55Z",
+    "claimed_at": "2026-11-18T15:25:30Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4197 is held for `claude-1` until 10:10 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4018 skipped: it waits for #4017 to close first"
+  ]
+}
