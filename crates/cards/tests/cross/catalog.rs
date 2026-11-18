@@ -6367,7 +6367,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "148",
         "Alteran Reach",
-        c(0),
+        c(1),
         T::FieldSpell,
         &[G::Wincon, G::Quickdraw],
         R::Mythic,
