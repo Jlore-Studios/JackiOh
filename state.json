@@ -14968,6 +14968,13 @@
     "4233": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T23:39:26Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-rule line holds: server-only change in one crate plus spec, no engine/AI/migration, ~19 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
