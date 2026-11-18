@@ -686,6 +686,17 @@ describe("R1655000 the picks of each card", () => {
     expect(readCardPicks(OWN)).toEqual({});
   });
 
+  it("stored card picks ignore proto ids (#4015)", () => {
+    localStorage.setItem(
+      CARD_PICKS_SETTINGS_KEY,
+      `{"__proto__":{"foil":"${PICKS.foil}"},"constructor":{"foil":"${PICKS.foil}"},"${OWN}":{"foil":"${PICKS.foil}"}}`,
+    );
+    resetCosmeticsForTests();
+    expect(readCardPicks(OWN)).toEqual({ foil: PICKS.foil });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+    expect(({} as Record<string, unknown>)["foil"]).toBeUndefined();
+  });
+
   it("R1655000 a write starts from what storage holds now: another tab's picks and a newer client's kinds stand", () => {
     expect(readCardPicks(OWN)).toEqual({});
     // Another tab, maybe a newer client's, wrote after this page read.

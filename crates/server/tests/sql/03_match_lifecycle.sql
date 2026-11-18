@@ -1297,7 +1297,7 @@ begin
   end if;
 end $$;
 
-\echo '### R106: the circuit breaker refuses redemption while it is open ###'
+\echo '### R4131000: only the operator pauses redemption, and failures spread over addresses never do ###'
 -- A third account and its own unspent code: `hash-good` had max_uses 2 and both
 -- profiles above consumed them, so reusing it here would return the exhausted
 -- `invalid_code` and prove nothing about the breaker.
@@ -1391,7 +1391,23 @@ begin
     raise exception 'FAIL (CHECK 22): the breaker did not close again';
   end if;
 end $$;
-\echo '-- with the breaker closed again, the untouched code redeems'
+\echo '-- 1000 failures from 1000 other addresses in the last minute, ten times what R106 opened at'
+insert into public.code_attempts (profile_id, ip_hash, succeeded)
+select null, 'ip-spray-' || n, false from generate_series(1, 1000) as n;
+do $$
+begin
+  -- Vacuity guard: the spray is on record inside the window R106 counted.
+  if (select count(*) from public.code_attempts
+       where not succeeded and at > now() - interval '600 seconds') <= 100 then
+    raise exception 'FAIL (CHECK 22): the spray did not put more than 100 recent failures on record';
+  end if;
+  -- And the counted breaker's knobs are gone with it (migration 0095).
+  if exists (select 1 from app.settings
+              where key in ('redemption_failure_threshold', 'redemption_failure_window_seconds')) then
+    raise exception 'FAIL (CHECK 22): app.settings still holds the counted breaker''s threshold or window';
+  end if;
+end $$;
+\echo '-- with the breaker closed again, the untouched code redeems past the spray'
 select app.redeem_invite_code('33333333-3333-3333-3333-333333333333', 'hash-r106', 'ip-c')
        as breaker_closed \gset
 select :'breaker_closed' as breaker_closed;
@@ -1426,5 +1442,7 @@ begin
     raise exception 'FAIL (CHECK 22): % of profile 3s attempts are marked succeeded, expected 1', n;
   end if;
 end $$;
+-- The spray goes, so no later file counts its rows.
+delete from public.code_attempts where ip_hash like 'ip-spray-%';
 
 \echo '### ALL LIFECYCLE CHECKS RAN ###'

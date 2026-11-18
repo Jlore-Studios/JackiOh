@@ -33,10 +33,9 @@ export const statsTestid = {
   createdTable: "stats-created-table",
   tokensPanel: "stats-tokens-panel",
   tokensTable: "stats-tokens-table",
-  /** R4082000: a Created row's tier and adjusted win rate, and the line that says what they are read against. */
+  /** R4082000, R4155000: a Created row's tier and adjusted win rate. */
   createdTierCell: "stats-created-tier-cell",
   createdAdjustedCell: "stats-created-adjusted-cell",
-  createdTiersNote: "stats-created-tiers-note",
   /** R3324003: the Columns toggles. */
   columnGames: "stats-column-games",
   columnPlayRate: "stats-column-play-rate",
@@ -52,16 +51,14 @@ export const statsTestid = {
   cardStatsAdjusted: "inspect-stats-adjusted",
   /** R3447000: the card detail's Statistics panel's patch its figures were collected on. */
   cardStatsPatch: "inspect-stats-patch",
-  /** R3022000: a card's tier (a table row's or a grid item's) and the line under the cards that says what tiers mean. */
+  /** R3022000: a card's tier (a table row's or a grid item's). */
   tierCell: "stats-tier-cell",
-  tiersNote: "stats-tiers-note",
   /** R3184001: under a tier, with the ranges shown, the share of the card's Adjusted range inside it. */
   tierFit: "stats-tier-fit",
-  /** R2895000: the Cards tab's Show 95% ranges toggle, a row's two ranges and the line that says what they mean. */
+  /** R2895000: the Cards tab's Show 95% ranges toggle and a row's two ranges. */
   rangesToggle: "stats-ranges-toggle",
   adjustedRange: "stats-adjusted-range",
   winRateRange: "stats-win-rate-range",
-  rangesNote: "stats-ranges-note",
   playersTable: "stats-players-table",
   playersPager: "stats-players-pager",
   playersPrev: "stats-players-prev",

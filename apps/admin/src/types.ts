@@ -69,7 +69,7 @@ export type AuditAction = {
   at: number;
 };
 
-export type AuditResponse = { actions: AuditAction[] };
+export type AuditResponse = { actions: AuditAction[]; nextBeforeId: number | null };
 
 /** What `POST /api/dev/clear/:part` clears: one holding, or all five (SPEC §14.10), in the order §14.10 lists them. */
 export const CLEAR_PARTS = ["cards", "cosmetics", "jlore", "counters", "tracks", "everything"] as const;

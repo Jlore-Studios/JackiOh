@@ -44,7 +44,7 @@ import "../auth/tavern.css";
 export const INVITE_CODE_INPUT = inviteTestid.input;
 export const INVITE_SUBMIT = inviteTestid.submit;
 export const INVITE_ERROR = inviteTestid.error;
-/** §9.4's circuit breaker is open: the screen says so instead of guessing after a 503. */
+/** The operator paused redemption (R4131000): the screen says so instead of guessing after a 503. */
 export const INVITE_PAUSED = inviteTestid.paused;
 /** An active account reached the code screen; redemption is not for it. */
 export const INVITE_NOT_NEEDED = inviteTestid.notNeeded;

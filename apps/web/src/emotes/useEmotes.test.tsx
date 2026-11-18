@@ -4,11 +4,12 @@
 // both the session's `until` and the expiry timeout's delay.
 
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { EMOTE_COOLDOWN_MS, EMOTE_IDS, type EmoteId, type PortraitId } from "@jackioh/shared";
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 import type { SoundSink } from "../audio/types.ts";
 import { EMOTE_EMOJI_MS } from "./config.ts";
 import { DEFAULT_EMOTE_HAND, type EmoteHands } from "./hand.ts";
@@ -42,6 +43,10 @@ type Options = {
 function hook(initial: Options = {}) {
   return renderHook((opts: Options) => useEmotes(opts), { initialProps: initial });
 }
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 afterEach(() => {
   cleanup();

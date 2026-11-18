@@ -65,9 +65,11 @@ pub(crate) struct Fight {
     pub(crate) a: Side,
     pub(crate) t: Side,
     pub(crate) combat: Exchange,
-    /// The attacker's blow on the target.
+    /// The attacker's blow on the target: nothing when a First Strike defender destroys the attacker
+    /// first (§4.3 step 1, R4171000).
     pub(crate) out: Blow,
-    /// The target's strike back on the attacker, nothing when none reaches it (R783000).
+    /// The target's strike back on the attacker: nothing when none reaches it (R783000) or a First Strike
+    /// attacker destroys the target first (§4.3 step 1).
     pub(crate) back: Blow,
     /// Whether the blow destroys the target: never when a First Strike defender destroys the attacker
     /// first.
@@ -87,30 +89,29 @@ pub(crate) fn fight(state: &GameState, attacker: &CardInstance, target: &CardIns
     let t = side_of(state, target);
     // R1120, R1283: each strike as the combat reads it, the bonus and the lane multiplier included.
     let combat = exchange(state, attacker, &a.view, target, &t.view);
-    let out = blow(&a, combat.hit, combat.poisonous, &t);
-    let back = if takes_strike_back(state, attacker, target) {
+    let mut out = blow(&a, combat.hit, combat.poisonous, &t);
+    let mut back = if takes_strike_back(state, attacker, target) {
         blow(&t, combat.strike_back, t.poisonous, &a)
     } else {
         Blow::default()
     };
-    let mut kills = out.kills;
-    let mut dies = back.kills;
-    if a.first_strike && !t.first_strike && kills {
-        dies = false;
+    // §4.3 step 1: a First Strike attacker that destroys its target first takes no strike back.
+    if a.first_strike && !t.first_strike && out.kills {
+        back = Blow::default();
     }
-    if t.first_strike && !a.first_strike && dies {
-        kills = false;
+    // §4.3 step 1, R4171000: an attacker a First Strike defender destroys first strikes nothing at all.
+    let lands = !(t.first_strike && !a.first_strike && back.kills);
+    if !lands {
+        out = Blow::default();
     }
-    // §4.3 step 1: an attacker a First Strike defender destroys first strikes nothing at all.
-    let lands = !(t.first_strike && !a.first_strike && dies);
     Fight {
         a,
         t,
         combat,
+        kills: out.kills,
+        dies: back.kills,
         out,
         back,
-        kills,
-        dies,
         lands,
     }
 }
@@ -140,9 +141,10 @@ fn counter_price(
 /// what its own death removes when it dies too (its whole `unit_worth` when the target's strike back
 /// exiles it), with First Strike deciding who strikes first and no strike back on a Ranged attacker
 /// unless the target is Ranged too (R783000). A hit that kills nothing is worth a little per point dealt,
-/// so a second attacker can finish what the first started. A Cleave splash is priced at
-/// `AI_REPLY.cleave_share` of what it kills or unshields (R63), a Trample excess as a face hit and a
-/// Lifesteal heal by `heal_worth` (#1820). With
+/// so a second attacker can finish what the first started; an attacker a First Strike defender destroys
+/// first deals nothing and pops nothing, so it is worth only its own loss (R4171000). A Cleave splash is
+/// priced at `AI_REPLY.cleave_share` of what it kills or unshields (R63), a Trample excess as a face hit
+/// and a Lifesteal heal by `heal_worth` (#1820). With
 /// `AI_EVAL.pool_and_conversion_read`, a blow that Burns or is Toxic instead kills nothing and heals
 /// nothing and is worth its counter (`counter_price`, R4064001), and the target side's damage pools soak
 /// the blow, then its splashes (R4064000). The move order reads `kills` and `splash_kills` too
@@ -890,7 +892,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     /// #67 Zoomerbin Oomen, a 1/2.
     const OOMEN: &str = "core-067";
-    /// #20 Pointmaster, a 7/1 First Strike.
+    /// #20 Pointmaster, a 6/1 Rush, First Strike (Radiant 12/2, Divine Shield too).
     const POINTMASTER: &str = "core-020";
     /// M+ #7 Life Mage, whose Radiant face makes healing its controller's hero twice as effective
     /// (R1180003).
@@ -1119,11 +1121,45 @@ mod tests {
             &[Keyword::Lifesteal],
         );
         let trade = trade_value(s.state(), s.card(VANILLA), &s.card(POINTMASTER).id, Prices::NONE);
-        // §4.3 step 1: the Pointmaster's 7 destroys the Vanilla before it strikes.
+        // §4.3 step 1: the Pointmaster's 6 destroys the Vanilla before it strikes, so its blow deals
+        // nothing, chips nothing and heals nothing (R4171000).
         assert!(!trade.kills);
-        let expected =
-            AI_REPLY.chip_per_damage * 1.0 - kill_worth(s.state(), s.card(VANILLA), &AI_EVAL, Prices::NONE);
+        let expected = -kill_worth(s.state(), s.card(VANILLA), &AI_EVAL, Prices::NONE);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    /// R4171000: an attacker without First Strike that a First Strike defender destroys first lands no
+    /// blow, so the static trader prices the attack as the attacker lost and nothing else: no chip on a
+    /// plain Pointmaster's 1 health, no pop of a Radiant one's Divine Shield.
+    #[test]
+    fn r4171000_a_blow_a_first_strike_defender_stops_earns_no_chip_and_no_shield_pop() {
+        jackioh_cards::register_all();
+        for (attacker, radiant) in [(VANILLA, false), (OOMEN, true)] {
+            let s = scenario(json!({
+                "p1": { "field": [attacker] },
+                "p2": { "field": [{ "def": POINTMASTER, "radiant": radiant }] },
+            }));
+            let (unit, pointmaster) = (s.card(attacker), s.card(POINTMASTER));
+            let read = fight(s.state(), unit, pointmaster);
+            assert!(
+                read.t.first_strike && !read.a.first_strike,
+                "{attacker} into {POINTMASTER}"
+            );
+            assert_eq!(read.t.shield, radiant, "{attacker} into {POINTMASTER}");
+            assert!(
+                !read.lands && read.dies && !read.kills,
+                "{attacker} into {POINTMASTER}"
+            );
+            assert_eq!((read.out.dealt, read.out.pops_shield), (0, false), "{attacker}");
+            let trade = trade_value(s.state(), unit, &pointmaster.id, Prices::NONE);
+            let expected = -kill_worth(s.state(), unit, &AI_EVAL, Prices::NONE);
+            assert!(!trade.kills && !trade.splash_kills, "{attacker}");
+            assert!(
+                (trade.value - expected).abs() < 1e-9,
+                "{attacker}: {} vs {expected}",
+                trade.value
+            );
+        }
     }
 
     /// p1's Mr. Vanilla's `face_value` on p2's hero in `setup`, with Lifesteal and without.

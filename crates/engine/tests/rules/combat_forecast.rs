@@ -7,6 +7,7 @@
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
+use crate::rules::fixtures::board_geometry::{FUSE, register_geometry_fixtures};
 use crate::rules::fixtures::burn_toxic::{
     PLAIN as BT_PLAIN, SHIELDED as BT_SHIELDED, VOLCANIC, add_burn_toxic_fixtures,
 };
@@ -560,5 +561,52 @@ mod r4111000_the_forecast_reads_exile_on_damage {
         let forecast = forecast_played(&state, &exiler.id, &shield.id);
         assert_eq!(forecast.dealt, 0);
         assert!(forecast.pops && !forecast.kills);
+    }
+}
+
+/// `board` with the board-geometry fixtures (`geo-fuse`, a 2/20 Ranged Unit whose attacks weigh 5× in its
+/// lane and 3× beside it) registered on top, after `new_game` has registered the engine's own.
+fn sweep_board(seed: &str) -> GameState {
+    let state = board(seed);
+    register_geometry_fixtures();
+    state
+}
+
+mod r4156000_the_forecast_strikes_back_a_sweeper_plain {
+    use super::*;
+
+    /// The forecast's (dealt, taken, kills, survives), held to what the engine's combat does with it.
+    fn forecast_and_play(state: &GameState, attacker_id: &str, target_id: &str) -> (i32, i32, bool, bool) {
+        let forecast = forecast_played(state, attacker_id, target_id);
+        (forecast.dealt, forecast.taken, forecast.kills, forecast.survives)
+    }
+
+    #[test]
+    fn r4156000_an_attack_on_a_sweeper_takes_its_plain_attack_back() {
+        let mut state = sweep_board("r4156000-forecast");
+        let across = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({})); // 3/3
+        let beside = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({})); // 3/3
+        let fuse = put(&mut state, FUSE, slot(P2, Row::Units, 1), json!({})); // 2/20
+        // 2 back from either lane, where its weight would have made it 10 across and 6 beside.
+        for striker in [&across, &beside] {
+            assert_eq!(
+                forecast_and_play(&state, &striker.id, &fuse.id),
+                (3, 2, false, true)
+            );
+        }
+    }
+
+    #[test]
+    fn r4156000_a_first_strike_sweeper_does_not_fell_its_attacker_first() {
+        let mut state = sweep_board("r4156000-first-strike");
+        let striker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({})); // 3/3
+        let fuse = put(&mut state, FUSE, slot(P2, Row::Units, 1), json!({})); // 2/20
+        grant(&mut state, &fuse.id, Keyword::FirstStrike);
+        // Its First Strike hits for 2, short of 3 health, so the blow still lands; weighted, the 10 would
+        // have destroyed the attacker before it struck.
+        assert_eq!(
+            forecast_and_play(&state, &striker.id, &fuse.id),
+            (3, 2, false, true)
+        );
     }
 }

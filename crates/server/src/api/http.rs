@@ -1365,7 +1365,7 @@ pub fn log_warn(event: &str, data: Value) {
     tracing::warn!(event = event, data = %data);
 }
 
-/// §9.4: the circuit breaker alerts; §9.8: unusual rejection rates raise an alert. At `error`,
+/// §9.8: unusual rejection rates raise an alert. At `error`,
 /// marked `alert`, which `alerts::AlertLayer` hands to people as a GitHub issue and an email
 /// (#3595). `data` reaches only the email: the issue is public.
 pub fn log_alert(event: &str, data: Value) {

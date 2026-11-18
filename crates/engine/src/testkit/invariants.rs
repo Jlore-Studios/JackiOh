@@ -27,10 +27,11 @@
 //!      zones, never from `view_for`'s rules (R763, R764; a Glitch's reset or boards, R676, R678).
 //!   I7 no orphaned work (§9.3, §10.3, R113): a live game with no prompt open (§10.6, R265) has `work` empty;
 //!      a game over keeps its debt (I5; Classic #52 Final Gambit, #56 Spell Tyrant).
-//!   I8 every attack, switch, activation and play `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2,
-//!      §10.5; #1192, #2978), as the server reduces without `legal_actions`. Not probed: R345, R923000,
-//!      R79 and a well-formed `answer` (R90, #992); a malformed one is the fuzz's probe (#1574, #1694).
-//!      Under a Mayor (R1200) a target is refused.
+//!   I8 every attack, switch, activation, play, Trade, shop buy and shop sale `reduce` accepts is listed
+//!      (§4.1, §4.2, §6.3, §9.1, §10.2, §10.5; R1838000, R1853003; #1192, #2978, #4143), as the server
+//!      reduces without `legal_actions`. Not probed: R345, R923000, R79 and a well-formed `answer` (R90,
+//!      #992); a malformed one is the fuzz's probe (#1574, #1694). Under a Mayor (R1200) a target is
+//!      refused.
 //!   I9 the wire tells the truth (§10.3, §10.10, #1719): `turnEnded` names the turn under way (§2.2), each
 //!      `fatigue` is the next draw's `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902), the last `manaChanged`
 //!      is `mana` (§2.3), and no 1v1 hero's health moves without its `damage`, `healthLost`, `healed`,
@@ -109,6 +110,8 @@ pub const I6_GATE_STRIDE: usize = 5;
 /// I8 under the 1,000-seed waves: every this-many-th state (#1192); the test sweep checks every state.
 /// Measured on 2026-10-18 (2 cores), seeds 1–1000: `cargo jackioh fuzz` 103 s before I8, 104 s with
 /// this stride (`--handicap` 130 s, 129 s); I8 on every state, 314 s and 417 s.
+/// Measured on 2026-11-18 (4 cores), seeds 1–200, after #4143's Trade and Marketplace forges:
+/// `cargo jackioh fuzz` 50 s before, 51 s after, at this stride.
 pub const I8_GATE_STRIDE: usize = 100;
 
 /// I14 under every wave and the test sweep: every this-many-th state, and setup's always (#3062).
@@ -1716,11 +1719,13 @@ type PlayZoneGroup = (
     Option<RevealAt>,
 );
 
-/// I8 for one seat: every `switchPosition`, `attack`, `activate`, `activatePower` and `play` that
-/// `legal` does not hold and `reduce` accepts (§4.1, §4.2, §9.1, §10.2, §10.5; #2978). Switches,
-/// attacks and activations are built from the board alone; plays are forged at the card level (a
-/// playable hand or graveyard card no listed play names) and at the zone level (a real lane no listed
-/// play of an otherwise listed card names). Empty when clean.
+/// I8 for one seat: every `switchPosition`, `attack`, `activate`, `activatePower`, `trade`,
+/// `marketBuy`, `marketSell` and `play` that `legal` does not hold and `reduce` accepts (§4.1, §4.2,
+/// §6.3, §9.1, §10.2, §10.5; #2978, #4143). Switches, attacks and activations are built from the board
+/// alone; a `trade` and a `marketSell` are forged for every hand card and a `marketBuy` for every offer
+/// index in the Marketplace (#4143); plays are forged at the card level (a playable hand or graveyard
+/// card no listed play names) and at the zone level (a real lane no listed play of an otherwise listed
+/// card names). Empty when clean.
 pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBody]) -> Vec<String> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
@@ -1783,6 +1788,48 @@ pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBod
                     state.turn
                 ));
             }
+        }
+    }
+    // I8's forged deals (§10.2, §6.3; #4143): a `trade` and a `marketSell` for every hand card, whatever it
+    // is, and a `marketBuy` for every offer index the Marketplace holds, the other seat's lots among them.
+    // `why_trade_refused`, `why_market_buy_refused` and `why_market_sell_refused` are the reducer's own
+    // refusals (the limit, the Credits, the stock, the phase) and the listing's, so these fire only where
+    // the reducer's acceptance and the listing part ways.
+    for card in &state.players[player].hand {
+        if accepts(ActionBody::Trade {
+            instance_id: card.id.clone(),
+        }) {
+            found.push(format!(
+                "I8 unlisted trade accepted: {player} may trade {} on turn {}, though legalActions does not \
+                 list it (§10.2, R1838000)",
+                name_of(card),
+                state.turn
+            ));
+        }
+        if accepts(ActionBody::MarketSell {
+            instance_id: card.id.clone(),
+        }) {
+            found.push(format!(
+                "I8 unlisted marketSell accepted: {player} may sell {} on turn {}, though legalActions does \
+                 not list it (§10.2, R1853003, R1861000)",
+                name_of(card),
+                state.turn
+            ));
+        }
+    }
+    let offers = state.marketplace.as_ref().map_or(0, |market| market.offers.len());
+    for offer in 0..offers as i32 {
+        if accepts(ActionBody::MarketBuy { offer }) {
+            let lot = state
+                .marketplace
+                .as_ref()
+                .and_then(|market| crate::marketplace::offered_to(market, player).nth(offer as usize))
+                .map_or("no such offer", |(_, lot)| lot.def_id.as_str());
+            found.push(format!(
+                "I8 unlisted marketBuy accepted: {player} may buy offer {offer} ({lot}) on turn {}, though \
+                 legalActions does not list it (§10.2, R1853003, R2250002)",
+                state.turn
+            ));
         }
     }
     // I8's forged plays (§10.2, §10.5; #2978): a `play` `reduce` accepts that `legal` never lists.
@@ -3782,7 +3829,7 @@ impl InvariantMonitor {
     }
 
     /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack, switch,
-    /// activation and play `reduce` accepts. Empty when clean.
+    /// activation, play, Trade, buy and sale `reduce` accepts. Empty when clean.
     pub fn unlisted(&self, state: &GameState) -> Vec<String> {
         let Some(player) = crate::reduce::seat_to_act(state) else {
             return Vec::new();

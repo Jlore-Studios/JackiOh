@@ -38,7 +38,7 @@ import {
   type TrioInput,
   type TrioSlots,
 } from "../../net/api.ts";
-import { isRecord } from "../../wire/json.ts";
+import { isRecord, isSafeKey } from "../../wire/json.ts";
 import { pickedDeckCosmetics, type DeckCosmeticFields } from "../../cards/cosmetics.ts";
 import { deckVersionsFrom } from "./deckHistory.ts";
 import { messageOf } from "../../net/errors.ts";
@@ -287,6 +287,8 @@ function entriesFrom<T>(value: unknown, read: (raw: unknown) => T | null): Mirro
     if (!isRecord(raw)) continue;
     const item = read(raw.item);
     if (item === null) continue;
+    // Issue #4015 (defense in depth): a mirror id from outside never becomes an object key downstream.
+    if (!isSafeKey((item as { id: string }).id)) continue;
     entries.push({ item, dirty: raw.dirty === true });
   }
   return entries;

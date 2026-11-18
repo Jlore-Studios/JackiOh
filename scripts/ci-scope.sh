@@ -113,7 +113,9 @@
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
 #    tools' patches tests read; the ship case above takes precedence) tools, wasm, the first as well as server; crates/server/tests/'s
 #    actor/, api/, bots/, loops/ and support/ (acceptance.rs holds their helpers to support/'s,
-#    #2385) tools, wasm as well as server; and
+#    #2385) tools, wasm as well as server; crates/server/migrations/0068_v0_5_retcon.sql and
+#    0087_v0_5_13_retcon.sql (the tools' r2532000 and r3631001 retcon tests read them through
+#    repo_root().join(MIGRATIONS_REL), #4157) tools, wasm as well as server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
 #    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
 #    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
@@ -332,6 +334,7 @@ for file in $files; do
     crates/ai/*) on rust_ai rust_ai_slow rust_server rust_tools_wasm ;;
     crates/server/tests/actor/* | crates/server/tests/api/* | crates/server/tests/bots/* | crates/server/tests/loops/* | \
       crates/server/tests/support/*) on rust_server rust_tools_wasm ;;
+    crates/server/migrations/*) on rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
     crates/shared/* | crates/run/*) on rust_server rust_tools_wasm ;;
     crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;

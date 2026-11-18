@@ -918,6 +918,110 @@ fn r1861000_closed_on_the_opponents_turn_or_unflagged_it_does_not_sell() {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Issue #4143: the I8 oracle forges the Marketplace's buys and sales too (§10.2).
+
+/// I8's findings for p1 against the list `legal_actions` gives them.
+fn unlisted_of(state: &GameState) -> Vec<String> {
+    unlisted_accepted(state, P1, &legal_actions(state, P1))
+}
+
+/// `legal` without the one deal `left_out`, as the oracle reads a list that left a deal out.
+fn without_deal(legal: Vec<ActionBody>, left_out: &ActionBody) -> Vec<ActionBody> {
+    assert!(legal.contains(left_out), "{left_out:?} was listed");
+    legal.into_iter().filter(|body| body != left_out).collect()
+}
+
+#[test]
+fn i8_stays_clean_where_the_marketplace_refuses_a_deal_the_list_does_not_hold() {
+    let closed = board("i8-closed", "p1", json!({}), json!({}));
+    assert_eq!(unlisted_of(&closed), Vec::<String>::new(), "closed");
+
+    let mut open = closed.clone();
+    credits(&mut open, P1, 1000);
+    let offers = own_offers(&open, P1);
+    assert!(!offers.is_empty() && offers.len() < market(&open).offers.len());
+    assert_eq!(unlisted_of(&open), Vec::<String>::new(), "open, the full list");
+
+    let mut short = open.clone();
+    short.players[P1].market_credits = Some(0);
+    let mut spent = open.clone();
+    for (at, lot) in &offers {
+        let slot = slot_of(&open, P1, *at);
+        spent.marketplace.as_mut().expect("open").offers[slot].bought[P1] = lot.stock;
+    }
+    let mut theirs = open.clone();
+    theirs.active = P2;
+    let cases = [
+        ("short of Credits", &short, None),
+        ("out of stock", &spent, None),
+        ("the other seat's turn", &theirs, Some("it is not your turn")),
+    ];
+    for (name, state, why) in cases {
+        for (at, _) in &offers {
+            let refused = buy(state, P1, *at).error;
+            assert!(refused.is_some(), "{name}: buy {at} is refused");
+            if why.is_some() {
+                assert_eq!(refused.as_deref(), why, "{name}");
+            }
+        }
+        assert_eq!(
+            buys_listed(state, P1),
+            Vec::<i32>::new(),
+            "{name}: no buy is listed"
+        );
+        assert_eq!(unlisted_of(state), Vec::<String>::new(), "{name}");
+    }
+}
+
+#[test]
+fn i8_fires_on_a_buy_reduce_accepts_that_the_list_leaves_out() {
+    let mut state = board("i8-buy", "p1", json!({}), json!({}));
+    credits(&mut state, P1, 1000);
+    let (at, lot) = own_offers(&state, P1)[0].clone();
+    let legal = without_deal(legal_actions(&state, P1), &buy_of(at));
+    let found = unlisted_accepted(&state, P1, &legal);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(
+        found[0].starts_with("I8 unlisted marketBuy accepted"),
+        "{}",
+        found[0]
+    );
+    assert!(found[0].contains(&format!("offer {at}")), "{}", found[0]);
+    assert!(found[0].contains(&lot.def_id), "{}", found[0]);
+    assert!(found[0].contains("R1853003"), "{}", found[0]);
+    assert!(found[0].contains("§10.2"), "{}", found[0]);
+}
+
+#[test]
+fn i8_fires_on_a_sale_reduce_accepts_that_the_list_leaves_out() {
+    let mut state = hand_sale_board("i8-sale", json!({ "hand": ["fx-1", HAND_SALE] }), json!({}));
+    credits(&mut state, P1, 10);
+    let hand: Vec<String> = state.players[P1]
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect();
+    assert_eq!(sales_listed(&state, P1), vec![hand[1].clone()]);
+    assert!(
+        sell(&state, P1, &hand[0]).error.is_some(),
+        "the card with no sale is refused, so forging it is silent"
+    );
+    assert_eq!(unlisted_of(&state), Vec::<String>::new(), "the full list");
+
+    let legal = without_deal(legal_actions(&state, P1), &sell_of(&hand[1]));
+    let found = unlisted_accepted(&state, P1, &legal);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(
+        found[0].starts_with("I8 unlisted marketSell accepted"),
+        "{}",
+        found[0]
+    );
+    assert!(found[0].contains(&hand[1]), "{}", found[0]);
+    assert!(found[0].contains("R1853003"), "{}", found[0]);
+    assert!(found[0].contains("§10.2"), "{}", found[0]);
+}
+
+// ---------------------------------------------------------------------------------------------
 // Issue #3047: four offers a turn, the new price curve, a card bought at (0), Buffed and Nerfed
 // offers, and a Resource's quote in braces.
 

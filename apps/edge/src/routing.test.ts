@@ -63,6 +63,23 @@ describe("forServer", () => {
     expect(forwarded.headers.get("Sec-WebSocket-Protocol")).toBe("jackioh.v1");
     expect(forwarded.headers.get("Origin")).toBe("https://jackioh.com");
   });
+
+  it("forServer ignores hostile headers (#4015)", () => {
+    const headers = new Headers({ "X-Forwarded-For": "evil", "CF-Connecting-IP": "192.0.2.7" });
+    headers.append("__proto__", "x");
+    const forwarded = forServer(new Request("https://jackioh.com/api/queue", { headers }));
+    expect(forwarded.headers.get("X-Forwarded-For")).toBe("192.0.2.7");
+    expect(forwarded.headers.get("__proto__")).toBe("x");
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
+  it("containerEnv drops hostile settings keys (#4015)", () => {
+    const settings = JSON.parse('{"__proto__":{"polluted":true},"PUBLIC_ORIGINS":"https://jackioh.com"}');
+    const vars = containerEnv(settings);
+    expect(vars.PUBLIC_ORIGINS).toBe("https://jackioh.com");
+    expect(Object.hasOwn(vars, "__proto__")).toBe(false);
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
 });
 
 describe("containerEnv", () => {

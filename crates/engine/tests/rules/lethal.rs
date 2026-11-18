@@ -10,6 +10,7 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::subsystems::lethal::{defending_hero, is_lethal, projected_damage};
 
+use crate::rules::fixtures::board_geometry::{FUSE, register_geometry_fixtures};
 use crate::rules::fixtures::burn_toxic::{
     BOTH, FRAIL, NOXIOUS, PLAIN as BT_PLAIN, STONE, VOLCANIC, add_burn_toxic_fixtures,
 };
@@ -458,5 +459,28 @@ mod r4032000_lethal_after_conversion_and_the_pool {
         assert!(lethal(&state, &attacker, &unit_now(&state, &leech)));
         let after = act_ok(&state, attack_of(&attacker, &leech.id));
         assert!(after.state.result.is_some());
+    }
+}
+
+mod r4156000_a_first_strike_sweeper_projects_its_plain_strike_back {
+    use super::*;
+
+    /// R4156000, §4.3 step 1: a First Strike sweeper that is attacked strikes first with its plain attack,
+    /// so R44's projection lets an attacker that survives it land its blow and trample on.
+    #[test]
+    fn r4156000_a_trampler_into_a_first_strike_sweeper_still_tramples_to_lethal() {
+        let mut state = board("r4156000-trample");
+        register_geometry_fixtures();
+        let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({})); // 6/4 Trample
+        let fuse = put(&mut state, FUSE, slot(P2, Row::Units, 1), json!({})); // 2/20
+        edit(&mut state, &fuse, |card| {
+            card.damage = 18;
+            card.granted_keywords.push(Keyword::FirstStrike);
+        });
+        // 2 first leaves the trampler standing (weighted, 10 would have destroyed it first): its 6 meets
+        // the Fuse's 2 health left and the other 4 trample through.
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &fuse)), 4);
+        state.players.p2.hero.health = 4;
+        assert!(lethal(&state, &attacker, &unit_now(&state, &fuse)));
     }
 }

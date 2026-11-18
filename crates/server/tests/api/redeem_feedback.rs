@@ -13,8 +13,7 @@ use jackioh_server::api::http::{create_rate_limiter, error_response, rate_limite
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
     API_MAX_BODY_BYTES, API_REQUESTS_PER_MINUTE, CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR,
-    CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD,
-    REDEMPTION_CIRCUIT_WINDOW_SECONDS, REDEMPTION_IDENTICAL_ERROR,
+    CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, REDEMPTION_IDENTICAL_ERROR, REDEMPTION_PAUSE_MIRROR_SECONDS,
 };
 use jackioh_server::db::store::CodeAttempt;
 
@@ -56,9 +55,9 @@ fn window_ms() -> i64 {
     CODE_ATTEMPT_WINDOW_SECONDS * MS_PER_SECOND
 }
 
-/// The breaker's cooldown.
-fn breaker_cooldown_ms() -> i64 {
-    REDEMPTION_CIRCUIT_WINDOW_SECONDS * MS_PER_SECOND
+/// How long the server mirrors the database's pause (R4131000).
+fn pause_mirror_ms() -> i64 {
+    REDEMPTION_PAUSE_MIRROR_SECONDS * MS_PER_SECOND
 }
 
 fn retry_after_header_for(ms: i64) -> String {
@@ -557,30 +556,19 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r192_b8_gives_the_breaker_s_503_no_retry_after_only_rate_limited_carries_one() {
-        // The threshold is `config.rs`'s, so the window is filled to one short of it with other
-        // accounts' failures from another address, and the caller's own miss crosses it.
+    async fn r192_b8_gives_the_pause_s_503_no_retry_after_only_rate_limited_carries_one() {
+        // R4131000: the operator's pause is the only 503; the store answers it, then the mirror.
         let app = code_app().await;
-        let caller = seed_caller(&app, "trips-breaker").await;
-        flood_address(
-            &app,
-            REDEMPTION_CIRCUIT_FAILURE_THRESHOLD - 1,
-            "earlier",
-            "hash-elsewhere",
-            now_ms(),
-        )
-        .await;
+        fake_lock(&app).await.redemption.enabled = Arc::new(|| false);
+        let caller = seed_caller(&app, "paused-press").await;
 
-        assert_eq!(
-            redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP)
-                .await
-                .status,
-            400
-        );
-        let blocked = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
+        let from_store = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
+        let from_mirror = redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await;
 
-        assert_eq!(blocked.status, 503);
-        assert_eq!(blocked.retry_after(), None);
+        for blocked in [from_store, from_mirror] {
+            assert_eq!(blocked.status, 503);
+            assert_eq!(blocked.retry_after(), None);
+        }
     }
 
     #[tokio::test(start_paused = true)]
@@ -599,12 +587,12 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         );
         assert_eq!(redeem(&app, &caller.token, &minted, DEFAULT_IP).await.status, 503);
 
-        // Now it does: the status says paused, with the breaker's cooldown as the wait…
+        // Now it does: the status says paused, with the mirror's span as the wait…
         let paused = code_status(&app, &caller.token).await;
         assert_eq!(paused["redemptionEnabled"], json!(false));
         let wait = paused["retryAfterMs"].as_i64().expect("retryAfterMs");
         assert!(wait > 0);
-        assert!(wait <= breaker_cooldown_ms());
+        assert!(wait <= pause_mirror_ms());
 
         // …and a second press is refused before the store logs another attempt.
         assert_eq!(redeem(&app, &caller.token, &minted, DEFAULT_IP).await.status, 503);

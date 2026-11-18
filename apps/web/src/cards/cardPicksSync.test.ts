@@ -281,4 +281,16 @@ describe("R1834000 each card's picks live on the account", () => {
     screenA.unmount();
     screenB.unmount();
   });
+
+  it("a hostile account answer replaces nothing polluted (#4015)", async () => {
+    const account = fakeAccount();
+    account.load = vi.fn(async () =>
+      JSON.parse(
+        `{"cards":[{"cardId":"__proto__","foil":"${FOIL}"},{"cardId":"constructor","foil":"${FOIL}"},{"cardId":"core-004","foil":"${FOIL}"}]}`,
+      ),
+    );
+    await start(account).settled();
+    expect(readAllCardPicks()).toEqual({ "core-004": { foil: FOIL } });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
 });

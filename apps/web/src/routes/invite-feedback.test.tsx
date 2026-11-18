@@ -538,7 +538,7 @@ describe("R192 a stated wait lifts by itself", () => {
     }
   });
 
-  it("R192 paused redemption says how long, and lifts when the breaker's wait is over", async () => {
+  it("R192 paused redemption says how long, and lifts when the pause's wait is over", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
     try {
       const wait = 5 * 60_000;

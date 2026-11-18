@@ -160,6 +160,13 @@ describe("the email's text", () => {
   it("says none for an alert with no fields", () => {
     expect(emailOf(SITE, BUILD, { fields: {}, at: AT }, { kind: "notFiled" }).text).toContain("Details:\n  (none)\n");
   });
+
+  it("emailOf with proto field names does not pollute (#4015)", () => {
+    const fields = JSON.parse('{"__proto__":{"polluted":true},"cause":"start"}');
+    const { text } = emailOf(SITE, BUILD, { fields, at: AT }, { kind: "notFiled" });
+    expect(text).toContain("cause: start");
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
 });
 
 describe("emailKey", () => {

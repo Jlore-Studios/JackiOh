@@ -43,7 +43,7 @@ First Strike moves **that unit's** strike into step 1, on whichever side of the 
 
 Lane strike (M #97.5 Bunker): a Unit with it has its attack multiplied (3× for Bunker) in combat with the opposing Unit directly across in the same lane, a GIGA across in either of its lanes included ([[R3546001]]), evaluated once per combat encounter ([[R94]]); an attack on a hero or on a Unit of another lane deals its plain attack. The multiplier scales with First Strike and buffs, and the target's Armor comes off after the multiplied damage is calculated ([[R1283]]).
 
-Sweep (Stinkyscape+ #107 Fuse): its attack hits every enemy Unit in its lane for 5 times its attack (Radiant 7) and every enemy Unit in the adjacent lanes for 3 times (Radiant 4), as one damage instance each; a declared target outside the sweep takes a normal hit ([[R3554008]]).
+Sweep (Stinkyscape+ #107 Fuse): its attack hits every enemy Unit in its lane for 5 times its attack (Radiant 7) and every enemy Unit in the adjacent lanes for 3 times (Radiant 4), as one damage instance each; a declared target outside the sweep takes a normal hit ([[R3554008]]). The weight is on its own attacks alone: a Unit with it that is attacked strikes back with its plain attack, at its attacker alone ([[R4156000]]).
 
 ### 4.4 One damage instance
 

@@ -424,6 +424,17 @@ describe("parseServerFrame", () => {
     expect(parseServerFrame(JSON.stringify({ type: "clock", now: 1 }))).toBeNull();
     expect(parseServerFrame("[]")).toBeNull();
   });
+
+  it("a frame with proto keys does not pollute (#4015)", () => {
+    expect(parseServerFrame('{"type":"nope","__proto__":{"polluted":true}}')).toBeNull();
+    expect(parseServerFrame('{"type":"nope","constructor":{"prototype":{"polluted":true}}}')).toBeNull();
+    expect(parseServerFrame('{"type":"ack","nonce":"n","seq":1,"__proto__":{"polluted":true}}')).toEqual({
+      type: "ack",
+      nonce: "n",
+      seq: 1,
+    });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
 });
 
 describe("remainingMs", () => {

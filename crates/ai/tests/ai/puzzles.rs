@@ -259,7 +259,7 @@ mod tactics_b18 {
     /// the AI's five units and its hero before the enemy hero, 24 plays at its own side ahead of any at
     /// the enemy. It attacks first, and burns the face below the root. How many Burns to fire is the
     /// evaluation's to judge: the next turn's swing reaches the enemy either way, and a Burn kept can clear
-    /// a blocker. A learned network keeps one (#466).
+    /// a blocker. The learned network (#466, retired by R4159000) kept one.
     #[test]
     fn five_attacks_then_four_burns_to_the_face_past_twenty_four_plays_at_its_own_side() {
         let run = puzzle(

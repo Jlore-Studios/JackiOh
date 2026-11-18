@@ -879,7 +879,7 @@ describe("R377 public statistics match type", () => {
     expect(order()).toEqual(["core-001", "core-003", "core-002"]);
   });
 
-  it("R3022000 shows each enough-games card's tier, sorts by tier with S first, and says what tiers mean and how far cards differ", async () => {
+  it("R3022000 R4155000 shows each enough-games card's tier and sorts by tier with S first, with no tiers note", async () => {
     const user = userEvent.setup();
     const tiered: Record<string, object> = {
       // Above the band and sure of it, though Aqua Warden's rate is higher: its range still reaches 50%.
@@ -914,11 +914,9 @@ describe("R377 public statistics match type", () => {
     await user.click(header);
     expect(order()).toEqual(["core-003", "core-001", "core-002"]);
 
-    // What the tiers mean, from the server's band, and the measured spread.
-    const note = screen.getByTestId(statsTestid.tiersNote);
-    expect(note).toHaveTextContent("Tier S is above 55% with its whole 95% range above 50%: a nerf candidate.");
-    expect(note).toHaveTextContent("Tier F is below 45%");
-    expect(note).toHaveTextContent("Read against 412 cards: the average card reads 50%, and real cards differ by about 3.4 points");
+    // R4155000: no tiers note; the tiers show in the table alone.
+    expect(screen.queryByText(/nerf candidate/)).toBeNull();
+    expect(screen.queryByText(/Read against .* cards/)).toBeNull();
 
     // The grid shows the tier too.
     await user.click(screen.getByTestId(statsTestid.viewGrid));
@@ -928,7 +926,7 @@ describe("R377 public statistics match type", () => {
     expect(within(item("core-002")).getByTestId(statsTestid.tierCell)).toHaveTextContent("—");
   });
 
-  it("R3070000 says what a card always in hand and the Dormant Starship are read against, the average deck's win rate", async () => {
+  it("R3070000 R4155000 a field naming the average deck's win rate shows no note saying so", async () => {
     const tiers = { center: 0.02, spread: 0.034, cards: 412, baseline: 0.4875, bandLow: 0.45, bandHigh: 0.55 };
     vi.stubGlobal(
       "fetch",
@@ -936,12 +934,11 @@ describe("R377 public statistics match type", () => {
     );
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
-    expect(screen.getByTestId(statsTestid.tiersNote)).toHaveTextContent(
-      "A card that is almost never left undrawn, such as a Quickdraw card, and the Dormant Starship are read against the average deck, which wins 48.8% of its games.",
-    );
+    expect(screen.queryByText(/almost never left undrawn/)).toBeNull();
+    expect(screen.queryByText(/nerf candidate/)).toBeNull();
   });
 
-  it("R3022000 a field too small to measure says the spread is assumed, and a server without tiers shows none", async () => {
+  it("R3022000 R4155000 a field too small to measure shows no note either, and a server without tiers shows none", async () => {
     const tiers = { center: 0, spread: 0.05, cards: 0, bandLow: 0.45, bandHigh: 0.55 };
     vi.stubGlobal(
       "fetch",
@@ -949,9 +946,8 @@ describe("R377 public statistics match type", () => {
     );
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
-    expect(screen.getByTestId(statsTestid.tiersNote)).toHaveTextContent(
-      "Too few cards have enough games to measure the rest against: the average card is taken to read 50%, and real cards to differ by about 5.0 points.",
-    );
+    expect(screen.queryByText(/Too few cards have enough games/)).toBeNull();
+    expect(screen.queryByText(/nerf candidate/)).toBeNull();
     cleanup();
     // R3206000: another server, another visit: nothing the first one kept is fresh for it.
     clearReadCache();
@@ -963,7 +959,7 @@ describe("R377 public statistics match type", () => {
     render(<StatsRoute />);
     const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     expect(within(table).getAllByTestId(statsTestid.tierCell).map((cell) => cell.textContent)).toEqual(["—", "—", "—"]);
-    expect(screen.queryByTestId(statsTestid.tiersNote)).not.toBeInTheDocument();
+    expect(screen.queryByText(/nerf candidate/)).toBeNull();
   });
 
   it("R3184001 with the ranges shown a tier shows how much of the card's range is in it, and a tier's cards sort by it", async () => {
@@ -1002,9 +998,8 @@ describe("R377 public statistics match type", () => {
     expect(within(row("core-001")).getByTestId(statsTestid.tierFit)).toHaveTextContent("42%");
     expect(within(row("core-003")).getByTestId(statsTestid.tierFit)).toHaveTextContent("75%");
     expect(within(row("core-002")).queryByTestId(statsTestid.tierFit)).toBeNull();
-    expect(screen.getByTestId(statsTestid.rangesNote)).toHaveTextContent(
-      "The percentage under a tier is how much of the card's Adjusted range lies inside that tier.",
-    );
+    // R4155000: the fit shows under the tier, with no line saying what it means.
+    expect(screen.queryByText(/how much of the card's Adjusted range/)).toBeNull();
 
     // The grid shows it under the tier too.
     await user.click(screen.getByTestId(statsTestid.viewGrid));
@@ -1035,7 +1030,7 @@ describe("R377 public statistics match type", () => {
     expect(orderAgain()).toEqual(["core-003", "core-001", "core-002"]);
   });
 
-  it("R2895000 Show 95% ranges puts each enough-games card's Win rate and Adjusted ranges under them, in the table and the grid", async () => {
+  it("R2895000 R4155000 Show 95% ranges puts each enough-games card's Win rate and Adjusted ranges under them, in the table and the grid, with no line saying what a range means", async () => {
     const user = userEvent.setup();
     const ranges: Record<string, object> = {
       "core-001": { winRateLow: 0.462, winRateHigh: 0.722, adjustedLow: 0.4452, adjustedHigh: 0.6228 },
@@ -1057,7 +1052,7 @@ describe("R377 public statistics match type", () => {
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryAllByTestId(statsTestid.adjustedRange)).toHaveLength(0);
     expect(screen.queryAllByTestId(statsTestid.winRateRange)).toHaveLength(0);
-    expect(screen.queryByTestId(statsTestid.rangesNote)).not.toBeInTheDocument();
+    expect(screen.queryByText(/true rate most likely/)).toBeNull();
 
     await user.click(toggle);
     expect(toggle).toHaveAttribute("aria-pressed", "true");
@@ -1072,7 +1067,8 @@ describe("R377 public statistics match type", () => {
     expect(shown(row("core-002"), statsTestid.winRateRange)).toEqual([]);
     expect(shown(row("core-003"), statsTestid.adjustedRange)).toEqual([]);
     expect(shown(row("core-003"), statsTestid.winRateRange)).toEqual(["33–67%"]);
-    expect(screen.getByTestId(statsTestid.rangesNote)).toBeInTheDocument();
+    // R4155000: the ranges show with no line saying what they mean.
+    expect(screen.queryByText(/true rate most likely/)).toBeNull();
 
     // The grid shows them too.
     await user.click(screen.getByTestId(statsTestid.viewGrid));
@@ -1086,7 +1082,7 @@ describe("R377 public statistics match type", () => {
     await user.click(screen.getByTestId(statsTestid.rangesToggle));
     expect(screen.queryAllByTestId(statsTestid.adjustedRange)).toHaveLength(0);
     expect(screen.queryAllByTestId(statsTestid.winRateRange)).toHaveLength(0);
-    expect(screen.queryByTestId(statsTestid.rangesNote)).not.toBeInTheDocument();
+    expect(screen.queryByText(/true rate most likely/)).toBeNull();
   });
 
   it("R4084000 the bar sits in the Adjusted cell sized by the adjusted rate, the Win rate cell keeps its text and range, and no bar shows below the floor or without an adjusted rate", async () => {
@@ -2406,8 +2402,8 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
   const SHEEP = { ...created("core-t-sheep", "Sheep Token", 40, 0.7, 0, null), tier: "A", adjustedWinRate: 0.533 };
   /** 12 seats, too few for a rate however many won: no tier, and its adjusted rate unshown. */
   const GHOUL = { ...created("core-t-ghoul", "Ghoul Token", 12, 0.9, 0, null), tier: null, adjustedWinRate: 0.6 };
-  /** The Coin, which the catalog holds as no card: 40 seats, 30 used it (50%) and 10 did not (30%), 18 won (45%). */
-  const COIN = { ...created("coin", "The Coin", 30, 0.5, 10, 0.3), tier: "D", adjustedWinRate: 0.471 };
+  /** The Coin (core-t-coin, a catalog token): 40 seats, 30 used it (50%) and 10 did not (30%), 18 won (45%). */
+  const COIN = { ...created("core-t-coin", "The Coin", 30, 0.5, 10, 0.3), cost: 0, tier: "D", adjustedWinRate: 0.471 };
   /** A Created copy of a deck card: no token. 30 seats, each used it, 15 won. */
   const COPY = { ...created("core-001", "Spark Pup", 30, 0.5, 0, null), tier: "C", adjustedWinRate: 0.49 };
 
@@ -2423,18 +2419,18 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     );
   }
 
-  /** The table's rows as their card ids, and each row's cells after its name. */
+  /** The table's rows as their card ids, and each row's cells (a row opens its card, so it is a button, not a row). */
   function rowsOf(table: HTMLElement): { ids: (string | null)[]; cells: string[][] } {
-    const rows = within(table).getAllByRole("row").slice(1);
+    const rows = [...table.querySelectorAll("tbody tr")];
     return {
       ids: rows.map((row) => row.getAttribute("data-card-id")),
       cells: rows.map((row) => [...row.querySelectorAll("td")].map((td) => td.textContent ?? "")),
     };
   }
 
-  const COLUMNS = ["Games", "Tier", "Adjusted ↓", "Win rate", "Used", "Not used", "Used Radiant", "Used normal", "Used vs not used"];
+  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓", "Win rate"];
 
-  it("R3887000 the Tokens and Other created cards list a catalog card as plain text, and The Coin keeps its name", async () => {
+  it("R3887000 the Tokens and Other created cards list a catalog card as plain text, The Coin among them", async () => {
     window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
     render(<StatsRoute />);
@@ -2449,12 +2445,12 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     const rush = within(rowOf(tokens, "core-t-rush")).getByTestId(statsTestid.plainCard);
     expect(rush).toHaveTextContent(readerName(CATALOG["core-t-rush"]!));
     expect(within(rowOf(other, "core-001")).getByTestId(statsTestid.plainCard)).toHaveAttribute("data-card-id", "core-001");
-    const coin = rowOf(other, "coin");
-    expect(within(coin).queryByTestId(statsTestid.plainCard)).toBeNull();
-    expect(within(coin).getByRole("rowheader")).toHaveTextContent("The Coin");
+    // The Coin is a catalog token (core-t-coin), so it lists as plain text in the Tokens table.
+    const coin = within(rowOf(tokens, "core-t-coin")).getByTestId(statsTestid.plainCard);
+    expect(coin).toHaveAttribute("data-card-id", "core-t-coin");
   });
 
-  it("R2089000 R2370000 R3324002 R4082000 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
+  it("R2089000 R2370000 R3324002 R4082000 R4155000 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
     const tiers = { center: 0, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 };
     const field = { center: 0.052, spread: 0.041, cards: 36, baseline: 0.552 };
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, tiers: { ...tiers, created: field }, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
@@ -2466,44 +2462,47 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(screen.getByRole("tabpanel")).toContainElement(others);
     expect(within(tokens).getByRole("heading", { name: "Tokens" })).toBeInTheDocument();
     expect(within(others).getByRole("heading", { name: "Other created cards" })).toBeInTheDocument();
-    expect(tokens).toHaveTextContent("Each needs 20 games");
-    expect(others).toHaveTextContent("generated and Discovered cards, copies and The Coin");
+    // R4155000: no hint paragraph and no tiers line in either section.
+    for (const panel of [tokens, others]) {
+      expect(panel.querySelector("p")).toBeNull();
+    }
+    expect(screen.queryByText(/Each needs 20 games/)).toBeNull();
+    expect(screen.queryByText(/generated and Discovered cards/)).toBeNull();
+    expect(screen.queryByText(/against the other Created cards/)).toBeNull();
     // The tokens come first.
     expect(tokens.compareDocumentPosition(others) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    // R4082000: each section says what its tiers are read against, from the server's Created field.
-    for (const panel of [tokens, others]) {
-      expect(within(panel).getByTestId(statsTestid.createdTiersNote)).toHaveTextContent(
-        "win 55.2% of their games, +5.2 points against the average deck, and real ones differ by about 4.1 points",
-      );
-    }
-
-    // One table, the same columns, opened on Adjusted, best first, a row under the floor last (R4082000).
+    // One table, the deck table's columns, opened on Adjusted, best first, a row under the floor last (R4082000, R4155000).
     const tokenTable = within(tokens).getByTestId(statsTestid.tokensTable);
     const otherTable = within(others).getByTestId(statsTestid.createdTable);
-    expect(within(tokenTable).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(["Token", ...COLUMNS]);
-    expect(within(otherTable).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(["Card", ...COLUMNS]);
+    expect(within(tokenTable).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(COLUMNS);
+    expect(within(otherTable).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(COLUMNS);
+    // The thumbnail badge reads the cost, and the name links as the deck table's.
+    const rushRow = tokenTable.querySelector('tr[data-card-id="core-t-rush"]') as HTMLElement;
+    expect(rushRow.querySelector(".stats-card-thumb-badge")).toHaveTextContent("1");
+    expect(rushRow.querySelector(".stats-card-name-link")).toHaveTextContent("Rush Token");
+    // The Coin is a catalog token (core-t-coin), so it stands in the Tokens table with a 0-cost badge.
+    const coinRow = tokenTable.querySelector('tr[data-card-id="core-t-coin"]') as HTMLElement;
+    expect(coinRow.querySelector(".stats-card-thumb-badge")).toHaveTextContent("0");
     expect(rowsOf(tokenTable)).toEqual({
-      ids: ["core-t-sheep", "core-t-rush", "core-t-ghoul"],
+      ids: ["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"],
       cells: [
-        ["40", "A", "53.3%", "70%", "70%", "—", "—", "70%", "—"],
-        // The 8 Radiant seats are below R654's floor: no 75%.
-        ["55", "B", "52.1%", "56%", "60%", "52%", "—", "55%", "+8%"],
-        ["12", "—", "—", "—", "—", "—", "—", "—", "—"],
+        ["1", "Sheep Token", "40", "A", "53.3%", "70%"],
+        ["1", "Rush Token", "55", "B", "52.1%", "56%"],
+        ["0", "The Coin", "40", "D", "47.1%", "45%"],
+        ["1", "Ghoul Token", "12", "—", "—", "—"],
       ],
     });
     expect(rowsOf(otherTable)).toEqual({
-      ids: ["core-001", "coin"],
-      cells: [
-        ["30", "C", "49.0%", "50%", "50%", "—", "—", "50%", "—"],
-        ["40", "D", "47.1%", "45%", "50%", "—", "—", "50%", "—"],
-      ],
+      ids: ["core-001"],
+      cells: [["1", "Spark Pup", "30", "C", "49.0%", "50%"]],
     });
 
-    // A header sorts its own table alone.
+    // A header sorts its own table alone. Rush has 55 games; Sheep and The Coin tie at 40 and
+    // keep the server's order, Ghoul's 12 last.
     fireEvent.click(within(tokenTable).getByRole("columnheader", { name: "Games" }));
-    expect(rowsOf(tokenTable).ids).toEqual(["core-t-rush", "core-t-sheep", "core-t-ghoul"]);
-    expect(rowsOf(otherTable).ids).toEqual(["core-001", "coin"]);
+    expect(rowsOf(tokenTable).ids).toEqual(["core-t-rush", "core-t-coin", "core-t-sheep", "core-t-ghoul"]);
+    expect(rowsOf(otherTable).ids).toEqual(["core-001"]);
 
     // No token is a row of the deck table.
     const deck = screen.getByTestId(statsTestid.cardsTable);
@@ -2515,8 +2514,8 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(rowsOf(screen.getByTestId(statsTestid.tokensTable)).ids).toEqual(["core-t-rush"]);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
     fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "coin" } });
-    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
-    expect(rowsOf(screen.getByTestId(statsTestid.createdTable)).ids).toEqual(["coin"]);
+    expect(rowsOf(screen.getByTestId(statsTestid.tokensTable)).ids).toEqual(["core-t-coin"]);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
 
     // The Sets tab counts the deck cards alone and shows neither section.
     fireEvent.click(screen.getByTestId(statsTestid.tabSets));
@@ -2528,7 +2527,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
 
   it("R3324002 no Show tokens control, and an old address's tokens=1 opens the page as any other", async () => {
     at("/stats?tokens=1");
-    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN] });
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
     render(<StatsRoute />);
 
     await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
@@ -2556,8 +2555,144 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
 
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [COIN] });
     render(<StatsRoute />);
-    await screen.findByTestId(statsTestid.createdPanel, undefined, SLOW);
-    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
+    await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+  });
+
+  it("R4155000 a Created row opens the drill-down and ?card=: a token's face and figures, The Coin's face and figures with empty deck-only sections", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname === "/api/stats/cards") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN] }), { status: 200 }),
+          );
+        }
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                card: {
+                  id,
+                  name: id === "core-t-coin" ? "The Coin" : "Rush Token",
+                  cost: id === "core-t-coin" ? 0 : 1,
+                  rarity: "Token",
+                },
+                patches: [],
+                byTurn: [],
+                coPlayed: [],
+              }),
+              { status: 200 },
+            ),
+          );
+        }
+        return Promise.resolve(new Response("{}", { status: 200 }));
+      }),
+    );
+    render(<StatsRoute />);
+    const tokensTable = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+
+    // Clicking a token row opens the drill-down on it, with ?card= in the address.
+    const rushRow = tokensTable.querySelector('tr[data-card-id="core-t-rush"]') as HTMLElement;
+    fireEvent.click(rushRow);
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    expect(new URLSearchParams(window.location.search).get("card")).toBe("core-t-rush");
+    // Its card face and its figures show; with no played games the deck-only sections show their empty states.
+    expect(modal.querySelector(".stats-drilldown-face")).not.toBeNull();
+    expect(within(modal).getByText("Win rate by turn played")).toBeInTheDocument();
+    expect(within(modal).getByText("No games recorded with this card played.")).toBeInTheDocument();
+    expect(within(modal).getByText("No co-played cards recorded.")).toBeInTheDocument();
+    expect(within(modal).queryByText("Details unavailable.")).toBeNull();
+
+    // Escape closes it and drops ?card=.
+    press("Escape");
+    expect(screen.queryByTestId(statsTestid.drillDownModal)).toBeNull();
+    expect(new URLSearchParams(window.location.search).has("card")).toBe(false);
+
+    // Enter on The Coin (core-t-coin, a catalog token): its face and figures show with the same
+    // empty deck-only states, no error. The real GET /api/stats/cards/:id 200s for it, since the catalog
+    // holds its def and the server lists only catalog ids in `created`.
+    const coinRow = tokensTable.querySelector('tr[data-card-id="core-t-coin"]') as HTMLElement;
+    fireEvent.keyDown(coinRow, { key: "Enter" });
+    const coinModal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    expect(new URLSearchParams(window.location.search).get("card")).toBe("core-t-coin");
+    expect(coinModal.querySelector(".stats-drilldown-face")).not.toBeNull();
+    expect(within(coinModal).getByText("Win rate by turn played")).toBeInTheDocument();
+    expect(within(coinModal).getByText("No games recorded with this card played.")).toBeInTheDocument();
+    expect(within(coinModal).getByText("No co-played cards recorded.")).toBeInTheDocument();
+    expect(within(coinModal).queryByText("Details unavailable.")).toBeNull();
+  });
+
+  it("R4155000 the Columns toggle hides Games in the Created tables too", async () => {
+    const user = userEvent.setup();
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    const headersOf = (testid: string): (string | null)[] =>
+      within(screen.getByTestId(testid)).getAllByRole("columnheader").map((th) => th.textContent);
+    expect(headersOf(statsTestid.tokensTable)).toContain("Games");
+
+    await user.click(screen.getByTestId(statsTestid.columnGames));
+    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Win rate"]);
+    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Win rate"]);
+
+    await user.click(screen.getByTestId(statsTestid.columnGames));
+    expect(headersOf(statsTestid.tokensTable)).toEqual(COLUMNS);
+  });
+
+  it("R4155000 no explanatory paragraph renders on the Cards, Sets or Players tabs", async () => {
+    const user = userEvent.setup();
+    const tiers = { center: 0.021, spread: 0.034, cards: 412, baseline: 0.4875, bandLow: 0.45, bandHigh: 0.55 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname === "/api/stats/cards") {
+          return Promise.resolve(
+            new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, tiers, created: [RUSH, COIN] }), { status: 200 }),
+          );
+        }
+        if (url.pathname === "/api/stats/players") {
+          return Promise.resolve(new Response(JSON.stringify(MOCK_PLAYERS), { status: 200 }));
+        }
+        return Promise.resolve(new Response("{}", { status: 200 }));
+      }),
+    );
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+
+    // Cards tab: none of the removed paragraphs; the kept states still render.
+    for (const words of [
+      /nerf candidate/,
+      /Read against .* cards/,
+      /almost never left undrawn/,
+      /Tokens made during/,
+      /generated and Discovered cards/,
+      /Win rate is of the seats/,
+      /against the other Created cards/,
+      /Counted over/,
+    ]) {
+      expect(screen.queryByText(words)).toBeNull();
+    }
+    expect(screen.getByTestId(statsTestid.gamesFew)).toHaveTextContent("Not enough games on this patch yet.");
+
+    // The ranges toggle adds ranges, not the ranges note.
+    await user.click(screen.getByTestId(statsTestid.rangesToggle));
+    expect(screen.queryByText(/true rate most likely/)).toBeNull();
+    await user.click(screen.getByTestId(statsTestid.rangesToggle));
+
+    // Sets tab: no intro and no footnote; the table still renders.
+    await user.click(screen.getByTestId(statsTestid.tabSets));
+    await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    expect(screen.queryByText(/How each set's cards do/)).toBeNull();
+    expect(screen.queryByText(/marks the highest win rate/)).toBeNull();
+
+    // Players tab: no note; the table still renders.
+    await user.click(screen.getByTestId(statsTestid.tabPlayers));
+    await screen.findByTestId(statsTestid.playersTable, undefined, SLOW);
+    expect(screen.queryByText(/public by default/)).toBeNull();
   });
 });
 

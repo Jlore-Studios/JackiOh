@@ -376,6 +376,12 @@ pub struct EvalWeights {
     /// (`afflicted_before_swing`). `unit_worth` is untouched: its affliction discount already prices the unit
     /// (R3822000). Off, every unit that may swing counts, as before.
     pub affliction_kills_before_swing: bool,
+    /// R4170000, #4170: whether `evaluate`'s threat and pressure terms, where they read a side's attacks as this
+    /// turn's (`NextSwing` has that side, on turn, swing first), apply the engine's refusals of this turn: a Frozen
+    /// unit counts no attack, though it thaws at this turn's cleanup, one summoning sick without Rush or Charge
+    /// none, and one with Rush but no Charge none on the hero. `face_threat`'s end-of-turn read,
+    /// `could_attack_next_turn`, `can_swing` and `unit_worth` are untouched. Off, such a unit counts as before.
+    pub frozen_sick_before_swing: bool,
     /// R3550001, R3560007, #3909: whether `face_threat` and `damage_past_taunts_with` read the two static
     /// attack flags the engine applies outside the plain Taunt walk. A unit that can only attack the Unit
     /// directly across (S+ #37 Scorch) never may hit a hero, so `face_threat` asks `attack_restriction` of
@@ -606,6 +612,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     gauntlet_bars_face_attacks: true,
     brittle_crumbles_before_swing: true,
     affliction_kills_before_swing: true,
+    frozen_sick_before_swing: true,
     static_attack_flags_read: true,
     best_attack_order_past_taunts: true,
     exile_on_damage_read: true,
@@ -820,8 +827,8 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
-/// `affliction_kills_before_swing`, `static_attack_flags_read`, `best_attack_order_past_taunts`,
-/// `exile_on_damage_read`, `pool_and_conversion_read`) is off.
+/// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
+/// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -836,6 +843,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     gauntlet_bars_face_attacks: false,
     brittle_crumbles_before_swing: false,
     affliction_kills_before_swing: false,
+    frozen_sick_before_swing: false,
     static_attack_flags_read: false,
     best_attack_order_past_taunts: false,
     exile_on_damage_read: false,

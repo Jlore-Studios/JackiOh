@@ -29295,5 +29295,79 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.6f",
+    "date": "2026-11-18",
+    "title": "Card loadouts and picks ignore prototype-pollution keys",
+    "source": "#4015",
+    "notes": "Hardens the card-looks parsers touched by #4015 (loadouts and card-picks sync under apps/web/src/cards/): outside card ids of __proto__, constructor or prototype are skipped before they become object keys. No picture renders differently for legitimate ids.",
+    "player": {
+      "title": "Steadier card loadouts",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Saved card looks with damaged data no longer risk changing other cards on the page."
+      ]
+    },
+    "commits": [
+      "179b6fcc2f583f94b1a39d41a406c04c01256494"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.6g",
+    "date": "2026-11-18",
+    "title": "Patch: the sound tables load when sound first needs them, so the first page load is about 100 KB lighter",
+    "source": "#4130",
+    "notes": "The static sound tables and json5 parser load when sound first needs them, keeping them out of the first page load.",
+    "player": {
+      "title": "Faster initial page load",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Sound data and audio tables now load on demand rather than on first page visit, reducing the initial download size."
+      ]
+    },
+    "commits": [
+      "addbe49ae96824b638c54a8e93faae15da9ff9a6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.6h",
+    "date": "2026-11-18",
+    "title": "Patch: a Fuse that is attacked strikes back with its plain attack, since only its own attacks are multiplied",
+    "source": "#4156",
+    "notes": "R4156000: a sweeper that is attacked (Stinkyscape+ #107 Fuse) strikes back with its plain attack, 2 (Radiant 4), where it took its sweep's weight on that attacker (10 across its lane, 6 beside it; Radiant 28 and 16); only its own attacks carry the sweep's weight (R3554008). Combat, the combat forecast, My Pawn's First Strike projection and the AI's exchange read combat::strike_back_multiplier_for. The claimed play is the family classify's stage 2 names: its unforced games against the base build diverge on S+ #120 Crawler (stage 2 names the card whose actions diverge, not the Fuse that strikes back). Replays where a Fuse was attacked are refused as rules_changed (R767000).",
+    "player": {
+      "title": "Fuse hits back for its printed attack",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Fuse hits back for its printed attack when it is attacked; only its own attacks are multiplied."
+      ]
+    },
+    "commits": [
+      "b59e26eef168e3f481da9a563103f7982c08c684"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-120"
+    ],
+    "changes": []
   }
 ]
