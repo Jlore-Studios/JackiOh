@@ -16718,24 +16718,22 @@
     "what": "plan #4187 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-18T13:57:50Z",
+    "at": "2026-11-18T14:12:13Z",
     "notes": [
-      "#4180 needs a plan",
-      "#4181 needs a plan",
-      "#4185 needs a plan",
-      "#4187 needs a plan",
-      "#4189 needs a plan",
-      "#4197 needs a plan",
-      "#4173: @MaxGoetzmann answered its question, so it is queued again with the answer",
-      "started revise #4173 on claude-7 (run 44319424875)",
-      "started plan #4189 on muse (run 44319564969)",
-      "started plan #4180 on muse (run 44319724386)",
-      "started plan #4185 on muse (run 44319882600)",
-      "started plan #4197 on muse (run 44320029618)",
-      "started plan #4181 on agy (run 44320172817)",
-      "started plan #4187 on claude-8 (run 44320320594)",
+      "delivered plan #4187 on claude-8 (run 44320320594): planned",
+      "delivered plan #4197 on muse (run 44320029618): planned",
+      "delivered plan #4185 on muse (run 44319882600): planned",
+      "delivered plan #4180 on muse (run 44319724386): planned",
+      "delivered plan #4189 on muse (run 44319564969): planned",
+      "started build #4189 on muse (run 44322732341)",
+      "started build #4180 on muse (run 44322867952)",
+      "started build #4185 on muse (run 44323002303)",
+      "started revise #4198 on claude-7 (run 44323158157)",
+      "started review #4178 on claude-8 (run 44323293364)",
+      "started plan #4197 on claude-1 (run 44323432405)",
+      "started plan #4187 on claude-8 (run 44323582856)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 7 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17441,7 +17439,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T13:57:50Z",
+  "loop_tick": "2026-11-18T14:12:13Z",
   "machine_disk": {
     "issue": null,
     "reading": {
