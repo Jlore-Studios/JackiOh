@@ -14593,6 +14593,7 @@
         "by": "`muse` (medium)",
         "sha": "ca549101c1773e6b90eeb3f0b1861637861911ec"
       },
+      "closed_at": "2026-11-18T05:24:52Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -14608,6 +14609,7 @@
         "provider": "muse",
         "sha": "ca549101c1773e6b90eeb3f0b1861637861911ec"
       },
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
