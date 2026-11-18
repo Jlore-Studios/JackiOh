@@ -120,6 +120,11 @@ destroys at its controller's next start, before it can attack, threatens no face
 its own Burn and Toxic destroys there: they ask `afflicted_before_swing` too, which reads the tick through
 `tick_damage`, the reading `afflicted` prices it by, and keeps a unit whose Reborn body has Charge, or Rush
 where only a Unit is the target (`affliction_kills_before_swing`, R4065000, #4065; off in `GREEDY_EVAL`). A
+side the evaluation reads as swinging this turn (the seat at its turn start after the reply, the enemy on
+turn in a passed line) counts no attack from a Frozen unit, though `frozen_next_turn` says it thaws at this
+turn's cleanup, none from a unit summoning sick without Rush or Charge, and none on a hero from one with
+Rush alone; `face_threat`'s end-of-turn read, `can_swing` and `unit_worth` are untouched
+(`frozen_sick_before_swing`, R4170000, #4170; off in `GREEDY_EVAL`). A
 hit from a source that exiles what it damages (M #72 The Banisher) reads as a Poisonous one in `blow`,
 `kills_and_survives`, the Taunt walk and its Cleave splash, `breaks_alone` and `falls_to_first_strike`
 (`exiles_what_it_damages`), and `trade_value` prices what it exiles at its whole `unit_worth`, with no Death
