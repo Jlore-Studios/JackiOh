@@ -1587,8 +1587,9 @@ where
         let served = server.await;
         // #4114: `drain`, not `stop_all`, so a match started or rebuilt after it is stopped too.
         let matches = app.matches.drain().await;
-        // #936: the co-op actors too, so none writes its log after the store closes; each match's
-        // log stays, and the next boot folds it back (`duos::registry`).
+        // #936, #4169: the co-op actors too, each checkpointed, then stopped, so none writes its log
+        // after the store closes; each match's log stays, and the next boot folds it back from the
+        // checkpoint (`duos::registry`).
         crate::duos::registry::registry(&app).drain().await;
         actor::ws_server::close_all(&app);
         actor::ws_server::all_closed(&app).await;

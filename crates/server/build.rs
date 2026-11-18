@@ -10,7 +10,8 @@ use std::path::{Path, PathBuf};
 const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
 
-/// What a match's fold and its telemetry replay read, relative to this crate.
+/// What a match's fold and its telemetry replay read, a co-op match's fold among them, relative to this
+/// crate.
 const RULES: &[&str] = &[
     "../engine/src",
     "../cards/src",
@@ -19,6 +20,8 @@ const RULES: &[&str] = &[
     "../cards/patches",
     "src/actor/engine.rs",
     "src/actor/telemetry.rs",
+    // #4169: a co-op match's fold and its setup (`duos::checkpoint`).
+    "src/duos/engine.rs",
 ];
 
 fn files_under(path: &Path, found: &mut Vec<PathBuf>) {
