@@ -15483,27 +15483,16 @@
     "what": "plan #4174 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-18T03:44:00Z",
+    "at": "2026-11-18T03:58:09Z",
     "notes": [
-      "#4166 needs a plan",
-      "delivered review #4165 on claude-1 (run 44231705524): approved",
-      "delivered review #4164 on claude-3 (run 44231631406): approved",
-      "delivered suggest on muse (run 44230353874): suggested",
-      "delivered suggest on claude-1 (run 44227407535): suggested",
-      "delivered build #4143 on claude-4 (run 44221864760): built",
-      "delivered build #4132 on claude-7 (run 44209788366): built",
-      "started review #4173 on claude-7 (run 44233064986)",
-      "started review #4172 on claude-4 (run 44233135085)",
-      "started review #4160 on claude-1 (run 44233204663)",
-      "started plan #4166 on claude-1 (run 44233277597)",
+      "#4164: green and waiting for a person to merge it, so `claude-3` gives up its claim on it",
+      "delivered review #4160 on claude-1 (run 44233204663): reviewed",
+      "delivered build #4145 on muse (run 44223247885): built",
+      "started review #4175 on muse (run 44234372986)",
+      "started plan #4174 on muse (run 44234455739)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days",
-      "#4171: typed it Task",
-      "#4170: typed it Task",
-      "#4169: typed it Task",
-      "#4168: typed it Task",
-      "#4167: typed it Task",
-      "#4166: typed it Task"
+      "#4174: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16209,7 +16198,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T03:44:00Z",
+  "loop_tick": "2026-11-18T03:58:09Z",
   "machine_disk": {
     "issue": null,
     "reading": {
