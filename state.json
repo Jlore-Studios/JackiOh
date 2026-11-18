@@ -15585,16 +15585,17 @@
     "what": "build #4174 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-18T03:58:09Z",
+    "at": "2026-11-18T04:09:02Z",
     "notes": [
-      "#4164: green and waiting for a person to merge it, so `claude-3` gives up its claim on it",
-      "delivered review #4160 on claude-1 (run 44233204663): reviewed",
-      "delivered build #4145 on muse (run 44223247885): built",
-      "started review #4175 on muse (run 44234372986)",
-      "started plan #4174 on muse (run 44234455739)",
+      "delivered plan #4174 on muse (run 44234455739): planned",
+      "delivered plan #4166 on claude-1 (run 44233277597): planned",
+      "delivered review #4172 on claude-4 (run 44233135085): approved",
+      "delivered build #4131 on claude-6 (run 44224552092): built",
+      "started review #4176 on claude-6 (run 44235802248)",
+      "started build #4166 on claude-1 (run 44235881817)",
+      "started build #4174 on muse (run 44235955123)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#4174: typed it Task"
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16300,7 +16301,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T03:58:09Z",
+  "loop_tick": "2026-11-18T04:09:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
