@@ -144,7 +144,7 @@
   "stinkyscapeplus-117": "none: its Burn rides each hit, which the damage rows draw", // Zenith
   "stinkyscapeplus-118": "none: its Burn rides each hit, which the damage rows draw", // Antumbra
   "stinkyscapeplus-119": "none: its Burn rides each hit, which the damage rows draw", // Eclipse
-  "stinkyscapeplus-120": { death: { motif: "bolt", palette: "Toxic" }, trigger: { motif: "send" } }, // Crawler
+  "stinkyscapeplus-120": { death: { motif: "send", palette: "Toxic" } }, // Crawler
   "stinkyscapeplus-121": { cry: { motif: "conjure", palette: "Toxic" }, trigger: { motif: "tally", palette: "Toxic" } }, // Toxopid
   "stinkyscapeplus-121-1": "none: vanilla", // Toxopid Leg
   "stinkyscapeplus-122": { trigger: { motif: "mend" } }, // Quad

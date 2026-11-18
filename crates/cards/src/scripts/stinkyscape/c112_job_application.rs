@@ -3,9 +3,9 @@
 //! of the Stinkyscape set.
 //!   Base:    "Death: Resummon this at Stage 1.
 //!            Quest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your
-//!            resume. Reward: Hear back in 1 to 4 turns.
+//!            resume. Reward: Hear back in 1 to 2 turns.
 //!            Quest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the
-//!            same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or
+//!            same as your resume; play 2 cards of different costs in one turn; or take or deal 8 or
 //!            more damage in one hit. Reward: Add your resume to your hand and Buff it
 //!            {buffs|time|times}. It costs (0).
 //!            Quest: Stage 3, The Offer. Activate this to accept the offer, or to send in another
@@ -17,6 +17,10 @@
 //! Stage 2 draws goal (R1854002); returns held resume at (0) buffed.
 //! Stage 3 accepts or reapplies (R81, #112.1, R1865002). Death resummon (R64, R78, R1865000).
 //! Radiant: Lucky 1 keeps shorter wait; buffs 10.
+//! Issue #4154 made the rewards easier to gain (R4154204): the resume hears back in 1 to 2 turns (1 to 4
+//! through v0.6.6e, 2 to 6 through v0.6.4c), and the Interview asks for 2 cards of different costs in a
+//! turn (3) or a hit of 8 or more (12); the same-cost goal and the tripling stay. `script_v0_6_6e` keeps
+//! the terms before it for those replays (R767000).
 
 use jackioh_engine::effects::{
     AddToHandArgs, HearBackArgs, RememberArgs, ReturnHeldArgs, SetAsideArgs, SummonArgs, add_to_hand,
@@ -63,13 +67,16 @@ const RESUME_WAIT_KEY: &str = "resumeWait";
 const REWARD_FACTOR_KEY: &str = "rewardFactor";
 const HIRED_KEY: &str = "hired";
 
-/// "Hear back in 1 to 4 turns" (2 to 6 through v0.6.4c, issue #3951).
+/// "Hear back in 1 to 2 turns" (1 to 4 through v0.6.6e, issue #4154; 2 to 6 through v0.6.4c, issue #3951).
 const SHORTEST_WAIT: i32 = 1;
-const LONGEST_WAIT: i32 = 4;
-/// "Play 3 cards of different costs in one turn".
-const BEHAVIORAL_COSTS: i32 = 3;
-/// "Take or deal 12 or more damage in one hit".
-const HARDBALL_DAMAGE: i32 = 12;
+const LONGEST_WAIT: i32 = 2;
+/// "Play 2 cards of different costs in one turn" (3 through v0.6.6e).
+const BEHAVIORAL_COSTS: i32 = 2;
+/// "Take or deal 8 or more damage in one hit" (12 through v0.6.6e).
+const HARDBALL_DAMAGE: i32 = 8;
+/// The Interview's two numbers through v0.6.6e (issue #4154).
+const BEHAVIORAL_COSTS_V0_6_6E: i32 = 3;
+const HARDBALL_DAMAGE_V0_6_6E: i32 = 12;
 /// The cost the Interview's first goal asks for while no resume's cost is noted (R1865001).
 const NO_RESUME_COST: i32 = 0;
 /// "It costs (0)".
@@ -95,11 +102,12 @@ const RARITY_LADDER: [Rarity; 5] = [
 
 /// R1865001: the weights of the waits `SHORTEST_WAIT` to `LONGEST_WAIT`, in that order, for a weak, a
 /// solid and a strong resume.
-const WEAK_WAITS: [i32; 4] = [1, 2, 3, 4];
-const SOLID_WAITS: [i32; 4] = [2, 3, 3, 2];
-const STRONG_WAITS: [i32; 4] = [4, 3, 2, 1];
+const WEAK_WAITS: [i32; 2] = [1, 3];
+const SOLID_WAITS: [i32; 2] = [1, 1];
+const STRONG_WAITS: [i32; 2] = [3, 1];
 
-/// R1865001: the waits a resume hears back in, `shortest` to `longest`, and each table's weights over them.
+/// R1865001: the waits a resume hears back in, `shortest` to `longest`, and each table's weights over
+/// them; and the Interview's two numbers, `behavioral` costs and `hardball` damage (R4154204).
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Waits {
     shortest: i32,
@@ -107,15 +115,31 @@ struct Waits {
     weak: &'static [i32],
     solid: &'static [i32],
     strong: &'static [i32],
+    behavioral: i32,
+    hardball: i32,
 }
 
-/// Since issue #3951: 1 to 4 turns.
+/// Since issue #4154: 1 to 2 turns, 2 costs, 8 damage.
 const WAITS: Waits = Waits {
     shortest: SHORTEST_WAIT,
     longest: LONGEST_WAIT,
     weak: &WEAK_WAITS,
     solid: &SOLID_WAITS,
     strong: &STRONG_WAITS,
+    behavioral: BEHAVIORAL_COSTS,
+    hardball: HARDBALL_DAMAGE,
+};
+
+/// From v0.6.4d through v0.6.6e: 1 to 4 turns, each table's weights over those four, 3 costs, 12 damage
+/// (R767000).
+const WAITS_V0_6_6E: Waits = Waits {
+    shortest: 1,
+    longest: 4,
+    weak: &[1, 2, 3, 4],
+    solid: &[2, 3, 3, 2],
+    strong: &[4, 3, 2, 1],
+    behavioral: BEHAVIORAL_COSTS_V0_6_6E,
+    hardball: HARDBALL_DAMAGE_V0_6_6E,
 };
 
 /// Through v0.6.4c: 2 to 6 turns, each table's weights over those five (R767000).
@@ -125,6 +149,8 @@ const WAITS_V0_6_4C: Waits = Waits {
     weak: &[1, 2, 3, 4, 5],
     solid: &[2, 3, 4, 3, 2],
     strong: &[5, 4, 3, 2, 1],
+    behavioral: BEHAVIORAL_COSTS_V0_6_6E,
+    hardball: HARDBALL_DAMAGE_V0_6_6E,
 };
 
 /// `remember` of one key.
@@ -244,10 +270,10 @@ fn stages(waits: Waits) -> Vec<QuestStage> {
             "goals": [
                 { "id": PROVE, "text": "Play a card that costs the same as your resume",
                   "goal": { "kind": "playCosting", "cost": NO_RESUME_COST, "remembered": RESUME_COST_KEY } },
-                { "id": BEHAVIORAL, "text": "Play 3 cards of different costs in one turn",
-                  "goal": { "kind": "differentCostsInTurn", "count": BEHAVIORAL_COSTS } },
-                { "id": HARDBALL, "text": "Take or deal 12 or more damage in one hit",
-                  "goal": { "kind": "damageInstance", "amount": HARDBALL_DAMAGE } },
+                { "id": BEHAVIORAL, "text": format!("Play {} cards of different costs in one turn", waits.behavioral),
+                  "goal": { "kind": "differentCostsInTurn", "count": waits.behavioral } },
+                { "id": HARDBALL, "text": format!("Take or deal {} or more damage in one hit", waits.hardball),
+                  "goal": { "kind": "damageInstance", "amount": waits.hardball } },
             ],
             "reward": { "id": "resumeBack", "text": "Add your resume to your hand and Buff it. It costs (0)" },
         },
@@ -413,6 +439,15 @@ pub fn script() -> CardScripts {
     let base = job_application(WAITS);
     let radiant = job_application(WAITS);
     CardScripts { base, radiant }
+}
+
+/// R767000: the scripts from v0.6.4d through v0.6.6e, whose resume heard back in 1 to 4 turns and whose
+/// Interview asked for 3 costs or 12 damage (issue #4154). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: job_application(WAITS_V0_6_6E),
+        radiant: job_application(WAITS_V0_6_6E),
+    }
 }
 
 /// R767000: the scripts through v0.6.4c, whose resume heard back in 2 to 6 turns (issue #3951).
@@ -785,7 +820,41 @@ mod tests {
             assert!(seen.contains(&6), "the longest wait comes up: {seen:?}");
         });
         let stage = serde_json::to_value(&script().base.stages[0]).expect("a stage serializes");
-        assert_eq!(stage["reward"]["text"], json!("Hear back in 1 to 4 turns"));
+        assert_eq!(stage["reward"]["text"], json!("Hear back in 1 to 2 turns"));
+    }
+
+    /// R767000: from v0.6.4d through v0.6.6e a resume heard back in 1 to 4 turns and the Interview asked
+    /// for 3 costs or 12 damage (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6e_hears_back_in_1_to_4_turns_and_asks_3_costs_or_12_damage() {
+        let kept = script_v0_6_6e();
+        let stages = serde_json::to_value(&kept.base.stages).expect("the stages serialize");
+        assert_eq!(stages[0]["reward"]["text"], json!("Hear back in 1 to 4 turns"));
+        assert_eq!(stages[1]["goals"][1]["text"], json!("Play 3 cards of different costs in one turn"));
+        assert_eq!(stages[1]["goals"][1]["goal"]["count"], json!(3));
+        assert_eq!(stages[1]["goals"][2]["text"], json!("Take or deal 12 or more damage in one hit"));
+        assert_eq!(stages[1]["goals"][2]["goal"]["amount"], json!(12));
+        crate::under_kept(ID, kept, || {
+            let mut seen: IndexSet<i32> = IndexSet::new();
+            for seed in 0..40 {
+                seen.insert(wait_of(&format!("ja-kept-e-{seed}"), false, SLIME));
+            }
+            assert!(seen.iter().all(|turns| (1..=4).contains(turns)), "{seen:?}");
+            assert!(seen.iter().any(|turns| *turns > LONGEST_WAIT), "a wait past 2 comes up: {seen:?}");
+        });
+    }
+
+    /// R4154204: since issue #4154 the Interview asks for 2 cards of different costs or a hit of 8.
+    #[test]
+    fn r4154204_the_interview_asks_for_2_costs_or_8_damage_and_hears_back_in_1_to_2() {
+        let stages = serde_json::to_value(&script().base.stages).expect("the stages serialize");
+        assert_eq!(stages[0]["reward"]["text"], json!("Hear back in 1 to 2 turns"));
+        assert_eq!(stages[1]["goals"][0]["id"], json!(PROVE), "the same-cost goal stays");
+        assert_eq!(stages[1]["goals"][1]["text"], json!("Play 2 cards of different costs in one turn"));
+        assert_eq!(stages[1]["goals"][1]["goal"]["count"], json!(BEHAVIORAL_COSTS));
+        assert_eq!(stages[1]["goals"][2]["text"], json!("Take or deal 8 or more damage in one hit"));
+        assert_eq!(stages[1]["goals"][2]["goal"]["amount"], json!(HARDBALL_DAMAGE));
+        assert_eq!((BEHAVIORAL_COSTS, HARDBALL_DAMAGE), (2, 8));
     }
 
     #[test]

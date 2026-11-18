@@ -2558,12 +2558,20 @@
     "dealsDamage": true,
     "loc": 24,
     "base": {
-      "keywords": [],
-      "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
     }
   },
   "core-071": {
@@ -5453,22 +5461,23 @@
     "cost": 0,
     "params": [
       {
-        "key": "discard",
+        "key": "flashback",
         "base": 4,
         "radiant": 4,
-        "better": "down",
+        "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Draw your deck. At the end of this turn, discard {discard|card|cards}."
+      "text": "Draw your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw your deck. At the end of your next turn, discard {discard|card|cards}."
+      "text": "Draw your deck. Give {flashback} random cards in your hand Flashback."
     }
   },
   "classic-038": {
@@ -11677,35 +11686,14 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "read": "cry"
-      },
-      {
-        "key": "mana",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant",
-        "read": "cry"
-      }
-    ],
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw|card|cards}."
+      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nActivate: Your opponent discards a random card."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw} and gain {mana} mana."
+      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nActivate: Your opponent discards a random Radiant card, or a random card if they hold none."
     }
   },
   "meditative-002": {
@@ -12101,16 +12089,25 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "price",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "base"
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}."
+      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate: Pay ({price}) to Discover a Cry or Death card."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}."
+      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate: Discover a Cry or Death card."
     }
   },
   "meditative-011": {
@@ -12445,16 +12442,24 @@
         "better": "down",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Add a Temporal Rift to your hand."
+      "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Your hero gains {armor} Armor. Add a Temporal Rift to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Add a Radiant Temporal Rift to your hand."
+      "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Your hero gains {armor} Armor. Add a Radiant Temporal Rift to your hand."
     }
   },
   "meditative-019-1": {
@@ -13783,12 +13788,22 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Activate: Add an Auspicious Rock to your hand."
+      "text": "Activate: Add an Auspicious Rock to your hand. It has Lucky {lucky}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Add a Radiant Auspicious Rock to your hand."
-    }
+      "text": "Activate: Add a Radiant Auspicious Rock to your hand. It has Lucky {lucky}."
+    },
+    "params": [
+      {
+        "key": "lucky",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ]
   },
   "meditative-045": {
     "id": "meditative-045",
@@ -15261,11 +15276,11 @@
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Exile every non-CN permanent."
+      "text": "Destroy every non-CN permanent."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile every enemy non-CN permanent."
+      "text": "Destroy every enemy non-CN permanent."
     }
   },
   "meditative-079": {
@@ -17180,24 +17195,14 @@
     "flavor": "Tech",
     "token": false,
     "cost": 0,
-    "params": [
-      {
-        "key": "setCost",
-        "base": 2,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Fuse the card with the lowest win rate and the card with the highest win rate, and add it to your hand. It costs ({setCost})."
+      "text": "Fuse the card with the lowest win rate and the card with the highest win rate, and add it to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win rate, and add it to your hand. It costs ({setCost})."
+      "text": "Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win rate, and add it to your hand."
     }
   },
   "meditativeplus-003": {
@@ -21469,13 +21474,13 @@
       "attack": 5,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Summon every Unit with a Death from your graveyard."
+      "text": "Cry: Summon every Unit with a Death from your graveyard. Trigger their Deaths."
     },
     "radiant": {
       "attack": 10,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Summon every Unit with a Death from your graveyard. Give them Reborn."
+      "text": "Cry: Summon every Unit with a Death from your graveyard. Give them Reborn. Trigger their Deaths twice."
     }
   },
   "stinkyscape-071": {
@@ -21981,13 +21986,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Discover {weapons|Rare Weapon|Rare Weapons} and Equip them into this."
+      "text": "Cry: Choose one of 2 Rare Weapons and Equip it into this, {weapons|time|times}."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Discover {weapons|Epic Weapon|Epic Weapons} and Equip them into this."
+      "text": "Cry: Choose one of 2 Epic Weapons and Equip it into this, {weapons|time|times}."
     }
   },
   "stinkyscape-084": {
@@ -23090,7 +23095,7 @@
     "loc": 253,
     "base": {
       "keywords": [],
-      "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 4 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 2 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 2 cards of different costs in one turn; or take or deal 8 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     },
     "radiant": {
       "keywords": [
@@ -23099,7 +23104,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 4 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 2 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 2 cards of different costs in one turn; or take or deal 8 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     }
   },
   "stinkyscape-112-1": {
@@ -24680,7 +24685,7 @@
     "rarity": "Mythic",
     "flavor": "Dark",
     "token": false,
-    "cost": 0,
+    "cost": 1,
     "refs": [
       "stinkyscape-148-1"
     ],
@@ -24691,7 +24696,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      "text": "Indestructible\nYour first travel each turn is free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
     },
     "radiant": {
       "keywords": [
@@ -24699,7 +24704,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nYour first travel each turn is free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      "text": "Indestructible\nYour first two travels each turn are free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
     }
   },
   "stinkyscape-148-1": {
@@ -25337,11 +25342,10 @@
       {
         "key": "trades",
         "base": 2,
-        "radiant": 2,
+        "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 2,
-        "tunedOn": "radiant"
+        "min": 2
       }
     ],
     "loc": 14,
@@ -25351,7 +25355,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Tradable\nAura: Cards in your hand have Tradable."
+      "text": "Tradable\nAura: Cards in your hand have Tradable. You may Trade up to {trades|card|cards} each turn."
     },
     "radiant": {
       "keywords": [
@@ -28283,12 +28287,22 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Add a random card to your hand."
+      "text": "Add a random card to your hand. It costs ({discount}) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a random Radiant card to your hand."
-    }
+      "text": "Add a random Radiant card to your hand. It costs ({discount}) less."
+    },
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ]
   },
   "traininggrounds-041": {
     "id": "traininggrounds-041",
@@ -32237,11 +32251,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Exile your deck. Start an {count|turn|turns} countdown. When it ends, win the game."
+      "text": "Exile your deck and every permanent. Start an {count|turn|turns} countdown. When it ends, win the game."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile your deck. Your hero gains {armor} Armor. Start an {count|turn|turns} countdown. When it ends, win the game."
+      "text": "Exile your deck and every permanent. Your hero gains {armor} Armor. Start an {count|turn|turns} countdown. When it ends, win the game."
     },
     "params": [
       {
@@ -32335,13 +32349,23 @@
     "token": false,
     "cost": 1,
     "loc": 27,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "base": {
       "keywords": [],
-      "text": "Now and at the start of each of your turns for the rest of the game: Add a random Terminus card to your hand. It costs (2)."
+      "text": "For the rest of the game, you have ({mana}) less mana, and at the start of each of your turns, add a random Terminus card to your hand. It costs (3)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Now and at the start of each of your turns for the rest of the game: Add a random Radiant Terminus card to your hand. It costs (2)."
+      "text": "For the rest of the game, you have ({mana}) less mana, and at the start of each of your turns, add a random Radiant Terminus card to your hand. It costs (3)."
     }
   },
   "stinkyscapeplus-083": {

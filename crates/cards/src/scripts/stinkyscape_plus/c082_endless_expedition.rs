@@ -136,7 +136,7 @@ pub fn script_v0_6_4c() -> CardScripts {
     }
 }
 
-// S+ #82 Endless Expedition — SPEC §8.12 row 82 (R3569007, R3569008; R640, R3552001, R387).
+// S+ #82 Endless Expedition — SPEC §8.12 row 82 (R4154101, R3569007, R3569008; R640, R3552001, R387).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -210,25 +210,24 @@ mod tests {
 
         #[test]
         fn r640_it_is_quickdraw() {
-            for scripts in [script(), script_v0_6_5b(), script_v0_6_4c()] {
+            for scripts in [script(), script_v0_6_6e(), script_v0_6_5b(), script_v0_6_4c()] {
                 assert_eq!(scripts.base.flags().quickdraw, Some(true));
                 assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
             }
         }
 
-        /// Issue #3996: no mana is lost any more, and the card comes now.
+        /// R4154101, R3569008: issue #4154 brought back the max-mana loss and took out the card now.
         #[test]
-        fn r3569007_now_it_adds_a_2_cost_terminus_card_and_max_mana_stays() {
-            for n in 0..6 {
-                let mut s = game(&format!("expedition-base-{n}"), false);
-                s.play(ID, json!({}));
-                // Cast for (1) from 4: 3 left of a max that stays 4.
-                assert_eq!(s.state().players[P1].mana.max, 4, "seed {n}");
-                assert_eq!(s.state().players[P1].mana.current, 3, "seed {n}");
-                let made = added(&s);
-                assert_eq!(made.len(), 1, "seed {n}: {made:?}");
-                expect_terminus(&s, &made, false, TERMINUS_COST);
-            }
+        fn r4154101_it_lowers_max_mana_by_1_for_the_rest_of_the_game_and_adds_no_card_now() {
+            let mut s = game("expedition-base", false);
+            s.play(ID, json!({}));
+            // Cast for (1) from 4: 3 left of a max that fell from 4 to 3.
+            assert_eq!(s.state().players[P1].mana.max, 3);
+            assert_eq!(s.state().players[P1].mana.current, 3);
+            assert!(added(&s).is_empty(), "no card now");
+            s.end_turn().end_turn();
+            assert_eq!(s.state().active, P1);
+            assert_eq!(s.state().players[P1].mana.max, 3, "the max stays lower");
         }
 
         #[test]
@@ -236,7 +235,7 @@ mod tests {
             let mut s = game("expedition-badge", false);
             s.play(ID, json!({}));
             s.expect_in_zone(ID, "graveyard");
-            let label = crate::card_def(ID).base.text.clone();
+            let label = fill_params(&crate::card_def(ID), FaceKind::Base, None);
             let mine: Vec<String> = s.view(P1).you.modifiers.iter().map(|m| m.label.clone()).collect();
             assert_eq!(mine, vec![label.clone()]);
             let theirs: Vec<String> =
@@ -244,20 +243,20 @@ mod tests {
             assert_eq!(theirs, vec![label]);
         }
 
-        /// R458, R62: one more at the start of each of the caster's turns, before the draw; the opponent's
-        /// turns add none.
+        /// R458, R62, R4154101: one at the start of each of the caster's turns from the next on, before the
+        /// draw, costing (3); the opponent's turns add none.
         #[test]
-        fn r458_each_of_your_turns_starts_with_another_and_the_opponents_add_none() {
+        fn r4154101_each_of_your_turns_starts_with_a_3_cost_one_and_the_opponents_add_none() {
             let mut s = game("expedition-turns", false);
             s.play(ID, json!({}));
             for turn in 1..=3 {
                 s.end_turn();
                 assert_eq!(s.state().active, PlayerId::P2);
-                assert_eq!(added(&s).len(), turn, "the opponent's turn adds none");
+                assert_eq!(added(&s).len(), turn - 1, "the opponent's turn adds none");
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
                 let made = added(&s);
-                assert_eq!(made.len(), turn + 1, "turn {turn}: {made:?}");
+                assert_eq!(made.len(), turn, "turn {turn}: {made:?}");
                 expect_terminus(&s, &made, false, TERMINUS_COST);
                 let events = s.last_events();
                 let came = events.iter().position(
@@ -265,8 +264,28 @@ mod tests {
                 );
                 let drawn = events.iter().rposition(|event| matches!(event, GameEvent::Drawn { .. }));
                 assert!(came.is_some() && came < drawn, "{events:?}");
-                assert_eq!(s.state().players[P1].mana.max, 4, "no mana lost");
+                assert_eq!(s.state().players[P1].mana.max, 3, "one mana lost, once");
             }
+        }
+
+        /// R767000: after v0.6.5b through v0.6.6e it lost no mana and added a card costing (2) now and at
+        /// each of its caster's turn starts (issue #4154).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_6e_adds_a_2_cost_card_now_and_each_turn_and_keeps_max_mana() {
+            crate::under_kept(ID, script_v0_6_6e(), || {
+                let mut s = game("expedition-kept-v0-6-6e", false);
+                s.play(ID, json!({}));
+                // Cast for (1) from 4: 3 left of a max that stays 4.
+                assert_eq!(s.state().players[P1].mana.max, 4);
+                assert_eq!(s.state().players[P1].mana.current, 3);
+                let made = added(&s);
+                assert_eq!(made.len(), 1, "{made:?}");
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6E);
+                s.end_turn().end_turn();
+                let made = added(&s);
+                assert_eq!(made.len(), 2, "{made:?}");
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6E);
+            });
         }
 
         /// R767000, R3569008: after v0.6.4c through v0.6.5b it lowered its caster's max mana for the rest of
@@ -281,7 +300,7 @@ mod tests {
                 assert_eq!(s.state().players[P1].mana.current, 3);
                 let made = added(&s);
                 assert_eq!(made.len(), 1, "{made:?}");
-                expect_terminus(&s, &made, false, TERMINUS_COST);
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6E);
                 s.end_turn().end_turn();
                 assert_eq!(s.state().active, P1);
                 // A turn on, the max stays lower and no card comes.
@@ -307,17 +326,15 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3569007_radiant_adds_a_radiant_one_now_and_at_each_of_its_casters_turns() {
+        fn r4154101_radiant_lowers_max_mana_by_1_and_adds_a_radiant_one_at_each_of_its_casters_turns() {
             for n in 0..6 {
                 let mut s = game(&format!("expedition-radiant-{n}"), true);
                 s.play(ID, json!({}));
-                assert_eq!(s.state().players[P1].mana.max, 4, "seed {n}");
-                let made = added(&s);
-                assert_eq!(made.len(), 1, "seed {n}: {made:?}");
-                expect_terminus(&s, &made, true, TERMINUS_COST);
+                assert_eq!(s.state().players[P1].mana.max, 3, "seed {n}");
+                assert!(added(&s).is_empty(), "seed {n}: no card now");
                 s.end_turn().end_turn();
                 let made = added(&s);
-                assert_eq!(made.len(), 2, "seed {n}: {made:?}");
+                assert_eq!(made.len(), 1, "seed {n}: {made:?}");
                 expect_terminus(&s, &made, true, TERMINUS_COST);
             }
         }
@@ -326,7 +343,7 @@ mod tests {
         fn r458_its_badge_reads_its_radiant_words() {
             let mut s = game("expedition-radiant-badge", true);
             s.play(ID, json!({}));
-            let label = crate::card_def(ID).radiant.text.clone();
+            let label = fill_params(&crate::card_def(ID), FaceKind::Radiant, None);
             let mine: Vec<String> = s.view(P1).you.modifiers.iter().map(|m| m.label.clone()).collect();
             assert_eq!(mine, vec![label]);
         }

@@ -1,28 +1,39 @@
 //! SPEC §8.10 Stinkyscape 165 The Trade Union, a card of the Stinkyscape set.
 //!   (1) Field Spell, Rare.
-//!   Base:    "Tradable / Aura: Cards in your hand have Tradable."
-//!   Radiant: "Tradable / Aura: Cards in your hand have Tradable. You may Trade up to {trades|card|cards}
-//!            each turn."
+//!   Base:    "Tradable / Aura: Cards in your hand have Tradable. You may Trade up to {trades|card|cards}
+//!            each turn." (2)
+//!   Radiant: the same. (3)
 //! Engine: Tradable on both faces is catalog data the engine reads in the hand (R1838000). The aura
 //!   lends Tradable to every card in its controller's hand while it acts on their field
-//!   (`tradable_hand_aura`, R1864002), read through the layers as Cloaked is. The Radiant face gives
-//!   its controller `trades` Trades a turn while it acts (`trades_per_turn`, R1864004), a pure read
-//!   through `param()` (R824000: the number is the Radiant face's alone), the most of several holding,
-//!   never a sum.
+//!   (`tradable_hand_aura`, R1864002), read through the layers as Cloaked is. Each face gives its
+//!   controller `trades` Trades a turn while it acts (`trades_per_turn`, R1864004), a pure read through
+//!   `param()`, the most of several holding, never a sum. Issue #4154 gave the base face the Trades too,
+//!   2, and made the Radiant face's 3 (R4154208); through v0.6.6e the base face gave none, which
+//!   `script_v0_6_6e` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-165";
 
-fn union(radiant: bool) -> Script {
+/// `trades`: whether the face gives its declared `trades` Trades a turn.
+fn union(trades: bool) -> Script {
     Script {
         aura: Some(tradable_hand_aura()),
-        trades_per_turn: radiant.then(|| -> TradesPerTurnHook { Arc::new(|args| param(&args, "trades")) }),
+        trades_per_turn: trades.then(|| -> TradesPerTurnHook { Arc::new(|args| param(&args, "trades")) }),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
+    CardScripts {
+        base: union(true),
+        radiant: union(true),
+    }
+}
+
+/// R767000: the scripts through v0.6.6e, whose base face gave no Trades (issue #4154). `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
     CardScripts {
         base: union(false),
         radiant: union(true),
@@ -137,20 +148,8 @@ mod tests {
     }
 
     #[test]
-    fn r1864004_the_base_face_allows_one_trade() {
-        let mut s = unionised("union-one", false);
-        assert_eq!(trades_per_turn_of(s.state(), P1), TRADES_PER_TURN);
-        let cards = held(&s, P1, FILLER);
-        s.trade(&cards[0]);
-        assert_eq!(
-            trade_refusal(&s, &cards[1]).as_deref(),
-            Some("you have made this turn's 1 Trade")
-        );
-    }
-
-    #[test]
-    fn r1864004_the_radiant_face_allows_two_and_refuses_a_third() {
-        let mut s = unionised("union-two", true);
+    fn r4154208_the_base_face_allows_two_and_refuses_a_third() {
+        let mut s = unionised("union-two", false);
         let trades = param_value(s.state(), Some(&union_of(&s)), "trades", ParamValueOptions::default());
         assert_eq!(trades, 2, "the printed number");
         assert_eq!(trades_per_turn_of(s.state(), P1), trades);
@@ -166,12 +165,30 @@ mod tests {
     }
 
     #[test]
+    fn r4154208_the_radiant_face_allows_three_and_refuses_a_fourth() {
+        let mut s = unionised("union-three", true);
+        let trades = param_value(s.state(), Some(&union_of(&s)), "trades", ParamValueOptions::default());
+        assert_eq!(trades, 3, "the printed number");
+        assert_eq!(trades_per_turn_of(s.state(), P1), trades);
+        for card in held(&s, P1, FILLER) {
+            s.trade(&card);
+        }
+        assert_eq!(trades_left(s.state(), P1), 0);
+        let prestige = held(&s, P1, PRESTIGE)[0].clone();
+        assert_eq!(
+            trade_refusal(&s, &prestige).as_deref(),
+            Some(format!("you have made this turn's {trades} Trades").as_str())
+        );
+        assert_eq!(trades_per_turn_of(s.state(), P2), TRADES_PER_TURN, "the opponent keeps theirs");
+    }
+
+    #[test]
     fn r1864004_leaving_the_field_the_limit_falls_back() {
         let mut s = unionised("union-leaves", true);
         let union = union_of(&s);
         let stockpile = held(&s, P1, FILLER)[0].clone();
         s.trade(&stockpile);
-        assert_eq!(trades_left(s.state(), P1), 1, "one of the two left");
+        assert_eq!(trades_left(s.state(), P1), 2, "two of the three left");
         by_hand(
             &mut s,
             vec![destroy(json_as(json!({ "target": { "of": "instance", "instanceId": union.id } })))],
@@ -186,38 +203,50 @@ mod tests {
     }
 
     #[test]
-    fn r1864004_two_unions_still_make_two() {
+    fn r1864004_two_unions_still_make_three() {
         let mut s = scenario(json!({
             "seed": "union-twice",
             "p1": {
-                "hand": [FILLER, FILLER, FILLER],
+                "hand": [FILLER, FILLER, FILLER, FILLER],
                 "field": [
                     { "def": ID, "lane": 1, "radiant": true },
-                    { "def": ID, "lane": 2, "radiant": true },
+                    { "def": ID, "lane": 2 },
                 ],
                 "library": filler(6),
             },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
-        assert_eq!(trades_per_turn_of(s.state(), P1), 2, "the most holds, never a sum");
+        assert_eq!(trades_per_turn_of(s.state(), P1), 3, "the most holds, never a sum");
         let cards = held(&s, P1, FILLER);
-        s.trade(&cards[0]);
-        s.trade(&cards[1]);
+        for card in &cards[..3] {
+            s.trade(card);
+        }
         assert_eq!(
-            trade_refusal(&s, &cards[2]).as_deref(),
-            Some("you have made this turn's 2 Trades")
+            trade_refusal(&s, &cards[3]).as_deref(),
+            Some("you have made this turn's 3 Trades")
         );
     }
 
     #[test]
-    fn r1864004_trades_reads_param_on_the_radiant_face_only() {
+    fn r386_trades_reads_param_on_both_faces() {
         for radiant in [false, true] {
             let mut s = unionised("union-param", radiant);
             let union = union_of(&s).id;
-            set_param(s.card_mut(&union), "trades", 3);
-            let expected = if radiant { 3 } else { TRADES_PER_TURN };
-            assert_eq!(trades_per_turn_of(s.state(), P1), expected, "radiant {radiant}");
+            set_param(s.card_mut(&union), "trades", 4);
+            assert_eq!(trades_per_turn_of(s.state(), P1), 4, "radiant {radiant}");
             assert_eq!(trades_per_turn_of(s.state(), P2), TRADES_PER_TURN);
         }
+    }
+
+    /// R767000: through v0.6.6e the base face gave no Trades and the Radiant face `trades` (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6e_gives_trades_on_the_radiant_face_alone() {
+        crate::under_kept(ID, script_v0_6_6e(), || {
+            for radiant in [false, true] {
+                let s = unionised("union-kept", radiant);
+                let expected = if radiant { 3 } else { TRADES_PER_TURN };
+                assert_eq!(trades_per_turn_of(s.state(), P1), expected, "radiant {radiant}");
+            }
+        });
     }
 }

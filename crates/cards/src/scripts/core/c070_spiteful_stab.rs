@@ -1,4 +1,7 @@
 //! #70 Spiteful Stab (SPEC §8.3, §3, §4.4, §10.9, R72, R81, R90): a Spell, cost 2 (3 until issue #3837).
+//! Issue #4154 gave both faces Pierce (R346, R4154213): printed in the catalog and read off the Spell as
+//! it resolves, and stated on the hit (`ignoreArmor`) as #44 True Strike's is, so §4.4 step 2 skips
+//! Armor; through v0.6.6e it had none, which `script_v0_6_6e` keeps (R767000).
 //!
 //! Base: "Deal 2 damage to a target, +1 per full 5 health your hero is below 30, +1 per card in your
 //! exile". Radiant (R275): 4, per full 3, +2 per card; the target and the 30 baseline are kept.
@@ -42,18 +45,28 @@ fn stab_amount(state: &GameState, controller: PlayerId, face: Stab) -> i32 {
     face.base + missing / face.step + face.per_exiled * zone_count(state, controller, OffFieldZone::Exile)
 }
 
-fn spiteful_stab(face: FaceKind) -> Script {
+/// `pierce`: whether the hit states Pierce (R346, since issue #4154).
+fn spiteful_stab(face: FaceKind, pierce: bool) -> Script {
     let def = crate::card_def(ID);
     Script {
         targets: targets(),
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             let amount = stab_amount(ctx.state, ctx.controller, numbers_of(&*ctx));
-            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+            let mut hit = json!({ "to": { "of": "chosen" }, "amount": amount });
+            if pierce {
+                hit["ignoreArmor"] = json!(true);
+            }
+            vec![damage(json_as(hit))]
         })),
-        // R280: the label is the face's text, its declared numbers as the card stands (R386).
+        // R280: the label is the face's text, its declared numbers as the card stands (R386): its last
+        // line, the damage, under its keyword line.
         preview: Some(condition_hook(move |ctx| {
             vec![PreviewValue {
-                label: fill_params(&def, face, params_view(ctx.state, ctx.self_).as_ref()),
+                label: fill_params(&def, face, params_view(ctx.state, ctx.self_).as_ref())
+                    .rsplit('\n')
+                    .next()
+                    .unwrap_or_default()
+                    .to_string(),
                 value: stab_amount(ctx.state, ctx.controller, numbers_of(&ctx)),
                 display: None,
                 ids: None,
@@ -70,8 +83,17 @@ fn spiteful_stab(face: FaceKind) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: spiteful_stab(FaceKind::Base),
-        radiant: spiteful_stab(FaceKind::Radiant),
+        base: spiteful_stab(FaceKind::Base, true),
+        radiant: spiteful_stab(FaceKind::Radiant, true),
+    }
+}
+
+/// R767000: the scripts through v0.6.6e, whose hit did not pierce (issue #4154). `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: spiteful_stab(FaceKind::Base, false),
+        radiant: spiteful_stab(FaceKind::Radiant, false),
     }
 }
 
@@ -190,13 +212,47 @@ mod tests {
             s.expect_stats(SPONGE, json!({ "health": 4, "maxHealth": 9 }));
         }
 
+        /// R767000: through v0.6.6e the hit had no Pierce (issue #4154).
         #[test]
-        fn s4_4_the_whole_amount_is_one_pipeline_instance_so_armor_absorbs_it_once() {
-            // #25 prints Armor 7: 2 + floor(10/5) = 4 is absorbed whole, a non-event (R63), not four hits.
-            let mut s = board(json!({ "p1": { "hand": [STAB], "health": 20 }, "p2": { "field": ["core-025"] } }));
-            let targets = pick::unit_at(&s, P2, 1);
-            s.play(STAB, json!({ "targets": targets }));
-            s.expect_stats("core-025", json!({ "health": 7, "maxHealth": 7 }));
+        fn r767000_s4_4_under_the_script_kept_for_v0_6_6e_armor_absorbs_the_one_instance_once() {
+            // v0.6.6e printed no Pierce either, which the Spell's hit would read off it (R346).
+            let unprinted = |def: &mut CardDef| {
+                def.base.keywords.clear();
+                def.radiant.keywords.clear();
+            };
+            crate::under_kept_as(STAB, super::super::script_v0_6_6e(), unprinted, || {
+                // #25 prints Armor 7: 2 + floor(10/5) = 4 is absorbed whole, a non-event (R63), not four hits.
+                let mut s = board(json!({ "p1": { "hand": [STAB], "health": 20 }, "p2": { "field": ["core-025"] } }));
+                let targets = pick::unit_at(&s, P2, 1);
+                s.play(STAB, json!({ "targets": targets }));
+                s.expect_stats("core-025", json!({ "health": 7, "maxHealth": 7 }));
+            });
+        }
+
+        #[test]
+        fn r4154213_r346_both_faces_pierce_armor_with_the_one_instance() {
+            for radiant in [false, true] {
+                // #25 prints Armor 7: the 4 (Radiant 4 + floor(10/3) = 7) skips it (§4.4 step 2).
+                let mut s = board(json!({
+                    "p1": { "hand": [{ "def": STAB, "radiant": radiant }], "health": 20 },
+                    "p2": { "field": ["core-025"] },
+                }));
+                let targets = pick::unit_at(&s, P2, 1);
+                s.play(STAB, json!({ "targets": targets }));
+                if radiant {
+                    s.expect_in_zone("core-025", "graveyard");
+                } else {
+                    s.expect_stats("core-025", json!({ "health": 3, "maxHealth": 7 }));
+                }
+            }
+        }
+
+        #[test]
+        fn r4154213_both_faces_print_pierce() {
+            crate::register_all();
+            let def = crate::card_def(STAB);
+            assert!(has_keyword(&def.base.keywords, KeywordKind::Pierce));
+            assert!(has_keyword(&def.radiant.keywords, KeywordKind::Pierce));
         }
 
         #[test]

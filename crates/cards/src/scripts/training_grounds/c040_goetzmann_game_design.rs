@@ -1,25 +1,32 @@
 //! TG #40 Goetzmann Game Design (SPEC §8.11 row TG 40; §2.4, §5.1, R74, R97, R380, R387, R640, R1420):
 //! (0) Spell, Quickdraw, Mythic, a card of the held Training Grounds set (R1420, R2194000).
-//!   Base:    "Add a random card to your hand."
-//!   Radiant: "Add a random Radiant card to your hand."
+//!   Base:    "Add a random card to your hand. It costs ({discount}) less." (1)
+//!   Radiant: "Add a random Radiant card to your hand. It costs ({discount}) less." (1)
 //! Core #59 add_random_from_catalog from shipped sets (R380, R1420), excluding own def (§5.1, R387), hidden from opponent (R97, §2.4). Radiant is Radiant (R74). Quickdraw flag (R640).
+//! Issue #4154 added "It costs (1) less", the declared `discount` (R386), as the add's `costMod` rider
+//! (R766: a price it has in that hand, never below (0), which a full hand's burn takes with it, R215;
+//! R4154210); through v0.6.6e the card cost what it printed, which `script_v0_6_6e` keeps (R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-040";
 
-fn design(radiant: bool) -> Script {
+/// `discounted`: whether the card added costs the declared `discount` less (since issue #4154).
+fn design(radiant: bool, discounted: bool) -> Script {
     Script {
         // R640: Quickdraw, the tag's rule, is this flag.
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
             let mut args = json!({ "query": { "excludeDefId": ID }, "count": 1 });
             if radiant {
                 args["radiant"] = json!(true);
+            }
+            if discounted {
+                args["costMod"] = json!(-param(&*ctx, "discount"));
             }
             vec![add_random_from_catalog(json_as(args))]
         })),
@@ -29,8 +36,17 @@ fn design(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: design(false),
-        radiant: design(true),
+        base: design(false, true),
+        radiant: design(true, true),
+    }
+}
+
+/// R767000: the scripts through v0.6.6e, whose card cost what it printed (issue #4154). `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: design(false, false),
+        radiant: design(true, false),
     }
 }
 
@@ -112,6 +128,28 @@ mod tests {
                 assert!(begun.players.p2.hand.iter().any(|card| card.def_id == DESIGN), "{seed}");
             }
         }
+    }
+
+    /// R4154210: the card added costs (1) less on either face: a `costMod` of -1, which R766's floor keeps
+    /// at (0) or more.
+    #[test]
+    fn r4154210_the_card_added_costs_1_less() {
+        for radiant in [false, true] {
+            for seed in ["tg40-cost-a", "tg40-cost-b", "tg40-cost-c"] {
+                let mut s = board(seed, radiant);
+                let card = added(&mut s);
+                assert_eq!(card.cost_mod, -1, "{seed}: {}", card.def_id);
+            }
+        }
+    }
+
+    /// R767000: through v0.6.6e the card cost what it printed (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6e_adds_the_card_at_its_price() {
+        crate::under_kept(DESIGN, super::script_v0_6_6e(), || {
+            let mut s = board("tg40-kept", false);
+            assert_eq!(added(&mut s).cost_mod, 0);
+        });
     }
 
     mod radiant {

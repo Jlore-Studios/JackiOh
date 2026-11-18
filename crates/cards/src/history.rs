@@ -45,20 +45,21 @@ use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
     c033_unstable_clone_machine, c042_eugenics, c043_big_felinor, c049_snom_bunny_mind_control,
     c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas, c054_straaza, c059_unbiased_immigration,
-    c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms, c073_anti_oneshot_armor,
-    c075_infinite_reserves, c079_twinspell, c080_zao_gao, c081_radiant_saintess, c083_transmogulate,
-    c084_going_long, c089_corpse_eater, c098_heroic_power,
+    c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms, c070_spiteful_stab,
+    c073_anti_oneshot_armor, c075_infinite_reserves, c079_twinspell, c080_zao_gao, c081_radiant_saintess,
+    c083_transmogulate, c084_going_long, c089_corpse_eater, c098_heroic_power,
 };
 use crate::scripts::meditative::{
-    c005_death_by_1000_cuts, c007_introspection, c009_joint_filing, c017_true_craft_a_card,
-    c018_expedition12, c019_1_temporal_rift, c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten,
-    c032_spiritually_zhongguo, c033_first_day_of_xuexiao, c037_cn_in_a_bottle, c038_h1b_printer,
-    c040_feng_shui, c044_cn_jade_well, c045_knowledge_breaker, c047_taotie, c048_tranquility,
-    c049_1_yilegpt_unleashed, c049_3_ai_girlfriend, c049_yilegpt_tamed, c050_cn_tech, c053_prestige,
-    c054_money_machine, c056_house_party, c063_skull_of_jnari, c065_keymaster_keenus, c074_montana_giant,
-    c078_occidentless_mandate, c080_aluneth, c081_deadmans_hand, c085_playtester, c087_tatches_the_totem,
-    c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
-    c093_3_growing_felinor_super_senior, c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem,
+    c001_disruptive_disruptor, c005_death_by_1000_cuts, c007_introspection, c009_joint_filing,
+    c010_double_counting, c017_true_craft_a_card, c018_expedition12, c019_1_temporal_rift,
+    c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten, c032_spiritually_zhongguo,
+    c033_first_day_of_xuexiao, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c044_cn_jade_well,
+    c045_knowledge_breaker, c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
+    c049_yilegpt_tamed, c050_cn_tech, c053_prestige, c054_money_machine, c056_house_party,
+    c063_skull_of_jnari, c065_keymaster_keenus, c074_montana_giant, c078_occidentless_mandate, c080_aluneth,
+    c081_deadmans_hand, c085_playtester, c087_tatches_the_totem, c090_spell_basket,
+    c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior,
+    c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem, c095_call_to_chaos_meditative_edition,
     c097_2_wishing_well, c097_8_prison, c099_paranoia, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
@@ -71,22 +72,25 @@ use crate::scripts::stinkyscape::{
     c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
     c046_circadian_halfcycler, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
     c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
-    c061_flak_v5, c074_paragon_x, c083_halo, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami,
-    c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi, c116_megabase,
-    c119_unsecure_system, c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher,
-    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c163_swear_loyalities, c168_drone_hanger,
-    c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
+    c061_flak_v5, c070_zzoth, c074_paragon_x, c083_halo, c086_prototype_x2, c094_tmack_trav,
+    c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi,
+    c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c140_rush_token_launcher,
+    c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck, c154_dice_of_doom,
+    c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid,
+    c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette,
+    t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
-    c037_scorch, c046_phase_fabric, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
-    c067_phase_wall, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
-    c097_selective_enrollment, c104_tireless_cultivation, c145_fire_beam_v5, c155_the_far_vagabond,
+    c037_scorch, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall,
+    c066_plastanium_wall, c067_phase_wall, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
+    c082_endless_expedition, c097_selective_enrollment, c104_tireless_cultivation, c120_crawler,
+    c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
-    c045_jlockeeds_weapons, c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
+    c039_call_to_chaos_training_grounds_edition, c040_goetzmann_game_design, c045_jlockeeds_weapons,
+    c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
 };
 use crate::{CATALOG, REGISTRY, catalog_json};
 
@@ -960,8 +964,78 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c021_jlockeed_shredder_12::script_v0_6_6e,
     ),
     (c047_taotie::ID, "v0.6.6e", c047_taotie::script_v0_6_6e),
-    // #4154 group B
-    // #4154 group C
+    // #4154 group B (R4154200 to R4154213): the scripts before Stinkyscape+ Balance Changes III.
+    (
+        c079_a_glimpse_into_the_endless_sea::ID,
+        "v0.6.6e",
+        c079_a_glimpse_into_the_endless_sea::script_v0_6_6e,
+    ),
+    (c037_last_hurrah::ID, "v0.6.6e", c037_last_hurrah::script_v0_6_6e),
+    (
+        c001_disruptive_disruptor::ID,
+        "v0.6.6e",
+        c001_disruptive_disruptor::script_v0_6_6e,
+    ),
+    (
+        c148_alteran_reach::ID,
+        "v0.6.6e",
+        c148_alteran_reach::script_v0_6_6e,
+    ),
+    (
+        c112_job_application::ID,
+        "v0.6.6e",
+        c112_job_application::script_v0_6_6e,
+    ),
+    (
+        c165_the_trade_union::ID,
+        "v0.6.6e",
+        c165_the_trade_union::script_v0_6_6e,
+    ),
+    (
+        c019_expedition123::ID,
+        "v0.6.6e",
+        c019_expedition123::script_v0_6_6e,
+    ),
+    (c070_zzoth::ID, "v0.6.6e", c070_zzoth::script_v0_6_6e),
+    (
+        c040_goetzmann_game_design::ID,
+        "v0.6.6e",
+        c040_goetzmann_game_design::script_v0_6_6e,
+    ),
+    (
+        c010_double_counting::ID,
+        "v0.6.6e",
+        c010_double_counting::script_v0_6_6e,
+    ),
+    (
+        c044_cn_jade_well::ID,
+        "v0.6.6e",
+        c044_cn_jade_well::script_v0_6_6e,
+    ),
+    (
+        c070_spiteful_stab::ID,
+        "v0.6.6e",
+        c070_spiteful_stab::script_v0_6_6e,
+    ),
+    // #4154 group C (R4154300, R4154301, R4154302, R4154304, R4154305): the last scripts before Stinkyscape+
+    // Balance Changes III.
+    (c121_toxopid::ID, "v0.6.6e", c121_toxopid::script_v0_6_6e),
+    (c120_crawler::ID, "v0.6.6e", c120_crawler::script_v0_6_6e),
+    (
+        c061_1_shawarma_law::ID,
+        "v0.6.6e",
+        c061_1_shawarma_law::script_v0_6_6e,
+    ),
+    (
+        c039_call_to_chaos_training_grounds_edition::ID,
+        "v0.6.6e",
+        c039_call_to_chaos_training_grounds_edition::script_v0_6_6e,
+    ),
+    (
+        c095_call_to_chaos_meditative_edition::ID,
+        "v0.6.6e",
+        c095_call_to_chaos_meditative_edition::script_v0_6_6e,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

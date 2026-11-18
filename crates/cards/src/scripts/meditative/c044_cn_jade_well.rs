@@ -1,14 +1,16 @@
 //! Meditative #44 CN Jade Well (SPEC §8.8 row 44, R964, R3837005). (3) Field Spell, CN, Rare.
 //!
-//!   Base:    "Activate: Add an Auspicious Rock to your hand."
-//!   Radiant: "Activate: Add a Radiant Auspicious Rock to your hand."
+//!   Base:    "Activate: Add an Auspicious Rock to your hand. It has Lucky {lucky}." (1)
+//!   Radiant: "Activate: Add a Radiant Auspicious Rock to your hand. It has Lucky {lucky}." (1)
 //!
 //! Engine: an `ActivationDecl` (R384), once a turn and free, as M #40 Feng Shui's (R3140000), that
 //! `add_to_hand`s the Rock (M #39.1). Issue #3837 turned its "Start of turn" into the Activate
 //! (R3837005); through v0.6.2c it was a Field Spell's `start_of_turn` (R62), Core #6 Mana Well's shape,
 //! which `script_v0_6_2c` keeps for those replays (R767000). MD-C15: an Activate needs a card that
 //! stays on the field as much as a start-of-turn text does, as R402 reasoned for C #78.
-//! Tunes: none.
+//! Issue #4154 gave the Rock Lucky 1 on both faces (the add's `lucky` rider, R1438; the declared `lucky`,
+//! R386; R4154212); through v0.6.6e it had none, which `script_v0_6_6e` keeps (R767000).
+//! Tunes: lucky 1 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -18,8 +20,8 @@ pub const ID: &str = "meditative-044";
 pub const ROCK: &str = "meditative-039-1";
 
 /// "Activate: Add an Auspicious Rock to your hand." (R384, R3837005): once a turn, free, Radiant on the
-/// Radiant face.
-fn rock(radiant: bool) -> ActivationDecl {
+/// Radiant face; with `lucky`, "It has Lucky {lucky}" (R4154212).
+fn rock(radiant: bool, lucky: bool) -> ActivationDecl {
     ActivationDecl {
         id: "rock".to_string(),
         label: if radiant {
@@ -33,21 +35,36 @@ fn rock(radiant: bool) -> ActivationDecl {
         modes: Vec::new(),
         can_activate: None,
         has: None,
-        run: hook(move |_ctx| vec![add_to_hand(json_as(json!({ "defId": ROCK, "radiant": radiant })))]),
+        run: hook(move |ctx| {
+            let mut args = json!({ "defId": ROCK, "radiant": radiant });
+            if lucky {
+                args["lucky"] = json!(param(&*ctx, "lucky"));
+            }
+            vec![add_to_hand(json_as(args))]
+        }),
     }
 }
 
-fn well(radiant: bool) -> Script {
+fn well(radiant: bool, lucky: bool) -> Script {
     Script {
-        activations: vec![rock(radiant)],
+        activations: vec![rock(radiant, lucky)],
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: well(false),
-        radiant: well(true),
+        base: well(false, true),
+        radiant: well(true, true),
+    }
+}
+
+/// R767000: the Activate through v0.6.6e, whose Rock had no Lucky (issue #4154). `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: well(false, false),
+        radiant: well(true, false),
     }
 }
 
@@ -187,6 +204,44 @@ mod tests {
         let rocks = rocks_of(&s, P1);
         assert_eq!(rocks.len(), 1);
         assert!(rocks[0].radiant);
+    }
+
+    /// The Lucky the Rock one Activate adds holds, its printed Lucky (a Radiant Rock's 2) included.
+    fn rock_lucky(radiant: bool) -> i32 {
+        let mut s = standing(radiant);
+        s.activate(ID, json!({}));
+        let rock = rocks_of(&s, P1).into_iter().next().expect("a Rock");
+        assert_eq!(rock.radiant, radiant);
+        lucky_on(s.state(), &rock)
+    }
+
+    #[test]
+    fn r4154212_the_rock_has_lucky_1_more_on_either_face() {
+        for radiant in [false, true] {
+            let plain = crate::under_kept(ID, script_v0_6_6e(), || rock_lucky(radiant));
+            assert_eq!(rock_lucky(radiant), plain + 1, "radiant {radiant}");
+        }
+        assert_eq!(rock_lucky(false), 1, "a base Rock prints none");
+    }
+
+    #[test]
+    fn r386_lucky_reads_through_param() {
+        let mut s = standing(false);
+        assert_eq!(crate::upgrade_number(&mut s, ID, "lucky"), 2);
+        s.activate(ID, json!({}));
+        let rock = rocks_of(&s, P1).into_iter().next().expect("a Rock");
+        assert_eq!(lucky_on(s.state(), &rock), 2);
+    }
+
+    /// R767000: through v0.6.6e the Rock had no Lucky (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6e_adds_a_rock_without_lucky() {
+        crate::under_kept(ID, script_v0_6_6e(), || {
+            let mut s = standing(false);
+            s.activate(ID, json!({}));
+            let rock = rocks_of(&s, P1).into_iter().next().expect("a Rock");
+            assert_eq!(lucky_on(s.state(), &rock), 0);
+        });
     }
 
     #[test]

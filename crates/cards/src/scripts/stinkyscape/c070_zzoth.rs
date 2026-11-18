@@ -1,15 +1,25 @@
 //! S #70 Z'Zoth (SPEC §8.10 row 70): (4) Unit, Legendary, 5/7 → 10/14, of the Stinkyscape set.
-//!   Base:    "Cry: Summon every Unit with a Death from your graveyard."
-//!   Radiant: "Cry: Summon every Unit with a Death from your graveyard. Give them Reborn."
+//!   Base:    "Cry: Summon every Unit with a Death from your graveyard. Trigger their Deaths."
+//!   Radiant: "Cry: Summon every Unit with a Death from your graveyard. Give them Reborn. Trigger their
+//!            Deaths twice."
 //! Engine: Cry (R1), R1869001: C #44 Back from the GY's Radiant summon from the graveyard (`for_each_card`
 //! read once as the clause begins, R113), filtered to the Unit cards whose running face prints a Death
 //! (`Script.death`; a Death granted on the field is gone in the graveyard, R78), oldest first (§3), each
 //! summoned into R64's zone with no Cry; with no room the rest stay in the graveyard. Radiant: each Unit
-//! this Cry summoned (`summoned_so_far`, R136) is given Reborn (`grant_keyword`).
+//! this Cry summoned (`summoned_so_far`, R136) is given Reborn (`grant_keyword`). Issue #4154 then has
+//! each Unit it summoned run its Death where it stands, in the order summoned, without dying
+//! (`trigger_death`, R4154205); the Radiant face runs that round twice, after the Reborn. "Them" are read
+//! once, before any Death runs, so a Unit a Death summons runs none, nor does one an earlier Death took
+//! off the field. Through v0.6.6e no Death ran, which `script_v0_6_6e` keeps
+//! (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-070";
+
+/// R4154205: how many rounds of the summoned Units' Deaths each face runs (since issue #4154).
+const DEATH_ROUNDS: usize = 1;
+const RADIANT_DEATH_ROUNDS: usize = 2;
 
 /// Your graveyard's Units whose running face prints a Death, oldest first (§3).
 fn graveyard_death_units(ctx: &EffectContext<'_>) -> Vec<String> {
@@ -24,7 +34,8 @@ fn graveyard_death_units(ctx: &EffectContext<'_>) -> Vec<String> {
         .collect()
 }
 
-fn zzoth(radiant: bool) -> Script {
+/// `radiant`: whether the summoned are given Reborn; `rounds`: how many times their Deaths then run.
+fn zzoth(radiant: bool, rounds: usize) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
             let mut effects = vec![for_each_card(ForEachCardArgs {
@@ -44,6 +55,20 @@ fn zzoth(radiant: bool) -> Script {
                     }),
                 }));
             }
+            if rounds > 0 {
+                // Read once, before any Death runs: a Unit a Death summons is none of "them".
+                effects.push(for_each_card(ForEachCardArgs {
+                    cards: Arc::new(move |ctx: &mut EffectContext<'_>| {
+                        let summoned = summoned_so_far(ctx);
+                        (0..rounds).flat_map(|_| summoned.clone()).collect()
+                    }),
+                    each: Arc::new(|instance_id: &str| {
+                        trigger_death(TriggerDeathArgs {
+                            instance_id: instance_id.to_string(),
+                        })
+                    }),
+                }));
+            }
             effects
         })),
         ..Script::default()
@@ -52,8 +77,17 @@ fn zzoth(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: zzoth(false),
-        radiant: zzoth(true),
+        base: zzoth(false, DEATH_ROUNDS),
+        radiant: zzoth(true, RADIANT_DEATH_ROUNDS),
+    }
+}
+
+/// R767000: the scripts through v0.6.6e, which triggered no Death (issue #4154). `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: zzoth(false, 0),
+        radiant: zzoth(true, 0),
     }
 }
 
@@ -77,6 +111,49 @@ mod tests {
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "graveyard": graveyard, "field": field },
             "p2": { "hand": [FILLER], "graveyard": [SAINTESS] },
         }))
+    }
+
+    const LAR: &str = "classicplus-076"; // Brother Lar: "Death: Summon a Brother Ping."
+    const PING: &str = "classicplus-076-1"; // Brother Ping
+
+    fn pings(s: &Scenario) -> usize {
+        (1..=5).filter_map(|lane| s.unit(P1, lane)).filter(|unit| unit.def_id == PING).count()
+    }
+
+    /// R4154205: Z'Zoth with Brother Lar in the graveyard: Lar's lane, then how many Pings its Deaths made.
+    fn lar_back(radiant: bool) -> (Scenario, usize) {
+        let mut s = holding(radiant, json!([LAR]), json!([]));
+        s.play(ID, json!({ "zone": 1 }));
+        assert_eq!(s.unit(P1, 2).map(|card| card.def_id), Some(LAR.to_string()), "Lar is summoned and stays");
+        assert_eq!(s.count("destroyed"), 0, "no Unit died");
+        let made = pings(&s);
+        (s, made)
+    }
+
+    #[test]
+    fn r4154205_the_base_face_triggers_each_summoned_units_death_once() {
+        let (_, made) = lar_back(false);
+        assert_eq!(made, 1);
+    }
+
+    #[test]
+    fn r4154205_the_radiant_face_triggers_them_twice_and_a_unit_a_death_summoned_runs_none() {
+        let (s, made) = lar_back(true);
+        assert_eq!(made, 2);
+        let lar = s.unit_at(P1, 2);
+        assert!(has_keyword(&s.stats(&lar).keywords, KeywordKind::Reborn), "Lar has Reborn first");
+    }
+
+    /// R767000: through v0.6.6e no Death ran (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6e_triggers_no_death() {
+        crate::under_kept(ID, super::script_v0_6_6e(), || {
+            for radiant in [false, true] {
+                let mut s = holding(radiant, json!([LAR]), json!([]));
+                s.play(ID, json!({ "zone": 1 }));
+                assert_eq!(pings(&s), 0, "radiant {radiant}");
+            }
+        });
     }
 
     fn units_on_board(s: &Scenario) -> Vec<Option<String>> {

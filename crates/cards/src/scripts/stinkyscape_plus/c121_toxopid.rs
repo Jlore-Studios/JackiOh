@@ -325,9 +325,12 @@ mod tests {
             assert_eq!(s.unit_at(P1, 1).def_id, ID);
             assert_eq!(s.unit_at(P2, 2).id, vanilla, "seed {n}: nothing exiled");
             assert!(s.pile(P2, "exile").is_empty(), "seed {n}");
-            for lane in &mine {
-                assert!(!s.unit_at(P1, *lane).radiant, "seed {n}: base Legs");
-            }
+            let legs: Vec<CardInstance> = mine
+                .iter()
+                .map(|lane| s.unit_at(P1, *lane))
+                .chain(enemy.iter().map(|lane| s.unit_at(P2, *lane)))
+                .collect();
+            assert!(legs.iter().all(|leg| !leg.radiant), "seed {n}: base Legs");
             own += mine.len();
             theirs += enemy.len();
         }

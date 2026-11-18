@@ -1,15 +1,18 @@
 //! M #78 Occidentless Mandate (SPEC §8.8 row 78): (4) Spell, CN, Epic.
 //!
-//! Base:    "Exile every non-CN permanent."
-//! Radiant: "Exile every enemy non-CN permanent."
+//! Base:    "Destroy every non-CN permanent."
+//! Radiant: "Destroy every enemy non-CN permanent."
 //! Engine:
-//! - **The exile:** `exile_all` over every non-CN permanent of both sides (the Radiant face's: its
-//!   opponent's alone), both rows, face-down ones included: exile ignores Indestructible and runs no
-//!   Death (§6.3). A unit token ceases to exist instead of reaching exile (R11); a card dormant under a
-//!   Stack is not on the field (R13); a Unit immune to Spells is spared (B5 E35, MD-B1, R940).
+//! - **The destroy** (issue #4154, R4154103): `destroy_all` over every non-CN permanent of both sides
+//!   (the Radiant face's: its opponent's alone), both rows, face-down ones included, all marked at once
+//!   and collected in one state check (R59), so every Death fires once the board has gone (§6.3); an
+//!   Indestructible one keeps its place (R46). A unit token ceases to exist (R11); a card dormant under
+//!   a Stack is not on the field (R13); a Unit immune to Spells is spared (B5 E35, MD-B1, R940).
 //! - **Tribal hate** (R1424): "non-CN" picks cards by lacking a tribal tag, and a card in Chinese has
 //!   it (R1176000).
-//! - **Kept for replays** (R767000): through v0.6.5b both faces exiled both sides and added a random CN
+//! - **Kept for replays** (R767000): through v0.6.6e it read "Exile every non-CN permanent." (Radiant:
+//!   "every enemy non-CN permanent"), `exile_all`, which ignores Indestructible and runs no Death
+//!   (`script_v0_6_6e`, issue #4154); through v0.6.5b both faces exiled both sides and added a random CN
 //!   card to their caster's hand for each of the caster's permanents exiled, counted first with the
 //!   exile's own scope (R1142, Frozen Wastes' pattern, C+ #12.6), the Radiant face's Radiant and
 //!   costing (`discount`) less (issue #3996); `script_v0_6_5b` keeps that.
@@ -24,8 +27,16 @@ fn non_cn_permanents(side: &str) -> BoardScope {
     json_as(json!({ "side": side, "rows": ["units", "backrow"], "notTags": ["CN"] }))
 }
 
-/// Issue #3996: the exile and nothing more.
+/// R4154103: the destroy and nothing more.
 fn mandate(side: &'static str) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| vec![destroy_all(non_cn_permanents(side))])),
+        ..Script::default()
+    }
+}
+
+/// Issue #3996, through v0.6.6e: the exile and nothing more.
+fn mandate_v0_6_6e(side: &'static str) -> Script {
     Script {
         cry: Some(hook(move |_ctx| vec![exile_all(non_cn_permanents(side))])),
         ..Script::default()
@@ -36,6 +47,15 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: mandate("any"),
         radiant: mandate("enemy"),
+    }
+}
+
+/// R767000: after v0.6.5b through v0.6.6e it exiled where it now destroys (issue #4154). `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: mandate_v0_6_6e("any"),
+        radiant: mandate_v0_6_6e("enemy"),
     }
 }
 
@@ -73,10 +93,10 @@ fn mandate_v0_6_5b(radiant: bool) -> Script {
     }
 }
 
-// M #78 Occidentless Mandate — SPEC §8.8 row 78, BUILD M10 row M 78.
+// M #78 Occidentless Mandate — SPEC §8.8 row 78, BUILD M10 row M 78 (R4154103).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script_v0_6_5b};
+    use super::{ID, script_v0_6_5b, script_v0_6_6e};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -143,8 +163,10 @@ mod tests {
         mod base {
             use super::*;
 
+            /// R4154103: every non-CN permanent of both sides is destroyed, a face-down one too, and each
+            /// goes to its graveyard; an Indestructible one stands.
             #[test]
-            fn exiles_every_non_cn_permanent_face_down_and_indestructible_too() {
+            fn r4154103_destroys_every_non_cn_permanent_face_down_too_and_an_indestructible_one_stands() {
                 let mut s = decreed(
                     "mandate-sweep",
                     false,
@@ -153,14 +175,16 @@ mod tests {
                 );
                 let wall = s.unit(P2, 1).expect("the wall");
                 let trap = s.backrow(P2, 1).expect("the trap");
+                let vanilla = s.unit(P1, 1).expect("p1's Vanilla");
                 s.play(ID, json!({}));
-                // Only the CN Unit stands.
+                // The CN Unit and the Indestructible wall stand.
                 assert_eq!(on_field(&s, P1), vec![BAT.to_string()]);
-                assert!(on_field(&s, P2).is_empty());
-                s.expect_in_zone(&wall, "exile");
-                s.expect_in_zone(&trap, "exile");
-                // An exile runs no Death and destroys nothing.
-                assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Destroyed));
+                assert_eq!(on_field(&s, P2), vec![WALL.to_string()]);
+                s.expect_in_zone(&wall, "field");
+                s.expect_in_zone(&trap, "graveyard");
+                s.expect_in_zone(&vanilla, "graveyard");
+                assert!(s.events().iter().any(|event| event.event_type() == GameEventType::Destroyed));
+                assert!(s.pile(P1, "exile").is_empty() && s.pile(P2, "exile").is_empty(), "nothing exiled");
             }
 
             /// Issue #3996: no card comes in return, and nothing is drawn from the match rng for one.
@@ -179,7 +203,7 @@ mod tests {
 
             #[test]
             fn r1176000_spares_a_translated_permanent() {
-                // A Vanilla in Chinese is CN (R1176000): it is not "non-CN", so it is not exiled, on
+                // A Vanilla in Chinese is CN (R1176000): it is not "non-CN", so it is not destroyed, on
                 // either side; p1's English Vanilla is.
                 let mut s = decreed("mandate-translated", false, json!([VANILLA, VANILLA]), json!([VANILLA]));
                 let translated = s.unit(P1, 1).expect("p1's Vanilla").id;
@@ -190,23 +214,7 @@ mod tests {
                 s.play(ID, json!({}));
                 assert_eq!(s.unit(P1, 1).expect("the translated Vanilla stands").id, translated);
                 assert_eq!(s.unit(P2, 1).expect("the enemy's translated Vanilla stands").id, enemy);
-                s.expect_in_zone(&english, "exile");
-            }
-
-            #[test]
-            fn r13_a_dormant_stack_card_is_spared() {
-                let mut s = decreed(
-                    "mandate-stack",
-                    false,
-                    json!([BIG_FELINOR, { "def": FIENDER, "stack": true }]),
-                    json!([]),
-                );
-                let fiender = s.unit(P1, 1).expect("the top of the pile");
-                assert_eq!(fiender.def_id, FIENDER);
-                s.play(ID, json!({}));
-                s.expect_in_zone(&fiender, "exile");
-                // The dormant Big Felinor was not on the field (R13): it resumes.
-                assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(BIG_FELINOR.to_string()));
+                s.expect_in_zone(&english, "graveyard");
             }
 
             #[test]
@@ -220,16 +228,16 @@ mod tests {
                 let immune = s.unit(P1, 1).expect("the immune unit");
                 s.play(ID, json!({}));
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.id), Some(immune.id));
-                assert!(s.unit(P1, 2).is_none(), "the Vanilla is exiled");
+                assert!(s.unit(P1, 2).is_none(), "the Vanilla is destroyed");
             }
         }
 
         mod radiant {
             use super::*;
 
-            /// Issue #3996: "Exile every enemy non-CN permanent." Yours stay, and no card comes.
+            /// R4154103: "Destroy every enemy non-CN permanent." Yours stay, and no card comes.
             #[test]
-            fn radiant_exiles_every_enemy_non_cn_permanent_and_spares_yours() {
+            fn r4154103_radiant_destroys_every_enemy_non_cn_permanent_and_spares_yours() {
                 let mut s = decreed(
                     "mandate-radiant",
                     true,
@@ -241,11 +249,129 @@ mod tests {
                 let hand = s.hand(P1).len();
                 s.play(ID, json!({}));
                 assert_eq!(on_field(&s, P1), vec![VANILLA.to_string(), SHEEPISH.to_string()]);
-                assert_eq!(on_field(&s, P2), vec![BAT.to_string()]);
-                s.expect_in_zone(&wall, "exile");
-                s.expect_in_zone(&trap, "exile");
+                assert_eq!(on_field(&s, P2), vec![WALL.to_string(), BAT.to_string()]);
+                s.expect_in_zone(&wall, "field");
+                s.expect_in_zone(&trap, "graveyard");
                 assert_eq!(s.hand(P1).len(), hand - 1);
                 assert!(added(&s).is_empty());
+            }
+        }
+
+        /// R767000: after v0.6.5b through v0.6.6e it exiled every (enemy) non-CN permanent (issue #4154).
+        mod kept_for_v0_6_6e {
+            use super::*;
+
+            #[test]
+            fn r767000_v0_6_6e_exiles_every_non_cn_permanent_face_down_and_indestructible_too() {
+                crate::under_kept(ID, script_v0_6_6e(), || {
+                    let mut s = decreed(
+                        "mandate-sweep",
+                        false,
+                        json!([VANILLA, BAT]),
+                        json!([WALL, { "def": SHEEPISH, "row": "backrow" }]),
+                    );
+                    let wall = s.unit(P2, 1).expect("the wall");
+                    let trap = s.backrow(P2, 1).expect("the trap");
+                    s.play(ID, json!({}));
+                    // Only the CN Unit stands.
+                    assert_eq!(on_field(&s, P1), vec![BAT.to_string()]);
+                    assert!(on_field(&s, P2).is_empty());
+                    s.expect_in_zone(&wall, "exile");
+                    s.expect_in_zone(&trap, "exile");
+                    // An exile runs no Death and destroys nothing.
+                    assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Destroyed));
+                });
+            }
+
+            /// Issue #3996: no card comes in return, and nothing is drawn from the match rng for one.
+            #[test]
+            fn r767000_v0_6_6e_it_adds_no_card_to_your_hand() {
+                crate::under_kept(ID, script_v0_6_6e(), || {
+                    let mut s = decreed("mandate-no-cards", false, json!([VANILLA, VANILLA, RUSH_TOKEN]), json!([VANILLA]));
+                    let hand = s.hand(P1).len();
+                    let cursor = s.state().rng_cursor;
+                    s.play(ID, json!({}));
+                    assert!(on_field(&s, P1).is_empty());
+                    assert!(on_field(&s, P2).is_empty());
+                    assert_eq!(s.hand(P1).len(), hand - 1, "only the Mandate left the hand");
+                    assert!(added(&s).is_empty());
+                    assert_eq!(s.state().rng_cursor, cursor);
+                });
+            }
+
+            #[test]
+            fn r767000_v0_6_6e_spares_a_translated_permanent() {
+                crate::under_kept(ID, script_v0_6_6e(), || {
+                    // A Vanilla in Chinese is CN (R1176000): it is not "non-CN", so it is not exiled, on
+                    // either side; p1's English Vanilla is.
+                    let mut s = decreed("mandate-translated", false, json!([VANILLA, VANILLA]), json!([VANILLA]));
+                    let translated = s.unit(P1, 1).expect("p1's Vanilla").id;
+                    let enemy = s.unit(P2, 1).expect("p2's Vanilla").id;
+                    let english = s.unit(P1, 2).expect("p1's other Vanilla");
+                    s.card_mut(&translated).chinese = Some(true);
+                    s.card_mut(&enemy).chinese = Some(true);
+                    s.play(ID, json!({}));
+                    assert_eq!(s.unit(P1, 1).expect("the translated Vanilla stands").id, translated);
+                    assert_eq!(s.unit(P2, 1).expect("the enemy's translated Vanilla stands").id, enemy);
+                    s.expect_in_zone(&english, "exile");
+                });
+            }
+
+            #[test]
+            fn r767000_v0_6_6e_a_dormant_stack_card_is_spared() {
+                crate::under_kept(ID, script_v0_6_6e(), || {
+                    let mut s = decreed(
+                        "mandate-stack",
+                        false,
+                        json!([BIG_FELINOR, { "def": FIENDER, "stack": true }]),
+                        json!([]),
+                    );
+                    let fiender = s.unit(P1, 1).expect("the top of the pile");
+                    assert_eq!(fiender.def_id, FIENDER);
+                    s.play(ID, json!({}));
+                    s.expect_in_zone(&fiender, "exile");
+                    // The dormant Big Felinor was not on the field (R13): it resumes.
+                    assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(BIG_FELINOR.to_string()));
+                });
+            }
+
+            #[test]
+            fn r767000_v0_6_6e_a_unit_immune_to_spells_is_spared() {
+                crate::under_kept(ID, script_v0_6_6e(), || {
+                    let mut s = decreed(
+                        "mandate-immune",
+                        false,
+                        json!([{ "def": TOP_LOSER, "radiant": true }, VANILLA]),
+                        json!([]),
+                    );
+                    let immune = s.unit(P1, 1).expect("the immune unit");
+                    s.play(ID, json!({}));
+                    assert_eq!(s.unit(P1, 1).map(|unit| unit.id), Some(immune.id));
+                    assert!(s.unit(P1, 2).is_none(), "the Vanilla is exiled");
+                });
+            }
+
+            /// Issue #3996: "Exile every enemy non-CN permanent." Yours stay, and no card comes.
+            #[test]
+            fn r767000_v0_6_6e_radiant_exiles_every_enemy_non_cn_permanent_and_spares_yours() {
+                crate::under_kept(ID, script_v0_6_6e(), || {
+                    let mut s = decreed(
+                        "mandate-radiant",
+                        true,
+                        json!([VANILLA, { "def": SHEEPISH, "row": "backrow" }]),
+                        json!([WALL, BAT, { "def": SHEEPISH, "row": "backrow" }]),
+                    );
+                    let wall = s.unit(P2, 1).expect("the wall");
+                    let trap = s.backrow(P2, 1).expect("their trap");
+                    let hand = s.hand(P1).len();
+                    s.play(ID, json!({}));
+                    assert_eq!(on_field(&s, P1), vec![VANILLA.to_string(), SHEEPISH.to_string()]);
+                    assert_eq!(on_field(&s, P2), vec![BAT.to_string()]);
+                    s.expect_in_zone(&wall, "exile");
+                    s.expect_in_zone(&trap, "exile");
+                    assert_eq!(s.hand(P1).len(), hand - 1);
+                    assert!(added(&s).is_empty());
+                });
             }
         }
 

@@ -8739,12 +8739,12 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "120",
         "Crawler",
-        c(0),
+        c(1),
         T::Unit,
         &[G::Mindustrial, G::AutomaGamma],
         R::Common,
-        st(1, 3),
-        st(2, 6),
+        st(3, 1),
+        st(6, 2),
     ),
     row(
         "121",

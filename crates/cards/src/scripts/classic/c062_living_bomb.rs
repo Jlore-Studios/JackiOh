@@ -1,4 +1,4 @@
-//! C #62 Living Bomb (SPEC §8.6 row 62). (2) Field Spell, Rare, Plague.
+//! C #62 Living Bomb (SPEC §8.6 row 62). (3) Field Spell, Rare, Plague ((2) until issue #4154).
 //!   Base:    "Cry: Place a Plague Counter. / At the start of each player's turn: Destroy every permanent
 //!            that player controls with a Plague Counter on it."
 //!   Radiant: "Activate: Place a Plague Counter. / At the start of your opponent's turn: Destroy every
@@ -248,7 +248,7 @@ mod tests {
                 for other in [&mine, &well, &pawn, &bomb] {
                     assert_eq!(s.card(other).counters.plague.unwrap_or(0), 0);
                 }
-                s.expect_mana(P1, 2);
+                s.expect_mana(P1, 1);
             }
 
             /// The counter the Cry placed is the Bomb's own weapon: the enemy Unit it names is destroyed at the
@@ -267,11 +267,12 @@ mod tests {
             }
 
             #[test]
-            fn r689_it_costs_2() {
+            fn r689_it_costs_3() {
                 crate::register_all();
-                assert_eq!(serde_json::to_value(crate::card_def(BOMB).cost).unwrap(), json!(2));
+                // (3) since issue #4154, (2) before.
+                assert_eq!(serde_json::to_value(crate::card_def(BOMB).cost).unwrap(), json!(3));
                 let mut s = in_hand(false);
-                s.state_mut().players.p1.mana.current = 1;
+                s.state_mut().players.p1.mana.current = 2;
                 s.expect_refused(|s| s.play(BOMB, json!({ "zone": 1 })));
             }
 

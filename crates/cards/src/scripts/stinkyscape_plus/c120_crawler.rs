@@ -285,16 +285,16 @@ mod tests {
 
     #[test]
     fn r4154301_the_reduction_is_its_declared_number_and_lasts() {
-        let mut s = doomed("s120-tuned", false, json!([TOXOPID]));
-        let moved = crate::upgrade_number(&mut s, ID, "reduce");
-        assert_eq!(moved, 3);
+        let mut s = doomed("s120-declared", false, json!([TOXOPID]));
+        let reduce = param_value(s.state(), Some(s.card(ID)), "reduce", ParamValueOptions::default());
+        assert_eq!(reduce, 2);
         let held = toxopids(&s);
         let before = s.card(&held[0]).cost_mod;
         kill(&mut s);
-        assert_eq!(s.card(&held[0]).cost_mod, before - 3);
-        // It lasts: the next turn leaves it where it is.
+        assert_eq!(s.card(&held[0]).cost_mod, before - reduce);
+        // It lasts: p2's turn ends and p1's begins, and the price stays where the Death put it.
         s.end_turn();
-        assert_eq!(s.card(&held[0]).cost_mod, before - 3);
+        assert_eq!(s.card(&held[0]).cost_mod, before - reduce);
     }
 
     mod radiant {

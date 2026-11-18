@@ -1,15 +1,17 @@
 //! SPEC §8.12 S+ #142 Call to Chaos (Mindustrial-Swarm Edition) (R28, R87, R423, R436, R3570000–R3570005),
 //! a card of the Stinkyscape+ set (R1420, R3535000). (4) Spell, Call to Chaos, Legendary.
-//!   Base:    "One of the following random effects: add 3 random Paperclip cards to your hand, they cost
-//!            (0), replenish 2 mana; add 3 random Evolved Swarm cards to your hand, they cost (0); summon
-//!            two random Radiant Units, make them GIGA; summon or cast 4 random Jlockeed cards; add 3
+//!   Base:    "One of the following random effects: add 2 random Paperclip cards to your hand, they cost
+//!            (0), replenish 2 mana; add 2 random Evolved Swarm cards to your hand, they cost (0); summon
+//!            two random Radiant Units, make them GIGA; summon or cast 3 random Jlockeed cards; add 2
 //!            random Terminus cards to your hand, replenish 4 mana; add the Toxopid to your hand, it costs
-//!            (0); Toxic 3 and Burn 2 all enemies; for the rest of the game, when you launch a Starship,
+//!            (0); Toxic 3 and Burn 1 all enemies; for the rest of the game, when you launch a Starship,
 //!            cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem
 //!            and a Swarm Golem; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!   Issue #3996 cut the two strongest entries' declared numbers (R3996200): `card3` 5 → 4 and `burn`
-//!   3 → 2, on both faces; the numbers are catalog data, so a replay of v0.6.5b reads its own.
+//!   3 → 2, on both faces; the numbers are catalog data, so a replay of v0.6.5b reads its own. Issue #4154
+//!   cut every entry with a count of 3 or more and the Burn by one (R4154303): `card`, `card2` and `card4`
+//!   3 → 2, `card3` 4 → 3 and `burn` 2 → 1, so a replay of v0.6.6e reads its own as well.
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MS_EFFECTS`,
 //! `subsystems/call_to_chaos_mindustrial_swarm.rs`): the roll, the announcement both players read (R436), the
@@ -63,7 +65,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // Mr. Vanilla
     const WASP: &str = "stinkyscape-091"; // The Propagation's Wasp: Swarm, "Evolve: Gain Flying"
     const TOXOPID: &str = "stinkyscapeplus-121";
-    const CRAWLER: &str = "stinkyscapeplus-120";
     const MINDUSTRIAL_GOLEM: &str = "stinkyscapeplus-142-1";
     const SWARM_GOLEM: &str = "stinkyscapeplus-142-2";
     const CRYSTAL: &str = "stinkyscape-132"; // Defensive Crystal: a Starship Piece
@@ -178,13 +179,14 @@ mod tests {
         assert_eq!(label_of("launchWatch"), subsystems::CHAOS_MS_LAUNCH_WATCH_LABEL);
     }
 
-    /// R3996200: issue #3996 cut the Jlockeed entry's count 5 → 4 and the afflict entry's Burn 3 → 2 on
-    /// both faces, and left every other declared number as it was.
+    /// R3996200, R4154303: issue #3996 cut the Jlockeed entry's count 5 → 4 and the afflict entry's Burn
+    /// 3 → 2; issue #4154 cut the three counts of 3 to 2, the Jlockeed count to 3 and the Burn to 1, on both
+    /// faces, and left the Toxic as it was.
     #[test]
-    fn r3996200_the_nerf_cuts_the_jlockeed_count_and_the_burn_and_leaves_the_rest() {
+    fn r3996200_r4154303_the_nerfs_cut_the_counts_and_the_burn_and_leave_the_toxic() {
         crate::register_all();
         let def = card_def(ID);
-        for (key, value) in [("card", 3), ("card2", 3), ("card3", 4), ("card4", 3), ("toxic", 3), ("burn", 2)] {
+        for (key, value) in [("card", 2), ("card2", 2), ("card3", 3), ("card4", 2), ("toxic", 3), ("burn", 1)] {
             let declared = def
                 .params
                 .as_ref()
@@ -234,13 +236,13 @@ mod tests {
         }
 
         #[test]
-        fn r3570000_entry_paperclips_adds_three_paperclip_cards_at_zero_then_replenishes_two() {
+        fn r3570000_r4154303_entry_paperclips_adds_two_paperclip_cards_at_zero_then_replenishes_two() {
             assert_eq!((CHAOS_MS_CARD_COST, CHAOS_MS_PAPERCLIP_REPLENISH), (0, 2));
             let mut p1 = side(false, json!([]));
             p1["mana"] = json!(CALL_PRICE);
             let s = chaos("paperclips", p1, json!({ "hand": [VANILLA] }));
             let added = added_to(&s, P1);
-            assert_eq!(added.len(), 3);
+            assert_eq!(added.len(), 2);
             for card in &added {
                 assert!(has_tag(&card.def_id, Tag::Paperclip), "{}", card.def_id);
                 assert_eq!(card.cost_override, Some(0));
@@ -266,20 +268,20 @@ mod tests {
                 hand.push(json!(VANILLA));
             }
             let s = chaos("paperclips", p1, json!({ "hand": [VANILLA] }));
-            assert!(added_to(&s, P1).len() < 3, "the full hand burned some");
+            assert!(added_to(&s, P1).len() < 2, "the full hand burned some");
             let mana = &s.state().players.p1.mana;
             assert_eq!(mana.current, CHAOS_MS_PAPERCLIP_REPLENISH.min(mana.max));
         }
 
         #[test]
-        fn r3570001_entry_swarm_adds_three_swarm_cards_at_zero_marked_where_they_can_evolve() {
+        fn r3570001_r4154303_entry_swarm_adds_two_swarm_cards_at_zero_marked_where_they_can_evolve() {
             // Over the games every card added is a Swarm card of the shipped or held sets, never a token,
             // at (0), marked evolved exactly when its text prints an Evolve hook.
             let mut wasp_game: Option<Scenario> = None;
             for n in 0..400 {
                 let s = chaos_seeded(&format!("{SEED}-swarm-{n}"), "swarm");
                 let added = added_to(&s, P1);
-                assert_eq!(added.len(), 3);
+                assert_eq!(added.len(), 2);
                 for card in &added {
                     let def = card_def(&card.def_id);
                     assert!(def.tags.contains(&Tag::Swarm) && !def.token, "{}", def.id);
@@ -311,10 +313,10 @@ mod tests {
             with_unique_draws(true, || {
                 let s = chaos_seeded(&format!("{SEED}-unique"), "swarm");
                 let mut ids: Vec<String> = added_to(&s, P1).into_iter().map(|card| card.def_id).collect();
-                assert_eq!(ids.len(), 3);
+                assert_eq!(ids.len(), 2);
                 ids.sort();
                 ids.dedup();
-                assert_eq!(ids.len(), 3, "E9: three different cards");
+                assert_eq!(ids.len(), 2, "E9: two different cards");
             });
         }
 
@@ -347,7 +349,7 @@ mod tests {
         }
 
         #[test]
-        fn r3570003_r3996200_entry_jlockeed_summons_its_permanents_and_casts_its_spells_four_of_them() {
+        fn r3570003_r4154303_entry_jlockeed_summons_its_permanents_and_casts_its_spells_three_of_them() {
             crate::register_all();
             let (mut summons, mut casts) = (0, 0);
             for n in 0..GAMES {
@@ -378,13 +380,13 @@ mod tests {
                         casts += 1;
                     }
                 }
-                assert!(generated >= 4, "game {n}: four picks, {generated} made");
+                assert!(generated >= 3, "game {n}: three picks, {generated} made");
             }
             assert!(summons > 0 && casts > 0, "{summons} summoned, {casts} cast");
         }
 
         #[test]
-        fn r3570000_entry_terminus_adds_three_terminus_cards_then_replenishes_four() {
+        fn r3570000_r4154303_entry_terminus_adds_two_terminus_cards_then_replenishes_four() {
             assert_eq!(CHAOS_MS_TERMINUS_REPLENISH, 4);
             let mut tokens = 0;
             for n in 0..GAMES {
@@ -398,7 +400,7 @@ mod tests {
                 s.state_mut().rng_cursor = cursor_in(&format!("{SEED}-terminus-{n}"), "terminus");
                 s.play(ID, json!({}));
                 let added = added_to(&s, P1);
-                assert_eq!(added.len(), 3);
+                assert_eq!(added.len(), 2);
                 for card in &added {
                     let def = card_def(&card.def_id);
                     assert!(def.tags.contains(&Tag::Terminus), "{}", def.id);
@@ -412,23 +414,21 @@ mod tests {
         }
 
         #[test]
-        fn r3570000_entry_toxopid_adds_the_toxopid_at_zero_and_its_crawler() {
+        fn r3570000_r4154300_entry_toxopid_adds_the_toxopid_at_zero_and_nothing_else() {
             let s = chaos("toxopid", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let added = added_to(&s, P1);
             let toxopids: Vec<&CardInstance> = added.iter().filter(|card| card.def_id == TOXOPID).collect();
             assert_eq!(toxopids.len(), 1);
             assert_eq!(toxopids[0].cost_override, Some(0));
             assert_eq!(cost_of(&s, toxopids[0]), 0);
-            // Its own text adds the Crawler the first time it enters a hand this game (R3560000), at the
-            // Crawler's printed price: that is the Toxopid's rule, not this card's.
+            // Since issue #4154 its first hand arrival adds no Crawler (R4154300; through v0.6.6e it did,
+            // R3560000).
             let others: Vec<&CardInstance> = added.iter().filter(|card| card.def_id != TOXOPID).collect();
-            assert_eq!(others.len(), 1, "{others:?}");
-            assert_eq!(others[0].def_id, CRAWLER);
-            assert_eq!(others[0].cost_override, None);
+            assert!(others.is_empty(), "{others:?}");
         }
 
         #[test]
-        fn r3570000_r3996200_entry_afflict_gives_every_enemy_and_their_hero_toxic_three_and_burn_two() {
+        fn r3570000_r4154303_entry_afflict_gives_every_enemy_and_their_hero_toxic_three_and_burn_one() {
             let mut p1 = side(false, json!([]));
             p1["field"] = json!([{ "def": "stand-in (1) 9/9", "lane": 1 }]);
             let s = chaos(
@@ -442,10 +442,10 @@ mod tests {
             for lane in [1, 3] {
                 let enemy = s.unit_at(P2, lane);
                 assert_eq!(jackioh_engine::afflictions::toxic_on(&enemy), 3, "lane {lane}");
-                assert_eq!(jackioh_engine::afflictions::burn_on(&enemy), 2, "lane {lane}");
+                assert_eq!(jackioh_engine::afflictions::burn_on(&enemy), 1, "lane {lane}");
             }
             assert_eq!(jackioh_engine::afflictions::hero_toxic_of(s.state(), P2), 3);
-            assert_eq!(jackioh_engine::afflictions::hero_burn_of(s.state(), P2), 2);
+            assert_eq!(jackioh_engine::afflictions::hero_burn_of(s.state(), P2), 1);
             // Its caster's side is untouched.
             let own = s.unit_at(P1, 1);
             assert_eq!(jackioh_engine::afflictions::toxic_on(&own), 0);

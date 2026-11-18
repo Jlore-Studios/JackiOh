@@ -1,14 +1,16 @@
 //! Meditative #19 Expedition123 (SPEC §8.8 row 19). (1) Spell, Quickdraw, Epic. Expedition1234 until
 //! patch v0.3.10 (#831), which renamed it and took a turn off its loss.
-//!   Base:    "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Add a Temporal Rift
-//!             to your hand."
-//!   Radiant: the same with a Radiant Temporal Rift.
+//!   Base:    "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Your hero gains
+//!             {armor} Armor. Add a Temporal Rift to your hand." (armor 2)
+//!   Radiant: the same with a Radiant Temporal Rift. (armor 4)
 //!
 //! Two next-turn riders (§6.3 Mana, `next_turn_mana`, #1563), as Expedition12's: the first lowers your
 //! next refresh by `loss`; a delayed step at the start of your next turn (§10.1, R62: after that turn's
 //! refresh) sets the second, `lossAfter`, on the refresh after it, carrying the number as it stood at
 //! the cast. A full hand burns the Rift (§2.4). An extra turn taken next is "next turn", as
-//! Hearthstone's Overload lands on Time Warp's extra turn.
+//! Hearthstone's Overload lands on Time Warp's extra turn. Issue #4154 added the Armor, the declared
+//! `armor` (R386), kept for the rest of the game (R124), before the Rift (R4154209); through v0.6.6e it
+//! gave none, which `script_v0_6_6e` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -21,8 +23,9 @@ pub const RIFT_ID: &str = "meditative-019-1";
 const TURN_AFTER: &str = "turnAfter";
 const LOSS_AFTER: &str = "lossAfter";
 
-fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    vec![
+/// `armor`: whether the face gains its hero the declared `armor` (since issue #4154).
+fn cry(ctx: &mut EffectContext<'_>, armor: bool) -> Vec<Effect> {
+    let mut effects = vec![
         next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "loss") }))),
         delay(json_as(json!({
             "at": { "phase": "start", "player": "self" },
@@ -31,8 +34,12 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
             "data": { "lossAfter": param(&*ctx, LOSS_AFTER) },
             "next": true,
         }))),
-        add_to_hand(json_as(json!({ "defId": RIFT_ID, "radiant": ctx.radiant }))),
-    ]
+    ];
+    if armor {
+        effects.push(gain_hero_armor(json_as(json!({ "amount": param(&*ctx, "armor") }))));
+    }
+    effects.push(add_to_hand(json_as(json!({ "defId": RIFT_ID, "radiant": ctx.radiant }))));
+    effects
 }
 
 /// The start of your next turn: the second loss rides on the refresh after it.
@@ -44,19 +51,28 @@ fn turn_after(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![next_turn_mana(json_as(json!({ "amount": -loss })))]
 }
 
-pub fn script() -> CardScripts {
+fn expedition(armor: bool) -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(cry)),
+        cry: Some(hook(move |ctx| cry(ctx, armor))),
         resume: IndexMap::from([(TURN_AFTER, hook(turn_after))]),
         ..Script::default()
     };
-    // The Rift's face is the running face; everything else is the same script.
+    // The Rift's face and the Armor's number are the running face's; everything else is the same script.
     let radiant = base.clone();
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    expedition(true)
+}
+
+/// R767000: Expedition123 after v0.4.0f through v0.6.6e, which gave no Armor (issue #4154).
+pub fn script_v0_6_6e() -> CardScripts {
+    expedition(false)
 }
 
 /// R767000: Expedition123 through v0.4.0f: "Lose all mana for your next {turns} turns" (R844).
@@ -241,6 +257,38 @@ mod tests {
             next_turn(&mut s);
             assert_eq!(lost(&s), 4);
         }
+    }
+
+    #[test]
+    fn r4154209_your_hero_gains_2_armor_and_4_on_the_radiant_face() {
+        for (radiant, armor) in [(false, 2), (true, 4)] {
+            let mut s = board(json!([{ "def": EXPEDITION, "radiant": radiant }]));
+            s.play(EXPEDITION, json!({}));
+            assert_eq!(s.state().players.p1.hero.armor, armor, "radiant {radiant}");
+            next_turn(&mut s);
+            assert_eq!(s.state().players.p1.hero.armor, armor, "the Armor stays (R124)");
+        }
+    }
+
+    #[test]
+    fn r386_armor_reads_through_param() {
+        let mut s = board(json!([EXPEDITION]));
+        step_param(s.card_mut(EXPEDITION), "armor", 1);
+        s.play(EXPEDITION, json!({}));
+        assert_eq!(s.state().players.p1.hero.armor, 3);
+    }
+
+    /// R767000: through v0.6.6e it gave no Armor (issue #4154).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6e_gives_no_armor() {
+        crate::under_kept(EXPEDITION, script_v0_6_6e(), || {
+            for radiant in [false, true] {
+                let mut s = board(json!([{ "def": EXPEDITION, "radiant": radiant }]));
+                s.play(EXPEDITION, json!({}));
+                assert_eq!(s.state().players.p1.hero.armor, 0);
+                assert_eq!(rifts(&s).len(), 1);
+            }
+        });
     }
 
     mod radiant {

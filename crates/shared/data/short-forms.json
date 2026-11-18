@@ -445,10 +445,10 @@
     },
     "stinkyscapeplus-061-1": {
       "base": {
-        "en": "End of turn: Every Unit eats a Shawarma: 1st, +{health} Health; 2nd, Can't attack; 3rd, Can't Defend and Brittle {brittle2}; then Freeze."
+        "en": "End of turn: Every Unit eats a Shawarma: 1st, +{health} Health; 2nd, Can't attack; 3rd, Can't Defend and Brittle {brittle2}; no more."
       },
       "radiant": {
-        "en": "End of turn: Every Unit eats a Shawarma: 1st, +{health} Health; 2nd, Can't attack; 3rd, Can't Defend and Brittle {brittle2}; then Freeze. Yours eat one."
+        "en": "End of turn: Every Unit eats a Shawarma: 1st, +{health} Health; 2nd, Can't attack; 3rd, Can't Defend and Brittle {brittle2}; no more. Yours eat one."
       }
     },
     "stinkyscapeplus-064": {
@@ -494,14 +494,6 @@
       },
       "radiant": {
         "en": "Add a random pair to your hand's two ends: iKwzki and Shockwave447, Shadiris and xxFreshJack, or Tylannt and Siva 1. Meeting, both go Radiant at (0)."
-      }
-    },
-    "stinkyscapeplus-120": {
-      "base": {
-        "en": "Can't Defend. Graveyard (1).\nFirst time in play each game: add a Toxopid.\nDies after attacking.\nDeath: {damage} to the last Unit it damaged."
-      },
-      "radiant": {
-        "en": "Can't Defend. Graveyard (1).\nFirst time in play each game: add a Radiant Toxopid.\nDies after attacking.\nDeath: {damage} to the last Unit it damaged."
       }
     },
     "stinkyscapeplus-121": {
@@ -605,8 +597,6 @@
     "traininggrounds-039 base",
     "traininggrounds-039 radiant",
     "stinkyscapeplus-061-1 radiant",
-    "stinkyscapeplus-121 base",
-    "stinkyscapeplus-121 radiant",
     "stinkyscapeplus-142 base",
     "stinkyscapeplus-142 radiant"
   ]
