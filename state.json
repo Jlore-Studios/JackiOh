@@ -14707,6 +14707,13 @@
     "4156": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44245942304",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-18T06:02:10Z",
+        "until": "2026-11-18T06:32:10Z"
+      },
       "difficulty_by": {
         "at": "2026-11-18T06:02:02Z",
         "difficulty": "hard",
