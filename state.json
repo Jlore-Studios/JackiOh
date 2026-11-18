@@ -14387,9 +14387,23 @@
     "what": "plan #4144 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-18T01:48:56Z",
+    "at": "2026-11-18T01:55:31Z",
     "notes": [
-      "#4153: green and waiting for a person to merge it, so `muse` gives up its claim on it"
+      "#4131 needs a plan",
+      "#4140 needs a plan",
+      "#4141 needs a plan",
+      "#4155 needs a plan",
+      "delivered suggest on claude-8 (run 44216964799): suggested",
+      "delivered suggest on claude-3 (run 44216895309): suggested",
+      "started plan #4131 on muse (run 44219686006)",
+      "started plan #4140 on muse (run 44219749107)",
+      "started plan #4155 on muse (run 44219810815)",
+      "started plan #4141 on muse (run 44219872594)",
+      "started plan #4143 on claude-4 (run 44219937564)",
+      "started plan #4144 on claude-1 (run 44220008638)",
+      "nothing more to start: nothing is queued",
+      "#4157: typed it Task",
+      "#4156: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15095,7 +15109,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T01:48:56Z",
+  "loop_tick": "2026-11-18T01:55:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
