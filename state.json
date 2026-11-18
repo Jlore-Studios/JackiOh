@@ -38710,14 +38710,6 @@
         "provider": "claude-6",
         "run_id": "44355163752",
         "taken_asks": []
-      },
-      "2": {
-        "area": "client",
-        "count": 2,
-        "last_run": "2026-11-18T17:08:38Z",
-        "provider": "claude-8",
-        "run_id": "44355304054",
-        "taken_asks": []
       }
     },
     "taken_asks": []
