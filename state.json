@@ -17141,24 +17141,13 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "44349363987",
-            "tier": "medium"
-          }
-        ],
-        "sha": "ba0c64ace2cd68f95fb58ec2cef431c4c603e6b0",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "33a65b858c77d94a6782d1a724ecad86ec140fea",
+        "tiers": {}
       }
     },
     "4209": {
