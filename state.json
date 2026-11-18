@@ -16650,9 +16650,7 @@
       "started_at": "2026-11-18T17:25:16Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6980572197"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6981915271
     },
