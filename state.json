@@ -14703,9 +14703,11 @@
         "by": "`muse` (medium)",
         "sha": "cc70f27b7895a629d5564d0a1654b448315fb195"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T02:13:47Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-18T02:41:47Z",
         "family": "muse",
@@ -14715,6 +14717,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the game log speaks its newest line to screen readers\"} -->\n- The log now announces its newest line to screen readers: a visually-hidden `role=\"status\"` announcer beside the `<ol>` speaks each arriving line once, politely, using the same redacted-safe words the list draws. Sighted players see nothing different.\n- What changed (4 files, per the plan):\n- - [Log.tsx](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/apps/web/src/game/Log.tsx): the `Log` component keeps a `said` string fed by an effect that primes silently on mount and hotseat hand-over and speaks only when the newest line's key changes; the `<ol>` is byte-identical, wrapp\u2026\n- - [contract.ts](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/apps/web/src/game/contract.ts): new `logLive: \"log-live\"` testid.\n- - [board.css](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/apps/web/src/game/board.css): `.board > .log-live` copies the turn banner's visually-hidden declarations, so arrivals stay announced on phones where `.log` is `display: none` until opened.\n- - [Log.test.tsx](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/apps/web/src/game/Log.test.tsx): five `#4140` tests (mount says nothing; arrival announces once; reveal/re-render announces nothing; redacted arrival reads its shown redacted words; turn change reads the turn's own line).\n- How I proved it: the five new tests fail without the `Log.tsx` change (`Unable to find an element by: [data-testid=\"log-live\"]`) and pass with it; the full `Log.test.tsx` file (49 tests), `contract.test.ts`, `Board.render.test.tsx` and `Game.opening.test.tsx` all pass; `pnpm typecheck`, `eslint` on\u2026\n- Decisions the issue did not settle:\n- - The plan's local was named `newest`, which collides with the component's `view: newest` prop destructure (build error); I named it `newestLine` instead. Rejected alternative: renaming the prop, which would ripple through the file.\n- - `pnpm typecheck` runs out of memory at Node's default 2 GB heap on this machine (environment limit, unrelated to the change); it passes with `NODE_OPTIONS=--max-old-space-size=6144`.\n- - No spec wording or ruling change: presentation only, grounded in \u00a710.10 (R745/R97), so no new ruling note per the plan.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4140 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4140,
       "kind": "review",
       "live": "reviewing",
