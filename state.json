@@ -14833,6 +14833,8 @@
     "4234": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "8b42c99be90784379713358ebc62a2df83c8d5b1",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-18T17:51:15Z",
