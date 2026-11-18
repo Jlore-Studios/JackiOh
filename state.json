@@ -15625,7 +15625,7 @@
       "provider": "claude-7",
       "question": "Should this change ship with the smoke gate's Hard against Easy at 15 of 20 (16 needed), given the full gate passes and the screen is neutral to slightly positive?",
       "queued_at": "2026-11-18T13:58:29Z",
-      "run_id": "pending:94bea3b5-1795010344",
+      "run_id": "44319424875",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
