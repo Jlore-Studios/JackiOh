@@ -10610,15 +10610,8 @@
       "verdict_rounds": 1
     },
     "4018": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44363531719",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-18T18:02:16Z",
-        "until": "2026-11-18T18:32:16Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -10630,10 +10623,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"ls crates/server/src/username/ && wc -l crates/server/src/username/*.rs && ls .bot-plan.md 2>&1 | head -1; cat spec/rulings/R1434.md\"}\n- Grep: {\"pattern\": \"r1434\", \"path\": \"/home/runner/work/_temp/work/item-4018\", \"-i\": true, \"output_mode\": \"content\", \"glob\": \"!spec/11-rulings.md\", \"head_limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4018/crates/server/src/username/mod.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"fn r1434\\\\|r1434_\\\" crates apps e2e --include=*.rs --include=*.ts --include=*.tsx | head; grep -n \\\"proven_in\\\\|Adding a ruling\\\" spec/README.md | head -30; ls spec/pending | \u2026\n- Bash: {\"command\": \"sed -n 25,75p spec/README.md; cat spec/rulings/R4008001.md | head -30; cat spec/pending/4154.md | head -20\"}\n- Bash: {\"command\": \"ls crates/tools/src; grep -rn \\\"proven_in\\\" crates/tools/src -l\"}\n- Bash: {\"command\": \"grep -n \\\"proven_in\\\\|fn proving\\\\|fn scan\\\\|fn test_names\\\\|ignore\\\" crates/tools/src/spec.rs | head -60\"}\n- Bash: {\"command\": \"grep -n \\\"R1434\\\" spec/INDEX.md | head -3; grep -n \\\"R1434\\\" spec/11-rulings.md | head -3; git log --oneline -5 -- spec/rulings/R1434.md; git log -3 --stat --format='%h %s' -- spec/rulin\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/server/Cargo.toml | sed -n 40,60p; grep -n \\\"caseless\\\\|unicode-normalization\\\\|unicode\\\" Cargo.toml; grep -n \\\"USERNAME_\\\" crates/server/src/config.rs | head -20\"}\n- Bash: {\"command\": \"ls target 2>/dev/null | head; ls ~/.cargo/registry 2>/dev/null | head; grep -n \\\"pub mod username\\\\|mod username\\\" crates/server/src/lib.rs; grep -n \\\"^\\\\[lib\\\\]\\\\|^name\\\" crates/server/\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/scratch4018/src && cd /tmp/scratch4018 && cat > Cargo.toml <<'EOF'\\n[package]\\nname = \\\"scratch4018\\\"\\nversion = \\\"0.0.0\\\"\\nedition = \\\"2021\\\"\\n[dependencies]\\ncaseless = \\\u2026\n- Bash: {\"command\": \"echo $CARGO_HOME; ls ~/.cargo/registry/cache/*/ 2>/dev/null | grep -i \\\"caseless\\\\|unicode-norm\\\" ; ls .cargo 2>/dev/null; cat .cargo/config.toml 2>/dev/null | head -20; ls target | head\u2026\n- Bash: {\"command\": \"cd /tmp/scratch4018 && cp /home/runner/work/_temp/work/item-4018/Cargo.lock . && (cargo run --release --offline 2>&1 | tail -30); cd /home/runner/work/_temp/work/item-4018\", \"timeout\": 4\u2026\n- Bash: {\"command\": \"cd /tmp/scratch4018 && (timeout 120 cargo run --release 2>&1 | tail -30); cd /home/runner/work/_temp/work/item-4018\", \"timeout\": 200000}\n- Bash: {\"command\": \"cd /tmp/scratch4018 && cat > src/main.rs <<'EOF'\\nmod config;\\n#[path = \\\"/home/runner/work/_temp/work/item-4018/crates/server/src/username/mod.rs\\\"]\\nmod username;\\nuse username::{norma\u2026\n- Bash: {\"command\": \"cd /tmp/scratch4018 && cat > src/main.rs <<'EOF'\\nmod config;\\n#[path = \\\"/home/runner/work/_temp/work/item-4018/crates/server/src/username/mod.rs\\\"]\\nmod username;\\nuse username::{norma\u2026\n- Bash: {\"command\": \"grep -n \\\"^\\\\[profile\\\" -A6 Cargo.toml | head -40; cd /tmp/scratch4018 && cat > src/main.rs <<'EOF'\\nmod config;\\n#[path = \\\"/home/runner/work/_temp/work/item-4018/crates/server/src/user\u2026\n- Bash: {\"command\": \"cd /tmp/scratch4018 && cat > src/main.rs <<'EOF'\\nmod config;\\n#[path = \\\"/home/runner/work/_temp/work/item-4018/crates/server/src/username/mod.rs\\\"]\\nmod username;\\nuse username::normal\u2026\n- Bash: {\"command\": \"grep -rn \\\"username_key\\\\|default_case_fold\\\" crates apps e2e --include=*.rs --include=*.ts --include=*.tsx --include=*.sql -l | head -20; grep -rn \\\"caseless\\\\|default_case_fold_str\\\" c\u2026\n- Bash: {\"command\": \"sed -n 6772,6795p crates/server/src/db/pg.rs; sed -n 140,160p crates/server/src/cli/seed_accounts.rs; sed -n 145,155p crates/server/src/bots/pool.rs; grep -rn \\\"case fold\\\\|case-fold\\\\|c\u2026\n- Bash: {\"command\": \"cd /tmp/scratch4018 && mkdir -p username && cp /home/runner/work/_temp/work/item-4018/crates/server/src/username/* username/ && python3 - <<'EOF'\\nimport re\\np='username/mod.rs'\\ns=open(\u2026\n- said: My blanket `MIN` replacement hit `USERNAME_MIN_LENGTH` too. I'll fix the scratch copy.\n- Bash: {\"command\": \"cd /tmp/scratch4018 && sed -i 's/USERNAME_1_000_LENGTH/USERNAME_MIN_LENGTH/g' username/mod.rs && grep -n \\\"1_000\\\" username/mod.rs | head; timeout 400 cargo test 2>&1 | grep -v \\\"^\\\\s*\\\\\u2026\n- Bash: {\"command\": \"cd /tmp/scratch4018 && cp username/mod.rs username/mod.rs.fixed && python3 - <<'EOF'\\np='username/mod.rs'\\ns=open(p).read()\\ns=s.replace(\\\" fold_nfkc(&fold_nfkc(display))\\\\n\\\",\\\" fold_nf\u2026\n- Bash: {\"command\": \"cd /tmp/scratch4018 && cp /home/runner/work/_temp/work/item-4018/rustfmt.toml . 2>/dev/null; ls /home/runner/work/_temp/work/item-4018/rustfmt.toml /home/runner/work/_temp/work/item-4018\u2026\n- Bash: {\"command\": \"cat rustfmt.toml; cd /home/runner/work/_temp/work/item-4018 && cp /tmp/scratch4018/username/mod.rs.fixed /tmp/mod_fmt.rs && rustfmt --edition 2021 --config-path rustfmt.toml /tmp/mod_fmt\u2026\n- tool error: Exit code 1 max_width = 110 edition = \"2024\" 603c603,606 < failures.push(format!(\"U+{:04X} {typed:?}: key {key:?} is not its own key\", u32::from(c))); --- > failures.push(format!( > \"U+{:04X} {typed:\u2026\n- Bash: {\"command\": \"cp /tmp/scratch4018/username/mod.rs.fixed /tmp/mod_fmt.rs && rustfmt --edition 2024 --config-path rustfmt.toml /tmp/mod_fmt.rs && diff <(sed 's/^$//' crates/server/src/username/mod.rs) /\u2026\n- Bash: {\"command\": \"git status --short; rm -rf /tmp/mod_fmt.rs; cat > .bot-plan.md <<'EOF'\\n# Draft plan #4018 (planner notes)\\n- Found: username_key (crates/server/src/username/mod.rs:99) is single-round f\u2026\n- said: ## Goal Add `r1434_\u2026` property tests to `crates/server/src/username/mod.rs` that hold `username_key` stable when applied twice, over every BMP character `normalize_username` accepts, alone and as `\"a\" + c`. Both properties from the issue are checked, and the test runs well under a second. **The pro\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-18T17:52:46Z",
       "owner_why": "it plans it",
@@ -10646,9 +10638,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-15T22:30:47Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44363531719",
+      "run_id": "pending:40487e85-1795025026",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T17:52:46Z",
+      "started_at": "2026-11-18T18:04:16Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17654,9 +17646,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T17:52:46Z",
+    "at": "2026-11-18T18:04:16Z",
     "url": "",
-    "what": "plan #4018 on claude-7"
+    "what": "build #4018 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-18T17:46:24Z",
