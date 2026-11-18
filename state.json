@@ -36452,7 +36452,9 @@
           "provider": "claude-6"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-18T05:51:42Z",
         "every": 5,
+        "findings": 0,
         "head": "d04490e5fdff330a5e4e51cd17437f6030cbad70",
         "issue": 4131,
         "merged_at": "2026-11-18T05:23:34Z",
@@ -36465,12 +36467,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:7b69a0cf-1794980402",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44245875367",
         "sha": "1fd0162fbf018b3113e38d97a58a1a2ad723f4e3",
         "started_at": "2026-11-18T05:40:25Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: wrong invite codes block one profile or address for its hour, never everyone: redemption has no global circuit breaker (R4131000)",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 337
