@@ -17011,8 +17011,9 @@
     "4206": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_early": true,
-      "ci_fixed_head": "4daea4cfa110c2c3da09434b98356240ae7eece7",
+      "ci_fixed_head": "2b516b74856444224382616d3af0cdfb1b63c394",
       "ci_fixes": 2,
       "ci_on_head": false,
       "ci_reruns": {
@@ -17035,7 +17036,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-18T16:48:54Z",
+      "feedback_since": "2026-11-18T17:50:28Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-18T17:13:53Z",
@@ -17061,7 +17062,7 @@
       "run_id": "44363118053",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-18T17:50:28Z",
       "stop_requested": false,
       "taken_asks": [],
