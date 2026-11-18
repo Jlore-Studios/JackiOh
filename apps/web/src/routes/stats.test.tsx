@@ -2402,8 +2402,8 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
   const SHEEP = { ...created("core-t-sheep", "Sheep Token", 40, 0.7, 0, null), tier: "A", adjustedWinRate: 0.533 };
   /** 12 seats, too few for a rate however many won: no tier, and its adjusted rate unshown. */
   const GHOUL = { ...created("core-t-ghoul", "Ghoul Token", 12, 0.9, 0, null), tier: null, adjustedWinRate: 0.6 };
-  /** The Coin, which the catalog holds as no card: 40 seats, 30 used it (50%) and 10 did not (30%), 18 won (45%). */
-  const COIN = { ...created("coin", "The Coin", 30, 0.5, 10, 0.3), tier: "D", adjustedWinRate: 0.471 };
+  /** The Coin (core-t-coin, a catalog token): 40 seats, 30 used it (50%) and 10 did not (30%), 18 won (45%). */
+  const COIN = { ...created("core-t-coin", "The Coin", 30, 0.5, 10, 0.3), cost: 0, tier: "D", adjustedWinRate: 0.471 };
   /** A Created copy of a deck card: no token. 30 seats, each used it, 15 won. */
   const COPY = { ...created("core-001", "Spark Pup", 30, 0.5, 0, null), tier: "C", adjustedWinRate: 0.49 };
 
@@ -2430,7 +2430,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
 
   const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓", "Win rate"];
 
-  it("R3887000 the Tokens and Other created cards list a catalog card as plain text, and The Coin keeps its name", async () => {
+  it("R3887000 the Tokens and Other created cards list a catalog card as plain text, The Coin among them", async () => {
     window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
     render(<StatsRoute />);
@@ -2445,9 +2445,9 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     const rush = within(rowOf(tokens, "core-t-rush")).getByTestId(statsTestid.plainCard);
     expect(rush).toHaveTextContent(readerName(CATALOG["core-t-rush"]!));
     expect(within(rowOf(other, "core-001")).getByTestId(statsTestid.plainCard)).toHaveAttribute("data-card-id", "core-001");
-    const coin = rowOf(other, "coin");
-    expect(within(coin).queryByTestId(statsTestid.plainCard)).toBeNull();
-    expect(coin.querySelector("td.stats-td--name")).toHaveTextContent("The Coin");
+    // The Coin is a catalog token (core-t-coin), so it lists as plain text in the Tokens table.
+    const coin = within(rowOf(tokens, "core-t-coin")).getByTestId(statsTestid.plainCard);
+    expect(coin).toHaveAttribute("data-card-id", "core-t-coin");
   });
 
   it("R2089000 R2370000 R3324002 R4082000 R4155000 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
@@ -2481,26 +2481,28 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     const rushRow = tokenTable.querySelector('tr[data-card-id="core-t-rush"]') as HTMLElement;
     expect(rushRow.querySelector(".stats-card-thumb-badge")).toHaveTextContent("1");
     expect(rushRow.querySelector(".stats-card-name-link")).toHaveTextContent("Rush Token");
+    // The Coin is a catalog token (core-t-coin), so it stands in the Tokens table with a 0-cost badge.
+    const coinRow = tokenTable.querySelector('tr[data-card-id="core-t-coin"]') as HTMLElement;
+    expect(coinRow.querySelector(".stats-card-thumb-badge")).toHaveTextContent("0");
     expect(rowsOf(tokenTable)).toEqual({
-      ids: ["core-t-sheep", "core-t-rush", "core-t-ghoul"],
+      ids: ["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"],
       cells: [
         ["1", "Sheep Token", "40", "A", "53.3%", "70%"],
         ["1", "Rush Token", "55", "B", "52.1%", "56%"],
+        ["0", "The Coin", "40", "D", "47.1%", "45%"],
         ["1", "Ghoul Token", "12", "—", "—", "—"],
       ],
     });
     expect(rowsOf(otherTable)).toEqual({
-      ids: ["core-001", "coin"],
-      cells: [
-        ["1", "Spark Pup", "30", "C", "49.0%", "50%"],
-        ["1", "The Coin", "40", "D", "47.1%", "45%"],
-      ],
+      ids: ["core-001"],
+      cells: [["1", "Spark Pup", "30", "C", "49.0%", "50%"]],
     });
 
-    // A header sorts its own table alone.
+    // A header sorts its own table alone. Rush has 55 games; Sheep and The Coin tie at 40 and
+    // keep the server's order, Ghoul's 12 last.
     fireEvent.click(within(tokenTable).getByRole("columnheader", { name: "Games" }));
-    expect(rowsOf(tokenTable).ids).toEqual(["core-t-rush", "core-t-sheep", "core-t-ghoul"]);
-    expect(rowsOf(otherTable).ids).toEqual(["core-001", "coin"]);
+    expect(rowsOf(tokenTable).ids).toEqual(["core-t-rush", "core-t-coin", "core-t-sheep", "core-t-ghoul"]);
+    expect(rowsOf(otherTable).ids).toEqual(["core-001"]);
 
     // No token is a row of the deck table.
     const deck = screen.getByTestId(statsTestid.cardsTable);
@@ -2512,8 +2514,8 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(rowsOf(screen.getByTestId(statsTestid.tokensTable)).ids).toEqual(["core-t-rush"]);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
     fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "coin" } });
-    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
-    expect(rowsOf(screen.getByTestId(statsTestid.createdTable)).ids).toEqual(["coin"]);
+    expect(rowsOf(screen.getByTestId(statsTestid.tokensTable)).ids).toEqual(["core-t-coin"]);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
 
     // The Sets tab counts the deck cards alone and shows neither section.
     fireEvent.click(screen.getByTestId(statsTestid.tabSets));
@@ -2525,7 +2527,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
 
   it("R3324002 no Show tokens control, and an old address's tokens=1 opens the page as any other", async () => {
     at("/stats?tokens=1");
-    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN] });
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
     render(<StatsRoute />);
 
     await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
@@ -2553,11 +2555,11 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
 
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [COIN] });
     render(<StatsRoute />);
-    await screen.findByTestId(statsTestid.createdPanel, undefined, SLOW);
-    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
+    await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
   });
 
-  it("R4155000 a Created row opens the drill-down and ?card=: a token's face and figures, The Coin's figures with empty deck-only sections", async () => {
+  it("R4155000 a Created row opens the drill-down and ?card=: a token's face and figures, The Coin's face and figures with empty deck-only sections", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
@@ -2572,7 +2574,12 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
           return Promise.resolve(
             new Response(
               JSON.stringify({
-                card: { id, name: id === "coin" ? "The Coin" : "Rush Token", cost: 1, rarity: "Token" },
+                card: {
+                  id,
+                  name: id === "core-t-coin" ? "The Coin" : "Rush Token",
+                  cost: id === "core-t-coin" ? 0 : 1,
+                  rarity: "Token",
+                },
                 patches: [],
                 byTurn: [],
                 coPlayed: [],
@@ -2586,7 +2593,6 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     );
     render(<StatsRoute />);
     const tokensTable = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
-    const otherTable = screen.getByTestId(statsTestid.createdTable);
 
     // Clicking a token row opens the drill-down on it, with ?card= in the address.
     const rushRow = tokensTable.querySelector('tr[data-card-id="core-t-rush"]') as HTMLElement;
@@ -2605,20 +2611,23 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(screen.queryByTestId(statsTestid.drillDownModal)).toBeNull();
     expect(new URLSearchParams(window.location.search).has("card")).toBe(false);
 
-    // Enter on The Coin, which the catalog holds as no card: its figures with the same empty states, no face, no error.
-    const coinRow = otherTable.querySelector('tr[data-card-id="coin"]') as HTMLElement;
+    // Enter on The Coin (core-t-coin, a catalog token): its face and figures show with the same
+    // empty deck-only states, no error. The real GET /api/stats/cards/:id 200s for it, since the catalog
+    // holds its def and the server lists only catalog ids in `created`.
+    const coinRow = tokensTable.querySelector('tr[data-card-id="core-t-coin"]') as HTMLElement;
     fireEvent.keyDown(coinRow, { key: "Enter" });
     const coinModal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
-    expect(new URLSearchParams(window.location.search).get("card")).toBe("coin");
+    expect(new URLSearchParams(window.location.search).get("card")).toBe("core-t-coin");
+    expect(coinModal.querySelector(".stats-drilldown-face")).not.toBeNull();
     expect(within(coinModal).getByText("Win rate by turn played")).toBeInTheDocument();
     expect(within(coinModal).getByText("No games recorded with this card played.")).toBeInTheDocument();
+    expect(within(coinModal).getByText("No co-played cards recorded.")).toBeInTheDocument();
     expect(within(coinModal).queryByText("Details unavailable.")).toBeNull();
-    expect(coinModal.querySelector(".stats-drilldown-face")).toBeNull();
   });
 
   it("R4155000 the Columns toggle hides Games in the Created tables too", async () => {
     const user = userEvent.setup();
-    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN] });
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
     const headersOf = (testid: string): (string | null)[] =>

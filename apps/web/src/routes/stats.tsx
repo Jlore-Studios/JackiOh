@@ -125,7 +125,7 @@ function tokensOf(def: CardDef): CardDef[] {
   return referencesOf(def).filter((named) => named.token);
 }
 
-/** R3887000: a card as plain text, or null for an id the catalog holds no card of (The Coin). */
+/** R3887000: a card as plain text, or null for an id the catalog holds no card of. */
 function plainCardOf(id: string): ReactElement | null {
   const def = CATALOG[id];
   return def === undefined ? null : <PlainCard def={def} />;
