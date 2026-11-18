@@ -15121,10 +15121,10 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "at": "2026-11-18T03:45:46Z",
+        "at": "2026-11-18T07:44:11Z",
         "built_by": "claude-3",
         "by": "`claude` (strong)",
-        "sha": "ce76274233b49d4e40431c3e07ec13cfcb82736d"
+        "sha": "1d9b5ea3724d491bf377f08fd8046c3505a95f54"
       },
       "died": 0,
       "difficulty": "hard",
@@ -15136,6 +15136,7 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
+      "merge_owner": "claude-3",
       "merge_owner_gave_up": {
         "at": "2026-11-18T03:58:42Z",
         "provider": "claude-3",
