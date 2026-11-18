@@ -14689,6 +14689,8 @@
       "taken_asks": []
     },
     "4160": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T02:13:47Z",
@@ -14702,8 +14704,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the game log speaks its newest line to screen readers\"} -->\n- The log now announces its newest line to screen readers: a visually-hidden `role=\"status\"` announcer beside the `<ol>` speaks each arriving line once, politely, using the same redacted-safe words the list draws. Sighted players see nothing different.\n- What changed (4 files, per the plan):\n- - [Log.tsx](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/apps/web/src/game/Log.tsx): the `Log` component keeps a `said` string fed by an effect that primes silently on mount and hotseat hand-over and speaks only when the newest line's key changes; the `<ol>` is byte-identical, wrapp\u2026\n- - [contract.ts](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/apps/web/src/game/contract.ts): new `logLive: \"log-live\"` testid.\n- - [board.css](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/apps/web/src/game/board.css): `.board > .log-live` copies the turn banner's visually-hidden declarations, so arrivals stay announced on phones where `.log` is `display: none` until opened.\n- - [Log.test.tsx](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/apps/web/src/game/Log.test.tsx): five `#4140` tests (mount says nothing; arrival announces once; reveal/re-render announces nothing; redacted arrival reads its shown redacted words; turn change reads the turn's own line).\n- How I proved it: the five new tests fail without the `Log.tsx` change (`Unable to find an element by: [data-testid=\"log-live\"]`) and pass with it; the full `Log.test.tsx` file (49 tests), `contract.test.ts`, `Board.render.test.tsx` and `Game.opening.test.tsx` all pass; `pnpm typecheck`, `eslint` on\u2026\n- Decisions the issue did not settle:\n- - The plan's local was named `newest`, which collides with the component's `view: newest` prop destructure (build error); I named it `newestLine` instead. Rejected alternative: renaming the prop, which would ripple through the file.\n- - `pnpm typecheck` runs out of memory at Node's default 2 GB heap on this machine (environment limit, unrelated to the change); it passes with `NODE_OPTIONS=--max-old-space-size=6144`.\n- - No spec wording or ruling change: presentation only, grounded in \u00a710.10 (R745/R97), so no new ruling note per the plan.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4140 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4140/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4140,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T02:46:07Z",
         "from_run": "44221700050",
         "gates": [
           {
@@ -14762,8 +14767,15 @@
         "source": "build",
         "until": "2026-11-18T03:15:10Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-18T02:45:10Z",
+      "run_id": "pending:fefbb8ff-1794969944",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-18T02:46:07Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -14777,9 +14789,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T02:37:24Z",
+    "at": "2026-11-18T02:46:07Z",
     "url": "",
-    "what": "build #4141 on claude-3"
+    "what": "review #4160 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T02:34:04Z",
