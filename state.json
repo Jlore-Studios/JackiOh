@@ -37105,14 +37105,6 @@
         "provider": "claude-4",
         "run_id": "44248554025",
         "taken_asks": []
-      },
-      "3": {
-        "area": "server",
-        "count": 2,
-        "last_run": "2026-11-18T06:04:06Z",
-        "provider": "muse",
-        "run_id": "44248617255",
-        "taken_asks": []
       }
     },
     "taken_asks": []
