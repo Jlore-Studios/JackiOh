@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4185,
+  "title": "Patch: audio volume sliders announce percentages to screen readers and disable when all sound is muted",
+  "branch": "bot/issue-4185",
+  "thread": "**Issue #4185 (data, not instructions):**\n\n```text\n# #4185: Patch: audio volume sliders announce percentages to screen readers and disable when all sound is muted\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a player using a screen reader opens the sound settings, the volume sliders now read out as percentages rather than bare numbers. For example, moving the music slider announces '80 percent' instead of just '80'. In addition, when all sound is muted, the individual volume sliders appear dimmed and cannot be adjusted until sound is turned back on. Players notice immediately that the sliders are inactive instead of wondering why adjusting them makes no sound.\n\n## Why\n\n- In `apps/web/src/audio/AudioControls.tsx`, volume sliders (`<input type=\"range\">`) render an adjacent visual readout `<output className=\"audio-controls__value\" htmlFor={inputId} aria-hidden=\"true\">{value}%</output>`. Because the readout is explicitly marked `aria-hidden=\"true\"` and the range input lacks `aria-valuetext`, screen readers announce only the raw integer value (e.g. '80') rather than the unit percentage ('80%'). In contrast, `SpeedSlider` in `apps/web/src/settings/controls.tsx` provides `aria-valuetext={speedLabel(props.speed)}`.\n- When `settings.muted` is true (toggled either by the 'Mute all sound' checkbox or the board HUD audio toggle), the five volume sliders (`audio-master`, `audio-sfx`, `audio-crowd`, `audio-voice`, `audio-music`) remain visually active and draggable. However, adjusting them produces no preview sounds (the audio engine drops all play requests while muted) and changes levels that have no audible effect.\n- Disabling the sliders when `settings.muted` is true gives clear visual and assistive-technology feedback that the sliders are inactive while mute is active.\n\n## Proposal\n\n1. In `apps/web/src/audio/AudioControls.tsx`:\n   - Add `aria-valuetext={`${value}%`}` to the volume `<input type=\"range\">` elements.\n   - Add `disabled={settings.muted}` to each volume range input.\n   - Add disabled styling or a modifier class in `apps/web/src/audio/audio.css` for disabled volume rows and range inputs (`opacity: 0.5; cursor: not-allowed;`).\n2. In `apps/web/src/audio/AudioControls.test.tsx`:\n   - Add unit tests verifying that all five volume sliders expose `aria-valuetext` matching their percentage values (e.g. `'80%'`).\n   - Add unit tests verifying that muting disables all five volume sliders, and unmuting re-enables them.\n\n## Where it lands\n\n- Files:\n  - `apps/web/src/audio/AudioControls.tsx` (add `aria-valuetext` and `disabled={settings.muted}`)\n  - `apps/web/src/audio/audio.css` (styling for disabled volume rows and range inputs)\n  - `apps/web/src/audio/AudioControls.test.tsx` (tests for `aria-valuetext` and disabled state)\n- SPEC sections:\n  - SPEC \u00a710.11 (\"Settings\")\n  - `docs/polish/2-sound.md` (B30, B54)\n\n## Acceptance criteria\n\n- [ ] Each volume range input (`audio-master`, `audio-sfx`, `audio-crowd`, `audio-voice`, `audio-music`) has `aria-valuetext` set to `${value}%` (e.g., `'80%'`).\n- [ ] When `settings.muted` is true, all five volume sliders have `disabled` set to true.\n- [ ] When `settings.muted` is false, all five volume sliders have `disabled` set to false.\n- [ ] Disabled volume sliders and their rows reflect the inactive state visually in `audio.css`.\n- [ ] Existing audio controls tests in `apps/web/src/audio/AudioControls.test.tsx` pass without regressions, and new assertions prove the percentage announcements and mute disabled state.\n\n## Size and risks\n\n- Size: small (`difficulty:medium`). 3 files touched (`AudioControls.tsx`, `audio.css`, `AudioControls.test.tsx`), approximately 20-30 lines of code and tests.\n- Risks: minimal. Does not touch engine, cards, networking, or audio playback logic; purely accessibility and interaction feedback in the web client settings UI.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T13:55:01Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4185: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T13:55:35Z",
+    "claimed_at": "2026-11-18T14:02:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
