@@ -14763,6 +14763,14 @@
           "muse": "medium"
         }
       }
+    },
+    "4162": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-18T02:14:24Z",
+      "issue": 4155,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
