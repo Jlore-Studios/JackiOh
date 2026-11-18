@@ -209,7 +209,7 @@ mod r1240_meditative_95s_table {
                 "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
                 "Add 2 random CN cards to your hand, which cost (0)",
                 "Add 2 random Prime cards to your hand, which cost (0)",
-                "Your hero gains 5 Armor and you heal it 5",
+                "Your hero gains 4 Armor and you heal it 4",
                 "Summon a Jade Beauty",
                 "Summon 2 random Acclaimed cards",
                 "Bounce every enemy permanent, then Nerf each card bounced",
@@ -221,7 +221,7 @@ mod r1240_meditative_95s_table {
     }
 
     #[test]
-    fn r3135001_the_three_tuned_numbers_and_the_seven_modes_left_alone() {
+    fn r3135001_r4154305_the_tuned_numbers_and_the_modes_left_alone() {
         assert_eq!(
             (
                 CHAOS_MED_FUSE_COPIES,
@@ -229,7 +229,7 @@ mod r1240_meditative_95s_table {
                 CHAOS_MED_HEAL,
                 CHAOS_MED_ACCLAIMED
             ),
-            (1, 5, 5, 2)
+            (1, 4, 4, 2)
         );
         assert_eq!(
             (
@@ -659,12 +659,12 @@ mod the_other_entries {
     }
 
     #[test]
-    fn r3135001_entry_armor_gives_5_hero_armor_and_heals_5_past_30() {
+    fn r4154305_entry_armor_gives_4_hero_armor_and_heals_4_past_30() {
         let mut state = game("armor", None, None);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
         run(&mut state, entry("armor"), None);
-        assert_eq!(state.players.p1.hero.armor, 5);
-        assert_eq!(state.players.p1.hero.health, HERO_HEALTH + 5);
+        assert_eq!(state.players.p1.hero.armor, 4);
+        assert_eq!(state.players.p1.hero.health, HERO_HEALTH + 4);
         assert_eq!(state.players.p2.hero.armor, 0);
     }
 

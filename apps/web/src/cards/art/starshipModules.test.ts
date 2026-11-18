@@ -23,6 +23,8 @@ import { STARSHIP_PIECES, tierOf } from "./stinkyscape.ts";
 
 /** The three Jlockeed weapons that are Starship Pieces only when Embiggened (#127 to #129). */
 const EMBIGGENED = ["stinkyscape-127", "stinkyscape-128", "stinkyscape-129"] as const;
+/** The Orca, which #4154 took the Starship Piece keyword from: its card still draws its module. */
+const FORMER = ["stinkyscape-079"] as const;
 const IDS = Object.keys(STARSHIP_MODULE_IDS);
 
 function drawn(m: StarshipModule): string {
@@ -42,7 +44,7 @@ function elements(svg: string): number {
 describe("R3333001: a module for every Starship Piece", () => {
   it("R3333001 the modules cover the fifty piece definitions, each tier its name's", () => {
     expect(IDS.length).toBe(50);
-    expect([...IDS].sort()).toEqual([...STARSHIP_PIECES, ...EMBIGGENED].sort());
+    expect([...IDS].sort()).toEqual([...STARSHIP_PIECES, ...EMBIGGENED, ...FORMER].sort());
     for (const id of IDS) {
       const card = CATALOG[id];
       expect(card, id).toBeDefined();

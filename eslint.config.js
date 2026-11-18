@@ -103,6 +103,55 @@ export default defineConfig(
     },
   },
   {
+    // Item 17 of #3897 (#4016): a player's text rendered as a template or as HTML (template
+    // injection). The daily mail is plain text and the unsubscribe page prints fixed strings, so
+    // no raw-HTML sink is needed anywhere the client, the Worker or the admin app runs: neither
+    // React's raw-markup escape hatch nor assignments to `innerHTML`/`outerHTML`, neither
+    // `insertAdjacentHTML` nor `document.write`, nor the `Function` constructor. A future need
+    // adds a commented exception.
+    files: ["apps/web/src/**/*.{ts,tsx,js}", "apps/edge/**/*.ts", "apps/admin/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: 'JSXAttribute[name.name="dangerouslySetInnerHTML"]',
+          message:
+            "No raw HTML in JSX: render text, not markup, so a player's text cannot become markup (#4016).",
+        },
+        {
+          selector: "AssignmentExpression[left.property.name='innerHTML']",
+          message:
+            "No innerHTML assignment: render text, not markup, so a player's text cannot become markup (#4016).",
+        },
+        {
+          selector: "AssignmentExpression[left.property.name='outerHTML']",
+          message:
+            "No outerHTML assignment: render text, not markup, so a player's text cannot become markup (#4016).",
+        },
+        {
+          selector: 'NewExpression[callee.name="Function"]',
+          message:
+            "No new Function: a player's text must never become code (#4016).",
+        },
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          property: "insertAdjacentHTML",
+          message:
+            "No insertAdjacentHTML: render text, not markup, so a player's text cannot become markup (#4016).",
+        },
+        {
+          object: "document",
+          property: "write",
+          message:
+            "No document.write: render text, not markup, so a player's text cannot become markup (#4016).",
+        },
+      ],
+    },
+  },
+  {
     // Plain `.mjs` scripts are Node tools, not library code: they legitimately use `console`, the
     // web globals Node exposes, and the process APIs.
     files: ["**/*.mjs"],

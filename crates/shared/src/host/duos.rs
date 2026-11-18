@@ -744,6 +744,11 @@ impl DuosHost {
         self.next_seq
     }
 
+    /// #4169: the nonce of the log's newest row, which a checkpoint is keyed by (`acks` is in log order).
+    pub fn last_nonce(&self) -> Option<&str> {
+        self.acks.last().map(|(nonce, _)| nonce.as_str())
+    }
+
     /// Whether the result is written (or the match was finished when the host was made).
     pub fn is_finished(&self) -> bool {
         self.finished

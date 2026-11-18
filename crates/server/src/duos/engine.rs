@@ -61,6 +61,34 @@ pub fn fold(pinned: Pinned, input: &DuosReplayInput) -> DuosReplayResult {
     pinned.run(|| duos_fold(input))
 }
 
+/// #4169: `fold` carried on from a checkpoint's `state` (the state after the log's first `skipped`
+/// actions) over `tail`, stopping at the first action it refuses as `duos_fold` does; `refused_at`
+/// counts from the log's start, as `fold`'s does.
+pub fn fold_tail(
+    pinned: Pinned,
+    mut state: DuosState,
+    tail: &[DuosAction],
+    skipped: usize,
+) -> DuosReplayResult {
+    registered();
+    pinned.run(|| {
+        let mut refused_at = None;
+        for (at, action) in tail.iter().enumerate() {
+            let result = duos_reduce(&state, action);
+            if result.error.is_some() {
+                refused_at = Some(skipped + at);
+                break;
+            }
+            state = result.state;
+        }
+        DuosReplayResult {
+            hash: duos_hash(&state),
+            state,
+            refused_at,
+        }
+    })
+}
+
 pub fn hash(state: &DuosState) -> String {
     duos_hash(state)
 }

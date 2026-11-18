@@ -72,7 +72,7 @@ mod tests {
     }
 
     /// The Tribute a card prints as a play cost (R1221), 0 for none: a Unit with one cannot be played from
-    /// a field with nothing on it to pay it (S+ #21 Jlockeed Shredder-12 prints Tribute 1).
+    /// a field with nothing on it to pay it (S+ #21 Jlockeed Shredder-12 prints Tribute 3).
     fn tribute_cost(def_id: &str) -> i32 {
         registered_entry(def_id)
             .and_then(|entry| entry.base.static_flags.as_ref())

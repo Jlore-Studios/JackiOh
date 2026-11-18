@@ -6,7 +6,7 @@
  */
 export type Counters = { plague?: number, grade?: number, 
 /**
- * R3540000: the Burn on the Unit, absent at none; it ticks at the start of its controller's turn.
+ * R3540000: the Burn on the Unit, absent at none; it ticks once at the end of the turn (R4154000).
  */
 burn?: number, 
 /**

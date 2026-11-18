@@ -88,32 +88,34 @@ mod tests {
         use super::*;
 
         #[test]
-        fn base_enters_at_0_4_radiant_unchanged() {
-            for (radiant_face, health) in [(false, 4), (true, 8)] {
+        fn base_enters_at_3_3_radiant_at_6_6() {
+            for (radiant_face, size) in [(false, 3), (true, 6)] {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SUPPORT, "radiant": radiant_face }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 s.play(SUPPORT, json!({ "zone": 3 }));
                 let me = loser(&s);
-                s.expect_stats(&me, json!({ "attack": 0, "health": health, "maxHealth": health }));
+                s.expect_stats(&me, json!({ "attack": size, "health": size, "maxHealth": size }));
             }
         }
 
         mod base {
             use super::*;
 
+            /// §4.1: a 3/3 since issue #4154 (0/4 before), it may declare an attack like any Unit.
             #[test]
-            fn s4_1_with_0_attack_it_never_declares_an_attack() {
+            fn s4_1_with_3_attack_it_may_declare_an_attack() {
                 let s = support(json!({}), false, json!({}));
                 let me = loser(&s).id;
-                assert!(!legal_actions(s.state(), P1).iter().any(
+                assert!(legal_actions(s.state(), P1).iter().any(
                     |action| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == me)
                 ));
             }
 
+            /// Attacked by a 4/4, its Divine Shield takes the hit and it strikes back for 3, leaving the 4/4 at 1.
             #[test]
-            fn r63_attacked_it_strikes_back_with_no_damage_instance() {
+            fn attacked_its_divine_shield_takes_the_hit_and_it_strikes_back_for_3() {
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [FILLER], "field": [{ "def": SUPPORT, "lane": 3 }], "library": DECK },
@@ -123,12 +125,13 @@ mod tests {
                 let me = loser(&s);
                 s.attack(&attacker, &me);
                 let me = loser(&s);
-                assert!(!s.events().iter().any(|event| matches!(
+                assert!(s.events().iter().any(|event| matches!(
                     event,
                     GameEvent::Damage { source_id: Some(source), .. } if *source == me.id
                 )));
+                s.expect_stats(&attacker, json!({ "health": 1 }));
                 // Its Divine Shield took the hit.
-                s.expect_stats(&me, json!({ "health": 4 }));
+                s.expect_stats(&me, json!({ "health": 3 }));
                 assert!(!has_keyword(&s, &me.id, KeywordKind::DivineShield));
             }
 
@@ -146,14 +149,15 @@ mod tests {
                     false,
                     json!({ "field": [{ "def": VANILLA, "lane": 1, "damage": 3 }] }),
                 );
-                loser_mut(&mut s).damage = 3;
+                // The 3/3 at 1 health: healed 3, but only up to its 3.
+                loser_mut(&mut s).damage = 2;
                 s.end_turn();
                 let first = unit_or_blank(&s, P1, 1);
                 s.expect_stats(&first, json!({ "health": 4 }));
                 let fifth = unit_or_blank(&s, P1, 5);
                 s.expect_stats(&fifth, json!({ "health": 9 }));
                 let me = loser(&s);
-                s.expect_stats(&me, json!({ "health": 4 }));
+                s.expect_stats(&me, json!({ "health": 3 }));
                 let enemy = unit_or_blank(&s, P2, 1);
                 s.expect_stats(&enemy, json!({ "health": 1 }));
             }
@@ -184,7 +188,7 @@ mod tests {
                 s.expect_health(P1, 17);
                 s.expect_in_zone(&vanilla, "graveyard");
                 let me = loser(&s);
-                s.expect_stats(&me, json!({ "health": 4 }));
+                s.expect_stats(&me, json!({ "health": 3 }));
                 assert!(!has_keyword(&s, &me.id, KeywordKind::DivineShield));
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Healed));
             }
@@ -211,10 +215,10 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_0_8_with_divine_shield_and_reborn_and_heals_6() {
+            fn is_6_6_with_divine_shield_and_reborn_and_heals_6() {
                 let mut s = support(json!({ "field": [{ "def": VANILLA, "lane": 1, "damage": 3 }] }), true, json!({}));
                 let me = loser(&s);
-                s.expect_stats(&me, json!({ "attack": 0, "health": 8 }));
+                s.expect_stats(&me, json!({ "attack": 6, "health": 6 }));
                 s.end_turn();
                 s.expect_health(P1, 36);
                 let first = unit_or_blank(&s, P1, 1);
