@@ -14694,6 +14694,13 @@
     "4156": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T05:35:30Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Engine rules (combat resolution and its forecasts in crates/engine/src) and the AI's attack candidates (crates/ai/src) \u2014 rules 1 and 2."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
