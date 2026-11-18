@@ -38607,6 +38607,9 @@
     "readings": [
       "2026-11-18T16:26:36Z,claude-6,ping,before,44346898904,2,2026-11-18T18:50:00Z,,,allowed,70,,",
       "2026-11-18T16:26:58Z,claude-6,stream,call,44346898904,3,2026-11-18T18:50:00Z,,,allowed,70,,"
+    ],
+    "runs": [
+      "2026-11-18T16:31:20Z,44346898904,claude-6,sonnet+opus,review,4212,medium,approved,,4.5,16,3672,433033,0.5187,2,3,,,2.1,,none,,1"
     ]
   },
   "version": 1
