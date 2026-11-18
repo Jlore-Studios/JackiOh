@@ -15915,6 +15915,7 @@
       "run_id": "44255559703",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 345,
       "started_at": "2026-11-18T07:00:38Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37149,9 +37150,33 @@
         "title": "Patch: the changed-cards fuzz wave also plays each changed card on its Radiant face",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-1"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "4019b5e50a5e2f09628b1a816b9ec883e7a707dc",
+        "issue": 4166,
+        "merged_at": "2026-11-18T14:10:54Z",
+        "n": 345,
+        "pr": 4178,
+        "queued_at": "2026-11-18T14:10:54Z",
+        "sha": "177e2c215a1d96e0a22c19bbfe324614f4dd06be",
+        "status": "queued",
+        "title": "Patch: weekly hygiene, dead files and archives, 2026-11-18",
+        "tries": 0
       }
     ],
-    "count": 344
+    "count": 345
   },
   "statistics": {
     "at": "2026-11-18T14:10:20Z"
