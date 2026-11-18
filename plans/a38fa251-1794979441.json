@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4168,
+  "title": "Patch: the dev dashboard's audit reads pages and filters by who and what",
+  "branch": "bot/issue-4168",
+  "thread": "**Issue #4168 (data, not instructions):**\n\n```text\n# #4168: Patch: the dev dashboard's audit reads pages and filters by who and what\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nToday the audit page shows the newest 200 admin actions as raw data with only a Refresh button. Once it is built, a maintainer can page back past those 200 and narrow the list to one account or one kind of action. Someone asking \u201cwho revoked that invite code on Tuesday\u201d gets an answer in seconds instead of scrolling through hundreds of entries. This matters more once the moderation tools also write their bans, revocations and redemption pauses to the audit, since that history is exactly what the page exists to inspect.\n\n## Why\n\nThe spec promises an audit row for every dev and admin action that the dashboard can read, but the read side is a dead end: the endpoint answers the newest 200 rows and nothing older is reachable, and the page offers no search. The row count is a single hard-coded page size, the response carries no cursor, and the UI has only Refresh. Volume is about to grow, because the open moderation-audit work will add a row per ban, revocation and redemption pause.\n\n## Proposal\n\nGive the audit read a cursor (`before_id`, default page size stays 200) and optional filters for acting account and route, in both store backends; expose them on the endpoint; add a filter row and an Older pager to the dashboard page. Update the \u00a714.10 audit paragraph to describe paging and filtering. No new ruling: this is dev tooling with no game-semantics decision in it.\n\n## Where it lands\n\n- `crates/server/src/api/admin.rs` (`get_audit`), `crates/server/src/admin/store.rs`, the Postgres and fake implementations behind it, `crates/server/src/config.rs` (page size)\n- `apps/admin/src/api.ts`, `apps/admin/src/types.ts`, `apps/admin/src/Audit.tsx` (plus test ids and tests)\n- SPEC \u00a714.10 (`spec/14-economy.md`, R3074000's paragraphs)\n\n## Acceptance criteria\n\n- [ ] Reading the audit with no params still returns the newest page as today\n- [ ] A second read with the returned cursor returns the next older page with no gaps or repeats\n- [ ] Filtering by acting account and by route returns only matching rows, in both store backends\n- [ ] The dashboard page offers the filters and a pager, covered by its tests\n- [ ] The \u00a714.10 text describes paging and filtering, and `cargo jackioh spec check` passes\n\n## Size and risks\n\nSmall-medium: one endpoint, two store backends, one page. Risk is low; the audit stays server-only and append-only, so nothing about retention changes. Rejected alternative: full-text search over the JSON blobs \u2014 overkill for a handful of devs; exact account and route filters answer the real questions.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T05:21:19Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4168: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T05:21:35Z",
+    "claimed_at": "2026-11-18T05:24:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4178 is held for `claude-1` until Wed 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#4159 is held for `claude-3` until Wed 00:30 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
