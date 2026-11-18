@@ -17203,6 +17203,14 @@
         "sha": "752b14f84aa01a7ab1eb0b6aaa3ed8c5ba2cc81a",
         "tiers": {}
       }
+    },
+    "4209": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-18T13:42:19Z",
+      "issue": 4159,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
