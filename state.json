@@ -17145,15 +17145,6 @@
       "failures": 0,
       "feedback_since": "2026-11-18T17:24:24Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-18T17:41:49Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "",
-        "provider": "muse",
-        "reason": "built and checked; its own review run, on this subscription, reviews it next",
-        "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the card search reads a stat line, such as 3/4 or 3+/4-\", \"ci_local\": \"passed\"} -->\n- ## What was asked\n- CI revision: the `web (unit 2/8)` shard failed on `apps/edge/src/index.test.ts > #4118 the settings check on the first request > waits RETIRE_WAIT_MS for it, then destroys it` (`library.stop` never called with `SIGTERM`). No new comments from trusted people.\n- ## What I did\n- Ran the failing check locally before anything else, then judged whether this branch could have caused it:\n- - `pnpm exec vitest run --project edge apps/edge/src/index.test.ts` \u2014 **62/62 pass**, including the failing test.\n- - Re-ran just the failing test (`-t \"waits RETIRE_WAIT_MS\"`) twice more \u2014 **passes both times**.\n- - Confirmed no code link: this branch touches only `apps/web/src/game/deckbuilder/filters.ts` and `filters.test.ts`, and a search for `deckbuilder|searchMatches|filters` in `apps/edge/src` returns nothing \u2014 the edge worker test never imports the changed code.\n- - `pnpm exec eslint` on both touched files \u2014 clean.\n- - `git status` clean, no extra worktrees left behind (only this worktree plus the harness's own `main` checkout).\n- ## Why no change\n- The failure is not this branch's doing. The failing test polls up to 100 `setImmediate` turns for an async fingerprint digest under fake timers \u2014 timing-sensitive, and in CI it ran in a shard with 78 workers spawned (~648 ms startup each). In isolation it passes consistently (3/3 here). The branch \u2026\n- Decisions: none to record \u2014 no judgment call the issue left open arose, and the rejected alternative (touching the edge timing test to \"fix\" CI) was out of scope and would risk weakening a check, which the rules forbid.\n- Follow-up: the branch's own suite finished \u2014 `filters.test.ts` 120/120 pass. No change to the conclusion above: nothing to fix, CI failure unrelated and green locally.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4208 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4208/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
-      },
       "interruptions": 0,
       "issue": 4203,
       "kind": "review",
