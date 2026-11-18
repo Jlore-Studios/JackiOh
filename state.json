@@ -35188,6 +35188,12 @@
         "number": 4107,
         "title": "Patch: the dev dashboard's admin routes answer only through the dashboard's own Worker, behind Cloudflare Access, and no longer on the player site",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-18T00:02:20Z",
+        "number": 4139,
+        "title": "Patch: the phone hand fan keeps a finger-wide strip per card past seven cards",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
