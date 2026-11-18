@@ -14941,7 +14941,7 @@
       "action": "build",
       "asks": [],
       "died": 0,
-      "failures": 2,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-11-18T13:35:57Z",
@@ -14965,7 +14965,9 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 4209,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-11-18T02:19:02Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
