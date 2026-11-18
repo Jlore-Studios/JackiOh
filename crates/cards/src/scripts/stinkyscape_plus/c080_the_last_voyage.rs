@@ -14,7 +14,7 @@
 //! launch by hand (R3539000); one launches at the start of each of its caster's turns from the next on
 //! (`launch_random_starship`, kept by `for_rest_of_game`, R3539002), a free launch (R1852006), and on
 //! the Radiant face one at once as well. The number summoned is the declared `starships`. Issue #4154
-//! took the base face's launch at once out; `script_v0_6_6g` keeps it for the replays of v0.6.6g and
+//! took the base face's launch at once out; `script_v0_6_6h` keeps it for the replays of v0.6.6h and
 //! before (R767000).
 
 use jackioh_engine::prelude::*;
@@ -129,7 +129,7 @@ pub fn terminus_hull() -> CardScripts {
 const BADGE: &str = "Start of turn: Launch a random Terminus Starship.";
 
 /// One face: `radiant` also exiles the opponent's board, and `launch_now` launches one at once (the
-/// Radiant face's, and the base face's through v0.6.6g).
+/// Radiant face's, and the base face's through v0.6.6h).
 fn voyage(radiant: bool, launch_now: bool, blueprints: fn() -> Vec<StarshipBlueprint>) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -175,9 +175,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.4c through v0.6.6g the base face launched one at once too (issue #4154).
+/// R767000: after v0.6.4c through v0.6.6h the base face launched one at once too (issue #4154).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: voyage(false, true, blueprints),
         radiant: voyage(true, true, blueprints),
@@ -243,7 +243,7 @@ pub(crate) fn assert_terminus(id: &str, pieces: &[&str], radiant: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6g};
+    use super::{ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6h};
     use crate::built_starship;
     use jackioh_engine::testkit::*;
 
@@ -396,10 +396,10 @@ mod tests {
         assert_eq!(launched_count(&s), 2, "and another at the one after");
     }
 
-    /// R767000: through v0.6.6g the base face launched one at once too (issue #4154).
+    /// R767000: through v0.6.6h the base face launched one at once too (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6g_launches_one_now_on_the_base_face() {
-        crate::under_kept(ID, script_v0_6_6g(), || {
+    fn r767000_the_script_kept_for_v0_6_6h_launches_one_now_on_the_base_face() {
+        crate::under_kept(ID, script_v0_6_6h(), || {
             let (mut s, _, _, _, _, _, _) = voyaging(false);
             s.play(VOYAGE, json!({}));
             assert_eq!(launched_count(&s), 1, "one launches now");

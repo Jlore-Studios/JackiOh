@@ -11,7 +11,7 @@
 //! served: the Units are all read before the first effect. On the Radiant face the controller's Units that
 //! have eaten one eat no more; the enemy's go on. The numbers are the declared `health` and `brittle2`
 //! (R386); the rung each count serves is below. R4154302: a Unit that has eaten three eats no more, its
-//! count staying at three; through v0.6.6g (`script_v0_6_6g`, R767000) every Shawarma after the third
+//! count staying at three; through v0.6.6h (`script_v0_6_6h`, R767000) every Shawarma after the third
 //! froze it.
 
 use jackioh_engine::prelude::*;
@@ -46,7 +46,7 @@ fn eaters(ctx: &EffectContext<'_>) -> Vec<Eater> {
         .collect()
 }
 
-/// What the Shawarma a Unit eats as its `n`th does: past the third, which only the v0.6.6g face serves, Freeze.
+/// What the Shawarma a Unit eats as its `n`th does: past the third, which only the v0.6.6h face serves, Freeze.
 fn serving(ctx: &EffectContext<'_>, id: &str, n: i64) -> Vec<Effect> {
     let at = json!({ "of": "instance", "instanceId": id });
     match n {
@@ -66,9 +66,9 @@ fn serving(ctx: &EffectContext<'_>, id: &str, n: i64) -> Vec<Effect> {
     }
 }
 
-/// The face: today's when `through_v0_6_6g` is false, else the one v0.6.6g and before ran, whose Units ate
+/// The face: today's when `through_v0_6_6h` is false, else the one v0.6.6h and before ran, whose Units ate
 /// on past the third and froze.
-fn law(radiant: bool, through_v0_6_6g: bool) -> Script {
+fn law(radiant: bool, through_v0_6_6h: bool) -> Script {
     Script {
         end_of_turn: Some(hook(move |ctx| {
             let mut effects = Vec::new();
@@ -76,7 +76,7 @@ fn law(radiant: bool, through_v0_6_6g: bool) -> Script {
                 if radiant && unit.controller == ctx.controller && unit.eaten >= FIRST {
                     continue;
                 }
-                if !through_v0_6_6g && unit.eaten >= THIRD {
+                if !through_v0_6_6h && unit.eaten >= THIRD {
                     continue;
                 }
                 let n = unit.eaten + 1;
@@ -100,8 +100,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.6g, before issue #4154: every Shawarma after the third froze the Unit.
-pub fn script_v0_6_6g() -> CardScripts {
+/// R767000: what it ran through v0.6.6h, before issue #4154: every Shawarma after the third froze the Unit.
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: law(false, true),
         radiant: law(true, true),
@@ -113,7 +113,7 @@ pub fn script_v0_6_6g() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use super::{EATEN, ID, script_v0_6_6g};
+    use super::{EATEN, ID, script_v0_6_6h};
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -195,10 +195,10 @@ mod tests {
         assert_eq!(eaten(&s, &mine), 1);
     }
 
-    /// R767000: through v0.6.6g every Shawarma after the third froze the Unit (issue #4154).
+    /// R767000: through v0.6.6h every Shawarma after the third froze the Unit (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6g_freezes_from_the_fourth() {
-        crate::under_kept(ID, script_v0_6_6g(), || {
+    fn r767000_the_script_kept_for_v0_6_6h_freezes_from_the_fourth() {
+        crate::under_kept(ID, script_v0_6_6h(), || {
             let mut s = board(false, 1);
             let unit = s.unit_at(P2, 1);
             for _ in 0..3 {

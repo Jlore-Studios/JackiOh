@@ -11,7 +11,7 @@
 //!   Issue #3996 cut the two strongest entries' declared numbers (R3996200): `card3` 5 → 4 and `burn`
 //!   3 → 2, on both faces; the numbers are catalog data, so a replay of v0.6.5b reads its own. Issue #4154
 //!   cut every entry with a count of 3 or more and the Burn by one (R4154303): `card`, `card2` and `card4`
-//!   3 → 2, `card3` 4 → 3 and `burn` 2 → 1, so a replay of v0.6.6g reads its own as well.
+//!   3 → 2, `card3` 4 → 3 and `burn` 2 → 1, so a replay of v0.6.6h reads its own as well.
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MS_EFFECTS`,
 //! `subsystems/call_to_chaos_mindustrial_swarm.rs`): the roll, the announcement both players read (R436), the
@@ -421,7 +421,7 @@ mod tests {
             assert_eq!(toxopids.len(), 1);
             assert_eq!(toxopids[0].cost_override, Some(0));
             assert_eq!(cost_of(&s, toxopids[0]), 0);
-            // Since issue #4154 its first hand arrival adds no Crawler (R4154300; through v0.6.6g it did,
+            // Since issue #4154 its first hand arrival adds no Crawler (R4154300; through v0.6.6h it did,
             // R3560000).
             let others: Vec<&CardInstance> = added.iter().filter(|card| card.def_id != TOXOPID).collect();
             assert!(others.is_empty(), "{others:?}");

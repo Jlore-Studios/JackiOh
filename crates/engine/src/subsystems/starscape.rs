@@ -6,7 +6,7 @@
 //! the match rng and stored, so a simulation or a replay of a later travel sees the same map. A travel
 //! (R1847001) takes one node's reward, at the edge the card the ability names (a full hand burns it,
 //! §2.4); nothing travels past the edge. A card may make its controller's first travels each turn free
-//! (R1847002: one on the Radiant face through v0.6.6g; since issue #4154 one on the base face and two on
+//! (R1847002: one on the Radiant face through v0.6.6h; since issue #4154 one on the base face and two on
 //! the Radiant face, R4154203), as two abilities `has` switches between (R752), so the card has one at a
 //! time.
 
@@ -112,7 +112,7 @@ pub fn starscape_travel_free(state: &GameState, player: PlayerId, free: i32) -> 
 
 /// R1847002: the abilities a card declares to travel its controller's map, the edge giving
 /// `edge_def_id`: the paid travel, and on the Radiant face a free one before this turn's first travel.
-/// The scripts through v0.6.6g (`starscape_abilities_free` since issue #4154).
+/// The scripts through v0.6.6h (`starscape_abilities_free` since issue #4154).
 pub fn starscape_abilities(radiant: bool, edge_def_id: &'static str) -> Vec<ActivationDecl> {
     starscape_abilities_free(i32::from(radiant), edge_def_id)
 }

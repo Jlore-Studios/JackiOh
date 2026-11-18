@@ -43,13 +43,14 @@ use jackioh_engine::{
     card_at, card_keywords, card_type_of_face, converts_to, credit_lapsing, damage_pool_of, death_hook_of,
     dormant_starship_of, effective_cost, effective_life, exit_mark, face_of, find_def, find_instance,
     find_instance_mut, first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword,
-    heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_dormant_starship, is_extra_turn_card,
-    is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, is_tradable, launched_starship_of,
-    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
-    own_cost, pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance,
-    script_of, sell_quote, sells_from_hand, settle, slots_of, stats_with_buffs, subsystems,
-    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship,
+    is_extra_turn_card, is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
+    is_tradable, launched_starship_of, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, plague_on,
+    playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, sell_quote, sells_from_hand,
+    settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on,
+    trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused,
+    with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -1437,7 +1438,10 @@ pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) 
 }
 
 /// `face_threat_with`, `on_turn_swings` saying whether the player on turn still has this turn's attacks to
-/// come (R3793000). `evaluate_priced` reads it off its `NextSwing`.
+/// come (R3793000). `evaluate_priced` reads it off its `NextSwing`. With `w.frozen_sick_before_swing` and those
+/// attacks this turn's, the engine's refusals of this turn apply (R4170000): a Frozen unit counts no attack, one
+/// summoning sick without Rush or Charge none, and one with Rush but no Charge none on a hero. `face_threat_with`
+/// reads the end of the turn under way, so the flag never acts there.
 fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_turn_swings: bool) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     // R1849005, #3287: while The Gauntlet acts, `attack_restriction` bars a Unit in its lanes from the hero.
@@ -1447,6 +1451,10 @@ fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_t
     let hero = AttackTarget::Hero {
         player: attacker.opponent(),
     };
+    // R4064000: the attacks are this turn's only when the player on turn still has them to come.
+    let swings_now = state.active == attacker && on_turn_swings;
+    // R4170000: and then the engine's refusals of this turn apply to them.
+    let refused_now = w.frozen_sick_before_swing && swings_now;
     for unit in active_units_of(state, attacker) {
         let view = unit_view(state, unit);
         let ready = view.position == Position::Atk || (w.deft_defense_attacks && deft_in_defense(&view));
@@ -1466,19 +1474,27 @@ fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_t
         {
             continue;
         }
+        // R4170000, #4170: this turn a Frozen unit declares no attack, whatever cleanup thaws it, and nor does
+        // one that entered the field this turn without Rush or Charge (§4.2 step 1). With Rush and no Charge it
+        // may attack only Units (§6.1): a Taunt binds it, but it lands nothing on the hero.
+        if refused_now && (unit.frozen.is_some() || is_asleep(state, unit, &view.keywords)) {
+            continue;
+        }
+        let sick_off_hero =
+            refused_now && is_sick(state, unit) && !has_keyword(&view.keywords, KeywordKind::Charge);
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
-        // Nor is it summoning sick then, so only a restriction (`may_hit_hero`) keeps a swing off the hero.
+        // Read at the end of the turn under way, nor is it summoning sick then, so only a restriction
+        // (`may_hit_hero`) keeps a swing off the hero; a side that swings this turn met its sickness above.
         // R3550001, #3909: a unit that can only attack the Unit across never hits a hero. Its flag is read
         // first, so a board with no such unit asks `attack_restriction` nothing more than before.
         let across_only =
             w.static_attack_flags_read && flags_of(state, unit).attacks_only_across == Some(true);
-        let may_hit_hero = !(gauntlet || across_only) || attack_restriction(state, unit, &hero).is_ok();
+        let may_hit_hero =
+            !sick_off_hero && (!(gauntlet || across_only) || attack_restriction(state, unit, &hero).is_ok());
         for _ in 0..attacks_per_turn(state, unit) {
             attacks.push((unit, view.attack, may_hit_hero));
         }
     }
-    // R4064000: the attacks are this turn's only when the player on turn still has them to come.
-    let swings_now = state.active == attacker && on_turn_swings;
     damage_past_taunts_from(state, attacker.opponent(), &attacks, w, swings_now)
 }
 

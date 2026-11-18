@@ -783,7 +783,7 @@ with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`de
 `apps/web/src/wire/generated/`; commit any diff.
 
 ```
-cargo test -p jackioh-shared
-cargo test -p jackioh-shared --features ts
-cargo clippy -p jackioh-shared --all-targets -- -D warnings
+cargo test -p jackioh-shared --features jackioh-engine/testkit
+cargo test -p jackioh-shared --features ts,jackioh-engine/testkit
+cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings
 ```

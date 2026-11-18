@@ -10,7 +10,7 @@
 //! each Unit it summoned run its Death where it stands, in the order summoned, without dying
 //! (`trigger_death`, R4154205); the Radiant face runs that round twice, after the Reborn. "Them" are read
 //! once, before any Death runs, so a Unit a Death summons runs none, nor does one an earlier Death took
-//! off the field. Through v0.6.6g no Death ran, which `script_v0_6_6g` keeps
+//! off the field. Through v0.6.6h no Death ran, which `script_v0_6_6h` keeps
 //! (R767000).
 
 use jackioh_engine::prelude::*;
@@ -82,9 +82,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.6g, which triggered no Death (issue #4154). `KEPT_SCRIPTS` folds
+/// R767000: the scripts through v0.6.6h, which triggered no Death (issue #4154). `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: zzoth(false, 0),
         radiant: zzoth(true, 0),
@@ -144,10 +144,10 @@ mod tests {
         assert!(has_keyword(&s.stats(&lar).keywords, KeywordKind::Reborn), "Lar has Reborn first");
     }
 
-    /// R767000: through v0.6.6g no Death ran (issue #4154).
+    /// R767000: through v0.6.6h no Death ran (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6g_triggers_no_death() {
-        crate::under_kept(ID, super::script_v0_6_6g(), || {
+    fn r767000_the_script_kept_for_v0_6_6h_triggers_no_death() {
+        crate::under_kept(ID, super::script_v0_6_6h(), || {
             for radiant in [false, true] {
                 let mut s = holding(radiant, json!([LAR]), json!([]));
                 s.play(ID, json!({ "zone": 1 }));

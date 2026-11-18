@@ -10,8 +10,8 @@
 //!
 //! Through v0.5.11r the fuse added 2 copies (three cards at (0)), the hero gained 6 Armor and healed 6, and
 //! 3 Acclaimed cards were summoned; those numbers are the engine's (`config.rs`), so this file keeps no old
-//! script (R3135001, R767000). Issue #4154 cut the Armor and the heal 5 → 4 (R4154305); through v0.6.6g they
-//! were 5, which `script_v0_6_6g` keeps by rolling the engine's v0.6.6g table (`CHAOS_MED_EFFECTS_V0_6_6G`,
+//! script (R3135001, R767000). Issue #4154 cut the Armor and the heal 5 → 4 (R4154305); through v0.6.6h they
+//! were 5, which `script_v0_6_6h` keeps by rolling the engine's v0.6.6h table (`CHAOS_MED_EFFECTS_V0_6_6H`,
 //! R767000).
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MED_EFFECTS`,
@@ -45,9 +45,9 @@ pub fn script() -> CardScripts {
     rolling(subsystems::CHAOS_MED_EFFECTS)
 }
 
-/// R767000, R4154305: what it rolled through v0.6.6g, before issue #4154 cut its Armor and heal.
-pub fn script_v0_6_6g() -> CardScripts {
-    rolling(subsystems::CHAOS_MED_EFFECTS_V0_6_6G)
+/// R767000, R4154305: what it rolled through v0.6.6h, before issue #4154 cut its Armor and heal.
+pub fn script_v0_6_6h() -> CardScripts {
+    rolling(subsystems::CHAOS_MED_EFFECTS_V0_6_6H)
 }
 
 #[cfg(test)]
@@ -244,24 +244,24 @@ mod tests {
         }
     }
 
-    /// R767000, R4154305: the script kept for v0.6.6g rolls the table it had then: entry 4 at 5 Armor and a heal
+    /// R767000, R4154305: the script kept for v0.6.6h rolls the table it had then: entry 4 at 5 Armor and a heal
     /// of 5, the other nine as today, under the same names in the same order.
     #[test]
-    fn r767000_r4154305_the_script_kept_for_v0_6_6g_gives_5_armor_and_heals_5() {
+    fn r767000_r4154305_the_script_kept_for_v0_6_6h_gives_5_armor_and_heals_5() {
         crate::register_all();
         let names = |table: &[subsystems::ChaosEffectDef]| -> Vec<&'static str> {
             table.iter().map(|entry| entry.name).collect()
         };
-        assert_eq!(names(subsystems::CHAOS_MED_EFFECTS_V0_6_6G), names(subsystems::CHAOS_MED_EFFECTS));
-        for (old, new) in subsystems::CHAOS_MED_EFFECTS_V0_6_6G.iter().zip(subsystems::CHAOS_MED_EFFECTS) {
+        assert_eq!(names(subsystems::CHAOS_MED_EFFECTS_V0_6_6H), names(subsystems::CHAOS_MED_EFFECTS));
+        for (old, new) in subsystems::CHAOS_MED_EFFECTS_V0_6_6H.iter().zip(subsystems::CHAOS_MED_EFFECTS) {
             if old.name == "armor" {
                 assert_eq!(old.label, "Your hero gains 5 Armor and you heal it 5");
             } else {
                 assert_eq!(old.label, new.label);
             }
         }
-        assert_eq!((CHAOS_MED_HERO_ARMOR_V0_6_6G, CHAOS_MED_HEAL_V0_6_6G), (5, 5));
-        crate::under_kept(ID, script_v0_6_6g(), || {
+        assert_eq!((CHAOS_MED_HERO_ARMOR_V0_6_6H, CHAOS_MED_HEAL_V0_6_6H), (5, 5));
+        crate::under_kept(ID, script_v0_6_6h(), || {
             let mut p1 = side(false, json!([]));
             p1["health"] = json!(20);
             let mut s = chaos("armor", p1, json!({ "hand": [VANILLA] }));

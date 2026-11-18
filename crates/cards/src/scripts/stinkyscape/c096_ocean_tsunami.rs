@@ -20,8 +20,8 @@ pub const ID: &str = "stinkyscape-096";
 
 /// "Tribute 2" (§6.3): two of your units, or one Sheep Token, since issue #4154.
 const TRIBUTE_COST: i32 = 2;
-/// "Tribute 1", from issue #3837 through v0.6.6g.
-const TRIBUTE_V0_6_6G: i32 = 1;
+/// "Tribute 1", from issue #3837 through v0.6.6h.
+const TRIBUTE_V0_6_6H: i32 = 1;
 
 fn face(radiant: bool, tribute: Option<i32>) -> Script {
     Script {
@@ -46,12 +46,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: Tribute 1 from issue #3837 through v0.6.6g (issue #4154); `KEPT_SCRIPTS` folds those replays
+/// R767000: Tribute 1 from issue #3837 through v0.6.6h (issue #4154); `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: face(false, Some(TRIBUTE_V0_6_6G)),
-        radiant: face(true, Some(TRIBUTE_V0_6_6G)),
+        base: face(false, Some(TRIBUTE_V0_6_6H)),
+        radiant: face(true, Some(TRIBUTE_V0_6_6H)),
     }
 }
 
@@ -69,13 +69,13 @@ mod tests {
     use jackioh_engine::effects::summon;
     use jackioh_engine::testkit::*;
 
-    use super::{ID, script_v0_6_2c, script_v0_6_6g};
+    use super::{ID, script_v0_6_2c, script_v0_6_6h};
     use crate::{filler, run_as, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
     const REKNITE: &str = "stinkyscape-t-reknite";
-    /// The two units its Tribute 2 takes (one through v0.6.6g).
+    /// The two units its Tribute 2 takes (one through v0.6.6h).
     const BODY: &str = "stand-in (1) 1/1";
     const SECOND: &str = "stand-in (1) 2/2";
 
@@ -131,8 +131,8 @@ mod tests {
     }
 
     #[test]
-    fn r767000_the_kept_v0_6_6g_script_needs_tribute_1() {
-        crate::under_kept(ID, script_v0_6_6g(), || {
+    fn r767000_the_kept_v0_6_6h_script_needs_tribute_1() {
+        crate::under_kept(ID, script_v0_6_6h(), || {
             let mut s = tsunami(false);
             s.play(ID, json!({ "tributes": [BODY] }));
             s.expect_in_zone(ID, "field");

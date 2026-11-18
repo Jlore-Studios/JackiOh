@@ -10,9 +10,9 @@
 //!   a Stack is not on the field (R13); a Unit immune to Spells is spared (B5 E35, MD-B1, R940).
 //! - **Tribal hate** (R1424): "non-CN" picks cards by lacking a tribal tag, and a card in Chinese has
 //!   it (R1176000).
-//! - **Kept for replays** (R767000): through v0.6.6g it read "Exile every non-CN permanent." (Radiant:
+//! - **Kept for replays** (R767000): through v0.6.6h it read "Exile every non-CN permanent." (Radiant:
 //!   "every enemy non-CN permanent"), `exile_all`, which ignores Indestructible and runs no Death
-//!   (`script_v0_6_6g`, issue #4154); through v0.6.5b both faces exiled both sides and added a random CN
+//!   (`script_v0_6_6h`, issue #4154); through v0.6.5b both faces exiled both sides and added a random CN
 //!   card to their caster's hand for each of the caster's permanents exiled, counted first with the
 //!   exile's own scope (R1142, Frozen Wastes' pattern, C+ #12.6), the Radiant face's Radiant and
 //!   costing (`discount`) less (issue #3996); `script_v0_6_5b` keeps that.
@@ -35,8 +35,8 @@ fn mandate(side: &'static str) -> Script {
     }
 }
 
-/// Issue #3996, through v0.6.6g: the exile and nothing more.
-fn mandate_v0_6_6g(side: &'static str) -> Script {
+/// Issue #3996, through v0.6.6h: the exile and nothing more.
+fn mandate_v0_6_6h(side: &'static str) -> Script {
     Script {
         cry: Some(hook(move |_ctx| vec![exile_all(non_cn_permanents(side))])),
         ..Script::default()
@@ -50,12 +50,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.5b through v0.6.6g it exiled where it now destroys (issue #4154). `KEPT_SCRIPTS`
+/// R767000: after v0.6.5b through v0.6.6h it exiled where it now destroys (issue #4154). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: mandate_v0_6_6g("any"),
-        radiant: mandate_v0_6_6g("enemy"),
+        base: mandate_v0_6_6h("any"),
+        radiant: mandate_v0_6_6h("enemy"),
     }
 }
 
@@ -96,7 +96,7 @@ fn mandate_v0_6_5b(radiant: bool) -> Script {
 // M #78 Occidentless Mandate — SPEC §8.8 row 78, BUILD M10 row M 78 (R4154103).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script_v0_6_5b, script_v0_6_6g};
+    use super::{ID, script_v0_6_5b, script_v0_6_6h};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -257,13 +257,13 @@ mod tests {
             }
         }
 
-        /// R767000: after v0.6.5b through v0.6.6g it exiled every (enemy) non-CN permanent (issue #4154).
-        mod kept_for_v0_6_6g {
+        /// R767000: after v0.6.5b through v0.6.6h it exiled every (enemy) non-CN permanent (issue #4154).
+        mod kept_for_v0_6_6h {
             use super::*;
 
             #[test]
-            fn r767000_v0_6_6g_exiles_every_non_cn_permanent_face_down_and_indestructible_too() {
-                crate::under_kept(ID, script_v0_6_6g(), || {
+            fn r767000_v0_6_6h_exiles_every_non_cn_permanent_face_down_and_indestructible_too() {
+                crate::under_kept(ID, script_v0_6_6h(), || {
                     let mut s = decreed(
                         "mandate-sweep",
                         false,
@@ -285,8 +285,8 @@ mod tests {
 
             /// Issue #3996: no card comes in return, and nothing is drawn from the match rng for one.
             #[test]
-            fn r767000_v0_6_6g_it_adds_no_card_to_your_hand() {
-                crate::under_kept(ID, script_v0_6_6g(), || {
+            fn r767000_v0_6_6h_it_adds_no_card_to_your_hand() {
+                crate::under_kept(ID, script_v0_6_6h(), || {
                     let mut s = decreed("mandate-no-cards", false, json!([VANILLA, VANILLA, RUSH_TOKEN]), json!([VANILLA]));
                     let hand = s.hand(P1).len();
                     let cursor = s.state().rng_cursor;
@@ -300,8 +300,8 @@ mod tests {
             }
 
             #[test]
-            fn r767000_v0_6_6g_spares_a_translated_permanent() {
-                crate::under_kept(ID, script_v0_6_6g(), || {
+            fn r767000_v0_6_6h_spares_a_translated_permanent() {
+                crate::under_kept(ID, script_v0_6_6h(), || {
                     // A Vanilla in Chinese is CN (R1176000): it is not "non-CN", so it is not exiled, on
                     // either side; p1's English Vanilla is.
                     let mut s = decreed("mandate-translated", false, json!([VANILLA, VANILLA]), json!([VANILLA]));
@@ -318,8 +318,8 @@ mod tests {
             }
 
             #[test]
-            fn r767000_v0_6_6g_a_dormant_stack_card_is_spared() {
-                crate::under_kept(ID, script_v0_6_6g(), || {
+            fn r767000_v0_6_6h_a_dormant_stack_card_is_spared() {
+                crate::under_kept(ID, script_v0_6_6h(), || {
                     let mut s = decreed(
                         "mandate-stack",
                         false,
@@ -336,8 +336,8 @@ mod tests {
             }
 
             #[test]
-            fn r767000_v0_6_6g_a_unit_immune_to_spells_is_spared() {
-                crate::under_kept(ID, script_v0_6_6g(), || {
+            fn r767000_v0_6_6h_a_unit_immune_to_spells_is_spared() {
+                crate::under_kept(ID, script_v0_6_6h(), || {
                     let mut s = decreed(
                         "mandate-immune",
                         false,
@@ -353,8 +353,8 @@ mod tests {
 
             /// Issue #3996: "Exile every enemy non-CN permanent." Yours stay, and no card comes.
             #[test]
-            fn r767000_v0_6_6g_radiant_exiles_every_enemy_non_cn_permanent_and_spares_yours() {
-                crate::under_kept(ID, script_v0_6_6g(), || {
+            fn r767000_v0_6_6h_radiant_exiles_every_enemy_non_cn_permanent_and_spares_yours() {
+                crate::under_kept(ID, script_v0_6_6h(), || {
                     let mut s = decreed(
                         "mandate-radiant",
                         true,

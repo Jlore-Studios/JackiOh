@@ -9,7 +9,7 @@
 //! (3) instead.
 //!
 //! Issue #3996 made it cost (1), from (0), and its Death deal 1 (Radiant 2), from 2 (Radiant 4). Issue #4154
-//! made it a 3/1 (Radiant 6/2) whose Death adds or cheapens a Toxopid; through v0.6.6g (`script_v0_6_6g`,
+//! made it a 3/1 (Radiant 6/2) whose Death adds or cheapens a Toxopid; through v0.6.6h (`script_v0_6_6h`,
 //! R767000) it was a 1/3 (Radiant 2/6) with Can't Defend whose first arrival each game added a Toxopid
 //! (R3560000), which died after it attacked (R3560002) and whose Death hit the last Unit it damaged
 //! (R3560003).
@@ -24,9 +24,9 @@ pub const ID: &str = "stinkyscapeplus-120";
 
 /// The Toxopid its Death adds or cheapens.
 const TOXOPID: &str = "stinkyscapeplus-121";
-/// R3560000: the once-a-game first-arrival mark (through v0.6.6g).
+/// R3560000: the once-a-game first-arrival mark (through v0.6.6h).
 const BOARD_KEY: &str = "stinkyscapeplus-120:board";
-/// R3560003: the last Unit this damaged (through v0.6.6g).
+/// R3560003: the last Unit this damaged (through v0.6.6h).
 const LAST_DAMAGED: &str = "lastDamaged";
 /// R3560001: "May be played from your graveyard for (1)".
 const GRAVEYARD_PRICE: i32 = 1;
@@ -79,13 +79,13 @@ fn toxopid_or_discount(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect
     }
 }
 
-/// The face: today's when `through_v0_6_6g` is false, else the one v0.6.6g and before ran.
-fn crawler(radiant: bool, through_v0_6_6g: bool) -> Script {
+/// The face: today's when `through_v0_6_6h` is false, else the one v0.6.6h and before ran.
+fn crawler(radiant: bool, through_v0_6_6h: bool) -> Script {
     let static_flags = Some(StaticFlags {
         graveyard_price: Some(GRAVEYARD_PRICE),
         ..StaticFlags::default()
     });
-    if !through_v0_6_6g {
+    if !through_v0_6_6h {
         return Script {
             static_flags,
             death: Some(hook(move |ctx| toxopid_or_discount(ctx, radiant))),
@@ -152,9 +152,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.6g, before issue #4154: the first-arrival Toxopid, the death after
+/// R767000: what it ran through v0.6.6h, before issue #4154: the first-arrival Toxopid, the death after
 /// an attack and the Death that hit the last Unit it damaged.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: crawler(false, true),
         radiant: crawler(true, true),
@@ -320,29 +320,29 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.6g and before (issue #4154), under its v0.6.6g
+    /// R767000: the script kept for the replays of v0.6.6h and before (issue #4154), under its v0.6.6h
     /// definition: a 1/3 (Radiant 2/6) with Can't Defend whose Death dealt `damage`, 1 (Radiant 2).
-    mod kept_v0_6_6g {
+    mod kept_v0_6_6h {
         use super::*;
 
-        fn v0_6_6g(def: &mut CardDef) {
+        fn v0_6_6h(def: &mut CardDef) {
             def.base.attack = Some(1);
             def.base.health = Some(3);
             def.radiant.attack = Some(2);
             def.radiant.health = Some(6);
             let cant_defend: Vec<Keyword> =
-                serde_json::from_value(json!([{ "kind": "Can't Defend" }])).expect("the v0.6.6g keywords");
+                serde_json::from_value(json!([{ "kind": "Can't Defend" }])).expect("the v0.6.6h keywords");
             def.base.keywords = cant_defend.clone();
             def.radiant.keywords = cant_defend;
             def.params = serde_json::from_value(json!([
                 { "key": "damage", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }
             ]))
-            .expect("the v0.6.6g params");
+            .expect("the v0.6.6h params");
         }
 
         #[test]
         fn r767000_r3560000_its_first_arrival_added_a_toxopid_once_per_game() {
-            crate::under_kept_as(ID, script_v0_6_6g(), v0_6_6g, || {
+            crate::under_kept_as(ID, script_v0_6_6h(), v0_6_6h, || {
                 for radiant in [false, true] {
                     let mut s = weapon_board(
                         "s120-kept-arrival",
@@ -364,7 +364,7 @@ mod tests {
 
         #[test]
         fn r767000_r3560002_r3560003_after_it_attacked_it_died_and_its_death_hit_the_unit_it_damaged() {
-            crate::under_kept_as(ID, script_v0_6_6g(), v0_6_6g, || {
+            crate::under_kept_as(ID, script_v0_6_6h(), v0_6_6h, || {
                 let mut s = weapon_board(
                     "s120-kept-death",
                     json!({ "field": [{ "def": ID, "lane": 1 }] }),

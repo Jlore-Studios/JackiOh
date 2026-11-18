@@ -1,6 +1,6 @@
 //! S #18 Imitated Instrumentality (SPEC §8.10 row S 18; §6.3, R1, R64, R1843000, R1843001, R1866000):
 //! (3) Spell, Tech, Legendary. Tribute 1 since issue #4154 (R101): `staticFlags.tribute`, the play's cost;
-//! through v0.6.6g it cost (4) and asked none (`script_v0_6_6g`, R767000).
+//! through v0.6.6h it cost (4) and asked none (`script_v0_6_6h`, R767000).
 //!   Base:    "Summon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote
 //!            to remove you."
 //!   Radiant: "Summon a Radiant MELCHIOR, a Radiant BALTHASAR and a Radiant CASPER. They offer great
@@ -42,7 +42,7 @@ fn instrumentality(radiant: bool) -> Script {
 const TRIBUTE: i32 = 1;
 
 pub fn script() -> CardScripts {
-    let mut scripts = script_v0_6_6g();
+    let mut scripts = script_v0_6_6h();
     for face in [&mut scripts.base, &mut scripts.radiant] {
         face.static_flags = Some(StaticFlags {
             tribute: Some(TRIBUTE),
@@ -52,8 +52,8 @@ pub fn script() -> CardScripts {
     scripts
 }
 
-/// R767000: no Tribute through v0.6.6g (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+/// R767000: no Tribute through v0.6.6h (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: instrumentality(false),
         radiant: instrumentality(true),
@@ -181,7 +181,7 @@ mod tests {
     }
 
     /// Issue #4154: Tribute 1 on both faces (R101): with no unit to pay it the play is refused; a game on
-    /// v0.6.6g plays it with none, under the kept script (R767000).
+    /// v0.6.6h plays it with none, under the kept script (R767000).
     #[test]
     fn issue_4154_both_faces_need_tribute_1() {
         for radiant in [false, true] {
@@ -190,7 +190,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             s.expect_refused_with(|s| s.play(INSTRUMENTALITY, json!({})), "Tribute");
-            crate::under_kept(INSTRUMENTALITY, super::script_v0_6_6g(), || {
+            crate::under_kept(INSTRUMENTALITY, super::script_v0_6_6h(), || {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": INSTRUMENTALITY, "radiant": radiant }, FILLER] },
                     "p2": { "hand": [FILLER] },

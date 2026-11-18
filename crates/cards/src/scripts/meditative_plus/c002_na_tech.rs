@@ -12,8 +12,8 @@
 //! transient hand card (`fuse_generated`'s two pools, R1108; R77, R102) at the price the fusion gives
 //! it, the `fused` hand price: its ingredients' printed costs summed, at most `FUSE_COST_CAP` (R77,
 //! R4154102). The Radiant face fuses both ingredients on their Radiant faces (R469). Tunes: none.
-//! Through v0.6.6g it printed "It costs ({setCost})." (2, Radiant 0), a `costOverride` (R1183001;
-//! `script_v0_6_6g`, kept, R767000).
+//! Through v0.6.6h it printed "It costs ({setCost})." (2, Radiant 0), a `costOverride` (R1183001;
+//! `script_v0_6_6h`, kept, R767000).
 //!
 //! The fallback (#3869, R3869005): an end the table cannot name is a random non-token card of the sets
 //! that ship, never NA Tech, the end the table names or the other ingredient (`distinct`), so the two
@@ -39,7 +39,7 @@ fn fallback(kept: bool, card: &str, other_end: Option<&str>) -> Option<String> {
 }
 
 /// The Cry; `kept`, the script through v0.6.3b; `set_cost`, the declared `setCost` it was priced at
-/// through v0.6.6g (R1183001), else the fusion's own price (R4154102).
+/// through v0.6.6h (R1183001), else the fusion's own price (R4154102).
 fn tech(radiant: bool, kept: bool, set_cost: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -80,9 +80,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.3b through v0.6.6g the fused card cost the declared `setCost` (R1183001);
+/// R767000: after v0.6.3b through v0.6.6h the fused card cost the declared `setCost` (R1183001);
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: tech(false, false, true),
         radiant: tech(true, false, true),
@@ -164,7 +164,7 @@ mod tests {
         added[0].clone()
     }
 
-    /// R767000: `run` under a kept script, with the `setCost` the card declared through v0.6.6g (2,
+    /// R767000: `run` under a kept script, with the `setCost` the card declared through v0.6.6h (2,
     /// Radiant 0).
     fn kept<T>(scripts: CardScripts, run: impl FnOnce() -> T) -> T {
         crate::under_kept_as(
@@ -174,7 +174,7 @@ mod tests {
                 def.params = serde_json::from_value(json!([
                     { "key": "setCost", "base": 2, "radiant": 0, "better": "down", "step": 1, "min": 0 }
                 ]))
-                .expect("the v0.6.6g params");
+                .expect("the v0.6.6h params");
             },
             run,
         )
@@ -382,11 +382,11 @@ mod tests {
             assert_eq!(burned.len(), 1, "the fused card burned");
         }
 
-        /// R767000, R1183001: after v0.6.3b through v0.6.6g the fused card cost the declared `setCost`,
+        /// R767000, R1183001: after v0.6.3b through v0.6.6h the fused card cost the declared `setCost`,
         /// (2) and Radiant (0), read through `param` (issue #4154).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_6g_sets_the_fused_cards_cost() {
-            kept(script_v0_6_6g(), || {
+        fn r767000_the_script_kept_for_v0_6_6h_sets_the_fused_cards_cost() {
+            kept(script_v0_6_6h(), || {
                 for (radiant, set_cost) in [(false, 2), (true, 0)] {
                     register_win_rates(the_table());
                     let mut s = casting("na-tech-kept-v0-6-6e", radiant, 1);

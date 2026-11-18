@@ -14,9 +14,9 @@
 //! Through v0.5.11r the replenish was 4, the cards cost (0) with no mana, the mana 8, the permanents 6, the
 //! army 5 tokens, and entry 9 added a Call at (0) at once and at the start of every second turn; the
 //! numbers are the engine's (`config.rs`), so this file keeps no old script (R3135000, R767000). Issue #4154
-//! cut entries 1, 2, 3, 4, 5 and 7 a step each (R4154304); through v0.6.6g the fortify and the army summoned 3
+//! cut entries 1, 2, 3, 4, 5 and 7 a step each (R4154304); through v0.6.6h the fortify and the army summoned 3
 //! Rush Tokens, the designs replenished 3, the cards were 4, the mana 6 and the permanents 5, which
-//! `script_v0_6_6g` keeps by rolling the engine's v0.6.6g table (`CHAOS_TG_EFFECTS_V0_6_6G`, R767000).
+//! `script_v0_6_6h` keeps by rolling the engine's v0.6.6h table (`CHAOS_TG_EFFECTS_V0_6_6H`, R767000).
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_TG_EFFECTS`,
 //! `subsystems/call_to_chaos_training_grounds.rs`): the roll, the announcement both players read (R436),
@@ -49,9 +49,9 @@ pub fn script() -> CardScripts {
     rolling(subsystems::CHAOS_TG_EFFECTS)
 }
 
-/// R767000, R4154304: what it rolled through v0.6.6g, before issue #4154 cut six of its entries.
-pub fn script_v0_6_6g() -> CardScripts {
-    rolling(subsystems::CHAOS_TG_EFFECTS_V0_6_6G)
+/// R767000, R4154304: what it rolled through v0.6.6h, before issue #4154 cut six of its entries.
+pub fn script_v0_6_6h() -> CardScripts {
+    rolling(subsystems::CHAOS_TG_EFFECTS_V0_6_6H)
 }
 
 // TG #39 Call to Chaos (Training-Grounds Edition) — SPEC §8.11 row 39, BUILD M13 row TG 39.
@@ -231,11 +231,11 @@ mod tests {
         }
     }
 
-    /// R767000, R4154304: the script kept for v0.6.6g rolls the table it had then, the six entries issue #4154
+    /// R767000, R4154304: the script kept for v0.6.6h rolls the table it had then, the six entries issue #4154
     /// cut at their old numbers and the other four as today, under the same names in the same order.
     #[test]
-    fn r767000_r4154304_the_script_kept_for_v0_6_6g_rolls_the_v0_6_6g_table() {
-        let labels: Vec<&str> = subsystems::CHAOS_TG_EFFECTS_V0_6_6G.iter().map(|entry| entry.label).collect();
+    fn r767000_r4154304_the_script_kept_for_v0_6_6h_rolls_the_v0_6_6h_table() {
+        let labels: Vec<&str> = subsystems::CHAOS_TG_EFFECTS_V0_6_6H.iter().map(|entry| entry.label).collect();
         assert_eq!(
             labels,
             vec![
@@ -254,23 +254,23 @@ mod tests {
         let names = |table: &[subsystems::ChaosEffectDef]| -> Vec<&'static str> {
             table.iter().map(|entry| entry.name).collect()
         };
-        assert_eq!(names(subsystems::CHAOS_TG_EFFECTS_V0_6_6G), names(subsystems::CHAOS_TG_EFFECTS));
+        assert_eq!(names(subsystems::CHAOS_TG_EFFECTS_V0_6_6H), names(subsystems::CHAOS_TG_EFFECTS));
         assert_eq!(
             (
-                CHAOS_TG_RUSH_TOKENS_V0_6_6G,
-                CHAOS_TG_REFRESH_V0_6_6G,
-                CHAOS_TG_CARDS_V0_6_6G,
-                CHAOS_TG_MANA_V0_6_6G,
-                CHAOS_TG_PERMANENTS_V0_6_6G,
-                CHAOS_TG_ARMY_TOKENS_V0_6_6G
+                CHAOS_TG_RUSH_TOKENS_V0_6_6H,
+                CHAOS_TG_REFRESH_V0_6_6H,
+                CHAOS_TG_CARDS_V0_6_6H,
+                CHAOS_TG_MANA_V0_6_6H,
+                CHAOS_TG_PERMANENTS_V0_6_6H,
+                CHAOS_TG_ARMY_TOKENS_V0_6_6H
             ),
             (3, 3, 4, 6, 5, 3)
         );
-        crate::under_kept(ID, script_v0_6_6g(), || {
+        crate::under_kept(ID, script_v0_6_6h(), || {
             let s = chaos("mana", side(false, json!([])), json!({ "hand": [VANILLA] }));
-            assert_eq!(s.state().players.p1.mana.current, 10 - CALL_PRICE + CHAOS_TG_MANA_V0_6_6G);
+            assert_eq!(s.state().players.p1.mana.current, 10 - CALL_PRICE + CHAOS_TG_MANA_V0_6_6H);
             let s = chaos("army", side(false, json!([])), json!({ "hand": [VANILLA] }));
-            for lane in 1..=CHAOS_TG_ARMY_TOKENS_V0_6_6G {
+            for lane in 1..=CHAOS_TG_ARMY_TOKENS_V0_6_6H {
                 assert_eq!(s.unit(P1, lane).map(|unit| unit.def_id), Some(RUSH_TOKEN.to_string()));
             }
         });

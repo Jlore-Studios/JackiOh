@@ -8,8 +8,8 @@
 //!   (`tradable_hand_aura`, R1864002), read through the layers as Cloaked is. Each face gives its
 //!   controller `trades` Trades a turn while it acts (`trades_per_turn`, R1864004), a pure read through
 //!   `param()`, the most of several holding, never a sum. Issue #4154 gave the base face the Trades too,
-//!   2, and made the Radiant face's 3 (R4154208); through v0.6.6g the base face gave none, which
-//!   `script_v0_6_6g` keeps (R767000).
+//!   2, and made the Radiant face's 3 (R4154208); through v0.6.6h the base face gave none, which
+//!   `script_v0_6_6h` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -31,9 +31,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.6g, whose base face gave no Trades (issue #4154). `KEPT_SCRIPTS`
+/// R767000: the scripts through v0.6.6h, whose base face gave no Trades (issue #4154). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: union(false),
         radiant: union(true),
@@ -238,10 +238,10 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.6.6g the base face gave no Trades and the Radiant face `trades` (issue #4154).
+    /// R767000: through v0.6.6h the base face gave no Trades and the Radiant face `trades` (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6g_gives_trades_on_the_radiant_face_alone() {
-        crate::under_kept(ID, script_v0_6_6g(), || {
+    fn r767000_the_script_kept_for_v0_6_6h_gives_trades_on_the_radiant_face_alone() {
+        crate::under_kept(ID, script_v0_6_6h(), || {
             for radiant in [false, true] {
                 let s = unionised("union-kept", radiant);
                 let expected = if radiant { 3 } else { TRADES_PER_TURN };

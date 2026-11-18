@@ -9,8 +9,8 @@
 //! refresh) sets the second, `lossAfter`, on the refresh after it, carrying the number as it stood at
 //! the cast. A full hand burns the Rift (§2.4). An extra turn taken next is "next turn", as
 //! Hearthstone's Overload lands on Time Warp's extra turn. Issue #4154 added the Armor, the declared
-//! `armor` (R386), kept for the rest of the game (R124), before the Rift (R4154209); through v0.6.6g it
-//! gave none, which `script_v0_6_6g` keeps (R767000).
+//! `armor` (R386), kept for the rest of the game (R124), before the Rift (R4154209); through v0.6.6h it
+//! gave none, which `script_v0_6_6h` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -70,8 +70,8 @@ pub fn script() -> CardScripts {
     expedition(true)
 }
 
-/// R767000: Expedition123 after v0.4.0f through v0.6.6g, which gave no Armor (issue #4154).
-pub fn script_v0_6_6g() -> CardScripts {
+/// R767000: Expedition123 after v0.4.0f through v0.6.6h, which gave no Armor (issue #4154).
+pub fn script_v0_6_6h() -> CardScripts {
     expedition(false)
 }
 
@@ -278,10 +278,10 @@ mod tests {
         assert_eq!(s.state().players.p1.hero.armor, 3);
     }
 
-    /// R767000: through v0.6.6g it gave no Armor (issue #4154).
+    /// R767000: through v0.6.6h it gave no Armor (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6g_gives_no_armor() {
-        crate::under_kept(EXPEDITION, script_v0_6_6g(), || {
+    fn r767000_the_script_kept_for_v0_6_6h_gives_no_armor() {
+        crate::under_kept(EXPEDITION, script_v0_6_6h(), || {
             for radiant in [false, true] {
                 let mut s = board(json!([{ "def": EXPEDITION, "radiant": radiant }]));
                 s.play(EXPEDITION, json!({}));

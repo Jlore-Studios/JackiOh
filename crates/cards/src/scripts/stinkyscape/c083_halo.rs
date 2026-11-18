@@ -8,8 +8,8 @@
 //! (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host
 //! wears (R77), so a Radiant Halo wields its Weapons' Radiant faces. Since #2521 it is no
 //! Starship Piece, and the Weapons it takes, each a piece, leave it none (R1852001), so its death fuses
-//! nothing (R1852000 reads the keyword). Kept for replays (R767000): through v0.6.6g each pick was a
-//! Discover of three, "Discover 3 Rare Weapons" (`script_v0_6_6g`, issue #4154).
+//! nothing (R1852000 reads the keyword). Kept for replays (R767000): through v0.6.6h each pick was a
+//! Discover of three, "Discover 3 Rare Weapons" (`script_v0_6_6h`, issue #4154).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
@@ -23,7 +23,7 @@ const PICKS: i32 = 3;
 const OPTIONS: i32 = 2;
 
 /// R1862002, R4154104: PICKS times, a choice of `options` `rarity` Weapons (a Discover's three when
-/// `None`, through v0.6.6g), Equipped into this.
+/// `None`, through v0.6.6h), Equipped into this.
 fn arm(rarity: Rarity, options: Option<i32>) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -47,9 +47,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.5.9f through v0.6.6g each pick was a Discover of three (issue #4154); `KEPT_SCRIPTS`
+/// R767000: after v0.5.9f through v0.6.6h each pick was a Discover of three (issue #4154); `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: arm(Rarity::Rare, None),
         radiant: arm(Rarity::Epic, None),
@@ -60,7 +60,7 @@ pub fn script_v0_6_6g() -> CardScripts {
 /// declared no `weapons` (it printed "Discover 3", which `param_or` reads); `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_5_9f() -> CardScripts {
-    script_v0_6_6g()
+    script_v0_6_6h()
 }
 
 // Stinkyscape #83 Halo — SPEC §8.10 row 83, BUILD M12 row S 83 (#2521; R4154104, R1841002, R1751000,
@@ -158,10 +158,10 @@ mod tests {
             armed(&s, &host);
         }
 
-        /// R767000: through v0.6.6g each pick was a Discover of three (issue #4154).
+        /// R767000: through v0.6.6h each pick was a Discover of three (issue #4154).
         #[test]
-        fn r767000_r1862002_the_script_kept_for_v0_6_6g_discovers_from_three() {
-            crate::under_kept(ID, script_v0_6_6g(), || {
+        fn r767000_r1862002_the_script_kept_for_v0_6_6h_discovers_from_three() {
+            crate::under_kept(ID, script_v0_6_6h(), || {
                 let (s, host) = arms(false, &RARE, DISCOVER_OPTIONS as usize);
                 armed(&s, &host);
             });

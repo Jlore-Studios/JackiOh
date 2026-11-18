@@ -3,19 +3,19 @@
 //! rolls, announces and resolves, so one rule serves every edition. Every entry is built when it resolves
 //! (`lazy_part`), as the other editions' are (R87, R113).
 //!
-//! Issue #4154 cut entries 1 to 5 and 7 by a step each (R4154304). The table they had through v0.6.6g,
-//! `CHAOS_TG_EFFECTS_V0_6_6G`, the same builders over the `_V0_6_6G` numbers and labels, is the one the
+//! Issue #4154 cut entries 1 to 5 and 7 by a step each (R4154304). The table they had through v0.6.6h,
+//! `CHAOS_TG_EFFECTS_V0_6_6H`, the same builders over the `_V0_6_6H` numbers and labels, is the one the
 //! card's kept script rolls for those replays (R767000).
 
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
 use crate::config::{
-    CHAOS_TG_ALTERNATE_CAP, CHAOS_TG_ARMY_TOKENS, CHAOS_TG_ARMY_TOKENS_V0_6_6G, CHAOS_TG_CARD_COST,
-    CHAOS_TG_CARDS, CHAOS_TG_CARDS_MANA, CHAOS_TG_CARDS_V0_6_6G, CHAOS_TG_DRAW, CHAOS_TG_EVERY,
-    CHAOS_TG_MANA, CHAOS_TG_MANA_V0_6_6G, CHAOS_TG_PERMANENTS, CHAOS_TG_PERMANENTS_V0_6_6G,
-    CHAOS_TG_RADIANT_CARDS, CHAOS_TG_RADIANT_MANA, CHAOS_TG_REFRESH, CHAOS_TG_REFRESH_V0_6_6G,
-    CHAOS_TG_RUSH_TOKENS, CHAOS_TG_RUSH_TOKENS_V0_6_6G,
+    CHAOS_TG_ALTERNATE_CAP, CHAOS_TG_ARMY_TOKENS, CHAOS_TG_ARMY_TOKENS_V0_6_6H, CHAOS_TG_CARD_COST,
+    CHAOS_TG_CARDS, CHAOS_TG_CARDS_MANA, CHAOS_TG_CARDS_V0_6_6H, CHAOS_TG_DRAW, CHAOS_TG_EVERY,
+    CHAOS_TG_MANA, CHAOS_TG_MANA_V0_6_6H, CHAOS_TG_PERMANENTS, CHAOS_TG_PERMANENTS_V0_6_6H,
+    CHAOS_TG_RADIANT_CARDS, CHAOS_TG_RADIANT_MANA, CHAOS_TG_REFRESH, CHAOS_TG_REFRESH_V0_6_6H,
+    CHAOS_TG_RUSH_TOKENS, CHAOS_TG_RUSH_TOKENS_V0_6_6H,
 };
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::ForRestOfGameArgs;
@@ -280,22 +280,22 @@ fn build_alternate() -> Effect {
     })
 }
 
-// The entries that issue #4154 cut, each built over today's number and over v0.6.6g's (R4154304).
+// The entries that issue #4154 cut, each built over today's number and over v0.6.6h's (R4154304).
 
 fn build_fortify() -> Effect {
     fortify(CHAOS_TG_RUSH_TOKENS)
 }
 
-fn build_fortify_v0_6_6g() -> Effect {
-    fortify(CHAOS_TG_RUSH_TOKENS_V0_6_6G)
+fn build_fortify_v0_6_6h() -> Effect {
+    fortify(CHAOS_TG_RUSH_TOKENS_V0_6_6H)
 }
 
 fn build_designs() -> Effect {
     designs(CHAOS_TG_REFRESH)
 }
 
-fn build_designs_v0_6_6g() -> Effect {
-    designs(CHAOS_TG_REFRESH_V0_6_6G)
+fn build_designs_v0_6_6h() -> Effect {
+    designs(CHAOS_TG_REFRESH_V0_6_6H)
 }
 
 /// 3. R2200000, R3135000, R4154304: three random Training Grounds cards at (1), then 2 mana.
@@ -303,32 +303,32 @@ fn build_cards() -> Effect {
     add_cards("cards", CHAOS_TG_CARDS, false, CHAOS_TG_CARDS_MANA)
 }
 
-fn build_cards_v0_6_6g() -> Effect {
-    add_cards("cards", CHAOS_TG_CARDS_V0_6_6G, false, CHAOS_TG_CARDS_MANA)
+fn build_cards_v0_6_6h() -> Effect {
+    add_cards("cards", CHAOS_TG_CARDS_V0_6_6H, false, CHAOS_TG_CARDS_MANA)
 }
 
 fn build_mana() -> Effect {
     mana_entry(CHAOS_TG_MANA)
 }
 
-fn build_mana_v0_6_6g() -> Effect {
-    mana_entry(CHAOS_TG_MANA_V0_6_6G)
+fn build_mana_v0_6_6h() -> Effect {
+    mana_entry(CHAOS_TG_MANA_V0_6_6H)
 }
 
 fn build_permanents() -> Effect {
     permanents(CHAOS_TG_PERMANENTS)
 }
 
-fn build_permanents_v0_6_6g() -> Effect {
-    permanents(CHAOS_TG_PERMANENTS_V0_6_6G)
+fn build_permanents_v0_6_6h() -> Effect {
+    permanents(CHAOS_TG_PERMANENTS_V0_6_6H)
 }
 
 fn build_army() -> Effect {
     army(CHAOS_TG_ARMY_TOKENS)
 }
 
-fn build_army_v0_6_6g() -> Effect {
-    army(CHAOS_TG_ARMY_TOKENS_V0_6_6G)
+fn build_army_v0_6_6h() -> Effect {
+    army(CHAOS_TG_ARMY_TOKENS_V0_6_6H)
 }
 
 /// §8.11 row 39's ten entries, in the order the card prints them. Each `label` is the clause as the card
@@ -388,34 +388,34 @@ pub const CHAOS_TG_EFFECTS: &[ChaosEffectDef] = &[
     },
 ];
 
-/// R4154304, R767000: §8.11 row 39's ten entries as they were through v0.6.6g, before issue #4154 cut entries 1
-/// to 5 and 7: the same names and builders over the `_V0_6_6G` numbers, each `label` the clause the card
-/// printed then. The card's kept script (`script_v0_6_6g`) rolls it for those replays.
-pub const CHAOS_TG_EFFECTS_V0_6_6G: &[ChaosEffectDef] = &[
+/// R4154304, R767000: §8.11 row 39's ten entries as they were through v0.6.6h, before issue #4154 cut entries 1
+/// to 5 and 7: the same names and builders over the `_V0_6_6H` numbers, each `label` the clause the card
+/// printed then. The card's kept script (`script_v0_6_6h`) rolls it for those replays.
+pub const CHAOS_TG_EFFECTS_V0_6_6H: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "fortify",
         label: "Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield",
-        build: build_fortify_v0_6_6g,
+        build: build_fortify_v0_6_6h,
     },
     ChaosEffectDef {
         name: "designs",
         label: "Fill your hand with Goetzmann Game Designs and replenish 3 mana",
-        build: build_designs_v0_6_6g,
+        build: build_designs_v0_6_6h,
     },
     ChaosEffectDef {
         name: "cards",
         label: "Add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana",
-        build: build_cards_v0_6_6g,
+        build: build_cards_v0_6_6h,
     },
     ChaosEffectDef {
         name: "mana",
         label: "Gain 6 mana and draw 2 cards",
-        build: build_mana_v0_6_6g,
+        build: build_mana_v0_6_6h,
     },
     ChaosEffectDef {
         name: "permanents",
         label: "Summon 5 random Training Grounds permanents",
-        build: build_permanents_v0_6_6g,
+        build: build_permanents_v0_6_6h,
     },
     ChaosEffectDef {
         name: "radiant",
@@ -425,7 +425,7 @@ pub const CHAOS_TG_EFFECTS_V0_6_6G: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "army",
         label: "Summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce",
-        build: build_army_v0_6_6g,
+        build: build_army_v0_6_6h,
     },
     ChaosEffectDef {
         name: "golem",

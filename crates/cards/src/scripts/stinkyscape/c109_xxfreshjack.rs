@@ -26,7 +26,7 @@ fn busted_anywhere() -> CatalogQueryArgs {
 const TRIBUTE: i32 = 1;
 
 pub fn script() -> CardScripts {
-    let mut scripts = script_v0_6_6g();
+    let mut scripts = script_v0_6_6h();
     for face in [&mut scripts.base, &mut scripts.radiant] {
         face.static_flags = Some(StaticFlags {
             tribute: Some(TRIBUTE),
@@ -36,8 +36,8 @@ pub fn script() -> CardScripts {
     scripts
 }
 
-/// R767000: no Tribute through v0.6.6g (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+/// R767000: no Tribute through v0.6.6h (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: Script {
             cry: Some(hook(|_ctx| {
@@ -257,10 +257,10 @@ mod tests {
         }
     }
 
-    /// R767000: a game on v0.6.6g and before plays it with no Tribute, under the kept script.
+    /// R767000: a game on v0.6.6h and before plays it with no Tribute, under the kept script.
     #[test]
-    fn issue_4154_the_kept_v0_6_6g_script_asks_no_tribute() {
-        crate::under_kept(ID, script_v0_6_6g(), || {
+    fn issue_4154_the_kept_v0_6_6h_script_asks_no_tribute() {
+        crate::under_kept(ID, script_v0_6_6h(), || {
             let mut s = board(false, "xxfreshjack-fold-6e");
             s.play(ID, json!({ "zone": 1 }));
             s.expect_in_zone(ID, "field");

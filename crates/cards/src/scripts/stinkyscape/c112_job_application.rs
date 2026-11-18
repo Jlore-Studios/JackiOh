@@ -18,8 +18,8 @@
 //! Stage 3 accepts or reapplies (R81, #112.1, R1865002). Death resummon (R64, R78, R1865000).
 //! Radiant: Lucky 1 keeps shorter wait; buffs 10.
 //! Issue #4154 made the rewards easier to gain (R4154204): the resume hears back in 1 to 2 turns (1 to 4
-//! through v0.6.6g, 2 to 6 through v0.6.4c), and the Interview asks for 2 cards of different costs in a
-//! turn (3) or a hit of 8 or more (12); the same-cost goal and the tripling stay. `script_v0_6_6g` keeps
+//! through v0.6.6h, 2 to 6 through v0.6.4c), and the Interview asks for 2 cards of different costs in a
+//! turn (3) or a hit of 8 or more (12); the same-cost goal and the tripling stay. `script_v0_6_6h` keeps
 //! the terms before it for those replays (R767000).
 
 use jackioh_engine::effects::{
@@ -67,16 +67,16 @@ const RESUME_WAIT_KEY: &str = "resumeWait";
 const REWARD_FACTOR_KEY: &str = "rewardFactor";
 const HIRED_KEY: &str = "hired";
 
-/// "Hear back in 1 to 2 turns" (1 to 4 through v0.6.6g, issue #4154; 2 to 6 through v0.6.4c, issue #3951).
+/// "Hear back in 1 to 2 turns" (1 to 4 through v0.6.6h, issue #4154; 2 to 6 through v0.6.4c, issue #3951).
 const SHORTEST_WAIT: i32 = 1;
 const LONGEST_WAIT: i32 = 2;
-/// "Play 2 cards of different costs in one turn" (3 through v0.6.6g).
+/// "Play 2 cards of different costs in one turn" (3 through v0.6.6h).
 const BEHAVIORAL_COSTS: i32 = 2;
-/// "Take or deal 8 or more damage in one hit" (12 through v0.6.6g).
+/// "Take or deal 8 or more damage in one hit" (12 through v0.6.6h).
 const HARDBALL_DAMAGE: i32 = 8;
-/// The Interview's two numbers through v0.6.6g (issue #4154).
-const BEHAVIORAL_COSTS_V0_6_6G: i32 = 3;
-const HARDBALL_DAMAGE_V0_6_6G: i32 = 12;
+/// The Interview's two numbers through v0.6.6h (issue #4154).
+const BEHAVIORAL_COSTS_V0_6_6H: i32 = 3;
+const HARDBALL_DAMAGE_V0_6_6H: i32 = 12;
 /// The cost the Interview's first goal asks for while no resume's cost is noted (R1865001).
 const NO_RESUME_COST: i32 = 0;
 /// "It costs (0)".
@@ -130,16 +130,16 @@ const WAITS: Waits = Waits {
     hardball: HARDBALL_DAMAGE,
 };
 
-/// From v0.6.4d through v0.6.6g: 1 to 4 turns, each table's weights over those four, 3 costs, 12 damage
+/// From v0.6.4d through v0.6.6h: 1 to 4 turns, each table's weights over those four, 3 costs, 12 damage
 /// (R767000).
-const WAITS_V0_6_6G: Waits = Waits {
+const WAITS_V0_6_6H: Waits = Waits {
     shortest: 1,
     longest: 4,
     weak: &[1, 2, 3, 4],
     solid: &[2, 3, 3, 2],
     strong: &[4, 3, 2, 1],
-    behavioral: BEHAVIORAL_COSTS_V0_6_6G,
-    hardball: HARDBALL_DAMAGE_V0_6_6G,
+    behavioral: BEHAVIORAL_COSTS_V0_6_6H,
+    hardball: HARDBALL_DAMAGE_V0_6_6H,
 };
 
 /// Through v0.6.4c: 2 to 6 turns, each table's weights over those five (R767000).
@@ -149,8 +149,8 @@ const WAITS_V0_6_4C: Waits = Waits {
     weak: &[1, 2, 3, 4, 5],
     solid: &[2, 3, 4, 3, 2],
     strong: &[5, 4, 3, 2, 1],
-    behavioral: BEHAVIORAL_COSTS_V0_6_6G,
-    hardball: HARDBALL_DAMAGE_V0_6_6G,
+    behavioral: BEHAVIORAL_COSTS_V0_6_6H,
+    hardball: HARDBALL_DAMAGE_V0_6_6H,
 };
 
 /// `remember` of one key.
@@ -441,12 +441,12 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts from v0.6.4d through v0.6.6g, whose resume heard back in 1 to 4 turns and whose
+/// R767000: the scripts from v0.6.4d through v0.6.6h, whose resume heard back in 1 to 4 turns and whose
 /// Interview asked for 3 costs or 12 damage (issue #4154). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: job_application(WAITS_V0_6_6G),
-        radiant: job_application(WAITS_V0_6_6G),
+        base: job_application(WAITS_V0_6_6H),
+        radiant: job_application(WAITS_V0_6_6H),
     }
 }
 
@@ -823,11 +823,11 @@ mod tests {
         assert_eq!(stage["reward"]["text"], json!("Hear back in 1 to 2 turns"));
     }
 
-    /// R767000: from v0.6.4d through v0.6.6g a resume heard back in 1 to 4 turns and the Interview asked
+    /// R767000: from v0.6.4d through v0.6.6h a resume heard back in 1 to 4 turns and the Interview asked
     /// for 3 costs or 12 damage (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6g_hears_back_in_1_to_4_turns_and_asks_3_costs_or_12_damage() {
-        let kept = script_v0_6_6g();
+    fn r767000_the_script_kept_for_v0_6_6h_hears_back_in_1_to_4_turns_and_asks_3_costs_or_12_damage() {
+        let kept = script_v0_6_6h();
         let stages = serde_json::to_value(&kept.base.stages).expect("the stages serialize");
         assert_eq!(stages[0]["reward"]["text"], json!("Hear back in 1 to 4 turns"));
         assert_eq!(stages[1]["goals"][1]["text"], json!("Play 3 cards of different costs in one turn"));

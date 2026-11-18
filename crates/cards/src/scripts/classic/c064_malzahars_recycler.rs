@@ -122,7 +122,7 @@ mod tests {
     const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
     const NOSE_HUNTER: &str = "classic-015"; // Nose Hunter: Activate: Discard a random card. Exile the bottom card of their deck.
     const RAPID_DRAW: &str = "classic-026"; // Rapid Draw: Draw 4. Then discard 4 random cards.
-    const LAST_HURRAH: &str = "classic-037"; // Last Hurrah: through v0.6.6g, Draw your deck and discard 4 at the end of this turn.
+    const LAST_HURRAH: &str = "classic-037"; // Last Hurrah: through v0.6.6h, Draw your deck and discard 4 at the end of this turn.
     const PICKLE: &str = "classic-008"; // Pickle: at the start of your opponent's next turn, they choose 3 times: discard 1, exile 1, or you draw 1
     const INCOME_TAX: &str = "classic-009"; // Income Tax: when the cards your opponent has drawn in a turn reach 2 …
 
@@ -340,7 +340,7 @@ mod tests {
             }
 
             /// R767000: Last Hurrah discards nothing since issue #4154, so this runs under the script kept for
-            /// v0.6.6g and that version's `discard`, 4.
+            /// v0.6.6h and that version's `discard`, 4.
             #[test]
             fn c_37_last_hurrahs_end_of_turn_discard_of_your_hand_draws_that_many_from_the_deck_it_emptied_fatigue() {
                 let discarding = |def: &mut CardDef| {
@@ -348,7 +348,7 @@ mod tests {
                         "key": "discard", "base": 4, "radiant": 4, "better": "down", "step": 1, "min": 1,
                     }))]);
                 };
-                let kept = crate::scripts::classic::c037_last_hurrah::script_v0_6_6g();
+                let kept = crate::scripts::classic::c037_last_hurrah::script_v0_6_6h();
                 crate::under_kept_as(LAST_HURRAH, kept, discarding, || {
                     let mut s = recycling(json!({
                         "hand": [LAST_HURRAH],

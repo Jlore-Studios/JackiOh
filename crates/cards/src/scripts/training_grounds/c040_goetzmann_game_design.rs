@@ -5,7 +5,7 @@
 //! Core #59 add_random_from_catalog from shipped sets (R380, R1420), excluding own def (§5.1, R387), hidden from opponent (R97, §2.4). Radiant is Radiant (R74). Quickdraw flag (R640).
 //! Issue #4154 added "It costs (1) less", the declared `discount` (R386), as the add's `costMod` rider
 //! (R766: a price it has in that hand, never below (0), which a full hand's burn takes with it, R215;
-//! R4154210); through v0.6.6g the card cost what it printed, which `script_v0_6_6g` keeps (R767000).
+//! R4154210); through v0.6.6h the card cost what it printed, which `script_v0_6_6h` keeps (R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -41,9 +41,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.6g, whose card cost what it printed (issue #4154). `KEPT_SCRIPTS`
+/// R767000: the scripts through v0.6.6h, whose card cost what it printed (issue #4154). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: design(false, false),
         radiant: design(true, false),
@@ -143,10 +143,10 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.6.6g the card cost what it printed (issue #4154).
+    /// R767000: through v0.6.6h the card cost what it printed (issue #4154).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_6g_adds_the_card_at_its_price() {
-        crate::under_kept(DESIGN, super::script_v0_6_6g(), || {
+    fn r767000_the_script_kept_for_v0_6_6h_adds_the_card_at_its_price() {
+        crate::under_kept(DESIGN, super::script_v0_6_6h(), || {
             let mut s = board("tg40-kept", false);
             assert_eq!(added(&mut s).cost_mod, 0);
         });

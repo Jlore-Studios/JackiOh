@@ -1612,7 +1612,7 @@ mod banked_modifiers_1722 {
     use jackioh_engine::testkit::{AltWinCondition, ModifierExpiry, ModifierKind, PlayerModifier};
 
     const CONTRACT: &str = "classicplus-052"; // (2) Spell: rest of the game, a Jlockeed card each start of your turn
-    const HURRAH: &str = "classic-037"; // Last Hurrah: through v0.6.6g its Radiant face discarded at the end of your next turn
+    const HURRAH: &str = "classic-037"; // Last Hurrah: through v0.6.6h its Radiant face discarded at the end of your next turn
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
     const FILLER: &str = "core-005";
 
@@ -1660,7 +1660,7 @@ mod banked_modifiers_1722 {
 
     /// The AI's state with Last Hurrah's delayed discard waiting, the same state without it, and that
     /// one with the AI's hand emptied. Issue #4154 took the discard off the card, so it is played under
-    /// the script kept for v0.6.6g and that version's `discard` (R767000).
+    /// the script kept for v0.6.6h and that version's `discard` (R767000).
     fn hurrahed() -> (GameState, GameState, GameState) {
         register_cards();
         let mut defs = jackioh_cards::CATALOG.clone();
@@ -1675,7 +1675,7 @@ mod banked_modifiers_1722 {
                 defs,
                 jackioh_engine::prelude::IndexMap::from([(
                     HURRAH.to_string(),
-                    jackioh_cards::scripts::classic::c037_last_hurrah::script_v0_6_6g(),
+                    jackioh_cards::scripts::classic::c037_last_hurrah::script_v0_6_6h(),
                 )]),
             )));
         let armed = jackioh_engine::with_shipped(Some(kept), || {

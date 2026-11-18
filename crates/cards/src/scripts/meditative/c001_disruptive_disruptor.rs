@@ -12,8 +12,8 @@
 //! (R384): an effect's discard of the opponent's (R16's "random", R682), so the opponent's own guard stops
 //! it, drawing nothing (R800). The Radiant face's draws among the Radiant cards of that hand, and among
 //! all of them when it holds none (R4154207); one card to draw from draws no random number (R129).
-//! Through v0.6.6g it had "Cry: Draw {draw}" (Radiant: "and gain {mana} mana", R1), which
-//! `script_v0_6_6g` keeps (R767000).
+//! Through v0.6.6h it had "Cry: Draw {draw}" (Radiant: "and gain {mana} mana", R1), which
+//! `script_v0_6_6h` keeps (R767000).
 
 use jackioh_engine::effects::{discard, discard_random, draw, gain_mana};
 use jackioh_engine::prelude::*;
@@ -91,9 +91,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.6g, the Aura and a Cry: "Draw {draw}" (Radiant: "and gain {mana}
+/// R767000: the scripts through v0.6.6h, the Aura and a Cry: "Draw {draw}" (Radiant: "and gain {mana}
 /// mana"), which issue #4154 replaced with the Activate. `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: Script {
             // "Cry: Draw {draw}" (patch v0.3.10, #831): the declared number `draw` (R386).
@@ -239,12 +239,12 @@ mod tests {
             assert_eq!(count(s.last_events(), "discardPrevented"), 0);
         }
 
-        /// R767000: `run` under the scripts v0.6.6g ran and its declared `draw` (1, Radiant 2) and `mana`
+        /// R767000: `run` under the scripts v0.6.6h ran and its declared `draw` (1, Radiant 2) and `mana`
         /// (2, the Radiant face's), which issue #4154 took off.
-        fn v0_6_6g<T>(run: impl FnOnce() -> T) -> T {
+        fn v0_6_6h<T>(run: impl FnOnce() -> T) -> T {
             crate::under_kept_as(
                 ID,
-                script_v0_6_6g(),
+                script_v0_6_6h(),
                 |def| {
                     def.params = Some(vec![
                         json_as(json!({ "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "read": "cry" })),
@@ -333,7 +333,7 @@ mod tests {
 
         #[test]
         fn r767000_its_cry_draws_1_and_gains_no_mana() {
-            v0_6_6g(|| {
+            v0_6_6h(|| {
                 let mut s = scenario(json!({
                     "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA] },
                     "p2": { "hand": [FILLER] },
@@ -351,7 +351,7 @@ mod tests {
 
         #[test]
         fn r767000_r386_its_draw_reads_through_param() {
-            v0_6_6g(|| {
+            v0_6_6h(|| {
                 let mut s = scenario(json!({
                     "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA, VANILLA] },
                     "p2": { "hand": [FILLER] },
@@ -366,7 +366,7 @@ mod tests {
 
         #[test]
         fn r767000_radiant_cry_draws_2_and_gains_2_mana() {
-            v0_6_6g(|| {
+            v0_6_6h(|| {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
@@ -388,7 +388,7 @@ mod tests {
 
         #[test]
         fn r767000_r386_radiant_draw_and_mana_read_through_param() {
-            v0_6_6g(|| {
+            v0_6_6h(|| {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
@@ -409,7 +409,7 @@ mod tests {
 
         #[test]
         fn r767000_r1_radiant_cry_fires_when_cast() {
-            v0_6_6g(|| {
+            v0_6_6h(|| {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],

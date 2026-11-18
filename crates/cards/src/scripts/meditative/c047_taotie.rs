@@ -14,8 +14,8 @@
 //! has none. The fusion is R77 and R102's: this keeps its instance, zone, damage, Radiant
 //! flag and this turn's use; the eaten card ceases to exist with no Death. Through v0.6.5b it was "End of
 //! turn: Fuse a random enemy Unit into this." (R62), the Radiant face then also fusing a random card of
-//! the opponent's library (`script_v0_6_5b`), through v0.6.6g the base face's Activate had no cooldown
-//! (`script_v0_6_6g`), and through v0.5.11r the field ingredient was any enemy
+//! the opponent's library (`script_v0_6_5b`), through v0.6.6h the base face's Activate had no cooldown
+//! (`script_v0_6_6h`), and through v0.5.11r the field ingredient was any enemy
 //! permanent, a Field Spell or a Trap too (`script_v0_5_11o`), both kept for their replays (R767000).
 
 use jackioh_engine::effects::fuse_cards;
@@ -129,9 +129,9 @@ pub fn script() -> CardScripts {
     devouring(true)
 }
 
-/// R767000: after v0.6.5b through v0.6.6g the base face's Activate had no extra turn cooldown (issue
+/// R767000: after v0.6.5b through v0.6.6h the base face's Activate had no extra turn cooldown (issue
 /// #4154); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     devouring(false)
 }
 
@@ -156,7 +156,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 // M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47, R468, R767000, R3996002.
 #[cfg(test)]
 mod tests {
-    use super::{DEVOUR, script_v0_5_11o, script_v0_6_5b, script_v0_6_6g};
+    use super::{DEVOUR, script_v0_5_11o, script_v0_6_5b, script_v0_6_6h};
     use crate::js;
     use jackioh_engine::subsystems::activate::activate_actions_for;
     use jackioh_engine::testkit::*;
@@ -654,14 +654,14 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays after v0.6.5b through v0.6.6g: the base face's Activate
+        /// R767000: the script kept for the replays after v0.6.5b through v0.6.6h: the base face's Activate
         /// with no extra turn cooldown.
-        mod v0_6_6g {
+        mod v0_6_6h {
             use super::*;
 
             #[test]
-            fn r767000_a_game_on_v0_6_6g_offers_the_base_activate_again_on_its_next_turn() {
-                crate::under_kept(TAOTIE, script_v0_6_6g(), || {
+            fn r767000_a_game_on_v0_6_6h_offers_the_base_activate_again_on_its_next_turn() {
+                crate::under_kept(TAOTIE, script_v0_6_6h(), || {
                     let mut s = table("taotie-kept-v0-6-6e", json!([]), json!([{ "def": BODY, "lane": 1 }, HARMLESS, HARMLESS]));
                     let id = taotie_id(&s);
 

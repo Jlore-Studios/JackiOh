@@ -8,8 +8,8 @@
 //! deck (R2657002), never below 0 (`float_lowers_tribute`, R1841003, as S #86 Prototype-X2's). The end of
 //! turn is #13's shape: one `damage_all` per pass (R51, R59), and "twice" is two passes, so every enemy
 //! takes two damage instances, the hero last in each (R3553000).
-//! Issue #4154 raised the Tribute from 2 and gave it the Float line; `script_v0_6_6g` keeps Tribute 2 with
-//! no Float for the replays of v0.6.6g and before, and issue #3996 had raised it from 1, which
+//! Issue #4154 raised the Tribute from 2 and gave it the Float line; `script_v0_6_6h` keeps Tribute 2 with
+//! no Float for the replays of v0.6.6h and before, and issue #3996 had raised it from 1, which
 //! `script_v0_6_5b` keeps for the replays of v0.6.5b and before (R767000).
 
 use jackioh_engine::effects::damage_all;
@@ -19,8 +19,8 @@ pub const ID: &str = "stinkyscapeplus-021";
 
 /// "Tribute 3" (R101, R366: printed, declared nowhere), since issue #4154.
 const TRIBUTE: i32 = 3;
-/// "Tribute 2", after v0.6.5b through v0.6.6g (issue #3996).
-const TRIBUTE_V0_6_6G: i32 = 2;
+/// "Tribute 2", after v0.6.5b through v0.6.6h (issue #3996).
+const TRIBUTE_V0_6_6H: i32 = 2;
 /// "Tribute 1", through v0.6.5b.
 const TRIBUTE_V0_6_5B: i32 = 1;
 /// "twice": two end-of-turn passes over every enemy (R3553000, R1748003: a printed word).
@@ -56,10 +56,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: after v0.6.5b through v0.6.6g it was Tribute 2 with no Float (issue #4154); `KEPT_SCRIPTS`
+/// R767000: after v0.6.5b through v0.6.6h it was Tribute 2 with no Float (issue #4154); `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_6g() -> CardScripts {
-    let base = shredder(TRIBUTE_V0_6_6G, false);
+pub fn script_v0_6_6h() -> CardScripts {
+    let base = shredder(TRIBUTE_V0_6_6H, false);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -73,7 +73,7 @@ pub fn script_v0_6_5b() -> CardScripts {
 
 // S+ #21 Jlockeed Shredder-12 — SPEC §8.12 row S+ 21 (R3553000; R51, R59, R101, R366, R1841003).
 // End-of-turn double AoE over enemy units and hero; Tribute 3 to play, each Float lowering it by 1 (2
-// with no Float through v0.6.6g, 1 through v0.6.5b).
+// with no Float through v0.6.6h, 1 through v0.6.5b).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,13 +253,13 @@ mod tests {
             }
         }
 
-        /// R767000: after v0.6.5b through v0.6.6g two Units paid it and a Float lowered nothing (issue #4154).
+        /// R767000: after v0.6.5b through v0.6.6h two Units paid it and a Float lowered nothing (issue #4154).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_6g_needs_tribute_2_and_no_float_lowers_it() {
-            crate::under_kept(ID, script_v0_6_6g(), || {
+        fn r767000_the_script_kept_for_v0_6_6h_needs_tribute_2_and_no_float_lowers_it() {
+            crate::under_kept(ID, script_v0_6_6h(), || {
                 let mut s = to_play(false);
-                assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_6G);
-                assert!(script_v0_6_6g().base.hand_triggers.is_empty(), "no Float");
+                assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_6H);
+                assert!(script_v0_6_6h().base.hand_triggers.is_empty(), "no Float");
                 let [first, second] = [1, 2].map(|lane| s.unit_at(PlayerId::P1, lane).id);
                 s.expect_refused(|s| s.play(ID, json!({ "zone": 4, "tributes": [first.as_str()] })));
                 s.play(ID, json!({ "zone": 4, "tributes": [first.as_str(), second.as_str()] }));
