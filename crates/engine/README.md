@@ -146,7 +146,8 @@ builds reads its own game's hold without the state (R2201001).
   card's declared number, R3561000), `slash_board` (`slashBoard`, R3554002) with `ask_slash_lane`/`chosen_slash_lane`, `line_damage_begin` and
   `line_damage_answered` (`lineTile`/`lineDamage`, R3554005), `chain_lightning` (`chainLightning`,
   R3554006) and `chain_units` (`chainUnits`, R3554007); the sweep (R3554008) is
-  `StaticFlags.sweep_lane`/`sweep_adjacent` with `combat::sweep_weight` and `combat::sweep`, and the
+  `StaticFlags.sweep_lane`/`sweep_adjacent` with `combat::sweep_weight` and `combat::sweep`, on the
+  sweeper's own attacks alone (a strike back reads `combat::strike_back_multiplier_for`, R4156000), and the
   occupied summon (R3554009) is `SummonPlacement.exile_below`.
 - S+ S22 (issue #3569, R3569000–R3569008) adds `GameState.radiant_world` (set by `effects/radiant.rs`'s
   `make_all_radiant`, kept true of every card by `radiate_world` at the settled state check, R3569000),
