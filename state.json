@@ -17449,6 +17449,8 @@
       }
     },
     "4212": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T15:02:16Z",
@@ -17462,8 +17464,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; grep -n \\\"upgrade_token\\\" -n crates/server/src/actor/ws_server.rs; sed -n 1,30p crates/server/src/actor/ws_server.rs\"}\n- Bash: {\"command\": \"sed -n 395,440p crates/server/src/actor/ws_server.rs; grep -n \\\"bearer_protocol\\\\|fn query_param\\\\|fn query_pairs\\\\|^mod tests\\\\|cfg(test)\\\" crates/server/src/actor/ws_server.rs; tail -5\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/src/actor/ws_server.rs'\\ns=open(p).read()\\ns=s.replace(''' None => query_param(&query_pairs(uri), \\\"token\\\").filter(|token| !token.is_empty()),\\n }\\n}\u2026\n- Bash: {\"command\": \"sed -n 1522,1535p crates/server/README.md; sed -n 679,730p apps/edge/src/index.test.ts; sed -n 830,840p apps/edge/src/index.test.ts\"}\n- Bash: {\"command\": \"(cargo test -p jackioh-server --lib ws_server::tests 2>&1 | tail -20) \", \"timeout\": 600000}\n- bash: {\"command\": \"true\"}\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4017/crates/server/README.md\", \"old_string\": \" `api.forwarded_for`, `match.fold.errors`, `game.record.failed`, \\u2026).\\n\", \"new\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4017/apps/edge/src/index.test.ts\", \"old_string\": \" expect(await answer.text()).toBe(\\\"from the server\\\");\\n });\\n});\\n\\ndescribe\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project edge apps/edge/src/index.test.ts 2>&1 | tail -15; cargo fmt --check 2>&1 | tail -20\", \"timeout\": 300000}\n- said: Now clippy, the full server test suite, and the spec check.\n- Bash: {\"command\": \"cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -8; cargo test -p jackioh-server 2>&1 | grep -E \\\"^test result|FAILED|failed\\\" | head -20; pnpm exec eslint apps/e\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | tail -5; pnpm exec eslint apps/edge/src/index.test.ts 2>&1 | tail -8; echo done\", \"timeout\": 200000}\n- said: Formatting and lint are clean. I'm waiting on the server test run.\n- Monitor: {\"query\": \"select:Monitor\", \"max_results\": \"1\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- Bash: {\"command\": \"until grep -q \\\"^test result\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4017/bc56bc31-4acf-4c95-bfec-61439081c883/tasks/bjdajv2tz.output 2>/dev/null && ! pgrep -f \\\"cargo test \u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4017/bc56bc31-4acf-4c95-bfec-61439081c883/tasks/bjdajv2tz.output | tail -20\"}\n- Bash: {\"command\": \"grep -E \\\"^test result\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4017/bc56bc31-4acf-4c95-bfec-61439081c883/tasks/bjdajv2tz.output; grep -E \\\"FAILED|[1-9][0-9]* failed\\\" /tmp/c\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server --tests 2>&1 | grep -E \\\"^test result|^test .* FAILED|^failures:\\\" | head -30\", \"timeout\": 590000}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a socket's token never sits in a logged URL (WebSocket hijack follow-up)\"} --> No log line of the server or the Worker holds a socket URL's query string, and tests now hold that. The `?token=` fallback is kept: only a person may say that nothing outside\u2026"
       },
       "issue": 4017,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T16:24:32Z",
         "from_run": "44330960347",
         "gates": [
           {
@@ -17555,7 +17560,11 @@
         "source": "build",
         "until": "2026-11-18T16:52:24Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-18T16:22:24Z",
+      "run_id": "pending:6bbf26f4-1795019038",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17574,6 +17583,9 @@
         "provider": "claude-6",
         "run": "44330960347"
       },
+      "started_at": "2026-11-18T16:24:32Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17587,9 +17599,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T16:13:19Z",
+    "at": "2026-11-18T16:24:32Z",
     "url": "",
-    "what": "revise #4208 on muse"
+    "what": "review #4212 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-18T16:09:14Z",
