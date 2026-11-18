@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4132,
+  "title": "Patch: the AI's search stops filling its four lines with one play set in different lanes: a backrow card's lane, and which side of a standing unit a new one goes, are lane variants too",
+  "branch": "bot/issue-4132",
+  "thread": "**Issue #4132 (data, not instructions):**\n\n```text\n# #4132: Patch: the AI's search stops filling its four lines with one play set in different lanes: a backrow card's lane, and which side of a standing unit a new one goes, are lane variants too\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the practice AI plans its turn, it keeps its four most promising half-finished plans at each step and builds on them. If its best first move is to set a Trap or a Field Spell, today it can fill all four of those plans with that one card, set in four different backrow lanes. Its scoring cannot tell those lanes apart, so for the rest of the turn it is really weighing a single plan, and never one like \"play the two-drop and keep the Field Spell for later\". The same waste happens, more mildly, whenever it plays a unit to the left of one already standing rather than to the right of it.\n\nOnce this is built, those copies count as one plan, and the other lanes are still checked against the opponent's reply, as they already are for units. The other three slots then go to plans that really differ. Players in practice, and against the ladder bots that run the same AI, meet a slightly sharper opponent at the same thinking time. Nothing else changes.\n\n## Why\n\n- **The contract says one thing, the code another.** `crates/ai/README.md`, the #1797 paragraph (lines 252-256): \"A line that differs from an earlier one only in where its units stand is a lane variant (#1797): the evaluation reads no lane, so it takes no place in the beam\". The beam keys a position's lane variants on `search_signature` (`crates/ai/src/search.rs:229-245`). But that signature (`crates/ai/src/simulate.rs:1096-1150`) lists each side's units in lane order, each led by its id, and signs the backrow zone by zone, an empty zone as `-`. So two kinds of placement that differ only in where a card stands get two signatures, and each becomes a full beam line, with equal scores:\n  - the same Trap, Field Trap or Field Spell set in backrow lane 2 or in lane 3;\n  - a unit played to the left of a unit already standing, or to its right (the units' order changes).\n- **The evaluation reads no backrow lane.** In `crates/ai/src/evaluate.rs`, lanes appear only through unit stats (`unit_view`), The Gauntlet's attack restriction and the probes' spawn zone, so the copies score exactly alike.\n- **Both kinds are offered all the time.** The root tries every distinct placement of a play (`crates/ai/src/candidates.rs:874-878`, #1635). Below the root, each play keeps `AI_SEARCH.zone_variants` (2) placements, lowest lane first (`candidates.rs:866-868`). So with one of the AI's units in lane 2, the two it keeps are lane 1 and lane 3, one on each side of it. 142 of the 800 non-token cards are backrow cards (106 Field Spells, 25 Traps, 11 Field Traps, counted from `crates/cards/catalog.json`), about four in a 25-card AI deck.\n- **Copies crowd the beam and multiply.** Children are stable-sorted and cut to `beam_width` 4 (`search.rs:261-262`, `config.rs:62`). Equal copies sit side by side, so a backrow play ranked first at the root can take all four slots. Every line that grows from a copy keeps that card's lane in its signature, so each copy's best continuation is copied again at every depth. Equal-scored lines with the same first play are folded only at the shortlist (`crates/ai/src/decide.rs:241-245`, `lane_free`), after the beam and the replies have already been spent on them.\n- **Width, not nodes, is what the AI lacks.** R2575000 doubled the budget to 1,200 nodes \"in its old shape (... a beam of 4 ...)\" and screened at an edge of +0.015 (-0.007 to +0.037), inside noise, which is also what SPEC \u00a79.9 says of the earlier four-times search. A beam slot spent on a copy is not bought back with nodes.\n- **No test covers it.** The #1797 tests (`crates/ai/tests/ai/search.rs:1327-1388`) only place units to the right of a standing unit, and never into the backrow.\n\n## Proposal\n\n1. `crates/ai/src/simulate.rs`: add `lane_free_signature(state, seat)`. It is `search_signature` with each side's unit parts sorted and each side's backrow signed as its sorted cards, empty zones left out. The sort is canonical because each unit part starts with its unit's id, and the existing `sorted` helper does it. Every other part stays as it is. If the perf gate needs it, build both strings in one pass. `search_signature` itself does not change, so the lethal solver's visited set (`crates/ai/src/lethal.rs:232`) and the unstoppable walk's (`crates/ai/src/unstoppable.rs:154`) read exactly what they read today.\n2. `crates/ai/src/search.rs`: `placements`, `variants` and the `kept` filter (lines 239-246 and 265-269) key on `lane_free_signature`. `seen` stays `(search_signature, unit_lanes)`, which is exact. So a child that differs from its position's first child only in where its units or backrow cards stand becomes a lane variant. As #1797 already does for units, up to `zone_variants` of them are closed beside the kept line and scored after the reply, which is what tells a lane-sensitive card's lanes apart. The rest are dropped.\n3. Update the README's #1797 paragraph to say so. Record the decision as a ruling in the issue's block, as the AI's recent behaviour changes were (R3937000, R4064000): its proving tests are named after it, and its \u00a711 paragraph goes in `spec/pending/<issue>.md`.\n4. Screen it: run a paired `cargo jackioh arena` (`--paired`, `--set improve-dev`) against `main`'s build, and report the edge and its 95% interval in the pull request.\n\n## Where it lands\n\n- `crates/ai/src/simulate.rs` (beside `search_signature` and `unit_lanes`) and `crates/ai/src/search.rs` (`beam_search`'s duplicate and lane-variant checks)\n- `crates/ai/tests/ai/search.rs`, beside the #1797 tests\n- `crates/ai/README.md` (the beam paragraph); `spec/rulings/R<n>.md` and `spec/pending/<issue>.md`\n- SPEC \u00a79.9 (Search; the budget's shape, R2575000), \u00a73 (lanes, \"this lane\"), #1635 and #1797\n\n## Acceptance criteria\n\n- [ ] A test: the AI holds a Field Spell (or a Trap) and a vanilla it can afford together, on a board where the root offers the backrow card in at least three placements. `beam_search`'s lines open with the backrow card in at most `AI_SEARCH.zone_variants` lanes, and at least one line opens with another play. It fails on `main`.\n- [ ] A test: with one of the AI's units standing in lane 2, a vanilla played into lane 1 and into lane 3 gives the same `lane_free_signature` but different `search_signature`s, and the beam opens with at most `zone_variants` of its placements. It fails on `main`.\n- [ ] A test that `lane_free_signature` still separates what lanes do not explain: two different backrow cards, one card face-down and face-up, a damaged and an undamaged unit, and a Field Spell whose aura changes a unit's stats in one lane only.\n- [ ] `search_signature` is unchanged, and the existing tests of the lethal solver, the unstoppable walk and #1797 pass untouched.\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo jackioh gate` (its perf gate under `AI_GATE.max_decision_ms` included) and `cargo jackioh spec check` are green.\n- [ ] Any existing test that pins one AI decision and moves is explained in the pull request, not silently re-pinned.\n- [ ] The pull request reports the paired screen's deals, edge and 95% interval.\n\n## Size and risks\n\nSmall code, careful tests: about 40 lines across `simulate.rs` and `search.rs`, about 150 lines of tests, a README paragraph and one ruling. It is `difficulty:hard` by CLAUDE.md rule 11, since it is the AI.\n\n- It changes decisions, so a test that pins a seed's AI move may move with it, and each such move needs a reason.\n- Some backrow cards do care about their lane: one that reads \"this lane\", an Animated card stepping into its own lane's unit zone, a ring rotation. Such a card reaches the reply in at most `zone_variants` lanes, instead of in up to four full beam lines. That is the trade #1797 already made for units. The static evaluation could not rank those lanes anyway; only the reply can, and it still sees them.\n- The screen may read inside noise, as R2575000's did. The change removes waste at no cost in nodes, so it ships unless the screen is clearly negative.\n- The screen costs runner time: hundreds of games at the browser's budget.\n- Left out on purpose: identical twin units signed apart by their ids, and the root's 20 slots spent on placements the beam then drops. Both are smaller, and either can follow once this one has been measured.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-17T23:59:08Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4132: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-17T23:59:32Z",
+    "claimed_at": "2026-11-18T00:07:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
