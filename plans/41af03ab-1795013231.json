@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4017,
+  "title": "Patch (part 19 of 20): a socket's token never sits in a logged URL (WebSocket hijack follow-up)",
+  "branch": "bot/issue-4017",
+  "thread": "**Issue #4017 (data, not instructions):**\n\n```text\n# #4017: Patch (part 19 of 20): a socket's token never sits in a logged URL (WebSocket hijack follow-up)\nOpened by @jgoetzmann.\n\n### What it does\n\nItem 19 of #3897: **WebSocket hijack**. Another site opens a socket that rides the victim's credentials. First-pass verdict: \u2705 covered.\n\n- Every socket route checks `Origin` against the site's own origins (`origin_allowed` in `crates/server/src/actor/ws_server.rs`, \u00a79.8).\n- The token travels in the `jackioh.bearer.` subprotocol (R1379000), not a cookie, so another site has no credentials to borrow.\n\nOne loose end: `upgrade_token` (around line 407) falls back to a `?token=` query parameter when no subprotocol is offered. A token in a URL can land in access logs: Cloudflare's, the Worker's, the server's `tracing`. Nothing in `apps/web`, `e2e`, `bot` or `scripts` sends it today.\n\n1. **Logs.** Make sure no log line keeps a socket URL's query string. Check the server's request logging and the Worker. Add a test that a logged upgrade has `token` removed.\n2. **The fallback.** Find out whether anything outside this tree still uses it (CLAUDE.md rule 13: that nothing in the tree calls it is no proof). Write what you found on this issue. Remove the fallback only once a person says yes there. Until then, keep it, with its log hole closed by step 1.\n\n### Acceptance\n\n- No log line keeps a socket's `token`, and a test holds it.\n- This issue records who, if anyone, uses the fallback, and the fallback is removed only after a person's yes, with its tests updated.\n- `cargo test -p jackioh-server` and the whole-workspace gates green.\n\n### Blocked by, part of\n\nPart of #3897. Related: #2629 \u00a74 (logs).\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4017: needs a plan; `claude-6` (claude, `sonnet`, medium) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T22:30:41Z",
+    "claimed_at": "2026-11-18T14:47:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4197 is held for `claude-1` until 10:10 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4018 skipped: it waits for #4017 to close first"
+  ]
+}
