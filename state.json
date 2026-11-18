@@ -14690,7 +14690,16 @@
       "feedback_since": "2026-11-18T02:13:47Z",
       "issue": 4140,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "cc70f27b7895a629d5564d0a1654b448315fb195",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
