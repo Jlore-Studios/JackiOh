@@ -17651,19 +17651,17 @@
     "what": "revise #4210 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-18T17:46:24Z",
+    "at": "2026-11-18T18:01:10Z",
     "notes": [
-      "#4205 is held for `claude-4` until 11:50 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "#4206: approved and green, so its strikes are cleared",
-      "delivered plan #4218 on muse (run 44358640527): planned",
-      "delivered revise #4208 on muse (run 44358322828): built",
-      "started review #4208 on muse (run 44362952933)",
-      "started revise #4206 on muse (run 44363118053)",
-      "started build #4205 on claude-4 (run 44363257873)",
-      "started build #4218 on muse (run 44363392440)",
-      "started plan #4018 on claude-7 (run 44363531719)",
+      "#4173 no longer waits its turn",
+      "delivered plan #4018 on claude-7 (run 44363531719): planned",
+      "delivered review #4215 on muse (run 44351417829): approved",
+      "started build #4018 on claude-7 (run 44365641720)",
+      "started revise #4173 on claude-7 (run 44365786519)",
+      "started revise #4210 on claude-8 (run 44365940484)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 1 of 1 waiting run(s) (run 44365399824 on bot/issue-4180)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18369,7 +18367,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T17:46:24Z",
+  "loop_tick": "2026-11-18T18:01:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
