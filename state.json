@@ -37009,16 +37009,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "2": {
-        "area": "tests",
-        "count": 1,
-        "last_run": "2026-11-18T05:16:18Z",
-        "provider": "claude-7",
-        "run_id": "44243082155",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
