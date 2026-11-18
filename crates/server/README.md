@@ -1525,6 +1525,9 @@ the card and deck slot cosmetics, the full arts and the portraits, the registry 
   states a number (CLAUDE.md rule 9).
 - Logs are `tracing` JSON lines to stdout with stable `event` names (`server.listening`,
   `api.forwarded_for`, `match.fold.errors`, `game.record.failed`, …).
+- A socket's address carries no secret in a log: no line holds a request's query. The `?token=` fallback
+  (R1379000) logs `ws.upgrade.query_token` with the path alone, one line per use, which counts what is left
+  of the previous client (#4017).
 - Anything the spec does not decide is marked `// NOT IN SPEC:` where it is decided.
 - Symmetric encryption is an AEAD (AES-GCM or ChaCha20-Poly1305, through `ring`), never CBC or another
   bare block mode, whose padding errors decrypt a ciphertext byte by byte; today Web Push's
