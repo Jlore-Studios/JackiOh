@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4144,
+  "title": "Patch: the dungeon run's shop and score strawmen hold run-sim affordability bands",
+  "branch": "bot/issue-4144",
+  "thread": "**Issue #4144 (data, not instructions):**\n\n```text\n# #4144: Patch: the dungeon run's shop and score strawmen hold run-sim affordability bands\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA dungeon run hands out coins and tickets, charges prices at shops and campfires, and turns score into a reward at the end. Many of those numbers are still rough guesses waiting for tuning. Once built, the test suite plays a handful of full runs with the practice opponent and fails when the economy clearly breaks, for example when an ordinary winning run can no longer afford the cheapest shop card, or when the end-of-run reward falls far outside its usual range. Players notice fair shops and meaningful rewards; the maintainer notices the breakage in a test message instead of in player complaints.\n\n## Why\n\n`crates/run/src/config.rs` marks the economy numbers as strawmen \"to be tuned\": `RUN_COINS`, `RUN_TICKETS`, `RUN_CARD_PRICE`, `RUN_ARTIFACT_PRICE`, `RUN_REMOVE_PRICE`, `RUN_RADIANT_TICKETS`, `RUN_BUFF_TICKETS`, plus the score row (`RUN_SCORE_ROW`, `RUN_SCORE_FIGHT`, `RUN_SCORE_DAMAGE`, `RUN_SCORE_HEALING`, `RUN_SCORE_CARD_DRAWN`, the boss percents, `RUN_SCORE_PER_EMBER`) and `RUN_LEVEL_EMBERS`, all specified in `spec/15-dungeon-run.md` \u00a7\u00a715.7, 15.8, 15.10 and 15.13. `crates/tools/src/run_sim.rs` already prints wins, HP cost, rows reached, score by term and Embers per skill, but its only asserting test is `the_enemy_tiers_hold_run_sims_win_rate_bands` (`BAND_SEEDS = 6`, tier 1 at least 75% won, final boss at most 50% won, elites cost more HP). Nothing asserts the economy, so a price retune that makes shops decoration or Embers noise stays green.\n\n## Proposal\n\nAdd an economy-bands test beside the tiers test, reusing its harness (`band_state`, `play_band_fight`/`play_match` at `TEST_BUDGET` and full skill, `KindTally`-style sums over `BAND_SEEDS` runs): tally coins and tickets earned over the first fights, the cheapest shop card, remove and Radiant prices actually charged, and the score-to-Embers payout of finished runs. Fail with a named band break (e.g. \"median run cannot afford the cheapest shop card by its first shop\" or \"Embers per won run outside X..Y\") and print the table as `render_bands` does. Keep bands wide because the header warns the AI plays better or worse than a person, so the table guides tuning rather than setting targets; a deliberate retune changes the bands in the same patch, as the tiers test already requires.\n\n## Where it lands\n\n- `crates/tools/src/run_sim.rs`: new economy bands test and helpers beside `play_bands`, `broken_bands`, `render_bands`\n- `crates/run/src/config.rs`: read only (values change only with a deliberate retune)\n- SPEC sections read, not changed: \u00a715.7 (packs, coins, tickets, drops), \u00a715.8 (campfire, shop, prices), \u00a715.10 (score and Embers), \u00a715.13 (strawmen to tune); no new ruling since no rules decision changes\n\n## Acceptance criteria\n\n- [ ] The new test passes on the current strawmen at the same seeds and budget the tiers test uses.\n- [ ] Multiplying `RUN_CARD_PRICE` (or zeroing `RUN_COINS`) breaks exactly its band with a message naming the edit, mirroring `each_band_names_the_tier_edit_that_breaks_it`.\n- [ ] Pushing score payouts far outside their band (e.g. `RUN_SCORE_PER_EMBER` tenfold) breaks exactly its band.\n- [ ] `cargo test -p jackioh-tools --bin jackioh run_sim` stays within a noted time budget, and the daily `run-sim` text output keeps its old rows plus the new economy lines.\n\n## Size and risks\n\nMedium: one tools file plus its tests, no game-rules change. Main risks are flakiness and mistaking AI skill for human value; mitigate with the pinned `BAND_SEEDS` starts, `TEST_BUDGET`, seeded policy order, and wide bands. Rejected alternative: tuning the strawman numbers directly now; rejected because the starting lists are still placeholders (`placeholder.json`, `run_catalog_content`) and the AI baseline is not a human baseline, so bands-that-hold beat numbers-that-guess.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T01:56:37Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4144: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T01:57:08Z",
+    "claimed_at": "2026-11-18T02:00:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
