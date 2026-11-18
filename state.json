@@ -15182,14 +15182,16 @@
     "what": "review #4165 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-18T03:23:05Z",
+    "at": "2026-11-18T03:33:05Z",
     "notes": [
-      "delivered suggest on claude-8 (run 44227579648): interrupted",
-      "delivered suggest on claude-8 (run 44227492717): interrupted",
-      "started suggest on muse (run 44230281185)",
-      "started suggest on muse (run 44230353874)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-18T06:30:00Z; it can start a build or a plan again in 2h 03m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered suggest on muse (run 44230281185): suggested",
+      "delivered build #4141 on claude-3 (run 44224629795): built",
+      "delivered build #4144 on claude-1 (run 44223317605): built",
+      "started review #4164 on claude-3 (run 44231631406)",
+      "started review #4165 on claude-1 (run 44231705524)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-18T06:30:00Z; it can start a build or a plan again in 1h 52m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 5 plan file(s) older than 7 days",
+      "#4163: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15895,7 +15897,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T03:23:05Z",
+  "loop_tick": "2026-11-18T03:33:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
