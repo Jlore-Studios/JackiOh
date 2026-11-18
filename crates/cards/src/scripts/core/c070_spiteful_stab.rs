@@ -58,15 +58,10 @@ fn spiteful_stab(face: FaceKind, pierce: bool) -> Script {
             }
             vec![damage(json_as(hit))]
         })),
-        // R280: the label is the face's text, its declared numbers as the card stands (R386): its last
-        // line, the damage, under its keyword line.
+        // R280: the label is the face's text, its declared numbers as the card stands (R386).
         preview: Some(condition_hook(move |ctx| {
             vec![PreviewValue {
-                label: fill_params(&def, face, params_view(ctx.state, ctx.self_).as_ref())
-                    .rsplit('\n')
-                    .next()
-                    .unwrap_or_default()
-                    .to_string(),
+                label: fill_params(&def, face, params_view(ctx.state, ctx.self_).as_ref()),
                 value: stab_amount(ctx.state, ctx.controller, numbers_of(&ctx)),
                 display: None,
                 ids: None,
@@ -420,7 +415,8 @@ mod tests {
             assert_eq!(
                 first,
                 Some((
-                    "Deal 3 damage, +1 per full 5 health your hero is below 30, +1 per card in your exile.".to_string(),
+                    "Pierce\nDeal 3 damage, +1 per full 5 health your hero is below 30, +1 per card in your exile."
+                        .to_string(),
                     3
                 ))
             );

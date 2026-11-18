@@ -1612,7 +1612,7 @@ mod banked_modifiers_1722 {
     use jackioh_engine::testkit::{AltWinCondition, ModifierExpiry, ModifierKind, PlayerModifier};
 
     const CONTRACT: &str = "classicplus-052"; // (2) Spell: rest of the game, a Jlockeed card each start of your turn
-    const HURRAH: &str = "classic-037"; // (0) Spell; Radiant: discard your hand at the end of your next turn
+    const HURRAH: &str = "classic-037"; // Last Hurrah: through v0.6.6e its Radiant face discarded at the end of your next turn
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
     const FILLER: &str = "core-005";
 
@@ -1659,16 +1659,34 @@ mod banked_modifiers_1722 {
     }
 
     /// The AI's state with Last Hurrah's delayed discard waiting, the same state without it, and that
-    /// one with the AI's hand emptied.
+    /// one with the AI's hand emptied. Issue #4154 took the discard off the card, so it is played under
+    /// the script kept for v0.6.6e and that version's `discard` (R767000).
     fn hurrahed() -> (GameState, GameState, GameState) {
         register_cards();
-        let mut s = scenario(json!({
-            "seed": "evaluate-1722",
-            "p1": { "hand": [{ "def": HURRAH, "radiant": true }, VANILLA], "library": [] },
-            "p2": { "hand": [VANILLA] },
-        }));
-        s.play(HURRAH, json!({}));
-        let armed = s.state().clone();
+        let mut defs = jackioh_cards::CATALOG.clone();
+        if let Some(def) = defs.get_mut(HURRAH) {
+            def.params = Some(vec![jackioh_engine::prelude::json_as(json!({
+                "key": "discard", "base": 4, "radiant": 4, "better": "down", "step": 1, "min": 1,
+            }))]);
+        }
+        let kept: &'static jackioh_engine::ShippedCatalog =
+            Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+                "v0.6.6e",
+                defs,
+                jackioh_engine::prelude::IndexMap::from([(
+                    HURRAH.to_string(),
+                    jackioh_cards::scripts::classic::c037_last_hurrah::script_v0_6_6e(),
+                )]),
+            )));
+        let armed = jackioh_engine::with_shipped(Some(kept), || {
+            let mut s = scenario(json!({
+                "seed": "evaluate-1722",
+                "p1": { "hand": [{ "def": HURRAH, "radiant": true }, VANILLA], "library": [] },
+                "p2": { "hand": [VANILLA] },
+            }));
+            s.play(HURRAH, json!({}));
+            s.state().clone()
+        });
         assert!(
             armed
                 .delayed

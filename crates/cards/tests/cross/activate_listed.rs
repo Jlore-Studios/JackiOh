@@ -43,6 +43,8 @@ const UNIVERSITY: &str = "meditative-097-6";
 const HEADQUARTERS: &str = "meditative-097-9";
 const FENG_SHUI: &str = "meditative-040";
 const CN_JADE_WELL: &str = "meditative-044";
+const DISRUPTIVE_DISRUPTOR: &str = "meditative-001";
+const DOUBLE_COUNTING: &str = "meditative-010";
 const MONEY_MACHINE: &str = "meditative-054";
 const GACHAHOLIC: &str = "meditative-101";
 const ALUNETH: &str = "meditative-080";
@@ -57,7 +59,7 @@ const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 102] = [
+const ACTIVATE_CARDS: [&str; 104] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,
@@ -87,6 +89,8 @@ const ACTIVATE_CARDS: [&str; 102] = [
     HEADQUARTERS,
     FENG_SHUI,
     CN_JADE_WELL,
+    DISRUPTIVE_DISRUPTOR,
+    DOUBLE_COUNTING,
     GACHAHOLIC,
     ALUNETH,
     TAOTIE,
@@ -1411,6 +1415,66 @@ mod m_n44_cn_jade_well {
                 |action| matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id)
             )
         );
+    }
+}
+
+/// Issue #4154: Disruptive Disruptor's Activate, once a turn and free: the opponent discards a random card
+/// (R4154207).
+mod m_n1_disruptive_disruptor {
+    use super::*;
+
+    fn discards_one(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(DISRUPTIVE_DISRUPTOR, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER, VANILLA], "library": [X, X] },
+        }));
+        let mana = s.state().players.p1.mana.current;
+        activate_listed(&mut s, DISRUPTIVE_DISRUPTOR, any);
+        assert_eq!(s.hand(P2).len(), 1, "the opponent discards one");
+        assert_eq!(s.hand(P1).len(), 1, "its own hand is untouched");
+        assert_eq!(s.state().players.p1.mana.current, mana, "no price");
+        let id = s.card(DISRUPTIVE_DISRUPTOR).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r4154207_base_makes_the_opponent_discard_a_random_card_once_a_turn() {
+        discards_one(false);
+    }
+
+    #[test]
+    fn r4154207_radiant_makes_the_opponent_discard_a_random_card_once_a_turn() {
+        discards_one(true);
+    }
+}
+
+/// Issue #4154: Double Counting's Activate, once a turn: a Discover of a Cry or Death card, (1) on the base
+/// face and free on the Radiant (R4154211).
+mod m_n10_double_counting {
+    use super::*;
+
+    fn discovers(radiant: bool, price: i32) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(DOUBLE_COUNTING, radiant)], "hand": [STOCKPILE], "library": [X, X], "mana": 4 },
+            "p2": { "hand": [FILLER] },
+        }));
+        activate_listed(&mut s, DOUBLE_COUNTING, any);
+        assert_eq!(s.state().players.p1.mana.current, 4 - price);
+        let pick = s.prompt_modes().into_iter().next().expect("a card on offer");
+        s.answer(json!(pick));
+        assert!(s.hand(P1).iter().any(|card| card.def_id == pick));
+        let id = s.card(DOUBLE_COUNTING).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r4154211_base_pays_1_to_discover_once_a_turn() {
+        discovers(false, 1);
+    }
+
+    #[test]
+    fn r4154211_radiant_discovers_for_free_once_a_turn() {
+        discovers(true, 0);
     }
 }
 

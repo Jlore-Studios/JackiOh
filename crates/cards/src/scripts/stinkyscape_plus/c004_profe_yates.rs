@@ -420,7 +420,7 @@ mod tests {
         }
 
         /// The cards Yates's plays now offer to exile, each once.
-        fn offered(s: &Scenario) -> Vec<String> {
+        fn pickable(s: &Scenario) -> Vec<String> {
             let mut out: Vec<String> = Vec::new();
             for id in pick::instance_ids(&s.play_targets(ID)) {
                 if !out.contains(&id) {
@@ -443,7 +443,7 @@ mod tests {
                 );
                 let theirs = s.unit_at(P2, 4).id;
                 let mine = s.unit_at(P1, 2).id;
-                assert_eq!(offered(&s), vec![mine.clone(), theirs.clone()], "radiant {radiant}");
+                assert_eq!(pickable(&s), vec![mine.clone(), theirs.clone()], "radiant {radiant}");
                 s.play(ID, json!({ "zone": 1, "targets": pick::id(&theirs) }));
                 s.expect_in_zone(theirs.as_str(), "exile");
                 // One permanent, and nothing off the field: Stockpile stays in p2's hand.
@@ -478,7 +478,7 @@ mod tests {
             );
             let vanilla = s.unit_at(P2, 4).id;
             let speciesist = s.unit_at(P2, 5).id;
-            assert_eq!(offered(&s), vec![speciesist]);
+            assert_eq!(pickable(&s), vec![speciesist]);
             s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&vanilla) })));
             s.expect_in_zone(vanilla.as_str(), "field");
         }
@@ -499,7 +499,7 @@ mod tests {
             );
             let base = s.unit_at(P2, 4).id;
             let radiant = s.unit_at(P2, 5).id;
-            assert_eq!(offered(&s), vec![base]);
+            assert_eq!(pickable(&s), vec![base]);
             s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&radiant) })));
         }
 
@@ -514,7 +514,7 @@ mod tests {
             );
             let lar = s.unit_at(P2, 4).id;
             let speciesist = s.unit_at(P2, 5).id;
-            assert_eq!(offered(&s), vec![speciesist]);
+            assert_eq!(pickable(&s), vec![speciesist]);
             s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&lar) })));
             s.expect_in_zone(lar.as_str(), "field");
         }
@@ -541,7 +541,7 @@ mod tests {
             }));
             let hidden = s.backrow(P2, 3).expect("the face-down Trap").id;
             let shown = s.backrow(P2, 4).expect("the face-up Trap").id;
-            assert_eq!(offered(&s), vec![shown.clone()]);
+            assert_eq!(pickable(&s), vec![shown.clone()]);
             s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&hidden) })));
             s.play(ID, json!({ "zone": 1, "targets": pick::id(&shown) }));
             s.expect_in_zone(shown.as_str(), "exile");
@@ -566,7 +566,7 @@ mod tests {
                     },
                 }));
                 assert!(s.can_play(ID), "radiant {radiant}");
-                assert!(offered(&s).is_empty(), "radiant {radiant}");
+                assert!(pickable(&s).is_empty(), "radiant {radiant}");
                 s.play(ID, json!({ "zone": 1 }));
                 assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), 0);
                 let traps = if radiant { RADIANT_TRAPS } else { BASE_TRAPS };

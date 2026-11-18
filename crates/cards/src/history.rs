@@ -964,6 +964,29 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c021_jlockeed_shredder_12::script_v0_6_6e,
     ),
     (c047_taotie::ID, "v0.6.6e", c047_taotie::script_v0_6_6e),
+    (c004_profe_yates::ID, "v0.6.6e", c004_profe_yates::script_v0_6_6e),
+    (
+        c080_the_last_voyage::ID,
+        "v0.6.6e",
+        c080_the_last_voyage::script_v0_6_6e,
+    ),
+    (
+        c082_endless_expedition::ID,
+        "v0.6.6e",
+        c082_endless_expedition::script_v0_6_6e,
+    ),
+    (c002_na_tech::ID, "v0.6.6e", c002_na_tech::script_v0_6_6e),
+    (c083_halo::ID, "v0.6.6e", c083_halo::script_v0_6_6e),
+    (
+        c078_occidentless_mandate::ID,
+        "v0.6.6e",
+        c078_occidentless_mandate::script_v0_6_6e,
+    ),
+    (
+        c040_appropriations::ID,
+        "v0.6.6e",
+        c040_appropriations::script_v0_6_6e,
+    ),
     // #4154 group B (R4154200 to R4154213): the scripts before Stinkyscape+ Balance Changes III.
     (
         c079_a_glimpse_into_the_endless_sea::ID,
