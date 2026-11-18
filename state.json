@@ -14052,9 +14052,7 @@
       "started_at": "2026-11-18T02:37:24Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6966628593"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4143": {
