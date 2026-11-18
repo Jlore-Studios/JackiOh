@@ -35500,6 +35500,12 @@
         "number": 4146,
         "title": "Patch: each pull request plays a few dozen games in the browser's build of the engine and holds every step to the native build's replay",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-18T02:18:59Z",
+        "number": 4142,
+        "title": "Patch: the AI quality gate reports and ceilings the learned evaluation's unknown share",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
