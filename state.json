@@ -17710,9 +17710,14 @@
     "what": "spot-check #4208 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-18T18:13:06Z",
+    "at": "2026-11-18T18:22:20Z",
     "notes": [
-      "delivered review #4208 on muse (run 44362952933): approved"
+      "delivered build #4218 on muse (run 44363392440): built",
+      "started review #4227 on muse (run 44369410374)",
+      "started revise #4215 on muse (run 44369549050)",
+      "started review #4208 on claude-6 (run 44369670082)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18418,7 +18423,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T18:13:06Z",
+  "loop_tick": "2026-11-18T18:22:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
