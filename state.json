@@ -14753,6 +14753,13 @@
     "4157": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T05:50:06Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium: no hard-line holds \u2014 not engine rules, AI, cross-crate design, a migration, or ~40 files; one map row, ~60 lines of scan plus tests, one web case"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
