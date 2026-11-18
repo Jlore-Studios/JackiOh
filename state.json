@@ -16911,6 +16911,13 @@
     "4205": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44328064947",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-18T15:12:31Z",
+        "until": "2026-11-18T15:42:31Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
