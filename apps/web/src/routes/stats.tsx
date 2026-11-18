@@ -17,7 +17,6 @@
 // cards, as readable text, no face (PlainText.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
-import catalogJson from "@jackioh/cards/catalog.json";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
@@ -28,6 +27,7 @@ import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -75,14 +75,20 @@ import { Segmented, Tabs } from "../tabs/index.ts";
 import "../auth/tavern.css";
 import "./stats.css";
 
-const CATALOG = catalogJson as unknown as CardDefs;
-
 /** Unit conversion, not configuration: a rate as a percentage has two more decimal places than as a fraction. */
 const PERCENT_PLACES = 2;
 
+/**
+ * #4180: the module's catalog (`game/currentCatalog.ts`), read in a call, never at import: the page
+ * sits behind `EngineGate` (`main.tsx`), so the module is in before any of these run.
+ */
+function catalog(): CardDefs {
+  return currentCatalog().cards;
+}
+
 /** A card's name as the reader reads it: the catalog's Chinese for a reader of Chinese, else the server's own. */
 function shownName(id: string, name: string): string {
-  return drawnInChinese(false) ? chineseName(id, name, CATALOG[id]) : name;
+  return drawnInChinese(false) ? chineseName(id, name, catalog()[id]) : name;
 }
 
 /** Whether a card answers the search box: the server's name, the name as the reader reads it, or the id holds the text. */
@@ -96,7 +102,7 @@ function matchesSearch(card: { id: string; name: string }, search: string): bool
 }
 
 function keywordKinds(id: string): KeywordKind[] {
-  const def = CATALOG[id];
+  const def = catalog()[id];
   if (!def) return [];
   const kinds = new Set<KeywordKind>();
   for (const kw of def.base?.keywords ?? []) {
@@ -115,7 +121,7 @@ function keywordName(kind: KeywordKind): string {
 /** R279, R3887000: every card a card's text names, token or not, the card itself left out, in the text's order. */
 function referencesOf(def: CardDef): CardDef[] {
   return [...new Set(def.refs ?? [])].flatMap((id) => {
-    const named = CATALOG[id];
+    const named = catalog()[id];
     return named !== undefined && id !== def.id ? [named] : [];
   });
 }
@@ -127,7 +133,7 @@ function tokensOf(def: CardDef): CardDef[] {
 
 /** R3887000: a card as plain text, or null for an id the catalog holds no card of. */
 function plainCardOf(id: string): ReactElement | null {
-  const def = CATALOG[id];
+  const def = catalog()[id];
   return def === undefined ? null : <PlainCard def={def} />;
 }
 
@@ -559,7 +565,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
   const keywordOptions = useMemo(() => {
     const present = new Set<KeywordKind>();
-    for (const [id, def] of Object.entries(CATALOG)) {
+    for (const [id, def] of Object.entries(catalog())) {
       if (def.token) continue;
       for (const kind of keywordKinds(id)) {
         present.add(kind);
@@ -646,13 +652,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R2089000: the Created cards the search box asks for, as it asks for the deck rows; R3324002: the tokens
   // among them in a section of their own, and every other in its own, so no card is in both.
   const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
-  const tokenCards = createdCards.filter((card) => CATALOG[card.id]?.token === true);
-  const otherCreatedCards = createdCards.filter((card) => CATALOG[card.id]?.token !== true);
+  const tokenCards = createdCards.filter((card) => catalog()[card.id]?.token === true);
+  const otherCreatedCards = createdCards.filter((card) => catalog()[card.id]?.token !== true);
 
   const summary = cardStatsData?.summary;
 
 
-  const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
+  const drillDownDef = cardDrillDownId ? catalog()[cardDrillDownId] : undefined;
   const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
   const drillDownRadiantFace =
     drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
@@ -661,7 +667,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
 
   return (
-    <CardDefsProvider defs={CATALOG}>
+    <CardDefsProvider defs={catalog()}>
       <div className="app-shell app-shell--wide tavern stats-page one-screen" data-testid={statsTestid.screen}>
         <header>
           <BackLink title={t("Statistics")}>
@@ -963,7 +969,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             ) : view === "grid" ? (
               <ul className={`stats-grid${plain.shown ? " stats-grid--plain" : ""}`} data-testid={statsTestid.cardsGrid}>
                 {filteredCards.map((card) => {
-                  const def = CATALOG[card.id];
+                  const def = catalog()[card.id];
                   const plainCard = plain.shown ? plainCardOf(card.id) : null;
                   const face = def && plainCard === null ? faceModel({ defId: card.id, def, radiant: false }) : null;
 
@@ -1440,7 +1446,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                     {playersList.map((p) => {
                       const rate = p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "—";
                       const topCard = p.favouriteCards?.[0];
-                      const favCardDef = topCard ? CATALOG[topCard.id] : undefined;
+                      const favCardDef = topCard ? catalog()[topCard.id] : undefined;
                       const favCardName = topCard ? (favCardDef ? readerName(favCardDef) : topCard.id) : "—";
                       return (
                         <tr key={p.profileId} className="stats-tr">

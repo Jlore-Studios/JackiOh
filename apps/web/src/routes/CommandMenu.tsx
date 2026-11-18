@@ -14,9 +14,11 @@ import {
 } from "react";
 
 import { useBoardShown } from "../game/boardShown.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { Dialog } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate } from "../net/navigate.ts";
+import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { Kbd, ShortcutHint, useShortcutHints } from "../shortcuts/Kbd.tsx";
 import { commandEntries, commandMenuOn, type CommandEntry } from "./commandEntries.ts";
 import "./command-menu.css";
@@ -99,7 +101,10 @@ function CommandMenuDialog({ onClose }: { onClose: () => void }): ReactElement {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
 
-  const shown = commandEntries(query);
+  // #4180: the menu opens on engine-free screens too, so until the module is in it lists its
+  // actions and pages with no cards; the cards arrive the moment `useEngineReady()` turns true.
+  const ready = useEngineReady();
+  const shown = commandEntries(query, ready ? currentCatalog().cards : {});
   const current = shown.length === 0 ? -1 : Math.min(selected, shown.length - 1);
   const optionId = (index: number): string => `${listId}-${String(index)}`;
 

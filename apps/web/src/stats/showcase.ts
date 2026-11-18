@@ -8,18 +8,24 @@
 // R2648000: a stat names the right kind of card (Unbreakable, Glass Cannon and Workhorse a Unit), and
 // `animationFor` fits a lunge to the card's type. R2649000's thirty are read off `track.ts`'s counters.
 
-import catalogJson from "@jackioh/cards/catalog.json";
 import { hasKeyword, type CardDefs, type KeywordKind } from "@jackioh/shared";
 
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { t } from "../i18n/i18n.ts";
 import type { Side } from "../game/contract.ts";
-import { ROTATION_POOL, below, shuffled, type RandomSource } from "../routes/landingFan.ts";
+import { below, shippedPool, shuffled, type RandomSource } from "../routes/landingFan.ts";
 import { SHOWCASE_MIN_PLAYS } from "./config.ts";
 import { NO_COUNTS, winPercent, type CardCounter, type CardCounters, type CardTally, type PlayerStats } from "./model.ts";
 import type { PocketPick } from "./pocketPick.ts";
 import type { StageAnimation } from "./showcaseStage.ts";
 
-const CATALOG = catalogJson as unknown as CardDefs;
+/**
+ * #4180: the module's catalog (`game/currentCatalog.ts`): every read happens in a call, never at
+ * import, since the showcase draws once the module is in (`PlayerStatsCard`'s `WhenEngineReady`).
+ */
+function catalog(): CardDefs {
+  return currentCatalog().cards;
+}
 
 /** The stats, the ten of R1584000 first, R1743000's twenty-five after, then R2649000's thirty. */
 export const SHOWCASE_KEYS = [
@@ -125,30 +131,30 @@ export function pocketLine(pick: PocketPick): string {
 }
 
 function showable(id: string): boolean {
-  const def = CATALOG[id];
+  const def = catalog()[id];
   return def !== undefined && !def.token;
 }
 
 /** R2648000: the card's catalog type is Unit. */
 function isUnit(id: string): boolean {
-  return CATALOG[id]?.type === "Unit";
+  return catalog()[id]?.type === "Unit";
 }
 
 /** R2649000: the card's catalog type is Spell or Field Spell. */
 function isSpell(id: string): boolean {
-  const type = CATALOG[id]?.type;
+  const type = catalog()[id]?.type;
   return type === "Spell" || type === "Field Spell";
 }
 
 /** R2648000: either face of the card prints one of `kinds`. */
 function prints(id: string, ...kinds: KeywordKind[]): boolean {
-  const def = CATALOG[id];
+  const def = catalog()[id];
   return def !== undefined && kinds.some((kind) => hasKeyword(def.base.keywords, kind) || hasKeyword(def.radiant.keywords, kind));
 }
 
 /** R2648000: a lunge is a Unit's or an Animated card's; a Spell or Field Spell casts, a Trap or Field Trap is revealed. Anything else is kept. */
 export function animationFor(defId: string, wanted: StageAnimation): StageAnimation {
-  const type = CATALOG[defId]?.type;
+  const type = catalog()[defId]?.type;
   if (wanted !== "lunge" || type === undefined || type === "Unit" || prints(defId, "Animated", "Animated on your turn")) return wanted;
   return type === "Trap" || type === "Field Trap" ? "trap" : "cast";
 }
@@ -251,7 +257,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     Object.entries(stats.cards)
       .filter(([id, counts]) => showable(id) && keep(counts))
       .map(([id]) => id);
-  const seenInPool = ROTATION_POOL.filter((def) => countsOf(stats, def.id).seen > 0).map((def) => def.id);
+  const seenInPool = shippedPool().filter((def) => countsOf(stats, def.id).seen > 0).map((def) => def.id);
   const seen = topCard(stats, "seen");
   const grudge = ranked(column(stats, (c) => Math.min(c.played, c.playedAgainst)))[0];
   const faced = countsOf(stats, grudge?.id ?? "");
@@ -354,7 +360,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ...about(
       drawOne(seenInPool, random),
       { key: "collector", title: () => t("Collector"), animation: "radiant", side: "you" },
-      () => t("seen {n} of {m} cards", { n: seenInPool.length, m: ROTATION_POOL.length }),
+      () => t("seen {n} of {m} cards", { n: seenInPool.length, m: shippedPool().length }),
     ),
     // R1743000: from the counters read off the views' events.
     ...tallied(

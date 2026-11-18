@@ -7,8 +7,8 @@
 //! Edwin): `played_earlier`, this play's own place in the turn's log, a cast counted (R70) and this card
 //! itself not, as Core #10 Rapid Replenish reads it. With nothing played earlier the Cry gains nothing.
 //! The gain is a permanent buff of attack and health by the same number (§10.4 layer 4), on the card
-//! itself. The yellow glow of R195 is not declared: it needs a `conditionMet` hook, which `tests/cross/
-//! condition_active.rs` pins to a closed list of cards.
+//! itself. The hand's yellow glow (R195) is declared: a `conditionMet` hook asks the same count from
+//! the hand (R4189000), as Core #10 Rapid Replenish reads it.
 //! The multiples are printed in the words, so they are named constants here, not declared numbers
 //! (R1748003), as Core #38's are.
 
@@ -26,6 +26,12 @@ const RADIANT_MULTIPLE: i32 = 4;
 /// `multiple`: how much of each card played earlier this unit gains, in attack and in health.
 fn edwin(multiple: i32) -> Script {
     Script {
+        // R4189000: in hand the card glows once a card was played earlier this turn, the same
+        // count the Cry's X reads.
+        condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
+            ctx.zone == ConditionZone::Hand
+                && played_earlier(ctx.state, ctx.controller, ctx.self_) >= COMBO
+        })),
         cry: Some(hook(move |ctx| {
             let x = played_earlier(ctx.state, ctx.controller, ctx.live_self());
             if x < COMBO {
@@ -101,6 +107,39 @@ mod tests {
         let mut s = board(false, 1);
         s.play(CHEAP, json!({})).play(ID, json!({}));
         s.expect_stats(ID, json!({ "attack": 2 + 2, "health": 2 + 2 }));
+    }
+
+    /// R4189000: Edwin is dark with nothing played earlier, glows after one play, and the play
+    /// it promised gains +2/+2.
+    #[test]
+    fn r4189000_base_dark_first_glows_after_one_play_and_gains_2() {
+        crate::register_all();
+        let mut s = board(false, 1);
+        let edwin = s.card(ID).id.clone();
+        assert!(!hand_glows(&s, &edwin, PlayerId::P1));
+        s.play(CHEAP, json!({}));
+        let edwin = s.card(ID).id.clone();
+        assert!(hand_glows(&s, &edwin, PlayerId::P1));
+        assert!(
+            !serde_json::to_string(&s.view(PlayerId::P2)).unwrap().contains("conditionActive"),
+            "the opponent never sees the flag"
+        );
+        s.play(ID, json!({}));
+        s.expect_stats(ID, json!({ "attack": 2 + 2, "health": 2 + 2 }));
+    }
+
+    /// R4189000: the Radiant face asks the same count from the hand, and the play gains +4.
+    #[test]
+    fn r4189000_radiant_glows_after_one_play_and_gains_4() {
+        crate::register_all();
+        let mut s = board(true, 1);
+        let edwin = s.card(ID).id.clone();
+        assert!(!hand_glows(&s, &edwin, PlayerId::P1));
+        s.play(CHEAP, json!({}));
+        let edwin = s.card(ID).id.clone();
+        assert!(hand_glows(&s, &edwin, PlayerId::P1));
+        s.play(ID, json!({}));
+        s.expect_stats(ID, json!({ "attack": 4 + 4, "health": 4 + 4 }));
     }
 
     #[test]

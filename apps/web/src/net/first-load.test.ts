@@ -48,8 +48,14 @@ const SOURCE = join(SRC, "patches/source.ts");
  * sound first needs them rather than with the entry chunk. `vite build --mode development`, as CI builds
  * it, measured 980,254 bytes (101,386 less). The budget is now 122 × 8192 (999,424), about 19 KB (2.0%)
  * over that: putting either `patches.json` or the sound tables back would cross it.
+ *
+ * #4180 lowered it: the catalog the engine module already ships leaves the entry chunk (every screen
+ * reads the module's `currentCatalog()`), and the Chinese card tables load with the reader's language
+ * or beside the module. `vite build --mode development`, as CI builds it, measured 834,287 bytes
+ * (165,137 less). The budget is now 104 × 8192 (851,968), about 18 KB (2.1%) over that: putting the
+ * catalog or the Chinese tables back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 999_424;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 851_968;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -70,6 +76,32 @@ it("#3499 no non-test module imports patches.json statically", () => {
   });
   expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
   expect(readFileSync(SOURCE, "utf8")).toContain("import.meta.glob");
+});
+
+it("#4180 no non-test module imports catalog.json statically or dynamically", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticImport = /from\s+["'][^"']*catalog\.json["']/u;
+  const dynamicImport = /import\(\s*["'][^"']*catalog\.json["']\s*\)/u;
+  const offenders = files.filter((path) => {
+    // The `@jackioh/cards` surface: the lazy chunks' shared catalog, never the entry's.
+    if (relative(SRC, path) === "wire/cards.ts") return false;
+    const text = readFileSync(path, "utf8");
+    return staticImport.test(text) || dynamicImport.test(text);
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+});
+
+it("#4180 only cards/chinese.ts names the Chinese sidecars, through a lazy glob", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const sidecar = /chinese(-terms)?\.json/u;
+  const namers = files.filter((path) => sidecar.test(readFileSync(path, "utf8")));
+  expect(namers.map((path) => relative(SRC, path))).toEqual(["cards/chinese.ts"]);
+  const loader = readFileSync(join(SRC, "cards/chinese.ts"), "utf8");
+  expect(loader).toContain("import.meta.glob");
+  expect(loader).not.toMatch(/from\s+["'][^"']*chinese(-terms)?\.json["']/u);
+  expect(loader).not.toMatch(/import\(\s*["'][^"']*chinese(-terms)?\.json["']\s*\)/u);
 });
 
 it("#4130 no non-test module imports sound tables or raw sound data files statically", () => {
@@ -136,6 +168,21 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     ];
     for (const probe of soundProbes) {
       for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4180 the entry chunk and its preloads hold no Chinese card name", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    const cards = JSON.parse(readFileSync(join(WEB, "../../crates/cards/chinese.json"), "utf8")) as Record<string, { name?: unknown }>;
+    const ids = Object.keys(cards).filter((id) => id !== "//");
+    const first = cards[ids[0] ?? ""];
+    const last = cards[ids.at(-1) ?? ""];
+    const terms = JSON.parse(readFileSync(join(WEB, "../../crates/cards/chinese-terms.json"), "utf8")) as { radiant?: unknown };
+    const probes = [first?.name, last?.name, terms.radiant];
+    expect(ids.length).toBeGreaterThan(0);
+    expect(probes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    for (const probe of probes) {
+      for (const text of texts) expect(text).not.toContain(probe as string);
     }
   });
 

@@ -9,6 +9,7 @@ import { landingTestid } from "../auth/testids.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { RandomSource } from "../routes/landingFan.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
+import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { loadPocketPick, type PocketPick } from "./pocketPick.ts";
 import { pocketStat, recordLine, showcaseStats } from "./showcase.ts";
 import { usePlayerStats } from "./store.ts";
@@ -44,8 +45,11 @@ export function PlayerStatsCard({ reduced, random }: PlayerStatsCardProps): Reac
   useLocale();
   const stats = usePlayerStats();
   const pocket = usePocketPick(stats);
+  // #4180: `showcaseStats` reads the module's catalog, so nothing is drawn until it is in; the
+  // showcase below already waits for it in `WhenEngineReady` (#778).
+  const ready = useEngineReady();
   // The pick's answer redraws nothing: the random stats are drawn once per tally, the pick added to them.
-  const drawn = useMemo(() => showcaseStats(stats, null, random), [stats, random]);
+  const drawn = useMemo(() => (ready ? showcaseStats(stats, null, random) : []), [stats, random, ready]);
   const showcase = useMemo(() => [...drawn, ...pocketStat(stats, pocket)], [drawn, stats, pocket]);
   if (stats.games === 0) return null;
 

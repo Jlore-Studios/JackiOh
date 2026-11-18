@@ -10,7 +10,8 @@
 //! (`query::war_doctrines`, R3869001, which named them by id through v0.6.2b), and a
 //! `cast_new` of the pick, free and counted as played (R70), Radiant on the Radiant face. The Doctrine
 //! resolves before the Starship's fused When launched answers the launch (R113, R1859006). With no
-//! Dormant Starship, nothing: no launch and no Discover. The prompt names the card as the game's
+//! Dormant Starship, nothing: no launch and no Discover. R4189000: in hand the card glows while
+//! its controller has a Dormant Starship. The prompt names the card as the game's
 //! catalog spells it (`def_of`). Declares no numbers.
 
 use jackioh_engine::prelude::*;
@@ -23,6 +24,12 @@ const PICKED: &str = "picked";
 fn preemptive_strike(radiant: bool) -> Script {
     let doctrine = if radiant { "a Radiant War Doctrine" } else { "a War Doctrine" };
     Script {
+        // R4189000: in hand the card glows while its controller has a Dormant Starship, the same
+        // fact the Cry branches on.
+        condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
+            ctx.zone == ConditionZone::Hand
+                && dormant_starship_of(ctx.state, ctx.controller).is_some()
+        })),
         cry: Some(hook(move |ctx| {
             let Some(ship) = dormant_starship_of(&*ctx.state, ctx.controller) else {
                 return vec![];
@@ -177,6 +184,63 @@ mod tests {
                 "no Doctrine cast"
             );
             s.expect_in_zone(ID, "graveyard");
+        }
+
+        /// p1's Starship built and Preemptive Strike (Radiant if `radiant`) in hand, unplayed.
+        fn holding(seed: &str, radiant: bool) -> (Scenario, String) {
+            built_starship(
+                seed,
+                json!([{ "def": CHASSIS, "lane": 1 }, { "def": CAPACITOR, "lane": 2 }]),
+                json!({ "hand": [{ "def": ID, "radiant": radiant }] }),
+                json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
+            )
+        }
+
+        /// R4189000: with a Dormant Starship the Strike glows in hand, and the cast it
+        /// promised launches the Starship and opens the Discover.
+        #[test]
+        fn r4189000_glows_with_a_dormant_starship_and_the_cast_then_launches_it() {
+            for radiant in [false, true] {
+                let (mut s, ship) = holding(&format!("r4189000-glow-{radiant}"), radiant);
+                let strike = s.card(ID).id.clone();
+                assert!(hand_glows(&s, &strike, P1), "radiant {radiant}");
+                assert!(
+                    !serde_json::to_string(&s.view(PlayerId::P2)).unwrap().contains("conditionActive"),
+                    "the opponent never sees the flag"
+                );
+                s.play(ID, json!({}));
+                assert!(is_launched_starship(s.card(ship.as_str())), "radiant {radiant}");
+                assert!(s.state().pending.is_some(), "the Discover opens");
+            }
+        }
+
+        /// R4189000: with no Dormant Starship it stays dark, and the cast does nothing.
+        #[test]
+        fn r4189000_dark_without_a_dormant_starship_and_the_cast_then_does_nothing() {
+            for radiant in [false, true] {
+                let mut s = crate::scenario(json!({
+                    "seed": format!("r4189000-dark-{radiant}"),
+                    "active": "p1",
+                    "p1": { "hand": [{ "def": ID, "radiant": radiant }, VANILLA], "mana": 10, "library": crate::filler(4) },
+                    "p2": { "hand": crate::filler(1), "library": crate::filler(4) },
+                }));
+                let strike = s.card(ID).id.clone();
+                assert!(!hand_glows(&s, &strike, P1), "radiant {radiant}");
+                s.play(ID, json!({}));
+                assert!(s.state().pending.is_none(), "no Discover");
+                assert!(
+                    !s.last_events()
+                        .iter()
+                        .any(|event| event.event_type() == GameEventType::StarshipLaunched)
+                );
+                assert!(
+                    !s.last_events().iter().any(|event| matches!(
+                        event,
+                        GameEvent::CardResolved { def_id, .. } if WAR_DOCTRINES.contains(&def_id.as_str())
+                    )),
+                    "no Doctrine cast"
+                );
+            }
         }
     }
 

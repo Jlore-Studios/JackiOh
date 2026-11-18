@@ -16,7 +16,8 @@ import { DialogClose } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
 import { dioramaOf, dioramaSliceBackground } from "./art/dioramas/index.ts";
-import { ART_PLANES, artPlaneBackground } from "./art/pictures.ts";
+import { ART_PLANES } from "./art/pictures.ts";
+import { artPlaneBackground } from "./art/planes.ts";
 import {
   CARD_TILT_MAX_DEG,
   DIORAMA_TURN_MAX_DEG,
