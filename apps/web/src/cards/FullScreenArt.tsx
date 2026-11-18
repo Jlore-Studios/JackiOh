@@ -11,7 +11,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type ReactEleme
 import { createPortal } from "react-dom";
 
 import { getMusicPlayer } from "../audio/music.ts";
-import { MUSIC_CARDS } from "../audio/musicData.ts";
+import { useSoundTables } from "../audio/soundTablesLoader.ts";
 import { DialogClose } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
@@ -133,13 +133,14 @@ export function FullScreenArt({ defId, artId: givenArtId, radiant = false, name,
   // a tap pauses the view (R3345000): a loop runs inside its slice's own picture, where no play state reaches it.
   const diorama = artId === null ? null : dioramaOf(artId);
   const { flat } = useDepthMotion();
+  const tables = useSoundTables();
   const maxDeg = diorama !== null ? DIORAMA_TURN_MAX_DEG : CARD_TILT_MAX_DEG;
   const turnsDiorama = diorama !== null;
 
   // Audio: play intro sting/music on mount, stop on unmount or pause
   useEffect(() => {
     try {
-      const intro = MUSIC_CARDS[defId]?.intro;
+      const intro = tables?.musicCards[defId]?.intro;
       if (intro && !paused) {
         getMusicPlayer().playIntro(intro);
       }
@@ -153,7 +154,7 @@ export function FullScreenArt({ defId, artId: givenArtId, radiant = false, name,
         // Audio is never worth an error
       }
     };
-  }, [defId, paused]);
+  }, [defId, paused, tables]);
 
   // A view with no picture to draw closes at once, never a black dialog.
   useEffect(() => {

@@ -39,8 +39,13 @@ const SOURCE = join(SRC, "patches/source.ts");
  * feed's lines and the social socket's `notification` frame are in the first load. CI's build of the pull
  * request merged into `main` (#4068, run 43822008191) measured 1,081,650 bytes. The budget is now 135 × 8192
  * (1,105,920), about 24 KB (2.2%) over that: putting `patches.json` back would still cross it.
+ *
+ * #4130 lowered it: the sound tables (voice lines, card audio settings, music manifest) load when
+ * sound first needs them rather than with the entry chunk. `vite build --mode development`, as CI builds
+ * it, measured 980,254 bytes (101,386 less). The budget is now 122 × 8192 (999,424), about 19 KB (2.0%)
+ * over that: putting either `patches.json` or the sound tables back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 1_105_920;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 999_424;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -61,6 +66,21 @@ it("#3499 no non-test module imports patches.json statically", () => {
   });
   expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
   expect(readFileSync(SOURCE, "utf8")).toContain("import.meta.glob");
+});
+
+it("#4130 no non-test module imports sound tables or raw sound data files statically", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticDataImport = /from\s+["'][^"']*(?:voice-manifest\.json|voice-text\.json|card-audio\.json5|music-manifest\.json|music-cards\.json)["']/u;
+  const rawDataImport = /["'][^"']*(?:voice-manifest\.json|voice-text\.json|card-audio\.json5|music-manifest\.json|music-cards\.json)\?raw["']/u;
+  const staticTablesImport = /from\s+["'][^"']*soundTables(?:\.ts)?["']/u;
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    if (rel === "audio/soundTables.ts") return false;
+    const text = readFileSync(path, "utf8");
+    return staticDataImport.test(text) || rawDataImport.test(text) || staticTablesImport.test(text);
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
 });
 
 describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
@@ -94,6 +114,19 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
   it("#3499 the entry chunk and its preloads hold no patch-notes text", () => {
     const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
     for (const probe of probes()) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4130 the entry chunk and its preloads hold no sound tables or json5", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    const soundProbes = [
+      "Stand behind me. Way behind.",
+      "Every card's sounds (SPEC §10.11, R655)",
+      "aac-lc 44100 stereo 80k",
+      "JSON5: invalid character",
+    ];
+    for (const probe of soundProbes) {
       for (const text of texts) expect(text).not.toContain(probe);
     }
   });
