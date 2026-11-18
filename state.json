@@ -16638,8 +16638,25 @@
     "what": "plan #4187 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-18T13:50:12Z",
-    "notes": [],
+    "at": "2026-11-18T13:57:50Z",
+    "notes": [
+      "#4180 needs a plan",
+      "#4181 needs a plan",
+      "#4185 needs a plan",
+      "#4187 needs a plan",
+      "#4189 needs a plan",
+      "#4197 needs a plan",
+      "#4173: @MaxGoetzmann answered its question, so it is queued again with the answer",
+      "started revise #4173 on claude-7 (run 44319424875)",
+      "started plan #4189 on muse (run 44319564969)",
+      "started plan #4180 on muse (run 44319724386)",
+      "started plan #4185 on muse (run 44319882600)",
+      "started plan #4197 on muse (run 44320029618)",
+      "started plan #4181 on agy (run 44320172817)",
+      "started plan #4187 on claude-8 (run 44320320594)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17344,7 +17361,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T13:50:12Z",
+  "loop_tick": "2026-11-18T13:57:50Z",
   "machine_disk": {
     "issue": null,
     "reading": {
