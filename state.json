@@ -17600,7 +17600,16 @@
       "feedback_since": "2026-11-18T17:52:00Z",
       "issue": 4218,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "9212b820b8b823ec53d8bf4878c93b6584752c09",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
