@@ -121,7 +121,11 @@
       "feedback_since": "2026-11-18T03:52:59Z",
       "issue": 4167,
       "kind": "revise",
-      "merge_owner": "claude-squishy",
+      "merge_owner_gave_up": {
+        "at": "2026-11-18T06:35:30Z",
+        "provider": "claude-squishy",
+        "sha": "1c8562609b1498827deb758bef73f9b20b44acc4"
+      },
       "self_check_findings": [],
       "votes": {
         "approvals": [
