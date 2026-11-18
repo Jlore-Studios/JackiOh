@@ -14694,21 +14694,14 @@
     "what": "plan #4159 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-18T02:07:10Z",
+    "at": "2026-11-18T02:23:36Z",
     "notes": [
-      "delivered plan #4143 on claude-4 (run 44219937564): planned",
-      "delivered plan #4141 on muse (run 44219872594): planned",
-      "delivered plan #4155 on muse (run 44219810815): planned",
-      "delivered plan #4140 on muse (run 44219749107): planned",
-      "delivered plan #4131 on muse (run 44219686006): planned",
-      "delivered build #4130 on agy (run 44214871826): built",
-      "started review #4158 on agy (run 44221624197)",
-      "started build #4140 on muse (run 44221700050)",
-      "started build #4155 on muse (run 44221780077)",
-      "started build #4143 on claude-4 (run 44221864760)",
-      "started plan #4145 on muse (run 44221944672)",
-      "started plan #4131 on claude-6 (run 44222023073)",
-      "started plan #4141 on claude-3 (run 44222104388)",
+      "#4159 needs a plan",
+      "delivered plan #4145 on muse (run 44221944672): planned",
+      "delivered plan #4144 on claude-1 (run 44220008638): planned",
+      "started build #4145 on muse (run 44223247885)",
+      "started build #4144 on claude-1 (run 44223317605)",
+      "started plan #4159 on claude-3 (run 44223393415)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15415,7 +15408,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T02:07:10Z",
+  "loop_tick": "2026-11-18T02:23:36Z",
   "machine_disk": {
     "issue": null,
     "reading": {
