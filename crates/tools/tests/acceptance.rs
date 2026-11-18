@@ -9,7 +9,10 @@
 //!    (part 37);
 //!  - CI scope (#751): `scripts/ci-scope.sh`'s `rust_<group>` lines follow `cargo metadata`'s crate graph: a
 //!    change runs every `rust-test` group that tests its crate or one built on it, and no other; so does a
-//!    file included from outside its crate's directory;
+//!    file included from outside its crate's directory, and so does a file read at run time from outside
+//!    its crate's directory (`repo_root().join(…)`, `repo().join(…)`,
+//!    `Path::new(env!("CARGO_MANIFEST_DIR")).join(…)` and `PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(…)`,
+//!    each a string literal or a same-file const with chained `.join(…)` literals appended);
 //!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`, naming what holds its rule
 //!    per pull request, so an ignore moves a test to super.yml's daily run and never switches one off;
 //!  - Config (BUILD §2, #1640): every `pub const` of the engine's `config.rs` is named, outside comments, by
@@ -698,6 +701,119 @@ fn outside_includes(text: &str) -> Vec<(usize, String, bool)> {
     out
 }
 
+/// The string constants `text` defines: each `const NAME … = "…";` line's name and literal, a
+/// `pub` and its `(…)` group aside. A value built any other way (`concat!`, a number) names no
+/// path of its own.
+fn file_string_consts(text: &str) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    for line in text.lines() {
+        let mut rest = line.trim_start();
+        if let Some(after_pub) = rest.strip_prefix("pub")
+            && (after_pub.is_empty()
+                || !after_pub.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_'))
+        {
+            rest = after_pub.trim_start();
+            if let Some(after_open) = rest.strip_prefix('(')
+                && let Some(close) = after_open.find(')')
+            {
+                rest = after_open[close + 1..].trim_start();
+            }
+        }
+        let Some(after_const) = rest.strip_prefix("const ") else {
+            continue;
+        };
+        let name: String = after_const
+            .chars()
+            .take_while(|c| !c.is_whitespace() && !matches!(c, ':' | ';' | '='))
+            .collect();
+        if name.is_empty() {
+            continue;
+        }
+        let Some((_, value)) = after_const[name.len()..].split_once('=') else {
+            continue;
+        };
+        let value = value.trim_start();
+        let Some(inner) = value.strip_prefix('"') else {
+            continue;
+        };
+        let Some(end) = inner.find('"') else {
+            continue;
+        };
+        out.insert(name, inner[..end].to_string());
+    }
+    out
+}
+
+/// The repository paths `text` reads at run time: the argument of `repo_root().join(…)` or
+/// `repo().join(…)`, relative to the repository root (`false`), or of
+/// `Path::new(env!("CARGO_MANIFEST_DIR")).join(…)` or `PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(…)`,
+/// relative to the crate (`true`), each with its line. The argument is a string literal or a
+/// same-file const, each chained `.join("…")` after it a literal appended. A variable argument
+/// (`join(&path)`), a receiver (`repo_root.join(…)`) or an unknown name reads no path of its own.
+fn outside_runtime_reads(text: &str) -> Vec<(usize, String, bool)> {
+    let consts = file_string_consts(text);
+    let markers = [
+        ("repo_root().join(", false),
+        ("repo().join(", false),
+        ("Path::new(env!(\"CARGO_MANIFEST_DIR\")).join(", true),
+        ("PathBuf::from(env!(\"CARGO_MANIFEST_DIR\")).join(", true),
+    ];
+    let mut out = Vec::new();
+    for (marker, from_crate) in markers {
+        let mut from = 0;
+        while let Some(found) = text[from..].find(marker) {
+            let marker_at = from + found;
+            from = marker_at + marker.len();
+            let rest = text[from..].trim_start();
+            let (mut joined, mut after) = if let Some(literal) = rest.strip_prefix('"') {
+                let Some(end) = literal.find('"') else {
+                    continue;
+                };
+                (literal[..end].to_string(), &literal[end + 1..])
+            } else {
+                let len = rest
+                    .bytes()
+                    .take_while(|b| b.is_ascii_alphanumeric() || *b == b'_')
+                    .count();
+                if len == 0 {
+                    continue;
+                }
+                let Some(value) = consts.get(&rest[..len]) else {
+                    continue;
+                };
+                (value.clone(), &rest[len..])
+            };
+            let trimmed = after.trim_start();
+            let Some(after_paren) = trimmed.strip_prefix(')') else {
+                continue;
+            };
+            after = after_paren;
+            loop {
+                let chained = after.trim_start();
+                let Some(inner) = chained.strip_prefix(".join(") else {
+                    break;
+                };
+                let inner = inner.trim_start();
+                let Some(literal) = inner.strip_prefix('"') else {
+                    break;
+                };
+                let Some(end) = literal.find('"') else {
+                    break;
+                };
+                let after_literal = literal[end + 1..].trim_start();
+                let Some(after_close) = after_literal.strip_prefix(')') else {
+                    break;
+                };
+                joined.push('/');
+                joined.push_str(&literal[..end]);
+                after = after_close;
+            }
+            out.push((text[..marker_at].matches('\n').count() + 1, joined, from_crate));
+        }
+    }
+    out
+}
+
 /// `path` with its `.` and `..` folded away, lexically; `None` when it climbs out of the root.
 fn fold(path: &Path) -> Option<String> {
     let mut parts: Vec<String> = Vec::new();
@@ -750,8 +866,53 @@ fn ci_scope_runs_a_crates_groups_for_every_file_it_includes_from_outside_it() {
             if relative == "crates/tools/tests/acceptance.rs" {
                 continue;
             }
+            // A file nested in another package (crates/wasm/core in crates/wasm) reads as
+            // the innermost one: its `CARGO_MANIFEST_DIR` is the nested crate's.
+            if packages.iter().any(|other| {
+                other.dir.len() > package.dir.len() && relative.starts_with(&format!("{}/", other.dir))
+            }) {
+                continue;
+            }
             let Ok(text) = fs::read_to_string(&file) else {
                 continue;
+            };
+            let mut check = |line: usize, literal: &str, base: &Path| {
+                let Some(path) = fold(&base.join(literal.trim_start_matches('/'))) else {
+                    missed.push(format!("{relative}:{line}: {literal} leaves the repository"));
+                    return;
+                };
+                if path.is_empty() {
+                    // A read of the repository root itself (the `repo()` helper's
+                    // `join("../..")`): no scope row can name it, and the files it really
+                    // reads go through a variable the scan does not see.
+                    return;
+                }
+                if path.starts_with(&format!("{}/", package.dir)) {
+                    return;
+                }
+                let ignored = Command::new("git")
+                    .args(["check-ignore", "-q", &path])
+                    .current_dir(&root)
+                    .status()
+                    .expect("git runs");
+                if ignored.success() {
+                    return;
+                }
+                found.push(path.clone());
+                let check = if root.join(&path).is_dir() {
+                    format!("{path}/lib.rs")
+                } else {
+                    path.clone()
+                };
+                let on = scope_lines(&[(check.as_str(), "x\n")]);
+                if !on
+                    .iter()
+                    .any(|(name, on)| *on && testing.contains(&name.as_str()))
+                {
+                    missed.push(format!(
+                        "{relative}:{line} includes {path}, but scripts/ci-scope.sh runs none of {testing:?} for it"
+                    ));
+                }
             };
             for (line, literal, from_crate) in outside_includes(&text) {
                 let base = if from_crate {
@@ -762,35 +923,26 @@ fn ci_scope_runs_a_crates_groups_for_every_file_it_includes_from_outside_it() {
                         .unwrap_or(Path::new(""))
                         .to_path_buf()
                 };
-                let Some(path) = fold(&base.join(literal.trim_start_matches('/'))) else {
-                    missed.push(format!("{relative}:{line}: {literal} leaves the repository"));
-                    continue;
+                check(line, &literal, &base);
+            }
+            // A run-time read names its path from the repository root (`repo_root()`,
+            // `repo()`) or from the crate (`CARGO_MANIFEST_DIR`), never from the file that
+            // reads it, so it resolves on its own base rather than the include's.
+            for (line, literal, from_crate) in outside_runtime_reads(&text) {
+                let base = if from_crate {
+                    PathBuf::from(&package.dir)
+                } else {
+                    PathBuf::new()
                 };
-                if path.starts_with(&format!("{}/", package.dir)) {
-                    continue;
-                }
-                let ignored = Command::new("git")
-                    .args(["check-ignore", "-q", &path])
-                    .current_dir(&root)
-                    .status()
-                    .expect("git runs");
-                if ignored.success() {
-                    continue;
-                }
-                found.push(path.clone());
-                let on = scope_lines(&[(&path, "x\n")]);
-                if !on
-                    .iter()
-                    .any(|(name, on)| *on && testing.contains(&name.as_str()))
-                {
-                    missed.push(format!(
-                        "{relative}:{line} includes {path}, but scripts/ci-scope.sh runs none of {testing:?} for it"
-                    ));
-                }
+                check(line, &literal, &base);
             }
         }
     }
-    for expected in ["docs/radiant-audit.md", "e2e/support/config.ts"] {
+    for expected in [
+        "docs/radiant-audit.md",
+        "e2e/support/config.ts",
+        "crates/server/migrations/0068_v0_5_retcon.sql",
+    ] {
         assert!(
             found.iter().any(|path| path == expected),
             "the scan found no include of {expected}: {found:?}"
@@ -810,6 +962,25 @@ fn ci_scope_include_scan_finds_each_literal_path() {
         [
             (1, "../../docs/x.json".to_string(), false),
             (4, "/../../e2e/y.ts".to_string(), true),
+        ]
+    );
+}
+
+#[test]
+fn ci_scope_runtime_scan_finds_each_repo_read() {
+    let text = "const REL: &str = \"crates/server/migrations\";\nlet a = repo_root().join(REL).join(\"0068_v0_5_retcon.sql\");\nlet b = repo_root().join(\"crates/cards/catalog.json\");\nlet c = Path::new(env!(\"CARGO_MANIFEST_DIR\")).join(\"../../Cargo.lock\");\nlet d = PathBuf::from(env!(\"CARGO_MANIFEST_DIR\")).join(\"migrations\");\nlet e = repo().join(REL);\nlet f = root.join(REL);\nlet g = repo_root.join(REL);\nlet h = repo_root().join(&path);\n";
+    assert_eq!(
+        outside_runtime_reads(text),
+        [
+            (
+                2,
+                "crates/server/migrations/0068_v0_5_retcon.sql".to_string(),
+                false
+            ),
+            (3, "crates/cards/catalog.json".to_string(), false),
+            (6, "crates/server/migrations".to_string(), false),
+            (4, "../../Cargo.lock".to_string(), true),
+            (5, "migrations".to_string(), true),
         ]
     );
 }

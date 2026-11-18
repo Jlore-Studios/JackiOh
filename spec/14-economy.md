@@ -192,7 +192,7 @@ Every dev grant and clear is written as ledger rows marked `dev` ([[R1300000]]),
 - the whole ladder, every row with its rating, marked person or bot, a bot's strength and persona beside it: the one read that tells a bot apart, and the dashboard's alone ([[R3074002]]);
 - news posts with no reward, plain text checked as the news file's entries are, and their take-down ([[§14.13]], [[R3074003]]).
 
-The server's `DEV_STRICT` is on for production and off for staging: on a strict server every dashboard route needs the account's two-step code. Every dev tool and every dashboard write leaves an audit row, who, which route, the request, the values before and after, and when, which the dashboard reads and no player does ([[R3074000]]).
+The server's `DEV_STRICT` is on for production and off for staging: on a strict server every dashboard route needs the account's two-step code. Every dev tool and every dashboard write leaves an audit row, who, which route, the request, the values before and after, and when, which the dashboard reads and no player does ([[R3074000]]). The dashboard reads the newest `ADMIN_AUDIT_PAGE` rows first and follows `nextBeforeId` with `before_id` for older pages. `profile_id` and `route` narrow the read to one acting account or one route.
 
 ### 14.11 The ledger
 
