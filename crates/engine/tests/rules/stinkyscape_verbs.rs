@@ -199,7 +199,7 @@ mod r1849002_destroy_becomes_exile {
     use super::*;
 
     #[test]
-    fn r1849002_a_lethal_hit_exiles_with_no_death_or_reborn() {
+    fn r1849002_r4207000_a_lethal_hit_exiles_its_death_fires_and_its_reborn_returns_it_from_exile() {
         let mut s = board(
             "r1849002-lethal",
             json!({ "hand": [BOLT], "field": [DISINTEGREX] }),
@@ -207,13 +207,33 @@ mod r1849002_destroy_becomes_exile {
         );
         let phoenix = id_at(&s, P2, 1);
         s.play(BOLT, pick::targets(pick::id(&phoenix)));
-        s.expect_in_zone(phoenix.as_str(), "exile");
-        assert!(s.unit(P2, 1).is_none(), "no Reborn body came back");
-        assert!(s.hand(P2).is_empty(), "no Death drew a card");
+        // R4207000: it was destroyed all the same: its Death drew a card and Reborn took it back out of
+        // the exile pile it died into.
+        assert_eq!(id_at(&s, P2, 1), phoenix, "the Reborn body came back from exile");
+        s.expect_in_zone(phoenix.as_str(), "field");
+        assert_eq!(s.hand(P2).len(), 1, "its Death drew a card");
         let kinds = types_of(s.last_events());
-        assert!(kinds.contains(&GameEventType::Exiled));
-        assert!(!kinds.contains(&GameEventType::Destroyed), "{kinds:?}");
-        assert_eq!(s.state().counters.destroyed, 0);
+        assert!(kinds.contains(&GameEventType::Destroyed), "{kinds:?}");
+        assert!(kinds.contains(&GameEventType::Exiled), "{kinds:?}");
+        assert!(kinds.contains(&GameEventType::Summoned), "{kinds:?}");
+        assert_eq!(s.state().counters.destroyed, 1);
+    }
+
+    #[test]
+    fn r4207000_a_reborn_body_that_dies_again_is_exiled_its_death_firing_again() {
+        let mut s = board(
+            "r4207000-twice",
+            json!({ "hand": [BOLT, BOLT], "field": [DISINTEGREX] }),
+            json!({ "field": [PHOENIX] }),
+        );
+        let phoenix = id_at(&s, P2, 1);
+        s.play(BOLT, pick::targets(pick::id(&phoenix)));
+        assert_eq!(id_at(&s, P2, 1), phoenix);
+        s.play(BOLT, pick::targets(pick::id(&phoenix)));
+        s.expect_in_zone(phoenix.as_str(), "exile");
+        assert!(s.unit(P2, 1).is_none(), "no Reborn is left to bring it back");
+        assert_eq!(s.hand(P2).len(), 2, "its Death fired on both deaths (R8)");
+        assert_eq!(s.state().counters.destroyed, 2);
     }
 
     #[test]
@@ -229,7 +249,7 @@ mod r1849002_destroy_becomes_exile {
     }
 
     #[test]
-    fn r1849002_the_aura_card_dying_with_them_is_exiled_too() {
+    fn r1849002_r4207000_the_aura_card_dying_with_them_is_exiled_too_and_every_one_is_destroyed() {
         let mut s = board(
             "r1849002-wipe",
             json!({ "hand": [WIPE], "field": [DISINTEGREX, GRUNT] }),
@@ -240,7 +260,20 @@ mod r1849002_destroy_becomes_exile {
         for id in &ids {
             s.expect_in_zone(id.as_str(), "exile");
         }
-        assert!(!types_of(s.last_events()).contains(&GameEventType::Destroyed));
+        let destroyed: Vec<String> = s
+            .last_events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Destroyed { instance_id, .. } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            destroyed,
+            ids.to_vec(),
+            "R4207000: each was destroyed, in R68's order"
+        );
+        assert_eq!(s.state().counters.destroyed, 3);
     }
 
     #[test]

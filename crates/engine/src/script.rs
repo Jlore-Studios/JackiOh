@@ -718,7 +718,8 @@ pub struct StaticFlags {
     pub immune_to_spell_damage: Option<bool>,
     /// R1849002 (Stinkyscape #105 Disintegrex): "Anytime something would be Destroyed, it is Exiled
     /// instead". While this card acts on the field, every permanent the state check collects is exiled
-    /// instead (§4.5 step 1, `replacements::destroy_exiles`).
+    /// instead of going to its graveyard, destroyed all the same (§4.5 step 1, `replacements::destroy_exiles`,
+    /// R4207000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub destroyed_exiled: Option<bool>,
     /// R1849002 (Disintegrex's Radiant face): the same, for the permanents of this card's opponent only.

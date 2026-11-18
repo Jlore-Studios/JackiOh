@@ -708,7 +708,8 @@ pub fn would_die_window(
 }
 
 /// R1849002 (Stinkyscape #105 Disintegrex): whether this collected card, which no "would die"
-/// replacement took, is exiled instead of destroyed: a card acting on either side says "anytime
+/// replacement took, is exiled instead of going to its graveyard, destroyed all the same (R4207000): a
+/// card acting on either side says "anytime
 /// something would be Destroyed, it is Exiled instead", or its Radiant "an enemy permanent" of the
 /// opponent's. Read before any card moves, so a dying aura card exiles what dies beside it and itself.
 pub fn destroy_exiles(state: &GameState, card: &CardInstance) -> bool {

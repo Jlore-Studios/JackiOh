@@ -279,7 +279,7 @@ pub static snake: LazyLock<CardDef> = LazyLock::new(|| plain_unit("snake", 4729,
 pub static bauble: LazyLock<CardDef> = LazyLock::new(|| def("bauble", 4730, "Field Spell", json!({})));
 /// A unit with a Death hook that notes itself, for R68's order beside a backrow Death.
 pub static rattle: LazyLock<CardDef> = LazyLock::new(|| plain_unit("rattle", 4731, 1, 1));
-/// A Unit with Reborn, to show R461: an exiled unit comes back from nothing.
+/// A Unit with Reborn, to show R4207000: a unit exiled as it dies comes back from exile.
 pub static phoenix: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
         "phoenix",

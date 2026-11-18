@@ -8,8 +8,10 @@
 //! Field Spell's, the same way.
 //!
 //! Cannon v3 is a Starship Piece: when it dies, a copy of it fuses into its owner's Dormant Starship
-//! (R1852000), which can fire it again. So the removal below is a transform, which is no death, and the
-//! tribute is made beside a Voidwalker, whose aura exiles the tributed card (R461).
+//! (R1852000), which can fire it again. So the removal below is a transform, which is no death. The
+//! tribute is made beside a Voidwalker, whose aura exiles the tributed card; a tributed Cannon has still
+//! died, so it fuses all the same (R4207000), into a Dormant Starship the probes never try, and the AI
+//! keeps the Cannon for its Activate (at `AI_EVAL.activation` 0 it gives the Cannon up).
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
