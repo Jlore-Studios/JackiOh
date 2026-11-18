@@ -66,18 +66,15 @@ export type PatchSource = {
   technical(): Promise<readonly TechnicalEntry[]>;
 };
 
-export type Loader = () => Promise<unknown>;
-
 /** R646: files that are not snapshots. */
 const PATCHES_FILE = "patches";
 const INDEX_FILE = "index";
 const SHIPPED_FILE = "shipped";
 const TECHNICAL_FILE = "technical";
 
-export function fileStem(path: string): string {
-  const name = path.slice(path.lastIndexOf("/") + 1);
-  return name.endsWith(".json") ? name.slice(0, -".json".length) : name;
-}
+import { fileStem, loadersByStem, type Loader } from "./loaders.ts";
+export { fileStem, loadersByStem };
+export type { Loader } from "./loaders.ts";
 
 function readPatches(value: unknown): readonly Patch[] {
   if (!Array.isArray(value)) throw new Error("patches.json is not a list of patches");
@@ -143,12 +140,6 @@ export function sourceFromLoaders(loaders: Readonly<Record<string, Loader>>): Pa
       return pending === null ? [] : readTechnical(await pending);
     },
   };
-}
-
-export function loadersByStem(glob: Readonly<Record<string, Loader>>): Record<string, Loader> {
-  const out: Record<string, Loader> = {};
-  for (const [path, loader] of Object.entries(glob)) out[fileStem(path)] = loader;
-  return out;
 }
 
 export function sourceFromData(data: {

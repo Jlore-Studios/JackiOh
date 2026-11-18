@@ -6,7 +6,10 @@
 // every client prints the same jumble and nothing calls Math.random during a render. A string's seed
 // folds its own characters into GLITCH_SEED, so the name and the text jumble differently.
 
-import { GLITCH_DEF_ID } from "@jackioh/engine/config";
+// Relative, not `@jackioh/engine/config`: the Vite config bundle (`static-pages.ts`) loads this
+// module through `cards/chinese.ts` (#4180) and resolves no `@jackioh/*` specifier; the generated
+// file it names is the same one the alias resolves to.
+import { GLITCH_DEF_ID } from "../wire/engineConfig.ts";
 
 import type { CardDef } from "@jackioh/shared";
 
