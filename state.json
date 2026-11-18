@@ -15711,7 +15711,11 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-6",
+      "merge_owner_gave_up": {
+        "at": "2026-11-18T19:21:35Z",
+        "provider": "claude-6",
+        "sha": "bc6f37dcbc8f76cf7c16bd70c7e34f9210bba642"
+      },
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
