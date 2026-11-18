@@ -2,11 +2,12 @@
 // canonical link, linked from the footer, served by public/_redirects (net/deploy-routes.test.ts reads
 // `paths`) and in the sitemap: every card through the deck builder's browse pane, read-only, asking
 // no server anything but the R654 public aggregates. Filter and sort semantics are filters.test.ts's.
+// The tests that open it through `App` are almanac.virtual.test.tsx's: with no layout, this file's grid
+// draws every card, which held such a test on the route's "Loading…" panel for seconds.
 
 import type { CardDef, Tag } from "@jackioh/shared";
 import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
@@ -44,11 +45,8 @@ import { at, meBody, signIn, stubServer } from "../test/stubServer.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import AlmanacRoute, { ALMANAC_CATALOG, almanacMeta, almanacTestid } from "./almanac.tsx";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
-import LandingRoute from "./landing.tsx";
-import LoginRoute from "./login.tsx";
-import { siteFooterTestid } from "./SiteFooter.tsx";
 
-const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
+const { canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
 
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
@@ -89,15 +87,6 @@ afterEach(() => {
 const SLOW_GRID = { timeout: 30_000 } as const;
 
 describe("R630 the /almanac route", SLOW_GRID, () => {
-  it("R630 is served at /almanac signed out, with no redirect and no call to the server", async () => {
-    at(paths.almanac);
-    render(<App />);
-    expect(await screen.findByTestId(almanacTestid.screen, undefined, SLOW)).toBeInTheDocument();
-    expect(window.location.pathname).toBe(paths.almanac);
-    expect(document.title).toBe("Almanac · JackiOh");
-    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
-  });
-
   it("R630 has a tab title, a canonical link, a heading and Back", () => {
     expect(paths.almanac).toBe("/almanac");
     expect(documentTitleFor(paths.almanac)).toBe("Almanac · JackiOh");
@@ -111,26 +100,6 @@ describe("R630 the /almanac route", SLOW_GRID, () => {
   it("R630 is in the sitemap", () => {
     const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/almanac</loc>`);
-  });
-
-  it("R630 the site footer links it beside Patch notes on the landing page and the sign-in screen, and opens it in place", async () => {
-    render(<LandingRoute />);
-    const footer = screen.getByTestId(siteFooterTestid.root);
-    const link = within(footer).getByTestId(siteFooterTestid.almanac);
-    expect(link).toHaveAttribute("href", paths.almanac);
-    expect(link).toHaveTextContent("Almanac");
-    expect(link.previousElementSibling).toBe(within(footer).getByTestId(siteFooterTestid.patchNotes));
-    cleanup();
-
-    render(<LoginRoute />);
-    expect(within(screen.getByTestId(siteFooterTestid.root)).getByTestId(siteFooterTestid.almanac)).toBeInTheDocument();
-    cleanup();
-
-    at(paths.landing);
-    render(<App />);
-    await userEvent.click(screen.getByTestId(siteFooterTestid.almanac));
-    expect(window.location.pathname).toBe(paths.almanac);
-    expect(await screen.findByTestId(almanacTestid.screen, undefined, SLOW)).toBeInTheDocument();
   });
 });
 

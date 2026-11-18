@@ -1,16 +1,21 @@
 // #2334: the Almanac's grid is virtual, so its first paint is the rows near the view and not the
 // 700 cards of the pool: the pool is still the filters', counted whole, and a scroll mounts the cards
-// it brings near. almanac.test.tsx has no layout, so it draws every card; here the layout is mocked.
+// it brings near. almanac.test.tsx has no layout, so it draws every card; here the layout is mocked,
+// so the tests that open the route through `App` and wait for it are here too (R630).
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_FILTER, DEFAULT_SORT, almanacPool } from "../game/deckbuilder/filters.ts";
 import { poolWindow, type PoolBand, type PoolShape } from "../game/deckbuilder/poolWindow.ts";
 import { CARD_POOL, DB_RESULT_COUNT, DB_SEARCH, poolCardId } from "../game/deckbuilder/testids.ts";
+import { paths } from "../net/navigate.ts";
 import { at } from "../test/stubServer.ts";
-import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
+import AlmanacRoute, { ALMANAC_CATALOG, almanacTestid } from "./almanac.tsx";
+import LandingRoute from "./landing.tsx";
+import LoginRoute from "./login.tsx";
+import { siteFooterTestid } from "./SiteFooter.tsx";
 
 /** What the page says of the grid's layout. */
 const layout = vi.hoisted(() => ({
@@ -24,6 +29,11 @@ vi.mock("../game/deckbuilder/poolWindow.ts", async (importOriginal) => ({
   readShape: () => layout.shape,
   readBand: () => layout.band,
 }));
+
+const { App } = await import("../main.tsx");
+
+/** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
+const SLOW = { timeout: 10_000 } as const;
 
 const POOL = almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT);
 
@@ -75,5 +85,36 @@ describe("#2334 the Almanac's grid mounts only the rows near the view", SLOW_GRI
     expect(kept.length).toBeGreaterThan(0);
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(kept.length));
     expect(mounted()).toEqual(kept);
+  });
+});
+
+describe("R630 the /almanac route, opened through the app", SLOW_GRID, () => {
+  it("R630 is served at /almanac signed out, with no redirect and no call to the server", async () => {
+    at(paths.almanac);
+    render(<App />);
+    expect(await screen.findByTestId(almanacTestid.screen, undefined, SLOW)).toBeInTheDocument();
+    expect(window.location.pathname).toBe(paths.almanac);
+    expect(document.title).toBe("Almanac · JackiOh");
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  });
+
+  it("R630 the site footer links it beside Patch notes on the landing page and the sign-in screen, and opens it in place", async () => {
+    render(<LandingRoute />);
+    const footer = screen.getByTestId(siteFooterTestid.root);
+    const link = within(footer).getByTestId(siteFooterTestid.almanac);
+    expect(link).toHaveAttribute("href", paths.almanac);
+    expect(link).toHaveTextContent("Almanac");
+    expect(link.previousElementSibling).toBe(within(footer).getByTestId(siteFooterTestid.patchNotes));
+    cleanup();
+
+    render(<LoginRoute />);
+    expect(within(screen.getByTestId(siteFooterTestid.root)).getByTestId(siteFooterTestid.almanac)).toBeInTheDocument();
+    cleanup();
+
+    at(paths.landing);
+    render(<App />);
+    await userEvent.click(screen.getByTestId(siteFooterTestid.almanac));
+    expect(window.location.pathname).toBe(paths.almanac);
+    expect(await screen.findByTestId(almanacTestid.screen, undefined, SLOW)).toBeInTheDocument();
   });
 });
