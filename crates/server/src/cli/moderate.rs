@@ -15,8 +15,11 @@
 //! account-deletion posture).
 //!
 //! This reads the whole environment through `load_env()`, so the code hash revoked here is the one the
-//! running server computes when it redeems (`cli/mint_code.rs` says why). Stdout is the audit trail: the
-//! CLI has no log pipeline, so the line it prints is the record.
+//! running server computes when it redeems (`cli/mint_code.rs` says why). A lever that changes something
+//! leaves two records: the line it prints, and one `admin_actions` row in its own transaction
+//! (R3074000's audit, migration 0095) with no profile, its route (`MODERATE_ROUTES`), the request and
+//! the state before and after; a revoked code by its stored hash, never the code. A lever that changes
+//! nothing writes no row.
 //!
 //! Like `mint-code`, banning a never-activated account then unbanning it leaves it active without
 //! R111's launch collection (the trigger only sees `pending → active`): operators ban pending
@@ -28,8 +31,14 @@
 
 use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
+use serde_json::json;
 
+use crate::admin::store::{
+    MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE, MODERATE_REVOKE_CODE_ROUTE, MODERATE_UNBAN_ROUTE,
+    NewAdminAction,
+};
 use crate::api::crypto::{canonical_invite_code, hashes_for_pepper};
+use crate::app::now_ms;
 use crate::cli::connect_one;
 use crate::config::CHAT_RETENTION_DAYS;
 use crate::db::store::{ChatReportListing, Db, ProfileStatus};
@@ -50,7 +59,8 @@ const USAGE: &str = "Usage: jackioh-server moderate <command> [arguments]
   chat-reports          List every chat report held, oldest first: when, the reason,
                         the reporter, the sender and the message. Changes nothing.
 
-Prints what changed. An unknown profile or code is refused without writing anything.";
+Prints what changed and writes it to the dev dashboard's audit. An unknown profile
+or code is refused without writing anything.";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ModerateCommand {
@@ -136,6 +146,14 @@ pub async fn ban_profile(db: &Db, profile_id: &str) -> anyhow::Result<String> {
     tx.profiles_set_status(profile_id, ProfileStatus::Banned)
         .await
         .map_err(|error| anyhow!("{error}"))?;
+    tx.admin_actions_append(&NewAdminAction::lever(
+        MODERATE_BAN_ROUTE,
+        json!({ "profileId": profile_id }),
+        json!({ "status": profile.status.as_str() }),
+        json!({ "status": ProfileStatus::Banned.as_str() }),
+        now_ms(),
+    ))
+    .await?;
     tx.commit().await?;
     Ok(format!("banned {profile_id}"))
 }
@@ -159,6 +177,14 @@ pub async fn unban_profile(db: &Db, profile_id: &str) -> anyhow::Result<String> 
     tx.profiles_set_status(profile_id, ProfileStatus::Active)
         .await
         .map_err(|error| anyhow!("{error}"))?;
+    tx.admin_actions_append(&NewAdminAction::lever(
+        MODERATE_UNBAN_ROUTE,
+        json!({ "profileId": profile_id }),
+        json!({ "status": profile.status.as_str() }),
+        json!({ "status": ProfileStatus::Active.as_str() }),
+        now_ms(),
+    ))
+    .await?;
     tx.commit().await?;
     Ok(format!("unbanned {profile_id}"))
 }
@@ -176,6 +202,16 @@ pub async fn revoke_code(db: &Db, pepper: &str, plain: &str) -> anyhow::Result<S
         bail!("unknown code {}", quoted(&canonical));
     }
     let revoked = tx.codes_revoke_by_hash(&hash).await?;
+    if revoked {
+        tx.admin_actions_append(&NewAdminAction::lever(
+            MODERATE_REVOKE_CODE_ROUTE,
+            json!({ "codeHash": hash }),
+            json!({ "revoked": false }),
+            json!({ "revoked": true }),
+            now_ms(),
+        ))
+        .await?;
+    }
     tx.commit().await?;
     if revoked {
         Ok(format!("revoked {canonical}"))
@@ -190,6 +226,16 @@ pub async fn revoke_code(db: &Db, pepper: &str, plain: &str) -> anyhow::Result<S
 pub async fn set_redemption(db: &Db, enabled: bool) -> anyhow::Result<String> {
     let mut tx = db.begin(None).await?;
     let previous = tx.redemption_set_enabled(enabled).await?;
+    if previous != enabled {
+        tx.admin_actions_append(&NewAdminAction::lever(
+            MODERATE_REDEMPTION_ROUTE,
+            json!({ "enabled": enabled }),
+            json!({ "enabled": previous }),
+            json!({ "enabled": enabled }),
+            now_ms(),
+        ))
+        .await?;
+    }
     tx.commit().await?;
     Ok(match (enabled, previous) {
         (false, true) => "redemption paused".to_string(),

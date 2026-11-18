@@ -1,13 +1,19 @@
-//! Abuse moderation tooling (`src/cli/moderate.rs`, #887, #970).
+//! Abuse moderation tooling (`src/cli/moderate.rs`, #887, #970, #4141).
 
+use std::sync::Arc;
+
+use jackioh_server::admin::store::MODERATE_BAN_ROUTE;
 use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
-use jackioh_server::api::crypto::canonical_invite_code;
+use jackioh_server::api::crypto::{canonical_invite_code, hashes_for_pepper};
 use jackioh_server::cli::moderate::{
     ModerateCommand, ban_profile, chat_reports, parse_moderate_args, revoke_code, set_redemption,
     unban_profile,
 };
 use jackioh_server::config::{CHAT_RETENTION_DAYS, RATING_START};
-use jackioh_server::db::store::{ChatMessageRow, ChatReportRow, Db, ProfileCreateInput, ProfileStatus};
+use jackioh_server::db::fake::OnCall;
+use jackioh_server::db::store::{
+    ChatMessageRow, ChatReportRow, Db, ProfileCreateInput, ProfileStatus, StoreError,
+};
 
 fn args(list: &[&str]) -> Vec<String> {
     list.iter().map(|arg| (*arg).to_owned()).collect()
@@ -235,6 +241,90 @@ mod moderate_commands {
             set_redemption(&db, true).await.expect("the switch flips"),
             "redemption already resumed"
         );
+    }
+
+    const AUDIT_DOWN: &str = "the audit is down";
+
+    /// While `failing`, the fake's audit append fails with [`AUDIT_DOWN`] and every other store
+    /// method answers (`tests/support/store.rs`'s `fail_on`, on a bare `Db`).
+    async fn fail_audit_rows(db: &Db, failing: bool) {
+        let Db::Fake(data) = db else {
+            panic!("the fault hook is the fake's");
+        };
+        let hook: OnCall = Arc::new(|called: &str| {
+            if called == "admin.actions.append" {
+                Err(StoreError::Other(AUDIT_DOWN.to_string()))
+            } else {
+                Ok(())
+            }
+        });
+        data.lock().await.on_call = failing.then_some(hook);
+    }
+
+    /// #4141: a lever's audit row is written in the lever's own transaction, so when the row cannot
+    /// be written the lever changes nothing: the ban, the unban and the revoke each fail whole.
+    /// Redemption is left out: the fake keeps its switch outside the tables a rollback restores,
+    /// while Postgres keeps it in `app.settings`, inside the transaction.
+    #[tokio::test]
+    async fn a_lever_whose_audit_row_fails_changes_nothing() {
+        let db = Db::fake();
+        let id = create_profile(&db, "user-audit").await;
+        let minted = mint_invite_code(
+            MintDeps {
+                db: &db,
+                code_pepper: PEPPER,
+            },
+            MintInput::default(),
+        )
+        .await
+        .expect("a code is minted");
+        let hash = hashes_for_pepper(PEPPER).code(&minted.formatted);
+
+        fail_audit_rows(&db, true).await;
+        let error = ban_profile(&db, &id)
+            .await
+            .expect_err("the ban fails with its row")
+            .to_string();
+        assert!(error.contains(AUDIT_DOWN), "{error}");
+        assert_eq!(status_of(&db, &id).await, ProfileStatus::Pending);
+        let error = revoke_code(&db, PEPPER, &minted.formatted)
+            .await
+            .expect_err("the revoke fails with its row")
+            .to_string();
+        assert!(error.contains(AUDIT_DOWN), "{error}");
+        let mut tx = db.begin(None).await.expect("a transaction opens");
+        let code = tx
+            .codes_find_by_hash(&hash)
+            .await
+            .expect("the lookup runs")
+            .expect("the code");
+        tx.commit().await.expect("the transaction commits");
+        assert!(!code.revoked, "the code stands");
+
+        fail_audit_rows(&db, false).await;
+        assert_eq!(
+            ban_profile(&db, &id).await.expect("the ban lands"),
+            format!("banned {id}")
+        );
+        fail_audit_rows(&db, true).await;
+        let error = unban_profile(&db, &id)
+            .await
+            .expect_err("the unban fails with its row")
+            .to_string();
+        assert!(error.contains(AUDIT_DOWN), "{error}");
+        assert_eq!(status_of(&db, &id).await, ProfileStatus::Banned);
+
+        fail_audit_rows(&db, false).await;
+        let mut tx = db.begin(None).await.expect("a transaction opens");
+        let routes: Vec<String> = tx
+            .admin_actions_recent(10)
+            .await
+            .expect("the audit reads")
+            .into_iter()
+            .map(|row| row.route)
+            .collect();
+        tx.commit().await.expect("the transaction commits");
+        assert_eq!(routes, vec![MODERATE_BAN_ROUTE.to_string()]);
     }
 
     #[tokio::test]

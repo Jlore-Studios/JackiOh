@@ -22,18 +22,46 @@ pub const RATING_GRANT_REASON: &str = "dev";
 /// so a claim never mistakes one for the other (migration 0080's `news_posts_id_check`).
 pub const NEWS_POST_ID_PREFIX: &str = "post-";
 
-/// R3074000: one row of `public.admin_actions` as it is written: who (a profile id; `None` once
-/// the account is deleted), which route (`<METHOD> <path>`, the path as the request named it), the
-/// request, the values before and after, and when.
+/// The routes a moderation lever's audit row names (`cli::moderate`, migration 0095), each exactly.
+pub const MODERATE_BAN_ROUTE: &str = "CLI moderate ban";
+pub const MODERATE_UNBAN_ROUTE: &str = "CLI moderate unban";
+pub const MODERATE_REVOKE_CODE_ROUTE: &str = "CLI moderate revoke-code";
+pub const MODERATE_REDEMPTION_ROUTE: &str = "CLI moderate redemption";
+/// The allow list `check_route` and migration 0095's `admin_actions_route_check` hold alike.
+pub const MODERATE_ROUTES: [&str; 4] = [
+    MODERATE_BAN_ROUTE,
+    MODERATE_UNBAN_ROUTE,
+    MODERATE_REVOKE_CODE_ROUTE,
+    MODERATE_REDEMPTION_ROUTE,
+];
+
+/// R3074000: one row of `public.admin_actions` as it is written: who (a profile id, or `None` for a
+/// moderation lever: the operator holds no profile), which route (`<METHOD> <path>`, the path as the
+/// request named it, or one of [`MODERATE_ROUTES`]), the request, the values before and after, and
+/// when.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NewAdminAction {
-    pub profile_id: String,
+    pub profile_id: Option<String>,
     pub route: String,
     pub request: Value,
     pub before: Value,
     pub after: Value,
     pub at: i64,
+}
+
+impl NewAdminAction {
+    /// A moderation lever's row (`cli::moderate`): no profile, `route` one of [`MODERATE_ROUTES`].
+    pub fn lever(route: &str, request: Value, before: Value, after: Value, at: i64) -> NewAdminAction {
+        NewAdminAction {
+            profile_id: None,
+            route: route.to_string(),
+            request,
+            before,
+            after,
+            at,
+        }
+    }
 }
 
 /// R3074000: one row of `public.admin_actions` as it is read back, with its id.
@@ -125,15 +153,19 @@ fn refused(why: String) -> StoreError {
     StoreError::Other(format!("admin: {why}"))
 }
 
-/// `admin_actions_route_check`: a dev or admin route, named with its method.
+/// `admin_actions_route_check`: a dev or admin route, named with its method (0080), or a moderation
+/// lever's, named exactly (0095).
 fn check_route(route: &str) -> Result<(), StoreError> {
+    if MODERATE_ROUTES.contains(&route) {
+        return Ok(());
+    }
     let (method, path) = route.split_once(' ').unwrap_or(("", ""));
     let method_ok = ["GET", "POST", "PUT", "PATCH", "DELETE"].contains(&method);
     let path_ok = path.starts_with("/api/dev/") || path.starts_with("/api/admin/");
     if method_ok && path_ok {
         Ok(())
     } else {
-        Err(refused(format!("{route:?} is no dev or admin route")))
+        Err(refused(format!("{route:?} is no dev, admin or moderation route")))
     }
 }
 
@@ -351,7 +383,7 @@ mod pg {
     }
 
     pub async fn actions_append(t: &mut PgTx<'_>, action: &NewAdminAction) -> Result<i64, StoreError> {
-        run_as(t, Some(action.profile_id.as_str())).await?;
+        run_as(t, action.profile_id.as_deref()).await?;
         let id: i64 = sqlx::query_scalar(
             "insert into public.admin_actions (profile_id, route, request, before_value, after_value, at)
              values ($1::uuid, $2::text, $3::jsonb, $4::jsonb, $5::jsonb,
@@ -615,7 +647,7 @@ mod fake {
         let id = tables.actions.iter().map(|row| row.id).max().unwrap_or(0) + 1;
         tables.actions.push(AdminAction {
             id,
-            profile_id: Some(action.profile_id.clone()),
+            profile_id: action.profile_id.clone(),
             route: action.route.clone(),
             request: action.request.clone(),
             before: action.before.clone(),

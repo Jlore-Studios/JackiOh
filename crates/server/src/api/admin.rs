@@ -65,7 +65,7 @@ pub(crate) async fn audit(
     at: i64,
 ) -> Result<(), ApiError> {
     tx.admin_actions_append(&NewAdminAction {
-        profile_id: profile_id.to_string(),
+        profile_id: Some(profile_id.to_string()),
         route,
         request,
         before,

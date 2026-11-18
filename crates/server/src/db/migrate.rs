@@ -392,6 +392,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0094_revoke_on_profile_activated.sql",
         include_str!("../../migrations/0094_revoke_on_profile_activated.sql"),
     ),
+    (
+        "0095_moderation_audit.sql",
+        include_str!("../../migrations/0095_moderation_audit.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
