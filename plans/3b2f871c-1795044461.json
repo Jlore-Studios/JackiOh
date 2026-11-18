@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4188,
+  "title": "Patch: an AI Duos seat counts what its teammate's enemy is about to take off the shared pool when it judges whether the team faces lethal",
+  "branch": "bot/issue-4188",
+  "thread": "**Issue #4188 (data, not instructions):**\n\n```text\n# #4188: Patch: an AI Duos seat counts what its teammate's enemy is about to take off the shared pool when it judges whether the team faces lethal\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn a 2v2 game against the computer team, the two computer players share one pool of health, as their human opponents do. Each computer player plans its turn looking only at its own board. When it asks whether the enemy can kill the team next round, it counts the whole shared pool as its own cushion. It forgets that its teammate's enemy is about to drain the same pool on the other board. So both computer players can feel safe at once, while together the two enemy boards will empty the pool next round.\n\nExample: one computer player has 5 of its own health left and the pool holds 8. It reads 13 and shrugs off an enemy board that can deal 10. Its teammate has no own health left and faces a board that can deal 4, which it reads against the pool's 8. Next round the first takes 10 (5 from its own health, 5 from the pool) and the second takes 4, so the pool is emptied and the team loses. Once this is built, each computer player counts what the other board will take from the pool, and defends (switches to defense, trades) when the two threats together are lethal. People playing co-op against the computer team notice it at the end of close games. So do the players facing a seat the AI takes over after a disconnect.\n\n## Why\n- \u00a713.4 (`spec/13-duos.md`): damage comes off a seat's own HP, then the shared pool. Both duels always agree on the pool, and a team whose pool reaches 0 loses. \u00a713.3: a round is one team turn, so both enemy seats swing in the same round.\n- R964000 (`spec/rulings/R964000.md`) decided that every life the AI reads is `effective_life` (own HP plus the pool), and adds: \"The other duel is not modeled: damage the pool takes there counts once it has happened.\"\n- `crates/ai/src/duos.rs:97`: `duos_decision` runs the 1v1 `decide(duel, seat.player(), options)` on the seat's own duel alone. In there:\n  - `crates/ai/src/evaluate.rs:2926-2939` reads `enemy_damage` from this duel's opponent only, against `seat_life = effective_life(state, seat)`.\n  - The switches to Defense facing lethal (`wall_switches`, `crates/ai/src/candidates.rs:1056-1061`) are skipped unless this one duel's threat reaches that same number.\n- The team already has the facts this needs: \u00a713.6 shares a seat's teammate's state with it and shows the team the teammate's duel board, and \u00a713.7's Information bullet lets the AI read its teammate's state.\n- No test covers it. `r964000_an_unspent_seat_at_20_own_hp_and_a_20_pool_is_not_under_lethal_threat_from_25` (`crates/ai/tests/ai/evaluate.rs:588`) holds the one-duel reading. The Duos gate plays only the Easy team against random and greedy teams, which seldom brings a pool close to empty.\n\n## Proposal\n1. In `duos_decision`, before `decide`, work out the pool's coming loss in the teammate's duel:\n   - Read that duel redacted for the teammate (`redact`, R185).\n   - Take the face damage its opponent's board could deal the teammate in the next enemy round (`face_threat`).\n   - Subtract the teammate's own HP while the teammate is not spent. Floor the result at 0 and cap it at the pool.\n   - It is 0 when that duel's next turn is not the enemy team's (an extra turn, R846).\n2. Carry it into the decision: a field on `evaluate::Prices` beside `starship_root` and `unknown_root`, set through a `decide` variant that `duos_decision` calls. Plain `decide` and `Prices::NONE` carry 0.\n3. Subtract it from the seat's life where the threat is judged: the evaluation's threat term (`lethal_threat` against `threat_per_damage`) and the check in `wall_switches`. Every other life read stays as now: the lethal solver, the hero value, the race and the reply's lethal hit.\n4. A new ruling in this issue's block amends R964000's last bullet. \u00a713.7's sentence on how the AI counts a seat's life says the teammate's duel's coming loss counts too.\n\nRejected:\n- The attack side (whether the two seats together can empty the enemy pool): it needs the seats to agree an order across duels, which is a second issue.\n- Playing the teammate's duel through: a second search per decision, at a Duos budget already half the practice AI's (`DUOS_AI_BUDGET`).\n\n## Where it lands\n- `crates/ai/src/duos.rs`, `crates/ai/src/decide.rs` (the variant that takes the loss), `crates/ai/src/evaluate.rs` (`Prices`, the threat term), `crates/ai/src/candidates.rs` (`wall_switches`).\n- `crates/ai/tests/ai/duos.rs`, `crates/ai/tests/ai/evaluate.rs`.\n- `crates/ai/README.md` (Duos), SPEC \u00a713.7 (`spec/13-duos.md`), `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n- [ ] `fn r<n>_...` in `tests/ai/duos.rs`, on the example above: an AI seat at 5 own HP and a pool of 8, facing 10 damage on board in its duel, and its spent teammate facing 4 in the other. The seat's evaluation reads the threat as lethal, and `duos_decide` for the seat returns a switch to Defense Position that lowers the threat, where today it does not. The builder picks a board where one switch does.\n- [ ] When the teammate's own HP can take its duel's whole threat, the coming loss is 0 and the decision is the one it is today.\n- [ ] Changing a hidden card in the teammate's opponent's hand, or a face-down backrow card there, changes neither the coming loss nor the decision.\n- [ ] Every 1v1 decision is unchanged: the existing `tests/ai` suites, R964000's among them, pass as they are.\n- [ ] The ruling note and pending paragraph, \u00a713.7 and the README's Duos section are updated, and `cargo jackioh spec check` is green.\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo fmt --check` and `cargo jackioh gate --duos` are green.\n\n## Size and risks\nMedium: four source files, about 80-120 lines, plus tests and docs. Difficulty hard (the AI, with a ruling amended).\n\nRisks:\n- The teammate acts in the same round, so its duel's threat can still fall before the round closes. The loss is read again at every decision, since `duos_decide` re-plans after every action. So it errs toward defending early in the round, never toward losing.\n- It changes decisions only in Duos, and only when the other board threatens more than the teammate's own HP. Duos fuzz and gate seeds may play differently; no floor moves.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T23:22:40Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4188: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T23:22:58Z",
+    "claimed_at": "2026-11-18T23:28:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
