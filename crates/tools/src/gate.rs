@@ -1326,6 +1326,20 @@ mod tests {
     }
 
     #[test]
+    fn r4132001_hard_against_easy_needs_three_quarters_of_its_games_not_the_briefs_four_fifths() {
+        let matchup = Matchup::HardVsEasy;
+        let full = full_seeds(matchup);
+        assert_eq!(needed(matchup, smoke_seeds()), 15, "the smoke run's 20 games");
+        assert_eq!(needed(matchup, full), 38, "the full run's 50 games");
+        // The floor sets both counts: an AI as strong as measured would still clear the brief's 16 and
+        // 40 in 95% of runs, so the measured rate alone would not have lowered them.
+        let measured = AI_GATE.measured_rate[matchup];
+        for (games, brief) in [(smoke_seeds(), 16), (full, 40)] {
+            assert!(binomial_tail(games, measured, brief) >= 1.0 - AI_GATE.false_alarm);
+        }
+    }
+
+    #[test]
     #[ignore = "daily: a gate matchup's smoke games; `gate --full` plays it at full size daily, and b28_b31 keeps a smoke matchup per pull request"]
     fn b30_b31_the_hard_ai_wins_against_itself_on_easy_and_every_game_is_clean() {
         smoke_fixture("hard-vs-easy", smoke_seeds());
