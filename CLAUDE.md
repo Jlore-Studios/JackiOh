@@ -114,7 +114,7 @@ Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules 
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the hotseat fixture's fold included; rewrites the engine's types in apps/web/src/wire/ (commit any diff)
-cargo test -p jackioh-run --features ts && cargo test -p jackioh-shared --features ts   # the run's and the shared logic's types in apps/web/src/wire/generated/, which neither the line above nor CI rewrites (commit any diff)
+cargo test -p jackioh-run --features ts && cargo test -p jackioh-shared --features ts,jackioh-engine/testkit   # the run's and the shared logic's types in apps/web/src/wire/generated/, which neither the line above nor CI rewrites (commit any diff)
 cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored   # the daily tests: the many-game sweeps marked #[ignore = "daily: …"]
 cargo jackioh catalog check        # catalog.json's shape and its census of cards and tokens by set
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
