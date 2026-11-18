@@ -13217,6 +13217,13 @@
     "4181": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T22:02:32Z",
+        "difficulty": "hard",
+        "provider": "step-up",
+        "tier": "",
+        "why": "failed 3 times at difficulty:medium"
+      },
       "failures": 2,
       "forced": false,
       "handoff": {
