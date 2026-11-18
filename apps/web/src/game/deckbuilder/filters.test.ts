@@ -1101,3 +1101,83 @@ describe("the Collection's keyword chips, sorts and ownership (issue #3734)", ()
     );
   });
 });
+
+// Issue #4203: a search term shaped like a stat line matches the base face's printed stats.
+describe("searchMatches stat terms (#4203)", () => {
+  const threeFour = def({ id: "s-34", index: "900", name: "Stat Plain", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 3, health: 4 } });
+  const threeFourTaunt = def({ id: "s-34t", index: "901", name: "Stat Guard", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 3, health: 4, keywords: [{ kind: "Taunt" }], text: "Taunt" } });
+  const fiveOne = def({ id: "s-51", index: "902", name: "Stat Striker", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 5, health: 1 } });
+  const threeZero = def({ id: "s-30", index: "903", name: "Stat Wall", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 3, health: 0 } });
+  const twoFour = def({ id: "s-24", index: "904", name: "Stat Off", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 2, health: 4 } });
+  const threeFive = def({ id: "s-35", index: "905", name: "Stat Taller", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 3, health: 5 } });
+  const fiveFour = def({ id: "s-54", index: "906", name: "Stat Heavy", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 5, health: 4 } });
+  const twelveOne = def({ id: "s-121", index: "907", name: "Stat Giant", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 12, health: 1 } });
+  const fiveFiveText = def({ id: "s-55t", index: "908", name: "Stat Printer", type: "Unit", rarity: "Common", cost: 3,
+    base: { attack: 5, health: 5, text: "Cry: write 3/4 on this card" } });
+
+  it("#4203 3/4 matches only the 3/4 unit", () => {
+    expect(searchMatches(threeFour, "3/4")).toBe(true);
+    expect(searchMatches(threeFourTaunt, "3/4")).toBe(true);
+    expect(searchMatches(card("x-02"), "3/4")).toBe(false);
+    expect(searchMatches(card("x-10"), "3/4")).toBe(false);
+    expect(searchMatches(card("x-03"), "3/4")).toBe(false);
+  });
+
+  it("#4203 3+/4- bounds both sides", () => {
+    for (const kept of [threeFour, threeFourTaunt, fiveOne, threeZero]) {
+      expect(searchMatches(kept, "3+/4-"), kept.id).toBe(true);
+    }
+    expect(searchMatches(twoFour, "3+/4-")).toBe(false);
+    expect(searchMatches(threeFive, "3+/4-")).toBe(false);
+    expect(searchMatches(card("x-03"), "0+/5+")).toBe(false);
+  });
+
+  it("#4203 3+/4 and 3/4- each bound one side", () => {
+    expect(searchMatches(threeFour, "3+/4")).toBe(true);
+    expect(searchMatches(fiveFour, "3+/4")).toBe(true);
+    expect(searchMatches(twoFour, "3+/4")).toBe(false);
+    expect(searchMatches(threeFive, "3+/4")).toBe(false);
+    expect(searchMatches(threeFour, "3/4-")).toBe(true);
+    expect(searchMatches(threeZero, "3/4-")).toBe(true);
+    expect(searchMatches(threeFive, "3/4-")).toBe(false);
+    expect(searchMatches(fiveFour, "3/4-")).toBe(false);
+  });
+
+  it("#4203 multi-digit stats", () => {
+    expect(searchMatches(card("x-04"), "10/10")).toBe(true);
+    expect(searchMatches(card("x-04"), "10/11")).toBe(false);
+    expect(searchMatches(twelveOne, "12+/1-")).toBe(true);
+    expect(searchMatches(twelveOne, "11+/1-")).toBe(true);
+    expect(searchMatches(twelveOne, "11/1")).toBe(false);
+    expect(searchMatches(twelveOne, "13+/1-")).toBe(false);
+    expect(searchMatches(twelveOne, "12+/0-")).toBe(false);
+  });
+
+  it("#4203 a stat term ANDs with a text term", () => {
+    expect(searchMatches(threeFourTaunt, "3/4 taunt")).toBe(true);
+    expect(matchesFilter(threeFourTaunt, filter({ search: "3/4 taunt" }))).toBe(true);
+    expect(searchMatches(threeFourTaunt, "3/4 lifesteal")).toBe(false);
+    expect(searchMatches(card("x-02"), "2/3 taunt")).toBe(true);
+    expect(searchMatches(card("x-02"), "3/4 taunt")).toBe(false);
+  });
+
+  it("#4203 malformed terms fall back to the text match and never throw", () => {
+    for (const term of ["3/", "/4", "3//4", "x/y", "3+-/4"]) {
+      expect(() => searchMatches(card("x-01"), term), term).not.toThrow();
+      expect(ALL_IDS.filter((id) => searchMatches(card(id), term)), term).toEqual([]);
+    }
+  });
+
+  it("#4203 a stat term ignores card text containing 3/4", () => {
+    expect(searchMatches(fiveFiveText, "3/4")).toBe(false);
+    expect(searchMatches(fiveFiveText, "5/5")).toBe(true);
+  });
+});
