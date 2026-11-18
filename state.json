@@ -14276,7 +14276,7 @@
       "question": "",
       "queued_at": "2026-11-18T19:22:28Z",
       "requested_by": "jgoetzmann-bot",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "44398100081",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -14301,7 +14301,7 @@
       "started_at": "2026-11-18T21:07:01Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [],
         "builder": "claude",
