@@ -37882,7 +37882,8 @@
     ],
     "runs": [
       "2026-11-18T14:24:53Z,44323293364,claude-8,opus,review,4178,hard,reviewed,,0.6,10,2482,369248,0.6236,3,4,,,,,none,,1",
-      "2026-11-18T14:37:39Z,44325369928,muse,muse-spark-1.3-contributor,plan,4203,medium,planned,,3.2,0,0,0,,4,4,32,32,2.4,,none,,1"
+      "2026-11-18T14:37:39Z,44325369928,muse,muse-spark-1.3-contributor,plan,4203,medium,planned,,3.2,0,0,0,,4,4,32,32,2.4,,none,,1",
+      "2026-11-18T14:35:55Z,44323432405,claude-1,opus,plan,4197,hard,interrupted,5-hour cap,11.5,0,0,0,,0,40,,,28.9,muse,fresh,other,1"
     ]
   },
   "version": 1
