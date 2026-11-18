@@ -15160,6 +15160,9 @@
       "taken_asks": [],
       "verdict_rounds": 0
     },
+    "4171": {
+      "suggestion": true
+    },
     "4172": {
       "action": "review",
       "asks": [],
