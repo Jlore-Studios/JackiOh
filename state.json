@@ -14751,17 +14751,8 @@
       ]
     },
     "4157": {
-      "action": "plan",
-      "asks": [
-        "c:6969909637"
-      ],
-      "build_next": {
-        "from_run": "44246143645",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-18T05:50:14Z",
-        "until": "2026-11-18T06:20:14Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-18T05:50:06Z",
         "difficulty": "medium",
@@ -14780,10 +14771,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- with:\n- ```\n- crates/server/migrations/*) on rust_server rust_tools_wasm ;;\n- crates/server/*) on rust_server ;;\n- ```\n- Leave the `:313` db row (`on db_sql db_store db_deploy`) exactly as it is.\n- 2. In the same file's header list of out-of-crate reads (`:108-126`), replace `/// #2385) tools, wasm as well as server; and` with:\n- ```\n- /// #2385) tools, wasm as well as server; crates/server/migrations/0068_v0_5_retcon.sql and\n- /// 0087_v0_5_13_retcon.sql (the tools' r2532000 and r3631001 retcon tests read them through\n- /// repo_root().join(MIGRATIONS_REL), #4157) tools, wasm as well as server; and\n- ```\n- 3. In `crates/tools/tests/acceptance.rs`, update the CI-scope module-header bullet (`:10-12`) so its last clause reads: `and no other; so does a file included from outside its crate's directory, and so does a file read at run time from outside its crate's directory (`repo_root().join(\u2026)`, `repo().j\u2026\n- 4. In the same file, directly after `outside_includes` (`:699`), add two functions. First, `fn file_string_consts(text: &str) -> BTreeMap<String, String>`: for each line, trim leading whitespace, strip an optional `pub` plus an optional `(\u2026)` group, require the `const ` prefix, take the name up to \u2026\n- 5. In the same file's `ci_scope_runs_a_crates_groups_for_every_file_it_includes_from_outside_it` test, replace `for (line, literal, from_crate) in outside_includes(&text) {` with two lines building `let mut reads = outside_includes(&text); reads.extend(outside_runtime_reads(&text));` and iterating \u2026\n- 6. In the same file, after `ci_scope_include_scan_finds_each_literal_path`, add `fn ci_scope_runtime_scan_finds_each_repo_read()` asserting exact equality on one fixture text holding: a same-file `const REL: &str = \"crates/server/migrations\";`, `repo_root().join(REL).join(\"0068_v0_5_retcon.sql\")`, \u2026\n- 7. In `apps/web/src/net/ci-scope.test.ts`, in `GROUPS` after the `[\"crates/server/src/api/queue.rs\", [\"rust_server\"]],` row, add `[\"crates/server/migrations/0068_v0_5_retcon.sql\", [\"rust_server\", \"rust_tools_wasm\"]],`. Leave the `DB` table's `0034_new.sql` row unchanged.\n- 8. Run the four checks from Tests. Then enumerate every run-time read the scan found (ripgrep the four markers across `crates/`, resolve each literal/const by hand, confirm each is covered) and put that list in the pull request description. Expect exactly: `crates/ai/src/shadow_ban.rs`, `crates/car\u2026\n- ## Tests\n- - `crates/tools/tests/acceptance.rs`, extended `ci_scope_runs_a_crates_groups_for_every_file_it_includes_from_outside_it`: with the new row it passes; temporarily revert only the Step 1 row and confirm it fails naming `crates/tools/src/retcon.rs` and the migration, then restore the row.\n- - `crates/tools/tests/acceptance.rs`, new `ci_scope_runtime_scan_finds_each_repo_read`: covers a literal, a same-file const, a chained join, a `CARGO_MANIFEST_DIR` join, and the scratch-root negatives.\n- - `apps/web/src/net/ci-scope.test.ts`, new `GROUPS` row: migration file yields exactly `[\"rust_server\", \"rust_tools_wasm\"]` among Rust groups, with the db suites still on as today.\n- - Commands: `cargo test -p jackioh-tools --test acceptance ci_scope`, `pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`.\n- ## Done when\n- - [ ] A diff of only `crates/server/migrations/0068_v0_5_retcon.sql` prints `rust_tools_wasm=true` and `rust_server=true`, with `db`, `db_sql`, `db_store`, `db_deploy` as today.\n- - [ ] Without the new row the extended acceptance test fails naming `crates/tools/src/retcon.rs` and the migration; with it, it passes.\n- - [ ] The scan unit test covers each run-time form and the scratch-root negative.\n- - [ ] The pull request lists every run-time read the scan found, and none but the migrations needed a new row.\n- - [ ] All four commands above are green.\n- ## Risks\n- - A migration-only pull request now also runs the `tools, wasm` group (a few minutes); migrations change rarely, so this is accepted.\n- - A read built some other way stays invisible: variable arguments (`sweep.rs`'s `join(&path)`, `retcon.rs`'s `join(&file.from)`), parameter receivers (`repo_root.join(\u2026)`), and the WASM tests' `read(path)` indirection. The scan covers only the forms in use today with literal or same-file-const argu\u2026\n- - The closing diff scan (`ci-scope.sh:390`) is deliberately unchanged: it still fires only on added `read_to_string(`/`include_str!`/`CARGO_MANIFEST_DIR`/etc. lines, so a newly added bare `.join(` read does not itself turn the tools group on. A newly added uncovered read is caught the same way unco\u2026\n- - Chained `.join()` arguments must be string literals; a chained same-file const is not resolved and stops the chain. No such form exists in the tree today.\n- ## Open questions\n- None. The task is fully specified; no person-only step is needed.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4157 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4157/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-18T05:42:43Z",
       "owner_why": "it plans it",
@@ -14796,12 +14786,14 @@
       "provider": "muse",
       "queued_at": "2026-11-18T05:23:07Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44246143645",
+      "run_id": "pending:70a341b6-1794981172",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-18T05:42:43Z",
+      "started_at": "2026-11-18T05:53:17Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6969909637"
+      ]
     },
     "4158": {
       "action": "review",
@@ -16016,9 +16008,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T05:42:43Z",
+    "at": "2026-11-18T05:53:17Z",
     "url": "",
-    "what": "plan #4157 on muse"
+    "what": "build #4157 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T05:33:28Z",
