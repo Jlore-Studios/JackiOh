@@ -17596,15 +17596,8 @@
       }
     },
     "4218": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44358640527",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-18T17:47:42Z",
-        "until": "2026-11-18T18:17:42Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17616,10 +17609,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "plan below already encodes them; this step is a fidelity check.\n- 2. Write the three configs exactly. `luau/rokit.toml`:\n- ```toml\n- [tools]\n- lune = \"lune-org/lune@0.11.1\"\n- stylua = \"JohnnyMorganz/StyLua@2.6.0\"\n- selene = \"Kampfkarren/selene@0.32.0\"\n- ```\n- `luau/stylua.toml`: `column_width = 120`, `line_endings = \"Unix\"`, `indent_type = \"Tabs\"`, `indent_width = 4`, `quote_style = \"AutoPreferDouble\"`. `luau/selene.toml`: `std = \"luau\"` (verified: this keeps `require(\"@lune/process\")` and every `buffer.*` call below clean on selene 0.32.0).\n- 3. Write `luau/README.md`: a table of what each file holds, the tools table with the three pinned versions, install (`cd luau && rokit install`, with Rokit on `PATH`), and from the repo root `lune run luau/tests/host.spec.luau`, `stylua --check luau`, `selene luau`. Note the adapter for `instance` \u2026\n- 4. Write `luau/src/Host.luau` with `--!strict` on line 1. Types: `CInstance = { exports: { [string]: any }, memory: () -> buffer }`, instance rows `{ _instance: CInstance, _dead: boolean }`. Constants: `STATUS_OK = 0`, `STATUS_FAILED = 1`, `PANIC_PREFIX = \"panicked at \"`. Variadic args use `...: an\u2026\n- 5. In the same file add `local readResult(instance)`: call `jackioh_result_len()`; if 0 return `\"\"` without calling `jackioh_result_ptr()`; else `buffer.readstring(instance.memory(), ptr, len)`. Fresh `memory()` on every call: never store the buffer.\n- 6. Add `Host.new(instance)`: call `instance.exports.init()` once, then `setmetatable({ _instance = instance, _dead = false }, Host)`; `Host.__index = Host` at the top.\n- 7. Add `Host:call(name, ...: any)`: if `self._dead`, `error(name .. \" refused: instance is dead; open a fresh one\", 0)`. Look up `exports[name]`; if nil, `error(name .. \" refused: unknown binding\", 0)` without marking dead. Marshal each arg: string of length 0 appends `0, 0` with no alloc; else `pt\u2026\n- 8. Add the scanner. `skipSpace` skips `\" \"`, `\"\\t\"`, `\"\\n\"`, `\"\\r\"`. `scanString(s, pos)` (`s[pos] == '\"'`): skip `\\X` pairs, return the closing quote's index or `error(\"splitState: unterminated string\", 0)`. `scanValue(s, pos)`: skip space; `\"` delegates to `scanString`; `{` walks `key : value` me\u2026\n- 9. Write `luau/tests/mock.luau` (`--!strict`, `return Mock`). `Mock.new()` builds one `buffer.create(64)`, bump offset `_next = 1` (0 stays invalid), `_live = {}`, `_resultPtr/_resultLen = 0`, counters zero, both grow flags false, and the `exports` table. `init` counts. `jackioh_alloc(len)` counts \u2026\n- 10. Write `luau/tests/host.spec.luau` (`--!strict`): `check(name, cond)` printing `ok`/`FAIL` lines, `fresh()` returning a new mock plus `Host.new(mock:instance())`, one `checkLive(mock, tag)` (`liveCount() == 0`) after every host call. Cover, each with its own check name: `init once` (3 calls, `in\u2026\n- 11. Run, from the repo root: `lune run luau/tests/host.spec.luau`; then `stylua luau` once to normalize and `stylua --check luau`; then `selene luau`. Fix code, not configs, until all three are clean.\n- 12. Breakage trials, one at a time with restore after each: free before copy-out; cache `memory()` in a local across `call`; skip the `init()` call; return the answer on status 1 instead of raising; don't set `_dead` on trap; drop the `PANIC_PREFIX` check (silent trap then reports `\"prev\"`); cut st\u2026\n- ## Tests\n- - `luau/tests/host.spec.luau`, run as `lune run luau/tests/host.spec.luau` from the repo root. Named checks: `init once`, `ascii round trip`, `utf8 round trip`, `empty string`, `empty result`, `two strings in order`, `number`, `zero args`, `no live allocations` (the `checkLive` after every call), `\u2026\n- - Style/lint gates on the same tree: `stylua --check luau` and `selene luau`, both from the repo root, both clean.\n- ## Done when\n- - [ ] `lune run luau/tests/host.spec.luau` passes from a clean checkout.\n- - [ ] `stylua --check luau` and `selene luau` are clean.\n- - [ ] Every behavior above has a check that goes red when its code is broken; the pull request text lists each breakage tried (step 12) and what failed.\n- - [ ] No file outside `luau/` changed; the harness's `rustfmt`, `catalog`, `patches` and `spec check` gates still pass.\n- - [ ] `luau/README.md` states the layout, tools, install and the three commands.\n- ## Risks\n- - The module caches states by exact text: `splitState` returns a substring of the answer, never a re-encoded value, so brace counting must be string- and escape-aware (an encoder that writes `{}` as `[]` is the failure the task names). The top-level member walk also ignores `\"state\"` text nested in\u2026\n- - `memory.grow` can replace the buffer at any point: every `buffer.writestring`/`buffer.readstring` uses a fresh `memory()` call, including after the binding returns and after `growOnAlloc` fires inside `jackioh_alloc`. The three grow checks pin all three spots.\n- - The result buffer is the module's: the host never frees it, reads it before freeing argument buffers, and never touches the pointer when the length is 0 (pinned by `allocCalls`/`ptrCalls` counters).\n- - Freeing argument buffers on the trap path is a choice for a uniform zero-live rule against the mock; the translator's adapter (later issue) owns real post-trap behavior.\n- - `rokit.toml` uses Rokit's documented `[tools]` id format matching the task's pins; the builder confirms with `rokit install`. No CI job covers `luau/` yet (a person adds it), so the three local commands are the gate.\n- ## Open questions\n- None. The task settles the API, messages, configs and coverage; the only open item belongs to a later issue (the translator's `instance` adapter).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4218 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4218/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-18T17:26:06Z",
       "owner_why": "it plans it",
@@ -17632,9 +17624,9 @@
       "provider": "muse",
       "queued_at": "2026-11-18T17:24:03Z",
       "requested_by": "squishy-squooby",
-      "run_id": "44358640527",
+      "run_id": "pending:290e6260-1795024289",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-18T17:26:06Z",
+      "started_at": "2026-11-18T17:52:00Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17658,9 +17650,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T17:51:15Z",
+    "at": "2026-11-18T17:52:00Z",
     "url": "",
-    "what": "build #4205 on claude-4"
+    "what": "build #4218 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T17:33:29Z",
