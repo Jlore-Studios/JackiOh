@@ -14650,13 +14650,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "gemini",
         "built_by": "agy",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "44237215973",
+            "tier": "medium"
+          }
+        ],
         "sha": "a7230d0d90d65176c0cd9c6c26323cca1d534112",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4159": {
