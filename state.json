@@ -13893,10 +13893,10 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-18T16:23:22Z",
-        "built_by": "muse",
+        "at": "2026-11-18T21:16:48Z",
+        "built_by": "claude-6",
         "by": "`muse` (medium)",
-        "sha": "4daea4cfa110c2c3da09434b98356240ae7eece7"
+        "sha": "cadaa1166a30b9eaaf112c74d8b28da1592e97af"
       },
       "cross_rounds": 0,
       "died": 0,
