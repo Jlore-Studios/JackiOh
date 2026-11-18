@@ -13,13 +13,18 @@
 //! R3539003's, no unit in Defense Position that R2179000, R2657000, R3543002 or R1849006 switches out of
 //! it, no hero at 0 that can lose, R2201000) and, on every state, no mana or card damage below 0
 //! and no `damage` event of 0 or less (§2.3, §4.5, R63).
+//!
+//! And its I18 (#4111): a plain attack does what the combat forecast its seat was shown said
+//! (R3100000, R4111000). Each check is proved by tampering with one payload of a real attack's events;
+//! the untampered events are clean, and a step or a board the forecast cannot foretell is not judged.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::SwapWhat;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
-use crate::rules::fixtures::harness::{both, new_game, put, setup_catalog, slot};
+use crate::rules::fixtures::combat::{big_body, plain};
+use crate::rules::fixtures::harness::{act_ok, both, new_game, put, setup_catalog, slot};
 use crate::rules::fixtures::stinkyscape_verbs::{WARP, register_stinkyscape_verbs};
 
 /// Past both mulligans, in the main phase of p1's first turn: nothing owed, no prompt open.
@@ -1506,4 +1511,351 @@ fn i17_a_unit_in_defense_that_may_stand_there_or_waits_for_an_open_prompt_is_cle
     let (mut prompted, _) = defending("i17-defense-prompt", Some("Indestructible"));
     open_prompt(&mut prompted, "i17-defense-prompt");
     assert_eq!(i17(&prompted, &[]), Vec::<String>::new());
+}
+
+// I18: a plain attack does what its seat's forecast said (R3100000, R4111000; #4111)
+
+/// p1's main phase on turn 4, a 3/3 in p1's lane 1 facing a 5/10 in p2's: the forecast is dealt 3,
+/// taken 5, no kill and the attacker falls. R345: p1's turn stays open after the attack, or R82 would
+/// end it inside the step.
+fn i18_board(seed: &str) -> (GameState, String, String) {
+    let mut state = new_game(seed, None);
+    state.turn = 4;
+    state.active = P1;
+    state.phase = Phase::Main;
+    state.players[P1].auto_end_turn = Some(false);
+    let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+    let defender = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), json!({}));
+    (state, attacker.id, defender.id)
+}
+
+/// A monitor that saw p1 choose `attacker` on `target` on `state`, and the reducer's attack.
+fn i18_attack(state: &GameState, attacker: &str, target: &str) -> (InvariantMonitor, ReduceResult) {
+    let mut monitor = create_invariant_monitor(state);
+    let action = ActionBody::Attack {
+        attacker_id: attacker.to_string(),
+        target_id: target.to_string(),
+    };
+    monitor.before(state, P1, &action);
+    let result = act_ok(
+        state,
+        json!({ "type": "attack", "playerId": "p1", "attackerId": attacker, "targetId": target }),
+    );
+    (monitor, result)
+}
+
+/// `events` with each `damage` into `target` one more than it was.
+fn drifted(events: &[GameEvent], target: &str) -> Vec<GameEvent> {
+    tampered(events, |event| match event {
+        GameEvent::Damage {
+            source_id,
+            target_id,
+            amount,
+            combat,
+            absorbed,
+            via,
+        } if target_id == target => Some(GameEvent::Damage {
+            source_id: source_id.clone(),
+            target_id: target_id.clone(),
+            amount: amount + 1,
+            combat: *combat,
+            absorbed: *absorbed,
+            via: *via,
+        }),
+        _ => None,
+    })
+}
+
+fn i18(monitor: &mut InvariantMonitor, events: &[GameEvent], state: &GameState) -> Vec<String> {
+    invariant("I18", monitor.after(events, state))
+}
+
+#[test]
+fn r4111000_i18_an_attack_that_did_what_its_forecast_said_is_clean_and_counted() {
+    let (state, attacker, defender) = i18_board("r4111000-i18-clean");
+    let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+    assert_eq!(
+        i18(&mut monitor, &result.events, &result.state),
+        Vec::<String>::new()
+    );
+    assert_eq!(monitor.forecast_judged(), 1);
+}
+
+#[test]
+fn r4111000_i18_a_hit_one_off_the_forecast_names_both_cards_the_turn_and_both_sets_of_numbers() {
+    let (state, attacker, defender) = i18_board("r4111000-i18-drift");
+    let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+    let found = i18(&mut monitor, &drifted(&result.events, &defender), &result.state);
+    assert_eq!(found.len(), 1, "{found:?}");
+    let finding = &found[0];
+    assert!(finding.starts_with("I18 forecast drift: "), "{finding}");
+    for part in [
+        attacker.as_str(),
+        "cb-plain",
+        "Plain Body (combat fixture)",
+        defender.as_str(),
+        "cb-big-body",
+        "Big Body (combat fixture)",
+        "on turn 4",
+        "was forecast dealt 3, taken 5, no kill, attacker falls, no shield pop but did dealt 4, taken 5, \
+         no kill, attacker falls, no shield pop",
+        "(R3100000)",
+    ] {
+        assert!(finding.contains(part), "{part:?} in {finding}");
+    }
+}
+
+#[test]
+fn r4111000_i18_a_strike_back_or_a_shield_the_forecast_did_not_foretell_is_drift() {
+    let (state, attacker, defender) = i18_board("r4111000-i18-back");
+    let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+    let found = i18(
+        &mut monitor,
+        &tampered(&result.events, |event| match event {
+            GameEvent::Damage {
+                source_id,
+                target_id,
+                combat,
+                absorbed,
+                via,
+                ..
+            } if *target_id == attacker => Some(GameEvent::Damage {
+                source_id: source_id.clone(),
+                target_id: target_id.clone(),
+                amount: 4,
+                combat: *combat,
+                absorbed: *absorbed,
+                via: *via,
+            }),
+            _ => None,
+        }),
+        &result.state,
+    );
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].contains("but did dealt 3, taken 4,"), "{}", found[0]);
+
+    let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+    let mut popped = result.events.clone();
+    popped.push(GameEvent::DivineShieldLost {
+        instance_id: defender.clone(),
+    });
+    let found = i18(&mut monitor, &popped, &result.state);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].ends_with("pops the shield (R3100000)"), "{}", found[0]);
+}
+
+#[test]
+fn r4111000_i18_a_step_that_ran_a_hook_met_a_trap_or_a_redirect_or_ended_the_turn_is_not_judged() {
+    let (state, attacker, defender) = i18_board("r4111000-i18-skipped");
+    let declared = |forced: bool, instead_of: Option<String>| GameEvent::AttackDeclared {
+        attacker_id: attacker.clone(),
+        target_id: defender.clone(),
+        forced,
+        instead_of,
+    };
+    let appended: Vec<(&str, GameEvent)> = vec![
+        (
+            "a hook ran (R2783000)",
+            GameEvent::HookResolving {
+                source_id: defender.clone(),
+                def_id: big_body.id.clone(),
+                controller: P2,
+                hook: HookKind::Whenever,
+                hidden_from: None,
+            },
+        ),
+        (
+            "a trap fired (R3477000)",
+            GameEvent::TrapFired {
+                instance_id: "x-trap".to_string(),
+                def_id: "fx-trap".to_string(),
+                controller: P2,
+                row: Row::Backrow,
+                lane: 1,
+                again: None,
+            },
+        ),
+        (
+            "the attack was called off",
+            GameEvent::AttackCancelled {
+                attacker_id: attacker.clone(),
+                target_id: defender.clone(),
+                by_instance_id: "x-trap".to_string(),
+            },
+        ),
+        (
+            "a hit was redirected (§4.4 step 4a)",
+            GameEvent::Redirected {
+                what: RedirectWhat::Damage,
+                from_id: defender.clone(),
+                to_id: "hero-p2".to_string(),
+                by_instance_id: None,
+            },
+        ),
+        (
+            "the turn ended (R82)",
+            GameEvent::TurnAutoEnded { player: P1, turn: 4 },
+        ),
+        ("a second declaration", declared(false, None)),
+    ];
+    for (why, event) in appended {
+        let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+        let mut events = drifted(&result.events, &defender);
+        events.push(event);
+        assert_eq!(
+            i18(&mut monitor, &events, &result.state),
+            Vec::<String>::new(),
+            "{why}"
+        );
+        assert_eq!(monitor.forecast_judged(), 0, "{why}");
+    }
+
+    let declarations: Vec<(&str, GameEvent)> = vec![
+        ("a forced attack (R53)", declared(true, None)),
+        (
+            "a substitute's attack (R1202)",
+            declared(false, Some("x-windfast".to_string())),
+        ),
+    ];
+    for (why, replacement) in declarations {
+        let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+        let events = tampered(&drifted(&result.events, &defender), |event| {
+            matches!(event, GameEvent::AttackDeclared { .. }).then(|| replacement.clone())
+        });
+        assert_eq!(
+            i18(&mut monitor, &events, &result.state),
+            Vec::<String>::new(),
+            "{why}"
+        );
+        assert_eq!(monitor.forecast_judged(), 0, "{why}");
+    }
+
+    let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+    let mut prompted = result.state.clone();
+    open_prompt(&mut prompted, "r4111000-i18-prompt");
+    let events = drifted(&result.events, &defender);
+    assert_eq!(
+        i18(&mut monitor, &events, &prompted),
+        Vec::<String>::new(),
+        "an answer is still to come (R3477000)"
+    );
+    assert_eq!(monitor.forecast_judged(), 0);
+}
+
+/// `script` registered for `def_id`, over the scripts already registered.
+fn register_i18_script(def_id: &str, script: Script) {
+    let mut scripts = registered_scripts().clone();
+    scripts.insert(def_id.to_string(), both(script));
+    register_scripts(scripts);
+}
+
+#[test]
+fn r4111000_i18_an_attack_the_forecast_cannot_see_from_the_board_is_not_judged() {
+    let unjudged = |state: &GameState, attacker: &str, defender: &str, why: &str| {
+        let (mut monitor, result) = i18_attack(state, attacker, defender);
+        let events = drifted(&result.events, defender);
+        assert_eq!(
+            i18(&mut monitor, &events, &result.state),
+            Vec::<String>::new(),
+            "{why}"
+        );
+        assert_eq!(monitor.forecast_judged(), 0, "{why}");
+    };
+
+    let (mut state, attacker, defender) = i18_board("r4111000-i18-split");
+    find_instance_mut(&mut state, &attacker)
+        .expect("on the field")
+        .split_chain = Some(1);
+    unjudged(&state, &attacker, &defender, "a split damage chain (R3554007)");
+
+    let (mut state, attacker, defender) = i18_board("r4111000-i18-shared");
+    find_instance_mut(&mut state, &defender)
+        .expect("on the field")
+        .shared_chain = Some(1);
+    unjudged(&state, &attacker, &defender, "a shared damage chain (R3554007)");
+
+    let (state, attacker, defender) = i18_board("r4111000-i18-when-attacks");
+    register_i18_script(
+        &plain.id,
+        Script {
+            when_attacks: Some(hook(|_ctx| vec![])),
+            ..Script::default()
+        },
+    );
+    unjudged(&state, &attacker, &defender, "When this attacks (R2285000)");
+
+    let (state, attacker, defender) = i18_board("r4111000-i18-reflects");
+    register_i18_script(
+        &big_body.id,
+        Script {
+            static_flags: Some(StaticFlags {
+                reflects_to_attacker: Some(true),
+                ..StaticFlags::default()
+            }),
+            ..Script::default()
+        },
+    );
+    unjudged(
+        &state,
+        &attacker,
+        &defender,
+        "a reflection onto the attacker (R1849003)",
+    );
+}
+
+#[test]
+fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative_win_as_no_kill() {
+    let (state, attacker, defender) = i18_board("r4111000-played");
+    let hit = |target: &str, amount: i32| GameEvent::Damage {
+        source_id: Some(attacker.clone()),
+        target_id: target.to_string(),
+        amount,
+        combat: true,
+        absorbed: 0,
+        via: None,
+    };
+
+    // Reborn returns a destroyed unit with its own id (R83): the field still holds it, but it died.
+    let returned = PlayedAttack::read(
+        &[hit(&defender, 3), destroyed_by(&defender, &attacker)],
+        &state,
+        &attacker,
+        &defender,
+    );
+    assert!(returned.kills && returned.survives, "{returned}");
+
+    // An exile on damage raises no `destroyed` (R1124): the unit is simply off the field.
+    let mut exiled = state.clone();
+    find_instance_mut(&mut exiled, &defender)
+        .expect("on the field")
+        .zone = Zone::Exile { player: P2 };
+    let read = PlayedAttack::read(&[hit(&defender, 3)], &exiled, &attacker, &defender);
+    assert!(read.kills, "{read}");
+
+    // A game won another way over a hero still standing is no kill of it (R850).
+    let mut alt_win = state.clone();
+    alt_win.players[P2].hero.health = 5;
+    alt_win.result = Some(GameResult {
+        winner: Winner::P1,
+        reason: GameOverReason::AltWin,
+    });
+    let read = PlayedAttack::read(&[hit("hero-p2", 3)], &alt_win, &attacker, "hero-p2");
+    assert_eq!(
+        read,
+        PlayedAttack {
+            dealt: 3,
+            taken: 0,
+            kills: false,
+            survives: true,
+            pops: false,
+        }
+    );
+
+    let mut hero_death = alt_win.clone();
+    hero_death.players[P2].hero.health = 0;
+    hero_death.result = Some(GameResult {
+        winner: Winner::P1,
+        reason: GameOverReason::HeroDeath,
+    });
+    assert!(PlayedAttack::read(&[hit("hero-p2", 3)], &hero_death, &attacker, "hero-p2").kills);
 }

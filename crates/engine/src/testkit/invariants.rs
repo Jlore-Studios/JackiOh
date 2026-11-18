@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The seventeen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
+//! The eighteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
 //! one bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -71,6 +71,10 @@
 //!      hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
 //!      mana and card `damage` are 0 or more (§2.3), and every `damage` event deals more than 0 (R63,
 //!      R1361, R1362).
+//!   I18 every plain attack does what its seat's forecast said (R3100000, R4111000; #4111): `before` keeps
+//!      the `combat_forecast` entry of a chosen `attack`, and `after` holds `PlayedAttack::read` of the
+//!      step to it; what it skips is `foreseeable_attack`'s and `plain_combat`'s (a hook, a trap, a
+//!      redirect, a damage chain, a reflection, a prompt or a turn end). 1v1 only.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -88,6 +92,7 @@ use crate::prompts::prompt_owner_of;
 use crate::reduce::ReduceResult;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
+use crate::testkit::played_attack::PlayedAttack;
 use crate::wire::{
     Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
     DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
@@ -2253,7 +2258,7 @@ struct ChosenExertion {
 const HERO_TARGET_PREFIX: &str = "hero-";
 
 /// The seat a `hero-<player>` target id names (the spelling `damage` and `healed` use), or None for a unit.
-fn hero_seat_of(target_id: &str) -> Option<PlayerId> {
+pub(crate) fn hero_seat_of(target_id: &str) -> Option<PlayerId> {
     let named = target_id.strip_prefix(HERO_TARGET_PREFIX)?;
     PLAYER_IDS.into_iter().find(|seat| seat.as_str() == named)
 }
@@ -2279,6 +2284,18 @@ struct ShadowAttack {
     killed: bool,
     forced: bool,
     answered: bool,
+}
+
+/// I18 (R3100000, #4111): the forecast entry of the attack `before` saw chosen, with what it was told
+/// of the step: the turn and both cards' labels are read before the attack, since it may remove the
+/// attacker, and `foreseeable` is `foreseeable_attack` on the board it was chosen on.
+#[derive(Clone, Debug)]
+struct KeptForecast {
+    entry: crate::query::AttackForecast,
+    turn: i32,
+    attacker: String,
+    target: String,
+    foreseeable: bool,
 }
 
 /// Every card on the field, a card dormant under a Stack pile and the backrow included (§3.2).
@@ -2330,10 +2347,123 @@ fn name_of(card: &CardInstance) -> String {
     format!("{} ({}, {}'s)", card.id, card.def_id, card.controller)
 }
 
+/// I18: a card as its message names it, `<id> (<def id> "<name>")`, or a hero's `hero-<player>` id.
+/// The name is the catalog's, `?` for a definition no catalog lists (`def_of` would panic).
+fn card_label(state: &GameState, id: &str) -> String {
+    match find_instance(state, id) {
+        Some(card) => {
+            let name =
+                crate::catalog::find_def(Some(state), &card.def_id).map_or("?", |def| def.name.as_str());
+            format!("{id} ({} \"{name}\")", card.def_id)
+        }
+        None => id.to_string(),
+    }
+}
+
+/// I18 (#4111): whether the board `attacker_id`'s attack on `target_id` is chosen on lets its forecast
+/// foretell all of it. Each `false` is a source R3100000's forecast leaves out, since the board does
+/// not show what it will do:
+/// - no attacker card;
+/// - the attacker or a Unit target in a split or shared damage chain (§4.4 steps 0b and 8b, R3554007),
+///   which R4032000 leaves unprojected;
+/// - the attacker's "When this attacks" (R2285000) or "After this attacks" (R2285001), or the Unit
+///   target's "After this is attacked" (MD-C26);
+/// - a card acting for the attacker's side with "After one of your Units attacks" (R2199000), or for
+///   the target's side with "When one of your Units is attacked" (R1849008). `hook_marks.rs` marks none
+///   of these attack hooks with a `hookResolving`, so `plain_combat` cannot see them run;
+/// - for a Unit target, a card acting for its side that reflects an attacker's strike back onto it
+///   (Stinkyscape #104 Reflective Plating's Radiant face, §4.4 step 8a, R1849003): the forecast's
+///   `taken` is the strike back alone (fuzz seed 1298), until the forecast projects it.
+fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> bool {
+    let Some(attacker) = find_instance(state, attacker_id) else {
+        return false;
+    };
+    let (target, target_side) = match hero_seat_of(target_id) {
+        Some(seat) => (None, seat),
+        None => match find_instance(state, target_id) {
+            Some(unit) => (Some(unit), unit.controller),
+            None => return false,
+        },
+    };
+    let chained = |card: &CardInstance| card.split_chain.is_some() || card.shared_chain.is_some();
+    if chained(attacker) || target.is_some_and(chained) {
+        return false;
+    }
+    let script = crate::scripts::script_of(state, attacker);
+    if script.when_attacks.is_some() || script.after_attack.is_some() {
+        return false;
+    }
+    if target.is_some_and(|unit| crate::scripts::script_of(state, unit).after_attacked.is_some()) {
+        return false;
+    }
+    let attacking_side = crate::damage::acting_texts_of(state, attacker.controller);
+    if attacking_side
+        .iter()
+        .any(|card| crate::scripts::script_of(state, card).ally_attack.is_some())
+    {
+        return false;
+    }
+    let defending_side = crate::damage::acting_texts_of(state, target_side);
+    if defending_side
+        .iter()
+        .any(|card| crate::scripts::script_of(state, card).ally_attacked.is_some())
+    {
+        return false;
+    }
+    !(target.is_some()
+        && defending_side
+            .iter()
+            .any(|card| crate::scripts::flags_of(state, card).reflects_to_attacker == Some(true)))
+}
+
+/// I18 (#4111): whether one step's `events`, and the `state` it left, were `entry`'s attack and nothing
+/// the forecast does not foretell. All of these hold:
+/// - no prompt is open after it (R3477000: an answer is still to come);
+/// - exactly one `attackDeclared`, with the entry's ids, not forced (R53) and no substitute's (R1202);
+/// - no `hookResolving` (R2783000: a hook ran), `trapFired` (R3477000), `attackCancelled` or
+///   `redirected` (of the attack, R1122, or of a hit, §4.4 steps 0a and 4a, which R4032000 leaves
+///   unprojected);
+/// - no `turnEnded`, `turnAutoEnded` or `turnCutShort`: the next turn's hits would read as the
+///   attack's (R82).
+fn plain_combat(events: &[GameEvent], state: &GameState, entry: &crate::query::AttackForecast) -> bool {
+    if state.pending.is_some() {
+        return false;
+    }
+    let mut declared = 0;
+    for event in events {
+        match event {
+            GameEvent::AttackDeclared {
+                attacker_id,
+                target_id,
+                forced,
+                instead_of,
+            } => {
+                if *attacker_id != entry.attacker_id
+                    || *target_id != entry.target_id
+                    || *forced
+                    || instead_of.is_some()
+                {
+                    return false;
+                }
+                declared += 1;
+            }
+            GameEvent::HookResolving { .. }
+            | GameEvent::TrapFired { .. }
+            | GameEvent::AttackCancelled { .. }
+            | GameEvent::Redirected { .. }
+            | GameEvent::TurnEnded { .. }
+            | GameEvent::TurnAutoEnded { .. }
+            | GameEvent::TurnCutShort { .. } => return false,
+            _ => {}
+        }
+    }
+    declared == 1
+}
+
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
-/// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
-/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11, I12, I16 and I17, `hidden` is I6, I13 and
-/// I15 for both seats, `unlisted` is I8 and `listed` is I14.
+/// run against it. `before` is I1, I3, I12's chosen-action snapshot and I18's kept forecast, `after`
+/// feeds one action's events into the shadow and runs I2, I4, I5, I7, I9, I10, I11, I12, I16, I17 and
+/// I18, `hidden` is I6, I13 and I15 for both seats, `unlisted` is I8 and `listed` is I14.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -2390,6 +2520,13 @@ pub struct InvariantMonitor {
     health: PerPlayer<i32>,
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
+    /// I18: whether this monitor holds attacks to their forecast; `new` sets it, and the Duos monitor
+    /// clears it on its duels (#4111).
+    judge_forecast: bool,
+    /// I18: the forecast of the attack `before` saw chosen, for `after` to judge.
+    forecast_kept: Option<KeptForecast>,
+    /// I18: how many attacks `after` held to their forecast, so a filter that judges nothing shows.
+    forecast_judged: usize,
 }
 
 /// R781004: whether `later`, the rest of an action's events, summons `id` again (back through Reborn): an
@@ -2429,7 +2566,15 @@ impl InvariantMonitor {
             fatigue: start.players.map(|_, side| side.fatigue_count),
             health: start.players.map(|_, side| side.hero.health),
             dormant: dormant_cards(start),
+            judge_forecast: true,
+            forecast_kept: None,
+            forecast_judged: 0,
         }
+    }
+
+    /// I18: how many attacks this monitor held to their forecast (#4111).
+    pub fn forecast_judged(&self) -> usize {
+        self.forecast_judged
     }
 
     fn stint_of(&self, id: &str) -> i32 {
@@ -2923,9 +3068,29 @@ impl InvariantMonitor {
         self.hold_hero_floor(seat, state);
     }
 
-    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot.
-    /// Empty when clean.
+    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot and the
+    /// forecast I18 holds a chosen attack to. Empty when clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
+        // I18: the forecast the seat was shown for the attack it chose, kept for `after` (R3100000).
+        self.forecast_kept = None;
+        if self.judge_forecast
+            && let ActionBody::Attack {
+                attacker_id,
+                target_id,
+            } = action
+        {
+            self.forecast_kept = crate::query::combat_forecast(state, player)
+                .attacks
+                .into_iter()
+                .find(|entry| entry.attacker_id == *attacker_id && entry.target_id == *target_id)
+                .map(|entry| KeptForecast {
+                    turn: state.turn,
+                    attacker: card_label(state, attacker_id),
+                    target: card_label(state, target_id),
+                    foreseeable: foreseeable_attack(state, attacker_id, target_id),
+                    entry,
+                });
+        }
         let mut found: Vec<String> = Vec::new();
         self.chosen_exertion = match action {
             ActionBody::Attack { attacker_id, .. } => {
@@ -3033,9 +3198,11 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12, I16 and I17 against the
-    /// resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12, I16, I17 and I18 against
+    /// the resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
+        // I18: a kept forecast is this step's alone.
+        let kept = self.forecast_kept.take();
         let mut found: Vec<String> = Vec::new();
         // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
         let began_on = self.turn;
@@ -3564,6 +3731,22 @@ impl InvariantMonitor {
         }
 
         found.extend(branch_state_findings(events, state));
+        // I18: a plain attack did what its seat's forecast said (R3100000, R4111000).
+        if let Some(kept) = kept
+            && kept.foreseeable
+            && plain_combat(events, state, &kept.entry)
+        {
+            self.forecast_judged += 1;
+            let forecast = PlayedAttack::forecast(&kept.entry);
+            let played = PlayedAttack::read(events, state, &kept.entry.attacker_id, &kept.entry.target_id);
+            if played != forecast {
+                found.push(format!(
+                    "I18 forecast drift: {} attacking {} on turn {} was forecast {forecast} but did {played} \
+                     (R3100000)",
+                    kept.attacker, kept.target, kept.turn
+                ));
+            }
+        }
         // A chosen action can confirm at most this one reduction. In Duos, `after` also visits the
         // untouched duel, so no marker may survive to match another duel's later event.
         self.chosen_exertion = None;
@@ -3687,11 +3870,14 @@ pub fn create_duos_invariant_monitor(start: &DuosState) -> DuosInvariantMonitor 
 
 impl DuosInvariantMonitor {
     pub fn new(start: &DuosState) -> DuosInvariantMonitor {
+        // I18 judges no Duos attack: Duos is out of #4111's scope, and a Duos seat is shown a subset of
+        // its duel's forecast entries.
+        let duel = |index: usize| InvariantMonitor {
+            judge_forecast: false,
+            ..InvariantMonitor::new(&start.duels[index])
+        };
         DuosInvariantMonitor {
-            monitors: [
-                InvariantMonitor::new(&start.duels[0]),
-                InvariantMonitor::new(&start.duels[1]),
-            ],
+            monitors: [duel(0), duel(1)],
             view_tamper: None,
         }
     }
@@ -3822,6 +4008,16 @@ mod tests {
             b1: ids[size * 2..size * 3].to_vec(),
             b2: ids[size * 3..size * 4].to_vec(),
         }
+    }
+
+    /// I18 (#4111): a Duos seat is shown a subset of its duel's forecast entries, so neither duel's
+    /// monitor judges an attack by the duel's own forecast; a 1v1 monitor does.
+    #[test]
+    fn i18_a_duos_duel_monitor_judges_no_forecast() {
+        let state = crate::testkit::duos_scenario::duos_scenario("i18-duos", test_decks(), None);
+        let monitor = create_duos_invariant_monitor(&state);
+        assert!(monitor.monitors.iter().all(|duel| !duel.judge_forecast));
+        assert!(create_invariant_monitor(&state.duels[0]).judge_forecast);
     }
 
     #[test]

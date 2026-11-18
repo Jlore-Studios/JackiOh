@@ -14,7 +14,7 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I17 hold on every applicable state or action
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I18 hold on every applicable state or action
 //! (stage "invariant"); I11 finds Unit tokens left in the graveyards, exile piles or held cards (R11), I12
 //! shadows chosen switches and declared attacks through each turn and stint (R49, R636), I13 holds every
 //! hand card and admitted graveyard card `legalActions` lists no play of to a `playReason` (§10.8, R979000,
@@ -29,6 +29,8 @@
 //! no unit in Defense Position that §4.5 step 1 switches out of it (R2179000, R2657000, R3543002,
 //! R1849006) and no 1v1 hero at 0 that can lose; on every state no mana or card damage below 0 and no
 //! `damage` of 0 (R63).
+//! I18 holds each plain attack to the forecast its seat was shown (R3100000, R4111000); the summary's
+//! `forecast attacks judged:` (`--json`'s `forecastJudged`) shows a filter that judges nothing.
 //! I9 holds the wire to the state: each `turnStarted`, `turnEnded`, `gameOver` and `manaChanged` to the
 //! state it left, each `fatigue` to its seat's count, and each 1v1 hero's health to a tally kept from
 //! `damage`, `healthLost`, `healed`, `healthSet` and `swapped` alone (§10.3).
@@ -1007,6 +1009,8 @@ struct GameRun {
     played: IndexSet<String>,
     /// The def ids that resolved on their Radiant face (#3283), setup's included.
     radiant: IndexSet<String>,
+    /// I18: the attacks the monitor held to their forecast (#4111).
+    forecast_judged: usize,
 }
 
 fn pending_label(state: &GameState) -> String {
@@ -1425,6 +1429,7 @@ fn play_game_with_options(
         paused: paused_steps,
         played,
         radiant,
+        forecast_judged: monitor.forecast_judged(),
     })
 }
 
@@ -2809,6 +2814,8 @@ struct Coverage {
     /// For each id dealt, how many games dealt it into either deck (#3113), once a game however many
     /// copies or decks held it.
     deals: IndexMap<String, u32>,
+    /// I18: the attacks the monitor held to their forecast (#4111), so a filter that judges nothing shows.
+    forecast_judged: usize,
 }
 
 impl Coverage {
@@ -2820,12 +2827,21 @@ impl Coverage {
             dealt,
             played,
             radiant: IndexSet::new(),
+            forecast_judged: 0,
         }
     }
 
     /// `self` with the ids its game's events show resolved Radiant (#3283).
     fn with_radiant(self, radiant: IndexSet<String>) -> Coverage {
         Coverage { radiant, ..self }
+    }
+
+    /// `self` with the attacks its game's monitor held to their forecast (I18, #4111).
+    fn with_forecast_judged(self, forecast_judged: usize) -> Coverage {
+        Coverage {
+            forecast_judged,
+            ..self
+        }
     }
 
     /// Adds another game's coverage; the wave adds them in seed order.
@@ -2836,6 +2852,7 @@ impl Coverage {
         for (id, games) in other.deals {
             *self.deals.entry(id).or_insert(0) += games;
         }
+        self.forecast_judged += other.forecast_judged;
     }
 
     /// The pool card dealt in the fewest games and the one dealt in the most, each with its count; a
@@ -2860,6 +2877,12 @@ impl Coverage {
     fn deals_line(&self) -> String {
         let ((least_id, least), (most_id, most)) = self.fewest_and_most();
         format!("  deals per pool card: fewest {least} ({least_id}), most {most} ({most_id})\n")
+    }
+
+    /// The summary's line of how many attacks I18 held to their forecast (#4111): 0 says its filter
+    /// judged nothing.
+    fn forecast_line(&self) -> String {
+        format!("  forecast attacks judged: {}\n", self.forecast_judged)
     }
 
     /// The dealt ids no game played, sorted by id.
@@ -3039,7 +3062,9 @@ fn run_seed_with_options(
             checkpoint_paused: checkpoint.paused,
             checkpoint_ms: checkpoint.ms,
             start: setup.start,
-            coverage: Coverage::of_game(&run.decks, run.played).with_radiant(run.radiant),
+            coverage: Coverage::of_game(&run.decks, run.played)
+                .with_radiant(run.radiant)
+                .with_forecast_judged(run.forecast_judged),
         })
     }));
     let (stage, message, turn, actions) = match caught {
@@ -3272,6 +3297,7 @@ impl Wave {
         text.push_str(&self.coverage.line());
         text.push_str(&self.coverage.radiant_line());
         text.push_str(&self.coverage.deals_line());
+        text.push_str(&self.coverage.forecast_line());
         text.push_str(&heaviest_lines(&self.heaviest));
         text
     }
@@ -3305,6 +3331,7 @@ impl Wave {
             "endingsChannel": self.endings,
             "forced": self.forcing.json(),
             "coverage": self.coverage.json(),
+            "forecastJudged": self.coverage.forecast_judged,
             "bounds": MEASURES
                 .into_iter()
                 .map(|measure| (measure.as_str(), measure.bound()))
@@ -4017,6 +4044,7 @@ pub(crate) mod tests {
                 paused: Vec::new(),
                 played: IndexSet::new(),
                 radiant: IndexSet::new(),
+                forecast_judged: 0,
             };
             assert_eq!(
                 check_termination(&GameSetup::plain(1), &run)
@@ -4051,6 +4079,7 @@ pub(crate) mod tests {
                     paused: Vec::new(),
                     played: IndexSet::new(),
                     radiant: IndexSet::new(),
+                    forecast_judged: 0,
                 };
                 assert_eq!(
                     check_termination(&GameSetup::plain(1), &run)
@@ -6811,6 +6840,7 @@ pub(crate) mod tests {
                     paused: Vec::new(),
                     played: IndexSet::new(),
                     radiant: IndexSet::new(),
+                    forecast_judged: 0,
                 };
                 let failure = check_termination(&GameSetup::plain(1), &run)
                     .expect_err("a game without the channel cannot end by one of its endings");
@@ -6861,6 +6891,7 @@ pub(crate) mod tests {
                     paused: Vec::new(),
                     played: IndexSet::new(),
                     radiant: IndexSet::new(),
+                    forecast_judged: 0,
                 };
                 assert_eq!(
                     check_termination(&GameSetup::plain(1), &run)
@@ -7570,6 +7601,40 @@ pub(crate) mod tests {
                     "  deals per pool card: fewest 0 ({0}), most 0 ({0})\n",
                     FUZZ_POOL[0]
                 )
+            );
+        }
+
+        /// I18 (#4111): the summary counts the attacks the monitor held to their forecast, summed over
+        /// the wave's games.
+        #[test]
+        fn the_summary_counts_the_attacks_held_to_their_forecast() {
+            assert_eq!(
+                Coverage::default().with_forecast_judged(3).forecast_line(),
+                "  forecast attacks judged: 3\n"
+            );
+            let mut coverage = Coverage::default();
+            coverage.merge(Coverage::default().with_forecast_judged(3));
+            coverage.merge(Coverage::default().with_forecast_judged(4));
+            assert_eq!(coverage.forecast_judged, 7);
+            assert_eq!(
+                Coverage::default().forecast_line(),
+                "  forecast attacks judged: 0\n"
+            );
+        }
+
+        /// I18 (#4111): a wave's games hold their plain attacks to the forecast, and the summary and
+        /// `--json` say how many they judged, so a filter that judges nothing shows.
+        #[test]
+        fn a_wave_holds_its_attacks_to_their_forecast() {
+            let wave = play_wave(1, 1, &Forcing::default());
+            assert!(wave.failures.is_empty(), "{}", report(&wave.failures, 1, 0.0));
+            let judged = wave.json()["forecastJudged"].as_u64().unwrap_or(0);
+            assert!(judged > 0, "seed 1 judged no attack against its forecast");
+            assert!(
+                wave.summary()
+                    .contains(&format!("\n  forecast attacks judged: {judged}\n")),
+                "{}",
+                wave.summary()
             );
         }
     }
