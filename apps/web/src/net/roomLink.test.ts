@@ -338,3 +338,24 @@ describe("R2094000 sending the co-op link", () => {
     expect(writeText).toHaveBeenCalledWith(LINK);
   });
 });
+
+describe("#4015 prototype pollution", () => {
+  it("room/coop links ignore proto params", () => {
+    expect(roomLinkOf("?room=abc234&__proto__=x&constructor[prototype]=y")).toEqual({ code: "ABC234", mode: null });
+    expect(roomLinkOf("?room=abc234&mode=bo1&__proto__[polluted]=true")).toEqual({ code: "ABC234", mode: "bo1" });
+    expect(coopLinkOf("?coop=abc234&__proto__=x")).toBe("ABC234");
+    expect(coopLinkOf("?coop=abc234&constructor[prototype]=y")).toBe("ABC234");
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
+  it("readRoomLink reads past hostile stored keys", () => {
+    window.sessionStorage.setItem(
+      ROOM_LINK_STORAGE_KEY,
+      `{"__proto__":{"polluted":true},"code":"abc234","mode":null}`,
+    );
+    visit("/");
+    expect(readRoomLink()).toEqual({ code: "ABC234", mode: null });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+    forgetRoomLink();
+  });
+});

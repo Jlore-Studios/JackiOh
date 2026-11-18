@@ -229,6 +229,23 @@ describe("R639 a tolerant reader", () => {
     expect(readPlayerStats()).toEqual(EMPTY_STATS);
   });
 
+  it("#4015 parsePlayerStats drops proto card ids", () => {
+    const parsed = parsePlayerStats(
+      JSON.parse(
+        `{"v":${PLAYER_STATS_VERSION},"games":1,"wins":1,"losses":0,"draws":0,` +
+          `"cards":{"core-001":{"seen":2},"__proto__":{"seen":5},"constructor":{"seen":5}},` +
+          `"longestGamePlayed":{"core-001":2,"__proto__":3,"constructor":4}}`,
+      ),
+    );
+    expect(parsed.cards["core-001"]).toMatchObject({ seen: 2 });
+    expect(Object.hasOwn(parsed.cards, "__proto__")).toBe(false);
+    expect(Object.hasOwn(parsed.cards, "constructor")).toBe(false);
+    // Without the guard the `__proto__` entry would sit on the result's prototype.
+    expect((parsed.cards as Record<string, unknown>)["seen"]).toBeUndefined();
+    expect(parsed.longestGamePlayed).toEqual({ "core-001": 2 });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("R639 storage that throws leaves the in-memory totals in force", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("blocked");

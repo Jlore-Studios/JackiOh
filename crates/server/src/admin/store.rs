@@ -22,12 +22,12 @@ pub const RATING_GRANT_REASON: &str = "dev";
 /// so a claim never mistakes one for the other (migration 0080's `news_posts_id_check`).
 pub const NEWS_POST_ID_PREFIX: &str = "post-";
 
-/// The routes a moderation lever's audit row names (`cli::moderate`, migration 0095), each exactly.
+/// The routes a moderation lever's audit row names (`cli::moderate`, migration 0096), each exactly.
 pub const MODERATE_BAN_ROUTE: &str = "CLI moderate ban";
 pub const MODERATE_UNBAN_ROUTE: &str = "CLI moderate unban";
 pub const MODERATE_REVOKE_CODE_ROUTE: &str = "CLI moderate revoke-code";
 pub const MODERATE_REDEMPTION_ROUTE: &str = "CLI moderate redemption";
-/// The allow list `check_route` and migration 0095's `admin_actions_route_check` hold alike.
+/// The allow list `check_route` and migration 0096's `admin_actions_route_check` hold alike.
 pub const MODERATE_ROUTES: [&str; 4] = [
     MODERATE_BAN_ROUTE,
     MODERATE_UNBAN_ROUTE,
@@ -154,7 +154,7 @@ fn refused(why: String) -> StoreError {
 }
 
 /// `admin_actions_route_check`: a dev or admin route, named with its method (0080), or a moderation
-/// lever's, named exactly (0095).
+/// lever's, named exactly (0096).
 fn check_route(route: &str) -> Result<(), StoreError> {
     if MODERATE_ROUTES.contains(&route) {
         return Ok(());

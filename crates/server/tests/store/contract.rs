@@ -1343,8 +1343,8 @@ mod codes {
         assert!(!q!(harness, t => t.codes_revoke_by_hash("no-such-hash")));
     }
 
-    /// §9.4 steps 2-4 and the circuit breaker read exactly these three counters.
-    async fn counts_attempts_by_profile_by_ip_hash_and_by_failure(harness: &StoreHarness) {
+    /// §9.4 steps 2-4 read exactly these counters (R4131000: no failure count is read).
+    async fn counts_attempts_by_profile_and_by_ip_hash(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
         let now = harness.now();
         let ip_hash = format!("ip-{}", id());
@@ -1388,7 +1388,6 @@ mod codes {
             q!(harness, t => t.codes_count_attempts_by_ip(&ip_hash, now - 60_000)),
             2
         );
-        assert_eq!(q!(harness, t => t.codes_count_failures(now - 60_000)), 2);
     }
 
     /// §9.8's watch: one IP hash behind six accounts is a cluster, six hashes with one account each
@@ -1463,7 +1462,7 @@ mod codes {
         claims_a_single_use_code_exactly_once,
         refuses_a_revoked_or_expired_code,
         revokes_a_code_by_hash_idempotently,
-        counts_attempts_by_profile_by_ip_hash_and_by_failure,
+        counts_attempts_by_profile_and_by_ip_hash,
         lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each,
     );
 }
@@ -1675,9 +1674,9 @@ mod redeem {
         assert_eq!(status_of(harness, &profile.id).await, "pending");
     }
 
-    /// §9.4: "A global circuit breaker disables redemption." This is the database's own switch,
-    /// which the store answers `circuit_open` from; the server's R106 breaker (`api/codes.rs`) is a
-    /// separate object that never lets a request reach here while it is open.
+    /// R4131000: the operator's pause, the database's own switch, which the store answers
+    /// `circuit_open` from; the server's mirror of it (`api/codes.rs`) never lets a request reach here
+    /// while it holds.
     async fn refuses_every_redemption_while_the_database_s_redemption_switch_is_off(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
         let code = mint(harness, json!({})).await;

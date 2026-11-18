@@ -88,7 +88,7 @@ const UNMIGRATED: Record<string, number> = {
   "routes/landing.css": 73,
   "routes/lobby.css": 40,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 64,
+  "routes/stats.css": 63,
   "settings/changeEmail.css": 2,
   "settings/settings.css": 17,
   "shop/shop.css": 2,

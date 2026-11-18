@@ -17,7 +17,7 @@
 //! This reads the whole environment through `load_env()`, so the code hash revoked here is the one the
 //! running server computes when it redeems (`cli/mint_code.rs` says why). A lever that changes something
 //! leaves two records: the line it prints, and one `admin_actions` row in its own transaction
-//! (R3074000's audit, migration 0095) with no profile, its route (`MODERATE_ROUTES`), the request and
+//! (R3074000's audit, migration 0096) with no profile, its route (`MODERATE_ROUTES`), the request and
 //! the state before and after; a revoked code by its stored hash, never the code. A lever that changes
 //! nothing writes no row.
 //!
@@ -53,9 +53,9 @@ const USAGE: &str = "Usage: jackioh-server moderate <command> [arguments]
   unban <profile-id>    Restore a banned account to active. Refuses a pending account.
   revoke-code <CODE>    Revoke the invite code, which then redeems exactly as an
                         exhausted one. Idempotent.
-  redemption <on|off>   Pause (off) or resume (on) redemption through §9.4's
-                        database-side circuit breaker. Pausing touches no account
-                        or session. Idempotent.
+  redemption <on|off>   Pause (off) or resume (on) redemption for everyone, the
+                        only global pause (§9.4, R4131000). Pausing touches no
+                        account or session. Idempotent.
   chat-reports          List every chat report held, oldest first: when, the reason,
                         the reporter, the sender and the message. Changes nothing.
 
@@ -220,7 +220,7 @@ pub async fn revoke_code(db: &Db, pepper: &str, plain: &str) -> anyhow::Result<S
     }
 }
 
-/// Flips §9.4's database-side kill switch. Pausing refuses new redemptions with the breaker's
+/// Flips the operator's redemption pause (§9.4, R4131000). Pausing refuses new redemptions with a
 /// 503 while touching no account or session; resuming restores them. Answers the stdout line,
 /// naming the previous state.
 pub async fn set_redemption(db: &Db, enabled: bool) -> anyhow::Result<String> {

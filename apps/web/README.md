@@ -1404,7 +1404,7 @@ each committing what it rendered back to the branch, and a Linux job runs `--che
 asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
 flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
 missing from the manifest falls back to the browser's `speechSynthesis`, with the voice's `web`
-pitch and rate.
+pitch and rate. The sound tables load with the first sound, not with the page.
 
 ## The engine as WebAssembly
 

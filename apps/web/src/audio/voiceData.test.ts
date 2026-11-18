@@ -17,18 +17,20 @@ import type { CardAudioTable } from "./types.ts";
 import {
   CARD_AUDIO,
   type CatalogTypes,
+  parseCardAudio,
+  parseCardAudioText,
+  withVoiceText,
+} from "./soundTables.ts";
+import {
   effectFor,
   emoteLineFor,
   emoteVoiceDef,
   entryFor,
   hookFor,
   lineFor,
-  parseCardAudio,
-  parseCardAudioText,
   voiceKey,
   voiceKeysForView,
   voiceUrl,
-  withVoiceText,
 } from "./voiceData.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, resetIds, unit } from "../test/fixtures.ts";
 

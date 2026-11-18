@@ -113,15 +113,15 @@ reseeds the database itself. Both steps are idempotent.
   and the reaper owns the in-flight game (the account-deletion posture, so a ban lands at once
   even mid-match). `moderate revoke-code <CODE>` revokes an invite code by its hash, which then
   redeems exactly as an exhausted one. `moderate redemption off` / `moderate redemption on`
-  pause and resume redemption through §9.4's database-side circuit breaker, touching no account
-  or session. Each lever is idempotent and prints what changed (`banned <id>`, `already banned
+  pause and resume redemption for everyone, the only global pause (§9.4, R4131000: no count of
+  failures pauses it), touching no account or session. Each lever is idempotent and prints what changed (`banned <id>`, `already banned
   <id>`, `revoked <CODE>`, `redemption paused`, …); an unknown profile or code is refused
   without writing anything, and a pending account is never unbanned — that would skip the
   invite gate and R111's launch grant, so ban pending accounts only to stop abuse. Like
   `mint-code` it reads the whole environment, because a `CODE_PEPPER` that differs from the
   running server's revokes a hash redemption will never look up. A lever that changes something
   leaves two records: the line it prints, and one `admin_actions` row in its own transaction
-  (R3074000's audit, migration 0095) with no profile, its route (`MODERATE_ROUTES`, such as `CLI
+  (R3074000's audit, migration 0096) with no profile, its route (`MODERATE_ROUTES`, such as `CLI
   moderate ban`), the request and the state before and after; a revoked code by its stored hash,
   never the code. A lever that changes nothing (an `already …`, an unknown profile or code, a
   pending account's unban) writes no row. The dev dashboard's Audit page shows the rows.
@@ -285,7 +285,7 @@ UUID (`economy/idempotency.rs`); anything else there is 400 `bad_request`, and a
 as before. Under the account's economy lock, in the spend's transaction, a key the account committed a
 spend with answers that spend's status and body again and spends nothing, the same key with another route
 or body is 422 `idempotency_key_reused`, and a new key's answer is written with its grant. A refusal keeps
-nothing. A redemption reads its key before the breaker and R145's account checks, and every outcome is
+nothing. A redemption reads its key before the pause and R145's account checks, and every outcome is
 padded (R107). Keys are per account, kept `IDEMPOTENCY_KEY_TTL_HOURS` and swept by the retention loop;
 the body is kept as an HMAC under `<CODE_PEPPER>:body`. CORS allows the header (`api/cors.rs`), without
 which the browser's preflight refuses every spend; `apps/web/src/net/api.ts` mints a key per press and
@@ -1465,7 +1465,7 @@ Migration 0088 widens the `cards` tag check once more, as 0083 did, with #3535's
 Paperclip — so `seed-catalog` can write the set's entries the day it ships (#3573, R3535000), and comments
 `cards.set_id` with the eight sets that ship.
 
-Migration 0095 widens `admin_actions_route_check` by the four moderation lever routes, each named exactly, as
+Migration 0096 widens `admin_actions_route_check` by the four moderation lever routes, each named exactly, as
 `check_route` holds them (`MODERATE_ROUTES`), so `jackioh-server moderate` writes its audit rows (#4141), and
 rewrites no row. `tests/sql/58_moderation_audit.sql` checks the routes taken, the near names refused and the
 re-apply.

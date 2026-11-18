@@ -393,8 +393,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0094_revoke_on_profile_activated.sql"),
     ),
     (
-        "0095_moderation_audit.sql",
-        include_str!("../../migrations/0095_moderation_audit.sql"),
+        "0095_no_global_redemption_breaker.sql",
+        include_str!("../../migrations/0095_no_global_redemption_breaker.sql"),
+    ),
+    (
+        "0096_moderation_audit.sql",
+        include_str!("../../migrations/0096_moderation_audit.sql"),
     ),
 ];
 
