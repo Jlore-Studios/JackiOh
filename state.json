@@ -15944,6 +15944,13 @@
     "4180": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T14:15:41Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Client-only change across ~35 files (under the ~40-file bar), no engine rules, AI, cross-crate design, or migration."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
