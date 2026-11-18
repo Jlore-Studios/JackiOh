@@ -37033,6 +37033,9 @@
       "2026-11-18T05:52:22Z,claude-8,stream,call,44245942304,94,2026-11-18T06:30:00Z,,,allowed_warning,100,,",
       "2026-11-18T05:53:07Z,claude-8,stream,call,44245942304,95,2026-11-18T06:30:00Z,,,allowed_warning,100,,",
       "2026-11-18T05:54:22Z,claude-8,stream,call,44245942304,96,2026-11-18T06:30:00Z,,,allowed_warning,100,,"
+    ],
+    "runs": [
+      "2026-11-18T05:56:14Z,44245942304,claude-8,opus,plan,4156,hard,planned,,12.3,172,72856,12380720,5.5507,86,96,,,21.5,muse,fresh,other,1"
     ]
   },
   "version": 1
