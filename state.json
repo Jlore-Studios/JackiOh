@@ -17032,11 +17032,11 @@
       "queued_at": "2026-11-18T17:46:45Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "44351574315",
+      "run_id": "pending:50bd4613-1795024189",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-18T16:48:54Z",
+      "started_at": "2026-11-18T17:50:28Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17666,9 +17666,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T17:49:34Z",
+    "at": "2026-11-18T17:50:28Z",
     "url": "",
-    "what": "review #4208 on muse"
+    "what": "revise #4206 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T17:33:29Z",
