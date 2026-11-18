@@ -16051,6 +16051,8 @@
       }
     },
     "4191": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T05:53:17Z",
@@ -16064,8 +16066,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a change to a migration the tools' tests read runs those tests, and the scope check sees the files a test reads at run time, not only those it includes\"} -->\n- ## What changed\n- - [scripts/ci-scope.sh](/home/agent-muse/actions-runner/_work/_temp/work/item-4157/scripts/ci-scope.sh): new crate-map row `crates/server/migrations/*) on rust_server rust_tools_wasm` ahead of `crates/server/*`, and a header clause naming the two retcon migrations as out-of-crate reads (#4157).\n- - [crates/tools/tests/acceptance.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4157/crates/tools/tests/acceptance.rs): module-header bullet extended; new `file_string_consts` and `outside_runtime_reads` covering `repo_root().join(\u2026)`, `repo().join(\u2026)`, `Path::new(env!(\"CARGO_MANIFEST_DI\u2026\n- - [apps/web/src/net/ci-scope.test.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4157/apps/web/src/net/ci-scope.test.ts): one `GROUPS` row mapping the 0068 migration to `[\"rust_server\", \"rust_tools_wasm\"]`.\n- No spec, ruling, migration, or crate source touched (CI tooling, #751).\n- ## How I tested\n- - `cargo test -p jackioh-tools --test acceptance ci_scope`: 7 passed, including the new scan unit test and the extended scope test.\n- - Negative check: with only the new script row reverted, the extended test fails naming `crates/tools/src/retcon.rs:1875` (`0068_v0_5_retcon.sql`) and `:1916` (`0087_v0_5_13_retcon.sql`) \u2014 and nothing else. Row restored, green again.\n- - Direct script check on a scratch migration-only diff: `rust_tools_wasm=true`, `rust_server=true`, all `db*` lines true, `web`/`clippy` off.\n- - `pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts` (after `sh scripts/build-wasm.sh`, which the test imports): 340 passed. `cargo fmt --check` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings` clean. `git status` shows only the three intended files.\n- ## Decisions the issue did not settle\n- - The plan's single combined `reads` vec is not implemented: an `include_str!` literal is file-relative while a `repo_root()`/`repo()` argument is already repo-relative, so one `from_crate` bool cannot encode both bases \u2014 the combined form mis-resolves the migration to `crates/tools/src/crates/serv\u2026\n- - A read resolving to the repository root itself (the `repo()` helper's own `join(\"../..\")` in `crates/wasm/tests/export_parity.rs`) is skipped: no scope row can name the root, and its real reads go through a variable argument the scan cannot see. Failing instead would make the check unpassable.\n- - Files under nested packages (`crates/wasm/core`, `crates/wasm/c` inside `crates/wasm`) are attributed to their innermost owner, since `CARGO_MANIFEST_DIR` there is the nested crate's. Without this, `constants.rs`'s joins resolve against `crates/wasm` and leave the repository (found on the first f\u2026\n- ## Every run-time read the scan found\n- `crates/server/migrations` (server `migrations_pinned.rs`), `crates/cards/patches` (server `catalog.rs` tests and tools `patches.rs`), `Cargo.lock`, `crates/server/src` (in-crate, skipped), the repo root itself (skipped, above), `apps/web/src/wire/engineConfig.ts` and `crates/shared/src/config.rs` \u2026\n- A reviewer should look twice at the two-loop resolution and the innermost-owner skip: both are deliberate departures from the plan's letter, documented above and in `.bot-notes.md`.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4157 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4157/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4157,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T06:43:08Z",
         "from_run": "44247353026",
         "gates": [
           {
@@ -16124,8 +16129,15 @@
         "source": "build",
         "until": "2026-11-18T07:12:18Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-18T06:42:18Z",
+      "run_id": "pending:ae797f21-1794984168",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-18T06:43:08Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16139,9 +16151,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T06:34:06Z",
+    "at": "2026-11-18T06:43:08Z",
     "url": "",
-    "what": "build #4169 on claude-7"
+    "what": "review #4191 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T06:28:25Z",
