@@ -1109,11 +1109,15 @@ fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &Atta
 #[cfg(test)]
 mod tests {
     use jackioh_engine::combat_forecast;
+    use jackioh_engine::config::DECK_SIZE;
     use jackioh_engine::testkit::{Keyword, Scenario, Value, json, scenario};
+    use jackioh_engine::{PerPlayer, Rng};
 
     use super::*;
     use crate::config::AI_REPLY;
+    use crate::deck::{AiDeckOptions, build_ai_deck};
     use crate::evaluate::{kill_worth, unit_worth};
+    use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
     use crate::reply::fight;
 
     /// Classic #73 Nurse Cleaver, with Rush, Cleave and Lifesteal: a 3/4 since issue #3136, set back to the 3/6
@@ -1814,5 +1818,126 @@ mod tests {
             }
         }
         assert_eq!(checked, settings.len() * bodies.len() * bodies.len());
+    }
+
+    /// R4171000: the seeded random-policy games the agreement test below plays, and its floors: the
+    /// Unit-target attacks it judged, the distinct cards (`def_id`s) at either end of one, and the
+    /// attacks a First Strike defender stopped whose blow would otherwise deal damage or pop a shield.
+    const FORECAST_AGREEMENT_GAMES: usize = 16;
+    const FORECAST_AGREEMENT_MIN_ATTACKS: usize = 1000;
+    const FORECAST_AGREEMENT_MIN_CARDS: usize = 150;
+    const FORECAST_AGREEMENT_MIN_STOPPED: usize = 5;
+
+    /// R4171000, R3100000: on every state of `FORECAST_AGREEMENT_GAMES` games of SPEC §10.7's random
+    /// policy, decks dealt from every set, every Unit-target entry of either seat's combat forecast is the
+    /// static trader's `fight` (what the attacker deals, up to the target's health for a Trample hit,
+    /// §4.4 step 5; what it takes; the kill; the survival; the pop) and the move order's
+    /// `kills_and_survives`.
+    #[test]
+    fn r4171000_the_trade_reads_agree_with_the_combat_forecast_on_seeded_games() {
+        jackioh_cards::register_all();
+        let (mut judged, mut stopped) = (0, 0);
+        let mut met: IndexSet<String> = IndexSet::new();
+        for game in 0..FORECAST_AGREEMENT_GAMES {
+            let seed = format!("forecast-agreement:{game}");
+            let deck = |seat: PlayerId| {
+                build_ai_deck(
+                    &mut Rng::new(&format!("{seed}:deck:{}", seat.as_str()), 0),
+                    DECK_SIZE,
+                    &AiDeckOptions {
+                        banned: Some(vec![]),
+                        gated_sets: Some(vec![]),
+                        ..AiDeckOptions::default()
+                    },
+                )
+            };
+            let config = MatchConfig {
+                seed: seed.clone(),
+                decks: (deck(PlayerId::P1), deck(PlayerId::P2)),
+                handicaps: None,
+                controllers: PerPlayer {
+                    p1: SeatController::Random,
+                    p2: SeatController::Random,
+                },
+                max_actions: None,
+                setup: MatchSetup::default(),
+            };
+            let mut states: Vec<GameState> = Vec::new();
+            {
+                let mut hooks = MatchHooks {
+                    after_action: Some(Box::new(
+                        |_before: &GameState, after: &GameState, _seat: PlayerId, _action: &ActionBody| {
+                            states.push(after.clone());
+                        },
+                    )),
+                    ..MatchHooks::default()
+                };
+                play_match(&config, &mut hooks);
+            }
+            for (index, state) in states.iter().enumerate() {
+                for seat in [PlayerId::P1, PlayerId::P2] {
+                    for entry in combat_forecast(state, seat).attacks {
+                        if entry.target_id.starts_with("hero-") {
+                            continue;
+                        }
+                        let attacker = find_instance(state, &entry.attacker_id).expect("the attacker");
+                        let target = find_instance(state, &entry.target_id).expect("the target");
+                        met.insert(attacker.def_id.clone());
+                        met.insert(target.def_id.clone());
+                        let read = fight(state, attacker, target);
+                        // §4.4 step 5: a Trample hit deals the unit no more than its health.
+                        let dealt = if has_keyword(&read.a.view.keywords, KeywordKind::Trample) {
+                            read.out.dealt.min(read.t.view.health.max(0))
+                        } else {
+                            read.out.dealt
+                        };
+                        let ours = (
+                            dealt,
+                            read.back.dealt,
+                            read.kills,
+                            !read.dies,
+                            read.out.pops_shield,
+                            kills_and_survives(state, attacker, target),
+                        );
+                        let theirs = (
+                            entry.dealt,
+                            entry.taken,
+                            entry.kills,
+                            entry.survives,
+                            entry.pops,
+                            entry.kills && entry.survives,
+                        );
+                        assert_eq!(
+                            ours,
+                            theirs,
+                            "{seed}, after action {index}: {} ({}, radiant {}) into {} ({}, radiant {}); \
+                             (dealt, taken, kills, survives, pops, kills_and_survives), the AI's then the \
+                             forecast's; {judged} attacks judged, {} cards met so far",
+                            attacker.id,
+                            attacker.def_id,
+                            attacker.radiant,
+                            target.id,
+                            target.def_id,
+                            target.radiant,
+                            met.len(),
+                        );
+                        if !read.lands {
+                            let unstopped = blow(&read.a, read.combat.hit, read.combat.poisonous, &read.t);
+                            if unstopped.dealt > 0 || unstopped.pops_shield {
+                                stopped += 1;
+                            }
+                        }
+                        judged += 1;
+                    }
+                }
+            }
+        }
+        let counts = format!(
+            "{judged} attacks judged, {} cards met, {stopped} stopped blows",
+            met.len()
+        );
+        assert!(judged >= FORECAST_AGREEMENT_MIN_ATTACKS, "{counts}");
+        assert!(met.len() >= FORECAST_AGREEMENT_MIN_CARDS, "{counts}");
+        assert!(stopped >= FORECAST_AGREEMENT_MIN_STOPPED, "{counts}");
     }
 }

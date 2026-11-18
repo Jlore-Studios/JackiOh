@@ -92,7 +92,9 @@ lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watch
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
-too, #3858), and once none is worth making the switches to Defense Position its own
+too, #3858; an attacker a First Strike defender destroys first earning no chip and no shield pop, since
+`fight` reads a blow that never lands as none, R4171000), and once none is worth making the switches to
+Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
