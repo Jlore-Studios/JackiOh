@@ -17167,6 +17167,7 @@
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 350,
       "started_at": "2026-11-18T17:49:34Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -38284,9 +38285,33 @@
         "title": "Patch: weekly hygiene, dead files and archives, 2026-11-18",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "33a65b858c77d94a6782d1a724ecad86ec140fea",
+        "issue": 4203,
+        "merged_at": "2026-11-18T18:25:49Z",
+        "n": 350,
+        "pr": 4208,
+        "queued_at": "2026-11-18T18:25:49Z",
+        "sha": "c040adf45e9814c6cd7d3c4524f6e73851927ff4",
+        "status": "queued",
+        "title": "Patch: the card search reads a stat line, such as 3/4 or 3+/4-",
+        "tries": 0
       }
     ],
-    "count": 349
+    "count": 350
   },
   "statistics": {
     "at": "2026-11-18T18:21:03Z"
