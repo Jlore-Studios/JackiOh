@@ -13,7 +13,8 @@
 //! (`query::war_doctrines`, R3869001, which named them by id through v0.6.2b), and a `cast_new` of the pick, free and counted as played (R70), Radiant on
 //! the Radiant face. The Doctrine resolves inside the Cry, before the Starship's fused When launched
 //! answers the launch (R113), so its Starship line reads the Starship before those (R1859006). With no
-//! Dormant Starship, nothing: no launch and no Discover. Declares no numbers. The Discover's prompt names
+//! Dormant Starship, nothing: no launch and no Discover. Declares no numbers. R4189000: in hand the
+//! card glows while its controller has a Dormant Starship. The Discover's prompt names
 //! the card as the game's catalog version spells it (`def_of`, R767000), so a replay of a game before
 //! the rename asks as it asked then. S #176 Preemptive Strike casts the same effect as a Spell.
 
@@ -27,6 +28,12 @@ const PICKED: &str = "picked";
 fn firststrike(radiant: bool) -> Script {
     let doctrine = if radiant { "a Radiant War Doctrine" } else { "a War Doctrine" };
     Script {
+        // R4189000: in hand the card glows while its controller has a Dormant Starship, the same
+        // fact the Cry branches on.
+        condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
+            ctx.zone == ConditionZone::Hand
+                && dormant_starship_of(ctx.state, ctx.controller).is_some()
+        })),
         cry: Some(hook(move |ctx| {
             let Some(ship) = dormant_starship_of(&*ctx.state, ctx.controller) else {
                 return vec![];
@@ -211,5 +218,55 @@ mod tests {
                 .iter()
                 .any(|event| event.event_type() == GameEventType::StarshipLaunched)
         );
+    }
+
+    /// p1's Starship built and the Commander (Radiant if `radiant`) in hand, unplayed.
+    fn holding(seed: &str, radiant: bool) -> (Scenario, String) {
+        built_starship(
+            seed,
+            json!([{ "def": CHASSIS, "lane": 1 }, { "def": CAPACITOR, "lane": 2 }]),
+            json!({ "hand": [{ "def": ID, "radiant": radiant }] }),
+            json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
+        )
+    }
+
+    /// R4189000: with a Dormant Starship the Commander glows in hand, and the play it
+    /// promised launches the Starship and opens the Discover.
+    #[test]
+    fn r4189000_glows_with_a_dormant_starship_and_the_cry_then_launches_it() {
+        for radiant in [false, true] {
+            let (mut s, ship) = holding(&format!("r4189000-glow-{radiant}"), radiant);
+            let commander = s.card(ID).id.clone();
+            assert!(hand_glows(&s, &commander, P1), "radiant {radiant}");
+            assert!(
+                !serde_json::to_string(&s.view(PlayerId::P2)).unwrap().contains("conditionActive"),
+                "the opponent never sees the flag"
+            );
+            s.play(ID, json!({ "zone": 4 }));
+            assert!(is_launched_starship(s.card(ship.as_str())), "radiant {radiant}");
+            assert!(s.state().pending.is_some(), "the Discover opens");
+        }
+    }
+
+    /// R4189000: with no Dormant Starship it stays dark, and the play does nothing.
+    #[test]
+    fn r4189000_dark_without_a_dormant_starship_and_the_cry_then_does_nothing() {
+        for radiant in [false, true] {
+            let mut s = crate::scenario(json!({
+                "seed": format!("r4189000-dark-{radiant}"),
+                "active": "p1",
+                "p1": { "hand": [{ "def": ID, "radiant": radiant }, VANILLA], "mana": 10, "library": crate::filler(4) },
+                "p2": { "hand": crate::filler(1), "library": crate::filler(4) },
+            }));
+            let commander = s.card(ID).id.clone();
+            assert!(!hand_glows(&s, &commander, P1), "radiant {radiant}");
+            s.play(ID, json!({ "zone": 1 }));
+            assert!(s.state().pending.is_none(), "no Discover");
+            assert!(
+                !s.last_events()
+                    .iter()
+                    .any(|event| event.event_type() == GameEventType::StarshipLaunched)
+            );
+        }
     }
 }

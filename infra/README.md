@@ -11,7 +11,7 @@ and the next `terraform plan` shows it. Terraform 1.6 or later; OpenTofu reads t
 | --- | --- | --- | --- |
 | Cloudflare | The jackioh.com zone's DNS records; the Workers' custom domains (`jackioh.com` for `jackioh`, `staging.jackioh.com` for `jackioh-staging`, the dev dashboard's `admin.jackioh.com` for `jackioh-admin` and `admin-staging.jackioh.com` for `jackioh-admin-staging`, and `www.jackioh.com` once it serves); the Access applications and policies that keep staging to the team and the dev dashboard to the devs (R3074000) | `cloudflare.tf` | `wrangler.jsonc` (both Workers, their assets, containers, settings and workers.dev routes) and `apps/admin/wrangler.jsonc` (the dashboard's two Workers), deployed by `promote-production.yml` and `deploy-staging.yml`; the server's secrets (`wrangler secret put`, `apps/edge/README.md`); the Access service token, whose secret would sit in the state |
 | Supabase (production's `fuzpvmjdejvbjcarypyi`, staging's `exmjdaswedxhnzmpzqrq`) | Each project's Authentication Site URL, Redirect URLs and leaked-password protection | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
-| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), the `production` and `staging` rulesets, the runner gate (the `ci-runners` environment and the `CI_GATE_ENVIRONMENT` variable), and the repository's Actions settings (every action allowed; the workflow token reads by default and may approve pull requests, which the daily promotion needs) | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores); the organization's own Actions settings |
+| GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), the `production` and `staging` rulesets, the runner gate (the `ci-runners` environment and the `CI_GATE_ENVIRONMENT` variable), and the repository's Actions settings (every action allowed; the workflow token reads by default and may approve pull requests, which the daily promotion needs) | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores); the organization's own Actions settings; the Actions event policy that allows `pull_request_target` (pull_request_target, below) |
 
 Not here at all: secret values (Actions secrets, the Workers' secrets, the Access service token),
 because the state would hold them. The server's `PUBLIC_ORIGINS` is in `wrangler.jsonc`'s `vars`.
@@ -129,6 +129,30 @@ the merge, and `promote-production.yml` makes `jackioh-admin` on the next promot
 run, apply staging's alone with `-target=cloudflare_workers_custom_domain.admin_staging_jackioh_com`
 (Terraform takes its Access application and policy with it). Each domain waits on its Access
 application (`depends_on`), so the hostname never serves a request Access has not seen.
+
+## pull_request_target
+
+From 2026-12-02 GitHub blocks `pull_request_target` in public repositories unless an Actions event
+policy allows it, and a blocked event shows as a failed run with the policy's annotation. Three
+workflows still need it, and each header says why:
+
+| Workflow | Why `pull_request` will not do |
+| --- | --- |
+| `bot-commands.yml` | the night bot's token on a pull request's `labeled`, `assigned` and `closed`: `pull_request` runs nothing while a pull request has a merge conflict, delivers `closed` unreliably, and gives a fork no secrets |
+| `squishy-commands.yml` | the same, for Squishy |
+| `lock-conversations.yml` | a write token on a fork's pull request, the outsider's thread it locks |
+
+None checks out or runs the pull request's code: each reads the event's payload, and the two bots'
+check out the default branch (`bot/go/tests`, `TestWorkflows_PullRequestTargetOnlyWhereThePolicyAllowsIt`,
+holds the list to this table). `pr-title.yml` and `triage.yml` used it too and run on `pull_request`
+now: neither needs a secret, and triage's labels on a fork's pull request skip quietly.
+
+The policy is the owner's to set, once: in the repository's (or the organization's) Actions
+policies, an event policy that allows `pull_request_target` for those three workflow files and no
+others. Terraform cannot hold it yet, as the GitHub provider has no resource for Actions policies
+(integrations/terraform-provider-github#3724). Without it, the bots never hear a pull request close
+(its issue keeps its `pr-open` label), a label or assignment on one waits for whatever sweep or
+night run reads it, and a fork's pull request is locked by the hourly sweep rather than as it opens.
 
 ## The runner gate
 

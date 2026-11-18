@@ -7,7 +7,11 @@
 //! The next rebuild (`Registry::rebuild`) resumes all three of its folds from a checkpoint that
 //! passes every check in `verify`, and folds only rows after it. On refusal, the whole log is
 //! folded; no replay (R768) reads a checkpoint. A refusal logs its reason, never the body.
+//!
+//! #4169: a co-op or 2v2 match's checkpoint (`duos::checkpoint`) is written by the same `row_for` and
+//! held to the same checks by the same `verify_body`, so the two paths cannot drift apart.
 
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{FoldError, PerPlayer, fnv1a32_utf16};
@@ -38,12 +42,25 @@ pub fn checkpoint_row(
     body: &CheckpointBody,
     at: i64,
 ) -> Result<MatchCheckpointRow, serde_json::Error> {
+    row_for(&match_row.id, &match_row.catalog_version, seq, nonce, body, at)
+}
+
+/// #4169: the row that stores any body, a 1v1's or a co-op match's (`duos::checkpoint`), so both are
+/// stamped alike: this build's rules fingerprint and checkpoint version, and the body's own FNV-1a.
+pub(crate) fn row_for<B: Serialize>(
+    match_id: &str,
+    catalog_version: &str,
+    seq: i64,
+    nonce: &str,
+    body: &B,
+    at: i64,
+) -> Result<MatchCheckpointRow, serde_json::Error> {
     let body = serde_json::to_string(body)?;
     Ok(MatchCheckpointRow {
-        match_id: match_row.id.clone(),
+        match_id: match_id.to_string(),
         seq,
         nonce: nonce.to_string(),
-        catalog_version: match_row.catalog_version.clone(),
+        catalog_version: catalog_version.to_string(),
         rules: RULES_FINGERPRINT.to_string(),
         checkpoint_version: MATCH_CHECKPOINT_VERSION,
         body_hash: fnv1a32_utf16(&body),
@@ -88,27 +105,47 @@ pub fn verify(
     match_row: &MatchRow,
     log: &[MatchActionRow],
 ) -> Result<CheckpointBody, Refusal> {
+    verify_body(
+        checkpoint,
+        &match_row.catalog_version,
+        row_at(log, checkpoint.seq).map(|row| (row.seq, row.action.nonce.as_str())),
+    )
+}
+
+/// #4169: the log row a checkpoint at `seq` follows, if the log (seq order) reaches it.
+pub(crate) fn row_at<R>(log: &[R], seq: i64) -> Option<&R> {
+    usize::try_from(seq.saturating_sub(1))
+        .ok()
+        .and_then(|index| log.get(index))
+}
+
+/// #4169: every check `verify` makes, for a 1v1's body or a co-op match's (`duos::checkpoint`), so the
+/// two cannot drift apart: the match is played under `catalog_version`, and `logged` is the seq and
+/// nonce of the log row at the checkpoint's place (`row_at`), if there is one.
+pub(crate) fn verify_body<B: Serialize + DeserializeOwned>(
+    checkpoint: &MatchCheckpointRow,
+    catalog_version: &str,
+    logged: Option<(i64, &str)>,
+) -> Result<B, Refusal> {
     if checkpoint.checkpoint_version != MATCH_CHECKPOINT_VERSION {
         return Err(Refusal::Version);
     }
     if checkpoint.rules != RULES_FINGERPRINT {
         return Err(Refusal::Rules);
     }
-    if checkpoint.catalog_version != match_row.catalog_version {
+    if checkpoint.catalog_version != catalog_version {
         return Err(Refusal::Catalog);
     }
-    let row = usize::try_from(checkpoint.seq.saturating_sub(1))
-        .ok()
-        .and_then(|index| log.get(index))
-        .filter(|row| row.seq == checkpoint.seq)
+    let (_, nonce) = logged
+        .filter(|(seq, _)| *seq == checkpoint.seq)
         .ok_or(Refusal::Seq)?;
-    if row.action.nonce != checkpoint.nonce {
+    if nonce != checkpoint.nonce {
         return Err(Refusal::Nonce);
     }
     if fnv1a32_utf16(&checkpoint.body) != checkpoint.body_hash {
         return Err(Refusal::Hash);
     }
-    let body: CheckpointBody = serde_json::from_str(&checkpoint.body).map_err(|_| Refusal::Body)?;
+    let body: B = serde_json::from_str(&checkpoint.body).map_err(|_| Refusal::Body)?;
     if serde_json::to_string(&body).ok().as_deref() != Some(checkpoint.body.as_str()) {
         return Err(Refusal::Shape);
     }

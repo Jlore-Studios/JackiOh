@@ -10,7 +10,8 @@ import { DEFAULT_FILTER, DEFAULT_SORT, almanacPool } from "../game/deckbuilder/f
 import { poolWindow, type PoolBand, type PoolShape } from "../game/deckbuilder/poolWindow.ts";
 import { CARD_POOL, DB_RESULT_COUNT, DB_SEARCH, poolCardId } from "../game/deckbuilder/testids.ts";
 import { at } from "../test/stubServer.ts";
-import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
+import AlmanacRoute from "./almanac.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
 
 /** What the page says of the grid's layout. */
 const layout = vi.hoisted(() => ({
@@ -25,7 +26,7 @@ vi.mock("../game/deckbuilder/poolWindow.ts", async (importOriginal) => ({
   readBand: () => layout.band,
 }));
 
-const POOL = almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT);
+const POOL = almanacPool(currentCatalog(), DEFAULT_FILTER, DEFAULT_SORT);
 
 /** Grids of 700 cards take a while to open under jsdom. */
 const SLOW_GRID = { timeout: 30_000 } as const;
@@ -71,7 +72,7 @@ describe("#2334 the Almanac's grid mounts only the rows near the view", SLOW_GRI
     expect(mounted()).not.toContain(POOL[0]);
 
     await userEvent.type(screen.getByTestId(DB_SEARCH), "speciesist");
-    const kept = almanacPool(ALMANAC_CATALOG, { ...DEFAULT_FILTER, search: "speciesist" }, DEFAULT_SORT);
+    const kept = almanacPool(currentCatalog(), { ...DEFAULT_FILTER, search: "speciesist" }, DEFAULT_SORT);
     expect(kept.length).toBeGreaterThan(0);
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(kept.length));
     expect(mounted()).toEqual(kept);

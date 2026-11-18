@@ -18,7 +18,7 @@ import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { useOfferedPortraits } from "./ownedPortraits.ts";
 import { emoteShowInfo, playEmote } from "./play.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
-import { PORTRAIT_DEFS } from "./portraits.ts";
+import { portraitDefs } from "./portraits.ts";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
 import { EmoteShow, VOICE_LABEL } from "./ui.tsx";
 
@@ -39,7 +39,7 @@ function PortraitTile({
   onPick: () => void;
   onPreview: () => void;
 }): ReactElement {
-  const { def } = PORTRAIT_DEFS[portrait];
+  const { def } = portraitDefs()[portrait];
   const name = readerName(def);
   return (
     <div className="portrait-tile" data-portrait={portrait} data-selected={selected ? "true" : undefined}>
@@ -135,7 +135,7 @@ export function PortraitPicker({
     playEmote(getAudioEngine(), forPortrait, emote);
   }, []);
 
-  const { def } = PORTRAIT_DEFS[portrait];
+  const { def } = portraitDefs()[portrait];
   return (
     <div className="portrait-picker" ref={root} data-testid="portrait-picker">
       <button
@@ -184,7 +184,7 @@ export function PortraitPicker({
               <span className="portrait-preview-show">
                 {show === null ? null : <EmoteShow key={show.key} show={show} />}
               </span>
-              <div className="portrait-preview-lines" role="group" aria-label={t("{name}'s emotes", { name: readerName(PORTRAIT_DEFS[previewing].def) })}>
+              <div className="portrait-preview-lines" role="group" aria-label={t("{name}'s emotes", { name: readerName(portraitDefs()[previewing].def) })}>
                 {VOICE_EMOTE_IDS.map((emote) => (
                   <button
                     key={emote}

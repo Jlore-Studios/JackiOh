@@ -180,9 +180,11 @@ func TestRepoMeta_ABotThatHasNoPassingTitleWritesOne(t *testing.T) {
 
 func TestRepoMeta_EveryTitleAndHeadIsCheckedNeverWithThePullRequestsCode(t *testing.T) {
 	text := workflowsRead(t, "pr-title.yml")
-	assertRegex(t, text, `pull_request_target:\n\s+types: \[opened, edited, reopened, `+
+	// `pull_request`, not `_target` (infra/README.md, "pull_request_target"): it needs no secret
+	// and no write, and the checkout below is the default branch's, never the pull request's.
+	assertRegex(t, text, `(?m)^  pull_request:\n\s+types: \[opened, edited, reopened, `+
 		`synchronize\]`)
-	assertNotRegex(t, text, `(?m)^  pull_request:`, "would run the pull request's code")
+	assertNotRegex(t, text, workflowsOnTarget.String())
 	assertEqual(t, workflowsFindall(workflowsRef, text),
 		[]string{"${{ github.event.repository.default_branch }}"})
 	assertIn(t, "persist-credentials: false", text)

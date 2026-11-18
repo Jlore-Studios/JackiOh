@@ -2,12 +2,14 @@
 //! a private lobby, against two more people (R3731002), as two 1v1 duels side by side (the engine's `DuosState` wrapper), served by its own rooms, its own socket
 //! (`/ws/duos`) and one actor per match (`registry`, `protocol`, `engine`, `store`).
 //!
-//! Submodules: `rooms` (HTTP routes), `again` (R2092000), `replay` (B41), `ws` (B35), `actor` (B35–B40).
+//! Submodules: `rooms` (HTTP routes), `again` (R2092000), `replay` (B41), `ws` (B35), `actor` (B35–B40),
+//! `checkpoint` (#4169).
 //! Nothing touches a 1v1 match (S6: co-op games are unranked). Its result pays every person
 //! through the reward hook (`finish_match`, [[R1502000]], R3731003).
 
 pub mod actor;
 pub mod again;
+pub mod checkpoint;
 pub mod engine;
 pub mod protocol;
 pub mod registry;

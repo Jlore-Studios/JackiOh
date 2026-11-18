@@ -1,6 +1,6 @@
-//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039, 0051 and 0091):
-//! rooms, matches, and logs over Postgres or fake `FakeTables::duos`. A 2v2's match row holds team
-//! B's people too (`b1`, `b2`, R3731002).
+//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039, 0051, 0091 and 0097):
+//! rooms, matches, logs and live matches' checkpoints (#4169) over Postgres or fake `FakeTables::duos`.
+//! A 2v2's match row holds team B's people too (`b1`, `b2`, R3731002).
 //!
 //! Store methods on `Tx` dispatch to `pg` or `fake`. Nonces logged at their own seq return that
 //! row; other clashes error as `StoreError::SeqClash` (R776000). Timestamps are `i64` epoch ms.
@@ -13,7 +13,7 @@ use jackioh_engine::wire::{DUOS_SEATS, DuosAction, DuosActionBody, DuosSeat, Duo
 use jackioh_engine::{Handicap, LeanPick};
 use jackioh_shared::host::DuosTeamB;
 
-use crate::db::store::{FrozenDeck, StoreResult, Tx};
+use crate::db::store::{FrozenDeck, MatchCheckpointRow, StoreResult, Tx};
 
 /// Frozen deck or random choice (S6, R253, R258, R1372, R924000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -183,6 +183,8 @@ pub struct DuosTables {
     pub rooms: Vec<DuosRoom>,
     pub matches: Vec<DuosMatch>,
     pub actions: Vec<DuosActionRow>,
+    /// #4169: migration 0097's `public.duos_match_checkpoints`, one row per live match at most.
+    pub checkpoints: Vec<MatchCheckpointRow>,
 }
 
 /// Logged action JSON (`{ seat, nonce, body }`).
@@ -286,7 +288,22 @@ impl Tx<'_> {
         duos_dispatch!(self, matches_live())
     }
 
-    /// B40: writes result and `ended_at` once (first write stands).
+    /// #4169: stores the match's checkpoint, only while the match is live (no `ended_at`) and its log
+    /// holds `row.seq` under `row.nonce`, and in place of an earlier seq's only. Answers whether it was
+    /// stored.
+    pub async fn duos_matches_put_checkpoint(&mut self, row: &MatchCheckpointRow) -> StoreResult<bool> {
+        duos_dispatch!(self, matches_put_checkpoint(row))
+    }
+
+    pub async fn duos_matches_checkpoint(
+        &mut self,
+        match_id: &str,
+    ) -> StoreResult<Option<MatchCheckpointRow>> {
+        duos_dispatch!(self, matches_checkpoint(match_id))
+    }
+
+    /// B40: writes result and `ended_at` once (first write stands), and drops the match's checkpoint
+    /// (#4169).
     pub async fn duos_matches_finish(
         &mut self,
         match_id: &str,
@@ -351,6 +368,7 @@ mod pg {
 
     use super::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
     use crate::auth::is_uuid;
+    use crate::db::store::MatchCheckpointRow;
     // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`), so it
     // runs as `service_role` with `request.jwt.claim.sub` the profile the call is about (or none).
     use crate::db::pg::{PgTx, json, ms_of, run_as, uuid_text, uuid_text_or_null};
@@ -640,7 +658,80 @@ mod pg {
         .bind(at)
         .execute(&mut **t)
         .await?;
+        // #4169: a match that has ended is never rebuilt from its checkpoint, so it goes with the ending.
+        sqlx::query("delete from public.duos_match_checkpoints where match_id = $1::uuid")
+            .bind(match_id)
+            .execute(&mut **t)
+            .await?;
         Ok(done.rows_affected() == 1)
+    }
+
+    /// #4169: one statement, so the guards and the write cannot come apart (as `db::pg`'s 1v1 one).
+    pub async fn matches_put_checkpoint(
+        t: &mut PgTx<'_>,
+        row: &MatchCheckpointRow,
+    ) -> Result<bool, StoreError> {
+        run_as(t, None).await?;
+        if !is_uuid(&row.match_id) {
+            return Ok(false);
+        }
+        let done = sqlx::query(
+            "insert into public.duos_match_checkpoints
+               (match_id, seq, nonce, catalog_version, rules, checkpoint_version, body, body_hash, at)
+             select $1::uuid, $2::bigint, $3::text, $4::text, $5::text, $6::integer, $7::text, $8::text,
+                    to_timestamp($9::double precision / 1000.0)
+              where exists (select 1 from public.duos_matches m where m.id = $1::uuid and m.ended_at is null)
+                and exists (select 1 from public.duos_match_actions a
+                             where a.match_id = $1::uuid and a.seq = $2::bigint and a.nonce = $3::text)
+             on conflict (match_id) do update set
+               seq = excluded.seq, nonce = excluded.nonce, catalog_version = excluded.catalog_version,
+               rules = excluded.rules, checkpoint_version = excluded.checkpoint_version, body = excluded.body,
+               body_hash = excluded.body_hash, at = excluded.at
+              where public.duos_match_checkpoints.seq < excluded.seq",
+        )
+        .bind(row.match_id.as_str())
+        .bind(row.seq)
+        .bind(row.nonce.as_str())
+        .bind(row.catalog_version.as_str())
+        .bind(row.rules.as_str())
+        .bind(row.checkpoint_version)
+        .bind(row.body.as_str())
+        .bind(row.body_hash.as_str())
+        .bind(row.at)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected() > 0)
+    }
+
+    pub async fn matches_checkpoint(
+        t: &mut PgTx<'_>,
+        match_id: &str,
+    ) -> Result<Option<MatchCheckpointRow>, StoreError> {
+        run_as(t, None).await?;
+        if !is_uuid(match_id) {
+            return Ok(None);
+        }
+        let row = sqlx::query(
+            "select seq, nonce, catalog_version, rules, checkpoint_version, body, body_hash, at
+               from public.duos_match_checkpoints where match_id = $1::uuid",
+        )
+        .bind(match_id)
+        .fetch_optional(&mut **t)
+        .await?;
+        row.map(|row| -> Result<MatchCheckpointRow, StoreError> {
+            Ok(MatchCheckpointRow {
+                match_id: match_id.to_string(),
+                seq: row.try_get("seq")?,
+                nonce: row.try_get("nonce")?,
+                catalog_version: row.try_get("catalog_version")?,
+                rules: row.try_get("rules")?,
+                checkpoint_version: row.try_get("checkpoint_version")?,
+                body: row.try_get("body")?,
+                body_hash: row.try_get("body_hash")?,
+                at: ms_of(row.try_get("at")?),
+            })
+        })
+        .transpose()
     }
 
     pub async fn actions_append(t: &mut PgTx<'_>, row: &DuosActionRow) -> Result<(), StoreError> {
@@ -729,7 +820,7 @@ mod fake {
 
     use super::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome, DuosTables};
     use crate::db::fake::FakeTx;
-    use crate::db::store::StoreError;
+    use crate::db::store::{MatchCheckpointRow, StoreError};
 
     /// Fault-injection and race hooks for fake calls (`db::fake`).
     fn call<'t>(f: &'t mut FakeTx<'_>, method: &str) -> Result<&'t mut DuosTables, StoreError> {
@@ -863,6 +954,8 @@ mod fake {
         at: i64,
     ) -> Result<bool, StoreError> {
         let tables = call(f, "duos.matches.finish")?;
+        // #4169: as Postgres's `matches_finish`, the ending drops the checkpoint.
+        tables.checkpoints.retain(|row| row.match_id != match_id);
         let Some(row) = tables
             .matches
             .iter_mut()
@@ -873,6 +966,43 @@ mod fake {
         row.ended_at = Some(at);
         row.result = Some(result.clone());
         Ok(true)
+    }
+
+    pub fn matches_put_checkpoint(f: &mut FakeTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
+        let tables = call(f, "duos.matches.putCheckpoint")?;
+        let live = tables
+            .matches
+            .iter()
+            .any(|held| held.id == row.match_id && held.ended_at.is_none());
+        let logged = tables
+            .actions
+            .iter()
+            .any(|held| held.match_id == row.match_id && held.seq == row.seq && held.nonce == row.nonce);
+        if !live || !logged {
+            return Ok(false);
+        }
+        match tables
+            .checkpoints
+            .iter_mut()
+            .find(|held| held.match_id == row.match_id)
+        {
+            None => tables.checkpoints.push(row.clone()),
+            Some(held) if held.seq < row.seq => *held = row.clone(),
+            Some(_) => return Ok(false),
+        }
+        Ok(true)
+    }
+
+    pub fn matches_checkpoint(
+        f: &mut FakeTx<'_>,
+        match_id: &str,
+    ) -> Result<Option<MatchCheckpointRow>, StoreError> {
+        let tables = call(f, "duos.matches.checkpoint")?;
+        Ok(tables
+            .checkpoints
+            .iter()
+            .find(|row| row.match_id == match_id)
+            .cloned())
     }
 
     pub fn actions_append(f: &mut FakeTx<'_>, row: &DuosActionRow) -> Result<(), StoreError> {

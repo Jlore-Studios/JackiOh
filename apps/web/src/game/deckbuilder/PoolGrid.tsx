@@ -38,10 +38,10 @@ import {
 } from "../../cards/index.ts";
 import { OwnershipContext, type CardOwnership } from "../../cards/cosmetics.ts";
 import { FullArtOwned, OwnCopy, useFullArt, useOwnCopy } from "../../cards/fullArt.ts";
-import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
+import { readerName, readerTerms } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
-import { getLocale, t, useLocale } from "../../i18n/i18n.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { mountedAt, poolCell, poolRowTracks } from "./poolWindow.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import { usePoolWindow } from "./usePoolWindow.ts";
@@ -152,7 +152,7 @@ export function poolCardLabel(
   fresh = false,
 ): string {
   // The type and rarity in the card frame's own words (cards/chinese.ts, R1303).
-  const terms = CARD_TABLES[getLocale()]?.terms;
+  const terms = readerTerms();
   const rarity = terms?.rarities[def.rarity] ?? def.rarity;
   const printed = def.printedRarity;
   const rarityWords =

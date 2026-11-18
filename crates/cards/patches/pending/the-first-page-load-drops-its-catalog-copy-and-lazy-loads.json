@@ -1,0 +1,17 @@
+{
+  "title": "Patch: the first page load drops its catalog copy and lazy-loads the Chinese tables",
+  "sources": "#4180",
+  "notes": "The first page load no longer ships its own copy of the card catalog or the Chinese card tables (#4180). Every screen reads the engine module's registered catalog through game/currentCatalog.ts, and cards/chinese.ts loads its two sidecars on demand via loadCardTables(). Nothing visible changes. Claims --visual because the refactor touches apps/web/src/cards/ (R2529000), a micro of no family.",
+  "player": {
+    "title": "Faster first load",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "The first page loads faster on a slow connection, with the same cards and words."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}

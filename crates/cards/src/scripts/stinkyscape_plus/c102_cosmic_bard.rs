@@ -4,8 +4,8 @@
 //!   Radiant: "Combo: Draw {summons} Units and set both their costs to the cheapest drawn."
 //!
 //! A Combo is met by one card played earlier this turn (§6.2): `played_earlier`, this play's own place in
-//! the turn's log, as Core #10 Rapid Replenish reads it. The hand's yellow glow (R195) is not declared: it
-//! needs a `conditionMet` hook, which `tests/cross/condition_active.rs` pins to a closed list of cards.
+//! the turn's log, as Core #10 Rapid Replenish reads it. The hand's yellow glow (R195) is declared: a
+//! `conditionMet` hook asks the same count from the hand (R4189000).
 //! The Cry draws the topmost Units of its controller's library, top first (R801: a kind of card drawn from
 //! the deck takes the topmost matches, no random number), each its own named §2.4 draw, so the hand cap, a
 //! cast on draw and the draw limit apply to each (R135). The library may hold fewer Units than `summons`:
@@ -33,6 +33,12 @@ fn topmost_units(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
 
 fn bard(radiant: bool) -> Script {
     Script {
+        // R4189000: in hand the card glows once a card was played earlier this turn, the same
+        // count the Cry reads, as Core #10 Rapid Replenish reads it.
+        condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
+            ctx.zone == ConditionZone::Hand
+                && played_earlier(ctx.state, ctx.controller, ctx.self_) >= COMBO
+        })),
         cry: Some(hook(move |ctx| {
             if played_earlier(ctx.state, ctx.controller, ctx.live_self()) < COMBO {
                 return vec![];
@@ -137,6 +143,46 @@ mod tests {
         s.play(ID, json!({}));
         assert_eq!(def_ids(&s.hand(P1)), vec![CHEAP.to_string(), FILLER.to_string()]);
         assert_eq!(s.pile(P1, "library").len(), 3);
+    }
+
+    /// R4189000: the Bard is dark with nothing played earlier, glows after one play, and the
+    /// play it promised draws the 2 Units.
+    #[test]
+    fn r4189000_base_dark_first_glows_after_one_play_and_draws_2() {
+        let mut s = board(false, json!([SPELL, DEAR, CHEAPEST, MIDDLING, FILLER]));
+        let bard = s.card(ID).id.clone();
+        assert!(!hand_glows(&s, &bard, P1));
+        s.play(CHEAP, json!({}));
+        let bard = s.card(ID).id.clone();
+        assert!(hand_glows(&s, &bard, P1));
+        assert!(
+            !serde_json::to_string(&s.view(PlayerId::P2)).unwrap().contains("conditionActive"),
+            "the opponent never sees the flag"
+        );
+        s.play(ID, json!({}));
+        assert_eq!(
+            def_ids(&s.hand(P1)),
+            vec![FILLER.to_string(), DEAR.to_string(), CHEAPEST.to_string()]
+        );
+    }
+
+    /// R4189000: the Radiant face asks the same count from the hand, and the play sets both
+    /// drawn Units to the cheapest drawn.
+    #[test]
+    fn r4189000_radiant_glows_after_one_play_and_sets_both_costs_to_the_cheapest() {
+        let mut s = board(true, json!([SPELL, DEAR, CHEAPEST, MIDDLING]));
+        let bard = s.card(ID).id.clone();
+        assert!(!hand_glows(&s, &bard, P1));
+        s.play(CHEAP, json!({}));
+        let bard = s.card(ID).id.clone();
+        assert!(hand_glows(&s, &bard, P1));
+        s.play(ID, json!({}));
+        assert_eq!(
+            def_ids(&s.hand(P1)),
+            vec![FILLER.to_string(), DEAR.to_string(), CHEAPEST.to_string()]
+        );
+        assert_eq!(price(&s, DEAR), 1);
+        assert_eq!(price(&s, CHEAPEST), 1);
     }
 
     #[test]

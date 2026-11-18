@@ -14,7 +14,18 @@ import { liveFace } from "../game/faces.ts";
 import { card, fusedDef, unit } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
-import { CHINESE, CHINESE_TERMS, chineseDef, chineseName } from "./chinese.ts";
+import {
+  CHINESE,
+  CHINESE_TERMS,
+  cardTablesReady,
+  chineseDef,
+  chineseName,
+  loadCardTables,
+  readerName,
+  readerTerms,
+  resetCardTablesForTests,
+} from "./chinese.ts";
+import { LOCALE_STORAGE_KEY, getLocale, initLocale, resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
 import { DORMANT_STARSHIP_ID } from "./fused.ts";
 import { Glossary } from "./inspect/Glossary.tsx";
@@ -29,13 +40,17 @@ import { GLOSSARY, legacyText, markedText } from "../test/faceData.ts";
 const glossaryOf = (face: FaceModel): FaceModel["glossary"] => face.glossary;
 
 // R1017001: a full-art face prints none of its words, so full art is off here (fullArt.test.tsx).
-beforeEach(() => {
+beforeEach(async () => {
   writeCardSettings({ fullArt: false });
+  resetLocaleForTests();
+  // #4180: the tables load on demand; every test below starts with them in, English reading.
+  await loadCardTables();
 });
 
 afterEach(() => {
   cleanup();
   resetCosmeticsForTests();
+  resetLocaleForTests();
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
 });
 
@@ -83,6 +98,45 @@ describe("R1303 the frame's words", () => {
       expect(entry.label.trim(), id).not.toBe("");
       expect(entry.rule.trim(), id).not.toBe("");
     }
+  });
+});
+
+describe("#4180 the card tables on demand", () => {
+  it("R711000 before the tables arrive a lookup falls back to English", async () => {
+    resetCardTablesForTests();
+    expect(cardTablesReady()).toBe(false);
+    const target = def("core-002");
+    // No entry and no terms: the card reads exactly as given, as `t()` does for a missing entry.
+    expect(chineseName(target.id, target.name)).toBe(target.name);
+    expect(chineseDef(target)).toBe(target);
+    expect(readerTerms()).toBeUndefined();
+    await loadCardTables();
+    expect(cardTablesReady()).toBe(true);
+    expect(chineseName(target.id, target.name)).toBe(must(CHINESE[target.id], target.id).name);
+  });
+
+  it("R711000 initLocale with stored Chinese paints Chinese names on the first render", async () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, "zh-CN");
+    await initLocale();
+    expect(getLocale()).toBe("zh-CN");
+    expect(readerName(def("core-002"))).toBe(must(CHINESE["core-002"], "core-002").name);
+    expect(readerTerms()).toBe(CHINESE_TERMS);
+  });
+
+  it("R711000 setLocale to Chinese paints Chinese names once it resolves", async () => {
+    await setLocale("zh-CN");
+    expect(getLocale()).toBe("zh-CN");
+    expect(readerName(def("core-002"))).toBe(must(CHINESE["core-002"], "core-002").name);
+    expect(readerTerms()).toBe(CHINESE_TERMS);
+  });
+
+  it("R1301 an English reader's gated screen names a flagged view's card in Chinese", () => {
+    // `main.tsx`'s EngineGate loads `loadCardTables()` best-effort beside the module, so a gated
+    // screen draws with the tables in whatever the reader reads: English here, the flag's Chinese on the face.
+    expect(getLocale()).toBe("en");
+    expect(cardTablesReady()).toBe(true);
+    const root = draw(inPlay(card({ defId: "core-002", cost: 3, chinese: true })));
+    expect(text(root, ".card-name")).toBe(zh("core-002").name);
   });
 });
 
