@@ -185,7 +185,11 @@ shipyard's launch exiles the hull and stands a fresh Starship in its place. Then
 ability, and each Dormant card of the seat's acting to awaken, is priced the same way and keyed by the
 card as the seat holds it now (R3575400, R923001: a hand card is spawned where a play would put it
 first), so a play worth the Activate it leaves reads it the moment it lands, not a turn later; the
-enemy's hand is never probed. A shipyard's turn-start fuse (R3539004) is no hook of its script, so
+enemy's hand is never probed. At the seat's own open prompt whose card acts on its side with an Activate
+its face declares (#98 Heroic Power's Discover of its power, R3134002), `prompt_activation_prices`
+simulates each answer once, in `action_key` order, within `AI_PROMPT_ACTIVATION_PROBE_NODES`, and prices
+the power an answer leaves that card the same way; every price is keyed by the power its card holds
+(`memory.power`, R43), so a lasting pick reads what each power keeps giving (R4197000). A shipyard's turn-start fuse (R3539004) is no hook of its script, so
 `turn_hook_prices` prices it by one run of the engine's own yard step, for each Dormant shipyard on
 either field and each in the seat's hand, and `slumber_worth` adds `AI_EVAL.turn_hook` of it outside the
 slumber share, which that probe's own evaluation already applied (R3575402).

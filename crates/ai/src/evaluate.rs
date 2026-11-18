@@ -54,11 +54,11 @@ use jackioh_engine::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
+use crate::candidates::{Side, action_key, blow, cleaved_neighbours, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS, AI_TURN_HOOK_PROBE_NODES,
-    EvalWeights,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS,
+    AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -469,14 +469,17 @@ fn turn_hook_price(state: &GameState, card: &CardInstance, w: &EvalWeights, pric
 }
 
 /// R2564000, R2603000: what one use of a card's Activate gives its controller, as a decision's root priced
-/// it (`activation_prices`), and the card it prices: its definition, its face and its controller, so the
-/// same card the search moves or makes later reads the same price. The controller is in the key since
-/// each copy aims at a different board.
+/// it (`activation_prices`), and the card it prices: its definition, its face, its controller and the
+/// power it holds (R4197000), so the same card the search moves or makes later reads the same price. The
+/// controller is in the key since each copy aims at a different board.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ActivationPrice {
     pub def_id: String,
     pub radiant: bool,
     pub controller: PlayerId,
+    /// R4197000: the power the card held when it was priced (`memory.power`, R43), since #98 Heroic
+    /// Power's Activate is its power's; `None` for every other card.
+    pub power: Option<String>,
     pub price: f64,
 }
 
@@ -487,13 +490,24 @@ impl ActivationPrice {
             def_id: card.def_id.clone(),
             radiant: card.radiant,
             controller: card.controller,
+            power: held_power(card).map(str::to_string),
             price: 0.0,
         }
     }
 
     fn is_for(&self, card: &CardInstance) -> bool {
-        self.def_id == card.def_id && self.radiant == card.radiant && self.controller == card.controller
+        self.def_id == card.def_id
+            && self.radiant == card.radiant
+            && self.controller == card.controller
+            && self.power.as_deref() == held_power(card)
     }
+}
+
+/// R4197000, R43: the power `card` holds, which only #98 Heroic Power writes; `None` for every other card.
+fn held_power(card: &CardInstance) -> Option<&str> {
+    card.memory
+        .get(subsystems::POWER_KEY)
+        .and_then(serde_json::Value::as_str)
 }
 
 /// R2688000: what a unit's next attack gives its controller through its "when this attacks" and
@@ -2769,6 +2783,122 @@ fn rekeyed_activation_prices(
             return;
         }
     }
+}
+
+/// R4197000: the card `seat`'s own open prompt resumes on (`resume.instance_id`) when it is one of the
+/// seat's cards the probes try (`activate_sources`) and its face declares an Activate (`script_of`), as
+/// #98 Heroic Power's does while its Cry's Discover of a power is open (R3134002). `None` at a prompt
+/// that is not the seat's, or whose card is anything else: a Spell's, a hand card's, a card with no
+/// Activate.
+fn prompt_card(world: &GameState, seat: PlayerId) -> Option<&CardInstance> {
+    let pending = world
+        .pending
+        .as_ref()
+        .filter(|pending| pending.player_id == seat)?;
+    let id = pending.resume.instance_id.as_deref()?;
+    activate_sources(world, seat)
+        .into_iter()
+        .find(|card| card.id == id)
+        .filter(|card| !script_of(world, *card).activations.is_empty())
+}
+
+/// R4197000, R3575400: the activation prices a decision at `seat`'s own open prompt passes for the power
+/// each answer leaves the prompt's card (`prompt_card`), so a pick that lasts the game reads what each
+/// power keeps giving. Each answer `legal_actions` lists is played once on a copy of `world`, in
+/// `action_key` order, with both players' automatic turn end off (R345); where it leaves the seat's own
+/// main phase with no prompt open and the card holding a power it did not hold before, the seat ends its
+/// turn and then the enemy (`next_turn`), and the card's uses alone are tried at the start of the seat's
+/// next turn (`price_uses`), as R3575400 prices a hand card. The price is keyed by the card as the answer
+/// leaves it, its power included (`ActivationPrice::key`). Nothing is priced, and no node spent, at a
+/// zero `activation` weight, once the game is over, outside the seat's own main phase, or at any prompt
+/// whose card is not `prompt_card`; an answer that fails, leaves a prompt open, leaves the card's power
+/// as it was, or that the nodes do not reach prices nothing. At most `AI_PROMPT_ACTIVATION_PROBE_NODES`
+/// nodes of `counter`.
+pub fn prompt_activation_prices(
+    world: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+) -> Vec<ActivationPrice> {
+    let mut priced: Vec<ActivationPrice> = Vec::new();
+    if AI_EVAL.activation == 0.0
+        || world.result.is_some()
+        || world.active != seat
+        || world.phase != Phase::Main
+    {
+        return priced;
+    }
+    let Some(card) = prompt_card(world, seat) else {
+        return priced;
+    };
+    let mut answers: Vec<ActionBody> = legal_actions(world, seat)
+        .into_iter()
+        .filter(|action| matches!(action, ActionBody::Answer { .. }))
+        .collect();
+    answers.sort_by_cached_key(action_key);
+    // R345: automatic turn end off before the answer, else a pick that leaves nothing to play ends the
+    // turn inside the answer's own reduce.
+    let mut start = world.clone();
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    let hidden = hidden_card_ids(world, seat);
+    let probes = create_sub_counter(counter, AI_PROMPT_ACTIVATION_PROBE_NODES);
+    for answer in &answers {
+        let answered = match simulate(&start, seat, answer, &probes, Prices::NONE) {
+            None => break,
+            Some(Err(_)) => continue,
+            Some(Ok(answered)) => answered,
+        };
+        if answered.pending.is_some()
+            || answered.result.is_some()
+            || answered.active != seat
+            || answered.phase != Phase::Main
+        {
+            continue;
+        }
+        let Some(now) = activate_sources(&answered, seat)
+            .into_iter()
+            .find(|other| other.id == card.id)
+        else {
+            continue;
+        };
+        if held_power(now).is_none()
+            || held_power(now) == held_power(card)
+            || priced.iter().any(|entry| entry.is_for(now))
+        {
+            continue;
+        }
+        // From here as `rekeyed_activation_prices`' tail: two turn ends, the card's uses alone.
+        let Some(enemy_turn) = next_turn(&answered, seat, &probes) else {
+            break;
+        };
+        let Some(enemy_turn) = enemy_turn else {
+            continue;
+        };
+        let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), &probes) else {
+            break;
+        };
+        let Some(own_turn) = own_turn else {
+            continue;
+        };
+        let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
+            .into_iter()
+            .filter(|other| other.id != now.id)
+            .map(ActivationPrice::key)
+            .collect();
+        let mut fresh: Vec<ActivationPrice> = Vec::new();
+        let cut = !price_uses(&own_turn, seat, &hidden, &probes, &mut tried, &mut fresh);
+        if let Some(price) = fresh.into_iter().map(|entry| entry.price).reduce(f64::max) {
+            priced.push(ActivationPrice {
+                price,
+                ..ActivationPrice::key(now)
+            });
+        }
+        if cut {
+            break;
+        }
+    }
+    priced
 }
 
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla

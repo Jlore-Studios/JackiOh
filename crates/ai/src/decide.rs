@@ -36,7 +36,7 @@ use crate::config::{
 use crate::determinize::{DetGround, DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
     Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, holds_starship,
-    turn_hook_prices,
+    prompt_activation_prices, turn_hook_prices,
 };
 use crate::learned::{LEARNED, unknown_root};
 use crate::lethal::{find_lethal, trim_lethal};
@@ -423,7 +423,9 @@ pub fn probe_world(public: &GameState, seat: PlayerId, ground: &DetGround) -> Ga
 /// backrow card's and a hand Field Spell's among them), turn hook, Activate, attack hook and Dormant
 /// card's awakening the seat can read, priced once on the probe world (`probe_world` of `public`) for the
 /// whole decision from `counter`'s nodes; all are priced before any is passed, so no probe reads a price.
-/// R4070000: `decide` and `decision_prices_at` both take a decision's prices from here.
+/// R4197000: and, at the seat's own prompt whose card can take a power, what each answer's power gives
+/// (`prompt_activation_prices`). R4070000: `decide` and `decision_prices_at` both take a decision's prices
+/// from here.
 pub fn decision_prices(
     public: &GameState,
     probe: &GameState,
@@ -432,7 +434,10 @@ pub fn decision_prices(
 ) -> Prices {
     let deaths = death_prices(probe, seat, counter);
     let turn_hooks = turn_hook_prices(probe, seat, counter);
-    let activations = activation_prices(probe, seat, counter);
+    let mut activations = activation_prices(probe, seat, counter);
+    // R4197000: at the seat's own prompt that gives a card its power for the game (Heroic Power's Discover),
+    // the power each answer leaves it; nothing at every other prompt and with no prompt open.
+    activations.extend(prompt_activation_prices(probe, seat, counter));
     let attack_hooks = attack_hook_prices(probe, seat, counter);
     let awakenings = awaken_prices(probe, seat, counter);
     Prices {
