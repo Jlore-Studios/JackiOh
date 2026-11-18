@@ -16537,7 +16537,8 @@
       "started_at": "2026-11-18T14:21:47Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6981915271
     },
     "4198": {
       "action": "revise",
