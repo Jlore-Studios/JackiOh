@@ -17571,13 +17571,30 @@
       "started_at": "2026-11-18T17:26:06Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "4221": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "claude-8",
+      "owner_since": "2026-11-18T17:38:17Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "claude-8",
+      "run_id": "pending:5bc216ca-1795023451",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-18T17:38:17Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T17:26:06Z",
+    "at": "2026-11-18T17:38:17Z",
     "url": "",
-    "what": "plan #4218 on muse"
+    "what": "plan #4221 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-18T17:19:11Z",
