@@ -16052,6 +16052,13 @@
     "4185": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T14:14:48Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Medium: not engine rules, AI, cross-crate design, migration, or 40+ files \u2014 a 3-file web a11y change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
