@@ -14926,9 +14926,10 @@
       "started_at": "2026-11-18T09:45:06Z",
       "stop_requested": false,
       "strike_log": [
+        "the run failed: no builder session in the run worked: built and checked; its own review run, on this subscription, reviews it next",
         "the run failed: no builder session in the run worked: built and checked; its own review run, on this subscription, reviews it next"
       ],
-      "strikes": 1,
+      "strikes": 2,
       "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6969648866
