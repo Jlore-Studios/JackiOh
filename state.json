@@ -16234,12 +16234,13 @@
     "what": "build #4171 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-18T06:59:30Z",
+    "at": "2026-11-18T07:07:23Z",
     "notes": [
-      "#4178 is held for `claude-1` until 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
-      "started review #4178 on claude-1 (run 44255559703)",
+      "delivered review #4178 on claude-1 (run 44255559703): approved",
+      "delivered plan #4171 on claude-8 (run 44252163730): planned",
+      "started build #4171 on claude-8 (run 44256708695)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16945,7 +16946,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T06:59:30Z",
+  "loop_tick": "2026-11-18T07:07:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
