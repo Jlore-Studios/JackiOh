@@ -1,4 +1,4 @@
-//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039, 0051, 0091 and 0096):
+//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039, 0051, 0091 and 0097):
 //! rooms, matches, logs and live matches' checkpoints (#4169) over Postgres or fake `FakeTables::duos`.
 //! A 2v2's match row holds team B's people too (`b1`, `b2`, R3731002).
 //!
@@ -183,7 +183,7 @@ pub struct DuosTables {
     pub rooms: Vec<DuosRoom>,
     pub matches: Vec<DuosMatch>,
     pub actions: Vec<DuosActionRow>,
-    /// #4169: migration 0096's `public.duos_match_checkpoints`, one row per live match at most.
+    /// #4169: migration 0097's `public.duos_match_checkpoints`, one row per live match at most.
     pub checkpoints: Vec<MatchCheckpointRow>,
 }
 

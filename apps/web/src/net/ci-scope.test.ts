@@ -570,6 +570,7 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/cards/catalog.json", [...RUST]],
     ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
+    ["crates/server/migrations/0068_v0_5_retcon.sql", ["rust_server", "rust_tools_wasm"]],
     // acceptance.rs holds the server tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
     ["crates/server/tests/api/queue.rs", ["rust_server", "rust_tools_wasm"]],
     ["crates/server/tests/store/contract.rs", ["rust_server"]],

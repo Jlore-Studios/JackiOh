@@ -397,8 +397,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0095_no_global_redemption_breaker.sql"),
     ),
     (
-        "0096_duos_match_checkpoints.sql",
-        include_str!("../../migrations/0096_duos_match_checkpoints.sql"),
+        "0096_moderation_audit.sql",
+        include_str!("../../migrations/0096_moderation_audit.sql"),
+    ),
+    (
+        "0097_duos_match_checkpoints.sql",
+        include_str!("../../migrations/0097_duos_match_checkpoints.sql"),
     ),
 ];
 

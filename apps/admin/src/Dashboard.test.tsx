@@ -355,4 +355,78 @@ describe("Audit", () => {
       expect(fake.sent("GET", "/api/admin/audit")).toHaveLength(2);
     });
   });
+
+  it("Apply sends the filters and replaces the list", async () => {
+    const filteredUrl = "/api/admin/audit?profile_id=p-dev&route=PUT+%2Fapi%2Fadmin%2Frating";
+    const { fake, user } = open({
+      [`GET ${filteredUrl}`]: { body: { actions: [AUDIT.actions[0]], nextBeforeId: null } },
+    });
+    await loaded();
+    await user.type(screen.getByTestId(testids.auditProfile), "p-dev");
+    await user.type(screen.getByTestId(testids.auditRoute), "PUT /api/admin/rating");
+    await user.click(screen.getByTestId(testids.auditApply));
+    await waitFor(() => {
+      expect(fake.sent("GET", filteredUrl)).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(1);
+    });
+    expect(fake.sent("GET", "/api/admin/audit")).toHaveLength(1);
+    expect(screen.queryByTestId(testids.auditOlder)).toBeNull();
+  });
+
+  it("Older appends the next page, then hides", async () => {
+    const older = {
+      id: 5,
+      profileId: "p-dev",
+      username: "devname",
+      route: "POST /api/dev/jlore",
+      request: { jlore: 40 },
+      before: { jlore: 0 },
+      after: { jlore: 40 },
+      at: AT - 2,
+    };
+    const oldest = { ...older, id: 4, at: AT - 3 };
+    const { fake, user } = open({
+      "GET /api/admin/audit?before_id=6": { body: { actions: [older, oldest], nextBeforeId: null } },
+    });
+    await loaded();
+    await user.click(screen.getByTestId(testids.auditOlder));
+    await waitFor(() => {
+      expect(fake.sent("GET", "/api/admin/audit?before_id=6")).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(4);
+    });
+    expect(screen.getAllByTestId(testids.auditRow).map((row) => row.dataset["actionId"])).toEqual([
+      "7",
+      "6",
+      "5",
+      "4",
+    ]);
+    expect(screen.queryByTestId(testids.auditOlder)).toBeNull();
+  });
+
+  it("Clear empties the filters and reads the newest page again", async () => {
+    const filteredUrl = "/api/admin/audit?profile_id=p-dev&route=PUT+%2Fapi%2Fadmin%2Frating";
+    const { fake, user } = open({
+      [`GET ${filteredUrl}`]: { body: { actions: [AUDIT.actions[0]], nextBeforeId: null } },
+    });
+    await loaded();
+    await user.type(screen.getByTestId(testids.auditProfile), "p-dev");
+    await user.type(screen.getByTestId(testids.auditRoute), "PUT /api/admin/rating");
+    await user.click(screen.getByTestId(testids.auditApply));
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(1);
+    });
+    await user.click(screen.getByTestId(testids.auditClear));
+    await waitFor(() => {
+      expect(fake.sent("GET", "/api/admin/audit")).toHaveLength(2);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(2);
+    });
+    expect(screen.getByTestId(testids.auditProfile)).toHaveValue("");
+    expect(screen.getByTestId(testids.auditRoute)).toHaveValue("");
+  });
 });

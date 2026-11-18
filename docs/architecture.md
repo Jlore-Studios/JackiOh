@@ -494,7 +494,7 @@ A co-op match is folded the same way (SPEC §13.9): `duos_matches.seed` and `opt
 the teams' rules and the AI seats' handicaps) with `duos_match_actions` reconstruct it through
 `duos_fold`, its duel `d` seeded `{seed}:duel{d}`, and both tables stay out of every client's reach
 for §3.1's reason. Its actor keeps a checkpoint as a match's does (`duos_match_checkpoints`, migration
-0096, #4169), stored by the restart drain and also every `MATCH_CHECKPOINT_MIN_ACTIONS` rows while the
+0097, #4169), stored by the restart drain and also every `MATCH_CHECKPOINT_MIN_ACTIONS` rows while the
 game is played, so a crashed actor's rebuild folds at most that many rows; one that fails a 1v1
 checkpoint's checks is ignored for the whole log, and the end drops it. A co-op replay (`GET /api/duos/matches/:matchId/replay`) sends a human seat its own
 Duos views, step by step, and nothing else.

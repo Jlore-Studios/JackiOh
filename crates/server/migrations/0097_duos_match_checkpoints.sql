@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0096: live co-op checkpoints (issue #4169) -- a co-op or 2v2
+-- Migration 0097: live co-op checkpoints (issue #4169) -- a co-op or 2v2
 -- rebuild folds only the log's tail
 -- ============================================================================
 -- Serves SPEC §9.3 (a live match's checkpoint, held to its checks) and §13.9
@@ -29,7 +29,7 @@
 -- like them it has RLS on, no policy and no grant: only service_role
 -- (BYPASSRLS) reads or writes it.
 --
--- Apply order: ... -> 0095 -> 0096 (this file).
+-- Apply order: ... -> 0096 -> 0097 (this file).
 -- Safe to re-apply: create-if-not-exists, comment-on, revoke.
 -- ============================================================================
 

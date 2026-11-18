@@ -10,7 +10,7 @@ use jackioh_engine::{
     attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, converts_to,
     damage_pool_of, effective_cost, effective_life, find_instance, find_instance_mut, has_keyword, is_locked,
     lane_multiplier_for, legal_actions, midlane_lanes_of, pierces, position_after_switch, row_size, slot_of,
-    subsystems, takes_strike_back, unit_damage_cap, unit_view,
+    strike_back_multiplier_for, subsystems, takes_strike_back, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -154,7 +154,8 @@ fn collapse_zones(
 /// The two strikes of a combat between `attacker` and the Unit `defender` (`a` and `t` their views),
 /// as `resolve_combat` reads them before either lands (R94): the attacker's attack plus the board's
 /// combat-only bonus (`attack_mod_for`, R1120) times its lane multiplier (`lane_multiplier_for`,
-/// R1283), and the defender's attack times its own, which no bonus ever rides.
+/// R1283), and the defender's attack times its lane strike alone (`strike_back_multiplier_for`, R4156000),
+/// which no bonus ever rides.
 pub(crate) struct Exchange {
     /// What the attacker's strike deals before §4.4.
     pub hit: i32,
@@ -178,7 +179,7 @@ pub(crate) fn exchange(
     Exchange {
         hit: (a.attack + bonus.attack) * lane_multiplier_for(state, attacker, defender),
         poisonous: bonus.poisonous || has_keyword(&a.keywords, KeywordKind::Poisonous),
-        strike_back: t.attack * lane_multiplier_for(state, defender, attacker),
+        strike_back: t.attack * strike_back_multiplier_for(state, defender, attacker),
         splash: a.attack + bonus.attack,
     }
 }
@@ -1109,11 +1110,15 @@ fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &Atta
 #[cfg(test)]
 mod tests {
     use jackioh_engine::combat_forecast;
+    use jackioh_engine::config::DECK_SIZE;
     use jackioh_engine::testkit::{Keyword, Scenario, Value, json, scenario};
+    use jackioh_engine::{PerPlayer, Rng};
 
     use super::*;
     use crate::config::AI_REPLY;
+    use crate::deck::{AiDeckOptions, build_ai_deck};
     use crate::evaluate::{kill_worth, unit_worth};
+    use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
     use crate::reply::fight;
 
     /// Classic #73 Nurse Cleaver, with Rush, Cleave and Lifesteal: a 3/4 since issue #3136, set back to the 3/6
@@ -1280,6 +1285,36 @@ mod tests {
         );
         assert_eq!(lane_multiplier_for(state, bunker, vanilla), 3);
         assert_eq!((combat.hit, combat.strike_back, combat.splash), (15, 4, 5));
+    }
+
+    /// S+ #107 Fuse, a 2/5 Ranged Unit with Armor 3 and Pierce whose own attacks weigh 5× in its lane.
+    const FUSE: &str = "stinkyscapeplus-107";
+
+    /// R4156000: a Fuse that is attacked strikes back with its plain attack, as `resolve_combat` reads it:
+    /// its sweep's weight is on its own attacks alone (R3554008), so the exchange the AI weighs an attack on
+    /// it by takes 2 back, not 10.
+    #[test]
+    fn r4156000_an_attacked_fuse_strikes_back_with_its_plain_attack() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            "p2": { "field": [{ "def": FUSE, "lane": 1 }] },
+        }));
+        let (vanilla, fuse) = (s.card(VANILLA), s.card(FUSE));
+        let state = s.state();
+        let combat = exchange(
+            state,
+            vanilla,
+            &unit_view(state, vanilla),
+            fuse,
+            &unit_view(state, fuse),
+        );
+        assert_eq!(
+            lane_multiplier_for(state, fuse, vanilla),
+            5,
+            "its own attack still sweeps"
+        );
+        assert_eq!((combat.hit, combat.strike_back), (4, 2));
     }
 
     /// R1120, §4.4 step 10: Economic Anxiety's +3 rides the strike and the Cleave splash alike (a
@@ -1814,5 +1849,126 @@ mod tests {
             }
         }
         assert_eq!(checked, settings.len() * bodies.len() * bodies.len());
+    }
+
+    /// R4171000: the seeded random-policy games the agreement test below plays, and its floors: the
+    /// Unit-target attacks it judged, the distinct cards (`def_id`s) at either end of one, and the
+    /// attacks a First Strike defender stopped whose blow would otherwise deal damage or pop a shield.
+    const FORECAST_AGREEMENT_GAMES: usize = 16;
+    const FORECAST_AGREEMENT_MIN_ATTACKS: usize = 1000;
+    const FORECAST_AGREEMENT_MIN_CARDS: usize = 150;
+    const FORECAST_AGREEMENT_MIN_STOPPED: usize = 5;
+
+    /// R4171000, R3100000: on every state of `FORECAST_AGREEMENT_GAMES` games of SPEC §10.7's random
+    /// policy, decks dealt from every set, every Unit-target entry of either seat's combat forecast is the
+    /// static trader's `fight` (what the attacker deals, up to the target's health for a Trample hit,
+    /// §4.4 step 5; what it takes; the kill; the survival; the pop) and the move order's
+    /// `kills_and_survives`.
+    #[test]
+    fn r4171000_the_trade_reads_agree_with_the_combat_forecast_on_seeded_games() {
+        jackioh_cards::register_all();
+        let (mut judged, mut stopped) = (0, 0);
+        let mut met: IndexSet<String> = IndexSet::new();
+        for game in 0..FORECAST_AGREEMENT_GAMES {
+            let seed = format!("forecast-agreement:{game}");
+            let deck = |seat: PlayerId| {
+                build_ai_deck(
+                    &mut Rng::new(&format!("{seed}:deck:{}", seat.as_str()), 0),
+                    DECK_SIZE,
+                    &AiDeckOptions {
+                        banned: Some(vec![]),
+                        gated_sets: Some(vec![]),
+                        ..AiDeckOptions::default()
+                    },
+                )
+            };
+            let config = MatchConfig {
+                seed: seed.clone(),
+                decks: (deck(PlayerId::P1), deck(PlayerId::P2)),
+                handicaps: None,
+                controllers: PerPlayer {
+                    p1: SeatController::Random,
+                    p2: SeatController::Random,
+                },
+                max_actions: None,
+                setup: MatchSetup::default(),
+            };
+            let mut states: Vec<GameState> = Vec::new();
+            {
+                let mut hooks = MatchHooks {
+                    after_action: Some(Box::new(
+                        |_before: &GameState, after: &GameState, _seat: PlayerId, _action: &ActionBody| {
+                            states.push(after.clone());
+                        },
+                    )),
+                    ..MatchHooks::default()
+                };
+                play_match(&config, &mut hooks);
+            }
+            for (index, state) in states.iter().enumerate() {
+                for seat in [PlayerId::P1, PlayerId::P2] {
+                    for entry in combat_forecast(state, seat).attacks {
+                        if entry.target_id.starts_with("hero-") {
+                            continue;
+                        }
+                        let attacker = find_instance(state, &entry.attacker_id).expect("the attacker");
+                        let target = find_instance(state, &entry.target_id).expect("the target");
+                        met.insert(attacker.def_id.clone());
+                        met.insert(target.def_id.clone());
+                        let read = fight(state, attacker, target);
+                        // §4.4 step 5: a Trample hit deals the unit no more than its health.
+                        let dealt = if has_keyword(&read.a.view.keywords, KeywordKind::Trample) {
+                            read.out.dealt.min(read.t.view.health.max(0))
+                        } else {
+                            read.out.dealt
+                        };
+                        let ours = (
+                            dealt,
+                            read.back.dealt,
+                            read.kills,
+                            !read.dies,
+                            read.out.pops_shield,
+                            kills_and_survives(state, attacker, target),
+                        );
+                        let theirs = (
+                            entry.dealt,
+                            entry.taken,
+                            entry.kills,
+                            entry.survives,
+                            entry.pops,
+                            entry.kills && entry.survives,
+                        );
+                        assert_eq!(
+                            ours,
+                            theirs,
+                            "{seed}, after action {index}: {} ({}, radiant {}) into {} ({}, radiant {}); \
+                             (dealt, taken, kills, survives, pops, kills_and_survives), the AI's then the \
+                             forecast's; {judged} attacks judged, {} cards met so far",
+                            attacker.id,
+                            attacker.def_id,
+                            attacker.radiant,
+                            target.id,
+                            target.def_id,
+                            target.radiant,
+                            met.len(),
+                        );
+                        if !read.lands {
+                            let unstopped = blow(&read.a, read.combat.hit, read.combat.poisonous, &read.t);
+                            if unstopped.dealt > 0 || unstopped.pops_shield {
+                                stopped += 1;
+                            }
+                        }
+                        judged += 1;
+                    }
+                }
+            }
+        }
+        let counts = format!(
+            "{judged} attacks judged, {} cards met, {stopped} stopped blows",
+            met.len()
+        );
+        assert!(judged >= FORECAST_AGREEMENT_MIN_ATTACKS, "{counts}");
+        assert!(met.len() >= FORECAST_AGREEMENT_MIN_CARDS, "{counts}");
+        assert!(stopped >= FORECAST_AGREEMENT_MIN_STOPPED, "{counts}");
     }
 }

@@ -4,7 +4,7 @@
 //! When the restart drain stops a live match's actor (`DuosRegistry::stop_all`), and after every
 //! `MATCH_CHECKPOINT_MIN_ACTIONS`-th row it logs while the match is played, the actor stores the
 //! `DuosState` it holds after the log's newest row (`DuosActor::checkpoint`) as one JSON `body`, in
-//! `public.duos_match_checkpoints` (migration 0096). The seq counter and the nonce map are the log's,
+//! `public.duos_match_checkpoints` (migration 0097). The seq counter and the nonce map are the log's,
 //! and the AI seats' cursors start afresh, as a full fold's do, so the state is all it holds.
 //!
 //! The next rebuild (`DuosRegistry::rebuild`) resumes from a checkpoint that passes every check a 1v1

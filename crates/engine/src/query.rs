@@ -1076,7 +1076,9 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
     let theirs = unit_view(state, defender);
     let bonus = crate::combat::attack_mod_for(state, attacker, defender);
     let hit = (mine.attack + bonus.attack) * crate::combat::lane_multiplier_for(state, attacker, defender);
-    let back = theirs.attack * crate::combat::lane_multiplier_for(state, defender, attacker);
+    // R4156000: a strike back takes lane strike's multiplier alone, never a sweep's weight.
+    let back_multiplier = crate::combat::strike_back_multiplier_for(state, defender, attacker);
+    let back = theirs.attack * back_multiplier;
     let strikes_back = crate::combat::takes_strike_back(state, attacker, defender);
     // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land,
     // and so does one whose first blow exiles it (R1124, R4111000).
@@ -1084,7 +1086,8 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         && !has_keyword(&mine.keywords, KeywordKind::FirstStrike)
         && exiles_on_damage(state, defender)
         && hit_on_unit(state, defender, attacker, back) > 0;
-    let falls = strikes_back && (falls_to_first_strike(state, attacker, defender) || exiled_first);
+    let falls =
+        strikes_back && (falls_to_first_strike(state, attacker, defender, back_multiplier) || exiled_first);
     let mut dealt = if falls {
         0
     } else {
