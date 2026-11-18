@@ -1074,19 +1074,20 @@ pub const GREEDY_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiMulliganCurve {
-    /// The switch: false makes the AI's mulligan `mulligan_keep_shaped` at the seat's bound
+    /// The switch: false makes the AI's mulligan `mulligan_keep_plain` at the seat's bound
     /// (`mulligan_keep_bound`, R2977000).
     pub on: bool,
     /// A card costing at most this is a first-turn play. The mana bonus (R181) does not raise it: the
     /// cap is on the cheapest bodies, so a Hard seat's two-drops are not capped.
     pub first_turn_max_cost: i32,
-    /// The most first-turn plays the mulligan keeps; the rest go back for a later turn's play.
+    /// The most first-turn plays the mulligan keeps; the rest go back for a later turn's play. Those
+    /// `hand_card_value` prices highest stay (R4110000).
     pub max_first_turn: usize,
     /// An early play costs at most this turn's crystals: the turn's number, plus the seat's mana
     /// bonus (R181) and its copies of The Coin (`OPENING_COINS`, R244).
     pub early_turn: i32,
-    /// A hand without an early play keeps at most this many of its cheap cards, the cheapest, so the
-    /// redraw digs for one.
+    /// A hand without an early play keeps at most this many of its cheap cards, the cheapest, of equal
+    /// cost those `hand_card_value` prices highest (R4110000), so the redraw digs for one.
     pub keep_without_early: usize,
 }
 

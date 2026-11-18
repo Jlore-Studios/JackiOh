@@ -264,7 +264,10 @@ things in it are not obvious:
   shared-logic crates beside it.
 - **A deploy restarts the server.** A container keeps the image it started with, so the first
   request after a deploy compares the running server's `/healthz` `x-deployed-commit` with the
-  commit the deploy named (`DEPLOYED_COMMIT`) and stops a server on an older one; live matches
+  commit the deploy named (`DEPLOYED_COMMIT`) and stops a server on an older one. It also stops a
+  server on the deployed commit whose settings, the secrets among them, are not the Worker's now,
+  told by a fingerprint of the container's environment kept in the object's storage (#4118), so a
+  redeploy after a secret change takes effect; live matches
   rebuild from `(seed, log)` when their sockets return (§6). The web build and the server deploy in
   the same job, so a client is never ahead of its server.
 

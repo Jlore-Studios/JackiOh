@@ -121,3 +121,18 @@ export function containerEnv(settings: ServerSettings): Record<string, string> {
   }
   return vars;
 }
+
+/**
+ * #4118: the lowercase hex SHA-256 of `containerEnv(settings)` as JSON with its names in order, so the same
+ * settings in any key order give the same digest, and a change to any one of them, the commit among them,
+ * changes it. The Worker keeps it in the object's storage to tell a running server that started on other
+ * settings from one that started on these (index.ts). It is a digest of secrets: never log or send it.
+ */
+export async function settingsFingerprint(settings: ServerSettings): Promise<string> {
+  const env = containerEnv(settings);
+  const entries = Object.keys(env)
+    .sort()
+    .map((name) => [name, env[name]]);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(entries)));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}

@@ -1172,9 +1172,6 @@ pub const DEALT_Q_PRIOR: f64 = 0.6685;
 /// (`AiDeckOptions::shape`, R976000), which no deal does today.
 pub const DEAL_SHAPE_K: f64 = 20.0;
 pub const DEAL_SHAPE_CAP: f64 = 12.0;
-/// The mulligan keeps at most one card costing `keep_max_cost + 1`, and only
-/// when its shaped weight reaches this (mulligan.rs).
-pub const DEAL_MULLIGAN_KEEP: f64 = 2.0;
 
 /// Per defId, win share with card in deck shrunk toward `DEALT_Q_PRIOR`. Absent ids price as `DEALT_Q_PRIOR`.
 pub const DEALT_Q: &[(&str, f64)] = &[
@@ -1454,9 +1451,8 @@ pub fn dealt_quality(id: &str) -> f64 {
 }
 
 /// The weight `build_ai_deck` deals `id` at when a deal asks for shaping
-/// (`AiDeckOptions::shape`, R976000), and the one `mulligan_keep_shaped` reads:
-/// the measured quality ratio sharpened and capped, with the lane's unbans
-/// preferred another `UNBANNED_PREFER_BY` on top.
+/// (`AiDeckOptions::shape`, R976000): the measured quality ratio sharpened and
+/// capped, with the lane's unbans preferred another `UNBANNED_PREFER_BY` on top.
 pub fn shaped_weight(id: &str) -> f64 {
     let mut weight = (dealt_quality(id) / DEALT_Q_PRIOR)
         .powf(DEAL_SHAPE_K)

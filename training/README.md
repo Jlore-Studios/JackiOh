@@ -224,8 +224,8 @@ deals against the parent until its sequential test decides (R1679000, `TRAINING_
   by that one rule, and neither is shaped by the lane's dealt-quality table (`DEALT_Q`; the deck
   builder's `shape` option, off), so the gate's decks are drawn as practice's and the daily gates'
   are (R976000). Until issue #976 the builder shaped every seat whose ban list was this build's
-  own, so in the unban lane the candidate's seat was always shaped and the parent's never. Both AIs
-  still mulligan by `mulligan_keep_shaped`, which is part of how the AI plays;
+  own, so in the unban lane the candidate's seat was always shaped and the parent's never. Each AI
+  mulligans by its own build's `mulligan_keep_curved`, which is part of how the AI plays;
 - the AI plays at `AI_GATE_BUDGET`, the browser's own budget, so the gate measures the AI that ships.
 
 **The test.** Each deal gives the candidate an edge, its wins less the parent's over the deal's two

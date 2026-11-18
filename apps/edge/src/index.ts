@@ -23,6 +23,7 @@ import {
   isModulePath,
   isServerPath,
   precompressedModule,
+  settingsFingerprint,
   type ServerSettings,
 } from "./routing.ts";
 
@@ -41,6 +42,12 @@ export const START_WAIT_MS = 60_000;
  * unreachable (epoch ms). Prefixed, so it cannot meet the container library's own keys.
  */
 export const TOLD_AT_KEY = "jackioh:server.unreachable:toldAt";
+
+/**
+ * #4118: the key in the object's storage that holds the fingerprint (routing.ts `settingsFingerprint`) of the
+ * settings the container was last started with. Prefixed, like `TOLD_AT_KEY`; the value is never logged or sent.
+ */
+export const SETTINGS_FINGERPRINT_KEY = "jackioh:server.settings:fingerprint";
 
 /** The one instance every request reaches: the server holds every live match in memory. */
 const INSTANCE = "main";
@@ -166,13 +173,23 @@ export class Server extends Container<Env> {
    * A container keeps the image it was started with when a new version deploys, so a server still
    * running from before the deploy is stopped (SIGTERM: it drains, and every live match rebuilds
    * from its seed and log when its sockets return, SPEC §9.5) and the next request starts the new
-   * one. The running server names its commit in `/healthz`'s `x-deployed-commit`. Resolves true
-   * when the check is settled (no server running, its commit current, or it retired) and false when
-   * a later request should ask again (the server did not answer within `IMAGE_CHECK_TIMEOUT_MS`, or
-   * stopping it failed); it never rejects.
+   * one. The running server names its commit in `/healthz`'s `x-deployed-commit`.
+   * #4118: it keeps the settings it started with too, so a server on the deployed commit is stopped the
+   * same way when the Worker's settings are not those (a redeploy after a secret change names the same
+   * commit): the fingerprint of the settings the container was last started with is in the object's
+   * storage (`SETTINGS_FINGERPRINT_KEY`), and an absent one counts as changed. The fingerprint is stored
+   * when the check settles with no server running, or once a retire has (the next start takes the
+   * Worker's settings). Resolves true when the check is settled (no server running, its commit and
+   * settings current, or it retired) and false when a later request should ask again (the server did
+   * not answer within `IMAGE_CHECK_TIMEOUT_MS`, the stored fingerprint could not be read, or stopping
+   * the server failed); it never rejects.
    */
   private async retireOlderImage(): Promise<boolean> {
-    if (!this.ctx.container?.running) return true;
+    if (!this.ctx.container?.running) {
+      // Nothing to stop: the server the request starts next takes these settings, so remember them.
+      await this.rememberSettings();
+      return true;
+    }
     let running: string | null;
     try {
       const health = await this.containerFetch(
@@ -192,7 +209,18 @@ export class Server extends Container<Env> {
       console.warn("server.image_check_failed", error);
       return false;
     }
-    if (running === (this.env.DEPLOYED_COMMIT ?? null)) return true;
+    if (running === (this.env.DEPLOYED_COMMIT ?? null)) {
+      try {
+        const started = await this.ctx.storage.get<string>(SETTINGS_FINGERPRINT_KEY);
+        if (started === (await settingsFingerprint(this.env))) return true;
+      } catch (error) {
+        // A storage fault is no reason to restart a live site; a later request asks again.
+        console.warn("server.settings_unreadable", error);
+        return false;
+      }
+      // Names no setting and carries no digest: the logs are not for secrets.
+      console.warn("server.settings_changed");
+    }
     try {
       await this.stop("SIGTERM");
       const deadline = Date.now() + RETIRE_WAIT_MS;
@@ -200,11 +228,24 @@ export class Server extends Container<Env> {
         await new Promise((resolve) => setTimeout(resolve, RETIRE_POLL_MS));
       }
       if (this.ctx.container.running) await this.destroy();
-      return true;
     } catch (error) {
       // The request goes on to start (or reach) a server; a later one tries the retire again.
       console.warn("server.retire_failed", error);
       return false;
+    }
+    await this.rememberSettings();
+    return true;
+  }
+
+  /**
+   * #4118: keeps the fingerprint of the settings the next start takes. A write that fails is logged and
+   * costs at most one more restart at a later deploy; it never rejects.
+   */
+  private async rememberSettings(): Promise<void> {
+    try {
+      await this.ctx.storage.put(SETTINGS_FINGERPRINT_KEY, await settingsFingerprint(this.env));
+    } catch (error) {
+      console.warn("server.settings_unwritten", error);
     }
   }
 }

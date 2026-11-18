@@ -289,10 +289,9 @@ describe("R711000 internationalisation and reader language", () => {
       fed.push({ table: "MARK_WORDS", value: words.text });
     }
     for (const text of Object.values(DRAW_TEXT)) fed.push({ table: "DRAW_TEXT", value: text });
-    const boardNames = CARD_SETTINGS_FIELDS.find((field) => field.key === "boardNames");
-    if (boardNames !== undefined) {
-      fed.push({ table: "boardNames", value: boardNames.label });
-      fed.push({ table: "boardNames", value: boardNames.description });
+    for (const field of CARD_SETTINGS_FIELDS) {
+      fed.push({ table: "CARD_SETTINGS_FIELDS", value: field.label });
+      fed.push({ table: "CARD_SETTINGS_FIELDS", value: field.description });
     }
     for (const option of BOARD_NAMES_OPTIONS) fed.push({ table: "boardNames", value: option.label });
     fed.push({ table: "CardList", value: DEFAULT_ORDER });
