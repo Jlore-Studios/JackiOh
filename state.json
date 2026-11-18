@@ -14000,11 +14000,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T02:08:56Z",
+        "at": "2026-11-18T02:34:51Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "A migration: the change adds crates/server/migrations/0095_moderation_audit.sql, which the hardness rule names explicitly."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 4: a database migration (crates/server/migrations/0095) widening a pinned table check"
       },
       "failures": 0,
       "forced": false,
