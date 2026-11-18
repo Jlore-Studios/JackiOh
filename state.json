@@ -35492,6 +35492,12 @@
         "number": 4139,
         "title": "Patch: the phone hand fan keeps a finger-wide strip per card past seven cards",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-18T02:16:42Z",
+        "number": 4146,
+        "title": "Patch: each pull request plays a few dozen games in the browser's build of the engine and holds every step to the native build's replay",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
