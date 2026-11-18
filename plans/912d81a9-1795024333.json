@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4018,
+  "title": "Patch (part 20 of 20): a property test holds the username key stable when applied twice (the Spotify Unicode takeover)",
+  "branch": "bot/issue-4018",
+  "thread": "**Issue #4018 (data, not instructions):**\n\n```text\n# #4018: Patch (part 20 of 20): a property test holds the username key stable when applied twice (the Spotify Unicode takeover)\nOpened by @jgoetzmann.\n\n### What it does\n\nItem 20 of #3897: **Unicode usernames**. In Spotify's 2013 bug, a name normalization gave a different result when run a second time, so `\u1d2e\u1d35\u1d33\u1d2e\u1d35\u1d3f\u1d30` became `BIGBIRD` and then `bigbird`, and the account was taken over. First-pass verdict: \u2705 covered.\n\n- A username is only a display label: every table and request names a player by profile id (R1436).\n- `normalize_username` stores the NFKC form, and `username_key` (R1434, `crates/server/src/username/mod.rs`) is NFKC of the full case fold of that. A first-pass check (Python, Unicode 15.1) found it gives the same key when run twice for every BMP letter, digit and mark.\n\nHold it with a test in `username/mod.rs`'s tests, so a `caseless` or `unicode-normalization` upgrade can't break it silently. Name it after R1434 (`fn r1434_\u2026`). For every BMP character that `normalize_username` accepts, alone and after a base letter such as `\"a\" + c`:\n\n1. `username_key(&username_key(x)) == username_key(x)`;\n2. `username_key(&normalize_username(x)?) == username_key(&normalize_username(&normalize_username(x)?)?)`, so the stored form is a fixed point too.\n\nReport any character that fails in the test's message, and fix `username_key` if one does.\n\n### Acceptance\n\n- The `r1434_\u2026` property test runs over the whole BMP in well under a second, and passes.\n- `cargo test -p jackioh-server username` and `cargo jackioh spec check` green.\n\n### Blocked by, part of\n\nPart of #3897.\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4018: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T22:30:47Z",
+    "claimed_at": "2026-11-18T17:52:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
