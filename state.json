@@ -14514,17 +14514,8 @@
       "waiting_comment": 6989049807
     },
     "4222": {
-      "action": "plan",
-      "asks": [
-        "c:6994626116"
-      ],
-      "build_next": {
-        "from_run": "44420657002",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-18T23:38:48Z",
-        "until": "2026-11-19T00:08:48Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-18T23:38:37Z",
         "difficulty": "medium",
@@ -14543,10 +14534,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "neRecipes.ts\";`. This is the one data module the source test allowlists.\n- 4. **New `sceneLoader.ts`, modelled on `audio/soundTablesLoader.ts`.** `loadSceneData(): Promise<void>` is idempotent, does `await import(\"./sceneData.ts\")` then `installSceneData(...)`, clears `pendingLoad` on failure so the next call retries. `sceneDataReady()` reports the slot. `resetSceneDataFo\u2026\n- 5. **`test/setup.ts`: install synchronously.** After `loadWasmSync(...)`, statically import the four names from their data files and call `installSceneData({ SCENE_KIT, drawFigure, SCENE_RECIPES, ALT_SCENE_RECIPES })`. Allowed: `sources()` in `first-load.test.ts` skips the `test/` directory.\n- 6. **`main.tsx`: start and gate.** Import `loadSceneData` from `./cards/art/sceneLoader.ts`; next to line 961 add `void loadSceneData().catch(() => undefined);`. In `EngineGate`, replace the `loadWasm()`-only wait with `void Promise.all([loadWasm(), loadSceneData()]).then(() => { if (live) setLoad(\u2026\n- 7. **`useEngineReady.ts`: gate on both.** Initial state `wasmLoaded() && sceneDataReady()`; effect awaits `Promise.all([loadWasm(), loadSceneData()])` before `setReady(true)`, failures ignored as today. Keep the best-effort `loadCardTables()` block. Update the header comment (`#4222`: readiness is \u2026\n- 8. **`WhenEngineReady.tsx`, `NotFoundPlay.tsx`, `landing.tsx`: no logic change** (they delegate to `useEngineReady`). Only update `WhenEngineReady.tsx`'s header comment to say the face waits for the module and the scene tables.\n- 9. **`routes/chunks.tsx`: prefetch and start.** Import `loadSceneData`; in `prefetchRoute`'s `ENGINE_CHUNKS` branch and in `startScreen`'s `engine` branch add `void loadSceneData().catch(() => undefined);` beside the `loadSoundTables()` call, with a `#4222` comment.\n- 10. **Docs.** `ART.md` \"Scene recipes and kits\": append that the kits and both recipe tables reach the client in a chunk `loadSceneData()` fetches beside the engine module, installed into `scene.ts`; before install `sceneRecipeOf` throws. `README.md` \"The engine as WebAssembly\": in the `src/wasm/in\u2026\n- 11. **Measure and lower the budget last.** Run `sh scripts/build-wasm.sh`, then `pnpm --dir apps/web exec vite build --mode development` (the exact CI `web-build` command), compute the entry-plus-preloads gzipped bytes with the test's own math, set the budget to the smallest `N \u00d7 8192 \u2265 measured \u00d7 \u2026\n- ## 4. Tests\n- - `apps/web/src/cards/art/scene.test.ts`, new `it(\"#4222 sceneRecipeOf throws before the tables are installed\")`: `resetSceneDataForTests()` then `expect(() => sceneRecipeOf(\"core-002\")).toThrow(\"the scene tables are not loaded\")` (`core-002` has a recipe, so null would be wrong); `afterEach` resto\u2026\n- - `apps/web/src/wasm/WhenEngineReady.test.tsx`, new `it(\"#4222 useEngineReady stays false until the scene tables arrive\")`: assert `wasmLoaded()` is true, `deferSceneDataForTests()`, render the file's `Probe`, flush a macrotask and expect `\"waiting\"`, resolve the deferred load, `await waitFor(() =>\u2026\n- - `apps/web/src/net/first-load.test.ts`, new `it(\"#4222 no non-test module statically imports scene data\")`: scan `sources(SRC)` as `#4130` does; strip `import type` lines (they emit no bytes); offenders are files whose remaining text matches `sceneKit*.ts`, `figureKit.ts`, or `*Recipes*.ts` target\u2026\n- - Same file, new `it(\"#4222 the entry chunk and its preloads hold no scene kit or recipe text\")`: reuse `entryAndPreloads()`; probes `\"bone-scarecrow\"`, `\"pose-genuflect\"`, `\"item-trunk-club\"` (each verified to occur in `src` only in data files, tests, or `ART.md`); assert absent from every file.\n- - Same file, new `it(\"#4222 the practice worker's bundle holds no scene data\")`: find the built asset containing `\"the practice engine could not be loaded\"` (unique to `practice.worker.ts`), assert it exists and holds none of the three probes.\n- - Existing suites run unchanged: `pnpm --dir apps/web test src/cards/art/scene.test.ts`, `pnpm --dir apps/web test src/wasm/WhenEngineReady.test.tsx`, `pnpm --dir apps/web test src/cards/art/artRichness.test.ts`, one Scenes suite (e.g. `src/cards/art/coreScenes.test.ts`), then `pnpm --dir apps/web \u2026\n- ## 5. Done when\n- - [ ] Source test fails on any non-allowlisted static import of kit/recipe files.\n- - [ ] Entry chunk plus modulepreloads hold none of the three probes; worker bundle holds none.\n- - [ ] `useEngineReady()` is false with module in and tables out, true with both; `sceneRecipeOf` throws before install.\n- - [ ] Every existing art test, `artRichness.test.ts`, and the Scenes suites pass unchanged.\n- - [ ] Budget lowered to measured \u00d7 1.02 rounded up to 8192, with the measurement in its comment.\n- - [ ] `typecheck`, eslint, the touched test files, and `cargo jackioh spec check` are green.\n- ## 6. Risks\n- - A face drawn before the gate (pile dialog, full-screen host) now throws instead of drawing the painter's picture; that is the point (wrong pictures must fail tests, never ship), and every gate waits for both loads first.\n- - `import type` must stay `import type`: converting one to a value import rejoins the chunk and fails the source test.\n- - Probes must be runtime string literals; if one turns out to occur outside the data files, pick another data-only literal rather than weakening the test.\n- - The reset in `scene.test.ts` / `WhenEngineReady.test.tsx` must restore via `loadSceneData()` in `afterEach`, or later tests in the same file run uninstalled.\n- - Local `vite build --mode development` numbers may differ slightly from CI's; the 2% headroom covers it.\n- ## 7. Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4222 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4222/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-18T23:25:37Z",
       "owner_why": "it plans it",
@@ -14559,12 +14549,14 @@
       "provider": "muse",
       "queued_at": "2026-11-18T23:25:05Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44420657002",
+      "run_id": "pending:ddbd7552-1795045246",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-18T23:25:37Z",
+      "started_at": "2026-11-18T23:41:09Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6994626116"
+      ]
     },
     "4224": {
       "action": "plan",
@@ -15098,9 +15090,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T23:40:33Z",
+    "at": "2026-11-18T23:41:09Z",
     "url": "",
-    "what": "build #4233 on muse"
+    "what": "build #4222 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T23:23:37Z",
