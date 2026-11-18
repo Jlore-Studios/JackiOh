@@ -17123,9 +17123,11 @@
         "by": "`muse` (medium)",
         "sha": "752b14f84aa01a7ab1eb0b6aaa3ed8c5ba2cc81a"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T14:46:07Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-18T15:28:19Z",
         "family": "muse",
@@ -17135,6 +17137,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the card search reads a stat line, such as 3/4 or 3+/4-\"} -->\n- ## What changed\n- - [`apps/web/src/game/deckbuilder/filters.ts`](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4203/apps/web/src/game/deckbuilder/filters.ts): the client's own stat-term grammar (`STAT_SEPARATOR`, `STAT_OR_MORE`, `STAT_OR_LESS`, one `STAT_TERM` regex built from them) plus `statTermMatches`,\u2026\n- - [`apps/web/src/game/deckbuilder/filters.test.ts`](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4203/apps/web/src/game/deckbuilder/filters.test.ts): new `describe(\"searchMatches stat terms (#4203)\")` with seven tests and local-only fixtures; the shared `DEFS` table is untouched.\n- ## How it was tested\n- - `pnpm --dir apps/web test src/game/deckbuilder/filters.test.ts`: 120/120 pass (113 existing + 7 new).\n- - Negative check: with the `searchMatches` rewire temporarily reverted to the old one-liner, 6 of the 7 new tests fail (the malformed-terms fallback passes on old code by design, since it asserts old behavior); fix then restored and the file re-runs green.\n- - `pnpm --dir apps/web typecheck`: green. `pnpm exec eslint` on both touched files: clean.\n- ## Decisions and departures from the plan\n- - **Placeholder left as is.** The plan changed the `FilterBar` placeholder and `zh-CN.json`, but the issue says \"Leave the search box's placeholder text as it is\", so those steps were dropped. No i18n entry needed.\n- - **Base face only, no ruling.** The issue decides the Radiant question itself (base face, same as the sorts), so the builder follows it exactly and no ruling note is added; test titles use `#4203`, never `R4203`.\n- - **`boundOf` takes `string | undefined`** instead of the plan's `string`, because `noUncheckedIndexedAccess` makes the regex groups possibly undefined; anything else still maps to exact.\n- - **Two multi-digit expectations corrected.** The plan asserted `11+/1-` and `12+/2-` both fail for a 12/1 card, but under the grammar both are true (12\u226511, 1\u22642). The tests instead assert `12+/1-` and `11+/1-` true, and `11/1`, `13+/1-`, `12+/0-` false, plus a local 5/4 fixture the one-sided test n\u2026\n- ## For the reviewer\n- - `tsc` on this runner OOMs at Node's default ~2 GB heap (`FATAL ERROR: Ineffective mark-compacts near heap limit`); it passes with `NODE_OPTIONS=--max-old-space-size=6144` (the box has ~7.7 GB). If CI's `web` job shows the same crash, that is an environment limit, not a type error \u2014 worth a look o\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4203 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4203/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4203,
       "kind": "review",
       "live": "reviewing",
