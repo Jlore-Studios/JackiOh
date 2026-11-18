@@ -15321,6 +15321,13 @@
     "4171": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T05:34:13Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "rating rule line 2 (The AI): the fix gates trade_value scoring in crates/ai/src/reply.rs, changing AI reply and move-order decisions"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
