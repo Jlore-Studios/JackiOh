@@ -3,7 +3,7 @@
 # (`gh workflow run super.yml --ref <branch>`). CI (ci.yml) keeps the essential checks per pull
 # request; this keeps the rest from rotting.
 #
-#   fuzz            `jackioh fuzz` seeds 1-10,000, plain and with the rotating handicap, and the Duos
+#   fuzz            `jackioh fuzz` seeds 1-12,500, plain and with the rotating handicap, and the Duos
 #                   co-op wave's seeds 1-2,000 (`fuzz --duos`), in quarters (V7, V9, #936 B25)
 #   ai gates        `jackioh gate --full` in shards, held together by `gate merge` (V10)
 #   golden          `jackioh golden check`: every recorded TypeScript trace replays identically (V4)
@@ -81,7 +81,7 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix.
-  FUZZ_SEEDS: "10000"
+  FUZZ_SEEDS: "12500"
   # The Duos wave's (§13, #936 B25), ten times `fuzz --duos`'s 200: a Duos game is four seats and a
   # pool, several times a 1v1 game's work. Split the same way.
   DUOS_FUZZ_SEEDS: "2000"
@@ -175,7 +175,7 @@ jobs:
 
   # Seeds 1-FUZZ_SEEDS, each quarter plain and then with the handicap (fuzz-handicap.test.ts's
   # rotation), as `--from` and `--seeds` ranges: a seed is its own game whatever run it sits in, so
-  # the quarters together play exactly `fuzz --seeds 10000` and `fuzz --seeds 10000 --handicap`. Then
+  # the quarters together play exactly `fuzz --seeds 12500` and `fuzz --seeds 12500 --handicap`. Then
   # the quarter's share of the Duos co-op wave, seeds 1-DUOS_FUZZ_SEEDS (`fuzz --duos`), which no
   # pull request plays beyond the tools crate's three seeds.
   fuzz:

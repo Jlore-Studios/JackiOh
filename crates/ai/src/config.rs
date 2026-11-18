@@ -158,7 +158,8 @@ pub struct AiSearch {
     /// Answers tried for each auto-answered prompt before the answerer's best is committed
     /// (`simulate`'s, the opponent's reply's and `own_prompt_score`'s auto-answers, #891): each one
     /// node. A prompt with more answers tries this many drawn from all of them (#1382,
-    /// `auto_answer_seed`).
+    /// `auto_answer_seed`), but a Plague Counter's placement under a Living Bomb tries every answer
+    /// (R4154402).
     pub max_auto_answer_options: i32,
     /// #1382: the stream the answers an auto-answered prompt tries are drawn on, beside the world's
     /// own seed and the prompt's id, when it has more than `max_auto_answer_options`.
@@ -372,7 +373,8 @@ pub struct EvalWeights {
     pub brittle_crumbles_before_swing: bool,
     /// R4065000, #4065: whether `face_threat` and `could_attack_next_turn` (so the threat and pressure terms,
     /// `wall_switches`, `stands_down` and the learned features) leave out a unit the first tick of its own Burn
-    /// and Toxic destroys at the start of its controller's next turn, before it can attack
+    /// and Toxic destroys before its controller's next attacks (a Burn at the end of the turn, R4154000; a
+    /// Toxic at its controller's turn start), before it can attack
     /// (`afflicted_before_swing`). `unit_worth` is untouched: its affliction discount already prices the unit
     /// (R3822000). Off, every unit that may swing counts, as before.
     pub affliction_kills_before_swing: bool,
@@ -452,6 +454,11 @@ pub struct EvalWeights {
     pub hand_cost_delta: f64,
     /// R637: the share of its worth an own Temporary hand card loses: cleanup discards it unless played.
     pub temporary_discount: f64,
+    /// R4154400: the share of its worth an own Tradable hand card loses while neither this turn's crystals
+    /// nor its next refresh's pay for it (`evaluate::dead_in_hand`): a Trade turns it into a card drawn and
+    /// puts it back in the deck, so holding it is worth less than a card the seat can play. At 0 nothing
+    /// is read.
+    pub dead_tradable_discount: f64,
     /// R961, R962: per step a Jade Counter has climbed toward the next threshold it has not crossed. A
     /// crossing's worth is the Jade Beauty it summons or ascends, which `unit_worth` prices.
     pub jade_step: f64,
@@ -472,6 +479,10 @@ pub struct EvalWeights {
     /// buys: the Marketplace asks `MARKETPLACE_CREDITS_PER_MANA` a mana, which the hand prices at
     /// `hand_per_cost`. Own side only (#2389).
     pub market_credit: f64,
+    /// R4154401: whether an own hand card that sells from the hand (Stinkyscape #89 Spice, R1861000)
+    /// counts, while the Marketplace quotes it, as the Credits its sale brings now at `market_credit`
+    /// (`evaluate::hand_sale_worth`) in place of its hand price. Off, it is priced as any hand card.
+    pub hand_sale_credits: bool,
     /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
     /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
     /// its holder's turn starts. Every shipped one pays its holder.
@@ -670,6 +681,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // `animated_share`, a Temporary card at Brittle 1's half, an extra turn about a turn's mana at
     // MAX_MANA (4 × unspent_mana) plus a draw.
     temporary_discount: 0.5,
+    // R4154400: an untuned start, as Temporary's. At a half a dead (5) card (2.5) holds 1.25, under the
+    // 1.6 an unseen card is priced at (`opponent_hand_cost`), so the Trade that swaps it reads as a gain.
+    dead_tradable_discount: 0.5,
     jade_step: 1.5,
     marked_share: 0.5,
     extra_turn: 5.0,
@@ -680,6 +694,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     extra_turn_in_hand: 0.5,
     anomaly_miss: 0.2,
     market_credit: AI_HAND_PER_COST / MARKETPLACE_CREDITS_PER_MANA as f64,
+    hand_sale_credits: true,
     // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
     // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
     // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
@@ -766,17 +781,24 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_weight: 3.0,
 };
 
-/// R3822000: the turn starts of a counter's controller over which the evaluation reads Burn and Toxic
-/// (`evaluate::afflicted`, `evaluate::coming_hero_ticks`). Four hold the whole series of Eclipse's Radiant
-/// Burn 10 (S+ #119: 10, 7, 4 and 1 at `BURN_DECAY`), the largest one line declares; a larger count, a
-/// fused rider's or one several hits stacked (R3540000), is read for its first four. Toxic, which never
-/// fades, is read over the same horizon.
+/// R3822000: the ticks over which the evaluation reads Burn and Toxic (`evaluate::afflicted`,
+/// `evaluate::coming_hero_ticks`): Toxic, which never fades, over its controller's next four turn starts;
+/// a Burn, which hits once at the end of the turn and is gone (R4154000), on the first alone.
 pub const AI_AFFLICTION_TICKS: i32 = 4;
 const _: () = assert!(AI_AFFLICTION_TICKS >= 1);
 const _: () = assert!(AI_EVAL.unit_affliction >= 0.0 && AI_EVAL.unit_affliction <= 1.0);
 const _: () = assert!(AI_EVAL.unit_doomed >= 0.0 && AI_EVAL.unit_doomed <= 1.0);
 // R3951100: at most 1, so a reward held in hand is never worth more than the Radiant play that takes it.
 const _: () = assert!(AI_EVAL.feng_shui_outlook >= 0.0 && AI_EVAL.feng_shui_outlook <= 1.0);
+// R4154400: a share, so a dead Tradable card is never worth less than nothing.
+const _: () = assert!(AI_EVAL.dead_tradable_discount >= 0.0 && AI_EVAL.dead_tradable_discount <= 1.0);
+
+/// R4154402: the cards whose turn hooks destroy every permanent with a Plague Counter that the player whose
+/// turn starts controls (Classic #62 Living Bomb, R400): its start-of-turn hook its controller's, its
+/// start-of-the-opponent's-turn hook the other side's. While one holds such a hook, a Plague Counter on a
+/// permanent that hook reaches is a destroy waiting (`evaluate::plague_doomed`), and the move order tries a
+/// placement prompt's enemy permanents first (`candidates::plague_aims_first`).
+pub const AI_PLAGUE_BOMBS: &[&str] = &["classic-062"];
 
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
@@ -897,7 +919,8 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
-/// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`) is off.
+/// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
+/// `hand_sale_credits`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -956,12 +979,14 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     grade_counter: 0.0,
     hand_cost_delta: 0.0,
     temporary_discount: 0.0,
+    dead_tradable_discount: 0.0,
     jade_step: 0.0,
     marked_share: 0.0,
     extra_turn: 0.0,
     extra_turn_in_hand: 0.0,
     anomaly_miss: 0.0,
     market_credit: 0.0,
+    hand_sale_credits: false,
     start_of_turn_effect: 0.0,
     alt_win: 0.0,
     doomed_hand_discount: 0.0,

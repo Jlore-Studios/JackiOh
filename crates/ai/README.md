@@ -121,7 +121,7 @@ destroys at its controller's next start, before it can attack, threatens no face
 (`brittle_crumbles_before_swing`, R3793000, #3793; off in `GREEDY_EVAL`). Nor does one the first tick of
 its own Burn and Toxic destroys there: they ask `afflicted_before_swing` too, which reads the tick through
 `tick_damage`, the reading `afflicted` prices it by, and keeps a unit whose Reborn body has Charge, or Rush
-where only a Unit is the target (`affliction_kills_before_swing`, R4065000, #4065; off in `GREEDY_EVAL`). A
+where only a Unit is the target, or that a Burn alone kills, its body back before its controller's turn (R4154000) (`affliction_kills_before_swing`, R4065000, #4065; off in `GREEDY_EVAL`). A
 side the evaluation reads as swinging this turn (the seat at its turn start after the reply, the enemy on
 turn in a passed line) counts no attack from a Frozen unit, though `frozen_next_turn` says it thaws at this
 turn's cleanup, none from a unit summoning sick without Rush or Charge, and none on a hero from one with
@@ -234,6 +234,20 @@ move order a play its card would be rewarded for comes first and one it would be
 by cost (`Auspice`), so a level's `branching` cut keeps the play that chains the elements, and the seat's last
 element is part of `search_signature`, so two orders of the same plays that end on different elements stay
 two positions; with no Feng Shui acting neither changes. `GREEDY_EVAL` keeps 0.
+While a Feng Shui of the seat's own acts, its Activate (a free Auspicious Rock) is tier 2's first source,
+before the rewarded plays (`Auspice::Judge`, R4154403), so a busy turn's `branching` cut never drops it.
+A Tradable card in the seat's own hand whose own cost is above the crystals its next refresh brings (this
+turn's `mana.max`, one more under `MAX_MANA`, moved by the rider; never the handicap) is dead
+(`dead_in_hand`): `material` holds it at `AI_EVAL.dead_tradable_discount` off its hand price, and its Trade
+is tried before the plays, so a line can play what it draws (R4154400). A card that sells from the hand
+(S #89 Spice) counts, while the Marketplace quotes it, as the Credits its sale brings at `market_credit`
+(`hand_sale_worth`, `AI_EVAL.hand_sale_credits`), so a sale moves nothing and one that completes a buy
+gains it (R4154401). A permanent a Living Bomb (`AI_PLAGUE_BOMBS`) will destroy at its controller's next
+turn start (`plague_doomed`: a Plague Counter, not Indestructible, and the bomb's hook that fires then
+registered where the engine's `trigger_holders_with_hook` finds it) keeps Brittle 1's share, its counters
+banking nothing, and a placement prompt under one tries the enemy's permanents first, every answer when
+auto-answered (`plague_aims_first`, R4154402). `GREEDY_EVAL` keeps all three off (its `brittle_discount`
+is 0).
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
@@ -246,8 +260,8 @@ read (`reply.rs`'s `trade_value`, #1779), these three ranked together by that mo
 first, ties in that order (#2825): a kill by `trade_value`, a hit on the hero by `face_value`
 (`reply_face_value` of what it deals through the hero's Armor, plus a Lifesteal attacker's heal of it
 unless the hit is lethal, #3858), and every hit on the hero first while
-the seat's ready attacks reach the face together (`ready_gap`); then the plays round-robin, answers, the
-Trades of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
+the seat's ready attacks reach the face together (`ready_gap`); then the Trades of dead Tradable cards (R4154400), the plays round-robin, answers, the
+other Trades of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
 buys and sales at the Marketplace (R1853004), the other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or

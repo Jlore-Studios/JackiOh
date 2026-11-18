@@ -1575,8 +1575,8 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub evolutions: Option<i32>,
-    /// R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking at the start of their
-    /// turn (R3540001). Absent at none, so a game without one hashes as before this field existed (D3).
+    /// R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking once at the end of the
+    /// turn (R4154000). Absent at none, so a game without one hashes as before this field existed (D3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hero_burn: Option<i32>,

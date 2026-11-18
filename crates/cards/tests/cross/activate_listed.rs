@@ -43,6 +43,8 @@ const UNIVERSITY: &str = "meditative-097-6";
 const HEADQUARTERS: &str = "meditative-097-9";
 const FENG_SHUI: &str = "meditative-040";
 const CN_JADE_WELL: &str = "meditative-044";
+const DISRUPTIVE_DISRUPTOR: &str = "meditative-001";
+const DOUBLE_COUNTING: &str = "meditative-010";
 const MONEY_MACHINE: &str = "meditative-054";
 const GACHAHOLIC: &str = "meditative-101";
 const ALUNETH: &str = "meditative-080";
@@ -57,7 +59,7 @@ const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 102] = [
+const ACTIVATE_CARDS: [&str; 103] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,
@@ -87,6 +89,8 @@ const ACTIVATE_CARDS: [&str; 102] = [
     HEADQUARTERS,
     FENG_SHUI,
     CN_JADE_WELL,
+    DISRUPTIVE_DISRUPTOR,
+    DOUBLE_COUNTING,
     GACHAHOLIC,
     ALUNETH,
     TAOTIE,
@@ -135,7 +139,6 @@ const ACTIVATE_CARDS: [&str; 102] = [
     "stinkyscape-175",
     "stinkyscape-t-dormant-starship",
     "stinkyscape-t-propagation-layer",
-    "stinkyscapeplus-004",
     "stinkyscapeplus-008",
     "stinkyscapeplus-009",
     "stinkyscapeplus-010",
@@ -1415,6 +1418,66 @@ mod m_n44_cn_jade_well {
     }
 }
 
+/// Issue #4154: Disruptive Disruptor's Activate, once a turn and free: the opponent discards a random card
+/// (R4154207).
+mod m_n1_disruptive_disruptor {
+    use super::*;
+
+    fn discards_one(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(DISRUPTIVE_DISRUPTOR, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER, VANILLA], "library": [X, X] },
+        }));
+        let mana = s.state().players.p1.mana.current;
+        activate_listed(&mut s, DISRUPTIVE_DISRUPTOR, any);
+        assert_eq!(s.hand(P2).len(), 1, "the opponent discards one");
+        assert_eq!(s.hand(P1).len(), 1, "its own hand is untouched");
+        assert_eq!(s.state().players.p1.mana.current, mana, "no price");
+        let id = s.card(DISRUPTIVE_DISRUPTOR).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r4154207_base_makes_the_opponent_discard_a_random_card_once_a_turn() {
+        discards_one(false);
+    }
+
+    #[test]
+    fn r4154207_radiant_makes_the_opponent_discard_a_random_card_once_a_turn() {
+        discards_one(true);
+    }
+}
+
+/// Issue #4154: Double Counting's Activate, once a turn: a Discover of a Cry or Death card, (1) on the base
+/// face and free on the Radiant (R4154211).
+mod m_n10_double_counting {
+    use super::*;
+
+    fn discovers(radiant: bool, price: i32) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(DOUBLE_COUNTING, radiant)], "hand": [STOCKPILE], "library": [X, X], "mana": 4 },
+            "p2": { "hand": [FILLER] },
+        }));
+        activate_listed(&mut s, DOUBLE_COUNTING, any);
+        assert_eq!(s.state().players.p1.mana.current, 4 - price);
+        let pick = s.prompt_modes().into_iter().next().expect("a card on offer");
+        s.answer(json!(pick));
+        assert!(s.hand(P1).iter().any(|card| card.def_id == pick));
+        let id = s.card(DOUBLE_COUNTING).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r4154211_base_pays_1_to_discover_once_a_turn() {
+        discovers(false, 1);
+    }
+
+    #[test]
+    fn r4154211_radiant_discovers_for_free_once_a_turn() {
+        discovers(true, 0);
+    }
+}
+
 mod m_n54_money_machine {
     use super::*;
 
@@ -2221,12 +2284,10 @@ mod stinkyscape {
             "p2": { "hand": [FILLER], "library": [X, X] },
         }));
         let mana = s.state().players.p1.mana.current;
-        // A travel costs (1); the Radiant face's first each turn is free (R1847001).
+        // A travel costs (1), but the first each turn is free on both faces since #4154, the Radiant
+        // face's first two (R1847001, R4154203).
         activate_listed(&mut s, "stinkyscape-148", any);
-        assert_eq!(
-            s.state().players.p1.mana.current,
-            if radiant { mana } else { mana - 1 }
-        );
+        assert_eq!(s.state().players.p1.mana.current, mana);
     });
 
     mod s_t_dormant_starship {
@@ -2342,7 +2403,6 @@ mod stinkyscape {
     mod plus {
         use super::*;
 
-        const YATES: &str = "stinkyscapeplus-004";
         const ASSEMBLER_V3: &str = "stinkyscapeplus-008";
         const ASSEMBLER_V4: &str = "stinkyscapeplus-009";
         const ASSEMBLER_V5: &str = "stinkyscapeplus-010";
@@ -2382,7 +2442,6 @@ mod stinkyscape {
         const FLIER: &str = "stand-in (1) 2/30 Flying"; // Scatter's `damage2` lands on it
         const ARMORED: &str = "stand-in (0) 40/200 Armor 5"; // Pierce reads off its health
         const ARMORED_HEALTH: i32 = 200;
-        const TYLANNT: &str = "stinkyscape-006"; // Tylannt: no M, O, U, S or E in its name, so Yates's exile spares it
         const FELINOR: &str = "core-086"; // "Miss" Mrow
         const KITTEN: &str = "meditative-030"; // Fickle E-Kitten: a second Felinor, so the discard is asked
 
@@ -2884,90 +2943,6 @@ mod stinkyscape {
             let worn = if radiant { &weapon.radiant } else { &weapon.base };
             assert_eq!(s.stats(&radi.id).health, before + worn.health.unwrap_or_default());
             uses_left(&s, &id, 1);
-        });
-
-        /// S+ #4 Profe Yates in p1's hand, p1's `own` Units and p2's `enemy` Units on the field, and a Mana
-        /// Well in p2's backrow for its Cry to exile.
-        fn yates_in_hand(radiant: bool, own: Value, enemy: Value) -> Scenario {
-            open(scenario(json!({
-                "seed": "listed-s004",
-                "p1": { "mana": 10, "hand": [on(YATES, radiant)], "field": own, "library": [X, X] },
-                "p2": { "field": enemy, "backrow": [MANA_WELL], "hand": [FILLER], "library": [X, X] },
-            })))
-        }
-
-        /// R3996000: Yates played into `zone`, its Cry exiling p2's Mana Well.
-        fn play_yates(s: &mut Scenario, zone: i32) {
-            let well = s.backrow(P2, 1).expect("p2's Mana Well").id;
-            s.play(
-                YATES,
-                json!({ "zone": zone, "targets": [{ "pick": "instance", "instanceId": well }] }),
-            );
-            s.expect_in_zone(well.as_str(), "exile");
-        }
-
-        /// The listed `activate` of `ability`.
-        fn ability(ability: &'static str) -> impl Fn(&ActionBody) -> bool {
-            move |action: &ActionBody| ability_of(action).as_deref() == Some(ability)
-        }
-
-        // R3567003: Overwhelm freezes every Unit in its lane and the lanes beside it, both sides, itself too,
-        // and a frozen Yates lists no Activate (R2246000).
-        both_faces!(sp_n4_profe_yates_overwhelm, |radiant: bool| {
-            let own = json!([at_lane(TYLANNT, false, 1), at_lane(TYLANNT, false, 4)]);
-            let enemy = json!([at_lane(TYLANNT, false, 2), at_lane(TYLANNT, false, 5)]);
-            let mut s = yates_in_hand(radiant, own, enemy);
-            play_yates(&mut s, 2);
-            let id = s.card(YATES).id.clone();
-            activate_listed(&mut s, YATES, ability("overwhelm"));
-            let frozen = |player: PlayerId, lane: i32| s.unit_at(player, lane).frozen.is_some();
-            assert_eq!(
-                [
-                    frozen(P1, 1),
-                    frozen(P1, 2),
-                    frozen(P1, 4),
-                    frozen(P2, 2),
-                    frozen(P2, 5)
-                ],
-                [true, true, false, true, false]
-            );
-            assert!(listed(&s, &id).is_empty(), "a frozen Yates lists no Activate");
-            let shown: Vec<Value> = viewed(&s, &id)
-                .iter()
-                .filter(|view| view["ability"] == json!("overwhelm"))
-                .map(|view| view["usesLeft"].clone())
-                .collect();
-            assert_eq!(shown, vec![json!(0)], "Overwhelm's one use spent");
-        });
-
-        // R3567004: Wolf's Maw pulls a Flying Unit down: it loses Flying and takes the declared damage.
-        both_faces!(sp_n4_profe_yates_wolfs_maw, |radiant: bool| {
-            let mut s = yates_in_hand(radiant, json!([]), json!([on(TYLANNT, true)]));
-            let flyer = s.unit_at(P2, 1).id;
-            find_instance_mut(s.state_mut(), &flyer)
-                .expect("the enemy Unit stands")
-                .granted_keywords
-                .push(Keyword::Flying);
-            play_yates(&mut s, 1);
-            activate_listed(&mut s, YATES, aimed_at(&flyer));
-            let pulled = s.card(&flyer);
-            assert!(!jackioh_engine::layers::unit_has(
-                s.state(),
-                pulled,
-                KeywordKind::Flying
-            ));
-            assert_eq!(pulled.damage, printed(YATES, "damage", radiant));
-        });
-
-        // R3567002: Iron Mandate fuses Yates into a friendly Unit, kept: the host takes its stats.
-        both_faces!(sp_n4_profe_yates_iron_mandate, |radiant: bool| {
-            let mut s = yates_in_hand(radiant, json!([at_lane(TYLANNT, radiant, 2)]), json!([]));
-            play_yates(&mut s, 1);
-            let (yates, host) = (s.unit_at(P1, 1).id, s.unit_at(P1, 2).id);
-            let (own, grafted) = (s.stats(&host).attack, s.stats(&yates).attack);
-            activate_listed(&mut s, YATES, aimed_at(&host));
-            s.expect_in_zone(yates.as_str(), "gone");
-            s.expect_stats(host.as_str(), json!({ "attack": own + grafted }));
         });
     }
 }

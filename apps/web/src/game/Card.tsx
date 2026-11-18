@@ -591,7 +591,7 @@ function Card(props: CardProps): ReactElement {
         </span>
       )}
       {counters?.burn !== undefined && (
-        // R3540000: the Burn the Unit ticks at the start of its controller's turn (board.css `.counter-burn`).
+        // R3540000: the Burn the Unit takes once at the end of the turn (R4154000; board.css `.counter-burn`).
         <span className="counter counter-burn" data-counter="burn" title={t("Burn counters")}>
           {counters.burn}
         </span>

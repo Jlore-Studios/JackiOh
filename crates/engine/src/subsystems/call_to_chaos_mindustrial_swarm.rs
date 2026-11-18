@@ -272,16 +272,18 @@ fn build_recast() -> Effect {
 
 /// §8.12 row 142's ten entries, in the order the card prints them. Each `label` is the clause as the card
 /// prints it, which `chaosRolled` names to both players (R436); a tuned `param` does not change it
-/// (R3570000). Issue #3996 cut entry 4's count 5 → 4 and entry 7's Burn 3 → 2 (R3996200).
+/// (R3570000). Issue #3996 cut entry 4's count 5 → 4 and entry 7's Burn 3 → 2 (R3996200); issue #4154 cut
+/// entries 1, 2 and 5's counts 3 → 2, entry 4's 4 → 3 and entry 7's Burn 2 → 1 (R4154303), each a declared
+/// number, so a replay reads its own catalog's.
 pub const CHAOS_MS_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "paperclips",
-        label: "Add 3 random Paperclip cards to your hand, they cost (0), replenish 2 mana",
+        label: "Add 2 random Paperclip cards to your hand, they cost (0), replenish 2 mana",
         build: build_paperclips,
     },
     ChaosEffectDef {
         name: "swarm",
-        label: "Add 3 random Evolved Swarm cards to your hand, they cost (0)",
+        label: "Add 2 random Evolved Swarm cards to your hand, they cost (0)",
         build: build_swarm,
     },
     ChaosEffectDef {
@@ -291,12 +293,12 @@ pub const CHAOS_MS_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "jlockeed",
-        label: "Summon or cast 4 random Jlockeed cards",
+        label: "Summon or cast 3 random Jlockeed cards",
         build: build_jlockeed,
     },
     ChaosEffectDef {
         name: "terminus",
-        label: "Add 3 random Terminus cards to your hand, replenish 4 mana",
+        label: "Add 2 random Terminus cards to your hand, replenish 4 mana",
         build: build_terminus,
     },
     ChaosEffectDef {
@@ -306,7 +308,7 @@ pub const CHAOS_MS_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "afflict",
-        label: "Toxic 3 and Burn 2 all enemies",
+        label: "Toxic 3 and Burn 1 all enemies",
         build: build_afflict,
     },
     ChaosEffectDef {

@@ -127,9 +127,12 @@ mod tests {
                 added(&s).into_iter().map(|card| card.def_id).collect::<Vec<_>>()
             };
             assert_eq!(run("s71-same"), run("s71-same"));
-            let repeated = (0..400).any(|i| {
-                let cards = run(&format!("s71-rep-{i}"));
-                cards.iter().collect::<IndexSet<_>>().len() < cards.len()
+            // R3563000 makes one effect's draws unique while its rule holds; with it off they may repeat.
+            let repeated = with_unique_draws(false, || {
+                (0..400).any(|i| {
+                    let cards = run(&format!("s71-rep-{i}"));
+                    cards.iter().collect::<IndexSet<_>>().len() < cards.len()
+                })
             });
             assert!(repeated);
         }
@@ -145,23 +148,12 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_adds_4_a_degrade_2() {
-            // S+ #121 Toxopid, among the Mindustrial cards, adds a Crawler on its first arrival in a
-            // hand (R3560000): a chain the contract's own count must not hold, so each seed is one where
-            // no Toxopid is among the picks.
-            let toxopid_free = |seed: &str, step: i32| {
-                let mut s = signed(false, seed, 0);
-                step_param(s.card_mut(ID), "card", step);
-                s.play(ID, json!({}));
-                added(&s).iter().all(|card| card.def_id != "stinkyscapeplus-121")
-            };
-            let up_seed = seed_where("s71-up", |seed| toxopid_free(seed, 1));
-            let mut up = signed(false, &up_seed, 0);
+            let mut up = signed(false, "s71-up", 0);
             step_param(up.card_mut(ID), "card", 1);
             up.play(ID, json!({}));
             assert_eq!(added(&up).len(), 4);
 
-            let down_seed = seed_where("s71-down", |seed| toxopid_free(seed, -1));
-            let mut down = signed(false, &down_seed, 0);
+            let mut down = signed(false, "s71-down", 0);
             step_param(down.card_mut(ID), "card", -1);
             down.play(ID, json!({}));
             assert_eq!(added(&down).len(), 2);

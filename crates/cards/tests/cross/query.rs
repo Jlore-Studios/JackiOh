@@ -1225,20 +1225,21 @@ mod r1878000_the_starship_piece_pool_stinkyscape_124_jlockeeds_shipbuilding_gran
     use jackioh_engine::{DORMANT_STARSHIP_DEF_ID, KeywordKind, has_keyword};
 
     #[test]
-    fn r1878000_the_starship_piece_pool_is_the_forty_six_stinkyscape_cards_that_print_the_keyword() {
+    fn r1878000_the_starship_piece_pool_is_the_forty_five_stinkyscape_cards_that_print_the_keyword() {
         register();
         // The query a card script writes names its set so that it reaches the pieces while the set is held
         // (R1420): S #38 to #177, the Field Trap #131 among them; never the Dormant Starship, which prints
         // none, nor the Golem or the AI card, which are tokens. #2521 took the keyword off fifteen Units
-        // (#68, #69, #72 to #78, #80 to #83, #85 and #86) and gave it to the new #177 Cloaking Module.
+        // (#68, #69, #72 to #78, #80 to #83, #85 and #86) and gave it to the new #177 Cloaking Module;
+        // #4154 took it off #79 Orca.
         assert_eq!(
             starship_pieces(),
             q(json!({ "set": "Stinkyscape", "keywords": ["Starship Piece"] }))
         );
         let expected: Vec<String> = [
-            38, 40, 43, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 79,
-            90, 93, 98, 100, 101, 104, 105, 106, 107, 108, 122, 131, 132, 133, 134, 136, 140, 141, 142, 143,
-            175, 177,
+            38, 40, 43, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 90,
+            93, 98, 100, 101, 104, 105, 106, 107, 108, 122, 131, 132, 133, 134, 136, 140, 141, 142, 143, 175,
+            177,
         ]
         .iter()
         .map(|n| format!("stinkyscape-{n:03}"))

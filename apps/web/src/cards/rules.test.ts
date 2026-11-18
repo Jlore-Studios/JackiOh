@@ -976,7 +976,8 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
 describe("R1384: the glossary's rows for the Meditative cards' words", () => {
   it("R1384 Exile, Hand size and Mark in a hand are found where a Meditative card prints them", () => {
     const cases: readonly (readonly [GlossaryTermId, string, "base" | "radiant", string])[] = [
-      ["Exile", "meditative-078", "base", "Exile"],
+      // Meditative #48 Tranquility: "… Exile this." (#78 Occidentless Mandate Destroys since issue #4154).
+      ["Exile", "meditative-048", "base", "Exile"],
       ["Hand size", "meditative-079", "base", "hand size"],
       ["Mark in a hand", "meditative-076", "base", "Mark"],
       ["Mark in a hand", "meditative-076", "radiant", "Mark"],

@@ -1,5 +1,6 @@
-//! A unit the first tick of its own Burn and Toxic destroys before it can attack (#4065, R4065000): the tick
-//! runs at the start of its controller's turn, before that turn's attacks (R3540001), so `face_threat` counts
+//! A unit the first tick of its own Burn and Toxic destroys before it can attack (#4065, R4065000): a Burn
+//! ticks at the end of the turn under way (R4154000) and a Toxic at the start of its controller's turn
+//! (R3540001), each before that unit's next attacks, so `face_threat` counts
 //! none of its attacks, and neither `wall_switches` nor `stands_down` offers a switch on its account. Each
 //! board is then stepped through the engine, which destroys exactly the units the read leaves out. The cards:
 //! Mr. Vanilla, a 4/4; Core #30 Archivist set to a 3/3; Core #25, a 4-mana 7/7 with Armor 7; and Classic+ #6
@@ -88,7 +89,7 @@ fn walls(state: &GameState) -> Vec<ActionBody> {
 }
 
 /// Burn 3 leaves the 4/4 at 1 health, so it still swings and the 7/7 still walls; Burn 5 destroys it at the
-/// human's start of turn 10, so only the 3/3's 3 can come and there is no lethal to wall.
+/// end of the AI's turn 9 (R4154000), so only the 3/3's 3 can come and there is no lethal to wall.
 #[test]
 fn r4065000_a_unit_its_own_burn_destroys_first_adds_nothing_to_the_face_threat() {
     let mut s = lethal(json!({ "burn": 3 }));
@@ -132,8 +133,8 @@ fn r4065000_armor_meets_burn_and_toxic_pierces_it() {
     assert!(in_graveyard(s.state(), HUMAN, VANILLA));
 }
 
-/// R4064000: the human's Force Projector refills at its start of turn, before the tick, and soaks the whole Burn
-/// 5, so the 4/4 stands and still swings: read as `afflicted` reads the tick, it still counts, and with the pool
+/// R4064000: the human's Force Projector, full when the Burn ticks at the end of the AI's turn, soaks the whole
+/// Burn 5, so the 4/4 stands and still swings: read as `afflicted` reads the tick, it still counts, and with the pool
 /// read off it is left out as on a board without the Projector. The engine leaves it at full health.
 #[test]
 fn r4065000_a_unit_its_damage_pool_keeps_standing_still_counts() {
@@ -196,7 +197,8 @@ fn r4065000_the_side_on_turn_swings_before_its_tick() {
     s.attack(VANILLA, "hero");
     assert!(s.state().result.is_some());
 
-    // (b) The human on turn 10, its tick behind it: read with it swinging first, its 4/4 swings now.
+    // (b) The human on turn 10: read with it swinging first, its 4/4 swings now, before its Burn ticks at the
+    // turn's end (R4154000).
     let mut s =
         at(json!({ "turn": 10, "active": "p2", "p1": walled(), "p2": burning(json!({ "burn": 5 })) }));
     assert_eq!(face_threat(s.state(), HUMAN), 3);
@@ -207,15 +209,15 @@ fn r4065000_the_side_on_turn_swings_before_its_tick() {
     s.attack(VANILLA, "hero").expect_health(AI, 3);
 }
 
-/// R83: the Reborn body of a 4/4 its Burn destroys comes back summoning sick, with no Rush or Charge, so it
-/// cannot attack on that turn.
+/// R83: the Reborn body of a 4/4 its Toxic destroys at its controller's turn start comes back summoning sick,
+/// with no Rush or Charge, so it cannot attack on that turn.
 #[test]
-fn r4065000_an_unspent_reborn_does_not_bring_the_swing_back() {
+fn r4065000_an_unspent_reborn_its_toxic_spends_does_not_bring_the_swing_back() {
     let mut s = game(
         side(30, json!([])),
         side(
             30,
-            json!([{ "def": VANILLA, "lane": 3, "counters": { "burn": 5 } }]),
+            json!([{ "def": VANILLA, "lane": 3, "counters": { "toxic": 5 } }]),
         ),
     );
     s.card_mut(theirs(&s, 3)).granted_keywords.push(Keyword::Reborn);
@@ -228,15 +230,45 @@ fn r4065000_an_unspent_reborn_does_not_bring_the_swing_back() {
     assert!(s.attacks_of(&body).is_empty(), "{:?}", s.attacks_of(&body));
 }
 
+/// R4154000: a Burn ticks at the end of the turn under way, so the Reborn body of a 4/4 its Burn destroys is back
+/// before its controller's turn starts: not summoning sick then, it swings, the hero included, and the face
+/// threat counts it.
+#[test]
+fn r4154000_a_reborn_body_its_burn_brings_back_swings_on_its_controllers_turn() {
+    let mut s = game(
+        side(30, json!([])),
+        side(
+            30,
+            json!([{ "def": VANILLA, "lane": 3, "counters": { "burn": 5 } }]),
+        ),
+    );
+    s.card_mut(theirs(&s, 3)).granted_keywords.push(Keyword::Reborn);
+    assert_eq!(face_threat(s.state(), HUMAN), 4);
+    assert_eq!(face_threat_with(s.state(), HUMAN, &OFF), 4);
+    s.end_turn();
+    assert_eq!(s.state().active, HUMAN);
+    let body = theirs(&s, 3);
+    assert_eq!((body.def_id.as_str(), s.stats(&body).health), (VANILLA, 1));
+    let hero = format!("hero-{}", AI.as_str());
+    assert!(
+        s.attacks_of(&body)
+            .iter()
+            .any(|attack| matches!(attack, ActionBody::Attack { target_id, .. } if *target_id == hero)),
+        "{:?}",
+        s.attacks_of(&body)
+    );
+}
+
 /// R83: a Reborn body with Rush may attack a Unit on the turn it comes back, never the hero: a Radiant
-/// Wrong-House Attacker its Burn destroys adds nothing to the face threat, and its body attacks the AI's unit.
+/// Wrong-House Attacker its Toxic destroys at its controller's turn start adds nothing to the face threat, and
+/// its body attacks the AI's unit.
 #[test]
 fn r4065000_a_reborn_body_with_rush_attacks_only_a_unit() {
     let mut s = game(
         side(30, json!([{ "def": VANILLA, "lane": 3 }])),
         side(
             30,
-            json!([{ "def": ATTACKER, "radiant": true, "lane": 2, "counters": { "burn": 5 } }]),
+            json!([{ "def": ATTACKER, "radiant": true, "lane": 2, "counters": { "toxic": 5 } }]),
         ),
     );
     assert_eq!(face_threat(s.state(), HUMAN), 0);

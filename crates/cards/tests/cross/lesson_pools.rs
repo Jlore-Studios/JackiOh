@@ -24,12 +24,12 @@ const NAMES_A_HELD_CARD: &[&str] = &[
     // The Stinkyscape+ release (#3573): the two cards of the set that name a held card, as a Faction's
     // text does, so no pool is drawn.
     "stinkyscapeplus-120", // Crawler: "add a Toxopid to your hand" (S+ #121, Legendary).
-    "stinkyscapeplus-136", // Crawler Assembly Line: "Summon a Crawler", whose first arrival adds a Toxopid.
+    "stinkyscapeplus-136", // Crawler Assembly Line: "Summon a Crawler", whose Death adds a Toxopid.
     "stinkyscapeplus-137", // The Perfect Pair: "The pairs are Scepter and Reign, … Quad and Oct, …" (R3565004).
 ];
 /// A held card the text of another card names, so it reaches a game wherever that other card stands, not
 /// only as it is played: Toxopid (S+ #121) comes with each Crawler (#120), which any Mindustrial pool
-/// can generate and which adds it by name on its first arrival, however it arrives.
+/// can generate and which adds it by name as it dies, however it arrived.
 const NAMED_BY_A_CARD_IN_PLAY: &[(&str, &str)] = &[("stinkyscapeplus-121", "stinkyscapeplus-120")];
 
 /// Whether `state` holds a card whose text names the held card `id` (`NAMED_BY_A_CARD_IN_PLAY`).

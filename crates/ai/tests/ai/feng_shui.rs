@@ -326,3 +326,61 @@ fn r3951100_two_orders_of_the_same_plays_that_end_on_different_elements_are_two_
         signature_after(&plain, WOOD, WATER)
     );
 }
+
+/// The AI's own Feng Shui's id in `state`'s backrow.
+fn own_feng_shui(state: &GameState) -> String {
+    state.players[AI]
+        .backrow
+        .iter()
+        .flatten()
+        .find(|card| card.def_id == FENG_SHUI)
+        .map(|card| card.id.clone())
+        .expect("the AI's Feng Shui")
+}
+
+fn activates(action: &ActionBody, id: &str) -> bool {
+    matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id)
+}
+
+#[test]
+fn r4154403_the_move_order_takes_the_own_feng_shuis_rock_before_every_play() {
+    // After 金 the 5/2 (水) is rewarded, which R3951100 tries first among the plays: the free Rock comes
+    // before it.
+    let state = scene(
+        "ai-feng-shui-rock-first",
+        Some((AI, false)),
+        2,
+        json!([EARTH, WOOD, WATER]),
+        Some(CardElement::Metal),
+    );
+    let judge = own_feng_shui(&state);
+    let candidates = candidate_actions(&state, AI, Prices::NONE);
+    assert!(activates(&candidates[0], &judge), "{candidates:?}");
+    // The plays keep R3951100's order after it.
+    assert_eq!(play_order(&state), vec![WATER, EARTH, WOOD]);
+}
+
+#[test]
+fn r4154403_the_ai_takes_its_rock_on_a_turn_it_spends_on_plays() {
+    let state = scene(
+        "ai-feng-shui-rock-busy",
+        Some((AI, false)),
+        2,
+        json!([EARTH, WOOD, WATER]),
+        Some(CardElement::Metal),
+    );
+    let judge = own_feng_shui(&state);
+    for k in ["ai-feng-shui-rock-k1", "ai-feng-shui-rock-k2"] {
+        let turn = play_ai_turn(&state, AI, &mut AiOptions::new(create_rng(k, 0)));
+        assert!(
+            turn.decisions
+                .iter()
+                .any(|decision| activates(&decision.action, &judge)),
+            "{k}: {:?}",
+            turn.decisions
+                .iter()
+                .map(|decision| &decision.action)
+                .collect::<Vec<_>>()
+        );
+    }
+}

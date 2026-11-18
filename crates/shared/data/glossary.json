@@ -736,7 +736,7 @@
     {
       "id": "Burn",
       "label": "Burn",
-      "rule": "A counter on a Unit or a hero: at the start of its controller's turn it takes that much damage, and the count then drops by 3",
+      "rule": "A counter on a Unit or a hero: at the end of the turn it takes that much damage, and the Burn is then removed",
       "section": "§6.3",
       "aliases": [
         "Burns"

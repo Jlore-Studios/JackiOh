@@ -6,12 +6,16 @@
 //! Every entry is built when it resolves (`lazy_part`), as Core's are: a recursion changes what each
 //! later entry reads (R87), and a pause parks the rest (R113). Entry 9 is the engine's own rest-of-game
 //! effect (R458, R1241), stepped by `eternal_step`, so the table never leans on a card file.
+//!
+//! Issue #4154 cut entry 4's Armor and heal 5 → 4 (R4154305). The table it had through v0.6.6h,
+//! `CHAOS_MED_EFFECTS_V0_6_6H`, is the one the card's kept script rolls for those replays (R767000).
 
 use serde_json::{Value, json};
 
 use crate::config::{
     CALL_TO_CHAOS_ETERNAL_CAP, CHAOS_MED_ACCLAIMED, CHAOS_MED_CN_CARDS, CHAOS_MED_COST,
-    CHAOS_MED_FUSE_COPIES, CHAOS_MED_HEAL, CHAOS_MED_HERO_ARMOR, CHAOS_MED_NERFS, CHAOS_MED_PRIME_CARDS,
+    CHAOS_MED_FUSE_COPIES, CHAOS_MED_HEAL, CHAOS_MED_HEAL_V0_6_6H, CHAOS_MED_HERO_ARMOR,
+    CHAOS_MED_HERO_ARMOR_V0_6_6H, CHAOS_MED_NERFS, CHAOS_MED_PRIME_CARDS,
 };
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::ForRestOfGameArgs;
@@ -173,17 +177,26 @@ fn build_prime() -> Effect {
 }
 
 /// 4. §6.1's Armor kept for the rest of the game (C+ #46's, R124), then an uncapped hero heal (§6.3), both
-///    5 since R3135001.
-fn build_armor() -> Effect {
-    entry("armor", |_ctx| {
+///    4 since R4154305 (5 from R3135001 through v0.6.6h).
+fn armor_entry(armor: i32, heal: i32) -> Effect {
+    entry("armor", move |_ctx| {
         vec![
-            crate::effects::perks::gain_hero_armor(json_as(json!({ "amount": CHAOS_MED_HERO_ARMOR }))),
+            crate::effects::perks::gain_hero_armor(json_as(json!({ "amount": armor }))),
             crate::effects::heal(json_as(json!({
                 "target": { "of": "selfHero" },
-                "amount": CHAOS_MED_HEAL
+                "amount": heal
             }))),
         ]
     })
+}
+
+fn build_armor() -> Effect {
+    armor_entry(CHAOS_MED_HERO_ARMOR, CHAOS_MED_HEAL)
+}
+
+/// R4154305, R767000: entry 4 through v0.6.6h, 5 Armor and a heal of 5.
+fn build_armor_v0_6_6h() -> Effect {
+    armor_entry(CHAOS_MED_HERO_ARMOR_V0_6_6H, CHAOS_MED_HEAL_V0_6_6H)
 }
 
 /// 5. The Jade Beauty token's base face (Meditative #39.5); the Jade Counter is not touched.
@@ -261,7 +274,7 @@ fn build_eternal() -> Effect {
 }
 
 /// §8.8 row 95's ten entries in printed order, each `label` the printed clause (R432's cost words,
-/// R373's "deck") that `chaosRolled` names to both players (R436).
+/// R373's "deck") that `chaosRolled` names to both players (R436). Issue #4154 cut entry 4 (R4154305).
 pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "fuse",
@@ -280,8 +293,64 @@ pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "armor",
-        label: "Your hero gains 5 Armor and you heal it 5",
+        label: "Your hero gains 4 Armor and you heal it 4",
         build: build_armor,
+    },
+    ChaosEffectDef {
+        name: "jade",
+        label: "Summon a Jade Beauty",
+        build: build_jade,
+    },
+    ChaosEffectDef {
+        name: "acclaimed",
+        label: "Summon 2 random Acclaimed cards",
+        build: build_acclaimed,
+    },
+    ChaosEffectDef {
+        name: "bounce",
+        label: "Bounce every enemy permanent, then Nerf each card bounced",
+        build: build_bounce,
+    },
+    ChaosEffectDef {
+        name: "golem",
+        label: "Summon a CN Golem",
+        build: build_golem,
+    },
+    ChaosEffectDef {
+        name: "eternal",
+        label: "For the rest of the game, at the start of each of your turns, cast a random Call to Chaos",
+        build: build_eternal,
+    },
+    // 10. Core's recursion, the chain counting casts of every edition (R28, R87, R1240).
+    ChaosEffectDef {
+        name: "recast",
+        label: "Cast a random Call to Chaos",
+        build: cast_random_call_to_chaos,
+    },
+];
+
+/// R4154305, R767000: §8.8 row 95's ten entries as they were through v0.6.6h, before issue #4154 cut entry 4's
+/// Armor and heal: the card's kept script (`script_v0_6_6h`) rolls it for those replays.
+pub const CHAOS_MED_EFFECTS_V0_6_6H: &[ChaosEffectDef] = &[
+    ChaosEffectDef {
+        name: "fuse",
+        label: "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
+        build: build_fuse,
+    },
+    ChaosEffectDef {
+        name: "cn",
+        label: "Add 2 random CN cards to your hand, which cost (0)",
+        build: build_cn,
+    },
+    ChaosEffectDef {
+        name: "prime",
+        label: "Add 2 random Prime cards to your hand, which cost (0)",
+        build: build_prime,
+    },
+    ChaosEffectDef {
+        name: "armor",
+        label: "Your hero gains 5 Armor and you heal it 5",
+        build: build_armor_v0_6_6h,
     },
     ChaosEffectDef {
         name: "jade",

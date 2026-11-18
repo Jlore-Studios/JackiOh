@@ -5,8 +5,9 @@
 //!            Stinkyscape card."
 //!
 //! Marketplace is open (R1853000), its owner may sell it from their hand in their main phase (R1853003),
-//! at a quote drawn each turn after the Resources' (`HAND_SALE_PRICE`, 3–10,
-//! Radiant 6–20); the public `marketSold` names it, it ceases to exist and its Credits are gained
+//! at a quote drawn each turn after the Resources' (`HAND_SALE_PRICE`, 4–13, Radiant 8–25 since issue
+//! #4154's "~25% more", R4154206; 3–10 and 6–20 before, a Rare Resource's); the public `marketSold`
+//! names it, it ceases to exist and its Credits are gained
 //! (R1840005). Played, it Discovers (§6.3) a non-token Stinkyscape card: the pool names the set, so R1420's
 //! gate would not empty it were the set held (R380), and the Discover never offers the card that made it
 //! (R387), so never Spice. The pick goes to the hand (§2.4's cap burning it), Radiant on the Radiant
@@ -196,6 +197,14 @@ mod tests {
                 "sell",
             )
         });
+    }
+
+    /// R4154206: issue #4154's "~25% more": a Rare Resource's 3 to 10 (Radiant 6 to 20), each end a
+    /// quarter higher, rounded to the nearest Credit.
+    #[test]
+    fn r4154206_it_sells_for_a_quarter_more_than_a_rare_resource() {
+        assert_eq!((HAND_SALE_PRICE.sell_min, HAND_SALE_PRICE.sell_max), (4, 13));
+        assert_eq!((HAND_SALE_RADIANT_PRICE.sell_min, HAND_SALE_RADIANT_PRICE.sell_max), (8, 25));
     }
 
     #[test]
