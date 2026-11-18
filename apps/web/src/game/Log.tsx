@@ -128,7 +128,7 @@ function Log({ view: newest, revealed = false }: LogProps): ReactElement {
   // never an instance id or a def id; CLAUDE.md rule 7). The ref primes silently on mount and on
   // hotseat hand-over, so history never replays; only a new newest key speaks.
   const newestLine: Line | null = shown.length === 0 ? null : (shown[shown.length - 1] ?? null);
-  const [said, setSaid] = useState("");
+  const [said, setSaid] = useState<{ key: string | null; text: string }>({ key: null, text: "" });
   const lastKey = useRef<{ viewer: PlayerView["viewer"]; key: string | null } | null>(null);
   useEffect(() => {
     const key = newestLine?.key ?? null;
@@ -138,7 +138,7 @@ function Log({ view: newest, revealed = false }: LogProps): ReactElement {
     }
     if (key !== lastKey.current.key) {
       lastKey.current = { viewer: view.viewer, key };
-      setSaid(newestLine?.text.full ?? "");
+      setSaid({ key, text: newestLine?.text.full ?? "" });
     }
   });
   return (
@@ -155,7 +155,7 @@ function Log({ view: newest, revealed = false }: LogProps): ReactElement {
       {/* #4140: always in the tree (as the draw notices are) so an arriving line is read out; `said`
           only changes on arrival, so mount, reveal and re-render announce nothing. */}
       <p className="log-live" data-testid={testid.logLive} role="status" aria-live="polite" aria-atomic="true">
-        {said}
+        <span key={said.key}>{said.text}</span>
       </p>
     </>
   );

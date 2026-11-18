@@ -894,6 +894,22 @@ describe("#4140 the log speaks its newest line to screen readers", () => {
     expect(announcer().textContent).toBe(said(2));
   });
 
+  it("#4174 repeated words still announce each arrival", () => {
+    const { rerender } = render(<Log view={withEvents(baseView(), [lost(1)])} />);
+    expect(announcer().textContent).toBe("");
+    const primed = announcer().firstElementChild;
+    rerender(<Log view={withEvents(baseView(), [lost(1), lost(1)])} />);
+    expect(announcer().textContent).toBe(said(1));
+    const first = announcer().firstElementChild;
+    expect(first).not.toBeNull();
+    expect(first).not.toBe(primed);
+    rerender(<Log view={withEvents(baseView(), [lost(1), lost(1), lost(1)])} />);
+    expect(announcer().textContent).toBe(said(1));
+    const second = announcer().firstElementChild;
+    expect(second).not.toBeNull();
+    expect(second).not.toBe(first);
+  });
+
   it("#4140 revealing the phone log and re-rendering announces nothing extra", () => {
     const view = withEvents(baseView(), [lost(1), lost(2)]);
     const { rerender } = render(<Log view={view} />);
