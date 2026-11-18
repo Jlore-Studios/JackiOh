@@ -16550,7 +16550,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4169,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner_gave_up": {
         "at": "2026-11-18T08:40:45Z",
@@ -16559,7 +16559,7 @@
       },
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-11-18T08:16:27Z",
+      "queued_at": "2026-11-18T14:17:30Z",
       "run_id": "44265823041",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16580,6 +16580,7 @@
         "provider": "claude-7",
         "run": "44252299583"
       },
+      "source": "conflict",
       "started_at": "2026-11-18T08:18:11Z",
       "stop_requested": false,
       "taken_asks": [],
