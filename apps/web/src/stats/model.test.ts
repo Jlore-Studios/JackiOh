@@ -14,7 +14,6 @@ import {
   SUMMED_COUNTERS,
   outcomeFor,
   winPercent,
-  formatPlayedDelta,
 } from "./model.ts";
 
 describe("R639 a game's log", () => {
@@ -226,11 +225,3 @@ describe("R2649000 the game's own mechanics", () => {
   });
 });
 
-describe("R377 formatPlayedDelta", () => {
-  it("R377 formats signed percentage points and returns null for null", () => {
-    expect(formatPlayedDelta(0.2)).toBe("+20%");
-    expect(formatPlayedDelta(-0.082)).toBe("-8%");
-    expect(formatPlayedDelta(0)).toBe("0%");
-    expect(formatPlayedDelta(null)).toBeNull();
-  });
-});

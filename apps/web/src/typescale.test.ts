@@ -144,7 +144,7 @@ const UNSCALED: Record<string, number> = {
   "routes/privacy.css": 3,
   "routes/purchases.css": 2,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 23,
+  "routes/stats.css": 22,
   "settings/changeEmail.css": 1,
   "settings/settings.css": 10,
   "shop/shop.css": 2,

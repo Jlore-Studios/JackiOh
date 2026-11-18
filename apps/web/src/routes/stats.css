@@ -78,17 +78,9 @@
   margin: 0;
 }
 
-.stats-games-note {
-  margin: 6px 0 0;
-}
-
-/* R2089000: the Created cards, below the Cards tab's table; their rows open nothing, so take no pointer. */
+/* R2089000, R4155000: the Created cards, below the Cards tab's table, in the deck table's columns. */
 .stats-created-panel {
   margin-top: 16px;
-}
-
-.stats-created-panel .stats-tr {
-  cursor: inherit;
 }
 
 /* Filter bar */
@@ -363,10 +355,6 @@
 
 /* R3022000: a card's balance tier chip is stats/tier.css's, which the card detail shares (R3185000) */
 
-.stats-tiers-note p {
-  margin: 4px 0;
-}
-
 /* R2895000: a figure's 95% range, on its own line under it (in a figure cell, under its text and — in the Adjusted cell, R4084000 — its bar) */
 .stats-range {
   display: block;
@@ -387,12 +375,6 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 16px;
-}
-
-.stats-player-note {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--text-dim, #9aa1b8);
 }
 
 .stats-loading,
@@ -681,10 +663,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.stats-sets-note {
-  margin-top: 16px;
 }
 
 /* R1973002, R3324000: the patch bar: the patch before, the patch tabs (a Segmented, #3222, each its patch's name

@@ -47,12 +47,8 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
   }, [patch, mode, attempt]);
 
   const figures = data?.figures ?? null;
-  // The figures to show, none below the sample floor; and the games they count against the patch's.
+  // The figures to show, none below the sample floor.
   const shown = data !== null && figures !== null && figures.games >= data.minSample ? figures : null;
-  const counted =
-    data !== null && figures !== null && figures.games < data.totalGames
-      ? { games: figures.games, total: data.totalGames }
-      : null;
 
   return (
     <section className="stats-games-panel" data-testid={statsTestid.gamesPanel}>
@@ -92,14 +88,6 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
                 <li>{t("{share}% of games reach fatigue", { share: Math.round(shown.fatigueShare * PERCENT) })}</li>
               )}
             </ul>
-          )}
-          {counted !== null && (
-            <p className="stats-sample-hint stats-games-note">
-              {t("Counted over {games} of the patch's {total} games: games recorded before these figures were kept are not in them.", {
-                games: formatNumber(counted.games),
-                total: formatNumber(counted.total),
-              })}
-            </p>
           )}
         </>
       )}
