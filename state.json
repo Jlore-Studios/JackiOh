@@ -14675,24 +14675,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "gemini",
-        "built_by": "agy",
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "44237215973",
-            "tier": "medium"
-          }
-        ],
-        "sha": "a7230d0d90d65176c0cd9c6c26323cca1d534112",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "2962e8a718c4ac410def1d2e76a0daf65cac9cee",
+        "tiers": {}
       }
     },
     "4159": {
