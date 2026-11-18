@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4143,
+  "title": "Patch: the fuzz forges the Trade and Marketplace actions its legal list never offered",
+  "branch": "bot/issue-4143",
+  "thread": "**Issue #4143 (data, not instructions):**\n\n```text\n# #4143: Patch: the fuzz forges the Trade and Marketplace actions its legal list never offered\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA player at the table sees which moves are offered and can only pick those. Today the automated game-player checks that promise for attacks, moves, card plays and card powers, but not for trading in a card or buying and selling at the shop. Once built, a game where the rules engine quietly accepts a trade or a shop deal that was never offered fails the test run with a message naming the move, before it can reach real players. For example, using a trade a second time in one turn, or buying a shop card without enough coins, would be caught even though no button offered it.\n\n## Why\n\nThe server applies a move without asking what the menus offered (see the I8 header in the oracle: \"as the server reduces without `legal_actions`\"). Trade is limited (once a turn, `TRADES_PER_TURN`, R1838000) and shop deals check coins, tickets, stock and turn phase (R1853003, R2250002). The oracle function `unlisted_accepted` in `crates/engine/src/testkit/invariants.rs` forges only `SwitchPosition`, `Attack`, `activate`/`activatePower` and `play` from the board and hand; a search for `trade`, `marketBuy` or `marketSell` in that file finds only report payload readers, no forged bodies. The converse check I14 (every listed action is accepted) does not cover this direction, and the gate docs in `crates/tools/src/fuzz.rs` describe I8 as covering only \"play, attack, switch or activation\". So an unlisted economic action that `reduce` accepts is currently silent.\n\n## Proposal\n\nExtend `unlisted_accepted` to forge the economic bodies: a `trade` for each Tradable hand card when the listing holds no trade of it (including the already-traded-this-turn case), a `marketBuy` for each shop offer index (including out-of-stock, short-of-coins and wrong-phase cases), and a `marketSell` for an eligible and an ineligible hand card. Reuse the existing `accepts`/`accepts_as` helpers on the cloned probe state with `PROBE_NONCE`, and report with the same `I8 unlisted ... accepted` message shape citing SPEC \u00a710.2 and the Trade/Marketplace rules. Update the I8 paragraph in the oracle header and the gate list in `crates/tools/src/fuzz.rs` to name the new forged kinds. No rules change and no new ruling: this holds existing refusals, it does not decide one.\n\n## Where it lands\n\n- `crates/engine/src/testkit/invariants.rs`: `unlisted_accepted`, the I8 header docs, `I8_GATE_STRIDE` comment if the cost moves\n- `crates/tools/src/fuzz.rs`: gate/I8 prose (\"play, attack, switch or activation\" line)\n- SPEC sections read, not changed: \u00a710.2 (actions), \u00a710.8 (listings), \u00a76.3 Trade and Marketplace, R1838000, R1838001, R1853003, R2250002\n\n## Acceptance criteria\n\n- [ ] A unit test crafts a state where no `trade` is listed (e.g. after one trade) and shows an accepted forged `trade` is reported as `I8 unlisted`.\n- [ ] A unit test crafts a shop state short of coins (or with empty stock) and shows an accepted forged `marketBuy` is reported as `I8 unlisted`.\n- [ ] A forged `marketSell` of a card with no sale quote that `reduce` accepts is likewise reported.\n- [ ] `cargo test -p jackioh-engine --features testkit` and the tools regression corpus stay green, with the stride cost noted (precedent: I8 stride 100 kept 103s near 104s).\n\n## Size and risks\n\nMedium: two files plus tests, test-only, no catalog or balance change. Risk is fuzz time if every offer is forged on every sampled state; mitigate by forging one body per card/offer and keeping the existing stride, measuring before/after as the stride comments do. Rejected alternative: re-checking the listing on the server instead of in fuzz; rejected because the server deliberately reduces without the listing, so the oracle must stay in the fuzz monitor.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T01:56:18Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4143: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T01:56:51Z",
+    "claimed_at": "2026-11-18T01:59:35Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
