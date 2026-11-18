@@ -37273,7 +37273,9 @@
           "provider": "claude-1"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-18T14:31:19Z",
         "every": 5,
+        "findings": 0,
         "head": "4019b5e50a5e2f09628b1a816b9ec883e7a707dc",
         "issue": 4166,
         "merged_at": "2026-11-18T14:10:54Z",
@@ -37286,12 +37288,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:336b2490-1795011631",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44323293364",
         "sha": "177e2c215a1d96e0a22c19bbfe324614f4dd06be",
         "started_at": "2026-11-18T14:21:02Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: weekly hygiene, dead files and archives, 2026-11-18",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 345
