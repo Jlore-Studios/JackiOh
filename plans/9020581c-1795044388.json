@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4216,
+  "title": "Patch: the skill miss reads only what its seat may know",
+  "branch": "bot/issue-4216",
+  "thread": "**Issue #4216 (data, not instructions):**\n\n```text\n# #4216: Patch: the skill miss reads only what its seat may know\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen you face a ladder bot that is set below full strength, some of its moves come from a deliberate mistake routine instead of the full search. That routine is supposed to play as if it knew only what its seat could see at the table. Today two corners of it peek at the real hidden cards: the list of moves it chooses from is built from the true position rather than the seat's view, and the imaginary worlds it prices those moves on ignore the cost printed on a face-down card that both players can see. After this change the bot's mistakes are honest ones: it picks only from moves its seat could know about, and its imagined worlds respect the costs it was shown. A concrete case: a human with a face-down card showing a cost faces a weaker bot whose error routine currently prices its reply on worlds holding a different-cost card, and whose shortlist of moves can shift with cards it cannot see.\n\n## Why\n\n- The crate's contract is that hidden cards never change a decision (`crates/ai/README.md`, decide reads only through redact; `decide.rs` names ai_to_act and redact the only two reads of the true state under R185). The mistake routine is a decision path used by ladder bots (`BOT_STRENGTHS`) and any seat below full skill, but `skill.rs` builds its candidate list from the true state and determinizes with shown-cost matching switched off, unlike every search-time determinization.\n- Face-down cards are not inert while hidden: a face-down trap's aura is live (R403) and visibly moves unit stats (the R602 compensation in `observe.rs`), and a face-down card can show a cost that redaction preserves and determinization matches (R351, R762). Both feed legality and pricing, so a true-state list and a cost-blind world can answer differently from what the seat knows.\n- Nothing guards this path today: the quality gates and the shadow-ban sweep always play `skill: None` (`gate.rs`, `sweep.rs`), so only short unit tests exercise the miss. A hidden-information regression here ships to real human opponents silently.\n\n## Proposal\n\n- Derive the miss's candidate list from the redacted state it already computes, instead of the true state.\n- Determinize the miss's world with the default shown-cost matching, as the search's worlds do, so its one-ply prices are read on worlds consistent with what the seat was shown; keep it off only with a documented, measured reason and a test.\n- Update the crate README's skill paragraph, which currently documents the true-state candidates, and any comments describing the old behavior.\n\n## Where it lands\n\n- `crates/ai/src/skill.rs` (candidate source, determinize options)\n- `crates/ai/tests/ai/skill.rs` (new fairness tests)\n- `crates/ai/README.md` (skill paragraph)\n- SPEC sections 9.9 (no-cheating practice AI, R185) and 9.12 (skill knob, R747000, R2214000); no new ruling, since this enforces R185 rather than deciding new semantics\n\n## Acceptance criteria\n\n- [ ] `skill_miss_action` builds its candidates from `redact(state, seat)`, never from the true state.\n- [ ] Its determinized world respects shown costs (R762) like the search's worlds, or a comment plus a test records why it must not.\n- [ ] A new test plays positions whose redactions match but whose hidden cards differ, including a face-down card with a shown cost and one with a live stat aura, and holds the miss's candidates and draw sequence identical; the shown-cost half fails before the fix.\n- [ ] `cargo test -p jackioh-ai` with the testkit features, `cargo fmt --check`, and `cargo clippy -p jackioh-ai --all-targets -- -D warnings` are clean, and gate and sweep behavior at `skill: None` is unchanged.\n\n## Size and risks\n\nSmall: one module plus tests and a paragraph of docs; no engine, card, gate-threshold, or spec change (difficulty hard as AI work goes, priority low as fairness work goes). The risk is that some candidate today is reachable only through hidden info; losing it is the intended fix, and the full-skill AI plus all gates are untouched. If shown-cost matching proves load-bearing for the miss, the fallback keeps it off with a measured reason instead.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `fairness` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T23:20:11Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4216: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T23:20:29Z",
+    "claimed_at": "2026-11-18T23:26:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
