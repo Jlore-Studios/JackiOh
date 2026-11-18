@@ -17087,15 +17087,8 @@
       }
     },
     "4207": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44335492185",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-18T16:00:53Z",
-        "until": "2026-11-18T16:30:53Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17107,10 +17100,9 @@
         "reason": "planned on opus",
         "trail": "ption\": \"Find tests importing damage_combat voidwalker fixtu\u2026\n- Bash: {\"command\": \"for r in 0127 0064 0055 0089 0011 0078 0463 0068 1124 0008 0042; do test -f spec/rulings/R$r.md && echo \\\"R$r ok: $(sed -n 3p spec/rulings/R$r.md | cut -c1-100)\\\" || echo \\\"R$r MISSING\\\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"RebornEntry {\\\" crates --include=*.rs | head; grep -rn \\\"ZoneName::Exile\\\" crates/engine/src/state_check.rs | head -3; grep -n \\\"^use\\\\|ZoneName\\\" crates/engine/src/state_chec\u2026\n- Bash: {\"command\": \"grep -n -i \\\"exiled instead\\\\|instead of dying\\\\|replacement sen\\\" spec/0[1-9]-*.md spec/1[0-5]-*.md | cut -c1-200 | grep -v \\\"^spec/04-combat.md:77\\\\|^spec/06-keywords.md:\\\\(52\\\\|108\\\\|\u2026\n- Bash: {\"command\": \"grep -n \\\"Second Wind\\\" spec/08-catalog.md | cut -c1-1200 | head -2; grep -n -i \\\"no death\\\\|no reborn\\\" spec/0[1-9]-*.md spec/1[0-5]-*.md | cut -c1-160 | head -20\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"sed -n 100,125p crates/engine/src/effects/destroy.rs; sed -n 800,830p crates/engine/src/play_steps.rs\", \"description\": \"Read sacrifice effect and tribute payment\"}\n- Bash: {\"command\": \"sed -n 1234,1300p crates/engine/tests/rules/replacements.rs | grep -n \\\"voidwalker\\\\|Destroyed\\\\|Exiled\\\\|fn \\\\|event_types\\\\|assert\\\" | head -30\", \"description\": \"Check view tests in re\u2026\n- Bash: {\"command\": \"grep -n \\\"DISINTEGREX\\\" crates/engine/tests/rules/*.rs | grep -v fixtures | head; grep -n \\\"fn board_as\\\\|\\\\\\\"turn\\\\\\\"\\\\|mana\\\" crates/engine/tests/rules/stinkyscape_verbs.rs | head -5\",\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Design settled (planner)\\n- collect(): ReadCard.exiled = cause==Collected && destroy_exiles(state,&unit) (judged in read phase, before any moves);\\n mov\u2026\n- Bash: {\"command\": \"sed -n 118,150p crates/engine/tests/rules/backrow_death.rs\", \"description\": \"Read backrow_death exile verb test pattern\"}\n- Bash: {\"command\": \"grep -n \\\"fn first_in_hand\\\\|fn field_of\\\\|fn strings\\\\|fn hero_target\\\\|pub fn sacrifice_now\\\\|pub use crate::state_check\\\" crates/engine/src/testkit/*.rs crates/engine/src/testkit.rs 2\u2026\n- Bash: {\"command\": \"sed -n 60,100p crates/engine/tests/rules/replacements.rs\", \"description\": \"Read replacements.rs local helpers\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\", \"content\": \"# Plan for #4207 (final draft; the final message is the same plan)\\n\\n1. **Goal.** A card that **dies** while a replac\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\", \"content\": \"## Goal\\n\\nA card that **dies** while a replacement sends it elsewhere has still died. This covers C #50 Voidwalker an\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the plan draft\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\", \"content\": \"## Goal\\n\\nA card that **dies** has still died wherever a replacement sends it. This covers C #50 Voidwalker and Stink\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\", \"content\": \"## Goal\\n\\nA card that **dies** has still died, wherever a replacement sends it. This covers C #50 Voidwalker and Stin\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-4207/.bot-plan.md'\\ns=open(p).read()\\nstart=s.index('### 3. Rulings')\\nend=s.index('### 5. Cards, AI and docs')\\nnew\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4207/.bot-plan.md'\\ns=open(p).read()\\nstart=s.index('## Tests')\\nend=s.index('## Done when')\\nnew='''## Tests\\n\\n### `crates/en\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport re\\ns=open('/home/runner/work/_temp/work/item-4207/.bot-plan.md').read()\\ntoks=s.split()\\nprint(len(toks), len([t for t in toks if re.search(r'[A-Za-z0-9]', t)])\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\", \"limit\": 80}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4207/.bot-plan.md'\\ns=open(p).read()\\na=s.index('## Goal'); b=s.index('## Files to touch')\\ns=s[:a]+'''## Goal\\n\\nA card that *\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\", \"offset\": 90, \"limit\": 120}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4207/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" - Returning a body from any exile pile, which would revive a body a Death hook\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\", \"offset\": 205, \"limit\": 130}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4207/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"r4207000_a_backrow_card_fires_its_death_sacrificed_destroyed_or_sacrificed_into\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4207/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n('''### 2. Doc comments\\n\\n- `crates/engine/src/replacements.rs`, `destroy_exiles`\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4207/.bot-plan.md'\\ns=open(p).read()\\na=s.index('## Done when'); b=s.index('## Risks')\\ns=s[:a]+'''## Done when\\n\\n- [ ] The te\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\", \"limit\": 60}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-4207/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"| `spec/rulings/R0461.md`, `R1849002.md`, `R0398.md`, `R1852000.md`, `R2564000.\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4207/.bot-plan.md\"}\n- said: ## Goal A card that **dies** has still died, wherever a replacement sends it. This is ruling **R4207000**, for C #50 Voidwalker and Stinkyscape #105 Disintegrex, base and Radiant. It covers the state check's collection and, under Voidwalker, a Sacrifice or Tribute too. Such a card: - fires its Deat\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-18T15:25:30Z",
       "owner_why": "it plans it",
@@ -17123,9 +17115,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-18T15:18:55Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44335492185",
+      "run_id": "pending:75cb4908-1795017686",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T15:25:30Z",
+      "started_at": "2026-11-18T16:02:00Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17335,9 +17327,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T15:51:54Z",
+    "at": "2026-11-18T16:02:00Z",
     "url": "",
-    "what": "review #4209 on claude-3"
+    "what": "build #4207 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-18T15:49:27Z",
