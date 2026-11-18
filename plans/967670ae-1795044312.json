@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4222,
+  "title": "Patch: the card pictures' scene kits and recipes load alongside the engine module, not in the first page load",
+  "branch": "bot/issue-4222",
+  "thread": "**Issue #4222 (data, not instructions):**\n\n```text\n# #4222: Patch: the card pictures' scene kits and recipes load alongside the engine module, not in the first page load\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe browser draws every card picture itself, from a large set of drawing parts and one recipe per card. Today all of that downloads before the first screen appears. It isn't needed that early: no card can be shown until the game engine has arrived, and the engine only starts downloading after the first screen's code has run. Once this is built, the first page is smaller and appears sooner. The engine also starts downloading sooner, and the pictures arrive alongside it, so cards look exactly as they do now and show up no later. A visitor on a phone or a slow connection sees the landing page sooner. Nobody sees a card drawn differently.\n\n## Why\n\n- **How the data gets into the first load:** `main.tsx:102` imports `routes/landing.tsx` statically. The landing imports `cards/CardFace.tsx` (`:119`), which reaches `cards/art/index.ts`, then `CardArt.tsx:63`, then `svg.ts:25` and `procedural.ts:10`, then `scene.ts:20-22`. `scene.ts` statically imports `sceneKit.ts`, `figureKit.ts` and `sceneRecipes.ts`: every scene kit and about 1,019 card recipes.\n- **How big it is:** 3,216,076 bytes of source. `sceneKit.ts` alone is 369,180 bytes and `figureKit.ts` 254,733; the recipe files total 1,696,416. With line comments stripped and gzipped, that is about 653 KB. Minified it is smaller, but it is still the largest single block of data in the first load. `net/first-load.test.ts:29-34` records that 48 recipes added 7,266 gzipped bytes, about 150 bytes each, so the recipes alone come to roughly 150 KB before the kits. After #4130 the whole first load measured 980,254 gzipped bytes; `FIRST_LOAD_GZIP_BUDGET_BYTES` is 999,424 (`first-load.test.ts:47`).\n- **No first-load screen can use it before the engine arrives:** a card face is the engine module's face model (`wasm/useEngineReady.ts:1-4`). The landing's card fan and the not-found page's card wait on `useEngineReady()` (`landing.tsx:608`), and every other screen waits behind `EngineGate`. The module is fetched only after the entry script has run (`main.tsx:953`), so a heavier entry also delays the engine.\n- **The seam is clean:** the scene data is read through four names only, `SCENE_RECIPES` and `ALT_SCENE_RECIPES` (both in `sceneRecipeOf`, `scene.ts:251`), `SCENE_KIT` and `drawFigure`. `scene.ts` has three importers (`svg.ts`, `procedural.ts`, `dioramas/pieces.ts`), and all of them go through `sceneRecipeOf`, `withScene` or `composeScene`.\n- **Precedent:** this is the same kind of cut as #4130 (the sound tables, 101,386 gzipped bytes less) and #4180 (the catalog copy, PR #4215), and it touches neither.\n\n## Proposal\n\n1. Add a small loader beside `scene.ts`. It dynamically imports one data module that re-exports the kits, the figure kit and both recipe tables, then installs them into `scene.ts`. `scene.ts` keeps its API, its types and its small constants (`SCENE_BOX`, the layers, the palette), and reads the four tables from the installed slot.\n2. The page starts this load next to `loadWasm()` in `main.tsx`. Anything that waits for the engine before drawing a face resolves only once both are in: `useEngineReady`, `WhenEngineReady`, `EngineGate`, and `routes/chunks.tsx`'s prefetch on intent. The practice worker imports `wasm/index.ts` but draws no pictures, so the scene wait belongs in the page's callers, not inside `loadWasm()`.\n3. Before install, `sceneRecipeOf` throws a clear error instead of answering null, the way `wasm/index.ts`'s `call` does before load. A null answer would draw the plain painter's picture and cache it in `svg.ts`'s `proceduralCache`. With the error, a face drawn too early fails a test instead of shipping the wrong picture.\n4. `test/setup.ts` installs the tables synchronously, as it already loads the wasm synchronously, so every existing art test runs unchanged.\n5. Measure the first load as CI builds it (`vite build --mode development`) and lower `FIRST_LOAD_GZIP_BUDGET_BYTES` to that number plus its usual 2% or so of headroom, writing the measurement in its comment.\n\n## Where it lands\n\n- `apps/web/src/cards/art/scene.ts`, plus a new loader and data module beside it\n- `apps/web/src/main.tsx`, `apps/web/src/wasm/useEngineReady.ts`, `apps/web/src/wasm/WhenEngineReady.tsx`, and the engine gate (`main.tsx`, `routes/chunks.tsx`)\n- `apps/web/src/test/setup.ts`\n- `apps/web/src/net/first-load.test.ts`\n- `apps/web/README.md` (The engine as WebAssembly) and `apps/web/src/cards/art/ART.md` (Scene recipes and kits)\n- No SPEC change and no ruling: presentation only (CLAUDE.md rule 7). Nothing in the engine, the view or replays changes.\n\n## Acceptance criteria\n\n- [ ] A source test, modelled on the `#4130` static-import test, fails if any non-test module other than the loader's data module statically imports `sceneKit*.ts`, `figureKit.ts` or a recipe file.\n- [ ] The built-file block of `first-load.test.ts` checks that strings found only in the kits and recipes are absent from the entry chunk and its modulepreloads.\n- [ ] A test shows `useEngineReady()` stays false while the module is in but the scene tables are not, and turns true once both are.\n- [ ] A test shows `sceneRecipeOf` throws before install, rather than returning null for a card that has a recipe.\n- [ ] Every existing art test (`cards/art/*.test.ts*`, `artRichness.test.ts`, the Scenes suites) passes unchanged.\n- [ ] `FIRST_LOAD_GZIP_BUDGET_BYTES` is lowered to the measured build plus headroom, with the measurement in its comment.\n- [ ] The practice worker's bundle holds no scene data.\n- [ ] `pnpm --dir apps/web typecheck`, eslint and the touched test files are green.\n\n## Size and risks\n\nMedium: about 8 to 10 files, no Rust, no ruling.\n\n- **A picture drawn before the gate,** for example by a pile dialog or the full-screen art host mounting before the engine: the throwing `sceneRecipeOf` turns that into a failing test instead of a wrong picture.\n- **A slow network:** the first cards could wait briefly for the art chunk. That chunk is much smaller than the 2.31 MB engine module that loads in parallel with it.\n- **Overlap:** it builds on #4180 / PR #4215 and does not conflict with it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T23:24:46Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4222: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T23:25:05Z",
+    "claimed_at": "2026-11-18T23:25:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4222 needs a plan",
+    "#4224 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
