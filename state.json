@@ -14358,6 +14358,7 @@
           }
         ],
         "head": "82a7f884c628a42b57f01df0c4e375a10b798bde",
+        "interruptions": 0,
         "kind": "revise",
         "model": "opus",
         "provider": "claude-8",
