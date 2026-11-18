@@ -30316,5 +30316,40 @@
       "v0.6.6i"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.7b",
+    "date": "2026-11-18",
+    "title": "Patch: Cosmic Bard and Edwin Van'Spacechief glow in hand when their Combo is met, as their rows say, and Starfleet Commander, Preemptive Strike and Olivian Expanse glow when their condition holds",
+    "source": "#4189",
+    "notes": "Five newer conditional cards glow in hand exactly when playing them would take their special branch (R4189000): S+ #102 Cosmic Bard and S+ #162 Edwin Van'Spacechief once a card was played earlier this turn, the same played_earlier Combo count their Cries read, as Core #10 Rapid Replenish reads it; S #137 Starfleet Commander and S #176 Preemptive Strike while their controller has a Dormant Starship, the dormant_starship_of fact their Cries branch on; S #4 Olivian Expanse while its controller's library is empty, on the Radiant face only while it is also the only card in hand, the FREE/WINS facts shifted by one since the played card has left the hand at resolution. Each hook is a pure read of the same fact its resolution reads (R195); no state, seed, replay-hash, AI or catalog change. The added hook code moves Olivian Expanse across the complicated code-lines threshold (R1846000), so S #109 xxFreshJack and S #111 Shockwave447, which read those lists (R2173001), play differently too and are claimed here with --plays. No catalog change, so --cards is empty.",
+    "player": {
+      "title": "Five cards glow when their bonus is ready",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cosmic Bard and Edwin Van'Spacechief glow in your hand once you have played another card this turn, when their Combo bonus is ready.",
+        "Starfleet Commander and Preemptive Strike glow in your hand while you have a Dormant Starship, when playing them would launch it.",
+        "Olivian Expanse glows in your hand while your deck is empty, when its pick would cost nothing; its Radiant face glows only while it is also the last card in hand.",
+        "Shockwave447's hand swap now treats Olivian Expanse as a complicated card."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "f77450ad19434013697f2cfb0850b0d4e2dd0682"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-004",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-137",
+      "stinkyscape-176",
+      "stinkyscapeplus-102",
+      "stinkyscapeplus-162"
+    ],
+    "changes": []
   }
 ]
