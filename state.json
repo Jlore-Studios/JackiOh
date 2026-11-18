@@ -16503,13 +16503,8 @@
     "what": "build #4159 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-18T09:43:16Z",
-    "notes": [
-      "delivered build #4159 on claude-3 (run 44251961122): built",
-      "started build #4159 on claude-3 (run 44278867826)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-18T09:51:51Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17214,7 +17209,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T09:43:16Z",
+  "loop_tick": "2026-11-18T09:51:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
