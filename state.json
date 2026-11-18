@@ -12479,11 +12479,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-18T13:42:19Z",
       "stop_requested": false,
-      "strike_log": [
-        "the run failed: no builder session in the run worked: built and checked; its own review run, on this subscription, reviews it next",
-        "the run failed: no builder session in the run worked: built and checked; its own review run, on this subscription, reviews it next"
-      ],
-      "strikes": 2,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 2,
       "waiting_comment": 6969648866
