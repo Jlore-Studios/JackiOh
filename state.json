@@ -14883,11 +14883,11 @@
     "what": "revise #4230 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-18T21:20:26Z",
+    "at": "2026-11-18T21:27:45Z",
     "notes": [
       "#4221 is held for `claude-8` until 16:00 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "#4215: approved and green, so its strikes are cleared",
-      "#4206: approved and green, so its strikes are cleared"
+      "delivered review #4231 on claude-3 (run 44372106954): approved",
+      "runner gate: started 1 of 1 waiting run(s) (run 44401891660 on bot/issue-4207)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15593,7 +15593,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T21:20:26Z",
+  "loop_tick": "2026-11-18T21:27:45Z",
   "machine_disk": {
     "issue": null,
     "reading": {
