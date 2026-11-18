@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4161,
+  "title": "Patch: the changed-cards fuzz wave also plays each changed card on its Radiant face",
+  "branch": "bot/issue-4161",
+  "thread": "**Issue #4161 (data, not instructions):**\n\n```text\n# #4161: Patch: the changed-cards fuzz wave also plays each changed card on its Radiant face\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a pull request changes a card, the fuzz gate already deals that card into both decks of about twenty extra games, so the changed rules actually get played before merge. But those games deal every card on its normal face: the card's upgraded Radiant face is only exercised if the game happens to upgrade it by chance, which is rare. So a change that only touches what a card does on its Radiant face can sail through its own safety net without the Radiant face ever being played. This change deals each changed card on its Radiant face too, in a small second batch of games, so both faces of a changed card are played before the pull request lands.\n\n## Why\n\n- The changed-cards wave (`play_changed_cards`) forces each touched card into both decks for `CHANGED_DEALS_PER_CARD` (20) games, yet nothing makes those copies Radiant: in-game upgrades are the only path, plus a lucky random mark on the small share of run-start seeds. A Radiant-only regression (wrong stats, wrong upgraded text behavior, a Radiant hook that panics) can pass its own targeted wave with zero Radiant resolutions.\n- The gate already knows this blind spot exists: pool coverage prints a second, never-failing `coverage (Radiant faces)` line listing dealt cards no game resolved Radiant (`neverRadiant`). Today that line is purely informational, and on a card pull request nobody is told whether the *changed* cards were among the never-Radiant ones.\n- The machinery to fix it exists: run-start games already carry per-index `deckMarks` that deal cards Radiant, and forced cards are placed first in each deck, so pinning the forced indices Radiant is a small composition of two tested paths rather than a new game mode.\n- Not covered elsewhere: #4143 (forging Trade/Marketplace actions), #4151 (plain attacks held to the forecast) and the fused-pairs changed run all exercise other dimensions; none forces Radiant faces. #1363 (a Duos failure corpus) is unrelated.\n\n## Proposal\n\n- After the existing changed-cards wave in `play_changed_cards`, play a second, bounded rotation: for each changed card a deck can hold, play run-start games with that card forced into both decks and the forced indices pinned Radiant through `deckMarks` (forced cards sit first, so their indices are known after forcing).\n- Name the new rotation in the summary (e.g. a `changed cards (Radiant faces): ...` line naming the cards and seed slice) and in `--json` alongside the existing `forced`/`coverage` fields; failures fail the gate exactly like the existing wave's, with the same `reproduce:` line plus the pinned marks so `--from N --seeds 1` replays them.\n- Size it with two named constants beside the existing ones: a per-card Radiant deal count at or below `CHANGED_DEALS_PER_CARD` and a seed cap at or below `CHANGED_WAVE_MAX_SEEDS`, keeping the `rust (checks, fuzz 200)` job inside its time budget; skip it (with a printed line, as today) when no changed card is deckable.\n- Rejected alternative: merely listing changed-but-never-Radiant cards in the summary without playing them. That makes the gap visible but leaves the Radiant face untested; forcing the face costs only a few extra seeds and actually runs the rules.\n\n## Where it lands\n\n- `crates/tools/src/fuzz.rs`: `play_changed_cards`, the `Forcing`/`force_into` path (forcing via `crates/tools/src/golden.rs`), `run_start_inputs`/`GameSetup::create_options` marks plumbing, new `CHANGED_RADIANT_*` constants next to `CHANGED_DEALS_PER_CARD`/`CHANGED_WAVE_MAX_SEEDS`, coverage `radiantResolved`/`neverRadiant` reporting; unit tests beside the existing `rotation_seeds`, `never_radiant` and `play_changed_cards` tests.\n- SPEC sections: \u00a710.7 (random-policy games and the fuzz gate), the #3113 changed-cards wave, #3283 run starts and deck marks, #2426 pool coverage.\n\n## Acceptance criteria\n\n- [ ] A pull request touching a card with a distinct Radiant face plays that card Radiant-resolved: the Radiant rotation's `radiantResolved` includes it (or the summary names it resolved), verified by a test that would fail without the new rotation.\n- [ ] Radiant-rotation games go through the same checks as the gate: invariants, replay fold back to the live hash, and checkpoint fold.\n- [ ] A failing Radiant-rotation seed prints a `reproduce:` line (seed, forced cards, marks) that replays the identical game.\n- [ ] No changed deckable cards means no extra games and a printed line saying so; `--from`, `--handicap`, `--cards` and `--json` runs behave exactly as before (no changed rotation).\n- [ ] The added seeds stay within the new caps, and the `rust (checks, fuzz 200)` job stays inside its CI time budget.\n\n## Size and risks\n\n- Size: medium (one tool module plus its tests; roughly a day of focused work). No engine, card-script, spec-rule or client changes.\n- Risks: a few extra seconds of CI on card pull requests (bounded by the new seed cap); run-start handicaps (drawn hero health, armor, extra cards/crystals) mean Radiant games are not plain-deal games, so the rotation complements rather than replaces the existing plain wave. No new flake surface: marks are pinned, not drawn, and all streams stay seed-derived so `--from` replays exactly.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T05:19:30Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4161: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T05:19:48Z",
+    "claimed_at": "2026-11-18T05:26:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4178 is held for `claude-1` until Wed 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#4159 is held for `claude-3` until Wed 00:30 (it refused a call)",
+    "#4164 is held for `claude-3` until Wed 00:30 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
