@@ -15289,15 +15289,8 @@
       }
     },
     "4174": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44234455739",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-18T04:10:04Z",
-        "until": "2026-11-18T04:40:04Z"
-      },
       "difficulty_by": {
         "at": "2026-11-18T04:09:55Z",
         "difficulty": "medium",
@@ -15316,10 +15309,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- | apps/web/src/game/Log.tsx | change | announcer state + keyed child |\n- | apps/web/src/game/Log.test.tsx | change | identical-repeat test |\n- Do not touch anything else: no spec, ruling, crate, config, or `.github/`, `.harness/`, `.squishy/`, `bot/` file. Governing background: SPEC \u00a710.10 (log wording) and CLAUDE.md rule 7 (client renders words, decides none; announcer must use `RichText.full`, never ids). No new ruling: this is a DOM an\u2026\n- ## Steps\n- 1. In `apps/web/src/game/Log.tsx`, function `Log` (announcer block, currently lines 127-159), change the announcer state from a plain string to a keyed pair. Replace `const [said, setSaid] = useState(\"\")` with `const [said, setSaid] = useState<{ key: string | null; text: string }>({ key: null, text\u2026\n- 2. In the same effect, on a new newest key store both: `setSaid({ key, text: newestLine?.text.full ?? \"\" })`. The key is always fresh (`useLogHistory.ts` `arrive()` mints `p1-<n>` per event), so the state object is never `Object.is`-equal to the last one even when `text` repeats.\n- 3. In the same file's return, render the text through a child keyed by the line key so React replaces the DOM node on every arrival:\n- ```tsx\n- <p className=\"log-live\" data-testid={testid.logLive} role=\"status\" aria-live=\"polite\" aria-atomic=\"true\">\n- <span key={said.key}>{said.text}</span>\n- </p>\n- ```\n- Keep `role=\"status\"`, `aria-live=\"polite\"`, `aria-atomic=\"true\"`, the `log-live` class and testid, and the comment noting mount/reveal/re-render announce nothing. Do not announce `key` itself; only `text` is rendered.\n- 4. In `apps/web/src/game/Log.test.tsx`, in the existing `describe(\"#4140 the log speaks its newest line to screen readers\")` block (which already defines `lost`, `said`, `announcer` helpers), add the regression test from the issue and run it before and after the fix to see it fail then pass.\n- ## Tests\n- In `apps/web/src/game/Log.test.tsx`, same `#4140` describe, add:\n- - `it(\"#4174 repeated words still announce each arrival\", ...)`:\n- - `render(<Log view={withEvents(baseView(), [lost(1)])} />)`; expect `announcer().textContent` to be `\"\"` (primed silent).\n- - Capture `const first = announcer().firstElementChild`.\n- - `rerender(<Log view={withEvents(baseView(), [lost(1), lost(1)])} />)`; expect `announcer().textContent` to be `said(1)` and `announcer().firstElementChild` to be non-null and `not.toBe(first)` (the text node was replaced, so the screen reader sees a change).\n- - Optionally rerender the same view once more and expect the content unchanged (announced once).\n- - Follow the file's existing pattern (`withEvents(baseView(), ...)`, `rerender`, `testid.logLive`).\n- Commands:\n- - `pnpm --dir apps/web test src/game/Log.test.tsx`\n- - `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web/src/game/Log.tsx apps/web/src/game/Log.test.tsx` if those files were touched (CI gates).\n- ## Done when\n- - [ ] A newest line with words identical to the previous line replaces the live region's child node and reads its text; the first of two identical arrivals is still spoken, not just the second.\n- - [ ] Mount with history, phone-log reveal, plain re-render, and hotseat hand-over still announce nothing (existing `#4140` tests green).\n- - [ ] New `#4174` test fails without the fix and passes with it.\n- - [ ] Focused web test file, typecheck, eslint, `cargo fmt --check` clean; no test skipped, ignored, weakened, or deleted.\n- ## Risks\n- - Keying the child could re-announce on unrelated re-renders. Avoid by keying only on the newest line's key and updating state only when the key changes, as the current effect does.\n- - Exposing hidden info. Avoid by announcing only `text.full` (shown words), never keys, ids, or def ids, per rule 7.\n- - Flaky node-identity assertion. Avoid by comparing `firstElementChild` references across the rerender, not timers or text alone.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4174 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4174/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-18T04:01:38Z",
       "owner_why": "it plans it",
@@ -15332,10 +15324,10 @@
       "provider": "muse",
       "queued_at": "2026-11-18T03:59:04Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "44234455739",
+      "run_id": "pending:6b6ec46f-1794975247",
       "runs_on": "night-vm-muse",
       "spot_check_of": 4160,
-      "started_at": "2026-11-18T04:01:38Z",
+      "started_at": "2026-11-18T04:14:33Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15588,9 +15580,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T04:13:54Z",
+    "at": "2026-11-18T04:14:33Z",
     "url": "",
-    "what": "build #4166 on claude-1"
+    "what": "build #4174 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T03:58:09Z",
