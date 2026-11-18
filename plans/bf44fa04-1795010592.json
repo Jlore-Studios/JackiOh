@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4181,
+  "title": "Patch: the pool probe runs every day, as its docs already say, and the 22 card tests it fails today stop depending on where a random roll lands",
+  "branch": "bot/issue-4181",
+  "thread": "**Issue #4181 (data, not instructions):**\n\n```text\n# #4181: Patch: the pool probe runs every day, as its docs already say, and the 22 card tests it fails today stop depending on where a random roll lands\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome card tests pass only because a random pick happens to land on one particular card. When a new card joins that pool of random cards, every pick shifts by one place, and those tests break on someone else's unrelated pull request. A check that catches such tests in advance was added on 5 November, and the docs say it runs every day. Nothing actually runs it. Run by hand today, it finds 22 card tests that would break this way. Once this is built, those 22 are fixed and the check really runs every day. The next such test is then caught the day it is written, not the day a new card trips it. The maintainer and the bots notice this as fewer surprise red checks on pull requests that add cards. Players don't see it.\n\n## Why\n\n- The pool probe (#3117, built in #3167) rebuilds the tests with every random pool rotated one place (`jackioh-engine`'s `pool-probe` feature, `crates/engine/src/testkit/pool_probe.rs`). Each roll then lands on its neighbour, as it would after one more card joined the pool (R380). A test that pins a roll fails.\n- `scripts/pool-probe.sh`'s header says \"Daily, not per pull request\". `docs/ADDING_CARDS.md:260` says \"`sh scripts/pool-probe.sh` (daily, in `super.yml`)\". But `grep -rn pool-probe .github/` finds nothing, and `scripts/ci-scope.sh:53-57` says so too: \"the pool probe (scripts/pool-probe.sh), which a person runs \u2026 no workflow names pool-probe.sh\". The bot that built #3167 could not edit `.github/`, so the daily run was never wired in. The only check that runs on every pull request is the engine's canary, `a_test_that_pins_where_a_pool_roll_lands_fails_under_the_probe` (`pool_probe.rs:164`). It proves the rotation works, not that the card tests survive it.\n- Since 5 November, 204 card script files have been added (`git log --since=2026-11-05 --diff-filter=A -- 'crates/cards/src/scripts/**/*.rs'`).\n- Measured for this survey on 4 cores: `cargo test -p jackioh-cards --features jackioh-engine/pool-probe --no-fail-fast` (engine at opt-level 1, cards at 0, as CI's `cards lib` group builds them) gives **9,889 passed, 22 failed** in the lib, and 1,208 of 1,208 passed in `tests/cards.rs`. The same probe over `-p jackioh-ai -p jackioh-tools` failed nothing (742 s). The server's suites were not run.\n- The 22 failures:\n  - Classic+: `c038_1_solarius_prime` (`radiant::its_spell_damage_6_\u2026`, a test #3167 had already converted), `c047_joggs_box` (`r767000_a_game_on_v0_5_11o_\u2026`), `c073_call_to_chaos_classic_edition` (`r70_r28_10_10_\u2026`).\n  - Meditative: `c032_spiritually_zhongguo` (2), `c037_cn_in_a_bottle` (`r387_\u2026`), `c050_cn_tech` (`r1266000_\u2026`), `c101_gachaholic` (`r1444_\u2026`).\n  - Meditative+: `c001_bobs_plan` (`r1185000_\u2026`).\n  - Stinkyscape: `c004_6_the_big_crunch` (4: three `r1870006_\u2026` and `r3869001_the_call_to_chaos_pool_is_the_seven_it_named_in_the_same_order`), `c078_ozark` (`r3869002_\u2026`), `c080_galaxy` (`r1872003_\u2026`), `c137_firststrike_capability` (`r3869001_\u2026`), `c143_book_launcher` (`r3869003_\u2026`), `c149_wildar` (2), `c150_call_to_chaos_stinky_edition` (`entry_humans_\u2026`).\n  - Stinkyscape+: `c054_pneumatic_drill` (`r3549001_the_mineral_pool_is_s_plus_44_to_50`), `c142_2_swarm_golem` (`r3570006_\u2026`).\n- Most came in after the probe landed: Stinkyscape+ (#3786, 12 Nov) and #3879's tag-query pools (15 Nov). Each will fail on whichever later pull request adds a card to its pool. CI then goes red on cards that pull request never touched, which is what #3117 was built to prevent.\n\n## Proposal\n\n1. **Convert the 22 tests** the way `pool_probe.rs`'s header and `docs/ADDING_CARDS.md` say:\n   - A test of a pool's contents or order reads the pool under `with_pool_shift(0, \u2026)`. These are the `r3869001`/`r3869002`/`r3869003` \"pool is the N it named in the same order\" tests and `r3549001`, whose failures print the same list rotated: `[\"45\", \u2026, \"50\", \"44\"]`.\n   - A test of a roll finds its roll with `seed_where`/`cursor_where` (#848) or builds the position directly. These are Jogg's Box (\"the Box ended no turn\"), Gachaholic, Wildar, The Big Crunch's casts and the rest.\n   - Every test keeps its name, so the R-ids `spec check` reads don't move. The edits sit below each script's `#[cfg(test)]`, which `catalog loc` does not count, so no patch fragment is owed.\n2. **Run the probe every day without a workflow edit.** Add `crates/tools/tests/pool_probe.rs` with one test, marked `#[ignore = \"daily: rebuilds the cards' tests under the pool-probe feature and runs them, about five minutes; the engine's pool_probe canary keeps the rotation itself per pull request\"]`. The daily tests job (`super.yml`'s `cargo test --workspace --tests \u2026 -- --ignored`) then runs it with no workflow change.\n   - It runs `cargo test -p jackioh-cards --features jackioh-engine/pool-probe --no-fail-fast --offline` through `env!(\"CARGO\")`, as `tests/acceptance.rs:201` already runs a nested cargo. It builds into a target directory of its own (`target/pool-probe`), so it never waits on the outer run's build lock, and uses `cards lib`'s opt-level `--config` flags.\n   - On failure it lists every `test \u2026 FAILED` name and the two fixes.\n3. **Docs say what really runs.**\n   - `scripts/pool-probe.sh`'s header: the cards crate daily through that test, all four crates by hand.\n   - `docs/ADDING_CARDS.md:260` and `crates/engine/README.md:253`: the same.\n   - `scripts/ci-scope.sh`'s skip-list comment stays true, since the test calls cargo and not the script.\n4. Run `sh scripts/pool-probe.sh` in full once, and convert any server test it fails as well.\n\nDecisions made here:\n- The daily test runs the cards crate only, not all four. The AI's and tools' suites took 742 s under the probe, with nothing failed, on top of the cards' roughly five minutes. All four would eat a large share of the daily tests job's 60-minute limit.\n- The cleanest wiring is one `super.yml` step running `sh scripts/pool-probe.sh`, which the bot cannot add. If a person adds that step later, this test can go.\n\n## Where it lands\n\n- the 18 script files above, in their `#[cfg(test)] mod tests` only\n- `crates/tools/tests/pool_probe.rs` (new)\n- `scripts/pool-probe.sh` (header comment)\n- `docs/ADDING_CARDS.md`\n- `crates/engine/README.md`\n- SPEC: R380 (one more card moves every draw), #848's seed search and #3117's probe. No new ruling: no rule changes.\n\n## Acceptance criteria\n\n- [ ] `cargo test -p jackioh-cards --features jackioh-engine/pool-probe` reports 0 failed, and plain `cargo test -p jackioh-cards` still passes.\n- [ ] Each of the 22 tests keeps its name and still asserts what it asserted. A contents or order test reads under `with_pool_shift(0, \u2026)`. A roll test searches for its roll or builds the position. None is deleted, emptied, `#[ignore]`d, or wrapped in `with_pool_shift(0, \u2026)` just to pass.\n- [ ] `crates/tools/tests/pool_probe.rs` holds one `#[ignore = \"daily: \u2026\"]` test whose reason names the engine canary. It builds in its own target directory, offline, and its failure names every failed test.\n- [ ] The PR shows the daily test failing, naming the test, with one conversion reverted locally, and passing with the conversion in. It also states the test's wall time.\n- [ ] `sh scripts/pool-probe.sh` passes in full (cards, AI, server, tools), or the PR names what it fails and why.\n- [ ] The script's header, `docs/ADDING_CARDS.md` and `crates/engine/README.md` no longer say a workflow runs the script.\n- [ ] `cargo jackioh spec check`, `cargo fmt --check` and `cargo clippy -p jackioh-cards -p jackioh-tools --all-targets -- -D warnings` pass.\n\n## Size and risks\n\nMedium: about 21 files. The conversions are mechanical, but each needs its roll understood. Two old-version tests (`r767000_\u2026`, `r1266000_\u2026`) fold games on an older catalog, so their search has to build the same versioned game.\n\nRisks:\n- The daily run gates production. A newly pinned roll will then fail it and hold promotion until the bot converts the test at `priority:high`, as any daily test failure does today.\n- The nested build needs a second target directory on the daily runner, a few GB for the engine and the cards.\n- Cards that land before this is built can add failures. Rerun the probe before converting.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T13:54:09Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4181: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T13:54:28Z",
+    "claimed_at": "2026-11-18T14:03:45Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
