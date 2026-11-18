@@ -17119,7 +17119,7 @@
       "taken_asks": []
     },
     "4208": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -17146,17 +17146,17 @@
       "interruptions": 0,
       "issue": 4203,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-18T16:12:43Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "44337618788",
+      "run_id": "pending:f359883c-1795018362",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-18T15:36:31Z",
+      "started_at": "2026-11-18T16:13:19Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17479,9 +17479,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T16:12:27Z",
+    "at": "2026-11-18T16:13:19Z",
     "url": "",
-    "what": "plan #4197 on claude-1"
+    "what": "revise #4208 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T15:59:01Z",
