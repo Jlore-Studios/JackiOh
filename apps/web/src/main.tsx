@@ -363,15 +363,16 @@ type EngineLoad = "loading" | "ready" | "failed";
 /**
  * Holds a screen that calls the engine until its module is in. A module that did not arrive gets a panel
  * whose retry asks `loadWasm()` again in place: a failed download is not cached (`wasm/index.ts`).
- * #4180, R1301: the Chinese card tables arrive beside the module, so a gated screen names a flagged
- * view's card in Chinese.
+ * #4180, R1301: the Chinese card tables load beside the module, best-effort, so a tables-chunk
+ * failure never bricks a gated screen: readiness is the module alone, and a flagged view's card
+ * falls back to English until the tables arrive.
  */
 function EngineGate({ children }: { children: ReactNode }): ReactElement {
   const [load, setLoad] = useState<EngineLoad>(() => (wasmLoaded() ? "ready" : "loading"));
   useEffect(() => {
     if (load !== "loading") return;
     let live = true;
-    void Promise.all([loadWasm(), loadCardTables()]).then(
+    void loadWasm().then(
       () => {
         if (live) setLoad("ready");
       },
@@ -380,6 +381,10 @@ function EngineGate({ children }: { children: ReactNode }): ReactElement {
         console.error("the engine's WebAssembly module did not load", cause);
         setLoad("failed");
       },
+    );
+    void loadCardTables().then(
+      () => undefined,
+      () => undefined,
     );
     return () => {
       live = false;

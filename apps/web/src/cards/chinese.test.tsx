@@ -131,8 +131,8 @@ describe("#4180 the card tables on demand", () => {
   });
 
   it("R1301 an English reader's gated screen names a flagged view's card in Chinese", () => {
-    // `main.tsx`'s EngineGate awaits `loadCardTables()` beside the module, so a gated screen draws
-    // with the tables in whatever the reader reads: English here, the flag's Chinese on the face.
+    // `main.tsx`'s EngineGate loads `loadCardTables()` best-effort beside the module, so a gated
+    // screen draws with the tables in whatever the reader reads: English here, the flag's Chinese on the face.
     expect(getLocale()).toBe("en");
     expect(cardTablesReady()).toBe(true);
     const root = draw(inPlay(card({ defId: "core-002", cost: 3, chinese: true })));

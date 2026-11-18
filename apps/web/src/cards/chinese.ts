@@ -170,8 +170,8 @@ const FUSED_LINE = "\n";
 const FUSED_NAME = " + ";
 
 function entryOf(defId: string): ChineseEntry | undefined {
-  // #4180: no entry until the tables arrive: every lookup falls back to the English, as R1301's joke
-  // needs the tables and the gates below wait for them.
+  // #4180: no entry until the tables arrive: every lookup falls back to the English, and the gates
+  // load them best-effort beside the module, so a failed chunk keeps reading English.
   return tablesReady && Object.hasOwn(CHINESE, defId) ? CHINESE[defId] : undefined;
 }
 
