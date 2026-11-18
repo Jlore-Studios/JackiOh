@@ -14915,6 +14915,8 @@
       }
     },
     "4234": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-18T17:51:15Z",
@@ -14928,8 +14930,11 @@
         "trail": "ash: {\"command\": \"rm -rf /tmp/jackioh-base-src && mkdir -p /tmp/jackioh-base-src && git archive origin/main | tar -x -C /tmp/jackioh-base-src && cd /tmp/jackioh-base-src && CARGO_TARGET_DIR=/tmp/jackioh-b\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; timeout 2400 cargo clippy --workspace --all-targets -- -D warnings > /tmp/jackioh-clippy.txt 2>&1; echo \\\"clippy exit=$?\\\"; grep -E \\\"^(warning|error)\\\"\u2026\n- Bash: {\"command\": \"tail -30 /tmp/jackioh-clippy.txt\", \"description\": \"Show clippy failure\"}\n- Bash: {\"command\": \"sed -i 's/\\\\bMoved::/MoveOutcome::/g; s/^enum Moved {/enum MoveOutcome {/; s/) -> Moved {/) -> MoveOutcome {/' crates/engine/src/effects/steal.rs && grep -n \\\"Moved\\\\b\\\\|MoveOutcome\\\" cr\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; timeout 2400 cargo clippy --workspace --all-targets -- -D warnings > /tmp/jackioh-clippy.txt 2>&1; echo \\\"clippy exit=$?\\\"; grep -aE \\\"error|warning\\\" /\u2026\n- Bash: {\"command\": \"tail -2 /tmp/jackioh-base-build.txt; echo \\\"- clippy had been red (enum_variant_names on Moved::Moved; earlier grep missed colored output): renamed enum to MoveOutcome; clippy now exit 0\u2026\n- said: Clippy had actually been red (my earlier filter missed its coloured output); fixed by renaming the enum. Now classify on the merged tree, via a temporary detached worktree as before:\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/jackioh-4205-idx; rm -f $GIT_INDEX_FILE; git read-tree origin/main && git add -A . && TREE=$(git write-tree); unset GIT_INDEX_FILE; HEADC=$(GIT_AUTHOR_NAME=tmp\u2026\n- Bash: {\"command\": \"cd ../jackioh-wt/classify-4205 && CARGO_TARGET_DIR=/tmp/jackioh-head-target cargo build --release -p jackioh-tools > /tmp/jackioh-4205-classify4.txt 2>&1 && timeout 2400 /tmp/jackioh-hea\u2026\n- Bash: {\"command\": \"git status --short | grep -v \\\"^M \\\\|^A \\\\|^D \\\\|^R \\\" | head -20\", \"description\": \"Check the real index and unstaged changes\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nnew='''## State\\n\\nBuilder, resumed (run 2), 2026-11-18. Main merged in (conflic\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit=\\\" /tmp/jackioh-4205-classify4.txt 2>/dev/null; do sleep 5; done'; grep -av \\\"Compiling\\\\|Running\\\" /tmp/jackioh-4205-classify4.txt | tail -15\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\np='crates/cards/patches/pending/a-stolen-permanent-with-no-room-on-the-thief-s-side-is.json'\\nd=json.load(open(p))\\nd['plays']=['classic-032','classic-039\u2026\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/jackioh-4205-idx; rm -f $GIT_INDEX_FILE; git read-tree origin/main && git add -A . && TREE=$(git write-tree); unset GIT_INDEX_FILE; HEADC=$(GIT_AUTHOR_NAME=tmp\u2026\n- Bash: {\"command\": \"cd ../jackioh-wt/classify-4205 && CARGO_TARGET_DIR=/tmp/jackioh-head-target cargo build --release -p jackioh-tools > /tmp/jackioh-4205-classify5.txt 2>&1 && timeout 2400 /tmp/jackioh-hea\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit=\\\" /tmp/jackioh-4205-classify5.txt 2>/dev/null; do sleep 5; done'; grep -av \\\"Compiling\\\\|Running\\\" /tmp/jackioh-4205-classify5.txt | tail -8\",\u2026\n- said: Classify `--claims` is green on the merged tree. Removing the temporary worktree, then fuzz and the full test line:\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/classify-4205 && git worktree prune && git worktree list; rmdir ../jackioh-wt 2>/dev/null; rm -rf /tmp/jackioh-base-src; echo \\\"- classify --cla\u2026\n- Bash: {\"command\": \"timeout 3000 cargo jackioh fuzz --seeds 200 > /tmp/jackioh-4205-fuzz.txt 2>&1; echo \\\"exit=$?\\\" >> /tmp/jackioh-4205-fuzz.txt; grep -aE \\\"^exit=|passed|panic|changed cards|fused pairs\\\" \u2026\n- Bash: {\"command\": \"echo \\\"- fuzz 200 on merged tree: green.\\\" >> .bot-notes.md; timeout 3500 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts > /tmp/jackioh-4205-tests.txt 2>&1; e\u2026\n- Bash: {\"command\": \"git diff origin/main -- spec/06-keywords.md | grep \\\"^[-+]\\\" | cut -c1-400\", \"description\": \"Review my \\u00a76.3 edits against main\"}\n- Bash: {\"command\": \"grep -rn \\\"R1045000\\\\|R963\\\\b\\\\|R15 \\\\|no room\\\" apps/web/src --include=*.ts --include=*.tsx | head\", \"description\": \"Check web tests citing the amended rulings\"}\n- Bash: {\"command\": \"grep -rn -i \\\"steal\\\" apps/web/src/cards/*.ts apps/web/src/game/*.ts 2>/dev/null | grep -i \\\"room\\\\|zone\\\\|stay\\\\|full\\\" | head\", \"description\": \"Look for client glossary text on steals\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit=\\\" /tmp/jackioh-4205-tests.txt 2>/dev/null; do sleep 10; done'; grep -aE \\\"^exit=| FAILED|test result: FAILED\\\" /tmp/jackioh-4205-tests.txt | h\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit=\\\" /tmp/jackioh-4205-tests.txt 2>/dev/null; do sleep 10; done'; grep -aE \\\"^exit=| FAILED|test result: FAILED\\\" /tmp/jackioh-4205-tests.txt | h\u2026\n- said: The full workspace test line is still running (about 25 minutes last time). Classify `--claims`, fuzz 200, golden, spec/patches/names/catalog, fmt and clippy are all green on the merged tree.\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit=\\\" /tmp/jackioh-4205-tests.txt 2>/dev/null; do sleep 10; done'; grep -aE \\\"^exit=| FAILED|test result: FAILED\\\" /tmp/jackioh-4205-tests.txt | h\u2026\n- Bash: {\"command\": \"git status --porcelain -- apps/web/src/wire; grep -a \\\"test result\\\" /tmp/jackioh-4205-tests.txt | awk '{s+=$4; f+=$6} END {print \\\"passed\\\", s, \\\"failed\\\", f}'; git diff --name-only --d\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nnew='''## State\\n\\nBuilder run 2 (opus), 2026-11-18: DONE. Main merged (conflict\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a stolen permanent with no room on the thief's side is destroyed, past Indestructible and Untributable\"} --> A steal that reaches a card on the field but has no room for it on the thief's side now destroys that card, and nothing prevents it. This is rul\u2026"
       },
       "issue": 4205,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T19:27:30Z",
         "from_run": "44363257873",
         "gates": [
           {
@@ -15021,7 +15026,11 @@
         "source": "build",
         "until": "2026-11-18T19:53:15Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-18T19:23:15Z",
+      "run_id": "pending:449faa6e-1795029873",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15040,6 +15049,9 @@
         "provider": "claude-4",
         "run": "44363257873"
       },
+      "started_at": "2026-11-18T19:27:30Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15053,9 +15065,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T19:02:29Z",
+    "at": "2026-11-18T19:27:30Z",
     "url": "",
-    "what": "suggestions (server) on claude-7"
+    "what": "review #4234 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-18T19:10:58Z",
