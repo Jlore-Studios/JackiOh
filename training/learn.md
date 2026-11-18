@@ -1,5 +1,9 @@
 # The learn lane
 
+> **Retired by #4159** (R4159000): the AI plays the hand evaluation `AI_EVAL` alone; the network, the
+> policy prior and `learned_parity` are gone. The learn lane's workflows stay until a person removes
+> them. This note is the record.
+
 The learned evaluation's lane (#466, #1012; `docs/learned-eval.md`). It keeps the AI's learned
 evaluation (`crates/ai/src/learned.rs`) trained on the AI's own games and promotes a better one to
 `main` through the same kind of gate every generation passes. Its decisions are a script's, not an
@@ -125,8 +129,6 @@ The network learns a worth for each card it has seen played, on top of the card'
 reads live (`docs/learned-eval.md`, D5 and D10). A patch leaves the learned worth of the cards it
 changed stale until a run exports on it, and a set's new cards have none until then: they are valued
 by their stats and by what they are (type, cost, tags, keywords, printed stats, Radiant; R3112000).
-The run's `positions.json` gives `unknownShare`, the share of the export's cards that the network
-shipped before it has no row for (R3112002).
 
 Micros (`docs/issues-and-patches.md`, Version numbers) ship several times a day, and a run takes
 about two days, about 40 hours of them its export. So a micro stops nothing: a lane that started

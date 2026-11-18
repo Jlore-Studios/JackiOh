@@ -7,6 +7,7 @@
 //! #1036's tests also show the opponent using the Activates it can see and never a face-down one.
 
 use jackioh_ai::*;
+use jackioh_engine::config::{AI_DIFFICULTY, AI_TUTORIAL, DIFFICULTIES};
 use jackioh_engine::testkit::*;
 
 use super::support::{AI, HUMAN, act, all_out_attack, in_graveyard, is_legal, on_field, run_puzzle, trace};
@@ -311,13 +312,65 @@ mod reply_score {
             &hidden_card_ids(&ended, AI),
             Prices::NONE,
         );
-        // A finalist's score (#1010): the hand eval while the switch is off.
+        // A finalist's score: the hand eval alone (R4159000).
         assert_eq!(
             score,
-            Some(finalist_score(&after, AI, NextSwing::Seat, Prices::NONE) - AI_EVAL.unspent_mana * 2.0)
+            Some(
+                evaluate_priced(&after, AI, NextSwing::Seat, &AI_EVAL, Prices::NONE)
+                    - AI_EVAL.unspent_mana * 2.0
+            )
         );
         assert_eq!(counter.used(), 2);
         assert_eq!(after.players[AI].hero.health, 26);
+    }
+
+    /// R4159000, R1010002, R1012001, R1012002, R1012003, R3479000: with the learned evaluation retired, a
+    /// replied finalist is scored by the hand eval alone at every tier, the tutorial opponent's among
+    /// them: no network corrects it, at no share and for no seat, whatever cards its view names.
+    #[test]
+    fn r4159000_r1010002_r1012001_r1012002_r1012003_r3479000_a_finalist_is_scored_by_the_hand_eval_alone() {
+        jackioh_cards::register_all();
+        let tiers = [None, Some(AI_TUTORIAL)].into_iter().chain(
+            DIFFICULTIES
+                .iter()
+                .map(|difficulty| Some(AI_DIFFICULTY[*difficulty])),
+        );
+        for handicap in tiers {
+            let s = scenario(json!({
+                "seed": "reply-hand-eval",
+                "active": "p1",
+                "turn": TURN,
+                "p1": { "mana": 2, "library": LIBRARY },
+                "p2": { "field": ["core-008"], "library": LIBRARY },
+            }));
+            let mut state = s.state().clone();
+            state.players[AI].handicap = handicap;
+            let ended = act(&state, AI, &ActionBody::EndTurn);
+            assert_eq!(line_status(&ended, AI, TURN), LineStatus::Passed, "{handicap:?}");
+            let unspent = ended.players[AI].turn_log.unspent_at_end.unwrap_or(0);
+            let hidden = hidden_card_ids(&ended, AI);
+            let after = simulate_reply(&ended, AI, &create_node_counter(20, None), &hidden, Prices::NONE)
+                .expect("a reply");
+            let next = if after.active == AI {
+                NextSwing::Seat
+            } else {
+                NextSwing::Enemy
+            };
+            let hand = evaluate_priced(&after, AI, next, &AI_EVAL, Prices::NONE)
+                + coming_mana(&ended, AI, &AI_EVAL)
+                - coming_mana(&after, AI, &AI_EVAL)
+                - AI_EVAL.unspent_mana * f64::from(unspent)
+                + float_credit(&ended, AI, unspent, &AI_EVAL);
+            let score = reply_score(
+                &ended,
+                AI,
+                TURN,
+                &create_node_counter(20, None),
+                &hidden,
+                Prices::NONE,
+            );
+            assert_eq!(score, Some(hand), "{handicap:?}");
+        }
     }
 
     #[test]

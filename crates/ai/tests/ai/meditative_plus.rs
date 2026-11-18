@@ -386,18 +386,22 @@ fn supply_drop_beside_two_vanillas() -> GameState {
 
 /// The board above with two castable Vanillas beside Supply Drop: their plays in each lane outscore
 /// the cast on the static score and fill every place the reply scores, so the countdown, worth only
-/// once the reply weighs it, keeps a place of its own (R3696000).
+/// once the reply weighs it, keeps a place of its own (R3696000). R4159000: with that place kept, the hand
+/// eval alone, which no network corrects any more, scores a Vanilla's line above the cast's, so the AI
+/// plays a Vanilla first.
 #[test]
-fn r3696000_the_ai_still_casts_supply_drop_in_combat_mode_with_two_castable_units_in_hand() {
+fn r3696000_r4159000_beside_two_castable_vanillas_the_hand_eval_plays_a_vanilla_first() {
     let state = supply_drop_beside_two_vanillas();
-    let drop = in_hand(&state, SUPPLY_DROP);
     let decision = decide_at(&state, "ai-supply-drop-combat");
-    assert!(
-        matches!(&decision.action, ActionBody::Play { instance_id, modes: Some(modes), .. }
-            if *instance_id == drop && *modes == ["combat"]),
-        "{:?}",
-        decision.action
-    );
+    let ActionBody::Play { instance_id, .. } = &decision.action else {
+        panic!("{:?}", decision.action);
+    };
+    let played = state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.id == *instance_id)
+        .map(|card| card.def_id.as_str());
+    assert_eq!(played, Some(VANILLA), "{:?}", decision.action);
 }
 
 /// The lines `shortlist_lines` takes at the browser's budget, before the payoff line (R3696000).

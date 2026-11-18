@@ -315,14 +315,6 @@ export function registeredCatalog(): CardDefs {
   });
 }
 
-/**
- * R1011000: the learned evaluation's parity fixture, its integer network's correction for each case.
- * Only the tests call it.
- */
-export function learnedParity(fixtureJson: string): number[] {
-  return call("learnedParity", () => parsed<number[]>(normal.learned_parity(fixtureJson)));
-}
-
 /** The catalog version compiled into the module (the newest entry of patches.json). */
 export function catalogVersion(): string {
   return call("catalogVersion", () => normal.catalog_version());

@@ -726,19 +726,6 @@ pub extern "C" fn constants() -> i32 {
     answer(wasm_core::constants())
 }
 
-/// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`)
-/// as this build computes it, so a host can hold its own port to the fixture's numbers bit for bit.
-#[unsafe(no_mangle)]
-pub extern "C" fn learned_parity(fixture_json_ptr: *const u8, fixture_json_len: usize) -> i32 {
-    boundary(|| {
-        wasm_core::learned_parity(arg(
-            "learnedParity: the fixture",
-            fixture_json_ptr,
-            fixture_json_len,
-        )?)
-    })
-}
-
 // The engine's tables the web's tests read (`subsystems.*`)
 
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the

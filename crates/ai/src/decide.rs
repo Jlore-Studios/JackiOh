@@ -35,10 +35,8 @@ use crate::config::{
 };
 use crate::determinize::{DetGround, DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
-    Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, holds_starship,
-    turn_hook_prices,
+    Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, turn_hook_prices,
 };
-use crate::learned::{LEARNED, unknown_root};
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
@@ -424,12 +422,7 @@ pub fn probe_world(public: &GameState, seat: PlayerId, ground: &DetGround) -> Ga
 /// card's awakening the seat can read, priced once on the probe world (`probe_world` of `public`) for the
 /// whole decision from `counter`'s nodes; all are priced before any is passed, so no probe reads a price.
 /// R4070000: `decide` and `decision_prices_at` both take a decision's prices from here.
-pub fn decision_prices(
-    public: &GameState,
-    probe: &GameState,
-    seat: PlayerId,
-    counter: &dyn NodeCounter,
-) -> Prices {
+pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Prices {
     let deaths = death_prices(probe, seat, counter);
     let turn_hooks = turn_hook_prices(probe, seat, counter);
     let activations = activation_prices(probe, seat, counter);
@@ -441,11 +434,6 @@ pub fn decision_prices(
         activations,
         attack_hooks,
         awakenings,
-        // R3038003: read off the redacted root, so no hidden card is in it, and carried with the prices
-        // so that every line of the decision, on every determinization, is scored by the same eval.
-        starship_root: holds_starship(public, seat),
-        // R3479000: read off the redacted root too, against the network the search scores with.
-        unknown_root: unknown_root(public, seat, &LEARNED),
     }
 }
 
@@ -456,12 +444,7 @@ pub fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
     let public = redact(state, seat);
     let ground = det_ground(&public, seat);
     let probe = probe_world(&public, seat, &ground);
-    decision_prices(
-        &public,
-        &probe,
-        seat,
-        &create_node_counter(AI_DECISION_PRICE_NODES, None),
-    )
+    decision_prices(&probe, seat, &create_node_counter(AI_DECISION_PRICE_NODES, None))
 }
 
 /// Steps 1–7 on the redacted copy; every number `stats` reads beside the counter goes in `scratch`.
@@ -523,7 +506,7 @@ fn plan(
 
     // R2424000, R2477000, R2564000, R2688000, R3064000: the decision's prices (`decision_prices`), from
     // the searched section's nodes, passed to every step below.
-    let prices = decision_prices(&public, &probe, seat, counter);
+    let prices = decision_prices(&probe, seat, counter);
 
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
     // finalist), the only draws decide ever takes from options.rng.

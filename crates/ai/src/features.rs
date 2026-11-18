@@ -1,5 +1,6 @@
-//! The learned evaluation's inputs (#466, #1006; `docs/learned-eval.md` D3, D5, D10): integer
-//! feature vectors derived from `redact(state, seat)` (R185, R1006000).
+//! The features `cargo jackioh positions` writes for the learn lane's exports (#466, #1006; the learned
+//! evaluation they fed is retired, R4159000; `docs/learned-eval.md` D3, D5, D10): integer feature vectors
+//! derived from `redact(state, seat)` (R185, R1006000).
 //! Dense features include life, mana, unit stats through §10.4 layers (`unit_view`), keywords,
 //! and hand distribution with Radiant counts (R1012004, #1143).
 //! Sparse features track board, hand, and readable backrow card counts, and the keys of what each such
@@ -20,11 +21,6 @@ use crate::observe::redact;
 /// 2: a Radiant card in the seat's own hand (R1012004).
 /// 3: what each card the seat can name is, beside its id (R3112000).
 pub const FEATURES_VERSION: u32 = 3;
-
-/// R3112001: the oldest version whose networks read this layout as they were fitted. Every version since
-/// then only added sparse key families, which such a network has no row for, so they are no input to it.
-/// Raise it to `FEATURES_VERSION` with any change to the dense layout or to an existing key's meaning.
-pub const FEATURES_READ_SINCE: u32 = 2;
 
 /// R3112000: the highest cost, attack or health an attribute key names; a card's number at or above it
 /// names it.
@@ -100,7 +96,7 @@ fn counted_keywords() -> impl Iterator<Item = KeywordKind> {
         .filter(|kind| !UNCOUNTED_KEYWORDS.contains(kind))
 }
 
-/// A position as the learned evaluation reads it.
+/// A position as the learn lane's exports write it (the learned evaluation that read it is retired, R4159000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub struct Features {
     /// One integer per name of `dense_names`, in its order.

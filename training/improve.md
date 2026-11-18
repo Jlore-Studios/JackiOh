@@ -2,9 +2,9 @@
 
 > **Stopped since 2026-10-25.** #682's audit (`reviews/2026-10-22-issue-682-subscriptions.md`) found that the
 > two LLM lanes made no fair promotion in about 427 hours, so `jackioh-train@improve` is disabled on the
-> training box and `setup.sh --training` no longer starts it (#1677). A stronger AI now comes from the `learn` lane,
-> a script with no LLM in it ([`learn.md`](learn.md)), and an idea for the AI goes through the night
-> bot as an issue with a measured acceptance. This prompt
+> training box and `setup.sh --training` no longer starts it (#1677). A stronger AI came from the `learn` lane,
+> a script with no LLM in it ([`learn.md`](learn.md)), until #4159 retired that lane too (R4159000); an idea
+> for the AI goes through the night bot as an issue with a measured acceptance. This prompt
 > is kept for the record, and for a person who starts the lane again by hand.
 
 You are improving JackiOh's Rust AI in `crates/ai/` (SPEC §9.9 and the doc comments of

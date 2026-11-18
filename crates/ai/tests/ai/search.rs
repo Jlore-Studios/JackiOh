@@ -324,23 +324,9 @@ mod candidate_actions_b14 {
         let deeper = (1..=5).take(cap).collect::<Vec<i32>>();
         assert_eq!(offered_lanes(&crowded, "core-008"), deeper);
         assert_eq!(root_offered_lanes(&crowded, "core-008"), vec![1, 2, 3, 4, 5]);
-        let root = root_expansion(
-            &crowded,
-            AI,
-            AI_BUDGET.root_branching,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let root = root_expansion(&crowded, AI, AI_BUDGET.root_branching, Prices::NONE);
         assert_eq!(lanes_of(&crowded, "core-008", &root), vec![1, 2, 3, 4, 5]);
-        let deeper_expansion = expansion(
-            &crowded,
-            AI,
-            AI_BUDGET.branching,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let deeper_expansion = expansion(&crowded, AI, AI_BUDGET.branching, Prices::NONE);
         assert_eq!(lanes_of(&crowded, "core-008", &deeper_expansion), deeper);
     }
 
@@ -507,25 +493,13 @@ mod candidate_actions_b14 {
         let kept = AI_SEARCH.position_switches as usize;
         assert!(0 < kept && kept < stand_downs.len());
 
-        for order in [MoveOrder::Heuristic, MoveOrder::Learned] {
-            let expanded = expansion(&state, AI, width, order, &POLICY_PRIOR, Prices::NONE);
-            assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
-            assert_eq!(expanded[..width], candidates[..width]);
-            assert_eq!(expanded[width..width + kept], stand_downs[..kept]);
-            assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
-        }
+        let expanded = expansion(&state, AI, width, Prices::NONE);
+        assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
+        assert_eq!(expanded[..width], candidates[..width]);
+        assert_eq!(expanded[width..width + kept], stand_downs[..kept]);
+        assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
 
-        assert_eq!(
-            expansion(
-                &state,
-                AI,
-                candidates.len(),
-                MoveOrder::Heuristic,
-                &POLICY_PRIOR,
-                Prices::NONE
-            ),
-            candidates
-        );
+        assert_eq!(expansion(&state, AI, candidates.len(), Prices::NONE), candidates);
     }
 
     /// R1759000: the stand-downs kept are the first the cut left out, not the first overall. With one
@@ -553,14 +527,7 @@ mod candidate_actions_b14 {
         let width = first + 1;
         let kept = AI_SEARCH.position_switches as usize;
         assert!(stand_downs.len() > kept);
-        let expanded = expansion(
-            &state,
-            AI,
-            width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let expanded = expansion(&state, AI, width, Prices::NONE);
         assert_eq!(expanded[..width], candidates[..width]);
         assert_eq!(expanded[width..width + kept], stand_downs[1..1 + kept]);
         assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
@@ -586,14 +553,7 @@ mod candidate_actions_b14 {
                 .any(|action| matches!(action, ActionBody::SwitchPosition { .. }))
         );
         assert!(!candidates.iter().any(|action| stands_down(&state, action)));
-        let expanded = expansion(
-            &state,
-            AI,
-            width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let expanded = expansion(&state, AI, width, Prices::NONE);
         assert_eq!(expanded.len(), width + 1, "{expanded:?}");
     }
 
@@ -626,14 +586,7 @@ mod candidate_actions_b14 {
                 .position(|action| matches!(action, ActionBody::SwitchPosition { .. }))
                 .is_some_and(|first| first > width)
         );
-        let expanded = expansion(
-            &state,
-            AI,
-            width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let expanded = expansion(&state, AI, width, Prices::NONE);
         assert_eq!(switches(&expanded), 0, "{expanded:?}");
         assert_eq!(expanded.len(), width + 1);
     }
@@ -977,8 +930,7 @@ mod wall_switches_2976 {
 
     /// R2976000: at 7 life against three 4/4s (12 face damage), the 7/7's switch to Defense would wall
     /// every attacker, yet no 4/4 beats it, so it is no stand-down, and it comes past both widths. It is
-    /// kept, once, after the first `width` moves and before endTurn, at the root and below, in either
-    /// move order.
+    /// kept, once, after the first `width` moves and before endTurn, at the root and below.
     #[test]
     fn r2976000_the_switch_that_stops_lethal_is_kept_past_the_cut_at_every_level() {
         let state = facing_three_4_4s(7);
@@ -1006,36 +958,17 @@ mod wall_switches_2976 {
             "{candidates:?}"
         );
 
-        for order in [MoveOrder::Heuristic, MoveOrder::Learned] {
-            for (expanded, at) in [
-                (
-                    root_expansion(&state, AI, root_width, order, &POLICY_PRIOR, Prices::NONE),
-                    root_width,
-                ),
-                (
-                    expansion(&state, AI, width, order, &POLICY_PRIOR, Prices::NONE),
-                    width,
-                ),
-            ] {
-                let walls = expanded.iter().filter(|action| **action == wall).count();
-                assert_eq!(walls, 1, "{order:?}: {expanded:?}");
-                assert_eq!(expanded.len(), at + 2, "{order:?}: {expanded:?}");
-                assert_eq!(
-                    expanded.last(),
-                    Some(&ActionBody::EndTurn),
-                    "{order:?}: {expanded:?}"
-                );
-            }
+        for (expanded, at) in [
+            (root_expansion(&state, AI, root_width, Prices::NONE), root_width),
+            (expansion(&state, AI, width, Prices::NONE), width),
+        ] {
+            let walls = expanded.iter().filter(|action| **action == wall).count();
+            assert_eq!(walls, 1, "{expanded:?}");
+            assert_eq!(expanded.len(), at + 2, "{expanded:?}");
+            assert_eq!(expanded.last(), Some(&ActionBody::EndTurn), "{expanded:?}");
         }
 
-        let root = root_expansion(
-            &state,
-            AI,
-            root_width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let root = root_expansion(&state, AI, root_width, Prices::NONE);
         assert_eq!(root[..root_width], root_candidates[..root_width]);
         assert_eq!(root[root_width], wall);
     }
@@ -1051,14 +984,7 @@ mod wall_switches_2976 {
         assert!(wall_switches(&state, AI, &root_candidates).is_empty());
 
         let wall = switch_of(&state, BIG, Position::Atk);
-        let root = root_expansion(
-            &state,
-            AI,
-            root_width,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let root = root_expansion(&state, AI, root_width, Prices::NONE);
         assert!(!root.contains(&wall), "{root:?}");
         assert_eq!(root.len(), root_width + 1, "{root:?}");
     }
@@ -1115,7 +1041,7 @@ mod wall_switches_2976 {
         assert!(0 < kept && kept < walls.len());
         assert!(!walls.iter().any(|wall| stands_down(&state, wall)));
 
-        let expanded = expansion(&state, AI, 1, MoveOrder::Heuristic, &POLICY_PRIOR, Prices::NONE);
+        let expanded = expansion(&state, AI, 1, Prices::NONE);
         assert_eq!(expanded.len(), 1 + kept + 1, "{expanded:?}");
         assert_eq!(expanded[..1], candidates[..1]);
         assert_eq!(expanded[1..1 + kept], walls[..kept]);
@@ -2195,7 +2121,7 @@ mod rescored_own_prompts_1636 {
         let score = rescore(&world, &line, &counter).unwrap_or_else(|| panic!("the counter ran out"));
         assert_ne!(
             score,
-            finalist_score(&at_prompt, AI, NextSwing::Enemy, Prices::NONE)
+            evaluate_priced(&at_prompt, AI, NextSwing::Enemy, &AI_EVAL, Prices::NONE)
         );
         // The Scarab, each answer tried, the closing endTurn, and the reply's own steps past them.
         assert!(counter.used() > 2 + offered.len(), "{} nodes", counter.used());
@@ -2269,14 +2195,7 @@ mod ways_of_being_played {
         .state()
         .clone();
 
-        let expanded = root_expansion(
-            &state,
-            AI,
-            AI_BUDGET.root_branching,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let expanded = root_expansion(&state, AI, AI_BUDGET.root_branching, Prices::NONE);
 
         let billy_id = hand_id(&state, "classicplus-069");
         let going_long_id = hand_id(&state, "core-084");
@@ -2332,14 +2251,7 @@ mod ways_of_being_played {
         .clone();
 
         let billy_id = hand_id(&state, "classicplus-069");
-        let root = root_expansion(
-            &state,
-            AI,
-            AI_BUDGET.root_branching,
-            MoveOrder::Heuristic,
-            &POLICY_PRIOR,
-            Prices::NONE,
-        );
+        let root = root_expansion(&state, AI, AI_BUDGET.root_branching, Prices::NONE);
         assert!(
             root.iter().any(|action| {
                 matches!(action, ActionBody::Play { instance_id, x: Some(4), .. } if *instance_id == billy_id)

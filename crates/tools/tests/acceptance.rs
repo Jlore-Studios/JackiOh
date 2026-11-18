@@ -27,6 +27,8 @@
 //!    a bare `let _ = <identifier>;`.
 //!  - Statics (#3063): the pure crates' sources declare no `thread_local!`, `static mut` or static holding a
 //!    `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` but the ones CLAUDE.md rule 4 names (`RULE_4_STATICS`).
+//!  - No network (R4159000): `crates/ai` compiles no trained weights, no learned evaluation and no policy
+//!    prior, and the WebAssembly modules export no `learned_parity`.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -2620,4 +2622,68 @@ fn statics_the_check_refuses_an_unlisted_static_in_each_pure_crate() {
     let problems = static_problems(root, &listed);
     drop(scratch);
     assert_eq!(problems, with_list);
+}
+
+/// The names that only the retired learned evaluation and policy prior used (R4159000): the weights files,
+/// the build script's generated code, the feature layout a network read, the two switches and the parity
+/// export.
+const RETIRED_NETWORK_NAMES: [&str; 6] = [
+    "weights.json",
+    "OUT_DIR",
+    "FEATURES_READ_SINCE",
+    "MoveOrder",
+    "EvalKind",
+    "learned_parity",
+];
+
+/// R4159000, R1010000, R1010001, R1011000, R1171001, R3112001: the AI compiles no network and no prior.
+/// `crates/ai` has no build script, no `learned` or `policy` module and no weights file, and no source of
+/// the AI or of the three WebAssembly crates names what only they used.
+#[test]
+fn r4159000_r1010000_r1010001_r1011000_r1171001_r3112001_the_ai_compiles_no_network_and_no_prior() {
+    let root = repo();
+    for gone in [
+        "crates/ai/build.rs",
+        "crates/ai/src/learned.rs",
+        "crates/ai/src/learned",
+        "crates/ai/src/policy.rs",
+        "crates/ai/src/policy",
+    ] {
+        assert!(!root.join(gone).exists(), "{gone} is back");
+    }
+    let manifest = fs::read_to_string(root.join("crates/ai/Cargo.toml")).expect("crates/ai/Cargo.toml");
+    assert!(
+        !manifest.contains("[build-dependencies]") && !manifest.contains("build ="),
+        "crates/ai builds a script again"
+    );
+    let lib = fs::read_to_string(root.join("crates/ai/src/lib.rs")).expect("crates/ai/src/lib.rs");
+    for module in ["mod learned", "mod policy"] {
+        assert!(!lib.contains(module), "crates/ai/src/lib.rs: `{module}`");
+    }
+    let mut files = Vec::new();
+    for dir in [
+        "crates/ai/src",
+        "crates/wasm/src",
+        "crates/wasm/c/src",
+        "crates/wasm/core/src",
+    ] {
+        sources(&root.join(dir), &mut files);
+    }
+    assert!(files.len() > 20, "only {} source files found", files.len());
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in RETIRED_NETWORK_NAMES {
+            if text.contains(name) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "the retired network is named again (R4159000): {found:?}"
+    );
 }

@@ -12,10 +12,8 @@ use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 use crate::candidates::{
     candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down, wall_switches,
 };
-use crate::config::{AI_MOVE_ORDER, AI_SEARCH, MoveOrder};
-use crate::evaluate::{NextSwing, Prices};
-use crate::learned::{finalist_score, line_score, open_score};
-use crate::policy::{POLICY_PRIOR, PolicyPrior, prior_order};
+use crate::config::{AI_EVAL, AI_SEARCH};
+use crate::evaluate::{NextSwing, Prices, evaluate_priced};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::simulate::{
     AnswersTried, LineStatus, best_auto_answer, close_line, line_status, own_prompt_score, search_signature,
@@ -59,56 +57,20 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
 /// The first `width` candidates that are not endTurn, then the first `AI_SEARCH.position_switches`
 /// stand-downs (`stands_down`) the cut left out (#1759, R1759000), then, while the opponent's board
 /// threatens lethal, the first `AI_SEARCH.position_switches` switches to Defense that lower that threat
-/// that both left out (`wall_switches`, #2976, R2976000), then endTurn when it is legal. With
-/// `MoveOrder::Learned` the candidates are sorted by `prior` before the first `width` are taken
-/// (`prior_order`, R1171001); with `MoveOrder::Heuristic` they keep `candidate_actions`' order.
-pub fn expansion(
-    state: &GameState,
-    seat: PlayerId,
-    width: usize,
-    order: MoveOrder,
-    prior: &PolicyPrior<'_>,
-    prices: &Prices,
-) -> Vec<ActionBody> {
-    expand(
-        candidate_actions(state, seat, prices),
-        state,
-        seat,
-        width,
-        order,
-        prior,
-    )
+/// that both left out (`wall_switches`, #2976, R2976000), then endTurn when it is legal. The candidates
+/// keep `candidate_actions`' order (R4159000).
+pub fn expansion(state: &GameState, seat: PlayerId, width: usize, prices: &Prices) -> Vec<ActionBody> {
+    expand(candidate_actions(state, seat, prices), state, seat, width)
 }
 
 /// `expansion` at the search's root (#1635): of `root_candidate_actions`, which keeps every distinct
 /// placement of a play.
-pub fn root_expansion(
-    state: &GameState,
-    seat: PlayerId,
-    width: usize,
-    order: MoveOrder,
-    prior: &PolicyPrior<'_>,
-    prices: &Prices,
-) -> Vec<ActionBody> {
-    expand(
-        root_candidate_actions(state, seat, prices),
-        state,
-        seat,
-        width,
-        order,
-        prior,
-    )
+pub fn root_expansion(state: &GameState, seat: PlayerId, width: usize, prices: &Prices) -> Vec<ActionBody> {
+    expand(root_candidate_actions(state, seat, prices), state, seat, width)
 }
 
 /// `expansion` of the given candidates.
-fn expand(
-    candidates: Vec<ActionBody>,
-    state: &GameState,
-    seat: PlayerId,
-    width: usize,
-    order: MoveOrder,
-    prior: &PolicyPrior<'_>,
-) -> Vec<ActionBody> {
+fn expand(candidates: Vec<ActionBody>, state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
     let end = candidates
         .iter()
         .find(|action| matches!(action, ActionBody::EndTurn))
@@ -123,9 +85,6 @@ fn expand(
         .into_iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))
         .collect();
-    if order == MoveOrder::Learned {
-        moves = prior_order(state, seat, moves, prior);
-    }
     moves.truncate(width);
     let left_out: Vec<ActionBody> = stand_downs
         .into_iter()
@@ -145,7 +104,7 @@ fn expand(
     moves
 }
 
-/// Beam search on one determinization expanding `root_expansion` (#1635) then `expansion` (R1171001).
+/// Beam search on one determinization expanding `root_expansion` (#1635) then `expansion`.
 /// Scores intermediate states (`own_prompt_score` #1112), drops transposition duplicates, tracks
 /// lane variants (#1797), and returns complete lines best first.
 pub fn beam_search(
@@ -155,25 +114,12 @@ pub fn beam_search(
     budget: SearchBudget,
     prices: &Prices,
 ) -> Vec<Line> {
-    beam_search_with(det, seat, counter, budget, AI_MOVE_ORDER, &POLICY_PRIOR, prices)
-}
-
-/// `beam_search` with a given move order and policy prior, for tests and screens (R1171001).
-pub fn beam_search_with(
-    det: &GameState,
-    seat: PlayerId,
-    counter: &dyn NodeCounter,
-    budget: SearchBudget,
-    order: MoveOrder,
-    prior: &PolicyPrior<'_>,
-    prices: &Prices,
-) -> Vec<Line> {
     let root_turn = det.turn;
     let mut complete: Vec<Line> = Vec::new();
     let mut frontier: Vec<OpenLine> = vec![OpenLine {
         state: det.clone(),
         actions: Vec::new(),
-        score: open_score(det, seat, NextSwing::Enemy, prices),
+        score: evaluate_priced(det, seat, NextSwing::Enemy, &AI_EVAL, prices),
     }];
     let mut left_open: Vec<OpenLine> = Vec::new();
     // #1797: the lane variants of the children the beam kept, closed after it (each a state and its line).
@@ -199,9 +145,9 @@ pub fn beam_search_with(
                 break;
             }
             let moves = if depth == 0 {
-                root_expansion(&line.state, seat, width, order, prior, prices)
+                root_expansion(&line.state, seat, width, prices)
             } else {
-                expansion(&line.state, seat, width, order, prior, prices)
+                expansion(&line.state, seat, width, prices)
             };
             for action in moves {
                 let next = match simulate(&line.state, seat, &action, counter, prices) {
@@ -246,7 +192,7 @@ pub fn beam_search_with(
                 }
                 // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
                 let score = own_prompt_score(&next, seat, counter, prices)
-                    .unwrap_or_else(|| open_score(&next, seat, NextSwing::Enemy, prices));
+                    .unwrap_or_else(|| evaluate_priced(&next, seat, NextSwing::Enemy, &AI_EVAL, prices));
                 children.push(OpenLine {
                     state: next,
                     actions,
@@ -297,7 +243,7 @@ pub fn beam_search_with(
         let end = close_line(&state, seat, root_turn, counter, prices);
         // Equality means `close_line` took no step: a step always moves the state on.
         let score = if end == state {
-            line_score(&end, seat, NextSwing::Enemy, prices)
+            evaluate_priced(&end, seat, NextSwing::Enemy, &AI_EVAL, prices)
         } else {
             static_score(&end, seat, root_turn, prices)
         };
@@ -378,10 +324,8 @@ pub fn score_line(
     {
         match simulate(&state, seat, &ActionBody::EndTurn, counter, prices) {
             None => return None,
-            // A finalist whose endTurn is refused keeps its static score, from the evaluation that
-            // scores the finalists when they are replied to (#1010).
-            Some(Err(_)) if reply => return Some(finalist_score(&state, seat, NextSwing::Enemy, prices)),
-            Some(Err(_)) => return Some(line_score(&state, seat, NextSwing::Enemy, prices)),
+            // A finalist whose endTurn is refused keeps its static score, the hand eval's.
+            Some(Err(_)) => return Some(evaluate_priced(&state, seat, NextSwing::Enemy, &AI_EVAL, prices)),
             Some(Ok(next)) => state = next,
         }
     }

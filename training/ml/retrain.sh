@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Retired by #4159 (R4159000): nothing here reaches the AI; kept while `learn.yml` runs `retrain.sh` and
+# `learn-promote.sh`. The AI compiles no network now, so this script stops where it would put one in.
 # The learned evaluation's retrain, start to end, with no LLM inside it (#466, #1012;
 # docs/learned-eval.md D2): one script exports, fits, screens, and names the gate only after a
 # passing screen. A person, the learn lane's workflow (.github/workflows/learn.yml) or a session runs
