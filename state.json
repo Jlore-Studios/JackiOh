@@ -17721,6 +17721,8 @@
       }
     },
     "4230": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-18T17:25:16Z",
@@ -17734,8 +17736,11 @@
         "trail": "turn later; the\\nenemy's hand i\u2026\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A 30 spec/README.md | head -50\", \"description\": \"Read spec README's Adding a ruling\"}\n- Bash: {\"command\": \"for r in R0043 R0185 R0345 R0752 R0754 R2564000 R2603000 R3134002 R3575400 R4070000 R3044000; do ls spec/rulings/$r.md >/dev/null 2>&1 && echo \\\"ok $r\\\" || echo \\\"MISSING $r\\\"; done\", \"d\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4197/spec/rulings/R4197000.md\", \"content\": \"---\\nid: R4197000\\ntitle: \\\"The AI picks Heroic Power's power by what one more use of each offered power g\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4197/spec/pending/4197.md\", \"content\": \"**[[R4197000]] The AI picks Heroic Power's power by what each power keeps giving (issue #4197, 2026-11-18)**: \u2026\n- Bash: {\"command\": \"echo \\\"- Docs written (README, \\u00a79.9, R4197000.md, pending/4197.md). Running fmt, clippy, spec check.\\\" >> .bot-notes.md; cargo fmt -p jackioh-ai && cargo fmt --check && echo FMT-OK;\u2026\n- Bash: {\"command\": \"git diff crates/ai/src/ | head -250\", \"description\": \"Review source diff after fmt\"}\n- Bash: {\"command\": \"sed -n 400,430p crates/engine/src/subsystems/hero_power.rs\", \"description\": \"Check power-changing code in hero_power\"}\n- Bash: {\"command\": \"timeout 1500 cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | grep -v \\\"^\\\\s*\\\\(Compiling\\\\|Checking\\\\)\\\" | tail -20\", \"description\": \"Run clippy on the AI crate\", \"timeout\u2026\n- Bash: {\"command\": \"echo \\\"- fmt OK, clippy -p jackioh-ai clean. Running spec check + cargo test -p jackioh-ai.\\\" >> .bot-notes.md; timeout 1800 cargo jackioh spec check 2>&1 | tail -15\", \"description\": \"Ru\u2026\n- Bash: {\"command\": \"echo \\\"- spec check OK. Running cargo test -p jackioh-ai (full).\\\" >> .bot-notes.md; timeout 3000 cargo test -p jackioh-ai 2>&1 | grep -E \\\"^test result|FAILED|panicked|failed|^error\\\" |\u2026\n- Bash: {\"command\": \"echo \\\"- cargo test -p jackioh-ai: all green (61 + 959 + 95 passed). Running smoke gate in background.\\\" >> .bot-notes.md; grep -rn \\\"ActivationPrice\\\\|AttackHookPrice\\\\|AwakenPrice\\\\|AI\u2026\n- Bash: {\"command\": \"timeout 5400 cargo jackioh gate > /tmp/gate-4197.log 2>&1; echo \\\"exit $?\\\" >> /tmp/gate-4197.log\", \"description\": \"Run the AI's smoke-size quality gates\", \"timeout\": 5500000, \"run_in_ba\u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20\", \"description\": \"Read classify docs in tools README\"}\n- Bash: {\"command\": \"timeout 900 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Classify the change against main with claims\", \"timeout\": 950000}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4197/crates/ai/tests/ai/activate.rs\", \"offset\": 463, \"limit\": 165}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('## Log')]\\nnew='''## State\\n\\nBuild run 1 (2026-11-18, opus). Plan steps 1-11 DONE:\\n- src: con\u2026\n- Bash: {\"command\": \"grep -ln \\\"jackioh-ai\\\" crates/*/Cargo.toml apps/*/Cargo.toml 2>/dev/null\", \"description\": \"List crates depending on jackioh-ai\"}\n- tool error: Exit code 2 crates/ai/Cargo.toml crates/server/Cargo.toml crates/shared/Cargo.toml crates/tools/Cargo.toml\n- Bash: {\"command\": \"cat crates/tools/README.md | grep -n \\\"^| \\\\`gate\\\" | head -3\", \"description\": \"Read gate command docs\"}\n- said: I'll wait for the gate to finish before running anything else, since parallel CPU load would skew its perf gate.\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"command\": \"tail -n +1 -f /tmp/gate-4197.log | grep --line-buffered -E \\\"^\\\\[gate|^gate |FAIL|fail|panic|error|^exit \\\"\", \"description\": \"smoke gate progress for #4197\", \"timeout_ms\": 600000}\n- tool error: This Bash command contains multiple operations. The following part requires approval: tail -n +1 -f /tmp/gate-4197.log\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/gate-4197.log; do sleep 10; done; grep -E \\\"^\\\\[gate|^gate |FAIL|panic|^exit \\\" /tmp/gate-4197.log | tail -30\", \"description\": \"Wait for the gate to finish \u2026\n- Bash: {\"command\": \"grep -rln \\\"activation_prices\\\\|AI_HAND_ACTIVATION_PROBE_NODES\\\" docs/ spec/0*.md crates/*/README.md 2>/dev/null\", \"description\": \"Find docs mentioning activation probes\"}\n- said: Waiting for the smoke gate to finish (the background task will notify me).\n- Bash: {\"command\": \"tail -c 1500 /tmp/gate-4197.log\", \"description\": \"Peek at gate progress\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\\|ai-vs-greedy\\\\] \\\" /tmp/gate-4197.log; do sleep 15; done; tail -c 800 /tmp/gate-4197.log\", \"description\": \"Wait for the greedy gate line\", \"timeout\": 3000000}\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/gate-4197.log; do sleep 15; done; grep -v \\\"Compiling\\\\|Finished\\\\|Running\\\" /tmp/gate-4197.log | tail -25\", \"description\": \"Wait for the gate to exit and s\u2026\n- Bash: {\"command\": \"echo \\\"- Smoke gate: exit 0 (random 20/20, greedy 18/20, hard-vs-easy 19/20, perf ok, 0 panics). Running shared/tools/server tests (AI's dependents).\\\" >> .bot-notes.md; timeout 3500 car\u2026\n- Bash: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4197/ed2fe2da-8447-47e0-a2cb-f20516c0cc3e/tasks/bpubb01pe.output ] && grep -q \\\"test result\\\" /tmp/claude-1001/-home-runner-\u2026\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4197/ed2fe2da-8447-47e0-a2cb-f20516c0cc3e/tasks/bpubb01pe.output; grep -c \\\"^test result: ok\\\" $f; grep -E \\\"FAILED|panicked|^error\\\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- left: smoke `cargo jackioh gate` (running, log /tmp/gate-4197.log), then final report.\\\",\\\"- smoke gate exit 0; sh\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI picks Heroic Power's power by what it does on every turn after, not only by what it can do this turn\"} --> ## What changed When the AI plays Heroic Power and the Cry's Discover is open with no mana left, it now keeps Die Insect instead of Armor U\u2026"
       },
       "issue": 4197,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T18:40:14Z",
         "from_run": "44358490772",
         "gates": [
           {
@@ -17827,7 +17832,11 @@
         "source": "build",
         "until": "2026-11-18T19:06:41Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-18T18:36:41Z",
+      "run_id": "pending:8531a07d-1795027185",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17846,6 +17855,9 @@
         "provider": "claude-1",
         "run": "44358490772"
       },
+      "started_at": "2026-11-18T18:40:14Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18007,9 +18019,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T18:39:30Z",
+    "at": "2026-11-18T18:40:14Z",
     "url": "",
-    "what": "review #4231 on claude-3"
+    "what": "review #4230 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-18T18:22:20Z",
