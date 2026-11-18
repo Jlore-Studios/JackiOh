@@ -87,7 +87,12 @@ pub(crate) fn projected_damage_with(
     // R176, §4.3 step 1: an attacker a First Strike defender destroys first deals nothing, Cleave
     // included. R783000: a Ranged attacker takes no strike back from a defender that is not.
     if crate::combat::takes_strike_back(state, attacker, defender)
-        && falls_to_first_strike(state, attacker, defender)
+        && falls_to_first_strike(
+            state,
+            attacker,
+            defender,
+            crate::combat::strike_back_multiplier_for(state, defender, attacker),
+        )
     {
         return 0;
     }
@@ -128,11 +133,14 @@ fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance
 /// strikes first, and an attacker that falls there never lands its own hit. §4.4's stops apply to the
 /// strike back as `damage::project_hit` reads them, the attacker's own cap (R2179005), a conversion and
 /// the attacker's side's damage pool included (R4032000), and a Poisonous defender destroys with any
-/// damage at all (step 7).
+/// damage at all (step 7). `multiplier` is the one on `defender`'s hit: `combat::strike_back_multiplier_for`
+/// when it strikes back (R4156000), `combat::lane_multiplier_for` when it is the attacker
+/// (`strike_back_heal`, sides swapped).
 pub(crate) fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
     defender: &CardInstance,
+    multiplier: i32,
 ) -> bool {
     let mine = unit_view(state, attacker);
     let theirs = unit_view(state, defender);
@@ -141,7 +149,7 @@ pub(crate) fn falls_to_first_strike(
     {
         return false;
     }
-    let theirs_attack = theirs.attack * crate::combat::lane_multiplier_for(state, defender, attacker);
+    let theirs_attack = theirs.attack * multiplier;
     if theirs_attack <= 0 {
         return false;
     }
@@ -183,7 +191,12 @@ fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackT
     if !has_keyword(&theirs.keywords, KeywordKind::Lifesteal) || theirs.attack <= 0 {
         return 0;
     }
-    if falls_to_first_strike(state, defender, attacker) {
+    if falls_to_first_strike(
+        state,
+        defender,
+        attacker,
+        crate::combat::lane_multiplier_for(state, attacker, defender),
+    ) {
         return 0;
     }
     let on_attacker = DamageTarget::Unit {

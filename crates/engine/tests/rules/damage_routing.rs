@@ -369,6 +369,73 @@ mod r3554008_sweep {
     }
 }
 
+mod r4156000_an_attacked_sweeper_strikes_back_plain {
+    use super::*;
+
+    /// The Fuse in p1's lane 3 and a Bulwark in each of p2's lanes 2 to 4, on p2's turn.
+    fn attacked(seed: &str) -> Scenario {
+        let mut s = board(
+            seed,
+            json!({ "field": [field_unit(FUSE, 3)] }),
+            json!({
+                "field": [
+                    field_unit(BULWARK, 2),
+                    field_unit(BULWARK, 3),
+                    field_unit(BULWARK, 4),
+                ],
+            }),
+        );
+        s.end_turn();
+        s
+    }
+
+    #[test]
+    fn r4156000_attacked_from_its_lane_it_strikes_back_with_its_plain_attack() {
+        let mut s = attacked("r4156000-lane");
+        let fuse = id_at(&s, P1, 3);
+        let (near_left, mid, near_right) = (id_at(&s, P2, 2), id_at(&s, P2, 3), id_at(&s, P2, 4));
+        s.attack(mid.as_str(), fuse.as_str());
+        // Its weight would have made it 10.
+        assert_eq!(
+            damage_on(s.state(), &mid),
+            2,
+            "its attacker takes its plain attack"
+        );
+        assert_eq!(
+            damage_on(s.state(), &near_left),
+            0,
+            "a strike back sweeps nothing"
+        );
+        assert_eq!(
+            damage_on(s.state(), &near_right),
+            0,
+            "a strike back sweeps nothing"
+        );
+        assert_eq!(damage_on(s.state(), &fuse), 1, "the Bulwark's blow");
+    }
+
+    #[test]
+    fn r4156000_attacked_from_beside_its_lane_it_strikes_back_with_its_plain_attack() {
+        let mut s = attacked("r4156000-beside");
+        let fuse = id_at(&s, P1, 3);
+        let (near_left, mid, near_right) = (id_at(&s, P2, 2), id_at(&s, P2, 3), id_at(&s, P2, 4));
+        s.attack(near_left.as_str(), fuse.as_str());
+        // Its adjacent weight would have made it 6.
+        assert_eq!(
+            damage_on(s.state(), &near_left),
+            2,
+            "its attacker takes its plain attack"
+        );
+        assert_eq!(damage_on(s.state(), &mid), 0, "a strike back sweeps nothing");
+        assert_eq!(
+            damage_on(s.state(), &near_right),
+            0,
+            "a strike back sweeps nothing"
+        );
+        assert_eq!(damage_on(s.state(), &fuse), 1, "the Bulwark's blow");
+    }
+}
+
 mod r3554009_occupied_summon {
     use super::*;
 
