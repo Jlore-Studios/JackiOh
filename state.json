@@ -14886,11 +14886,9 @@
     "what": "spot-check #4230 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-18T22:18:10Z",
+    "at": "2026-11-18T22:26:06Z",
     "notes": [
-      "started review #4230 on claude-7 (run 44410442176)",
-      "nothing more to start: nothing is queued",
-      "pruned 6 plan file(s) older than 7 days"
+      "delivered review #4230 on claude-7 (run 44410442176): reviewed"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15596,7 +15594,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T22:18:10Z",
+  "loop_tick": "2026-11-18T22:26:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
