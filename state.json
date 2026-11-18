@@ -15351,11 +15351,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T03:59:04Z",
+        "at": "2026-11-18T04:09:55Z",
         "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4160, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "none of the hard lines hold: single-file web a11y fix, no engine/AI/cross-crate/migration/big change"
       },
       "failures": 0,
       "forced": false,
