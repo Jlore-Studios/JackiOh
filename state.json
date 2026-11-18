@@ -14120,7 +14120,7 @@
       }
     },
     "4153": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -14157,11 +14157,13 @@
       },
       "interruptions": 0,
       "issue": 4015,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "muse",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T00:55:33Z",
         "from_run": "44207656480",
         "gates": [
           {
@@ -14226,11 +14228,11 @@
       "queued_at": "2026-11-18T00:54:47Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "44207656480",
+      "run_id": "pending:816cf250-1794963314",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-18T00:25:07Z",
+      "started_at": "2026-11-18T00:55:33Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -14247,9 +14249,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T00:40:42Z",
+    "at": "2026-11-18T00:55:33Z",
     "url": "",
-    "what": "build #4132 on claude-7"
+    "what": "review #4153 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T00:47:13Z",
