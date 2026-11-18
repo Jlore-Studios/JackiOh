@@ -18082,16 +18082,11 @@
     "what": "suggestions (server) on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-18T18:56:52Z",
+    "at": "2026-11-18T19:10:58Z",
     "notes": [
-      "#4231: `rust (classify)` red in CI run 44371741485; its other early jobs have until 2026-11-18T18:57:51Z to report",
-      "delivered review #4230 on claude-1 (run 44372231699): approved",
-      "delivered revise #4173 on claude-7 (run 44365786519): built",
-      "delivered build #4018 on claude-7 (run 44365641720): built",
-      "started review #4232 on muse (run 44375939473)",
-      "started review #4173 on claude-6 (run 44376082585)",
-      "started suggest on claude-7 (run 44376215606)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4173 on claude-6 (run 44376082585): reviewed",
+      "delivered review #4232 on muse (run 44375939473): reviewed",
+      "delivered plan #4221 on claude-8 (run 44360885218): interrupted"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18797,7 +18792,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T18:56:52Z",
+  "loop_tick": "2026-11-18T19:10:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
