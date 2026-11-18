@@ -22,112 +22,13 @@
     }
   },
   "items": {
-    "2980": {
-      "action": "build",
-      "died": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "live": "building",
-      "owner": "claude-squishy",
-      "owner_since": "2026-11-04T02:37:04Z",
-      "owner_why": "it took it up",
-      "pending_request": false,
-      "planned_at": "2026-11-04T02:57:45Z",
-      "planned_by": "`claude-squishy` (claude, `opus`, strong)",
-      "planned_by_id": "claude-squishy",
-      "planned_tier": "strong",
-      "provider": "claude-squishy",
-      "run_id": "41761805309",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T02:37:04Z",
-      "stop_requested": false
-    },
-    "2981": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "live": "building",
-      "owner": "claude-squishy",
-      "owner_since": "2026-11-04T02:38:02Z",
-      "owner_why": "it took it up",
-      "pending_request": false,
-      "planned_at": "2026-11-04T04:30:16Z",
-      "planned_by": "`claude-squishy` (claude, `opus`, strong)",
-      "planned_by_id": "claude-squishy",
-      "planned_tier": "strong",
-      "pr": 2993,
-      "provider": "claude-squishy",
-      "round_tier": "strong",
-      "run_id": "41761924717",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T02:38:02Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "2993": {
-      "cleared": {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-squishy",
-          "tier": "strong"
-        },
-        "at": "2026-11-04T04:30:29Z",
-        "built_by": "claude-squishy",
-        "by": "`claude` (strong)",
-        "sha": "1a2e909f66b01f62a8a66dbece789b46857da03f"
-      },
-      "closed_at": "2026-11-04T08:17:48Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-11-04T02:38:02Z",
-      "issue": 2981,
-      "kind": "revise",
-      "merge_owner_gave_up": {
-        "at": "2026-11-04T05:39:53Z",
-        "provider": "claude-squishy",
-        "sha": "1a2e909f66b01f62a8a66dbece789b46857da03f"
-      },
-      "merged": true
-    },
-    "3029": {
-      "action": "build",
-      "archived": {
-        "at": "2026-11-04T11:11:45Z",
-        "branch": "",
-        "head": "",
-        "pr": null,
-        "why": "in GitHub, turn on **Allow GitHub Actions to create and approve pull requests** for `Jlore-Studios/JackiOh`. Leave the default token permission as it is."
-      },
-      "died": 0,
-      "forced": false,
-      "interruptions": 0,
-      "live": "building",
-      "owner": "",
-      "pending_request": false,
-      "planned_at": "2026-11-04T11:11:33Z",
-      "planned_by": "`claude-squishy` (claude, `opus`, strong)",
-      "planned_by_id": "claude-squishy",
-      "planned_tier": "strong",
-      "provider": "claude-squishy",
-      "run_id": "41818041745",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T11:02:26Z"
-    },
     "3670": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "live": "building",
       "owner": "claude-squishy",
       "owner_since": "2026-11-11T03:22:56Z",
@@ -139,15 +40,12 @@
       "planned_tier": "strong",
       "pr": 3684,
       "provider": "claude-squishy",
-      "question": "",
       "round_tier": "strong",
       "run_id": "42951887540",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T03:22:56Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "3684": {
@@ -174,28 +72,7 @@
         "provider": "claude-squishy",
         "sha": "b97e4057fe90afa52df33f6baa2be23326e69e58"
       },
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "built_by": "claude-squishy",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-squishy",
-            "run": "42951887540",
-            "tier": "strong"
-          }
-        ],
-        "sha": "b97e4057fe90afa52df33f6baa2be23326e69e58",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     }
   },
   "labels_synced": "ad570512878062b5",
@@ -316,9 +193,9 @@
     }
   },
   "pruned": {
-    "at": "2026-11-11T03:22:36Z",
+    "at": "2026-11-18T03:52:41Z",
     "dropped": 4,
-    "shed": 4
+    "shed": 2
   },
   "rate_limited_until": null,
   "secrets": {
