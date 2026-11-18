@@ -14758,13 +14758,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-1",
       "queued_at": "2026-11-18T02:45:10Z",
-      "run_id": "44225657521",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:fd60a515-1794973802",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 330,
-      "started_at": "2026-11-18T02:46:07Z",
+      "started_at": "2026-11-18T03:50:26Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15329,9 +15330,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T03:49:49Z",
+    "at": "2026-11-18T03:50:26Z",
     "url": "",
-    "what": "review #4172 on claude-4"
+    "what": "spot-check #4160 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-18T03:33:05Z",
@@ -35742,7 +35743,15 @@
         "n": 330,
         "pr": 4160,
         "queued_at": "2026-11-18T03:24:16Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:fd60a515-1794973802",
         "sha": "254b7862576b26fa0d81d5945ce1f51d36f6d0cf",
+        "started_at": "2026-11-18T03:50:26Z",
         "status": "queued",
         "title": "Patch: the game log speaks its newest line to screen readers",
         "tries": 0
