@@ -296,6 +296,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub marked_exiled: Option<bool>,
+    /// R4205000: marked destroyed by a steal that had no room for it (§6.3 Steal). Nothing keeps it on the
+    /// field: Indestructible drops no mark (R46), no "would die" replacement is offered it; a
+    /// destroy-to-exile aura still exiles it (R1849002). Only ever `Some(true)`; R78's reset clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub unpreventable_destroy: Option<bool>,
     /// Came back through Reborn, so it no longer has it (§4.5 step 4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -2807,6 +2813,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         divine_shield_spent: None,
         marked_destroyed: None,
         marked_exiled: None,
+        unpreventable_destroy: None,
         reborn_spent: None,
         known_as: None,
         tuning: None,

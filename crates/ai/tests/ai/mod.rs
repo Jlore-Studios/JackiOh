@@ -78,6 +78,7 @@ pub mod slumber;
 pub mod starship;
 pub mod starship_equip;
 pub mod static_attack_flags;
+pub mod steal_no_room;
 pub mod stinkyscape_plus_s14;
 pub mod stinkyscape_plus_turrets;
 pub mod style;

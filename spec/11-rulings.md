@@ -1767,7 +1767,7 @@ The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195
 
 **[[R3546002]] GIGA is a size taken as the card enters the field (issue #3546, 2026-11-10)**: printed, a hand grant or an embiggened conditional keyword ([[R1878001]]); fixed on the field; [[R78]]'s reset ends it; Flicker and Transform keep it. Rejected: a size following field keywords; a separate mark field.
 
-**[[R3546003]] A GIGA moves only whole (issue #3546, 2026-11-10)**: a steal takes the same lane, else the leftmost fit, else fails ([[R15]]); a rotation ([[R14]]) or swap ([[R88]]) that can't land it whole bounces it; it never steps rows; Reborn and [[R210]] hold four zones. Rejected: splitting it at the center line.
+**[[R3546003]] A GIGA moves only whole (issue #3546, 2026-11-10)**: a steal takes the same lane, else the leftmost fit, else it is destroyed ([[R15]], [[R4205000]]); a rotation ([[R14]]) or swap ([[R88]]) that can't land it whole bounces it; it never steps rows; Reborn and [[R210]] hold four zones. Rejected: splitting it at the center line.
 
 **[[R3546004]] The view draws a GIGA at its anchor (issue #3546, 2026-11-10)**: the flag at the anchor, the covered zones empty; public on a face-down card too, whose zones refuse every play anyway ([[R33]]). Rejected: hiding a face-down size.
 

@@ -1,7 +1,9 @@
 //! #49 Snom Bunny Mind Control (SPEC §8.2): (5) Spell, Rare. "Float reduces cost. / Steal an enemy card.",
 //! radiant "Steal an enemy card. Make it Radiant."
 //!
-//! The radiant face steals the same card and then sets its flag (§8 Conventions).
+//! The radiant face steals the same card and then sets its flag (§8 Conventions), `steal`'s `radiant`, on a
+//! card the steal took only (R282's reading): one it had no room for is destroyed where it stands instead
+//! (R4205000) and made nothing.
 //!
 //! "Card" is any enemy permanent, a Unit, Field Spell, Trap or Field Trap, since issue #3139 (R3139002): a
 //! DECLARED play-time target (R81), validated by R90, only the top card of a Stack pile on offer (R13) and a
@@ -14,7 +16,8 @@
 //! never in the deck (R2657002). At (5) it is past `MAX_MANA` and is played only after a Float or with mana
 //! gained (§2.3).
 //!
-//! Placement is §6.3 Steal and R15 (`effects/steal.rs`). Control is field-only (R12): only `controller`
+//! Placement is §6.3 Steal and R15 (`effects/steal.rs`), and a card with no room is destroyed, past
+//! Indestructible (R4205000). Control is field-only (R12): only `controller`
 //! moves; owner, damage, buffs, counters and position stay (R78 is about leaving). `set_radiant` is the
 //! flag alone (R74): the base layer swaps, damage and buffs stay, no Cry re-fires (R22). It resolves by
 //! instance id, so the steal's zone move cannot make it miss.
@@ -63,10 +66,7 @@ fn scripts_with(targets: fn() -> Vec<TargetDecl>, float: bool) -> CardScripts {
         radiant: Script {
             targets: targets(),
             cry: Some(hook(|_ctx| {
-                vec![
-                    steal(json_as(json!({ "target": { "of": "chosen" } }))),
-                    set_radiant(json_as(json!({ "target": { "of": "chosen" } }))),
-                ]
+                vec![steal(json_as(json!({ "target": { "of": "chosen" }, "radiant": true })))]
             })),
             hand_triggers: hand_triggers(),
             ..Script::default()
@@ -87,6 +87,8 @@ mod tests {
     const SEVEN_SEVEN: &str = "core-025";
     const DUELIST: &str = "core-045";
     const VANILLA: &str = "core-008";
+    /// #66 The Rock: Indestructible.
+    const ROCK: &str = "core-066";
     const TOKEN_MAKER: &str = "core-015";
     const SHEEPISH: &str = "core-041";
     const WEAPONS: &str = "core-014";
@@ -254,6 +256,44 @@ mod tests {
                 .filter_map(|lane| g.unit(PlayerId::P1, lane).map(|unit| unit.def_id.clone()))
                 .collect();
             assert_eq!(mine, vec![prey.def_id.clone()]);
+        }
+
+        /// p1's unit row full of Vanillas and the mana to cast it; `prey` is p2's only Unit.
+        fn full_row(hand: Value, prey: Value) -> Scenario {
+            scenario(json!({
+                "p1": { "hand": [hand], "mana": COST, "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
+                "p2": { "field": [prey] },
+            }))
+        }
+
+        /// R4205000: with no room on the caster's side the card is destroyed where it stands, into its
+        /// controller's graveyard, past Indestructible (#66 The Rock).
+        #[test]
+        fn r4205000_with_no_room_the_card_is_destroyed() {
+            let mut g = full_row(json!(MIND_CONTROL), json!({ "def": ROCK, "lane": 3 }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold The Rock in lane 3").clone();
+
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+
+            assert!(g.unit(PlayerId::P2, 3).is_none());
+            g.expect_in_zone(&prey, "graveyard");
+            assert!(g.pile(PlayerId::P2, "graveyard").iter().any(|card| card.id == prey.id));
+            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
+            assert!(g.events().iter().any(|event| event.event_type().as_str() == "destroyed"));
+        }
+
+        /// R282's reading, R4205000: the Radiant face makes Radiant only a card it took.
+        #[test]
+        fn r4205000_radiant_with_no_room_the_card_is_destroyed_not_made_radiant() {
+            let mut g = full_row(radiant_mind_control(), json!({ "def": SEVEN_SEVEN, "lane": 3 }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the 7/7 in lane 3").clone();
+
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+
+            g.expect_in_zone(&prey, "graveyard");
+            assert!(g.pile(PlayerId::P2, "graveyard").iter().any(|card| card.id == prey.id));
+            assert!(!g.card(&prey).radiant);
+            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "radiantSet"));
         }
 
         #[test]
