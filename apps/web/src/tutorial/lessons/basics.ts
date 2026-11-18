@@ -3,8 +3,8 @@
 // `deckCopies` of each (R2433001; the AI's own, R2533001), and no spell, keyword but Rush, backrow card,
 // Legendary or Mythic, the pool hold on. Deck order fixes this seed's deal (`scripts/lesson-deal.ts
 // basics`): reordering it changes the game, so rerun the lesson's tests. Seed "-1" until #2825, whose AI
-// ranks its kills with its hits on the hero, so there the coach's line took 11 turns; "-6" opens on two
-// Spikey Stevens and wins within 6.
+// ranks its kills with its hits on the hero, so there the coach's line took 11 turns; "-6" until #4154,
+// whose 2/2 Midlane Menace took it to 11 again; "-2" wins within 6.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -14,7 +14,7 @@ export const lesson: TutorialLesson = {
   title: "First steps",
   summary: "Play units, attack, and bring the enemy hero down to 0.",
   discoveries: ["mana", "play-unit", "attack-hero", "trade", "winning"],
-  seed: "tg-basics-6",
+  seed: "tg-basics-2",
   humanSeat: "p1",
   poolHold: true,
   humanDeck: [

@@ -273,12 +273,13 @@ pub fn tag_count(tag: Tag) -> usize {
         // #114, #115, #147 and #147.1, and #137 Starfleet Commander (#2521).
         // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the Legacy cards #41, #43,
         // #53 and #54.
+        // Stinkyscape+ #61 Jayaad joined them in issue #4154.
         Tag::Human => {
             39 + meditative(16)
                 + meditative_plus(5)
                 + stinkyscape(21)
                 + training_grounds(15)
-                + stinkyscape_plus(11)
+                + stinkyscape_plus(12)
         }
         // Not Core #62 Friend of Felinors nor Classic #32 Felinor Feelings (#1837, R1837000).
         // Stinkyscape #87.

@@ -400,6 +400,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0096_moderation_audit.sql",
         include_str!("../../migrations/0096_moderation_audit.sql"),
     ),
+    (
+        "0097_duos_match_checkpoints.sql",
+        include_str!("../../migrations/0097_duos_match_checkpoints.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

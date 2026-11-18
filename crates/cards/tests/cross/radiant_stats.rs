@@ -104,13 +104,14 @@ fn tmack_trav_s_radiant_cell_put_back_to_18_18_fails() {
         .lines()
         .find(|line| line.starts_with("| 94 | Tmack Trav |"))
         .expect("§8.10 row 94");
-    assert!(row.contains("| 16/16, plus Pierce"), "{row}");
+    // #4154 made it 7/7 (Radiant 14/14), from 8/8 (Radiant 16/16).
+    assert!(row.contains("| 14/14, plus Pierce"), "{row}");
     let header = TABLE_HEADER;
-    let stale = row.replace("| 16/16, plus Pierce", "| 18/18, plus Pierce");
+    let stale = row.replace("| 14/14, plus Pierce", "| 18/18, plus Pierce");
     let stale = format!("{header}\n| --- |\n{stale}\n");
     assert_eq!(
         mismatches(&stale),
-        vec!["#94 Tmack Trav: the Radiant cell says 18/18, the Stats cell \"8/8 → 16/16\"".to_string()]
+        vec!["#94 Tmack Trav: the Radiant cell says 18/18, the Stats cell \"7/7 → 14/14\"".to_string()]
     );
 }
 

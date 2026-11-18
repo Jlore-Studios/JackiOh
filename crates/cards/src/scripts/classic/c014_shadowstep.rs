@@ -327,7 +327,7 @@ mod tests {
                     "backrow": [{ "def": SHADOWSTEP, "faceUp": false }],
                     "library": [STOCKPILE],
                 },
-                "p2": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 5, "library": [STOCKPILE, STOCKPILE] },
+                "p2": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 6, "library": [STOCKPILE, STOCKPILE] },
             }));
             let menace = s.card(MENACE).clone();
             s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }));
@@ -374,7 +374,7 @@ mod tests {
         #[test]
         fn r2618000_a_stolen_unit_of_theirs_you_control_that_dies_returns_to_your_hand() {
             let mut s = scenario(json!({
-                "p1": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 5, "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
+                "p1": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 6, "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
                 "p2": { "hand": [BIG_FELINOR, STOCKPILE], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] },
             }));
             let menace = s.card(MENACE).clone();
@@ -539,7 +539,7 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [MIND_CONTROL, STOCKPILE],
-                    "mana": 5,
+                    "mana": 6,
                     "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
                     "library": [STOCKPILE],
                 },

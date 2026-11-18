@@ -154,6 +154,8 @@ mod tests {
     fn r1876002_its_death_removes_every_allure_on_the_field_so_nothing_is_stolen() {
         let mut s = board(false, json!([FANATIC, FILLER]), json!([{ "def": MENACE, "lane": 5 }]));
         let vanilla = s.unit_at(P1, 2);
+        // K-Pop Fanatic costs (3) since issue #4154, as Kwzka does: paid at (2) it costs less (R56).
+        s.card_mut(FANATIC).cost_mod = -1;
         s.play(FANATIC, json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
         let fanatic = s.unit_at(P2, 1);
         assert!(allured(&s, &fanatic) && allured(&s, &vanilla));

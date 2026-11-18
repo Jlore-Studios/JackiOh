@@ -506,7 +506,7 @@ mod tests {
         crate::register_all();
         let game = |id: &str, radiant: bool| {
             let mut g = scenario(json!({
-                "p1": { "hand": [{ "def": id, "radiant": radiant }], "mana": 5 },
+                "p1": { "hand": [{ "def": id, "radiant": radiant }], "mana": 6 },
                 "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
             }));
             let prey = g.unit(PlayerId::P2, 3).expect("setup: the 7/7").clone();

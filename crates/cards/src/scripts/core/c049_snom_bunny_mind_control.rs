@@ -1,4 +1,4 @@
-//! #49 Snom Bunny Mind Control (SPEC §8.2): (5) Spell, Rare. "Float reduces cost. / Steal an enemy card.",
+//! #49 Snom Bunny Mind Control (SPEC §8.2): (6) Spell, Rare ((5) until issue #4154). "Float reduces cost. / Steal an enemy card.",
 //! radiant "Steal an enemy card. Make it Radiant."
 //!
 //! The radiant face steals the same card and then sets its flag (§8 Conventions), `steal`'s `radiant`, on a
@@ -13,7 +13,7 @@
 //!
 //! "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464) as
 //! Drone Core VIII's: each Float of its owner's lowers its cost by that much while it is in their hand,
-//! never in the deck (R2657002). At (5) it is past `MAX_MANA` and is played only after a Float or with mana
+//! never in the deck (R2657002). At (6) it is past `MAX_MANA` and is played only after a Float or with mana
 //! gained (§2.3).
 //!
 //! Placement is §6.3 Steal and R15 (`effects/steal.rs`), and a card with no room is destroyed, past
@@ -96,8 +96,9 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// Mind Control costs (5), past the harness's 4 mana (issue #3139): a game gives p1 the mana to play it.
-    const COST: i32 = 5;
+    /// Mind Control costs (6) since issue #4154 ((5) from issue #3139), past the harness's 4 mana: a game gives
+    /// p1 the mana to play it.
+    const COST: i32 = 6;
 
     /// The target lists of every `play` `legal_actions` offers p1 for this card (R81).
     fn offered(state: &GameState, card: &CardInstance) -> Vec<Vec<String>> {
@@ -133,7 +134,7 @@ mod tests {
             assert_eq!(g.card(&prey).controller, PlayerId::P1);
             assert_eq!(g.card(&prey).owner, PlayerId::P2);
             g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
-            // Cost 5 since issue #3139.
+            // Cost 6 since issue #4154 (5 from issue #3139).
             g.expect_mana(PlayerId::P1, 0);
         }
 
@@ -361,9 +362,9 @@ mod tests {
             assert_eq!(s.card(hand.as_str()).cost_mod, 0);
         }
 
-        /// At (5) it is past the 4 mana a turn gives: unplayable at 4, playable once a Float lowered it.
+        /// At (6) it is past the 4 mana a turn gives: unplayable at 4, playable once a Float lowered it by 2.
         #[test]
-        fn r3139002_at_5_it_cannot_be_played_on_4_mana_until_a_float_has_lowered_it() {
+        fn r3139002_at_6_it_cannot_be_played_on_4_mana_until_a_float_has_lowered_it() {
             let mut s = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL, FILLER], "mana": 4 },
                 "p2": { "field": [SEVEN_SEVEN] },
@@ -374,6 +375,8 @@ mod tests {
             assert_eq!(s.card(&prey).controller, PlayerId::P2);
 
             s.card_mut(MIND_CONTROL).cost_mod = -1;
+            s.expect_refused(|s| s.play(MIND_CONTROL, named.clone()));
+            s.card_mut(MIND_CONTROL).cost_mod = -2;
             s.play(MIND_CONTROL, named);
             assert_eq!(s.card(&prey).controller, PlayerId::P1);
         }

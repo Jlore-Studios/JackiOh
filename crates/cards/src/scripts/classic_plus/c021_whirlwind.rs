@@ -179,7 +179,8 @@ mod tests {
                 }));
                 s.play(WHIRLWIND, json!({}));
                 let immune = unit_or_blank(&s, P2, 1);
-                s.expect_stats(&immune, json!({ "health": 8 }));
+                // A Radiant Top Loser is 6/6: untouched.
+                s.expect_stats(&immune, json!({ "health": 6 }));
                 let body = unit_or_blank(&s, P2, 2);
                 s.expect_stats(&body, json!({ "health": 8 }));
             }

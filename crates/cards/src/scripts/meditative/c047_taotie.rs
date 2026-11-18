@@ -1,7 +1,7 @@
 //! M #47 饕餮 (SPEC §8.8 row 47): (4) Unit, CN, Legendary, 2/2 → 4/4 (0/1 → 0/2 from v0.5.12 through
 //! v0.6.5b).
 //!
-//! Base:    "Activate: Fuse a random enemy Unit into this, then Freeze this."
+//! Base:    "Activate: Fuse a random enemy Unit into this, then Freeze this. Has an extra turn cooldown."
 //! Radiant: "Activate: Fuse a random enemy Unit into this."
 //! Engine (R3996002): an Activate, once a turn with no cost (R384), offered while 饕餮 is not Immutable
 //! and an enemy Unit stands that is not Immutable, with this as the kept target and one ingredient drawn
@@ -9,10 +9,13 @@
 //! each pile, both the unit row and a Flying Unit standing in the backrow, R1081000; never a Field Spell
 //! or a Trap, face-up or face-down, and never an Immutable one, R1020). The base face then Freezes 饕餮
 //! (§6.3 Freeze), which costs it its attack this turn, or its next turn and that turn's Activate once it
-//! has attacked (R2246000). The fusion is R77 and R102's: this keeps its instance, zone, damage, Radiant
+//! has attacked (R2246000). Since issue #4154 the base face's Activate also has an extra turn cooldown, as
+//! the Beams' (R1841000): a use sits out its user's next turn, on top of the Freeze; the Radiant face's
+//! has none. The fusion is R77 and R102's: this keeps its instance, zone, damage, Radiant
 //! flag and this turn's use; the eaten card ceases to exist with no Death. Through v0.6.5b it was "End of
 //! turn: Fuse a random enemy Unit into this." (R62), the Radiant face then also fusing a random card of
-//! the opponent's library (`script_v0_6_5b`), and through v0.5.11r the field ingredient was any enemy
+//! the opponent's library (`script_v0_6_5b`), through v0.6.6h the base face's Activate had no cooldown
+//! (`script_v0_6_6h`), and through v0.5.11r the field ingredient was any enemy
 //! permanent, a Field Spell or a Trap too (`script_v0_5_11o`), both kept for their replays (R767000).
 
 use jackioh_engine::effects::fuse_cards;
@@ -43,8 +46,9 @@ fn has_meal(state: &GameState, me: &CardInstance, controller: PlayerId) -> bool 
             .any(|unit| !unit_has(state, unit, KeywordKind::Immutable))
 }
 
-/// R3996002: "Activate: Fuse a random enemy Unit into this[, then Freeze this]."
-fn devour(freeze_self: bool) -> ActivationDecl {
+/// R3996002: "Activate: Fuse a random enemy Unit into this[, then Freeze this][. Has an extra turn
+/// cooldown]." (`cooldown`, R1841000, the base face's since issue #4154).
+fn devour(freeze_self: bool, cooldown: bool) -> ActivationDecl {
     let label = if freeze_self {
         "Fuse a random enemy Unit into this, then Freeze this"
     } else {
@@ -54,7 +58,10 @@ fn devour(freeze_self: bool) -> ActivationDecl {
         id: DEVOUR.to_string(),
         label: label.to_string(),
         uses: ActivationUses::Count(USES),
-        cost: None,
+        cost: cooldown.then(|| ActivationCost {
+            extra_turn_cooldown: Some(true),
+            ..ActivationCost::default()
+        }),
         targets: vec![],
         modes: vec![],
         can_activate: Some(condition_hook(|c| has_meal(c.state, c.self_, c.controller))),
@@ -104,17 +111,28 @@ fn taotie_end_of_turn(radiant: bool, field_ingredient: fn() -> Value) -> Script 
     }
 }
 
-pub fn script() -> CardScripts {
+/// Both faces' Activates; `cooldown`: whether the base face's has an extra turn cooldown (issue #4154).
+fn devouring(cooldown: bool) -> CardScripts {
     CardScripts {
         base: Script {
-            activations: vec![devour(true)],
+            activations: vec![devour(true, cooldown)],
             ..Script::default()
         },
         radiant: Script {
-            activations: vec![devour(false)],
+            activations: vec![devour(false, false)],
             ..Script::default()
         },
     }
+}
+
+pub fn script() -> CardScripts {
+    devouring(true)
+}
+
+/// R767000: after v0.6.5b through v0.6.6h the base face's Activate had no extra turn cooldown (issue
+/// #4154); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
+    devouring(false)
 }
 
 /// R767000: through v0.6.5b an end of turn ate a random enemy Unit, the Radiant face a random card of
@@ -138,7 +156,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 // M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47, R468, R767000, R3996002.
 #[cfg(test)]
 mod tests {
-    use super::{DEVOUR, script_v0_5_11o, script_v0_6_5b};
+    use super::{DEVOUR, script_v0_5_11o, script_v0_6_5b, script_v0_6_6h};
     use crate::js;
     use jackioh_engine::subsystems::activate::activate_actions_for;
     use jackioh_engine::testkit::*;
@@ -269,11 +287,29 @@ mod tests {
                 assert!(s.card(&id).frozen.is_some(), "frozen");
                 let target = (1..=UNIT_ZONES).find_map(|lane| s.unit(P2, lane)).expect("an enemy Unit left").id;
                 s.expect_refused_with(|s| s.attack(id.as_str(), target.as_str()), "Frozen");
-                // Once a turn: it is offered again on its next turn, thawed.
                 assert_eq!(offers(&s, &id), 0);
                 s.end_turn().end_turn();
                 assert!(s.card(&id).frozen.is_none(), "thawed at the cleanup of the turn it lost the attack in");
-                assert_eq!(offers(&s, &id), 1);
+            }
+
+            /// R1841000: since issue #4154 the base face's Activate has an extra turn cooldown: thawed on its
+            /// next turn, it still sits that turn out, and it is offered again the turn after.
+            #[test]
+            fn r1841000_its_activate_sits_out_its_next_turn_and_comes_back_the_turn_after() {
+                let mut s = table("taotie-cooldown", json!([]), json!([{ "def": BODY, "lane": 1 }, HARMLESS, HARMLESS]));
+                let id = taotie_id(&s);
+
+                devour(&mut s, &id);
+
+                s.end_turn().end_turn();
+                assert!(s.card(&id).frozen.is_none(), "thawed");
+                assert_eq!(offers(&s, &id), 0, "cooling down");
+                s.expect_refused_with(|s| devour(s, &id), "cooling down");
+                s.end_turn().end_turn();
+                assert_eq!(offers(&s, &id), 1, "usable again");
+                devour(&mut s, &id);
+                let meals = s.events().iter().filter(|event| matches!(event, GameEvent::Fused { .. })).count();
+                assert_eq!(meals, 2, "a second meal");
             }
 
             #[test]
@@ -587,6 +623,8 @@ mod tests {
                 s.expect_health(P2, HERO_HEALTH - RADIANT.0 - 6);
             }
 
+            /// R3996002, R1841000: once a turn, and with no extra turn cooldown on the Radiant face: it is
+            /// offered again on its next turn.
             #[test]
             fn r3996002_once_a_turn_the_fusion_keeps_the_use() {
                 let mut s = table_as("taotie-radiant-once", true, json!([]), json!([HARMLESS, HARMLESS]));
@@ -613,6 +651,27 @@ mod tests {
                 let after = s.card(id.as_str()).clone();
                 assert_eq!(after.damage, 1);
                 assert!(s.stats(&after).health >= 1);
+            }
+        }
+
+        /// R767000: the script kept for the replays after v0.6.5b through v0.6.6h: the base face's Activate
+        /// with no extra turn cooldown.
+        mod v0_6_6h {
+            use super::*;
+
+            #[test]
+            fn r767000_a_game_on_v0_6_6h_offers_the_base_activate_again_on_its_next_turn() {
+                crate::under_kept(TAOTIE, script_v0_6_6h(), || {
+                    let mut s = table("taotie-kept-v0-6-6e", json!([]), json!([{ "def": BODY, "lane": 1 }, HARMLESS, HARMLESS]));
+                    let id = taotie_id(&s);
+
+                    devour(&mut s, &id);
+
+                    assert!(s.card(&id).frozen.is_some(), "frozen");
+                    s.end_turn().end_turn();
+                    assert!(s.card(&id).frozen.is_none(), "thawed");
+                    assert_eq!(offers(&s, &id), 1, "no cooldown");
+                });
             }
         }
 

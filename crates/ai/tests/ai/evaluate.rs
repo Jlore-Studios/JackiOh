@@ -1612,7 +1612,7 @@ mod banked_modifiers_1722 {
     use jackioh_engine::testkit::{AltWinCondition, ModifierExpiry, ModifierKind, PlayerModifier};
 
     const CONTRACT: &str = "classicplus-052"; // (2) Spell: rest of the game, a Jlockeed card each start of your turn
-    const HURRAH: &str = "classic-037"; // (0) Spell; Radiant: discard your hand at the end of your next turn
+    const HURRAH: &str = "classic-037"; // Last Hurrah: through v0.6.6h its Radiant face discarded at the end of your next turn
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
     const FILLER: &str = "core-005";
 
@@ -1659,16 +1659,34 @@ mod banked_modifiers_1722 {
     }
 
     /// The AI's state with Last Hurrah's delayed discard waiting, the same state without it, and that
-    /// one with the AI's hand emptied.
+    /// one with the AI's hand emptied. Issue #4154 took the discard off the card, so it is played under
+    /// the script kept for v0.6.6h and that version's `discard` (R767000).
     fn hurrahed() -> (GameState, GameState, GameState) {
         register_cards();
-        let mut s = scenario(json!({
-            "seed": "evaluate-1722",
-            "p1": { "hand": [{ "def": HURRAH, "radiant": true }, VANILLA], "library": [] },
-            "p2": { "hand": [VANILLA] },
-        }));
-        s.play(HURRAH, json!({}));
-        let armed = s.state().clone();
+        let mut defs = jackioh_cards::CATALOG.clone();
+        if let Some(def) = defs.get_mut(HURRAH) {
+            def.params = Some(vec![jackioh_engine::prelude::json_as(json!({
+                "key": "discard", "base": 4, "radiant": 4, "better": "down", "step": 1, "min": 1,
+            }))]);
+        }
+        let kept: &'static jackioh_engine::ShippedCatalog =
+            Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+                "kept",
+                defs,
+                jackioh_engine::prelude::IndexMap::from([(
+                    HURRAH.to_string(),
+                    jackioh_cards::scripts::classic::c037_last_hurrah::script_v0_6_6h(),
+                )]),
+            )));
+        let armed = jackioh_engine::with_shipped(Some(kept), || {
+            let mut s = scenario(json!({
+                "seed": "evaluate-1722",
+                "p1": { "hand": [{ "def": HURRAH, "radiant": true }, VANILLA], "library": [] },
+                "p2": { "hand": [VANILLA] },
+            }));
+            s.play(HURRAH, json!({}));
+            s.state().clone()
+        });
         assert!(
             armed
                 .delayed
@@ -2092,7 +2110,8 @@ mod r2490000_backrow_unit_priced_once {
 }
 
 /// R3822000: the Burn and Toxic still to come on a unit or a hero (§6.3, R3540001), priced by the ticks
-/// they will deal over `AI_AFFLICTION_TICKS` of their controller's turn starts. Mr. Vanilla is a 4/4 and
+/// they will deal over `AI_AFFLICTION_TICKS` ticks, a Burn on the first alone since it hits once at the end
+/// of the turn and is gone (R4154000). Mr. Vanilla is a 4/4 and
 /// Reno a 4/6, neither with a keyword, so a unit's worth is `health` a point of health and `attack` a point
 /// of attack, and every tick lands whole.
 mod r3822000_burn_and_toxic {
@@ -2236,9 +2255,9 @@ mod r3822000_burn_and_toxic {
         let shielded = granted(Keyword::DivineShield);
         let s = worth(&state, &shielded);
         let ds = AI_EVAL.keyword.divine_shield;
-        // Burn 4's first hit takes the shield; its second, 1, lands.
+        // R4154000: Burn 4's one hit takes the shield, and the Burn is gone: nothing lands.
         let burning = worth(&state, &countered(&shielded, 4, 0));
-        assert_close(burning - s, -a * (ds + hp * 1.0), 9);
+        assert_close(burning - s, -a * ds, 9);
         assert!(burning < s, "{burning}: losing the shield cost nothing off {s}");
         // Toxic 2's first hit takes the shield too, which Toxic never passes: then 2 and 2, dead at the
         // third.
@@ -2250,9 +2269,9 @@ mod r3822000_burn_and_toxic {
 
         let armored = granted(Keyword::Armor { n: 3 });
         let s = worth(&state, &armored);
-        // Armor 3 takes Burn 3 whole, and the 0 it drops to after.
+        // Armor 3 takes Burn 3's one hit whole.
         assert_eq!(worth(&state, &countered(&armored, 3, 0)), s);
-        // Burn 4 lands 1 through it, its 1 after none.
+        // Burn 4's one hit lands 1 through it.
         let burning = worth(&state, &countered(&armored, 4, 0));
         assert_close(burning - s, -a * hp * 1.0, 9);
         assert!(
@@ -2401,7 +2420,7 @@ mod r3822000_burn_and_toxic {
         let mut armored = clone(&state);
         armored.players[AI].hero.armor = 3;
         let armored_base = eval(&armored, AI);
-        // Armor 3 takes each hit of Burn 3 whole; Toxic pierces it.
+        // Armor 3 takes Burn 3's one hit whole; Toxic pierces it.
         assert_eq!(eval(&hero_countered(&armored, AI, 3, 0), AI), armored_base);
         assert_close(
             armored_base - eval(&hero_countered(&armored, AI, 0, 3), AI),

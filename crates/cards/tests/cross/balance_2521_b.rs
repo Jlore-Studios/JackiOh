@@ -636,7 +636,8 @@ const COSTS: [(&str, bool, i32); 5] = [
     // #2657 took The Syndicate to (0).
     (THE_SYNDICATE, false, 0),
     (SWEAR_LOYALITIES, false, 0),
-    (MEMORY_LEAK, true, 2),
+    // #4154 took Memory Leak to (1).
+    (MEMORY_LEAK, true, 1),
 ];
 
 fn priced(card: &str, radiant: bool, mana: i32) -> Scenario {

@@ -44,7 +44,7 @@ pub struct StealTarget {
 
 /// What `move_control` did with one card.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Moved {
+enum MoveOutcome {
     /// It changed sides.
     Moved,
     /// No steal or give reaches it: off the field, beneath a Stack pile or Dormant (R13, R1839000), or
@@ -83,10 +83,10 @@ fn destination_for(
 /// One card to `ctx.controller`'s side, by `move_control`'s rules; a card it reaches but has no room for
 /// is destroyed where it stands, and nothing prevents that destroy (R4205000): no `controlChanged`, no
 /// R171 entry, no R1854002 quest step, and R59's state check collects it with the rest.
-fn take_control(ctx: &mut EffectContext<'_>, card: &CardInstance) -> Moved {
+fn take_control(ctx: &mut EffectContext<'_>, card: &CardInstance) -> MoveOutcome {
     let receiver = ctx.controller;
     let moved = move_control(ctx, card, receiver, ControlHow::Steal);
-    if moved == Moved::NoRoom {
+    if moved == MoveOutcome::NoRoom {
         mark_destroyed_unpreventably(&mut *ctx.state, card);
     }
     moved
@@ -101,21 +101,21 @@ fn move_control(
     card: &CardInstance,
     receiver: PlayerId,
     how: ControlHow,
-) -> Moved {
+) -> MoveOutcome {
     let Some(from) = slot_of(ctx.state, card) else {
-        return Moved::Unreached;
+        return MoveOutcome::Unreached;
     };
     // R13: only the top of a Stack pile is on the field; a card dormant under one (#50's) is not taken.
     if !is_active_on_field(ctx.state, card) {
-        return Moved::Unreached;
+        return MoveOutcome::Unreached;
     }
     if card.controller == receiver {
-        return Moved::Unreached;
+        return MoveOutcome::Unreached;
     }
     let previous = card.controller;
 
     let Some(to) = destination_for(ctx, receiver, card, &from) else {
-        return Moved::NoRoom;
+        return MoveOutcome::NoRoom;
     };
 
     let mut moving = card.clone();
@@ -135,7 +135,7 @@ fn move_control(
         } else {
             place_on_field(ctx.state, &mut moving, from, options);
         }
-        return Moved::Unreached;
+        return MoveOutcome::Unreached;
     }
 
     // R171: the card has entered its new controller's side on this turn.
@@ -155,7 +155,7 @@ fn move_control(
     if how == ControlHow::Steal {
         crate::subsystems::quests::note_steal(ctx, to.player);
     }
-    Moved::Moved
+    MoveOutcome::Moved
 }
 
 /// §6.3 Steal: take control of one card on the field (#36 radiant, #49, #50), or destroy it where it
@@ -167,7 +167,7 @@ pub fn steal(args: StealTarget) -> Effect {
         else {
             return;
         };
-        if take_control(ctx, &card) == Moved::Moved && args.radiant == Some(true) {
+        if take_control(ctx, &card) == MoveOutcome::Moved && args.radiant == Some(true) {
             let target = RadiantTarget {
                 instance_id: Some(card.id.clone()),
                 target: None,

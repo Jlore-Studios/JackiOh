@@ -832,14 +832,17 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 /// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
 /// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
 /// telemetry's replay about 0.50 ms, while a checkpoint (some 75 KB) takes about 0.3 ms to serialize
-/// and hash, plus its write.
+/// and hash, plus its write. #4169: a co-op or 2v2 match's too (`duos::checkpoint`), whose actor also
+/// stores one after every row of its log whose seq is a multiple of it, so a crash costs at most this
+/// many rows' fold.
 pub const MATCH_CHECKPOINT_MIN_ACTIONS: i64 = 32;
 /// #1169: the shape of a checkpoint's body and of what the server folds a log to. A checkpoint
 /// stamped with another is refused and the whole log folded. Bump it when a server change alters
-/// either: the body (`actor::checkpoint::CheckpointBody`), the setup a rebuild folds with
-/// (`Registry::rebuild`'s arguments) or the bot turns it reads (`bot_moved_turns`). A change to the
-/// engine, the cards or `actor/engine.rs` and `actor/telemetry.rs` needs none: the rules fingerprint
-/// (`build.rs`) refuses those.
+/// either: the body (`actor::checkpoint::CheckpointBody`, or a co-op match's
+/// `duos::checkpoint::DuosCheckpointBody`, #4169), the setup a rebuild folds with
+/// (`Registry::rebuild`'s arguments, or `DuosRegistry::rebuild`'s fold inputs) or the bot turns it reads
+/// (`bot_moved_turns`). A change to the engine, the cards or `actor/engine.rs`, `actor/telemetry.rs` and
+/// `duos/engine.rs` needs none: the rules fingerprint (`build.rs`) refuses those.
 pub const MATCH_CHECKPOINT_VERSION: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------

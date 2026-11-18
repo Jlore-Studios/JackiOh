@@ -88,3 +88,93 @@ fn r1838003_the_card_a_trade_would_draw_never_changes_the_decision() {
         );
     }
 }
+
+/// Meditative #11 Double Header: a (4) Field Spell, Tradable.
+const DOUBLE_HEADER: &str = "meditative-011";
+
+/// The AI's turn holding Double Header and a Mr. Vanilla with 1 mana, at `max` crystals; the human's Mr.
+/// Vanilla on the field. At 1 crystal neither this turn's nor the next refresh's pay for Double Header.
+fn dead_board(seed: &str, max: i32) -> GameState {
+    register_cards();
+    let mut state = scenario(json!({
+        "seed": seed,
+        "p1": { "mana": 1, "hand": [DOUBLE_HEADER, "core-008"], "library": LIBRARY },
+        "p2": { "hand": ["core-005"], "field": ["core-008"], "library": LIBRARY },
+    }))
+    .state()
+    .clone();
+    state.players[AI].mana.max = max;
+    state
+}
+
+fn double_header_of(state: &GameState) -> CardInstance {
+    state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.def_id == DOUBLE_HEADER)
+        .cloned()
+        .expect("Double Header in the AI's hand")
+}
+
+#[test]
+fn r4154400_a_tradable_card_no_coming_crystals_pay_for_counts_at_a_discount() {
+    let dead = dead_board("ai-trade-dead-eval", 1);
+    let header = double_header_of(&dead);
+    assert!(dead_in_hand(&dead, AI, &header));
+    let blind = EvalWeights {
+        dead_tradable_discount: 0.0,
+        ..AI_EVAL
+    };
+    let score = |state: &GameState, w: &EvalWeights| evaluate(state, AI, NextSwing::Enemy, w);
+    let cost =
+        f64::from(jackioh_engine::own_cost(&dead, &header).expect("a cost")).min(AI_EVAL.hand_cost_cap);
+    let price = AI_EVAL.hand_card + AI_EVAL.hand_per_cost * cost;
+    let lost = score(&dead, &blind) - score(&dead, &AI_EVAL);
+    assert!(
+        (lost - AI_EVAL.dead_tradable_discount * price).abs() < 1e-9,
+        "{lost} vs {}",
+        AI_EVAL.dead_tradable_discount * price
+    );
+    // At 3 crystals the next refresh brings 4, which pays for it: no discount.
+    let live = dead_board("ai-trade-dead-eval", 3);
+    assert!(!dead_in_hand(&live, AI, &double_header_of(&live)));
+    assert_eq!(score(&live, &blind), score(&live, &AI_EVAL));
+}
+
+#[test]
+fn r4154400_the_trade_of_a_dead_card_is_tried_before_the_plays() {
+    let position_of = |state: &GameState| {
+        let header = double_header_of(state).id;
+        let candidates = candidate_actions(state, AI, Prices::NONE);
+        let trade = candidates
+            .iter()
+            .position(|action| matches!(action, ActionBody::Trade { instance_id } if *instance_id == header))
+            .expect("the Trade is a candidate");
+        let play = candidates
+            .iter()
+            .position(|action| matches!(action, ActionBody::Play { .. }))
+            .expect("a play is a candidate");
+        (trade, play)
+    };
+    let (trade, play) = position_of(&dead_board("ai-trade-dead-order", 1));
+    assert!(trade < play, "the dead card's Trade first: {trade} vs {play}");
+    // A card the next refresh pays for keeps its place after the plays (R1838003).
+    let (trade, play) = position_of(&dead_board("ai-trade-dead-order", 3));
+    assert!(trade > play, "after the plays: {trade} vs {play}");
+}
+
+#[test]
+fn r4154400_the_ai_trades_a_card_it_cannot_play_before_its_turn_after_next() {
+    let state = dead_board("ai-trade-dead-turn", 1);
+    let header = double_header_of(&state).id;
+    for k in ["ai-trade-dead-k1", "ai-trade-dead-k2"] {
+        let turn = play_ai_turn(&state, AI, &mut ai_options(k, AI_BUDGET));
+        assert!(
+            turn.decisions.iter().any(
+                |decision| matches!(&decision.action, ActionBody::Trade { instance_id } if *instance_id == header)
+            ),
+            "{k}: {:?}",
+            turn.decisions.iter().map(|decision| &decision.action).collect::<Vec<_>>()
+        );
+    }
+}

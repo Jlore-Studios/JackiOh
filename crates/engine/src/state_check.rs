@@ -926,6 +926,39 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     run_death_pass(sink, &mut pass, None);
 }
 
+/// R4154205 (Stinkyscape #70 Z'Zoth's "Trigger their Deaths"): each of `cards`' Death hooks runs now, in
+/// the order given, as §4.5 step 3 runs a dying card's, the card read as it stands (its snapshot, R89):
+/// none dies, so there is no Reborn, no `destroyed`, no graveyard step and no state check after it (the
+/// list's own follows, R59), as after a Sacrifice's pass. Its controller's Cry and Death multiplier
+/// (R823) runs each Death that many more times, as for a Death the check collects. A card with no Death
+/// runs nothing; a hook that asks parks the rest of the run on `state.work` (R113).
+pub fn run_death_hooks(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
+    let mut owed: Vec<CardInstance> = Vec::new();
+    for card in cards {
+        if crate::grants::death_hook_of(sink.state, card).is_none() {
+            continue;
+        }
+        let extra = crate::multipliers::extra_runs(
+            sink.state,
+            card.controller,
+            crate::multipliers::Multiplied::CryAndDeath,
+        )
+        .max(0) as usize;
+        for _ in 0..=extra {
+            owed.push(card.clone());
+        }
+    }
+    if owed.is_empty() {
+        return;
+    }
+    let mut pass = DeathPass {
+        owed,
+        sacrificed: Some(true),
+        ..DeathPass::default()
+    };
+    run_death_pass(sink, &mut pass, None);
+}
+
 /// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths, in R68's order, by §6.3
 /// Exile's move (`zones::exile_to_pile`, R11, R55): no Death, no Reborn, no `destroyed` (R461), even
 /// when the hit was lethal.

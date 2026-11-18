@@ -1,18 +1,21 @@
 //! SPEC §8.12 S+ #82 Endless Expedition (1) Spell, Quickdraw, Mythic, a card of the Stinkyscape+ set
-//! (R1420, R3535000; R3569007, R640, R458).
-//!   Base:    "Now and at the start of each of your turns for the rest of the game: Add a random
-//!            Terminus card to your hand. It costs (2)."
-//!   Radiant: "Now and at the start of each of your turns for the rest of the game: Add a random
-//!            Radiant Terminus card to your hand. It costs (2)."
+//! (R1420, R3535000; R3569007, R3569008, R4154101, R640, R458).
+//!   Base:    "For the rest of the game, you have ({mana}) less mana, and at the start of each of your
+//!            turns, add a random Terminus card to your hand. It costs (3)." — mana 1
+//!   Radiant: "For the rest of the game, you have ({mana}) less mana, and at the start of each of your
+//!            turns, add a random Radiant Terminus card to your hand. It costs (3)." — mana 1
 //!
-//! Engine: the Cry adds the card now and leaves `forRestOfGame` (C+ #52's, R458), a badge in the card's
-//! words (R169) whose step adds another at the start of each of its caster's turns from the next on, in
-//! R62's delayed stage, before the draw. Each card is one drawn from the Terminus pool, every Terminus
-//! card of the shipped sets, tokens included (R3552001, R380), through the generator (R387), costing
-//! (`TERMINUS_COST`) whatever it printed (R3569007), a Radiant one on the Radiant face. Quickdraw (R640)
-//! is a static flag beside the tag.
+//! Engine (R4154101): the Cry lowers its caster's max mana by the declared `mana` for the rest of the
+//! game (`loseMaxMana`, R3569008) and leaves `forRestOfGame` (C+ #52's, R458), a badge in the card's
+//! words (R169) whose step adds a card at the start of each of its caster's turns from the next on, in
+//! R62's delayed stage, before the draw; none comes now. Each card is one drawn from the Terminus pool,
+//! every Terminus card of the shipped sets, tokens included (R3552001, R380), through the generator
+//! (R387), costing (`TERMINUS_COST`) whatever it printed (R3569007), a Radiant one on the Radiant face.
+//! Quickdraw (R640) is a static flag beside the tag.
 //!
-//! Kept for replays (R767000): through v0.6.5b the card read "For the rest of the game, lose {mana} mana.
+//! Kept for replays (R767000): through v0.6.6h the card read "Now and at the start of each of your turns
+//! for the rest of the game: Add a random Terminus card to your hand. It costs (2).", with no mana lost
+//! (`script_v0_6_6h`, issue #4154); through v0.6.5b it read "For the rest of the game, lose {mana} mana.
 //! Add a random Terminus card to your hand. It costs (2).", `loseMaxMana` lowering its caster's max mana
 //! (R3569008) and one card added (`script_v0_6_5b`, issue #3996); through v0.6.4c that card cost (3)
 //! (`script_v0_6_4c`, issue #3951).
@@ -22,8 +25,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-082";
 
-/// "It costs (2)": the added card's cost.
-const TERMINUS_COST: i32 = 2;
+/// "It costs (3)": the added card's cost, since issue #4154.
+const TERMINUS_COST: i32 = 3;
+/// After v0.6.4c through v0.6.6h (issues #3951 to #4154): "It costs (2)".
+const TERMINUS_COST_V0_6_6H: i32 = 2;
 /// Through v0.6.4c (issue #3951): "it costs (3)".
 const TERMINUS_COST_V0_6_4C: i32 = 3;
 /// The step the start-of-turn add is re-entered under (`delayed`).
@@ -46,7 +51,8 @@ fn add_terminus(radiant: bool, cost: i32) -> Effect {
     })))
 }
 
-/// Issue #3996: the card now, and the rest-of-game step that adds one at each of the caster's turn starts.
+/// R4154101: the caster's max mana lowered by the declared `mana` for the rest of the game (R3569008),
+/// and the rest-of-game step that adds a card costing (3) at each of the caster's turn starts; none now.
 fn expedition(radiant: bool) -> Script {
     Script {
         static_flags: quickdraw(),
@@ -54,11 +60,29 @@ fn expedition(radiant: bool) -> Script {
             let face = if radiant { FaceKind::Radiant } else { FaceKind::Base };
             let label = fill_params(def_of(Some(&*ctx.state), ID), face, None);
             vec![
-                add_terminus(radiant, TERMINUS_COST),
+                lose_max_mana(json_as(json!({ "amount": param(ctx, "mana") }))),
                 for_rest_of_game(json_as(json!({ "step": EXPEDITION_STEP, "label": label }))),
             ]
         })),
         delayed: Some(hook(move |_ctx| vec![add_terminus(radiant, TERMINUS_COST)])),
+        ..Script::default()
+    }
+}
+
+/// Issue #3996, through v0.6.6h: the card now, and the rest-of-game step that adds one at each of the
+/// caster's turn starts, each costing (2).
+fn expedition_v0_6_6h(radiant: bool) -> Script {
+    Script {
+        static_flags: quickdraw(),
+        cry: Some(hook(move |ctx| {
+            let face = if radiant { FaceKind::Radiant } else { FaceKind::Base };
+            let label = fill_params(def_of(Some(&*ctx.state), ID), face, None);
+            vec![
+                add_terminus(radiant, TERMINUS_COST_V0_6_6H),
+                for_rest_of_game(json_as(json!({ "step": EXPEDITION_STEP, "label": label }))),
+            ]
+        })),
+        delayed: Some(hook(move |_ctx| vec![add_terminus(radiant, TERMINUS_COST_V0_6_6H)])),
         ..Script::default()
     }
 }
@@ -85,12 +109,21 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: the scripts after v0.6.5b through v0.6.6h: a Terminus card costing (2) now and at each of the
+/// caster's turn starts, no mana lost (issue #4154). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
+    CardScripts {
+        base: expedition_v0_6_6h(false),
+        radiant: expedition_v0_6_6h(true),
+    }
+}
+
 /// R767000: the scripts after v0.6.4c through v0.6.5b: max mana lowered for the rest of the game and one
 /// Terminus card added, costing (2) (issue #3996). `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: expedition_v0_6_5b(false, TERMINUS_COST),
-        radiant: expedition_v0_6_5b(true, TERMINUS_COST),
+        base: expedition_v0_6_5b(false, TERMINUS_COST_V0_6_6H),
+        radiant: expedition_v0_6_5b(true, TERMINUS_COST_V0_6_6H),
     }
 }
 
@@ -103,7 +136,7 @@ pub fn script_v0_6_4c() -> CardScripts {
     }
 }
 
-// S+ #82 Endless Expedition — SPEC §8.12 row 82 (R3569007, R3569008; R640, R3552001, R387).
+// S+ #82 Endless Expedition — SPEC §8.12 row 82 (R4154101, R3569007, R3569008; R640, R3552001, R387).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,25 +210,24 @@ mod tests {
 
         #[test]
         fn r640_it_is_quickdraw() {
-            for scripts in [script(), script_v0_6_5b(), script_v0_6_4c()] {
+            for scripts in [script(), script_v0_6_6h(), script_v0_6_5b(), script_v0_6_4c()] {
                 assert_eq!(scripts.base.flags().quickdraw, Some(true));
                 assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
             }
         }
 
-        /// Issue #3996: no mana is lost any more, and the card comes now.
+        /// R4154101, R3569008: issue #4154 brought back the max-mana loss and took out the card now.
         #[test]
-        fn r3569007_now_it_adds_a_2_cost_terminus_card_and_max_mana_stays() {
-            for n in 0..6 {
-                let mut s = game(&format!("expedition-base-{n}"), false);
-                s.play(ID, json!({}));
-                // Cast for (1) from 4: 3 left of a max that stays 4.
-                assert_eq!(s.state().players[P1].mana.max, 4, "seed {n}");
-                assert_eq!(s.state().players[P1].mana.current, 3, "seed {n}");
-                let made = added(&s);
-                assert_eq!(made.len(), 1, "seed {n}: {made:?}");
-                expect_terminus(&s, &made, false, TERMINUS_COST);
-            }
+        fn r4154101_it_lowers_max_mana_by_1_for_the_rest_of_the_game_and_adds_no_card_now() {
+            let mut s = game("expedition-base", false);
+            s.play(ID, json!({}));
+            // Cast for (1) from 4: 3 left of a max that fell from 4 to 3.
+            assert_eq!(s.state().players[P1].mana.max, 3);
+            assert_eq!(s.state().players[P1].mana.current, 3);
+            assert!(added(&s).is_empty(), "no card now");
+            s.end_turn().end_turn();
+            assert_eq!(s.state().active, P1);
+            assert_eq!(s.state().players[P1].mana.max, 3, "the max stays lower");
         }
 
         #[test]
@@ -203,7 +235,7 @@ mod tests {
             let mut s = game("expedition-badge", false);
             s.play(ID, json!({}));
             s.expect_in_zone(ID, "graveyard");
-            let label = crate::card_def(ID).base.text.clone();
+            let label = fill_params(&crate::card_def(ID), FaceKind::Base, None);
             let mine: Vec<String> = s.view(P1).you.modifiers.iter().map(|m| m.label.clone()).collect();
             assert_eq!(mine, vec![label.clone()]);
             let theirs: Vec<String> =
@@ -211,20 +243,20 @@ mod tests {
             assert_eq!(theirs, vec![label]);
         }
 
-        /// R458, R62: one more at the start of each of the caster's turns, before the draw; the opponent's
-        /// turns add none.
+        /// R458, R62, R3569007, R4154101: one at the start of each of the caster's turns from the next on,
+        /// before the draw, costing (3); the opponent's turns add none.
         #[test]
-        fn r458_each_of_your_turns_starts_with_another_and_the_opponents_add_none() {
+        fn r3569007_r4154101_each_of_your_turns_starts_with_a_3_cost_one_and_the_opponents_add_none() {
             let mut s = game("expedition-turns", false);
             s.play(ID, json!({}));
             for turn in 1..=3 {
                 s.end_turn();
                 assert_eq!(s.state().active, PlayerId::P2);
-                assert_eq!(added(&s).len(), turn, "the opponent's turn adds none");
+                assert_eq!(added(&s).len(), turn - 1, "the opponent's turn adds none");
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
                 let made = added(&s);
-                assert_eq!(made.len(), turn + 1, "turn {turn}: {made:?}");
+                assert_eq!(made.len(), turn, "turn {turn}: {made:?}");
                 expect_terminus(&s, &made, false, TERMINUS_COST);
                 let events = s.last_events();
                 let came = events.iter().position(
@@ -232,8 +264,28 @@ mod tests {
                 );
                 let drawn = events.iter().rposition(|event| matches!(event, GameEvent::Drawn { .. }));
                 assert!(came.is_some() && came < drawn, "{events:?}");
-                assert_eq!(s.state().players[P1].mana.max, 4, "no mana lost");
+                assert_eq!(s.state().players[P1].mana.max, 3, "one mana lost, once");
             }
+        }
+
+        /// R767000: after v0.6.5b through v0.6.6h it lost no mana and added a card costing (2) now and at
+        /// each of its caster's turn starts (issue #4154).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_6h_adds_a_2_cost_card_now_and_each_turn_and_keeps_max_mana() {
+            crate::under_kept(ID, script_v0_6_6h(), || {
+                let mut s = game("expedition-kept-v0-6-6e", false);
+                s.play(ID, json!({}));
+                // Cast for (1) from 4: 3 left of a max that stays 4.
+                assert_eq!(s.state().players[P1].mana.max, 4);
+                assert_eq!(s.state().players[P1].mana.current, 3);
+                let made = added(&s);
+                assert_eq!(made.len(), 1, "{made:?}");
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6H);
+                s.end_turn().end_turn();
+                let made = added(&s);
+                assert_eq!(made.len(), 2, "{made:?}");
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6H);
+            });
         }
 
         /// R767000, R3569008: after v0.6.4c through v0.6.5b it lowered its caster's max mana for the rest of
@@ -248,7 +300,7 @@ mod tests {
                 assert_eq!(s.state().players[P1].mana.current, 3);
                 let made = added(&s);
                 assert_eq!(made.len(), 1, "{made:?}");
-                expect_terminus(&s, &made, false, TERMINUS_COST);
+                expect_terminus(&s, &made, false, TERMINUS_COST_V0_6_6H);
                 s.end_turn().end_turn();
                 assert_eq!(s.state().active, P1);
                 // A turn on, the max stays lower and no card comes.
@@ -274,17 +326,15 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3569007_radiant_adds_a_radiant_one_now_and_at_each_of_its_casters_turns() {
+        fn r4154101_radiant_lowers_max_mana_by_1_and_adds_a_radiant_one_at_each_of_its_casters_turns() {
             for n in 0..6 {
                 let mut s = game(&format!("expedition-radiant-{n}"), true);
                 s.play(ID, json!({}));
-                assert_eq!(s.state().players[P1].mana.max, 4, "seed {n}");
-                let made = added(&s);
-                assert_eq!(made.len(), 1, "seed {n}: {made:?}");
-                expect_terminus(&s, &made, true, TERMINUS_COST);
+                assert_eq!(s.state().players[P1].mana.max, 3, "seed {n}");
+                assert!(added(&s).is_empty(), "seed {n}: no card now");
                 s.end_turn().end_turn();
                 let made = added(&s);
-                assert_eq!(made.len(), 2, "seed {n}: {made:?}");
+                assert_eq!(made.len(), 1, "seed {n}: {made:?}");
                 expect_terminus(&s, &made, true, TERMINUS_COST);
             }
         }
@@ -293,7 +343,7 @@ mod tests {
         fn r458_its_badge_reads_its_radiant_words() {
             let mut s = game("expedition-radiant-badge", true);
             s.play(ID, json!({}));
-            let label = crate::card_def(ID).radiant.text.clone();
+            let label = fill_params(&crate::card_def(ID), FaceKind::Radiant, None);
             let mine: Vec<String> = s.view(P1).you.modifiers.iter().map(|m| m.label.clone()).collect();
             assert_eq!(mine, vec![label]);
         }

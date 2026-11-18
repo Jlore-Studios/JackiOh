@@ -14,8 +14,8 @@ const MIND_CONTROL: &str = "core-049";
 const ROCK: &str = "core-066";
 const VANILLA: &str = "core-008";
 const STOCKPILE: &str = "core-005";
-/// Mind Control's cost since issue #3139.
-const COST: i32 = 5;
+/// Mind Control's cost since issue #4154.
+const COST: i32 = 6;
 
 #[test]
 fn r4205000_with_its_unit_row_full_the_ai_plays_mind_control_on_the_indestructible_rock_as_removal() {

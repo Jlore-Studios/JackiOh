@@ -1,4 +1,4 @@
-//! S #92 The Propagation's Hornet (SPEC §8.10 row 92): (2) Unit, Swarm, Rare, 2/3 → 4/6 (3/3 → 6/6 until
+//! S #92 The Propagation's Hornet (SPEC §8.10 row 92): (2) Unit, Swarm, Rare, 1/3 → 2/6 (2/3 → 4/6 until issue #4154; 3/3 → 6/6 until
 //! issue #3996; 3/4 → 6/8 until #3041; 4/4 → 8/8 until #2657), of the Stinkyscape set.
 //!   Base:    "Rush / After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
 //!   Radiant: "Rush / After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
@@ -82,13 +82,13 @@ mod tests {
             let hornet = s.unit_at(P1, 1);
             assert!(!flies(&s, &hornet));
             s.attack(&hornet, "hero");
-            s.expect_health(P2, HERO_HEALTH - 2);
+            s.expect_health(P2, HERO_HEALTH - 1);
             let copies = copies(&s);
             assert_eq!(copies.len(), 1);
             assert_eq!(s.unit_at(P1, 2).id, copies[0].id, "R64: the leftmost open zone");
             assert!(!flies(&s, &copies[0]), "made before it evolved");
             assert!(flies(&s, &hornet));
-            s.expect_stats(&copies[0], json!({ "attack": 2, "health": 3 }));
+            s.expect_stats(&copies[0], json!({ "attack": 1, "health": 3 }));
         }
 
         #[test]
@@ -173,13 +173,13 @@ mod tests {
         fn copies_at_double_size() {
             let mut s = board(true, json!([]), json!([]));
             let hornet = s.unit_at(P1, 1);
-            s.expect_stats(&hornet, json!({ "attack": 4, "health": 6 }));
+            s.expect_stats(&hornet, json!({ "attack": 2, "health": 6 }));
             s.attack(&hornet, "hero");
-            s.expect_health(P2, HERO_HEALTH - 4);
+            s.expect_health(P2, HERO_HEALTH - 2);
             let copies = copies(&s);
             assert_eq!(copies.len(), 1);
             assert!(copies[0].radiant);
-            s.expect_stats(&copies[0], json!({ "attack": 4, "health": 6 }));
+            s.expect_stats(&copies[0], json!({ "attack": 2, "health": 6 }));
             assert!(!flies(&s, &copies[0]));
             assert!(flies(&s, &hornet));
         }

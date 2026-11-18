@@ -18,7 +18,7 @@ use jackioh_engine::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::candidates::action_key;
+use crate::candidates::{action_key, plague_aims_first, plague_placement_open};
 use crate::config::{
     AI_EVAL, AI_KY_COMPETITION_EXPECTED_STREAK, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AI_SEARCH,
 };
@@ -529,7 +529,9 @@ pub(crate) enum AnswersTried {
 }
 
 /// The answers `best_auto_answer` tries of `answerer`'s prompt (excluding Concede).
-/// `Drawn` (#1382) sorts by `action_key` and samples up to `AI_SEARCH.max_auto_answer_options` (R185).
+/// `Drawn` (#1382) sorts by `action_key` and samples up to `AI_SEARCH.max_auto_answer_options` (R185), but
+/// takes every answer of a Plague Counter's placement under a Living Bomb, the enemy's permanents first
+/// (`plague_aims_first`, R4154402).
 fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> Vec<ActionBody> {
     let answers = legal_actions(state, answerer)
         .into_iter()
@@ -540,6 +542,11 @@ fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> V
     let mut keyed: Vec<(String, ActionBody)> = answers.map(|answer| (action_key(&answer), answer)).collect();
     keyed.sort_by(|a, b| a.0.cmp(&b.0));
     let ordered: Vec<ActionBody> = keyed.into_iter().map(|(_, answer)| answer).collect();
+    // R4154402: a Plague Counter placed under a Living Bomb is a destroy aimed, so every answer is tried,
+    // the enemy's permanents first, never a draw of a few.
+    if plague_placement_open(state, answerer) {
+        return plague_aims_first(state, answerer, ordered);
+    }
     let cap = AI_SEARCH.max_auto_answer_options.max(1) as usize;
     if ordered.len() <= cap {
         return ordered;

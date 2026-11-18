@@ -22,7 +22,22 @@ fn busted_anywhere() -> CatalogQueryArgs {
     json_as(json!({ "tier": "S", "everySet": true, "past": "also" }))
 }
 
+/// "Tribute 1" (R101, R366: printed, declared nowhere), since issue #4154.
+const TRIBUTE: i32 = 1;
+
 pub fn script() -> CardScripts {
+    let mut scripts = script_v0_6_6h();
+    for face in [&mut scripts.base, &mut scripts.radiant] {
+        face.static_flags = Some(StaticFlags {
+            tribute: Some(TRIBUTE),
+            ..StaticFlags::default()
+        });
+    }
+    scripts
+}
+
+/// R767000: no Tribute through v0.6.6h (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
         base: Script {
             cry: Some(hook(|_ctx| {
@@ -110,11 +125,18 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const FILLER: &str = "core-005"; // Stockpile: a Spell
+    /// The unit its Tribute 1 takes (issue #4154), in lane 2.
+    const BODY: &str = "stand-in (1) 1/1";
 
     fn board(radiant: bool, seed: &str) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
-            "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": filler(8), "mana": 4 },
+            "p1": {
+                "hand": [{ "def": ID, "radiant": radiant }, FILLER],
+                "field": [{ "def": BODY, "lane": 2 }],
+                "library": filler(8),
+                "mana": 4,
+            },
             "p2": { "hand": [FILLER], "library": filler(8) },
         }));
         s.state_mut().players.p1.auto_end_turn = Some(false);
@@ -152,7 +174,7 @@ mod tests {
         let run = || {
             let mut s = board(false, "xxfreshjack");
             let from = s.events().len();
-            s.play(ID, json!({ "zone": 1 }));
+            s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
             assert!(s.state().pending.is_none(), "a random cast asks nothing (R452)");
             cast_since(&s, from)
         };
@@ -190,7 +212,7 @@ mod tests {
         let (mut s, options) = (0..100)
             .find_map(|n| {
                 let mut s = board(true, &format!("xxfreshjack-radiant-past-{n}"));
-                s.play(ID, json!({ "zone": 1 }));
+                s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
                 let options = discovered(&s);
                 split_past_id(&options[0]).is_some().then_some((s, options))
             })
@@ -215,6 +237,41 @@ mod tests {
         }
         let cast = cast_since(&s, from);
         assert_eq!(cast.first(), Some(&(options[0].clone(), true, 0)), "{cast:?}");
+    }
+
+    /// Issue #4154: Tribute 1 on both faces (R101): with no unit to pay it the play is refused, and the unit
+    /// paid goes to the graveyard. Its Cry casts a random BUSTED card from the build's own list, which a
+    /// new version's list changes and which may move it off the field (v0.6.7's exiles it), so the play is
+    /// read off its `cardPlayed`, not off where it stands.
+    #[test]
+    fn issue_4154_both_faces_need_tribute_1() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": filler(8), "mana": 4 },
+                "p2": { "hand": [FILLER], "library": filler(8) },
+            }));
+            s.expect_refused_with(|s| s.play(ID, json!({ "zone": 1 })), "Tribute");
+            let mut s = board(radiant, "xxfreshjack-tribute");
+            let body = s.unit(P1, 2).expect("the body").id;
+            s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
+            let played = s.events().iter().any(|event| {
+                matches!(event, GameEvent::CardPlayed { player: P1, def_id, .. } if def_id == ID)
+            });
+            assert!(played, "radiant {radiant}: the play was taken");
+            s.expect_in_zone(body.as_str(), "graveyard");
+        }
+    }
+
+    /// R767000: a game on v0.6.6h and before plays it with no Tribute, under the kept script.
+    #[test]
+    fn issue_4154_the_kept_v0_6_6h_script_asks_no_tribute() {
+        crate::under_kept(ID, script_v0_6_6h(), || {
+            let mut s = board(false, "xxfreshjack-fold-6e");
+            s.play(ID, json!({ "zone": 1 }));
+            s.expect_in_zone(ID, "field");
+            assert!(s.unit(P1, 2).is_some(), "no unit paid for it");
+        });
     }
 
     #[test]
