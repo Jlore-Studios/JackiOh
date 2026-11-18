@@ -14823,9 +14823,11 @@
         "by": "`muse` (medium)",
         "sha": "628e1090bae510472c2aaa4d45d01b2127b5eb0f"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T02:14:24Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-18T03:00:39Z",
         "family": "muse",
@@ -14835,6 +14837,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: /stats' Tokens and Other created cards match the deck table, rows open the card, and the page loses its explanatory paragraphs\"} -->\n- ## What changed and why\n- Issue #4155, per its plan: the `/stats` Tokens and Other created cards sections now show the deck table's columns (Card thumbnail, Name, Games, Tier, Adjusted, Win rate) in its order, with its cell markup and classes, honouring the Columns toggle; Used, Not used, Used Radiant, Used normal and Used \u2026\n- ## How I tested it\n- - `pnpm --dir apps/web test src/stats/CreatedPanel.test.tsx` \u2014 11 passed (new R4155000 header/toggle/row-open tests; sorting still R3184002, default still Adjusted best-first).\n- - `pnpm --dir apps/web test src/routes/stats.test.tsx` \u2014 92 passed, including 3 new R4155000 tests: token row click opens the drill-down with face, figures and `?card=`, The Coin row opens via Enter with figures and empty deck-only states (no face, no error), Escape closes; Games toggle hides Games\u2026\n- - `pnpm --dir apps/web test src/stats/GamesPanel.test.tsx src/stats/model.test.ts src/i18n/i18n.test.ts` \u2014 30 passed.\n- - `cargo jackioh spec check` \u2014 ok (2241 rulings, 5684 proofs). `pnpm exec eslint apps/web` \u2014 clean. `cargo fmt --check` \u2014 clean. `pnpm --dir apps/web typecheck` \u2014 clean (see note below). Grep over `e2e/` for removed testids/strings \u2014 no hits.\n- ## Decisions the issue did not settle\n- - **Drill-down, not the CardDetail inspect view**, for token rows: catalog token defs render faces, and The Coin (no catalog def) shows its figures with the existing empty-state strings, so no server change was needed. Stated in the ruling.\n- - **No `title` tooltips on the Created headers**: the deck's Adjusted tooltip describes drawing a card, which is wrong for made cards; the issue only required keeping tooltips already on headers.\n- - **Name cell is now `td` like the deck table** (was `th scope=row`); **games cell renders raw** like the deck table (identical text to `formatNumber` for these values).\n- - `GamesPanel.test.tsx` joined the ruling's `proven_in` since its R4155000 absence test proves the removal. R0654 and R3324003 were deliberately left unamended (their sentences state live rules/history, not removed notes).\n- ## For the reviewer\n- - Typecheck OOMs this box's default node heap (`tsc` core-dumps, exit 134, twice); it passes with `NODE_OPTIONS=--max-old-space-size=4096`. That looks like a pre-existing environment limit, not the change \u2014 flagging in case CI shows otherwise.\n- - The Created rows' `role=\"button\"` means they are no longer `row` roles: test helpers read them via `tbody tr`, matching the deck-table tests.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4155 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4155/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4155,
       "kind": "review",
       "live": "reviewing",
