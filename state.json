@@ -14238,67 +14238,6 @@
       "issue": 4015,
       "kind": "review",
       "live": "reviewing",
-      "own_review": {
-        "claimed": true,
-        "claimed_at": "2026-11-17T23:58:45Z",
-        "from_run": "44196702757",
-        "gates": [
-          {
-            "exit_code": 0,
-            "inconclusive": false,
-            "name": "rustfmt",
-            "ok": true,
-            "pre_existing": false,
-            "run": "cargo fmt --check",
-            "seconds": 8.3,
-            "skipped": "",
-            "tail": ""
-          },
-          {
-            "exit_code": 0,
-            "inconclusive": false,
-            "name": "catalog",
-            "ok": true,
-            "pre_existing": false,
-            "run": "cargo jackioh catalog check",
-            "seconds": 401.6,
-            "skipped": "",
-            "tail": ""
-          },
-          {
-            "exit_code": 0,
-            "inconclusive": false,
-            "name": "patches",
-            "ok": true,
-            "pre_existing": false,
-            "run": "cargo jackioh patches check",
-            "seconds": 2.2,
-            "skipped": "",
-            "tail": ""
-          },
-          {
-            "exit_code": 0,
-            "inconclusive": false,
-            "name": "rulings",
-            "ok": true,
-            "pre_existing": false,
-            "run": "cargo jackioh spec check",
-            "seconds": 4.9,
-            "skipped": "",
-            "tail": ""
-          }
-        ],
-        "head": "378432cc3b0acb695ad3a8b5703f815a07ba628d",
-        "kind": "build",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "round_tier": "medium",
-        "rounds_on": 4015,
-        "rounds_used": 0,
-        "since": "2026-11-17T23:57:59Z",
-        "source": "build",
-        "until": "2026-11-18T00:27:59Z"
-      },
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-17T23:57:59Z",
