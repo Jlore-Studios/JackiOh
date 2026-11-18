@@ -14673,15 +14673,8 @@
       }
     },
     "4159": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44223393415",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-18T03:13:17Z",
-        "until": "2026-11-18T03:43:17Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14693,10 +14686,9 @@
         "reason": "planned on opus",
         "trail": "s edited. Two problems are outside the list the issue gives: - **`spec check` in CI (`.github/workflows/ci.yml:546`) will fail.** It requires every ruling's `pro\u2026\n- Bash: {\"command\": \"sed -n 9,35p crates/ai/README.md | grep -n -i \\\"build\\\\|weights\\\\|learned\\\\|network\\\\|unknown_root\\\\|starship_root\\\" | cut -c1-300\", \"description\": \"Check the AI README purity section fo\u2026\n- Bash: {\"command\": \"grep -rn \\\"decision_prices(\\\" crates --include=*.rs | grep -v \\\"fn decision_prices\\\"; sed -n 418,425p crates/ai/src/decide.rs; sed -n 455,470p crates/ai/src/decide.rs; grep -n \\\"parity\\\\\u2026\n- Bash: {\"command\": \"sed -n 1,8p spec/rulings/R3695001.md; sed -n 9,40p spec/rulings/R3695001.md | cut -c1-500\", \"description\": \"Read the Drone Core X ruling\"}\n- Bash: {\"command\": \"grep -n -i \\\"fanatic\\\\|keeps the expedition\\\\|AI \\\" spec/rulings/R0844.md | cut -c1-300; grep -n \\\"Supply Drop beside\\\\|two castable\\\\|two Vanillas\\\\|beside two\\\" spec/rulings/R3696000.m\u2026\n- Bash: {\"command\": \"grep -n -i \\\"vanilla\\\\|supply drop\\\" spec/rulings/R3696000.md | cut -c1-400\", \"description\": \"Find Supply Drop test mentions in R3696000\"}\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^exit|Running\\\" /tmp/exp4159/other-test.txt | cut -c1-200 | tail -15; tail -2 /tmp/exp4159/other-test.txt | cut -c1-200\", \"description\": \"Check the\u2026\n- Bash: {\"command\": \"sed -n 425,440p crates/ai/src/decide.rs; sed -n 520,530p crates/ai/src/decide.rs; sed -n 576,592p crates/tools/src/positions.rs; sed -n 355,385p crates/ai/src/evaluate.rs\", \"description\"\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^exit\\\" /tmp/exp4159/other-test.txt | cut -c1-200 | tail -15; tail -1 /tmp/exp4159/other-test.txt | cut -c1-200\", \"description\": \"Check the depende\u2026\n- said: Writing the full plan into the draft now; the dependents' test run (tools, server, shared, wasm-core with the network off) is still compiling.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4159/.bot-plan.md\", \"content\": \"# Draft plan for #4159 (planner's notes; final message = the plan section below)\\n\\nStatus: plan written; waiting on /\u2026\n- Bash: {\"command\": \"grep -rln \\\"OUT_DIR\\\\|weights.json\\\\|MoveOrder\\\\|EvalKind\\\\|FEATURES_READ_SINCE\\\" crates/wasm crates/ai/src | grep -v \\\"crates/ai/src/\\\\(learned\\\\|policy\\\\|config\\\\|features\\\\|search\\\\)\\\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^exit\\\" /tmp/exp4159/other-test.txt | cut -c1-200 | tail -15; tail -1 /tmp/exp4159/other-test.txt | cut -c1-200; sed -n 1,30p crates/ai/tests/ai/re\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const AI_TUTORIAL\\\\|pub const AI_DIFFICULTY\\\" crates/engine/src/config.rs; grep -n \\\"^const TURN\\\\|^const LIBRARY\\\\|^mod \\\\|^ use \\\" crates/ai/tests/ai/reply.rs | head\", \"d\u2026\n- Bash: {\"command\": \"until grep -qE \\\"^exit \\\" /tmp/exp4159/other-test.txt; do sleep 15; done; grep -E \\\"^test result|FAILED|panicked|^exit|could not compile|^error\\\" /tmp/exp4159/other-test.txt | cut -c1-22\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4159/.bot-plan.md\", \"content\": \"**Human required (one part only):** a person must, when this merges, disable or remove `.github/workflows/learn.yml` a\u2026\n- Bash: {\"command\": \"sed -n 48p crates/tools/README.md | cut -c1-200; sed -n 51p crates/tools/README.md | grep -o \\\".\\\\{60\\\\}learned evaluation.\\\\{80\\\\}\\\"\", \"description\": \"Read the tools README rows to edit\u2026\n- Bash: {\"command\": \"until grep -qE \\\"^exit \\\" /tmp/exp4159/other-test.txt; do sleep 15; done; grep -E \\\"^test result|FAILED|panicked|^exit|could not compile\\\" /tmp/exp4159/other-test.txt | cut -c1-220 | hea\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|Running\\\" /tmp/exp4159/other-test.txt | cut -c1-200 | tail -12\", \"description\": \"Peek at the dependents' test progress\"}\n- Bash: {\"command\": \"grep -cE \\\"^test result: ok\\\" /tmp/exp4159/other-test.txt; grep -E \\\"FAILED|panicked\\\" /tmp/exp4159/other-test.txt | cut -c1-200 | head\", \"description\": \"Count passing suites and failure\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4159/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe AI plays on `AI_EVAL` alone. `crates/ai` compiles no trained weights. These go:\\n- the learned evaluati\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^exit\\\" /tmp/exp4159/other-test.txt | cut -c1-200 | tail -5\", \"description\": \"Check the dependents' test progress\"}\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-4159/.bot-plan.md <<'EOF'\\n\\n## Steps (draft, condensed in final)\\nsee final message\\nEOF\\ngrep -E \\\"^test result|FAILED|panicked|^exit\\\" /tmp/ex\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^exit\\\" /tmp/exp4159/other-test.txt | cut -c1-200 | tail -4; grep -c \\\"^test result: ok\\\" /tmp/exp4159/other-test.txt\", \"description\": \"Final check\u2026\n- said: ## Goal The AI plays on `AI_EVAL` alone, and `crates/ai` compiles no trained weights. These go: - **The learned evaluation:** `learned.rs`, `learned/`, `build.rs`, `EvalKind`, `LEARNED_*`, the root flags on `Prices`, and `holds_starship`. - **The policy prior:** `policy.rs`, `policy/`, `MoveOrder`,\u2026\n- Bash: {\"command\": \"grep -E \\\"FAILED|panicked|^exit|could not compile\\\" /tmp/exp4159/other-test.txt | cut -c1-220 | head -20; grep -cE \\\"^test result: ok\\\" /tmp/exp4159/other-test.txt; grep -E \\\"^test resul\u2026\n- Bash: {\"command\": \"grep -n -A8 \\\"thread 'ci_scope_runs_a_crates_groups\\\" /tmp/exp4159/other-test.txt | cut -c1-300; sed -n 640,700p crates/tools/tests/acceptance.rs\", \"description\": \"Inspect the one failin\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-4159/.bot-plan.md <<'EOF'\\n\\n## Experiment final\\n- tools/server/shared/wasm-core tests with network off: all pass except\\n acceptance.rs ci_scop\u2026\n- said: ## Goal The AI plays on `AI_EVAL` alone, and `crates/ai` compiles no trained weights. These go: - **The learned evaluation:** `learned.rs`, `learned/`, `build.rs`, `EvalKind`, `LEARNED_*`, the root flags on `Prices`, and `holds_starship`. - **The policy prior:** `policy.rs`, `policy/`, `MoveOrder`,\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-18T02:27:27Z",
       "owner_why": "it plans it",
@@ -14709,9 +14701,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-18T02:19:02Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44223393415",
+      "run_id": "pending:c5cd9a89-1794971716",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T02:27:27Z",
+      "started_at": "2026-11-18T03:15:43Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14871,9 +14863,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T03:15:01Z",
+    "at": "2026-11-18T03:15:43Z",
     "url": "",
-    "what": "review #4162 on muse"
+    "what": "build #4159 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-18T03:08:24Z",
