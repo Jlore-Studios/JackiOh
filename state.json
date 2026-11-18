@@ -13219,11 +13219,11 @@
       "asks": [],
       "died": 0,
       "difficulty_by": {
-        "at": "2026-11-18T22:02:32Z",
+        "at": "2026-11-18T22:34:32Z",
         "difficulty": "hard",
-        "provider": "step-up",
-        "tier": "",
-        "why": "failed 3 times at difficulty:medium"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the bot's step-up rating stands and a planner may not rate lower; by the rule alone it is card tests, one tools test and docs, about 21 files, none of lines 1-5"
       },
       "failures": 0,
       "forced": false,
