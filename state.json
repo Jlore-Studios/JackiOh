@@ -14617,9 +14617,11 @@
     "4158": {
       "action": "review",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T01:19:04Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-18T02:03:10Z",
         "family": "gemini",
@@ -14629,6 +14631,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- said: \n- run_command: ps -ef | grep jackioh\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-919\"}\n- said: \n- run_command: ps -ef | grep jackioh\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-919\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-919\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-919\"}\n- said: \n- run_command: ps -ef | grep jackioh\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-919\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-919\"}\n- said: \n- run_command: ps -ef | grep jackioh\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-919\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4130 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4130 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4130 && git diff e2e/cypress/component/audio-recipes.cy.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4130 && git diff spec/10-engine-guide.md apps/web/README.md\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-1072\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"3444e94a-6fad-4bfb-a08d-5df42c9f13bc/task-919\"}\n- said: I will wait for `cargo jackioh spec check` (task `task-919`) to finish running.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4130 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the sound tables load when sound first needs them, so the first page load is about 100 KB lighter\"} --> ## Summary The static sound tables (`card-audio.json5`, `voice-text.json`, `voice-manifest.json`, `music-manifest.json`, and `music-cards.json`), alo\u2026"
       },
+      "interruptions": 0,
       "issue": 4130,
       "kind": "review",
       "live": "reviewing",
