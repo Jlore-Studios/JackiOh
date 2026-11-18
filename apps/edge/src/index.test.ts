@@ -532,11 +532,16 @@ describe("#4118 the settings check on the first request", () => {
       resetLibrary();
       vi.spyOn(console, "warn").mockImplementation(() => undefined);
       const storage = memoryStorage();
+      // Waits for the stop itself, not a count of event-loop turns: on a busy runner the digest can take more.
+      const stopped = new Promise<void>((resolve) => {
+        library.stop.mockImplementation(() => {
+          resolve();
+          return Promise.resolve();
+        });
+      });
 
       const fetching = serverWithCtx({ container: { running: true }, storage }, CHANGED).fetch(request());
-      for (let turns = 0; turns < 100 && library.stop.mock.calls.length === 0; turns++) {
-        await new Promise((resolve) => setImmediate(resolve));
-      }
+      await stopped;
       // Still draining: the destroy has to wait for the full wait, not a skipped or shortened one.
       await vi.advanceTimersByTimeAsync(29_000);
       expect(library.stop).toHaveBeenCalledWith("SIGTERM");
