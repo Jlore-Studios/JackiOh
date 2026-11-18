@@ -13936,10 +13936,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "2b516b74856444224382616d3af0cdfb1b63c394",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "4207": {
