@@ -9,7 +9,6 @@ use axum::http::{Request, Response};
 use indexmap::IndexMap;
 use serde::Serialize;
 use serde_json::{Value, json};
-use tokio::sync::Mutex;
 use tower::ServiceExt;
 
 use jackioh_server::api::codes::{DEFAULT_INVITE_CODE_MAX_USES, MintDeps, MintInput, mint_invite_code};
@@ -19,8 +18,7 @@ use jackioh_server::config::{
     INVITE_CODE_LENGTH, MIN_ACCOUNT_AGE_YEARS, REDEMPTION_IDENTICAL_ERROR, REDEMPTION_RESPONSE_FLOOR_MS,
     TERMS_VERSION,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, StoreError, TermsSource};
+use jackioh_server::db::store::{StoreError, TermsSource};
 
 use crate::support::deps::{self, from_json};
 use crate::support::store::{fake, hmac_sha256_hex};
@@ -119,22 +117,6 @@ async fn code_server() -> Server {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
     fake(&app).lock().await.reset();
-    Server {
-        router: app::router(app.clone()),
-        app,
-    }
-}
-
-/// A second App over `store`: a second router on the same deps.
-async fn server_sharing(store: Arc<Mutex<FakeData>>) -> Server {
-    let env = app::load_server_env(&test_env()).expect("the test environment loads");
-    let built = Arc::try_unwrap(app::build(env).await.expect("the test app builds"))
-        .ok()
-        .expect("app::build keeps no second handle on the App it returns");
-    let app = Arc::new(App {
-        db: Db::Fake(store),
-        ..built
-    });
     Server {
         router: app::router(app.clone()),
         app,
