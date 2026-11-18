@@ -13999,6 +13999,13 @@
     "4141": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44222104388",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-18T02:35:00Z",
+        "until": "2026-11-18T03:05:00Z"
+      },
       "difficulty_by": {
         "at": "2026-11-18T02:34:51Z",
         "difficulty": "hard",
