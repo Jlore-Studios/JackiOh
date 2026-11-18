@@ -14162,7 +14162,11 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "muse",
+      "merge_owner_gave_up": {
+        "at": "2026-11-18T01:49:20Z",
+        "provider": "muse",
+        "sha": "ca549101c1773e6b90eeb3f0b1861637861911ec"
+      },
       "pending_request": false,
       "provider": "muse",
       "question": "",
