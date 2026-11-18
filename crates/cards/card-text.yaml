@@ -676,8 +676,8 @@ core-070: # Spiteful Stab
     cast: This is for everything.
   zh:
     name: 恶毒刺击
-    base: 造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。
-    radiant: 造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。
+    base: "穿透\n造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。"
+    radiant: "穿透\n造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。"
     previews:
       Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile.: 造成{damage}点伤害；你的英雄的生命值每比30低满{healthStep}点，伤害+1；你的放逐区中每有一张牌，伤害+{perExile}。
 core-071: # Intern Stimmy
@@ -1346,8 +1346,8 @@ classic-037: # Last Hurrah
     cast: One last hurrah, together!
   zh:
     name: 最后的狂欢
-    base: 抽光你的牌库。在本回合结束时，弃掉{discard}张牌。
-    radiant: 抽光你的牌库。在你的下个回合结束时，弃掉{discard}张牌。
+    base: 抽光你的牌库。
+    radiant: 抽光你的牌库。使你手牌中的{flashback}张随机牌获得闪回。
 classic-038: # Jackiestan Auctioneer
   flavour: Going once, going twice, sold to the player in lane three.
   voice:
@@ -2876,8 +2876,8 @@ meditative-001: # Disruptive Disruptor
     cast: Objection. Nobody touches that hand.
   zh:
     name: 捣乱的捣乱者
-    base: "光环：在你对手的回合中，你不会被迫弃牌。\n战吼：抽{draw}张牌。"
-    radiant: "光环：在你对手的回合中，你不会被迫弃牌。\n战吼：抽{draw}张牌并获得{mana}点法力值。"
+    base: "光环：在你对手的回合中，你不会被迫弃牌。\n激活：你的对手随机弃掉一张牌。"
+    radiant: "光环：在你对手的回合中，你不会被迫弃牌。\n激活：你的对手随机弃掉一张光辉牌；如果其没有光辉牌，则随机弃掉一张牌。"
 meditative-002: # Rampaging Rhino
   flavour: Every bruise costs it something. It keeps running anyway.
   voice:
@@ -2954,8 +2954,8 @@ meditative-010: # Double Counting
     cast: One, two, and one, two again.
   zh:
     name: 重复计算
-    base: 光环：你的战吼和亡语效果会额外触发{extra}次。
-    radiant: 光环：你的战吼和亡语效果会额外触发{extra}次。
+    base: "光环：你的战吼和亡语效果会额外触发{extra}次。\n激活：支付({price})点法力值，发现一张战吼或亡语牌。"
+    radiant: "光环：你的战吼和亡语效果会额外触发{extra}次。\n激活：发现一张战吼或亡语牌。"
 meditative-011: # Double Header
   flavour: Buy one ticket, watch two games, and keep the stub.
   voice:
@@ -3034,8 +3034,8 @@ meditative-019: # Expedition123
     cast: The long road it is.
   zh:
     name: 远征123
-    base: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。将一张时空裂隙置入你的手牌。
-    radiant: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。将一张光辉时空裂隙置入你的手牌。
+    base: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。你的英雄获得{armor}点护甲。将一张时空裂隙置入你的手牌。
+    radiant: 在下个回合失去({loss})点法力值，再下个回合失去({lossAfter})点法力值。你的英雄获得{armor}点护甲。将一张光辉时空裂隙置入你的手牌。
 meditative-019-1: # Temporal Rift
   flavour: Time folds once for everyone. Spend your fold well.
   voice:
@@ -3327,8 +3327,8 @@ meditative-044: # CN Jade Well
     cast: Drink from the deep green.
   zh:
     name: 玉之井
-    base: 激活：将一张鸿运石置入你的手牌。
-    radiant: 激活：将一张光辉鸿运石置入你的手牌。
+    base: 激活：将一张鸿运石置入你的手牌。它具有幸运{lucky}。
+    radiant: 激活：将一张光辉鸿运石置入你的手牌。它具有幸运{lucky}。
 meditative-045: # Knowledge Breaker
   flavour: Sit still. What you know is about to leave you.
   voice:
@@ -5149,8 +5149,8 @@ stinkyscape-070: # Z'Zoth
     death: I will be back.
   zh:
     name: 兹佐斯
-    base: 战吼：从你的墓地中召唤每个具有亡语的单位。
-    radiant: 战吼：从你的墓地中召唤每个具有亡语的单位。使它们获得复生。
+    base: 战吼：从你的墓地中召唤每个具有亡语的单位。触发它们的亡语。
+    radiant: 战吼：从你的墓地中召唤每个具有亡语的单位。使它们获得复生。触发它们的亡语两次。
 stinkyscape-071: # A'Zoth
   flavour: Every first word deserves an encore.
   voice:
@@ -5563,8 +5563,8 @@ stinkyscape-112: # Job Application
     cast: Thank you for applying. We'll be in touch.
   zh:
     name: 求职申请
-    base: "亡语：重新召唤这张牌，回到第1阶段。\n任务：第1阶段，上传简历。激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到4个回合后收到回复。\n任务：第2阶段，面试。从三个任务中随机抽取一个：打出一张法力值消耗与你的简历相同的牌；在一个回合内打出3张法力值消耗各不相同的牌；或者单次受到或造成12点或更多伤害。奖励：将你的简历置入你的手牌并将其强化{buffs}次。其法力值消耗为(0)。\n任务：第3阶段，录用通知。激活这张牌以接受录用，或者再投一份申请，回到第1阶段，且所有奖励变为三倍。奖励：从你的下个回合起，在你的每个回合开始时，将一张薪水支票置入你的手牌。"
-    radiant: "幸运1\n亡语：重新召唤这张牌，回到第1阶段。\n任务：第1阶段，上传简历。激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到4个回合后收到回复。\n任务：第2阶段，面试。从三个任务中随机抽取一个：打出一张法力值消耗与你的简历相同的牌；在一个回合内打出3张法力值消耗各不相同的牌；或者单次受到或造成12点或更多伤害。奖励：将你的简历置入你的手牌并将其强化{buffs}次。其法力值消耗为(0)。\n任务：第3阶段，录用通知。激活这张牌以接受录用，或者再投一份申请，回到第1阶段，且所有奖励变为三倍。奖励：从你的下个回合起，在你的每个回合开始时，将一张薪水支票置入你的手牌。"
+    base: "亡语：重新召唤这张牌，回到第1阶段。\n任务：第1阶段，上传简历。激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到2个回合后收到回复。\n任务：第2阶段，面试。从三个任务中随机抽取一个：打出一张法力值消耗与你的简历相同的牌；在一个回合内打出2张法力值消耗各不相同的牌；或者单次受到或造成8点或更多伤害。奖励：将你的简历置入你的手牌并将其强化{buffs}次。其法力值消耗为(0)。\n任务：第3阶段，录用通知。激活这张牌以接受录用，或者再投一份申请，回到第1阶段，且所有奖励变为三倍。奖励：从你的下个回合起，在你的每个回合开始时，将一张薪水支票置入你的手牌。"
+    radiant: "幸运1\n亡语：重新召唤这张牌，回到第1阶段。\n任务：第1阶段，上传简历。激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到2个回合后收到回复。\n任务：第2阶段，面试。从三个任务中随机抽取一个：打出一张法力值消耗与你的简历相同的牌；在一个回合内打出2张法力值消耗各不相同的牌；或者单次受到或造成8点或更多伤害。奖励：将你的简历置入你的手牌并将其强化{buffs}次。其法力值消耗为(0)。\n任务：第3阶段，录用通知。激活这张牌以接受录用，或者再投一份申请，回到第1阶段，且所有奖励变为三倍。奖励：从你的下个回合起，在你的每个回合开始时，将一张薪水支票置入你的手牌。"
     previews:
       Buff it {buffs|time|times}: 强化{buffs}次
       add a Paycheck: 将一张薪水支票
@@ -5963,8 +5963,8 @@ stinkyscape-148: # Alteran Reach
     cast: The stars stretch on forever.
   zh:
     name: 奥特兰疆域
-    base: "不可摧毁\n激活♾️：支付(1)点法力值，沿你的星图航行一个节点并获得其奖励。\n第20个节点是宇宙的尽头：抵达那里会将一张宇宙边缘置入你的手牌。"
-    radiant: "不可摧毁\n你每回合的第一次航行免费。\n激活♾️：支付(1)点法力值，沿你的星图航行一个节点并获得其奖励。\n第20个节点是宇宙的尽头：抵达那里会将一张宇宙边缘置入你的手牌。"
+    base: "不可摧毁\n你每回合的第一次航行免费。\n激活♾️：支付(1)点法力值，沿你的星图航行一个节点并获得其奖励。\n第20个节点是宇宙的尽头：抵达那里会将一张宇宙边缘置入你的手牌。"
+    radiant: "不可摧毁\n你每回合的前两次航行免费。\n激活♾️：支付(1)点法力值，沿你的星图航行一个节点并获得其奖励。\n第20个节点是宇宙的尽头：抵达那里会将一张宇宙边缘置入你的手牌。"
 stinkyscape-148-1: # Edge of the Universe
   flavour: You did not win the war. You just walked off the edge of the map.
   voice:
@@ -6119,7 +6119,7 @@ stinkyscape-165: # The Trade Union
     cast: Solidarity! Every card gets a fair trade.
   zh:
     name: 贸易联盟
-    base: "可交易\n光环：你手牌中的牌具有可交易。"
+    base: "可交易\n光环：你手牌中的牌具有可交易。你每回合最多可以交易{trades}张牌。"
     radiant: "可交易\n光环：你手牌中的牌具有可交易。你每回合最多可以交易{trades}张牌。"
 stinkyscape-166: # Scanning Probe Mk1
   flavour: Ping. Nothing. Ping. Nothing. Ping. Wait, what was that?
@@ -6827,8 +6827,8 @@ traininggrounds-040: # Goetzmann Game Design
     cast: Let me design you something.
   zh:
     name: 高兹曼游戏设计
-    base: 将一张随机牌置入你的手牌。
-    radiant: 将一张随机光辉牌置入你的手牌。
+    base: 将一张随机牌置入你的手牌。其法力值消耗减少({discount})点。
+    radiant: 将一张随机光辉牌置入你的手牌。其法力值消耗减少({discount})点。
 traininggrounds-041: # Legacy: Speciesist
   flavour: He has a strong opinion about everyone who isn't him, and none of them are good.
   voice:
@@ -7785,8 +7785,8 @@ stinkyscapeplus-079: # A Glimpse into the Endless Sea
     cast: Just wait. The sea remembers.
   zh:
     name: 无尽之海一瞥
-    base: 放逐你的牌库。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
-    radiant: 放逐你的牌库。你的英雄获得{armor}点护甲。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
+    base: 放逐你的牌库和所有永久物。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
+    radiant: 放逐你的牌库和所有永久物。你的英雄获得{armor}点护甲。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
 stinkyscapeplus-080: # The Last Voyage
   flavour: Every ship leaves port. This fleet just forgot to pack a return.
   voice:

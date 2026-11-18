@@ -375,13 +375,21 @@ mod r280_the_core_cards_that_declare_preview {
             labels(ECHOES, FaceKind::Radiant),
             vec!["twice the cards in your exile"]
         );
+        // Its damage line, the last under its Pierce (issue #4154).
+        let damage_line = |face: FaceKind| {
+            text_of(SPITEFUL_STAB, face)
+                .rsplit('\n')
+                .next()
+                .unwrap_or_default()
+                .to_string()
+        };
         assert_eq!(
             labels(SPITEFUL_STAB, FaceKind::Base),
-            vec![text_of(SPITEFUL_STAB, FaceKind::Base)]
+            vec![damage_line(FaceKind::Base)]
         );
         assert_eq!(
             labels(SPITEFUL_STAB, FaceKind::Radiant),
-            vec![text_of(SPITEFUL_STAB, FaceKind::Radiant)]
+            vec![damage_line(FaceKind::Radiant)]
         );
         assert_eq!(
             labels(FED_FAUCI, FaceKind::Base),

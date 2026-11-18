@@ -1671,7 +1671,7 @@ mod banked_modifiers_1722 {
         }
         let kept: &'static jackioh_engine::ShippedCatalog =
             Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
-                "v0.6.6e",
+                "kept",
                 defs,
                 jackioh_engine::prelude::IndexMap::from([(
                     HURRAH.to_string(),

@@ -79,6 +79,11 @@
       "base": "colon",
       "radiant": "colon"
     },
+    "meditative-001": {
+      "radiant": {
+        "en": "Aura: You can't be forced to discard on your opponent's turn.\nActivate: Your opponent discards a random Radiant card, else a random card."
+      }
+    },
     "meditative-008": {
       "base": 2,
       "radiant": 2
@@ -327,10 +332,10 @@
     },
     "stinkyscape-148": {
       "base": {
-        "en": "Indestructible\nActivate ♾️: Pay (1) to travel one node of your starscape map for its reward. Node 20 adds an Edge of the Universe."
+        "en": "Indestructible\nYour first travel a turn is free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
       },
       "radiant": {
-        "en": "Indestructible\nYour first travel a turn is free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
+        "en": "Indestructible\nFirst 2 travels a turn are free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
       }
     },
     "stinkyscape-150": {
