@@ -6,6 +6,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { getPlayerSettings, putPlayerSettings, type PlayerSettingsAccountCopy, type PlayerSettingsGroup } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
+import { isSafeKey } from "../wire/json.ts";
 import { SETTINGS_GROUPS, type SettingsGroup } from "./groups.ts";
 import { getStored, setStored } from "../net/storage.ts";
 
@@ -102,6 +103,8 @@ function readClock(): Record<string, number> {
     if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
     const clock: Record<string, number> = {};
     for (const [id, at] of Object.entries(raw)) {
+      // Issue #4015: a stored key from outside never becomes an object key.
+      if (!isSafeKey(id)) continue;
       if (typeof at === "number" && Number.isSafeInteger(at) && at > 0) clock[id] = at;
     }
     return clock;
@@ -128,6 +131,8 @@ function accountCopy(raw: unknown): PlayerSettingsAccountCopy {
   }
   const copy: PlayerSettingsAccountCopy = { groups: {} };
   for (const [id, group] of Object.entries(groups)) {
+    // Issue #4015: a group id from outside never becomes an object key.
+    if (!isSafeKey(id)) continue;
     const held = group as { at?: unknown; values?: unknown } | null;
     if (typeof held?.at !== "number" || typeof held.values !== "object" || held.values === null) continue;
     copy.groups[id] = { at: held.at, values: held.values as PlayerSettingsGroup["values"] };

@@ -1186,18 +1186,6 @@ pub fn redemption_set_enabled(f: &mut FakeTx<'_>, enabled: bool) -> Result<bool,
     Ok(previous)
 }
 
-/// §9.4: the server-side circuit breaker's input — system-wide failures in a window (R106).
-pub fn codes_count_failures(f: &mut FakeTx<'_>, since: i64) -> Result<i64, StoreError> {
-    call(f, "codes.countFailures")?;
-    let count = f
-        .tables()
-        .attempts
-        .iter()
-        .filter(|a| a.result == CodeAttemptResult::Rejected && a.at >= since)
-        .count();
-    Ok(count as i64)
-}
-
 // Collection (§9.4's entitlement ledger)
 
 pub fn collection_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<CollectionEntry>, StoreError> {

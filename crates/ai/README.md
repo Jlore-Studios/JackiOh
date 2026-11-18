@@ -92,7 +92,9 @@ lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watch
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
-too, #3858), and once none is worth making the switches to Defense Position its own
+too, #3858; an attacker a First Strike defender destroys first earning no chip and no shield pop, since
+`fight` reads a blow that never lands as none, R4171000), and once none is worth making the switches to
+Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
@@ -120,6 +122,11 @@ destroys at its controller's next start, before it can attack, threatens no face
 its own Burn and Toxic destroys there: they ask `afflicted_before_swing` too, which reads the tick through
 `tick_damage`, the reading `afflicted` prices it by, and keeps a unit whose Reborn body has Charge, or Rush
 where only a Unit is the target (`affliction_kills_before_swing`, R4065000, #4065; off in `GREEDY_EVAL`). A
+side the evaluation reads as swinging this turn (the seat at its turn start after the reply, the enemy on
+turn in a passed line) counts no attack from a Frozen unit, though `frozen_next_turn` says it thaws at this
+turn's cleanup, none from a unit summoning sick without Rush or Charge, and none on a hero from one with
+Rush alone; `face_threat`'s end-of-turn read, `can_swing` and `unit_worth` are untouched
+(`frozen_sick_before_swing`, R4170000, #4170; off in `GREEDY_EVAL`). A
 hit from a source that exiles what it damages (M #72 The Banisher) reads as a Poisonous one in `blow`,
 `kills_and_survives`, the Taunt walk and its Cleave splash, `breaks_alone` and `falls_to_first_strike`
 (`exiles_what_it_damages`), and `trade_value` prices what it exiles at its whole `unit_worth`, with no Death
@@ -418,13 +425,14 @@ promotion, sweep and live practice keep the live table.
 controllers (the AI, `greedy_action` or `random_action`, §10.7's random policy) and returns its log,
 hash and bookkeeping; `play_ai_turn` plays one AI turn out. The gates (`run_gate_games`, `AI_GATE`) are
 three matchups whose subject alternates seats, every game folded back to its hash. A run of n games
-needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins count.
+needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins count. Hard against
+Easy's floor is 75%, below the brief's 80%, by the user's decision (R4132001).
 
 | Matchup | Subject | Opponent | Full run | Smoke run |
 | --- | --- | --- | --- | --- |
 | `ai-vs-random` | the AI on Easy | random policy on Easy | 91 of 100 | 17 of 20 |
 | `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 28 of 50 | 10 of 20 |
-| `hard-vs-easy` | the AI on Hard | the AI on Easy | 40 of 50 | 16 of 20 |
+| `hard-vs-easy` | the AI on Hard | the AI on Easy | 38 of 50 | 15 of 20 |
 
 The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
 within the node budget and under `AI_GATE.max_decision_ms`, and the two pinned positions

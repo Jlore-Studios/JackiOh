@@ -10,7 +10,8 @@ import { PLAY_TIERS_ASCENDING } from "../../../apps/web/src/game/damageFeel.ts";
 import { buildMix } from "../../../apps/web/src/audio/mix.ts";
 import { DEFAULT_AUDIO_SETTINGS } from "../../../apps/web/src/audio/settings.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, type SfxRecipe } from "../../../apps/web/src/audio/sfx.ts";
-import { CARD_AUDIO, lineFor } from "../../../apps/web/src/audio/voiceData.ts";
+import { CARD_AUDIO } from "../../../apps/web/src/audio/soundTables.ts";
+import { lineFor } from "../../../apps/web/src/audio/voiceData.ts";
 import { ANOMALY_CODES } from "../../../apps/web/src/cards/anomalies.ts";
 
 type SfxId = (typeof SFX_IDS)[number];

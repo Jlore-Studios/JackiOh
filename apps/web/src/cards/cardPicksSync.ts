@@ -10,7 +10,7 @@
 import { getCardPicks, putCardPick, uploadCardPicks, type CardPicksEntry, type CardPicksResponse, type CardPickPut } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
 import { requestQueue, SETTINGS_SYNC_GRACE_MS, useAccountSync } from "../settings/accountSync.ts";
-import { isRecord } from "../wire/json.ts";
+import { isRecord, isSafeKey } from "../wire/json.ts";
 import {
   readAllCardPicks,
   replaceAllCardPicks,
@@ -63,7 +63,8 @@ function accountCopy(answer: unknown): Record<string, unknown> {
   if (!isRecord(answer) || !Array.isArray(answer.cards)) throw new Error("not a card picks answer");
   const picks: Record<string, unknown> = {};
   for (const entry of answer.cards as unknown[]) {
-    if (isRecord(entry) && typeof entry.cardId === "string") picks[entry.cardId] = entry;
+    // Issue #4015: a card id from outside never becomes an object key.
+    if (isRecord(entry) && typeof entry.cardId === "string" && isSafeKey(entry.cardId)) picks[entry.cardId] = entry;
   }
   return picks;
 }

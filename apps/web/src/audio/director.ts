@@ -33,8 +33,10 @@ import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.t
 import { setPieceBed } from "./setPieceBeds.ts";
 import { signatureBed } from "./signatureBeds.ts";
 import { starshipSounds } from "./starshipSounds.ts";
+import { soundTablesNow } from "./soundTablesLoader.ts";
 import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
-import { CARD_AUDIO } from "./voiceData.ts";
+
+const EMPTY_CARD_AUDIO: CardAudioTable = { voices: {}, effects: {}, cards: {}, emotes: {} };
 
 export type SoundDirector = {
   /** Feed every newest view (Game's props.view). */
@@ -84,7 +86,7 @@ function sideMana(view: PlayerView, player: PlayerId): number {
  */
 export function createSoundDirector(
   sink: SoundSink,
-  lines: CardAudioTable = CARD_AUDIO,
+  lines?: CardAudioTable,
   card?: (defId: string) => CueCard | undefined,
   observe?: (event: GameEvent, view: PlayerView) => void,
   // R1088: the client's own cosmetic rng for trigger lines, defaulting to `Math.random`.
@@ -113,7 +115,7 @@ export function createSoundDirector(
   function ctx(view: PlayerView, castOnDraw: string | null): CueContext {
     return {
       view,
-      lines,
+      lines: lines ?? soundTablesNow()?.cardAudio ?? EMPTY_CARD_AUDIO,
       manaBefore: (player) => lastMana.get(player) ?? sideMana(view, player),
       wasPlayed: (instanceId) => played.has(instanceId),
       unitNow: (instanceId) => findUnit(seen, instanceId) ?? findUnit(view, instanceId),

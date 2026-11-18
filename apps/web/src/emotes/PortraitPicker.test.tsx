@@ -7,13 +7,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PortraitId } from "@jackioh/shared";
 import { EMOJI_EMOTE_IDS, EMOTE_IDS, PORTRAIT_IDS, VOICE_EMOTE_IDS } from "@jackioh/shared";
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import { setAudioEngineForTests } from "../audio/engine.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import type { SavedDeck } from "../net/api.ts";
 import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
@@ -35,6 +36,10 @@ import { PORTRAIT_DEFS } from "./portraits.ts";
 import { PortraitPicker } from "./PortraitPicker.tsx";
 
 let engine: FakeAudioEngine;
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 beforeEach(() => {
   engine = fakeAudioEngine();

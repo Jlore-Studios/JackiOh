@@ -7,8 +7,9 @@ import type { ChangeEvent, ReactElement } from "react";
 
 import { CARD_HOOK_NAMES, VOICE_PRIORITY } from "../../audio/constants.ts";
 import { getAudioEngine } from "../../audio/engine.ts";
+import { useSoundTables } from "../../audio/soundTablesLoader.ts";
 import type { VoiceLineKind } from "../../audio/types.ts";
-import { CARD_AUDIO, lineFor } from "../../audio/voiceData.ts";
+import { lineFor } from "../../audio/voiceData.ts";
 import { t } from "../../i18n/i18n.ts";
 
 function MicIcon(): ReactElement {
@@ -42,7 +43,9 @@ const LINE_LABELS: Record<VoiceLineKind, string> = {
 };
 
 export function VoicePreview({ defId }: { defId: string }): ReactElement | null {
-  const lines = CARD_HOOK_NAMES.filter((hook) => lineFor(CARD_AUDIO, defId, hook) !== null);
+  const tables = useSoundTables();
+  if (tables === null) return null;
+  const lines = CARD_HOOK_NAMES.filter((hook) => lineFor(tables.cardAudio, defId, hook) !== null);
   if (lines.length === 0) return null;
   const onChange = (event: ChangeEvent<HTMLSelectElement>): void => {
     const line = event.currentTarget.value;

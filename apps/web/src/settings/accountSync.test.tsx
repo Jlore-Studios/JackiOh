@@ -673,6 +673,34 @@ describe("R634 the hook: one sync for the page, only for an active account", () 
   });
 });
 
+describe("#4015 prototype pollution", () => {
+  it("a group smuggled in a hostile answer's prototype is never adopted", async () => {
+    const api = fakeApi();
+    // The outer entry carries a well-formed group shape, so only the key guard stops the fold.
+    api.load.mockResolvedValueOnce(
+      JSON.parse(
+        `{"groups":{"__proto__":{"at":${T0 + 1_000},"values":{},"gameplay":{"at":${T0 + 1_000},"values":{"dragToPlay":false}}}}}`,
+      ) as unknown as PlayerSettingsAccountCopy,
+    );
+    start(api);
+    await settleSyncs();
+
+    expect(readSettings().dragToPlay).toBe(true);
+    expect(storedClock()).toEqual({});
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
+  it("a hostile stored clock keeps no proto keys", async () => {
+    localStorage.setItem(SETTINGS_SYNC_STORAGE_KEY, `{"gameplay":${T0},"__proto__":${T0},"constructor":${T0}}`);
+    const api = fakeApi();
+    start(api);
+    await settleSyncs();
+
+    expect(storedClock()).toEqual({ gameplay: T0 });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+});
+
 describe("requestQueue", () => {
   it("runs requests in order, a failure skipped, and settles after the last", async () => {
     const { enqueue, settled } = requestQueue();

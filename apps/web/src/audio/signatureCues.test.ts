@@ -26,7 +26,7 @@ import { SIGNATURE_SFX, signatureCues } from "./signatureCues.ts";
 import { FakeAudio } from "./test/fakeAudio.ts";
 import type { SfxId, SoundCue } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
-import { CARD_AUDIO } from "./voiceData.ts";
+import { CARD_AUDIO } from "./soundTables.ts";
 
 /** R3402001: Core's ten, beside R3400001's eight. */
 const SIGNATURES = Object.entries(SIGNATURE_SFX).filter(([defId]) => defId.startsWith("core-"));

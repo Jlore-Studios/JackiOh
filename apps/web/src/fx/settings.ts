@@ -6,6 +6,7 @@
 import { useSyncExternalStore } from "react";
 
 import { localStorageOrNull } from "../net/storage.ts";
+import { isSafeKey } from "../wire/json.ts";
 import { FX_INTENSITY_SCALE, FX_SETTINGS_KEY, FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN } from "./constants.ts";
 
 export type FxIntensity = "off" | "low" | "normal" | "high";
@@ -87,6 +88,8 @@ export function getFxSettings(): FxSettings {
 export function setFxSettings(patch: Partial<FxSettings>): FxSettings {
   const merged: Record<string, unknown> = { ...getFxSettings() };
   for (const [key, value] of Object.entries(patch)) {
+    // Issue #4015: a key from outside (the account's copy) never becomes an object key.
+    if (!isSafeKey(key)) continue;
     if (value !== undefined) merged[key] = value;
   }
   const next = normalizeFxSettings(merged);

@@ -245,6 +245,13 @@ describe("B6 getFxSettings and setFxSettings", () => {
     expect(getFxSettings()).toEqual({ speed: 1, intensity: "low", motion: "reduce", bigMoments: "full" });
   });
 
+  it("setFxSettings drops proto keys (#4015)", () => {
+    const next = setFxSettings(JSON.parse(`{"speed":2,"__proto__":{"polluted":true},"constructor":{"speed":3}}`));
+    expect(next).toEqual({ speed: 2, intensity: "normal", motion: "system", bigMoments: "full" });
+    expect(getFxSettings()).toEqual(next);
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("B6 setFxSettings normalizes the patch before storing and returning it", () => {
     expect(setFxSettings({ speed: 10 })).toEqual({ speed: 3, intensity: "normal", motion: "system", bigMoments: "full" });
     expect(getFxSettings().speed).toBe(3);

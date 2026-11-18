@@ -21,10 +21,11 @@ import {
 import { exposeAudioDebug, type AudioDebugHandle } from "./debug.ts";
 import { createAudioEngine, getAudioEngine, setAudioEngineForTests } from "./engine.ts";
 import { readAudioSettings, resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
-import { FakeClock, FakeFetch, fakeAudioEngine, fakeContextFactory, type FakeAudioEngine } from "./test/fakeAudio.ts";
+import { FakeClock, FakeFetch, fakeAudioEngine, fakeContextFactory, seedSoundTables, type FakeAudioEngine } from "./test/fakeAudio.ts";
 import type { AudioEngine, AudioState, PlayedCue, SoundSink } from "./types.ts";
 import { installUiSounds } from "./uiSounds.ts";
-import { CARD_AUDIO, voiceKeysForView } from "./voiceData.ts";
+import { voiceKeysForView } from "./voiceData.ts";
+import { CARD_AUDIO, SOUND_TABLES } from "./soundTables.ts";
 import { durationFor } from "../game/animations.ts";
 import Game from "../game/Game.tsx";
 import { baseView, card, emptySide, unit, withEvents } from "../test/fixtures.ts";
@@ -93,6 +94,7 @@ beforeEach(() => {
   localStorage.clear();
   resetAudioSettingsForTests();
   setAudioEngineForTests(null);
+  seedSoundTables(SOUND_TABLES);
 });
 
 afterEach(() => {

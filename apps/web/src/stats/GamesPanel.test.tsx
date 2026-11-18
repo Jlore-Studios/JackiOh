@@ -114,19 +114,14 @@ describe("R1994000 the Games panel", () => {
     }
   });
 
-  it("R1994000 the panel says how many of the patch's games it counts", async () => {
+  it("R4155000 the panel says nothing of how many of the patch's games it counts", async () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(answer(gamesResponse({ ...FIGURES, games: 600 }, 1500)))));
 
     render(<GamesPanel patch="" mode="" />);
 
-    expect(
-      await screen.findByText(
-        "Counted over 600 of the patch's 1,500 games: games recorded before these figures were kept are not in them.",
-        undefined,
-        SLOW,
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText("First player wins 51% of decided games (±5)")).toBeInTheDocument();
+    // The figures still show; the counted line is gone (R4155000 amends R1994000).
+    expect(await screen.findByText("First player wins 51% of decided games (±5)", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.gamesPanel).textContent).not.toContain("Counted over");
   });
 
   it("R1994000 a failed load offers Try again", async () => {

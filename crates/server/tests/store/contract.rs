@@ -1343,8 +1343,8 @@ mod codes {
         assert!(!q!(harness, t => t.codes_revoke_by_hash("no-such-hash")));
     }
 
-    /// §9.4 steps 2-4 and the circuit breaker read exactly these three counters.
-    async fn counts_attempts_by_profile_by_ip_hash_and_by_failure(harness: &StoreHarness) {
+    /// §9.4 steps 2-4 read exactly these counters (R4131000: no failure count is read).
+    async fn counts_attempts_by_profile_and_by_ip_hash(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
         let now = harness.now();
         let ip_hash = format!("ip-{}", id());
@@ -1388,7 +1388,6 @@ mod codes {
             q!(harness, t => t.codes_count_attempts_by_ip(&ip_hash, now - 60_000)),
             2
         );
-        assert_eq!(q!(harness, t => t.codes_count_failures(now - 60_000)), 2);
     }
 
     /// §9.8's watch: one IP hash behind six accounts is a cluster, six hashes with one account each
@@ -1463,7 +1462,7 @@ mod codes {
         claims_a_single_use_code_exactly_once,
         refuses_a_revoked_or_expired_code,
         revokes_a_code_by_hash_idempotently,
-        counts_attempts_by_profile_by_ip_hash_and_by_failure,
+        counts_attempts_by_profile_and_by_ip_hash,
         lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each,
     );
 }
@@ -1675,9 +1674,9 @@ mod redeem {
         assert_eq!(status_of(harness, &profile.id).await, "pending");
     }
 
-    /// §9.4: "A global circuit breaker disables redemption." This is the database's own switch,
-    /// which the store answers `circuit_open` from; the server's R106 breaker (`api/codes.rs`) is a
-    /// separate object that never lets a request reach here while it is open.
+    /// R4131000: the operator's pause, the database's own switch, which the store answers
+    /// `circuit_open` from; the server's mirror of it (`api/codes.rs`) never lets a request reach here
+    /// while it holds.
     async fn refuses_every_redemption_while_the_database_s_redemption_switch_is_off(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
         let code = mint(harness, json!({})).await;
@@ -12510,7 +12509,9 @@ mod ping {
 /// their ledger (R3074001), and the news posts (R3074003).
 mod dev_dashboard {
     use super::*;
-    use jackioh_server::admin::store::{HandSetRating, NewAdminAction, NewsPost, RatingChange, RatingGrant};
+    use jackioh_server::admin::store::{
+        AdminActionFilter, HandSetRating, NewAdminAction, NewsPost, RatingChange, RatingGrant,
+    };
 
     fn action(profile_id: &str, route: &str, at: i64) -> NewAdminAction {
         NewAdminAction {
@@ -12580,6 +12581,90 @@ mod dev_dashboard {
             "{}",
             harness.name
         );
+    }
+
+    /// The audit reads back by cursor and filter: pages newest first with no gaps or repeats,
+    /// and `profile_id` and `route` narrow the read to exact matches.
+    async fn audit_pages_by_cursor_and_filter(harness: &StoreHarness) {
+        let dev = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let jlore = "POST /api/dev/jlore";
+        let rating = "PUT /api/admin/rating";
+        let wrote = [
+            (dev.id.as_str(), jlore, now),
+            (other.id.as_str(), jlore, now + 1),
+            (dev.id.as_str(), rating, now + 2),
+            (other.id.as_str(), rating, now + 3),
+            (dev.id.as_str(), jlore, now + 4),
+        ];
+        let mut ids = Vec::new();
+        for (who, route, at) in wrote {
+            ids.push(q!(harness, t => t.admin_actions_append(&action(who, route, at))));
+        }
+        let order = |rows: Vec<jackioh_server::admin::store::AdminAction>| -> Vec<i64> {
+            rows.into_iter().map(|row| row.id).collect()
+        };
+        let first = q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 2));
+        assert_eq!(order(first.clone()), vec![ids[4], ids[3]], "{}", harness.name);
+        let second = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                before_id: Some(first[1].id),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(second.clone()), vec![ids[2], ids[1]], "{}", harness.name);
+        let third = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                before_id: Some(second[1].id),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(third), vec![ids[0]], "{}", harness.name);
+
+        let of_dev = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                profile_id: Some(dev.id.clone()),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(of_dev), vec![ids[4], ids[2]], "{}", harness.name);
+        let of_rating = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                route: Some(rating.to_string()),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(of_rating), vec![ids[3], ids[2]], "{}", harness.name);
+        let of_dev_rating = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                profile_id: Some(dev.id.clone()),
+                route: Some(rating.to_string()),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(of_dev_rating), vec![ids[2]], "{}", harness.name);
+        let past_oldest = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                before_id: Some(ids[0]),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert!(past_oldest.is_empty(), "{}: nothing older", harness.name);
+        let unknown = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                profile_id: Some("no such account".to_string()),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert!(unknown.is_empty(), "{}", harness.name);
     }
 
     fn glicko(rating: f64) -> Glicko {
@@ -12813,6 +12898,7 @@ mod dev_dashboard {
 
     both_stores!(
         r3074000_an_audit_row_is_kept_newest_first_and_outlives_its_account,
+        audit_pages_by_cursor_and_filter,
         r3074001_a_hand_set_rating_keeps_the_first_earned_one_and_clears_once,
         r3074001_standings_mark_a_hand_set_ladder,
         r3074003_posts_are_kept_listed_and_taken_down_once,

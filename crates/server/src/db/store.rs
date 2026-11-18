@@ -357,8 +357,8 @@ store_union! {
     /// Exactly the strings `app.redeem_invite_code(uuid, text, text)` returns (migration 0001 §6).
     /// `not_pending` covers no such profile, banned and already active together: `codes.rs` tells
     /// them apart first (R145), so here it is a race, answered as a conflict (R170).
-    /// `email_unverified` is the database's second opinion (R159); `circuit_open` is its half of
-    /// §9.4's breaker, beside the server's (R106). Missing, revoked, expired and exhausted codes
+    /// `email_unverified` is the database's second opinion (R159); `circuit_open` is the
+    /// operator's pause, `app.settings.redemption_enabled` off (R4131000). Missing, revoked, expired and exhausted codes
     /// all answer `invalid_code` (§9.4).
     pub enum RedeemResult {
         Ok = "ok",
@@ -1686,12 +1686,7 @@ impl Tx<'_> {
         dispatch!(self, codes_invite_clusters(since))
     }
 
-    /// §9.4: the server-side circuit breaker's input — system-wide failures in a window (R106).
-    pub async fn codes_count_failures(&mut self, since: i64) -> StoreResult<i64> {
-        dispatch!(self, codes_count_failures(since))
-    }
-
-    /// Flips §9.4's database-side kill switch (`app.settings.redemption_enabled`), which step 5's
+    /// Flips the operator's redemption pause (R4131000) (`app.settings.redemption_enabled`), which step 5's
     /// lookup reads and `Tx::redeem` answers `CircuitOpen` from. Answers the previous value.
     pub async fn redemption_set_enabled(&mut self, enabled: bool) -> StoreResult<bool> {
         dispatch!(self, redemption_set_enabled(enabled))

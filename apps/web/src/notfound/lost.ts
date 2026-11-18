@@ -3,8 +3,9 @@
 // hash of the path (cards/art/hash.ts), never `Math.random`, so one wrong link always shows the same.
 
 import { CARD_HOOK_NAMES } from "../audio/constants.ts";
-import type { CardHook } from "../audio/types.ts";
-import { CARD_AUDIO, lineFor } from "../audio/voiceData.ts";
+import { soundTablesNow } from "../audio/soundTablesLoader.ts";
+import type { CardAudioTable, CardHook } from "../audio/types.ts";
+import { lineFor } from "../audio/voiceData.ts";
 import { hashId } from "../cards/art/hash.ts";
 import { corrupt, GLITCH_ODDS_SCALE } from "../cards/glitch.ts";
 import { paths } from "../net/navigate.ts";
@@ -28,8 +29,10 @@ export function lostCardFor(path: string): LostCardId {
 }
 
 /** The line a lost card says when tapped: its first hook with a line, in CARD_HOOKS's order. */
-export function lostCardLine(defId: string): CardHook | null {
-  return CARD_HOOK_NAMES.find((hook) => lineFor(CARD_AUDIO, defId, hook) !== null) ?? null;
+export function lostCardLine(defId: string, table?: CardAudioTable): CardHook | null {
+  const t = table ?? soundTablesNow()?.cardAudio;
+  if (!t) return null;
+  return CARD_HOOK_NAMES.find((hook) => lineFor(t, defId, hook) !== null) ?? null;
 }
 
 /** The three face-down cards' destinations, in the order they are dealt. Their words go through `t()` where drawn. */

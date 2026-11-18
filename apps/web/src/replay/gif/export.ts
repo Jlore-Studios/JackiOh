@@ -17,6 +17,7 @@ import { PORTRAIT_LOOKS } from "../../emotes/portraitLook.ts";
 import { PORTRAIT_DEFS } from "../../emotes/portraits.ts";
 import { withMatchDefs } from "../../game/catalog.ts";
 import type { CardLookup } from "../../game/catalog.ts";
+import { isSafeKey } from "../../wire/json.ts";
 import {
   REPLAY_GIF_FALLBACK_FPS,
   REPLAY_GIF_FPS,
@@ -70,6 +71,8 @@ export function assetsFor(plan: GifPlan, clip: readonly ReplayStep[], lookup: Ca
       if (item.kind !== "card") continue;
       const key = faceKey(item.defId, item.radiant);
       if (Object.hasOwn(faces, key)) continue;
+      // Issue #4015: a defId from outside (an untrusted replay file) never becomes an object key.
+      if (!isSafeKey(key)) continue;
       const info = find?.(item.defId, item.radiant);
       faces[key] =
         info === undefined

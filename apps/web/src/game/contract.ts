@@ -79,6 +79,8 @@ export const testid = {
   power: "power",
   concede: "concede",
   log: "log",
+  /** #4140: the log's screen-reader announcer: the newest shown line's plain words. */
+  logLive: "log-live",
   board: "board",
   /** R3554000: the Black Hole lane's swallowed count (`"n/capacity"`). */
   blackHoleCount: "black-hole-count",
