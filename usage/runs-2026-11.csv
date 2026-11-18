@@ -2621,3 +2621,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-18T05:45:13Z,44245875367,claude-4,opus,review,4176,hard,reviewed,,1.9,27,10020,1405349,1.2702,24,26,,,,,none,,1
 2026-11-18T05:39:43Z,44244234205,agy,gemini-3.8-flash-high,plan,4169,medium,planned,,10.5,312545,61885,0,,72,78,21,22,4.2,,none,,1
 2026-11-18T05:43:01Z,44243082155,claude-7,opus,suggest,,,suggested,,23,101,37527,5364599,5.2338,34,11,,,,,none,,1
+2026-11-18T05:56:14Z,44245942304,claude-8,opus,plan,4156,hard,planned,,12.3,172,72856,12380720,5.5507,86,96,,,21.5,muse,fresh,other,1
+2026-11-18T06:06:20Z,44245682565,muse,muse-spark-1.3-contributor,build,4168,medium,built,,26.7,0,0,0,,14,17,29,30,17.1,muse,none,,1
+2026-11-18T06:18:53Z,44248683172,agy,gemini-3.8-flash-high,suggest,,,suggested,,13.6,570131,47264,0,,0,8,23,25,,,none,,1
+2026-11-18T06:13:22Z,44247468947,claude-6,opus,plan,4170,hard,planned,,16.3,194,86363,14624276,6.3849,20,32,,,33.6,muse,fresh,other,1
+2026-11-18T06:17:02Z,44247410774,claude-7,opus,plan,4169,hard,planned,,21.2,215,136397,23534851,10.1011,12,31,,,31.9,agy,fresh,other,1
