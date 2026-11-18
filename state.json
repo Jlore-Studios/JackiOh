@@ -15379,7 +15379,7 @@
       "planned_at": "2026-11-18T06:21:22Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
-      "planned_model": "gemini-3.8-flash-high",
+      "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-7",
       "queued_at": "2026-11-18T05:21:51Z",
