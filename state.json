@@ -13431,6 +13431,13 @@
     "4132": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T00:14:39Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "CLAUDE.md rule 11 line 2: the AI, its decisions and its search \u2014 this rekeys the beam's dedup in crates/ai/src/search.rs"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
