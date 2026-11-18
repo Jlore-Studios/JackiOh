@@ -13876,7 +13876,7 @@
     "4206": {
       "action": "review",
       "asks": [],
-      "audit_tier": "",
+      "audit_tier": "medium",
       "ci_early": true,
       "ci_fixed_head": "2b516b74856444224382616d3af0cdfb1b63c394",
       "ci_fixes": 2,
@@ -13898,6 +13898,7 @@
         "by": "`muse` (medium)",
         "sha": "4daea4cfa110c2c3da09434b98356240ae7eece7"
       },
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -13914,14 +13915,21 @@
       },
       "interruptions": 0,
       "issue": 4189,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The fragment's `plays` claims five cards (stinkyscape-004, -137, -176, stinkyscapeplus-102, -162) whose games cannot play differently, so `classify --claims` (`rust (classify)`) will probably fail on them.",
+          "evidence": "crates/tools/src/claims.rs:88-98 reports a plays claim added by this change as a problem when stage 2 shows its games playing as before. Stage 2 keeps a script-only claim only when its forced games diverge (classify.rs header). The glow is a pure read in `view_for` (view_for.rs:1480). `condition_active` is called nowhere else outside the engine's own files (grep), and crates/ai never reads the glow or the `conditionActive` field. The issue says no state, hash, replay or AI decision changes. The precedent for a glow-only patch, v0.2.3d, says 'no card plays differently'. Only xxFreshJack (109) and Shockwave447 (111) have a real reason. Olivian Expanse's code lines go from about 53 to about 62, across COMPLICATED_CODE_LINES = 60, and R2173001 makes every list reader play differently. The builder's report never says it ran `cargo jackioh classify --base origin/main --claims`, which CLAUDE.md asks for before pushing.",
+          "severity": "blocking",
+          "where": "crates/cards/patches/pending/cosmic-bard-and-edwin-van-spacechief-glow-in-hand-when-their.json"
+        }
+      ],
       "live": "reviewing",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
-      "queued_at": "2026-11-18T20:13:51Z",
+      "queued_at": "2026-11-18T20:23:21Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -13929,7 +13937,7 @@
       "run_id": "44388993784",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-18T20:14:48Z",
       "stop_requested": false,
       "taken_asks": [],
