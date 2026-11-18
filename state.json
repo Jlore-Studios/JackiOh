@@ -16423,6 +16423,8 @@
       }
     },
     "4200": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-18T07:09:37Z",
@@ -16436,8 +16438,11 @@
         "trail": "he 224 seeds show no mismatch: 31,257 attacks over 1,061 distinct cards. Now the pool-probe variant, to check the floors hold when the random pools rotate.\n- Bash: {\"command\": \"grep -n \\\"pool-probe\\\" crates/engine/Cargo.toml crates/ai/Cargo.toml scripts/pool-probe.sh | head -5\\npython3 - <<'EOF'\\np='crates/ai/src/candidates.rs'\\ns=open(p).read()\\nold=' assert!(\u2026\n- said: The pool probe matches the planner's numbers (2117 attacks, 224 cards, 12 stopped blows), so all three floors hold there too. Now `fmt --check`, `spec check` and the smoke gate.\n- Bash: {\"command\": \"echo \\\"- build run 1: ai tests 60+937+95 pass, clippy clean; 224 seeds: 0 mismatches (31257/1061/411, 67 s); pool-probe 16 games: 2117/224/12. Running fmt, spec check, gate smoke.\\\" >> .\u2026\n- Bash: {\"command\": \"cargo fmt --check; echo \\\"fmt exit $?\\\"; time cargo jackioh gate 2>&1 | tail -25\", \"description\": \"Run fmt check exit code and the smoke AI gate\", \"timeout\": 3600000, \"run_in_background\"\u2026\n- Bash: {\"command\": \"sleep 20; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4171/230d2996-483a-46bf-a4d2-f6113943f7c0/tasks/bm3yx0rr8.output; git rev-parse --verify origin/main 2>&1 | head -1\", \"de\u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -8\", \"description\": \"Read classify docs in tools README\"}\n- Bash: {\"command\": \"timeout 900 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Run classify with claims against main\", \"timeout\": 1000000}\n- said: `classify --claims` against main prints `classify: Internal` with no claim problems, so no patch fragment is needed. The smoke gate is still running.\n- Bash: {\"command\": \"echo \\\"- build run 1: fmt --check exit 0; spec check ok (2244 rulings); classify --claims: Internal, no problems. Gate smoke running (background).\\\" >> .bot-notes.md\\nuntil grep -q \\\"^re\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R4171000.md'\\ns=open(p).read()\\nold='On this branch it judges 2064 attacks over 246 distinct cards, with 80 stopped blows, and finds no other mismatch;\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R4171000.md'\\ns=open(p).read()\\nold=\\\"for the faces and keywords random play rarely shows (Anime Armor's cap, the damage pools, [[R4065001]]'s exile).\\\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -2; cargo fmt --check; echo \\\"fmt $?\\\"; git status --short\", \"description\": \"Re-run spec check and fmt; list changed files\", \"timeout\": 600000}\n- said: Everything requested passes. One more risk: the fix can change AI decisions, so any test outside `crates/ai` that pins an AI game's outcome could break. Checking which crates depend on the AI.\n- Bash: {\"command\": \"grep -l \\\"jackioh-ai\\\" crates/*/Cargo.toml apps/*/Cargo.toml 2>/dev/null; ls crates\", \"description\": \"List crates depending on jackioh-ai\"}\n- Grep: {\"pattern\": \"SeatController::Ai|decide\\\\(|play_match\\\\(\", \"path\": \"crates\", \"glob\": \"!crates/ai/**\", \"output_mode\": \"files_with_matches\"}\n- Bash: {\"command\": \"echo \\\"- build run 1: gate smoke 19/16/16 (17/10/16 needed), note filled. Running shared/server/tools/wasm tests (AI dependants) in background -> /tmp/dep-tests-4171.log\\\" >> .bot-notes.\u2026\n- Bash: {\"command\": \"sleep 15; grep -h \\\"^name\\\" crates/wasm/Cargo.toml crates/wasm/*/Cargo.toml 2>/dev/null; cat /tmp/dep-tests-4171.log\", \"description\": \"Check wasm package names and early test output\"}\n- Bash: {\"command\": \"git diff crates/ai/README.md; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold_start=s.index('- Done:')\\nold_end=s.index('## Log')\\nnew='''- Done: plan steps 2-9 and step 10's\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4171/crates/ai/README.md\", \"old_string\": \"`fight` reads a blow that never lands as none, R4171000), and once none is worth makin\u2026\n- Bash: {\"command\": \"sed -n 90,100p crates/ai/README.md\", \"description\": \"Check README wrap\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4171/crates/ai/README.md\", \"old_string\": \"Defense Position its own evaluation prefers) on every determinization, and plays the f\u2026\n- Bash: {\"command\": \"git diff crates/ai/README.md\", \"description\": \"Confirm README diff is minimal\"}\n- said: The README clause is in with a minimal diff. Now waiting on the dependent crates' tests (shared, server, tools, wasm).\n- Bash: {\"command\": \"until grep -q \\\"^DONE\\\" /tmp/dep-tests-4171.log; do sleep 15; done; cat /tmp/dep-tests-4171.log\", \"description\": \"Wait for the dependent crates' tests\", \"timeout\": 3600000}\n- Bash: {\"command\": \"cat /tmp/dep-tests-4171.log; ps aux | grep -E \\\"jackioh|cargo|rustc\\\" | grep -v grep | awk '{print $11, $12, $13}' | head\", \"description\": \"Check dependent tests progress\"}\n- Bash: {\"command\": \"ps -eo pid,etime,args | grep -E \\\"target/debug|rustc|cargo\\\" | grep -v grep | cut -c1-200 | head\", \"description\": \"List running test processes\"}\n- Bash: {\"command\": \"until grep -q \\\"^DONE\\\" /tmp/dep-tests-4171.log; do sleep 15; done; cat /tmp/dep-tests-4171.log\", \"description\": \"Keep waiting for dependent tests\", \"timeout\": 600000}\n- said: The dependent crates all pass: server 1848 + 747 store, shared, tools 572 + acceptance + golden, and wasm. One last check is that the `ts` run left `apps/web/src/wire` unchanged.\n- Bash: {\"command\": \"git status --porcelain; test -z \\\"$(git status --porcelain -- apps/web/src/wire)\\\" && echo \\\"wire clean\\\"; ls ../jackioh-wt 2>/dev/null; echo \\\"- build run 1: dependants' tests all green\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Next: dependants' tests (shared/server/tools/wasm) running; then final report. No exceptions in the test.\\\",\\\"- Ne\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a test holds the AI's per-attack combat math to the game's combat forecast on boards from seeded games, and a blow a First Strike defender stops is worth nothing to the AI\"} --> ## What changed **The fix (`crates/ai/src/reply.rs`, `fight`).** The AI's m\u2026"
       },
       "issue": 4171,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T08:42:41Z",
         "from_run": "44256708695",
         "gates": [
           {
@@ -16529,7 +16534,11 @@
         "source": "build",
         "until": "2026-11-18T09:11:51Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-18T08:41:51Z",
+      "run_id": "pending:6ea822bb-1794991339",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16548,6 +16557,9 @@
         "provider": "claude-8",
         "run": "44256708695"
       },
+      "started_at": "2026-11-18T08:42:41Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16561,9 +16573,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T08:18:44Z",
+    "at": "2026-11-18T08:42:41Z",
     "url": "",
-    "what": "review #4199 on claude-8"
+    "what": "review #4200 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-18T08:32:14Z",
