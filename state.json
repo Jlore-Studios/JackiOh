@@ -38702,16 +38702,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "server",
-        "count": 2,
-        "last_run": "2026-11-18T17:07:53Z",
-        "provider": "claude-6",
-        "run_id": "44355163752",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
