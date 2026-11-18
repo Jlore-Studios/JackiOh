@@ -29369,5 +29369,952 @@
       "stinkyscapeplus-120"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.6i",
+    "date": "2026-11-18",
+    "title": "Patch: Stinkyscape+ Balance Changes III",
+    "source": "#4154",
+    "notes": "The designer's third Stinkyscape+ balance pass (#4154). Burn now ticks once at the end of every turn and is removed (R4154000); Toxopid Legs are Immune to Toxic (R4154001). Costs, stats, keywords and Tributes on about 35 cards; script changes, each keeping its v0.6.6g script (R767000), on Profe Yates, Selective Enrollment, The Last Voyage, Endless Expedition, Taotie, NA Tech, Jlockeed Shredder-12, Appropriations, Halo, Occidentless Mandate, Repeater v5, A Glimpse into the Endless Sea, Last Hurrah, Disruptive Disruptor, Alteran Reach, Job Application, The Trade Union, Expedition123, Z'Zoth, Goetzmann Game Design, Double Counting, CN Jade Well, Spiteful Stab, Toxopid, Toxopid Leg, Crawler, Shawarma Law, the Training-Grounds and Meditative Calls to Chaos, Eclipse, xxFreshJack, Ocean Tsunami, Imitated Instrumentality and Introspection; Spice sells higher. The AI trades, sells Spice, aims Living Bomb and uses Feng Shui better. Rulings R4154000, R4154001, R4154100-R4154105, R4154200-R4154213, R4154300-R4154305, R4154400-R4154403.",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes III",
+      "new": [],
+      "balance": [
+        "Burn now deals its damage once, at the end of the turn, and is then removed (it used to tick at the start of its owner's turn and drop by 3).",
+        "Tommy Tempo is 3/3 (Radiant 6/6), down from 4/4 (Radiant 8/8).",
+        "JC Backed costs (4), up from (3).",
+        "Beam v3 deals 4 damage (Radiant 8), Beam v4 6 (Radiant 12) and Beam v5 8 (Radiant 16), each down from 5, 7 and 9 (Radiant 10, 14 and 18).",
+        "Fuse costs (3), up from (2); CN Flea Market (2), up from (1); Drone Core IX (7), up from (6); Snom Bunny Mind Control (6), up from (5).",
+        "Midlane Menace is 2/2 (Radiant 4/4), down from 3/3 (Radiant 6/6); Straaza is 6/6 (Radiant 12/12), down from 8/8 (Radiant 16/16).",
+        "Silly Silas is 7/7 (Radiant 14/14), up from 4/4 (Radiant 8/8).",
+        "Tmack Trav is 7/7 (Radiant 14/14), down from 8/8 (Radiant 16/16); The Propagation's Hornet is 1/3 (Radiant 2/6), down from 2/3 (Radiant 4/6).",
+        "Book of Buff Buffs 3 times (Radiant 6), down from 4 (Radiant 8).",
+        "K-Pop Fanatic costs (3), up from (2), and loses Can't Defend.",
+        "Outbreak costs (3), up from (1), and places 2 Plague Counters (Radiant 4), up from 1 (Radiant 2).",
+        "Imitated Instrumentality and Introspection cost (3), down from (4), and each needs Tribute 1.",
+        "Ocean Tsunami needs Tribute 2, up from 1; xxFreshJack gains Tribute 1.",
+        "League of Losers' five Losers are each 3/3 (Radiant 6/6).",
+        "Orca is no longer a Starship Piece.",
+        "Open Enrollment costs (0), Feng Shui (2), Lockdown (1), Living Bomb (3), Basket of Crawlers (1), Field of Dreams (0) and Memory Leak (1); Lockdown gains Crater.",
+        "Eclipse is 9/17 (Radiant 18/34), its Radiant Armor is 6 (Radiant Reignclipse's Armor 3 is 6 too) and its damage Burns 7 (Radiant 14).",
+        "Tatches the Totem is 0/4 (Radiant 0/8); Arm of the Jempire is 3/8 (Radiant 6/16).",
+        "Jayaad is a Human; Toxopid Legs are Immune to Toxic.",
+        "Repeater v5's Activate can be used 3 times a turn, down from 4.",
+        "Jlockeed Shredder-12 needs Tribute 3, up from 2, and a Float lowers it by 1.",
+        "Appropriations' four choices are weaker again on both faces.",
+        "Call to Chaos (Mindustrial-Swarm Edition): its card counts drop by one (Paperclip 2, Evolved Swarm 2, Jlockeed 3, Terminus 2) and its Burn to 1.",
+        "Call to Chaos (Training-Grounds Edition): both Rush entries summon 2 Rush Tokens, down from 3; it replenishes 2 mana, down from 3, and gives 5 mana, down from 6.",
+        "Call to Chaos (Training-Grounds Edition) adds 3 Training Grounds cards, down from 4, and summons 4 permanents, down from 5.",
+        "Call to Chaos (Meditative Edition): your hero gains 4 Armor and heals 4, down from 5.",
+        "Alteran Reach costs (1), up from (0).",
+        "Spice sells for about 25% more Credits at the Marketplace.",
+        "Expedition123 also gives your hero 2 Armor (Radiant 4).",
+        "Goetzmann Game Design's card costs (1) less.",
+        "CN Jade Well's Auspicious Rocks come with Lucky 1.",
+        "Spiteful Stab gains Pierce.",
+        "Dungeon run: a tier-1 Elite now draws every turn and has 18 health, up from every other turn and 16."
+      ],
+      "changes": [
+        "Profe Yates's Cry exiles a permanent with M, O, U, S and E in its name and text (CN cards are immune; a face-down card never qualifies), and Yates has no Activates any more.",
+        "Selective Enrollment costs (5), up from (4), and Float reduces its cost.",
+        "The Last Voyage's base face no longer launches a Starship as it resolves: one launches at the start of each of your turns.",
+        "Endless Expedition: for the rest of the game you have (1) less mana, and at the start of each of your turns you add a random Terminus card (Radiant: Radiant) that costs (3). It adds none at once.",
+        "饕餮's base Activate has an extra turn cooldown.",
+        "NA Tech's fused card costs what the fusion costs, at most (4), instead of a set price.",
+        "Halo's Cry: three times, choose one of 2 Weapons and Equip it into Halo.",
+        "Occidentless Mandate destroys instead of exiling.",
+        "A Glimpse into the Endless Sea also exiles every permanent on the field.",
+        "Last Hurrah no longer discards at the end of the turn; the Radiant face gives 4 random cards in your hand Flashback.",
+        "Disruptive Disruptor loses its Cry and gains Activate: your opponent discards a random card (Radiant: a random Radiant card, or any card if they hold none).",
+        "Alteran Reach: your first travel each turn is free (Radiant: your first two).",
+        "Job Application hears back in 1 to 2 turns, and its Interview asks for 2 cards of different costs or a hit of 8 or more.",
+        "The Trade Union lets you Trade up to 2 cards each turn (Radiant 3).",
+        "Z'Zoth triggers the Deaths of the Units it summons (Radiant: twice).",
+        "Double Counting gains Activate: pay (1) to Discover a Cry or Death card (Radiant: free).",
+        "Toxopid's Legs land in random empty zones (Radiant: on your opponent's side); it no longer adds a Crawler, and a Crawler dying no longer cheapens it.",
+        "Crawler is a (1) 3/1 (Radiant 6/2) you may play from your graveyard for (1); it lost Can't Defend, its death after attacking and its old Death.",
+        "Crawler's Death adds a Toxopid to your hand, or cheapens the one you hold by (2) (Radiant (3)).",
+        "Shawarma Law: a Unit eats at most three Shawarmas.",
+        "The AI trades cards it cannot play soon, sells Spice, aims Living Bomb at your permanents and takes Feng Shui's Rock every turn."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "69a14a320d6a60527ffcb3d9006d5bda1f31c3b8"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-037",
+      "classic-039",
+      "classic-062",
+      "classic-084",
+      "classicplus-019",
+      "classicplus-026",
+      "classicplus-034",
+      "classicplus-040",
+      "classicplus-071",
+      "core-049",
+      "core-050",
+      "core-052",
+      "core-054",
+      "core-070",
+      "core-076",
+      "core-081",
+      "meditative-001",
+      "meditative-007",
+      "meditative-010",
+      "meditative-019",
+      "meditative-040",
+      "meditative-042",
+      "meditative-044",
+      "meditative-087",
+      "meditativeplus-002",
+      "stinkyscape-014",
+      "stinkyscape-018",
+      "stinkyscape-035",
+      "stinkyscape-050",
+      "stinkyscape-054",
+      "stinkyscape-058",
+      "stinkyscape-079",
+      "stinkyscape-089",
+      "stinkyscape-092",
+      "stinkyscape-094",
+      "stinkyscape-111",
+      "stinkyscape-148",
+      "stinkyscape-165",
+      "stinkyscapeplus-004",
+      "stinkyscapeplus-061",
+      "stinkyscapeplus-082",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-107",
+      "stinkyscapeplus-119",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-133",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-142",
+      "traininggrounds-005",
+      "traininggrounds-040"
+    ],
+    "changes": [
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "core-050",
+        "name": "K-Pop Fanatic",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-076",
+        "name": "Field of Dreams",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-037",
+        "name": "Last Hurrah",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-084",
+        "name": "Lockdown",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-1",
+        "name": "Top Loser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-019-2",
+        "name": "Jungle Loser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-019-3",
+        "name": "Mid Loser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-019-4",
+        "name": "Support Loser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-019-5",
+        "name": "Bot Loser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-034",
+        "name": "Memory Leak",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-071",
+        "name": "Book of Buff",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-001",
+        "name": "Disruptive Disruptor",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-007",
+        "name": "Introspection",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-010",
+        "name": "Double Counting",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-019",
+        "name": "Expedition123",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-040",
+        "name": "Feng Shui",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-042",
+        "name": "CN Flea Market",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-044",
+        "name": "CN Jade Well",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-047",
+        "name": "饕餮",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "meditative-078",
+        "name": "Occidentless Mandate",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-087",
+        "name": "Tatches the Totem",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "meditative-095",
+        "name": "Call to Chaos (Meditative Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-002",
+        "name": "NA Tech",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-014",
+        "name": "Arm of the Jempire",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-018",
+        "name": "Imitated Instrumentality",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-035",
+        "name": "Drone Core IX",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-050",
+        "name": "Beam v3",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-054",
+        "name": "Beam v4",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-058",
+        "name": "Beam v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-059",
+        "name": "Repeater v5",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-070",
+        "name": "Z'Zoth",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-079",
+        "name": "Orca",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-083",
+        "name": "Halo",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-092",
+        "name": "The Propagation's Hornet",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "stinkyscape-094",
+        "name": "Tmack Trav",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-096",
+        "name": "Ocean Tsunami",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-109",
+        "name": "xxFreshJack",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-112",
+        "name": "Job Application",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-148",
+        "name": "Alteran Reach",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-165",
+        "name": "The Trade Union",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-005",
+        "name": "Midlane Menace",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "traininggrounds-039",
+        "name": "Call to Chaos (Training-Grounds Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-040",
+        "name": "Goetzmann Game Design",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-004",
+        "name": "Profe Yates",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-021",
+        "name": "Jlockeed Shredder-12",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-061",
+        "name": "Jayaad",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-061-1",
+        "name": "Shawarma Law",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-079",
+        "name": "A Glimpse into the Endless Sea",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-080",
+        "name": "The Last Voyage",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-082",
+        "name": "Endless Expedition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-095",
+        "name": "JC Backed",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-096",
+        "name": "Open Enrollment",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-097",
+        "name": "Selective Enrollment",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-107",
+        "name": "Fuse",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-119",
+        "name": "Eclipse",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-120",
+        "name": "Crawler",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121",
+        "name": "Toxopid",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121-1",
+        "name": "Toxopid Leg",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-133-5",
+        "name": "Reignclipse",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-134",
+        "name": "Basket of Crawlers",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-142",
+        "name": "Call to Chaos (Mindustrial-Swarm Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.7",
+    "date": "2026-11-18",
+    "title": "Patch: the daily patch, rolling up v0.6.6b to v0.6.6i",
+    "source": "patches cut at fa2e2f383a473c9fee268fd1b14f0c67180acb29: v0.6.6b, v0.6.6c, v0.6.6d, v0.6.6e, v0.6.6f, v0.6.6g, v0.6.6h, v0.6.6i",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.6, each a snapshot of its own: v0.6.6b (Patch: the tier cards and KPIs read the newest win rates); v0.6.6c (Patch: #3951's kept scripts cover v0.6.4c, the newest version that ran them); v0.6.6d (Diorama picture tag scan is linear with identical matches); v0.6.6e (Patch: Heroic Power's powers, the Anomaly titles and the other words the client translates from a table read in Chinese for a Chinese reader, held by a test); v0.6.6f (Card loadouts and picks ignore prototype-pollution keys); v0.6.6g (Patch: the sound tables load when sound first needs them, so the first page load is about 100 KB lighter); v0.6.6h (Patch: a Fuse that is attacked strikes back with its plain attack, since only its own attacks are multiplied); v0.6.6i (Patch: Stinkyscape+ Balance Changes III).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes III, and 7 more changes",
+      "new": [],
+      "balance": [
+        "Burn now deals its damage once, at the end of the turn, and is then removed (it used to tick at the start of its owner's turn and drop by 3).",
+        "Tommy Tempo is 3/3 (Radiant 6/6), down from 4/4 (Radiant 8/8).",
+        "JC Backed costs (4), up from (3).",
+        "Beam v3 deals 4 damage (Radiant 8), Beam v4 6 (Radiant 12) and Beam v5 8 (Radiant 16), each down from 5, 7 and 9 (Radiant 10, 14 and 18).",
+        "Fuse costs (3), up from (2); CN Flea Market (2), up from (1); Drone Core IX (7), up from (6); Snom Bunny Mind Control (6), up from (5).",
+        "Midlane Menace is 2/2 (Radiant 4/4), down from 3/3 (Radiant 6/6); Straaza is 6/6 (Radiant 12/12), down from 8/8 (Radiant 16/16).",
+        "Silly Silas is 7/7 (Radiant 14/14), up from 4/4 (Radiant 8/8).",
+        "Tmack Trav is 7/7 (Radiant 14/14), down from 8/8 (Radiant 16/16); The Propagation's Hornet is 1/3 (Radiant 2/6), down from 2/3 (Radiant 4/6).",
+        "Book of Buff Buffs 3 times (Radiant 6), down from 4 (Radiant 8).",
+        "K-Pop Fanatic costs (3), up from (2), and loses Can't Defend.",
+        "Outbreak costs (3), up from (1), and places 2 Plague Counters (Radiant 4), up from 1 (Radiant 2).",
+        "Imitated Instrumentality and Introspection cost (3), down from (4), and each needs Tribute 1.",
+        "Ocean Tsunami needs Tribute 2, up from 1; xxFreshJack gains Tribute 1.",
+        "League of Losers' five Losers are each 3/3 (Radiant 6/6).",
+        "Orca is no longer a Starship Piece.",
+        "Open Enrollment costs (0), Feng Shui (2), Lockdown (1), Living Bomb (3), Basket of Crawlers (1), Field of Dreams (0) and Memory Leak (1); Lockdown gains Crater.",
+        "Eclipse is 9/17 (Radiant 18/34), its Radiant Armor is 6 (Radiant Reignclipse's Armor 3 is 6 too) and its damage Burns 7 (Radiant 14).",
+        "Tatches the Totem is 0/4 (Radiant 0/8); Arm of the Jempire is 3/8 (Radiant 6/16).",
+        "Jayaad is a Human; Toxopid Legs are Immune to Toxic.",
+        "Repeater v5's Activate can be used 3 times a turn, down from 4.",
+        "Jlockeed Shredder-12 needs Tribute 3, up from 2, and a Float lowers it by 1.",
+        "Appropriations' four choices are weaker again on both faces.",
+        "Call to Chaos (Mindustrial-Swarm Edition): its card counts drop by one (Paperclip 2, Evolved Swarm 2, Jlockeed 3, Terminus 2) and its Burn to 1.",
+        "Call to Chaos (Training-Grounds Edition): both Rush entries summon 2 Rush Tokens, down from 3; it replenishes 2 mana, down from 3, and gives 5 mana, down from 6.",
+        "Call to Chaos (Training-Grounds Edition) adds 3 Training Grounds cards, down from 4, and summons 4 permanents, down from 5.",
+        "Call to Chaos (Meditative Edition): your hero gains 4 Armor and heals 4, down from 5.",
+        "Alteran Reach costs (1), up from (0).",
+        "Spice sells for about 25% more Credits at the Marketplace.",
+        "Expedition123 also gives your hero 2 Armor (Radiant 4).",
+        "Goetzmann Game Design's card costs (1) less.",
+        "CN Jade Well's Auspicious Rocks come with Lucky 1.",
+        "Spiteful Stab gains Pierce.",
+        "Dungeon run: a tier-1 Elite now draws every turn and has 18 health, up from every other turn and 16."
+      ],
+      "changes": [
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games.",
+        "Profe Yates's Cry exiles a permanent with M, O, U, S and E in its name and text (CN cards are immune; a face-down card never qualifies), and Yates has no Activates any more.",
+        "Selective Enrollment costs (5), up from (4), and Float reduces its cost.",
+        "The Last Voyage's base face no longer launches a Starship as it resolves: one launches at the start of each of your turns.",
+        "Endless Expedition: for the rest of the game you have (1) less mana, and at the start of each of your turns you add a random Terminus card (Radiant: Radiant) that costs (3). It adds none at once.",
+        "饕餮's base Activate has an extra turn cooldown.",
+        "NA Tech's fused card costs what the fusion costs, at most (4), instead of a set price.",
+        "Halo's Cry: three times, choose one of 2 Weapons and Equip it into Halo.",
+        "Occidentless Mandate destroys instead of exiling.",
+        "A Glimpse into the Endless Sea also exiles every permanent on the field.",
+        "Last Hurrah no longer discards at the end of the turn; the Radiant face gives 4 random cards in your hand Flashback.",
+        "Disruptive Disruptor loses its Cry and gains Activate: your opponent discards a random card (Radiant: a random Radiant card, or any card if they hold none).",
+        "Alteran Reach: your first travel each turn is free (Radiant: your first two).",
+        "Job Application hears back in 1 to 2 turns, and its Interview asks for 2 cards of different costs or a hit of 8 or more.",
+        "The Trade Union lets you Trade up to 2 cards each turn (Radiant 3).",
+        "Z'Zoth triggers the Deaths of the Units it summons (Radiant: twice).",
+        "Double Counting gains Activate: pay (1) to Discover a Cry or Death card (Radiant: free).",
+        "Toxopid's Legs land in random empty zones (Radiant: on your opponent's side); it no longer adds a Crawler, and a Crawler dying no longer cheapens it.",
+        "Crawler is a (1) 3/1 (Radiant 6/2) you may play from your graveyard for (1); it lost Can't Defend, its death after attacking and its old Death.",
+        "Crawler's Death adds a Toxopid to your hand, or cheapens the one you hold by (2) (Radiant (3)).",
+        "Shawarma Law: a Unit eats at most three Shawarmas.",
+        "The AI trades cards it cannot play soon, sells Spice, aims Living Bomb at your permanents and takes Feng Shui's Rock every turn."
+      ],
+      "text": [],
+      "fixes": [
+        "Replays of games played just before the first Stinkyscape+ balance changes that held a card those changes reworked now play back, instead of being refused.",
+        "A past Tatches the Totem that Neoconservative adds to your hand plays as its text then read: it summons itself only from your deck, not from your hand.",
+        "Pictures with damaged markup data no longer risk freezing the tab while their tags are read.",
+        "Players reading in Simplified Chinese now see Heroic Power's powers, the Anomaly titles and the board-names setting in Chinese.",
+        "Saved card looks with damaged data no longer risk changing other cards on the page.",
+        "Sound data and audio tables now load on demand rather than on first page visit, reducing the initial download size.",
+        "Fuse hits back for its printed attack when it is attacked; only its own attacks are multiplied."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-037",
+      "classic-039",
+      "classic-062",
+      "classic-084",
+      "classicplus-019",
+      "classicplus-026",
+      "classicplus-034",
+      "classicplus-040",
+      "classicplus-071",
+      "core-049",
+      "core-050",
+      "core-052",
+      "core-054",
+      "core-070",
+      "core-076",
+      "core-081",
+      "meditative-001",
+      "meditative-007",
+      "meditative-010",
+      "meditative-019",
+      "meditative-040",
+      "meditative-042",
+      "meditative-044",
+      "meditative-087",
+      "meditativeplus-002",
+      "stinkyscape-014",
+      "stinkyscape-018",
+      "stinkyscape-035",
+      "stinkyscape-050",
+      "stinkyscape-054",
+      "stinkyscape-058",
+      "stinkyscape-079",
+      "stinkyscape-089",
+      "stinkyscape-092",
+      "stinkyscape-094",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-148",
+      "stinkyscape-165",
+      "stinkyscapeplus-004",
+      "stinkyscapeplus-034",
+      "stinkyscapeplus-061",
+      "stinkyscapeplus-082",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-107",
+      "stinkyscapeplus-119",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-133",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-142",
+      "stinkyscapeplus-164",
+      "traininggrounds-005",
+      "traininggrounds-040"
+    ],
+    "includes": [
+      "v0.6.6b",
+      "v0.6.6c",
+      "v0.6.6d",
+      "v0.6.6e",
+      "v0.6.6f",
+      "v0.6.6g",
+      "v0.6.6h",
+      "v0.6.6i"
+    ],
+    "changes": []
   }
 ]
