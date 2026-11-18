@@ -11,7 +11,8 @@
 //! - `GET /api/admin/leaderboard` (R3074002): every row of a ladder, each marked person or bot.
 //! - `GET /api/admin/news`, `POST /api/admin/news`, `DELETE /api/admin/news/:postId` (R3074003):
 //!   news posts with no reward, checked as `news.json`'s entries are, and taken down.
-//! - `GET /api/admin/audit` (R3074000): the newest `ADMIN_AUDIT_PAGE` audit rows.
+//! - `GET /api/admin/audit` (R3074000): the newest `ADMIN_AUDIT_PAGE` audit rows, paged by
+//!   `before_id` and filtered by `profile_id` and `route`.
 //!
 //! Every write is one transaction that writes its audit row ([`audit`]) beside what it changes, as
 //! every `api::dev` and quest tool does.
@@ -22,7 +23,8 @@ use indexmap::IndexMap;
 use serde_json::{Value, json};
 
 use crate::admin::store::{
-    HandSetRating, NEWS_POST_ID_PREFIX, NewAdminAction, NewsPost, RatingChange, RatingGrant,
+    AdminActionFilter, HandSetRating, NEWS_POST_ID_PREFIX, NewAdminAction, NewsPost, RatingChange,
+    RatingGrant,
 };
 use crate::api::dev::dev_caller;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, caller_of, json, ok_of};
@@ -374,19 +376,46 @@ pub async fn delete_post(app: &Arc<App>, req: Req) -> ApiResult {
 
 // The audit (R3074000)
 
-/// `GET /api/admin/audit`: `{ actions }`, the newest `ADMIN_AUDIT_PAGE` audit rows, newest first,
-/// each with its author's username (`""` once the account is gone).
+/// `GET /api/admin/audit`: `{ actions, nextBeforeId }`, the newest `ADMIN_AUDIT_PAGE` audit
+/// rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>` (all optional:
+/// `before_id` is an exclusive upper bound on the row id, the other two exact matches, an
+/// empty one no constraint), newest first, each with its author's username (`""` once the
+/// account is gone). `nextBeforeId` is the last row's id when the page is full, else `null`:
+/// a following read with it as `before_id` answers the next older page.
 pub async fn get_audit(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = admin_caller(app, &req)?;
+    let before_id = match req.query.get("before_id") {
+        None => None,
+        Some(text) => Some(
+            text.parse::<i64>()
+                .map_err(|_| bad_request("before_id must be a whole number"))?,
+        ),
+    };
+    let present = |name: &str| {
+        req.query
+            .get(name)
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    };
+    let filter = AdminActionFilter {
+        before_id,
+        profile_id: present("profile_id"),
+        route: present("route"),
+    };
     let mut tx = app.db.begin(Some(&profile.id)).await?;
-    let actions = tx.admin_actions_recent(ADMIN_AUDIT_PAGE).await?;
+    let rows = tx.admin_actions_page(&filter, ADMIN_AUDIT_PAGE).await?;
     let names = usernames_of(
         &mut tx,
-        actions.iter().filter_map(|action| action.profile_id.as_deref()),
+        rows.iter().filter_map(|action| action.profile_id.as_deref()),
     )
     .await?;
     tx.commit().await?;
-    let actions: Vec<Value> = actions
+    let next_before_id = if rows.len() as i64 == ADMIN_AUDIT_PAGE {
+        rows.last().map(|action| action.id)
+    } else {
+        None
+    };
+    let actions: Vec<Value> = rows
         .iter()
         .map(|action| {
             json!({
@@ -406,5 +435,8 @@ pub async fn get_audit(app: &Arc<App>, req: Req) -> ApiResult {
             })
         })
         .collect();
-    Ok(json(200, json!({ "actions": actions })))
+    Ok(json(
+        200,
+        json!({ "actions": actions, "nextBeforeId": next_before_id }),
+    ))
 }
