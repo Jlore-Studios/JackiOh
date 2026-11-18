@@ -37797,23 +37797,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-18T14:06:54Z,claude-8,ping,before,44320320594,1,2026-11-18T17:00:00Z,,,allowed,85,,",
-      "2026-11-18T14:07:11Z,claude-8,stream,call,44320320594,2,2026-11-18T17:00:00Z,,,allowed,85,,",
-      "2026-11-18T14:04:14Z,muse,usage-command,before,44320029618,0,2026-11-18T19:03:00Z,31,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-18T14:06:18Z,muse,usage-command,after,44320029618,1,2026-11-18T19:03:00Z,31,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-18T14:05:02Z,muse,usage-command,after,44319882600,0,2026-11-18T19:03:00Z,31,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-18T14:08:02Z,muse,usage-command,after,44319724386,1,2026-11-18T19:03:00Z,31,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-18T14:07:18Z,muse,usage-command,after,44319564969,1,2026-11-18T19:03:00Z,31,2026-11-23T00:00:00Z,allowed,100,100,"
-    ],
-    "runs": [
-      "2026-11-18T14:08:44Z,44320320594,claude-8,opus,plan,4187,medium,planned,,1.8,27,13329,834898,0.4641,1,2,,,9.4,,fresh,,1",
-      "2026-11-18T14:06:19Z,44320029618,muse,muse-spark-1.3-contributor,plan,4197,medium,planned,,1.9,0,0,0,,0,1,31,31,10.1,,none,,1",
-      "2026-11-18T14:05:02Z,44319882600,muse,muse-spark-1.3-contributor,plan,4185,medium,planned,,0.9,0,0,0,,0,0,31,31,6.5,,none,,1",
-      "2026-11-18T14:08:02Z,44319724386,muse,muse-spark-1.3-contributor,plan,4180,medium,planned,,4.7,0,0,0,,1,1,31,31,7.6,,none,,1",
-      "2026-11-18T14:07:18Z,44319564969,muse,muse-spark-1.3-contributor,plan,4189,medium,planned,,4,0,0,0,,1,1,31,31,7.1,,none,,1"
-    ]
-  },
   "version": 1
 }
