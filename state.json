@@ -16630,17 +16630,8 @@
       }
     },
     "4197": {
-      "action": "plan",
-      "asks": [
-        "c:6980572197"
-      ],
-      "build_next": {
-        "from_run": "44355624174",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-18T17:21:13Z",
-        "until": "2026-11-18T17:51:13Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-18T17:21:04Z",
         "difficulty": "hard",
@@ -16659,10 +16650,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; git log --oneline -1; git status --short | head; ls .bot-plan.md\", \"description\": \"Check branch head and draft presence\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; git diff --stat 177e2c215a HEAD -- crates/ai crates/engine/src/subsystems/hero_power.rs spec/09-architecture.md spec/rulings spec/pending | tai\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; git diff --stat 177e2c215a HEAD -- crates/ai crates/engine/src/subsystems/hero_power.rs spec/09-architecture.md spec/pending | head -30; ls spe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; git diff 177e2c215a HEAD -- crates/ai/src/evaluate.rs | grep \\\"^@@\\\" ; grep -n \\\"pub struct ActivationPrice\\\\|fn is_for\\\\|fn next_turn\\\\|fn pri\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; git diff 177e2c215a HEAD -- crates/ai/src/evaluate.rs | sed -n '/@@ -1201/,/@@ -1241/p' | head -40; grep -n \\\"activation_price(\\\" crates/ai/src\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; git diff 177e2c215a HEAD --stat -- crates/ai/src/decide.rs; grep -n \\\"PROBE_NODES: usize\\\\|pub const AI_DECISION_PRICE_NODES\\\" crates/ai/src/co\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; grep -n \\\"flat\\\\|chip\\\" crates/ai/src/config.rs | head -8; grep -n \\\"fn hero_armor_value\\\\|hero_armor \\\\*\\\\|w.hero_armor\\\" crates/ai/src/evalua\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; sed -n 1040,1050p crates/ai/src/config.rs; grep -n \\\"chip_per_damage\\\" crates/ai/src/*.rs | head -5\", \"description\": \"Read chip_per_damage cont\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; sed -n 1262,1300p crates/ai/src/evaluate.rs\", \"description\": \"Read hero side evaluation terms\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; grep -o \\\"A card acting face-up in either backrow[^)]*)[^)]*)\\\\.\\\" spec/09-architecture.md; sed -n 186,190p crates/ai/README.md\", \"description\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; grep -n \\\"pub fn hero\\\\|pub fn targets\\\\|pub fn id\\\" crates/engine/src/testkit/pick.rs\", \"description\": \"Check pick helper signatures\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; git show --stat --format=%s 320e811c8e | head -20\", \"description\": \"See files a recent AI patch touched\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; git show 320e811c8e -- crates/server/tests/api/daily.rs | head -40\", \"description\": \"Inspect the server daily test change\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4197/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2, the AI: it changes the AI's evaluation and decision prices in \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; grep -n \\\"ActivationPrice {\\\\|AttackHookPrice {\\\\|AwakenPrice {\\\\|^fn rekeyed_activation_prices\\\\|^fn hookless_twin\\\" crates/ai/src/evaluate.rs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\"- **Determinism and hidden information.** The probe runs on the probe \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\" - The probe world keeps the open prompt: `determinize` never touches \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4197/.bot-plan.md\", \"offset\": 1, \"limit\": 40}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\"When the AI answers its own Discover of Heroic Power's power, `decide`\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4197; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=\\\"\\\"\\\"- [ ] Tests 2\\u20134 pass; the `activations.rs`, `starship_equip.rs` and r752\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2, the AI: it changes the AI's evaluation and decision prices in crates/ai/src/evaluate.rs and decide.rs\"} --> ## Goal At its own Discover of Heroic Power's power, `decide` weighs each offered power by one more use at the start of its next turn, so with\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-18T14:21:47Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -16675,12 +16665,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-18T13:52:53Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44355624174",
+      "run_id": "pending:898a577b-1795022678",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T17:10:17Z",
+      "started_at": "2026-11-18T17:25:16Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6980572197"
+      ],
       "waiting_comment": 6981915271
     },
     "4198": {
@@ -17604,9 +17596,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T17:24:24Z",
+    "at": "2026-11-18T17:25:16Z",
     "url": "",
-    "what": "revise #4208 on muse"
+    "what": "build #4197 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-18T17:06:20Z",
