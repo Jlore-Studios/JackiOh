@@ -181,5 +181,24 @@ mod tests {
         fn r4207000_a_destroyed_backrow_card_with_death_fires_it_and_is_exiled() {
             super::a_destroyed_backrow_card_with_death_fires_it_and_is_exiled(true);
         }
+
+        #[test]
+        fn r4207000_an_enemy_unit_destroyed_is_exiled_its_death_fires_and_its_reborn_returns_it() {
+            let mut s = board(true, json!([HIT_JOB, HIT_JOB]), json!([]), json!([SAINTESS, VANILLA, DEFENDER]));
+            let saintess = s.unit_at(P2, 1);
+            let vanilla = s.unit_at(P2, 2);
+            let defender = s.unit_at(P2, 3);
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&saintess) }));
+            s.expect_in_zone(&saintess, "exile");
+            assert!(exiled(&s, &saintess) && destroyed(&s, &saintess));
+            assert!(s.card(&vanilla.id).radiant, "its Death fired");
+
+            s.state_mut().players.p1.mana.current = 4;
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&defender) }));
+            assert!(exiled(&s, &defender) && destroyed(&s, &defender));
+            // Reborn takes it back out of the exile pile it died into.
+            assert_eq!(s.unit_at(P2, 3).id, defender.id, "the Reborn body is back");
+            s.expect_in_zone(&defender, "field");
+        }
     }
 }
