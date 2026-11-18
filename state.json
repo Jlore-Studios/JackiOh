@@ -15589,6 +15589,7 @@
     "4173": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "decision": {
         "answer": "1 and loosen the threshold to 75",
         "answer_url": "https://github.com/Jlore-Studios/JackiOh/pull/4173#issuecomment-6980684244",
@@ -15625,7 +15626,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-18T00:40:42Z",
+      "feedback_since": "2026-11-18T13:59:36Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-18T04:19:41Z",
@@ -15639,11 +15640,13 @@
       "interruptions": 0,
       "issue": 4132,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-7",
-      "question": "Should this change ship with the smoke gate's Hard against Easy at 15 of 20 (16 needed), given the full gate passes and the screen is neutral to slightly positive?",
+      "question": "",
       "queued_at": "2026-11-18T13:58:29Z",
+      "round_tier": "strong",
       "run_id": "44319424875",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15664,10 +15667,11 @@
         "provider": "claude-7",
         "run": "44233064986"
       },
-      "source": "decision",
+      "source": "",
       "started_at": "2026-11-18T13:59:36Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
