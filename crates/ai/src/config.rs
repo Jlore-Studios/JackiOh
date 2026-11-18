@@ -1032,6 +1032,7 @@ pub struct AiReply {
     pub open_lethal: bool,
     /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
+    /// R4187000: also the most walls (`wall_switches`) a step facing lethal weighs against its best attack.
     pub defense_switches: i32,
     /// #1995: per turn a countdown (R1181000) still waits past its owner's next turn start, the share
     /// of a line's second score, the one with every countdown fired at the seat's next turn start, that
