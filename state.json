@@ -10525,15 +10525,8 @@
       "verdict_rounds": 1
     },
     "4017": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44328219674",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-18T14:58:07Z",
-        "until": "2026-11-18T15:28:07Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -10545,10 +10538,9 @@
         "reason": "planned on sonnet",
         "trail": "- Grep: {\"pattern\": \"token|fn upgrade_token|tracing::|info!|debug!|warn!\", \"path\": \"/home/runner/work/_temp/work/item-4017/crates/server/src/actor/ws_server.rs\", \"output_mode\": \"content\", \"head_limit\": 120}\n- Grep: {\"pattern\": \"TraceLayer|uri\\\\(\\\\)|\\\\.uri|query\\\\(\\\\)|request_uri|tower_http\", \"path\": \"/home/runner/work/_temp/work/item-4017/crates/server\", \"output_mode\": \"content\", \"glob\": \"*.{rs,toml}\"}\n- Grep: {\"pattern\": \"console\\\\.|request\\\\.url|new URL\\\\(|logs|observability\", \"path\": \"/home/runner/work/_temp/work/item-4017/apps/edge\", \"output_mode\": \"content\", \"glob\": \"!node_modules\", \"head_limit\": 80}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4017/crates/server/src/actor/ws_server.rs\", \"offset\": 395, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4017/crates/server/src/actor/ws_server.rs\", \"offset\": 700, \"limit\": 240}\n- Bash: {\"command\": \"sed -n 250,330p apps/edge/src/index.ts; ls apps/edge; grep -n \\\"observ\\\\|logs\\\\|head_sampling\\\\|invocation\\\" -r apps/edge/wrangler.* infra/*.tf 2>/dev/null | head -20; grep -rn \\\"tracing\u2026\n- Bash: {\"command\": \"sed -n 55,110p apps/edge/src/index.test.ts; grep -n \\\"forServer\\\" -r apps/edge/src | head; ls apps/edge/src; find . -name \\\"wrangler*\\\" -not -path \\\"./node_modules/*\\\" -not -path \\\"*/nod\u2026\n- Bash: {\"command\": \"grep -rn \\\"token\\\" apps/edge/src/*.ts | grep -v test | head -20; grep -rn \\\"?token\\\\|token=\\\" --include=*.ts --include=*.tsx --include=*.md --include=*.rs --include=*.go --include=*.py -\u2026\n- Bash: {\"command\": \"cat wrangler.jsonc | head -80; sed -n 1,100p apps/edge/src/routing.ts; sed -n 505,540p crates/server/src/actor/ws_server.rs; grep -rn \\\"ws.upgrade\\\\|query\\\" docs/deploy-cloudflare.md | h\u2026\n- Bash: {\"command\": \"grep -rnE \\\"[?&]token=|searchParams.*token|\\\\\\\"token\\\\\\\"\\\" apps/web/src apps/edge/src apps/admin e2e/cypress scripts bot docs .github crates/server/src crates/tools crates/shared 2>/dev/\u2026\n- Bash: {\"command\": \"sed -n 1520,1540p crates/server/README.md; sed -n 525,600p crates/server/src/alerts.rs; grep -n \\\"cfg(test)\\\" crates/server/src/actor/ws_server.rs; sed -n 1,50p crates/server/src/actor/w\u2026\n- Bash: {\"command\": \"cd apps/edge/src; grep -n \\\"describe(\\\\|worker.fetch\\\\|default.fetch\\\\|import \\\" index.test.ts | head -60; grep -n \\\"observability\\\" -r ../../../apps/edge/src ../../../apps/web/src/net/c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4017/apps/edge/src; sed -n 676,716p index.test.ts; sed -n 112,125p index.test.ts; cd ../../..; grep -n \\\"observability\\\" -r apps/edge apps/web/src/ne\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4017/.bot-plan.md\", \"content\": \"# Draft plan #4017\\nFindings: server tracing never logs a URI (ws_server.rs logs origin/limit/path only); Worker (apps\u2026\n- said: ## Goal No log line of the server or the Worker keeps a socket URL's query string, so a `?token=` can't land in them, and tests hold it. The `?token=` fallback stays, because only a person may say that nothing outside this tree still uses it (CLAUDE.md rule 13). The server gains one log line for ea\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-18T14:47:46Z",
       "owner_why": "it plans it",
@@ -10561,9 +10553,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-15T22:30:41Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44328219674",
+      "run_id": "pending:c1d86c48-1795014098",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T14:47:46Z",
+      "started_at": "2026-11-18T15:02:16Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17045,9 +17037,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T15:01:15Z",
+    "at": "2026-11-18T15:02:16Z",
     "url": "",
-    "what": "review #4206 on muse"
+    "what": "build #4017 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-18T14:40:54Z",
