@@ -13509,11 +13509,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T02:11:14Z",
+        "at": "2026-11-18T02:35:40Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "rule 4: the change contains database migration 0095 (crates/server/migrations/)"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Rule 4: it adds migration 0095, which rewrites app.redeem_invite_code and deletes two app.settings rows and an index"
       },
       "failures": 0,
       "forced": false,
