@@ -16740,22 +16740,13 @@
     "what": "plan #4203 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-18T14:12:13Z",
+    "at": "2026-11-18T14:30:16Z",
     "notes": [
-      "delivered plan #4187 on claude-8 (run 44320320594): planned",
-      "delivered plan #4197 on muse (run 44320029618): planned",
-      "delivered plan #4185 on muse (run 44319882600): planned",
-      "delivered plan #4180 on muse (run 44319724386): planned",
-      "delivered plan #4189 on muse (run 44319564969): planned",
-      "started build #4189 on muse (run 44322732341)",
-      "started build #4180 on muse (run 44322867952)",
-      "started build #4185 on muse (run 44323002303)",
-      "started revise #4198 on claude-7 (run 44323158157)",
-      "started review #4178 on claude-8 (run 44323293364)",
-      "started plan #4197 on claude-1 (run 44323432405)",
-      "started plan #4187 on claude-8 (run 44323582856)",
+      "#4203 needs a plan",
+      "delivered review #4178 on claude-8 (run 44323293364): reviewed",
+      "started plan #4203 on muse (run 44325369928)",
       "nothing more to start: nothing is queued",
-      "pruned 7 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17461,7 +17452,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T14:12:13Z",
+  "loop_tick": "2026-11-18T14:30:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
