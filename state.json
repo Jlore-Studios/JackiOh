@@ -15453,6 +15453,14 @@
           "muse": "medium"
         }
       }
+    },
+    "4178": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-18T04:13:54Z",
+      "issue": 4166,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
