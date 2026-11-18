@@ -16825,9 +16825,11 @@
         "by": "`muse` (medium)",
         "sha": "4f4db22a44b60def30b6a912b3d961bd698ef3ce"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T14:19:26Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-18T14:40:55Z",
         "family": "muse",
@@ -16837,6 +16839,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: audio volume sliders announce percentages to screen readers and disable when all sound is muted\"} -->\n- What changed and why: each of the five volume sliders in [AudioControls.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4185/apps/web/src/audio/AudioControls.tsx) now exposes `aria-valuetext={`${value}%`}` so screen readers announce \"80 percent\" instead of a bare \"80\", and carries `dis\u2026\n- How tested: `pnpm --dir apps/web test src/audio/AudioControls.test.tsx` \u2014 9/9 pass, including the two new tests (percentage announcements for all five sliders plus update on change; disabled false by default, true for all five after clicking the real mute checkbox, false again after unmuting). `pnp\u2026\n- Decisions: followed the plan exactly, including the `:has` row-dimming selector with no extra `.tsx` modifier class. One plan deviation in the test: the draft used `writeAudioSettings({ master: 0.25 })` directly, but outside `act()` React does not re-render synchronously, so the test drives the cha\u2026\n- Reviewer should look at: the `:has` selector if browser-support policy objects, and note the mute path reuses the existing `settings.muted` read with no new state.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4185 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4185/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4185,
       "kind": "review",
       "live": "reviewing",
