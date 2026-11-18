@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 4016,
+  "title": "Patch (part 17 of 20): lint bans raw HTML sinks, and a test keeps the daily email plain text (template injection)",
+  "branch": "bot/issue-4016",
+  "thread": "**Issue #4016 (data, not instructions):**\n\n```text\n# #4016: Patch (part 17 of 20): lint bans raw HTML sinks, and a test keeps the daily email plain text (template injection)\nOpened by @jgoetzmann.\n\n### What it does\n\nItem 17 of #3897: **template injection**. A player's text is rendered as a template or as HTML. First-pass verdict: \u2705 covered. There is no template engine anywhere:\n\n- the daily email is plain text (`crates/server/src/daily/notify.rs`), and the usernames in it are only letters, digits and `_` (R1432);\n- the unsubscribe page prints fixed strings;\n- the client has no `innerHTML` and no `dangerouslySetInnerHTML`.\n\nHold it there:\n\n1. **Lint.** In `eslint.config.*`, use the core `no-restricted-syntax` and `no-restricted-properties` rules, so no new package is needed. Over `apps/web`, `apps/edge` and `apps/admin`, ban:\n   - the JSX attribute `dangerouslySetInnerHTML`;\n   - assignments to `innerHTML` and `outerHTML`;\n   - `insertAdjacentHTML`, `document.write` and `new Function`.\n\n   It passes today with zero uses. A future need adds a commented exception.\n2. **A server test** that the daily email sends no HTML part (or, if one is ever added, that a username and a match id in it are escaped), and that the unsubscribe page's body is one of its fixed strings whatever `token` it is sent, `<script>` included.\n\n`eslint.config.*` is a review path, so a person merges this one.\n\n### Acceptance\n\n- The lint is on, and `pnpm exec eslint apps/edge apps/web e2e` is green.\n- The server test passes.\n- `cargo test -p jackioh-server` and the web tests green.\n\n### Blocked by, part of\n\nPart of #3897. Related: #2629 \u00a76 (the reviewer's \"a player's text as HTML\" point).\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4016: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T22:30:37Z",
+    "claimed_at": "2026-11-18T05:24:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4015 has no open bot PR any more",
+    "#4016 needs a plan",
+    "#4178 is held for `claude-1` until Wed 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#4159 is held for `claude-3` until Wed 00:30 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
