@@ -13956,6 +13956,13 @@
     "4143": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T02:08:07Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Test-only change to the fuzz oracle (`crates/engine/src/testkit/invariants.rs`, docs in `crates/tools`) plus engine rule tests; no rules, resolution-loop, AI, cross-crate design, migration or 40-file change, so no line of the hard rule holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
