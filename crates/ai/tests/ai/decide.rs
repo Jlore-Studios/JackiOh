@@ -1329,7 +1329,7 @@ mod draw_offers_b21 {
     }
 }
 
-/// R3822000: a unit its own Burn kills at the start of its controller's next turn is worth less than its
+/// R3822000: a unit its own Burn kills at the end of this turn (R4154000) is worth less than its
 /// twin without the counter, so of two equal kills the AI makes the one the Burn will not.
 mod r3822000_afflicted_targets {
     use super::*;

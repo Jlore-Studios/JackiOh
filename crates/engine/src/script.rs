@@ -716,6 +716,10 @@ pub struct StaticFlags {
     /// target it and do everything else to it (`restrictions::spell_damage_cannot_reach`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub immune_to_spell_damage: Option<bool>,
+    /// R4154001 (Stinkyscape+ #121.1 Toxopid Leg): "Immune to Toxic". While this Unit is on the field no
+    /// Toxic goes on it: a gain, a rider and a conversion each add nothing (`afflictions::afflict`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub immune_to_toxic: Option<bool>,
     /// R1849002 (Stinkyscape #105 Disintegrex): "Anytime something would be Destroyed, it is Exiled
     /// instead". While this card acts on the field, every permanent the state check collects is exiled
     /// instead (§4.5 step 1, `replacements::destroy_exiles`).

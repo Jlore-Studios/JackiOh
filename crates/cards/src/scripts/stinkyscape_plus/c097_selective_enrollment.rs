@@ -1,11 +1,16 @@
-//! S+ #97 Selective Enrollment (SPEC §8.12 row 97). (4) Spell, Common.
-//!   Base:    "Fill your hand with random Radiant S tier cards (or A tier if none exist)."
-//!   Radiant: "Fill your hand with random Radiant S tier cards (or A tier if none exist). They cost
+//! S+ #97 Selective Enrollment (SPEC §8.12 row 97). (5) Spell, Common.
+//!   Base:    "Float reduces cost.
+//!            Fill your hand with random Radiant S tier cards (or A tier if none exist)."
+//!   Radiant: "Float reduces cost.
+//!            Fill your hand with random Radiant S tier cards (or A tier if none exist). They cost
 //!            (2) less."
 //!
 //! Cry (R1): add Radiant S-tier cards (Radiant A-tier when no S card exists, R3538001) until the
 //! hand is full. The Radiant face's cards cost (2) less (`costMod`, a price, R1748003).
-//! Its catalog row, sound, flavour and Chinese entries are already written.
+//! "Float reduces cost" as S #35 Drone Core IX's (R1563000): a hand trigger on its owner's Float,
+//! never in the deck (R2657002), a `costMod` kept until a graveyard or exile (R766).
+//! Kept for replays (R767000): through v0.6.6e it cost (4) and had no Float (`script_v0_6_6e`,
+//! issue #4154).
 
 use jackioh_engine::prelude::*;
 
@@ -23,7 +28,8 @@ fn tier_or(first: CardTier, then: CardTier) -> CardTier {
     }
 }
 
-fn face(radiant: bool) -> Script {
+/// One face. `float`: whether "Float reduces cost" is printed (since issue #4154), a hand trigger.
+fn face(radiant: bool, float: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let tier = tier_or(CardTier::S, CardTier::A);
@@ -42,24 +48,41 @@ fn face(radiant: bool) -> Script {
             }
             effects
         })),
+        hand_triggers: if float {
+            vec![float_reduces_cost("selective-enrollment-float-hand")]
+        } else {
+            vec![]
+        },
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: face(false),
-        radiant: face(true),
+        base: face(false, true),
+        radiant: face(true, true),
     }
 }
 
-// S+ #97 Selective Enrollment — SPEC §8.12 row 97 (R3538001).
+/// R767000: through v0.6.6e it had no Float; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6e() -> CardScripts {
+    CardScripts {
+        base: face(false, false),
+        radiant: face(true, false),
+    }
+}
+
+// S+ #97 Selective Enrollment — SPEC §8.12 row 97 (R3538001, R1563000).
 #[cfg(test)]
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::stinkyscape_family as fam;
     use crate::{filler, scenario};
+
+    /// Its printed cost since issue #4154.
+    const PRINTED: i32 = 5;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -87,7 +110,7 @@ mod tests {
                 "hand": [{ "def": ID, "radiant": radiant }, FILLER],
                 "field": [{ "def": "core-008", "lane": 1 }],
                 "library": filler(8),
-                "mana": 4,
+                "mana": PRINTED,
             },
             "p2": {
                 "hand": [FILLER],
@@ -145,5 +168,28 @@ mod tests {
             "each costs (2) less"
         );
         clear_overrides();
+    }
+
+    /// R1563000, R2657002: since issue #4154 a Float of 2 makes it cost two less in hand, never in the
+    /// deck, on both faces.
+    #[test]
+    fn r1563000_a_float_lowers_its_cost_in_hand_never_in_the_deck() {
+        fam::drone_float_two_less(ID, PRINTED);
+    }
+
+    #[test]
+    fn r1563000_the_opponents_float_lowers_nothing() {
+        fam::drone_float_opponent(ID, PRINTED);
+    }
+
+    /// R767000: through v0.6.6e it had no Float.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_6e_has_no_float() {
+        let kept = script_v0_6_6e();
+        assert!(kept.base.hand_triggers.is_empty());
+        assert!(kept.radiant.hand_triggers.is_empty());
+        let current = script();
+        assert_eq!(current.base.hand_triggers.len(), 1);
+        assert_eq!(current.radiant.hand_triggers.len(), 1);
     }
 }

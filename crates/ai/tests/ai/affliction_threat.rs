@@ -1,5 +1,6 @@
-//! A unit the first tick of its own Burn and Toxic destroys before it can attack (#4065, R4065000): the tick
-//! runs at the start of its controller's turn, before that turn's attacks (R3540001), so `face_threat` counts
+//! A unit the first tick of its own Burn and Toxic destroys before it can attack (#4065, R4065000): a Burn
+//! ticks at the end of the turn under way (R4154000) and a Toxic at the start of its controller's turn
+//! (R3540001), each before that unit's next attacks, so `face_threat` counts
 //! none of its attacks, and neither `wall_switches` nor `stands_down` offers a switch on its account. Each
 //! board is then stepped through the engine, which destroys exactly the units the read leaves out. The cards:
 //! Mr. Vanilla, a 4/4; Core #30 Archivist set to a 3/3; Core #25, a 4-mana 7/7 with Armor 7; and Classic+ #6
@@ -88,7 +89,7 @@ fn walls(state: &GameState) -> Vec<ActionBody> {
 }
 
 /// Burn 3 leaves the 4/4 at 1 health, so it still swings and the 7/7 still walls; Burn 5 destroys it at the
-/// human's start of turn 10, so only the 3/3's 3 can come and there is no lethal to wall.
+/// end of the AI's turn 9 (R4154000), so only the 3/3's 3 can come and there is no lethal to wall.
 #[test]
 fn r4065000_a_unit_its_own_burn_destroys_first_adds_nothing_to_the_face_threat() {
     let mut s = lethal(json!({ "burn": 3 }));
@@ -132,8 +133,8 @@ fn r4065000_armor_meets_burn_and_toxic_pierces_it() {
     assert!(in_graveyard(s.state(), HUMAN, VANILLA));
 }
 
-/// R4064000: the human's Force Projector refills at its start of turn, before the tick, and soaks the whole Burn
-/// 5, so the 4/4 stands and still swings: read as `afflicted` reads the tick, it still counts, and with the pool
+/// R4064000: the human's Force Projector, full when the Burn ticks at the end of the AI's turn, soaks the whole
+/// Burn 5, so the 4/4 stands and still swings: read as `afflicted` reads the tick, it still counts, and with the pool
 /// read off it is left out as on a board without the Projector. The engine leaves it at full health.
 #[test]
 fn r4065000_a_unit_its_damage_pool_keeps_standing_still_counts() {
@@ -196,7 +197,8 @@ fn r4065000_the_side_on_turn_swings_before_its_tick() {
     s.attack(VANILLA, "hero");
     assert!(s.state().result.is_some());
 
-    // (b) The human on turn 10, its tick behind it: read with it swinging first, its 4/4 swings now.
+    // (b) The human on turn 10: read with it swinging first, its 4/4 swings now, before its Burn ticks at the
+    // turn's end (R4154000).
     let mut s =
         at(json!({ "turn": 10, "active": "p2", "p1": walled(), "p2": burning(json!({ "burn": 5 })) }));
     assert_eq!(face_threat(s.state(), HUMAN), 3);

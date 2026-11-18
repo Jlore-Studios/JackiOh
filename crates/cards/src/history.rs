@@ -946,6 +946,10 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.6d",
         c010_2_divine_spirit::script_v0_6_6d,
     ),
+    // #4154 lead: the scripts before Stinkyscape+ Balance Changes III.
+    // #4154 group A
+    // #4154 group B
+    // #4154 group C
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

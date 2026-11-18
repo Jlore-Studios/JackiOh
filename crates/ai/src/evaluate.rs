@@ -24,8 +24,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::IndexSet;
 use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::config::{
-    BRITTLE_TICK, BURN_DECAY, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH,
-    JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+    BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT,
+    JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::float::float_cuts_in_hand;
@@ -552,9 +552,10 @@ fn tick_damage(
 }
 
 /// R3822000: `value`, a unit's worth inside its Brittle share, less what its Burn and Toxic will deal it
-/// over its controller's next `AI_AFFLICTION_TICKS` turn starts, and the share the unit keeps: 1, or
-/// `1 − unit_doomed / n` when the nth tick kills it. Each tick is R3540001's, before the start-of-turn
-/// triggers: Burn's hit, dropping by `BURN_DECAY` after it, then Toxic's; an unspent Divine Shield
+/// over the next `AI_AFFLICTION_TICKS` ticks, and the share the unit keeps: 1, or `1 − unit_doomed / n`
+/// when the nth tick kills it. Each tick is Burn's hit, the first tick alone, since a Burn hits once at
+/// the end of the turn and is gone (R4154000, `burning_at`), then Toxic's at its controller's turn start
+/// (R3540001); an unspent Divine Shield
 /// negates the first (its worth goes), Armor meets Burn's and Toxic pierces it, the unit's own cap holds
 /// both (R2179005), and an Indestructible unit takes none. With `w.pool_and_conversion_read`, its side's
 /// damage pools soak what they can of each tick's hits, refilled at the turn start before it (R4064000);
@@ -581,7 +582,7 @@ fn afflicted(
     let mut taken: i32 = 0;
     let mut share = 1.0;
     for tick in 1..=AI_AFFLICTION_TICKS {
-        let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        let burning = burning_at(burn, tick);
         let (hit, popped) = tick_damage(view, cap, burning, toxic, &mut shield, pool);
         if popped {
             spent = w.keyword.divine_shield;
@@ -594,6 +595,12 @@ fn afflicted(
     }
     let lost = spent + w.health * f64::from(taken.min(view.health.max(0)));
     (value - w.unit_affliction * lost, share)
+}
+
+/// R4154000: the Burn the `tick`th projected tick deals: the whole count on the first, since a Burn hits
+/// once at the end of the turn and is then removed, and none after it.
+fn burning_at(burn: i32, tick: i32) -> i32 {
+    if tick == 1 { burn } else { 0 }
 }
 
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
@@ -1081,7 +1088,7 @@ fn hero_ticks(state: &GameState, player: PlayerId, burn: i32, toxic: i32, w: &Ev
     let pool = refilled_pool(state, player, w);
     let mut taken: i32 = 0;
     for tick in 1..=AI_AFFLICTION_TICKS {
-        let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        let burning = burning_at(burn, tick);
         let mut left = pool;
         if burning > 0 {
             let hit = subsystems::projected_hero_damage(state, player, burning, false);

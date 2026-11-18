@@ -3365,7 +3365,7 @@ meditative-047: # 饕餮
     death: Still hungry. Always hungry.
   zh:
     name: 饕餮
-    base: 激活：将一个随机敌方单位融合进本牌，然后冻结本牌。
+    base: 激活：将一个随机敌方单位融合进本牌，然后冻结本牌。使用后，你的下个回合无法使用。
     radiant: 激活：将一个随机敌方单位融合进本牌。
 meditative-048: # Tranquility
   flavour: Breathe in. The storm waits its turn.
@@ -5039,8 +5039,8 @@ stinkyscape-059: # Repeater v5
     death: Barrels melted.
   zh:
     name: 连发炮v5
-    base: "星舰部件，装备\n激活4：对一个敌方单位造成{damage}点伤害，具有穿透。"
-    radiant: "星舰部件，装备\n激活4：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    base: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    radiant: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
 stinkyscape-060: # Cannon v5
   flavour: Its shells have names. Its crew does not.
   voice:
@@ -7225,8 +7225,8 @@ stinkyscapeplus-021: # Jlockeed Shredder-12
     death: Budget cuts got me.
   zh:
     name: Jlockeed收割机-12
-    base: "献祭2，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
-    radiant: "献祭2，穿透\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    base: "献祭3，穿透\n结余使献祭需求减少1。\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    radiant: "献祭3，穿透\n结余使献祭需求减少1。\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
 stinkyscapeplus-022: # Cryofluid
   flavour: Cold, thick and a little too eager to help. Don't drink it, however thirsty.
   voice:
@@ -7949,8 +7949,8 @@ stinkyscapeplus-097: # Selective Enrollment
     cast: Only the finest few. Sorry, not you.
   zh:
     name: 择优招生
-    base: 将你的手牌填满随机光辉S级牌，若无则为A级牌。
-    radiant: 将你的手牌填满随机光辉S级牌，若无则为A级牌。它们的法力值消耗减少(2)点。
+    base: "结余减费。\n将你的手牌填满随机光辉S级牌，若无则为A级牌。"
+    radiant: "结余减费。\n将你的手牌填满随机光辉S级牌，若无则为A级牌。它们的法力值消耗减少(2)点。"
 stinkyscapeplus-098: # Doomed Ship
   flavour: The captain seated them at opposite ends. Fate had notes.
   voice:

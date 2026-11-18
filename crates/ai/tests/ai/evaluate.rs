@@ -2092,7 +2092,8 @@ mod r2490000_backrow_unit_priced_once {
 }
 
 /// R3822000: the Burn and Toxic still to come on a unit or a hero (§6.3, R3540001), priced by the ticks
-/// they will deal over `AI_AFFLICTION_TICKS` of their controller's turn starts. Mr. Vanilla is a 4/4 and
+/// they will deal over `AI_AFFLICTION_TICKS` ticks, a Burn on the first alone since it hits once at the end
+/// of the turn and is gone (R4154000). Mr. Vanilla is a 4/4 and
 /// Reno a 4/6, neither with a keyword, so a unit's worth is `health` a point of health and `attack` a point
 /// of attack, and every tick lands whole.
 mod r3822000_burn_and_toxic {
@@ -2236,9 +2237,9 @@ mod r3822000_burn_and_toxic {
         let shielded = granted(Keyword::DivineShield);
         let s = worth(&state, &shielded);
         let ds = AI_EVAL.keyword.divine_shield;
-        // Burn 4's first hit takes the shield; its second, 1, lands.
+        // R4154000: Burn 4's one hit takes the shield, and the Burn is gone: nothing lands.
         let burning = worth(&state, &countered(&shielded, 4, 0));
-        assert_close(burning - s, -a * (ds + hp * 1.0), 9);
+        assert_close(burning - s, -a * ds, 9);
         assert!(burning < s, "{burning}: losing the shield cost nothing off {s}");
         // Toxic 2's first hit takes the shield too, which Toxic never passes: then 2 and 2, dead at the
         // third.
@@ -2250,9 +2251,9 @@ mod r3822000_burn_and_toxic {
 
         let armored = granted(Keyword::Armor { n: 3 });
         let s = worth(&state, &armored);
-        // Armor 3 takes Burn 3 whole, and the 0 it drops to after.
+        // Armor 3 takes Burn 3's one hit whole.
         assert_eq!(worth(&state, &countered(&armored, 3, 0)), s);
-        // Burn 4 lands 1 through it, its 1 after none.
+        // Burn 4's one hit lands 1 through it.
         let burning = worth(&state, &countered(&armored, 4, 0));
         assert_close(burning - s, -a * hp * 1.0, 9);
         assert!(
@@ -2401,7 +2402,7 @@ mod r3822000_burn_and_toxic {
         let mut armored = clone(&state);
         armored.players[AI].hero.armor = 3;
         let armored_base = eval(&armored, AI);
-        // Armor 3 takes each hit of Burn 3 whole; Toxic pierces it.
+        // Armor 3 takes Burn 3's one hit whole; Toxic pierces it.
         assert_eq!(eval(&hero_countered(&armored, AI, 3, 0), AI), armored_base);
         assert_close(
             armored_base - eval(&hero_countered(&armored, AI, 0, 3), AI),

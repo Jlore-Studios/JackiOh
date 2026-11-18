@@ -194,8 +194,9 @@ fn r4064000_a_blow_meets_the_pool_before_its_cleave_splash() {
     assert_eq!(health(&s, AI), ARMED_LIFE - 3);
 }
 
-/// R4064000: each Burn and Toxic tick meets its side's pools refilled, as its turn start refills them
-/// first: the AI's hero with Toxic 3 and its Mr. Vanilla with Burn 3, each behind a Force Projector (two
+/// R4064000: each Burn and Toxic tick meets its side's pools full: a Toxic at its turn start, which refills
+/// them first, and a Burn at the end of the turn (R4154000), here the AI's own turn, whose pool nothing spent:
+/// the AI's hero with Toxic 3 and its Mr. Vanilla with Burn 3, each behind a Force Projector (two
 /// boards, since the engine ticks the hero first and the Vanilla would meet only what that tick left),
 /// lose nothing to their ticks, where the old reading counts them. The engine plays the ticks out alike.
 #[test]

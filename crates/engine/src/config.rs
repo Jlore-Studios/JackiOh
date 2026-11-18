@@ -2473,11 +2473,6 @@ pub const EMOTE_WINDOW_MS: i64 = 20_000;
 /// R643: at most this many emotes in a window.
 pub const EMOTE_WINDOW_MAX: usize = 5;
 
-// ---- Stinkyscape+ E2 (issue #3540): Burn and Toxic ----
-
-/// R3540001: what a Burn count drops by after each tick (8 → 5 → 2 → none).
-pub const BURN_DECAY: i32 = 3;
-
 // ---- Stinkyscape+ E5 (issue #3548) ----
 
 /// R3548000: what a Tipsy counter drops by at the start of its owner's turn.

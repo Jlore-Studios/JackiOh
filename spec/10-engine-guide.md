@@ -86,7 +86,7 @@ type PlayerState = {
   fled?: 'draw' | 'loss';        // this player fled, leaving the other player a draw or a loss; ends the game at the state check (#1843, R1843002)
   anomalyMisses?: number;        // this player's missed Anomaly scans, each raising their later scans' chances; absent until the first (#1855, R1855003)
   evolutions?: number;           // this player's cards that evolved this game; absent until the first (issue #3536, R3536004)
-  heroBurn?: number;             // the Burn on this player's hero, ticking at the start of their turn; absent at none (issue #3540, R3540000, R3540001)
+  heroBurn?: number;             // the Burn on this player's hero, ticking at the end of the turn; absent at none (issue #3540, R3540000; R4154000)
   heroToxic?: number;            // the Toxic on this player's hero, as heroBurn (issue #3540, R3540000)
 };
 type CardInstance = {

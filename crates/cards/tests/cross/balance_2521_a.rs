@@ -1580,8 +1580,9 @@ fn repeater_uses_a_turn(def: &str, uses: i32) {
 }
 
 #[test]
-fn b19_repeater_v5_activates_4_times_a_turn_and_the_5th_is_refused() {
-    repeater_uses_a_turn("stinkyscape-059", 4);
+fn b19_repeater_v5_activates_3_times_a_turn_and_the_4th_is_refused() {
+    // Issue #4154 cut its Activate 4 to Activate 3.
+    repeater_uses_a_turn("stinkyscape-059", 3);
 }
 
 #[test]

@@ -372,7 +372,8 @@ pub struct EvalWeights {
     pub brittle_crumbles_before_swing: bool,
     /// R4065000, #4065: whether `face_threat` and `could_attack_next_turn` (so the threat and pressure terms,
     /// `wall_switches`, `stands_down` and the learned features) leave out a unit the first tick of its own Burn
-    /// and Toxic destroys at the start of its controller's next turn, before it can attack
+    /// and Toxic destroys before its controller's next attacks (a Burn at the end of the turn, R4154000; a
+    /// Toxic at its controller's turn start), before it can attack
     /// (`afflicted_before_swing`). `unit_worth` is untouched: its affliction discount already prices the unit
     /// (R3822000). Off, every unit that may swing counts, as before.
     pub affliction_kills_before_swing: bool,
@@ -759,11 +760,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_weight: 3.0,
 };
 
-/// R3822000: the turn starts of a counter's controller over which the evaluation reads Burn and Toxic
-/// (`evaluate::afflicted`, `evaluate::coming_hero_ticks`). Four hold the whole series of Eclipse's Radiant
-/// Burn 10 (S+ #119: 10, 7, 4 and 1 at `BURN_DECAY`), the largest one line declares; a larger count, a
-/// fused rider's or one several hits stacked (R3540000), is read for its first four. Toxic, which never
-/// fades, is read over the same horizon.
+/// R3822000: the ticks over which the evaluation reads Burn and Toxic (`evaluate::afflicted`,
+/// `evaluate::coming_hero_ticks`): Toxic, which never fades, over its controller's next four turn starts;
+/// a Burn, which hits once at the end of the turn and is gone (R4154000), on the first alone.
 pub const AI_AFFLICTION_TICKS: i32 = 4;
 const _: () = assert!(AI_AFFLICTION_TICKS >= 1);
 const _: () = assert!(AI_EVAL.unit_affliction >= 0.0 && AI_EVAL.unit_affliction <= 1.0);
