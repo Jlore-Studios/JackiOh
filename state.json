@@ -14255,10 +14255,10 @@
     "what": "plan #4130 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-18T00:53:44Z",
+    "at": "2026-11-18T01:02:01Z",
     "notes": [
-      "delivered revise #4153 on muse (run 44207656480): built",
-      "started review #4153 on muse (run 44211789182)",
+      "delivered plan #4130 on agy (run 44189681405): failed",
+      "started plan #4130 on agy (run 44212849878)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -14965,7 +14965,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T00:53:44Z",
+  "loop_tick": "2026-11-18T01:02:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
