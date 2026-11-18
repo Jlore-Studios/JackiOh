@@ -19,7 +19,7 @@
 import type { CardDef, CardType, KeywordKind, Rarity, Tag } from "@jackioh/shared";
 
 import { getLocale, isZhCn, type Locale } from "../i18n/i18n.ts";
-import { loadersByStem } from "../patches/source.ts";
+import { loadersByStem, type Loader } from "../patches/loaders.ts";
 import { DORMANT_STARSHIP_ID, holdsDormantStarship } from "./fused.ts";
 import { isGlitch } from "./glitch.ts";
 
@@ -53,9 +53,18 @@ export type ChineseTerms = {
 /**
  * #4180: the two sidecars' loaders, by stem (`loadersByStem`), through a lazy glob: Vite keeps both
  * JSON files out of every bundle until `loadCardTables()` asks for them. Keep the glob path-based:
- * Vite rejects package specifiers (patches/source.ts).
+ * Vite rejects package specifiers (patches/source.ts). The glob runs inside `loadCardTables()`,
+ * never at import: the GitHub-releases script (under `tsx`, where `import.meta.glob` does not
+ * exist) imports this module through `ChangeList.tsx` but never loads the tables.
  */
-const TABLE_LOADERS = loadersByStem(import.meta.glob<unknown>("../../../../crates/cards/chinese*.json", { import: "default" }));
+let tableLoaders: Record<string, Loader> | null = null;
+
+function getTableLoaders(): Record<string, Loader> {
+  if (tableLoaders === null) {
+    tableLoaders = loadersByStem(import.meta.glob<unknown>("../../../../crates/cards/chinese*.json", { import: "default" }));
+  }
+  return tableLoaders;
+}
 
 /** The cards' table, filled in place by `loadCardTables()`: the same object `CARD_TABLES` reads. */
 export const CHINESE: Record<string, ChineseEntry> = {};
@@ -83,8 +92,14 @@ function isTable(value: unknown): value is Record<string, unknown> {
 export function loadCardTables(): Promise<void> {
   if (tablesReady) return Promise.resolve();
   if (pendingTables !== null) return pendingTables;
-  const cards = TABLE_LOADERS["chinese"];
-  const terms = TABLE_LOADERS["chinese-terms"];
+  let loaders: Record<string, Loader>;
+  try {
+    loaders = getTableLoaders();
+  } catch {
+    return Promise.reject(new Error("the Chinese card tables did not load"));
+  }
+  const cards = loaders["chinese"];
+  const terms = loaders["chinese-terms"];
   if (cards === undefined || terms === undefined) {
     return Promise.reject(new Error("the Chinese card tables did not load"));
   }

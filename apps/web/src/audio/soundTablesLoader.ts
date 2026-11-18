@@ -36,15 +36,20 @@ export function soundTablesNow(): SoundTables | null {
 }
 
 export function loadSoundTables(): Promise<SoundTables> {
+  // #4180: the chunk parses at its top level against `currentCatalog()`, so the module comes
+  // first. Every call starts (or reuses) the module load, so a route-intent prefetch counts one
+  // `loadWasm()` per engine route through here alone (`routes/chunks.tsx` starts no second one).
+  const wasm = loadWasm();
   if (cachedTables !== null) {
-    return Promise.resolve(cachedTables);
+    const cached = cachedTables;
+    return wasm.then(() => cached);
   }
   if (pendingLoad !== null) {
-    return pendingLoad;
+    const pending = pendingLoad;
+    return wasm.then(() => pending);
   }
-  // The chunk parses at its top level against `currentCatalog()`, so the module comes first;
-  // both were already fetched together in `routes/chunks.tsx`, so only a cold first sound waits.
-  pendingLoad = loadWasm()
+  // Both were already fetched together in `routes/chunks.tsx`, so only a cold first sound waits.
+  pendingLoad = wasm
     .then(() => import("./soundTables.ts"))
     .then((mod) => {
       cachedTables = mod.SOUND_TABLES ?? mod.default;
