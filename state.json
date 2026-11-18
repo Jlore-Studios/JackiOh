@@ -16177,17 +16177,8 @@
       "taken_asks": []
     },
     "4189": {
-      "action": "plan",
-      "asks": [
-        "c:6980580341"
-      ],
-      "build_next": {
-        "from_run": "44319564969",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-18T14:16:40Z",
-        "until": "2026-11-18T14:46:40Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-18T14:16:31Z",
         "difficulty": "medium",
@@ -16206,10 +16197,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "entence \"The yellow glow of R195 is not declared\u2026\" the same way.\n- 3. In `c137_firststrike_capability.rs`, inside `firststrike()`, add `condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| { ctx.zone == ConditionZone::Hand && dormant_starship_of(ctx.state, ctx.controller).is_some() }))`. This reads the same `dormant_starship_of` fact the Cry's `let Some(\u2026\n- 4. In `c176_preemptive_strike.rs`, inside `preemptive_strike()`, add the identical hook as step 3 (same `dormant_starship_of` fact its Cry reads) plus the same kind of header sentence.\n- 5. In `c004_olivian_expanse.rs`, stop cloning one `Script` for both faces. Build `base` with `condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| { ctx.zone == ConditionZone::Hand && zone_count(ctx.state, ctx.controller, OffFieldZone::Library) == 0 }))`, then `let mut radiant = base.clon\u2026\n- 6. In `spec/08-catalog.md`, append to the Engine cell of the S #4 row (line 569) \"; the glow asks whether the library is empty ([[R4189000]])\", to the S #137 row (line 724) \"; the glow asks whether its controller has a Dormant Starship ([[R4189000]])\", and to the S #176 row (line 771) the same clau\u2026\n- 7. Write `spec/rulings/R4189000.md` with front matter `id: R4189000`, a title naming the five cards' glow, `cards: \"\u00a710.8, \u00a710.9, S #4, S #137, S #176, S+ #102, S+ #162, issue #4189\"`, and `proven_in` listing all five script files plus `crates/cards/tests/cross/condition_active.rs`. Body: the two C\u2026\n- 8. Write `spec/pending/4189.md` with the single \u00a711 paragraph in the file's established style: `**[[R4189000]] \u2026 (issue #4189, 2026-11-18)**: \u2026`, one paragraph, no other content.\n- 9. Add own-file tests named `r4189000_\u2026` in each script's `mod tests` (names carry the ruling token, which `proven_in` requires): c102/c162 \u2014 dark with nothing played earlier, glowing after one `CHEAP` play, on both faces, then played to show the branch (Bard draws 2; Edwin gains +2/+4); c137/c176 \u2026\n- 10. In `tests/cross/condition_active.rs`, add five mods (`\u2026_r4189000`) following the file's existing helpers (`setup`, `hand_glows`, `glows`, `copies_in_hand`): per card, glow-present then played-shows-branch on both faces, glow-absent case, and the opponent's serialized view containing no `conditi\u2026\n- ## Tests\n- - `crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs`: `r4189000_base_glows_after_one_play_and_draws_2`, `r4189000_base_dark_first_and_draws_nothing`, `r4189000_radiant_glows_after_one_play_and_sets_cheapest`; each asserts the view flag, then plays and asserts the branch.\n- - `crates/cards/src/scripts/stinkyscape_plus/c162_edwin_vanspacechief.rs`: `r4189000_base_glows_after_one_play_and_gains_2`, `r4189000_base_dark_first_and_gains_nothing`, `r4189000_radiant_glows_after_one_play_and_gains_4_per_play`.\n- - `crates/cards/src/scripts/stinkyscape/c137_firststrike_capability.rs`: `r4189000_glows_with_a_dormant_starship_and_opens_the_discover`, `r4189000_dark_without_one_and_does_nothing`, same pair for the Radiant face.\n- - `crates/cards/src/scripts/stinkyscape/c176_preemptive_strike.rs`: same four as c137 (cast opens the Discover; without a ship no pending, no Doctrine cast).\n- - `crates/cards/src/scripts/stinkyscape/c004_olivian_expanse.rs`: `r4189000_base_glows_with_an_empty_library_and_the_pick_costs_0`, `r4189000_base_dark_with_a_card_left`, `r4189000_radiant_glows_alone_and_the_pick_wins`, `r4189000_radiant_dark_with_a_second_card_in_hand`.\n- - `crates/cards/tests/cross/condition_active.rs`: one mod per card as in Steps step 10, each with present/absent on both faces, play-after-glow branch, and opponent-view-clean tests; plus the updated closed-list test.\n- - Commands: `cargo test -p jackioh-cards --lib -- c102_cosmic_bard c162_edwin_vanspacechief c137_firststrike_capability c176_preemptive_strike c004_olivian_expanse`, then `cargo test -p jackioh-cards --test cards condition_active`, then `cargo clippy -p jackioh-cards --all-targets -- -D warnings`, \u2026\n- ## Done when\n- - [ ] Bard and Edwin carry `conditionActive: true` in the owner's hand after a card was played, on both faces, and the key is absent with none played.\n- - [ ] Commander and Strike carry it while the owner has a Dormant Starship, on both faces, and not otherwise.\n- - [ ] Olivian carries it while the owner's library is empty; Radiant only while also alone in hand.\n- - [ ] Every new test plays the card right after reading the glow and asserts the promised branch, and the opponent's view never carries the flag.\n- - [ ] The closed-list test names all 25 ids on both faces and keeps the `r195` token; both Stinkyscape+ headers no longer say the glow is undeclared.\n- - [ ] The commands above pass: the five lib filters, `--test cards condition_active`, clippy, fmt, and `spec check`.\n- ## Risks\n- - A hook disagreeing with its branch (the issue's named risk): each hook reuses the Cry's own predicate and constant (`COMBO`, `dormant_starship_of`, `FREE`/`WINS` counts), and every proof plays the card right after reading the flag. Olivian's off-by-one (hand 0 at resolution vs 1 in hand) is the s\u2026\n- - Purity (CLAUDE.md rules 4\u20135): hooks call only prelude read helpers, no writes, no rng, and never `state.active` (they read `ctx.zone` and, implicitly, `your_turn` rules via `condition_active`).\n- - Hidden information (rule 7): hooks read only the controller's own board and piles, the same facts R195 lights on Core #53/#68/#71; opponent views are asserted clean per card.\n- ## Open questions\n- None. All five conditions, the ruling number, and the rejected wider alternatives are settled by the task.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4189 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4189/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-18T14:00:24Z",
       "owner_why": "it plans it",
@@ -16222,12 +16212,14 @@
       "provider": "muse",
       "queued_at": "2026-11-18T13:53:19Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44319564969",
+      "run_id": "pending:0a6786cb-1795011438",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-18T14:00:24Z",
+      "started_at": "2026-11-18T14:17:55Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6980580341"
+      ]
     },
     "4191": {
       "action": "review",
@@ -16736,9 +16728,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T14:04:35Z",
+    "at": "2026-11-18T14:17:55Z",
     "url": "",
-    "what": "plan #4187 on claude-8"
+    "what": "build #4189 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T13:57:50Z",
