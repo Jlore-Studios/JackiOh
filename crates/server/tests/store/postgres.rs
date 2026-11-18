@@ -663,8 +663,6 @@ mod app_redeem_invite_code {
             .codes_count_attempts_by_profile(&user_id, since))
         .expect("codes.countAttemptsByProfile");
         assert_eq!(by_profile, 1);
-        let failures = once!(ctx.db, None, |tx| tx.codes_count_failures(since)).expect("codes.countFailures");
-        assert_eq!(failures, 1);
         ctx.finish().await;
     }
 }

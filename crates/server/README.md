@@ -113,8 +113,8 @@ reseeds the database itself. Both steps are idempotent.
   and the reaper owns the in-flight game (the account-deletion posture, so a ban lands at once
   even mid-match). `moderate revoke-code <CODE>` revokes an invite code by its hash, which then
   redeems exactly as an exhausted one. `moderate redemption off` / `moderate redemption on`
-  pause and resume redemption through §9.4's database-side circuit breaker, touching no account
-  or session. Each lever is idempotent and prints what changed (`banned <id>`, `already banned
+  pause and resume redemption for everyone, the only global pause (§9.4, R4131000: no count of
+  failures pauses it), touching no account or session. Each lever is idempotent and prints what changed (`banned <id>`, `already banned
   <id>`, `revoked <CODE>`, `redemption paused`, …); an unknown profile or code is refused
   without writing anything, and a pending account is never unbanned — that would skip the
   invite gate and R111's launch grant, so ban pending accounts only to stop abuse. Like
@@ -281,7 +281,7 @@ UUID (`economy/idempotency.rs`); anything else there is 400 `bad_request`, and a
 as before. Under the account's economy lock, in the spend's transaction, a key the account committed a
 spend with answers that spend's status and body again and spends nothing, the same key with another route
 or body is 422 `idempotency_key_reused`, and a new key's answer is written with its grant. A refusal keeps
-nothing. A redemption reads its key before the breaker and R145's account checks, and every outcome is
+nothing. A redemption reads its key before the pause and R145's account checks, and every outcome is
 padded (R107). Keys are per account, kept `IDEMPOTENCY_KEY_TTL_HOURS` and swept by the retention loop;
 the body is kept as an HMAC under `<CODE_PEPPER>:body`. CORS allows the header (`api/cors.rs`), without
 which the browser's preflight refuses every spend; `apps/web/src/net/api.ts` mints a key per press and

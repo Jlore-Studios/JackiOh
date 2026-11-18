@@ -44,9 +44,9 @@ const USAGE: &str = "Usage: jackioh-server moderate <command> [arguments]
   unban <profile-id>    Restore a banned account to active. Refuses a pending account.
   revoke-code <CODE>    Revoke the invite code, which then redeems exactly as an
                         exhausted one. Idempotent.
-  redemption <on|off>   Pause (off) or resume (on) redemption through §9.4's
-                        database-side circuit breaker. Pausing touches no account
-                        or session. Idempotent.
+  redemption <on|off>   Pause (off) or resume (on) redemption for everyone, the
+                        only global pause (§9.4, R4131000). Pausing touches no
+                        account or session. Idempotent.
   chat-reports          List every chat report held, oldest first: when, the reason,
                         the reporter, the sender and the message. Changes nothing.
 
@@ -184,7 +184,7 @@ pub async fn revoke_code(db: &Db, pepper: &str, plain: &str) -> anyhow::Result<S
     }
 }
 
-/// Flips §9.4's database-side kill switch. Pausing refuses new redemptions with the breaker's
+/// Flips the operator's redemption pause (§9.4, R4131000). Pausing refuses new redemptions with a
 /// 503 while touching no account or session; resuming restores them. Answers the stdout line,
 /// naming the previous state.
 pub async fn set_redemption(db: &Db, enabled: bool) -> anyhow::Result<String> {
