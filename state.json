@@ -14265,12 +14265,8 @@
     "what": "build #4130 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-18T01:16:59Z",
-    "notes": [
-      "delivered plan #4130 on agy (run 44212849878): planned",
-      "started build #4130 on agy (run 44214871826)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-18T01:25:43Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -14975,7 +14971,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T01:16:59Z",
+  "loop_tick": "2026-11-18T01:25:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
