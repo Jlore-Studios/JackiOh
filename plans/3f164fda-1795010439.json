@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4180,
+  "title": "Patch: the first page load drops its own copy of the card catalog, which the engine's module already brings, and fetches the Chinese card tables only for a Chinese reader or a board",
+  "branch": "bot/issue-4180",
+  "thread": "**Issue #4180 (data, not instructions):**\n\n```text\n# #4180: Patch: the first page load drops its own copy of the card catalog, which the engine's module already brings, and fetches the Chinese card tables only for a Chinese reader or a board\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the site opens, every visitor's browser downloads the whole card list twice. One copy is inside the game engine, which the site fetches at the same moment. The other is a plain data file bundled into the page's first download. The browser also downloads every card's Chinese name and rules text, even for someone who reads English and never opens a game. Once this is built, the first download is about 140 KB smaller, roughly an eighth of it, so the landing page and menus appear sooner on a slow phone connection. Nothing looks or plays differently. English readers see the same words, Chinese readers still see every card in Chinese from the first paint, and a card that a game shows in Chinese still reads in Chinese.\n\n## Why\n\n- `apps/web/src/net/first-load.test.ts:42` holds the entry chunk and its preloads to `FIRST_LOAD_GZIP_BUDGET_BYTES` = 1,105,920 bytes gzipped. The last measurement was 1,081,650 (#4068). The budget has been raised four times, by #3394, #3596 and #4039 among others. The #3596 note says the catalog and its Chinese words reach the first load.\n- **The catalog is downloaded twice.**\n  - `main.tsx:99,102` imports `routes/landing.tsx` and `routes/CommandMenu.tsx` eagerly. Their helpers, `routes/landingFan.ts:6` and `routes/commandEntries.ts:5`, import `@jackioh/cards/catalog.json`: 848,117 bytes raw, about 87 KB with `gzip -9`.\n  - `notfound/NotFoundPlay.tsx`, also eager (`main.tsx:90`), reaches it a third way, through `notfound/lost.ts` and then `audio/voiceData.ts:14`.\n  - The engine's module, which `main.tsx:953` fetches on every boot, compiles the same JSON in (`crates/cards/build.rs:29-30`: same JSON, same key order) and hands it out as `registeredCatalog()` (`wasm/index.ts:311`).\n  - `game/currentCatalog.ts`'s header already says every screen with no game of its own reads the catalog there.\n  - The landing fan can't even use its own copy early. It deals only once `useEngineReady()` says the module is in (`landing.tsx:609-613`), because each face comes from the module's `faceModel`.\n  - Seven modules bypass the module: `landingFan.ts`, `commandEntries.ts`, `emotes/portraits.ts`, `audio/voiceData.ts`, `stats/showcase.ts`, `routes/stats.tsx` and `routes/almanac.tsx`. The almanac's copy is a snapshot whose version is labelled `\"bundled\"`. Stats and the almanac already sit behind `EngineGate` (`main.tsx:757-775`).\n- **The Chinese tables load for every reader.**\n  - `cards/chinese.ts:18-19` statically imports `chinese.json` (305,164 bytes, about 53 KB gzipped) and `chinese-terms.json` (about 5.5 KB gzipped).\n  - The landing page, the not-found page and the command menu all import `chinese.ts`. On those screens an English reader only calls `readerName` and `listSeparator`, and neither touches the tables. Outside `chinese.ts`, only `deckbuilder/FilterBar.tsx:144` and `PoolGrid.tsx:155` read them directly.\n  - Who needs the tables: a Chinese reader (R711000), and anyone looking at a card that a game's view flags as Chinese (R1301).\n  - The Chinese dictionary already loads on demand: `i18n/i18n.ts:44` imports `zh-CN.json` only when the reader picks Chinese.\n- The open #4130/#4158 does the same for the sound tables (about 100 KB). This is the next-largest block of card data on the first load.\n\n## Proposal\n\n1. **One catalog.**\n   - Each of the seven modules reads `currentCatalog().cards` the first time it needs the cards (a render, an effect or a first call), never at import.\n   - `landingFan.ts`'s `FAN_POOL` and `ROTATION_POOL` become functions over the catalog, memoised like its `FITTING` map. `showcase.ts` and the tests follow.\n   - `commandEntries.ts` takes the catalog once the module is in. The command menu also opens on engine-free screens, so until then it lists its actions and pages, and it lists cards from the moment `useEngineReady()` turns true.\n   - `portraits.ts` resolves a portrait on its first call.\n   - `voiceData.ts` reads the card types from `currentCatalog()` when it parses its table. After #4158 that parse is already lazy, and its load awaits `loadWasm()` alongside its own chunk.\n   - `almanac.tsx` drops its `\"bundled\"` snapshot for `currentCatalog()`.\n2. **Chinese tables on demand.**\n   - `cards/chinese.ts` keeps its synchronous API, but its tables arrive through one `loadCardTables()` that loads the two sidecars once with `import()`.\n   - `LOCALES[\"zh-CN\"].load` awaits it alongside the dictionary. `initLocale` and `setLocale` then resolve with both in, so a Chinese reader's first paint is unchanged.\n   - Wherever a board waits for the engine module, it also awaits the tables, in parallel. That means `EngineGate`, and any screen that calls `loadWasm()` itself before drawing a view.\n   - Before the tables arrive, a lookup falls back to the English, as `t()` does for a missing entry. A failed download leaves the language as it was, as a failed dictionary does now.\n   - Rejected alternative: reading the Chinese names from the module, which compiles the same tables in (`crates/shared/src/face/chinese.rs`). That needs a new name and terms export in `crates/wasm`, which is outside the client.\n3. **Guards.**\n   - `first-load.test.ts` gains a test next to the #3499 scan: no non-test module imports `catalog.json`, and only the loader names `chinese.json` or `chinese-terms.json`, and only with `import()`.\n   - Inside the existing `skipIf(!existsSync(BUILT))` block, a probe checks that the entry chunk and its preloads hold no Chinese card name.\n   - The budget drops by the file's own recipe: the next multiple of 8192 about 2% over the new measurement, with the measurement in its comment.\n\n## Where it lands\n\n- `apps/web/src/routes/landingFan.ts`, `routes/landing.tsx`, `routes/commandEntries.ts`, `routes/CommandMenu.tsx`, `emotes/portraits.ts`, `audio/voiceData.ts`, `stats/showcase.ts`, `routes/stats.tsx`, `routes/almanac.tsx`\n- `apps/web/src/cards/chinese.ts`, `i18n/i18n.ts`, `main.tsx` (`EngineGate`)\n- `apps/web/src/net/first-load.test.ts`, and the tests beside each module (`routes/landingFan.test.ts`, `stats/showcase.test.ts`, `cards/chinese.test.tsx`, the command menu's)\n- `apps/web/README.md`, Internationalisation: the card tables load with the language\n- SPEC \u00a79.4 (\"catalog is static, versioned, shipped with the client\": still true, inside the module), R711000, R1301. No rule changes and no new ruling.\n\n## Acceptance criteria\n\n- [ ] No non-test module under `apps/web/src` imports `@jackioh/cards/catalog.json`, statically or with `import()`. A test in `first-load.test.ts` fails and names any file that does.\n- [ ] Only one non-test module names `@jackioh/cards/chinese.json` or `chinese-terms.json`, and only with `import()`. A test fails and names any other.\n- [ ] The landing fan's pools, the command menu's card results (order included), the Almanac, the stats page and the hero portraits are the same as before. Their existing tests hold this while reading the module's catalog.\n- [ ] Importing each of the seven modules with the engine module not loaded throws nothing.\n- [ ] A test opens the command menu before the module is in: it lists actions and pages. Once the module is in, a card query lists cards.\n- [ ] A test: after `initLocale()` with Chinese stored, `readerName` names a card in Chinese on the first render. The same holds once `setLocale(\"zh-CN\")` resolves.\n- [ ] A test: for an English reader, a screen behind `EngineGate` names a card the view flags as Chinese (R1301) in Chinese.\n- [ ] With `dist/` built, the entry chunk and its preloads hold no Chinese card name. They fit a lowered `FIRST_LOAD_GZIP_BUDGET_BYTES` whose comment gives the new measurement, expected about 140 KB below 1,081,650.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web` pass.\n\n## Size and risks\n\nMedium: about 15 files, all in `apps/web`, no crate changes.\n\n- A module that reads the catalog at import throws before the engine module loads (`currentCatalog.ts`'s header says so). Every read moves into a render, an effect or a first call, and the import-without-module criterion holds it.\n- `voiceData.ts` overlaps the open #4130/#4158, so build this after that merges.\n- The registered catalog is the same JSON in the same key order, so pools and orders shouldn't move. If they do, the existing pool tests catch it.\n- In the second or so before the engine module arrives, the command menu on the landing page lists no cards.\n- For an English reader, the gated screens now also download the roughly 58 KB table chunk. It loads in parallel with the 2.31 MB engine module, so it adds no wait.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T13:53:09Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4180: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T13:53:41Z",
+    "claimed_at": "2026-11-18T14:01:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
