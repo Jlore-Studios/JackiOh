@@ -9,15 +9,20 @@
 # bots title theirs from their issue when the builder's title breaks it, and when both do (a
 # workflow's `CI: …` alert) write `Patch: <what it does>` (`triage.PullTitle`).
 #
-# _target: this repository's workflow and its default branch's harness run, never code from the pull
-# request, and the job reads nothing but the title, from the event, through the environment. It
-# runs again on every edit and push, so the result always belongs to the newest title and head.
+# `pull_request`, not `_target` (GitHub blocks that in public repositories from 2026-12-02;
+# infra/README.md, "pull_request_target"): the job needs no secret and no write, so a fork's
+# read-only token is all it takes. It checks out the default branch and runs its harness, never code
+# from the pull request, and reads nothing but the title, from the event, through the environment.
+# It runs again on every edit and push, so the result belongs to the newest title and head; GitHub
+# runs no `pull_request` workflow while the pull request has a merge conflict, so a title edited
+# then waits for the conflict's fix. The workflow file is the pull request's own, so a pull request
+# can change its check: one more reason it is not required.
 #
 # Not a required check: making it one is branch protection's setting, the owner's call.
 name: pr title
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, edited, reopened, synchronize]
 
 permissions: {}

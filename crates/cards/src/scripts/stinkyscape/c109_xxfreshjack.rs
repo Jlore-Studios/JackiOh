@@ -240,7 +240,9 @@ mod tests {
     }
 
     /// Issue #4154: Tribute 1 on both faces (R101): with no unit to pay it the play is refused, and the unit
-    /// paid goes to the graveyard.
+    /// paid goes to the graveyard. Its Cry casts a random BUSTED card from the build's own list, which a
+    /// new version's list changes and which may move it off the field (v0.6.7's exiles it), so the play is
+    /// read off its `cardPlayed`, not off where it stands.
     #[test]
     fn issue_4154_both_faces_need_tribute_1() {
         crate::register_all();
@@ -253,7 +255,11 @@ mod tests {
             let mut s = board(radiant, "xxfreshjack-tribute");
             let body = s.unit(P1, 2).expect("the body").id;
             s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
-            s.expect_in_zone(ID, "field").expect_in_zone(body.as_str(), "graveyard");
+            let played = s.events().iter().any(|event| {
+                matches!(event, GameEvent::CardPlayed { player: P1, def_id, .. } if def_id == ID)
+            });
+            assert!(played, "radiant {radiant}: the play was taken");
+            s.expect_in_zone(body.as_str(), "graveyard");
         }
     }
 

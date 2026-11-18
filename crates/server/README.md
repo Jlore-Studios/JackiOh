@@ -29,7 +29,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop; the sweeps feed each step's result to a `loops::FailingStreak`, #3770), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, and each co-op actor stopped; both registries marked draining first, so a match `start` or a rebuild makes once the drain has begun, a rebuild in flight across it or begun after it among them, is stopped the same way, never kept live, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop; the sweeps feed each step's result to a `loops::FailingStreak`, #3770), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, and each co-op actor checkpointed, then stopped, #4169; both registries marked draining first, so a match `start` or a rebuild makes once the drain has begun, a rebuild in flight across it or begun after it among them, is stopped the same way, never kept live, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. The 1v1 actor decides no clock, reconnect or rematch rule (#3101): `jackioh_shared::host`'s pure machine does (`step(host, event, now) -> (host, outputs)`: which clock runs and what an expiry becomes, the disconnect grace, the order every view is sent in, the aim relay, a bot's turn, what a rematch offer meets), and the actor feeds it events and carries out its outputs: a tokio timer (`clock.rs` is only that), a socket send, a store write. The Duos actor is the same driver over `host::duos`'s machine (the mulligan, round and prompt clocks, the grace after which the AI plays a person's seat, the AI's pause and fallback, the ceiling's retry), and `duos/again.rs` keeps the request, the store reads and the wake-up of an offer waiting on a create around `host::again`'s book. `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
@@ -462,7 +462,11 @@ holds, with four seats:
   has ended, only within `REMATCH_OFFER_TTL_MS` of its `ended_at` (past that the seat is not found,
   4404, and nothing is folded: R1398000), and the end writes the result and `ended_at` once, unranked,
   for every person; every engine call runs under the catalog version the match was dealt from
-  (`DuosMatchOptions::catalog_version`, R767000);
+  (`DuosMatchOptions::catalog_version`, R767000). The actor stores a checkpoint of its `DuosState`
+  (`duos_match_checkpoints`, migration 0097, `duos/checkpoint.rs`) when the restart drain stops it and
+  after every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row it logs, and a rebuild folds only the rows after one
+  that passes a 1v1 checkpoint's checks (the same `actor::checkpoint::verify_body`), or else logs
+  `duos.checkpoint.refused` with the reason and folds the whole log; finishing drops it (#4169);
 - a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
   while one from the same socket is still queued is absorbed (R835001's rule); one that finds none
   queued is dropped unanswered when it comes less than `WATCH_HELLO_INTERVAL_MS` after the socket's
@@ -1470,6 +1474,15 @@ Migration 0096 widens `admin_actions_route_check` by the four moderation lever r
 rewrites no row. `tests/sql/58_moderation_audit.sql` checks the routes taken, the near names refused and the
 re-apply.
 
+Migration 0097 adds `duos_match_checkpoints` (#4169), 0042's table for a co-op or 2v2 match: at most one
+row per live match, the `DuosState` its actor held after one log row, written by the restart drain and
+after every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row while the match is played, and read by the next
+rebuild. A table of its own, since 0042's rows reference `matches`. It holds all four hands and
+libraries, so it is server-only like `duos_matches` (RLS on, no policy, no grant). It is written only
+while the match has no `ended_at` and its log holds that row, replaced only by a later seq, and deleted
+by `duos_matches_finish`; the retention purge never meets one. A catalog retcon leaves it on the old
+version, so the next rebuild refuses it as `catalog` and folds the whole log.
+
 ## Tests
 
 ```
@@ -1525,6 +1538,9 @@ the card and deck slot cosmetics, the full arts and the portraits, the registry 
   states a number (CLAUDE.md rule 9).
 - Logs are `tracing` JSON lines to stdout with stable `event` names (`server.listening`,
   `api.forwarded_for`, `match.fold.errors`, `game.record.failed`, …).
+- A socket's address carries no secret in a log: no line holds a request's query. The `?token=` fallback
+  (R1379000) logs `ws.upgrade.query_token` with the path alone, one line per use, which counts what is left
+  of the previous client (#4017).
 - Anything the spec does not decide is marked `// NOT IN SPEC:` where it is decided.
 - Symmetric encryption is an AEAD (AES-GCM or ChaCha20-Poly1305, through `ring`), never CBC or another
   bare block mode, whose padding errors decrypt a ciphertext byte by byte; today Web Push's

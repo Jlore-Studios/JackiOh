@@ -20,6 +20,10 @@ on:
   issues:
     types: [opened]
   # _target: nothing from the pull request is checked out or run; the job reads the event only.
+  # `pull_request` would give a fork's pull request, the outsider's thread this job is for, a
+  # read-only token that cannot lock it. GitHub blocks `_target` in public repositories from
+  # 2026-12-02 unless an Actions event policy allows it, so this file is on the policy's list
+  # (infra/README.md, "pull_request_target").
   pull_request_target:
     types: [opened]
 
