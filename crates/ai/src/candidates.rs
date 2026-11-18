@@ -10,7 +10,7 @@ use jackioh_engine::{
     attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, converts_to,
     damage_pool_of, effective_cost, effective_life, find_instance, find_instance_mut, has_keyword, is_locked,
     lane_multiplier_for, legal_actions, midlane_lanes_of, pierces, position_after_switch, row_size, slot_of,
-    subsystems, takes_strike_back, unit_damage_cap, unit_view,
+    strike_back_multiplier_for, subsystems, takes_strike_back, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -154,7 +154,8 @@ fn collapse_zones(
 /// The two strikes of a combat between `attacker` and the Unit `defender` (`a` and `t` their views),
 /// as `resolve_combat` reads them before either lands (R94): the attacker's attack plus the board's
 /// combat-only bonus (`attack_mod_for`, R1120) times its lane multiplier (`lane_multiplier_for`,
-/// R1283), and the defender's attack times its own, which no bonus ever rides.
+/// R1283), and the defender's attack times its lane strike alone (`strike_back_multiplier_for`, R4156000),
+/// which no bonus ever rides.
 pub(crate) struct Exchange {
     /// What the attacker's strike deals before §4.4.
     pub hit: i32,
@@ -178,7 +179,7 @@ pub(crate) fn exchange(
     Exchange {
         hit: (a.attack + bonus.attack) * lane_multiplier_for(state, attacker, defender),
         poisonous: bonus.poisonous || has_keyword(&a.keywords, KeywordKind::Poisonous),
-        strike_back: t.attack * lane_multiplier_for(state, defender, attacker),
+        strike_back: t.attack * strike_back_multiplier_for(state, defender, attacker),
         splash: a.attack + bonus.attack,
     }
 }
@@ -1284,6 +1285,36 @@ mod tests {
         );
         assert_eq!(lane_multiplier_for(state, bunker, vanilla), 3);
         assert_eq!((combat.hit, combat.strike_back, combat.splash), (15, 4, 5));
+    }
+
+    /// S+ #107 Fuse, a 2/5 Ranged Unit with Armor 3 and Pierce whose own attacks weigh 5× in its lane.
+    const FUSE: &str = "stinkyscapeplus-107";
+
+    /// R4156000: a Fuse that is attacked strikes back with its plain attack, as `resolve_combat` reads it:
+    /// its sweep's weight is on its own attacks alone (R3554008), so the exchange the AI weighs an attack on
+    /// it by takes 2 back, not 10.
+    #[test]
+    fn r4156000_an_attacked_fuse_strikes_back_with_its_plain_attack() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            "p2": { "field": [{ "def": FUSE, "lane": 1 }] },
+        }));
+        let (vanilla, fuse) = (s.card(VANILLA), s.card(FUSE));
+        let state = s.state();
+        let combat = exchange(
+            state,
+            vanilla,
+            &unit_view(state, vanilla),
+            fuse,
+            &unit_view(state, fuse),
+        );
+        assert_eq!(
+            lane_multiplier_for(state, fuse, vanilla),
+            5,
+            "its own attack still sweeps"
+        );
+        assert_eq!((combat.hit, combat.strike_back), (4, 2));
     }
 
     /// R1120, §4.4 step 10: Economic Anxiety's +3 rides the strike and the Cleave splash alike (a

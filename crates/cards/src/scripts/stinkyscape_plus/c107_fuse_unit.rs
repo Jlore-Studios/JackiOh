@@ -14,8 +14,9 @@
 //! (R346). The weights are the static flags `sweepLane` and `sweepAdjacent` (R3554008): its attack hits every
 //! enemy Unit in its lane for `sweepLane` times its attack and every enemy Unit in the adjacent lanes for
 //! `sweepAdjacent` times, as one damage instance each; a declared target outside the sweep takes a normal
-//! hit. The weights read the card's declared numbers first (R386), so an Upgrade of either lifts the sweep and
-//! the projections agree with combat. Both faces share the script's shape; the flags carry each face's number.
+//! hit. Attacked, it strikes back with its plain attack (R4156000). The weights read the card's declared
+//! numbers first (R386), so an Upgrade of either lifts the sweep and the projections agree with combat. Both
+//! faces share the script's shape; the flags carry each face's number.
 
 use jackioh_engine::prelude::*;
 
@@ -48,7 +49,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S+ #107 Fuse — SPEC §8.12 row 107 (R3554008; R346, R386, R783000).
+// S+ #107 Fuse — SPEC §8.12 row 107 (R3554008, R4156000; R346, R386, R783000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,6 +61,9 @@ mod tests {
     /// A target no sweep brings down, and one whose Armor would stop a lot of it.
     const TOUGH: &str = "stand-in (1) 0/60";
     const ARMORED: &str = "stand-in (1) 0/60 Armor 4";
+    /// What attacks Fuse: its blow of 6 gets past the base face's Armor 3 and is all taken by the Radiant
+    /// face's Armor 6, and no strike back brings it down.
+    const ATTACKER: &str = "stand-in (1) 6/60";
 
     /// What each face hits for before its weight, and its health and Armor.
     const ATTACK: i32 = 2;
@@ -83,6 +87,15 @@ mod tests {
     /// p2's damage in lanes 1 to 5.
     fn lanes(s: &Scenario) -> Vec<i32> {
         (1..=5).map(|lane| s.unit_at(P2, lane).damage).collect()
+    }
+
+    /// R4156000: p2's Unit across Fuse's lane 3 attacks it, toughs in the other lanes.
+    fn attacked(radiant: bool, seed: &str) -> Scenario {
+        let mut s = board(radiant, seed, json!([TOUGH, TOUGH, ATTACKER, TOUGH, TOUGH]));
+        s.end_turn();
+        let attacker = s.unit_at(P2, 3).id;
+        s.attack(attacker.as_str(), ID);
+        s
     }
 
     mod base {
@@ -151,6 +164,17 @@ mod tests {
         }
 
         #[test]
+        fn r4156000_attacked_it_strikes_back_with_its_plain_attack() {
+            let s = attacked(false, "s107-attacked");
+            assert_eq!(
+                lanes(&s),
+                vec![0, 0, ATTACK, 0, 0],
+                "2 on its attacker, not 10, and the strike back sweeps nothing"
+            );
+            assert_eq!(s.card(ID).damage, 3, "the blow of 6 less its Armor 3");
+        }
+
+        #[test]
         fn its_armor_and_health_are_printed() {
             let s = board(false, "s107-stats", json!([]));
             let view = s.stats(ID);
@@ -186,6 +210,17 @@ mod tests {
             s.attack(ID, target.as_str());
             assert_eq!(s.unit_at(P2, 3).damage, RADIANT_SWEEP_LANE * RADIANT_ATTACK);
             assert_eq!(s.unit_at(P2, 2).damage, RADIANT_SWEEP_ADJACENT * RADIANT_ATTACK);
+        }
+
+        #[test]
+        fn r4156000_attacked_the_radiant_strikes_back_with_its_plain_attack() {
+            let s = attacked(true, "s107-radiant-attacked");
+            assert_eq!(
+                lanes(&s),
+                vec![0, 0, RADIANT_ATTACK, 0, 0],
+                "4 on its attacker, not 28, and the strike back sweeps nothing"
+            );
+            assert_eq!(s.card(ID).damage, 0, "its Armor 6 takes the whole blow of 6");
         }
 
         #[test]

@@ -2356,72 +2356,101 @@ mod r4039000_daily_feed {
         match_id
     }
 
+    /// A hand-over's game is All Random, dealt from a random seed, and a card can end the turn of the seat
+    /// the move passes to as that turn starts, before that seat holds the move, so the move comes straight
+    /// back: Classic+ #26 Tommy Tempo casts itself when drawn and ends the turn, and Meditative+ #18
+    /// Cognitive Offloading has the AI play the rest of it. A test of hand-overs deals again, up to this
+    /// many times, until every move it makes hands over.
+    const DEALS: usize = 8;
+
+    /// `who`'s move (`move_now`), meant to hand the move to `to`: whether `to` holds it now.
+    async fn hand_over(app: &Arc<App>, who: &Account, to: &Account, match_id: &str, nonce: &str) -> bool {
+        move_now(app, who, match_id, nonce).await;
+        read(app, to, match_id).await["hasMove"] == true
+    }
+
     #[tokio::test]
     async fn r4039000_a_handover_tells_the_next_holder_alone() {
-        let (app, ada, bo) = two_friends().await;
-        let match_id = begun(&app, &ada, &bo).await;
-        let (on_move, other) = holder(&app, [&ada, &bo], &match_id).await;
-        move_now(&app, on_move, &match_id, "hand-over").await;
-        let (next, _) = holder(&app, [&ada, &bo], &match_id).await;
-        assert_eq!(next.id, other.id, "the move passed");
-        let told = unread(&app, other).await;
-        assert_eq!(
-            told,
-            vec![json!({
-                "id": told[0]["id"],
-                "kind": "dailyMove",
-                "actor": { "profileId": on_move.id, "username": on_move.name },
-                "subject": match_id,
-                "payload": {},
-                "createdAt": told[0]["createdAt"],
-                "read": false,
-            })]
-        );
-        assert_eq!(
-            unread(&app, on_move).await,
-            Vec::<Value>::new(),
-            "the mover is told nothing"
-        );
+        for _ in 0..DEALS {
+            let (app, ada, bo) = two_friends().await;
+            let match_id = begun(&app, &ada, &bo).await;
+            let (on_move, other) = holder(&app, [&ada, &bo], &match_id).await;
+            if !hand_over(&app, on_move, other, &match_id, "hand-over").await {
+                continue;
+            }
+            let told = unread(&app, other).await;
+            assert_eq!(
+                told,
+                vec![json!({
+                    "id": told[0]["id"],
+                    "kind": "dailyMove",
+                    "actor": { "profileId": on_move.id, "username": on_move.name },
+                    "subject": match_id,
+                    "payload": {},
+                    "createdAt": told[0]["createdAt"],
+                    "read": false,
+                })]
+            );
+            assert_eq!(
+                unread(&app, on_move).await,
+                Vec::<Value>::new(),
+                "the mover is told nothing"
+            );
+            return;
+        }
+        panic!("the move passed in none of {DEALS} deals");
     }
 
     #[tokio::test]
     async fn r4039000_a_second_move_replaces_the_unread_daily_move() {
-        let (app, ada, bo) = two_friends().await;
-        let match_id = begun(&app, &ada, &bo).await;
-        let (first, second) = holder(&app, [&ada, &bo], &match_id).await;
-        // First hands over, Second hands back, First hands over again: Second's one unread row stands.
-        move_now(&app, first, &match_id, "one").await;
-        let told = of_kind(&app, second, "dailyMove").await;
-        assert_eq!(told.len(), 1, "{told:?}");
-        move_now(&app, second, &match_id, "two").await;
-        move_now(&app, first, &match_id, "three").await;
-        let again = of_kind(&app, second, "dailyMove").await;
-        assert_eq!(
-            again.len(),
-            1,
-            "the newer move replaced the unread one: {again:?}"
-        );
-        assert!(again[0]["id"].as_i64() > told[0]["id"].as_i64(), "{again:?}");
-        assert_eq!(
-            unread(&app, first)
-                .await
-                .iter()
-                .filter(|row| row["kind"] == "dailyMove")
-                .count(),
-            1,
-            "First was told once"
-        );
+        for _ in 0..DEALS {
+            let (app, ada, bo) = two_friends().await;
+            let match_id = begun(&app, &ada, &bo).await;
+            let (first, second) = holder(&app, [&ada, &bo], &match_id).await;
+            // First hands over, Second hands back, First hands over again: Second's one unread row stands.
+            if !hand_over(&app, first, second, &match_id, "one").await {
+                continue;
+            }
+            let told = of_kind(&app, second, "dailyMove").await;
+            assert_eq!(told.len(), 1, "{told:?}");
+            if !hand_over(&app, second, first, &match_id, "two").await
+                || !hand_over(&app, first, second, &match_id, "three").await
+            {
+                continue;
+            }
+            let again = of_kind(&app, second, "dailyMove").await;
+            assert_eq!(
+                again.len(),
+                1,
+                "the newer move replaced the unread one: {again:?}"
+            );
+            assert!(again[0]["id"].as_i64() > told[0]["id"].as_i64(), "{again:?}");
+            assert_eq!(
+                unread(&app, first)
+                    .await
+                    .iter()
+                    .filter(|row| row["kind"] == "dailyMove")
+                    .count(),
+                1,
+                "First was told once"
+            );
 
-        // Once read, the next move is a row of its own.
-        read_all(&app, second).await;
-        move_now(&app, second, &match_id, "four").await;
-        move_now(&app, first, &match_id, "five").await;
-        let rows = of_kind(&app, second, "dailyMove").await;
-        assert_eq!(
-            rows.iter().map(|row| row["read"].clone()).collect::<Vec<_>>(),
-            vec![json!(false), json!(true)],
-            "{rows:?}"
-        );
+            // Once read, the next move is a row of its own.
+            read_all(&app, second).await;
+            if !hand_over(&app, second, first, &match_id, "four").await
+                || !hand_over(&app, first, second, &match_id, "five").await
+            {
+                continue;
+            }
+            let rows = of_kind(&app, second, "dailyMove").await;
+            assert_eq!(
+                rows.iter().map(|row| row["read"].clone()).collect::<Vec<_>>(),
+                vec![json!(false), json!(true)],
+                "{rows:?}"
+            );
+            return;
+        }
+        panic!("every move passed in none of {DEALS} deals");
     }
 
     #[tokio::test]
