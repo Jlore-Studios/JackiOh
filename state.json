@@ -15351,11 +15351,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T05:52:05Z",
+        "at": "2026-11-18T06:21:20Z",
         "difficulty": "hard",
-        "provider": "agy",
-        "tier": "medium",
-        "why": "Rule 4 applies: adds a database migration in crates/server/migrations/"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 4 (migration 0096) and rule 3 (crates/shared's DuosHost and crates/server must agree on the checkpoint key)"
       },
       "failures": 0,
       "forced": false,
