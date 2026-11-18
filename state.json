@@ -17661,10 +17661,17 @@
     "what": "suggestions (ai) on muse"
   },
   "last_sweep": {
-    "at": "2026-11-18T16:57:16Z",
+    "at": "2026-11-18T17:06:20Z",
     "notes": [
       "#4197 is held for `claude-1` until 11:10 (5-hour usage is 86%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))",
-      "delivered review #4208 on muse (run 44349363987): approved"
+      "started suggest on claude-6 (run 44355163752)",
+      "started suggest on claude-8 (run 44355304054)",
+      "started suggest on claude-6 (run 44355448036)",
+      "started plan #4197 on claude-1 (run 44355624174)",
+      "started suggest on claude-4 (run 44355785668)",
+      "started suggest on muse (run 44355937490)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18370,7 +18377,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-18T16:57:16Z",
+  "loop_tick": "2026-11-18T17:06:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
