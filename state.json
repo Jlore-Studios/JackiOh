@@ -16088,6 +16088,7 @@
       "run_id": "44254631388",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 340,
       "started_at": "2026-11-18T06:52:58Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36818,9 +36819,33 @@
         "title": "Patch: wrong invite codes block one profile or address for its hour, never everyone: redemption has no global circuit breaker (R4131000)",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "43bc89793d1ebf2b37ad7208c6c3b42fc8ec394d",
+        "issue": 4161,
+        "merged_at": "2026-11-18T07:46:13Z",
+        "n": 340,
+        "pr": 4192,
+        "queued_at": "2026-11-18T07:46:13Z",
+        "sha": "ba7a755b2895a77d08a8c1bbd6eb40e1e36223f8",
+        "status": "queued",
+        "title": "Patch: the changed-cards fuzz wave also plays each changed card on its Radiant face",
+        "tries": 0
       }
     ],
-    "count": 339
+    "count": 340
   },
   "statistics": {
     "at": "2026-11-18T07:42:04Z"
