@@ -13906,6 +13906,13 @@
     "4140": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T02:10:28Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "client-only change in one component plus its style, testid and tests; none of the five hard lines (engine rules, AI, cross-crate design, migration, 40+ files) holds"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
