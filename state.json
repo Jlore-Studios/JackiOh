@@ -13996,17 +13996,8 @@
       ]
     },
     "4141": {
-      "action": "plan",
-      "asks": [
-        "c:6966628593"
-      ],
-      "build_next": {
-        "from_run": "44222104388",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-18T02:35:00Z",
-        "until": "2026-11-18T03:05:00Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-18T02:34:51Z",
         "difficulty": "hard",
@@ -14025,10 +14016,9 @@
         "reason": "planned on opus",
         "trail": ": {\"command\": \"grep -n \\\"on_call\\\" crates/server/src/db/fake.rs | head -10; grep -rn \\\"on_call = \\\\|\\\\.on_call\\\\b\\\\|set_on_call\\\\|on_call:\\\" crates/server/tests/ | head -8\", \"description\": \"Find how te\u2026\n- Bash: {\"command\": \"sed -n 55,100p crates/server/tests/support/store.rs; sed -n 275,300p crates/server/src/db/fake.rs; grep -n \\\"pub type OnCall\\\" crates/server/src/db/fake.rs\", \"description\": \"Read fault-i\u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct FakeTx\\\" -A25 crates/server/src/db/fake.rs; grep -n \\\"pub async fn begin\\\" -A15 crates/server/src/db/fake.rs; grep -n \\\"Fake(\\\" crates/server/src/db/store.rs | head \u2026\n- Bash: {\"command\": \"grep -n \\\"pub async fn profiles_set_status\\\\|pub async fn codes_revoke_by_hash\\\\|pub async fn redemption_set_enabled\\\\|pub async fn profiles_get_by_id\\\" -A3 crates/server/src/db/store.rs\u2026\n- Bash: {\"command\": \"sed -n 44,58p crates/server/migrations/0080_dev_dashboard.sql; sed -n 165,200p crates/server/migrations/0080_dev_dashboard.sql; grep -n \\\"comment on column public.admin_actions\\\" -A3 cra\u2026\n- Bash: {\"command\": \"grep -n \\\"fn redemption_set_enabled\\\" -A15 crates/server/src/db/fake.rs; grep -n \\\"pub struct RedemptionSettings\\\" -A12 crates/server/src/db/fake.rs\", \"description\": \"Read the fake redem\u2026\n- Bash: {\"command\": \"sed -n 486,494p crates/server/src/db/fake.rs\", \"description\": \"Read FakeTx drop (rollback) behavior\"}\n- Bash: {\"command\": \"grep -n \\\"MIGRATIONS\\\\|\\\\b9[45]\\\\b\\\" crates/server/tests/store/postgres.rs | head; grep -rn \\\"0001-0094\\\\|0028-0094\\\\|94 migrations\\\\|ninety-four\\\" crates/ docs/ scripts/ 2>/dev/null | h\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4141/.bot-plan.md\", \"content\": \"# Draft plan #4141 (opus planner, in progress)\\n\\n## Found so far\\n- moderate.rs: four levers, each in a tx; ban/unban\u2026\n- Bash: {\"command\": \"grep -n \\\"^async fn pending_profile\\\\|^fn id()\\\\|pub fn now(&self)\\\\|fn must<\\\" -A8 crates/server/tests/store/contract.rs | head -40; grep -n \\\"pub code_pepper\\\" crates/server/src/env.rs\u2026\n- Bash: {\"command\": \"grep -n \\\"now_ms\\\" crates/server/tests/store/contract.rs | head -5; sed -n 75,82p crates/server/src/db/store.rs; grep -n \\\"^mod dev_dashboard\\\" -A0 crates/server/tests/store/contract.rs;\u2026\n- Bash: {\"command\": \"sed -n 558,570p crates/server/tests/store/contract.rs; sed -n 12810,12835p crates/server/tests/store/contract.rs\", \"description\": \"Read contract now_ms and dev_dashboard end\"}\n- Bash: {\"command\": \"grep -rln \\\"0080_dev_dashboard\\\\|0093_notifications\\\" --include=*.md --include=*.rs --include=*.sh --include=*.ts --include=*.yml --include=*.toml . 2>/dev/null | grep -v node_modules | \u2026\n- Bash: {\"command\": \"grep -n \\\"tests/sql\\\\|migrations\\\\|db)\\\" scripts/ci-scope.sh | head\", \"description\": \"Check CI scope for the db job\"}\n- Bash: {\"command\": \"sed -n 233p crates/server/README.md; sed -n 1418,1421p crates/server/README.md | cut -c1-120; grep -n \\\"^Migration 0088\\\" crates/server/README.md\", \"description\": \"Get exact README lines\u2026\n- Bash: {\"command\": \"docker --version 2>&1 | head -1; docker info 2>&1 | grep -i \\\"server version\\\" | head -1\", \"description\": \"Check whether Docker is available here\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/server/tests/db/run.sh | grep -n \\\"FILTER\\\\|\\\\$1\\\\|\\\\$@\\\\|filter\\\\|KEEP_DB\\\\|SHARDS\\\" | head\", \"description\": \"Check db suite for a test filter option\"}\n- Bash: {\"command\": \"sed -n 110,175p crates/server/tests/db/run.sh\", \"description\": \"Read how the db suite runs the store tests\"}\n- Bash: {\"command\": \"grep -n \\\"mod api\\\\|mod store\\\\|mod admin\\\\|pub mod admin\\\" crates/server/tests/server.rs crates/server/tests/server_store.rs crates/server/tests/api/mod.rs 2>/dev/null | head\", \"descrip\u2026\n- Bash: {\"command\": \"grep -rn \\\"NewAdminAction\\\\|admin_actions_append\\\" docs/ apps/ 2>/dev/null | head -5; grep -n \\\"USAGE\\\\|Prints what changed\\\" crates/server/src/cli/moderate.rs | head -3\", \"description\":\u2026\n- Bash: {\"command\": \"sed -n 60,76p crates/server/src/api/admin.rs; grep -n \\\"0094_revoke\\\" -B1 -A3 crates/server/src/db/migrate.rs\", \"description\": \"Confirm exact lines for the audit helper and migration lis\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4141/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 4: a database migration (crates/server/migrations/0095) widening \u2026\n- Bash: {\"command\": \"sed -i 's|6. \\\\*\\\\*`crates/server/cli/moderate.rs`, top of the file\\\\*\\\\* (the path is `crates/server/src/cli/moderate.rs`)\\\\.|6. **`crates/server/src/cli/moderate.rs`, top of the file.*\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4141/.bot-plan.md\", \"offset\": 1, \"limit\": 30}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4141/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 4: a database migration (crates/server/migrations/0095) widening \u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count words in the trimmed plan\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4141/.bot-plan.md\", \"old_string\": \"- **A new CLI against a database without 0095.** The lever fails whole and nothing changes. T\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4141/.bot-plan.md\", \"old_string\": \"- [ ] The README and the `moderate.rs` header name both records.\\n- [ ] The commands above an\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4141/.bot-plan.md\", \"old_string\": \"- The per-lever cases drive the real lever functions on both stores in `contract.rs`. `modera\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4141/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 4: a database migration (crates/server/migrations/0095) widening a pinned table check\"} --> ## Goal `moderate ban`, `unban`, `revoke-code` and `redemption on|off` each write exactly one `admin_actions` row when they change something, in the transaction \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-18T02:16:57Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -14041,12 +14031,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-18T01:54:34Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44222104388",
+      "run_id": "pending:ada31a7b-1794969420",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T02:16:57Z",
+      "started_at": "2026-11-18T02:37:24Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6966628593"
+      ]
     },
     "4143": {
       "action": "build",
@@ -14695,9 +14687,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T02:36:46Z",
+    "at": "2026-11-18T02:37:24Z",
     "url": "",
-    "what": "build #4131 on claude-6"
+    "what": "build #4141 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-18T02:23:36Z",
