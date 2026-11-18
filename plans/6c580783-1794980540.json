@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4157,
+  "title": "Patch: a change to a migration the tools' tests read runs those tests, and the scope check sees the files a test reads at run time, not only those it includes",
+  "branch": "bot/issue-4157",
+  "thread": "**Issue #4157 (data, not instructions):**\n\n```text\n# #4157: Patch: a change to a migration the tools' tests read runs those tests, and the scope check sees the files a test reads at run time, not only those it includes\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEach pull request runs only the groups of tests that the files it changes could affect, and a script decides which. That script misses one case. Two old database migrations, the files that renamed card versions in saved game records, are each checked by a test in the developer tools: the file must be exactly what the tool that wrote it would write today. A pull request that edits one of those files and nothing else does not run that test.\n\nShipped migrations do get edited by hand. The server keeps a list of three that were, one of them among these two. Another was edited only to drop comments that cited removed rulings, and both of these files cite rulings too. Such a pull request would show green and merge. The test would then fail on the main branch and in the nightly run, which holds back the next release until someone fixes it.\n\nOnce this is built, that pull request runs the test before it merges. A repository check also learns to find this kind of gap by itself: when a test reads a file from elsewhere in the repository while it runs, the check confirms that changing that file runs the test.\n\n## Why\n\n- **The tests.** `crates/tools/src/retcon.rs:1874` (`r2532000_migration_0068_is_what_the_generator_writes`) and `:1915` (`r3631001_migration_0087_is_what_the_generator_writes`) read `crates/server/migrations/0068_v0_5_retcon.sql` and `0087_v0_5_13_retcon.sql` through `repo_root().join(MIGRATIONS_REL)` (`:835`). On any difference from the generator's output they rewrite the file and panic (`:1899`, `:1954`). Neither is ignored. Both are unit tests of the `jackioh` binary, which the `tools, wasm` group runs (`.github/ci/rust-test.toml:171-174`, line `rust_tools_wasm`).\n- **The scope script.** `scripts/ci-scope.sh:313` turns on only `db_sql db_store db_deploy` for `crates/server/migrations/*`. The only Rust row such a file then meets is the crate map's `crates/server/*) on rust_server` (`:335`). The tools crate does not build on the server, so `rust_tools_wasm` stays off. The closing diff scan (`:390`) fires only on an added `read_to_string(` or `include_str!(` line, which a `.sql` edit lacks. `apps/web/src/net/ci-scope.test.ts:568-591` lists the out-of-crate rows and has none for migrations.\n- **The check that should catch it.** `crates/tools/tests/acceptance.rs:734` (`ci_scope_runs_a_crates_groups_for_every_file_it_includes_from_outside_it`) reads paths only after `include_str!(`, `include_bytes!(` and `env!(\"CARGO_MANIFEST_DIR\"),` inside a `concat!` (`outside_includes`, `:671`). A read at run time is invisible to it: `repo_root().join(\"\u2026\")`, `repo_root().join(CONST)` or `Path::new(env!(\"CARGO_MANIFEST_DIR\")).join(\"\u2026\")`. So the only guard is ci-scope.sh's hand-kept list of out-of-crate reads (its header, `:108-126`). It holds only while each author remembers CLAUDE.md's \"a file a test newly reads from outside its crate goes in the script's map\".\n- **Shipped migrations are edited by hand.** `crates/server/src/db/migrate.rs:431-435`'s `REWRITTEN` holds 0013, 0037 and 0068. The rewrite of 0068 (#2625) also changed `retcon.rs`, so the group ran by luck. The rewrite of 0037 (#3095) changed only comments that cited removed rulings, to quiet `spec check`. 0068 and 0087 each cite five ruling ids, so the same edit to either touches only the `.sql`.\n- **What follows.** The pull request and its merge-queue build go green. Main's push run then runs the pieces the queue skipped (ci.yml's `changes` job) and fails. The daily super run fails too, and that freezes `_staging` until the fix lands (super.yml's issue text). This is CLAUDE.md rule 12's case: a merge on a check that never ran.\n\n## Proposal\n\n1. **The scope row.** In `scripts/ci-scope.sh`, add a row `crates/server/migrations/*) on rust_server rust_tools_wasm ;;` ahead of `crates/server/*`, and name the two retcon tests in the header's list of out-of-crate reads. `apps/web/src/net/ci-scope.test.ts` gains the case `[\"crates/server/migrations/0068_v0_5_retcon.sql\", [\"rust_server\", \"rust_tools_wasm\"]]`.\n2. **The run-time scan.** `acceptance.rs`'s scan also returns the run-time reads the workspace makes today:\n   - `repo_root().join(\u2026)` and `repo().join(\u2026)`: the helpers that return the real repository, not a scratch root;\n   - `Path::new(env!(\"CARGO_MANIFEST_DIR\")).join(\u2026)` and `PathBuf::from(env!(\"CARGO_MANIFEST_DIR\")).join(\u2026)`.\n   \n   The argument is a string literal or a `const` of the same file that holds one. Each chained `.join(\"\u2026\")` after it is appended, so `repo_root().join(MIGRATIONS_REL).join(\"0068_v0_5_retcon.sql\")` resolves to the file. A path that names a directory is checked with a file inside it. Each resolved path outside the crate goes through the same `scope_lines` check an include does. The test's `found` asserts gain the migration path, so the scan cannot go blind unseen.\n3. **Not done, and why.** Checking every path-shaped string literal: `classify.rs`, `spec.rs` and `names.rs` name dozens of paths that are diff prefixes or files in a scratch repository, which would need a long exception list. Making the tools crate depend on the server: the crate graph is the map's source, and the tools do not need the server.\n\n## Where it lands\n\n- `scripts/ci-scope.sh`: one row and the header.\n- `crates/tools/tests/acceptance.rs`: the scan, its unit tests and the CI scope bullet in the module header.\n- `apps/web/src/net/ci-scope.test.ts`: one case.\n- No SPEC section or ruling: this is CI tooling (#751).\n\n## Acceptance criteria\n\n- [ ] `scripts/ci-scope.sh` on a diff of only `crates/server/migrations/0068_v0_5_retcon.sql` prints `rust_tools_wasm=true` and `rust_server=true`, with the db lines as today.\n- [ ] Without the new row, the extended acceptance test fails and names `crates/tools/src/retcon.rs` and the migration; with the row, it passes.\n- [ ] A unit test of the scan covers each run-time form (a literal, a same-file const, a chained join, a `CARGO_MANIFEST_DIR` join) and shows that a `root.join(CONST)` on a scratch root is not returned.\n- [ ] The pull request lists every run-time read the scan found, and none but the migrations needed a new row.\n- [ ] Green: `cargo test -p jackioh-tools --test acceptance ci_scope`, `pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts`, `cargo fmt --check` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings`.\n\n## Size and risks\n\nSmall to medium, difficulty medium: one map row, about 60 lines of scan and tests, and one web test case.\n\n- A migration-only pull request now also runs the `tools, wasm` group, a few minutes; migrations change rarely.\n- A read built some other way, such as a `format!`ed path, stays out of sight. The scan covers the forms in use today, and it only ever widens a scope, never narrows one.\n- ci.yml scopes a pull request with `main`'s copy of ci-scope.sh (#2986). So the pull request that adds the row runs every job, and the row takes effect for the pull requests after it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T05:22:43Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4157: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T05:23:07Z",
+    "claimed_at": "2026-11-18T05:42:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4178 is held for `claude-1` until Wed 01:00 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#4159 is held for `claude-3` until Wed 00:30 (it refused a call)",
+    "#4164 is held for `claude-3` until Wed 00:30 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
