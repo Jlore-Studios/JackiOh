@@ -10468,15 +10468,8 @@
       "verdict_rounds": 1
     },
     "4016": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44244088078",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-18T05:36:12Z",
-        "until": "2026-11-18T06:06:12Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -10488,10 +10481,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Steps\n- 1. In `eslint.config.js`, after the #4013 blocks, add one block:\n- - `files: [\"apps/web/src/**/*.{ts,tsx,js}\", \"apps/edge/**/*.ts\", \"apps/admin/**/*.{ts,tsx}\"]` (covers `apps/admin/worker` and top-level admin files; mirrors #4009/#4013 scope; e2e deliberately not listed \u2014 outside the task's scope).\n- - `ignores: [\"**/*.test.{ts,tsx}\"]`: test files legitimately assign `innerHTML` for jsdom setup (`apps/web/src/fx/anchors.test.ts`, `apps/web/src/tutorial/Coach.test.tsx`, etc.), so without this the block fails today.\n- - `no-restricted-syntax` (error), one entry each with a message ending `(#4016)`:\n- - `JSXAttribute[name.name=\"dangerouslySetInnerHTML\"]` \u2014 React's raw-markup escape hatch.\n- - `AssignmentExpression[left.property.name=\"innerHTML\"]` and `AssignmentExpression[left.property.name=\"outerHTML\"]` \u2014 assignments (including `+=`) only, so reads like the e2e specs' `element.outerHTML` stay legal.\n- - `NewExpression[callee.name=\"Function\"]` \u2014 the `new Function` constructor.\n- - `no-restricted-properties` (error), one entry each, message ending `(#4016)`:\n- - `{ \"property\": \"insertAdjacentHTML\" }` \u2014 markup written straight into the document.\n- - `{ \"object\": \"document\", \"property\": \"write\" }` \u2014 `document.write`.\n- - No allowlist block: verification (below) shows zero hits in the scoped non-test sources, so a future need adds a commented exception then, per the task.\n- 2. Verify the lint block: run `pnpm exec eslint apps/edge apps/web e2e` from the repo root and confirm green. If a non-test source flags, stop \u2014 the task's premise (zero uses) is wrong; do not weaken the selector, report it.\n- 3. In `crates/server/tests/api/daily.rs`, add one test after `the_sweep_emails_once_per_account_and_none_when_off_or_without_email` (copy its setup: `two_friends()`, one `daily_game`, `fake_service(StatusCode::OK)`, `app_with` with `mail_api`, `POST /daily-sweep`):\n- - Mail half: deserialize the captured Resend body as in that test and assert `mail.get(\"html\").is_none()` (no HTML part is ever sent) while `mail[\"text\"]` still lists the game line. Add a comment on the assert: if an `html` part is ever added, this test must grow escaping asserts for the opponent u\u2026\n- - Unsubscribe half, through `call` (HTML arrives as `Value::String`; assert `body.as_str()` exact equality, copying the literals from `notify.rs:590-591` and `html_page` at `594-603` \u2014 do not import the private const):\n- - GET with each of `token=` (empty), `token=not-a-uuid`, and percent-encoded `token=%3Cscript%3Ealert(1)%3C%2Fscript%3E` returns 200 and exactly the full `NOT_OURS` page; assert the body contains neither `alert(1)` nor any `<script>`.\n- - GET with a fresh unknown UUID (`uuid::Uuid::new_v4()`) returns 200 and exactly the form page (`Stop the emails about your daily games?` \u2026 `action=\"/api/daily/unsubscribe?token={uuid}\"`), proving a well-formed token is echoed only inside the action URL.\n- - POST to the `<script>`-token link returns 200 and exactly the `NOT_OURS` page (unknown token unsubscribes nobody).\n- 4. Run the new server test plus the existing sweep-mail test (step 5's commands), then `cargo fmt --check` and `cargo clippy -p jackioh-server --all-targets -- -D warnings`.\n- ## Tests\n- - `crates/server/tests/api/daily.rs`, new `async fn daily_email_has_no_html_part_and_unsubscribe_page_reflects_no_token`: asserts the Resend JSON has no `html` key with `text` intact, and exact-equality of the unsubscribe GET/POST bodies for hostile tokens (`<script>alert(1)</script>` included) aga\u2026\n- - Existing guard in the same file: `the_sweep_emails_once_per_account_and_none_when_off_or_without_email` must stay green (it owns the mail-capture setup the new test copies).\n- - Commands: `cargo test -p jackioh-server --test server api::daily::daily_email_has_no_html_part_and_unsubscribe_page_reflects_no_token`, then `cargo test -p jackioh-server --test server api::daily::the_sweep_emails_once_per_account_and_none_when_off_or_without_email`, then `pnpm exec eslint apps/e\u2026\n- ## Done when\n- - [ ] New ESLint block is in `eslint.config.js` with the six bans across the three apps, test files ignored, zero allowlist entries.\n- - [ ] `pnpm exec eslint apps/edge apps/web e2e` is green (the task's acceptance command).\n- - [ ] New server test passes; existing sweep-mail test passes; `cargo test -p jackioh-server` and the web tests are green.\n- - [ ] `cargo fmt --check` and `cargo clippy -p jackioh-server --all-targets -- -D warnings` are clean; no ruling note added or removed (no `spec check` impact).\n- ## Risks\n- - Selector overreach: a too-broad `outerHTML`/`innerHTML` selector would flag reads (the e2e specs' `element.outerHTML`, web tests' `container.innerHTML`). Avoided by scoping the two property selectors to `AssignmentExpression[left.\u2026]` and keeping e2e outside `files`.\n- - Test-file noise: `document.body.innerHTML = \"\"` appears in many web tests. Avoided by the block's `ignores`, not by touching the tests.\n- - Brittle exact-string asserts on the unsubscribe pages: intentional \u2014 the point is the bodies are fixed strings, so any copy change must update the test deliberately.\n- - `call` percent-encoding: the `<script>` token must be percent-encoded in the path (`%3C\u2026%3E`); a raw `<` may fail at `Uri` parsing rather than exercise the handler.\n- ## Open questions\n- None. One judgment call is pre-settled and needs no person: if an `html` mail part is ever added, the new test's comment requires its author to extend the test with username/match-id escaping asserts rather than delete the absence assert.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4016 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4016/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-18T05:24:50Z",
       "owner_why": "it plans it",
@@ -10504,9 +10496,9 @@
       "provider": "muse",
       "queued_at": "2026-11-15T22:30:37Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44244088078",
+      "run_id": "pending:a491bf43-1794980335",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-18T05:24:50Z",
+      "started_at": "2026-11-18T05:39:18Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15927,9 +15919,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T05:38:42Z",
+    "at": "2026-11-18T05:39:18Z",
     "url": "",
-    "what": "build #4168 on muse"
+    "what": "build #4016 on muse"
   },
   "last_sweep": {
     "at": "2026-11-18T05:23:20Z",
