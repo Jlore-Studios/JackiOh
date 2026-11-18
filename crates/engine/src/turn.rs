@@ -410,7 +410,7 @@ fn start_of_turn_brittle(sink: &mut EngineSink, player: PlayerId, due_before: u3
     // R1854004: then `player`'s quests waiting to hear back count the turn; one whose wait ends opens
     // its stage.
     crate::subsystems::quests::hear_back_at_turn_start(sink, player);
-    // R3540001: then the Burn and Toxic ticks, settled with the stage.
+    // R3540001: then the Toxic ticks, settled with the stage (Burn ticks at the end of the turn, R4154000).
     crate::afflictions::tick_at_turn_start(sink, player);
     // R3554001: then the Black Hole draws `player`'s permanents one lane toward it.
     crate::geometry::pull_at_turn_start(sink, player);
@@ -775,6 +775,9 @@ fn end_of_turn_after_window(sink: &mut EngineSink, player: PlayerId, due_before:
         return;
     }
 
+    // R4154000: then every Burn ticks once and is removed, settled with the delayed effects before
+    // cleanup.
+    crate::afflictions::tick_burn_at_turn_end(sink, player);
     end_of_turn_delayed_settle(sink, player);
 }
 

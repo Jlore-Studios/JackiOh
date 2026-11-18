@@ -1,22 +1,26 @@
 //! Stinkyscape #59 Repeater v5 (SPEC §8.10 row 59). Unit 0/4 → 0/8, Weapon, cost 4, Legendary.
 //!   Base:    "Starship Piece, Equip
-//!            Activate 4: Deal {damage} damage to an enemy Unit, with Pierce." — damage 3
+//!            Activate 3: Deal {damage} damage to an enemy Unit, with Pierce." — damage 3
 //!   Radiant: the same text — damage 6
 //!
 //! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the Activate's target is a declared enemy Unit (R81), never a hero (#2521). Pierce is
-//! `ignoreArmor` (R346). Activate 4 is four uses a turn (R384, R1857003), each hit its own state check.
-//! The number is the declared `damage` (R386), read through `param`.
+//! `ignoreArmor` (R346). Activate 3 is three uses a turn (R384, R1857003), each hit its own state check;
+//! issue #4154 cut it from four, which `script_v0_6_6h` keeps for the replays of v0.6.6h and before
+//! (R767000). The number is the declared `damage` (R386), read through `param`.
 
 use jackioh_engine::effects::{DamageEffectArgs, DamageFlagArgs, TargetSpec, damage};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-059";
 
-/// Activate 4 (R1857003): four uses a turn.
-const USES: i32 = 4;
+/// Activate 3 (R1857003): three uses a turn (issue #4154).
+const USES: i32 = 3;
+
+/// R767000: Activate 4 (R1857003): the four uses a turn it had through v0.6.6h.
+const USES_V0_6_6H: i32 = 4;
 
 /// R767000: Activate 6 (R1857003): the six uses a turn it had through v0.5.11.
 const USES_V0_5_11: i32 = 6;
@@ -33,11 +37,11 @@ fn shot(ctx: &EffectContext<'_>) -> Vec<Effect> {
     })]
 }
 
-fn repeater() -> ActivationDecl {
+fn repeater(uses: i32) -> ActivationDecl {
     ActivationDecl {
         id: "repeater".into(),
         label: "Deal damage to an enemy Unit, with Pierce".into(),
-        uses: ActivationUses::Count(USES),
+        uses: ActivationUses::Count(uses),
         cost: None,
         // "an enemy Unit": enemy Units only, never a hero.
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))],
@@ -48,13 +52,24 @@ fn repeater() -> ActivationDecl {
     }
 }
 
-pub fn script() -> CardScripts {
+/// Both faces' scripts, the Activate's `uses` a turn.
+fn scripts(uses: i32) -> CardScripts {
     let base = Script {
-        activations: vec![repeater()],
+        activations: vec![repeater(uses)],
         ..Script::default()
     };
     let radiant = base.clone();
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(USES)
+}
+
+/// R767000: through v0.6.6h its Activate had `USES_V0_6_6H` uses a turn; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
+    scripts(USES_V0_6_6H)
 }
 
 /// R767000: the chosen enemy's hit, through Armor, as v0.5.11 ran it: the enemy hero a target too,
@@ -137,6 +152,13 @@ mod tests {
         #[test]
         fn damage_reads_through_param() {
             fam::rep_param_reads(ID, "s059");
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_6h_has_four_uses_a_turn() {
+            crate::under_kept(ID, script_v0_6_6h(), || {
+                fam::rep_uses_a_turn(ID, "s059-v0-6-6e", false, USES_V0_6_6H, DAMAGE);
+            });
         }
     }
 

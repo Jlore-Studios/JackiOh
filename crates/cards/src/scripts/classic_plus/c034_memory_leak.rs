@@ -1,4 +1,4 @@
-//! C+ #34 Memory Leak (SPEC §8.7 row 34): (2) Field Spell, Epic (#2521: was (3), and gained Crater).
+//! C+ #34 Memory Leak (SPEC §8.7 row 34): (1) Field Spell, Epic (issue #4154: was (2); #2521: was (3), and gained Crater).
 //!   Base:    "Crater". Choose one: "End of turn: Lock a random enemy zone"; or
 //!            "After your opponent plays a Unit or Field Spell, Lock its zone."
 //!   Radiant: "Crater", and both, no choice.

@@ -1389,14 +1389,24 @@ pub fn chosen_tuning_number(ctx: &EffectContext<'_>) -> Option<ChosenTuningNumbe
 pub struct GainKeywordForGoodArgs {
     /// The keyword the card keeps: Lucky 1 for Stinkyscape #154 Dice of Doom.
     pub keyword: Keyword,
+    /// R4154202 (Classic #37 Last Hurrah's Radiant "Give 4 random cards in your hand Flashback"): the
+    /// card that keeps it, by id, wherever it is now; absent, the card running the script.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instance_id: Option<String>,
 }
 
-/// R1870007 (Stinkyscape #154 Dice of Doom): the card running the script keeps `keyword` in every zone,
-/// in its `tuning` as an Upgrade's is (R386), so neither leaving the field (R78) nor a graveyard (R215)
-/// takes it. A numbered Armor or Lucky stacks (`tuning::tuned_keywords`); another kind is not had twice.
+/// R1870007 (Stinkyscape #154 Dice of Doom): the card running the script, or the card `instance_id`
+/// names (R4154202), keeps `keyword` in every zone, in its `tuning` as an Upgrade's is (R386), so neither
+/// leaving the field (R78) nor a graveyard (R215) takes it. A numbered Armor or Lucky stacks
+/// (`tuning::tuned_keywords`); another kind is not had twice. The `keywordGranted` it reports names a
+/// card in a hidden zone to no one else (`view_for`, R177).
 pub fn gain_keyword_for_good(args: GainKeywordForGoodArgs) -> Effect {
     Effect::new("gainKeywordForGood", move |ctx| {
-        let Some(card_id) = ctx.live_self().map(|card| card.id.clone()) else {
+        let card_id = match &args.instance_id {
+            Some(instance_id) => Some(instance_id.clone()),
+            None => ctx.live_self().map(|card| card.id.clone()),
+        };
+        let Some(card_id) = card_id else {
             return;
         };
         let Some(card) = find_instance_mut(ctx.state, &card_id) else {

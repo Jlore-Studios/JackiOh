@@ -1,11 +1,12 @@
-//! SPEC §8.12 S+ #135 Crawler Swarm (§7, R64, R1136000, R1420, R3535000, R3560000): (3) Spell ((2) until
+//! SPEC §8.12 S+ #135 Crawler Swarm (§7, R64, R1136000, R1420, R3535000, R4154301): (3) Spell ((2) until
 //! issue #3996), Mindustrial, Common, a card of the Stinkyscape+ set.
 //!   Base:    "Fill your board with Crawlers."
 //!   Radiant: "Fill your board with Radiant Crawlers."
 //!
 //! Engine: its Cry is one `fillBoard` of the Crawler (S+ #120): a Crawler in every empty unit zone of its
-//! caster's side, left to right (R64, R1136000), Radiant on the Radiant face. The first Crawler to arrive
-//! each game adds a Toxopid to its player's hand, once whatever the number that arrive (R3560000).
+//! caster's side, left to right (R64, R1136000), Radiant on the Radiant face. Their arrival adds nothing:
+//! each Crawler's Death adds or cheapens a Toxopid (R4154301; through v0.6.6h the first Crawler to arrive
+//! each game added one, R3560000).
 
 use jackioh_engine::prelude::*;
 
@@ -30,7 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S+ #135 Crawler Swarm — SPEC §8.12 row S+ 135 (R64, R3560000).
+// S+ #135 Crawler Swarm — SPEC §8.12 row S+ 135 (R64, R4154301).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,11 +79,11 @@ mod tests {
         }
 
         #[test]
-        fn r3560000_exactly_one_toxopid_comes_of_the_whole_swarm() {
+        fn r4154301_the_swarm_s_arrival_brings_no_toxopid() {
             let mut s = swarming(false, json!([{ "def": STAND_IN, "lane": 1 }, { "def": STAND_IN, "lane": 2 }]));
             s.play(ID, json!({}));
             assert_eq!(crawlers(&s).len(), 3);
-            assert_eq!(toxopids(&s), 1);
+            assert_eq!(toxopids(&s), 0, "only a Crawler's Death adds one");
         }
 
         #[test]

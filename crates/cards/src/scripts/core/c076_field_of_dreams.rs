@@ -1,5 +1,5 @@
-//! #76 Field of Dreams (SPEC §8.3, R31, R4, R11, R50, §10.5). (1) Spell, Rare; it cost (2) until issue
-//! #3996 and (3) until patch v0.3.13 (#1194).
+//! #76 Field of Dreams (SPEC §8.3, R31, R4, R11, R50, §10.5). (0) Spell, Rare; it cost (1) until issue
+//! #4154, (2) until issue #3996 and (3) until patch v0.3.13 (#1194).
 //!
 //! Base: "Replace your hand with the same number of Reminisce; exile this". The radiant cell is
 //! "Radiant Reminisce", so every other clause is kept (§8 Conventions): the faces differ by one flag.
@@ -102,22 +102,22 @@ mod tests {
         ids
     }
 
-    /// Field of Dreams (Radiant on `radiant`) costs (1) and its play spends 1 of 5 mana.
-    fn spends_1(radiant: bool) {
-        assert_eq!(crate::card_def(FIELD_OF_DREAMS).cost, CardCost::Fixed(1));
+    /// Field of Dreams (Radiant on `radiant`) costs (0) since issue #4154 and its play spends none of 5 mana.
+    fn spends_0(radiant: bool) {
+        assert_eq!(crate::card_def(FIELD_OF_DREAMS).cost, CardCost::Fixed(0));
         let mut p1 = busy_with_hand(hand_of(json!({ "def": FIELD_OF_DREAMS, "radiant": radiant }), &FILLER));
         p1["mana"] = json!(5);
         let mut s = setup(json!({ "p1": p1, "p2": keep_busy() }));
         s.play(FIELD_OF_DREAMS, json!({}));
-        s.expect_mana(P1, 4);
+        s.expect_mana(P1, 5);
     }
 
     mod field_of_dreams_base {
         use super::*;
 
         #[test]
-        fn costs_1_and_a_play_spends_1() {
-            spends_1(false);
+        fn costs_0_and_a_play_spends_nothing() {
+            spends_0(false);
         }
 
         #[test]
@@ -197,8 +197,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn costs_1_and_a_play_spends_1() {
-            spends_1(true);
+        fn costs_0_and_a_play_spends_nothing() {
+            spends_0(true);
         }
 
         #[test]

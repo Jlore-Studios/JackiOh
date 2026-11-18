@@ -9,13 +9,28 @@
 //! **Can’t attack**
 //! **Taunt**
 //!
-//! Every word is catalog data (Crater, Can't attack, Taunt): no script.
+//! Crater, Can't attack and Taunt are catalog data. Since issue #4154 both faces are also "Immune to
+//! Toxic", a static flag (`immuneToToxic`, R4154001): no Toxic goes on it, so the Toxopid's own
+//! end-of-turn Toxic spares a Leg on its controller's opponent's side.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-121-1";
 
 pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            immune_to_toxic: Some(true),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.6.6h the Leg had no script (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_6h() -> CardScripts {
     let base = Script::default();
     let radiant = base.clone();
     CardScripts { base, radiant }
@@ -47,6 +62,28 @@ mod tests {
                 lane: *lane,
             },
             zone => panic!("not on the field: {zone:?}"),
+        }
+    }
+
+    /// R4154001: a Scourge Mortar v3's Toxic adds nothing to a Leg, on either face, while it still Toxics a
+    /// Unit beside it.
+    #[test]
+    fn r4154001_a_leg_takes_no_toxic() {
+        const MORTAR: &str = "stinkyscapeplus-146"; // Scourge Mortar v3: the Toxic
+        const TOUGH: &str = "stand-in (1) 2/30";
+        for radiant in [false, true] {
+            let mut s = weapon_board(
+                "s121-1-immune",
+                json!({ "field": [MORTAR] }),
+                json!({ "field": [{ "def": ID, "radiant": radiant }, TOUGH] }),
+            );
+            let leg = s.unit_at(PlayerId::P2, 1).id;
+            let tough = s.unit_at(PlayerId::P2, 2).id;
+            s.activate(MORTAR, json!({ "ability": "toxic", "targets": pick::id(&leg) }));
+            assert_eq!(jackioh_engine::query::toxic_on(s.card(&leg)), 0, "radiant {radiant}");
+            crate::next_turn_of(&mut s, PlayerId::P1);
+            s.activate(MORTAR, json!({ "ability": "toxic", "targets": pick::id(&tough) }));
+            assert!(jackioh_engine::query::toxic_on(s.card(&tough)) > 0, "radiant {radiant}: a Unit beside it takes it");
         }
     }
 

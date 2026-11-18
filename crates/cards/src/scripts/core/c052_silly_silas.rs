@@ -1,6 +1,6 @@
 //! #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
-//! R14, R33, R78, R81, R88, R3837000, R3837001, R3837002). Unit 4/4 → 8/8, Human, cost 4, Legendary
-//! (2/2 → 4/4 until issue #3996; 4/4 → 8/8 until issue #3136). BUILD wave 3 (rotation).
+//! R14, R33, R78, R81, R88, R3837000, R3837001, R3837002). Unit 7/7 → 14/14, Human, cost 4, Legendary
+//! (4/4 → 8/8 until issue #4154; 2/2 → 4/4 until issue #3996; 4/4 → 8/8 until issue #3136). BUILD wave 3 (rotation).
 //!   Base:    "Summon this for your opponent. Cry: choose left or right; rotate every card on the field
 //!            one step around its ring (3.1); cards crossing sides change control"
 //!   Radiant: "Cards that would move to the opponent are bounced to their controller's hand costing 0
@@ -479,7 +479,7 @@ mod tests {
             // Neither card crosses, so the radiant clause never applies and both simply step one lane.
             assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
             assert_eq!(s.unit_at(P1, 4).def_id, "core-053");
-            s.expect_stats("core-052", json!({ "attack": 8, "maxHealth": 8 }));
+            s.expect_stats("core-052", json!({ "attack": 14, "maxHealth": 14 }));
         }
 
         #[test]
