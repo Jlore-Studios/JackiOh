@@ -4,7 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
-import { PORTRAIT_IDS } from "@jackioh/shared";
+import { PORTRAIT_IDS, type CardDef, type PortraitId } from "@jackioh/shared";
+import { portraitDefs } from "../emotes/portraits.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import {
   fixtureCardId,
@@ -53,11 +54,32 @@ vi.mock("../game/currentCatalog.ts", async (importOriginal) => {
   return { ...actual, currentCatalog: vi.fn() };
 });
 
+vi.mock("../emotes/portraits.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../emotes/portraits.ts")>();
+  return { ...actual, portraitDefs: vi.fn() };
+});
+
 const TOKEN = "e2e-token-p1";
 const PROFILE = "profile-p1";
 const catalog = fixtureCatalog();
 const collection = fixtureCollection();
 const [ONE = [], TWO = []] = legalDecks();
+
+/**
+ * #4180: portraits resolve against the module catalog, which this file replaces with a
+ * fixture that names none of the portrait cards. The picker under test offers portrait ids,
+ * never defs, so each portrait reads one of the fixture's own defs here.
+ */
+function fixturePortraitDefs(): Readonly<Record<PortraitId, { defId: string; def: CardDef }>> {
+  return Object.fromEntries(
+    PORTRAIT_IDS.map((id, index) => {
+      const defId = fixtureCardId(index + 1);
+      const def = catalog.cards[defId];
+      if (def === undefined) throw new Error(`decks.test: no fixture def ${defId} for portrait ${id}`);
+      return [id, { defId, def }];
+    }),
+  ) as Record<PortraitId, { defId: string; def: CardDef }>;
+}
 
 function meBody(status: "pending" | "active" | "banned", needsInviteCode: boolean) {
   return {
@@ -82,6 +104,7 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/decks");
   vi.mocked(getMe).mockResolvedValue(meBody("active", false));
   vi.mocked(currentCatalog).mockReturnValue(catalog);
+  vi.mocked(portraitDefs).mockReturnValue(fixturePortraitDefs());
   vi.mocked(getCollection).mockResolvedValue(collectionBody());
   vi.mocked(getDecks).mockResolvedValue(
     decksResponse(
