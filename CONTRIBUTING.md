@@ -20,9 +20,9 @@ For people and agents alike. This is a pointer page: the rules live in the files
 Open one through a form (**New issue**): Patch, Bug, Architecture or CI, Night bot. Each starts the
 title (`Patch: `) and puts on the type labels, and triage gives the issue its type (Task, Bug or
 Feature). When it is ready, label it `human` (people do it) or `bot:build` (the night bot does), or
-pick one in the form's Who does it. Work on `.github/`, `bot/`, `.harness/`, `.squishy/` or `.claude/`
-(but for `.claude/skills/`, which Squishy may change) is `human`: the bots may not change those paths
-(`CLAUDE.md`, The night bot).
+pick one in the form's Who does it. Work on `.github/`, `bot/`, `.harness/`, `.squishy/` or `.claude/` is
+`human`: the bots may not change those paths (`CLAUDE.md`, The night bot). The one exception is
+`.claude/skills/`, which Squishy may change: label that work `squishy:build`, never `bot:build`.
 
 ## Titles
 
@@ -34,11 +34,10 @@ Issues and pull requests share them (`docs/issues-and-patches.md`, Titles):
 | Part of a change split over several issues | `Patch (part n of m): <…>` |
 | A shipped card change | `Patch v<version>: <…>`, given by `patches-ship.yml` once it ships |
 
-No title names a version before it ships: `patches ship` names a card change the next micro, or the
-next major when it ships a set (R3944000), and `patches-ship.yml` retitles its issue and pull request;
-once a day `patches cut` rolls the micros into the day's patch, `v0.X.Y`. The `pr title` check fails a pull request whose title breaks these, the older prefixes
-(`CI: `, `Architecture: `, …) included; the titles tools give their own pull requests are in
-`docs/issues-and-patches.md`, Pull requests.
+No title names a version before it ships: `patches-ship.yml` retitles a card change's issue and pull
+request when it ships. The `pr title` check fails a pull request whose title breaks these, the older
+prefixes (`CI: `, `Architecture: `, …) included. `docs/issues-and-patches.md`, Titles, has the rest, the
+titles tools give their own pull requests among them.
 
 ## Pull requests and commits
 
@@ -46,10 +45,10 @@ once a day `patches cut` rolls the micros into the day's patch, `v0.X.Y`. The `p
   patch says `Closes #<part>` and `Part of #<tracker>`, never `Closes #<tracker>`.
 - The title becomes the squash commit's subject on `main`. Commits on a branch say what they change
   in a short subject, with the why in the body when it isn't obvious.
-- A change to a card goes live through a pending fragment (`cargo jackioh patches "<title>"`, with
-  `--plays <ids>` for a card whose script or engine rule changed how it plays); CI's `rust
-  (classify)` checks the claims and labels the pull request with its kind and tier. The version rules
-  are in `docs/issues-and-patches.md`, Version numbers.
+- A change to a card goes live through a pending fragment (`cargo jackioh patches`; its flags and its
+  player note are in `docs/ADDING_CARDS.md`); CI's `rust (classify)` checks the claims and labels the
+  pull request with its kind and tier. The version rules are in `docs/issues-and-patches.md`, Version
+  numbers.
 - Write American English (color, behavior, center, canceled, serialize) in prose, comments, test
   names and the client's words. A name on the wire or in storage keeps the spelling it shipped with;
   rename one only in an issue of its own (#2445).
@@ -58,7 +57,7 @@ once a day `patches cut` rolls the micros into the day's patch, `v0.X.Y`. The `p
 
 A new ruling takes the lowest number free in its issue's block (`CLAUDE.md` rule 3): issue N
 owns R(N×1000) to R(N×1000+999), so issue #690's first is R690000, and a pull request with no
-issue uses its own number. Name it in your pull request. If another open pull request on the same
-issue took the same number, the one that merges second renumbers its note, its tests and every
-`R<n>` it cites first, within the block; `cargo jackioh spec check` catches what it misses
+issue uses its own number's block. Name it in your pull request. If another open pull request on
+the same issue took the same number, the one that merges second renumbers its note, its tests and
+every `R<n>` it cites first, within the block; `cargo jackioh spec check` catches what it misses
 (`docs/issues-and-patches.md`, Ruling numbers).
