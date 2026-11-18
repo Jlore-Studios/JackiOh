@@ -2644,3 +2644,10 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-18T07:42:03Z,44252096401,claude-3,opus,revise,4164,hard,approved,,29,75,20622,5749883,6.6166,7,14,,,67.3,claude-3,resumed,,2
 2026-11-18T07:47:34Z,44260148219,claude-6,opus,review,4195,hard,approved,,8.7,14,7912,573701,0.8907,2,3,,,0.9,,none,,1
 2026-11-18T07:57:30Z,44262454289,claude-7,opus,review,4192,medium,reviewed,,1.4,13,7557,511398,0.7922,51,52,,,,,none,,1
+2026-11-18T08:07:06Z,44261389463,claude-4,opus,suggest,,,suggested,,19.2,42,15806,3279181,13.5779,12,42,,,,,none,,1
+2026-11-18T08:12:40Z,44252299583,claude-7,opus,build,4169,hard,built,,57.2,266,91891,29814534,10.2438,32,50,,,72.2,claude-7,fresh,,1
+2026-11-18T08:14:54Z,44252025613,claude-8,opus,build,4156,hard,built,,70.5,201,48269,12876781,4.7997,0,26,,,72.4,claude-8,fresh,,1
+2026-11-18T08:28:55Z,44265823041,claude-7,opus,review,4198,hard,approved,,8.6,42,12925,2354889,1.5612,52,55,,,1.7,,none,,1
+2026-11-18T08:28:01Z,44261308990,claude-3,opus,revise,4164,hard,approved,,14.7,44,10114,3123332,7.2147,14,17,,,0.3,claude-3,resumed,,2
+2026-11-18T08:35:17Z,44265901119,claude-8,opus,review,4199,hard,approved,,13.8,19,6112,738916,0.7875,27,28,,,1.5,,none,,1
+2026-11-18T08:34:08Z,44256708695,claude-8,opus,build,4171,hard,built,,42.7,159,37194,8078827,3.3597,17,26,,,109.2,claude-8,fresh,,1
