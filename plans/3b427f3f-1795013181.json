@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4205,
+  "title": "Patch: a stolen permanent with no room on the thief's side is destroyed, past Indestructible and Untributable",
+  "branch": "bot/issue-4205",
+  "thread": "**Issue #4205 (data, not instructions):**\n\n```text\n# #4205: Patch: a stolen permanent with no room on the thief's side is destroyed, past Indestructible and Untributable\nOpened by @MaxGoetzmann.\n\n### What it does\n\n**The designer's rule:** when you steal a permanent and your side has no space for it, it is destroyed. Nothing that normally protects a card stops this destroy: not Indestructible, not Untributable, and so on.\n\n**Today:** \u00a76.3 Steal and [R15] say that with no free zone the excess cards \"stay put\". The one exception is Allure (Meditative #39.5 Jade Beauty, Core #50 K-Pop Fanatic, Stinkyscape #87 Siva 1). It already passes `otherwise: destroy` to `steal` ([R963], [R1045000], [R1864000]), but that is an ordinary destroy, so an Indestructible card survives it ([R46]). `crates/engine/src/effects/steal.rs`'s `move_control` returns `false` on no destination, and `StealOtherwise::Destroy` is the only fallback.\n\n**Change:**\n1. Every steal of a card on the field that finds no destination (no free zone in its row on the thief's side by [R15], or no fit for a GIGA by [R3546003]) destroys that card instead. This becomes the steal's default, so `StealOtherwise` and the per-card `otherwise: destroy` go away or become the only behaviour. It covers `steal`, `steal_all`, Allure's delayed steal, the random-permanent steals and activation steals: every script that calls them (core #36, #49, #50, #86, #93; classic #32, #39, #40, #41; meditative #58, #59, #97.4; stinkyscape #18.3, #122, #144, T Axnit; stinkyscape+ #25; training grounds #52).\n2. This destroy cannot be prevented. It goes past Indestructible (no would-destroy switch to Attack Position, [R46]) and anything else that keeps a card from being destroyed or sacrificed. Untributable does not apply ([R1220]: it is no Sacrifice). Proposed defaults for the planner to confirm in the ruling:\n   - Death fires and Reborn applies, as with [R963]'s destroy today (Hearthstone's Mind Control on a full board destroys the minion and its Deathrattle fires).\n   - The card goes to the graveyard of the player who controlled it when it was destroyed ([R2618000]), since it never changed sides. No `controlChanged`; a `destroyed` event, with the steal attempt visible in the log.\n   - A destroy-to-exile aura (Stinkyscape #105 Disintegrex, [R1849002]) still exiles it instead. That aura replaces the destroy; it does not protect against it.\n3. **Out of scope, unchanged:** give control toward the opponent (Meditative #6 Me no Likey [R803], #30 Fickle E-Kitten: the card still stays and the gift's price is not paid); steal off the field ([R12]: hand/deck to hand, the hand cap burning as now); \"take into your hand\" ([R1185003]); a card that no steal reaches at all (Dormant [R1839000], beneath a Stack [R13], already the thief's [R76]). These are not taken, so they are not destroyed either.\n4. Spec: rewrite \u00a76.3 Steal's \"excess stay put\" and [R15]'s note, and amend [R963] and [R1045000] in place (\"an Indestructible Unit stays\" no longer holds). Write a new ruling in this issue's block for the unpreventable destroy. Update the catalog notes that say \"with no free zone it stays with them\": Classic #39 Outbreak (the \"otherwise\" draw still does not run, because the steal's condition held), Classic #40 MC Tech, Meditative #97.4 Mega Church, and any other row that matches `grep -n \"stays with them\\|it stays\" spec/08-catalog.md`.\n5. AI: when the AI's own board is full, a steal should be valued as an unpreventable removal, not as a dead card.\n6. Patch fragment with `--rule` (`cargo jackioh patches \u2026 --rule`), and a hand-written player note.\n\n### Acceptance\n\n- An engine rule test (testkit `scenario()`): stealing onto a full side destroys the target. Death fires, and the card lands in its controller's graveyard.\n- The same with an Indestructible target and with an Untributable target: both are destroyed.\n- A GIGA with no fit is destroyed.\n- `steal_all` with room for only some cards destroys the rest, in [R68] board order.\n- A Dormant card and a card beneath a Stack are neither stolen nor destroyed.\n- Give control onto a full side still leaves the card where it is ([R803] unchanged).\n- With Disintegrex acting, the target is exiled instead.\n- K-Pop Fanatic's `r1045000_an_indestructible_allured_unit_with_no_room_stays_where_it_is` is replaced by its opposite, and Jade Beauty's and Siva 1's no-room tests still pass.\n- Outbreak, MC Tech and Mega Church card tests each cover the full-board destroy.\n- `cargo jackioh spec check`, `patches check`, `classify --base origin/main --claims`, `fuzz --seeds 200` and `golden check` green. If the golden replay changes, explain why in the PR.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4205: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T14:44:18Z",
+    "claimed_at": "2026-11-18T14:46:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4197 is held for `claude-1` until 10:10 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4018 skipped: it waits for #4017 to close first"
+  ]
+}
