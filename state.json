@@ -13399,6 +13399,13 @@
     "4130": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-18T01:17:54Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "client web audio tables lazy-load across 36 files in apps/web and spec/docs, no engine/ai/db/multi-crate rules"
+      },
       "failures": 2,
       "forced": false,
       "handoff": {
