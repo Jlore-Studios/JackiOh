@@ -15348,17 +15348,8 @@
       "verdict_rounds": 0
     },
     "4169": {
-      "action": "plan",
-      "asks": [
-        "c:6969891310"
-      ],
-      "build_next": {
-        "from_run": "44247410774",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-18T06:21:27Z",
-        "until": "2026-11-18T06:51:27Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-18T06:21:20Z",
         "difficulty": "hard",
@@ -15377,10 +15368,9 @@
         "reason": "planned on opus",
         "trail": "s/server/tests/sql/23_duos.sql; sed -n 85,125p crates/server/tests/sql/23_duos.sql\", \"description\": \"Read duos SQL test checks\"}\n- Bash: {\"command\": \"cat > .bot-plan.md <<'EOF'\\n# Draft plan #4169 (planner run 2, Opus)\\n\\nStatus: reading done; writing plan. Key findings:\\n- 1v1 checkpoint: crates/server/src/actor/checkpoint.rs (verify\u2026\n- Bash: {\"command\": \"sed -n 120,135p docs/issues-and-patches.md; sed -n 175,185p docs/issues-and-patches.md\", \"description\": \"Read patch kinds and claims rules\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn run\\\\b\\\\|pub fn run<\\\\|pub fn run(\\\" -A 8 crates/server/src/actor/engine.rs | head -20; grep -n \\\"pub struct Pinned\\\" -B3 -A3 crates/server/src/actor/engine.rs\", \"descri\u2026\n- Bash: {\"command\": \"grep -rn \\\"DuosTables {\\\" crates/ --include=*.rs | head; grep -n \\\"pub enum LogOutcome\\\" -B3 crates/shared/src/host/*.rs\", \"description\": \"Find DuosTables literals and LogOutcome derives\u2026\n- Bash: {\"command\": \"sed -n 300,312p crates/shared/src/host/types.rs; grep -rn \\\"export_to\\\\|ts(export\\\" crates/shared/src/host/duos.rs | head -2; grep -rn \\\"DuosHost\\\" apps/web/src/wire/generated/ 2>/dev/nu\u2026\n- Bash: {\"command\": \"awk 'NR<=3870 && /^mod [a-z_0-9]+ \\\\{/ {m=$0; n=NR} END{}; NR==3870{print m, n}' crates/server/tests/store/contract.rs; sed -n 1,72p crates/server/tests/store/contract.rs | grep -n \\\"^us\u2026\n- Bash: {\"command\": \"grep -n \\\"pub enum Difficulty\\\" -A 8 crates/engine/src/config.rs; grep -n \\\"pub fn of\\\" -A 12 crates/server/src/actor/engine.rs | head -16; grep -n \\\"pub fn install_test_cards\\\" -A6 crat\u2026\n- Bash: {\"command\": \"sed -n 1104,1160p crates/server/src/duos/actor.rs\", \"description\": \"Read DuosActor submit and accessors\"}\n- Bash: {\"command\": \"grep -rn \\\"economy_live\\\" crates/server/tests/support/*.rs | head -5; grep -n \\\"pub async fn empty_test_app\\\" -A 12 crates/server/tests/support/deps.rs | head -20\", \"description\": \"Check\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const ECONOMY_LIVE\\\" crates/server/src/config.rs; grep -n \\\"async fn pay_coop\\\" -A 25 crates/server/src/duos/mod.rs | head -35\", \"description\": \"Check ECONOMY_LIVE and co-o\u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct Account\\\" -A 8 crates/server/tests/support/store.rs; grep -n \\\"pub async fn account\\\" -A 15 crates/server/tests/support/store.rs | head -25\", \"description\": \"Read te\u2026\n- Bash: {\"command\": \"grep -rn \\\"last_nonce\\\\|checkpoint\\\" docs/v0.3.0/SURFACE.md | head -10\", \"description\": \"Check SURFACE doc for checkpoint mentions\"}\n- Bash: {\"command\": \"grep -n \\\"CHECKPOINT\\\" apps/web/src/wire/serverConfig.ts apps/web/src/wire/engineConfig.ts | head; grep -rn \\\"MATCH_CHECKPOINT\\\" crates/server/tests/export_config.rs crates/server/src/bi\u2026\n- Bash: {\"command\": \"cat crates/server/tests/actor/mod.rs; grep -n \\\"fn spread\\\\|fn j<\\\\|fn j(\\\\|fn must\\\\|fn id()\\\\|async fn active_profile\\\" crates/server/tests/store/contract.rs | head\", \"description\": \"R\u2026\n- Bash: {\"command\": \"grep -n \\\"pub duos: \\\\|duos: DuosTables\\\\|pub tables:\\\" crates/server/src/db/fake.rs | head\", \"description\": \"Check FakeTables duos field visibility\"}\n- Bash: {\"command\": \"grep -n \\\"0095\\\\|0042\\\\|migrat\\\" crates/server/tests/db/run.sh | head -10; grep -rn \\\"0095_no_global\\\\|0094_revoke\\\" crates/server/tests/deploy/ 2>/dev/null | head\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"grep -n \\\"match_checkpoints\\\\|duos_match\\\\|all tables\\\" crates/server/tests/db/grants.sql | head\", \"description\": \"Check DB grants script for table lists\"}\n- Bash: {\"command\": \"sed -n 388,402p crates/server/src/db/migrate.rs; grep -n \\\"0095\\\" crates/server/tests/store/migrations_pinned.rs; grep -n \\\"\\\\\\\"0094\\\\|0095\\\" crates/server/tests/sql/03_match_lifecycle.s\u2026\n- Bash: {\"command\": \"git branch -r 2>/dev/null | head -5; git log --oneline -1 origin/main 2>/dev/null; ls crates/server/migrations | grep -c sql\", \"description\": \"Check remote refs and migration count\"}\n- Bash: {\"command\": \"for b in $(git branch -r | grep -v HEAD | head -60); do git ls-tree --name-only $b crates/server/migrations/ 2>/dev/null | grep -E \\\"009[6-9]|01[0-9][0-9]_\\\" | sed \\\"s|^|$b: |\\\"; done 2>\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Decisions so far\\n- New crates/server/src/duos/checkpoint.rs (DuosCheckpointBody, checkpoint_row, verify) over pub(crate) row_for/row_at/verify_body in \u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/server/src/duos/store.rs | head -8; grep -n \\\"^use\\\\|^ use\\\" crates/server/src/duos/registry.rs | head -30\", \"description\": \"Confirm imports in duos store and registr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4169/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 4 (a migration, 0096) and rule 3 (crates/shared's DuosHost and cr\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4169/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 4 (a migration, 0096) and rule 3 (crates/shared's DuosHost and cr\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan length\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"\\\"\\\"- **Drift between paths.** One `verify_body` and one row writer serve both; `fold_tail` stops as `duos_f\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4169/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 4 (migration 0096) and rule 3 (crates/shared's DuosHost and crate\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; sed 's/`[^`]*`//g' .bot-plan.md | grep -v '^ \\\\|^ [a-z]\\\\|^```' | wc -w\", \"description\": \"Recount plan words\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 4 (migration 0096) and rule 3 (crates/shared's DuosHost and crates/server must agree on the checkpoint key)\"} --> # Goal A co-op or 2v2 actor stores its `DuosState` after the log's newest row in a new table, `public.duos_match_checkpoints` (migration 00\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-18T05:53:48Z",
       "owner_why": "handed off from `agy`: its owner `agy` has no strong seat, which it needs",
@@ -15393,12 +15383,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-18T05:21:51Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44247410774",
+      "run_id": "pending:a5dfa723-1794982915",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T05:53:48Z",
+      "started_at": "2026-11-18T06:22:17Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6969891310"
+      ]
     },
     "4170": {
       "action": "plan",
@@ -16139,9 +16131,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T06:13:07Z",
+    "at": "2026-11-18T06:22:17Z",
     "url": "",
-    "what": "review #4183 on muse"
+    "what": "build #4169 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-18T06:11:24Z",
