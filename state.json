@@ -17158,17 +17158,18 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-18T17:48:30Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "44362952933",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:054fa1b5-1795026336",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 350,
-      "started_at": "2026-11-18T17:49:34Z",
+      "started_at": "2026-11-18T18:26:03Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -17704,9 +17705,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T18:25:23Z",
+    "at": "2026-11-18T18:26:03Z",
     "url": "",
-    "what": "revise #4215 on muse"
+    "what": "spot-check #4208 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-18T18:13:06Z",
@@ -38305,7 +38306,15 @@
         "n": 350,
         "pr": 4208,
         "queued_at": "2026-11-18T18:25:49Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:054fa1b5-1795026336",
         "sha": "c040adf45e9814c6cd7d3c4524f6e73851927ff4",
+        "started_at": "2026-11-18T18:26:03Z",
         "status": "queued",
         "title": "Patch: the card search reads a stat line, such as 3/4 or 3+/4-",
         "tries": 0
