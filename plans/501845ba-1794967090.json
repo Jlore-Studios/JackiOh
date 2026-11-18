@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4155,
+  "title": "Patch: /stats' Tokens and Other created cards match the deck table, rows open the card, and the page loses its explanatory paragraphs",
+  "branch": "bot/issue-4155",
+  "thread": "**Issue #4155 (data, not instructions):**\n\n```text\n# #4155: Patch: /stats' Tokens and Other created cards match the deck table, rows open the card, and the page loses its explanatory paragraphs\nOpened by @MaxGoetzmann.\n\nThe owner's request: the Tokens and Other created cards sections on `/stats` should look and act almost exactly like the normal cards table. The page should also lose the paragraphs of explanation scattered across it.\n\n**This replaces #4083's column list (its point 1).** #4083 drops Win rate and hides Games. The owner wants both kept, as below. #4083's other points (the deck table's sort select, the Grid view, ranges, the API trim) are not part of this issue.\n\n## What to build\n\n### 1. The Created tables' columns match the deck table's\n\nIn `apps/web/src/stats/CreatedPanel.tsx`, both sections (Tokens and Other created cards) show the deck table's columns, in its order and under its header labels (`apps/web/src/routes/stats.tsx`, the `stats-table` under `statsTestid.cardsTable`):\n\n| Column | As in the deck table |\n|---|---|\n| **Card** | the thumbnail cell: the cost badge coloured by rarity (`stats-td--thumb`) |\n| **Name** | header `Name` (today the Created header reads `Token` / `Card`) |\n| **Games** | |\n| **Tier** | the `TierChip` |\n| **Adjusted** | the adjusted win rate |\n| **Win rate** | the raw win rate (`createdWinRate`) |\n\n- Honour the tab's **Columns** toggle (`visibleCols.thumbnail`, `visibleCols.games`) as the deck table does. Pass it into `CreatedPanel`.\n- Remove **Used**, **Not used**, **Used Radiant**, **Used normal** and **Used vs not used**, with their sort keys in `CreatedPanel` and any helpers left with no caller (such as `formatPlayedDelta`, if nothing else uses it).\n- Every remaining header still sorts (R3184002), and each section still opens on Adjusted, best first (R4082000).\n- Use the deck table's cell markup and classes, so the rows look the same, not merely hold the same figures. Lifting the shared row or header into one component both tables use is welcome. Keep it inside `apps/web/src/stats/`.\n- The `created` rows of `GET /api/stats/cards` already carry `cost` and `rarity` for the thumbnail. **No server change.** The API trim stays #4083's.\n\n### 2. A row opens the card\n\nA Created row opens the same drill-down the deck table's rows open: `openDrillDown(card.id, opener)`, `?card=<id>` in the address, Back and Escape close it (R2127000, R3221000).\n\n- The rows act as the deck table's do: `role`/`tabIndex`, Enter and Space, the pointer cursor and the name styled as `stats-card-name-link`.\n- Check that the drill-down renders well for a token, which no deck holds:\n  - its card face and its figures (R4082000) show;\n  - its deck-only sections show their empty states (`No games recorded with this card played.` and the like), not an error.\n- If the drill-down cannot show a token sensibly, open the card's inspect view, the `CardDetail` and its Statistics panel, instead. Say which one you chose in the ruling.\n\n### 3. Remove the explanatory paragraphs\n\nDelete these blocks of prose. Keep error, empty and loading states (`The card statistics didn't load.`, `No games on patch \u2026 yet.`, `Details unavailable.`, the collecting-data notice of R3324000 and the like), headings, and the short `title` tooltips already on the headers.\n\n- **Cards tab, the tiers note** (`statsTestid.tiersNote`, R3022000): the three paragraphs (\"Tier S is above \u2026 a nerf candidate\u2026\", \"Read against {cards} cards\u2026\", \"A card that is almost never left undrawn\u2026\").\n- **Cards tab, the ranges note** (`statsTestid.rangesNote`, R2895000): \"A range is where the card's true rate most likely sits\u2026\".\n- **Created sections** (`CreatedPanel`): the hint paragraph (\"Tokens made during the game.\", \"Every other card made during the game\u2026\", \"Win rate is of the seats that made one\u2026\") and `CreatedTiersNote`.\n- **Games panel** (`apps/web/src/stats/GamesPanel.tsx`): \"Counted over {games} of the patch's {total} games\u2026\".\n- **Sets tab**: the intro (\"How each set's cards do on patch {patch}\u2026\") and the footnote (\"\u2605 marks the highest win rate. \u00b1 is the margin\u2026\").\n- **Players tab**: \"Player stats are public by default. Ratings and ranks are not shown here.\"\n\nRemove their CSS (`stats-tiers-note`, `stats-sets-note`, `stats-games-note`, `stats-player-note` where nothing else uses it) and their test ids from `apps/web/src/stats/testids.ts`, and drop their strings from the translation catalogs if the web keeps any.\n\n## Spec and tests\n\nPresentation only (CLAUDE.md rule 7): no rule, state, event, endpoint or response changes.\n\n- Add one ruling in this issue's block (`spec/rulings/R<issue\u00d71000>.md`, its \u00a711 paragraph in `spec/pending/<issue>.md`). It amends every ruling that names a removed column or a removed note: at least R2089000, R2370000, R3184002 and R3324002 (columns and the hint), R3022000 (the tiers note), R2895000 (the ranges note) and R4082000. Grep `spec/rulings/` for the rest: the Sets tab's and the Games panel's notes, R1966000 and R1994000.\n- Update \u00a79.11's text where it describes these columns or notes.\n- Proving tests named after the ruling (`it(\"R<id> \u2026\")`), in `CreatedPanel.test.tsx` and `routes/stats.test.tsx`:\n  - the Created tables' headers are exactly Card, Name, Games, Tier, Adjusted, Win rate, and the Columns toggle hides Card and Games in them;\n  - clicking a Created row, or pressing Enter on it, opens the card (the drill-down and `?card=`);\n  - none of the removed paragraphs renders.\n- Update the existing tests that assert the removed columns or notes, and any Cypress spec under `e2e/` that reads them (grep the test ids).\n- `cargo jackioh spec check` must pass. `pnpm --dir apps/web test`, `typecheck` and `pnpm exec eslint apps/web` must be green.\n\n## Not in scope\n\n- The server, `GET /api/stats/cards`'s fields, and the dev tools' full Created tables (`stats-cards`, `stats report`).\n- #4083's sort select, Grid view, ranges and filters for the Created cards.\n- How Tier and Adjusted are computed (#4082).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4155: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T01:54:00Z",
+    "claimed_at": "2026-11-18T01:58:29Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
