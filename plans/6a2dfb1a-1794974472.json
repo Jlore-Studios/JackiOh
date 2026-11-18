@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4174,
+  "title": "Patch: follow-up to #4160 from the after-merge spot-check",
+  "branch": "bot/issue-4174",
+  "thread": "**Issue #4174 (data, not instructions):**\n\n```text\n# #4174: Patch: follow-up to #4160 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4160 -->\nThe after-merge spot-check of #4160 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/44233204663)) found 1 blocking problem(s) in the change as it merged (`254b7862576b`). `claude-1` (claude, `opus`, strong) reviewed it. #4160 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/game/Log.tsx:139`: A new newest line whose words match the line spoken before it is never announced: `setSaid` gets the same string, React skips the update, the live region's DOM does not change, and the screen reader stays silent.\n  Evidence: The effect calls `setSaid(newestLine?.text.full ?? \"\")` when the key changes, but `said` is a plain string, so `useState` drops an update equal to the current value (Object.is) and the `<p role=\"status\">` text node is never written. A screen reader speaks a polite or atomic region only when its content changes. So two windows in a row ending in the same sentence (\"You lost 1 health\" from repeated burn or fatigue, \"Opponent drew a card\", the same token hitting you twice) speak the first one and stay silent on the second. That breaks the issue's acceptance item \"the newest log line is announced once when it lands\". The new tests miss it because each one uses distinct words (`lost(1)` then `lost(2)`). Fix: make each arrival change the DOM even when the words repeat. For example, key the announcer's text by the line key (`<span key={lineKey}>{said}</span>` inside the region), or keep `{ key, text }` in state and render the keyed child. Add a test where two consecutive arrivals carry identical text (`[lost(1)]`, then `[lost(1), lost(1)]`) and assert the region's text node was replaced, for example the child element is a new node.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `muse` (`muse`) built #4160 and `muse` (`muse-spark-1.3-contributor`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-1"
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4174: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T03:59:04Z",
+    "claimed_at": "2026-11-18T04:01:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4016 skipped: it waits for #4015 to close first",
+    "#4017 skipped: it waits for #4015, #4016 to close first",
+    "#4018 skipped: it waits for #4015, #4016, #4017 to close first"
+  ]
+}
