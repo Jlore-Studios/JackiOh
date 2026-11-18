@@ -16179,6 +16179,8 @@
       }
     },
     "4195": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-18T06:33:32Z",
@@ -16192,8 +16194,11 @@
         "trail": "xit code and clippy on the ai crate\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-ai 2>&1 | grep -E 'test result|FAILED|panicked|Running' | tail -20\", \"description\": \"Run the full jackioh-ai test suite\", \"timeout\": 1800000}\n- said: The full `jackioh-ai` suite passes: 58 unit, 943 `ai`, 95 `ai_slow`. Next: `classify` and the smoke gate.\n- Bash: {\"command\": \"echo \\\"- fmt, clippy -p jackioh-ai, spec check, cargo test -p jackioh-ai (58/943/95) all green. Next: classify, gate, then server/tools tests.\\\" >> .bot-notes.md; git rev-parse --verify \u2026\n- Bash: {\"command\": \"cargo jackioh gate 2>&1 | tail -25\", \"description\": \"Run the AI quality gates at smoke size\", \"timeout\": 1800000, \"run_in_background\": true}\n- said: While the gate runs, I'll find which other crates depend on `jackioh-ai` so their tests can catch a moved AI fixture.\n- Bash: {\"command\": \"grep -l 'jackioh-ai' crates/*/Cargo.toml apps/*/Cargo.toml 2>/dev/null\", \"description\": \"List crates depending on jackioh-ai\"}\n- tool error: Exit code 2 crates/ai/Cargo.toml crates/server/Cargo.toml crates/shared/Cargo.toml crates/tools/Cargo.toml\n- Bash: {\"command\": \"cargo test -p jackioh-shared -p jackioh-tools -p jackioh-server --features jackioh-engine/testkit 2>&1 | grep -E 'test result|FAILED|panicked|Running|error' | tail -40\", \"description\": \"\u2026\n- Bash: {\"command\": \"grep -n 'face_threat_from(' crates/ai/src/*.rs\", \"description\": \"Find all callers of face_threat_from\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R4170000.md'\\ns=open(p).read()\\nold=\\\"Sickness went unread there, since at the end of a turn no Unit is sick.\\\"\\nnew=\\\"Sickness went unread there, sinc\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('## Log')]\\nnew='''## State\\n\\n- Build pass 1 (opus), 2026-11-18. Plan above (claude-6's) is the\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4170/3ab5fa2e-2b67-42a9-8f76-441b660c21f4/tasks/bjmpvwbhf.output | tail -5; echo ---; tail -5 /tmp/claude-1001/-home-runner-work--t\u2026\n- said: Both background runs are still going: the smoke gate, and the tests of the three crates that use the AI (shared, tools, server). Meanwhile I'm reviewing the full diff.\n- Bash: {\"command\": \"git status --short; git diff crates/ai/src/config.rs crates/ai/README.md spec/09-architecture.md | grep '^[+-]' | cut -c1-200\", \"description\": \"Review config, README and spec diffs\"}\n- said: The diff matches the plan. I'll wait for the two background runs to report.\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"wait for gate and dependent-crate tests to finish\", \"timeout_ms\": 600000, \"command\": \"d=/tmp/claude-1001/-home-runner-work--temp-work-item-4170/3ab5fa2e-2b67-42a9-8f76-441b660c21f4/t\u2026\n- tool error: A variable in this command can't be checked before it runs\n- Monitor: {\"description\": \"wait for gate and dependent-crate tests to finish\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4170/3ab5fa2e-2b67-42a9-8f76-441b6\u2026\n- said: Waiting on the gate and the dependent-crate tests.\n- Bash: {\"command\": \"ps aux | grep -E 'jackioh gate|cargo test|jackioh_server|tools-|server-' | grep -v grep | awk '{print $11, $12, $13, $14}' | head\", \"description\": \"Check which background processes are r\u2026\n- said: Both are still running. I'll pick up when they report.\n- Monitor: {\"description\": \"wait for dependent-crate tests to finish\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4170/3ab5fa2e-2b67-42a9-8f76-441b660c21f4/t\u2026\n- said: Both watches are armed; waiting for their reports.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4170/3ab5fa2e-2b67-42a9-8f76-441b660c21f4/tasks/bjmpvwbhf.output\", \"description\": \"Read the gate output\"}\n- Bash: {\"command\": \"echo \\\"- gate (smoke) green: ai-vs-random 19/20 (17 needed), ai-vs-greedy 16/20 (10), hard-vs-easy 18/20 (16), 0 panics. Waiting on shared/tools/server tests.\\\" >> .bot-notes.md\", \"descr\u2026\n- said: The smoke gate passed: AI vs random won 19 of 20 (17 needed), AI vs greedy 16 of 20 (10 needed), hard vs easy 18 of 20 (16 needed), no search panics. Still waiting on the shared, tools and server tests.\n- Bash: {\"command\": \"ps aux | grep -E 'cargo test|deps/' | grep -v grep | awk '{print $10, $11}' | head\", \"description\": \"Check which test binaries are still running\"}\n- Monitor: {\"description\": \"wait for dependent-crate tests to finish\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4170/3ab5fa2e-2b67-42a9-8f76-441b660c21f4/t\u2026\n- said: The tools crate's tests are still running. Waiting for them to finish.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4170/3ab5fa2e-2b67-42a9-8f76-441b660c21f4/tasks/bm8o00gee.output\", \"description\": \"Read dependent-crate test output\"}\n- Bash: {\"command\": \"git status --short; grep -rn 'frozen_sick\\\\|affliction_kills_before_swing' apps/web/src crates/wasm 2>/dev/null | head -3\", \"description\": \"Check tree status and any wire/wasm mention of\u2026\n- said: Only the seven planned files changed. I edited the ruling note's wording after the last spec check, so I'm running it again with `patches check`.\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -1; cargo jackioh patches check 2>&1 | tail -2\", \"description\": \"Rerun spec check and patches check\", \"timeout\": 900000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('## Log')]\\nnew='''## State\\n\\n- Build pass 1 (opus), 2026-11-18: DONE. Plan above (claude-6's) \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: after the opponent's reply, the AI counts no attack this turn from its own unit that is still Frozen or just arrived, as the engine allows none\"} --> ## What changed When the AI scores a position where one side's attacks are still to come this turn, it \u2026"
       },
       "issue": 4170,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-18T07:35:58Z",
         "from_run": "44252228927",
         "gates": [
           {
@@ -16285,7 +16290,11 @@
         "source": "build",
         "until": "2026-11-18T08:05:01Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-18T07:35:01Z",
+      "run_id": "pending:1ff1741f-1794987335",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16304,6 +16313,9 @@
         "provider": "claude-6",
         "run": "44252228927"
       },
+      "started_at": "2026-11-18T07:35:58Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16317,9 +16329,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T07:26:13Z",
+    "at": "2026-11-18T07:35:58Z",
     "url": "",
-    "what": "suggestions (rules) on claude-1"
+    "what": "review #4195 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-18T07:23:22Z",
