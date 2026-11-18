@@ -13215,17 +13215,8 @@
       "verdict_rounds": 2
     },
     "4181": {
-      "action": "plan",
-      "asks": [
-        "c:6980614087"
-      ],
-      "build_next": {
-        "from_run": "44407893615",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-18T22:34:43Z",
-        "until": "2026-11-18T23:04:43Z"
-      },
+      "action": "build",
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-18T22:34:32Z",
@@ -13245,10 +13236,9 @@
         "reason": "planned on opus",
         "trail": "\\\\.\\\\.\\\\. ok\\\" /tmp/probe/server.log; grep \\\"FAILED\\\" /tmp/probe/server.log | head\", \"description\": \"Check server probe progress cou\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- **A search that changes the seed** changes what the test plays even without the\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"5. **`crates/tools/tests/pool_probe.rs`** (new). Module doc: what it runs and why (the probe,\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \" - `#[test] fn the_report_names_every_failed_test_and_both_fixes()`: a literal libtest stdout\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \" - `classic_plus/c073_call_to_chaos_classic_edition.rs`, `r70_r28_10_10_\\u2026`: `let cast: V\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; cat /tmp/probe/server-time.txt 2>/dev/null; grep -c \\\"\\\\.\\\\.\\\\. ok\\\" /tmp/probe/server.log; grep \\\"FAILED\\\" /tmp/probe/server.log | head -3\", \"description\": \"Recount \u2026\n- Bash: {\"command\": \"grep \\\"test result\\\" /tmp/probe/server.log; grep -c \\\"FAILED\\\" /tmp/probe/server.log; git status --porcelain | head\", \"description\": \"Summarize server probe results\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"limit\": 40}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"Every card test that fails under `jackioh-engine`'s `pool-probe` feature passes, converted as\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"or any script line above `#[cfg(test)]`. No patch fragment and no ruling: only test modules c\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"offset\": 120}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \" `fn report(stdout: &str, stderr: &str) -> String`: no failed names \\u2192 `\\\"the pool probe \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"6. **Docs.**\\n - `scripts/pool-probe.sh`, the paragraph from `# Daily, not per pull request:`\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"- `cargo test -p jackioh-cards --features jackioh-engine/pool-probe --no-fail-fast $OPT`: 0 f\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"offset\": 37, \"limit\": 70}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"Each card step edits only that file's `#[cfg(test)] mod tests`. `with_pool_shift`, `seed_wher\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"wrap only the `let pool` line's expression: `with_pool_shift(0, || crate::query::query(&miner\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"in its doc comment, Meditative's become `#36 CN Peptides, #54 Money Machine (its end of turn \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \" - `core/c007_jewelosco_scarab.rs` (spec \\u00a78.1 row 7: `excludeDefId`, never #7 itself; th\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"above it `// A cast Spell may end the turn itself, and which seeds cast one moves with every \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \"None for a person. Decisions made here: the Big Crunch's two plain order tests compare with t\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \" - `r1870006_casts_the_five_editions_once_each_in_order`: `assert_eq!(chaos_plays(&s), pool()\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \" - `r1870006_r2200004_\\u2026` names catalog places: `let plays = with_pool_shift(0, || chaos_\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -c \\\"\\\" .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \": 0 failed (one file: append its stem, e.g. `c004_6_the_big_crunch`).\", \"new_string\": \": 0 fa\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"offset\": 96, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"offset\": 134, \"limit\": 60}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \" // daily log this way, as tests/perf.rs writes its table.\\n let mut log = std::io::stderr().\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"old_string\": \" (#4181); a test either fails leans on a roll, so convert it.\", \"new_string\": \" (#4181); a te\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4181/.bot-plan.md\", \"limit\": 10}\n- Bash: {\"command\": \"cat .bot-plan.md; wc -w .bot-plan.md; git status --porcelain\", \"description\": \"Print the final plan draft\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"the bot's step-up rating stands and a planner may not rate lower; by the rule alone it is card tests, one tools test and docs, about 21 files, none of lines 1-5\"} --> ## Goal Every card test that the `pool-probe` feature fails passes after conversion, as `cr\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-18T22:04:02Z",
       "owner_why": "handed off from `agy`: its owner `agy` has no strong seat, which it needs",
@@ -13262,14 +13252,16 @@
       "queued_at": "2026-11-18T22:02:32Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "44407893615",
+      "run_id": "pending:d6238157-1795041319",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-18T22:04:02Z",
+      "started_at": "2026-11-18T22:35:41Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6980614087"
+      ],
       "verdict_rounds": 0
     },
     "4183": {
@@ -14892,9 +14884,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T22:19:19Z",
+    "at": "2026-11-18T22:35:41Z",
     "url": "",
-    "what": "spot-check #4230 on claude-7"
+    "what": "build #4181 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-18T22:26:06Z",
