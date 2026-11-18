@@ -14652,6 +14652,15 @@
       "failures": 0,
       "feedback_since": "2026-11-18T04:49:53Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-18T04:59:08Z",
+        "family": "muse",
+        "kind": "work",
+        "notes": "## State\n\n**Plan:** CI revision for #4158 (run 44238315226, `web (unit 2/8)` failure in `apps/edge/src/index.test.ts`).\n**Done:** Ran the failing check locally \u2014 `pnpm --dir apps/edge test src/index.test.ts` passes 62/62, repeated 4x green. Branch diff touches only `apps/web`, docs, and one cards patch fragment; `git diff ...HEAD -- apps/edge/` is empty, so the edge failure is not this branch's doing (timing-sensitive `#4118` retire-wait test under CI load: 153s, 78 workers). No code changed; worktree clean.\n**Next:** Nothing. Harness re-runs CI on this head.\n**Decisions:** No fix attempted \u2014 weakening or touching that timing test to chase a loaded-runner flake would violate rule 12.\n**Dead ends:** None.\n\n## Log\n\n- Ran failing edge test file locally: 62/62 passed.\n- Repeated 3 more times: green each time.\n- Confirmed branch does not touch `apps/edge/`; left tree unchanged.\n",
+        "provider": "muse",
+        "reason": "built and checked; its own review run, on this subscription, reviews it next",
+        "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the sound tables load when sound first needs them, so the first page load is about 100 KB lighter\", \"ci_local\": \"passed\"} -->\n- No change made: the one failed CI job is not this branch's doing.\n- - What failed: `web (unit 2/8)` on `apps/edge/src/index.test.ts` > `#4118 the settings check on the first request` > `waits RETIRE_WAIT_MS for it, then destroys it` \u2014 `expected \"vi.fn()\" to be called with arguments: [ 'SIGTERM' ]`, 0 calls.\n- - Local result: `pnpm --dir apps/edge test src/index.test.ts` passes 62/62, repeated 4 times green (output quoted: `Test Files 1 passed (1)`, `Tests 62 passed (62)`).\n- - Evidence it is unrelated: `git diff afb9945...HEAD -- apps/edge/` is empty \u2014 this branch touches only `apps/web`, docs, and one cards patch fragment. The failing test is a timing-sensitive fake-timers/`setImmediate` test from #4118, and CI ran it under heavy load (153s duration, 78 workers spawne\u2026\n- - Worktree left clean; per the revision rules no test was skipped, weakened, or touched.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4158 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4158/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
+      },
       "interruptions": 0,
       "issue": 4130,
       "kind": "revise",
