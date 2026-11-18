@@ -6,6 +6,7 @@ pub mod checkpoints;
 pub mod choice_hover;
 pub mod dealt_deck;
 pub mod duos;
+pub mod duos_checkpoints;
 pub mod engine_real;
 pub mod glitch;
 pub mod heartbeat;

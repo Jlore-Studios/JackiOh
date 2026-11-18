@@ -109,6 +109,7 @@ const PINNED: &[(&str, &str)] = &[
     ("0093_notifications.sql", "96151b07"),
     ("0094_revoke_on_profile_activated.sql", "2ac06ed4"),
     ("0095_no_global_redemption_breaker.sql", "de19167a"),
+    ("0096_duos_match_checkpoints.sql", "04d96bda"),
 ];
 
 /// `PINNED[name]`.

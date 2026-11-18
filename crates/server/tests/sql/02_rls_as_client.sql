@@ -395,7 +395,7 @@ begin
                            'age_checks', 'terms_acceptances',
                            'record_totals', 'card_totals', 'decklist_totals', 'practice_seeds',
                            'game_record_batches', 'game_totals', 'idempotency_keys',
-                           'practice_claim_counts', 'lobbies'] loop
+                           'practice_claim_counts', 'lobbies', 'duos_match_checkpoints'] loop
     if to_regclass('public.' || t) is null then
       missing := missing || t || ' ';
     end if;
@@ -418,7 +418,8 @@ declare
   -- `age_checks` and `terms_acceptances` (0034, R757000, R757001): what each account agreed to,
   -- which the server alone records. The three totals tables (0041, R1044000): the game records
   -- folded, which the server alone reads and serves as the public figures. `match_checkpoints`
-  -- (0042, #1169): a live match's whole state, both hands and both libraries, as `matches`.
+  -- (0042, #1169): a live match's whole state, both hands and both libraries, as `matches`, and
+  -- `duos_match_checkpoints` (0096, #4169) a live co-op match's, every hand and library.
   -- `practice_seeds` (0047, #1303): the seeds a practice claim pays on, and each game's setup.
   -- `game_record_batches` (0060, R1976000): the files folded as totals only, which the server alone
   -- claims. `game_totals` (0063, R1994000): each patch's whole games, folded as the totals are, which
@@ -433,7 +434,7 @@ declare
                                      'age_checks', 'terms_acceptances',
                                      'record_totals', 'card_totals', 'decklist_totals', 'practice_seeds',
                                      'game_record_batches', 'game_totals', 'idempotency_keys',
-                                     'practice_claim_counts', 'lobbies'];
+                                     'practice_claim_counts', 'lobbies', 'duos_match_checkpoints'];
   missing   text := coalesce(current_setting('rls3.missing', true), 'unknown');
   t         text;
   n         bigint;

@@ -9108,6 +9108,150 @@ mod duos {
         }))
     }
 
+    /// #4169: a co-op checkpoint row as the actor writes one (its body opaque to the store).
+    fn checkpoint(match_id: &str, seq: i64, nonce: &str, body: &str, at: i64) -> MatchCheckpointRow {
+        from(json!({
+            "matchId": match_id,
+            "seq": seq,
+            "nonce": nonce,
+            "catalogVersion": "v-duos-checkpoint",
+            "rules": "fedcba9876543210",
+            "checkpointVersion": 1,
+            "body": body,
+            "bodyHash": format!("hash-of-{body}"),
+            "at": at,
+        }))
+    }
+
+    /// A stored checkpoint without its `at`, which only has to be a time: Postgres keeps it as a
+    /// `timestamptz`.
+    fn stored(row: Option<MatchCheckpointRow>) -> Option<Value> {
+        row.map(|row| {
+            let mut value = j(&row);
+            assert!(value["at"].is_number(), "{value}");
+            if let Value::Object(map) = &mut value {
+                map.remove("at");
+            }
+            value
+        })
+    }
+
+    /// #4169: a co-op match with its log's first `rows` rows, `n-1` on.
+    async fn logged_match(harness: &StoreHarness, row: &DuosMatch, rows: i64) {
+        q!(harness, t => t.duos_matches_create(row));
+        for seq in 1..=rows {
+            q!(harness, t => t.duos_actions_append(&logged(&row.id, seq, &format!("n-{seq}"), harness.now())));
+        }
+    }
+
+    /// #4169: every field comes back as written, and only a later seq's checkpoint replaces it.
+    async fn s6_a_coop_checkpoint_round_trips_and_only_a_later_seq_replaces_it(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now);
+        logged_match(harness, &row, 3).await;
+        let second = checkpoint(&row.id, 2, "n-2", "{\"at\":2}", now);
+        assert!(q!(harness, t => t.duos_matches_put_checkpoint(&second)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(second.clone()))
+        );
+
+        let earlier = checkpoint(&row.id, 1, "n-1", "{\"at\":1}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&earlier)));
+        let same = checkpoint(&row.id, 2, "n-2", "{\"at\":\"again\"}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&same)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(second.clone()))
+        );
+
+        let third = checkpoint(&row.id, 3, "n-3", "{\"at\":3}", now);
+        assert!(q!(harness, t => t.duos_matches_put_checkpoint(&third)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(third))
+        );
+    }
+
+    /// #4169: never for a row the log does not hold under that nonce, nor for a match that has ended or
+    /// is not there.
+    async fn s6_a_coop_checkpoint_is_stored_only_for_a_logged_row_of_a_live_match(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now);
+        logged_match(harness, &row, 1).await;
+        for refused in [
+            checkpoint(&row.id, 1, "other", "{}", now),
+            checkpoint(&row.id, 2, "n-2", "{}", now),
+            checkpoint(&id(), 1, "n-1", "{}", now),
+            checkpoint("not-a-uuid", 1, "n-1", "{}", now),
+        ] {
+            assert!(
+                !q!(harness, t => t.duos_matches_put_checkpoint(&refused)),
+                "{refused:?}"
+            );
+        }
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&row.id)).is_none());
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&id())).is_none());
+        assert!(q!(harness, t => t.duos_matches_checkpoint("not-a-uuid")).is_none());
+
+        let result = json!({ "outcome": "draw", "winner": null, "reason": "turnCap" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 1_000)));
+        let ended = checkpoint(&row.id, 1, "n-1", "{}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&ended)));
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&row.id)).is_none());
+    }
+
+    /// #4169: an ended co-op or 2v2 match is never rebuilt from its checkpoint, so its ending drops it,
+    /// and no later write puts it back; every other match keeps its own.
+    async fn s6_finishing_a_coop_or_two_v_two_match_drops_its_checkpoint_and_no_other(
+        harness: &StoreHarness,
+    ) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let b1 = active_profile(harness, None).await;
+        let b2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let coop = duos_match(&a1.id, &a2.id, now);
+        let made = duos_match(&a1.id, &a2.id, now);
+        let two_v_two: DuosMatch = from(spread(
+            j(&made),
+            json!({ "b1": b1.id, "b2": b2.id, "difficulty": "easy", "options": spread(j(&made.options), json!({ "teamB": "people" })) }),
+        ));
+        assert_eq!(two_v_two.team_b(), jackioh_shared::host::DuosTeamB::People);
+        let other = duos_match(&a1.id, &a2.id, now);
+        for row in [&coop, &two_v_two, &other] {
+            logged_match(harness, row, 2).await;
+            assert!(
+                q!(harness, t => t.duos_matches_put_checkpoint(&checkpoint(&row.id, 2, "n-2", "{}", now)))
+            );
+        }
+
+        let result = json!({ "outcome": "win", "winner": "a", "reason": "concede" });
+        for (ended, kept) in [(&coop, vec![&two_v_two, &other]), (&two_v_two, vec![&other])] {
+            assert!(q!(harness, t => t.duos_matches_finish(&ended.id, &result, now + 1_000)));
+            assert!(q!(harness, t => t.duos_matches_checkpoint(&ended.id)).is_none());
+            assert!(
+                !q!(harness, t => t.duos_matches_put_checkpoint(&checkpoint(&ended.id, 2, "n-2", "{}", now))),
+                "an ended match takes no checkpoint"
+            );
+            for row in kept {
+                assert_eq!(
+                    stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+                    stored(Some(checkpoint(&row.id, 2, "n-2", "{}", now)))
+                );
+            }
+        }
+        let ended = must(q!(harness, t => t.duos_matches_get(&two_v_two.id)), "the 2v2");
+        assert_eq!(
+            (ended.b1.as_str(), ended.b2.as_str()),
+            (b1.id.as_str(), b2.id.as_str())
+        );
+    }
+
     /// B33, B34: a code is held once; the claim is single-shot, never the host's and never past
     /// the expiry; only the host deletes an unjoined room; the reaper keeps a joined one longer.
     async fn s6_rooms_are_claimed_once_and_reaped(harness: &StoreHarness) {
@@ -9449,6 +9593,9 @@ mod duos {
         r1497000_a_profile_seated_in_a_live_co_op_match_is_not_deleted,
         r3731003_a_two_v_two_match_keeps_team_bs_people,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
+        s6_a_coop_checkpoint_round_trips_and_only_a_later_seq_replaces_it,
+        s6_a_coop_checkpoint_is_stored_only_for_a_logged_row_of_a_live_match,
+        s6_finishing_a_coop_or_two_v_two_match_drops_its_checkpoint_and_no_other,
     );
 }
 

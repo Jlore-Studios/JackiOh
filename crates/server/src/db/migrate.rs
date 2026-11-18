@@ -396,6 +396,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0095_no_global_redemption_breaker.sql",
         include_str!("../../migrations/0095_no_global_redemption_breaker.sql"),
     ),
+    (
+        "0096_duos_match_checkpoints.sql",
+        include_str!("../../migrations/0096_duos_match_checkpoints.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
