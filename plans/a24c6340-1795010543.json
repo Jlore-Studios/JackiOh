@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4197,
+  "title": "Patch: the AI picks Heroic Power's power by what it does on every turn after, not only by what it can do this turn",
+  "branch": "bot/issue-4197",
+  "thread": "**Issue #4197 (data, not instructions):**\n\n```text\n# #4197: Patch: the AI picks Heroic Power's power by what it does on every turn after, not only by what it can do this turn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the computer opponent plays Heroic Power, it is shown three powers and keeps the one it picks for the rest of the game. Today it judges each power only by what it can do with it this turn and gives no weight to the uses on later turns. So with no mana left after playing the card, offered Armor Up (free: 2 Armor until its next turn), Die Insect (1 mana: 8 damage to a random enemy) and Witness Value (1 mana: Discover a Unit), it takes Armor Up, the only one it can use right away. It keeps that weak power for the whole game. When none of the three can be used this turn, they all score alike and it takes the first one offered. A player sees an AI that gets the one permanent choice on the card wrong. Once this is built, the AI also counts what one more use of each power is worth, as it already does for every other card with a reusable ability on the field, and it picks the strong power.\n\n## Why\n\n- The rules: SPEC \u00a78.5's row for #98 Heroic Power and R3134002 say the Cry Discovers 3 of its 14 powers and the pick is the card's power for the game. SPEC \u00a79.9 (Evaluation; R2564000, R2603000) says the AI counts a face-up backrow card's Activate by what one use of it gives its controller. R3575400 does the same for a hand card, so that \"a play worth the Activate it leaves reads it the moment it lands\".\n- The pick is a decision at the AI's own open prompt. `decide` prices a decision with `decision_prices` on its probe world (`crates/ai/src/decide.rs:526`). At the Discover that world has the prompt open, and both `root_prices` (`crates/ai/src/evaluate.rs:2471`) and `rekeyed_activation_prices` (`evaluate.rs:2530`) return nothing while `world.pending.is_some()`. So every answer's line prices the power it gives at 0, and the beam ranks the three answers only by what this turn's line does with them.\n- Even with a price, `ActivationPrice::is_for` (`evaluate.rs:430`) keys a price on `def_id`, `radiant` and `controller` alone, never on the power the card holds (`memory.power`, R43; the engine gates each power's ability on it in `crates/engine/src/subsystems/hero_power.rs:1048`). So two lines that hold one Heroic Power with two different powers would read the same price.\n- No test covers the pick. `crates/ai/tests/ai/activate.rs:326` (R752) and `tests/ai/reply.rs` both start from a power already set in memory.\n- Heroic Power is one of the 16 Quickdraw cards in the catalog, so whenever an AI deck holds it, it is in the opening hand (`AI_DECK.max_quickdraw`, R817000). Every game the AI plays it, the pick happens once, and the AI lives with it all game.\n\n## Proposal\n\n1. **The price follows the power.** `ActivationPrice` adds the power the card holds (`memory.power` under the engine's `subsystems::POWER_KEY`, `None` for every other card) to its key, so `is_for` matches a card only with the power it was priced with. Every card but Heroic Power is keyed exactly as today.\n2. **A pick at the AI's own prompt prices what each answer gives.** When the decision's root is the seat's own open prompt, `decision_prices` does the following within a new named node cap in `crates/ai/src/config.rs` (for example `AI_PROMPT_ACTIVATION_PROBE_NODES`):\n   - For each answer, in `action_key` order, it reduces the answer once on a copy of the probe world (`reduce_unpiloted`).\n   - Where that leaves the seat's own main phase with no prompt open, and a card on the field now holds a power it did not hold before, it prices that card's Activate on that copy as `activation_prices` would: the two turn ends, then one use at the start of the seat's next turn.\n   - It adds the price under that card's key, power included.\n   - An answer the cap does not reach, or one that leaves another prompt open, prices nothing, as every answer does today.\n   - Every other decision, prompt or not, gets the prices it gets today.\n3. A new ruling in this issue's block (Hearthstone semantics: a lasting choice is judged by what it keeps giving) states the rule, with its proving test, and SPEC \u00a79.9's Evaluation and `crates/ai/README.md`'s Activate paragraph name it. `GREEDY_EVAL` keeps `activation` at 0, so the greedy baseline does not move.\n\nOut of scope: what a Heroic Power still in hand is worth before it is played (its power is not yet offered, so the hand probe sees no Activate), Steady Shot's growth and End Times' countdown beyond one use, and the beam's look-ahead past a Heroic Power play inside a simulated line. Each is a possible follow-up.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs`: `ActivationPrice` and its key, plus the per-answer probe beside `activation_prices`.\n- `crates/ai/src/decide.rs`: `decision_prices` at an own-prompt root.\n- `crates/ai/src/config.rs`: the new node cap.\n- `crates/ai/tests/ai/activate.rs`: the proving tests.\n- `crates/ai/README.md`: the Activate paragraph.\n- `spec/09-architecture.md` \u00a79.9 Evaluation, `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`.\n\n## Acceptance criteria\n\n- [ ] A test named after the new ruling, in `crates/ai/tests/ai/activate.rs`, fails on `main` and passes with the change. It builds a board where the AI's Heroic Power Discover is open with no mana left to spend, offering one power it can use now and one it cannot use this turn that is worth clearly more per use (for example Armor Up against Die Insect), and `decide` answers with the stronger power.\n- [ ] A test shows that two lines holding one Heroic Power with different powers read different activation prices, and that a card with no power is priced and keyed as before.\n- [ ] A test shows that a decision at any other prompt (a target choice, a Discover of a card to hand) and a decision with no prompt open pass the same `Prices` as before.\n- [ ] The per-answer probe spends no more than the new named cap, inside the decision's own budget (a test reads the node count).\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo fmt --check` and `cargo jackioh spec check` are green. `cargo jackioh gate` at smoke size is clean, its perf gate included.\n- [ ] `GREEDY_EVAL` is unchanged.\n\n## Size and risks\n\nMedium code, hard area (`difficulty:hard`: the AI's evaluation). About 6 to 8 files, most of the work in `evaluate.rs` and one test file.\n\nRisks:\n- **Node cost.** The probe runs only at the seat's own prompt and only for answers that give a field card a new power, so in practice once per Heroic Power played. Its cap keeps it inside the decision's budget. Each own-prompt decision still pays one reduce per answer checked, which the cap bounds.\n- **The key.** The price lookup sits on the evaluation's hot path. Reading one memory field per lookup is cheap, and the perf gate holds it.\n- **What is measured.** The change only moves games where the AI holds Heroic Power, so the smoke gates won't measure it. The proving test is the evidence.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-18T13:52:26Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4197: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-18T13:52:53Z",
+    "claimed_at": "2026-11-18T14:02:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4017 skipped: it waits for #4016 to close first",
+    "#4018 skipped: it waits for #4016, #4017 to close first"
+  ]
+}
