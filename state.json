@@ -36760,7 +36760,9 @@
           "provider": "claude-6"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-18T08:01:04Z",
         "every": 5,
+        "findings": 0,
         "head": "43bc89793d1ebf2b37ad7208c6c3b42fc8ec394d",
         "issue": 4161,
         "merged_at": "2026-11-18T07:46:13Z",
@@ -36773,12 +36775,13 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:4fbb7889-1794988407",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44262454289",
         "sha": "ba7a755b2895a77d08a8c1bbd6eb40e1e36223f8",
         "started_at": "2026-11-18T07:53:47Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the changed-cards fuzz wave also plays each changed card on its Radiant face",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 340
