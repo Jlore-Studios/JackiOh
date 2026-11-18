@@ -37089,16 +37089,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "rules",
-        "count": 2,
-        "last_run": "2026-11-18T06:03:03Z",
-        "provider": "claude-4",
-        "run_id": "44248489898",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
