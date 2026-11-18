@@ -36025,6 +36025,12 @@
         "number": 4186,
         "title": "Patch: strict servers need the two-step code for the dev tools too",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-18T23:22:39Z",
+        "number": 4190,
+        "title": "Patch: a card extracted in a dungeon run is never dealt back into that run by a pack, a shop or an event",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-18T22:53:19Z",
