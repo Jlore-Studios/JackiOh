@@ -13874,7 +13874,7 @@
       "waiting_comment": 6986505318
     },
     "4206": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "ci_early": true,
@@ -13915,7 +13915,7 @@
           "where": "crates/cards/patches/pending/cosmic-bard-and-edwin-van-spacechief-glow-in-hand-when-their.json"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "claude-6",
@@ -13925,11 +13925,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "44388993784",
+      "run_id": "pending:5e194bab-1795033427",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-18T20:14:48Z",
+      "started_at": "2026-11-18T20:24:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -15028,9 +15028,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-18T20:14:48Z",
+    "at": "2026-11-18T20:24:16Z",
     "url": "",
-    "what": "review #4206 on claude-6"
+    "what": "revise #4206 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-18T20:12:45Z",
