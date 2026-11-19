@@ -36237,7 +36237,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-19T02:12:21Z",
         "every": 5,
+        "findings": 0,
         "head": "0eb4571a83a9b5aaa7dc4e4c3b848972225f6d00",
         "issue": 4224,
         "merged_at": "2026-11-19T01:50:34Z",
@@ -36250,12 +36252,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:7c1c22fc-1795053849",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44441619780",
         "sha": "14e3fd964e9c198680f0ebf671d33311631ca666",
         "started_at": "2026-11-19T02:04:32Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a live 1v1 match checkpoints every 32 actions as it is played",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 360
