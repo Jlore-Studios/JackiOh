@@ -15930,6 +15930,8 @@
       }
     },
     "4258": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-19T04:04:17Z",
@@ -15943,8 +15945,11 @@
         "trail": "- All edits are in. The new test run (including its WASM pretest build) is still going in the background \u2014 I'll pick up typecheck, eslint, and the remaining suites when its result lands.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: every counter on a hero's portrait can be read\"} -->\n- All eight hero counters now read at once on phone, tablet, and desktop. Health, Armor, the Jade Counter, and Credits keep the oval's four corners; Luck, Burn, Toxic, and Tipsy moved to labelled chips (`Luck 2`, `Burn 6`, \u2026) in the hero's tray beside the plate, outside the tray's `+N` overflow allow\u2026\n- What changed:\n- - [HeroTray.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/apps/web/src/game/HeroTray.tsx) \u2014 new `CounterChip` (name + count, stein icon for Tipsy, kept classes/attrs/testid) and a `hero-counters-<side>` span rendered beside the modifiers, never counted toward `HERO_TRAY_PHONE_CO\u2026\n- - [Hero.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/apps/web/src/game/Hero.tsx) \u2014 Burn/Toxic/Tipsy portrait spans and the `luck` prop removed; all counters passed to `HeroInspect`.\n- - [Portrait.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/apps/web/src/emotes/Portrait.tsx) \u2014 Luck badge removed; health/Armor only.\n- - [HeroInspect.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/apps/web/src/emotes/HeroInspect.tsx) \u2014 new `HERO_INSPECT_*` testids and optional props; one row per counter above 0 (Credits whenever carried, 0 included).\n- - [board.css](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/apps/web/src/game/board.css) / [emotes.css](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/apps/web/src/emotes/emotes.css) \u2014 portrait keeps Jade/Credits corners; per-kind colors rescoped to `.hero-counter.*` so\u2026\n- - Tests: new [hero-counters.test.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/apps/web/src/game/hero-counters.test.tsx) (each counter once, named, outside the overflow list; `+N` counts modifiers only; inspect lists all six; plate-unchanged CSS + DOM guards); [Hero.test.tsx](/h\u2026\n- How it was tested (all observed output):\n- - `pnpm --dir apps/web test src/game/hero-counters.test.tsx` \u2014 4 passed.\n- - `pnpm --dir apps/web test src/game/Hero.test.tsx src/game/tipsy.test.tsx src/i18n/i18n.test.ts` \u2014 25 passed.\n- - `pnpm --dir apps/web test src/game/Board.test.tsx src/emotes/ui.test.tsx src/palette.test.ts src/typescale.test.ts src/spacing.test.ts src/surfaces.test.ts src/motion.test.ts src/breakpoints.test.ts` \u2014 101 passed.\n- - `pnpm --dir apps/web typecheck` \u2014 clean (first attempt core-dumped Node OOM; passed with `NODE_OPTIONS=--max-old-space-size=8192`).\n- - `pnpm exec eslint` on all eight touched web/e2e files \u2014 clean.\n- - `pnpm --dir e2e typecheck:component` \u2014 clean. `cargo fmt --check` \u2014 clean. `cargo jackioh spec check` \u2014 ok (2287 rulings, 5763 proofs).\n- Decisions the issue left open: tray-chips-over-portrait-corners follows the issue's recommended option (no alternative layout explored). Two departures from the plan, both forced by code: `.hero-luck` also left the two loose-row sizing rules in board.css (they would have resized the tray chip), and\u2026\n- Look twice: the phone left-align rule (`.hero-tray:has(.hero-counters)` in the 600px block) is arithmetic, not measurement \u2014 the new component spec asserts it at 360x740/390x844, but Cypress can't run in this environment (binary install disabled by `CYPRESS_INSTALL_BINARY=0`), so that spec is writt\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4251 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4251,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-19T04:40:26Z",
         "from_run": "44455756335",
         "gates": [
           {
@@ -16003,8 +16008,15 @@
         "source": "build",
         "until": "2026-11-19T05:08:50Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-19T04:38:50Z",
+      "run_id": "pending:4f7f41db-1795063201",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-19T04:40:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16018,9 +16030,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T04:30:30Z",
+    "at": "2026-11-19T04:40:26Z",
     "url": "",
-    "what": "revise #4209 on claude-3"
+    "what": "review #4258 on muse"
   },
   "last_sweep": {
     "at": "2026-11-19T04:27:43Z",
