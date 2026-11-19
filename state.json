@@ -15995,11 +15995,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-19T05:19:49Z",
+        "at": "2026-11-19T05:28:15Z",
         "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4258, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: no engine rules, AI, migration, or ~40 files, and spec plus one app's CSS and its specs is not cross-crate design."
       },
       "failures": 0,
       "forced": false,
