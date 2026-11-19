@@ -15833,6 +15833,14 @@
         "sha": "fef02ba6c909d8fa95dabe4e2b83346a416d91d0",
         "tiers": {}
       }
+    },
+    "4255": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-18T23:59:14Z",
+      "issue": 4221,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
