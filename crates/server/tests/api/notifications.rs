@@ -33,6 +33,7 @@ async fn write(app: &App, to: &Account, actor: &Account, subject: &str, at: i64)
                 subject: Some(subject.to_string()),
                 payload: json!({}),
                 created_at: at,
+                read: false,
             },
             NOTIFICATIONS_KEEP,
         )

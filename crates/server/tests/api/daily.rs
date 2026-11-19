@@ -168,6 +168,21 @@ async fn send(
     .await
 }
 
+/// Whether `GET /api/daily` lists `match_id` for `who` as holding the move. The list marks
+/// nothing, unlike opening the board (R4233000), so tests read it to see a move pass without
+/// dealing with what it is about.
+async fn list_has_move(app: &Arc<App>, who: &Account, match_id: &str) -> bool {
+    let (status, list) = api(app, "GET", "/api/daily", &who.token, Value::Null).await;
+    assert_eq!(status, 200, "{list}");
+    list["games"]
+        .as_array()
+        .expect("games")
+        .iter()
+        .find(|game| game["matchId"] == match_id)
+        .expect("the game is listed")["hasMove"]
+        == true
+}
+
 fn legal_has(game: &Value, kind: &str) -> bool {
     game["legal"]
         .as_array()
@@ -2451,8 +2466,8 @@ mod r4039000_daily_feed {
             .collect()
     }
 
-    /// The move `who`, holding it, makes in `match_id`.
-    async fn move_now(app: &Arc<App>, who: &Account, match_id: &str, nonce: &str) {
+    /// The move `who`, holding it, makes in `match_id`: the game as the move left it.
+    async fn move_now(app: &Arc<App>, who: &Account, match_id: &str, nonce: &str) -> Value {
         let game = read(app, who, match_id).await;
         assert_eq!(game["hasMove"], true, "{game}");
         let (status, body) = send(
@@ -2465,6 +2480,7 @@ mod r4039000_daily_feed {
         )
         .await;
         assert_eq!(status, 200, "{body}");
+        body
     }
 
     /// A game `ada` challenged `bo` to, past its mulligan, both feeds read: its match id.
@@ -2480,14 +2496,10 @@ mod r4039000_daily_feed {
     /// the move passes to as that turn starts, before that seat holds the move, so the move comes straight
     /// back: Classic+ #26 Tommy Tempo casts itself when drawn and ends the turn, and Meditative+ #18
     /// Cognitive Offloading has the AI play the rest of it. A test of hand-overs deals again, up to this
-    /// many times, until every move it makes hands over.
+    /// many times, until every move it makes hands over. Whether a move passed is read off the
+    /// list, which marks nothing (R4233000): opening the recipient's board would deal with the
+    /// very row the feed is checked for.
     const DEALS: usize = 8;
-
-    /// `who`'s move (`move_now`), meant to hand the move to `to`: whether `to` holds it now.
-    async fn hand_over(app: &Arc<App>, who: &Account, to: &Account, match_id: &str, nonce: &str) -> bool {
-        move_now(app, who, match_id, nonce).await;
-        read(app, to, match_id).await["hasMove"] == true
-    }
 
     #[tokio::test]
     async fn r4039000_a_handover_tells_the_next_holder_alone() {
@@ -2495,7 +2507,10 @@ mod r4039000_daily_feed {
             let (app, ada, bo) = two_friends().await;
             let match_id = begun(&app, &ada, &bo).await;
             let (on_move, other) = holder(&app, [&ada, &bo], &match_id).await;
-            if !hand_over(&app, on_move, other, &match_id, "hand-over").await {
+            move_now(&app, on_move, &match_id, "hand-over").await;
+            // R4233000: whether the move passed is read off the list, which marks nothing, so the
+            // recipient's row is still unread when the feed is checked.
+            if !list_has_move(&app, other, &match_id).await {
                 continue;
             }
             let told = unread(&app, other).await;
@@ -2522,52 +2537,61 @@ mod r4039000_daily_feed {
     }
 
     #[tokio::test]
-    async fn r4039000_a_second_move_replaces_the_unread_daily_move() {
+    async fn r4039000_a_second_move_stands_beside_a_read_row() {
         for _ in 0..DEALS {
             let (app, ada, bo) = two_friends().await;
             let match_id = begun(&app, &ada, &bo).await;
             let (first, second) = holder(&app, [&ada, &bo], &match_id).await;
-            // First hands over, Second hands back, First hands over again: Second's one unread row stands.
-            if !hand_over(&app, first, second, &match_id, "one").await {
+            // The mulligan's own rows stay listed, read: the moves below add to them.
+            let base_first = of_kind(&app, first, "dailyMove").await.len();
+            let base_second = of_kind(&app, second, "dailyMove").await.len();
+            // First hands over, Second hands back, First hands over again. Each move is made
+            // from the mover's own board and the pass read off the list, which marks nothing,
+            // so only the mover's own rows are marked along the way.
+            move_now(&app, first, &match_id, "one").await;
+            if !list_has_move(&app, second, &match_id).await {
                 continue;
             }
             let told = of_kind(&app, second, "dailyMove").await;
-            assert_eq!(told.len(), 1, "{told:?}");
-            if !hand_over(&app, second, first, &match_id, "two").await
-                || !hand_over(&app, first, second, &match_id, "three").await
-            {
+            assert_eq!(told.len(), base_second + 1, "{told:?}");
+            assert_eq!(told[0]["read"], json!(false), "{told:?}");
+            move_now(&app, second, &match_id, "two").await;
+            if !list_has_move(&app, first, &match_id).await {
                 continue;
             }
+            move_now(&app, first, &match_id, "three").await;
+            if !list_has_move(&app, second, &match_id).await {
+                continue;
+            }
+            // R4233000: Second opened its board (and acted) between the two moves to it, marking
+            // the first row read, so the newer move stands beside it instead of replacing it. The
+            // store still replaces an unread row (the contract proves it), and the read flags tell
+            // the two apart.
             let again = of_kind(&app, second, "dailyMove").await;
-            assert_eq!(
-                again.len(),
-                1,
-                "the newer move replaced the unread one: {again:?}"
-            );
+            assert_eq!(again.len(), base_second + 2, "{again:?}");
+            assert_eq!(again[0]["read"], json!(false), "{again:?}");
+            assert!(again[1..].iter().all(|row| row["read"] == true), "{again:?}");
             assert!(again[0]["id"].as_i64() > told[0]["id"].as_i64(), "{again:?}");
-            assert_eq!(
-                unread(&app, first)
-                    .await
-                    .iter()
-                    .filter(|row| row["kind"] == "dailyMove")
-                    .count(),
-                1,
-                "First was told once"
-            );
+            // R4233000: First opened its board to send "three", marking its own row read; First
+            // was told once more, and none of its rows is unread.
+            let firsts = of_kind(&app, first, "dailyMove").await;
+            assert_eq!(firsts.len(), base_first + 1, "First was told once: {firsts:?}");
+            assert!(firsts.iter().all(|row| row["read"] == true), "{firsts:?}");
 
             // Once read, the next move is a row of its own.
             read_all(&app, second).await;
-            if !hand_over(&app, second, first, &match_id, "four").await
-                || !hand_over(&app, first, second, &match_id, "five").await
-            {
+            move_now(&app, second, &match_id, "four").await;
+            if !list_has_move(&app, first, &match_id).await {
+                continue;
+            }
+            move_now(&app, first, &match_id, "five").await;
+            if !list_has_move(&app, second, &match_id).await {
                 continue;
             }
             let rows = of_kind(&app, second, "dailyMove").await;
-            assert_eq!(
-                rows.iter().map(|row| row["read"].clone()).collect::<Vec<_>>(),
-                vec![json!(false), json!(true)],
-                "{rows:?}"
-            );
+            assert_eq!(rows.len(), base_second + 3, "{rows:?}");
+            assert_eq!(rows[0]["read"], json!(false), "{rows:?}");
+            assert!(rows[1..].iter().all(|row| row["read"] == true), "{rows:?}");
             return;
         }
         panic!("every move passed in none of {DEALS} deals");
@@ -2588,17 +2612,21 @@ mod r4039000_daily_feed {
         )
         .await;
         assert_eq!(status, 200, "{body}");
-        for (who, other, outcome) in [(&ada, &bo, "loss"), (&bo, &ada, "win")] {
-            let rows = unread(&app, who).await;
+        // R4233000: the conceder's own row is written already read; both rows are still listed,
+        // and the other player's stays unread until they open the board.
+        for (who, other, outcome, read) in [(&ada, &bo, "loss", true), (&bo, &ada, "win", false)] {
+            let rows = of_kind(&app, who, "dailyEnded").await;
             assert_eq!(rows.len(), 1, "{}: {rows:?}", who.name);
-            assert_eq!(rows[0]["kind"], "dailyEnded", "{rows:?}");
             assert_eq!(rows[0]["subject"], json!(match_id));
             assert_eq!(rows[0]["actor"]["profileId"], json!(other.id));
             assert_eq!(
                 rows[0]["payload"],
                 json!({ "outcome": outcome, "reason": "concede" })
             );
+            assert_eq!(rows[0]["read"], json!(read), "{}: {rows:?}", who.name);
         }
+        assert_eq!(unread(&app, &ada).await, Vec::<Value>::new());
+        assert_eq!(unread(&app, &bo).await.len(), 1);
     }
 
     #[tokio::test]
@@ -2611,22 +2639,45 @@ mod r4039000_daily_feed {
             if through_the_sweep {
                 let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
                 assert_eq!((status, swept["settled"].clone()), (200, json!(1)), "{swept}");
+                // Nobody opened a board: both rows are unread.
+                for (who, outcome) in [(late, "loss"), (waiting, "win")] {
+                    let rows = unread(&app, who).await;
+                    assert_eq!(
+                        rows.iter()
+                            .map(|row| (row["kind"].clone(), row["payload"].clone()))
+                            .collect::<Vec<_>>(),
+                        vec![(
+                            json!("dailyEnded"),
+                            json!({ "outcome": outcome, "reason": "disconnect" })
+                        )],
+                        "{}: {rows:?}",
+                        who.name
+                    );
+                }
             } else {
                 assert_eq!(read(&app, waiting, &match_id).await["lostOnTime"], true);
-            }
-            for (who, outcome) in [(late, "loss"), (waiting, "win")] {
-                let rows = unread(&app, who).await;
+                // R4233000: a loss on time is the server's act, so both rows are written unread,
+                // and the read that settled the game marked the reader's own row read.
+                let rows = unread(&app, late).await;
                 assert_eq!(
                     rows.iter()
                         .map(|row| (row["kind"].clone(), row["payload"].clone()))
                         .collect::<Vec<_>>(),
                     vec![(
                         json!("dailyEnded"),
-                        json!({ "outcome": outcome, "reason": "disconnect" })
+                        json!({ "outcome": "loss", "reason": "disconnect" })
                     )],
                     "{}: {rows:?}",
-                    who.name
+                    late.name
                 );
+                let rows = of_kind(&app, waiting, "dailyEnded").await;
+                assert_eq!(rows.len(), 1, "{rows:?}");
+                assert_eq!(
+                    rows[0]["payload"],
+                    json!({ "outcome": "win", "reason": "disconnect" }),
+                    "{rows:?}"
+                );
+                assert_eq!(rows[0]["read"], json!(true), "{rows:?}");
             }
             // Read again, the game writes nothing more.
             read(&app, late, &match_id).await;
@@ -2686,7 +2737,13 @@ mod r4039000_daily_feed {
                 .collect::<Vec<_>>(),
             vec![(json!("dailyAnswered"), json!(id), json!({ "answer": "declined" }))]
         );
-        assert_eq!(unread(&app, &bo).await.len(), 1, "the decliner is told nothing");
+        // R4233000: answering the challenge marked the decliner's row read; it stays listed, and
+        // the decliner is told nothing new.
+        let rows = of_kind(&app, &bo, "dailyChallenge").await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["subject"], json!(id), "{rows:?}");
+        assert_eq!(rows[0]["read"], json!(true), "{rows:?}");
+        assert_eq!(unread(&app, &bo).await, Vec::<Value>::new());
 
         // A cancel tells nobody.
         read_all(&app, &ada).await;
@@ -2847,5 +2904,264 @@ mod r4039000_daily_feed {
                 "{settings}"
             );
         }
+    }
+}
+
+mod r4233000_read_on_open {
+    //! R4233000 (#4233): a notification counts as seen once its owner opens or answers what it is
+    //! about. Reading a daily board (or sending an action there) marks that game's rows read, and
+    //! the game-ending row told to the player whose own act ended it is written already read.
+    use super::*;
+    use crate::support::store::{feed, feed_kinds};
+
+    /// `who`'s unread feed rows.
+    async fn unread(app: &Arc<App>, who: &Account) -> Vec<Value> {
+        feed(app, who).await["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["read"] == false)
+            .cloned()
+            .collect()
+    }
+
+    /// Marks every row of `who`'s feed read.
+    async fn read_all(app: &Arc<App>, who: &Account) {
+        let (status, body) = api(app, "POST", "/api/notifications/read", &who.token, json!({})).await;
+        assert_eq!((status, body), (200, json!({ "unread": 0 })));
+    }
+
+    /// `who`'s rows of `kind`, newest first.
+    async fn of_kind(app: &Arc<App>, who: &Account, kind: &str) -> Vec<Value> {
+        feed(app, who).await["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["kind"] == kind)
+            .cloned()
+            .collect()
+    }
+
+    /// The move `who`, holding it, makes in `match_id`: the game as the move left it.
+    async fn move_now(app: &Arc<App>, who: &Account, match_id: &str, nonce: &str) -> Value {
+        let game = read(app, who, match_id).await;
+        assert_eq!(game["hasMove"], true, "{game}");
+        let (status, body) = send(
+            app,
+            who,
+            match_id,
+            game["seq"].as_i64().expect("a seq"),
+            nonce,
+            next_move(&game),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        body
+    }
+
+    /// A game `ada` challenged `bo` to, past its mulligan, both feeds read: its match id.
+    async fn begun(app: &Arc<App>, ada: &Account, bo: &Account) -> String {
+        let match_id = daily_game(app, ada, bo, 1).await;
+        past_the_mulligan(app, [ada, bo], &match_id).await;
+        read_all(app, ada).await;
+        read_all(app, bo).await;
+        match_id
+    }
+
+    /// `who`'s `notificationsUnread` in the social read.
+    async fn social_unread(app: &Arc<App>, who: &Account) -> Value {
+        let (status, social) = api(app, "GET", "/api/social", &who.token, Value::Null).await;
+        assert_eq!(status, 200, "{social}");
+        social["notificationsUnread"].clone()
+    }
+
+    /// A hand-over's game deals again until every move it makes hands over (as
+    /// `r4039000_daily_feed`'s `DEALS`).
+    const DEALS: usize = 8;
+
+    #[tokio::test]
+    async fn r4233000_a_board_read_marks_its_move_rows_read() {
+        for _ in 0..DEALS {
+            let (app, ada, bo) = two_friends().await;
+            let match_id = begun(&app, &ada, &bo).await;
+            let (on_move, other) = holder(&app, [&ada, &bo], &match_id).await;
+            move_now(&app, on_move, &match_id, "hand-over").await;
+            if !list_has_move(&app, other, &match_id).await {
+                continue;
+            }
+            // One unread row, and the social read counts it.
+            assert_eq!(unread(&app, other).await.len(), 1);
+            assert_eq!(social_unread(&app, other).await, json!(1));
+
+            // Opening the board marks it read: the social read drops by one, the row stays
+            // listed, and reading again changes nothing.
+            read(&app, other, &match_id).await;
+            assert_eq!(unread(&app, other).await, Vec::<Value>::new());
+            assert_eq!(social_unread(&app, other).await, json!(0));
+            let rows = of_kind(&app, other, "dailyMove").await;
+            assert_eq!(rows.len(), 1, "{rows:?}");
+            assert_eq!(rows[0]["subject"], json!(match_id), "{rows:?}");
+            assert_eq!(rows[0]["read"], json!(true), "{rows:?}");
+            read(&app, other, &match_id).await;
+            assert_eq!(unread(&app, other).await, Vec::<Value>::new());
+            assert_eq!(social_unread(&app, other).await, json!(0));
+            assert_eq!(of_kind(&app, other, "dailyMove").await.len(), 1);
+            return;
+        }
+        panic!("the move passed in none of {DEALS} deals");
+    }
+
+    #[tokio::test]
+    async fn r4233000_an_action_marks_the_same_rows() {
+        for _ in 0..DEALS {
+            let (app, ada, bo) = two_friends().await;
+            let match_id = begun(&app, &ada, &bo).await;
+            let (on_move, other) = holder(&app, [&ada, &bo], &match_id).await;
+            move_now(&app, on_move, &match_id, "hand-over").await;
+            if !list_has_move(&app, other, &match_id).await {
+                continue;
+            }
+            assert_eq!(unread(&app, other).await.len(), 1);
+            // The Daily-screen turn: open the board, send the move. Nothing waits on the
+            // player after it, and the bell clears.
+            let answered = move_now(&app, other, &match_id, "answer").await;
+            assert_eq!(unread(&app, other).await, Vec::<Value>::new(), "after the action");
+            assert_eq!(social_unread(&app, other).await, json!(0));
+            let rows = of_kind(&app, other, "dailyMove").await;
+            assert_eq!(rows.len(), 1, "{rows:?}");
+            assert_eq!(rows[0]["read"], json!(true), "{rows:?}");
+            assert!(answered["seq"].as_i64().is_some_and(|seq| seq > 0));
+            return;
+        }
+        panic!("the move passed in none of {DEALS} deals");
+    }
+
+    #[tokio::test]
+    async fn r4233000_the_senders_own_ended_row_is_written_read() {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = begun(&app, &ada, &bo).await;
+        let game = read(&app, &bo, &match_id).await;
+        let (status, body) = send(
+            &app,
+            &bo,
+            &match_id,
+            game["seq"].as_i64().expect("a seq"),
+            "concede",
+            json!({ "type": "concede" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        // The conceder's own row is listed but already read, so their social read counts
+        // nothing; the other player's row stays unread until they open the board.
+        let rows = of_kind(&app, &bo, "dailyEnded").await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["subject"], json!(match_id), "{rows:?}");
+        assert_eq!(
+            rows[0]["payload"],
+            json!({ "outcome": "loss", "reason": "concede" }),
+            "{rows:?}"
+        );
+        assert_eq!(rows[0]["read"], json!(true), "{rows:?}");
+        assert_eq!(social_unread(&app, &bo).await, json!(0));
+        let rows = of_kind(&app, &ada, "dailyEnded").await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["read"], json!(false), "{rows:?}");
+        assert_eq!(social_unread(&app, &ada).await, json!(1));
+        assert!(feed_kinds(&feed(&app, &bo).await).contains(&"dailyEnded".to_string()));
+    }
+
+    #[tokio::test]
+    async fn r4233000_accepting_or_declining_a_daily_challenge_marks_its_row() {
+        let (app, ada, bo) = two_friends().await;
+        read_all(&app, &ada).await;
+        read_all(&app, &bo).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ada.token,
+            random_challenge(&bo, 3),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let first = body["id"].as_str().expect("a challenge id").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{first}/decline"),
+            &bo.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        // Declining marked that challenge's row; nothing else changed.
+        let rows = of_kind(&app, &bo, "dailyChallenge").await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["subject"], json!(first), "{rows:?}");
+        assert_eq!(rows[0]["read"], json!(true), "{rows:?}");
+        assert_eq!(unread(&app, &bo).await, Vec::<Value>::new());
+
+        // A second challenge's row is untouched until it is answered, and answering it leaves
+        // the first alone.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ada.token,
+            random_challenge(&bo, 7),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let second = body["id"].as_str().expect("a challenge id").to_string();
+        let rows = of_kind(&app, &bo, "dailyChallenge").await;
+        assert_eq!(rows.len(), 2, "{rows:?}");
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{second}/accept"),
+            &bo.token,
+            json!({ "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let rows = of_kind(&app, &bo, "dailyChallenge").await;
+        assert_eq!(
+            rows.iter()
+                .map(|row| (row["subject"].clone(), row["read"].clone()))
+                .collect::<Vec<_>>(),
+            vec![(json!(second), json!(true)), (json!(first), json!(true)),],
+            "{rows:?}"
+        );
+        assert_eq!(unread(&app, &bo).await, Vec::<Value>::new());
+    }
+
+    #[tokio::test]
+    async fn r4233000_a_mark_failure_leaves_the_move_answered() {
+        let logs = record_logs();
+        let (app, ada, bo) = two_friends().await;
+        let match_id = begun(&app, &ada, &bo).await;
+        let (on_move, _) = holder(&app, [&ada, &bo], &match_id).await;
+        let before = read(&app, on_move, &match_id).await;
+        fail_on(&app, "notifications.markSubject", "the store cannot answer").await;
+        // Every mark fails, and the move is still answered: the failure is logged, never the
+        // act's.
+        let game = read(&app, on_move, &match_id).await;
+        let (status, body) = send(
+            &app,
+            on_move,
+            &match_id,
+            game["seq"].as_i64().expect("a seq"),
+            "marked-fail",
+            next_move(&game),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["seq"], before["seq"].as_i64().expect("a seq") + 1, "{body}");
+        stop_failing(&app).await;
+        assert!(
+            !logs.named("notifications.mark_failed").is_empty(),
+            "{:?}",
+            logs.entries()
+        );
     }
 }

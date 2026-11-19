@@ -878,15 +878,23 @@ the send fails (`daily_email_release`). Past it no email goes that day, logged o
 **The notification feed** (`notifications/`, R4039000, issue #4039) is the channel that is always on; email and
 push are extras while their keys are set. Each event's handler, after its own commit, calls
 `notifications::notify`, which writes its rows in a transaction of its own (a notice its own actor would get, or
-one across a block either way, writes nothing), sends each row to its recipient's social sockets and logs a
+one across a block either way, writes nothing), sends each unread row to its recipient's social sockets and logs a
 failure as `notifications.write_failed` without failing the event. The kinds: `dailyMove` (a hold that began with
 an action, `daily::games::apply`, and the waiting seeker of a paired seek), `dailyEnded` (both players, on time and
 by concession included, a void excepted), `dailyChallenge`, `dailyAnswered` (accept and decline; a cancel tells
 nobody), `friendRequest`, `friendAccepted` (an accept and a mutual request), `lobbyInvite` and `replayShared`. A new
 row replaces its recipient's unread row of the same kind, actor and subject (`Tx::notifications_add`), each
 account keeps its newest `NOTIFICATIONS_KEEP`, and the sweep deletes rows older than `NOTIFICATIONS_KEEP_DAYS`
-(`notifications_purge`). Migration 0093 adds `public.notifications`, the server's alone (RLS on, no policy, no
-grant), and `tests/sql/57_notifications.sql` checks it.
+(`notifications_purge`). R4233000 (issue #4233): a row counts as seen once its owner opens or answers what it is
+about. Reading a daily board (or acting there) marks that game's `dailyMove`/`dailyEnded` rows read inside the
+read's own transaction (`daily::games::game_json`, `expired_json`); accepting or declining a daily challenge or a
+friend request, entering a lobby and a friend's read of a shared replay each mark that subject's row read after
+their own commit (`notifications::mark_subject`, which pushes the owner's social frame when it changed a row and
+logs a failure as `notifications.mark_failed` without failing the act). The sender's own `dailyEnded` row is
+written already read (`Notice::read`) but still listed. `Tx::notifications_unread` leaves out a `lobbyInvite`
+whose lobby is gone, started or expired, the same test the page reads by, in one statement. Migration 0093 adds
+`public.notifications`, the server's alone (RLS on, no policy, no grant), and `tests/sql/57_notifications.sql`
+checks it.
 A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
 VAPID, with `ring`), and a subscription its push service answers 404, 410 or 403 is deleted (403 is what a
 push service answers after the VAPID pair changes, #3844). A subscription is kept only at a browser's push

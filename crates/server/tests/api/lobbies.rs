@@ -1102,3 +1102,119 @@ mod r4039000_the_invite_feed {
         assert_eq!(invites(&t.app, &t.guest).await, (Vec::new(), json!(0)));
     }
 }
+
+mod r4233000_read_on_open {
+    //! R4233000 (#4233): entering a lobby marks its `lobbyInvite` row read, and a `lobbyInvite`
+    //! whose lobby has started, expired or closed counts as unread nowhere, even before any page
+    //! is read.
+    use super::*;
+    use crate::support::store::feed;
+
+    /// `who`'s listed `lobbyInvite` rows as `(subject, read)`, and its unread count.
+    async fn invites(app: &Arc<App>, who: &Account) -> (Vec<(Value, Value)>, Value) {
+        let body = feed(app, who).await;
+        let listed = body["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["kind"] == "lobbyInvite")
+            .map(|row| (row["subject"].clone(), row["read"].clone()))
+            .collect();
+        (listed, body["unread"].clone())
+    }
+
+    /// `who`'s `notificationsUnread` in the social read, which deletes nothing.
+    async fn social_unread(app: &Arc<App>, who: &Account) -> Value {
+        let (status, social) = api(app, "GET", "/api/social", &who.token, Value::Null).await;
+        assert_eq!(status, 200, "{social}");
+        social["notificationsUnread"].clone()
+    }
+
+    #[tokio::test]
+    async fn r4233000_entering_a_lobby_marks_its_invite_read() {
+        let t = three().await;
+        befriend(&t.app, &t.host, &t.guest).await;
+        api(
+            &t.app,
+            "POST",
+            "/api/notifications/read",
+            &t.guest.token,
+            json!({}),
+        )
+        .await;
+        let code = duel(&t.app, &t.host, "random").await;
+        let invite = json!({ "profileId": t.guest.id });
+        ok_act(&t.app, &t.host, &code, "invite", invite).await;
+        assert_eq!(social_unread(&t.app, &t.guest).await, json!(1));
+
+        // Entering from the invite's own toast answers it: the row stays listed, read.
+        ok_act(&t.app, &t.guest, &code, "enter", Value::Null).await;
+        assert_eq!(
+            invites(&t.app, &t.guest).await,
+            (vec![(json!(code), json!(true))], json!(0))
+        );
+        assert_eq!(social_unread(&t.app, &t.guest).await, json!(0));
+    }
+
+    #[tokio::test]
+    async fn r4233000_a_dead_lobby_invite_is_not_counted() {
+        let t = three().await;
+        befriend(&t.app, &t.host, &t.guest).await;
+        api(
+            &t.app,
+            "POST",
+            "/api/notifications/read",
+            &t.guest.token,
+            json!({}),
+        )
+        .await;
+        let invite = json!({ "profileId": t.guest.id });
+
+        // Gone: the host leaves, closing the lobby, and no page is read between.
+        let gone = duel(&t.app, &t.host, "random").await;
+        ok_act(&t.app, &t.host, &gone, "invite", invite.clone()).await;
+        assert_eq!(social_unread(&t.app, &t.guest).await, json!(1));
+        ok_act(&t.app, &t.host, &gone, "leave", Value::Null).await;
+        assert_eq!(
+            social_unread(&t.app, &t.guest).await,
+            json!(0),
+            "a closed lobby's invite counts nowhere"
+        );
+
+        // Started, then expired: the count leaves each out while the rows stay unread.
+        let ended = duel(&t.app, &t.host, "random").await;
+        ok_act(&t.app, &t.host, &ended, "invite", invite).await;
+        let mut lobby =
+            store!(t.app, tx => tx.lobbies_get(&ended).await.expect("lobbies.get")).expect("the lobby");
+        let rev = lobby.rev;
+        lobby.rev += 1;
+        lobby.started_at = Some(now_ms());
+        assert!(store!(t.app, tx => tx.lobbies_update(&lobby, rev).await.expect("lobbies.update")));
+        assert_eq!(
+            social_unread(&t.app, &t.guest).await,
+            json!(0),
+            "a started lobby's invite counts nowhere"
+        );
+        lobby.rev += 1;
+        lobby.started_at = None;
+        lobby.expires_at = now_ms() - 1;
+        assert!(store!(t.app, tx => tx.lobbies_update(&lobby, rev + 1).await.expect("lobbies.update")));
+        assert_eq!(
+            social_unread(&t.app, &t.guest).await,
+            json!(0),
+            "an expired lobby's invite counts nowhere"
+        );
+
+        // The rows are still there, unread: the page deletes them as it reads.
+        let body = feed(&t.app, &t.guest).await;
+        assert_eq!(body["unread"], 0, "{body}");
+        assert!(
+            body["notifications"]
+                .as_array()
+                .expect("rows")
+                .iter()
+                .all(|row| row["kind"] != "lobbyInvite"),
+            "{body}"
+        );
+    }
+}

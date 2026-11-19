@@ -50,6 +50,8 @@ impl NotificationKind {
 }
 
 /// A feed row before it is written: whom it tells, of what, by whom, about what, and its words.
+/// R4233000: `read` writes it already read (the actor's own game-ending row): it is listed, but no
+/// toast goes out for it and it never counts as unread.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NewNotification {
@@ -59,6 +61,7 @@ pub struct NewNotification {
     pub subject: Option<String>,
     pub payload: Value,
     pub created_at: i64,
+    pub read: bool,
 }
 
 /// One row of `public.notifications` (R4039000).
@@ -128,9 +131,10 @@ impl Tx<'_> {
         notifications_dispatch!(self, page(profile_id, before, limit))
     }
 
-    /// How many of `profile_id`'s rows are unread.
-    pub async fn notifications_unread(&mut self, profile_id: &str) -> StoreResult<i64> {
-        notifications_dispatch!(self, unread(profile_id))
+    /// How many of `profile_id`'s rows are unread at `now`. R4233000: a `lobbyInvite` whose lobby
+    /// is gone, started or expired counts nowhere, the same test `list` reads by.
+    pub async fn notifications_unread(&mut self, profile_id: &str, now: i64) -> StoreResult<i64> {
+        notifications_dispatch!(self, unread(profile_id, now))
     }
 
     /// Marks `profile_id`'s unread rows with an id up to `up_to`, inclusive (every one for `None`),
@@ -142,6 +146,21 @@ impl Tx<'_> {
         at: i64,
     ) -> StoreResult<u64> {
         notifications_dispatch!(self, mark_read(profile_id, up_to, at))
+    }
+
+    /// R4233000: marks `profile_id`'s unread rows of one of `kinds` about `subject` (by `actor`
+    /// when `Some`), read at `at`: how many it marked. Opening or answering what a row is about
+    /// calls this, so the bell's dot follows only news not yet dealt with. Deletes nothing, never
+    /// touches another account's rows, never marks a read row unread.
+    pub async fn notifications_mark_subject(
+        &mut self,
+        profile_id: &str,
+        kinds: &[NotificationKind],
+        subject: &str,
+        actor: Option<&str>,
+        at: i64,
+    ) -> StoreResult<u64> {
+        notifications_dispatch!(self, mark_subject(profile_id, kinds, subject, actor, at))
     }
 
     /// Deletes `profile_id`'s rows among `ids` (a lobby invite whose lobby is gone): how many.
@@ -168,7 +187,7 @@ mod pg {
     use sqlx::Row;
     use sqlx::postgres::PgRow;
 
-    use super::{NewNotification, NotificationRow};
+    use super::{NewNotification, NotificationKind, NotificationRow};
     use crate::auth::is_uuid;
     // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`).
     use crate::db::pg::{PgTx, json, run_as, uuid_text, uuid_text_or_null};
@@ -212,8 +231,9 @@ mod pg {
         .execute(&mut **t)
         .await?;
         let written = sqlx::query(concat!(
-            "insert into public.notifications (profile_id, kind, actor_id, subject, payload, created_at)
-             values ($1::uuid, $2::text, $3::uuid, $4::text, $5::jsonb, $6::bigint)
+            "insert into public.notifications (profile_id, kind, actor_id, subject, payload, created_at, read_at)
+             values ($1::uuid, $2::text, $3::uuid, $4::text, $5::jsonb, $6::bigint,
+                     case when $7::boolean then $6::bigint end)
              returning ",
             notification_columns!()
         ))
@@ -223,6 +243,7 @@ mod pg {
         .bind(new.subject.as_deref())
         .bind(json(&new.payload)?)
         .bind(new.created_at)
+        .bind(new.read)
         .fetch_one(&mut **t)
         .await?;
         sqlx::query(
@@ -264,16 +285,23 @@ mod pg {
         rows.iter().map(notification_of).collect()
     }
 
-    pub async fn unread(t: &mut PgTx<'_>, profile_id: &str) -> Result<i64, StoreError> {
+    pub async fn unread(t: &mut PgTx<'_>, profile_id: &str, now: i64) -> Result<i64, StoreError> {
         run_as(t, None).await?;
         if !is_uuid(profile_id) {
             return Ok(0);
         }
+        // R4233000: one statement, as `list` reads it: a `lobbyInvite` counts only while its lobby
+        // is there, unstarted and unexpired.
         let row = sqlx::query(
-            "select count(*)::bigint as n from public.notifications
-              where profile_id = $1::uuid and read_at is null",
+            "select count(*)::bigint as n from public.notifications n
+              left join public.lobbies l on l.code = n.subject and n.kind = 'lobbyInvite'
+              where n.profile_id = $1::uuid and n.read_at is null
+                and (n.kind <> 'lobbyInvite'
+                     or (l.code is not null and l.started_at is null
+                         and l.expires_at > to_timestamp($2::double precision / 1000.0)))",
         )
         .bind(profile_id)
+        .bind(now as f64)
         .fetch_one(&mut **t)
         .await?;
         Ok(row.try_get::<i64, _>("n")?)
@@ -296,6 +324,36 @@ mod pg {
         )
         .bind(profile_id)
         .bind(up_to)
+        .bind(at)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected())
+    }
+
+    pub async fn mark_subject(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        kinds: &[NotificationKind],
+        subject: &str,
+        actor: Option<&str>,
+        at: i64,
+    ) -> Result<u64, StoreError> {
+        run_as(t, None).await?;
+        if !is_uuid(profile_id) {
+            return Ok(0);
+        }
+        let kinds: Vec<&str> = kinds.iter().map(|kind| kind.as_str()).collect();
+        let done = sqlx::query(
+            "update public.notifications set read_at = $5::bigint
+              where profile_id = $1::uuid and read_at is null
+                and kind = any($2::text[])
+                and subject is not distinct from $3::text
+                and ($4::uuid is null or actor_id = $4::uuid)",
+        )
+        .bind(profile_id)
+        .bind(kinds)
+        .bind(subject)
+        .bind(actor)
         .bind(at)
         .execute(&mut **t)
         .await?;
@@ -358,7 +416,7 @@ mod fake {
             subject: new.subject.clone(),
             payload: new.payload.clone(),
             created_at: new.created_at,
-            read_at: None,
+            read_at: new.read.then_some(new.created_at),
         };
         // Ids only grow, so the rows stay in id order.
         tables.rows.push(written.clone());
@@ -386,11 +444,33 @@ mod fake {
             .collect())
     }
 
-    pub fn unread(f: &mut FakeTx<'_>, profile_id: &str) -> Result<i64, StoreError> {
-        let tables = call(f, "notifications.unread")?;
-        Ok(newest_first(&tables.rows, profile_id)
-            .filter(|row| row.read_at.is_none())
+    pub fn unread(f: &mut FakeTx<'_>, profile_id: &str, now: i64) -> Result<i64, StoreError> {
+        crate::db::fake::call(f, "notifications.unread")?;
+        let tables = f.tables();
+        Ok(tables
+            .notifications
+            .rows
+            .iter()
+            .filter(|row| {
+                row.profile_id == profile_id
+                    && row.read_at.is_none()
+                    && invite_open(&tables.lobbies, row, now)
+            })
             .count() as i64)
+    }
+
+    /// R4233000: whether a row counts as unread: every kind but a dead `lobbyInvite` (its lobby
+    /// gone, started or expired), the same test `list` reads by.
+    fn invite_open(lobbies: &[crate::lobby::store::Lobby], row: &NotificationRow, now: i64) -> bool {
+        if row.kind != super::NotificationKind::LobbyInvite {
+            return true;
+        }
+        let Some(subject) = row.subject.as_deref() else {
+            return false;
+        };
+        lobbies
+            .iter()
+            .any(|lobby| lobby.code == subject && lobby.started_at.is_none() && lobby.expires_at > now)
     }
 
     pub fn mark_read(
@@ -403,6 +483,29 @@ mod fake {
         let mut marked = 0;
         for row in tables.rows.iter_mut().filter(|row| {
             row.profile_id == profile_id && row.read_at.is_none() && up_to.is_none_or(|up_to| row.id <= up_to)
+        }) {
+            row.read_at = Some(at);
+            marked += 1;
+        }
+        Ok(marked)
+    }
+
+    pub fn mark_subject(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        kinds: &[super::NotificationKind],
+        subject: &str,
+        actor: Option<&str>,
+        at: i64,
+    ) -> Result<u64, StoreError> {
+        let tables = call(f, "notifications.markSubject")?;
+        let mut marked = 0;
+        for row in tables.rows.iter_mut().filter(|row| {
+            row.profile_id == profile_id
+                && row.read_at.is_none()
+                && kinds.contains(&row.kind)
+                && row.subject.as_deref() == Some(subject)
+                && actor.is_none_or(|actor| row.actor_id.as_deref() == Some(actor))
         }) {
             row.read_at = Some(at);
             marked += 1;

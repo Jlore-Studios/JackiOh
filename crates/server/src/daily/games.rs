@@ -33,7 +33,7 @@ use crate::actor::protocol::{client_nonce, parse_action_body};
 use crate::actor::registry::{Prepared, dealt_for, panic_text, pinned_for, prepare_match};
 use crate::actor::telemetry::Recorder;
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiResult, Req, bad_request, json as json_response, ok, to_json};
+use crate::api::http::{ApiError, ApiResult, Req, bad_request, json as json_response, now_ms, ok, to_json};
 use crate::api::results::{record_result, seats_of, void_match};
 use crate::app::App;
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
@@ -243,6 +243,10 @@ pub(crate) async fn apply(
     let state = reduced.state;
     // R4039000: who sent it, as the seats stood before it (R677), whom the feed never tells of it.
     let sender = loaded.account_at(action.player_id).to_string();
+    // R4233000: the server's own `disconnectExpired` is not its sender's act (R270 names its nonce),
+    // so a loss on time still tells its loser; a player's own concession or winning blow is told to
+    // them already read.
+    let own = !action.nonce.starts_with(SERVER_NONCE_PREFIX);
     let clock = daily_sync(&loaded.daily.clock, &state, now);
     let board = daily_board(&state);
     let ended_at = state.result.is_some().then_some(now);
@@ -292,7 +296,7 @@ pub(crate) async fn apply(
     if loaded.over() {
         record(app, loaded, now).await;
     }
-    crate::notifications::notify(app, feed_notices(loaded, &before, &sender)).await;
+    crate::notifications::notify(app, feed_notices(loaded, &before, &sender, own)).await;
     Ok(Applied::Done)
 }
 
@@ -301,7 +305,8 @@ pub(crate) async fn apply(
 /// result as each sees it (`dailyEnded`; a void tells nobody, R679); one that goes on tells each
 /// account the move newly passed to (a hold that began with this action) unless it sent it
 /// (`dailyMove`). The server's own `disconnectExpired` ends the game, so a loss on time is told too.
-fn feed_notices(loaded: &Loaded, before: &DailyClock, sender: &str) -> Vec<Notice> {
+/// R4233000: `own` is the sender's own act, whose ended row is written already read (still listed).
+fn feed_notices(loaded: &Loaded, before: &DailyClock, sender: &str, own: bool) -> Vec<Notice> {
     let match_id = loaded.match_row.id.as_str();
     let (a, b) = (loaded.daily.players.0.as_str(), loaded.daily.players.1.as_str());
     let other = |me: &str| if me == a { b } else { a };
@@ -313,12 +318,15 @@ fn feed_notices(loaded: &Loaded, before: &DailyClock, sender: &str) -> Vec<Notic
             .into_iter()
             .filter_map(|me| {
                 let seat = seat_now(&loaded.daily, me)?;
-                Some(
-                    Notice::new(NotificationKind::DailyEnded, me, other(me), match_id).with(json!({
-                        "outcome": outcome_of(result.winner, seat),
-                        "reason": result.reason,
-                    })),
-                )
+                let notice = Notice::new(NotificationKind::DailyEnded, me, other(me), match_id).with(json!({
+                    "outcome": outcome_of(result.winner, seat),
+                    "reason": result.reason,
+                }));
+                Some(if own && me == sender {
+                    notice.read()
+                } else {
+                    notice
+                })
             })
             .collect();
     }
@@ -609,7 +617,31 @@ async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) ->
     let mut tx = app.db.begin(Some(me)).await?;
     let opponent = tx.profiles_get_by_id(loaded.account_at(other)).await?;
     let rows = tx.daily_games_of(me, 0).await?;
+    // R4233000: reading the board marks this game's move and ended rows read, inside the read's own
+    // transaction and only while unread, so a slow timer's re-read (R3840000) writes nothing. A
+    // failure marks nothing and never fails the read (the act's answer included): it is logged, as
+    // `notify`'s is. A mark that changed any row pushes the reader's social frame, so every one of
+    // their tabs drops the dot.
+    let marked = match tx
+        .notifications_mark_subject(
+            me,
+            &[NotificationKind::DailyMove, NotificationKind::DailyEnded],
+            &loaded.match_row.id,
+            None,
+            now_ms(),
+        )
+        .await
+    {
+        Ok(marked) => marked,
+        Err(error) => {
+            tracing::warn!(event = "notifications.mark_failed", matchId = %loaded.match_row.id, message = %error);
+            0
+        }
+    };
     tx.commit().await?;
+    if marked > 0 {
+        push_social(app, &[me]).await;
+    }
     // CLAUDE.md rule 7: the caller's view, legal actions and forecast only, under the game's catalog.
     let pinned = loaded.pinned;
     let view = engine::view_for(pinned, &loaded.state, seat);
@@ -686,7 +718,28 @@ async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value
     };
     let mut tx = app.db.begin(Some(me)).await?;
     let opponent = tx.profiles_get_by_id(opponent_id).await?;
+    // R4233000: as `game_json`'s read marks, for a game whose moves are gone. A mark that changed
+    // any row pushes the reader's social frame, as `game_json`'s does.
+    let marked = match tx
+        .notifications_mark_subject(
+            me,
+            &[NotificationKind::DailyMove, NotificationKind::DailyEnded],
+            &stored.match_row.id,
+            None,
+            now_ms(),
+        )
+        .await
+    {
+        Ok(marked) => marked,
+        Err(error) => {
+            tracing::warn!(event = "notifications.mark_failed", matchId = %stored.match_row.id, message = %error);
+            0
+        }
+    };
     tx.commit().await?;
+    if marked > 0 {
+        push_social(app, &[me]).await;
+    }
     let mut game = summary_json(
         &stored.daily,
         Some(&stored.match_row),
