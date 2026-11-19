@@ -36753,7 +36753,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-19T05:19:48Z",
         "every": 5,
+        "findings": 2,
+        "follow_up": 4259,
         "head": "8f71b975eb318a91e597a32f9e39ca09526c2097",
         "issue": 4251,
         "merged_at": "2026-11-19T05:10:46Z",
@@ -36766,12 +36769,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:6bc3e8f4-1795065085",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44463478889",
         "sha": "1955aebdce4029480ef70656832fe9618c4a32b2",
         "started_at": "2026-11-19T05:11:48Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: every counter on a hero's portrait can be read",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 365
