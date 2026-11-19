@@ -124,14 +124,13 @@ fn allure(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     effects
 }
 
-/// R1045000: the picked Unit stolen, or destroyed with no open zone in its row.
+/// R1045000: the picked Unit stolen, or destroyed with no open zone in its row (R4205000).
 fn steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(target_id) = ctx.data.get(TARGET_KEY).and_then(Value::as_str) else {
         return vec![];
     };
     vec![steal(StealTarget {
         instance_id: Some(target_id.to_string()),
-        otherwise: Some(StealOtherwise::Destroy),
         ..StealTarget::default()
     })]
 }

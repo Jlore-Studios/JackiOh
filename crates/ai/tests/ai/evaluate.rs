@@ -539,7 +539,7 @@ mod r1224_r1225_credit_line {
 
 mod duos_life_r964000 {
     use super::*;
-    use jackioh_ai::{EvalWeights, starting_life};
+    use jackioh_ai::{EvalWeights, evaluate_priced, starting_life};
     use jackioh_engine::testkit::{DUOS_OWN_HEALTH, DUOS_POOL_HEALTH, DuosLife};
 
     /// What a probed weight adds, so a term that counts moves the score by far more than rounding.
@@ -647,6 +647,47 @@ mod duos_life_r964000 {
         let duos = in_duos(&state, AI, 20, 7, 30, false);
         assert_eq!(starting_life(&duos, AI), DUOS_OWN_HEALTH + 30);
         assert_eq!(starting_life(&duos, HUMAN), HERO_HEALTH);
+    }
+
+    /// R4188000: prices carrying a pool's coming loss of 1, read for `seat`.
+    fn loss_of_one(seat: PlayerId) -> Prices {
+        Prices {
+            pool_loss: Some((seat, 1)),
+            ..Prices::default()
+        }
+    }
+
+    /// Whether the lethal threat term counts in AI's score of `state` under `prices`.
+    fn lethal_threat_priced(state: &GameState, prices: &Prices) -> bool {
+        let mut probed = AI_EVAL;
+        probed.lethal_threat += PROBE;
+        evaluate_priced(state, AI, NextSwing::Enemy, &probed, prices)
+            != evaluate_priced(state, AI, NextSwing::Enemy, &AI_EVAL, prices)
+    }
+
+    #[test]
+    fn r4188000_the_threat_term_reads_the_seats_life_less_the_pools_coming_loss() {
+        let state = in_duos(&board(json!({ "p2": board_of_25() })), AI, 6, 20, 20, false);
+        assert_eq!(face_threat(&state, HUMAN), 25);
+        assert!(
+            lethal_threat_priced(&state, &loss_of_one(AI)),
+            "6 + 20 less 1 is 25"
+        );
+        assert!(!lethal_threat_priced(&state, Prices::NONE), "6 + 20 is 26");
+        assert!(
+            !lethal_threat_priced(&state, &loss_of_one(HUMAN)),
+            "a loss read for the other seat is not the AI's"
+        );
+        let score = |state: &GameState, prices: &Prices| {
+            evaluate_priced(state, AI, NextSwing::Enemy, &AI_EVAL, prices)
+        };
+        assert_eq!(score(&state, &loss_of_one(HUMAN)), score(&state, Prices::NONE));
+        let calm = in_duos(&board(base()), AI, 6, 20, 20, false);
+        assert_eq!(
+            score(&calm, &loss_of_one(AI)),
+            score(&calm, Prices::NONE),
+            "short of lethal the loss moves nothing: the threat is per point of damage"
+        );
     }
 }
 

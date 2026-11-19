@@ -8,6 +8,7 @@ import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, stripTr
 import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
 import { loadSoundTables } from "../audio/soundTablesLoader.ts";
+import { loadSceneData } from "../cards/art/sceneLoader.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
@@ -148,6 +149,8 @@ export function prefetchRoute(path: string): void {
     // #4180: the sound loader awaits the module before its chunk parses against the catalog,
     // so one call starts both; `loadWasm()` is idempotent, and the test holds the single call.
     void loadSoundTables().catch(() => undefined);
+    // #4222: the scene tables start beside the module too, so a face draws once both are in.
+    void loadSceneData().catch(() => undefined);
   }
 }
 
@@ -162,6 +165,8 @@ export function startScreen(path: string, engine: boolean): void {
   if (engine) {
     // #4180: as above, the sound loader starts the module too.
     void loadSoundTables().catch(() => undefined);
+    // #4222: as above, the scene tables start beside the module too.
+    void loadSceneData().catch(() => undefined);
   }
 }
 

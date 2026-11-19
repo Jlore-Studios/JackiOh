@@ -3,9 +3,10 @@
 // branch — the children draw, the fallback does not. The unready branch belongs to the landing and
 // shop screens' suites, which hold the module back.
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { deferSceneDataForTests, loadSceneData } from "../cards/art/sceneLoader.ts";
 import { wasmLoaded } from "./index.ts";
 import { useEngineReady } from "./useEngineReady.ts";
 import { WhenEngineReady } from "./WhenEngineReady.tsx";
@@ -14,8 +15,9 @@ function Probe(): string {
   return useEngineReady() ? "ready" : "waiting";
 }
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await loadSceneData();
 });
 
 describe("useEngineReady", () => {
@@ -41,5 +43,18 @@ describe("WhenEngineReady", () => {
     const { container } = render(<WhenEngineReady>{() => <span>face</span>}</WhenEngineReady>);
     expect(screen.getByText("face")).toBeInTheDocument();
     expect(container.textContent).toBe("face");
+  });
+});
+
+describe("#4222 readiness waits for the scene tables", () => {
+  it("#4222 useEngineReady stays false until the scene tables arrive", async () => {
+    expect(wasmLoaded()).toBe(true);
+    const deferred = deferSceneDataForTests();
+    render(<Probe />);
+    // The module is in but the tables are held back: the face must not draw yet.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.getByText("waiting")).toBeInTheDocument();
+    await deferred.resolve();
+    await waitFor(() => expect(screen.getByText("ready")).toBeInTheDocument());
   });
 });

@@ -10,7 +10,8 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
 use crate::candidates::{
-    candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down, wall_switches,
+    candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down,
+    wall_switches_priced,
 };
 use crate::config::{AI_EVAL, AI_SEARCH};
 use crate::evaluate::{NextSwing, Prices, evaluate_priced};
@@ -57,20 +58,32 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
 /// The first `width` candidates that are not endTurn, then the first `AI_SEARCH.position_switches`
 /// stand-downs (`stands_down`) the cut left out (#1759, R1759000), then, while the opponent's board
 /// threatens lethal, the first `AI_SEARCH.position_switches` switches to Defense that lower that threat
-/// that both left out (`wall_switches`, #2976, R2976000), then endTurn when it is legal. The candidates
-/// keep `candidate_actions`' order (R4159000).
+/// that both left out (`wall_switches_priced`, #2976, R2976000), then endTurn when it is legal. The
+/// candidates keep `candidate_actions`' order (R4159000).
 pub fn expansion(state: &GameState, seat: PlayerId, width: usize, prices: &Prices) -> Vec<ActionBody> {
-    expand(candidate_actions(state, seat, prices), state, seat, width)
+    expand(candidate_actions(state, seat, prices), state, seat, width, prices)
 }
 
 /// `expansion` at the search's root (#1635): of `root_candidate_actions`, which keeps every distinct
 /// placement of a play.
 pub fn root_expansion(state: &GameState, seat: PlayerId, width: usize, prices: &Prices) -> Vec<ActionBody> {
-    expand(root_candidate_actions(state, seat, prices), state, seat, width)
+    expand(
+        root_candidate_actions(state, seat, prices),
+        state,
+        seat,
+        width,
+        prices,
+    )
 }
 
 /// `expansion` of the given candidates.
-fn expand(candidates: Vec<ActionBody>, state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
+fn expand(
+    candidates: Vec<ActionBody>,
+    state: &GameState,
+    seat: PlayerId,
+    width: usize,
+    prices: &Prices,
+) -> Vec<ActionBody> {
     let end = candidates
         .iter()
         .find(|action| matches!(action, ActionBody::EndTurn))
@@ -80,7 +93,7 @@ fn expand(candidates: Vec<ActionBody>, state: &GameState, seat: PlayerId, width:
         .filter(|action| stands_down(state, action))
         .cloned()
         .collect();
-    let walls = wall_switches(state, seat, &candidates);
+    let walls = wall_switches_priced(state, seat, &candidates, prices);
     let mut moves: Vec<ActionBody> = candidates
         .into_iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))

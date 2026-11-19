@@ -592,7 +592,8 @@ pub struct EvalWeights {
     pub next_turn_mana: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
-    /// When faceThreat(enemy) >= the seat's life (`effective_life`, R964000).
+    /// When faceThreat(enemy) >= the seat's life (`effective_life`, R964000), less the pool's coming loss
+    /// in a Duos duel (R4188000).
     pub lethal_threat: f64,
     pub pressure_per_damage: f64,
     pub lethal_pressure: f64,

@@ -30,6 +30,18 @@ async function engineAgain(): Promise<void> {
   fresh.loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../wasm/pkg/jackioh_wasm_bg.wasm")));
 }
 
+/** A reset drops the modules, the scene tables with them: the fresh `scene.ts` is installed as setup.ts did. */
+async function sceneAgain(): Promise<void> {
+  const scene = await import("../../cards/art/scene.ts");
+  const data = await import("../../cards/art/sceneData.ts");
+  scene.installSceneData({
+    SCENE_KIT: data.SCENE_KIT,
+    drawFigure: data.drawFigure,
+    SCENE_RECIPES: data.SCENE_RECIPES,
+    ALT_SCENE_RECIPES: data.ALT_SCENE_RECIPES,
+  });
+}
+
 afterEach(() => {
   cleanup();
   Reflect.deleteProperty(HTMLElement.prototype, HANDLER);
@@ -41,6 +53,7 @@ describe("PoolGrid's faces", () => {
     Object.defineProperty(HTMLElement.prototype, HANDLER, { value: null, configurable: true, writable: true });
     vi.resetModules();
     await engineAgain();
+    await sceneAgain();
     const { default: PoolGrid } = await import("./PoolGrid.tsx");
     const { container } = render(<PoolGrid ids={[CARD]} catalog={CATALOG_HERE} onInspect={() => {}} />);
     const holder = must(container.querySelector(".db-card-face"), "the face's holder");
@@ -56,6 +69,7 @@ describe("PoolGrid's faces", () => {
 
   it("draws every face at once where the browser reports no skips", async () => {
     await engineAgain();
+    await sceneAgain();
     const { default: PoolGrid } = await import("./PoolGrid.tsx");
     const { container } = render(<PoolGrid ids={[CARD]} catalog={CATALOG_HERE} onInspect={() => {}} />);
     expect(container.querySelector(".db-card-face .cf")).not.toBeNull();

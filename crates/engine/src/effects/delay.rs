@@ -17,7 +17,7 @@ use crate::effects::add_to_hand::{AddToHandArgs, add_to_hand};
 use crate::effects::destroy::{DestroyArgs, destroy, destroy_all};
 use crate::effects::move_::{DiscardHandArgs, DiscardRandomArgs, discard_hand, discard_random};
 use crate::effects::radiant::{RadiantTarget, set_radiant};
-use crate::effects::steal::{StealOtherwise, StealTarget, steal};
+use crate::effects::steal::{StealTarget, steal};
 use crate::effects::targets::{
     BoardScope, PlayerSpec, TargetSpec, cards_in_scope_aimed, instance_by_id_or_spec, instance_of, player_of,
     stands_since_script_began,
@@ -770,7 +770,6 @@ pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> 
             if let Some(instance_id) = data.get("instanceId").and_then(Value::as_str) {
                 let target = StealTarget {
                     instance_id: Some(instance_id.to_string()),
-                    otherwise: Some(StealOtherwise::Destroy),
                     ..StealTarget::default()
                 };
                 (steal(target).apply)(&mut ctx);
