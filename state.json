@@ -13679,7 +13679,9 @@
     },
     "4196": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6994557444"
+      ],
       "failures": 2,
       "forced": false,
       "handoff": {
@@ -13714,9 +13716,7 @@
       ],
       "strikes": 2,
       "suggestion": true,
-      "taken_asks": [
-        "c:6994557444"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4197": {
