@@ -1234,5 +1234,12 @@
     "commit": "f034bfcd6cdd8d6a6f60ff51dd80b5b481db35b0",
     "blob": "959a65323e44852b66a43f828486598b9e2564c3",
     "cardMetricsBlob": "a07c18846f773632eac2e9fcd173f41a8327ffe0"
+  },
+  {
+    "version": "v0.6.7k",
+    "commit": "2de57a9a2334e34c614260de1447ce7f8a846f2d",
+    "blob": "959a65323e44852b66a43f828486598b9e2564c3",
+    "cardMetricsBlob": "a07c18846f773632eac2e9fcd173f41a8327ffe0",
+    "recordsBlob": "406cb0357162b2d4942c2dfbd85b6e9c5a2f5042"
   }
 ]
