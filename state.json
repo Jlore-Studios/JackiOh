@@ -15930,8 +15930,14 @@
     "what": "plan #4196 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-19T07:05:32Z",
-    "notes": [],
+    "at": "2026-11-19T07:12:28Z",
+    "notes": [
+      "delivered plan #4196 on agy (run 44460079905): failed",
+      "started plan #4196 on claude-1 (run 44478032574)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days",
+      "runner gate: started 1 of 1 waiting run(s) (run 44477947079 on main)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16636,7 +16642,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T07:05:32Z",
+  "loop_tick": "2026-11-19T07:12:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
