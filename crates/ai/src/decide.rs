@@ -451,6 +451,7 @@ pub fn decision_prices(
         starship_root: holds_starship(public, seat),
         // R3479000: read off the redacted root too, against the network the search scores with.
         unknown_root: unknown_root(public, seat, &LEARNED),
+        pool_loss: None,
     }
 }
 
@@ -471,6 +472,7 @@ pub fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
 
 /// Steps 1–7 on the redacted copy; every number `stats` reads beside the counter goes in `scratch`.
 /// `options` gives the budget, the wrap-up and the stream; its `should_stop` is the counter's.
+/// `pool_loss` is what `decide_with_pool_loss` was given (R4188000), None for every 1v1 decision.
 fn plan(
     state: &GameState,
     seat: PlayerId,
@@ -478,6 +480,7 @@ fn plan(
     options: &mut AiOptions,
     counter: &dyn NodeCounter,
     scratch: &mut Scratch,
+    pool_loss: Option<i32>,
 ) -> Plan {
     let budget = options.budget;
     let wrap_up = options.wrap_up;
@@ -527,8 +530,12 @@ fn plan(
     let counter: &dyn NodeCounter = &stage;
 
     // R2424000, R2477000, R2564000, R2688000, R3064000: the decision's prices (`decision_prices`), from
-    // the searched section's nodes, passed to every step below.
-    let prices = decision_prices(&public, &probe, seat, counter);
+    // the searched section's nodes, passed to every step below. R4188000: with the pool's coming loss
+    // `decide_with_pool_loss` was given.
+    let prices = Prices {
+        pool_loss: pool_loss.map(|loss| (seat, loss)),
+        ..decision_prices(&public, &probe, seat, counter)
+    };
 
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
     // finalist), the only draws decide ever takes from options.rng.
@@ -858,6 +865,28 @@ pub fn decide_styled(
     options: &mut AiOptions,
     style: &AiStyle,
 ) -> Option<Decision> {
+    decide_in(state, seat, options, style, None)
+}
+
+/// R4188000: `decide` for a seat of a Duos duel, its threat judged against its life less `pool_loss`,
+/// what its teammate's duel is about to take off the team's pool (`duos_pool_loss`).
+pub fn decide_with_pool_loss(
+    state: &GameState,
+    seat: PlayerId,
+    options: &mut AiOptions,
+    pool_loss: i32,
+) -> Option<Decision> {
+    decide_in(state, seat, options, &AI_STYLE_EXACT, Some(pool_loss))
+}
+
+/// `decide_styled`, with the pool's coming loss `plan` prices the decision with (R4188000).
+fn decide_in(
+    state: &GameState,
+    seat: PlayerId,
+    options: &mut AiOptions,
+    style: &AiStyle,
+    pool_loss: Option<i32>,
+) -> Option<Decision> {
     match catch_unwind(AssertUnwindSafe(|| ai_to_act(state, seat))) {
         Ok(true) => {}
         _ => return None,
@@ -874,7 +903,7 @@ pub fn decide_styled(
     };
 
     let outcome = catch_unwind(AssertUnwindSafe(|| {
-        plan(state, seat, style, options, &counter, &mut scratch)
+        plan(state, seat, style, options, &counter, &mut scratch, pool_loss)
     }));
 
     let stats = |counter: &CountingNodeCounter, score: f64, stopped_by: Option<StoppedBy>| SearchStats {
@@ -977,7 +1006,15 @@ mod tests {
             score,
             runners_up,
             ..
-        } = plan(state, AI, &AI_STYLE_EXACT, &mut options, &counter, &mut scratch)
+        } = plan(
+            state,
+            AI,
+            &AI_STYLE_EXACT,
+            &mut options,
+            &counter,
+            &mut scratch,
+            None,
+        )
         else {
             panic!("the search decides");
         };
