@@ -1,0 +1,23 @@
+{
+  "title": "Patch: a Unit revealed from Cloaked is summoning sick on its reveal turn",
+  "sources": "#4237",
+  "notes": "R4237000: a Unit revealed from Cloaked enters its unit zone on its reveal turn and is summoning sick that turn unless it has Rush or Charge (SPEC §4.1, §6.1), where it kept its set turn and could attack at once (R783006, R1041). Replays of a revealed Unit attacking on its reveal turn are refused as rules_changed (R767000). The plays are classify's stage 2 against main: its unforced games diverge on these cards.",
+  "player": {
+    "title": "Cloaked Units and summoning sickness",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A Unit revealed from Cloaked is now summoning sick on the turn it is revealed, like any Unit that enters the field: it attacks on your next turn, or at once with Rush or Charge."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "classic-032",
+    "classic-039",
+    "core-033",
+    "core-049",
+    "stinkyscape-074"
+  ]
+}
