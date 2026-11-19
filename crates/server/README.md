@@ -408,12 +408,13 @@ What the actor holds, each with a test named after it:
   (R2686000).
 - Every resolved action is appended to `match_actions`. A rebuilt actor folds `(seed, decks, log)`
   with the last boards, Glitch boards and dealt seats frozen into the match at its start (R417, R678,
-  R433), and a reconnect gets a fresh view, never a log replay (§9.5). The restart drain stores a
-  checkpoint of each live match of `MATCH_CHECKPOINT_MIN_ACTIONS` actions or more
+  R433), and a reconnect gets a fresh view, never a log replay (§9.5). Each live match's actor
+  stores a checkpoint every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row as it is played, and the restart
+  drain stores one of each live match of `MATCH_CHECKPOINT_MIN_ACTIONS` actions or more
   (`match_checkpoints`, migration 0042, `actor/checkpoint.rs`), and the next rebuild folds only the
   rows after it when it passes every check (`MATCH_CHECKPOINT_VERSION`, the build's rules
   fingerprint from `build.rs`, the catalog, its row's seq and nonce, its hash), or else logs
-  `match.checkpoint.refused` with the reason and folds the whole log; finishing drops it (#1169).
+  `match.checkpoint.refused` with the reason and folds the whole log; finishing drops it (#1169, #4224).
   A match is played, rebuilt, reaped and recorded under the catalog version it started on (R388,
   R767000): a start on a version this build neither is nor carries is refused, and a rebuild of such
   a match logs `match.catalog.unpinned` and plays on this build's catalog, as Duos's does.

@@ -68,11 +68,15 @@ mod tests {
         "stinkyscapeplus-142",
     ];
 
+    /// The Call to Chaos pool as the Crunch reads it (R3869001): `EDITIONS`, rotated under the pool probe.
+    fn pool() -> Vec<String> {
+        crate::query::pool_ids(&crate::query::call_to_chaos_editions())
+    }
+
     #[test]
     fn r3869001_the_call_to_chaos_pool_is_the_seven_it_named_in_the_same_order() {
         crate::register_all();
-        let pool = crate::query::pool_ids(&crate::query::call_to_chaos_editions());
-        assert_eq!(pool, EDITIONS.map(str::to_string).to_vec());
+        assert_eq!(with_pool_shift(0, pool), EDITIONS.map(str::to_string).to_vec());
     }
 
     const P1: PlayerId = PlayerId::P1;
@@ -152,7 +156,7 @@ mod tests {
         #[test]
         fn r1870006_casts_the_five_editions_once_each_in_order() {
             let s = played(&plain_seed("big-crunch-order", false), false);
-            assert_eq!(chaos_plays(&s), EDITIONS.map(str::to_string).to_vec());
+            assert_eq!(chaos_plays(&s), pool());
             // Each is its own card, landed in its caster's graveyard after it (R87).
             let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
             for def_id in EDITIONS.iter().chain([&CRUNCH]) {
@@ -166,8 +170,10 @@ mod tests {
         fn r1870006_r2200004_casts_the_training_grounds_edition_sixth_and_the_stinkyscape_plus_one_last() {
             assert!(set_ships(SetName::TrainingGrounds));
             assert!(set_ships(SetName::StinkyscapePlus));
-            let s = played(&plain_seed("big-crunch-training-grounds", false), false);
-            let plays = chaos_plays(&s);
+            // Which place each edition casts in is the pool's order (R3869001), read as it is.
+            let plays = with_pool_shift(0, || {
+                chaos_plays(&played(&plain_seed("big-crunch-training-grounds", false), false))
+            });
             assert_eq!(plays.len(), 7);
             assert_eq!(plays.get(5).map(String::as_str), Some("traininggrounds-039"));
             assert_eq!(plays.last().map(String::as_str), Some("stinkyscapeplus-142"));
@@ -177,8 +183,8 @@ mod tests {
         fn r1870006_each_rolls_one_effect_named_to_both() {
             let s = played(&plain_seed("big-crunch-named", false), false);
             let rolled = rolls(&s);
-            let by: Vec<&str> = rolled.iter().map(|(def_id, _)| def_id.as_str()).collect();
-            assert_eq!(by, EDITIONS.to_vec(), "each edition rolls once, in order");
+            let by: Vec<String> = rolled.iter().map(|(def_id, _)| def_id.clone()).collect();
+            assert_eq!(by, pool(), "each edition rolls once, in the pool's order");
             for (def_id, effects) in &rolled {
                 assert_eq!(effects.len(), 1, "{def_id}'s base face rolls one effect");
             }

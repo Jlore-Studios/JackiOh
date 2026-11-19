@@ -11,8 +11,8 @@ use crate::candidates::candidate_set;
 use crate::config::{
     AI_SEARCH, AI_SKILL_MAX, AI_SKILL_MIN, AI_SKILL_MISS_TEMPERATURE, GREEDY_EVAL, GREEDY_MULLIGAN,
 };
-use crate::decide::pick_finalist;
-use crate::determinize::{DeterminizeOptions, determinize};
+use crate::decide::{pick_finalist, probe_world};
+use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::mulligan::mulligan_keep;
 use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
@@ -40,10 +40,11 @@ pub fn plays_best(skill: f64, rng: &mut Rng) -> bool {
     rng.chance(skill)
 }
 
-/// R2214000: a decision the skill's roll does not give to the AI: the true state's candidates (each
-/// legal), read one ply ahead on one determinization (`one_ply_scores`) and drawn by a softmax at
-/// `AI_SKILL_MISS_TEMPERATURE`. A draw offer, a mulligan (the greedy baseline's keep) and a lone
-/// candidate take no draw.
+/// R2214000, R4216000: a decision the skill's roll does not give to the AI: the candidates the probe
+/// world lists (`probe_world` of `redact(state, seat)`, as `decide` lists its own), read one ply ahead
+/// on one determinization at the shown costs (`one_ply_scores`, R762) and drawn by a softmax at
+/// `AI_SKILL_MISS_TEMPERATURE`. Past `ai_to_act` and `redact` nothing reads `state` (R185). A draw
+/// offer, a mulligan (the greedy baseline's keep) and a lone candidate take no draw.
 pub fn skill_miss_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     if !ai_to_act(state, seat) {
         return None;
@@ -57,18 +58,15 @@ pub fn skill_miss_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Op
             keep: mulligan_keep(&public, seat, GREEDY_MULLIGAN.keep_max_cost),
         });
     }
-    let candidates = candidate_set(state, seat);
+    // R4216000: listed as `decide` lists its own, on the probe world dealt from what the seat sees
+    // (the redaction's placeholders have no definition for a play's targets to read), drawing nothing.
+    let ground = det_ground(&public, seat);
+    let candidates = candidate_set(&probe_world(&public, seat, &ground), seat);
     if candidates.len() < 2 {
         return candidates.into_iter().next();
     }
-    let det = determinize(
-        &public,
-        seat,
-        rng,
-        DeterminizeOptions {
-            match_shown_cost: Some(false),
-        },
-    );
+    // R762: the world it prices them on holds a trap at the cost a face-down card shows, as the search's do.
+    let det = determinize_on(&public, seat, rng, DeterminizeOptions::default(), &ground);
     let scores = one_ply_scores(&det, seat, &candidates);
     candidates
         .get(pick_finalist(&scores, AI_SKILL_MISS_TEMPERATURE, rng))

@@ -39,6 +39,7 @@ and Duos's `duos_ai_team` in `crates/engine/src/config.rs`).
 ```rust
 pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Option<Decision>;
 pub fn decide_styled(state: &GameState, seat: PlayerId, options: &mut AiOptions, style: &AiStyle) -> Option<Decision>;
+pub fn decide_with_pool_loss(state: &GameState, seat: PlayerId, options: &mut AiOptions, pool_loss: i32) -> Option<Decision>;   // R4188000, Duos
 pub struct AiStyle { pub temperature: f64, pub missed_lethal_chance: f64 }
 pub struct AiOptions<'a> {
     pub rng: Rng,
@@ -93,8 +94,8 @@ it can see on the field, then its attacks, a kill priced at what it removes (a u
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
 too, #3858; an attacker a First Strike defender destroys first earning no chip and no shield pop, since
-`fight` reads a blow that never lands as none, R4171000), and once none is worth making the switches to
-Defense Position its own
+`fight` reads a blow that never lands as none, R4171000), and once none is worth making, or facing lethal
+against its best attack (R4187000), the switches to Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
@@ -286,9 +287,9 @@ lethal solver's visited set still reads a position without its units' lanes. Pos
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. While the
-opponent's board threatens lethal (`face_threat` reaching the seat's `effective_life`, where the evaluation's
-`lethal_threat` applies), up to `AI_SEARCH.position_switches` more switches to Defense Position that lower that
-threat are kept after them, stand-downs or not (`wall_switches`: each tried on a copy of the state with the unit's
+opponent's board threatens lethal (`face_threat` reaching the seat's `effective_life`, less the pool's coming
+loss in a Duos duel, R4188000, where the evaluation's `lethal_threat` applies), up to `AI_SEARCH.position_switches` more switches to Defense Position that lower that
+threat are kept after them, stand-downs or not (`wall_switches_priced`: each tried on a copy of the state with the unit's
 position set, the least threat left first; #2976, R2976000). An action the
 true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and
@@ -467,9 +468,10 @@ names the seed, the seat and the first message (`Decision::first_sim_panic`, nat
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
 `[0, 1]` that each decision follows the AI, the rest being the skill miss (`skill::skill_miss_action`,
 R2214000): a softmax at `AI_SKILL_MISS_TEMPERATURE` over the greedy baseline's one-ply scores of the
-true state's candidates, read on one determinization of what the seat sees. `None` is `AI_SKILL_MAX`:
-full skill, which takes no draw, so a seat without one plays as it did before the knob; `AI_SKILL_MIN`
-is the miss at every decision, with no search. In
+candidates the probe world lists (`decide::probe_world` of `redact(state, seat)`, as `decide` lists
+its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762).
+`None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one plays as it did
+before the knob; `AI_SKILL_MIN` is the miss at every decision, with no search. In
 between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision
 (`skill::clamp_skill` pins the range, a NaN reading as full), so a seeded run reproduces. The knob
 knows nothing of cards or sets: it keeps meaning the same when the AI improves or a set ships. The
@@ -620,12 +622,13 @@ and any human seat the server hands it after a disconnect (§13.8).
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
 pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback, sim_panics, first_sim_panic }
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
+pub fn duos_pool_loss(state: &DuosState, seat: DuosSeat) -> i32;   // R4188000
 pub fn duos_gate_game(n: usize, series: &str, opponent: DuosOpponent) -> DuosGateGame;
 pub fn duos_gate_report(opponent: DuosOpponent, played: &[DuosGateGame]) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
 pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody>;
 ```
 
-- `duos_decide` is `decide` on the seat's own duel: its mulligan and its prompts as a 1v1 seat answers
+- `duos_decide` is `decide` on the seat's own duel (`decide_with_pool_loss`, given `duos_pool_loss`): its mulligan and its prompts as a 1v1 seat answers
   them, and its own turn by the same search. When `decide` would end the turn, it first sends the
   passes `duos_passes` names, one action at a time, then the `endTurn`. `None` when the seat owes
   nothing. The same state and options give the same action.
@@ -649,12 +652,20 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   of the card gains it in its own duel (R2827000): gain against gain, never one duel's score against
   the other's.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
-  `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
+  `determinize` (R185), and its teammate's own state and duel as the teammate sees them (`redact` from
+  the teammate's seat), which a team shares (§13.6). An opponent's
   hidden card never changes a decision.
 - A seat's life is the engine's `effective_life` (own HP and the team's pool while unspent, §13.4)
   everywhere the AI reads one: the evaluation, `ready_gap`, the reply's `reply_face_value` and the My
   Pawn surcharge. The hero value and `closing` are anchored at `starting_life` (`DUOS_OWN_HEALTH` plus
   the pool's cap). A 1v1 seat reads its hero's health and `HERO_HEALTH`, as before (R964000).
+- `duos_pool_loss` is what the enemy board in the teammate's duel is about to take off the pool next
+  round (R4188000): `face_threat` on that duel redacted for the teammate, less the teammate's own HP
+  while unspent, at least 0, at most the pool, and 0 unless that duel is on the teammate's turn with no
+  extra turn owed to it (R846). `decide_with_pool_loss` carries it in `Prices::pool_loss`, keyed to the
+  deciding seat (`Prices::pool_loss_of`), and only two places subtract it from the seat's life: the
+  evaluation's threat term and `wall_switches_priced`'s gate. The lethal solver, the hero value, the
+  race, `closing` and the reply read the whole life, and a 1v1 decision carries no loss.
 - The tiers are `duos_ai_team(difficulty)` for the team (Easy the humans' rules, Medium free passing,
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI

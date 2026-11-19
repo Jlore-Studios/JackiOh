@@ -4,7 +4,7 @@
 // The run's bindings are the fixtures' scripted ones; the screens of parts E, F and G are stand-ins.
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { chunkAt, prefetchRoute, resetRoutePrefetchForTests, routeChunks } from "../routes/chunks.tsx";
 import { canonicalUrlFor, documentTitleFor } from "../net/head.ts";
@@ -25,6 +25,11 @@ vi.mock("./stats/DungeonStats.tsx", () => ({
 }));
 
 const { App } = await import("../main.tsx");
+
+// The screens' code in before the renders: a cold `import()` of a screen's module tree is vitest's
+// transform, and on a loaded runner it alone outlasted `findByTestId`'s wait, the gate's "Loading…" still
+// up (#4210's `web (unit 1/8)`). The route drawing a chunk that is still on its way is `chunks.test.tsx`'s.
+beforeAll(() => Promise.all([routeChunks.dungeon.load(), routeChunks.dungeonStats.load()]));
 
 beforeEach(() => {
   window.localStorage.clear();

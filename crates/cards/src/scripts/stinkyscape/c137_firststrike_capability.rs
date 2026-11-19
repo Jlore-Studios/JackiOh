@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn r3869001_the_war_doctrine_pool_is_the_four_it_named_in_the_same_order() {
         crate::register_all();
-        let pool = crate::query::pool_ids(&crate::query::war_doctrines());
+        let pool = with_pool_shift(0, || crate::query::pool_ids(&crate::query::war_doctrines()));
         assert_eq!(pool, WAR_DOCTRINES.map(str::to_string).to_vec());
     }
     use crate::built_starship;

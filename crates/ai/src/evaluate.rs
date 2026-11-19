@@ -387,7 +387,7 @@ impl TurnHookPrice {
 /// R2424000, R2477000, R2564000, R2688000, R3064000: the prices a decision's root probed, passed by
 /// reference from `decide` through the search to every scorer that reads them, and the two facts about the
 /// root they ride with: whether it holds a Starship (R3038003), and whether its view names mostly cards the
-/// learned network has no row for (R3479000).
+/// learned network has no row for (R3479000); and in a Duos duel the pool's coming loss (R4188000).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Prices {
     pub deaths: Vec<DeathPrice>,
@@ -404,6 +404,9 @@ pub struct Prices {
     /// no row for (`learned::unknown_root`), so its finalists are scored by the hand eval alone
     /// (`learned::finalist_score_with`), whatever the line, as with `starship_root`.
     pub unknown_root: bool,
+    /// R4188000: in a Duos duel, the deciding seat and what the enemy board of its teammate's duel is
+    /// about to take off the team's shared pool next round (`duos_pool_loss`). None in every 1v1 decision.
+    pub pool_loss: Option<(PlayerId, i32)>,
 }
 
 impl Prices {
@@ -417,7 +420,17 @@ impl Prices {
         awakenings: Vec::new(),
         starship_root: false,
         unknown_root: false,
+        pool_loss: None,
     };
+
+    /// R4188000: the pool's coming loss when `seat` is the seat it was read for, else 0. The evaluation
+    /// also scores the opponent with the decision's prices (reply.rs `judged`, simulate.rs's answerer).
+    pub fn pool_loss_of(&self, seat: PlayerId) -> i32 {
+        match self.pool_loss {
+            Some((owner, loss)) if owner == seat => loss,
+            _ => 0,
+        }
+    }
 }
 
 /// R3038003: whether `state` holds a Starship `seat` can see: a hull on either side, Dormant or
@@ -3216,8 +3229,11 @@ pub fn evaluate_priced(
     let seat_life = effective_life(state, seat);
     let opp_life = effective_life(state, opp);
     let threat_share = if seat_first { w.answerable_threat } else { 1.0 };
+    // R4188000: the threat is judged against that life less what the teammate's duel is about to take
+    // off the pool.
+    let threat_life = seat_life - prices.pool_loss_of(seat);
     let threat = threat_share
-        * (if enemy_damage >= seat_life {
+        * (if enemy_damage >= threat_life {
             w.lethal_threat
         } else {
             w.threat_per_damage * f64::from(enemy_damage)

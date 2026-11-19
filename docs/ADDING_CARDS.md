@@ -257,9 +257,9 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   needs a roll to land one way searches at run time with the testkit's `seed_where(prefix, accept)` or `cursor_where(seed, accept)`
   (bounded by `SEED_SEARCH_BOUND`; `accept` builds the position and reads where the roll landed), or builds the position directly, and
   a test about a Craft a Card result and not about its offers builds the fused card with `cross::craft_fused` (R77). Keep a search
-  within a few hundred tries. `sh scripts/pool-probe.sh` (daily, in `super.yml`) runs the cards', AI's, server's and tools' tests with
-  every random pool rotated one place (#3117); a test it fails leans on a roll, so convert it. A test of a pool's content or order reads
-  it under `with_pool_shift(0, …)`.
+  within a few hundred tries. `sh scripts/pool-probe.sh` runs the cards', AI's, server's and tools' tests with every random pool rotated
+  one place (#3117), by hand, and super.yml's daily tests run the cards' that way through `crates/tools/tests/pool_probe.rs` (#4181); a
+  test that either fails leans on a roll, so convert it. A test of a pool's content or order reads it under `with_pool_shift(0, …)`.
 - **The cross-build replay** (`cargo jackioh classify --base origin/main --parent-bin <base build's jackioh>`, which `rust (classify)`
   runs on the pull request) records golden-seeded games on your build with `golden record` and has the base build replay them with `golden check --file`;
   a divergence names the seed, the step and the hash. Nothing is committed (the 240 golden traces were retired in #2578), so nothing is

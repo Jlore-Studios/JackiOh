@@ -1063,6 +1063,41 @@ mod wall_switches_2976 {
         assert_eq!(root.len(), root_width + 1, "{root:?}");
     }
 
+    /// R4188000: prices carrying a pool's coming loss of 1, read for `seat`.
+    fn loss_of_one(seat: PlayerId) -> Prices {
+        Prices {
+            pool_loss: Some((seat, 1)),
+            ..Prices::default()
+        }
+    }
+
+    /// R4188000: at 13 life against the 12 the 4/4s could deal, a pool's coming loss of 1 in the other
+    /// duel brings the threat to lethal, so the 7/7's switch walls it and is kept past the root's cut.
+    /// A loss read for the other seat walls nothing.
+    #[test]
+    fn r4188000_the_wall_switches_read_the_life_less_the_pools_coming_loss() {
+        let state = facing_three_4_4s(13);
+        let root_width = AI_BUDGET.root_branching;
+        let root_candidates = root_candidate_actions(&state, AI, Prices::NONE);
+        let wall = switch_of(&state, BIG, Position::Atk);
+        assert!(wall_switches(&state, AI, &root_candidates).is_empty());
+        assert_eq!(
+            wall_switches_priced(&state, AI, &root_candidates, &loss_of_one(AI)),
+            vec![wall.clone()]
+        );
+        assert!(wall_switches_priced(&state, AI, &root_candidates, &loss_of_one(HUMAN)).is_empty());
+
+        let root = root_expansion(
+            &state,
+            AI,
+            root_width,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+            &loss_of_one(AI),
+        );
+        assert_eq!(root[root_width], wall, "{root:?}");
+    }
+
     /// R2976000: at 7 life against four 7/7s (21 face damage), p1's 7/7 in Defense would soak all four
     /// (none gets through its 7 health and Armor 8) and leave 0, its 4/4 in Defense would soak one and
     /// leave 14, and a switch back to Attack would lower nothing. So the walls are the 7/7's switch then

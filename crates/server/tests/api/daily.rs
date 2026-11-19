@@ -20,6 +20,7 @@ use ring::{agreement, signature};
 use serde_json::{Value, json};
 use tokio::sync::Semaphore;
 
+use jackioh_engine::config::RANDOM_ATTACK_TARGET;
 use jackioh_engine::testkit::{clear_overrides, register_catalog, register_shipped};
 use jackioh_engine::{CardCost, CardDefs, ShippedCatalog};
 use jackioh_server::api::catalog::{LoadCatalogOptions, load_catalog};
@@ -206,6 +207,14 @@ fn forecast_ids(game: &Value) -> Vec<(String, String)> {
         .expect("a forecast's attacks")
         .iter()
         .map(ids_of)
+        .collect()
+}
+
+/// The attacks of `ids` the forecast has an entry for: every one but those whose target a Mayor draws
+/// (R1200), which carry the sentinel target and are not forecast (R4188001).
+fn forecast_of_attacks(ids: Vec<(String, String)>) -> Vec<(String, String)> {
+    ids.into_iter()
+        .filter(|(_, target_id)| target_id != RANDOM_ATTACK_TARGET)
         .collect()
 }
 
@@ -529,7 +538,8 @@ async fn a_player_not_holding_the_move_may_only_concede() {
 /// R3855000: a daily game's read, and every answer to an action, carries the engine's forecast of the
 /// seat's attacks (R3477000): one entry per attack its `legal` lists, in its order, and none while the
 /// other seat holds the move. The game is dealt from a random seed, so the test plays a card whenever
-/// one is legal and ends its turn when none is, until a seat has an attack to forecast.
+/// one is legal and ends its turn when none is, until a seat has an attack to forecast. A Mayor dealt
+/// onto the field there draws every attack's target (R1200), and such an attack has no entry (R4188001).
 #[tokio::test]
 async fn r3855000_a_daily_read_carries_the_forecast_of_its_seats_legal_attacks() {
     /// More than enough turns for a unit to be played and to be old enough to attack.
@@ -560,7 +570,7 @@ async fn r3855000_a_daily_read_carries_the_forecast_of_its_seats_legal_attacks()
     // The holder: the forecast's entries are its legal attacks, in order.
     let attacks = legal_attack_ids(&game);
     assert!(!attacks.is_empty(), "{game}");
-    assert_eq!(forecast_ids(&game), attacks, "{game}");
+    assert_eq!(forecast_ids(&game), forecast_of_attacks(attacks), "{game}");
     assert!(game["forecast"]["lethal"].is_boolean(), "{game}");
 
     // The other seat: no attack, and no lethal; a refusal's `game` says so too.
@@ -589,7 +599,11 @@ async fn r3855000_a_daily_read_carries_the_forecast_of_its_seats_legal_attacks()
     let (status, body) = send(&app, on_move, &match_id, seq, "fc-attack", attack).await;
     assert_eq!(status, 200, "{body}");
     assert!(body["forecast"].is_object(), "{body}");
-    assert_eq!(forecast_ids(&body), legal_attack_ids(&body), "{body}");
+    assert_eq!(
+        forecast_ids(&body),
+        forecast_of_attacks(legal_attack_ids(&body)),
+        "{body}"
+    );
 }
 
 /// Two requests under one nonce with different actions, both read at one seq: the store takes the

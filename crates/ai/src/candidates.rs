@@ -1120,16 +1120,27 @@ pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
         .any(|enemy| could_attack_next_turn(state, enemy, &target) && kills_and_survives(state, enemy, unit))
 }
 
+/// `wall_switches_priced` with no price: the 1v1 reading.
+pub fn wall_switches(state: &GameState, seat: PlayerId, candidates: &[ActionBody]) -> Vec<ActionBody> {
+    wall_switches_priced(state, seat, candidates, Prices::NONE)
+}
+
 /// #2976, R2976000: of `candidates`, the switches of a unit from Attack to Defense Position that lower the
 /// face damage the opponent's board could deal `seat` next turn (`face_threat`, which counts the Taunt
 /// Defense Position grants, §4.1, binding the attackers, §4.2 step 3), best first: the least damage left,
-/// ties in `candidates`' order. None unless that damage reaches `seat`'s life (`effective_life`) as it
-/// stands, the point where the evaluation's `lethal_threat` applies. Each switch is tried on a copy of
-/// the state with the unit's position set, so no search node is spent.
-pub fn wall_switches(state: &GameState, seat: PlayerId, candidates: &[ActionBody]) -> Vec<ActionBody> {
+/// ties in `candidates`' order. None unless that damage reaches `seat`'s life (`effective_life`), less
+/// the pool's coming loss in a Duos duel (`Prices::pool_loss_of`, R4188000), the point where the
+/// evaluation's `lethal_threat` applies. Each switch is tried on a copy of the state with the unit's
+/// position set, so no search node is spent.
+pub fn wall_switches_priced(
+    state: &GameState,
+    seat: PlayerId,
+    candidates: &[ActionBody],
+    prices: &Prices,
+) -> Vec<ActionBody> {
     let opponent = seat.opponent();
     let threat = face_threat(state, opponent);
-    if threat < effective_life(state, seat) {
+    if threat < effective_life(state, seat) - prices.pool_loss_of(seat) {
         return Vec::new();
     }
     let mut walls: Vec<(ActionBody, i32)> = Vec::new();
