@@ -15562,18 +15562,19 @@
     "what": "suggestions (rules) on muse"
   },
   "last_sweep": {
-    "at": "2026-11-19T01:35:14Z",
+    "at": "2026-11-19T01:49:17Z",
     "notes": [
-      "#4244: `rust (test server api 1/4)` red in CI run 44436927290; its other early jobs have until 2026-11-19T01:37:19Z to report",
-      "delivered review #4243 on claude-6 (run 44435723250): approved",
-      "delivered review #4242 on claude-1 (run 44435640066): approved",
-      "started suggest on claude-6 (run 44438422419)",
-      "started suggest on claude-1 (run 44438512906)",
-      "started suggest on muse (run 44438608039)",
-      "started suggest on muse (run 44438716314)",
-      "started suggest on muse (run 44438818792)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered suggest on muse (run 44438818792): suggested",
+      "delivered suggest on muse (run 44438716314): suggested",
+      "delivered suggest on muse (run 44438608039): suggested",
+      "delivered suggest on claude-1 (run 44438512906): interrupted",
+      "started suggest on muse (run 44440128274)",
+      "started suggest on muse (run 44440201632)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 41%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-19T04:30:00Z; it can start a build or a plan again in 1h 06m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 1 plan file(s) older than 7 days",
+      "#4247: typed it Task",
+      "#4246: typed it Feature",
+      "#4245: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16279,7 +16280,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T01:35:14Z",
+  "loop_tick": "2026-11-19T01:49:17Z",
   "machine_disk": {
     "issue": null,
     "reading": {
