@@ -30431,5 +30431,174 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.7f",
+    "date": "2026-11-19",
+    "title": "Patch: Recruit takes the first card that can actually land, not the first that matches",
+    "source": "#4238",
+    "notes": "R4238000: a Recruit passes over a matching card no zone takes (its row full, a named lane taken, a GIGA with no fit, the far half of a slashed board) and summons the first that can land; R690 reads those alone; Recruit N rechecks each scan; recruitAll lists the cards that land as it starts. Engine: effects/summon.rs, whose read query::recruit_takes C #1 Curse of the Forgotten Classic's Radiant now names its forced attacker by (its old reading kept as script_v0_6_7e in KEPT_SCRIPTS). classify stage 2 finds one unforced game of 200 that plays differently: C #90 In Too Deep's Recruit, with a full unit row, now sets S+ #54 Pneumatic Drill from beneath two Units, so S+ #54 is claimed with --plays. Replays a Recruit now changes are refused as rules_changed (R767000).",
+    "player": {
+      "title": "Recruit skips cards it can't place",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Recruit now skips a card it can't place and takes the next matching card that fits: with your unit row full, it sets the Trap below your top Unit.",
+        "A Recruit of several cards takes the next card that fits each time, rather than stopping at the first one that doesn't."
+      ],
+      "text": [],
+      "fixes": [
+        "Curse of the Forgotten Classic's Radiant face: the Unit its Recruit takes past a newer X-cost card now attacks the enemy hero, as its text says."
+      ]
+    },
+    "commits": [
+      "cbb2ac42172a9f2cf65c04dfecf08a10ba2e94ca"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-054"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.7g",
+    "date": "2026-11-19",
+    "title": "Patch: a Unit revealed from Cloaked is summoning sick on its reveal turn",
+    "source": "#4237",
+    "notes": "R4237000: a Unit revealed from Cloaked enters its unit zone on its reveal turn and is summoning sick that turn unless it has Rush or Charge (SPEC §4.1, §6.1), where it kept its set turn and could attack at once (R783006, R1041). Replays of a revealed Unit attacking on its reveal turn are refused as rules_changed (R767000). The plays are classify's stage 2 against main: its unforced games diverge on these cards.",
+    "player": {
+      "title": "Cloaked Units and summoning sickness",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Unit revealed from Cloaked is now summoning sick on the turn it is revealed, like any Unit that enters the field: it attacks on your next turn, or at once with Rush or Charge."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "087a371898ce240ca3c8d75afe9f23fceb7b5ee4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-007",
+      "core-066",
+      "stinkyscape-108",
+      "stinkyscape-123",
+      "stinkyscape-177",
+      "stinkyscapeplus-004",
+      "stinkyscapeplus-075"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.7h",
+    "date": "2026-11-19",
+    "title": "Patch: Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)",
+    "source": "#4207",
+    "notes": "R4207000 (superseding R461; amending R1849002, R398, R1852000 and R2564000): a card the state check collects, or a Sacrifice or Tribute takes, that C #50 Voidwalker's aura (base and Radiant) or Stinkyscape #105 Disintegrex's (base and Radiant) exiles instead of sending to its graveyard has still died: its Death fires in R68's order, Reborn returns it from that exile pile at 1 health, destroyed reports it and the destroyed counter counts it, and a Starship Piece fuses; otherwise it stays in exile. A discard, a resolved Spell, a burn, a spent Trap or a mill under Voidwalker, and a plain exile, still fire nothing. The claimed plays are the families classify's stage 2 names against the base build: those two cards, the cards whose games under either aura now diverge, and the Starships the newly fused pieces build. Replays where such a card died are refused as rules_changed (R767000).",
+    "player": {
+      "title": "Death and Reborn work under Voidwalker and Disintegrex",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A card that dies while Voidwalker or Disintegrex exiles it still fires its Death.",
+        "A Reborn Unit that dies that way still comes back with 1 Health.",
+        "Those cards count as destroyed, and a Starship Piece exiled that way still fuses."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "a5ff1f2cb14df49fc0222d952ece6ce5ef6282be"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-032",
+      "classic-050",
+      "classicplus-065",
+      "core-t-bread",
+      "meditative-036",
+      "meditative-067",
+      "meditative-091",
+      "stinkyscape-003",
+      "stinkyscape-057",
+      "stinkyscape-074",
+      "stinkyscape-090",
+      "stinkyscape-105",
+      "stinkyscape-134",
+      "stinkyscape-137",
+      "stinkyscapeplus-001",
+      "stinkyscapeplus-018",
+      "stinkyscapeplus-117",
+      "stinkyscapeplus-125",
+      "stinkyscapeplus-t-terminus-starship-entropys-wake"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.7i",
+    "date": "2026-11-19",
+    "title": "A Stack card can no longer be played into a lane Slashed Dream voided",
+    "source": "#4221",
+    "notes": "zones::accepts_stack_card refuses a void zone (R4221001, R3554002): a Stack play is offered no zone of the slash lane, and an Animated on your turn card whose home the slash voided stays a Unit at cleanup instead of being lost. classify names the Stack cards whose play lists change on a slashed board.",
+    "player": {
+      "title": "Fixes on a board Slashed Dream cut",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Stack card is no longer offered the lane Slashed Dream Cries in Red voided as a place to play it.",
+        "An Animated on your turn card whose home zone Slashed Dream voided now stays a Unit where it stands at the end of your turn, rather than vanishing."
+      ]
+    },
+    "commits": [
+      "f034bfcd6cdd8d6a6f60ff51dd80b5b481db35b0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-077",
+      "classicplus-004",
+      "classicplus-033"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.7j",
+    "date": "2026-11-19",
+    "title": "Imitated Instrumentality's Radiant face keeps its art",
+    "source": "#4221",
+    "notes": "Stinkyscape #18's Radiant text is reworded to fit a 170 px face (R1017000); wording only, it plays the same.",
+    "player": {
+      "title": "Imitated Instrumentality's shorter Radiant text",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Imitated Instrumentality's Radiant text now reads \"Summon Radiant MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but can vote to remove you.\""
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "f034bfcd6cdd8d6a6f60ff51dd80b5b481db35b0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": [
+      {
+        "id": "stinkyscape-018",
+        "name": "Imitated Instrumentality",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
