@@ -15495,6 +15495,8 @@
       }
     },
     "4253": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-19T00:38:42Z",
@@ -15508,8 +15510,11 @@
         "trail": "-work--temp-work-item-4238/1ba38f39-db26-4f15-b8bc-df7abf3d6456/tasks/b2fna475e.output; until grep -q 'exit ' $f; do sleep 10; done; cat $f\", \"description\"\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4238/1ba38f39-db26-4f15-b8bc-df7abf3d6456/tasks/bnqul3c8m.output\", \"description\": \"Read the fuzz result\"}\n- Bash: {\"command\": \"grep -E -i 'fuzz:|seeds|fail|violation|ok\\\\b' /tmp/claude-1001/-home-runner-work--temp-work-item-4238/1ba38f39-db26-4f15-b8bc-df7abf3d6456/tasks/bnqul3c8m.output | head -10; wc -l /tmp/c\u2026\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/classify-4238 && git branch -D wt/classify-4238 && git worktree list; ls ../jackioh-wt/ 2>/dev/null; echo \\\"- $(date -u +%H:%M) classify --claim\u2026\n- Bash: {\"command\": \"cargo test --workspace --no-fail-fast --features jackioh-engine/testkit,jackioh-engine/ts 2>&1 | grep -E '^test .*FAILED$|^test result: FAILED|panicked|^error' | head -40; echo \\\"---\\\"; \u2026\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4238/1ba38f39-db26-4f15-b8bc-df7abf3d6456/tasks/bokf49e9d.output; until grep -q 'wire-clean-check-done' $f; do sleep 15; done; cat $f\u2026\n- said: Workspace tests are running (the slow suite, once). The PR description is drafted meanwhile; I'll fill in the final numbers when the run finishes.\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4238/1ba38f39-db26-4f15-b8bc-df7abf3d6456/tasks/blhq3x2yf.output; until grep -q 'exited with code' $f; do sleep 15; done; cat $f\", \"d\u2026\n- TaskStop: {\"task_id\": \"bcrfuttu3\"}\n- Bash: {\"command\": \"pgrep -fa 'cargo test --workspace' | grep -v pgrep | head -2 | cut -c1-120; ls -la /tmp/claude-1001/-home-runner-work--temp-work-item-4238/1ba38f39-db26-4f15-b8bc-df7abf3d6456/tasks/bokf\u2026\n- said: Still running. A final read of the new engine tests after the `card_at` swap:\n- Bash: {\"command\": \"git diff crates/engine/tests/rules/recruit_variants.rs | grep '^+' | sed -n '1,60p'\", \"description\": \"Review the new recruit tests\"}\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4238/1ba38f39-db26-4f15-b8bc-df7abf3d6456/tasks/bokf49e9d.output; until grep -q 'wire-clean-check-done' $f; do sleep 15; done; cat $f\u2026\n- TaskStop: {\"task_id\": \"bp40qmbj6\"}\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4238/1ba38f39-db26-4f15-b8bc-df7abf3d6456/tasks/bokf49e9d.output; for i in $(seq 1 57); do grep -q 'wire-clean-check-done' $f && brea\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | head -5; echo \\\"fmt exit ${PIPESTATUS[0]}\\\"; cargo clippy --workspace --all-targets -- -D warnings 2>&1 | grep -E '^(error|warning)' -A8 | head -30; echo \\\"clipp\u2026\n- said: Everything is green. Last pass of the four data checks against the final tree:\n- Bash: {\"command\": \"/tmp/jackioh-base-4238 catalog check 2>&1 | head -1; /tmp/jackioh-base-4238 patches check 2>&1 | tail -1; /tmp/jackioh-base-4238 spec check 2>&1 | tail -1; /tmp/jackioh-base-4238 names -\u2026\n- said: All four pass. The harness's web step runs `vitest --changed origin/main`, and I touched no web file. Checking whether its config reruns everything on a Rust change:\n- Bash: {\"command\": \"grep -rn -i 'forceRerun\\\\|changed\\\\|crates' vitest.config.ts apps/web/vitest.config.* 2>/dev/null | head\", \"description\": \"Check vitest's rerun triggers\"}\n- said: No triggers on `crates/`. Web tests that exercise Recruit through the WebAssembly engine would still see the new rule, so let me find any:\n- Bash: {\"command\": \"grep -rln -i 'recruit' apps/web/src --include=*.test.ts --include=*.test.tsx | head; grep -rn -i 'recruit' apps/web/src --include=*.test.ts --include=*.test.tsx | grep -v 'model.test.ts'\u2026\n- Bash: {\"command\": \"grep -n -i 'recruit' apps/web/src/cards/rules.test.ts apps/web/src/game/LiveCards.test.tsx apps/web/src/game/animations.test.ts apps/web/src/cards/inPlay.test.ts apps/web/src/game/modeTe\u2026\n- said: The client has a glossary entry for Recruit. Checking whether it's built from the \u00a76.3 row I edited:\n- Bash: {\"command\": \"grep -rn -i 'matches the filter\\\\|06-keywords' apps/web/src --include=*.ts --include=*.tsx | grep -v '/wire/' | cut -c1-200 | head -5; grep -rn 'Summon from deck, scanning top down' apps\u2026\n- said: `rules.test.ts` reads `spec/06-keywords.md`, which I edited. Running it directly (it reads the spec file, so it shouldn't need the WebAssembly build):\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest run --project web apps/web/src/cards/rules.test.ts 2>&1 | tail -8\", \"description\": \"Run the web glossary test against the edited spec\", \"timeout\": 660000}\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest run --project web apps/web/src/cards/rules.test.ts 2>&1 | grep -v '^\\\\s*$' | head -20 | cut -c1-250\", \"description\": \"See why the web test file failed to loa\u2026\n- said: It needs the WebAssembly module after all. Building it as the harness does (`apps/web/src/wasm/pkg` should be gitignored; I'll confirm), then rerunning:\n- Bash: {\"command\": \"git check-ignore -v apps/web/src/wasm/pkg/x.js | head -1; sh scripts/build-wasm.sh 2>&1 | tail -3; timeout 600 pnpm exec vitest run --project web apps/web/src/cards/rules.test.ts 2>&1 | \u2026\n- said: The glossary test passes (59 tests). Also the harness's exact web command, now that the module is built:\n- Bash: {\"command\": \"timeout 900 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>&1 | grep -E '\u2026\n- Bash: {\"command\": \"git status --porcelain; python3 - <<'EOF'\\nimport pathlib\\np = pathlib.Path('.bot-notes.md'); s = p.read_text()\\nold = s[s.index('## State'):s.index('## Log')]\\nnew = \\\"\\\"\\\"## State\\n\\n-\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Recruit takes the first card that can actually land, not the first that matches\"} --> A Recruit now passes over a matching card that it can't place and takes the next match that can land. Every check the harness runs passes locally; CI's e2e and typeche\u2026"
       },
       "issue": 4238,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-19T02:54:06Z",
         "from_run": "44430666818",
         "gates": [
           {
@@ -15601,7 +15606,11 @@
         "source": "build",
         "until": "2026-11-19T03:23:03Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-19T02:53:03Z",
+      "run_id": "pending:5fdc366e-1795056819",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15620,6 +15629,9 @@
         "provider": "claude-3",
         "run": "44430666818"
       },
+      "started_at": "2026-11-19T02:54:06Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15633,9 +15645,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T02:24:12Z",
+    "at": "2026-11-19T02:54:06Z",
     "url": "",
-    "what": "revise #4209 on claude-3"
+    "what": "review #4253 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-19T02:47:50Z",
