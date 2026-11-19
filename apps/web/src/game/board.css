@@ -194,11 +194,7 @@
 .hero-health,
 .hero-armor,
 .hero-jade,
-.hero-burn,
-.hero-toxic,
-.hero-tipsy,
-.hero-credits,
-.hero-luck {
+.hero-credits {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -437,6 +433,11 @@ button.modifier-badge[data-open="true"] {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+  height: auto;
+  font-weight: inherit;
+  text-shadow: none;
+  box-shadow: none;
   color: var(--pal-white);
 }
 

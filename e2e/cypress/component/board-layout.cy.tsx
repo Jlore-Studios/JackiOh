@@ -209,7 +209,7 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
       ...base,
       you: {
         ...base.you,
-        hero: { ...base.you.hero, power: used, powers: [used] },
+        hero: { ...base.you.hero, power: used, powers: [used], burn: 6, toxic: 2 },
         modifiers: EIGHT,
         secrets: [
           { id: "s-you-1", choice: "greed" as const },
@@ -217,14 +217,18 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         ],
         riftExtraTurn: true as const,
         jade: 3,
+        luck: 2,
+        tipsy: 4,
       },
       opponent: {
         ...base.opponent,
-        hero: { health: 30, armor: 0, power: used, powers: [used] },
+        hero: { health: 30, armor: 0, power: used, powers: [used], burn: 6, toxic: 2 },
         modifiers: EIGHT,
         secrets: [{ id: "s-foe-1" }, { id: "s-foe-2" }],
         riftExtraTurn: true as const,
         jade: 3,
+        luck: 2,
+        tipsy: 4,
       },
     };
   }
@@ -293,7 +297,7 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         </div>,
       );
       for (const side of ["you", "opponent"] as const) {
-        cy.get(`[data-testid="tray-${side}"] .modifier-badge`).should("have.length", allowance);
+        cy.get(`[data-testid="tray-${side}"] .modifier-badge:not(.hero-counter)`).should("have.length", allowance);
         cy.get(`[data-testid="tray-more-${side}"]`).should("have.text", `+${hidden}`);
       }
 
@@ -310,7 +314,7 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         </div>,
       );
       for (const side of ["you", "opponent"] as const) {
-        cy.get(`[data-testid="tray-${side}"] .modifier-badge`).should("have.length", allowance);
+        cy.get(`[data-testid="tray-${side}"] .modifier-badge:not(.hero-counter)`).should("have.length", allowance);
         cy.get(`[data-testid="tray-more-${side}"]`).should("not.exist");
       }
     });
