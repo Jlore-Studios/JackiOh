@@ -14,7 +14,7 @@
 //! (R1088's `sourceId`), else the seat it went to (The Coin). It is used once, the first time it is
 //! played, cast, summoned, set or takes a card's place; a hand play is its player's `createdPlayed`.
 //!
-//! R4276000: a dealt card an effect casts or summons from its seat's own deck or hand, rather than a play
+//! R4279000: a dealt card an effect casts or summons from its seat's own deck or hand, rather than a play
 //! from the hand, is that seat's `castOrSummoned`: cast on its draw (§2.4, the draw's `cardPlayed` says
 //! `onDraw`) or from the deck (§6.3), or summoned from the deck or the hand (M #87 Tatches the Totem, a
 //! Recruit). A play's own `summoned` follows its `cardPlayed` and is that play, not another.
@@ -31,12 +31,12 @@ use crate::wire::{
 /// Each seat's hand as instance id → catalog id, in hand order.
 type Hands = PerPlayer<IndexMap<String, String>>;
 
-/// R4276000: each seat's library by instance id.
+/// R4279000: each seat's library by instance id.
 type Decks = PerPlayer<IndexSet<String>>;
 
 struct Reading {
     hands: Hands,
-    /// R4276000: each seat's library as an action begins, with the cards a cast took from it that an
+    /// R4279000: each seat's library as an action begins, with the cards a cast took from it that an
     /// earlier action left resolving (`decks_of`).
     decks: Decks,
     radiant: IndexSet<String>,
@@ -66,7 +66,7 @@ struct Reading {
     used: IndexSet<String>,
     created_used: PerPlayer<Vec<CreatedUse>>,
     created_played: PerPlayer<Vec<CreatedUse>>,
-    /// R4276000: the dealt cards an effect cast or summoned from each seat's own deck or hand.
+    /// R4279000: the dealt cards an effect cast or summoned from each seat's own deck or hand.
     cast_or_summoned: PerPlayer<Vec<CreatedUse>>,
     /// R831001: the cards countered into a hand by a step that ended on a prompt, whose cast the step
     /// that answers it may make.
@@ -118,7 +118,7 @@ fn hands_of(state: &GameState, following: Option<&Hands>) -> Hands {
     PerPlayer::new(hand(PlayerId::P1), hand(PlayerId::P2))
 }
 
-/// R4276000: each seat's library as an action begins, plus the cards of `following` (the last action's
+/// R4279000: each seat's library as an action begins, plus the cards of `following` (the last action's
 /// decks) a cast took to the resolving zone and has not announced, since a cast's choices come before its
 /// `cardPlayed` (R453) and a prompt can hold them past its action, as `hands_of` keeps a hand's.
 fn decks_of(state: &GameState, following: Option<&Decks>) -> Decks {
@@ -138,7 +138,7 @@ fn decks_of(state: &GameState, following: Option<&Decks>) -> Decks {
     PerPlayer::new(deck(PlayerId::P1), deck(PlayerId::P2))
 }
 
-/// R4276000: a dealt card of `player`'s an effect cast or summoned from its deck or hand.
+/// R4279000: a dealt card of `player`'s an effect cast or summoned from its deck or hand.
 fn cast_or_summon(reading: &mut Reading, player: PlayerId, card: &str, radiant: bool) {
     reading.cast_or_summoned[player].push(CreatedUse {
         card: card.to_string(),
@@ -209,7 +209,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
     // The cards this step countered into a hand, and those an earlier step did before it ended on a
     // prompt: a `cardPlayed` naming one is the countering player's cast (R831001), never a play from hand.
     let mut stolen: Vec<String> = std::mem::take(&mut reading.stolen);
-    // R4276000: the cards a `cardPlayed` of this step named, by both ids, whose `summoned` is that play's.
+    // R4279000: the cards a `cardPlayed` of this step named, by both ids, whose `summoned` is that play's.
     let mut announced: IndexSet<String> = IndexSet::new();
     for (at, event) in events.iter().enumerate() {
         match event {
@@ -313,7 +313,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     let radiant = is_radiant(before, after, &ids);
                     use_created(reading, &ids, maker, def_id, radiant);
                 } else if !ids.iter().any(|id| announced.contains(*id)) {
-                    // R4276000: a dealt card put onto its seat's field from that seat's deck or hand, by
+                    // R4279000: a dealt card put onto its seat's field from that seat's deck or hand, by
                     // its own trigger (M #87) or another card's effect (a Recruit); a play's step-4
                     // summon is that play.
                     let id = former_id.as_deref().unwrap_or(instance_id.as_str());
@@ -382,7 +382,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     use_created(reading, &ids, *player, def_id, radiant);
                 }
                 if !from_hand || on_draw {
-                    // R4276000: a dealt card cast on its draw, whichever deck it was drawn from (as
+                    // R4279000: a dealt card cast on its draw, whichever deck it was drawn from (as
                     // `drawn` credits the drawer), or cast from its seat's own deck.
                     if !created && (on_draw || reading.decks[*player].contains(id)) {
                         let radiant = is_radiant(before, after, &ids);

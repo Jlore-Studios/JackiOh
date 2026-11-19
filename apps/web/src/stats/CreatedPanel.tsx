@@ -1,4 +1,4 @@
-// The Created cards of /stats (SPEC §9.11, R2089000), on the Tokens tab (R4276001), in two sections that share no
+// The Created cards of /stats (SPEC §9.11, R2089000), on the Tokens tab (R4279001), in two sections that share no
 // row (R3324002): the catalog's tokens, and every other card made during a game (generated and Discovered cards,
 // copies, transforms' results, The Coin). A row counts the seats that made a copy: Win rate pools them, used or
 // not (R2370000). The figures and R654's floor ("—" below it) are the server's, and Win rate is read off them,

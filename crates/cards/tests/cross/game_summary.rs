@@ -1435,10 +1435,10 @@ mod r2089000_created_cards {
     }
 }
 
-/// R4276000: the dealt cards an effect cast or summoned from their seat's own deck or hand, read off
+/// R4279000: the dealt cards an effect cast or summoned from their seat's own deck or hand, read off
 /// `scenario()` steps through `SummaryReader`, and how the card statistics count them: played, so seen,
 /// and never among the never-drawn.
-mod r4276000_cast_or_summoned {
+mod r4279000_cast_or_summoned {
     use super::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -1472,7 +1472,7 @@ mod r4276000_cast_or_summoned {
     /// `card`'s figures over one live game p1 won with `p1`.
     fn figures(p1: SeatSummary, card: &str) -> CardStats {
         let record = GameRecord {
-            id: "r4276000".to_string(),
+            id: "r4279000".to_string(),
             patch: "v0.0.1".to_string(),
             source: GameSource::Live,
             mode: GameMode::Bo1,
@@ -1501,7 +1501,7 @@ mod r4276000_cast_or_summoned {
     }
 
     #[test]
-    fn r4276000_tatches_summoned_from_the_deck_by_a_tribal_play_is_its_seat_s_and_counts_as_played() {
+    fn r4279000_tatches_summoned_from_the_deck_by_a_tribal_play_is_its_seat_s_and_counts_as_played() {
         register_all();
         let mut s = scenario(json!({
             "p1": { "mana": 10, "hand": [VANILLA], "library": [FILLER, TATCHES, FILLER] },
@@ -1529,7 +1529,7 @@ mod r4276000_cast_or_summoned {
     }
 
     #[test]
-    fn r4276000_tatches_summoned_from_the_hand_is_its_seat_s_once() {
+    fn r4279000_tatches_summoned_from_the_hand_is_its_seat_s_once() {
         register_all();
         let mut s = scenario(json!({
             "p1": { "mana": 10, "hand": [VANILLA, TATCHES], "library": [FILLER, FILLER] },
@@ -1552,7 +1552,7 @@ mod r4276000_cast_or_summoned {
     /// top of p1's deck as p2 ends its turn: p1's start-of-turn draw casts it, never a draw into the hand
     /// nor a play (§2.4, R2179002).
     #[test]
-    fn r4276000_a_card_cast_on_its_draw_is_its_seat_s_cast_once_and_counts_as_played() {
+    fn r4279000_a_card_cast_on_its_draw_is_its_seat_s_cast_once_and_counts_as_played() {
         register_all();
         for card in [TOMMY, HINDER] {
             let mut s = scenario(json!({

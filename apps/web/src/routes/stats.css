@@ -723,7 +723,7 @@
   }
 }
 
-/* R4276001: the page's views (Cards, Tokens, Sets, Players) as raised buttons, each its name over a line of what
+/* R4279001: the page's views (Cards, Tokens, Sets, Players) as raised buttons, each its name over a line of what
    it shows, the one open marked in the selected colour, so the row reads as places to go and not as headings.
    tabs.css draws the rest (the hit size, the focus ring); a phone keeps the names alone, so the row stays one line. */
 .stats-tabs {

@@ -165,7 +165,7 @@ def _read_record(record: dict, games: list[dict], seats: list[dict], seat_cards:
         )
         opening = set(summary["opening"])
         drawn = set(summary["drawn"])
-        # R4276000: a card an effect cast or summoned from the deck or the hand went into play, so it is played.
+        # R4279000: a card an effect cast or summoned from the deck or the hand went into play, so it is played.
         cast = summary.get("castOrSummoned") or []
         played = set(summary["played"]) | {use["card"] for use in cast}
         first_played = _first_turns(summary["played"], summary.get("playedTurns"))

@@ -278,7 +278,7 @@ mod tests {
         cards.dedup();
         let rows: Vec<&str> = stats.cards.iter().map(|row| row.card.as_str()).collect();
         assert_eq!(rows, cards);
-        // R4276000: a card an effect cast or summoned from the deck or the hand went into play too.
+        // R4279000: a card an effect cast or summoned from the deck or the hand went into play too.
         let played = |seat: &jackioh_engine::SeatSummary, card: &str| {
             seat.played.iter().any(|id| id == card)
                 || seat

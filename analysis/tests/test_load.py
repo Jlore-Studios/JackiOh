@@ -76,7 +76,7 @@ def test_one_row_per_game_seat_and_distinct_card_in_each_deck(tmp_path):
     assert cards[cards["game"] == "g2"]["first_played_turn"].isna().all()
 
 
-def test_r4276000_a_card_cast_or_summoned_from_the_deck_or_hand_is_played_on_the_turn_it_went_in(tmp_path):
+def test_r4279000_a_card_cast_or_summoned_from_the_deck_or_hand_is_played_on_the_turn_it_went_in(tmp_path):
     p1 = seat(["a", "b", "c"], [], [], ["c"], [4])
     p1["castOrSummoned"] = [
         {"card": "a", "turn": 3, "radiant": False},

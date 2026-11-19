@@ -1688,7 +1688,7 @@ describe("R1966000 the Sets tab", () => {
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
-  it("#3222 R4276001 stats tabs answer arrow keys, moving between Cards, Tokens, Sets, and Players", async () => {
+  it("#3222 R4279001 stats tabs answer arrow keys, moving between Cards, Tokens, Sets, and Players", async () => {
     serveSets();
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
@@ -2279,7 +2279,7 @@ describe("R3447000 the games tile names the patch its games were collected on", 
 });
 
 describe("R1973000 the Daily runs tab is gone", () => {
-  it("R1973000 R4276001 the page offers Cards, Tokens, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
+  it("R1973000 R4279001 the page offers Cards, Tokens, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
     at("/stats?tab=ci");
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
@@ -2368,7 +2368,7 @@ describe("R2446000 the Cards table's columns", () => {
 });
 
 describe("R2089000 R3324002 the Created cards and the Tokens", () => {
-  /** R4276001: the Created cards are on the Tokens tab. */
+  /** R4279001: the Created cards are on the Tokens tab. */
   async function openTokens(): Promise<void> {
     fireEvent.click(await screen.findByTestId(statsTestid.tabTokens, undefined, SLOW));
   }
@@ -2463,7 +2463,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(coin).toHaveAttribute("data-card-id", "core-t-coin");
   });
 
-  it("R2089000 R2370000 R3324002 R4082000 R4155000 R4276001 the Tokens tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
+  it("R2089000 R2370000 R3324002 R4082000 R4155000 R4279001 the Tokens tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
     const tiers = { center: 0, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 };
     const field = { center: 0.052, spread: 0.041, cards: 36, baseline: 0.552 };
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, tiers: { ...tiers, created: field }, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
@@ -2547,7 +2547,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
   });
 
-  it("R4276001 ?tab=tokens opens the Tokens tab, and the address follows the tab", async () => {
+  it("R4279001 ?tab=tokens opens the Tokens tab, and the address follows the tab", async () => {
     at("/stats?tab=tokens");
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH] });
     render(<StatsRoute />);
@@ -2576,7 +2576,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(screen.getByTestId(statsTestid.createdPanel)).toBeInTheDocument();
   });
 
-  it("R2089000 R3324002 R4276001 shows neither section when the response has no Created card, and only the one with rows", async () => {
+  it("R2089000 R3324002 R4279001 shows neither section when the response has no Created card, and only the one with rows", async () => {
     const none = "No tokens or created cards match the selected filters.";
     render(<StatsRoute />);
     await openTokens();

@@ -157,7 +157,7 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_played: Option<Vec<CreatedUse>>,
-    /// R4276000: the dealt cards an effect cast or summoned from this seat's own deck or hand, every time,
+    /// R4279000: the dealt cards an effect cast or summoned from this seat's own deck or hand, every time,
     /// none of them a play from the hand: cast on its draw (§2.4) or from the deck (§6.3), or summoned
     /// from the deck or the hand (M #87 Tatches the Totem, a Recruit). The statistics count each as
     /// played. Absent when there were none, and from every record written before the change.
@@ -176,7 +176,7 @@ pub struct SeatSummary {
 }
 
 /// R2089000: one use of a Created card: its catalog id, the turn (§2.5's counter) and whether it was
-/// Radiant then (R1147000). R4276000: also a dealt card's cast or summon by an effect (`castOrSummoned`).
+/// Radiant then (R1147000). R4279000: also a dealt card's cast or summon by an effect (`castOrSummoned`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -959,7 +959,7 @@ impl StatsTotals {
                 .chain(summary.drawn.iter())
                 .map(String::as_str)
                 .collect();
-            // R4276000: a dealt card an effect cast or summoned from the seat's deck or hand went into
+            // R4279000: a dealt card an effect cast or summoned from the seat's deck or hand went into
             // play, so it counts as played: seen, and never among the never-drawn.
             let cast_or_summoned = summary.cast_or_summoned.as_deref().unwrap_or_default();
             let played: IndexSet<&str> = summary
@@ -975,7 +975,7 @@ impl StatsTotals {
                 .as_ref()
                 .filter(|turns| turns.len() == summary.played.len());
             // R1147000: cards played Radiant at least once, read only when every play from the hand has
-            // a face flag (a seat with none needs none); R4276000: a cast or summon by its face then.
+            // a face flag (a seat with none needs none); R4279000: a cast or summon by its face then.
             let played_radiant: Option<IndexSet<&str>> = match &summary.played_radiant {
                 Some(flags) if flags.len() == summary.played.len() => Some(
                     summary
@@ -1070,7 +1070,7 @@ impl StatsTotals {
                     continue;
                 }
 
-                // Each turn the card was played on counts the game once, a cast or summon's (R4276000)
+                // Each turn the card was played on counts the game once, a cast or summon's (R4279000)
                 // among them.
                 let mut turns_played_in_game: IndexSet<i32> = IndexSet::new();
                 if let Some(played_turns) = played_turns {
@@ -2332,7 +2332,7 @@ fn text(value: Option<&Value>, at: &str) -> Result<String, EngineError> {
 }
 
 /// R2089000: a list of a Created card's uses: absent reads as `None`; each entry must name a card, a
-/// turn of 1 or more and its face. R4276000's `castOrSummoned` is read the same way.
+/// turn of 1 or more and its face. R4279000's `castOrSummoned` is read the same way.
 fn created_uses(value: Option<&Value>, at: &str) -> Result<Option<Vec<CreatedUse>>, EngineError> {
     card_uses(value, at, "Created card's use", "Created cards' uses")
 }
@@ -4758,9 +4758,9 @@ mod tests {
         assert_eq!(forced_series(&spoofed), Some("dev-force-core-090"));
     }
 
-    /// R4276000: a dealt card an effect cast or summoned from its seat's deck or hand went into play, so its
+    /// R4279000: a dealt card an effect cast or summoned from its seat's deck or hand went into play, so its
     /// game is a played one, on the seen side, and never among the never-drawn.
-    mod r4276000_cast_or_summoned {
+    mod r4279000_cast_or_summoned {
         use super::*;
 
         fn cast(card: &str, turn: i32, radiant: bool) -> CreatedUse {
@@ -4786,7 +4786,7 @@ mod tests {
         }
 
         #[test]
-        fn r4276000_a_card_cast_or_summoned_from_the_deck_is_played_and_seen_never_never_drawn() {
+        fn r4279000_a_card_cast_or_summoned_from_the_deck_is_played_and_seen_never_never_drawn() {
             let report = card_stats(&[cast_game()], &live());
             let a = stats_of(&report, "a");
             assert_eq!(a.in_deck, tally(2, 1, 0));
@@ -4814,7 +4814,7 @@ mod tests {
         }
 
         #[test]
-        fn r4276000_a_seat_that_only_cast_splits_its_casts_by_face_and_counts_their_turns() {
+        fn r4279000_a_seat_that_only_cast_splits_its_casts_by_face_and_counts_their_turns() {
             let mut p1 = seat(&["a"], &[], &[], &[]);
             p1.cast_or_summoned = Some(vec![cast("a", 4, false), cast("a", 6, false)]);
             let lost = GameRecord {
@@ -4840,7 +4840,7 @@ mod tests {
         }
 
         #[test]
-        fn r4276000_parse_reads_the_casts_and_summons_and_refuses_a_malformed_one() {
+        fn r4279000_parse_reads_the_casts_and_summons_and_refuses_a_malformed_one() {
             let written = cast_game();
             let json = serde_json::to_value(&written).unwrap();
             assert_eq!(

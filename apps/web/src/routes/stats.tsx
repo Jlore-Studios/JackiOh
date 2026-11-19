@@ -1,6 +1,6 @@
 // `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on four tabs, each a raised
-// button naming what it shows (R4276001): Cards (the filters, not columns, cover cost, rarity and keyword,
-// R2446000), Tokens (R4276001), Sets (R1966000) and Players (public aggregates, fun stats from #125). No
+// button naming what it shows (R4279001): Cards (the filters, not columns, cover cost, rarity and keyword,
+// R2446000), Tokens (R4279001), Sets (R1966000) and Players (public aggregates, fun stats from #125). No
 // provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661).
 // Below the per-row floor a row reads "not enough games". The Adjusted win rate leads (R2777000), so the table
 // shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000); with the ranges shown, a tier says how
@@ -10,7 +10,7 @@
 // tile the patch its games were collected on (R3447000). The Cards tab also holds the games panel (R1994000). The
 // Tokens tab holds the cards made during a game, the Tokens and the Other created cards, two sections that share
 // no row and show the deck table's columns, opening a row's drill-down as a deck row does, under the Cards tab's
-// filters (R2089000, R2370000, R3184002, R3324002, R4155000, R4276001). The page's on/off controls are the
+// filters (R2089000, R2370000, R3184002, R3324002, R4155000, R4279001). The page's on/off controls are the
 // Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art card's still Epic while
 // the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy. R3838000: its
 // "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx). R3887000: the
@@ -255,7 +255,7 @@ function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: st
  * R3324000: the Cards or Sets tab of a patch still collecting its data: the words in place of its figures, and the
  * way to the patch before. No count and no progress (R661).
  */
-/** R4276001: a view's tab, its name over a line of what it shows, so the row reads as places to go. */
+/** R4279001: a view's tab, its name over a line of what it shows, so the row reads as places to go. */
 function TabLabel({ name, hint }: { name: string; hint: string }): ReactElement {
   return (
     <>
@@ -677,7 +677,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
 
-  // R4276001: the Cards and Tokens tabs' filters, one set of state: the search, the set, rarity and cost the
+  // R4279001: the Cards and Tokens tabs' filters, one set of state: the search, the set, rarity and cost the
   // read asks for, the match type, and on the Cards tab the keyword, which only the deck table reads.
   const cardFilters = (withKeyword: boolean): ReactElement => (
     <>
@@ -1224,7 +1224,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         label: <TabLabel name={t("Tokens")} hint={t("Tokens and other cards made in games")} />,
         testId: statsTestid.tabTokens,
         panelClassName: "stats-panel one-screen__body",
-        // R4276001: the cards made during a game, a tab of their own beside the deck cards' (R2089000, R3324002,
+        // R4279001: the cards made during a game, a tab of their own beside the deck cards' (R2089000, R3324002,
         // R4155000): the tokens, then every other, no card in both, in the deck table's columns, each row
         // opening the drill-down, under the Cards tab's filters. R3324000: a collecting patch shows no figures.
         panel: collecting ? (

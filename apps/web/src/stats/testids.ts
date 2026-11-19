@@ -6,7 +6,7 @@ export const statsTestid = {
   tabPlayers: "stats-tab-players",
   /** R1966000: the Sets tab. */
   tabSets: "stats-tab-sets",
-  /** R4276001: the Tokens tab, the cards made during a game. */
+  /** R4279001: the Tokens tab, the cards made during a game. */
   tabTokens: "stats-tab-tokens",
   setsLeaders: "stats-sets-leaders",
   setsTable: "stats-sets-table",
