@@ -15578,9 +15578,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T01:27:43Z",
+    "at": "2026-11-19T01:38:24Z",
     "url": "",
-    "what": "review #4244 on claude-4"
+    "what": "suggestions (client) on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-19T01:28:05Z",
@@ -36758,13 +36758,22 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-19T01:28:48Z",
-    "last_area": "server",
-    "last_run": "2026-11-18T19:02:29Z",
+    "idle_since": "2026-11-19T01:38:24Z",
+    "last_area": "client",
+    "last_run": "2026-11-19T01:38:24Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "client",
+        "count": 2,
+        "last_run": "2026-11-19T01:38:24Z",
+        "provider": "claude-6",
+        "run_id": "pending:14eadebf-1795052272",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
