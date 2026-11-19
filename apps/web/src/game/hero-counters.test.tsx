@@ -189,4 +189,24 @@ describe("#4251 the hero's counters", () => {
     };
     expect(portraitOf(baseView({ you: emptySide("p1", { luck: 2 }) }))).toBe(portraitOf(baseView()));
   });
+
+  it("#4270 the tray clears the piles, the zones and the portrait's badges on a phone and on its side", () => {
+    // The component specs that measure this (board-layout's #2877 and emotes-layout's #4251) run
+    // daily only, so this holds the rules that place it on every pull request.
+    const boardCss = readSheet("src/game/board.css");
+    // The Jade Counter and the Credits stand above the portrait's open button, as health and Armor do.
+    expect(boardCss).toMatch(/\.hero-portrait \.hero-jade,\s*\n\.hero-portrait \.hero-credits\s*\{[^}]*z-index:\s*2;/);
+    // The desktop's 32px health and Armor badges stand apart on the 44px oval.
+    expect(boardCss).toMatch(/\.seat \.hero-portrait \.hero-armor\s*\{[^}]*left:\s*-10px;/);
+    expect(boardCss).toMatch(/\.seat \.hero-portrait \.hero-health\s*\{[^}]*right:\s*-10px;/);
+    // On a phone the opponent's tray hangs past its pinned pill row, above the pills' tap bands.
+    expect(boardCss).toMatch(/\.seat \.pile\s*\{[^}]*height:\s*var\(--seat-pile-h\);/);
+    expect(boardCss).toMatch(/:where\(\.board > \.seat-opponent\) > \.hero\s*\{[^}]*z-index:\s*var\(--z-raised\);/);
+    expect(boardCss).toMatch(/\.hero-opponent \.hero-tray\s*\{[^}]*top:\s*calc\(100% \+ var\(--seat-pile-h\) \+ 2px\);/);
+    expect(boardCss).toMatch(/\.hero-opponent \.hero-tray \.hero-counter-name\s*\{[^}]*display:\s*none;/);
+    // On its side both trays show counts alone and hang above their plates.
+    expect(boardCss).toMatch(/\.hero-tray \.hero-counter-name\s*\{[^}]*display:\s*none;/);
+    expect(boardCss).toMatch(/\.hero-opponent \.hero-tray\s*\{[^}]*top:\s*auto;[^}]*bottom:\s*calc\(100% \+ var\(--space-2\)\);/);
+    expect(boardCss).toMatch(/\.hero-you \.hero-tray\s*\{[^}]*bottom:\s*calc\(100% \+ var\(--space-2\)\);/);
+  });
 });

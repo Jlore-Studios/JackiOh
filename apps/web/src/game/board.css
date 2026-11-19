@@ -461,6 +461,9 @@ button.modifier-badge[data-open="true"] {
 .hero-portrait .hero-credits {
   position: absolute;
   top: -6px;
+  /* #4270: above the portrait's open button (z 1, `emotes/portrait.css`), which covers them on a
+     phone, as `emotes.css` lifts health and armor. */
+  z-index: 2;
   min-width: 22px;
   height: 22px;
   padding: 0 var(--space-2);
@@ -3100,6 +3103,16 @@ button.modifier-badge[data-open="true"] {
     font-size: var(--type-xl-em);
   }
 
+  /* #4270: two 32px badges on the 44px oval at the base -6px overlapped each other by 8px, so here
+     each stands 4px further out. */
+  .seat .hero-portrait .hero-armor {
+    left: -10px;
+  }
+
+  .seat .hero-portrait .hero-health {
+    right: -10px;
+  }
+
   /* Your hand's cards are drawn 1.3 to 1.5 times the field's here, so their type comes up to
      match: at the field's size the rules text was 9px in a card with room to spare. */
   .hand-you .card-hand {
@@ -3407,6 +3420,8 @@ button.modifier-badge[data-open="true"] {
        2px the tray stands off the plate. */
     --tray-chip-h: 14px;
     --tray-channel: calc(var(--tray-chip-h) + 2px);
+    /* #4270: the height of the seat's pill row, which the opponent's tray steps past. */
+    --seat-pile-h: 14px;
     /* Your hand takes the height a phone held upright still has spare under the controls, so its
        cards read without a tap; B30's strips still hold for a 7- and a 10-card hand. */
     --hand-card-h: calc(var(--card-h) * 1.24);
@@ -3712,6 +3727,11 @@ button.modifier-badge[data-open="true"] {
     line-height: 1;
   }
 
+  /* #4270: a seat's pills are pinned at the height the opponent's tray steps past (below). */
+  .seat .pile {
+    height: var(--seat-pile-h);
+  }
+
   .pile::before {
     width: 11px;
     height: 11px;
@@ -3754,6 +3774,26 @@ button.modifier-badge[data-open="true"] {
   .hero-tray:has(.hero-counters) {
     left: var(--space-2);
     transform: none;
+  }
+
+  /* #4270: the opponent's seat stacks its plate, its mana and pills, then the tray channel, so a
+     tray hung 2px under the plate lay on the pills. It hangs past the pill row, in the channel.
+     A `data-legal="false"` plate's opacity makes it a stacking context, which kept the tray under
+     the pills' tap bands (`.seat .pile--browsable`, z 1), so the opponent's plate stands one layer
+     up; `:where` keeps the glowing hero's and the emote's layers winning, and the bands start at
+     the pill's top, so the plate covers none of them. */
+  :where(.board > .seat-opponent) > .hero {
+    z-index: var(--z-raised);
+  }
+
+  .hero-opponent .hero-tray {
+    top: calc(100% + var(--seat-pile-h) + 2px);
+  }
+
+  /* #4270: that tray has only the plate's width, so its counters show their counts alone; the
+     name stays in each chip's title and label and in the hold-to-inspect list (R3540005). */
+  .hero-opponent .hero-tray .hero-counter-name {
+    display: none;
   }
 
   /* #2932: a route's rail (a match's, a replay's, a watch's: Back and the rank line) rides the top
@@ -4028,6 +4068,23 @@ button.modifier-badge[data-open="true"] {
 
   .hand-you .hand-slot[data-lifted="true"]:has(> .card[data-selected="true"]) {
     transform: translateY(calc(var(--hand-card-h) * -0.5 - 8px));
+  }
+
+  /* #4270: the seat column is 224px wide, so a centred tray of named counters (about 324px) ran off
+     the screen and over the field's first lane; with their counts alone (the name in each chip's
+     title and label, R3540005) it is about 220px. Both trays hang above their plates, in the seat's
+     free half, clear of the opponent's pills and of the badges' 4px overhang. */
+  .hero-tray .hero-counter-name {
+    display: none;
+  }
+
+  .hero-opponent .hero-tray {
+    top: auto;
+    bottom: calc(100% + var(--space-2));
+  }
+
+  .hero-you .hero-tray {
+    bottom: calc(100% + var(--space-2));
   }
 }
 

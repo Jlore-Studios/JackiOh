@@ -10,7 +10,8 @@ import { PLAY_TIERS_ASCENDING } from "../../../apps/web/src/game/damageFeel.ts";
 import { buildMix } from "../../../apps/web/src/audio/mix.ts";
 import { DEFAULT_AUDIO_SETTINGS } from "../../../apps/web/src/audio/settings.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, type SfxRecipe } from "../../../apps/web/src/audio/sfx.ts";
-import { CARD_AUDIO } from "../../../apps/web/src/audio/soundTables.ts";
+import { loadSoundTables, type SoundTables } from "../../../apps/web/src/audio/soundTablesLoader.ts";
+import type { CardAudioTable } from "../../../apps/web/src/audio/types.ts";
 import { lineFor } from "../../../apps/web/src/audio/voiceData.ts";
 import { ANOMALY_CODES } from "../../../apps/web/src/cards/anomalies.ts";
 
@@ -481,10 +482,17 @@ async function renderMix(cues: readonly Cue[], lines: readonly { buffer: AudioBu
   return (await ctx.startRendering()).getChannelData(0);
 }
 
+/**
+ * #4270: the card audio table, loaded in B57's `before`: the tables parse against the module's
+ * catalog (#4215), which loads only in the support file's `before`, so a static import throws.
+ */
+let cardAudio: CardAudioTable | null = null;
+
 function personaGain(key: string): number {
+  if (cardAudio === null) throw new Error("the sound tables are not loaded");
   const at = key.lastIndexOf("-");
   const line = key.slice(at + 1) as Parameters<typeof lineFor>[2];
-  return lineFor(CARD_AUDIO, key.slice(0, at), line)?.persona.gain ?? 1;
+  return lineFor(cardAudio, key.slice(0, at), line)?.persona.gain ?? 1;
 }
 
 async function decode(b64: string): Promise<AudioBuffer> {
@@ -567,6 +575,9 @@ describe("polish 2 — B57 the mix at the default settings", () => {
   const buffers: Record<string, AudioBuffer> = {};
 
   before(() => {
+    cy.wrap(loadSoundTables(), { timeout: 60_000, log: false }).then((tables) => {
+      cardAudio = (tables as SoundTables).cardAudio;
+    });
     for (const key of REFERENCE_LINES) {
       cy.readFile(`../apps/web/public/audio/voice/${key}.m4a`, "base64", { log: false }).then((b64) => {
         cy.wrap(decode(b64 as string), { log: false }).then((buffer) => {

@@ -482,7 +482,10 @@ Luck (R987), Burn and Toxic (R3540000) and Tipsy (R3548000) ride the hero's tray
 (`hero-luck`, `hero-burn`, `hero-toxic`, `hero-tipsy`, each keeping its `data-*` attribute),
 outside the tray's overflow allowance: every counter reads at once however many effects the seat
 carries, and a counter rising from 0 never moves the plate. Holding a hero (or Shift+F10 on it)
-lists every counter above 0 with its name and number in the inspect view (`HeroInspect.tsx`).
+lists every counter above 0 with its name and number in the inspect view (`HeroInspect.tsx`). #4270: where
+the tray has only its plate's width (the opponent's on a phone held upright, where it hangs below the
+seat's pills, and both seats' on a phone on its side, where each hangs above its plate) its counters show
+their counts alone, each name staying in its chip's title and label and in that inspect list.
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
