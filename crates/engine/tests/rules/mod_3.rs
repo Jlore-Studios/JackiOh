@@ -28,6 +28,7 @@ pub mod start_of_opponent_turn;
 pub mod state;
 pub mod statecheck;
 pub mod stays;
+pub mod steal_no_room;
 pub mod stinkyscape_plus_s13;
 pub mod stinkyscape_plus_s14;
 pub mod stinkyscape_plus_s15;

@@ -36,8 +36,8 @@
 //! ({loss}) mana.", 2 on the base face and 1 on the Radiant: the target is an enemy Unit, and the loss is
 //! `next_turn_mana` on its caster (R1848004), their next refresh giving their max mana less it, never below
 //! 0, a badge both seats read. Once the Spell resolves with its target, the loss is paid whatever the
-//! steal does (R3996101): both effects run in a list, so a steal that finds no free zone (R15) still costs
-//! the mana, as Hearthstone's Overload is locked in as its card is played. With no enemy Unit to target the
+//! steal does (R3996101): both effects run in a list, so a steal that finds no free zone (R15), which
+//! destroys the Unit instead (R4205000), still costs the mana, as Hearthstone's Overload is locked in as its card is played. With no enemy Unit to target the
 //! Spell fizzles whole (§8's Conventions), and nothing is lost.
 //!
 //! Kept for replays (R767000): from issue #3139 through v0.6.5b the base face read "Steal an enemy Unit.
@@ -281,9 +281,9 @@ mod tests {
             assert!(g.unit(PlayerId::P2, 3).is_none());
         }
 
-        /// R3996101: a full row leaves the card with the opponent, and the mana is lost all the same.
+        /// R3996101, R4205000: a full row destroys the card, and the mana is lost all the same.
         #[test]
-        fn r15_r3996101_a_full_row_leaves_the_card_with_the_opponent_and_the_mana_is_still_lost() {
+        fn r15_r3996101_r4205000_a_full_row_destroys_the_card_and_the_mana_is_still_lost() {
             let mut g = scenario(json!({
                 "p1": {
                     "hand": [MIND_CONTROL],
@@ -301,8 +301,11 @@ mod tests {
 
             g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-            assert_eq!(g.unit(PlayerId::P2, 3).map(|u| u.id.clone()), Some(prey.id.clone()));
-            assert_eq!(g.card(&prey).controller, PlayerId::P2);
+            assert_eq!(g.unit(PlayerId::P2, 3), None);
+            g.expect_in_zone(&prey, "graveyard");
+            assert!(g.events().iter().any(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == prey.id)
+            ));
             g.expect_in_zone(MIND_CONTROL, "graveyard");
             assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
             assert_eq!(next_refresh(&g), -2);

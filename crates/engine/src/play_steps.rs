@@ -831,8 +831,7 @@ fn tributes_an_enemy(state: &GameState, run: &PlayRun) -> bool {
 /// is (§8 #52's base face) takes the opponent's leftmost open unit zone (R64); with none it stays where
 /// named (R3837001). R360: #55's base face, when its Tribute took an opposing unit, takes the
 /// opponent's zone in the named lane if open, else their leftmost open unit zone (R15); with none it
-/// stays where named, as a steal with no zone does (R15). A Flying Golem named into the backrow goes
-/// to the unit row (R1081000).
+/// stays where named. A Flying Golem named into the backrow goes to the unit row (R1081000).
 fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Option<ZoneSlot> {
     let zone = run.zone?;
     let flags = crate::scripts::flags_of(state, card);

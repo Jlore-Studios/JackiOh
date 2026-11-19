@@ -33,6 +33,17 @@ fn mark_destroyed(state: &mut GameState, card: &CardInstance) {
     }
 }
 
+/// R4205000: the mark a steal with no room for the card leaves (§6.3 Steal). The same mark as any
+/// destroy, so R59's one state check collects it in R68's order, but one nothing prevents: §4.5 drops no
+/// Indestructible mark of it (R46) and offers it no "would die" replacement; a destroy-to-exile aura
+/// still exiles it (R1849002).
+pub(crate) fn mark_destroyed_unpreventably(state: &mut GameState, card: &CardInstance) {
+    mark_destroyed(state, card);
+    if let Some(live) = find_instance_mut(state, &card.id) {
+        live.unpreventable_destroy = Some(true);
+    }
+}
+
 /// `destroy`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

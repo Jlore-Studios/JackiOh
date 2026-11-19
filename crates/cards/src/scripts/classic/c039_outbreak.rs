@@ -8,8 +8,8 @@
 //! card its chooser may not read is offered by id alone and the placement never names it to them (R177).
 //! One placement of {tokens} (`placePlague`, B5 E19, R471; `param`, R386; Pestilent Slime multiplies it), then, read
 //! after it lands: an enemy permanent with counters at least its cost (R396's `costNow`: an X card on the field its X,
-//! 0 with none chosen; any other card R65's cost) is stolen (§6.3, R15, an entry, R171); with no free zone it stays
-//! with them and nothing is drawn, since "otherwise" is the condition's, not the steal's. Otherwise draw one per counter (§2.4). A target gone from the field takes nothing.
+//! 0 with none chosen; any other card R65's cost) is stolen (§6.3, R15, an entry, R171); with no free zone it is
+//! destroyed instead (R4205000) and nothing is drawn, since "otherwise" is the condition's, not the steal's. Otherwise draw one per counter (§2.4). A target gone from the field takes nothing.
 //! Tunes: tokens 1 ↑ (Radiant 2); drawPer 1 ↑, the cards drawn per counter (R1748003). Through v0.4.4b that 1 was
 //! printed, not declared; `script_v0_4_4b` keeps that (R767000).
 
@@ -282,7 +282,7 @@ mod tests {
             }
 
             #[test]
-            fn r15_with_no_free_zone_in_your_row_the_stolen_card_stays_with_them_and_nothing_is_drawn() {
+            fn r15_r4205000_with_no_free_zone_in_your_row_the_card_is_destroyed_and_nothing_is_drawn() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [MENACE, MENACE, MENACE, MENACE, MENACE], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },
@@ -292,7 +292,9 @@ mod tests {
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert!(stolen_ids(&s).is_empty());
-                assert_eq!(s.card(VANILLA).controller, P2);
+                s.expect_in_zone(VANILLA, "graveyard");
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == VANILLA));
+                assert!(s.events().iter().any(|event| matches!(event, GameEvent::Destroyed { def_id, .. } if def_id == VANILLA)));
                 assert_eq!(drawn(&s), 0);
             }
 
