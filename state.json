@@ -13381,11 +13381,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T23:36:10Z",
+        "at": "2026-11-19T00:14:42Z",
         "difficulty": "hard",
-        "provider": "claude-1",
-        "tier": "medium",
-        "why": "Rule line 2: it changes the AI's decisions and its search (crates/ai/src: evaluation threat term, wall_switches, decide, duos) and amends a ruling."
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Rule line 2 (the AI): it changes the AI's decisions and search in crates/ai/src (evaluate, candidates, search, decide, duos) and amends ruling R964000"
       },
       "failures": 0,
       "forced": false,
