@@ -30431,5 +30431,66 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.7f",
+    "date": "2026-11-19",
+    "title": "Patch: Recruit takes the first card that can actually land, not the first that matches",
+    "source": "#4238",
+    "notes": "R4238000: a Recruit passes over a matching card no zone takes (its row full, a named lane taken, a GIGA with no fit, the far half of a slashed board) and summons the first that can land; R690 reads those alone; Recruit N rechecks each scan; recruitAll lists the cards that land as it starts. Engine: effects/summon.rs, whose read query::recruit_takes C #1 Curse of the Forgotten Classic's Radiant now names its forced attacker by (its old reading kept as script_v0_6_7e in KEPT_SCRIPTS). classify stage 2 finds one unforced game of 200 that plays differently: C #90 In Too Deep's Recruit, with a full unit row, now sets S+ #54 Pneumatic Drill from beneath two Units, so S+ #54 is claimed with --plays. Replays a Recruit now changes are refused as rules_changed (R767000).",
+    "player": {
+      "title": "Recruit skips cards it can't place",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Recruit now skips a card it can't place and takes the next matching card that fits: with your unit row full, it sets the Trap below your top Unit.",
+        "A Recruit of several cards takes the next card that fits each time, rather than stopping at the first one that doesn't."
+      ],
+      "text": [],
+      "fixes": [
+        "Curse of the Forgotten Classic's Radiant face: the Unit its Recruit takes past a newer X-cost card now attacks the enemy hero, as its text says."
+      ]
+    },
+    "commits": [
+      "cbb2ac42172a9f2cf65c04dfecf08a10ba2e94ca"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-054"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.7g",
+    "date": "2026-11-19",
+    "title": "Patch: a Unit revealed from Cloaked is summoning sick on its reveal turn",
+    "source": "#4237",
+    "notes": "R4237000: a Unit revealed from Cloaked enters its unit zone on its reveal turn and is summoning sick that turn unless it has Rush or Charge (SPEC §4.1, §6.1), where it kept its set turn and could attack at once (R783006, R1041). Replays of a revealed Unit attacking on its reveal turn are refused as rules_changed (R767000). The plays are classify's stage 2 against main: its unforced games diverge on these cards.",
+    "player": {
+      "title": "Cloaked Units and summoning sickness",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Unit revealed from Cloaked is now summoning sick on the turn it is revealed, like any Unit that enters the field: it attacks on your next turn, or at once with Rush or Charge."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "087a371898ce240ca3c8d75afe9f23fceb7b5ee4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-007",
+      "core-066",
+      "stinkyscape-108",
+      "stinkyscape-123",
+      "stinkyscape-177",
+      "stinkyscapeplus-004",
+      "stinkyscapeplus-075"
+    ],
+    "changes": []
   }
 ]
