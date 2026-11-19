@@ -15195,6 +15195,8 @@
     "4241": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "e4f05418005d9d399417062a8604034bc536afd7",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T23:41:09Z",
