@@ -16103,6 +16103,13 @@
     "4272": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44593606891",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-19T19:32:01Z",
+        "until": "2026-11-19T20:02:01Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
