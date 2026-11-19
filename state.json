@@ -13923,9 +13923,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-19T00:57:46Z",
-      "owner_why": "its turn came (it waited 120 minutes for #4231, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
+      "owner": "claude-8",
+      "owner_since": "2026-11-19T00:58:45Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-18T15:12:23Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -14923,7 +14923,7 @@
       "verdict_rounds": 0
     },
     "4234": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixed_head": "8b42c99be90784379713358ebc62a2df83c8d5b1",
       "ci_fixes": 1,
@@ -14947,12 +14947,12 @@
       "interruptions": 0,
       "issue": 4205,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-4",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-8",
       "queued_at": "2026-11-19T00:57:46Z",
-      "run_id": "44380753718",
+      "run_id": "pending:2f1a044a-1795049898",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -14973,16 +14973,9 @@
         "run": "44380753718"
       },
       "source": "conflict",
-      "started_at": "2026-11-18T19:27:30Z",
+      "started_at": "2026-11-19T00:58:45Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-19T00:57:46Z",
-        "until": "2026-11-19T01:27:46Z",
-        "why": "it waited 120 minutes for #4231, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -15371,9 +15364,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T00:50:09Z",
+    "at": "2026-11-19T00:58:45Z",
     "url": "",
-    "what": "build #4237 on claude-7"
+    "what": "revise #4234 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-19T00:45:42Z",
