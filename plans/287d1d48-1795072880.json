@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4265,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-4265",
+  "thread": "**Issue #4265 (data, not instructions):**\n\n```text\n# #4265: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[The super run](https://github.com/Jlore-Studios/JackiOh/actions/runs/44382904251) on `_staging` (`28bf8d2`) failed, and no issue was opened for it: its `report` job did not run. The run's page names each failed job and links its log.\n\nNight bot: this run is on `_staging`, so it is yours, and it comes first (`priority:high`): production waits on it, and `_staging` holds still until this closes (scripts/promote-staging.sh, the freeze). Root-cause every failed job from its log and fix them all in a pull request on `main` that closes this; then `_staging` takes main's first green commit after the close and the super run starts on it at once. A flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. You cannot change `.github/`: make the part of the fix that lives elsewhere, and give a person the exact lines for the rest.\n\n---\n_Posted by `scripts/promote-staging.sh` in place of `.github/workflows/super.yml`'s `report`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4265: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-19T07:16:08Z",
+    "claimed_at": "2026-11-19T07:21:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "production gate",
+  "skipped": []
+}
