@@ -15075,9 +15075,11 @@
         "by": "`muse` (medium)",
         "sha": "0eb4571a83a9b5aaa7dc4e4c3b848972225f6d00"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T23:41:47Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-19T00:31:11Z",
         "family": "muse",
@@ -15087,6 +15089,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Both verification commands are running \u2014 the checkpoint suite and clippy. I'll report once their results land.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: a live 1v1 match checkpoints every 32 actions as it is played\"} -->\n- A live 1v1 match now stores a checkpoint every `MATCH_CHECKPOINT_MIN_ACTIONS` (32) rows while it is played, exactly as co-op matches already do, so a crash rebuild folds only the rows since the last checkpoint.\n- What changed:\n- - `crates/server/src/actor/match_actor.rs`: `Task::Checkpoint` now carries `Option<oneshot::Sender<()>>` (`Some` for the restart drain, answered once written or passed over; `None` for the periodic one). The `DuelOutput::Append` arm enqueues `Task::Checkpoint(None)` behind the task in hand whenever\u2026\n- - `crates/server/tests/actor/checkpoints.rs`: new `a_live_match_checkpoints_every_min_actions_rows_as_it_is_played_and_a_crash_resumes_there`, modeled on the co-op periodic test. It submits 40 actions through the actor: no checkpoint at seq 31, exactly one (`seq` 32, nonce `cp-32`) at seq 32, still\u2026\n- - `spec/09-architecture.md` (\u00a79.3), `crates/server/README.md` (match paragraph), `docs/architecture.md` (checkpoint paragraph): no longer say a 1v1 match checkpoints only for a restart. No ruling, per the issue.\n- How it was tested: `cargo test -p jackioh-server --test server actor::checkpoints` \u2014 10/10 pass, existing suite unmodified; `cargo fmt --check` clean; `cargo clippy -p jackioh-server --all-targets -- -D warnings` clean. No ruling was added, so `spec check` has nothing new to validate.\n- Decisions the issue did not settle:\n- - Telemetry is compared with `clockLeftMs` stripped (`telemetry_without_clocks`). That field is recorded live as each action lands and a fold has no clock to read it from, so a live-written checkpoint can never match a whole-log fold in exactly that field; everything else is asserted equal. The alt\u2026\n- - Nonce re-acks are resubmitted from each nonce's own seat, since R4013000 makes another seat's copy `NonceTaken` (\"that nonce is already taken\"). The existing `ack_of` helper hardcodes P1 and was left untouched.\n- - Kept the split field-by-field asserts (hash, state, views, clocks, telemetry) instead of one `Seen` equality, so a failure names its field.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4224 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4224/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- muse: retrying meta model stream in 60000ms (attempt 2/10)"
       },
+      "interruptions": 0,
       "issue": 4224,
       "kind": "review",
       "live": "reviewing",
