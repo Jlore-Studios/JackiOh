@@ -14562,6 +14562,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-18T23:59:14Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 2,
       "waiting_comment": 6989049807
