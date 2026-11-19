@@ -16,9 +16,7 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
-through the search to the scorers that read them, with the two facts about the root they ride with: whether it
-holds a Starship (`starship_root`, R3038003) and whether its view names mostly cards the network has no row
-for (`unknown_root`, R3479000). `decide` takes them from `decision_prices` on its `probe_world`, and
+through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`, and
 `decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`:
 `cargo jackioh positions` scores its rows with them (R4070000). Any other call outside a decision passes
 `Prices::NONE` (plain `evaluate`, the probes, the baselines) and prices nothing. The crate holds no thread-local.
@@ -497,15 +495,14 @@ banned, and the holder's card at the slot `${seed}:force` picks is replaced by i
 `DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
 record stays a pure function of its number.
 
-## The learned evaluation's features (#466, #1006)
+## The features (#466, #1006)
 
-`src/features.rs` turns a position into the learned evaluation's inputs (`docs/learned-eval.md` D3,
-D5, D10). One function serves the replay pass that makes training rows (`cargo jackioh positions`)
-and, once a network ships, its inference in the search, so the two never read a position apart.
+`src/features.rs` turns a position into the rows `cargo jackioh positions` writes for the learn lane's
+exports (`docs/learned-eval.md` D3, D5, D10). The learned evaluation that read them in the search is
+retired (R4159000): no network reads them in this crate any more.
 
 ```rust
 pub const FEATURES_VERSION: u32;
-pub const FEATURES_READ_SINCE: u32;                                  // the oldest layout a network may be fitted on
 pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
 pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
 pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
@@ -535,83 +532,14 @@ pub fn card_id_of_key(key: &str) -> Option<(&str, &str)>;           // a key's z
   health, each number clamped at `ATTRIBUTE_TOP`, and `<zone>.face:<side>:Radiant` when it is Radiant.
   A card a network has no id row for still moves it through the keys it shares with the cards it was
   fitted on.
-- `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the
-  version they were fitted on. `FEATURES_READ_SINCE` is the oldest version a network may be fitted on
-  and still ship: every version since it only added sparse keys, which such a network has no row for,
-  so it reads this build's features as it was fitted (R3112001). A change to the dense layout or to
-  what an existing key means raises it to `FEATURES_VERSION`.
+- `FEATURES_VERSION` names the layout; any change bumps it.
 
-## The learned evaluation (#466, #1010)
+## The learned evaluation and the policy prior (retired)
 
-`src/learned.rs` is a small network over `features` that corrects the hand eval where the search
-finally scores a line (`docs/learned-eval.md` D4, D6, D7, D9):
-
-```rust
-pub enum EvalKind { Hand, Learned }
-pub const AI_EVAL_KIND: EvalKind;                 // config.rs: Hand, unless a promotion turns it on
-pub const LEARNED: Network<'static>;              // compiled in from src/learned/weights.json by build.rs
-pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64;
-impl Learned<'a> { pub fn known_card_ids(&self) -> Vec<&'a str>; }   // the ids its keys name, sorted
-pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards;   // { named, unknown }
-pub fn unknown_root(view: &GameState, seat: PlayerId, network: &Learned<'_>) -> bool;   // R3479000
-```
-
-- With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
-  reply with the network's logit mapped back onto the hand eval's points, `points = hand + (b +
-  net(x))·U/a` (R1010000, R1010001), taken at `LEARNED_CORRECTION_SHARE`: `hand + share·(points −
-  hand)` (R1012001). The beam's pruning keeps the hand eval. 1v1 only: a Duos duel keeps the hand
-  eval (R1010002). So does a decision whose root holds a Starship (`holds_starship`, R3038003: a Dormant
-  or launched Starship on either side, or a Starship Piece on either field or in the seat's own hand, read
-  off the redacted view once and carried in `Prices.starship_root`), every line of it alike: the network
-  was fitted before the set, and the hand eval holds what a Starship leaves behind (R2566000, R2380000,
-  R3064000). So does a decision whose redacted root view names mostly cards the network has no row for
-  (`unknown_root`, R3479000: more than `LEARNED_MAX_UNKNOWN_SHARE` of the copies `unknown_cards` counts,
-  carried in `Prices.unknown_root`), until a retrain gives them rows.
-- `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
-  version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
-  keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`
-  turns it into constant slices: data at compile time, no static at run time (rule 4). The checked-in
-  file may be the null network, whose correction is zero everywhere.
-- `unknown_cards` counts the copies of cards a row names by id and how many of them name an id the
-  network has no row for (`known_card_ids`); `cargo jackioh positions` sums them over its rows and
-  prints their share, `unknownShare`, so a refit is asked for by that number (R3112002).
-- Inference is `f64`, one fixed order, clipped ReLUs as comparisons, no libm, for a float network
-  (`"format": 1`, `Learned::Float`), which part 5's native screen measures. The network that ships is
-  an integer one (`"format": 2`, `Learned::Int`, `src/learned/int.rs`, #1011): `training/ml`'s
-  `quantize.py` folds the standardizer into an i16 first layer over the raw features, i8 head layers,
-  i64 sums, floor shifts and clips, and one IEEE division at the end, so the native gates and the
-  browser's WASM build give the same answer bit for bit (R1011000; `tests/fixtures/learned-parity.json`,
-  held natively and through the WASM module's `learned_parity`).
-
-## The policy prior (#1171)
-
-`src/policy.rs` is a table of weights, fitted by `training/ml`'s `policy_fit.py` on the moves the AI
-played, that re-sorts the moves the beam expands before it takes its prefix (`docs/learned-eval.md`,
-learned move ordering):
-
-```rust
-pub enum MoveOrder { Heuristic, Learned }
-pub const AI_MOVE_ORDER: MoveOrder;               // config.rs: Heuristic, unless a promotion turns it on
-pub const POLICY_PRIOR: PolicyPrior<'static>;     // compiled in from src/policy/weights.json by build.rs
-pub fn policy_keys(view: &GameState, seat: PlayerId, action: &ActionBody, rank: Option<usize>) -> Vec<String>;
-pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> PolicyLabel;
-pub fn prior_order(state: &GameState, seat: PlayerId, moves: Vec<ActionBody>, prior: &PolicyPrior<'_>) -> Vec<ActionBody>;
-pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &PolicyPrior<'_>, prices: &Prices) -> Vec<Line>;
-```
-
-- With `Heuristic` nothing changes. With `Learned`, `search::expansion` sorts each line's candidates
-  that are not End Turn by the prior, best first and ties in their own order, then takes the first
-  `root_branching` or `branching` and End Turn, as before (R1171001). It never adds, drops or changes
-  a move and spends no node. A table of no keys, the checked-in null one, leaves every order as it is,
-  and so does a Duos duel.
-- A move is a handful of text keys read from `redact` alone (R185, R1171000): its kind, its rank in the
-  heuristic order (capped at `POLICY_RANK_CAP`), the card it plays or acts with (named by R1006000's
-  rule, else `hidden`), where it lands and the class of what it aims at. No key holds an instance, hero
-  or prompt id. Its score is the sum of its keys' weights; a key the table lacks adds nothing.
-- `policy_label` is what `cargo jackioh positions --policy` writes on each decision row: the keys of
-  every candidate the search's root lists on decide's probe world and which one was played.
-  `src/policy/weights.json` records the `POLICY_KEYS_VERSION` and catalog it was fitted on (a test fails
-  on another version); `build.rs` turns it into constant slices, data at compile time (rule 4).
+The learned evaluation (#466, #1010) and the policy prior (#1171) are retired (#4159, R4159000): the
+search scores every line and finalist with the hand eval (`evaluate_priced` over `AI_EVAL`) and expands
+each line's moves in `candidate_actions`' order. The crate has no build script and compiles no weights.
+`docs/learned-eval.md` is the record.
 
 ## Duos (§13.7)
 

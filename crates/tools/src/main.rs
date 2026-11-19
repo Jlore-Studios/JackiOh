@@ -96,9 +96,9 @@ enum Command {
     Agent(agent::Args),
     /// The promotion gate (part 29).
     Promote(promote::Args),
-    /// Self-play game logs for the learned evaluation (#1006).
+    /// Self-play game logs (#1006; they fed the learned evaluation, retired by R4159000).
     Selfplay(selfplay::Args),
-    /// Self-play logs folded into the learned evaluation's training rows (#1006).
+    /// Self-play logs folded into training rows (#1006; they fed the learned evaluation, retired: R4159000).
     Positions(positions::Args),
     /// `winrates --refresh <report.json>`: the win rates of record from production's windowed card figures, once per patch (R3882000).
     Winrates(winrates::Args),

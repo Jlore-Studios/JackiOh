@@ -392,12 +392,22 @@ fn supply_drop_beside_two_vanillas() -> GameState {
 /// R4132000: before that change, four of the six places held one board, both Vanillas attacking,
 /// with the Vanillas in each other's lanes or the second in lane 2 or 3, and the cast beat it after
 /// the reply. Those are one line now, and a place goes to a Vanilla set in Defense Position, which the
-/// reply scores above the cast, so the decision plays it.
+/// reply scores above the cast, so the decision plays it. R4159000: the hand eval alone, which no network
+/// corrects any more, scores a Vanilla's line above the cast's too, so the AI plays a Vanilla first.
 #[test]
-fn r3696000_beside_two_castable_units_the_supply_drop_line_still_keeps_a_place_among_the_replied_lines() {
+fn r3696000_r4159000_beside_two_castable_vanillas_the_hand_eval_plays_a_vanilla_first() {
     let state = supply_drop_beside_two_vanillas();
     let decision = decide_at(&state, "ai-supply-drop-combat");
     assert!(decision.stats.replied > SHORTLIST, "{:?}", decision.stats);
+    let ActionBody::Play { instance_id, .. } = &decision.action else {
+        panic!("{:?}", decision.action);
+    };
+    let played = state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.id == *instance_id)
+        .map(|card| card.def_id.as_str());
+    assert_eq!(played, Some(VANILLA), "{:?}", decision.action);
 }
 
 /// The lines `shortlist_lines` takes at the browser's budget, before the payoff line (R3696000).

@@ -92,8 +92,9 @@ fn r1838003_the_card_a_trade_would_draw_never_changes_the_decision() {
 /// Meditative #11 Double Header: a (4) Field Spell, Tradable.
 const DOUBLE_HEADER: &str = "meditative-011";
 
-/// The AI's turn holding Double Header and a Mr. Vanilla with 1 mana, at `max` crystals; the human's Mr.
-/// Vanilla on the field. At 1 crystal neither this turn's nor the next refresh's pay for Double Header.
+/// The AI's turn holding Double Header and a Mr. Vanilla with 1 mana, at `max` crystals, its started turns
+/// set to match; the human's Mr. Vanilla on the field. At 1 crystal neither this turn's nor the next
+/// refresh's pay for Double Header.
 fn dead_board(seed: &str, max: i32) -> GameState {
     register_cards();
     let mut state = scenario(json!({
@@ -103,7 +104,11 @@ fn dead_board(seed: &str, max: i32) -> GameState {
     }))
     .state()
     .clone();
-    state.players[AI].mana.max = max;
+    // The crystal count the refreshes set the maximum from (R1854003) moves with it, so the next refresh
+    // brings `max` + 1 and not the scenario's 4 back.
+    let side = &mut state.players[AI];
+    side.turns_started += max - jackioh_engine::mana_crystal_count(side);
+    side.mana.max = max;
     state
 }
 

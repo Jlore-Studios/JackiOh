@@ -1,11 +1,13 @@
 # training/ml
 
-The learned evaluation's fit (#466, #1009; `docs/learned-eval.md` D4, D5, D8) and the policy prior's
-(#1171): Python and CPU-only PyTorch over the positions `cargo jackioh positions` writes. It is kept
-apart from `analysis/`, so `super.yml`'s notebooks job never installs torch. Nothing in `crates/`,
-`apps/`, `e2e/` or `spec/` reads it; what it makes reaches the AI only as `crates/ai/src/learned/weights.json` (`export.py`,
-#1010) or `crates/ai/src/policy/weights.json` (`policy_fit.py`, #1171), through a reviewed pull
-request.
+Retired by #4159 (R4159000): nothing here reaches the AI; kept while `learn.yml` runs `retrain.sh` and
+`learn-promote.sh`.
+
+The learned evaluation's fit (#466, #1009; `docs/learned-eval.md` D4, D5, D8): Python and CPU-only
+PyTorch over the positions `cargo jackioh positions` writes. It is kept apart from `analysis/`, so
+`super.yml`'s notebooks job never installs torch. Nothing in `crates/`, `apps/`, `e2e/` or `spec/` reads
+it. What it made reached the AI only as `crates/ai/src/learned/weights.json` (`export.py`, #1010),
+through a reviewed pull request, until #4159 removed the network from the AI.
 
 ```
 uv sync --frozen --project training/ml                             # Python 3.13, torch (CPU) and the pins, into training/ml/.venv
@@ -24,8 +26,7 @@ To move a pin, edit `pyproject.toml`, run `uv lock --project training/ml` and co
    `cargo jackioh selfplay --games 2000 --seed <base> --out <dir>` (R1006001, R1006002).
 2. Positions: `cargo jackioh positions <dir>/selfplay-*.jsonl --out positions.jsonl` (one row per seat
    per turn, the default; `--every decision` for every decision), which drops and counts any game that
-   no longer replays (R1006003, R1006004). It prints `unknownShare`, the share of the cards its rows
-   name that the build's network has no row for (R3112002).
+   no longer replays (R1006003, R1006004).
 
 `training/ml/data/` and `training/ml/out/` are git-ignored: positions and fits are data. The fixture
 `tests/fixtures/positions.jsonl` (20 games, `selfplay --games 20 --seed ml-fixture`, 284 positions) is
@@ -72,8 +73,8 @@ every stage it writes.
 folded into an i16 first layer over the raw dense features, i8 head layers, i64 sums, floor shifts and
 clips to `[0, 127]`, and one division into the logit (R1011000). `--report` gives the integer network's
 held-out log loss beside the float one's and their largest difference in logits.
-`--random 1011 --positions tests/fixtures/positions.jsonl --parity
-crates/ai/tests/fixtures/learned-parity.json` writes the parity fixture both builds are held to.
+`--random 1011 --positions tests/fixtures/positions.jsonl --parity <file>` writes a parity fixture; the
+one the Rust and WASM builds were held to went with the network (R4159000).
 
 ## The retrain
 
@@ -88,28 +89,4 @@ run, one after another (`training/learn.md`).
 
 ## The policy prior (#1171)
 
-The policy prior (`crates/ai/src/policy.rs`, R1171000, R1171001) re-sorts the moves the beam expands
-before it takes its first `root_branching` or `branching`, so a move the heuristic tiers rank past
-that prefix can still be searched. Its data is `cargo jackioh positions --every decision --policy`:
-each decision row labeled with the keys of every candidate the AI considered there, in the heuristic
-order, and the move it played.
-
-`python -m jackioh_ml.policy_fit <positions>… --out <dir>` (`jackioh_ml/policy_fit.py`) refuses a file
-without labels or a `policyKeysVersion` that differs between files, holds 10% of the games out whole
-(by `data.game_bucket`, as the evaluation's fit does), and fits one weight per key seen in 20 or more
-training moves on the first 20,000 of the other games: a multinomial logit of the move played among
-the decision's moves that are not End Turn (the beam always keeps End Turn), L2 1e-4, full-batch
-L-BFGS on one thread, so a refit gives the same weights. `<dir>/report.md` and `report.json` give, on
-the held-out decisions that played a move, where it sits in the heuristic order and in the prior's:
-`top1`, `within6` and `within20` (the beam's branching and root branching) and `meanRank`, with the
-prior's log loss beside a uniform choice's. The decision is **go** when the prior's `within6` beats the
-heuristic order's. That is a precondition only: the moves played are the heuristic's own choices, so a
-prior can merely imitate them, and only the screen and the gate judge the strength.
-`<dir>/weights.json` is the table `crates/ai/build.rs` compiles in.
-
-`training/ml/retrain_policy.sh` is the same loop as `retrain.sh` for the prior: the logs, the labeled
-positions, the fit (stopping unless the decision is go), the table into
-`crates/ai/src/policy/weights.json` with `AI_MOVE_ORDER` set to `Learned`, the parent, the candidate
-and the 800-game screen on `improve-dev`, printing the learn lane's gate only when the screen's
-`edgeLow` is above zero. The checked-in table is the null one and the switch is off: turning it on is
-a promotion, the table and the switch in one change.
+The policy prior (#1171) is retired (R4159000).

@@ -1,5 +1,9 @@
 # A learned evaluation for the AI (#466): options and a plan
 
+> **Retired by #4159** (R4159000): the AI plays the hand evaluation `AI_EVAL` alone; the network, the
+> policy prior and `learned_parity` are gone. The learn lane's workflows stay until a person removes
+> them. This note is the record.
+
 Issue #466 proposes a small neural network, trained in Python on self-play and run in Rust inside
 `crates/ai`, to replace or blend with the hand-written evaluation (`crates/ai/src/evaluate.rs`, SPEC
 §9.9 "Evaluation"). This note is its planning pass of 2026-10-15. It sets out what changed since

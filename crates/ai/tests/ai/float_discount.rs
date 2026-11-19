@@ -115,7 +115,8 @@ fn r3695000_with_no_float_card_in_hand_every_score_is_as_before() {
         let end = ended(&s);
         close(
             passed(&s),
-            line_score(&end, AI, NextSwing::Enemy, Prices::NONE) - AI_EVAL.unspent_mana * f64::from(float),
+            evaluate_priced(&end, AI, NextSwing::Enemy, &AI_EVAL, Prices::NONE)
+                - AI_EVAL.unspent_mana * f64::from(float),
         );
         assert_eq!(float_credit(&end, AI, float, &AI_EVAL), 0.0);
     }
@@ -181,7 +182,8 @@ fn r3695000_a_reply_scored_line_carries_the_credit() {
     let score = reply_score(&end, AI, 9, &create_node_counter(20, None), &hidden, Prices::NONE);
     close(
         score.expect("a score"),
-        finalist_score(&after, AI, NextSwing::Seat, Prices::NONE) - AI_EVAL.unspent_mana * 2.0 + credit,
+        evaluate_priced(&after, AI, NextSwing::Seat, &AI_EVAL, Prices::NONE) - AI_EVAL.unspent_mana * 2.0
+            + credit,
     );
 }
 
@@ -349,12 +351,8 @@ fn hard_on_seven(others: &[&str], enemy: Value) -> GameState {
 /// Drone Core X while the layers beneath the Shield Layer counted nothing. X costs all 7, so it is cast
 /// first or not that turn.
 #[test]
-fn r3695001_hard_on_seven_crystals_casts_drone_core_x_over_genn_or_greaser() {
-    for (others, enemy) in [
-        (&[GENN][..], json!([])),
-        (&[GENN][..], json!([VANILLA])),
-        (&[GREASER][..], json!([])),
-    ] {
+fn r3695001_hard_on_seven_crystals_casts_drone_core_x_over_greaser_or_over_genn_facing_a_unit() {
+    for (others, enemy) in [(&[GENN][..], json!([VANILLA])), (&[GREASER][..], json!([]))] {
         let s = hard_on_seven(others, enemy.clone());
         let x = s.players[AI].hand[0].id.clone();
         assert_eq!(
@@ -370,5 +368,23 @@ fn r3695001_hard_on_seven_crystals_casts_drone_core_x_over_genn_or_greaser() {
                 decision.action
             );
         }
+    }
+}
+
+/// R3695001, R4159000: on an empty board Hard plays Genn before Drone Core X on every stream, as the hand
+/// eval alone scores it; the layers beneath still count (above), and facing a unit X comes first.
+#[test]
+fn r3695001_r4159000_on_an_empty_board_hard_plays_genn_before_drone_core_x() {
+    let s = hard_on_seven(&[GENN], json!([]));
+    let genn = s.players[AI].hand[1].id.clone();
+    assert_eq!(s.players[AI].hand[1].def_id, GENN);
+    for cursor in 0..3 {
+        let decision =
+            decide(&s, AI, &mut AiOptions::new(create_rng("ai-float-x", cursor))).expect("a decision");
+        assert!(
+            plays(std::slice::from_ref(&decision.action), &genn),
+            "cursor {cursor}: {:?}",
+            decision.action
+        );
     }
 }

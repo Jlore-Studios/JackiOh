@@ -366,8 +366,7 @@ mod tests {
             crate::positions::fold_game(
                 &line,
                 crate::positions::Every::Turn,
-                jackioh_cards::catalog_version(),
-                false
+                jackioh_cards::catalog_version()
             ),
             Err(crate::positions::Dropped::NoResult)
         );
@@ -458,12 +457,12 @@ mod tests {
             line.faults
         );
         assert_eq!(
-            crate::positions::fold_game(&line, crate::positions::Every::Turn, build, false),
+            crate::positions::fold_game(&line, crate::positions::Every::Turn, build),
             Err(crate::positions::Dropped::Unclean)
         );
         let mut clean = line.clone();
         clean.faults.clear();
-        assert!(crate::positions::fold_game(&clean, crate::positions::Every::Turn, build, false).is_ok());
+        assert!(crate::positions::fold_game(&clean, crate::positions::Every::Turn, build).is_ok());
         let text = serde_json::to_string(&clean).unwrap();
         assert!(!text.contains("\"faults\""), "{text}");
         assert_eq!(serde_json::from_str::<SelfplayGame>(&text).unwrap(), clean);

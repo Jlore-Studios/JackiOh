@@ -612,16 +612,6 @@ pub fn choose_action(
     to_json(&json!({ "action": action, "rngCursor": rng.cursor() }))
 }
 
-/// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`) as
-/// this build computes it: its integer network's correction for each case, in order. The web's tests hold
-/// the WASM build to the fixture's numbers bit for bit, as `cargo test -p jackioh-ai` does the native one.
-pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
-    let fixture: serde_json::Value = serde_json::from_str(fixture_json)
-        .map_err(|error| format!("the parity fixture is not JSON: {error}"))?;
-    let answers = jackioh_ai::parity_answers(&fixture)?;
-    to_json(&answers)
-}
-
 // The engine's tables the web's tests read (`subsystems.*`)
 
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the

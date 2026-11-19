@@ -143,7 +143,6 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `economy(call)` | string | #3104: one call of `jackioh-shared`'s collection economy, an `EconomyCall` in and an `EconomyAnswer` out (`openCardPack` and `openCosmeticPack` take the records the store read, the seed and the time, and answer the slots, the `grants` to write in order and the `log` every row's `ref` carries; `payGame`, `payXp`, `startingRewards` and the quest calls answer the grants to write, in order; `fillBar` and `levelReward` are reads); the host reads the records from its store and writes the grants back (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
-| `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |
 | `preview_sets(sets)` | string | nothing (an empty result); a module built with `preview` previews the sets |
 | `run_content()`, `run_constants()` | | the dungeon run's content and numbers |
 | `run_content_at(version)` | string | R3496000: the dungeon run's content for a catalog version: the build's own, a carried version's, or `null` when this build carries it no longer |

@@ -101,7 +101,6 @@ const WRAPPERS: readonly (readonly [string, (wasm: Wasm) => unknown])[] = [
   ["dealEmoteHand", (w) => w.dealEmoteHand(ANY, ANY)],
   ["previewSets", (w) => w.previewSets(ANY)],
   ["registeredCatalog", (w) => w.registeredCatalog()],
-  ["learnedParity", (w) => w.learnedParity(ANY)],
   ["catalogVersion", (w) => w.catalogVersion()],
   ["carriedVersions", (w) => w.carriedVersions()],
   ["runContent", (w) => w.runContent()],

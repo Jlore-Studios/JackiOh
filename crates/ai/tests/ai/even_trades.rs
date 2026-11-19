@@ -99,14 +99,7 @@ fn wrong_house_attackers_trade_into_the_taunt_is_within_branching_after_its_play
     let after = act(&state, AI, &play);
 
     let trade = attack(&unit_id(&after, AI, WRONG_HOUSE), &unit_id(&after, HUMAN, MENACE));
-    let expanded = expansion(
-        &after,
-        AI,
-        AI_BUDGET.branching,
-        MoveOrder::Heuristic,
-        &POLICY_PRIOR,
-        Prices::NONE,
-    );
+    let expanded = expansion(&after, AI, AI_BUDGET.branching, Prices::NONE);
     assert!(
         expanded.contains(&trade),
         "the Attacker's trade into the Menace is within {}: {:?}",

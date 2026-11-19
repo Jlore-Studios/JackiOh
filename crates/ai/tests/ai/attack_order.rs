@@ -91,14 +91,7 @@ fn the_engines_kill_goes_before_every_hit_on_the_hero_and_the_oomens_after() {
 fn the_engines_kill_is_within_branching_on_a_crowded_board() {
     // Five hits on the hero and the first winning trade, the Oomen's, filled the six before #2825.
     let state = crowded("ai-attack-order-branching", 30, engine_and_oomen());
-    let expanded = expansion(
-        &state,
-        AI,
-        AI_BUDGET.branching,
-        MoveOrder::Heuristic,
-        &POLICY_PRIOR,
-        Prices::NONE,
-    );
+    let expanded = expansion(&state, AI, AI_BUDGET.branching, Prices::NONE);
     let engine = unit_id(&state, HUMAN, TRICKSTER);
     assert!(
         expanded

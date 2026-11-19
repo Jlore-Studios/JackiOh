@@ -75,6 +75,7 @@ pub enum Lane {
     /// Idle while the parent has none (`lane_done`).
     Unban,
     /// The learned evaluation, retrained by a script (R1012000): improve's test on its own deals.
+    /// Retired with the network (R4159000); kept while `learn.yml` runs it (CLAUDE.md rule 13).
     Learn,
 }
 

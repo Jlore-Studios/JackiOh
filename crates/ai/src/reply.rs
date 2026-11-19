@@ -32,7 +32,6 @@ use crate::evaluate::{
     NextSwing, Prices, coming_mana, evaluate_priced, float_credit, heal_converted, heal_worth,
     hero_ticks_added, kill_worth, unit_worth,
 };
-use crate::learned::finalist_score;
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
     AnswersTried, LineStatus, best_auto_answer, charge_announced, line_status, note_sim_panic, simulate,
@@ -850,10 +849,9 @@ pub fn reply_score(
     if status == LineStatus::Over {
         return Some(static_score(end, seat, root_turn, prices));
     }
-    // A line that stopped on the seat's own prompt keeps its static score, from the evaluation that
-    // scores the finalists (#1010).
+    // A line that stopped on the seat's own prompt keeps its static score, the hand eval's.
     if status == LineStatus::Open {
-        return Some(finalist_score(end, seat, NextSwing::Enemy, prices));
+        return Some(evaluate_priced(end, seat, NextSwing::Enemy, &AI_EVAL, prices));
     }
     let unspent = if status == LineStatus::Passed {
         end.players[seat].turn_log.unspent_at_end.unwrap_or(0)
@@ -872,7 +870,7 @@ pub fn reply_score(
     Some(first + share * (second - first))
 }
 
-/// A passed line's score at `after`, where the reply from `end` stopped: the finalists' evaluation
+/// A passed line's score at `after`, where the reply from `end` stopped: the hand eval
 /// with whoever swings next, less the crystals the line left `unspent`, plus what that Float brought
 /// its Float-discount cards at `end` (R3695000).
 fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i32, prices: &Prices) -> f64 {
@@ -888,7 +886,7 @@ fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i3
     } else {
         0.0
     };
-    finalist_score(after, seat, next, prices) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
+    evaluate_priced(after, seat, next, &AI_EVAL, prices) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
         + float_credit(end, seat, unspent, &AI_EVAL)
 }
 

@@ -23,7 +23,6 @@ use crate::config::{
     AI_EVAL, AI_KY_COMPETITION_EXPECTED_STREAK, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AI_SEARCH,
 };
 use crate::evaluate::{NextSwing, Prices, evaluate_priced, feng_shui_acts, float_credit};
-use crate::learned::{line_score, open_score};
 use crate::types::{NodeCounter, StoppedBy};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -684,7 +683,7 @@ fn step_answer(
 /// how the beam ranks a child that waits there (search.rs): every prompt open on the way, either seat's,
 /// gets its holder's best auto-answer (`best_auto_answer`, each answer one node of `counter`), but the
 /// seat's own question it works out answered as `decide` would (`worked_step`, #2929), at most
-/// AI_SEARCH.max_auto_answers prompts, and the state reached is scored by `open_score`. Only a score: the
+/// AI_SEARCH.max_auto_answers prompts, and the state reached is scored by the hand eval. Only a score: the
 /// child stays at its prompt, and keeps its plain evaluation on `None`.
 pub fn own_prompt_score(
     state: &GameState,
@@ -719,7 +718,13 @@ pub fn own_prompt_score(
                 best_auto_answer(&current, answerer, AnswersTried::Drawn, counter, "ahead", prices)?.ok()?;
             answered += 1;
         }
-        Some(open_score(&current, seat, NextSwing::Enemy, prices))
+        Some(evaluate_priced(
+            &current,
+            seat,
+            NextSwing::Enemy,
+            &AI_EVAL,
+            prices,
+        ))
     }));
     run.unwrap_or_else(|payload| {
         note_sim_panic(counter, payload.as_ref());
@@ -844,11 +849,12 @@ fn simulate_answering(
     }
 }
 
-/// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent,
+/// A passed turn's value: the line's hand eval, less the crystals the seat left unspent,
 /// plus what that Float brought its Float-discount cards (R3695000).
 fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
     let unspent = state.players[seat].turn_log.unspent_at_end.unwrap_or(0);
-    line_score(state, seat, NextSwing::Enemy, prices) - AI_EVAL.unspent_mana * f64::from(unspent)
+    evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices)
+        - AI_EVAL.unspent_mana * f64::from(unspent)
         + float_credit(state, seat, unspent, &AI_EVAL)
 }
 
@@ -888,12 +894,12 @@ pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32, prices: &
     if line_status(state, seat, root_turn) == LineStatus::Passed {
         passed_score(state, seat, prices)
     } else {
-        line_score(state, seat, NextSwing::Enemy, prices)
+        evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices)
     }
 }
 
 /// A line's value: `static_score`, but an open line is first closed with an endTurn if the seat is in its
-/// main phase and a node is left (R1012002).
+/// main phase and a node is left.
 pub fn terminal_score(
     state: &GameState,
     seat: PlayerId,
@@ -904,7 +910,7 @@ pub fn terminal_score(
     let status = line_status(state, seat, root_turn);
     if status == LineStatus::Open {
         return match close_line_step(state, seat, root_turn, counter, prices) {
-            None => line_score(state, seat, NextSwing::Enemy, prices),
+            None => evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices),
             Some(closed) => static_score(&closed, seat, root_turn, prices),
         };
     }

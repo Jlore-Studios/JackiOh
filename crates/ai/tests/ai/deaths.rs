@@ -737,9 +737,9 @@ fn r2687000_decide_plays_comet_crash_and_bauble_bubble_when_nothing_else_is_wort
     }
 }
 
-/// R3038003: the root of the removal test holds a Starship Piece, so a finalist is scored by the hand eval
-/// in every determinization, and the hand eval keeps the vanilla kill above the piece kill by the margin
-/// R2566000's price gives it, whatever the network, fitted before any Starship, would add to either.
+/// R3038003: the root of the removal test holds a Starship Piece, and the hand eval, which scores every
+/// finalist (R4159000), keeps the vanilla kill above the piece kill in every determinization by the margin
+/// R2566000's price gives it.
 #[test]
 fn r3038003_given_one_removal_every_determinization_scores_the_vanilla_kill_above_the_piece_kill() {
     register_cards();
@@ -757,10 +757,6 @@ fn r3038003_given_one_removal_every_determinization_scores_the_vanilla_kill_abov
         .state()
         .clone();
         let public = redact(&state, AI);
-        assert!(
-            holds_starship(&public, AI),
-            "{at}: the enemy's piece is on its field"
-        );
         let ground = det_ground(&public, AI);
         let probe = determinize_on(
             &public,
@@ -772,7 +768,6 @@ fn r3038003_given_one_removal_every_determinization_scores_the_vanilla_kill_abov
         let counter = create_node_counter(AI_BUDGET.nodes * 100, None);
         let prices = Prices {
             deaths: death_prices(&probe, AI, &counter),
-            starship_root: holds_starship(&public, AI),
             ..Prices::default()
         };
         let mut rng = create_rng(&seed, 0);

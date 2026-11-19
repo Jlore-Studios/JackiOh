@@ -1,16 +1,20 @@
 # The AI training lanes
 
-**Since 2026-10-25 the AI improves itself through the `learn` lane alone**, with no LLM in the loop
-([`learn.md`](learn.md)). On GitHub's runners (the owner's PC until #3740), one run after another, a script plays the AI on `main`
-against itself, retrains the learned evaluation on those games, and gates the result against the AI
-on `main`. A pass opens its own pull request with auto-merge on, and every run's games go into the
-card statistics as development records (#1976). #682's audit
+**The learn lane is retired (#4159, R4159000)**: the AI plays its hand-written evaluation `AI_EVAL`
+alone, and the learned network and the policy prior are gone from it. From 2026-10-25 the AI improved
+itself through the `learn` lane alone, with no LLM in the loop ([`learn.md`](learn.md)). On GitHub's
+runners (the owner's PC until #3740), one run after another, a script played the AI on `main` against
+itself, retrained the learned evaluation on those games, and gated the result against the AI on
+`main`. A pass opened its own pull request with auto-merge on, and every run's games went into the
+card statistics as development records (#1976). It promoted once, generation 13 (2026-10-21), and
+could not keep up with daily patches, so the owner retired it on 2026-11-18; its workflows run until a
+person removes them (CLAUDE.md rule 13). #682's audit
 (`reviews/2026-10-22-issue-682-subscriptions.md`) stopped the two LLM lanes, `improve` and `unban`:
 they made no fair promotion in about 427 hours of Muse and Devin sessions, while `learn` made
 generation 13 (#1677). The shadow ban is now measured by a sweep of record, which #1675's took from
 17 cards to 1 and #1889's to none, and fixed through ordinary issues. Since #1678 a sweep of record runs
 by itself after every promotion and every set that ships, on GitHub's runners
-(`.github/workflows/sweep.yml`, R1678000), so the table keeps step with the AI the learn lane promotes.
+(`.github/workflows/sweep.yml`, R1678000), so the table keeps step with the AI on `main`.
 
 The lanes below improve JackiOh's AI (`crates/ai/`, SPEC §9.9), each gated by a fixed number of
 games against the AI on `main`, and nothing else: since generation 9 they play no games against
@@ -22,12 +26,13 @@ docs/v0.3.0/SURFACE.md §14.
 |---|---|---|
 | `improve` | **stopped (#1677).** A stronger AI: pass the sequential test against its predecessor on paired deals (R850000, R1679000) | [`improve.md`](improve.md) |
 | `unban` | **stopped (#1677).** An AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, and the same test passed | [`unban.md`](unban.md) |
-| `gather` | no change to the AI: development records for the card win rates (R378), without end; since #1676 the development records come from the learn lane's exports (The gather lane) | [`gather.md`](gather.md) |
-| `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: the same test, on deals of its own (R1012000) | [`learn.md`](learn.md) |
+| `gather` | no change to the AI: development records for the card win rates (R378), without end; since #1676 the development records come from the learn lane's exports and `gather.yml`'s, which keeps filing them on its own once the retired learn lane's workflow is removed (The gather lane) | [`gather.md`](gather.md) |
+| `learn` | **retired (#4159).** A stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: the same test, on deals of its own (R1012000) | [`learn.md`](learn.md) |
 
 The `gather` lane runs no model session and opens no pull request (The gather lane, below). The
-`learn` lane runs no model session either and needs no box: it is a GitHub workflow,
-`.github/workflows/learn.yml`, and its contract is [`learn.md`](learn.md).
+`learn` lane, **retired (#4159)**, ran no model session either and needed no box: it is a GitHub
+workflow, `.github/workflows/learn.yml`, which runs until a person removes it, and its contract is
+[`learn.md`](learn.md). The AI it retrained no longer compiles a network (R4159000).
 
 Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
@@ -304,7 +309,8 @@ thread count.
 
 ## The gather lane
 
-Since #1676 the development games come from the learn lane's exports. `cargo jackioh stats
+Since #1676 the development games come from the learn lane's exports (the lane is retired by #4159 and
+files them only until a person removes its workflow; `gather.yml`, below, keeps filing on its own). `cargo jackioh stats
 from-selfplay <shards>… --out <file>` files each game of an export that still replays under the
 catalog it was played on, finished and clean, as a development record `dev:<patch>:selfplay:<base>:<n>`,
 and counts the rest (R1676000). Since #1976 `learn.yml` does it after every export (its `import` job,
@@ -433,7 +439,7 @@ The live games' records are what the gather lane's figures sit beside, and they 
 
 ## Where the exports come from
 
-The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play exports: game logs
+The self-play exports (which fed the learned evaluation, retired by #4159; #466, `docs/learned-eval.md`) are game logs
 `cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
 `gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=80]` plays it in shards on

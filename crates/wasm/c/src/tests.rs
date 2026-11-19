@@ -241,9 +241,6 @@ fn static_exports_answer_what_the_core_bodies_answer() {
     let crafted = answered(craft_preview("{}".as_ptr(), 2, 1.0, "{}".as_ptr(), 2));
     assert_eq!(crafted, expect(wasm_core::craft_preview("{}", 1.0, "{}")));
     assert_eq!(crafted.status, STATUS_FAILED);
-    let parity = call!(learned_parity; "{}";);
-    assert_eq!(parity, expect(wasm_core::learned_parity("{}")));
-    assert_eq!(parity.status, STATUS_FAILED);
     // No set to preview is no preview, which every module takes: the result is empty.
     assert_eq!(
         call!(preview_sets; "[]";),

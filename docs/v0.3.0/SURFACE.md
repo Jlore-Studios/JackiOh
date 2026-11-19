@@ -888,7 +888,7 @@ Both sides test against one fixture, `crates/engine/tests/fixtures/code-input-ca
 
 ### 10.5 The C module (`crates/wasm/c`, #3093)
 
-`jackioh-wasm-c` exports every binding of §10.1 (and `learned_parity` and the `duos_*` bindings the
+`jackioh-wasm-c` exports every binding of §10.1 (and the `duos_*` bindings the
 browser module also binds) as an `extern "C"` function over JSON strings, built as a plain
 `wasm32-unknown-unknown` `cdylib`: no wasm-bindgen glue, no JavaScript, no system interface, so its
 import section is empty and a host that is not JavaScript instantiates it with no imports. It is a second
@@ -1251,7 +1251,7 @@ it fails. A promotion's `vsParent` is the wins out of the games of the deals it 
 |---|---|---|
 | `improve` | the test passes | — |
 | `unban` | the test passes | strictly fewer than the parent's |
-| `learn` | the test passes, on deals of its own (R1012000) | — |
+| `learn` | the test passes, on deals of its own (R1012000); retired with the learned evaluation by #4159 (R4159000), kept while `learn.yml` runs it | — |
 
 The improve lane's bar was 65 of 100 until issue #850 (R732001), then 220 of 400 paired games until
 issue #1679 (R850000), and the unban lane's 60 of 100 unpaired games.
