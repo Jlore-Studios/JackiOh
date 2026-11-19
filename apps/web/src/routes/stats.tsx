@@ -1,20 +1,21 @@
-// `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on three tabs: Cards
-// (the filters, not columns, cover cost, rarity and keyword, R2446000), Sets (R1966000) and Players (public
-// aggregates, fun stats from #125). No provisional banner and no reading notes (R2325000): the page never
-// names a data source or the gate (R661). Below the per-row floor a row reads "not enough games". The Adjusted
-// win rate leads (R2777000), so the table shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000);
-// with the ranges shown, a tier says how much of the card's range is in it (R3184001). The patch bar
-// (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of its own; each
-// offered patch is a tab, and the newest, short of games, says its data is still being collected (R3324000).
-// The header names the current patch (R3324001), and the games tile the patch its games were collected on
-// (R3447000). The Cards tab also holds the games panel (R1994000) and the cards made during a game, the Tokens and
-// the Other created cards, two sections that share no row and show the deck table's columns, opening a row's
-// drill-down as a deck row does (R2089000, R2370000, R3184002, R3324002, R4155000); its
-// on/off controls are the Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art
-// card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played
-// synergy. R3838000: its "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx).
-// R3887000: the Cards tab's "Plain text" button prints each card it lists, and the drill-down's text and its Reference
-// cards, as readable text, no face (PlainText.tsx).
+// `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on four tabs, each a raised
+// button naming what it shows (R4279001): Cards (the filters, not columns, cover cost, rarity and keyword,
+// R2446000), Tokens (R4279001), Sets (R1966000) and Players (public aggregates, fun stats from #125). No
+// provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661).
+// Below the per-row floor a row reads "not enough games". The Adjusted win rate leads (R2777000), so the table
+// shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000); with the ranges shown, a tier says how
+// much of the card's range is in it (R3184001). The patch bar (R1973002): a patch is the window the cards share
+// (R1973001), so a micro is never a step of its own; each offered patch is a tab, and the newest, short of games,
+// says its data is still being collected (R3324000). The header names the current patch (R3324001), and the games
+// tile the patch its games were collected on (R3447000). The Cards tab also holds the games panel (R1994000). The
+// Tokens tab holds the cards made during a game, the Tokens and the Other created cards, two sections that share
+// no row and show the deck table's columns, opening a row's drill-down as a deck row does, under the Cards tab's
+// filters (R2089000, R2370000, R3184002, R3324002, R4155000, R4279001). The page's on/off controls are the
+// Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art card's still Epic while
+// the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy. R3838000: its
+// "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx). R3887000: the
+// Cards and Tokens tabs' "Plain text" button prints each card they list, and the drill-down's text and its
+// Reference cards, as readable text, no face (PlainText.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
@@ -160,7 +161,7 @@ function setPercent(rate: number, signed = false): string {
   });
 }
 
-type TabKey = "cards" | "sets" | "players";
+type TabKey = "cards" | "tokens" | "sets" | "players";
 type ViewKey = "table" | "grid";
 type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
@@ -254,6 +255,16 @@ function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: st
  * R3324000: the Cards or Sets tab of a patch still collecting its data: the words in place of its figures, and the
  * way to the patch before. No count and no progress (R661).
  */
+/** R4279001: a view's tab, its name over a line of what it shows, so the row reads as places to go. */
+function TabLabel({ name, hint }: { name: string; hint: string }): ReactElement {
+  return (
+    <>
+      <span className="stats-tab-name">{name}</span>
+      <span className="stats-tab-hint">{hint}</span>
+    </>
+  );
+}
+
 function CollectingNote({
   patch,
   previous,
@@ -296,7 +307,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
   const [tab, setTab] = useState<TabKey>(() => {
     const asked = initialParams.get("tab");
-    return asked === "sets" || asked === "players" ? asked : "cards";
+    return asked === "tokens" || asked === "sets" || asked === "players" ? asked : "cards";
   });
   const [patch, setPatch] = useState<string>(initialParams.get("patch") ?? "");
   const [search, setSearch] = useState<string>(initialParams.get("search") ?? "");
@@ -666,6 +677,98 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
 
+  // R4279001: the Cards and Tokens tabs' filters, one set of state: the search, the set, rarity and cost the
+  // read asks for, the match type, and on the Cards tab the keyword, which only the deck table reads.
+  const cardFilters = (withKeyword: boolean): ReactElement => (
+    <>
+      <input
+        type="search"
+        className="stats-search-input"
+        data-testid={statsTestid.searchInput}
+        placeholder={t("Search card by name or id…")}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      <div className="stats-filter-selects">
+        <select
+          className="stats-select"
+          value={setFilter}
+          onChange={(e) => setSetFilter(e.target.value)}
+          aria-label={t("Filter by set")}
+        >
+          <option value="">{t("All sets")}</option>
+          {/* R1420: every set that ships, and only those. The server compares the value with each card's set, case folded. */}
+          {SHIPPED_SETS.map((set) => (
+            <option key={set} value={set.toLowerCase()}>
+              {t(set)}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="stats-select"
+          value={rarityFilter}
+          onChange={(e) => setRarityFilter(e.target.value)}
+          aria-label={t("Filter by rarity")}
+        >
+          <option value="">{t("All rarities")}</option>
+          <option value="Common">{t("Common")}</option>
+          <option value="Rare">{t("Rare")}</option>
+          <option value="Epic">{t("Epic")}</option>
+          <option value="Legendary">{t("Legendary")}</option>
+          <option value="Mythic">{t("Mythic")}</option>
+        </select>
+
+        <select
+          className="stats-select"
+          value={costFilter}
+          onChange={(e) => setCostFilter(e.target.value)}
+          aria-label={t("Filter by cost")}
+        >
+          <option value="">{t("All costs")}</option>
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6+</option>
+        </select>
+
+        {withKeyword && (
+          <select
+            className="stats-select"
+            value={keywordFilter}
+            onChange={(e) => setKeywordFilter(e.target.value)}
+            aria-label={t("Filter by keyword")}
+          >
+            <option value="">{t("All keywords")}</option>
+            {keywordOptions.map((kind) => (
+              <option key={kind} value={kind}>
+                {keywordName(kind)}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <select
+          className="stats-select"
+          data-testid={statsTestid.modeSelect}
+          value={mode}
+          onChange={(e) => setMode(modeOf(new URLSearchParams({ mode: e.target.value })))}
+          aria-label={t("Filter by match type")}
+        >
+          {MODES.map((known) => (
+            <option key={known} value={known}>
+              {t(MODE_LABELS[known])}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+
   return (
     <CardDefsProvider defs={catalog()}>
       <div className="app-shell app-shell--wide tavern stats-page one-screen" data-testid={statsTestid.screen}>
@@ -756,7 +859,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
           items={[
             {
               id: "cards",
-              label: t("Cards"),
+              label: <TabLabel name={t("Cards")} hint={t("Win rate and tier of every card")} />,
               testId: statsTestid.tabCards,
               panelClassName: "stats-panel one-screen__body",
               // R3324000: a patch still collecting its data shows no figures.
@@ -769,89 +872,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
             {/* Filter controls */}
             <div className="stats-filter-bar">
-              <input
-                type="search"
-                className="stats-search-input"
-                data-testid={statsTestid.searchInput}
-                placeholder={t("Search card by name or id…")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-
-              <div className="stats-filter-selects">
-                <select
-                  className="stats-select"
-                  value={setFilter}
-                  onChange={(e) => setSetFilter(e.target.value)}
-                  aria-label={t("Filter by set")}
-                >
-                  <option value="">{t("All sets")}</option>
-                  {/* R1420: every set that ships, and only those. The server compares the value with each card's set, case folded. */}
-                  {SHIPPED_SETS.map((set) => (
-                    <option key={set} value={set.toLowerCase()}>
-                      {t(set)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="stats-select"
-                  value={rarityFilter}
-                  onChange={(e) => setRarityFilter(e.target.value)}
-                  aria-label={t("Filter by rarity")}
-                >
-                  <option value="">{t("All rarities")}</option>
-                  <option value="Common">{t("Common")}</option>
-                  <option value="Rare">{t("Rare")}</option>
-                  <option value="Epic">{t("Epic")}</option>
-                  <option value="Legendary">{t("Legendary")}</option>
-                  <option value="Mythic">{t("Mythic")}</option>
-                </select>
-
-                <select
-                  className="stats-select"
-                  value={costFilter}
-                  onChange={(e) => setCostFilter(e.target.value)}
-                  aria-label={t("Filter by cost")}
-                >
-                  <option value="">{t("All costs")}</option>
-                  <option value="0">0</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6+</option>
-                </select>
-
-                <select
-                  className="stats-select"
-                  value={keywordFilter}
-                  onChange={(e) => setKeywordFilter(e.target.value)}
-                  aria-label={t("Filter by keyword")}
-                >
-                  <option value="">{t("All keywords")}</option>
-                  {keywordOptions.map((kind) => (
-                    <option key={kind} value={kind}>
-                      {keywordName(kind)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="stats-select"
-                  data-testid={statsTestid.modeSelect}
-                  value={mode}
-                  onChange={(e) => setMode(modeOf(new URLSearchParams({ mode: e.target.value })))}
-                  aria-label={t("Filter by match type")}
-                >
-                  {MODES.map((known) => (
-                    <option key={known} value={known}>
-                      {t(MODE_LABELS[known])}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {cardFilters(true)}
 
               {/* R3324003: how the cards show, one row of labelled groups, every on/off control a pressed button */}
               <div className="stats-options">
@@ -1195,10 +1216,56 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 </table>
               </TableScroll>
             )}
+          </>
+        ),
+      },
+      {
+        id: "tokens",
+        label: <TabLabel name={t("Tokens")} hint={t("Tokens and other cards made in games")} />,
+        testId: statsTestid.tabTokens,
+        panelClassName: "stats-panel one-screen__body",
+        // R4279001: the cards made during a game, a tab of their own beside the deck cards' (R2089000, R3324002,
+        // R4155000): the tokens, then every other, no card in both, in the deck table's columns, each row
+        // opening the drill-down, under the Cards tab's filters. R3324000: a collecting patch shows no figures.
+        panel: collecting ? (
+          <CollectingNote patch={shownPatchName} previous={previousWindow} onPrevious={choosePatch} />
+        ) : (
+          <>
+            <div className="stats-filter-bar">
+              {cardFilters(false)}
+              <div className="stats-options">
+                <PlainTextButton shown={plain.shown} onToggle={plain.toggle} />
+                <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
+                  <span className="stats-sort-label" id="stats-columns-label">
+                    {t("Columns")}
+                  </span>
+                  <div className="segmented">
+                    <button
+                      type="button"
+                      className={`segmented__item stats-view-btn ${visibleCols.games ? "segmented__item--selected" : ""}`}
+                      data-testid={statsTestid.columnGames}
+                      aria-pressed={visibleCols.games}
+                      onClick={() => setVisibleCols((c) => ({ ...c, games: !c.games }))}
+                    >
+                      {t("Games")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            {/* R2089000, R3324002, R4155000: the cards made during a game, apart from the deck cards above:
-                the tokens, then every other, no card in both, in the deck table's columns, opening the drill-down */}
-            {!cardStatsLoading && !cardStatsError && (
+            {cardStatsLoading ? (
+              <Skeleton variant="table" label={t("Loading card statistics…")} />
+            ) : cardStatsError ? (
+              <div className="stats-error">
+                <p>{t("The card statistics didn't load.")}</p>
+                <button type="button" className="stats-retry-btn" onClick={() => setCardStatsAttempt((n) => n + 1)}>
+                  {t("Retry")}
+                </button>
+              </div>
+            ) : tokenCards.length === 0 && otherCreatedCards.length === 0 ? (
+              <EmptyState text={t("No tokens or created cards match the selected filters.")} />
+            ) : (
               <>
                 <CreatedPanel
                   kind="tokens"
@@ -1227,7 +1294,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       },
       {
         id: "sets",
-        label: t("Sets"),
+        label: <TabLabel name={t("Sets")} hint={t("How each set does")} />,
         testId: statsTestid.tabSets,
         panelClassName: "stats-panel one-screen__body",
         // R3324000: a patch still collecting its data has no sets to show.
@@ -1403,7 +1470,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       },
       {
         id: "players",
-        label: t("Players"),
+        label: <TabLabel name={t("Players")} hint={t("Every player's games and win rate")} />,
         testId: statsTestid.tabPlayers,
         panelClassName: "stats-panel one-screen__body",
         panel: (
