@@ -1071,6 +1071,12 @@
       "lines": [
         "approve"
       ]
+    },
+    "c:7002037549": {
+      "at": "2026-11-19T06:52:11Z",
+      "lines": [
+        "/harness suspend claude-3 off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then"
+      ]
     }
   },
   "items": {
