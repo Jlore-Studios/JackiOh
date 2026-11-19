@@ -15406,6 +15406,8 @@
     "4244": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "62fbc13ebe30c42dfde44622e213321d2ad91761",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-19T00:17:17Z",
