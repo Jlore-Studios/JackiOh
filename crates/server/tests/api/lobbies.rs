@@ -1103,6 +1103,165 @@ mod r4039000_the_invite_feed {
     }
 }
 
+// R4072000: an unstarted lobby follows the running catalog on its next read.
+
+mod r4072000_catalog_move {
+    use super::*;
+
+    /// Fakes a lobby made before a deploy: its stored catalog is older, same rev line.
+    async fn age_catalog(app: &Arc<App>, code: &str) -> i64 {
+        let mut lobby =
+            store!(app, tx => tx.lobbies_get(code).await.expect("lobbies.get")).expect("the lobby");
+        let rev = lobby.rev;
+        lobby.catalog_version = "v-before-the-deploy".to_string();
+        assert!(store!(app, tx => tx.lobbies_update(&lobby, rev).await.expect("lobbies.update")));
+        rev
+    }
+
+    async fn repick_and_ready(t: &Three, code: &str, host_deck: &str, guest_deck: &str) {
+        ok_act(
+            &t.app,
+            &t.host,
+            code,
+            "pick",
+            json!({ "mode": "bo1", "deckId": host_deck }),
+        )
+        .await;
+        ok_act(
+            &t.app,
+            &t.guest,
+            code,
+            "pick",
+            json!({ "mode": "bo1", "deckId": guest_deck }),
+        )
+        .await;
+        for who in [&t.host, &t.guest] {
+            ok_act(&t.app, who, code, "ready", json!({ "ready": true })).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn r4072000_an_unstarted_duel_moves_to_the_running_catalog_on_read() {
+        let t = three().await;
+        let (host_deck, guest_deck) = (uuid(10), uuid(11));
+        with_saved_deck(&t.app, &t.host, &host_deck, "Pyre Control").await;
+        with_saved_deck(&t.app, &t.guest, &guest_deck, "Tide Tempo").await;
+        let code = duel(&t.app, &t.host, "bo1").await;
+        ok_act(&t.app, &t.guest, &code, "enter", Value::Null).await;
+        repick_and_ready(&t, &code, &host_deck, &guest_deck).await;
+        assert_eq!(states(&view(&t.app, &t.host, &code).await), ["ready", "ready"]);
+
+        age_catalog(&t.app, &code).await;
+        let seen = view(&t.app, &t.host, &code).await;
+        assert_eq!(states(&seen), ["choosing", "choosing"], "{seen}");
+        assert!(seen["yourPick"].is_null(), "{seen}");
+        // Both seats are still seated; only the picks and the Readies went.
+        assert_eq!(seen["seats"][0]["player"]["username"], t.host.name);
+        assert_eq!(seen["seats"][1]["player"]["username"], t.guest.name);
+        let stored =
+            store!(t.app, tx => tx.lobbies_get(&code).await.expect("lobbies.get")).expect("the lobby");
+        assert_eq!(stored.catalog_version, jackioh_cards::catalog_version());
+
+        repick_and_ready(&t, &code, &host_deck, &guest_deck).await;
+        let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        assert!(!started["matchId"].is_null(), "{started}");
+    }
+
+    #[tokio::test]
+    async fn r4072000_a_co_op_lobby_moves_and_starts_again() {
+        let t = three().await;
+        let code = coop(&t.app, &t.host).await;
+        ok_act(&t.app, &t.guest, &code, "enter", Value::Null).await;
+        for who in [&t.host, &t.guest] {
+            ok_act(&t.app, who, &code, "pick", json!({ "random": true })).await;
+            ok_act(&t.app, who, &code, "ready", json!({ "ready": true })).await;
+        }
+        age_catalog(&t.app, &code).await;
+        let seen = view(&t.app, &t.host, &code).await;
+        assert_eq!(states(&seen), ["choosing", "choosing"], "{seen}");
+        for who in [&t.host, &t.guest] {
+            ok_act(&t.app, who, &code, "pick", json!({ "random": true })).await;
+            ok_act(&t.app, who, &code, "ready", json!({ "ready": true })).await;
+        }
+        let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        let match_id = started["matchId"].as_str().expect("a match id").to_string();
+        let row = store!(t.app, tx => tx.duos_matches_get(&match_id).await.expect("duos.matches.get"))
+            .expect("the co-op match");
+        assert_eq!(
+            (row.a1.as_str(), row.a2.as_str()),
+            (t.host.id.as_str(), t.guest.id.as_str())
+        );
+    }
+
+    #[tokio::test]
+    async fn r4072000_a_2v2_lobby_keeps_four_seats_and_two_teams() {
+        let t = five().await;
+        let code = full_two_v_two(&t).await;
+        let lineup = lineup_of(&view(&t.app, &t.host, &code).await);
+        age_catalog(&t.app, &code).await;
+        let seen = view(&t.app, &t.host, &code).await;
+        assert_eq!(lineup_of(&seen), lineup, "{seen}");
+        assert_eq!(
+            states(&seen),
+            ["choosing", "choosing", "choosing", "choosing"],
+            "{seen}"
+        );
+        assert_eq!(seen["settings"], json!({ "format": "2v2" }), "{seen}");
+        for who in [&t.host, &t.guest, &t.third, &t.fourth] {
+            ok_act(&t.app, who, &code, "pick", json!({ "random": true })).await;
+            ok_act(&t.app, who, &code, "ready", json!({ "ready": true })).await;
+        }
+        let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        assert!(!started["matchId"].is_null(), "{started}");
+    }
+
+    #[tokio::test]
+    async fn r4072000_a_friend_enters_a_lobby_left_under_an_older_catalog() {
+        let t = three().await;
+        let code = duel(&t.app, &t.host, "random").await;
+        age_catalog(&t.app, &code).await;
+        ok_act(&t.app, &t.guest, &code, "enter", Value::Null).await;
+        let seen = view(&t.app, &t.guest, &code).await;
+        assert_eq!(seen["you"], "guest", "{seen}");
+        assert_eq!(states(&seen), ["choosing", "choosing"], "{seen}");
+    }
+
+    #[tokio::test]
+    async fn r4072000_a_started_lobby_under_an_older_catalog_is_left_alone() {
+        let t = three().await;
+        let code = ready_random_duel(&t).await;
+        let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        let match_id = started["matchId"].as_str().expect("a match id").to_string();
+        age_catalog(&t.app, &code).await;
+        let seen = view(&t.app, &t.guest, &code).await;
+        assert!(!seen["startedAt"].is_null(), "{seen}");
+        assert_eq!(seen["matchId"], match_id.as_str(), "{seen}");
+        assert_eq!(states(&seen), ["ready", "ready"], "{seen}");
+        let stored =
+            store!(t.app, tx => tx.lobbies_get(&code).await.expect("lobbies.get")).expect("the lobby");
+        assert_eq!(stored.catalog_version, "v-before-the-deploy");
+    }
+
+    #[tokio::test]
+    async fn r4072000_two_reads_racing_the_move_both_get_the_lobby() {
+        let t = three().await;
+        let code = ready_random_duel(&t).await;
+        let aged_rev = age_catalog(&t.app, &code).await;
+        let ((host_status, host_body), (guest_status, guest_body)) =
+            tokio::join!(read(&t.app, &t.host, &code), read(&t.app, &t.guest, &code));
+        assert_eq!(host_status, 200, "{host_body}");
+        assert_eq!(guest_status, 200, "{guest_body}");
+        let stored =
+            store!(t.app, tx => tx.lobbies_get(&code).await.expect("lobbies.get")).expect("the lobby");
+        assert_eq!(stored.catalog_version, jackioh_cards::catalog_version());
+        assert_eq!(stored.rev, aged_rev + 1, "moved exactly once: {stored:?}");
+    }
+}
+
 mod r4233000_read_on_open {
     //! R4233000 (#4233): entering a lobby marks its `lobbyInvite` row read, and a `lobbyInvite`
     //! whose lobby has started, expired or closed counts as unread nowhere, even before any page

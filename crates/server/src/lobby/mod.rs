@@ -1,5 +1,5 @@
-//! Private lobbies (SPEC §9.5, §13.9; R3730000 to R3730006, R3731000 to R3731003; issues #3730,
-//! #3731): a friend game's pre-game stage, 1v1 in a room mode, co-op against the AI team, or a 2v2
+//! Private lobbies (SPEC §9.5, §13.9; R3730000 to R3730006, R3731000 to R3731003, R4072000;
+//! issues #3730, #3731, #4072): a friend game's pre-game stage, 1v1 in a room mode, co-op against the AI team, or a 2v2
 //! between two teams of two people, every route `AuthLevel::Active`.
 //!
 //! - `POST /api/lobbies` makes one (`201 {code}`), `GET /api/lobbies` lists the caller's.
@@ -20,7 +20,9 @@
 //!
 //! Blocks (§9.4, R1689000's reading) make a lobby read as unknown, and a guest a block now separates
 //! from the host (in a 2v2, from any member seated before them, R3731000) is dropped from the seat as
-//! the lobby is read. A refusal of a member's own doing is `409 conflict` with `details.reason`
+//! the lobby is read. A read may also write: an unstarted lobby under an older catalog moves onto the
+//! running one, every seat's pick removed and every Ready off (R4072000). A refusal of a member's own
+//! doing is `409 conflict` with `details.reason`
 //! naming it (`full`, `own_lobby`, `not_host`, `started`, `not_ready`, `no_pick`, `already_in`,
 //! `changed`, `busy`, and a 2v2's `team_full` and `host_stays`).
 
@@ -321,7 +323,51 @@ async fn load(app: &App, code: &str, caller: &str) -> Result<Lobby, ApiError> {
     if caller_blocked {
         return Err(not_open());
     }
+    // R4072000: an unstarted lobby under an older catalog moves onto the running one, the first
+    // time anyone opens or touches it after the patch. Every seat's pick is removed and every Ready
+    // turned off, since each pick was frozen under the old cards; seats, teams and settings stay. A
+    // started lobby is left alone, since its game pinned its catalog (R767000).
+    if lobby.started_at.is_none() && lobby.catalog_version != app.catalog.version {
+        let from = lobby.catalog_version.clone();
+        let mut next = lobby.clone();
+        next.catalog_version = app.catalog.version.clone();
+        next.host_pick = None;
+        next.guest_pick = None;
+        next.host_ready = false;
+        next.guest_ready = false;
+        for member in &mut next.others {
+            member.pick = None;
+            member.ready = false;
+        }
+        match write(app, &lobby, next, &[]).await {
+            Ok(moved) => {
+                tracing::info!(event = "lobby.catalog_moved", code = %code, from = %from, to = %app.catalog.version);
+                lobby = moved;
+            }
+            Err(error) if changed(&error) => {
+                // Another member's read moved it first: read once more rather than answering
+                // `409 changed`, and use what the store holds now.
+                let reread = one_tx!(app.db, |t| t.lobbies_get(code).await?)?;
+                let Some(reread) = reread.filter(|reread| reread.expires_at > now_ms()) else {
+                    return Err(not_open());
+                };
+                lobby = reread;
+            }
+            Err(error) => return Err(error),
+        }
+    }
     Ok(lobby)
+}
+
+/// Whether `error` is `write`'s compare-and-set refusal: another write landed first.
+fn changed(error: &ApiError) -> bool {
+    error.code == ApiErrorCode::Conflict
+        && error
+            .details
+            .as_ref()
+            .and_then(|details| details.get("reason"))
+            .and_then(|reason| reason.as_str())
+            == Some("changed")
 }
 
 /// `load`, for a member only: anyone else meets the 404 an unknown code does.
