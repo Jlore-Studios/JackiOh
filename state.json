@@ -15650,8 +15650,15 @@
     "what": "revise #4241 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-19T02:47:50Z",
-    "notes": [],
+    "at": "2026-11-19T02:51:46Z",
+    "notes": [
+      "#4241: `web (unit 7/8)` red in CI run 44441315953; its other early jobs have until 2026-11-19T02:54:22Z to report",
+      "delivered build #4238 on claude-3 (run 44430666818): built",
+      "started review #4253 on claude-3 (run 44447632312)",
+      "started revise #4241 on muse (run 44447713090)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16356,7 +16363,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T02:47:50Z",
+  "loop_tick": "2026-11-19T02:51:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
