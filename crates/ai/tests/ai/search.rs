@@ -1383,6 +1383,205 @@ mod lanes_that_play_differently {
         assert_eq!(lane(&neighbour), Some(1), "{}", trace(&turn));
         assert!(lane(&vanilla).is_some_and(|lane| lane >= 3), "{}", trace(&turn));
     }
+
+    /// C #6 Mana Well, a (2) Field Spell.
+    const MANA_WELL: &str = "core-006";
+    /// TG #21 Flame Tongue Totem: "Adjacent Units have +3 Attack."
+    const TOTEM: &str = "traininggrounds-021";
+    /// C #41 Sheepish, a Trap.
+    const SHEEPISH: &str = "core-041";
+    /// C #96 My Pawn, a Trap.
+    const MY_PAWN: &str = "core-096";
+
+    /// The lanes `lines` open by playing the AI's hand card of `def_id` into, lowest first, each once.
+    fn opening_lanes(state: &GameState, def_id: &str, lines: &[Line]) -> Vec<i32> {
+        let mut lanes: Vec<i32> = lines
+            .iter()
+            .flat_map(|line| lanes_of(state, def_id, line.actions.get(..1).unwrap_or_default()))
+            .collect();
+        lanes.sort();
+        lanes.dedup();
+        lanes
+    }
+
+    /// Every line's actions, for a failure's message.
+    fn line_keys(lines: &[Line]) -> String {
+        lines
+            .iter()
+            .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
+            .collect::<Vec<_>>()
+            .join(" | ")
+    }
+
+    /// One of the AI's Mr. Vanillas standing in lane 2 (in Defense Position, so it adds no attack to
+    /// the search), another in its hand: lane 1 is left of the standing unit, lanes 3 to 5 right of it.
+    fn standing_vanilla_board() -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "search-r4132000-sides",
+            "p1": {
+                "hand": [VANILLA],
+                "field": [{ "def": VANILLA, "lane": 2, "position": "DEF" }],
+                "library": LIBRARY,
+            },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// R4132000: the root offers Mana Well in three backrow lanes, which the evaluation cannot tell
+    /// apart. They take one line of the beam between them (and at most `AI_SEARCH.zone_variants` of
+    /// them end their turn beside it), so a line that opens with the vanilla keeps its place.
+    #[test]
+    fn r4132000_a_field_spells_backrow_lanes_take_one_beam_line_and_leave_room_for_another_play() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-r4132000-backrow",
+            "p1": { "hand": [MANA_WELL, VANILLA], "library": LIBRARY },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        let cap = AI_SEARCH.zone_variants as usize;
+        assert!(root_offered_lanes(&state, MANA_WELL).len() > cap);
+
+        let lines = beam_search(
+            &state,
+            AI,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            AI_BUDGET,
+            Prices::NONE,
+        );
+        let keys = line_keys(&lines);
+        assert!(opening_lanes(&state, MANA_WELL, &lines).len() <= cap, "{keys}");
+        assert!(!opening_lanes(&state, VANILLA, &lines).is_empty(), "{keys}");
+    }
+
+    /// R4132000: a vanilla played left of the AI's standing unit or right of it lists the two units in
+    /// another order, yet it is one play in two lanes: the beam opens with at most
+    /// `AI_SEARCH.zone_variants` of its placements, as it does for placements on one side (#1797).
+    #[test]
+    fn r4132000_a_unit_either_side_of_a_standing_unit_opens_at_most_zone_variants_lines_of_the_beam() {
+        let state = standing_vanilla_board();
+        let lanes = root_offered_lanes(&state, VANILLA);
+        assert!(
+            lanes.contains(&1) && lanes.iter().filter(|lane| **lane > 2).count() >= 2,
+            "{lanes:?}"
+        );
+
+        let lines = beam_search(
+            &state,
+            AI,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            AI_BUDGET,
+            Prices::NONE,
+        );
+        assert!(
+            opening_lanes(&state, VANILLA, &lines).len() <= AI_SEARCH.zone_variants as usize,
+            "{}",
+            line_keys(&lines)
+        );
+    }
+
+    /// R4132000: a vanilla played into lane 1, left of the AI's standing unit, or into lane 3, right of
+    /// it, is two positions to the beam's duplicate check (`search_signature` and `unit_lanes`) and to
+    /// the lethal solver, and one position without where its cards stand.
+    #[test]
+    fn r4132000_a_unit_left_or_right_of_a_standing_unit_signs_alike_without_its_lanes() {
+        let state = standing_vanilla_board();
+        let vanilla = hand_id(&state, VANILLA);
+        let into = |lane: i32| {
+            act(
+                &state,
+                AI,
+                body(
+                    json!({ "type": "play", "instanceId": vanilla, "zone": { "row": "units", "lane": lane } }),
+                ),
+            )
+        };
+        let (left, right) = (into(1), into(3));
+        assert_ne!(search_signature(&left, AI), search_signature(&right, AI));
+        assert_ne!(unit_lanes(&left), unit_lanes(&right));
+        assert_eq!(lane_free_signature(&left, AI), lane_free_signature(&right, AI));
+    }
+
+    /// R4132000: the lane-free signature still splits what a lane does not explain (two different
+    /// backrow cards, one card face-down or face-up, a damaged unit, a unit an adjacency aura buffs in
+    /// one lane only) and signs alike, where `search_signature` does not, one backrow card in two lanes,
+    /// two backrow cards in each other's lanes and a unit either side of the aura it stands in.
+    #[test]
+    fn r4132000_the_lane_free_signature_keeps_what_a_lane_does_not_explain() {
+        jackioh_cards::register_all();
+        let board = |p1: Value| {
+            scenario(json!({ "seed": "search-r4132000-apart", "p1": p1, "p2": { "library": LIBRARY } }))
+                .state()
+                .clone()
+        };
+        let vanilla_attack = |p1: Value| {
+            let state = board(p1);
+            let vanilla = active_units_of(&state, AI)
+                .into_iter()
+                .find(|unit| unit.def_id == VANILLA)
+                .expect("the vanilla stands");
+            unit_view(&state, vanilla).attack
+        };
+        let beside_totem = json!({ "field": [{ "def": TOTEM, "lane": 2 }, { "def": VANILLA, "lane": 3 }] });
+        let away_from_totem =
+            json!({ "field": [{ "def": TOTEM, "lane": 2 }, { "def": VANILLA, "lane": 5 }] });
+        assert!(vanilla_attack(beside_totem.clone()) > vanilla_attack(away_from_totem.clone()));
+
+        let apart = [
+            (
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 2 }] }),
+                json!({ "backrow": [{ "def": MY_PAWN, "lane": 2 }] }),
+            ),
+            (
+                json!({ "backrow": [{ "def": MANA_WELL, "lane": 2, "faceUp": false }] }),
+                json!({ "backrow": [{ "def": MANA_WELL, "lane": 2, "faceUp": true }] }),
+            ),
+            (
+                json!({ "field": [{ "def": VANILLA, "lane": 2 }] }),
+                json!({ "field": [{ "def": VANILLA, "lane": 2, "damage": 2 }] }),
+            ),
+            (beside_totem, away_from_totem),
+        ];
+        for (one, other) in apart {
+            assert_ne!(
+                lane_free_signature(&board(one.clone()), AI),
+                lane_free_signature(&board(other.clone()), AI),
+                "{one} / {other}"
+            );
+        }
+
+        let alike = [
+            (
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 2 }] }),
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 3 }] }),
+            ),
+            (
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 2 }, { "def": MY_PAWN, "lane": 4 }] }),
+                json!({ "backrow": [{ "def": SHEEPISH, "lane": 4 }, { "def": MY_PAWN, "lane": 2 }] }),
+            ),
+            (
+                json!({ "field": [{ "def": TOTEM, "lane": 2 }, { "def": VANILLA, "lane": 1 }] }),
+                json!({ "field": [{ "def": TOTEM, "lane": 2 }, { "def": VANILLA, "lane": 3 }] }),
+            ),
+        ];
+        for (one, other) in alike {
+            let (one_state, other_state) = (board(one.clone()), board(other.clone()));
+            assert_ne!(
+                search_signature(&one_state, AI),
+                search_signature(&other_state, AI),
+                "{one} / {other}"
+            );
+            assert_eq!(
+                lane_free_signature(&one_state, AI),
+                lane_free_signature(&other_state, AI),
+                "{one} / {other}"
+            );
+        }
+    }
 }
 
 mod decides_determinism_and_budget_b15 {

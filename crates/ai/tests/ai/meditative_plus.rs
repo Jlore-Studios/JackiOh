@@ -386,13 +386,19 @@ fn supply_drop_beside_two_vanillas() -> GameState {
 
 /// The board above with two castable Vanillas beside Supply Drop: their plays in each lane outscore
 /// the cast on the static score and fill every place the reply scores, so the countdown, worth only
-/// once the reply weighs it, keeps a place of its own (R3696000). R4159000: with that place kept, the hand
-/// eval alone, which no network corrects any more, scores a Vanilla's line above the cast's, so the AI
-/// plays a Vanilla first.
+/// once the reply weighs it, keeps a place of its own (R3696000): the decision replies to one line
+/// past the shortlist.
+///
+/// R4132000: before that change, four of the six places held one board, both Vanillas attacking,
+/// with the Vanillas in each other's lanes or the second in lane 2 or 3, and the cast beat it after
+/// the reply. Those are one line now, and a place goes to a Vanilla set in Defense Position, which the
+/// reply scores above the cast, so the decision plays it. R4159000: the hand eval alone, which no network
+/// corrects any more, scores a Vanilla's line above the cast's too, so the AI plays a Vanilla first.
 #[test]
 fn r3696000_r4159000_beside_two_castable_vanillas_the_hand_eval_plays_a_vanilla_first() {
     let state = supply_drop_beside_two_vanillas();
     let decision = decide_at(&state, "ai-supply-drop-combat");
+    assert!(decision.stats.replied > SHORTLIST, "{:?}", decision.stats);
     let ActionBody::Play { instance_id, .. } = &decision.action else {
         panic!("{:?}", decision.action);
     };

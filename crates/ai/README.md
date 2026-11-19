@@ -183,7 +183,11 @@ shipyard's launch exiles the hull and stands a fresh Starship in its place. Then
 ability, and each Dormant card of the seat's acting to awaken, is priced the same way and keyed by the
 card as the seat holds it now (R3575400, R923001: a hand card is spawned where a play would put it
 first), so a play worth the Activate it leaves reads it the moment it lands, not a turn later; the
-enemy's hand is never probed. A shipyard's turn-start fuse (R3539004) is no hook of its script, so
+enemy's hand is never probed. At the seat's own open prompt whose card acts on its side with an Activate
+its face declares (#98 Heroic Power's Discover of its power, R3134002), `prompt_activation_prices`
+simulates each answer once, in `action_key` order, within `AI_PROMPT_ACTIVATION_PROBE_NODES`, and prices
+the power an answer leaves that card the same way; every price is keyed by the power its card holds
+(`memory.power`, R43), so a lasting pick reads what each power keeps giving (R4197000). A shipyard's turn-start fuse (R3539004) is no hook of its script, so
 `turn_hook_prices` prices it by one run of the engine's own yard step, for each Dormant shipyard on
 either field and each in the seat's hand, and `slumber_worth` adds `AI_EVAL.turn_hook` of it outside the
 slumber share, which that probe's own evaluation already applied (R3575402).
@@ -268,11 +272,14 @@ first (#1778). Its root tries a play in every distinct placement (the zones besi
 across it), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
-are one position). A line that differs from an earlier one only in where its units stand is a lane variant
-(#1797): the evaluation reads no lane, so it takes no place in the beam, but when the beam keeps the earlier
-line, the first `AI_SEARCH.zone_variants` - 1 of them end their turn where they stand after it, below that
-line on a tie. So the placements the beam tries reach the reply, which prices a Cleave into a unit's
-neighbours; a lane the reply scores the same as a better one of that play is not a finalist of its own. The
+are one position). A line that differs from an earlier one only in where its cards stand is a lane variant
+(#1797; R4132000: a backrow card's lane, and which side of a standing unit a new one goes, included, read off
+`lane_free_signature`, which sorts each side's units and backrow cards and leaves out its empty zones): the
+evaluation reads no lane but through a unit's stats, which that signature keeps, so it takes no place in the
+beam, but when the beam keeps the earlier line, the first `AI_SEARCH.zone_variants` - 1 of them end their
+turn where they stand after it, below that line on a tie. So the placements the beam tries reach the reply,
+which prices a Cleave into a unit's neighbours; a lane the reply scores the same as a better one of that
+play is not a finalist of its own. The
 lethal solver's visited set still reads a position without its units' lanes. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
@@ -434,13 +441,14 @@ promotion, sweep and live practice keep the live table.
 controllers (the AI, `greedy_action` or `random_action`, §10.7's random policy) and returns its log,
 hash and bookkeeping; `play_ai_turn` plays one AI turn out. The gates (`run_gate_games`, `AI_GATE`) are
 three matchups whose subject alternates seats, every game folded back to its hash. A run of n games
-needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins count.
+needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins count. Hard against
+Easy's floor is 75%, below the brief's 80%, by the user's decision (R4132001).
 
 | Matchup | Subject | Opponent | Full run | Smoke run |
 | --- | --- | --- | --- | --- |
 | `ai-vs-random` | the AI on Easy | random policy on Easy | 91 of 100 | 17 of 20 |
 | `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 28 of 50 | 10 of 20 |
-| `hard-vs-easy` | the AI on Hard | the AI on Easy | 40 of 50 | 16 of 20 |
+| `hard-vs-easy` | the AI on Hard | the AI on Easy | 38 of 50 | 15 of 20 |
 
 The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
 within the node budget and under `AI_GATE.max_decision_ms`, and the two pinned positions
