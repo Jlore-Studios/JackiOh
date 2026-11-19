@@ -1,7 +1,9 @@
 // A hero portrait (issue §1, R641): the portrait's card drawn in `CardArt`'s `oval` shape
-// (`PortraitArt`, R1332), squashing and glinting as its menu or inspect view opens (R1331). R987: Luck
-// rides above the health badge. Presentation only: it lives inside the `hero-<side>` element, which
-// keeps the testid, the ClickTarget and every glow, highlight and damage shake.
+// (`PortraitArt`, R1332), squashing and glinting as its menu or inspect view opens (R1331).
+// Only health and Armor badge here now (#4251): the Jade Counter and the Credits ride the oval's
+// top corners (`Hero.tsx`), R987's Luck and the Burn, Toxic and Tipsy counters the tray beside it.
+// Presentation only: it lives inside the `hero-<side>` element, which keeps the testid, the
+// ClickTarget and every glow, highlight and damage shake.
 
 import { useEffect, useRef, useState, type CSSProperties, type DOMAttributes, type ReactElement, type ReactNode } from "react";
 
@@ -37,7 +39,6 @@ export function HeroPortrait({
   health,
   armor,
   reacting,
-  luck,
   press,
   children,
 }: {
@@ -47,8 +48,6 @@ export function HeroPortrait({
   armor: number;
   /** The menu or the inspect view has just opened (R1331). */
   reacting?: boolean;
-  /** R987: the side's Luck (`SideView.luck`); the badge draws only above 0. */
-  luck?: number;
   /**
    * R1449: the hold's pointer handlers, on the whole oval: its badges sit over the open button (the
    * health badge covers the oval's center at some sizes), so a press on one is a press on the portrait.
@@ -76,16 +75,6 @@ export function HeroPortrait({
       {armor > 0 && (
         <span className="hero-armor" data-armor={armor} title={t("Hero armor")}>
           {armor}
-        </span>
-      )}
-      {luck !== undefined && luck > 0 && (
-        <span
-          className="hero-luck"
-          data-testid="hero-luck"
-          data-luck={luck}
-          title={t("Luck {luck}: every roll your cards make that keeps a best rolls {luck} more times", { luck: String(luck) })}
-        >
-          {luck}
         </span>
       )}
       {children}

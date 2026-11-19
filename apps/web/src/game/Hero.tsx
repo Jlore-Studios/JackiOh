@@ -18,7 +18,6 @@ import type { ReactElement } from "react";
 import { DEFAULT_PORTRAIT } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { Icon } from "../cards/index.ts";
 import { useInspectTrigger } from "../cards/inspect/index.ts";
 import { HeroInspect } from "../emotes/HeroInspect.tsx";
 import { HeroPortrait, usePortraitReaction } from "../emotes/Portrait.tsx";
@@ -151,7 +150,6 @@ export default function Hero(props: HeroProps): ReactElement {
         portrait={portrait}
         health={hero.health}
         armor={hero.armor}
-        luck={seat.luck}
         reacting={reacting}
         press={emotes === undefined ? undefined : press.handlers}
       >
@@ -191,24 +189,9 @@ export default function Hero(props: HeroProps): ReactElement {
             {seat.jade}
           </span>
         )}
-        {/* R3540000: the Burn and Toxic on the hero, as the Jade Counter rides, on both seats. */}
-        {(hero.burn ?? 0) > 0 && (
-          <span className="hero-burn" data-burn={hero.burn} title={t("Burn counters")}>
-            {hero.burn}
-          </span>
-        )}
-        {(hero.toxic ?? 0) > 0 && (
-          <span className="hero-toxic" data-toxic={hero.toxic} title={t("Toxic counters")}>
-            {hero.toxic}
-          </span>
-        )}
-        {/* R3548000: the Tipsy counter, as the Jade Counter rides, on both seats. */}
-        {(seat.tipsy ?? 0) > 0 && (
-          <span className="hero-tipsy" data-tipsy={seat.tipsy} title={t("Tipsy counter")}>
-            <Icon name="stein" />
-            {seat.tipsy}
-          </span>
-        )}
+        {/* #4251: R3540000's Burn and Toxic and R3548000's Tipsy ride the tray now
+            (`HeroTray.tsx`), as labelled chips beside the plate, so no portrait badge covers
+            them; R987's Luck went with them. */}
         {/* R1840005: the Credits, 0 included, once the view carries them. */}
         {seat.marketCredits !== undefined && (
           <span
@@ -283,6 +266,12 @@ export default function Hero(props: HeroProps): ReactElement {
           portrait={portrait}
           health={hero.health}
           armor={hero.armor}
+          luck={seat.luck}
+          jade={seat.jade}
+          burn={hero.burn}
+          toxic={hero.toxic}
+          tipsy={seat.tipsy}
+          marketCredits={seat.marketCredits}
           menu={menu}
           hand={emotes.hand}
           gate={emotes.gate}

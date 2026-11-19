@@ -87,6 +87,61 @@ function mountGame(): void {
   );
 }
 
+/** #4251: both seats with every counter above 0 plus extra effects, so the tray holds chips. */
+function counteredView(): View {
+  const base = fullBoardView();
+  const extra = (id: number): { id: string; label: string } => ({
+    id: `counter-extra-${String(id)}`,
+    label: `Countered extra effect ${String(id)} with a long label`,
+  });
+  return {
+    ...base,
+    you: {
+      ...base.you,
+      jade: 3,
+      luck: 2,
+      tipsy: 4,
+      marketCredits: 7,
+      hero: { ...base.you.hero, burn: 6, toxic: 2 },
+      modifiers: [...base.you.modifiers, extra(1)],
+    },
+    opponent: {
+      ...base.opponent,
+      jade: 2,
+      luck: 1,
+      tipsy: 1,
+      marketCredits: 2,
+      hero: { ...base.opponent.hero, burn: 1, toxic: 3 },
+      modifiers: [...base.opponent.modifiers, extra(2), extra(3)],
+    },
+  };
+}
+
+function mountCounteredGame(): void {
+  mountedEmotes = null;
+  cy.mount(
+    <StrictMode>
+      <div className="app-shell app-shell--wide">
+        <EmoteGame view={counteredView()} legal={END_TURN_ONLY} onEmotes={keepEmotes} />
+      </div>
+    </StrictMode>,
+  );
+}
+
+/** #4251: the eight counter badges a hero shows, the Credits' testid naming its side. */
+function counterSelectors(side: "you" | "opponent"): string[] {
+  return [
+    ".hero-health",
+    ".hero-armor",
+    ".hero-jade",
+    '[data-testid="hero-luck"]',
+    ".hero-burn",
+    ".hero-toxic",
+    ".hero-tipsy",
+    `[data-testid="market-credits-${side}"]`,
+  ];
+}
+
 function fontSizePx(element: Element): number {
   const win = element.ownerDocument.defaultView;
   return win === null ? 0 : Number.parseFloat(win.getComputedStyle(element).fontSize);
@@ -317,6 +372,46 @@ for (const viewport of VIEWPORTS) {
           expect(box.width, "the bubble's width").to.be.at.least(BUBBLE_MIN_PX);
           expectOnScreen(bubble, "the bubble");
         });
+    });
+  });
+}
+
+for (const viewport of VIEWPORTS) {
+  describe(`#4251 the hero's counters at ${viewport.width}x${viewport.height}`, () => {
+    beforeEach(() => {
+      cy.viewport(viewport.width, viewport.height);
+      mountCounteredGame();
+    });
+
+    it("#4251 every counter reads at once on both heroes: no two overlap, each on the screen and on top", () => {
+      for (const side of ["you", "opponent"] as const) {
+        const selectors = counterSelectors(side);
+        cy.get(ts(`hero-${side}`)).should(($hero) => {
+          const hero = $hero[0] as Element;
+          const badges = selectors.map((selector) => {
+            const badge = hero.querySelector(selector);
+            expect(badge, `${side}'s ${selector}`).not.to.equal(null);
+            return { selector, badge: badge as HTMLElement };
+          });
+          for (const { selector, badge } of badges) {
+            const box = badge.getBoundingClientRect();
+            for (const other of badges) {
+              if (other.badge === badge) continue;
+              const otherBox = other.badge.getBoundingClientRect();
+              const overlap =
+                box.left < otherBox.right &&
+                otherBox.left < box.right &&
+                box.top < otherBox.bottom &&
+                otherBox.top < box.bottom;
+              expect(overlap, `${side}'s ${selector} over ${other.selector}`).to.equal(false);
+            }
+            expectOnScreen(badge, `${side}'s ${selector}`);
+            const doc = badge.ownerDocument;
+            const top = doc.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+            expect(top !== null && badge.contains(top), `${side}'s ${selector} drawn on top`).to.equal(true);
+          }
+        });
+      }
     });
   });
 }
