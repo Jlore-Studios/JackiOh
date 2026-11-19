@@ -18,8 +18,8 @@ use crate::learned::{finalist_score, line_score, open_score};
 use crate::policy::{POLICY_PRIOR, PolicyPrior, prior_order};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::simulate::{
-    AnswersTried, LineStatus, best_auto_answer, close_line, line_status, own_prompt_score, search_signature,
-    simulate, static_score, unit_lanes,
+    AnswersTried, LineStatus, best_auto_answer, close_line, lane_free_signature, line_status,
+    own_prompt_score, search_signature, simulate, static_score, unit_lanes,
 };
 use crate::types::{NodeCounter, SearchBudget};
 
@@ -147,7 +147,7 @@ fn expand(
 
 /// Beam search on one determinization expanding `root_expansion` (#1635) then `expansion` (R1171001).
 /// Scores intermediate states (`own_prompt_score` #1112), drops transposition duplicates, tracks
-/// lane variants (#1797), and returns complete lines best first.
+/// lane variants (#1797, R4132000), and returns complete lines best first.
 pub fn beam_search(
     det: &GameState,
     seat: PlayerId,
@@ -184,7 +184,8 @@ pub fn beam_search_with(
     while depth < budget.max_depth && !frontier.is_empty() {
         let mut children: Vec<OpenLine> = Vec::new();
         // #1797: each open child's position with its units' lanes; how many children each position
-        // without them (`search_signature`) has had; and its lane variants, by that signature.
+        // without where its cards stand (`lane_free_signature`, R4132000) has had; and its lane variants,
+        // by that signature.
         let mut seen: IndexSet<(String, String)> = IndexSet::new();
         let mut placements: IndexMap<String, usize> = IndexMap::new();
         let mut variants: Vec<(String, GameState, Vec<ActionBody>)> = Vec::new();
@@ -229,18 +230,20 @@ pub fn beam_search_with(
                 // Two orders of the same moves into the same lanes reach the same position: keep the
                 // first, which ranks higher.
                 let signature = search_signature(&next, seat);
-                if !seen.insert((signature.clone(), unit_lanes(&next))) {
+                if !seen.insert((signature, unit_lanes(&next))) {
                     continue;
                 }
-                // #1797: a later child that differs from its position's first only in where its units
-                // stand is a lane variant. The evaluation reads no lane, so it would score alike and
-                // fill the beam; it is played no further but closed beside the first, so the reply can
+                // #1797: a later child that differs from its position's first only in where its cards
+                // stand (its units' lanes, which side of a standing unit a new one goes, a backrow card's
+                // lane: R4132000) is a lane variant. The evaluation reads no lane, so it would score alike
+                // and fill the beam; it is played no further but closed beside the first, so the reply can
                 // tell the lanes apart. At most AI_SEARCH.zone_variants of a position, the first included.
-                let placed = placements.entry(signature.clone()).or_insert(0);
+                let lane_free = lane_free_signature(&next, seat);
+                let placed = placements.entry(lane_free.clone()).or_insert(0);
                 *placed += 1;
                 if *placed > 1 {
                     if *placed <= AI_SEARCH.zone_variants.max(1) as usize {
-                        variants.push((signature, next, actions));
+                        variants.push((lane_free, next, actions));
                     }
                     continue;
                 }
@@ -265,7 +268,7 @@ pub fn beam_search_with(
         next_frontier.truncate(budget.beam_width.max(1));
         let kept: IndexSet<String> = next_frontier
             .iter()
-            .map(|line| search_signature(&line.state, seat))
+            .map(|line| lane_free_signature(&line.state, seat))
             .collect();
         lane_variants.extend(
             variants

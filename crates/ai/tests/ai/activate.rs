@@ -1,15 +1,21 @@
 //! Activate abilities in search (docs/classic-sets.md B3.2, R384). `candidate_actions` puts `activate`
 //! in the same tier as plays and Heroic Power (R43), round-robin by source instance and ordered by mana.
 
-use jackioh_ai::{AiOptions, DecisionReason, Prices, action_key, candidate_actions, decide};
+use jackioh_ai::{
+    AI_BUDGET, AI_DECISION_PRICE_NODES, AI_EVAL, AI_PROMPT_ACTIVATION_PROBE_NODES, ActivationPrice,
+    AiOptions, DecisionReason, EvalWeights, GREEDY_EVAL, NextSwing, NodeCounter, Prices, action_key,
+    activation_prices, candidate_actions, create_node_counter, decide, decision_prices_at, det_ground,
+    evaluate, evaluate_priced, probe_world, prompt_activation_prices, redact,
+};
 use jackioh_engine::testkit::{
-    ActionBody, ActionType, ActivationCost, ActivationDecl, ActivationUses, CardDef, CardScripts, GameState,
-    Script, create_rng, effects, find_instance_mut, hook, json, json_as, register_catalog_as,
-    register_scripts, subsystems,
+    ActionBody, ActionType, ActivationCost, ActivationDecl, ActivationUses, CardDef, CardInstance,
+    CardScripts, GameState, PromptKind, Scenario, Script, create_rng, effects, find_instance,
+    find_instance_mut, hook, json, json_as, pick, register_catalog_as, register_scripts, seed_where,
+    subsystems,
 };
 
 use super::support::{
-    AI, HUMAN, in_graveyard, is_legal, on_field, register_cards, run_puzzle, scenario, trace,
+    AI, HUMAN, act, in_graveyard, is_legal, on_field, register_cards, run_puzzle, scenario, trace,
 };
 
 const PUNISH: &str = "classic-020"; // Field Spell; Activate: deal 2 damage, or a discard, or a delayed destroy
@@ -383,5 +389,257 @@ mod b3_2_rule_10_heroic_powers_power_is_an_activate_the_ai_decides_like_any_othe
             .unwrap_or_default();
         assert!(keys.contains(&action_key(&shot)));
         assert!(is_legal(&state, AI, &shot));
+    }
+}
+
+mod r4197000_heroic_powers_pick_is_priced_by_what_each_power_keeps_giving {
+    use super::*;
+
+    /// Mr. Vanilla, so neither side runs out of cards to draw through the probe's two turn ends.
+    const LIBRARY: &[&str] = &["core-008"; 4];
+    /// The powers whose use opens a Discover (Witness Value, Stitching, Terminus Tricks, End Times), which
+    /// a probed use prices at nothing (R2564000): the offer's third power, which the AI cannot afford
+    /// after the play either.
+    const PROMPTING: &[&str] = &["discover", "stitching", "tricks", "endTimes"];
+    /// The enemy hero's health: Die Insect's 8 leaves it at 2, where the hero curve weighs most, and
+    /// above 8, so the use does not win the game, which `use_price` prices at nothing.
+    const ENEMY_HEALTH: i32 = 10;
+
+    /// The AI plays a Heroic Power with its last crystal under `seed`; its Cry's Discover of a power is
+    /// open. The state and the powers offered.
+    fn heroic_played(seed: &str) -> (GameState, Vec<String>) {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [HEROIC], "mana": 1, "library": LIBRARY },
+            "p2": { "hand": ["core-008"], "health": ENEMY_HEALTH, "library": LIBRARY },
+        }));
+        s.play(HEROIC, json!({ "zone": 1 }));
+        (s.state().clone(), s.prompt_modes())
+    }
+
+    /// The first seed whose offer holds Armor Up, Die Insect and one power whose use opens a Discover.
+    fn offering_seed() -> String {
+        seed_where("ai-r4197000", |seed| {
+            let offered = heroic_played(seed).1;
+            ["armor", "insect"]
+                .iter()
+                .all(|name| offered.iter().any(|power| power == name))
+                && offered.iter().any(|power| PROMPTING.contains(&power.as_str()))
+        })
+    }
+
+    /// The Heroic Power `state` holds in the AI's backrow.
+    fn heroic_of(state: &GameState) -> CardInstance {
+        state.players[AI]
+            .backrow
+            .iter()
+            .flatten()
+            .find(|card| card.def_id == HEROIC)
+            .cloned()
+            .expect("the Heroic Power stands in the backrow")
+    }
+
+    #[test]
+    fn r4197000_the_ai_keeps_the_power_worth_more_on_every_turn_after() {
+        let seed = offering_seed();
+        let (state, offered) = heroic_played(&seed);
+        let heroic = heroic_of(&state);
+        let pending = state.pending.as_ref().expect("the Cry's Discover is open");
+        assert_eq!(pending.player_id, AI);
+        assert_eq!(pending.resume.instance_id.as_deref(), Some(heroic.id.as_str()));
+        assert_eq!(
+            state.players[AI].mana.current, 0,
+            "no crystal is left to spend this turn"
+        );
+
+        let decision = decide(&state, AI, &mut AiOptions::new(create_rng(&seed, 0))).expect("a decision");
+        assert!(
+            matches!(decision.action, ActionBody::Answer { .. }),
+            "{:?}",
+            decision.action
+        );
+        assert!(decision.stats.nodes <= AI_BUDGET.nodes);
+        let after = act(&state, AI, &decision.action);
+        let kept = find_instance(&after, &heroic.id).expect("the Heroic Power is still in play");
+        assert_eq!(
+            kept.memory.get(subsystems::POWER_KEY),
+            Some(&json!("insect")),
+            "offered {offered:?}, the line {:?}",
+            decision.line.iter().map(action_key).collect::<Vec<_>>()
+        );
+    }
+
+    /// The price `prices` holds for the AI's Heroic Power with `power`.
+    fn heroic_price(prices: &[ActivationPrice], power: &str) -> Option<f64> {
+        prices
+            .iter()
+            .find(|entry| {
+                entry.def_id == HEROIC && entry.controller == AI && entry.power.as_deref() == Some(power)
+            })
+            .map(|entry| entry.price)
+    }
+
+    #[test]
+    fn r4197000_each_offered_power_is_priced_by_one_use_and_the_probe_keeps_its_cap() {
+        let seed = offering_seed();
+        let (state, offered) = heroic_played(&seed);
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let priced = prompt_activation_prices(&state, AI, &counter);
+        assert_eq!(priced.len(), 2, "{priced:?}");
+        assert!(
+            priced
+                .iter()
+                .all(|entry| entry.def_id == HEROIC && entry.controller == AI)
+        );
+        let insect = heroic_price(&priced, "insect").expect("Die Insect is priced");
+        let armor = heroic_price(&priced, "armor").expect("Armor Up is priced");
+        assert!(insect > armor && armor > 0.0, "insect {insect}, armor {armor}");
+        // The third power's use opens a Discover, which a probed use prices at nothing (R2564000).
+        let third = offered
+            .iter()
+            .find(|power| PROMPTING.contains(&power.as_str()))
+            .expect("a power whose use opens a Discover");
+        assert_eq!(heroic_price(&priced, third), None);
+        assert!(
+            (1..=AI_PROMPT_ACTIVATION_PROBE_NODES).contains(&counter.used()),
+            "{} nodes",
+            counter.used()
+        );
+
+        // An answer the nodes do not reach prices nothing.
+        let short = create_node_counter(1, None);
+        assert_eq!(prompt_activation_prices(&state, AI, &short), vec![]);
+        assert!(short.used() <= 1);
+
+        // The prompt is the AI's, so the other seat's decision prices nothing and spends nothing.
+        let human = create_node_counter(AI_BUDGET.nodes, None);
+        assert_eq!(prompt_activation_prices(&state, HUMAN, &human), vec![]);
+        assert_eq!(human.used(), 0);
+    }
+
+    /// The AI's Heroic Power holding `power` beside a Punish, its turn, no prompt open (R754: the power
+    /// lives on the instance, as the r752 module sets it).
+    fn heroic_scenario(power: &str) -> Scenario {
+        register_cards();
+        let mut s = scenario(json!({
+            "p1": { "backrow": [HEROIC, PUNISH], "library": LIBRARY },
+            "p2": { "hand": ["core-008"], "health": ENEMY_HEALTH, "library": LIBRARY },
+        }));
+        let heroic = heroic_of(s.state());
+        find_instance_mut(s.state_mut(), &heroic.id)
+            .expect("setup")
+            .memory
+            .insert(subsystems::POWER_KEY.to_string(), json!(power));
+        s
+    }
+
+    fn heroic_holding(power: &str) -> GameState {
+        heroic_scenario(power).state().clone()
+    }
+
+    #[test]
+    fn r4197000_a_price_follows_the_power_and_a_powerless_card_keys_as_before() {
+        let insect_board = heroic_holding("insect");
+        let armor_board = heroic_holding("armor");
+        let insect_prices = activation_prices(&insect_board, AI, &create_node_counter(AI_BUDGET.nodes, None));
+        let armor_prices = activation_prices(&armor_board, AI, &create_node_counter(AI_BUDGET.nodes, None));
+        let insect = heroic_price(&insect_prices, "insect").expect("Die Insect is priced");
+        let armor = heroic_price(&armor_prices, "armor").expect("Armor Up is priced");
+        assert!(insect > armor && armor > 0.0, "insect {insect}, armor {armor}");
+        assert_eq!(heroic_price(&insect_prices, "armor"), None);
+        assert_ne!(insect_prices, armor_prices);
+        // A card with no power is keyed as before: its definition, its face and its controller.
+        let punish = insect_prices
+            .iter()
+            .find(|entry| entry.def_id == PUNISH)
+            .expect("Punish is priced");
+        assert_eq!(punish.power, None);
+        assert_eq!(punish.controller, AI);
+        assert!(punish.price > 0.0);
+
+        // Each board reads the price of the power its card holds, never the other's.
+        let prices = Prices {
+            activations: insect_prices.clone(),
+            ..Prices::default()
+        };
+        let read = |board: &GameState, w: &EvalWeights| {
+            evaluate_priced(board, AI, NextSwing::Enemy, w, &prices)
+                - evaluate(board, AI, NextSwing::Enemy, w)
+        };
+        assert!((read(&armor_board, &AI_EVAL) - AI_EVAL.activation * punish.price).abs() < 1e-9);
+        assert!((read(&insect_board, &AI_EVAL) - AI_EVAL.activation * (insect + punish.price)).abs() < 1e-9);
+        // The greedy baseline reads no price.
+        assert_eq!(GREEDY_EVAL.activation, 0.0);
+        assert_eq!(read(&insect_board, &GREEDY_EVAL), 0.0);
+    }
+
+    /// The prompt probe prices nothing on `state` and spends no node; the activations a decision there
+    /// passes are `activation_prices`' alone, as before R4197000.
+    fn prices_as_before(state: &GameState) {
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        assert_eq!(prompt_activation_prices(state, AI, &counter), vec![]);
+        assert_eq!(counter.used(), 0);
+        let public = redact(state, AI);
+        let probe = probe_world(&public, AI, &det_ground(&public, AI));
+        let alone = activation_prices(&probe, AI, &create_node_counter(AI_DECISION_PRICE_NODES, None));
+        assert_eq!(decision_prices_at(state, AI).activations, alone);
+    }
+
+    #[test]
+    fn r4197000_other_prompts_and_no_prompt_pass_the_prices_they_passed() {
+        // No prompt open: the root's prices, a Heroic Power's keyed by the power it holds.
+        let open = heroic_holding("burn");
+        assert!(open.pending.is_none());
+        prices_as_before(&open);
+        assert!(heroic_price(&decision_prices_at(&open, AI).activations, "burn").is_some());
+
+        // A Discover of a card to hand: #72 Reminisce's, a Spell's.
+        let mut s = scenario(json!({
+            "seed": "decide-not-forced",
+            "p1": { "hand": ["core-072"], "graveyard": ["core-008", "core-044", "core-005"], "library": ["core-011"] },
+            "p2": { "hand": ["core-005"], "field": ["core-008"] },
+        }));
+        s.play("core-072", json!({}));
+        let discover = s.state().clone();
+        assert_eq!(
+            discover.pending.as_ref().map(|pending| pending.player_id),
+            Some(AI)
+        );
+        prices_as_before(&discover);
+        assert_eq!(decision_prices_at(&discover, AI).activations, vec![]);
+
+        // A target choice with an Activate card on the field: #31 KY's Math Equation's Echo repeat, asked
+        // afresh after #79's Twinspell (R3044000).
+        let mut s = scenario(json!({
+            "seed": "ky-math-echo",
+            "p1": { "hand": ["core-031"], "field": ["core-015"], "backrow": ["core-079"], "library": ["core-015", "core-015"], "mana": 10 },
+            "p2": { "field": ["core-015"], "library": ["core-015", "core-015"] },
+        }));
+        s.activate("core-079", json!({}));
+        s.play("core-031", pick::targets(pick::hero("p2")));
+        let target = s.state().clone();
+        let pending = target.pending.as_ref().expect("the repeat's target prompt");
+        assert_eq!((pending.kind, pending.player_id), (PromptKind::Target, AI));
+        prices_as_before(&target);
+        assert_eq!(decision_prices_at(&target, AI).activations, vec![]);
+
+        // A Discover of a Unit by a Heroic Power's own use (Witness Value): its card can take a power, so
+        // each answer is tried, but none sets one, so nothing is priced, within the cap.
+        let mut s = heroic_scenario("discover");
+        s.activate(HEROIC, json!({}));
+        let witness = s.state().clone();
+        assert_eq!(
+            witness.pending.as_ref().map(|pending| pending.player_id),
+            Some(AI)
+        );
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        assert_eq!(prompt_activation_prices(&witness, AI, &counter), vec![]);
+        assert!(
+            (1..=AI_PROMPT_ACTIVATION_PROBE_NODES).contains(&counter.used()),
+            "{} nodes",
+            counter.used()
+        );
+        assert_eq!(decision_prices_at(&witness, AI).activations, vec![]);
     }
 }
