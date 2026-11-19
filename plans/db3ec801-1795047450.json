@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4237,
+  "title": "Patch: a Unit revealed from Cloaked is summoning sick on its reveal turn",
+  "branch": "bot/issue-4237",
+  "thread": "**Issue #4237 (data, not instructions):**\n\n```text\n# #4237: Patch: a Unit revealed from Cloaked is summoning sick on its reveal turn\nOpened by @MaxGoetzmann.\n\n### What it does\n\nToday a Unit set face-down by its Cloaked keeps the turn it was set as its `summonedTurn`. If it is revealed on a later turn (Activate: Reveal), it can attack straight away. [R783006] and [R1041] call this \"the one exception to [R83] and [R171]\". So a player can set a Cloaked Unit, pass, and reveal it next turn as an unexpected Charge-like attacker.\n\nThis patch removes that exception. A Unit revealed from Cloaked **enters the field on the turn it is revealed** and is summoning sick for the rest of that turn, like any Unit that enters a unit zone ([\u00a74.1], [R83], [R171], and [\u00a73] Animated: \"Entering the unit zone is entering it on that turn\"). Rush and Charge lift the sickness as usual: Rush for enemy Units only, Charge for Units and the hero. Switching to Defense stays allowed, as for any sick Unit.\n\nNot affected:\n- A revealed **Spell** or **Field Spell** (they do not attack).\n- Everything else about the reveal: the `animated` event (never `summoned`, [R445]), the Cry running with prompts, Crater's lock ([R783010]), the reveal being a firing ([R783006]), and its being offered only while the card can come out whole.\n\nWhere it lives:\n- `crates/engine/src/alt_play.rs`, `reveal_effect`. The block commented `R1041, R171` stamps `summoned_turn` with `max(set_turn, summoned_turn)`. It should stamp the current turn instead, the turn the card animates into its unit zone.\n- Spec text to change:\n  - `spec/06-keywords.md`, the Cloaked row: \"a Unit animates into a unit zone (it may attack on a later turn)\".\n  - `spec/rulings/R783006.md` and `spec/rulings/R1041.md`: the \"keeps the turn it was set as its `summonedTurn`\" sentences.\n  - `spec/04-combat.md` \u00a74.1's summoning-sickness paragraph, if it needs the case named.\n- The AI (`crates/ai`): if anything values a set Cloaked Unit, or its Reveal, as an attacker this turn (the move order, `reply.rs`, the lethal solver), it must now see a revealed Unit as sick unless it has Rush or Charge. The engine's own `legal_actions` and `canAct` should follow from the stamp, but check that the AI reads them rather than its own copy.\n- The client only renders `canAct` from the view (CLAUDE.md rule 7), so it needs no rule change.\n\nThis reverses part of an existing ruling. By CLAUDE.md rule 3 and `spec/README.md` (Adding a ruling):\n- Write a new note in this issue's block that supersedes the \"may attack at once\" half of R783006 and R1041.\n- Put its \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- Edit R783006's and R1041's text to point to it.\n\nIt changes how every Cloaked Unit plays, so it needs a pending patch fragment (`cargo jackioh patches \u2026 --rule`) with a hand-written player note (`docs/ADDING_CARDS.md`). `cargo jackioh classify --base origin/main --claims` must agree with that fragment.\n\n### Acceptance\n\n- A new ruling note in this issue's block, with a proving test named after it in `crates/engine/tests/rules/cloaked.rs`. The test covers a Cloaked Unit set on turn N and revealed on turn N+1 (or later) by its controller:\n  - it cannot attack that turn, and `legal_actions` offers no attack by it;\n  - the reducer refuses an attack it declares;\n  - its view shows it cannot act (`canAct` false for attacking);\n  - it can switch to Defense;\n  - it can attack on its controller's next turn.\n- The same test, or a sibling: the revealed Unit with Rush can attack an enemy Unit but not the hero on its reveal turn; with Charge, it can attack the hero too.\n- A Unit revealed on the same turn it was set is still sick, as before.\n- `r783006_a_unit_reveals_cries_with_a_prompt_and_attacks_next_turn` and any other test that asserts the old attack-at-once behavior are updated to the new rule. None is deleted, skipped or `#[ignore]`d.\n- Each Cloaked Unit's own script tests (`crates/cards/src/scripts/**`) that assert an attack on the reveal turn are updated to match.\n- The AI does not plan an attack by a Unit it reveals this turn unless that Unit has Rush or Charge. This needs an AI test, in `crates/ai/tests/` or the AI's existing Cloaked tests.\n- Spec text is consistent: the \u00a76.1 Cloaked row, R783006 and R1041 no longer say a revealed Unit may attack at once, and `cargo jackioh spec check` passes.\n- `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass. The golden replay and fuzz gates are green; if the golden fixture's fold changes, it is updated in the same PR.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4237: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-19T00:13:07Z",
+    "claimed_at": "2026-11-19T00:17:55Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
