@@ -14940,6 +14940,7 @@
     "4234": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_fixed_head": "8b42c99be90784379713358ebc62a2df83c8d5b1",
       "ci_fixes": 1,
       "cleared": {
@@ -14957,16 +14958,19 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-18T17:51:15Z",
+      "feedback_since": "2026-11-19T00:58:45Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4205,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-19T00:57:46Z",
+      "round_tier": "strong",
       "run_id": "44433319643",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -14987,10 +14991,11 @@
         "provider": "claude-4",
         "run": "44380753718"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-19T00:58:45Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
