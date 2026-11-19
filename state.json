@@ -14446,6 +14446,8 @@
       }
     },
     "4283": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-19T20:13:40Z",
@@ -14459,8 +14461,11 @@
         "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4275 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4275/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- received SIGTERM; flushed session logs"
       },
       "issue": 4275,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-19T23:02:40Z",
         "from_run": "44606479424",
         "gates": [
           {
@@ -14519,8 +14524,15 @@
         "source": "build",
         "until": "2026-11-19T23:31:44Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-19T23:01:44Z",
+      "run_id": "pending:493bd3ea-1795129341",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-19T23:02:40Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -14534,9 +14546,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T22:35:56Z",
+    "at": "2026-11-19T23:02:40Z",
     "url": "",
-    "what": "review #4282 on muse"
+    "what": "review #4283 on muse"
   },
   "last_sweep": {
     "at": "2026-11-19T22:54:37Z",
