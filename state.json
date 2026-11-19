@@ -14404,11 +14404,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-18T23:37:00Z",
+        "at": "2026-11-19T00:15:26Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Rule line 2 (The AI): the change is a decision path in crates/ai/src/skill.rs, so it is hard even though the item arrived labeled medium."
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule 2: it changes how the AI decides (crates/ai/src/skill.rs, the ladder bots' skill miss)"
       },
       "failures": 0,
       "forced": false,
