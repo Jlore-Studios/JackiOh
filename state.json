@@ -14224,6 +14224,7 @@
       "run_id": "44613871950",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 375,
       "started_at": "2026-11-19T20:57:18Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35063,9 +35064,33 @@
         "title": "Patch: Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "51bd596b4bbf94e6eaf3e3d5ca3ec3fdabd80a17",
+        "issue": 4274,
+        "merged_at": "2026-11-19T21:49:54Z",
+        "n": 375,
+        "pr": 4278,
+        "queued_at": "2026-11-19T21:49:54Z",
+        "sha": "3271750b6976d62a7e50e200f68ecf434b17396f",
+        "status": "queued",
+        "title": "Patch: the C module replays golden seeds hash for hash under Node",
+        "tries": 0
       }
     ],
-    "count": 374
+    "count": 375
   },
   "statistics": {
     "at": "2026-11-19T21:45:25Z"
