@@ -13707,6 +13707,13 @@
     "4196": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44478032574",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-19T07:49:12Z",
+        "until": "2026-11-19T08:19:12Z"
+      },
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-19T07:49:04Z",
