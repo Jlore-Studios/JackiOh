@@ -467,9 +467,10 @@ names the seed, the seat and the first message (`Decision::first_sim_panic`, nat
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
 `[0, 1]` that each decision follows the AI, the rest being the skill miss (`skill::skill_miss_action`,
 R2214000): a softmax at `AI_SKILL_MISS_TEMPERATURE` over the greedy baseline's one-ply scores of the
-true state's candidates, read on one determinization of what the seat sees. `None` is `AI_SKILL_MAX`:
-full skill, which takes no draw, so a seat without one plays as it did before the knob; `AI_SKILL_MIN`
-is the miss at every decision, with no search. In
+candidates the probe world lists (`decide::probe_world` of `redact(state, seat)`, as `decide` lists
+its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762).
+`None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one plays as it did
+before the knob; `AI_SKILL_MIN` is the miss at every decision, with no search. In
 between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision
 (`skill::clamp_skill` pins the range, a NaN reading as full), so a seeded run reproduces. The knob
 knows nothing of cards or sets: it keeps meaning the same when the AI improves or a set ships. The
