@@ -15213,8 +15213,11 @@
       "asks": [],
       "ci_early": false,
       "ci_fixed_head": "e4f05418005d9d399417062a8604034bc536afd7",
-      "ci_fixes": 2,
+      "ci_fixes": 1,
       "ci_on_head": true,
+      "ci_reruns": {
+        "e4f05418005d9d399417062a8604034bc536afd7": 1
+      },
       "ci_run_id": 44441315953,
       "ci_sha": "e4f05418005d9d399417062a8604034bc536afd7",
       "cleared": {
