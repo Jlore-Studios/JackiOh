@@ -15488,6 +15488,14 @@
         "sha": "c6ef8d7f454fdf5d207eaf23ce2512f7c184e9c4",
         "tiers": {}
       }
+    },
+    "4243": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-18T22:35:41Z",
+      "issue": 4181,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
