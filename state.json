@@ -36775,16 +36775,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "client",
-        "count": 2,
-        "last_run": "2026-11-19T01:38:24Z",
-        "provider": "claude-6",
-        "run_id": "44438422419",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
