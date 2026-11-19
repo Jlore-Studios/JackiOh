@@ -1,10 +1,13 @@
 //! Duos co-op for the practice AI (#936 S5, B26–B32): the AI plays one seat of a `DuosState`, two
-//! plain 1v1 duels side by side, by playing that seat's own duel with the 1v1 `decide` (B26, B27).
-//! When `decide` would end the turn, the seat first passes the cards `duos_passes` names, one per call
-//! (B27). Like `decide` it never concedes, so it never opens a team's concede offer.
+//! plain 1v1 duels side by side, by playing that seat's own duel with the 1v1 `decide` (B26, B27),
+//! as `decide_with_pool_loss`: its threat judged against its life less what its teammate's duel is
+//! about to take off the team's pool (`duos_pool_loss`, R4188000). When `decide` would end the turn,
+//! the seat first passes the cards `duos_passes` names, one per call (B27). Like `decide` it never
+//! concedes, so it never opens a team's concede offer.
 //!
-//! Knowledge (B29): `decide` reads its duel only through `redact` and its determinizations (R185), and
-//! `duos_passes` reads of the teammate only its own side, so an opponent's hidden card never reaches a
+//! Knowledge (B29): `decide` reads its duel only through `redact` and its determinizations (R185),
+//! `duos_passes` reads of the teammate only its own side, and `duos_pool_loss` reads the teammate's duel
+//! only through `redact` from the teammate's seat (§13.6), so an opponent's hidden card never reaches a
 //! decision.
 //!
 //! The gate (B32): each of its games (`duos_gate_game`, summed by `duos_gate_report`) plays the Easy
@@ -39,10 +42,10 @@ use crate::config::{
     AI_EVAL, AI_GATE_BUDGET, AI_SEARCH, DUOS_GATE_GREEDY_WIN_FLOOR, DUOS_GATE_WIN_FLOOR,
     DUOS_PASS_MARGIN_PER_COST, DUOS_PASS_MAX_FOLLOWUPS, DUOS_PASS_MIN_GAIN, DUOS_PASS_PROBE_SEED,
 };
-use crate::decide::decide;
+use crate::decide::decide_with_pool_loss;
 use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::determinize::{DeterminizeOptions, determinize};
-use crate::evaluate::{NextSwing, evaluate, hand_card_value};
+use crate::evaluate::{NextSwing, evaluate, face_threat, hand_card_value};
 use crate::observe::redact;
 use crate::types::{AiOptions, DecisionReason, SearchBudget};
 
@@ -57,9 +60,9 @@ const DUOS_GATE_MAX_ACTIONS: usize = 6000;
 // The AI seat
 
 /// The action an AI-played seat takes next, or None when it owes nothing: the 1v1 `decide`'s on its
-/// duel, or a pass `duos_passes` names before it ends the turn (B26, B27). Deterministic for the same
-/// state and options (B31): `options.rng` is `decide`'s only stream, and the caller reads its cursor
-/// back afterwards.
+/// duel (`decide_with_pool_loss`, R4188000), or a pass `duos_passes` names before it ends the turn
+/// (B26, B27). Deterministic for the same state and options (B31): `options.rng` is `decide`'s only
+/// stream, and the caller reads its cursor back afterwards.
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody> {
     duos_decision(state, seat, options).map(|decision| decision.body)
 }
@@ -94,7 +97,7 @@ pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions)
     // wrapper's own refusals are by kind (a seat that has ended, a draw offer), so an action of a
     // kind the wrapper offers is sent as decided. A mulligan's keep or an answer's selection may list
     // its ids in another order than `duos_legal_actions` does, and means the same.
-    let decided = decide(duel, seat.player(), options);
+    let decided = decide_with_pool_loss(duel, seat.player(), options, duos_pool_loss(state, seat));
     let sim_panics = decided.as_ref().map_or(0, |decision| decision.stats.sim_panics);
     let first_sim_panic = decided
         .as_ref()
@@ -116,6 +119,34 @@ pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions)
         sim_panics,
         first_sim_panic,
     })
+}
+
+/// R4188000: what the enemy board of `seat`'s teammate's duel is about to take off the team's pool next
+/// round: the face damage it could deal the teammate (`face_threat` on that duel redacted for the
+/// teammate, R185, §13.6), less the teammate's own HP while not spent, at least 0, at most the pool.
+/// 0 unless that duel is on the teammate's turn with no extra turn owed to it (R846), and on a panic.
+pub fn duos_pool_loss(state: &DuosState, seat: DuosSeat) -> i32 {
+    // `redact` runs on the true duel, as in `duos_passes`.
+    catch_unwind(AssertUnwindSafe(|| pool_loss_of(state, seat))).unwrap_or(0)
+}
+
+fn pool_loss_of(state: &DuosState, seat: DuosSeat) -> i32 {
+    let mate = seat.teammate();
+    let Some(mate_duel) = state.duels.get(mate.duel()) else {
+        return 0;
+    };
+    let player = mate.player();
+    let side = &mate_duel.players[player];
+    if mate_duel.active != player || side.extra_turns.unwrap_or(0) > 0 {
+        return 0;
+    }
+    let Some(life) = side.duos else {
+        return 0;
+    };
+    let threat = face_threat(&redact(mate_duel, player), player.opponent());
+    // §13.4: a spent seat's `health` reads the pool.
+    let own = if life.spent { 0 } else { side.hero.health };
+    (threat - own).max(0).min(life.pool)
 }
 
 /// Whether the wrapper offers a duel action of this kind.
