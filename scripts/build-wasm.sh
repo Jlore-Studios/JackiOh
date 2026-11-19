@@ -223,13 +223,27 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
   fi
   # #4275: the C module a port translates carries every byte, so it builds small. Scoped
   # `CARGO_PROFILE_RELEASE_*` env on this line alone (never exported: the browser module above is
-  # untouched): `opt-level = "z"` (9.8 MB raw saved alone), one codegen unit (7.3 MB alone, and
-  # thinner LTO across the crate) and no name section (6.8 MB; a trap's backtrace loses names, but
-  # the panic's text stays readable, checked below). Together they took the module from 42,987,413
-  # to 18,760,875 B raw (7,453,285 to 3,438,587 gzipped) on 2026-11-19. Kept out: `opt-level = "s"`
-  # (smaller raw alone, bigger beside strip), `lto = "fat"` (miscompiles to a module V8 rejects:
-  # "not enough arguments on the stack"), `panic = "abort"` (19 KB saved for a workspace-wide
-  # constraint) and `wasm-opt -Oz` (below, when it is on PATH at all).
+  # untouched). Measured 2026-11-19 (raw B, `gzip -9` B, wall s; gzip wobbles a few B run to run;
+  # walls are pass 1's trial log, sizes re-measured in pass 2 from its saved artifacts):
+  #   baseline (thin LTO): 42,987,413 raw, 7,453,290 gz, 1587 s cold; name section 6,831,510 B.
+  #   opt-level=z alone: 33,194,775 raw (-9,792,638), 4,779,269 gz, 799 s. Kept (wins in combination).
+  #   opt-level=s alone: 32,710,078 raw (-10,277,335), 5,061,534 gz, 1041 s. Dropped: beats z raw
+  #     alone by ~0.5 MB but loses gzip by ~0.3 MB, and loses the combination by ~4.0 MB raw
+  #     (combo-s 22,729,645 raw / 4,138,727 gz vs combo-z 18,760,875 / 3,438,587, both verified
+  #     imports-empty, answers-identical, panic-readable in pass 2).
+  #   codegen-units=1 alone: 35,720,878 raw (-7,266,535), 7,077,157 gz, 888 s. Kept (composition).
+  #   strip=symbols alone: 36,150,299 raw (-6,837,114), 6,914,487 gz, 959 s; name section gone,
+  #     panic text still readable. Kept.
+  #   Kept together (z + 1 unit + strip): 18,760,875 raw, 3,438,587 gz (pass 2 recorded run:
+  #     `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh` printed exactly these,
+  #     456 s wall with a cold wasm target dir). Imports [], answers identical to baseline
+  #     (constants/catalog hashes), panic text readable after the trap (checked below; a trap's
+  #     backtrace loses names, the text above still reads).
+  #   Dropped: lto=fat (36,321,030 raw, 7,327,246 gz, 1763 s; the module is INVALID, Node/V8
+  #     reject it: "not enough arguments on the stack"); panic=abort (42,968,386 raw, 7,447,610
+  #     gz, wall not recorded: pass 1 was cut off mid-trial; text still readable when re-probed in
+  #     pass 2, but -19,027 raw is negligible for a panic-strategy constraint); wasm-opt -Oz
+  #     (absent here and on CI, skipped with a message below; nothing to measure).
   CARGO_PROFILE_RELEASE_OPT_LEVEL=z \
     CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
     CARGO_PROFILE_RELEASE_STRIP=symbols \
