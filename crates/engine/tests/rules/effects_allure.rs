@@ -1,11 +1,11 @@
 //! ME-ALLURE (Meditative #39.5 Jade Beauty; docs/meditative-set.md M5, Group C's systems): "Allure
 //! every enemy Unit" marks each one `allure` (pink, R437); at the Allurer's next start each marked Unit
 //! still the opponent's is stolen in lane order (R15), summoning sick (R171), or, with no open zone,
-//! destroyed as any destroy is: Death, Reborn and Indestructible apply (R46, R963, MD-C4; fixtures/jade.rs).
+//! destroyed as every steal with no room destroys a card: Death and Reborn apply, and nothing prevents it,
+//! Indestructible included (R963, R4205000, MD-C4; fixtures/jade.rs).
 
 use jackioh_engine::effects::delay::DELAYED_ALLURE_HOOK;
 use jackioh_engine::effects::destroy::{DestroyArgs, destroy};
-use jackioh_engine::effects::steal::StealOtherwise;
 use jackioh_engine::effects::targets::TargetSpec;
 use jackioh_engine::reduce::begin_game;
 use jackioh_engine::state_check::state_check;
@@ -163,7 +163,7 @@ fn r963_steals_each_marked_unit_in_lane_order_at_the_allurers_next_start_summoni
 }
 
 #[test]
-fn r963_no_open_zone_destroys_it_and_an_indestructible_one_stays() {
+fn r963_r4205000_no_open_zone_destroys_it_an_indestructible_one_too() {
     let mut state = playing("no-room");
     for lane in 1..=5 {
         put(&mut state, "fx-10", slot(P1, Row::Units, lane), json!({}));
@@ -186,10 +186,15 @@ fn r963_no_open_zone_destroys_it_and_an_indestructible_one_stays() {
             .any(|event| json_of(event)["instanceId"] == json!(victim.id)),
         "the full row destroys it"
     );
-    // R46: an Indestructible Unit stays where it is.
-    let kept = find_instance(&mine, &tough.id).expect("the Indestructible Unit");
-    assert_eq!(kept.controller, P2);
-    assert_eq!(top_id(&mine, P2, 2), Some(tough.id));
+    // R4205000: so is an Indestructible one, past R46's knock-down.
+    assert!(find_instance(&mine, &tough.id).is_none_or(|card| card.zone.z() != ZoneName::Field));
+    assert_eq!(top_id(&mine, P2, 2), None);
+    assert!(
+        events_of_type(&events, GameEventType::Destroyed)
+            .iter()
+            .any(|event| json_of(event)["instanceId"] == json!(tough.id)),
+        "the full row destroys the Indestructible Unit too"
+    );
 }
 
 #[test]
@@ -293,11 +298,7 @@ fn r963_one_already_yours_is_neither_stolen_nor_destroyed() {
 }
 
 /// One `steal` by id at `victim_id`, run as P1 into a full row, so it cannot land; its events.
-fn run_full_row_steal(
-    state: &mut GameState,
-    victim_id: &str,
-    otherwise: Option<StealOtherwise>,
-) -> Vec<GameEvent> {
+fn run_full_row_steal(state: &mut GameState, victim_id: &str) -> Vec<GameEvent> {
     use jackioh_engine::effects::steal::{StealTarget, steal};
     let spell = {
         let mut card = new_instance(state, "fx-mana-well", P1, Zone::Resolving { player: P1 });
@@ -319,12 +320,11 @@ fn run_full_row_steal(
         );
         (steal(StealTarget {
             instance_id: Some(victim_id.to_string()),
-            otherwise,
             ..StealTarget::default()
         })
         .apply)(&mut ctx);
-        // `steal` only marks for `otherwise: destroy` (§6.3 Destroy is a mark; §4.5's state check
-        // collects it), so settle before reading the events.
+        // `steal` only marks a card it has no room for (R4205000; §6.3 Destroy is a mark, §4.5's state
+        // check collects it), so settle before reading the events.
         state_check(&mut sink);
     }
     state.rng_cursor = rng.cursor();
@@ -332,29 +332,27 @@ fn run_full_row_steal(
 }
 
 #[test]
-fn r963_steal_otherwise_destroy_needs_no_room_to_destroy() {
-    let mut state = playing("otherwise-direct");
+fn r963_r4205000_a_plain_steal_with_no_room_destroys() {
+    let mut state = playing("no-room-plain");
     for lane in 1..=5 {
         put(&mut state, "fx-10", slot(P1, Row::Units, lane), json!({}));
     }
     let victim = put(&mut state, "fx-1", slot(P2, Row::Units, 1), json!({}));
-    let events = run_full_row_steal(&mut state, &victim.id, Some(StealOtherwise::Destroy));
+    let events = run_full_row_steal(&mut state, &victim.id);
     assert!(
         events.iter().any(|event| matches!(
             event,
             GameEvent::Destroyed { instance_id, .. } if instance_id == &victim.id
         )),
-        "a full row still destroys it"
+        "a full row destroys it"
     );
-    // Without `otherwise` the same steal stays a refusal: the Unit stands.
-    let mut state = playing("otherwise-plain");
-    for lane in 1..=5 {
-        put(&mut state, "fx-10", slot(P1, Row::Units, lane), json!({}));
-    }
-    let victim = put(&mut state, "fx-1", slot(P2, Row::Units, 1), json!({}));
-    let events = run_full_row_steal(&mut state, &victim.id, None);
-    assert!(events.is_empty(), "a plain steal refused reports nothing");
-    assert_eq!(top_id(&state, P2, 1), Some(victim.id));
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, GameEvent::ControlChanged { .. })),
+        "nothing changed sides"
+    );
+    assert_eq!(top_id(&state, P2, 1), None);
 }
 
 /// Apply `effect` for `controller` with no card running it, then settle.

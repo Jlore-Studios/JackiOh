@@ -1203,7 +1203,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r15_steals_into_the_same_lane_when_it_is_free_else_the_first_free_zone_leaving_the_excess() {
+    fn r15_steals_into_the_same_lane_when_it_is_free_else_the_first_free_zone_marking_the_excess_destroyed() {
         let mut state = game("r15");
 
         let same_lane = put(&mut state, BODY, slot(P2, UNITS, 3), json!({}));
@@ -1229,7 +1229,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             displaced.id
         );
 
-        // With no free zone left the card stays with its opponent.
+        // With no free zone left the card stays with its opponent, marked destroyed (R4205000).
         put(&mut state, BODY, slot(P1, UNITS, 4), json!({}));
         put(&mut state, BODY, slot(P1, UNITS, 5), json!({}));
         let stays = put(&mut state, BODY, slot(P2, UNITS, 2), json!({}));
@@ -1243,6 +1243,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             stays.id
         );
         assert_eq!(instance_in(&state, &stays.id).controller, P2);
+        assert_eq!(instance_in(&state, &stays.id).marked_destroyed, Some(true));
     }
 
     #[test]

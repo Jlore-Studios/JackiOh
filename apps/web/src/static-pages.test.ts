@@ -499,6 +499,15 @@ describe("R3127000 the 404 page", () => {
     expect(notFoundHtml(TEMPLATE, other)).toContain(`${other}/og.png`);
   });
 
+  it("#4222 static-pages.ts installs the scene tables its faces draw through", () => {
+    // The build renders outside every gate with no test setup: without this install `writeBundle`
+    // throws instead of writing 404.html (as it did before the install). The build itself proves the
+    // render; this pins the install in place, in the style of `net/first-load.test.ts`'s source tests.
+    const source = readFileSync(join(HERE, "../static-pages.ts"), "utf8");
+    expect(source).toContain("installSceneData({ SCENE_KIT, drawFigure, SCENE_RECIPES, ALT_SCENE_RECIPES })");
+    expect(source).toMatch(/from ["']\.\/src\/cards\/art\/sceneData\.ts["']/u);
+  });
+
   it("R3127000 the hand is three placeholder Spell faces named Error, Not, Found with cost gems 4, 0, 4", () => {
     const faces = [...page().doc.querySelectorAll("#root .cf")];
     expect(faces).toHaveLength(3);

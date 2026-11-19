@@ -1423,10 +1423,14 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   so a screen that does not wait for it (the landing, the shop, `/replays`) draws a face only through
   `useEngineReady` or `WhenEngineReady` (`src/wasm/`), the way the landing's fan, "Your table" showcase and
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
+  The scene kits and both recipe tables load in a chunk beside the module (#4222:
+  `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
+  and `test/setup.ts` installs the tables synchronously.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match
-  screens also call `loadWasm()`; Save-Data turns it all off, a production build has no dev
+  screens also call `loadWasm()`; engine routes also start `loadSceneData()` beside it (#4222).
+  Save-Data turns it all off, a production build has no dev
   chunk, and a screen whose code is already in shows no fallback.
 - `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
   §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,

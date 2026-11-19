@@ -13,10 +13,11 @@
 //!            R360's (MD-F13). R101 lists every minimal set (R90), up to 15,504 of them with twenty
 //!            permanents out, so the builder measures the legal actions and the AI's budget on a full
 //!            board. Activate (R384): one declared enemy permanent acting on the field, stolen (§6.3; the
-//!            same lane if free, else the first free zone, else it stays, R15; R171's entry), then made
-//!            Radiant on the Radiant face. Tunes: cheap 1 ↑; Tribute 5 ↓ (never below 1)."
+//!            same lane if free, else the first free zone, R15, else it is destroyed instead, R4205000;
+//!            R171's entry), then, on the Radiant face, made Radiant if it was taken (R282's reading).
+//!            Tunes: cheap 1 ↑; Tribute 5 ↓ (never below 1)."
 
-use jackioh_engine::effects::{set_radiant, steal};
+use jackioh_engine::effects::steal;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-097-4";
@@ -47,13 +48,8 @@ fn church(radiant: bool) -> Script {
         modes: vec![],
         can_activate: None,
         has: None,
-        run: hook(move |_ctx| {
-            let mut effects = vec![steal(json_as(json!({ "target": { "of": "chosen" } })))];
-            if radiant {
-                effects.push(set_radiant(json_as(json!({ "target": { "of": "chosen" } }))));
-            }
-            effects
-        }),
+        // R282, R4205000: the Radiant face's "Make it Radiant" lands only on a card the steal took.
+        run: hook(move |_ctx| vec![steal(json_as(json!({ "target": { "of": "chosen" }, "radiant": radiant })))]),
     };
 
     Script {
@@ -428,7 +424,7 @@ mod tests {
         }
 
         #[test]
-        fn r15_with_no_free_zone_the_stolen_permanent_stays_put() {
+        fn r15_r4205000_with_no_free_zone_the_stolen_permanent_is_destroyed() {
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [ID, VANILLA, VANILLA, VANILLA, VANILLA],
@@ -446,10 +442,10 @@ mod tests {
                 ID,
                 json!({ "targets": [{ "pick": "instance", "instanceId": enemy }] }),
             );
-            // No zone of p1's is free: it stays where it stands, with its opponent (R15).
-            let still = s.unit(P2, 2).expect("still in p2's lane 2");
-            assert_eq!(still.id, enemy);
-            assert_eq!(still.controller, P2);
+            // No zone of p1's is free: it is destroyed where it stands, into p2's graveyard (R15, R4205000).
+            assert_eq!(s.unit(P2, 2), None);
+            s.expect_in_zone(enemy.as_str(), "graveyard");
+            assert!(s.pile(P2, "graveyard").iter().any(|card| card.id == enemy));
         }
 
         #[test]
@@ -502,6 +498,35 @@ mod tests {
             assert_eq!(stolen.id, enemy_unit);
             assert_eq!(stolen.controller, P1);
             assert!(stolen.radiant, "stolen card became Radiant");
+        }
+
+        #[test]
+        fn r4205000_radiant_with_no_room_destroys_the_permanent_and_makes_nothing_radiant() {
+            let mut s = crate::scenario(json!({
+                "p1": {
+                    "field": [{ "def": ID, "radiant": true, "lane": 1 }, VANILLA, VANILLA, VANILLA, VANILLA],
+                    "hand": [FILLER],
+                    "library": [SPARE, SPARE],
+                },
+                "p2": {
+                    "field": [{ "def": VANILLA, "lane": 2 }],
+                    "hand": [FILLER],
+                    "library": [SPARE, SPARE],
+                },
+            }));
+            let enemy = s.unit(P2, 2).unwrap().id;
+
+            s.activate(
+                ID,
+                json!({ "targets": [{ "pick": "instance", "instanceId": enemy }] }),
+            );
+
+            assert_eq!(s.unit(P2, 2), None);
+            s.expect_in_zone(enemy.as_str(), "graveyard");
+            assert!(!s.card(enemy.as_str()).radiant, "it was not taken, so it is made nothing");
+            assert!(!s.events().iter().any(
+                |event| matches!(event, GameEvent::RadiantSet { instance_id, .. } if *instance_id == enemy)
+            ));
         }
     }
 }

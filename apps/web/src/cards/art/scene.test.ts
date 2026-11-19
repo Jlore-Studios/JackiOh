@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef, Rarity } from "@jackioh/shared";
@@ -27,6 +27,7 @@ import { drawFigure, FIGURE_DEFAULT_LOOK, FIGURE_KIT, FIGURE_LOOKS, figureLookFo
 import { fmt, seededRandom } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf } from "./pictures.ts";
+import { loadSceneData, resetSceneDataForTests } from "./sceneLoader.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MIN, artElements } from "./richness.ts";
 import {
@@ -439,5 +440,20 @@ describe("R3331000 the five proof cards", () => {
       const svg = svgOf(proceduralCardArtUri(def(id), false));
       for (const shape of inked) expect(svg, id).toContain(`d="${shape.d}" fill="${SCENE_PALETTE[shape.paint]}" opacity="${fmt(shape.opacity)}" fill-rule="evenodd" stroke="${SCENE_PALETTE[line.paint]}" stroke-width="${line.width}"`);
     }
+  });
+});
+
+describe("#4222 the scene tables load beside the engine module", () => {
+  afterEach(async () => {
+    await loadSceneData();
+  });
+
+  it("#4222 sceneRecipeOf throws before the tables are installed", async () => {
+    resetSceneDataForTests();
+    // `core-002` has a recipe, so null would be the wrong picture: the throw fails a face drawn too
+    // early instead of caching the painter's picture in `svg.ts`'s `proceduralCache`.
+    expect(() => sceneRecipeOf("core-002")).toThrow("the scene tables are not loaded");
+    await loadSceneData();
+    expect(sceneRecipeOf("core-002")).not.toBeNull();
   });
 });
