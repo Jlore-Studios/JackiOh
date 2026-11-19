@@ -740,7 +740,13 @@ The rule, one step at a time, each step one `reduce` (one node):
 4. **Defense.** When no attack is worth making, it tries up to `AI_REPLY.defenseSwitches` switches
    to Defense Position of its units in Attack Position whose switch is unspent (a unit that
    attacked has spent it, unless it has Deft, R49), one node each, and keeps the one its own
-   `evaluate` likes best, if that beats standing still (#1696).
+   `evaluate` likes best, if that beats standing still (#1696). Facing lethal (`faceThreat` of the
+   seat's board at least the opponent's life, so `wallSwitches`, R2976000, offers any), it also tries
+   the attack step 3 picked and up to `AI_REPLY.defenseSwitches` of those walls together, one node
+   each, and keeps a wall only when its `evaluate` beats both standing still and that attack; an
+   attack that wins goes first. It walls nothing while its own attacks left reach the seat's hero
+   together (`readyGap` at most zero), and a Deft unit that may still attack keeps its switch until
+   it has attacked (R4187000).
 5. **End.** Otherwise it ends its turn, and the engine runs the seat's start of turn.
 
 It never plays a card it held unseen: those are samples, and a guessed hand adds noise rather than

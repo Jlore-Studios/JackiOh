@@ -834,4 +834,149 @@ mod defense_switch_1696 {
         );
         assert_eq!(counter.used(), 3);
     }
+
+    /// The reply from `state` on a fresh twenty-node counter, with the nodes it used.
+    fn replied(state: &GameState) -> (GameState, usize) {
+        let counter = create_node_counter(20, None);
+        let reply =
+            simulate_reply(state, AI, &counter, &hidden_card_ids(state, AI), Prices::NONE).expect("a reply");
+        (reply, counter.used())
+    }
+
+    /// R4187000: the seat's 7/7 would finish p2 at 7 next turn. Mr. Vanilla could hit the open face for
+    /// 4, but in Defense Position its Taunt takes the 7/7's swing, so p2 walls instead and the seat's
+    /// hero stays at 30.
+    #[test]
+    fn r4187000_a_plain_unit_walls_instead_of_swinging_at_the_face_when_the_seat_threatens_lethal() {
+        let state = handed_over(json!({
+            "p1": { "field": ["core-025"] },
+            "p2": { "health": 7, "field": ["core-008"] },
+        }));
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, "core-008")).position,
+            Position::Def
+        );
+        assert_eq!(reply.players[AI].hero.health, 30);
+        assert_eq!(reply.players[HUMAN].hero.health, 7);
+        assert_eq!(reply.active, AI);
+        assert_eq!(used, 3);
+    }
+
+    /// R4187000: with the seat at 4, Mr. Vanilla's swing at the face wins, so p2 takes it before any wall.
+    #[test]
+    fn r4187000_a_winning_attack_is_still_taken_when_the_seat_threatens_lethal() {
+        let state = handed_over(json!({
+            "p1": { "health": 4, "field": ["core-025"] },
+            "p2": { "health": 7, "field": ["core-008"] },
+        }));
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            reply.result.map(|result| result.winner),
+            Some(Winner::from(HUMAN))
+        );
+        assert_eq!(used, 1);
+    }
+
+    /// R4187000: two Mr. Vanillas reach the seat's 8 only together, while either could wall the 7/7.
+    /// p2's attacks win together (`ready_gap`), so it walls nothing and swings both.
+    #[test]
+    fn r4187000_attacks_that_win_together_are_taken_before_any_wall() {
+        let state = handed_over(json!({
+            "p1": { "health": 8, "field": ["core-025"] },
+            "p2": { "health": 7, "field": ["core-008", "core-008"] },
+        }));
+        assert!(ready_gap(&state, HUMAN) <= 0.0);
+        assert!(!wall_switches(&state, HUMAN, &legal_actions(&state, HUMAN)).is_empty());
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            reply.result.map(|result| result.winner),
+            Some(Winner::from(HUMAN))
+        );
+        assert_eq!(used, 2);
+    }
+
+    /// R4187000: at 8, p2 survives the 7/7, so no wall is offered: Mr. Vanilla hits the face as before,
+    /// for the same nodes.
+    #[test]
+    fn r4187000_off_lethal_the_reply_and_its_nodes_are_unchanged() {
+        let state = handed_over(json!({
+            "p1": { "field": ["core-025"] },
+            "p2": { "health": 8, "field": ["core-008"] },
+        }));
+        assert!(wall_switches(&state, HUMAN, &legal_actions(&state, HUMAN)).is_empty());
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, "core-008")).position,
+            Position::Atk
+        );
+        assert_eq!(reply.players[AI].hero.health, 26);
+        assert_eq!(used, 2);
+    }
+
+    /// R4187000: the seat's 3/2 would finish p2 at 3, and Mr. Vanilla could wall it, but killing it
+    /// ends the threat and keeps Mr. Vanilla in Attack: p2's evaluation prefers the attack, tried with
+    /// the wall for one node more.
+    #[test]
+    fn r4187000_an_attack_its_evaluation_prefers_goes_before_the_wall() {
+        let state = handed_over(json!({
+            "p1": { "field": [{ "def": "core-008", "statsOverride": { "attack": 3, "health": 2 } }] },
+            "p2": { "health": 3, "field": ["core-008"] },
+        }));
+        assert!(!wall_switches(&state, HUMAN, &legal_actions(&state, HUMAN)).is_empty());
+        let (reply, used) = replied(&state);
+        assert!(active_units_of(&reply, AI).is_empty());
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, "core-008")).position,
+            Position::Atk
+        );
+        assert_eq!(reply.players[AI].hero.health, 30);
+        assert_eq!(used, 3);
+    }
+
+    /// R4187000: the line ending on the first test's board is scored after a reply that walls, so the
+    /// board it is scored on no longer reads as lethal on board; the reply that swung at the face left it
+    /// there, `AI_EVAL.lethal_on_board` and all.
+    #[test]
+    fn r4187000_the_board_a_line_is_scored_on_after_the_reply_carries_no_lethal_on_board() {
+        let end = handed_over(json!({
+            "p1": { "field": ["core-025"] },
+            "p2": { "health": 7, "field": ["core-008"] },
+        }));
+        let mut flat = AI_EVAL;
+        flat.lethal_on_board = 0.0;
+        let carried = |state: &GameState| {
+            evaluate(state, AI, NextSwing::Seat, &AI_EVAL) - evaluate(state, AI, NextSwing::Seat, &flat)
+        };
+        let hidden = hidden_card_ids(&end, AI);
+
+        let (after, _) = replied(&end);
+        assert_eq!(after.active, AI);
+        assert!(face_threat(&after, AI) < effective_life(&after, HUMAN));
+        assert!(carried(&after).abs() < 1e-9);
+        assert!(
+            reply_score(
+                &end,
+                AI,
+                TURN,
+                &create_node_counter(20, None),
+                &hidden,
+                Prices::NONE
+            )
+            .is_some()
+        );
+
+        let swung = act(
+            &end,
+            HUMAN,
+            &ActionBody::Attack {
+                attacker_id: unit_of(&end, "core-008").id,
+                target_id: "hero-p1".into(),
+            },
+        );
+        let unwalled = act(&swung, HUMAN, &ActionBody::EndTurn);
+        assert_eq!(unwalled.active, AI);
+        assert!(face_threat(&unwalled, AI) >= effective_life(&unwalled, HUMAN));
+        assert!((carried(&unwalled) - AI_EVAL.lethal_on_board).abs() < 1e-9);
+    }
 }
