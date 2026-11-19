@@ -482,7 +482,8 @@ migration 0014 is applied loses records (each logged as `game.record.failed`), n
 
 One snapshot, and only beside the log. ARCHITECTURE-CCG §2.2: "Append each action as it resolves;
 don't persist snapshots. Periodic snapshots are an optimization for later if replay gets slow." A
-30-player-turn cap (R2) bounds a log's length, so nothing is written as a match is played. Each
+30-player-turn cap (R2) bounds a log's length, so the only thing written beside the log
+as a match is played is its checkpoint. Each
 live match's actor stores one checkpoint every `MATCH_CHECKPOINT_MIN_ACTIONS` rows as played, and
 the restart drain stores one per live match as before (`match_checkpoints`, migration 0042,
 #1169, #4224), which the very next boot's rebuild resumes when every check passes, folding only
