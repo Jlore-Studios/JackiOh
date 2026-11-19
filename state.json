@@ -14803,14 +14803,6 @@
       "failures": 0,
       "feedback_since": "2026-11-19T02:13:11Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-19T05:20:29Z",
-        "lifted": "2026-11-19T04:01:49Z",
-        "owner": "claude-6",
-        "since": "2026-11-19T03:20:29Z",
-        "until": "2026-11-19T04:00:00Z",
-        "why": "5-hour usage is 45%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)"
-      },
       "interruptions": 0,
       "issue": 4207,
       "kind": "revise",
@@ -14823,11 +14815,11 @@
       "queued_at": "2026-11-19T03:20:16Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "44442692660",
+      "run_id": "pending:4e48d154-1795061070",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-19T02:13:11Z",
+      "started_at": "2026-11-19T04:04:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -15906,9 +15898,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T04:04:17Z",
+    "at": "2026-11-19T04:04:55Z",
     "url": "",
-    "what": "build #4251 on muse"
+    "what": "revise #4231 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-19T03:53:17Z",
