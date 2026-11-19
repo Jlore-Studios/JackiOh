@@ -14342,6 +14342,8 @@
       }
     },
     "4282": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-19T20:13:11Z",
@@ -14355,8 +14357,11 @@
         "trail": "- Status: reproduction in progress \u2014 the C-module build (`JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh`) is still running in the background. Once its result arrives I'll confirm the `signature mismatch` warning and the `signature_mismatch:` stub, then proceed with the red gate (ste\u2026\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the C module's `log` export traps every `f64::ln`\"} -->\n- ## What changed and why\n- The C module's `#[no_mangle]` export `log` shared its symbol name with libm's `log`, which `f64::ln` lowers to on `wasm32-unknown-unknown`. The linker resolved the clash with a trapping `signature_mismatch:log` stub, so every `ln` in the module (Glicko-2 in `ranked`'s `rateGame`, the ladder bots) t\u2026\n- Files (10, exactly the plan's list plus one comment word): `scripts/build-wasm.sh` (the gate), `crates/wasm/c/src/lib.rs`, `crates/wasm/src/lib.rs`, `crates/wasm/c/src/tests.rs`, `apps/web/src/wasm/index.ts`, `apps/web/src/game/logLines.ts`, `apps/web/src/wasm/index.test.ts`, `crates/wasm/README.md\u2026\n- ## How I tested it\n- - **Repro (old code):** `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh` exited 0 but logged `warning: linker stderr: rust-lld: function signature mismatch: log`, and the built `.wasm` contained one `signature_mismatch:` stub.\n- - **New gate, red:** after adding the gate, the same build on the unrenamed tree exited 1 with the gate message. **Green:** after the rename it exits 0 with no `signature mismatch` warning and zero stub bytes.\n- - **Browser side:** `cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown --features preview` exits 0 with zero such warnings and zero stub bytes \u2014 the browser module never clashed (wasm-bindgen exports link differently); it was renamed anyway for parity.\n- - **Exports:** node `WebAssembly.Module.exports` on the rebuilt C module lists `game_log`, no `log`, no `signature_mismatch:` names.\n- - **End-to-end fix:** drove `init` \u2192 `planSeason` \u2192 `rateGame` (two Glicko-2 sides) through the real built `.wasm` in node \u2014 both answered status 0 with the expected ranks (winner `wins: 1`). On the old module this trapped the instance dead.\n- - **Kept coverage:** `cargo test -p jackioh-wasm-c -- game_log_export_answers_what_the_core_body_answers ranked_export_answers_what_the_core_body_answers` \u2192 2 passed; `cargo test -p jackioh-wasm --test export_parity` \u2192 4 passed.\n- - **Web:** `pnpm --dir apps/web test src/wasm/index.test.ts` \u2192 19 passed; `src/game/Log.test.tsx` \u2192 50 passed (re-run after the final comment edit). `git status --porcelain -- apps/web/src/wire` is empty.\n- - **Gates:** `cargo fmt --check` clean; `cargo clippy -p jackioh-wasm -p jackioh-wasm-c -p jackioh-wasm-core --all-targets -- -D warnings` clean; `cargo jackioh catalog check`, `patches check`, `spec check` (2300 rulings, 5789 proofs) all ok.\n- ## Decisions the issue didn't settle\n- - **No new Rust test file:** a native `cargo test` links with the host toolchain and cannot reproduce a `wasm32` libm link clash, so it would pass on the old code and prove nothing. The shell gate (proven red-then-green) plus the node drive of `rateGame` through the actual built module are the regr\u2026\n- - **No ruling note:** a symbol collision settles no rules question, so per the plan none was added; `spec check` stays green.\n- - **One departure from the plan:** fixed a stale pointer the plan didn't name \u2014 the `logLines.ts` header comment's \"the WebAssembly module's `log` body\" now says `` `gameLog` ``. Left the `crates/wasm/core/src/lib.rs::log` body and all `\"log\"` JSON field names exactly as is.\n- - **Reviewer, look twice at:** the `grep -a` gate goes blind if a toolchain ever strips the name section \u2014 the linker-warning line in the build log remains as the secondary signal. And out-of-tree hosts (the Roblox port in #2898) calling the C `log` export must switch to `game_log`; that call site \u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4273 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4273/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4273,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-19T22:35:56Z",
         "from_run": "44606395709",
         "gates": [
           {
@@ -14415,8 +14420,15 @@
         "source": "build",
         "until": "2026-11-19T23:05:17Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-19T22:35:17Z",
+      "run_id": "pending:e7b7a30a-1795127742",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-19T22:35:56Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -14430,9 +14442,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T22:27:57Z",
+    "at": "2026-11-19T22:35:56Z",
     "url": "",
-    "what": "revise #4281 on claude-7"
+    "what": "review #4282 on muse"
   },
   "last_sweep": {
     "at": "2026-11-19T22:26:49Z",
