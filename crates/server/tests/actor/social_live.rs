@@ -805,4 +805,89 @@ mod r4233000_push {
         assert_eq!(status, 200, "{body}");
         assert_eq!(next_social(&bob_ws, from).await["notificationsUnread"], 0);
     }
+
+    #[tokio::test(start_paused = true)]
+    async fn r4233000_a_board_read_pushes_the_new_count() {
+        use jackioh_server::config::NOTIFICATIONS_KEEP;
+        use jackioh_server::notifications::store::{NewNotification, NotificationKind};
+
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        befriend(&app, &ana, &bob).await;
+
+        // A daily game between them: Ana challenges, Bob accepts.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ana.token,
+            json!({ "friendId": bob.id, "mode": "random", "perMoveDays": 3 }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let challenge_id = body["id"].as_str().expect("a challenge id").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{challenge_id}/accept"),
+            &bob.token,
+            json!({ "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let match_id = body["matchId"].as_str().expect("a match id").to_string();
+
+        // One unread `dailyMove` row about the game, as a handed-over move would write. The
+        // store write itself pushes nothing; only opening the board does.
+        let mut tx = app.db.begin(None).await.expect("a store transaction begins");
+        tx.notifications_add(
+            &NewNotification {
+                profile_id: bob.id.clone(),
+                kind: NotificationKind::DailyMove,
+                actor_id: Some(ana.id.clone()),
+                subject: Some(match_id.clone()),
+                payload: json!({}),
+                created_at: now_ms(),
+                read: false,
+            },
+            NOTIFICATIONS_KEEP,
+        )
+        .await
+        .expect("the row is written");
+        tx.commit().await.expect("the row commits");
+        let (status, social) = api(&app, "GET", "/api/social", &bob.token, Value::Null).await;
+        assert_eq!(status, 200, "{social}");
+        assert_eq!(social["notificationsUnread"], 1);
+
+        let served = serve(&app);
+        let bob_ws = connected(&served, &bob).await;
+
+        // Bob opens the board: the read marks the row, and the mark pushes his new count of
+        // none. Nothing else in the read pushes Bob a frame.
+        let from = bob_ws.received();
+        let (status, body) = api(
+            &app,
+            "GET",
+            &format!("/api/daily/games/{match_id}"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(next_social(&bob_ws, from).await["notificationsUnread"], 0);
+
+        // Reading again marks nothing, so it pushes nothing either.
+        let from = bob_ws.received();
+        let (status, body) = api(
+            &app,
+            "GET",
+            &format!("/api/daily/games/{match_id}"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_told_nothing(&bob_ws, from, "Bob").await;
+    }
 }

@@ -620,8 +620,9 @@ async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) ->
     // R4233000: reading the board marks this game's move and ended rows read, inside the read's own
     // transaction and only while unread, so a slow timer's re-read (R3840000) writes nothing. A
     // failure marks nothing and never fails the read (the act's answer included): it is logged, as
-    // `notify`'s is.
-    if let Err(error) = tx
+    // `notify`'s is. A mark that changed any row pushes the reader's social frame, so every one of
+    // their tabs drops the dot.
+    let marked = match tx
         .notifications_mark_subject(
             me,
             &[NotificationKind::DailyMove, NotificationKind::DailyEnded],
@@ -631,9 +632,16 @@ async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) ->
         )
         .await
     {
-        tracing::warn!(event = "notifications.mark_failed", matchId = %loaded.match_row.id, message = %error);
-    }
+        Ok(marked) => marked,
+        Err(error) => {
+            tracing::warn!(event = "notifications.mark_failed", matchId = %loaded.match_row.id, message = %error);
+            0
+        }
+    };
     tx.commit().await?;
+    if marked > 0 {
+        push_social(app, &[me]).await;
+    }
     // CLAUDE.md rule 7: the caller's view, legal actions and forecast only, under the game's catalog.
     let pinned = loaded.pinned;
     let view = engine::view_for(pinned, &loaded.state, seat);
@@ -710,8 +718,9 @@ async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value
     };
     let mut tx = app.db.begin(Some(me)).await?;
     let opponent = tx.profiles_get_by_id(opponent_id).await?;
-    // R4233000: as `game_json`'s read marks, for a game whose moves are gone.
-    if let Err(error) = tx
+    // R4233000: as `game_json`'s read marks, for a game whose moves are gone. A mark that changed
+    // any row pushes the reader's social frame, as `game_json`'s does.
+    let marked = match tx
         .notifications_mark_subject(
             me,
             &[NotificationKind::DailyMove, NotificationKind::DailyEnded],
@@ -721,9 +730,16 @@ async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value
         )
         .await
     {
-        tracing::warn!(event = "notifications.mark_failed", matchId = %stored.match_row.id, message = %error);
-    }
+        Ok(marked) => marked,
+        Err(error) => {
+            tracing::warn!(event = "notifications.mark_failed", matchId = %stored.match_row.id, message = %error);
+            0
+        }
+    };
     tx.commit().await?;
+    if marked > 0 {
+        push_social(app, &[me]).await;
+    }
     let mut game = summary_json(
         &stored.daily,
         Some(&stored.match_row),
