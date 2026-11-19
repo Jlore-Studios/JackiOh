@@ -15181,7 +15181,7 @@
       }
     },
     "4240": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -15203,25 +15203,18 @@
       "interruptions": 0,
       "issue": 4233,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-19T03:27:30Z",
-      "run_id": "44430486965",
+      "run_id": "pending:b34b94d8-1795059056",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-19T00:37:21Z",
+      "started_at": "2026-11-19T03:31:22Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-19T03:27:30Z",
-        "until": "2026-11-19T03:57:30Z",
-        "why": "it waited 120 minutes for #4104, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "muse"
@@ -15996,9 +15989,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T03:30:42Z",
+    "at": "2026-11-19T03:31:22Z",
     "url": "",
-    "what": "review #4241 on muse"
+    "what": "revise #4240 on muse"
   },
   "last_sweep": {
     "at": "2026-11-19T03:18:32Z",
