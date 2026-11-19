@@ -6,7 +6,8 @@
 //!    judged after the turn's end while a handed card would be discarded there (R3696001).
 //! 2. Face-up activations (up to AI_REPLY.visible_activations).
 //! 3. Static trades: best value attack (lethal, kill, trade up, face; Deft trials R49).
-//! 4. Defense switches up to AI_REPLY.defense_switches (#1696).
+//! 4. Defense switches up to AI_REPLY.defense_switches (#1696); facing lethal, weighed against the best
+//!    attack (R4187000).
 //!
 //! Step evaluation uses real `reduce` calls (catching unwinds, SURFACE §4.4.9). Countdowns
 //! waiting where reply ends are blended via `AI_REPLY.countdown_share` (#1995, R1181000).
@@ -24,7 +25,7 @@ use jackioh_engine::{
 };
 
 use crate::candidates::{
-    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of,
+    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of, wall_switches,
 };
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
@@ -670,6 +671,46 @@ fn defense_switch(
     best_try(state, seat.opponent(), &tries, false, counter, prices)
 }
 
+/// Step 4, R4187000: facing lethal, the switches to Defense Position that lower the seat's threat
+/// (`wall_switches`, R2976000), up to `AI_REPLY.defense_switches`, tried with `attack`, the best-ranked
+/// attack, first, one node each; the best by the opponent's own evaluation is kept (`best_try`), so a
+/// winning attack still goes first and a wall only when it beats both that attack and standing still.
+/// Nothing while the opponent's attacks left reach the seat's face together (`ready_gap`), nor for a Deft
+/// unit that may still attack, which keeps its switch for after its attack (R49).
+fn lethal_wall(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    attack: &ActionBody,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Known {
+    let opp = seat.opponent();
+    let attacks_first = |instance_id: &str| {
+        legal.iter().any(
+            |action| matches!(action, ActionBody::Attack { attacker_id, .. } if attacker_id == instance_id),
+        ) && find_instance(state, instance_id)
+            .is_some_and(|unit| has_keyword(&unit_view(state, unit).keywords, KeywordKind::Deft))
+    };
+    let switches: Vec<ActionBody> = legal
+        .iter()
+        .filter(|action| {
+            matches!(action, ActionBody::SwitchPosition { instance_id } if !attacks_first(instance_id))
+        })
+        .cloned()
+        .collect();
+    let walls = wall_switches(state, opp, &switches);
+    if walls.is_empty() || ready_gap(state, opp) <= 0.0 {
+        return Known::Nothing;
+    }
+    let mut tries = vec![attack.clone()];
+    tries.extend(walls.into_iter().take(AI_REPLY.defense_switches.max(0) as usize));
+    if tries.len() < 2 {
+        return Known::Nothing;
+    }
+    best_try(state, opp, &tries, false, counter, prices)
+}
+
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
 pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
     let side = &state.players[seat.opponent()];
@@ -761,15 +802,18 @@ pub fn simulate_reply_with(
             .next();
         // #1696: no attack is worth making, so before it ends its turn the opponent switches a unit
         // its evaluation would rather have in Defense Position.
-        if attack.is_none() {
-            match defense_switch(&current, seat, &legal, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(switched) => {
-                    current = *switched;
-                    continue;
-                }
-                Known::Nothing => {}
+        // R4187000: facing lethal, it weighs a wall against that attack.
+        let walled = match &attack {
+            None => defense_switch(&current, seat, &legal, counter, prices),
+            Some(best) => lethal_wall(&current, seat, &legal, best, counter, prices),
+        };
+        match walled {
+            Known::Cut => return None,
+            Known::Played(switched) => {
+                current = *switched;
+                continue;
             }
+            Known::Nothing => {}
         }
         if !counter.take() {
             return None;

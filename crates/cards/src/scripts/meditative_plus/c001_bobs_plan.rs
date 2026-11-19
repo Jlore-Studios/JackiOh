@@ -455,9 +455,11 @@ mod tests {
                 "type": "Spell", "tags": ["Wincon"], "rarity": "Common", "token": false, "cost": 0,
                 "base": face, "radiant": face,
             }));
+            // Every Wincon card out (the plan table's four, S+ #79 among them since #3569, and any a later
+            // set prints), so fx-wincon is the pool's one card wherever the roll lands.
             let catalog: CardDefs = registered_catalog()
                 .iter()
-                .filter(|(id, _)| ![SUMMIT, AESTHETICIZE, ALTERAN_REACH].contains(&id.as_str()))
+                .filter(|(_, def)| !def.tags.contains(&Tag::Wincon))
                 .map(|(id, def)| (id.clone(), def.clone()))
                 .chain([(wincon.id.clone(), wincon)])
                 .collect();

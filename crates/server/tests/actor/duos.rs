@@ -3566,6 +3566,11 @@ mod two_v_two {
     use jackioh_server::config::JLORE_COOP_WIN;
 
     const SEATS: [&str; 4] = ["a1", "a2", "b1", "b2"];
+    /// The seed every 2v2 here starts from (R143: the test app is in end-to-end mode, which takes a
+    /// lobby's seed). A random pick freezes only its lean, so a fresh seed dealt fresh decks, and about
+    /// one in a hundred drew a Cognitive Offloading in round 1 or 2, whose autopilot ended that seat's
+    /// turn before the test could (#3564's flake, in `versus`).
+    const VERSUS_SEED: &str = "seed-r3731002";
 
     /// A 2v2 started from a four-account lobby over HTTP; nobody connected yet.
     struct Versus {
@@ -3610,7 +3615,14 @@ mod two_v_two {
             }
         }
         let path = format!("/api/lobbies/{code}/start");
-        let (status, started) = api(&app, "POST", &path, &lobby[0].token, json!({})).await;
+        let (status, started) = api(
+            &app,
+            "POST",
+            &path,
+            &lobby[0].token,
+            json!({ "seed": VERSUS_SEED }),
+        )
+        .await;
         assert_eq!(status, 200, "{started}");
         let match_id = started["matchId"].as_str().expect("a match id").to_string();
         let mut t = app.db.begin(None).await.expect("a transaction");

@@ -5,9 +5,11 @@
 # where a roll lands: it searches for the roll with `seed_where`/`cursor_where` (#848) or builds the
 # position directly, and a test of a pool's content or order reads it under `with_pool_shift(0, …)`.
 #
-# Daily, not per pull request: it builds four crates' tests with a feature no per-PR group enables and runs
-# the AI's and the server's games, which does not fit the five-minute job budget (`ci.yml`'s header). The
-# per-PR check is `pool_probe`'s canary in the engine's own tests. Extra arguments go to `cargo test`.
+# By hand, not per pull request: it builds four crates' tests with a feature no per-PR group enables and
+# runs the AI's and the server's games, which does not fit the eight-minute job budget (`ci.yml`'s header),
+# and no workflow runs it. The cards' share runs daily: `crates/tools/tests/pool_probe.rs` builds and runs
+# their tests under the feature in a `#[ignore = "daily: …"]` test super.yml's daily tests job runs (#4181).
+# The per-PR check is `pool_probe`'s canary in the engine's own tests. Extra arguments go to `cargo test`.
 set -eu
 
 cd "$(dirname "$0")/.."

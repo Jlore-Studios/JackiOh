@@ -153,7 +153,9 @@ mod tests {
 
     #[test]
     fn r1872003_radiant_4_4_and_all_five_radiant_miners_fused_v1_to_v5_asking_nothing() {
-        let (mut s, host) = played(true);
+        // The Radiant face rolls nothing: it fuses the whole Miner pool in the pool's order (R3869002),
+        // read as it is.
+        let (mut s, host) = with_pool_shift(0, || played(true));
         assert!(s.state().pending.is_none());
         let fusions = s
             .last_events()
