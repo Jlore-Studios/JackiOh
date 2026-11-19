@@ -14577,7 +14577,7 @@
       "started_at": "2026-11-18T23:59:14Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 2,
       "waiting_comment": 6989049807
     },
     "4222": {
