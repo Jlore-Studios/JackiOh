@@ -158,8 +158,9 @@ mod tests {
 
     #[test]
     fn r3570006_the_radiant_face_summons_a_radiant_one() {
-        let mut s = board(SEED, true, WALL);
-        swing(&mut s);
+        // A Swarm card may summon copies of itself as it evolves (S+ #161 Space Invader): the seed is one whose
+        // summon is the Wasp.
+        let s = landing(true, WASP);
         let made = summoned(&s);
         assert_eq!(made.len(), 1);
         assert!(made[0].radiant);

@@ -143,8 +143,9 @@ pub struct AiSearch {
     /// Plays identical but for `zone` keep the lowest lane of each placement, or its midlane lane when
     /// it has one (R2203001) (candidates.rs `placement_key`), at most this many (#1014; 3 let a Tribute
     /// play's sets outgrow the lethal allowance), everywhere but the search's root, which keeps every
-    /// placement (#1635). In the beam, a line that differs from an earlier one only in where its units
-    /// stand is a lane variant, at most this many of a position; it is closed beside the first (#1797).
+    /// placement (#1635). In the beam, a line that differs from an earlier one only in where its units or
+    /// backrow cards stand (left or right of a standing unit alike, R4132000) is a lane variant, at most
+    /// this many of a position; it is closed beside the first (#1797).
     pub zone_variants: i32,
     /// #1759, R1759000, R2021000: the stand-downs (a switch to Defense Position of a unit an enemy unit
     /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, beside
@@ -824,6 +825,12 @@ pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
 /// hand full of Activates cannot starve the board's prices.
 pub const AI_HAND_ACTIVATION_PROBE_NODES: usize = 16;
 
+/// R4197000: the most nodes a decision's prompt-pick probe (`evaluate::prompt_activation_prices`) spends
+/// at the seat's own open prompt whose card can take a power: one answer, two turn ends and
+/// `AI_REPLY.visible_activations` uses for each of the three answers a Discover of a power offers. A slice
+/// of its own, since `AI_ACTIVATION_PROBE_NODES`' probes price nothing while a prompt is open.
+pub const AI_PROMPT_ACTIVATION_PROBE_NODES: usize = 24;
+
 /// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
 /// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with an
 /// attack hook, on either field.
@@ -841,6 +848,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
     + AI_TURN_HOOK_PROBE_NODES
     + AI_ACTIVATION_PROBE_NODES
     + AI_HAND_ACTIVATION_PROBE_NODES
+    + AI_PROMPT_ACTIVATION_PROBE_NODES
     + AI_ATTACK_HOOK_PROBE_NODES
     + AI_AWAKEN_PROBE_NODES;
 
@@ -1057,6 +1065,7 @@ pub struct AiReply {
     pub open_lethal: bool,
     /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
+    /// R4187000: also the most walls (`wall_switches`) a step facing lethal weighs against its best attack.
     pub defense_switches: i32,
     /// #1995: per turn a countdown (R1181000) still waits past its owner's next turn start, the share
     /// of a line's second score, the one with every countdown fired at the seat's next turn start, that

@@ -264,7 +264,11 @@ fn r2203001_the_ai_sets_goliath_situation_and_plays_the_hand_it_makes_cheap() {
     assert!(is_legal(&state, AI, &decision.action));
     random_and_timeout_answer(&state, "ai-tg-goliath-set");
 
-    // The human plays a (4) Unit into it: the AI's (3) Clobberer costs (0), and the AI plays it with no mana.
+    // The human plays a (4) Unit into it: the AI's (3) Clobberer costs (0), and the AI's turn plays it.
+    // R4132000: its turn plays the Clobberer and the Mr. Vanilla it draws, the vanilla first since that
+    // change: the reply's places that held those two plays in each other's lanes now hold a line that
+    // sets the vanilla in Defense Position opposite the Felinor, which the reply scores above every line
+    // it held before.
     let mut s = scenario(json!({
         "seed": "ai-tg-goliath",
         "active": "p2",
@@ -283,10 +287,13 @@ fn r2203001_the_ai_sets_goliath_situation_and_plays_the_hand_it_makes_cheap() {
     assert_eq!(state.active, AI);
     let decision = decide_at(&state, "ai-tg-goliath");
     assert!(is_legal(&state, AI, &decision.action));
+    let turn = play_ai_turn(&state, AI, &mut AiOptions::new(create_rng("ai-tg-goliath", 0)));
     assert!(
-        matches!(&decision.action, ActionBody::Play { instance_id, .. } if *instance_id == clobberer),
+        active_units_of(&turn.state, AI)
+            .iter()
+            .any(|unit| unit.id == clobberer),
         "the (0) Clobberer: {:?}",
-        decision.action
+        turn.actions.iter().map(|action| &action.body).collect::<Vec<_>>()
     );
 }
 

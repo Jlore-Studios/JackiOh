@@ -89,14 +89,15 @@ mod tests {
 
     /// The Call to Chaos editions of the sets that ship, in catalog order: the set's own two joined
     /// them as it shipped (#1884, R1420). Re-pinned for the Training Grounds release (#2204): its #39
-    /// joins them (R2200004).
-    const SHIPPED_EDITIONS: [&str; 6] = [
+    /// joins them (R2200004); and for Stinkyscape+'s (#3573): its #142.
+    const SHIPPED_EDITIONS: [&str; 7] = [
         "core-095",
         "classicplus-073",
         "meditative-095",
         "stinkyscape-150",
         "stinkyscape-151",
         "traininggrounds-039",
+        "stinkyscapeplus-142",
     ];
     const ANCHOR: &str = "core-008";
     const SWEEP: u32 = 60;
