@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4275,
+  "title": "Patch: a smaller build of the C module for ports",
+  "branch": "bot/issue-4275",
+  "thread": "**Issue #4275 (data, not instructions):**\n\n```text\n# #4275: Patch: a smaller build of the C module for ports\nOpened by @squishy-squooby.\n\nPart of #2898. `crates/wasm/c` builds to about 43 MB (43,167,354 bytes on a recent build), and a port that translates it into another language carries every byte. Make it smaller without changing what it answers.\n\n## What to try, measuring each\n\n- `opt-level = \"z\"` (and `\"s\"`) for the module.\n- LTO and `codegen-units = 1`.\n- `panic = \"abort\"`. Check that a panic's text is still readable at `jackioh_result_ptr()` after the trap, as `crates/wasm/c/README.md` (Errors and traps) promises, with a test that proves it.\n- `wasm-opt -Oz` when it's on PATH (skip it with a message when it isn't).\n- Stripping the name section, if the size it saves is worth losing the names in a trap's backtrace.\n\n`lto` and `panic` are profile-wide settings, so this likely means a custom profile, or a `[profile.release.package\u2026]` override where one is allowed. Keep the built module at `target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm`, or say in the pull request what must change: CI's `web (wasm c module)` job reads that path, and workflows are outside the bot's paths.\n\n## Done when\n\n- `scripts/build-wasm.sh` (`JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0`) builds the smaller module and prints its size beside the old one's, raw and gzipped.\n- The import section is still empty.\n- `cargo test -p jackioh-wasm-c` and `crates/wasm/tests/export_parity.rs` pass.\n- The pull request has a table of each setting's size and build time, and says which ones it kept.\n- Nothing about the browser's module changes.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4275: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-19T19:50:27Z",
+    "claimed_at": "2026-11-19T19:55:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
