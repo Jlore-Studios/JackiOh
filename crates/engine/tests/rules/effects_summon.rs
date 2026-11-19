@@ -1310,6 +1310,23 @@ mod r2248000_a_flying_unit_summoned_into_a_full_unit_row_stands_in_the_backrow {
     }
 
     #[test]
+    fn r2248000_r4238000_a_recruit_passes_over_a_unit_no_zone_takes_for_a_flier_that_stands_in_the_backrow() {
+        let mut state = full_row(&[]);
+        set_library(&mut state, PlayerId::P1, &[crier().id, flier().id]);
+        let events = run(&mut state, recruit(json_as(json!({}))), RunOptions::default());
+        assert_eq!(placed(&events), vec![(Row::Backrow, 1)]);
+        assert_eq!(summoned_def_ids(&events), vec![flier().id]);
+        let flier_card = card_at(&state, slot(PlayerId::P1, Row::Backrow, 1))
+            .expect("the flier")
+            .clone();
+        assert!(
+            stands_in_backrow(&state, &flier_card),
+            "it stands there (R1081000)"
+        );
+        assert_eq!(def_ids_of(&state.players[PlayerId::P1].library), vec![crier().id]);
+    }
+
+    #[test]
     fn r2248000_r1083_r129_a_flier_in_hand_is_summoned_into_the_backrow_of_a_full_unit_row() {
         let mut state = full_row(&[]);
         in_hand(&mut state, &flier().id, PlayerId::P1, 1);

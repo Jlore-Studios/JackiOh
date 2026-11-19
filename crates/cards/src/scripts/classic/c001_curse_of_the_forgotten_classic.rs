@@ -7,9 +7,12 @@
 //! One hit: the damage per card times their exile size as the Spell resolves is a single `damage`,
 //! so Armor applies once and a total of 0 is no hit (R63); then the draw. The preview (R280) is that
 //! total. The Radiant Recruit (§6.3) takes the newest permanent in their exile (chronological, §3)
-//! under your control, owner unchanged (§3.2), no Cry (R1); a Trap is set face-down (R33). A Unit it
+//! that can be summoned, passing over a newer one no zone takes (R4238000), under your control, owner
+//! unchanged (§3.2), no Cry (R1); a Trap is set face-down (R33). A Unit it
 //! took makes one forced attack on the enemy hero (R53). The attacker is named by its definition, as a
-//! Unit a card cast on the draw summoned (R58) is summoned by this list too and must not attack.
+//! Unit a card cast on the draw summoned (R58) is summoned by this list too and must not attack; the
+//! card is read by the Recruit's own scan (`recruit_takes`). Through v0.6.7e it was read as the newest
+//! permanent of their exile; `script_v0_6_7e` keeps that (R767000).
 
 use jackioh_engine::effects::{damage, draw, forced_attacks, recruit};
 use jackioh_engine::prelude::*;
@@ -45,30 +48,25 @@ fn preview() -> PreviewHook {
     })
 }
 
-/// The card the Recruit will take: the newest permanent in the opponent's exile (a Spell is never
-/// recruited, and a unit token is never in an exile, R11), read as the Spell resolves.
-fn newest_permanent_of_theirs(ctx: &EffectContext<'_>) -> Option<CardInstance> {
-    let state: &GameState = &*ctx.state;
-    let exile = zone_cards(state, opponent_of(ctx.controller), OffFieldZone::Exile);
-    exile
-        .iter()
-        .rev()
-        .find(|card| def_of(Some(state), &card.def_id).type_ != CardType::Spell)
-        .cloned()
-}
+/// How the Radiant face names the card its Recruit will take, read as the Spell resolves.
+type Recruited = fn(&EffectContext<'_>, &RecruitArgs) -> Option<CardInstance>;
 
-pub fn script() -> CardScripts {
-    let base = Script {
+fn base() -> Script {
+    Script {
         cry: Some(hook(|ctx| hit_and_draw(ctx))),
         preview: Some(preview()),
         ..Script::default()
-    };
+    }
+}
 
-    let radiant = Script {
-        cry: Some(hook(|ctx| {
-            let recruited = newest_permanent_of_theirs(ctx);
+/// The Radiant face, its forced attacker named by `recruited`.
+fn radiant(recruited: Recruited) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let args: RecruitArgs = json_as(json!({ "from": "exile", "whose": "enemy" }));
+            let recruited = recruited(ctx, &args);
             let mut effects = hit_and_draw(ctx);
-            effects.push(recruit(json_as(json!({ "from": "exile", "whose": "enemy" }))));
+            effects.push(recruit(args));
             // Only a Unit of the recruited definition attacks, not one a card cast on the draw summoned (C+ #26).
             if let Some(card) = recruited
                 && def_of(Some(&*ctx.state), &card.def_id).type_ == CardType::Unit
@@ -82,9 +80,37 @@ pub fn script() -> CardScripts {
         })),
         preview: Some(preview()),
         ..Script::default()
-    };
+    }
+}
 
-    CardScripts { base, radiant }
+/// The card is read by the scan the Recruit runs (R4238000): the newest permanent of their exile that
+/// can be summoned, R690's order kept.
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: base(),
+        radiant: radiant(recruit_takes),
+    }
+}
+
+/// Through v0.6.7e the card was read as the newest permanent in the opponent's exile (a Spell is never
+/// recruited, and a unit token is never in an exile, R11), whether or not it could land and past R690.
+fn newest_permanent_of_theirs(ctx: &EffectContext<'_>, _args: &RecruitArgs) -> Option<CardInstance> {
+    let state: &GameState = &*ctx.state;
+    let exile = zone_cards(state, opponent_of(ctx.controller), OffFieldZone::Exile);
+    exile
+        .iter()
+        .rev()
+        .find(|card| def_of(Some(state), &card.def_id).type_ != CardType::Spell)
+        .cloned()
+}
+
+/// R767000: the scripts through v0.6.7e, before R4238000 read the recruited card by the Recruit's own
+/// scan. `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_7e() -> CardScripts {
+    CardScripts {
+        base: base(),
+        radiant: radiant(newest_permanent_of_theirs),
+    }
 }
 
 // C #1 — SPEC §8.6 row 1, BUILD M9 Classic row C 1 (R63, R280, §3.2, R2618000, R53, R33, R386).
@@ -105,6 +131,7 @@ mod tests {
     const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
     const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const BILLY: &str = "classicplus-069"; // Buff Billy: an X-cost Unit
     const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
     const RUSH_TOKEN: &str = "core-t-rush";
@@ -409,7 +436,7 @@ mod tests {
             }
 
             #[test]
-            fn the_newest_permanent_with_no_open_zone_for_it_nothing_is_recruited_not_an_older_one() {
+            fn r4238000_the_newest_permanent_with_no_open_zone_is_passed_over_for_an_older_one_that_lands() {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": CURSE, "radiant": true }, STOCKPILE],
@@ -419,11 +446,36 @@ mod tests {
                     "p2": { "hand": [STOCKPILE], "exile": [VANILLA, SHEEPISH], "library": [STOCKPILE] },
                 }));
                 s.play(CURSE, json!({}));
-                let units: Vec<Option<CardInstance>> = (1..=5).map(|lane| s.unit(P1, lane)).collect();
-                assert_eq!(units, vec![None, None, None, None, None]);
+                // Sheepish, the newest, finds the backrow full; the Unit exiled before it lands and attacks.
+                assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(VANILLA.to_string()));
                 let exiled = def_ids(&s.pile(P2, "exile"));
-                assert_eq!(exiled, vec![VANILLA, SHEEPISH]);
-                assert_eq!(hits_on(&s, P2), vec![2]);
+                assert_eq!(exiled, vec![SHEEPISH]);
+                assert_eq!(hits_on(&s, P2), vec![2, 4]);
+            }
+
+            #[test]
+            fn r4238000_r690_the_unit_taken_past_a_newer_x_cost_one_is_the_one_that_attacks() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": CURSE, "radiant": true }, STOCKPILE], "library": [STOCKPILE] },
+                    "p2": { "hand": [STOCKPILE], "exile": [VANILLA, BILLY], "library": [STOCKPILE] },
+                }));
+                s.play(CURSE, json!({}));
+                assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(VANILLA.to_string()));
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![BILLY]);
+                assert_eq!(hits_on(&s, P2), vec![2, 4]);
+            }
+
+            #[test]
+            fn r767000_the_script_kept_for_v0_6_7e_names_the_newest_permanent_so_the_unit_taken_past_it_stays() {
+                crate::under_kept(CURSE, super::super::super::script_v0_6_7e(), || {
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [{ "def": CURSE, "radiant": true }, STOCKPILE], "library": [STOCKPILE] },
+                        "p2": { "hand": [STOCKPILE], "exile": [VANILLA, BILLY], "library": [STOCKPILE] },
+                    }));
+                    s.play(CURSE, json!({}));
+                    assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(VANILLA.to_string()));
+                    assert_eq!(hits_on(&s, P2), vec![2], "the newest, Billy, was named: the Unit taken stays");
+                });
             }
 
             #[test]

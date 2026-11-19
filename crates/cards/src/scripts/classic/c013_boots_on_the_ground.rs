@@ -9,9 +9,10 @@
 //! one's before its combat (R53, #9 Moths to the Flame), so it draws or Recruits though it dies in that
 //! combat. An attack called off in its trap window runs nothing (R44), and defending is not attacking.
 //!
-//! Radiant: §6.3 Recruit, the first permanent from the top of your deck, summoned into its row per R64
-//! with no Cry (R1), a Trap face-down (R33); nothing when there is none or its row is full. The
-//! numbers are the declared `draw` and `recruits` (R386), read through `param`.
+//! Radiant: §6.3 Recruit, the first permanent from the top of your deck that can be summoned, into its
+//! row per R64 with no Cry (R1), a Trap face-down (R33): a match no zone takes is passed over, so with
+//! the unit row full a Trap beneath a top Unit is set (R4238000), and with none that can land, nothing.
+//! The numbers are the declared `draw` and `recruits` (R386), read through `param`.
 
 use jackioh_engine::prelude::*;
 

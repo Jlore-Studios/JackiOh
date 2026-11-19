@@ -28,11 +28,11 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c004_palantir, c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep,
-    c020_the_power_to_punish, c023_devils_pact, c024_book_of_knowledge, c027_pestilent_slime,
-    c028_second_wind, c032_felinor_feelings, c035_prep, c037_last_hurrah, c039_outbreak,
-    c047_recurring_felinor, c052_final_gambit, c057_echo, c062_living_bomb, c064_malzahars_recycler,
-    c070_book_of_plague, c088_siphon_squad, c090_in_too_deep,
+    c001_curse_of_the_forgotten_classic, c004_palantir, c008_pickle, c009_income_tax,
+    c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
+    c024_book_of_knowledge, c027_pestilent_slime, c028_second_wind, c032_felinor_feelings, c035_prep,
+    c037_last_hurrah, c039_outbreak, c047_recurring_felinor, c052_final_gambit, c057_echo, c062_living_bomb,
+    c064_malzahars_recycler, c070_book_of_plague, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
@@ -1096,6 +1096,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c095_call_to_chaos_meditative_edition::ID,
         "v0.6.6h",
         c095_call_to_chaos_meditative_edition::script_v0_6_6h,
+    ),
+    // #4238 (R4238000): C #1's Radiant forced attacker named as the newest permanent of their exile, before
+    // it was read by the Recruit's own scan.
+    (
+        c001_curse_of_the_forgotten_classic::ID,
+        "v0.6.7e",
+        c001_curse_of_the_forgotten_classic::script_v0_6_7e,
     ),
 ];
 
