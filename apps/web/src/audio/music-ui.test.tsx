@@ -11,9 +11,13 @@ import { setAudioEngineForTests } from "./engine.ts";
 import { setMusicPlayerForTests, type MusicPlayer, type MusicRequest } from "./music.ts";
 import { gameMusicClaims, holdMenuMusic } from "./musicScene.ts";
 import { readAudioSettings, resetAudioSettingsForTests } from "./settings.ts";
+import { loadSoundTables } from "./soundTablesLoader.ts";
 import Game from "../game/Game.tsx";
 import { baseView, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
+
+// #4158: the sound tables load lazily; this file reads the shipped ones.
+await loadSoundTables();
 
 /** A player that records what it is asked for and plays nothing. */
 function recordingPlayer(): MusicPlayer & { requests: MusicRequest[]; intros: string[]; stops: number } {

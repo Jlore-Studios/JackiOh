@@ -365,6 +365,12 @@ pub fn accepts_stack_card(
     if crate::giga::covering(state, slot).is_some() {
         return false;
     }
+    // R3554002, R4221001: nor onto a zone the slash voided, which takes nothing (`place_on_field`): no Stack
+    // play is offered it, and a move stacking there (an animated card's return to its voided home) changes
+    // nothing.
+    if crate::geometry::is_void(state, slot) {
+        return false;
+    }
     slot.row == Row::Units || carried_at(state, slot).is_none()
 }
 

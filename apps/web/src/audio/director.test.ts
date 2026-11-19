@@ -21,12 +21,16 @@ import {
 import { createSoundDirector, type SoundDirector } from "./director.ts";
 import { createAudioEngine } from "./engine.ts";
 import { resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
+import { loadSoundTables } from "./soundTablesLoader.ts";
 import { FakeClock, FakeFetch, fakeContextFactory, fakeSpeech, settle } from "./test/fakeAudio.ts";
 import { answerPrompts, devDeck, handDefId, playOf, realGame, type RealGame } from "./test/realGame.ts";
 import type { AudioEngine, CardAudioTable, CardHook, PlayableLineKind, SfxId, SfxParams, SoundSink } from "./types.ts";
 import { newEventsSince, planEntries, sameOccurrence, type AnimationEntry } from "../game/animations.ts";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
+
+// #4158: the sound tables load lazily; this file reads the shipped ones.
+await loadSoundTables();
 
 // Fixtures
 

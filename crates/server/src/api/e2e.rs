@@ -254,6 +254,10 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
         ));
     };
     store.lock().await.reset();
+    // R144, R3210000: and every presence row with it, so the router's touch writes again at once, as after
+    // a boot; else an account heard from just before the reseed reads offline for a `PRESENCE_TOUCH_EVERY_MS`
+    // and a challenge to it is 409 `offline` (spec 57, #4221).
+    app.social.presence.clear();
     // R1523000: the wipe took the seat epoch and every seat with it, so the ledger boots again on
     // the empty store, as a restart over it would.
     crate::seats::boot(app).await?;

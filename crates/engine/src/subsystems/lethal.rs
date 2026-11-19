@@ -10,7 +10,7 @@ use crate::combat::AttackTarget;
 use crate::damage::{DamageTarget, ProjectedPools, project_hit};
 use crate::layers::unit_view;
 use crate::state::{CardInstance, GameState};
-use crate::wire::{KeywordKind, PlayerId, has_keyword};
+use crate::wire::{KeywordKind, PlayerId, has_keyword, opponent_of};
 
 /// The hero a hit on this target can reach: itself, or through Trample its controller's (§4.4 step 9).
 pub fn defending_hero(target: &AttackTarget) -> PlayerId {
@@ -80,8 +80,13 @@ pub(crate) fn projected_damage_with(
         }
     };
     let hero = defending_hero(target);
+    let on_hero = DamageTarget::Hero { player: hero };
     let defender = match target {
-        DamageTarget::Hero { .. } => return project_hit(state, Some(attacker), target, attack, pools),
+        // R3554008, R4221003: the blow, then the sweep's hits on the enemy Units, each with its excess.
+        DamageTarget::Hero { .. } => {
+            let blow = project_hit(state, Some(attacker), target, attack, pools);
+            return blow + swept_excess(state, attacker, None, attack, &on_hero, pools);
+        }
         DamageTarget::Unit { instance } => instance,
     };
     // R176, §4.3 step 1: an attacker a First Strike defender destroys first deals nothing, Cleave
@@ -98,14 +103,42 @@ pub(crate) fn projected_damage_with(
     }
     let hit = attack * crate::combat::lane_multiplier_for(state, attacker, defender);
     // Each hit is its own damage instance on the hero, so Armor and the cap apply to each (§4.4), in
-    // `combat::strike`'s order: the blow and its excess, then each Cleave hit and its excess, so the
-    // pools soak the first of them (R4032000).
-    let on_hero = DamageTarget::Hero { player: hero };
+    // `combat::strike`'s order: the blow and its excess, then each Cleave hit and its excess, then each
+    // of the sweep's (R3554008, R4221003), so the pools soak the first of them (R4032000).
     let mut total = 0;
     for unit in struck_by(state, attacker, defender) {
         let amount = if unit.id == defender.id { hit } else { attack };
         let excess = trample_excess(state, attacker, &unit, amount, pools);
         total += project_hit(state, Some(attacker), &on_hero, excess, pools);
+    }
+    total + swept_excess(state, attacker, Some(defender), attack, &on_hero, pools)
+}
+
+/// R3554008, R4221003: what a sweep's other hits (`combat::sweep`) pass on to the hero: every enemy
+/// Unit the sweep weighs but `struck`, the declared target, takes `attack` times its weight as one
+/// instance, and a Trample attacker's excess over each goes on (§4.4 step 9), as Cleave's does (R176).
+/// Each hit is read on the board as it stands, so a Unit Cleave struck too is read at its health before.
+fn swept_excess(
+    state: &GameState,
+    attacker: &CardInstance,
+    struck: Option<&CardInstance>,
+    attack: i32,
+    on_hero: &DamageTarget,
+    pools: &mut ProjectedPools,
+) -> i32 {
+    if crate::scripts::flags_of(state, attacker).sweep_lane.is_none() {
+        return 0;
+    }
+    let mut total = 0;
+    for unit in crate::zones::active_units_of(state, opponent_of(attacker.controller)) {
+        if struck.is_some_and(|struck| struck.id == unit.id) {
+            continue;
+        }
+        let Some(weight) = crate::combat::sweep_weight(state, attacker, unit) else {
+            continue;
+        };
+        let excess = trample_excess(state, attacker, unit, attack * weight, pools);
+        total += project_hit(state, Some(attacker), on_hero, excess, pools);
     }
     total
 }

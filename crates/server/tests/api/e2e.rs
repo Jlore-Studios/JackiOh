@@ -528,6 +528,27 @@ mod r144_the_reseed_at_boot {
         );
     }
 
+    /// R144, R3210000 (#4221): an account heard from just before a reseed is online again at its first
+    /// signed-in request after it, as after a boot, though the router's touch wrote within its
+    /// `PRESENCE_TOUCH_EVERY_MS`: the reseed wiped that row (spec 57's challenge was 409 `offline`).
+    #[tokio::test(start_paused = true)]
+    async fn a_reseed_leaves_no_touch_mark_so_the_next_request_writes_presence() {
+        let app = harness().await;
+        seed_e2e_fixtures(&app).await.expect("the reseed");
+        let (status, _headers, _me) = call(&app, "GET", "/api/auth/me", Some(p1().token), Value::Null).await;
+        assert_eq!(status, 200);
+        seed_e2e_fixtures(&app).await.expect("the second reseed");
+
+        let (status, _headers, me) = call(&app, "GET", "/api/auth/me", Some(p1().token), Value::Null).await;
+        assert_eq!(status, 200);
+        let id = me["profile"]["id"].as_str().unwrap_or_default().to_string();
+        let seen = store!(app.db, presence_last_seen(std::slice::from_ref(&id)));
+        assert!(
+            seen.contains_key(&id),
+            "the request after the reseed wrote {id}'s presence: {seen:?}"
+        );
+    }
+
     #[tokio::test(start_paused = true)]
     async fn seeds_the_good_expired_and_exhausted_codes_and_never_the_missing_one() {
         let app = harness().await;

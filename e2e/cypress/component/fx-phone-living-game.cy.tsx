@@ -239,9 +239,11 @@ function mountLiving(initial: PlayerView): { play: (shown: PlayerView, events: G
   };
 }
 
+/** The circling's stop; afterEach calls it too, so a failed scenario's circling does not run on into the next. */
+let stopTilt = (): void => undefined;
+
 /** Circles the pointer over the tilted card for the whole scenario, so its face tilts under its glare. */
 function startTilt(): { stop: () => void } {
-  let stop = (): void => undefined;
   cy.get(`[data-testid="${TILTED}"]`).then(($card) => {
     const element = $card[0] as HTMLElement;
     const win = element.ownerDocument.defaultView as Window & typeof globalThis;
@@ -263,7 +265,7 @@ function startTilt(): { stop: () => void } {
     };
     element.dispatchEvent(new win.PointerEvent("pointerenter", { pointerType: "mouse" }));
     frame = win.requestAnimationFrame(circle);
-    stop = () => {
+    stopTilt = () => {
       running = false;
       win.cancelAnimationFrame(frame);
     };
@@ -272,7 +274,7 @@ function startTilt(): { stop: () => void } {
   return {
     stop: () => {
       cy.then(() => {
-        stop();
+        stopTilt();
       });
     },
   };
@@ -282,6 +284,7 @@ describe("R3351000 R3744000 the living game on a phone", () => {
   // A scene that changes the effects settings (the broadside's speed) has them put back after it,
   // a failed one included; throttling is reset too, and the shed stage with it.
   afterEach(() => {
+    stopTilt();
     setFxSettings({ ...DEFAULT_FX_SETTINGS });
     window.localStorage.removeItem(FX_SETTINGS_KEY);
     setShedLevel(0);

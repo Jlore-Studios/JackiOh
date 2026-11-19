@@ -11,8 +11,12 @@ import { DEFAULT_AUDIO_SETTINGS } from "./settings.ts";
 import type { MusicRequest } from "./music.ts";
 import { MUSIC_ROTATION_KEY } from "./constants.ts";
 import { LOW_HEALTH_AT, createMusicDirector, rotationFor, type MusicDirector } from "./musicDirector.ts";
+import { deferSoundTablesForTests, loadSoundTables, setSoundTablesForTests } from "./soundTablesLoader.ts";
 import type { AudioSettings } from "./types.ts";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
+
+// #4158: the sound tables load lazily; this file reads the shipped ones.
+const TABLES = await loadSoundTables();
 
 /** #97 Zephyrs (a Mythic Spell), #96 My Pawn (a Mythic Trap), #50 K-Pop Fanatic (EDM), #4 Gary (Tavern). */
 const ZEPHYRS = "core-097";
@@ -149,6 +153,22 @@ describe("R631 a match's music opens on its station", () => {
     r.director.onView(midGame({ active: "p2" }));
     r.director.settle();
     expect(r.last()).toEqual({ track: "tavern-1", intro: null, opponentTurn: true });
+  });
+});
+
+describe("R631 a board that mounts before the sound tables load (#4158)", () => {
+  it("R631 asks for no music until the manifest arrives, then opens on the station's sting into this rotation's in-game track", () => {
+    const deferred = deferSoundTablesForTests();
+    try {
+      const r = rig({ rotation: 1 });
+      r.director.onView(opening());
+      r.director.settle();
+      expect(r.requests).toEqual([]);
+      deferred.resolve(TABLES);
+      expect(r.requests).toEqual([{ track: "tavern-2", intro: "tavern-start", opponentTurn: false }]);
+    } finally {
+      setSoundTablesForTests(TABLES);
+    }
   });
 });
 

@@ -1,0 +1,18 @@
+{
+  "title": "Imitated Instrumentality's Radiant face keeps its art",
+  "sources": "#4221",
+  "notes": "Stinkyscape #18's Radiant text is reworded to fit a 170 px face (R1017000); wording only, it plays the same.",
+  "player": {
+    "title": "Imitated Instrumentality's shorter Radiant text",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Imitated Instrumentality's Radiant text now reads \"Summon Radiant MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but can vote to remove you.\""
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "stinkyscape-018"
+  ]
+}

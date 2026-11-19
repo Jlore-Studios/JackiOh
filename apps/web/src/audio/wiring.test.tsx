@@ -15,12 +15,16 @@ import { HIDDEN_DEF_ID } from "./constants.ts";
 import { setAudioEngineForTests } from "./engine.ts";
 import { setMusicPlayerForTests, type MusicPlayer } from "./music.ts";
 import { resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
+import { loadSoundTables } from "./soundTablesLoader.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "./test/fakeAudio.ts";
 import type { AudioEngine, SfxId, SfxParams } from "./types.ts";
 import { durationFor } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { baseView, withEvents } from "../test/fixtures.ts";
+
+// #4158: the sound tables load lazily; this file reads the shipped ones.
+await loadSoundTables();
 
 type SpeakingEngine = FakeAudioEngine & { say(on: boolean): void };
 

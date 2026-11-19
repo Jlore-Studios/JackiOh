@@ -24,6 +24,7 @@ use jackioh_engine::wire::SwapWhat;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
 use crate::rules::fixtures::combat::{big_body, plain};
+use crate::rules::fixtures::combat_reactions::{POOL, register_e6_fixtures};
 use crate::rules::fixtures::harness::{act_ok, both, new_game, put, setup_catalog, slot};
 use crate::rules::fixtures::stinkyscape_verbs::{WARP, register_stinkyscape_verbs};
 
@@ -1801,6 +1802,131 @@ fn r4111000_i18_an_attack_the_forecast_cannot_see_from_the_board_is_not_judged()
         &defender,
         "a reflection onto the attacker (R1849003)",
     );
+}
+
+/// R4221000 (fuzz seed 9561): a "would die" replacement acting for either side answers the death check
+/// after the combat (§4.5 step 1) with no `trapFired` or `hookResolving`, and the forecast projects none:
+/// here the attacker, foretold to fall, flickers home instead.
+#[test]
+fn r4221000_i18_an_attack_a_would_die_replacement_can_answer_is_not_judged() {
+    let (state, attacker, defender) = i18_board("r4221000-i18-would-die");
+    register_i18_script(
+        &plain.id,
+        Script {
+            replacements: vec![ReplacementDef {
+                id: "step".into(),
+                on: ReplacementMoment::WouldDie,
+                where_: None,
+                when: None,
+                instead: json_as(json!({ "flicker": "yours" })),
+                then: None,
+                by: None,
+            }],
+            ..Script::default()
+        },
+    );
+    let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+    assert!(
+        result.events.iter().any(|event| matches!(
+            event,
+            GameEvent::Flickered { instance_id, .. } if *instance_id == attacker
+        )),
+        "the attacker flickered instead of dying"
+    );
+    let played = PlayedAttack::read(&result.events, &result.state, &attacker, &defender);
+    assert!(played.survives, "{played}");
+    assert_eq!(
+        i18(&mut monitor, &result.events, &result.state),
+        Vec::<String>::new()
+    );
+    assert_eq!(monitor.forecast_judged(), 0);
+}
+
+/// I18 on `attacker`'s attack on `defender`, its `damage` into the defender drifted one more than the
+/// forecast: how many attacks it judged, and what it found.
+fn judged_drift(state: &GameState, attacker: &str, defender: &str) -> (usize, Vec<String>) {
+    let (mut monitor, result) = i18_attack(state, attacker, defender);
+    let events = drifted(&result.events, defender);
+    let found = i18(&mut monitor, &events, &result.state);
+    (monitor.forecast_judged(), found)
+}
+
+/// R4221002 (fuzz seeds 4897 and 6161): a combatant whose leaving brings a card in at the state check
+/// after the combat (one dormant beneath it in its pile, R1829000, or one it holds, R1850003), which
+/// may exile a combatant by its aura (Stinkyscape #115 Scornboi): the forecast foretells nothing past
+/// the combat, so I18 does not judge the attack.
+#[test]
+fn r4221002_i18_an_attack_whose_combatant_has_a_card_beneath_or_held_is_not_judged() {
+    let (mut state, attacker, _) = i18_board("r4221002-i18-beneath");
+    let mut top = new_instance(&mut state, &plain.id, P2, Zone::Hand { player: P2 });
+    assert!(place_on_field(
+        &mut state,
+        &mut top,
+        slot(P2, Row::Units, 1),
+        json_as(json!({ "stack": true })),
+    ));
+    assert_eq!(
+        beneath_at(&state, slot(P2, Row::Units, 1)).len(),
+        1,
+        "the 5/10 lies beneath the new top"
+    );
+    assert_eq!(
+        judged_drift(&state, &attacker, &top.id),
+        (0, Vec::new()),
+        "a card dormant beneath the target (R1829000)"
+    );
+
+    let (mut state, attacker, defender) = i18_board("r4221002-i18-held");
+    let card = new_instance(&mut state, &plain.id, P2, Zone::Gone { player: P2 });
+    state.held = Some(vec![HeldCard {
+        holder_id: defender.clone(),
+        holder_mark: 0,
+        to: P2,
+        card,
+        exile_on_release: None,
+    }]);
+    assert_eq!(
+        judged_drift(&state, &attacker, &defender),
+        (0, Vec::new()),
+        "a card the target holds (R1850003)"
+    );
+}
+
+/// R4221004 (fuzz seed 9305): a target whose side reflects what it takes onto the attacker's hero
+/// (Reflective Plating's base face, R1849003) while the attacker's side has a damage pool (R3550004):
+/// the reflected hit spends the pool before the strike back lands, so I18 does not judge the attack;
+/// with no pool on the attacker's side, the same attack is judged.
+#[test]
+fn r4221004_i18_an_attack_on_a_reflector_into_the_attacker_s_pool_is_not_judged() {
+    let reflector = || {
+        register_i18_script(
+            &big_body.id,
+            Script {
+                static_flags: Some(StaticFlags {
+                    reflects_damage: Some(true),
+                    ..StaticFlags::default()
+                }),
+                ..Script::default()
+            },
+        );
+    };
+
+    let (mut state, attacker, defender) = i18_board("r4221004-i18-pool");
+    register_e6_fixtures();
+    put(&mut state, POOL, slot(P1, Row::Backrow, 1), json!({}));
+    reflector();
+    assert_eq!(
+        judged_drift(&state, &attacker, &defender),
+        (0, Vec::new()),
+        "the reflection spends the attacker's side's pool first"
+    );
+
+    let (state, attacker, defender) = i18_board("r4221004-i18-no-pool");
+    reflector();
+    let (judged, found) = judged_drift(&state, &attacker, &defender);
+    assert_eq!(judged, 1, "with no pool to spend, the attack is judged");
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].contains("I18 forecast drift"), "{}", found[0]);
 }
 
 #[test]

@@ -3,8 +3,8 @@
 //! through v0.6.6h it cost (4) and asked none (`script_v0_6_6h`, R767000).
 //!   Base:    "Summon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote
 //!            to remove you."
-//!   Radiant: "Summon a Radiant MELCHIOR, a Radiant BALTHASAR and a Radiant CASPER. They offer great
-//!            strategic value, but they can vote to remove you."
+//!   Radiant: "Summon Radiant MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but can
+//!            vote to remove you." (reworded in #4221 to fit a 170 px face, R1017000)
 //!
 //! Engine: three `summon`s, S #18.1 MELCHIOR, S #18.2 BALTHASAR and S #18.3 CASPER, in that order, each
 //! a fresh Field Spell into its caster's leftmost open backrow zone (R64), one with no zone left not
