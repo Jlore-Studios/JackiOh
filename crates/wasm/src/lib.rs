@@ -423,7 +423,7 @@ pub fn face(call_json: &str) -> Result<String, JsError> {
 /// One call of the game log: a `LogCall` as JSON in, a `LogAnswer` as JSON out. The catalog is the one
 /// `init` registered; the locale is an argument of the call (`crates/shared/README.md`).
 #[wasm_bindgen]
-pub fn log(call_json: &str) -> Result<String, JsError> {
+pub fn game_log(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::log(call_json))
 }
 
