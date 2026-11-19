@@ -195,7 +195,7 @@ describe("#4251 the hero's counters", () => {
     // daily only, so this holds the rules that place it on every pull request.
     const boardCss = readSheet("src/game/board.css");
     // The Jade Counter and the Credits stand above the portrait's open button, as health and Armor do.
-    expect(boardCss).toMatch(/\.hero-portrait \.hero-jade,\s*\n\.hero-portrait \.hero-credits\s*\{[^}]*z-index:\s*2;/);
+    expect(boardCss).toMatch(/\.hero-portrait \.hero-jade,\s*\n\.hero-portrait \.hero-credits\s*\{[^}]*z-index:\s*var\(--z-raised\);/);
     // The desktop's 32px health and Armor badges stand apart on the 44px oval.
     expect(boardCss).toMatch(/\.seat \.hero-portrait \.hero-armor\s*\{[^}]*left:\s*-10px;/);
     expect(boardCss).toMatch(/\.seat \.hero-portrait \.hero-health\s*\{[^}]*right:\s*-10px;/);

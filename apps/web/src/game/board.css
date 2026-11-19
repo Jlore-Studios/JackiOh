@@ -462,8 +462,8 @@ button.modifier-badge[data-open="true"] {
   position: absolute;
   top: -6px;
   /* #4270: above the portrait's open button (z 1, `emotes/portrait.css`), which covers them on a
-     phone, as `emotes.css` lifts health and armor. */
-  z-index: 2;
+     phone, at the layer `emotes.css` lifts health and armor to (2, a named layer here, #2109). */
+  z-index: var(--z-raised);
   min-width: 22px;
   height: 22px;
   padding: 0 var(--space-2);
