@@ -14065,7 +14065,7 @@
       "started_at": "2026-11-19T20:13:11Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "4274": {
       "action": "build",
