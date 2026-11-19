@@ -15277,6 +15277,8 @@
       }
     },
     "4241": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-18T23:41:09Z",
@@ -15290,8 +15292,11 @@
         "trail": ".ts) installs the tables synchronously, so existing art tests run unchanged.\n- - Tests: throw-before-install ([scene.test.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4222/apps/web/src/cards/art/scene.test.ts)), false-until-both gating ([WhenEngineReady.test.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-4222/apps/web/src/wasm/WhenEngineReady.test.tsx\u2026\n- - Docs: `ART.md` and `apps/web/README.md` describe the scene chunk.\n- ## How it was tested\n- - `eslint` on all touched files: green (one regex backtracking error found and fixed by switching to basename checks).\n- - `pnpm --dir apps/web test src/wasm/WhenEngineReady.test.tsx`, `cargo jackioh spec check`: runs in flight.\n- - Still to run before merge: `scene.test.ts`, `artRichness.test.ts`, one Scenes suite, `first-load.test.ts` with `dist/` built via `vite build --mode development`, measuring the entry-plus-preloads gzip bytes and lowering `FIRST_LOAD_GZIP_BUDGET_BYTES` to measured \u00d7 1.02 rounded up to 8192 with the\u2026\n- ## Decisions\n- - The slot-clear helper (`clearSceneDataForTests`) lives in `scene.ts` (slot owner); reset/defer live in the loader (pending owner). Rejected: duplicating readiness state in the loader.\n- - A scene-chunk failure fails closed (gate retry panel / face stays undrawn). Rejected: a painter fallback, which would draw and cache the wrong picture.\n- - A mid-task edit briefly consumed a test's `it(` opener; repaired and verified the file's describes are balanced and the tests intact.\n- Verification in progress \u2014 the scene and first-load suites are running, with the build-and-measure step, remaining suites, typecheck, and spec check queued behind them.\n- Spec check is green (2282 rulings, 5743 proofs \u2014 no ruling changes needed, as expected for a presentation-only change). The scene and first-load suites are still running; the development build, budget measurement, and final typecheck follow once they land.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the card pictures' scene kits and recipes load alongside the engine module, not in the first page load\"} -->\n- ## What changed\n- The scene kits and every card recipe leave the first load and arrive in a lazy chunk beside the engine module:\n- - `cards/art/scene.ts` keeps its API, types and small constants (`SCENE_BOX` now re-exported from `kitDraw.ts`). Its kit/recipe imports are `import type`; the four tables (`SCENE_KIT`, `drawFigure`, `SCENE_RECIPES`, `ALT_SCENE_RECIPES`) are read from an installed slot. `sceneRecipeOf`/`composeScene\u2026\n- - New `cards/art/sceneData.ts` (the one allowlisted data module) and `cards/art/sceneLoader.ts` (`loadSceneData`, `sceneDataReady`, `resetSceneDataForTests`, `deferSceneDataForTests`), modelled on the sound-tables loader.\n- - `main.tsx` boots `loadSceneData()` next to `loadWasm()`; `EngineGate` waits for both, failing closed to the retry panel. `useEngineReady()` is true only with module plus tables; `WhenEngineReady` header updated; `routes/chunks.tsx` prefetch/start also kick off `loadSceneData()`.\n- - `test/setup.ts` installs the tables synchronously, so existing art tests run unchanged.\n- - `static-pages.ts` installs the tables at import: the build prerenders the 404 hand's faces outside every gate, and the first build failed on the new throw (see below).\n- - Tests: throw-before-install (`scene.test.ts`), false-until-both gating (`WhenEngineReady.test.tsx`), static-import guard + entry-chunk probe absence (`bone-scarecrow`, `pose-genuflect`, `item-trunk-club`) + practice-worker probe (`first-load.test.ts`), install-pinning test (`static-pages.test.ts`\u2026\n- - Budget lowered 851,968 \u2192 483,328 (measured 473,538 gzipped bytes, ~360 KB less), with the measurement in its comment. Docs updated (`ART.md`, `apps/web/README.md`).\n- ## How it was tested\n- - `vite build --mode development` (CI's command) initially failed in `writeStaticPages` on the new throw; after the `static-pages.ts` install it succeeds with a fresh `dist`.\n- - `first-load.test.ts` 13/13 with `dist` built (source guard, probes, worker, new budget); `WhenEngineReady.test.tsx` 4/4; `scene.test.ts` 13/13; `artRichness` + `coreScenes` + `chunks` + `NotFoundPlay` 28/28; `static-pages.test.ts` 24/24; engine-gate suites green.\n- - `pnpm --dir apps/web typecheck` green (needed `NODE_OPTIONS=--max-old-space-size=6144` \u2014 this machine OOMs tsc at the default 2 GB heap; no repo change), `eslint` on all touched files green, `cargo fmt --check` green, `cargo jackioh spec check` green (2282 rulings).\n- ## Decisions and departures from the plan\n- - The slot-clear helper (`clearSceneDataForTests`) lives in `scene.ts` (slot owner); reset/defer live in the loader (pending owner). Rejected: duplicating readiness state in the loader.\n- - A scene-chunk failure fails closed (gate retry panel / face stays undrawn). Rejected: a painter fallback, which would draw and cache the wrong picture.\n- - Departure: the plan said nothing renders before the gates, but the build's static 404 page does. Added the `static-pages.ts` install plus a regression test; a negative control (install removed) fails the new test as expected, and the file was restored byte-identical.\n- - `landing.test.tsx` R1017002 times out (6.5s vs the 5s limit) here, but it fails identically on a pristine base worktree (6.8s), so it is pre-existing machine slowness, not this change; the comparison worktree was removed. All other landing tests pass (50/51).\n- - The practice-worker's bundle probe matches three assets (worker, host, zh-CN translations of the message); none holds scene text, so the test holds.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4222 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4222/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4222,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-19T00:49:25Z",
         "from_run": "44422852839",
         "gates": [
           {
@@ -15350,8 +15355,15 @@
         "source": "build",
         "until": "2026-11-19T01:17:36Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-19T00:47:36Z",
+      "run_id": "pending:c69e75da-1795049336",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-19T00:49:25Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15365,9 +15377,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T00:38:42Z",
+    "at": "2026-11-19T00:49:25Z",
     "url": "",
-    "what": "build #4238 on claude-3"
+    "what": "review #4241 on muse"
   },
   "last_sweep": {
     "at": "2026-11-19T00:33:12Z",
