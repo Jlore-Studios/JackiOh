@@ -30600,5 +30600,35 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.7k",
+    "date": "2026-11-19",
+    "title": "Patch: the tier cards and KPIs read the newest win rates",
+    "source": "winrates-refresh.yml: production's windowed card figures at v0.6.7j (R3882000)",
+    "notes": "The win rates of record refresh from the card statistics at v0.6.7j: 799 cards with at least 20 games over their own windows (provisional figures). The tier pools and KPIs read them from this version on (R3538000, R3538001); earlier versions keep theirs, and CN Tech and NA Tech still read each game's snapshot (R3049000).",
+    "player": {
+      "title": "Win rates refreshed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "2de57a9a2334e34c614260de1447ce7f8a846f2d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-164"
+    ],
+    "changes": []
   }
 ]
