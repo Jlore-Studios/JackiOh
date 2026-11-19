@@ -26527,3 +26527,8 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-19T06:52:45Z,agy,usage-command,call,44460079905,2,2026-11-19T07:04:26Z,29,2026-11-25T01:04:18Z,allowed,100,100,
 2026-11-19T07:02:48Z,agy,usage-command,call,44460079905,2,2026-11-19T07:04:26Z,29,2026-11-25T01:04:18Z,allowed,100,100,
 2026-11-19T07:12:34Z,agy,usage-command,after,44460079905,0,2026-11-19T12:04:26Z,29,2026-11-25T01:04:18Z,allowed,100,100,
+2026-11-19T07:16:59Z,claude-1,ping,before,44478032574,3,2026-11-19T10:10:00Z,,,allowed,100,,
+2026-11-19T07:17:17Z,claude-1,stream,call,44478032574,4,2026-11-19T10:10:00Z,,,allowed,100,,
+2026-11-19T07:17:47Z,claude-1,stream,call,44478032574,5,2026-11-19T10:10:00Z,,,allowed,100,,
+2026-11-19T07:20:02Z,claude-1,stream,call,44478032574,6,2026-11-19T10:10:00Z,,,allowed,100,,
+2026-11-19T07:40:33Z,claude-1,stream,call,44478032574,7,2026-11-19T10:10:00Z,,,allowed,100,,
