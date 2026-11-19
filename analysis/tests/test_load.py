@@ -76,6 +76,25 @@ def test_one_row_per_game_seat_and_distinct_card_in_each_deck(tmp_path):
     assert cards[cards["game"] == "g2"]["first_played_turn"].isna().all()
 
 
+def test_r4279000_a_card_cast_or_summoned_from_the_deck_or_hand_is_played_on_the_turn_it_went_in(tmp_path):
+    p1 = seat(["a", "b", "c"], [], [], ["c"], [4])
+    p1["castOrSummoned"] = [
+        {"card": "a", "turn": 3, "radiant": False},
+        {"card": "c", "turn": 2, "radiant": True},
+        {"card": "a", "turn": 1, "radiant": False},
+    ]
+    records = load(write_records(tmp_path / "cast.jsonl", [record("g1", p1, seat(["a"]))]))
+
+    cards = records.seat_cards.set_index(["seat", "card"])
+    assert cards.loc[("p1", "a"), "played"]
+    assert not cards.loc[("p1", "a"), "drawn"]
+    assert cards.loc[("p1", "a"), "first_played_turn"] == 1
+    # A play from the hand and a cast of the same card: the earlier turn.
+    assert cards.loc[("p1", "c"), "first_played_turn"] == 2
+    assert not cards.loc[("p1", "b"), "played"]
+    assert not cards.loc[("p2", "a"), "played"]
+
+
 def test_reads_several_files_in_the_order_named_skips_blank_lines_and_ignores_fields_it_does_not_know(tmp_path):
     first, second = two_games()
     second["somethingNew"] = {"added": "later"}
