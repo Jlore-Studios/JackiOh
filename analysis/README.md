@@ -46,7 +46,9 @@ catalog = load_catalog()  # id → name, set, rarity, cost, type, tags, off crat
 seats of live games (a ladder bot's side is read only when asked for) and every seat of the rest (R1451). Each
 deck counts once per game, a draw is a game not won, and the played delta is the played win rate minus the
 drawn-but-not-played win rate in percentage points. The drawn delta is the drawn win rate (played and
-drawn but not played together) minus the never-drawn win rate in percentage points (R2427000). It returns
+drawn but not played together) minus the never-drawn win rate in percentage points (R2427000). A card an effect
+cast or summoned from the deck or the hand (a record's `castOrSummoned`) counts as played, on the turn it went
+in (R4276000). It returns
 one row per card with `<breakdown>_games`, `_wins`, `_draws` and `_rate` for `in_deck`, `opening_hand`,
 `going_first`, `going_second`, `played`, `drawn_not_played` and `not_drawn`, and `played_delta` and
 `drawn_delta`; the frame's `attrs` hold `games` and `decks`.

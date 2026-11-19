@@ -72,6 +72,13 @@ createdUnused?: Array<string>,
  */
 createdPlayed?: Array<CreatedUse>, 
 /**
+ * R4276000: the dealt cards an effect cast or summoned from this seat's own deck or hand, every time,
+ * none of them a play from the hand: cast on its draw (§2.4) or from the deck (§6.3), or summoned
+ * from the deck or the hand (M #87 Tatches the Totem, a Recruit). The statistics count each as
+ * played. Absent when there were none, and from every record written before the change.
+ */
+castOrSummoned?: Array<CreatedUse>, 
+/**
  * R3335001: the Starship Pieces that fused into this seat's Starships (§6.1), each fusion once. Absent when
  * there were none, and from every record written before the count.
  */

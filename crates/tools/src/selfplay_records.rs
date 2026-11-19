@@ -278,6 +278,15 @@ mod tests {
         cards.dedup();
         let rows: Vec<&str> = stats.cards.iter().map(|row| row.card.as_str()).collect();
         assert_eq!(rows, cards);
+        // R4276000: a card an effect cast or summoned from the deck or the hand went into play too.
+        let played = |seat: &jackioh_engine::SeatSummary, card: &str| {
+            seat.played.iter().any(|id| id == card)
+                || seat
+                    .cast_or_summoned
+                    .iter()
+                    .flatten()
+                    .any(|cast| cast.card == card)
+        };
         for row in &stats.cards {
             let card = row.card.as_str();
             assert_eq!(row.in_deck, tallied(&record, card, |_| true), "{card}");
@@ -288,14 +297,14 @@ mod tests {
             );
             assert_eq!(
                 row.played,
-                tallied(&record, card, |seat| seat.played.iter().any(|id| id == card)),
+                tallied(&record, card, |seat| played(seat, card)),
                 "{card}"
             );
             assert_eq!(
                 row.drawn_not_played,
                 tallied(&record, card, |seat| {
                     let reached = seat.opening.iter().chain(&seat.drawn).any(|id| id == card);
-                    reached && !seat.played.iter().any(|id| id == card)
+                    reached && !played(seat, card)
                 }),
                 "{card}"
             );
