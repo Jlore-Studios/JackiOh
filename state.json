@@ -15032,17 +15032,9 @@
     "what": "plan #4238 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-19T00:13:46Z",
+    "at": "2026-11-19T00:25:20Z",
     "notes": [
-      "#4237 needs a plan",
-      "delivered plan #4188 on claude-4 (run 44423109143): planned",
-      "delivered plan #4216 on claude-1 (run 44423023923): planned",
-      "started build #4216 on claude-1 (run 44427706364)",
-      "started build #4188 on claude-4 (run 44427793999)",
-      "started plan #4237 on claude-7 (run 44427877442)",
-      "started plan #4238 on claude-3 (run 44427962568)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "#4231: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15748,7 +15740,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T00:13:46Z",
+  "loop_tick": "2026-11-19T00:25:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
