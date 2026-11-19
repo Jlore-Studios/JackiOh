@@ -14991,6 +14991,13 @@
     "4237": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44427877442",
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-19T00:46:43Z",
+        "until": "2026-11-19T01:16:43Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
