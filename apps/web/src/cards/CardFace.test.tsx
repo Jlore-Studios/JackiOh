@@ -140,6 +140,16 @@ type CardFaceModule = typeof import("./CardFace.tsx");
  */
 async function freshCardFace(): Promise<CardFaceModule> {
   vi.resetModules();
+  // #4222: the reset drops the scene tables with the modules, so the fresh `scene.ts` is installed
+  // as `test/setup.ts` did before the face it draws reads them.
+  const scene = await import("./art/scene.ts");
+  const data = await import("./art/sceneData.ts");
+  scene.installSceneData({
+    SCENE_KIT: data.SCENE_KIT,
+    drawFigure: data.drawFigure,
+    SCENE_RECIPES: data.SCENE_RECIPES,
+    ALT_SCENE_RECIPES: data.ALT_SCENE_RECIPES,
+  });
   return import("./CardFace.tsx");
 }
 
