@@ -13380,6 +13380,13 @@
     "4188": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44423109143",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-19T00:14:52Z",
+        "until": "2026-11-19T00:44:52Z"
+      },
       "difficulty_by": {
         "at": "2026-11-19T00:14:42Z",
         "difficulty": "hard",
