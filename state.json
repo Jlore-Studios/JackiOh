@@ -14076,16 +14076,11 @@
     "what": "build #4274 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-19T19:54:03Z",
+    "at": "2026-11-19T20:02:07Z",
     "notes": [
-      "#4273 needs a plan",
-      "#4274 needs a plan",
-      "#4275 needs a plan",
-      "started plan #4273 on muse (run 44603220429)",
-      "started plan #4274 on muse (run 44603305843)",
-      "started plan #4275 on muse (run 44603380618)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered plan #4274 on muse (run 44603305843): planned",
+      "started build #4274 on muse (run 44604748840)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14791,7 +14786,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T19:54:03Z",
+  "loop_tick": "2026-11-19T20:02:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
