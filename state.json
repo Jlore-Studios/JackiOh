@@ -15916,14 +15916,10 @@
     "what": "revise #4231 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-19T04:01:23Z",
+    "at": "2026-11-19T04:11:44Z",
     "notes": [
-      "#4231: `claude-6` can start again, so its hold is lifted",
-      "delivered plan #4251 on muse (run 44454667131): planned",
-      "delivered review #4253 on claude-3 (run 44447632312): approved",
-      "started build #4251 on muse (run 44455756335)",
-      "started revise #4231 on claude-6 (run 44455828855)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #4240 on muse (run 44452029764): approved",
+      "runner gate: started 1 of 1 waiting run(s) (run 44456743622 on bot/issue-4233)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16629,7 +16625,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T04:01:23Z",
+  "loop_tick": "2026-11-19T04:11:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
