@@ -36776,14 +36776,6 @@
         "provider": "muse",
         "run_id": "44438716314",
         "taken_asks": []
-      },
-      "5": {
-        "area": "server",
-        "count": 1,
-        "last_run": "2026-11-19T01:41:36Z",
-        "provider": "muse",
-        "run_id": "44438818792",
-        "taken_asks": []
       }
     },
     "taken_asks": []
