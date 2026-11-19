@@ -1,0 +1,56 @@
+# One-off: lifts the suspension of the night bot's `claude-3` subscription 40 hours after the operator
+# set it (https://github.com/Jlore-Studios/JackiOh/issues/148#issuecomment-7002037549), at 22:51 UTC on
+# 2026-11-20 (16:51 Central). The bot's `suspend` takes no duration (bot/README.md, Commands), so this
+# posts `/harness resume claude-3` on the status issue (#148) as @squishy-squooby, an operator in
+# .harness/trust.txt: a comment made with GITHUB_TOKEN wakes no workflow, and the bot answers none of
+# github-actions[bot]'s. The comment carries no Squishy marker, so the bot reads it as a person's
+# (`events.FromOtherBot`), and Squishy answers only `/squishy`. Then it disables itself, so the yearly
+# cron never fires again; a later pull request deletes this file. The second schedule, an hour later,
+# covers a dropped run (GitHub drops scheduled runs under load): the first run that posts disables the
+# workflow, and the date check holds a schedule to 2026-11-20. `gh workflow run resume-claude-3.yml`
+# posts it at once, whatever the date. No model runs here.
+name: resume claude-3
+
+on:
+  schedule:
+    - cron: "51 22 20 11 *"
+    - cron: "51 23 20 11 *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: resume-claude-3
+  cancel-in-progress: false
+
+jobs:
+  resume:
+    name: resume claude-3, then disable this workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write # disable this workflow once it has posted
+    steps:
+      - name: post the resume and disable this workflow
+        env:
+          SQUISHY_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          SUSPENSION: https://github.com/Jlore-Studios/JackiOh/issues/148#issuecomment-7002037549
+        run: |
+          set -eu
+          if [ "$EVENT" = schedule ] && [ "$(date -u +%F)" != 2026-11-20 ]; then
+            echo "Not 2026-11-20 (UTC): nothing posted." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -z "$SQUISHY_TOKEN" ]; then
+            echo "::error::SQUISHY_GITHUB_TOKEN is not set: post \`/harness resume claude-3\` on #148 by hand."
+            exit 1
+          fi
+          body=$(printf '%s\n\n---\n_Posted by %s, 40 hours after [the suspension](%s)._' \
+            "/harness resume claude-3" "\`.github/workflows/resume-claude-3.yml\`" "$SUSPENSION")
+          url=$(GH_TOKEN="$SQUISHY_TOKEN" gh issue comment 148 --repo "$REPO" --body "$body")
+          echo "Posted the resume: $url" | tee -a "$GITHUB_STEP_SUMMARY"
+          gh workflow disable resume-claude-3.yml --repo "$REPO"
+          echo "Disabled resume-claude-3.yml." | tee -a "$GITHUB_STEP_SUMMARY"
