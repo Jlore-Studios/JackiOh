@@ -15491,17 +15491,8 @@
       }
     },
     "4251": {
-      "action": "plan",
-      "asks": [
-        "c:6999110618"
-      ],
-      "build_next": {
-        "from_run": "44454667131",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-19T04:02:30Z",
-        "until": "2026-11-19T04:32:30Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-19T04:02:21Z",
         "difficulty": "medium",
@@ -15520,10 +15511,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "on: the four portrait corners plus the four tray chips |\n- Do not touch `.github/`, `.harness/`, `.squishy/`, `bot/`, the engine, cards, AI, server or edge crates, migrations, or wire output. Governing spec: \u00a710.1 (state model), \u00a710.8 (views), \u00a710.10 (client rendering), R961 (Jade), R987 (Luck), R1840005 (Credits), R3540000 (Burn/Toxic), R3548000 (Tipsy). \u2026\n- ## Steps\n- 1. `apps/web/src/game/HeroTray.tsx`: after the `secretBadgeText` import, add a `CounterChip` helper rendering `<span className=\"modifier-badge hero-counter {cls}\" title aria-label=\"{Name} {n}\">` containing `<span className=\"hero-counter-name\">{Name}</span> <span className=\"hero-counter-n\">{n}</span\u2026\n- 2. `apps/web/src/game/Hero.tsx`: delete the Burn, Toxic and Tipsy portrait spans (keep Jade and Credits spans untouched); change `<HeroPortrait portrait health armor luck reacting press>` to drop `luck={seat.luck}`. Extend the `<HeroInspect>` call with `luck={seat.luck} jade={seat.jade} burn={hero.\u2026\n- 3. `apps/web/src/emotes/Portrait.tsx`: remove the `luck?: number` prop and its doc line, and delete the `{luck \u2026 hero-luck \u2026}` badge block. Update the header comment to say the portrait badges health lower-right and Armor lower-left only. `Hero.tsx` is the sole caller.\n- 4. `apps/web/src/emotes/HeroInspect.tsx`: add exported constants `HERO_INSPECT_LUCK/JADE/BURN/TOXIC/TIPSY/CREDITS`; extend `HeroInspectProps` with optional `luck, jade, burn, toxic, tipsy, marketCredits: number | undefined`; destructure them and append rows to `dl.hero-inspect-stats` for each `> 0`\u2026\n- 5. `apps/web/src/game/board.css`: narrow the `.hero-portrait .hero-jade, \u2026` absolute block to Jade and Credits only; delete the `.hero-portrait .hero-burn`, `.hero-toxic`, `.hero-tipsy` rules. Add `.hero-tray .hero-counters { display: inline-flex; gap: var(--space-2); }` and `.hero-tray .hero-count\u2026\n- 6. `apps/web/src/emotes/emotes.css`: remove `.hero-luck` from the `.hero-health/.hero-armor/.hero-luck` absolute rule and delete the `.hero-portrait .hero-luck` block. Health and Armor anchors unchanged.\n- 7. `apps/web/src/game/hero-counters.test.tsx` (new, copy `Hero.test.tsx` imports plus `renderBoard`): view with health 30, armor 5, `jade: 3`, `luck: 2`, `hero: {burn: 6, toxic: 2}`, `tipsy: 4`, `marketCredits: 7` and two modifiers. Assert each counter selector appears exactly once in `document` (`\u2026\n- 8. Update `apps/web/src/game/Hero.test.tsx` R987 test to expect the Luck chip in `[data-testid=\"hero-counters-you\"]` with text `Luck 1`, kept `data-luck=\"1\"` and `data-testid=\"hero-luck\"`; update R3540005 test to find `.hero-burn`/`.hero-toxic` in the tray span with kept titles. Update `apps/web/sr\u2026\n- 9. `e2e/cypress/component/emotes-layout.cy.tsx`: add a `describe` over the existing `VIEWPORTS` mounting `Game` with a `fullBoardView()` whose both seats carry all counters above 0 plus three modifiers. For each side, for each of the eight counter selectors, assert `getBoundingClientRect` pairwise \u2026\n- 10. `apps/web/README.md`: extend the Credits paragraph to name the four portrait corners (health, Armor, Jade, Credits) and the four tray chips (Luck, Burn, Toxic, Tipsy with visible names, excluded from the tray allowance), plus the inspect view listing every counter above 0.\n- ## Tests\n- - `apps/web/src/game/hero-counters.test.tsx`: new `hero counters` suite (once drawn, named, outside overflow; inspect lists all; tray stays absolute). Run `pnpm --dir apps/web test src/game/hero-counters.test.tsx`.\n- - `apps/web/src/game/Hero.test.tsx`: updated R987 and R3540005 tests. Run `pnpm --dir apps/web test src/game/Hero.test.tsx`.\n- - `apps/web/src/game/tipsy.test.tsx`: updated R3548000 stein test. Run `pnpm --dir apps/web test src/game/tipsy.test.tsx`.\n- - `e2e/cypress/component/emotes-layout.cy.tsx`: new counter-overlap spec at all `VIEWPORTS`. Run `pnpm --dir e2e test:component` for that file (daily run; not per-PR).\n- - Typecheck and lint the touched web files: `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web/src/game/Hero.tsx apps/web/src/game/HeroTray.tsx apps/web/src/emotes/Portrait.tsx apps/web/src/emotes/HeroInspect.tsx apps/web/src/game/hero-counters.test.tsx`. No `cargo jackioh spec check` n\u2026\n- ## Done when\n- - [ ] Both heroes with all counters above 0 show all eight at once with no box overlap, on phone, tablet and desktop viewports.\n- - [ ] Per-PR jsdom test holds the rule in its new form (each counter once, named, outside overflow).\n- - [ ] Hold / Shift+F10 inspect lists every counter above 0 with name and number.\n- - [ ] A counter rising from 0 does not move the plate.\n- - [ ] Existing testids kept; touched web tests, typecheck and eslint pass.\n- ## Risks\n- - Tight phone plate: four tray chips could cover the hand or opponent row. Mitigation: chips ride the existing out-of-flow tray toward the field (above yours, below the opponent's) with `max-width` ellipsis like modifier chips; the component spec measures the phone viewport.\n- - Only jsdom runs per PR: layout regressions slip to daily. Mitigation: the jsdom test pins structure and names, plus `readSheet` CSS guards on the tray's absolute position and the plate's fixed width.\n- - Label change breaks badge-text readers: Luck/Burn/Toxic/Tipsy text becomes `Name N` instead of `N`. Mitigation: classes, `data-*` attrs and testids unchanged; only `Hero.test.tsx`/`tipsy.test.tsx` expectations move, which this plan names.\n- ## Open questions\n- None. The arrangement follows the issue's recommended option; a builder taking a different overlap-free layout keeps the same testids, names and criteria.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4251 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4251/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-19T03:54:33Z",
       "owner_why": "it plans it",
@@ -15536,12 +15526,14 @@
       "provider": "muse",
       "queued_at": "2026-11-19T03:50:20Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44454667131",
+      "run_id": "pending:77a4c807-1795061031",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-19T03:54:33Z",
+      "started_at": "2026-11-19T04:04:17Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6999110618"
+      ]
     },
     "4253": {
       "action": "review",
@@ -15914,9 +15906,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T03:54:33Z",
+    "at": "2026-11-19T04:04:17Z",
     "url": "",
-    "what": "plan #4251 on muse"
+    "what": "build #4251 on muse"
   },
   "last_sweep": {
     "at": "2026-11-19T03:53:17Z",
