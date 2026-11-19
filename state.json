@@ -15927,15 +15927,8 @@
       }
     },
     "4265": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44501529358",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-19T10:07:22Z",
-        "until": "2026-11-19T10:37:22Z"
-      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-19T10:04:52Z",
@@ -15946,9 +15939,8 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"ls /tmp/p4265 2>&1 | head; git -C /home/runner/work/_temp/work/item-4265 log --oneline -1; git -C /home/runner/work/_temp/work/item-4265 status --porcelain | head\", \"description\": \"Check\u2026\n- Bash: {\"command\": \"git log --oneline 947bae6c11..HEAD | head -20; git diff --stat 947bae6c11..HEAD -- crates/engine/src/play_steps.rs crates/engine/src/state.rs crates/engine/src/state_check.rs crates/card\u2026\n- Bash: {\"command\": \"git show --stat --format='%s' HEAD | head -20; grep -n 'fn handed_over_zone' -A3 crates/engine/src/play_steps.rs; grep -n 'let status = {' crates/engine/src/state_check.rs; grep -n 'let \u2026\n- Bash: {\"command\": \"grep -n 'for those replays (R767000)' crates/cards/src/scripts/core/c052_silly_silas.rs; sed -n 1,8p crates/cards/src/scripts/core/c055_lava_golem.rs; grep -n 'mod r360_opposing_units_us\u2026\n- said: Anchors all hold at the new base (`2472e7ca1d`, perf-tool change only). Writing the finished plan to the draft.\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-4265/.bot-plan.md <<'EOF'\\n\\n## Steps\\n(see the final message: steps 1-12 written out there; this draft holds the evidence below)\\n\\n## Planner e\u2026\n- said: ## Goal This pull request on `main` closes #4265 and should leave the next super run on `_staging` green. Run 44382904251 tested `28bf8d2`. That commit lacks #4255 (`f034bfcd6c`), which fixed every job that was red at `17e34d0` (#4221). #4221's planner reproduced those failures at `c33b1e9`, which \u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-19T07:21:37Z",
       "owner_why": "it plans it",
@@ -15960,9 +15952,9 @@
       "planned_tier": "strong",
       "provider": "claude-4",
       "round_tier": "",
-      "run_id": "44501529358",
+      "run_id": "pending:18674c99-1795082866",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-19T10:00:02Z",
+      "started_at": "2026-11-19T10:07:59Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
@@ -16032,9 +16024,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T10:00:02Z",
+    "at": "2026-11-19T10:07:59Z",
     "url": "",
-    "what": "plan #4265 on claude-4"
+    "what": "build #4265 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-19T09:58:56Z",
