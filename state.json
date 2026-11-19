@@ -14258,11 +14258,12 @@
     "what": "spot-check #4278 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-19T21:50:12Z",
+    "at": "2026-11-19T21:57:25Z",
     "notes": [
-      "started review #4278 on claude-1 (run 44622866463)",
+      "delivered review #4278 on claude-1 (run 44622866463): interrupted",
+      "started review #4278 on claude-4 (run 44624070254)",
       "nothing more to start: nothing is queued",
-      "pruned 9 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14968,7 +14969,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T21:50:12Z",
+  "loop_tick": "2026-11-19T21:57:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
