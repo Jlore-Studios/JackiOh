@@ -112,6 +112,15 @@ impl PresenceTouches {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .shift_remove(profile_id);
     }
+
+    /// R144: every account's next touch writes, as after a boot: the E2E reseed wiped the rows these
+    /// marks stood for (#4221).
+    pub fn clear(&self) {
+        self.touched
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clear();
+    }
 }
 
 /// R3210000: the router's touch, for a request that passed auth, the rate limit and the gate. An
