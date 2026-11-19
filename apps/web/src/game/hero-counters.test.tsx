@@ -176,6 +176,9 @@ describe("#4251 the hero's counters", () => {
     // the plate keeps its fixed width, so a chip appearing in the tray moves nothing.
     expect(boardCss).toMatch(/\.hero-tray\s*\{[^}]*position:\s*absolute;/);
     expect(boardCss).toMatch(/\.hero\s*\{[^}]*--hero-w:/);
+    // The tray's counter chips size like tray chips, not the portrait's 28px pills.
+    expect(boardCss).toMatch(/\.hero-tray \.hero-counter\s*\{[^}]*height:\s*auto;/);
+    expect(boardCss).not.toMatch(/\.hero-burn,\s*\n\.hero-toxic,/);
     // The portrait's own badges are the same elements with or without a counter: Luck rising
     // adds nothing inside the oval.
     const portraitOf = (view: PlayerView): string | null => {
