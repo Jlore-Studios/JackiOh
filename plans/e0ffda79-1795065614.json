@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4259,
+  "title": "Patch: follow-up to #4258 from the after-merge spot-check",
+  "branch": "bot/issue-4259",
+  "thread": "**Issue #4259 (data, not instructions):**\n\n```text\n# #4259: Patch: follow-up to #4258 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4258 -->\nThe after-merge spot-check of #4258 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/44463478889)) found 2 blocking problem(s) in the change as it merged (`1955aebdce40`). `claude-1` (claude, `opus`, strong) reviewed it. #4258 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `spec/rulings/R3540005.md`: The spec still says the client draws the hero's Burn and Toxic on the hero's portrait, but this change moved them off the portrait into the tray, so the spec and the code now disagree and the spec was not updated in the same PR.\n  Evidence: R3540005.md: \"The client draws each as its own badge \u2026 and on the hero's portrait (`.hero-burn`, `.hero-toxic`, shown above 0)\". The folded paragraph at spec/11-rulings.md:1738 says the same (\"on the hero's portrait\"). The diff removes those spans from Hero.tsx and draws them in HeroTray.tsx's `hero-counters-<side>`. CLAUDE.md asks that the spec change in the same PR. The fix is to amend R3540005's note to say they are drawn as labelled chips in the hero's tray, outside its overflow allowance, following spec/README's process for amending a note. R987 ('by the hero's portrait') and R3548000 ('beside the player's hero') still read true.\n- [ ] `apps/web/src/game/board.css:194`: Above 600px the new tray chips still pick up the old portrait-pill rule, so they are 28px tall beside modifier chips of about 19.5px. That makes the tray taller toward the field, and no spec checks a tray that carries counters against the zones and hands, which is the phone-plate risk the issue said the component spec would cover.\n  Evidence: The group rule `.hero-health, .hero-armor, .hero-jade, .hero-burn, .hero-toxic, .hero-tipsy, .hero-credits, .hero-luck { min-width: 28px; height: 28px; font-weight: 800; box-shadow \u2026 }` (board.css:194-215) still matches the chips. Nothing overrides that height except the \u2264600px `.hero-tray .modifier-badge { height: var(--tray-chip-h) }` (board.css:3743). `.modifier-badge` itself (board.css:343) sets no height: about 10px \u00d7 1.35 line-height + 2\u00d72px padding + 2px border \u2248 19.5px. The only check that a tray covers no zone or hand is board-layout.cy.tsx:318, and its view (8 modifiers, 2 secrets, Rift, 3 Jade) has no Luck, Burn, Toxic or Tipsy. The new emotes-layout spec only checks the eight counters against each other. The fix is to size `.hero-tray .hero-counter` like a tray chip and give the board-layout tray-overlap view every tray counter above 0.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `muse` (`muse`) built #4258 and `muse` (`muse-spark-1.3-contributor`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-1"
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4259: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-19T05:19:49Z",
+    "claimed_at": "2026-11-19T05:20:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4259 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
