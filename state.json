@@ -15735,15 +15735,8 @@
     "what": "review #4244 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-19T01:23:47Z",
-    "notes": [
-      "delivered review #4239 on muse (run 44430573531): approved",
-      "delivered review #4240 on muse (run 44430486965): approved",
-      "delivered build #4188 on claude-4 (run 44427793999): built",
-      "started review #4244 on claude-4 (run 44437077926)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-19T01:28:05Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
