@@ -15960,13 +15960,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-1",
       "queued_at": "2026-11-19T04:38:50Z",
-      "run_id": "44459935164",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:6bc3e8f4-1795065085",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 365,
-      "started_at": "2026-11-19T04:40:26Z",
+      "started_at": "2026-11-19T05:11:48Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15993,9 +15994,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T04:41:43Z",
+    "at": "2026-11-19T05:11:48Z",
     "url": "",
-    "what": "plan #4196 on agy"
+    "what": "spot-check #4258 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-19T05:03:23Z",
@@ -36742,7 +36743,15 @@
         "n": 365,
         "pr": 4258,
         "queued_at": "2026-11-19T05:10:46Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:6bc3e8f4-1795065085",
         "sha": "1955aebdce4029480ef70656832fe9618c4a32b2",
+        "started_at": "2026-11-19T05:11:48Z",
         "status": "queued",
         "title": "Patch: every counter on a hero's portrait can be read",
         "tries": 0
