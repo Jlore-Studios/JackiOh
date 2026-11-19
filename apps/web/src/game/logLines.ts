@@ -1,5 +1,5 @@
 // The game log's lines, written in Rust: `jackioh-shared`'s `log` module (#3108), which the web reaches
-// through the WebAssembly module's `log` body (`wasm/index.ts`). A line is final: its words are in the
+// through the WebAssembly module's `gameLog` body (`wasm/index.ts`). A line is final: its words are in the
 // reader's language already, as the spans a card face's text is made of, and it says which card it is about
 // when it names one the viewer may read (R97). Nothing here is a rule or a wording (CLAUDE.md rule 7).
 //
@@ -9,7 +9,7 @@
 import type { PlayerView } from "@jackioh/shared";
 
 import { getLocale, type Locale } from "../i18n/i18n.ts";
-import { log } from "../wasm/index.ts";
+import { gameLog } from "../wasm/index.ts";
 import type { LogLine } from "../wire/generated/LogLine.ts";
 
 export type { LogLine } from "../wire/generated/LogLine.ts";
@@ -19,14 +19,14 @@ export type { LogLine } from "../wire/generated/LogLine.ts";
  * markers, `cardResolved`, `manaSpent`: the animation layer's bookkeeping).
  */
 export function logLines(view: PlayerView, locale: Locale = getLocale()): readonly (LogLine | null)[] {
-  const answer = log({ call: "view", view, locale });
+  const answer = gameLog({ call: "view", view, locale });
   if (answer.answer !== "lines") throw new Error(`the log answered ${answer.answer} for a view`);
   return answer.lines;
 }
 
 /** R745: the line that says events may be missing where a window shares none with the one before. */
 export function gapLine(): LogLine {
-  const answer = log({ call: "gap", locale: getLocale() });
+  const answer = gameLog({ call: "gap", locale: getLocale() });
   if (answer.answer !== "line") throw new Error(`the log answered ${answer.answer} for a gap`);
   return answer.line;
 }

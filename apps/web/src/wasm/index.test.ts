@@ -137,7 +137,7 @@ const WRAPPERS: readonly (readonly [string, (wasm: Wasm) => unknown])[] = [
   ["engineTables", (w) => w.engineTables()],
   ["validateDeck", (w) => w.validator("validateDeck", ANY)],
   ["face", (w) => w.face(ANY)],
-  ["log", (w) => w.log(ANY)],
+  ["gameLog", (w) => w.gameLog(ANY)],
 ];
 
 describe("before the module is loaded", () => {
