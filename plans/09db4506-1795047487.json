@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4238,
+  "title": "Patch: Recruit takes the first card that can actually land, not the first that matches",
+  "branch": "bot/issue-4238",
+  "thread": "**Issue #4238 (data, not instructions):**\n\n```text\n# #4238: Patch: Recruit takes the first card that can actually land, not the first that matches\nOpened by @MaxGoetzmann.\n\n## What's wrong\n\nA Recruit picks its target by the filter alone, then tries to summon it. If that card can't be placed, the whole scan fizzles, even when a card further down the pile matches the filter and *could* land.\n\nIn `crates/engine/src/effects/summon.rs`, `recruit` (around line 1160) does:\n\n1. `valid_in_pile` \u2192 `recruitable`: a permanent, not a unit token, and `matches_filter`. Placement is never checked here.\n2. `skip_x_cost(...).next()` takes the first card (R690).\n3. `summon_existing` then returns `None` for that card if `zone_and_stance_for` finds no zone. That happens when its row is full, Locked or Reserved (R64, R688), when a named `lane` is taken, when a GIGA doesn't fit, on the wrong half of a slashed board (R3554003), or when the card is barred (R2533000). The card stays in the library and nothing is summoned.\n\nWith `count: N`, every later scan finds the same stuck card again. So Call to Arms, Cookie Guild Radiant and the other multi-scan cards fizzle N times over one card.\n\n**Example:** your unit row is full and your backrow has room. The library's top card is a Unit and the second is a Trap. Boots on the Ground Radiant (\"Recruit a card\"), Expedition Map (\"Recruit a permanent\") and any unfiltered Recruit summon nothing, though the Trap could have been set.\n\nToday this is deliberate and pinned:\n- test `r64_a_scan_whose_card_finds_no_zone_fizzles_and_the_next_finds_the_same_card_core_c69_s_shape` (`crates/engine/tests/rules/recruit_variants.rs`, about line 193)\n- the doc comment on `recruit` (\"a card with no zone fizzles and the next finds it again\")\n- the catalog's C+ #13 Boots on the Ground row (\"none, or its row full, nothing\")\n\n## What it should do\n\nA Recruit's valid target is the first card in scan order that **both** passes its conditions (permanent, not a unit token, the filter) **and** can actually be summoned: `summon_existing` would place it, given the Recruit's `lane`, `radiant`, Flying into the backrow (R2248000), GIGA, slashed-board half and so on. If no card in the pile can land, the Recruit does nothing, as today.\n\n- **R690 still holds, among placeable cards only.** Take the first placeable non-(X) card, and an (X)-cost one only if no other placeable card matches.\n- **`count: N`** rechecks placement on each scan. Every scan takes the next card that lands, and the scans stop once nothing can.\n- **`recruitAll`** (Pile On) already passes over a card whose row is full. Check that its R690 step also reads placeable cards only, so a non-(X) card that can't land doesn't keep an (X)-cost card that could from being taken.\n- **Exile Recruits** (`from: \"exile\"`, Classic #1 Radiant) follow the same rule.\n\n## How\n\n- Check placement without moving the card. Run the same checks as `summon_existing` (`row_of`, `barred_from_play`, `summon_flies`, `enters_giga`, `zone_and_stance_for`) as a read-only probe, and use it in `valid_in_pile` (or right after it). Factor the checks out so the probe and `summon_existing` can't drift apart.\n- Placement is read from public board state. The library scan already reads hidden order engine-side, so no hidden information reaches a view.\n\n## Spec, rulings and tests\n\n- **Ruling.** Write a note in this issue's block amending R64 (and citing R690, R2248000). Its \u00a711 paragraph goes in `spec/pending/<N>.md`. Name the proving test after it.\n- **Spec text.** Update \u00a76.3's Recruit row in `spec/06-keywords.md` (line 139: \"First permanent card \u2026 that matches the filter\" becomes \"\u2026 that matches the filter and can be summoned\").\n- **Catalog.** Update every catalog row that says a full row means nothing: at least C+ #13 Boots on the Ground, plus the Call to Arms and Cookie Guild \"stops when the board is full\" wording if it changes. Grep `spec/08-catalog.md` for Recruit.\n- **Tests.** Flip the `r64_\u2026_fizzles_and_the_next_finds_the_same_card\u2026` test. Add tests for:\n  - full unit row, Trap below \u2192 the Trap is set face-down\n  - full backrow, Unit below \u2192 the Unit is summoned\n  - `count: 2` skipping a stuck card and taking the next two that land\n  - R690 with an unplaceable non-(X) card ahead of a placeable (X)-cost card\n  - a named `lane` that is taken\n- **Patch fragment.** Cards play differently, so add a pending fragment (`cargo jackioh patches \u2026 --rule`) with a player note, and run `cargo jackioh classify --base origin/main --claims`.\n- **Old logs.** Check the golden replay and older logs. Use the same version-gating earlier rule changes used, so old logs replay the same.\n\n## Acceptance\n\n- [ ] A Recruit skips matching cards that can't be summoned and takes the first that can. With `count`, each scan does the same.\n- [ ] R690 applies among placeable targets for `recruit` and `recruitAll`.\n- [ ] Ruling note, spec \u00a76.3 and the catalog rows are updated, and `cargo jackioh spec check` passes.\n- [ ] The tests above are green, and CI's required checks are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4238: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-19T00:14:22Z",
+    "claimed_at": "2026-11-19T00:18:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
