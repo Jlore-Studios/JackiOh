@@ -30407,5 +30407,29 @@
       "stinkyscape-074"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.7e",
+    "date": "2026-11-19",
+    "title": "Patch: the card pictures' scene kits and recipes load alongside the engine module, not in the first page load",
+    "source": "#4222",
+    "notes": "The card pictures' scene kits and recipes no longer ship in the first page load (#4222). scene.ts keeps its API and reads the four tables from an installed slot filled by loadSceneData() beside loadWasm(); EngineGate and useEngineReady wait for both, failing closed on a scene-chunk failure, and sceneRecipeOf throws before install so an early face fails a test instead of drawing the wrong picture. Nothing visible changes. Claims --visual because the change touches apps/web/src/cards/ (R2529000), a micro of no family.",
+    "player": {
+      "title": "Faster first load, same card pictures",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "The first page loads faster on a slow connection, with the same card pictures."
+      ]
+    },
+    "commits": [
+      "4b603c1576a447d92a4c2c1e318b0de5b77ba859"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
