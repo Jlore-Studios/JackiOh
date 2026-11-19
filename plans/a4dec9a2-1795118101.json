@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4274,
+  "title": "Patch: the C module replays golden seeds hash for hash under Node",
+  "branch": "bot/issue-4274",
+  "thread": "**Issue #4274 (data, not instructions):**\n\n```text\n# #4274: Patch: the C module replays golden seeds hash for hash under Node\nOpened by @squishy-squooby.\n\nPart of #2898. Nothing holds `crates/wasm/c` to the native engine today: `crates/wasm/c/src/tests.rs` and `export_parity.rs` run natively. #4146 (closed, not planned) would have covered the browser's module through e2e and named the C module as uncovered. This issue is the C module's own check, as a small Node script calling the built `jackioh_wasm_c.wasm` through its raw C ABI, exactly as any other host does. Its Luau twin is #4218's host.\n\n## What to add: `luau/tools/reference-host.mjs`\n\nIt's plain Node ESM with no dependencies. #4218 creates `luau/`: whichever lands first makes the folder.\n\n- **One `call(name, ...args)` helper** following `crates/wasm/c/README.md`:\n  - It instantiates the module with an empty import object, checks that it imports nothing, and calls `init()` once (it returns nothing).\n  - Strings go in through `jackioh_alloc`, numbers pass through, and the answer is copied out before the argument buffers are freed.\n  - Status 1 throws `<name> refused: <message>`.\n  - A trap marks the instance dead. The result buffer counts as panic text only when it starts with `panicked at `: a trap that isn't a panic leaves the previous answer there.\n- **State stays exact text.** Never decode and re-encode a state. A `splitState(answer)` cuts the `state` member out of a `{\"state\":\u2026,\u2026}` answer (`begin_game`, `reduce`, `fold`) as text.\n- **`fixture <wasm>`** folds the hotseat fixture with `fold`, then replays its log step by step with `reduce`. Both final hashes must equal `HOTSEAT_HASH`, read from `crates/engine/src/testkit/golden.rs` rather than restated.\n  - The step-by-step replay opens with `fold` of the fixture's setup and an empty log. `create_game` refuses the fixture's EARLIER_DECK_SIZE decks (R1705003), while `fold` opens as `create_recorded_game` does.\n- **`traces <wasm> <file>`** replays a `cargo jackioh golden record` file: `create_game` of each line's `args`, `begin_game`, then `reduce` of each step's `a`.\n  - It holds `hash_state` to `begin.s` and each step's `s` (the same FNV-1a over the canonical text, SURFACE \u00a75.2). It ignores `l`, `v` and `e`, which hash canonical texts only the testkit writes.\n  - The first mismatch prints the seed, step, action, expected and got, and exits 1.\n- **A short report:** the module's size, its load and `init` times, games, steps, and the median and worst time per `reduce` plus `hash_state`.\n\n## Done when\n\n- Both modes pass on golden seeds 1..5. For scale: on a recent build, all 240 golden seeds passed this way, with a median of about 2.4 ms a step.\n- A traces file with one hash changed fails, naming that seed and step.\n\nRunning it in CI is a person's change to `ci.yml` (workflows are outside the bot's paths). Say in the pull request which job should run it and with what command.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4274: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-19T19:50:23Z",
+    "claimed_at": "2026-11-19T19:55:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
