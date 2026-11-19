@@ -1101,8 +1101,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     // it was read by the Recruit's own scan.
     (
         c001_curse_of_the_forgotten_classic::ID,
-        "v0.6.7c",
-        c001_curse_of_the_forgotten_classic::script_v0_6_7c,
+        "v0.6.7e",
+        c001_curse_of_the_forgotten_classic::script_v0_6_7e,
     ),
 ];
 

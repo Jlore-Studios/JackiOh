@@ -11,8 +11,8 @@
 //! unchanged (§3.2), no Cry (R1); a Trap is set face-down (R33). A Unit it
 //! took makes one forced attack on the enemy hero (R53). The attacker is named by its definition, as a
 //! Unit a card cast on the draw summoned (R58) is summoned by this list too and must not attack; the
-//! card is read by the Recruit's own scan (`recruit_takes`). Through v0.6.7c it was read as the newest
-//! permanent of their exile; `script_v0_6_7c` keeps that (R767000).
+//! card is read by the Recruit's own scan (`recruit_takes`). Through v0.6.7e it was read as the newest
+//! permanent of their exile; `script_v0_6_7e` keeps that (R767000).
 
 use jackioh_engine::effects::{damage, draw, forced_attacks, recruit};
 use jackioh_engine::prelude::*;
@@ -92,7 +92,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// Through v0.6.7c the card was read as the newest permanent in the opponent's exile (a Spell is never
+/// Through v0.6.7e the card was read as the newest permanent in the opponent's exile (a Spell is never
 /// recruited, and a unit token is never in an exile, R11), whether or not it could land and past R690.
 fn newest_permanent_of_theirs(ctx: &EffectContext<'_>, _args: &RecruitArgs) -> Option<CardInstance> {
     let state: &GameState = &*ctx.state;
@@ -104,9 +104,9 @@ fn newest_permanent_of_theirs(ctx: &EffectContext<'_>, _args: &RecruitArgs) -> O
         .cloned()
 }
 
-/// R767000: the scripts through v0.6.7c, before R4238000 read the recruited card by the Recruit's own
+/// R767000: the scripts through v0.6.7e, before R4238000 read the recruited card by the Recruit's own
 /// scan. `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_7c() -> CardScripts {
+pub fn script_v0_6_7e() -> CardScripts {
     CardScripts {
         base: base(),
         radiant: radiant(newest_permanent_of_theirs),
@@ -466,8 +466,8 @@ mod tests {
             }
 
             #[test]
-            fn r767000_the_script_kept_for_v0_6_7c_names_the_newest_permanent_so_the_unit_taken_past_it_stays() {
-                crate::under_kept(CURSE, super::super::super::script_v0_6_7c(), || {
+            fn r767000_the_script_kept_for_v0_6_7e_names_the_newest_permanent_so_the_unit_taken_past_it_stays() {
+                crate::under_kept(CURSE, super::super::super::script_v0_6_7e(), || {
                     let mut s = scenario(json!({
                         "p1": { "hand": [{ "def": CURSE, "radiant": true }, STOCKPILE], "library": [STOCKPILE] },
                         "p2": { "hand": [STOCKPILE], "exile": [VANILLA, BILLY], "library": [STOCKPILE] },
