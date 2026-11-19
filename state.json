@@ -14024,15 +14024,8 @@
       "taken_asks": []
     },
     "4273": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44603220429",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-19T20:11:28Z",
-        "until": "2026-11-19T20:41:28Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14044,10 +14037,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "{ log }` \u2192 `import { gameLog }`; the two call sites in `logLines` and `gapLine` |\n- | `apps/web/src/wasm/index.test.ts` | change | WRAPPERS entry `[\"log\", (w) => w.log(ANY)]` \u2192 `[\"gameLog\", (w) => w.gameLog(ANY)]` (~line 140) |\n- | `crates/wasm/README.md` | change | Bindings table row 34: `` `log(call)` `` \u2192 `` `game_log(call)` `` and `binds it as `log(call_ptr, call_len)`` \u2192 `` `game_log(call_ptr, call_len)` `` |\n- | `crates/wasm/c/README.md` | change | Bindings table row 142: `` `log(call)` `` \u2192 `` `game_log(call)` `` |\n- | `docs/v0.3.0/SURFACE.md` | change | \u00a710.1 line 823 `pub fn log(call_json` \u2192 `pub fn game_log(call_json`; \u00a710.3 line 854 `` `log` (#3108 \u2026) `` \u2192 `` `game_log` (#3108 \u2026) `` |\n- Do not touch: `crates/wasm/core/src/lib.rs` (its `pub fn log` is an internal mangled symbol, no clash), anything under `crates/shared/`, `crates/engine/`, `crates/cards/`, `crates/ai/`, `crates/server/`, generated `apps/web/src/wire/`, `apps/web/src/game/contract.ts` (`log: \"log\"` is a DOM test-id)\u2026\n- ## Steps\n- 1. Reproduce and scope (read-only, no edits). Build the C module capturing stderr: `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh 2>/tmp/c-wasm-build.log; grep -i 'signature mismatch' /tmp/c-wasm-build.log`. Confirm the stub bytes: `grep -ac 'signature_mismatch:' target/wasm32-unk\u2026\n- 2. Add the regression gate first (red). In `scripts/build-wasm.sh`, in the `JACKIOH_WASM_C=1` block after the node import check and before the final `echo`, add a comment citing #4273 and: `if grep -aq 'signature_mismatch:' \"$C_MODULE\"; then echo \"build-wasm: the C module contains a signature_misma\u2026\n- 3. Rename the Rust exports. In `crates/wasm/c/src/lib.rs`, rename `pub extern \"C\" fn log(call_json_ptr \u2026` to `game_log` and its `arg(\"log: the call\", \u2026)` label to `\"game_log: the call\"`. In `crates/wasm/src/lib.rs`, rename `pub fn log(call_json: &str)` to `game_log`. Leave `crates/wasm/core/src/lib\u2026\n- 4. Rename the web wrapper and its callers. In `apps/web/src/wasm/index.ts`, change `export function log(request: LogCall): LogAnswer` to `gameLog`, its body to `call(\"gameLog\", () => parsed<LogAnswer>(normal.game_log(json(request))))` (raw bindgen exports keep snake_case, as `normal.combat_forecast\u2026\n- 5. Update the three docs: the two README binding-table rows and the two SURFACE spots listed above. Change only the binding name; leave surrounding prose (e.g. the economy row's \"the `log` every row's `ref` carries\") alone.\n- 6. Rebuild green and verify the symbols. Run `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh`; confirm exit 0, no `signature mismatch` warning in its output, and `WebAssembly.Module.exports` of the built file lists `game_log` with no `log` export left behind. Rebuild the browser mo\u2026\n- 7. Run the checks listed under Tests, then `git status --porcelain -- apps/web/src/wire` must be empty (the rename must not alter generated wire types).\n- ## Tests\n- - New regression test (shell, red-then-green): the `signature_mismatch:` gate in `scripts/build-wasm.sh`. Red command (before step 3): `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh` must exit nonzero; green command (after step 5): same invocation must exit 0. No new Rust test fil\u2026\n- - Existing coverage kept and run: `cargo test -p jackioh-wasm-c game_log_export_answers_what_the_core_body_answers` (renamed; asserts the export answers what the body answers) and `cargo test -p jackioh-wasm-c ranked_export_answers_what_the_core_body_answers` (already calls `planSeason` then `rateG\u2026\n- - Parity: `cargo test -p jackioh-wasm --test export_parity` (must stay green with both sides renamed; needs no edit since it reads the sources).\n- - Web: `pnpm --dir apps/web test src/wasm/index.test.ts` and `pnpm --dir apps/web test src/game/Log.test.tsx` (pretest rebuilds the WASM module the tests load).\n- - Style and gates: `cargo fmt --check`; `cargo clippy -p jackioh-wasm -p jackioh-wasm-c -p jackioh-wasm-core --all-targets -- -D warnings`; `cargo jackioh catalog check`; `cargo jackioh patches check`; `cargo jackioh spec check` (no ruling added; must stay green).\n- ## Done when\n- - The C-module build prints no `signature mismatch` warning and its module contains no `signature_mismatch:` name.\n- - `game_log` is exported by both modules, `log` by neither, and the parity test passes.\n- - `ranked` `rateGame` answers status 0 through the C boundary (native renamed-path test green; built module green).\n- - The new build gate is proven red on the old code (step 2 run) and green after the rename.\n- - Every test and check under Tests passes, and `apps/web/src/wire/` is clean.\n- ## Risks\n- - wasm-bindgen name mapping: if the generated glue for `game_log` is not exactly `game_log`, step 6's exports listing catches it; fix `index.ts` to whatever the listing shows and say so. Evidence says snake_case is preserved (`normal.combat_forecast`).\n- - External host breakage: any out-of-tree host (the Roblox port in #2898) calling the C `log` export must switch to `game_log`; note it in the PR description since it cannot be changed here.\n- - `grep -a` on the `.wasm`: binary-safe by flag; if a toolchain ever compresses or strips the name section, the check could go blind \u2014 the unmodified linker-warning line in the build log remains as the secondary signal (Done-when checks both).\n- - No behavior change is intended: `wasm_core` bodies, JSON shapes, log line text, and Glicko-2 math are untouched, so golden replays and fuzz hashes are unaffected; the full `cargo test --workspace` and fuzz runs stay with CI.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4273 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4273/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-19T19:54:49Z",
       "owner_why": "it plans it",
@@ -14060,9 +14052,9 @@
       "provider": "muse",
       "queued_at": "2026-11-19T19:50:12Z",
       "requested_by": "squishy-squooby",
-      "run_id": "44603220429",
+      "run_id": "pending:341f1800-1795119175",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-19T19:54:49Z",
+      "started_at": "2026-11-19T20:13:11Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14147,9 +14139,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T20:12:42Z",
+    "at": "2026-11-19T20:13:11Z",
     "url": "",
-    "what": "plan #4270 on claude-7"
+    "what": "build #4273 on muse"
   },
   "last_sweep": {
     "at": "2026-11-19T20:02:07Z",
