@@ -15929,6 +15929,13 @@
     "4265": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44501529358",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-19T10:07:22Z",
+        "until": "2026-11-19T10:37:22Z"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-19T09:53:34Z",
