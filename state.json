@@ -14012,15 +14012,8 @@
       "taken_asks": []
     },
     "4274": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44603305843",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-19T20:02:57Z",
-        "until": "2026-11-19T20:32:57Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14032,10 +14025,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- | File | New / change | What changes |\n- | --- | --- | --- |\n- | `luau/tools/reference-host.mjs` | new | The whole script: `call` helper, `splitState`, `fixture` and `traces` modes, report, CLI |\n- Do not touch anything else: no changes under `.github/`, `.harness/`, `.squishy/`, `bot/`, `crates/`, `apps/`, `e2e/` or `spec/`. No ruling note is added (R1705003 is cited, already specified in `spec/rulings/R1705003.md`). Governing sections: `crates/wasm/c/README.md` (the ABI contract), `docs/v0.\u2026\n- ## Steps\n- 1. Create `luau/tools/reference-host.mjs` as ESM importing only `node:fs`. Resolve the repo root from the script's own path (`new URL('../../..', import.meta.url)`), so the fixture (`crates/engine/tests/golden/01-hotseat-full-game.json`) and `crates/engine/src/testkit/golden.rs` are found regardles\u2026\n- 2. Write `loadModule(wasmPath)`: read the bytes, record byte length; `new WebAssembly.Module(bytes)`; assert `WebAssembly.Module.imports(mod).length === 0`, else throw naming the imports; `new WebAssembly.Instance(mod, {})`; time load (read + compile + instantiate) and `init()` separately with `per\u2026\n- 3. Write `call(host, name, ...args)` following `crates/wasm/c/README.md` and `luau/src/Host.luau`: throw `<name> refused: instance is dead; open a fresh one` when `host.dead`; throw `<name> refused: unknown binding` for a missing export; accept only `string` or `number` arguments. Encode each strin\u2026\n- 4. Write `splitState(answer)` as a direct port of `Host.splitState` in `luau/src/Host.luau` (skip-space / string / value scanners returning the exact substring of the `\"state\"` member; never `JSON.parse` plus re-encode). Throw `splitState: ...` errors matching the Luau messages for a non-object ans\u2026\n- 5. Write `readHotseatHash()`: read `crates/engine/src/testkit/golden.rs` as text and parse `pub const HOTSEAT_HASH: &str = \"...\"` with a regex; throw if absent, so the value is never restated.\n- 6. Write `fixture` mode: full fixture text goes to `fold`; assert the parsed answer's `errors` is empty; `stateText = splitState(answer)`; assert `JSON.parse(call(host, 'hash_state', stateText)) === HOTSEAT_HASH` (`hash_state` answers a JSON string, so unquote with `JSON.parse`). Then require the R\u2026\n- 7. Write `traces` mode: read the file, split into non-empty lines. Per line (`game`): `created = call(host, 'create_game', JSON.stringify(game.args))`; `s = splitState(call(host, 'begin_game', created))`; check `begin` with `checkHash(game.seed, 'begin', null, game.begin.s, s)`, then per step `i`: \u2026\n- 8. Write the report, printed by both modes: `size: <bytes> B`, `load: <ms> ms`, `init: <ms> ms`, `games: <n>`, `steps: <n>`, `reduce+hash median: <ms> ms`, `reduce+hash worst: <ms> ms` (median of the per-step samples at index `Math.floor(n / 2)` of the sorted copy; one decimal).\n- 9. Write the CLI: `fixture <wasm>` and `traces <wasm> <file>`; anything else prints usage to stderr and exits 2. Uncaught failures print `<mode> failed: <message>` to stderr with exit 1.\n- ## Tests\n- No committed test file is added: no JS runner covers `luau/` (lune runs only the Luau specs), so the script is verified by running it. Run, in order:\n- - `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh`\n- - `cargo jackioh golden record --seeds 1..5 --out /tmp/jackioh-golden-1-5.jsonl`\n- - `node luau/tools/reference-host.mjs fixture target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm` (exit 0, report printed, both hashes equal)\n- - `node luau/tools/reference-host.mjs traces target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm /tmp/jackioh-golden-1-5.jsonl` (exit 0)\n- - Tamper run: copy the traces file with one step's `s` changed (flip its last hex digit via `python3`), run `traces` on it, and require exit 1 with the seed and step named in `mismatch: ...`.\n- - `git status --porcelain` shows only `luau/tools/reference-host.mjs` as new.\n- ## Done when\n- - `fixture` and `traces` pass on golden seeds 1..5 (exit 0, report printed).\n- - The tampered traces file fails with exit 1 naming that seed and step.\n- - The report shows module size, load and `init` times, games, steps, and median and worst per-step time.\n- - Only `luau/tools/reference-host.mjs` is added; `cargo jackioh spec check` stays clean.\n- - The pull request description says which CI job should run it and with what command (person's edit to `ci.yml`; suggested: extend the `web (wasm c module)` job with `node luau/tools/reference-host.mjs fixture $C_MODULE` and `traces` on a freshly recorded `golden record --seeds 1..5` file).\n- ## Risks\n- - State text must stay byte-exact: the module caches states by exact text, so `splitState` cuts substrings and the script never decodes and re-encodes a state (`hash_state` canonicalizes, but the cache key does not).\n- - The memory view must be re-created from `exports.memory.buffer` before every read and write; a `memory.grow` during a call replaces the buffer.\n- - `hash_state` answers quoted JSON (`\"512357ea\"`); compare after `JSON.parse`, not against the raw answer.\n- - Traces `args` carry `\"handicaps\": null` for plain seeds; `CreateGameArgs` takes it via its `Option` default, so pass `game.args` through unchanged.\n- - A trap poisons the instance logically; every later `call` must refuse until a fresh instance is opened, even though the exports remain callable.\n- ## Open questions\n- None blocking. One for the person wiring CI: whether to extend the existing `web (wasm c module)` job or add a new job for the two commands named above.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4274 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4274/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-19T19:55:18Z",
       "owner_why": "it plans it",
@@ -14048,9 +14040,9 @@
       "provider": "muse",
       "queued_at": "2026-11-19T19:50:23Z",
       "requested_by": "squishy-squooby",
-      "run_id": "44603305843",
+      "run_id": "pending:1f8a3050-1795118602",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-19T19:55:18Z",
+      "started_at": "2026-11-19T20:03:41Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14079,9 +14071,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T19:55:46Z",
+    "at": "2026-11-19T20:03:41Z",
     "url": "",
-    "what": "plan #4275 on muse"
+    "what": "build #4274 on muse"
   },
   "last_sweep": {
     "at": "2026-11-19T19:54:03Z",
