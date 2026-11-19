@@ -14219,13 +14219,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-1",
       "queued_at": "2026-11-19T20:56:38Z",
-      "run_id": "44613871950",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:36507baf-1795125042",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 375,
-      "started_at": "2026-11-19T20:57:18Z",
+      "started_at": "2026-11-19T21:50:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -14252,9 +14253,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T20:57:18Z",
+    "at": "2026-11-19T21:50:57Z",
     "url": "",
-    "what": "review #4278 on muse"
+    "what": "spot-check #4278 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-19T21:43:50Z",
@@ -35087,7 +35088,15 @@
         "n": 375,
         "pr": 4278,
         "queued_at": "2026-11-19T21:49:54Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:36507baf-1795125042",
         "sha": "3271750b6976d62a7e50e200f68ecf434b17396f",
+        "started_at": "2026-11-19T21:50:57Z",
         "status": "queued",
         "title": "Patch: the C module replays golden seeds hash for hash under Node",
         "tries": 0
