@@ -348,6 +348,77 @@ mod i2_r3139004_a_second_attack_after_an_attack_on_a_unit_inside_one_action {
     }
 }
 
+/// I2 and a Prime's kill behind its joiners (R1203): its joiner declares a forced attack on its target
+/// first, and the Prime's own combat follows with no declaration, so the kill is the Prime's and its
+/// Frenzy's fresh exertion answers it (R3543003; fuzz seed 867, #4221).
+mod i2_r1203_a_prime_s_kill_behind_its_joiners {
+    use super::*;
+
+    /// M #91.1 Windfurious Prime (Rush, Windfury; its joiners attack its target first).
+    const PRIME: &str = "meditative-091-1";
+    /// Core #1 Big D-fender, a 0/7: the one Unit in hand, so the joiner, which kills nothing.
+    const FENDER: &str = "core-001";
+    const STOCKPILE: &str = "core-005";
+
+    /// p1's Prime, with Frenzy when `frenzy`, attacks p2's Vanilla behind its joiner and kills it, then
+    /// attacks each of `then`; each step watched by one monitor. The scenario, the monitor, the Prime's
+    /// id and every violation found.
+    fn kill_behind_a_joiner(
+        frenzy: bool,
+        then: &[&str],
+    ) -> (Scenario, InvariantMonitor, String, Vec<String>) {
+        let mut g = scenario(json!({
+            "p1": { "hand": [FENDER, STOCKPILE], "library": [], "field": [{ "def": PRIME, "lane": 1 }] },
+            "p2": { "hand": [STOCKPILE], "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let prime = g.unit_at(PlayerId::P1, 1).id;
+        let prey = g.unit_at(PlayerId::P2, 1).id;
+        if frenzy {
+            find_instance_mut(g.state_mut(), &prime)
+                .expect("the Prime")
+                .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Frenzy" }))];
+        }
+        let mut monitor = create_invariant_monitor(g.state());
+        let mut found = Vec::new();
+        for target in std::iter::once(prey.as_str()).chain(then.iter().copied()) {
+            let attack = ActionBody::Attack {
+                attacker_id: prime.clone(),
+                target_id: target.to_string(),
+            };
+            // `before` reads the Frenzy the Prime begins each attack with (R3543003); its I3 names the
+            // scenario's cards, which were set out with no entry event.
+            found.extend(
+                monitor
+                    .before(g.state(), PlayerId::P1, &attack)
+                    .into_iter()
+                    .filter(|found| !found.starts_with("I3 ")),
+            );
+            g.attack(prime.as_str(), if target == "hero-p2" { "hero" } else { target });
+            found.extend(monitor.after(g.last_events(), g.state()));
+        }
+        g.expect_in_zone(prey.as_str(), "graveyard");
+        (g, monitor, prime, found)
+    }
+
+    #[test]
+    fn r1203_r3543003_a_frenzied_prime_that_kills_behind_its_joiner_may_attack_twice_more() {
+        let (.., found) = kill_behind_a_joiner(true, &["hero-p2", "hero-p2"]);
+        assert_eq!(found, no_violations());
+    }
+
+    #[test]
+    fn r1203_a_prime_with_no_frenzy_that_kills_behind_its_joiner_still_has_windfury_s_two_alone() {
+        let (g, mut monitor, prime, found) = kill_behind_a_joiner(false, &["hero-p2"]);
+        assert_eq!(found, no_violations());
+        let third = event(
+            json!({ "type": "attackDeclared", "attackerId": prime, "targetId": "hero-p2", "forced": false }),
+        );
+        let found = monitor.after(&[third], g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
 /// I2 and a unit that enters inside one action already holding Windfury: the autopilot (R1183002)
 /// (Rampaging Rhino), #1216.
 mod i2_a_windfury_unit_that_enters_inside_one_action {

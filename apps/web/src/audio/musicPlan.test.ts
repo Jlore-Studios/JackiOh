@@ -3,7 +3,11 @@
 import { describe, expect, it } from "vitest";
 
 import { chooseMusic, defaultTrack, type MusicMoment } from "./musicPlan.ts";
+import { loadSoundTables } from "./soundTablesLoader.ts";
 import type { MusicManifest, MusicTrack } from "./types.ts";
+
+// #4158: the sound tables load lazily; this file reads the shipped ones.
+await loadSoundTables();
 
 const LOOP: MusicTrack = { hash: "x", bytes: 1, bpm: 120, beatsPerBar: 4, loop: true, intro: 0, duration: 20, loopStart: 3, loopEnd: 19, handoff: null };
 

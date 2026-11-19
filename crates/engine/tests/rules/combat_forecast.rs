@@ -610,3 +610,36 @@ mod r4156000_the_forecast_strikes_back_a_sweeper_plain {
         );
     }
 }
+
+mod r4221003_the_forecast_counts_a_sweep_s_trample_onto_the_hero {
+    use super::*;
+
+    /// Fuzz seed 7606: a trampling sweeper's attack on the enemy hero sweeps the enemy Units too (R3554008),
+    /// and what each sweep hit deals beyond its Unit's health goes on to the hero (§4.4 step 9), as Cleave's
+    /// excess does (R176): the forecast's `dealt` and `kills`, and the seat's `lethal`, count it.
+    #[test]
+    fn r4221003_a_trampling_sweeper_s_attack_on_the_hero_counts_its_sweep_s_excess() {
+        let mut state = sweep_board("r4221003-forecast");
+        let fuse = put(&mut state, FUSE, slot(P1, Row::Units, 1), json!({})); // 2/20
+        grant(&mut state, &fuse.id, Keyword::Trample);
+        // A 3/3 beside it takes 3x2 = 6, 3 of it beyond its health.
+        put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        let forecast = forecast_played(&state, &fuse.id, "hero-p2");
+        assert_eq!((forecast.dealt, forecast.kills), (2 + 3, false));
+
+        state.players[P2].hero.health = 5;
+        let forecast = forecast_played(&state, &fuse.id, "hero-p2");
+        assert_eq!((forecast.dealt, forecast.kills), (5, true));
+        assert!(combat_forecast(&state, P1).lethal);
+    }
+
+    /// With no Trample, the sweep's hits end on their Units: the hero takes the blow alone.
+    #[test]
+    fn r4221003_a_sweeper_with_no_trample_deals_the_hero_its_blow_alone() {
+        let mut state = sweep_board("r4221003-no-trample");
+        let fuse = put(&mut state, FUSE, slot(P1, Row::Units, 1), json!({})); // 2/20
+        put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        let forecast = forecast_played(&state, &fuse.id, "hero-p2");
+        assert_eq!((forecast.dealt, forecast.kills), (2, false));
+    }
+}

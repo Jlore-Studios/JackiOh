@@ -717,6 +717,41 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         assert!(!is_reserved(sink.state, slot(P1, Row::Backrow, 1)));
     }
 
+    /// R4221001 (fuzz seed 9484): S+ #78 Slashed Dream voided the lane of its home while it stood a Unit
+    /// in another; the void takes nothing (R3554002), so cleanup leaves it a Unit where it stands, its home
+    /// still held, rather than lifting it off the field into a zone that refuses it.
+    #[test]
+    fn r4221001_an_on_your_turn_card_whose_home_the_slash_voided_stays_a_unit_at_cleanup() {
+        let mut state = playing("animated-voided-home");
+        for lane in [1, 2] {
+            put(
+                &mut state,
+                &plain.id,
+                slot(P1, Row::Units, lane),
+                Default::default(),
+            );
+        }
+        let card = put(
+            &mut state,
+            &spatula.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let mut sink = sink_for(&mut state);
+        animate_at_turn_start(&mut sink, P1);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 3)), Some(card.id.clone()));
+        (jackioh_engine::effects::slash_board(json_as(json!({ "lane": 2 }))).apply)(&mut make_context(
+            &mut sink,
+            None,
+            by(P1),
+        ));
+        assert_eq!(sink.state.slashed_lane, Some(2));
+        return_at_cleanup(&mut sink, P1);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 3)), Some(card.id.clone()));
+        assert!(home_of(sink.state, &card.id).is_some());
+        assert!(events_of_type(sink.events, GameEventType::Deanimated).is_empty());
+    }
+
     #[test]
     fn r383_a_card_leaving_the_field_from_its_unit_zone_lets_its_home_go() {
         let mut state = playing("animated-dies");

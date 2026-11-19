@@ -2420,7 +2420,20 @@ fn card_label(state: &GameState, id: &str) -> String {
 ///   of these attack hooks with a `hookResolving`, so `plain_combat` cannot see them run;
 /// - for a Unit target, a card acting for its side that reflects an attacker's strike back onto it
 ///   (Stinkyscape #104 Reflective Plating's Radiant face, §4.4 step 8a, R1849003): the forecast's
-///   `taken` is the strike back alone (fuzz seed 1298), until the forecast projects it.
+///   `taken` is the strike back alone (fuzz seed 1298), until the forecast projects it;
+/// - for a Unit target, a card acting for its side that reflects what it takes onto the attacker's hero
+///   (Reflective Plating's base face, R1849003) while the attacker's side has a damage pool to soak it
+///   (Stinkyscape+ #42 Force Projector, R3550004): the reflection spends the pool before the strike back
+///   lands, which the forecast reads against the pool as the board shows it (R4221004; fuzz seed 9305);
+/// - the attacker or a Unit target with cards dormant beneath it in its pile (R1829000; its count is
+///   shown, R13) or holding one (Stinkyscape #135.1 Sack's Unit, R1850003): its leaving the field brings
+///   them in at the state check after the combat, where an aura among them may exile a combatant
+///   (Stinkyscape #115 Scornboi), and the forecast foretells nothing past the combat (R4221002; fuzz
+///   seeds 4897 and 6161);
+/// - a card acting for either side with a "would die" replacement (Classic #14 Shadowstep's Radiant
+///   face, Stinkyscape #138 Pocket Peptides; §4.5 step 1, R4221000): it answers the death check after
+///   the combat, a flicker or its own `then`, with no `trapFired` or `hookResolving` for `plain_combat`
+///   to see, and the forecast projects no replacement (fuzz seed 9561).
 fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> bool {
     let Some(attacker) = find_instance(state, attacker_id) else {
         return false;
@@ -2457,10 +2470,30 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
     {
         return false;
     }
-    !(target.is_some()
-        && defending_side
+    let takes_deaths = |card: &CardInstance| {
+        crate::scripts::script_of(state, card)
+            .replacements
             .iter()
-            .any(|card| crate::scripts::flags_of(state, card).reflects_to_attacker == Some(true)))
+            .any(|def| def.on == crate::script::ReplacementMoment::WouldDie)
+    };
+    if attacking_side.iter().chain(&defending_side).any(takes_deaths) {
+        return false;
+    }
+    let brings_in = |card: &CardInstance| {
+        crate::zones::slot_of(state, card)
+            .is_some_and(|slot| !crate::zones::beneath_at(state, slot).is_empty())
+            || !crate::query::held_beneath(state, card).is_empty()
+    };
+    if brings_in(attacker) || target.is_some_and(brings_in) {
+        return false;
+    }
+    let pool_soaks_reflection = crate::query::damage_pool_of(state, attacker.controller, false) > 0;
+    !(target.is_some()
+        && defending_side.iter().any(|card| {
+            let flags = crate::scripts::flags_of(state, card);
+            flags.reflects_to_attacker == Some(true)
+                || (pool_soaks_reflection && flags.reflects_damage == Some(true))
+        }))
 }
 
 /// I18 (#4111): whether one step's `events`, and the `state` it left, were `entry`'s attack and nothing
@@ -2552,6 +2585,10 @@ pub struct InvariantMonitor {
     unsettled_credits: IndexSet<String>,
     /// R424: the latest attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
+    /// R1203: the Primes' attacks held behind their joiners, outermost first: each joiner declares a
+    /// forced attack on the Prime's target, and the Prime's own combat follows with no declaration, so its
+    /// kill is its own and not the latest joiner's (fuzz seed 867).
+    behind_joiners: Vec<ShadowAttack>,
     /// R424, R1869002: whether the last action left a prompt or work owed, so a combat it declared may
     /// still be resolving (an ambush's Discovers, S #22) and its attack is kept for the next action.
     attack_open: bool,
@@ -2608,6 +2645,7 @@ impl InvariantMonitor {
             kill_credits: IndexMap::new(),
             unsettled_credits: IndexSet::new(),
             attack: None,
+            behind_joiners: Vec::new(),
             attack_open: false,
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
@@ -3258,6 +3296,7 @@ impl InvariantMonitor {
         // still resolving then (R1869002: a kill an ambush's Discovers delayed credits on landing).
         if !self.attack_open {
             self.attack = None;
+            self.behind_joiners.clear();
         }
 
         for (index, event) in events.iter().enumerate() {
@@ -3266,6 +3305,7 @@ impl InvariantMonitor {
                     self.turn = *turn;
                     self.active = *player;
                     self.attack = None;
+                    self.behind_joiners.clear();
                     self.fired.clear();
                 }
                 GameEvent::TurnEnded { player, turn, .. } | GameEvent::TurnAutoEnded { player, turn } => {
@@ -3424,15 +3464,23 @@ impl InvariantMonitor {
                     killer_id,
                     ..
                 } => {
-                    if let Some(attack) = self.attack.as_mut()
-                        && attack.target_id == *instance_id
-                        && killer_id.as_deref() == Some(attack.attacker_id.as_str())
-                        && !attack.killed
-                    {
-                        attack.killed = true;
+                    // R1203: the latest attack's, or a Prime's held behind its joiners, whose combat is last.
+                    let killed_by = self
+                        .attack
+                        .iter_mut()
+                        .chain(self.behind_joiners.iter_mut().rev())
+                        .find(|attack| {
+                            attack.target_id == *instance_id
+                                && killer_id.as_deref() == Some(attack.attacker_id.as_str())
+                                && !attack.killed
+                        })
+                        .map(|attack| {
+                            attack.killed = true;
+                            attack.attacker_id.clone()
+                        });
+                    if let Some(attacker_id) = killed_by {
                         // R1869002: a kill readies its attacker only through its own `afterAttack` text;
                         // R3543003: or its Frenzy, which answers the same kill.
-                        let attacker_id = attack.attacker_id.clone();
                         // R3543003: the Frenzy it began the action with, in the stint it still attacks in.
                         let began_frenzied =
                             self.frenzy.get(&attacker_id) == Some(&self.stint_of(&attacker_id));
@@ -3594,7 +3642,23 @@ impl InvariantMonitor {
                     }
                     // R53: a forced attack is not a declaration and spends nothing (nor readies a
                     // transform, R424); its kill may still earn a kill credit (R1869002).
-                    self.attack = None;
+                    let previous = self.attack.take();
+                    // R1203: a Prime's joiners attack its target first, each declaring a forced attack, and
+                    // its own combat follows with no declaration, so its attack is held behind them.
+                    if *forced {
+                        self.behind_joiners.retain(|prime| prime.target_id == *target_id);
+                        if let Some(prime) = previous.filter(|prime| {
+                            !prime.killed
+                                && prime.target_id == *target_id
+                                && find_instance(state, &prime.attacker_id).is_some_and(|card| {
+                                    crate::scripts::flags_of(state, card).attack_joiners == Some(true)
+                                })
+                        }) {
+                            self.behind_joiners.push(prime);
+                        }
+                    } else {
+                        self.behind_joiners.clear();
+                    }
                     if *forced {
                         self.attack = Some(ShadowAttack {
                             attacker_id: attacker_id.clone(),

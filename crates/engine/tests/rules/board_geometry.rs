@@ -441,6 +441,31 @@ mod r3554002_slash {
         assert_eq!(s.state().slashed_lane, Some(3));
     }
 
+    /// R4221001: a Stack card, which may enter an occupied zone (§6.1), is offered no zone the slash
+    /// voided either, since the void takes nothing (`zones::accepts_stack_card`, as `place_on_field`).
+    #[test]
+    fn r4221001_a_stack_card_is_offered_no_zone_the_slash_voided() {
+        let mut s = board("r4221001-stack", json!({ "hand": [SLASH, PLAIN] }), json!({}));
+        s.play(SLASH, json!({}));
+        assert_eq!(s.state().slashed_lane, Some(3));
+        let stacker = s
+            .hand(P1)
+            .iter()
+            .find(|card| card.def_id == PLAIN)
+            .expect("a plain in hand")
+            .id
+            .clone();
+        find_instance_mut(s.state_mut(), &stacker)
+            .expect("in hand")
+            .granted_keywords = vec![Keyword::Stack];
+        let zones = play_zones(&s, &stacker);
+        assert!(!zones.is_empty(), "the Stack card has zones to enter");
+        assert!(
+            zones.iter().all(|(_, lane)| *lane != 3),
+            "no Stack play enters the void: {zones:?}"
+        );
+    }
+
     #[test]
     fn r3554002_radiant_slash_lane_prompt_is_answered() {
         let mut s = board(

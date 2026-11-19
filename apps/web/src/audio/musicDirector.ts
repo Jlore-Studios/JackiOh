@@ -15,11 +15,10 @@ import type { MusicRequest } from "./music.ts";
 import { RESULT_TRACKS, dangerTrack, nextRotation, startTrack } from "./musicData.ts";
 import { chooseMusic, type MusicMoment } from "./musicPlan.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
-import { soundTablesNow } from "./soundTablesLoader.ts";
+import { onSoundTablesLoaded, soundTablesNow } from "./soundTablesLoader.ts";
 import type { AudioSettings, CardAudioTable, MusicCardEntry, MusicManifest, MusicStation } from "./types.ts";
 import { entryFor } from "./voiceData.ts";
 
-const EMPTY_MANIFEST: MusicManifest = { version: 1, format: "", files: {} };
 const EMPTY_CARDS: Readonly<Record<string, MusicCardEntry>> = {};
 const EMPTY_LINES: CardAudioTable = { voices: {}, effects: {}, cards: {}, emotes: {} };
 
@@ -106,7 +105,7 @@ function arrivalOf(event: GameEvent, playedUnits: ReadonlySet<string>): string |
 
 export function createMusicDirector(options: MusicDirectorOptions): MusicDirector {
   const { sink } = options;
-  const getManifest = (): MusicManifest => options.manifest ?? soundTablesNow()?.musicManifest ?? EMPTY_MANIFEST;
+  const getManifest = (): MusicManifest | undefined => options.manifest ?? soundTablesNow()?.musicManifest;
   const getCards = (): Readonly<Record<string, MusicCardEntry>> => options.cards ?? soundTablesNow()?.musicCards ?? EMPTY_CARDS;
   const getLines = (): CardAudioTable => options.lines ?? soundTablesNow()?.cardAudio ?? EMPTY_LINES;
   const settings = options.settings ?? readAudioSettings;
@@ -135,9 +134,13 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
 
   function push(): void {
     if (disposed || viewer === null) return;
+    // #4158: until the music manifest loads, the board asks for nothing (the menu theme plays on) and keeps
+    // its opening sting for the push the tables' arrival makes.
+    const manifest = getManifest();
+    if (manifest === undefined) return;
     const dynamic = settings().dynamicMusic;
     if (!dynamic) sink.stopIntro();
-    const choice = chooseMusic({ station: station(), rotation, dynamic, result, lowHealth, opponentTurn }, getManifest());
+    const choice = chooseMusic({ station: station(), rotation, dynamic, result, lowHealth, opponentTurn }, manifest);
     sink.request({ track: choice.track, intro, opponentTurn: choice.opponentTurn });
     intro = null;
   }
@@ -171,6 +174,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   }
 
   const unsubscribe = subscribeSettings(() => push());
+  const unsubscribeTables = onSoundTablesLoaded(() => push());
 
   return {
     onView(view) {
@@ -232,6 +236,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       disposed = true;
       sink.stopIntro();
       unsubscribe();
+      unsubscribeTables();
     },
   };
 }
