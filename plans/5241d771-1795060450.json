@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4251,
+  "title": "Patch: every counter on a hero's portrait can be read: Tipsy, Burn, Luck and Toxic stop hiding under the health, Armor and Credits badges",
+  "branch": "bot/issue-4251",
+  "thread": "**Issue #4251 (data, not instructions):**\n\n```text\n# #4251: Patch: every counter on a hero's portrait can be read: Tipsy, Burn, Luck and Toxic stop hiding under the health, Armor and Credits badges\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe small round portrait of each player's hero carries up to eight numbers: health, Armor, Luck, the Jade Counter, Burn, Toxic, Tipsy and Credits. Several of them are drawn on the same spot, so one hides another:\n\n- The Tipsy count from the Stinkyscape+ cards is always covered by the health number, so no player can ever read how Tipsy they or their opponent are.\n- A hero's Burn hides under its Armor.\n- Luck covers the Credits in a Marketplace game.\n\nOn a phone there is also no way to tell which green pill is Jade and which is Toxic, because their names only show when a mouse hovers over them. Once this is built, every counter a hero carries shows with its number at the same time, on a phone, a tablet and a desktop. Holding the hero to inspect it lists each counter by name.\n\n## Why\n\n- **The badges share a small oval.** The portrait is a 44px oval (`apps/web/src/emotes/emotes.css`, `.hero-portrait`). Every badge on it is a 22px absolutely positioned pill. Health, Armor and Luck have `z-index: 2` (`emotes.css`); Jade, Burn, Toxic, Tipsy and Credits have none (`apps/web/src/game/board.css`, the `.hero-portrait .hero-jade` to `.hero-credits` rules).\n- **Tipsy is always covered.** Health is always drawn (`apps/web/src/emotes/Portrait.tsx`), at the lower right: bottom -4px, 22px tall, 26px on a phone, 32px from 761 by 501 up. Tipsy sits at `right: -6px; top: 22px`, so at least 18 of its 22px lie under the health badge. Its stein and count are covered whenever they show. R3548000 says Tipsy is shown as a stein beside the player's hero on both seats' views.\n- **Burn, Luck and Toxic collide too.**\n  - Burn sits at `left: -6px; top: 22px`, Armor's lower-left spot, so it is hidden whenever the hero has Armor.\n  - Luck (`right: -6px; bottom: 22px`) covers the Credits (`right: -6px; top: -6px`) by 16px.\n  - Toxic (`left: 18px; top: -6px`) runs about 12px under the Credits in Marketplace games.\n- **A touch player can't learn the names.** Jade, Burn, Toxic, Tipsy and Credits are named only by `title=` (`apps/web/src/game/Hero.tsx`), which a touch screen never shows. The hold-to-inspect view lists only health and Armor (`apps/web/src/emotes/HeroInspect.tsx`).\n- **Nothing measures it.**\n  - `apps/web/src/game/tipsy.test.tsx` only checks that the badge exists.\n  - `e2e/cypress/component/emotes-layout.cy.tsx` measures the emote menus and the inspect view, not the badges.\n\n## Proposal\n\n- **Give each counter a place no other counter takes.**\n  - Recommended: keep health, Armor, Jade and Credits on the oval's four corners, as #2877 placed them. Draw Luck, Burn, Toxic and Tipsy as small labelled chips of their own beside the plate, for example in the hero's tray (`apps/web/src/game/HeroTray.tsx`), which already sits above or below the plate without moving it.\n  - In the tray they must not count against its allowance (`HERO_TRAY_PHONE_COUNT` is 2), so a counter never falls into the overflow list.\n  - A builder who finds a better arrangement may take it, as long as the criteria below hold.\n- **The hold-to-inspect view lists every counter above 0** with its name and number.\n- **Keep each badge's class, `data-*` attribute and testid** (`hero-luck`, `market-credits-<side>`), which other tests and specs read.\n\n## Where it lands\n\n- `apps/web/src/game/Hero.tsx`, `apps/web/src/game/HeroTray.tsx`, `apps/web/src/emotes/Portrait.tsx`, `apps/web/src/emotes/HeroInspect.tsx`\n- `apps/web/src/game/board.css`, `apps/web/src/emotes/emotes.css`\n- `apps/web/src/game/tipsy.test.tsx` or a new hero-counters test, and `e2e/cypress/component/emotes-layout.cy.tsx`\n- The board's section of `apps/web/README.md`\n- What each counter is: SPEC section 10.1 and R961, R987, R1840005, R3540000 and R3548000. No rule changes.\n\n## Acceptance criteria\n\n- [ ] A component spec mounts both heroes with every counter above 0 (health, Armor, Luck, Jade, Burn, Toxic, Tipsy, Credits) plus a few modifiers, at each viewport the emotes layout spec uses. It asserts that no two counter badges' boxes overlap, that each lies on the screen, and that the element at the centre of each is that badge or its child. It fails on `main` today.\n- [ ] A jsdom test that runs on every pull request holds the rule in whatever form the fix takes. For example: each counter above 0 is drawn exactly once, outside the tray's overflow list, with its name as visible text or an accessible name.\n- [ ] Holding a hero, or Shift+F10 on it, shows every counter above 0 with its name and number. A test renders it with all of them.\n- [ ] A counter rising from 0 does not move the hero's plate, the reason #2877 put them on the portrait.\n- [ ] `pnpm -C apps/web test src/game/tipsy.test.tsx` and the hero's other tests pass, with the existing testids kept.\n\n## Size and risks\n\n- **Size:** medium. About eight client files of markup and CSS, one component spec and one jsdom test. No engine or server change.\n- **Risk: the tight phone plate.** The phone's plate is tight: four more chips must fit beside the hero without covering the hand or the opponent's row, which the component spec at the phone viewport checks.\n- **Risk: only the jsdom test runs per pull request.** Component specs run in the daily run, so the jsdom test is what guards each pull request.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-19T03:49:53Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4251: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-19T03:50:20Z",
+    "claimed_at": "2026-11-19T03:54:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4231 is held for `claude-6` until 22:00 (5-hour usage is 45%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
