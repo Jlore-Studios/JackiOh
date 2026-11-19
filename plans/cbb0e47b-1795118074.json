@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4273,
+  "title": "Patch: the C module's `log` export traps every `f64::ln`",
+  "branch": "bot/issue-4273",
+  "thread": "**Issue #4273 (data, not instructions):**\n\n```text\n# #4273: Patch: the C module's `log` export traps every `f64::ln`\nOpened by @squishy-squooby.\n\nPart of #2898. Found while replaying golden seeds through `crates/wasm/c` from a host outside JavaScript.\n\n## The bug\n\n- **The clash.** The C module's `#[no_mangle]` export `log` (#3108, the game log) has the same symbol name as libm's `log`, which `f64::ln` lowers to on `wasm32-unknown-unknown`.\n- **What the linker does.** `cargo build -p jackioh-wasm-c --release --target wasm32-unknown-unknown` warns `rust-lld: function signature mismatch: log`. It resolves the clash with a trapping stub, `signature_mismatch:log`, which shows in the module's name section.\n- **What breaks.** Every `ln` in the module traps with `unreachable` and leaves no panic text. That covers `jackioh-shared`'s glicko2 (`ranked/glicko2.rs`, reached by `ranked`'s `rateGame`) and the ladder bots' `bots/think.rs` and `bots/signals.rs`.\n- **To reproduce:** through the C module, call `ranked` with `planSeason`, then `rateGame` for two sides. It traps, and the instance is dead.\n- **What it doesn't touch.** The rules engine's `reduce` path calls no `ln`, so games, the golden replay and the fuzz are unaffected.\n\n## What to do\n\n- Rename the C export (`game_log`, say). `crates/wasm/tests/export_parity.rs` holds the C module's export list to the browser module's, so rename the browser binding with it, and update its callers and `crates/wasm/README.md`/`crates/wasm/c/README.md`.\n- Check whether the browser module's `log` clashes the same way (its build's linker warnings, and its name section).\n- Add a test that would have caught it, either or both:\n  - the C module's build check (`scripts/build-wasm.sh`, beside the import check) fails on any `signature_mismatch:` name in the built module;\n  - a C-module test calls `ranked` `rateGame` and expects status 0.\n\n## Done when\n\n- The module builds with no `signature mismatch` warning.\n- `ranked` `rateGame` answers through the C module.\n- The new check fails on the old code.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4273: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-19T19:50:12Z",
+    "claimed_at": "2026-11-19T19:54:49Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
