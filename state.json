@@ -15237,6 +15237,15 @@
       "failures": 0,
       "feedback_since": "2026-11-19T02:13:56Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-19T02:38:04Z",
+        "family": "muse",
+        "kind": "work",
+        "notes": "",
+        "provider": "muse",
+        "reason": "the failing CI check passed locally and nothing needed changing, so CI runs again on the same head, with no commit",
+        "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the card pictures' scene kits and recipes load alongside the engine module, not in the first page load\", \"ci_local\": \"passed\"} -->\n- No change made. The failing check passes on this head.\n- - CI `web (unit 7/8)` failed with one test throwing `the scene tables are not loaded` via `CardArt \u2192 proceduralArtUri \u2192 artSpec \u2192 sceneRecipeOf`. I ran that exact shard locally as `ci.yml` does (`pnpm exec vitest run --project web --project edge --project admin --shard=7/8` with CI's `--exclude` fl\u2026\n- - The `web` gate job failure was only the reflection of `UNIT: failure`; it clears once the shard is green.\n- - Worktree is clean (`git status` empty), no extra worktrees, no commits made.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4241 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4241/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
+      },
       "interruptions": 0,
       "issue": 4222,
       "kind": "revise",
