@@ -158,6 +158,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `armor_on_field(state)` | every point of Armor on the field, Units through §10.4 and both heroes (R1064) |
 | `find_instance(state, id)` | an instance id, wherever the card has since landed (R98) |
 | `instance_of(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at (R174) |
+| `recruit_takes(ctx, args)` | the card a `recruit` of those arguments would take now, by the scan the verb runs: the first match that can be summoned, R690's order kept (R4238000, C #1's forced attacker) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |
 | `killer_of(state, card)` | the Unit that destroyed a card, while it still acts (R42, R361) |
 | `when_attacks_of(ctx)` | in a `when_attacks` hook, its attack's facts, before any damage (R2285000) |

@@ -604,6 +604,14 @@ pub fn exiling_summon_lands(state: &GameState, source: &CardInstance, slot: crat
         && !crate::zones::is_reserved(state, slot)
 }
 
+/// R4238000: the card a `recruit` of `args` would take now, read without moving anything: its pile's
+/// first match that can be summoned, (X)-cost ones last (R690), or `None` when it would summon nothing.
+/// A script that must name the recruited card before its `recruit` runs (C #1's forced attacker) reads
+/// it here, the same scan the verb runs.
+pub fn recruit_takes(ctx: &EffectContext<'_>, args: &crate::effects::RecruitArgs) -> Option<CardInstance> {
+    crate::effects::summon::recruit_target(ctx, args)
+}
+
 /// R3560006: whether a card of `def_id` stands on either side's field. A pure read, never
 /// `unit_view`, so `conditional_keywords` may call it.
 pub fn def_on_field(state: &GameState, def_id: &str) -> bool {

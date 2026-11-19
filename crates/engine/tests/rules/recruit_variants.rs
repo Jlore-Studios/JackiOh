@@ -190,7 +190,7 @@ mod e25_recruit_n_with_filters_classic_c31_c65 {
     }
 
     #[test]
-    fn r64_a_scan_whose_card_finds_no_zone_fizzles_and_the_next_finds_the_same_card_core_c69_s_shape() {
+    fn r4238000_a_scan_passes_over_a_card_no_zone_takes_and_the_next_scan_finds_nothing_once_none_can_land() {
         let mut start = playing("recruit-count-full");
         let state = &mut start.state;
         for lane in 1..=5 {
@@ -206,11 +206,197 @@ mod e25_recruit_n_with_filters_classic_c31_c65 {
             run(&mut sink, vec![recruit(args(json!({ "count": 2 })))]);
             sink.events.clone()
         };
-        assert_eq!(
-            events_of_type(&events, GameEventType::Summoned),
-            Vec::<GameEvent>::new()
+        // The first scan passes the Unit over for the Trap beneath it; the second finds nothing that lands.
+        assert_eq!(events_of_type(&events, GameEventType::Summoned).len(), 1);
+        let trap = must(
+            card_at(state, slot(P1, Row::Backrow, 1)).cloned(),
+            "the recruited trap",
         );
-        assert_eq!(ids(&state.players.p1.library), library);
+        assert_eq!(trap.def_id, plain_trap.id);
+        assert_ne!(trap.face_up, Some(true), "set face-down (R33)");
+        assert_eq!(ids(&state.players.p1.library), vec![library[0].clone()]);
+    }
+}
+
+/// P1's unit row, every lane held by a `body`.
+fn fill_units(state: &mut GameState) {
+    for lane in 1..=5 {
+        put(state, &body.id, slot(P1, Row::Units, lane), json!({}));
+    }
+}
+
+/// P1's backrow, every lane held by a `plain_trap`.
+fn fill_backrow(state: &mut GameState) {
+    for lane in 1..=5 {
+        put(state, &plain_trap.id, slot(P1, Row::Backrow, lane), json!({}));
+    }
+}
+
+/// R4238000 A Recruit takes the first matching card that can be summoned, passing over one no zone takes
+mod r4238000_a_recruit_takes_the_first_card_that_can_land {
+    use super::*;
+
+    #[test]
+    fn r4238000_with_the_unit_row_full_the_trap_below_the_top_unit_is_set_face_down() {
+        let mut start = playing("recruit-land-trap");
+        let state = &mut start.state;
+        fill_units(state);
+        let library = ids(set_library(
+            state,
+            P1,
+            &[cheap_unit.id.clone(), plain_trap.id.clone()],
+        ));
+        run_on(state, vec![recruit(args(json!({})))]);
+        let trap = must(
+            card_at(state, slot(P1, Row::Backrow, 1)).cloned(),
+            "the recruited trap",
+        );
+        assert_eq!(trap.def_id, plain_trap.id);
+        assert_ne!(trap.face_up, Some(true), "set face-down (R33)");
+        assert_eq!(ids(&state.players.p1.library), vec![library[0].clone()]);
+    }
+
+    #[test]
+    fn r4238000_with_the_backrow_full_the_unit_below_the_top_trap_is_summoned() {
+        let mut start = playing("recruit-land-unit");
+        let state = &mut start.state;
+        fill_backrow(state);
+        let library = ids(set_library(
+            state,
+            P1,
+            &[field_trap.id.clone(), cheap_unit.id.clone()],
+        ));
+        run_on(state, vec![recruit(args(json!({})))]);
+        assert_eq!(
+            card_at(state, slot(P1, Row::Units, 1))
+                .cloned()
+                .map(|card| card.id),
+            Some(library[1].clone())
+        );
+        assert_eq!(ids(&state.players.p1.library), vec![library[0].clone()]);
+    }
+
+    #[test]
+    fn r4238000_count_2_skips_a_stuck_card_and_takes_the_next_two_that_land() {
+        let mut start = playing("recruit-land-count");
+        let state = &mut start.state;
+        fill_units(state);
+        let library = ids(set_library(
+            state,
+            P1,
+            &[
+                cheap_unit.id.clone(),
+                plain_trap.id.clone(),
+                pricy_unit.id.clone(),
+                field_trap.id.clone(),
+                deck_spell.id.clone(),
+            ],
+        ));
+        run_on(state, vec![recruit(args(json!({ "count": 2 })))]);
+        assert_eq!(
+            (1..=2)
+                .map(|lane| card_at(state, slot(P1, Row::Backrow, lane))
+                    .cloned()
+                    .map(|card| card.def_id))
+                .collect::<Vec<_>>(),
+            vec![Some(plain_trap.id.clone()), Some(field_trap.id.clone())]
+        );
+        assert!(
+            card_at(state, slot(P1, Row::Backrow, 3)).cloned().is_none(),
+            "two scans, two cards"
+        );
+        assert_eq!(
+            ids(&state.players.p1.library),
+            vec![library[0].clone(), library[2].clone(), library[4].clone()]
+        );
+    }
+
+    #[test]
+    fn r4238000_a_named_lane_that_is_taken_passes_its_card_over_for_one_whose_row_has_that_lane_open() {
+        let mut start = playing("recruit-land-lane");
+        let state = &mut start.state;
+        put(state, &body.id, slot(P1, Row::Units, 2), json!({}));
+        let library = ids(set_library(
+            state,
+            P1,
+            &[cheap_unit.id.clone(), plain_trap.id.clone()],
+        ));
+        run_on(state, vec![recruit(args(json!({ "lane": 2 })))]);
+        let trap = must(
+            card_at(state, slot(P1, Row::Backrow, 2)).cloned(),
+            "the recruited trap",
+        );
+        assert_eq!(trap.def_id, plain_trap.id);
+        assert!(
+            card_at(state, slot(P1, Row::Units, 1)).cloned().is_none(),
+            "the Unit takes no other lane"
+        );
+        assert!(card_at(state, slot(P1, Row::Backrow, 1)).cloned().is_none());
+        assert_eq!(ids(&state.players.p1.library), vec![library[0].clone()]);
+    }
+
+    #[test]
+    fn r4238000_from_their_exile_a_newest_card_no_zone_takes_is_passed_over_for_an_older_one() {
+        let mut start = playing("recruit-land-exile");
+        let state = &mut start.state;
+        fill_units(state);
+        exiled(state, &plain_trap.id, P2);
+        let newest = exiled(state, &cheap_unit.id, P2);
+        run_on(
+            state,
+            vec![recruit(args(json!({ "from": "exile", "whose": "enemy" })))],
+        );
+        // The trap takes a fresh id as it goes face-down (R227), so it is named by its def and owner.
+        let trap = must(
+            card_at(state, slot(P1, Row::Backrow, 1)).cloned(),
+            "the recruited trap",
+        );
+        assert_eq!(trap.def_id, plain_trap.id);
+        assert_eq!(trap.owner, P2);
+        assert_eq!(trap.controller, P1);
+        assert_eq!(ids(&state.players.p2.exile), vec![newest.id.clone()]);
+    }
+
+    #[test]
+    fn r4238000_recruit_takes_names_the_card_the_recruit_then_summons_and_none_when_nothing_can_land() {
+        let mut start = playing("recruit-takes");
+        let state = &mut start.state;
+        fill_units(state);
+        let older = exiled(state, &cheap_unit.id, P2);
+        let trap = exiled(state, &plain_trap.id, P2);
+        exiled(state, &x_unit.id, P2);
+        let literal = json!({ "from": "exile", "whose": "enemy" });
+        let takes = |state: &mut GameState| {
+            let mut sink = sink_for(state);
+            let ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..HookOptions::default()
+                },
+            );
+            jackioh_engine::query::recruit_takes(&ctx, &args(literal.clone())).map(|card| card.id)
+        };
+        // The newest, an (X)-cost Unit, finds the unit row full: the read names the Trap exiled before it,
+        // as the scan does.
+        assert_eq!(takes(state), Some(trap.id.clone()));
+        run_on(state, vec![recruit(args(literal.clone()))]);
+        assert_eq!(
+            card_at(state, slot(P1, Row::Backrow, 1))
+                .cloned()
+                .map(|card| (card.def_id, card.owner)),
+            Some((plain_trap.id.clone(), P2))
+        );
+        // With the unit row opened, R690 passes the (X)-cost Unit over for the older plain one.
+        state.players.p1.units[0] = None;
+        assert_eq!(takes(state), Some(older.id.clone()));
+        // With both rows full, nothing can land and the read names nothing.
+        put(state, &body.id, slot(P1, Row::Units, 1), json!({}));
+        for lane in 2..=5 {
+            put(state, &plain_trap.id, slot(P1, Row::Backrow, lane), json!({}));
+        }
+        assert_eq!(takes(state), None);
     }
 }
 
@@ -433,5 +619,48 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
             Some(only_library[0].clone())
         );
         assert_eq!(ids(&only_state.players.p1.library), vec![only_library[1].clone()]);
+    }
+
+    #[test]
+    fn r690_r4238000_a_non_x_card_that_cannot_land_does_not_keep_an_x_cost_card_that_can_from_the_scan() {
+        let mut start = playing("recruit-x-landing");
+        let state = &mut start.state;
+        fill_backrow(state);
+        let library = ids(set_library(
+            state,
+            P1,
+            &[field_trap.id.clone(), x_unit.id.clone()],
+        ));
+        run_on(state, vec![recruit(args(json!({})))]);
+        assert_eq!(
+            card_at(state, slot(P1, Row::Units, 1))
+                .cloned()
+                .map(|card| card.id),
+            Some(library[1].clone())
+        );
+        assert_eq!(ids(&state.players.p1.library), vec![library[0].clone()]);
+    }
+
+    #[test]
+    fn r690_r4238000_recruit_all_takes_the_x_cost_card_when_every_non_x_match_cannot_land() {
+        let mut start = playing("recruit-all-x-landing");
+        let state = &mut start.state;
+        fill_backrow(state);
+        let library = ids(set_library(
+            state,
+            P1,
+            &[field_trap.id.clone(), x_unit.id.clone(), deck_spell.id.clone()],
+        ));
+        run_on(state, vec![recruit_all(args(json!({})))]);
+        assert_eq!(
+            card_at(state, slot(P1, Row::Units, 1))
+                .cloned()
+                .map(|card| card.id),
+            Some(library[1].clone())
+        );
+        assert_eq!(
+            ids(&state.players.p1.library),
+            vec![library[0].clone(), library[2].clone()]
+        );
     }
 }

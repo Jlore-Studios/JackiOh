@@ -541,27 +541,37 @@ pub fn summon_existing_card(
     summon_existing(ctx, card, player, &SummonPlacement::default())
 }
 
-/// A card that already exists, moved onto the field "from anywhere else" (§6.3 Summon).
-fn summon_existing(
-    ctx: &mut EffectContext<'_>,
+/// What `summon_existing` reads before R3554009's exile: the row `card` enters, or `None` when no
+/// summon of it lands anywhere.
+fn existing_row(
+    state: &GameState,
     card: &CardInstance,
     player: PlayerId,
     at: &SummonPlacement,
-) -> Option<CardInstance> {
+) -> Option<Row> {
     if card.zone.z() == ZoneName::Field {
         return None;
     }
     // R2533000: a card in the hand of a seat that plays only the tutorial's cards, and not one of them,
     // is put onto the field by no effect: a summon out of a hand is that hand's play.
     if let Zone::Hand { player: holder } = card.zone
-        && crate::state::barred_from_play(ctx.state, holder, card)
+        && crate::state::barred_from_play(state, holder, card)
     {
         return None;
     }
     let probe = face_probe(&card.def_id, player, card.radiant || at.radiant == Some(true));
-    let row = row_of(card_type_of(ctx.state, &probe))?;
-    // R3554009: exile the pile below before the zone is read, so the moving card lands on it.
-    exile_below(ctx, player, row, at);
+    row_of(card_type_of(state, &probe))
+}
+
+/// What `summon_existing` reads after R3554009's exile: the zone `card` enters in `row` and whether it
+/// stands there, or `None` when the summon fizzles.
+fn existing_zone(
+    ctx: &EffectContext<'_>,
+    card: &CardInstance,
+    player: PlayerId,
+    row: Row,
+    at: &SummonPlacement,
+) -> Option<(ZoneSlot, bool)> {
     // R2248000: the card's Flying as it stands where it is (a hand's, a graveyard's printed one).
     let flies = summon_flies(ctx.state, card);
     // R3546002: the size is read off the card with the summon's riders, as `place_with` reads it.
@@ -573,7 +583,33 @@ fn summon_existing(
         giga_probe.x = Some(x);
     }
     let giga = crate::giga::enters_giga(ctx.state, &giga_probe);
-    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies, giga)?;
+    zone_and_stance_for(ctx, player, row, at, flies, giga)
+}
+
+/// R4238000: whether `summon_existing` would place `card` now, read without moving anything: the same
+/// row, Flying (R2248000), GIGA (R3546002), lane and slashed-half (R3554003) reads. It reads no
+/// `exile_below` (R3554009), which no Recruit names.
+fn existing_lands(
+    ctx: &EffectContext<'_>,
+    card: &CardInstance,
+    player: PlayerId,
+    at: &SummonPlacement,
+) -> bool {
+    existing_row(ctx.state, card, player, at)
+        .is_some_and(|row| existing_zone(ctx, card, player, row, at).is_some())
+}
+
+/// A card that already exists, moved onto the field "from anywhere else" (§6.3 Summon).
+fn summon_existing(
+    ctx: &mut EffectContext<'_>,
+    card: &CardInstance,
+    player: PlayerId,
+    at: &SummonPlacement,
+) -> Option<CardInstance> {
+    let row = existing_row(ctx.state, card, player, at)?;
+    // R3554009: exile the pile below before the zone is read, so the moving card lands on it.
+    exile_below(ctx, player, row, at);
+    let (slot, stands) = existing_zone(ctx, card, player, row, at)?;
 
     let mut moving = card.clone();
     remove_from_any_zone(ctx.state, &mut moving);
@@ -1086,8 +1122,9 @@ fn recruitable(ctx: &EffectContext<'_>, card: &CardInstance, filter: &RecruitFil
         && matches_filter(ctx, card, filter)
 }
 
-/// R690: a scan takes the first valid target that is not (X)-cost (recruited, never played, it would
-/// arrive with no X), and the first (X)-cost one only when nothing else is valid.
+/// R690: a scan takes the first valid target (valid: able to land, R4238000) that is not (X)-cost
+/// (recruited, never played, it would arrive with no X), and the first (X)-cost one only when nothing
+/// else is valid.
 fn skip_x_cost(ctx: &EffectContext<'_>, cards: Vec<CardInstance>) -> Vec<CardInstance> {
     if cards.is_empty() {
         return cards;
@@ -1100,16 +1137,19 @@ fn skip_x_cost(ctx: &EffectContext<'_>, cards: Vec<CardInstance>) -> Vec<CardIns
     if solid.is_empty() { cards } else { solid }
 }
 
-/// The valid targets of one scan, in scan order (before R690's ordering).
+/// The valid targets of one scan, in scan order (before R690's ordering): each recruitable card a
+/// summon for `player` with `at` would place now (R4238000).
 fn valid_in_pile(
     ctx: &EffectContext<'_>,
     from: RecruitSource,
     whose: PlayerId,
     filter: &RecruitFilter,
+    player: PlayerId,
+    at: &SummonPlacement,
 ) -> Vec<CardInstance> {
     let mut valid = Vec::new();
     for card in recruit_pile(ctx, from, whose) {
-        if recruitable(ctx, &card, filter) {
+        if recruitable(ctx, &card, filter) && existing_lands(ctx, &card, player, at) {
             valid.push(card);
         }
     }
@@ -1152,36 +1192,70 @@ pub struct RecruitArgs {
     pub count: Option<i32>,
 }
 
-/// §6.3 Recruit: summon the library's first matching permanent, top down, per R64 (a Trap face-down).
-/// B5 E25: `from: "exile"` scans newest first; `whose` names whose pile (Classic #1 Radiant takes the
-/// opponent's, its owner unchanged, §3.2, R12, but into a graveyard it lands as its controller's,
-/// R2618000); `count` is N whole scans, so a card with no zone fizzles and the next finds it again
-/// (Classic #31 and #65 Radiant, Core #69). (X)-cost cards come last (R690).
+/// §6.3 Recruit: summon the pile's first matching permanent that can land, top down, per R64 (a Trap
+/// face-down); a match no zone takes is passed over and stays (R4238000). B5 E25: `from: "exile"`
+/// scans newest first; `whose` names whose pile (Classic #1 Radiant takes the opponent's, its owner
+/// unchanged, §3.2, R12, but into a graveyard it lands as its controller's, R2618000); `count` is N
+/// whole scans, each reading the board the last one left, so each takes the next card that lands and
+/// the rest find nothing once none can (Classic #31 and #65 Radiant, Core #69). (X)-cost cards come
+/// last among the cards that land (R690).
 pub fn recruit(args: RecruitArgs) -> Effect {
     Effect::new("recruit", move |ctx| {
+        let scan = RecruitScan::of(ctx, &args);
+        let scans = args.count.unwrap_or(1).max(1);
+        for _ in 0..scans {
+            let Some(found) = scan.target(ctx) else {
+                return;
+            };
+
+            let recruited = summon_existing(ctx, &found, scan.player, &scan.at);
+            announce_radiant(ctx, recruited.as_ref(), args.radiant);
+        }
+    })
+}
+
+/// What one `recruit` scan reads off its arguments, the same for each of its scans.
+struct RecruitScan {
+    /// Who summons the card.
+    player: PlayerId,
+    /// Whose pile is scanned.
+    whose: PlayerId,
+    from: RecruitSource,
+    filter: RecruitFilter,
+    at: SummonPlacement,
+}
+
+impl RecruitScan {
+    fn of(ctx: &EffectContext<'_>, args: &RecruitArgs) -> Self {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let whose = match args.whose {
             None => player,
             Some(spec) => player_of(ctx, spec),
         };
-        let filter = args.filter.clone().unwrap_or_default();
-        let from = args.from.unwrap_or(RecruitSource::Library);
-        let scans = args.count.unwrap_or(1).max(1);
-        for _ in 0..scans {
-            let valid = valid_in_pile(ctx, from, whose, &filter);
-            let Some(found) = skip_x_cost(ctx, valid).into_iter().next() else {
-                return;
-            };
-
-            let at = SummonPlacement {
+        RecruitScan {
+            player,
+            whose,
+            from: args.from.unwrap_or(RecruitSource::Library),
+            filter: args.filter.clone().unwrap_or_default(),
+            at: SummonPlacement {
                 lane: args.lane,
                 radiant: args.radiant,
                 ..SummonPlacement::default()
-            };
-            let recruited = summon_existing(ctx, &found, player, &at);
-            announce_radiant(ctx, recruited.as_ref(), args.radiant);
+            },
         }
-    })
+    }
+
+    /// The card this scan takes now: the first valid target (R4238000) in R690's order.
+    fn target(&self, ctx: &EffectContext<'_>) -> Option<CardInstance> {
+        let valid = valid_in_pile(ctx, self.from, self.whose, &self.filter, self.player, &self.at);
+        skip_x_cost(ctx, valid).into_iter().next()
+    }
+}
+
+/// R4238000: the card `recruit(args)`'s first scan would take now, read without moving anything
+/// (`query::recruit_takes`).
+pub(crate) fn recruit_target(ctx: &EffectContext<'_>, args: &RecruitArgs) -> Option<CardInstance> {
+    RecruitScan::of(ctx, args).target(ctx)
 }
 
 /// `recruitAll`'s arguments.
@@ -1199,10 +1273,11 @@ pub struct RecruitAllArgs {
     pub whose: Option<PlayerSpec>,
 }
 
-/// B5 E25, Classic #60 Pile On: "Recruit every permanent in your deck". The pile is read once and each
-/// match summoned in turn where its row has an open zone (for a Flying Unit, the backrow's, R2248000),
-/// else passed over; a Spell, a unit-token card (§6.3, R218) and an (X)-cost one unless the only one
-/// (R690) stay. The memo is the card list, so a question a card asks (R151) pauses the rest (R113).
+/// B5 E25, Classic #60 Pile On: "Recruit every permanent in your deck". The pile is read once, the
+/// matches that can land as it starts (R4238000), and each summoned in turn where its row has an open
+/// zone (for a Flying Unit, the backrow's, R2248000), else passed over; a Spell, a unit-token card
+/// (§6.3, R218) and an (X)-cost one unless the only one (R690, among the cards that land) stay. The
+/// memo is the card list, so a question a card asks (R151) pauses the rest (R113).
 pub fn recruit_all(args: RecruitAllArgs) -> Effect {
     lazy_part("recruitAll", move |ctx, memo| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -1217,10 +1292,13 @@ pub fn recruit_all(args: RecruitAllArgs) -> Effect {
                 .iter()
                 .filter_map(|id| id.as_str().map(str::to_string))
                 .collect(),
-            None => skip_x_cost(ctx, valid_in_pile(ctx, pile, whose, &filter))
-                .into_iter()
-                .map(|card| card.id)
-                .collect(),
+            None => skip_x_cost(
+                ctx,
+                valid_in_pile(ctx, pile, whose, &filter, player, &SummonPlacement::default()),
+            )
+            .into_iter()
+            .map(|card| card.id)
+            .collect(),
         };
         let effects: Vec<Effect> = ids
             .iter()

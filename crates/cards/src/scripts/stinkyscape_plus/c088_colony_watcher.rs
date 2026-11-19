@@ -7,9 +7,9 @@
 //! "Evolve when this moves from Defense to Attack Position" is the card's own `positionSwitched` trigger
 //! evolving itself (R3536001): the event names this card and the Attack Position, so a move into Defense,
 //! or another Unit's move, evolves nothing. The Evolve text runs once (R3536000): `recruit` (§6.3), the
-//! library's first Swarm card from the top down, summoned into the leftmost open zone (R64, no Cry, R1),
-//! then the next for each more; one that finds no Swarm card or no zone recruits nothing. A "Swarm card"
-//! is any permanent of the tag, so S+'s two Swarm Field Spells are reached as its Units are.
+//! library's first Swarm card from the top down that can be summoned (R4238000), into the leftmost open
+//! zone (R64, no Cry, R1), then the next for each more; one that finds none that can recruits nothing.
+//! A "Swarm card" is any permanent of the tag, so S+'s two Swarm Field Spells are reached as its Units are.
 
 use jackioh_engine::prelude::*;
 
