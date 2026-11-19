@@ -15001,17 +15001,23 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-4",
+        "built_by": "claude-8",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [],
+          "from": "8b42c99be90784379713358ebc62a2df83c8d5b1",
+          "main": "1ddaeb4fb03f789480c9e040d514eaae7e1d960c"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-4",
-            "run": "44380753718",
+            "provider": "claude-8",
+            "run": "44433319643",
             "tier": "strong"
           }
         ],
-        "sha": "8b42c99be90784379713358ebc62a2df83c8d5b1",
+        "sha": "cd5f28f9d4ea9d09abaf478198f94ddf517b09f9",
         "tiers": {
           "claude": "strong"
         }
