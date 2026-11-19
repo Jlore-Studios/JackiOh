@@ -10,7 +10,8 @@
 //!
 //! Base: a declared target (R81), filtered by `targetChecks` (§10.6). With no such target the play is
 //! still legal and the steal fizzles (§8's conventions, R90). The steal is §6.3's (R15: its own lane
-//! if free, else the first free zone; none, and it stays), an entry that leaves it summoning sick (R171).
+//! if free, else the first free zone; none, and it is destroyed instead, R4205000), an entry that leaves
+//! it summoning sick (R171).
 //!
 //! Radiant: first a Felinor Token in your leftmost open unit zone (R64), then the steal is a prompt, so
 //! the token's lane counts. A full board summons no token; with no such Unit no prompt opens.
@@ -346,7 +347,7 @@ mod tests {
             }
 
             #[test]
-            fn r15_with_no_free_zone_on_your_side_the_stolen_card_stays_with_its_owner() {
+            fn r15_r4205000_with_no_free_zone_on_your_side_the_stolen_unit_is_destroyed() {
                 crate::register_all();
                 let mut s = setup(
                     json!({ "field": [TIMMY, VANILLA, VANILLA, VANILLA, VANILLA] }),
@@ -357,8 +358,10 @@ mod tests {
 
                 s.play(FEELINGS, json!({ "targets": pick::instance(&menace) }));
 
-                assert_eq!(s.card(&menace).controller, P2);
-                assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(menace.id.clone()));
+                assert_eq!(s.unit(P2, 1), None);
+                s.expect_in_zone(&menace, "graveyard");
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.id == menace.id));
+                assert!(!s.events().iter().any(|event| matches!(event, GameEvent::ControlChanged { .. })));
             }
 
             #[test]
@@ -456,8 +459,9 @@ mod tests {
                 assert_eq!(pending_selections(&s), Some(at_selection(&must_unit(&s, P2, 3))));
                 let menace = must_unit(&s, P2, 3);
                 s.answer(pick::instance(&menace));
-                // No free zone: it stays with its owner (R15).
-                assert_eq!(must_unit(&s, P2, 3).controller, P2);
+                // No free zone: it is destroyed where it stands (R15, R4205000).
+                assert_eq!(s.unit(P2, 3), None);
+                s.expect_in_zone(&menace, "graveyard");
             }
 
             #[test]

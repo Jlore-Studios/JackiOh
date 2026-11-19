@@ -8,6 +8,7 @@
 //! - R1203 (ME-ATTACKSUMMON): Windfurious Prime's rider — joiners attack first.
 //! - R1204 (ME-LETHALGUARD): §4.4 step 4a opens for Units too; `redirect: "self"` sends the hit to
 //!   the guard through its own Armor, each guard catching a given hit once.
+//! - R4188001: the combat forecast carries no attack whose target a Mayor draws.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -108,6 +109,40 @@ fn r1200_legal_actions_offer_plays_and_attacks_without_targets() {
         "the attack names the random sentinel: {:?}",
         attacks[0]
     );
+}
+
+#[test]
+fn r4188001_the_forecast_carries_no_attack_whose_target_a_mayor_draws() {
+    let mut state = playing("mb22-forecast");
+    let mayor = put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
+    let skirmisher = put(&mut state, &fx::skirmisher.id, slot(P1, Row::Units, 2), json!({}));
+    state.players[P2].hero.health = 1;
+
+    let offered = legal_actions(&state, P1).into_iter().any(|action| {
+        matches!(&action, ActionBody::Attack { attacker_id, target_id }
+            if attacker_id == &skirmisher.id && target_id == RANDOM_ATTACK_TARGET)
+    });
+    assert!(offered, "the attack names the random sentinel");
+    let forecast = combat_forecast(&state, P1);
+    assert!(forecast.attacks.is_empty(), "{:?}", forecast.attacks);
+    assert!(!forecast.lethal, "a drawn target is no lethal swing");
+
+    // Once the Mayor leaves, the same attacker's named attacks are forecast, the lethal one among them.
+    assert!(jackioh_engine::zones::remove_from_field(
+        &mut state,
+        &mayor,
+        Default::default()
+    ));
+    let forecast = combat_forecast(&state, P1);
+    assert!(
+        forecast
+            .attacks
+            .iter()
+            .any(|entry| entry.attacker_id == skirmisher.id && entry.target_id == "hero-p2"),
+        "{:?}",
+        forecast.attacks
+    );
+    assert!(forecast.lethal);
 }
 
 #[test]
