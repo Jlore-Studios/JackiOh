@@ -475,6 +475,15 @@ and nothing while the view carries none; a count of 0 still shows. A Resource is
 #2250 (R2250000), so the hand draws it and there is no Resource tray. A Resource's face prints
 `Credits: <min>–<max>` under its text, its face's `resource` prices (the face model's `creditsLine`, jackioh-shared, R2521009).
 
+**Hero counters** (#4251). The oval keeps one badge on each corner — health lower right, Armor lower
+left (both `emotes.css`), the Jade Counter top left and the Credits top right — so no two overlap.
+Luck (R987), Burn and Toxic (R3540000) and Tipsy (R3548000) ride the hero's tray instead
+(`HeroTray.tsx`'s `hero-counters-<side>`), as labelled chips with their names beside their counts
+(`hero-luck`, `hero-burn`, `hero-toxic`, `hero-tipsy`, each keeping its `data-*` attribute),
+outside the tray's overflow allowance: every counter reads at once however many effects the seat
+carries, and a counter rising from 0 never moves the plate. Holding a hero (or Shift+F10 on it)
+lists every counter above 0 with its name and number in the inspect view (`HeroInspect.tsx`).
+
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
 its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's

@@ -20,10 +20,17 @@ describe("R3548000 the Tipsy stein", () => {
     });
     for (const side of ["you", "opponent"] as const) {
       const { unmount } = render(withCatalog(<Hero view={view} side={side} />));
-      const badge = document.querySelector(".hero-tipsy");
+      // #4251: the stein rides the tray as a labelled chip, outside the overflow list, not on the
+      // portrait under the health badge.
+      const tray = document.querySelector(`[data-testid="hero-counters-${side}"]`);
+      expect(tray).not.toBeNull();
+      const badge = tray?.querySelector(".hero-tipsy");
       expect(badge?.getAttribute("data-tipsy")).toBe(side === "you" ? "4" : "2");
       expect(badge?.getAttribute("title")).toBe("Tipsy counter");
+      expect(badge?.textContent).toBe(side === "you" ? "Tipsy 4" : "Tipsy 2");
+      expect(badge?.getAttribute("aria-label")).toBe(side === "you" ? "Tipsy 4" : "Tipsy 2");
       expect(badge?.querySelector("img.cf-icon")).not.toBeNull();
+      expect(badge?.closest('[data-testid^="tray-list-"]')).toBeNull();
       unmount();
     }
     render(withCatalog(<Hero view={baseView()} side="you" />));
