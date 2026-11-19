@@ -3,6 +3,7 @@
 import { mount } from "cypress/react";
 
 import "../../apps/web/src/index.css";
+import { loadSceneData } from "../../apps/web/src/cards/art/sceneLoader.ts";
 import { loadWasm } from "../../apps/web/src/wasm/index.ts";
 
 declare global {
@@ -19,9 +20,10 @@ Cypress.Commands.add("mount", mount);
 
 // A card face is worked out in Rust (jackioh-shared, #3106) and read through the WebAssembly module, so every
 // component spec that draws one needs the module loaded; `loadWasm()` is idempotent, and a spec that loads it
-// itself waits on the same promise.
+// itself waits on the same promise. The face's picture comes from the scene tables, which load lazily beside
+// the module (#4222), and `sceneRecipeOf` throws until they have (#4265): `loadSceneData()` is idempotent too.
 before(() => {
-  cy.wrap(loadWasm(), { timeout: 60_000 });
+  cy.wrap(Promise.all([loadWasm(), loadSceneData()]), { timeout: 60_000 });
 });
 
 // An uncaught error fails the spec: the default, made explicit as support/e2e.ts does.

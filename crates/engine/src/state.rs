@@ -2071,20 +2071,54 @@ pub fn rename_in_board_history(state: &mut GameState, from: &str, to: &str) {
     }
     // R227, R3550007: Bogos Binted's Cry keeps its side in memory, so a card set again under a fresh id goes
     // back as itself (Duos seed 1616, #4079). Only a note it renamed is written back.
-    let key = crate::subsystems::board_history::SIDE_SNAPSHOT_KEY;
     for player in PLAYER_IDS {
         for card in side_cards_mut(&mut state.players[player]) {
-            let Some(slot) = card.memory.get_mut(key).and_then(|note| note.get_mut("side")) else {
-                continue;
-            };
-            let Ok(mut side) = serde_json::from_value::<SideSnapshot>(slot.clone()) else {
-                continue;
-            };
-            if rename_in_side(&mut side, from, to)
-                && let Ok(renamed) = serde_json::to_value(&side)
-            {
-                *slot = renamed;
-            }
+            rename_in_side_note(card, from, to);
+        }
+    }
+}
+
+/// R3550007: rename_in_board_history on one card's side snapshot note (SIDE_SNAPSHOT_KEY). Only a note it renamed is written back.
+fn rename_in_side_note(card: &mut CardInstance, from: &str, to: &str) {
+    let key = crate::subsystems::board_history::SIDE_SNAPSHOT_KEY;
+    let Some(slot) = card.memory.get_mut(key).and_then(|note| note.get_mut("side")) else {
+        return;
+    };
+    let Ok(mut side) = serde_json::from_value::<SideSnapshot>(slot.clone()) else {
+        return;
+    };
+    if rename_in_side(&mut side, from, to)
+        && let Ok(renamed) = serde_json::to_value(&side)
+    {
+        *slot = renamed;
+    }
+}
+
+/// R4265001: the fresh ids `events` gave (R227's `formerId`), followed in the side snapshot notes of
+/// `cards`, the copies a Death pass still owes, which no zone holds for `rename_in_board_history` to
+/// reach: a Death run again (R823) resets the side its last run left (Duos fuzz seed 476, #4265).
+pub(crate) fn follow_fresh_ids(cards: &mut [CardInstance], events: &[GameEvent]) {
+    for event in events {
+        let (GameEvent::CardPlayed {
+            instance_id,
+            former_id: Some(former),
+            ..
+        }
+        | GameEvent::Summoned {
+            instance_id,
+            former_id: Some(former),
+            ..
+        }
+        | GameEvent::ControlChanged {
+            instance_id,
+            former_id: Some(former),
+            ..
+        }) = event
+        else {
+            continue;
+        };
+        for card in cards.iter_mut() {
+            rename_in_side_note(card, former, instance_id);
         }
     }
 }

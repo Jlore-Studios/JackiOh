@@ -833,6 +833,11 @@ fn tributes_an_enemy(state: &GameState, run: &PlayRun) -> bool {
 /// opponent's zone in the named lane if open, else their leftmost open unit zone (R15); with none it
 /// stays where named. A Flying Golem named into the backrow goes to the unit row (R1081000).
 fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Option<ZoneSlot> {
+    // R4265000: a Cloaked play is set face-down in its player's own backrow, its text inert (§6.1
+    // Cloaked), so no hand-over moves it, and its reveal animates it on its controller's side.
+    if card.set_as.is_some() {
+        return None;
+    }
     let zone = run.zone?;
     let flags = crate::scripts::flags_of(state, card);
     if flags.summon_for_opponent == Some(true) {

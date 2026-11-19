@@ -588,6 +588,7 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         // parks the rest of the hook with the pass (`plan_for`); when the hook's last effect asked there
         // is none to park, so the pass parks itself without the card. The status tells the two apart,
         // not a count of items: a nested pass parks an item of its own (R156).
+        let first_event = sink.events.len();
         let status = {
             let mut ctx = make_context(
                 sink,
@@ -617,6 +618,10 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
             let effects = hook(&mut ctx);
             run_resumable_list(&mut ctx, &plan, effects, paused)
         };
+        // R4265001: the copies still owed read the fresh ids this run gave, as the cards in play do.
+        if let Some(events) = sink.events.get(first_event..) {
+            crate::state::follow_fresh_ids(&mut pass.owed, events);
+        }
         if status == ListStatus::Done {
             pass.owed.remove(0);
             continue;

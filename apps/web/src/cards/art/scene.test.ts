@@ -456,4 +456,10 @@ describe("#4222 the scene tables load beside the engine module", () => {
     await loadSceneData();
     expect(sceneRecipeOf("core-002")).not.toBeNull();
   });
+
+  it("#4265 the component specs' support file loads the scene tables beside the module", () => {
+    // The component specs run only in the daily super run, so their setup is held here per pull request.
+    const support = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../../e2e/support/component.tsx"), "utf8");
+    expect(support).toContain("Promise.all([loadWasm(), loadSceneData()])");
+  });
 });
