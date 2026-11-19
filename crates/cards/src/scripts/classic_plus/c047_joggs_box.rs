@@ -771,7 +771,10 @@ mod tests {
                         let id = s.card(BOX).id.clone();
                         s.play(BOX, json!({}));
                         let cast = casts(s.last_events(), &id);
-                        let quiet = s.state().pending.is_none() && s.state().result.is_none();
+                        // A cast Spell may end the turn itself, on seeds every Spell joining the pool moves
+                        // (#848): keep one whose turn is still p1's, which none is if the kept Box ends it.
+                        let quiet =
+                            s.state().pending.is_none() && s.state().result.is_none() && s.state().active == P1;
                         (quiet && cast.len() == want).then(|| s.state().active)
                     });
                     if let Some(active) = kept {
@@ -780,7 +783,7 @@ mod tests {
                         break;
                     }
                 }
-                assert!(found, "radiant {radiant}: no quiet seed");
+                assert!(found, "radiant {radiant}: no seed the kept Box left p1's turn on");
             }
         }
     }

@@ -197,6 +197,18 @@ mod tests {
         (1..=5).filter_map(|lane| s.unit(P1, lane)).collect()
     }
 
+    /// The first `<prefix>-<n>` seed whose base cast leaves its two hand cards in the hand: the CN card
+    /// the hand becomes may leave it by itself (M #87 Tatches the Totem summons itself, #3951), and which
+    /// card that is moves with every CN card joining the pool (#848). `prepare` runs before the play.
+    fn kept_hand(prefix: &str, prepare: impl Fn(&mut Scenario)) -> String {
+        seed_where(prefix, |seed| {
+            let mut s = casting(seed, false);
+            prepare(&mut s);
+            s.play(SPIRITUALLY, json!({}));
+            s.hand(P1).len() == 2
+        })
+    }
+
     mod m32_spiritually_zhongguo {
         use super::*;
 
@@ -306,7 +318,10 @@ mod tests {
 
             #[test]
             fn units_reads_through_param() {
-                let mut s = casting("spiritually-param", false);
+                let seed = kept_hand("spiritually-param", |s| {
+                    set_param(s.card_mut(SPIRITUALLY), "units", 2);
+                });
+                let mut s = casting(&seed, false);
                 set_param(s.card_mut(SPIRITUALLY), "units", 2);
                 s.play(SPIRITUALLY, json!({}));
                 assert_eq!(units_of(&s).len(), 2);
@@ -374,7 +389,8 @@ mod tests {
             #[test]
             fn r767000_a_game_on_v0_5_9f_makes_the_hand_cost_0() {
                 crate::under_kept(SPIRITUALLY, script_v0_5_9f(), || {
-                    let mut s = casting("spiritually-kept-9e", false);
+                    let seed = kept_hand("spiritually-kept-9e", |_| {});
+                    let mut s = casting(&seed, false);
                     s.play(SPIRITUALLY, json!({}));
                     assert!(!s.hand(P1).is_empty());
                     for card in s.hand(P1) {

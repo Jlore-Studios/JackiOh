@@ -312,12 +312,13 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
             assert_eq!(card.summoned_turn, Some(turn));
             assert_eq!(card.exertion, FRESH);
         }
-        // R15: no free zone, so these stay with their owner, untouched.
+        // R15: no free zone, so these stay with their owner, untouched but for R4205000's destroy mark.
         for card in &left_behind {
             let card = live(&state, card);
             assert_eq!(card.controller, P2);
             assert_eq!(card.summoned_turn, Some(turn - 1));
             assert_eq!(card.exertion, SPENT);
+            assert_eq!(card.marked_destroyed, Some(true));
         }
     }
 
@@ -562,7 +563,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let theirs = put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
         let theirs = exhausted(&mut state, theirs, turn - 1);
 
-        // R76: already yours. R15: no free zone on the thief's side.
+        // R76: already yours. R15: no free zone on the thief's side, so it is only marked destroyed
+        // (R4205000), which the state check collects.
         assert_eq!(
             run_effect(&mut state, steal(json_as(json!({ "instanceId": mine.id }))), P1),
             vec![]
@@ -578,6 +580,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
             assert_eq!(now.exertion, SPENT);
         }
         assert_eq!(live(&state, &theirs).controller, P2);
+        assert_eq!(live(&state, &mine).marked_destroyed, None);
+        assert_eq!(live(&state, &theirs).marked_destroyed, Some(true));
     }
 
     #[test]

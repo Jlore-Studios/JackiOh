@@ -351,6 +351,10 @@ fn spell_damage_for(state: &GameState, source: Option<&CardInstance>) -> i32 {
 /// health, or marked destroyed. A unit is killed once, so nothing landing on it afterwards (a later
 /// hit, a Poisonous one, a destroy) changes who killed it.
 pub fn already_killed(state: &GameState, unit: &CardInstance) -> bool {
+    // R4205000: a steal that had no room for it has destroyed it past anything, Indestructible included.
+    if unit.unpreventable_destroy == Some(true) {
+        return true;
+    }
     let view = crate::layers::unit_view(state, unit);
     // §4.5 step 1's own test: an Indestructible unit dies only once its max health is gone (R69).
     if has_keyword(&view.keywords, KeywordKind::Indestructible) {

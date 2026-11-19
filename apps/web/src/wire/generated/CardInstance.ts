@@ -72,6 +72,12 @@ markedDestroyed?: boolean,
  */
 markedExiled?: true, 
 /**
+ * R4205000: marked destroyed by a steal that had no room for it (§6.3 Steal). Nothing keeps it on the
+ * field: Indestructible drops no mark (R46), no "would die" replacement is offered it; a
+ * destroy-to-exile aura still exiles it (R1849002). Only ever `Some(true)`; R78's reset clears it.
+ */
+unpreventableDestroy?: true, 
+/**
  * Came back through Reborn, so it no longer has it (§4.5 step 4).
  */
 rebornSpent?: boolean, 

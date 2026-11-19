@@ -618,7 +618,8 @@ pub fn attack_target_of(state: &GameState, target_id: &str) -> Option<AttackTarg
 /// the question §4.5 step 1 will: 0 or less health or a destroy mark, while an Indestructible unit
 /// falls only to max health 0 or less (R69).
 fn has_fallen(state: &GameState, unit: &CardInstance) -> bool {
-    if !is_active_on_field(state, unit) {
+    // R4205000: nor does a unit a steal had no room for, Indestructible or not.
+    if !is_active_on_field(state, unit) || unit.unpreventable_destroy == Some(true) {
         return true;
     }
     let view = crate::layers::unit_view(state, unit);

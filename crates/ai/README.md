@@ -93,8 +93,8 @@ it can see on the field, then its attacks, a kill priced at what it removes (a u
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
 too, #3858; an attacker a First Strike defender destroys first earning no chip and no shield pop, since
-`fight` reads a blow that never lands as none, R4171000), and once none is worth making the switches to
-Defense Position its own
+`fight` reads a blow that never lands as none, R4171000), and once none is worth making, or facing lethal
+against its best attack (R4187000), the switches to Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
@@ -467,9 +467,10 @@ names the seed, the seat and the first message (`Decision::first_sim_panic`, nat
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
 `[0, 1]` that each decision follows the AI, the rest being the skill miss (`skill::skill_miss_action`,
 R2214000): a softmax at `AI_SKILL_MISS_TEMPERATURE` over the greedy baseline's one-ply scores of the
-true state's candidates, read on one determinization of what the seat sees. `None` is `AI_SKILL_MAX`:
-full skill, which takes no draw, so a seat without one plays as it did before the knob; `AI_SKILL_MIN`
-is the miss at every decision, with no search. In
+candidates the probe world lists (`decide::probe_world` of `redact(state, seat)`, as `decide` lists
+its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762).
+`None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one plays as it did
+before the knob; `AI_SKILL_MIN` is the miss at every decision, with no search. In
 between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision
 (`skill::clamp_skill` pins the range, a NaN reading as full), so a seeded run reproduces. The knob
 knows nothing of cards or sets: it keeps meaning the same when the AI improves or a set ships. The

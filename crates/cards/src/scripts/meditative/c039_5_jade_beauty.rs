@@ -148,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn r963_core_066_stays() {
+    fn r963_r4205000_core_066_is_destroyed_too() {
         let mut s = scenario(json!({
             "p1": {
                 "hand": [FILLER],
@@ -168,10 +168,10 @@ mod tests {
         s.end_turn();
         s.end_turn();
 
-        // R46: an Indestructible Unit stays where it is, under its own side.
-        let kept = s.card(&wall);
-        assert_eq!(kept.controller, P2);
-        assert_eq!(s.unit(P2, 2).map(|unit| unit.id), Some(wall));
+        // R4205000: a steal with no room destroys even an Indestructible Unit, past R46.
+        assert_eq!(s.unit(P2, 2), None);
+        s.expect_in_zone(wall.as_str(), "graveyard");
+        assert!(s.pile(P2, "graveyard").iter().any(|card| card.id == wall));
     }
 
     #[test]
