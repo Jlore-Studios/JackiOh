@@ -14843,7 +14843,8 @@
         "tiers": {
           "claude": "strong"
         }
-      }
+      },
+      "waiting_comment": 6998661815
     },
     "4232": {
       "action": "review",
