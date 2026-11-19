@@ -15973,9 +15973,11 @@
         "by": "`muse` (medium)",
         "sha": "0a9a7970646ef4a51fdb1a64fbdaddc741604bec"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-19T05:29:18Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-19T05:49:50Z",
         "family": "muse",
@@ -15985,6 +15987,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4258 from the after-merge spot-check\"} -->\n- Both spot-check findings are fixed without reverting #4258.\n- **What changed and why**\n- - [spec/rulings/R3540005.md](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4259/spec/rulings/R3540005.md): the hero's Burn and Toxic sentence now says they draw as labelled chips in the hero's tray (`hero-counters-<side>`, outside the overflow allowance) instead of on the hero's portrait.\u2026\n- - [spec/pending/4259.md](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4259/spec/pending/4259.md): new \u00a711 paragraph amending R3540005 under no new number, shaped like the paragraphs in `spec/pending/4132.md`. R987 and R3548000 untouched; both still read true (their Luck/stein badges sit \u2026\n- - [apps/web/src/game/board.css](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4259/apps/web/src/game/board.css): the 28px portrait-pill group rule is narrowed to `.hero-health, .hero-armor, .hero-jade, .hero-credits`, and `.hero-tray .hero-counter` now resets `min-width`, `height: auto`, \u2026\n- - [e2e/cypress/component/board-layout.cy.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4259/e2e/cypress/component/board-layout.cy.tsx): `heavyView()` now carries `luck: 2`, `tipsy: 4`, `burn: 6`, `toxic: 2` on both seats, and both allowance-count selectors exclude `.hero-counter` chi\u2026\n- - [apps/web/src/game/hero-counters.test.tsx](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4259/apps/web/src/game/hero-counters.test.tsx): the `#4251 a counter rising from 0 moves no plate` test now asserts the chip rule sets `height: auto` and that the pill group rule no longer names the\u2026\n- **How tested (commands run, output seen)**\n- - `cargo fmt --check`: clean.\n- - `cargo jackioh spec check`: ok \u2014 2288 rulings, 5769 proofs, 71888 citations, 31014 links.\n- - `pnpm --dir apps/web test src/game/hero-counters.test.tsx`: 4 passed (includes the two new CSS assertions).\n- - `pnpm --dir apps/web test src/game/Hero.test.tsx`: 12 passed. `pnpm --dir apps/web test src/game/tipsy.test.tsx`: 6 passed.\n- - `pnpm --dir e2e typecheck:component`: clean; `pnpm exec eslint` on the two edited TS/TSX files: clean.\n- - Cypress component run not done here: the Cypress binary is missing from this worktree (`/home/agent-muse/.cache/Cypress/16.1.0` absent), so `board-layout.cy.tsx` goes to CI, as the plan allows. No test skipped, ignored, or weakened.\n- **Decisions the issue did not settle**\n- - None; every edit follows the plan verbatim. One judgment call worth a second look by the reviewer: the amended R3540005 keeps the state sentence \"a hero as `burn` and `toxic` beside its `armor`\" (view data, still true) and changes only the client-drawing sentence, matching how the plan scoped the\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4259 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4259/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4259,
       "kind": "review",
       "live": "reviewing",
