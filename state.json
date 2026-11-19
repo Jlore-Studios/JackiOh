@@ -15369,15 +15369,12 @@
     "what": "revise #4234 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-19T00:45:42Z",
+    "at": "2026-11-19T00:57:13Z",
     "notes": [
-      "delivered plan #4237 on claude-7 (run 44427877442): planned",
-      "delivered build #4222 on muse (run 44422852839): built",
-      "delivered revise #4210 on claude-8 (run 44419388783): approved",
-      "started review #4241 on muse (run 44432100409)",
-      "started build #4237 on claude-7 (run 44432197028)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "#4241: `rust (classify)` red in CI run 44431836403; its other early jobs have until 2026-11-19T00:59:28Z to report",
+      "#4234: its turn came (it waited 120 minutes for #4231, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
+      "started revise #4234 on claude-8 (run 44433319643)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16083,7 +16080,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T00:45:42Z",
+  "loop_tick": "2026-11-19T00:57:13Z",
   "machine_disk": {
     "issue": null,
     "reading": {
