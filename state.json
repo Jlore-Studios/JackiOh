@@ -15355,6 +15355,8 @@
       }
     },
     "4242": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-19T00:16:38Z",
@@ -15368,8 +15370,11 @@
         "trail": "l | grep -i 'true state' | grep -v '11-rulings.md' | cut -c1-250; grep -rln \\\"miss lists\\\\|miss's list\\\\|skill miss\\\" spec/rul\u2026\n- Bash: {\"command\": \"grep -n 'skill miss\\\\|miss lists' spec/rulings/R748000.md crates/tools/README.md | cut -c1-300\", \"description\": \"Check R748000 and tools README mentions\"}\n- Bash: {\"command\": \"echo \\\"- Spec edits done (R2214000, R747000, \\u00a79.12). Running fmt, spec check, then the ai crate's full tests.\\\" >> .bot-notes.md; cargo fmt --check 2>&1 | tail -5; echo FMT=$?; time\u2026\n- said: Format and `spec check` are clean. Now the AI crate's full test suite.\n- Bash: {\"command\": \"timeout 3000 cargo test -p jackioh-ai --features jackioh-engine/testkit 2>&1 | grep -E 'test result|FAILED|panicked|^error' | tail -20\", \"description\": \"Run the AI crate's full test suit\u2026\n- Bash: {\"command\": \"git diff crates/ai/src/skill.rs crates/ai/README.md spec/rulings/R2214000.md spec/rulings/R747000.md | cut -c1-260\", \"description\": \"Review the code and doc diffs\"}\n- Bash: {\"command\": \"cat rustfmt.toml 2>/dev/null; awk 'length > 110 {print FILENAME\\\": \\\"FNR\\\": \\\"length}' crates/ai/src/skill.rs crates/ai/tests/ai/skill.rs\\npython3 - <<'EOF'\\nfor p,old,new in [\\n ('spec/\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4216/crates/ai/tests/ai/skill.rs\", \"offset\": 178, \"limit\": 30}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/ai/tests/ai/skill.rs'\\ns=open(p).read()\\nreps=[(''' scenario(json!({\\n \\\"seed\\\": \\\"r4216000-masked\\\", \\\"active\\\": \\\"p1\\\", \\\"turn\\\": 9,\\n \\\"p1\\\": { \\\"field\\\":\u2026\n- Bash: {\"command\": \"echo \\\"- fmt + spec check clean. Wrapped fixtures' JSON to 110 cols; added R4216000 to R2214000/R747000 cards. Full ai suite running in background.\\\" >> .bot-notes.md; tail -5 /tmp/claud\u2026\n- said: While the full AI suite runs, I'm reading the server's mistake-rate test, which grades the miss on the true board.\n- Bash: {\"command\": \"sed -n 60,140p crates/server/tests/bots/seat.rs\", \"description\": \"Read the server's skill miss mistake-rate test\"}\n- Bash: {\"command\": \"sed -n 140,175p crates/server/tests/bots/seat.rs\", \"description\": \"Read the test's assertions\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"ai crate full test run finishing\", \"timeout_ms\": 600000, \"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4216/d24545bd-3d73-4a47-ac16-a80087797379/tasks/bpgc33v5c.ou\u2026\n- tool error: This Monitor command contains multiple operations. The following part requires approval: [ -s \"$f\" ]\n- Bash: {\"command\": \"until test -s /tmp/claude-1001/-home-runner-work--temp-work-item-4216/d24545bd-3d73-4a47-ac16-a80087797379/tasks/bpgc33v5c.output; do sleep 10; done; cat /tmp/claude-1001/-home-runner-wo\u2026\n- said: The whole AI crate passes (61 + 965 + 95 tests, 0 failures). Next: the skill tests again after the fixture rewrap, clippy, and the downstream callers' tests.\n- Bash: {\"command\": \"echo \\\"- Full ai suite green (61+965+95, 0 failed). Next: skill:: rerun, clippy ai, shared bots_decide, server bots::, tools arena.\\\" >> .bot-notes.md; timeout 1200 cargo test -p jackioh\u2026\n- Bash: {\"command\": \"timeout 3000 cargo test -p jackioh-shared --features jackioh-engine/testkit --test bots_decide 2>&1 | grep -E 'test result|FAILED|panicked|^error' | tail -10\", \"description\": \"Run the sh\u2026\n- Bash: {\"command\": \"timeout 3000 cargo test -p jackioh-server --features jackioh-engine/testkit --test server bots:: 2>&1 | grep -E 'test result|FAILED|panicked|^error|ended the turn' | tail -10\", \"descript\u2026\n- Bash: {\"command\": \"echo \\\"- skill:: 7/7, clippy -p jackioh-ai clean, shared bots_decide 24/24. Server bots:: running in background.\\\" >> .bot-notes.md; until test -s /tmp/claude-1001/-home-runner-work--tem\u2026\n- Bash: {\"command\": \"echo \\\"- server bots:: 98/98. Running tools arena.\\\" >> .bot-notes.md; timeout 3000 cargo test -p jackioh-tools --features jackioh-engine/testkit arena 2>&1 | grep -E 'test result|FAILED\u2026\n- said: Arena tests pass (18, the 1 ignored is an existing daily test). Checking `classify --claims`, which CI runs as `rust (classify)`, to confirm no patch fragment is owed.\n- Bash: {\"command\": \"echo \\\"- tools arena 18 pass. Running classify --claims.\\\" >> .bot-notes.md; git rev-parse --verify origin/main 2>&1 | head -1; git merge-base HEAD origin/main 2>&1 | head -1\", \"descript\u2026\n- Bash: {\"command\": \"timeout 3000 cargo jackioh classify --base origin/main --claims 2>&1 | grep -v 'Compiling' | tail -25\", \"description\": \"Run classify against origin/main with claims\", \"timeout\": 3050000,\u2026\n- Bash: {\"command\": \"until test -s /tmp/claude-1001/-home-runner-work--temp-work-item-4216/d24545bd-3d73-4a47-ac16-a80087797379/tasks/bt61nv4zt.output; do sleep 10; done; sleep 2; cat /tmp/claude-1001/-home-\u2026\n- said: `classify` reports the change as `Internal` (no card plays differently), so no patch fragment is owed. Running `patches check`.\n- Bash: {\"command\": \"echo \\\"- classify --claims: Internal.\\\" >> .bot-notes.md; timeout 1200 cargo jackioh patches check 2>&1 | grep -v Compiling | tail -4; git status --short\", \"description\": \"Run patches ch\u2026\n- Bash: {\"command\": \"timeout 1200 cargo jackioh spec check 2>&1 | tail -1; cargo fmt --check && echo FMT_OK; git worktree list | grep jackioh-wt || echo no-extra-worktrees\", \"description\": \"Rerun spec check \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nnew='''## State\\n\\n- Build run 1 (2026-11-19, opus): DONE. Every plan step built\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\noq=s.index('## Open questions')\\ntail=s[oq:]\\nlines=tail.split('\\\\n')\\nkeep=[l for l in lines if not l.startswith('- ') or not any\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the skill miss reads only what its seat may know\"} --> ## What changed `skill_miss_action` (`crates/ai/src/skill.rs`) is the move a ladder bot plays when its skill roll does not go to the full search. It now reads the true state only through `ai_to_act`\u2026"
       },
       "issue": 4216,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-19T01:16:20Z",
         "from_run": "44427706364",
         "gates": [
           {
@@ -15461,7 +15466,11 @@
         "source": "build",
         "until": "2026-11-19T01:44:17Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-19T01:14:17Z",
+      "run_id": "pending:c78f60b4-1795050955",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15480,6 +15489,9 @@
         "provider": "claude-1",
         "run": "44427706364"
       },
+      "started_at": "2026-11-19T01:16:20Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15629,9 +15641,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T00:58:45Z",
+    "at": "2026-11-19T01:16:20Z",
     "url": "",
-    "what": "revise #4234 on claude-8"
+    "what": "review #4242 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-19T01:06:07Z",
