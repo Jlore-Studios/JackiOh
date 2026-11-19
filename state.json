@@ -14236,24 +14236,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "crates/ai/src/decide.rs",
-            "crates/ai/tests/ai/meditative_plus.rs",
-            "crates/server/tests/fixtures/practice-claim.json",
             "spec/09-architecture.md"
           ],
-          "from": "bf2847543bbe815b9cece4d91348ca2ccf5aa5ba",
-          "main": "1ddaeb4fb03f789480c9e040d514eaae7e1d960c"
+          "from": "5e71cb6206357c4ef4588b760e8e76c7294527e4",
+          "main": "14e3fd964e9c198680f0ebf671d33311631ca666"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "44418205575",
+            "run": "44444057750",
             "tier": "strong"
           }
         ],
-        "sha": "5e71cb6206357c4ef4588b760e8e76c7294527e4",
+        "sha": "40d3bca01d592a4556673155ca16e994c3ab034e",
         "tiers": {
           "claude": "strong"
         }
