@@ -22076,6 +22076,11 @@
           "minutes": 65.0
         }
       ],
+      "suspended": {
+        "at": "2026-11-19T06:52:14Z",
+        "by": "jgoetzmann",
+        "reason": "off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then"
+      },
       "tokens_spent": [
         {
           "at": "2026-11-09T04:49:02Z",
