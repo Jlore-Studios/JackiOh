@@ -273,7 +273,7 @@ mod tests {
         }
 
         #[test]
-        fn r1040_r1041_a_set_unit_waits_for_its_reveal_then_attacks() {
+        fn r1040_r1041_r4237000_a_set_unit_waits_for_its_reveal_then_attacks_the_turn_after() {
             let mut s = scenario(json!({
                 "seed": "breaker-set",
                 "p1": {
@@ -299,7 +299,9 @@ mod tests {
             assert_eq!(unit.def_id, VANILLA);
             assert_eq!(unit.face_up, Some(true));
             assert_eq!(unit.set_as, None);
-            // It kept its set turn, so it may attack at once.
+            // R4237000: it entered that zone now, so it is summoning sick until its controller's next turn.
+            assert!(s.attacks_of(&unit).is_empty());
+            s.end_turn().end_turn();
             assert!(!s.attacks_of(&unit).is_empty());
         }
 
