@@ -9,8 +9,10 @@
 //! of PERF_ACTIONS_PER_SEAT evenly spread listed actions of each seat; then it folds the longest of
 //! those games from its log, as a reconnect and `jackioh replay` do, and hashes the result. After
 //! PERF_WARMUP_PASSES passes whose samples are dropped, PERF_PASSES passes are timed (one under
-//! `--smoke`, which judges no budget). Two work measures need no clock and cannot flake: the bytes of
-//! each `view_for` and the `reduce` calls of the fold.
+//! `--smoke`). Two work measures need no clock and cannot flake: the bytes of each `view_for` and the
+//! `reduce` calls of the fold. `--smoke` judges only their two budgets, so every pull request holds
+//! them (#4196), and leaves the five timings to the daily run: one pass on a shared runner is too
+//! noisy to judge a time.
 //!
 //! Each budget bounds a measure's median (the p95 is shown, not judged), at the profile the binary
 //! was built at: `cargo test`'s (`*_TEST`, debug assertions on) or release (`*_RELEASE`). No
@@ -95,10 +97,13 @@ pub const HASH_STATE_US_BUDGET_RELEASE: f64 = 970.0;
 /// 199.2 and 198.9 (fuzz seed 37, 256 actions), 5x headroom.
 pub const FOLD_MS_BUDGET_RELEASE: f64 = 1_000.0;
 /// The JSON size of one seat's `view_for`, in bytes, at either profile: a median of 6,976 in all six
-/// runs, 2x headroom.
+/// runs, 2x headroom. `perf --smoke` read 7,001 on 2026-11-18 (8c6074f25b) and 2026-11-19
+/// (947bae6c11).
 pub const VIEW_FOR_BYTES_BUDGET: f64 = 14_000.0;
 /// The `reduce` calls the fold of the longest corpus game makes (its log's length), at either
-/// profile: 256 in all six runs (fuzz seed 37), 2x headroom.
+/// profile: 256 in all six runs (fuzz seed 37), 2x headroom. `perf --smoke` read 404 (fuzz seed 29)
+/// on 2026-11-18 (8c6074f25b) and 250 (fuzz seed 30) on 2026-11-19 (947bae6c11): card changes move
+/// the corpus's longest game.
 pub const FOLD_REDUCE_CALLS_BUDGET: f64 = 520.0;
 
 /// The profile this binary was built at, which picks the time budgets.
@@ -109,7 +114,7 @@ const PROFILE: &str = if cfg!(debug_assertions) { "test" } else { "release" };
 /// `perf [--smoke] [--json]`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
-    /// Time the corpus once and judge no budget (the per-pull-request smoke test).
+    /// Time the corpus once and judge only the two work budgets (the per-pull-request smoke test).
     #[arg(long)]
     pub smoke: bool,
     /// Print the report as one JSON object instead of the table.
@@ -181,6 +186,19 @@ impl Measure {
             Measure::Fold => "ms",
             Measure::ViewForBytes => "bytes",
             Measure::FoldReduceCalls => "calls",
+        }
+    }
+
+    /// Whether the measure is a time, which only a judged run's passes are enough to judge; the two
+    /// work measures come out the same on every run, so `--smoke` judges them too.
+    fn needs_clock(self) -> bool {
+        match self {
+            Measure::Reduce
+            | Measure::ViewFor
+            | Measure::LegalActions
+            | Measure::HashState
+            | Measure::Fold => true,
+            Measure::ViewForBytes | Measure::FoldReduceCalls => false,
         }
     }
 
@@ -484,6 +502,9 @@ struct Row {
     budget: f64,
     #[serde(skip)]
     budget_name: &'static str,
+    /// Whether the measure is a time (`Measure::needs_clock`), which `--smoke` does not judge.
+    #[serde(skip)]
+    needs_clock: bool,
 }
 
 fn row(measure: Measure, mut samples: Vec<f64>) -> Result<Row> {
@@ -500,6 +521,7 @@ fn row(measure: Measure, mut samples: Vec<f64>) -> Result<Row> {
         p95: nearest_rank(&samples, P95),
         budget,
         budget_name,
+        needs_clock: measure.needs_clock(),
     })
 }
 
@@ -533,7 +555,7 @@ struct Report {
     corpus: CorpusCounts,
     fold: FoldInfo,
     measures: Vec<Row>,
-    /// One message per median past its budget; none under `--smoke`.
+    /// One message per median past its budget; under `--smoke`, only the two work measures are judged.
     failures: Vec<String>,
 }
 
@@ -589,7 +611,11 @@ fn measure(smoke: bool) -> Result<Report> {
             row(measure, taken)
         })
         .collect::<Result<Vec<_>>>()?;
-    let failures = if smoke { Vec::new() } else { judge(&measures) };
+    let failures = if smoke {
+        judge_smoke(&measures)
+    } else {
+        judge(&measures)
+    };
     Ok(Report {
         profile: PROFILE,
         smoke,
@@ -635,6 +661,12 @@ fn judge(rows: &[Row]) -> Vec<String> {
         .collect()
 }
 
+/// `--smoke`'s verdict: `judge` over the rows that need no clock, the two work measures.
+fn judge_smoke(rows: &[Row]) -> Vec<String> {
+    let unclocked: Vec<Row> = rows.iter().filter(|row| !row.needs_clock).cloned().collect();
+    judge(&unclocked)
+}
+
 /// The report as one table: a line saying what was measured, then measure, unit, median, p95 and budget.
 fn perf_table(report: &Report) -> String {
     let corpus = &report.corpus;
@@ -652,7 +684,7 @@ fn perf_table(report: &Report) -> String {
         report.fold.actions
     );
     if report.smoke {
-        out.push_str("; smoke: no budget judged");
+        out.push_str("; smoke: work budgets judged, clock budgets not");
     }
     out.push('\n');
     let _ = writeln!(
@@ -684,6 +716,7 @@ mod tests {
             p95: value,
             budget,
             budget_name,
+            needs_clock: measure.needs_clock(),
         }
     }
 
@@ -735,6 +768,34 @@ mod tests {
     }
 
     #[test]
+    fn under_smoke_only_the_two_work_budgets_fail_even_at_twice_every_budget() {
+        let rows: Vec<Row> = MEASURES
+            .iter()
+            .map(|&measure| row_at(measure, 2.0 * measure.budget().0))
+            .collect();
+        let failures = judge_smoke(&rows);
+        assert_eq!(failures.len(), 2, "{failures:#?}");
+        assert!(
+            failures[0].starts_with("view_for bytes:") && failures[0].ends_with("(VIEW_FOR_BYTES_BUDGET)"),
+            "{failures:#?}"
+        );
+        assert!(
+            failures[1].starts_with("fold reduce calls:")
+                && failures[1].ends_with("(FOLD_REDUCE_CALLS_BUDGET)"),
+            "{failures:#?}"
+        );
+    }
+
+    #[test]
+    fn under_smoke_every_measure_at_its_budget_passes() {
+        let rows: Vec<Row> = MEASURES
+            .iter()
+            .map(|&measure| row_at(measure, measure.budget().0))
+            .collect();
+        assert_eq!(judge_smoke(&rows), Vec::<String>::new());
+    }
+
+    #[test]
     fn the_table_has_a_line_per_measure_under_its_header() {
         let report = Report {
             profile: PROFILE,
@@ -759,7 +820,10 @@ mod tests {
         let lines: Vec<&str> = table.lines().collect();
         assert_eq!(lines.len(), 2 + MEASURES.len(), "{table}");
         assert!(lines[0].starts_with("perf: "), "{table}");
-        assert!(lines[0].ends_with("; smoke: no budget judged"), "{table}");
+        assert!(
+            lines[0].ends_with("; smoke: work budgets judged, clock budgets not"),
+            "{table}"
+        );
         assert!(lines[0].contains("fuzz seed 7, 12 actions"), "{table}");
         let header: Vec<&str> = lines[1].split_whitespace().collect();
         assert_eq!(header, ["measure", "unit", "median", "p95", "budget"]);

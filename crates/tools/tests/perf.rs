@@ -1,5 +1,6 @@
-//! `perf` on the built `jackioh` (#3429): once per pull request with no budget judged, so the harness
-//! keeps working, and daily with every median held to the test profile's budgets.
+//! `perf` on the built `jackioh` (#3429): once per pull request, so the harness keeps working and
+//! the two work budgets, which need no clock, are held (#4196), and daily with every median held to
+//! the test profile's budgets.
 
 use std::io::Write as _;
 use std::process::{Command, Output};
@@ -60,10 +61,23 @@ fn perf_smoke_times_the_corpus_once() {
         assert!(number("median") >= 0.0, "{row}");
         assert!(number("budget") > 0.0, "{row}");
     }
+
+    // The two work budgets, the ones `--smoke` judges (#4196), each read by its row's name.
+    for name in ["view_for bytes", "fold reduce calls"] {
+        let row = rows
+            .iter()
+            .find(|row| row["measure"] == name)
+            .unwrap_or_else(|| panic!("no {name} row: {report:#}"));
+        let number = |key: &str| row[key].as_f64().unwrap_or(f64::NAN);
+        assert!(
+            number("median") <= number("budget"),
+            "{name} is over its budget: {row}"
+        );
+    }
 }
 
 #[test]
-#[ignore = "daily: ten timed passes over the corpus held to the test profile's budgets; perf_smoke_times_the_corpus_once keeps the harness working per pull request"]
+#[ignore = "daily: ten timed passes over the corpus held to the test profile's budgets; perf_smoke_times_the_corpus_once holds the two work budgets on every pull request"]
 fn perf_holds_every_budget() {
     let output = jackioh(&["perf"]);
     // libtest captures `print!` and `eprint!` alone, so the table reaches the daily log this way.
