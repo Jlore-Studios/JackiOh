@@ -3375,8 +3375,9 @@ impl InvariantMonitor {
                     ..
                 } => {
                     // R383: moving into the unit row is entering it, but not for a carried Unit leaving its
-                    // carrier (C+ #33), a set Unit (ME-ALTPLAY, R1041) or an "Animated on your turn" card at
-                    // its controller's start of turn (R1062, R1126) that did not fire as a trap (#1216).
+                    // carrier (C+ #33) or an "Animated on your turn" card at its controller's start of turn
+                    // (R1062, R1126) that did not fire as a trap (#1216). A set Unit's reveal enters, as any
+                    // Unit that comes into a unit zone does (R4237000).
                     if *carried != Some(true)
                         && (self.fired.contains(instance_id)
                             || !self.on_its_side_before_this_turn(
@@ -3386,14 +3387,8 @@ impl InvariantMonitor {
                                 &events[index + 1..],
                             ))
                     {
-                        let is_unit_def = find_instance(state, instance_id).is_some_and(|card| {
-                            crate::catalog::def_of(Some(state), &card.def_id).type_
-                                == crate::wire::CardType::Unit
-                        });
-                        if !is_unit_def {
-                            self.enter(instance_id);
-                            self.note_entry_windfury(instance_id, state);
-                        }
+                        self.enter(instance_id);
+                        self.note_entry_windfury(instance_id, state);
                     }
                 }
                 GameEvent::Transformed {

@@ -356,14 +356,13 @@ fn reveal_effect() -> Effect {
             if !animated {
                 return;
             }
-            // R1041, R171: it counts as summoned on its set turn, or on the later turn it came back
-            // onto the field after it was set (a Rollback restoring it, a steal's fresh id).
-            let entered = card
-                .summoned_turn
-                .map_or(set.set_turn, |turn| turn.max(set.set_turn));
+            // R4237000: it enters its unit zone on the turn it is revealed, whatever turn it was set on,
+            // so it is summoning sick for the rest of that turn unless it has Rush or Charge (§4.1, R83,
+            // R171).
+            let turn = ctx.state.turn;
             if let Some(stored) = find_instance_mut(ctx.state, &snapshot.id) {
                 stored.set_as = None;
-                stored.summoned_turn = Some(entered);
+                stored.summoned_turn = Some(turn);
             }
             // R783010: a Crater Unit Locks the unit zone it came out into, before its Cry.
             crate::crater::lock_on_arrival(ctx, &snapshot.id);

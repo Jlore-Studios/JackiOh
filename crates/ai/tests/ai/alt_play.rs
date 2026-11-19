@@ -1,16 +1,17 @@
-//! Face-down plays through the AI's eyes (R1046, R783009).
+//! Face-down plays through the AI's eyes (R1046, R783009, R4237000).
 //!
 //! A set card redacts to a placeholder with no `setAs`, and `determinize` samples for a hidden backrow
 //! card a Trap, a card that prints Cloaked whatever acts (R783009), or a card an aura lends Cloaked to
-//! in that side's hand now: every Unit while Knowledge Breaker acts there (R1046).
+//! in that side's hand now: every Unit while Knowledge Breaker acts there (R1046). A Unit the AI reveals
+//! is summoning sick that turn, so it plans an attack by it only with Rush or Charge (R4237000).
 
-use jackioh_ai::{DeterminizeOptions, determinize, redact};
+use jackioh_ai::{AI_BUDGET, DeterminizeOptions, determinize, lethal_hint, play_ai_turn, redact};
 use jackioh_engine::testkit::{
     ActionBody, CardScripts, CardType, GameState, Keyword, RevealAt, Row, ZoneChoice, create_rng, find_def,
     json, legal_actions, register_catalog, register_scripts, registered_catalog, registered_scripts,
 };
 
-use super::support::{AI, HUMAN, register_cards, run_puzzle, scenario, trace};
+use super::support::{AI, HUMAN, ai_options, register_cards, run_puzzle, scenario, trace};
 
 const BREAKER: &str = "meditative-045";
 const VANILLA: &str = "core-008";
@@ -167,6 +168,111 @@ fn register_cloaked() {
     let mut scripts = registered_scripts().clone();
     scripts.insert(CLOAKED.to_string(), CardScripts::default());
     register_scripts(scripts);
+}
+
+/// R4237000: `CLOAKED` with Charge too.
+const CLOAKED_CHARGE: &str = "ai-cloaked-charge";
+
+fn register_cloaked_charge() {
+    register_cloaked();
+    let mut def = find_def(None, CLOAKED).expect("the Cloaked vanilla").clone();
+    def.id = CLOAKED_CHARGE.to_string();
+    def.index = "4237".to_string();
+    def.base.keywords = vec![Keyword::Cloaked, Keyword::Charge];
+    def.radiant.keywords = vec![Keyword::Cloaked, Keyword::Charge];
+    let mut defs = registered_catalog().clone();
+    defs.insert(def.id.clone(), def);
+    register_catalog(defs);
+    let mut scripts = registered_scripts().clone();
+    scripts.insert(CLOAKED_CHARGE.to_string(), CardScripts::default());
+    register_scripts(scripts);
+}
+
+/// R4237000: p1, the AI, set `def_id` (a 4/4) face-down by its Cloaked on its turn 7, and both seats
+/// ended their turns: p1's turn 9, p2's hero at 4 with no Unit. The state and the set card's id.
+fn set_two_turns_ago(seed: &str, def_id: &str) -> (GameState, String) {
+    let state = scenario(json!({
+        "seed": seed,
+        "active": "p1",
+        "turn": 7,
+        "p1": { "mana": 8, "hand": [def_id], "library": [VANILLA, VANILLA, VANILLA] },
+        "p2": { "health": 4, "library": [VANILLA, VANILLA, VANILLA] },
+    }))
+    .state()
+    .clone();
+    let card = state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.def_id == def_id)
+        .cloned()
+        .expect("the Cloaked card");
+    let set = super::support::act(
+        &state,
+        AI,
+        ActionBody::Play {
+            instance_id: card.id,
+            zone: Some(ZoneChoice {
+                row: Row::Backrow,
+                lane: 1,
+            }),
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: None,
+            targets: None,
+            modes: None,
+            plague: None,
+            face_down: Some(RevealAt::Cloaked),
+        },
+    );
+    let set_id = set.players[AI].backrow[0].clone().expect("the set card").id;
+    let handed = super::support::act(&set, AI, ActionBody::EndTurn);
+    let back = super::support::act(&handed, HUMAN, ActionBody::EndTurn);
+    assert_eq!((back.active, back.turn), (AI, 9));
+    (back, set_id)
+}
+
+/// Whether the AI's turn declared, or planned in a line, an attack by `attacker`.
+fn planned_attack_by(turn: &jackioh_ai::AiTurnResult, attacker: &str) -> bool {
+    turn.decisions.iter().any(|decision| {
+        std::iter::once(&decision.action)
+            .chain(&decision.line)
+            .any(|action| matches!(action, ActionBody::Attack { attacker_id, .. } if attacker_id == attacker))
+    })
+}
+
+/// R4237000: a Unit the AI reveals from Cloaked is summoning sick that turn, so with neither Rush nor
+/// Charge its 4 Attack is no lethal on a hero at 4, and the AI plans no attack by it.
+#[test]
+fn r4237000_the_ai_plans_no_attack_by_a_unit_it_reveals_this_turn() {
+    register_cloaked();
+    let (start, set_id) = set_two_turns_ago("r4237000-ai-sick", CLOAKED);
+    assert!(!lethal_hint(&start, AI, None));
+    let turn = play_ai_turn(&start, AI, &mut ai_options("r4237000-ai-sick", AI_BUDGET));
+    assert!(!planned_attack_by(&turn, &set_id), "{}", trace(&turn));
+    assert!(turn.state.result.is_none(), "{}", trace(&turn));
+    assert_eq!(turn.state.players[HUMAN].hero.health, 4, "{}", trace(&turn));
+}
+
+/// R4237000: with Charge the revealed Unit may attack the hero at once, and the AI reveals it for lethal.
+#[test]
+fn r4237000_the_ai_reveals_a_charge_unit_and_attacks_the_hero_for_lethal() {
+    register_cloaked_charge();
+    let (start, set_id) = set_two_turns_ago("r4237000-ai-charge", CLOAKED_CHARGE);
+    assert!(lethal_hint(&start, AI, None));
+    let turn = play_ai_turn(&start, AI, &mut ai_options("r4237000-ai-charge", AI_BUDGET));
+    assert_eq!(
+        turn.state.result.and_then(|result| result.winner.player()),
+        Some(AI),
+        "{}",
+        trace(&turn)
+    );
+    assert!(
+        turn.decisions.iter().any(|decision| matches!(&decision.action,
+            ActionBody::Attack { attacker_id, .. } if *attacker_id == set_id)),
+        "{}",
+        trace(&turn)
+    );
 }
 
 #[test]

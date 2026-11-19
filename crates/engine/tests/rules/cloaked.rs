@@ -6,9 +6,10 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{act, act_result, put, slot};
 use super::fixtures::keywords_783::{
-    REVEAL_ECHO, board_783 as playing, cloak_spells, cloak_units, cloaked_asker, cloaked_bolt, cloaked_echo,
-    cloaked_field, cloaked_field_trap, cloaked_mourner, cloaked_token, cloaked_trap, cloaked_unit,
-    crater_cloaked, grunt, plain_spell, plain_unit, second_wind, set_resolver, toe_cracker, trap_discount,
+    REVEAL_ECHO, board_783 as playing, cloak_spells, cloak_units, cloaked_asker, cloaked_bolt,
+    cloaked_charger, cloaked_echo, cloaked_field, cloaked_field_trap, cloaked_mourner, cloaked_rusher,
+    cloaked_token, cloaked_trap, cloaked_unit, crater_cloaked, grunt, plain_spell, plain_unit, second_wind,
+    set_resolver, toe_cracker, trap_discount,
 };
 use super::fixtures::prompt_harness::{answer_keys, cast_now, open_as, round_trip};
 
@@ -405,9 +406,13 @@ mod r783006_cloaked_reveal {
         assert_eq!(revealed.id, set.id);
         assert_eq!(revealed.set_as, None);
         assert_eq!(revealed.face_up, Some(true));
-        assert_eq!(revealed.summoned_turn, Some(3));
+        // R4237000: it entered its unit zone on its reveal turn, though it was set on turn 3.
+        assert_eq!(revealed.summoned_turn, Some(5));
         assert!(state.players.p1.backrow[1].is_none());
-        // Set on an earlier turn, it may attack at once.
+        // R4237000: revealed, it is summoning sick that turn, and attacks on its controller's next.
+        assert_eq!(attack_count(&state, &set.id), 0);
+        state = end_turn(&state, "p1");
+        state = end_turn(&state, "p2");
         assert!(attack_count(&state, &set.id) > 0);
     }
 
@@ -619,6 +624,137 @@ mod r783006_cloaked_reveal {
 
     fn live_of(state: &GameState, id: &str) -> CardInstance {
         must(find_instance(state, id).cloned(), "the card")
+    }
+}
+
+/// R4237000 (issue #4237): a Unit revealed from Cloaked enters its unit zone on its reveal turn, whatever
+/// turn it was set on, so it is summoning sick then unless it has Rush or Charge (§4.1, R83, R171).
+mod r4237000_a_revealed_unit_is_summoning_sick {
+    use super::*;
+
+    fn live_of(state: &GameState, id: &str) -> CardInstance {
+        must(find_instance(state, id).cloned(), "the card")
+    }
+
+    fn attack_body(attacker: &str, target: &str) -> Value {
+        json!({ "type": "attack", "attackerId": attacker, "targetId": target, "playerId": "p1" })
+    }
+
+    fn offered(state: &GameState, attacker: &str, target: &str) -> bool {
+        legal_actions(state, P1).iter().any(|action| {
+            matches!(action, ActionBody::Attack { attacker_id, target_id }
+                if attacker_id == attacker && target_id == target)
+        })
+    }
+
+    /// p1's view of its unit in this lane.
+    fn unit_seen(state: &GameState, lane: i32) -> jackioh_engine::wire::UnitView {
+        must(
+            view_for(state, P1).you.units[(lane - 1) as usize].clone(),
+            "p1's unit in that lane, as p1 sees it",
+        )
+    }
+
+    /// `def_id` set by p1 into backrow lane 2 on turn 3 beside an enemy grunt in p2's unit lane 1, both
+    /// turns ended, then revealed on p1's turn 5: the state, the set card and the grunt.
+    fn revealed_later(seed: &str, def_id: &str) -> (GameState, CardInstance, CardInstance) {
+        let mut state = playing(seed);
+        let enemy = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
+        let unit = in_hand(&mut state, def_id, P1);
+        let set = cloak(&mut state, &unit.id, 2);
+        assert_eq!(state.turn, 3);
+        state = end_turn(&state, "p1");
+        state = end_turn(&state, "p2");
+        assert_eq!(state.turn, 5);
+        state = act(&state, reveal_body(&set.id, "p1"));
+        (state, set, enemy)
+    }
+
+    #[test]
+    fn r4237000_a_unit_revealed_a_turn_after_its_set_is_sick_that_turn_and_attacks_the_next() {
+        let (mut state, set, enemy) = revealed_later("r4237000-sick", &cloaked_unit().id);
+        assert_eq!(answer_keys(&mut state, &["hero:p2"]).error, None);
+        assert_eq!(live_of(&state, &set.id).summoned_turn, Some(state.turn));
+
+        // `legalActions` offers no attack by it, and the reducer refuses one at either target.
+        assert_eq!(attack_count(&state, &set.id), 0);
+        for target in ["hero-p2", enemy.id.as_str()] {
+            assert!(
+                refusal(&act_result(&state, attack_body(&set.id, target))).contains("summoning sick"),
+                "an attack on {target} is refused as sick"
+            );
+        }
+
+        // Its view: asleep and told why it cannot attack; it may still act, by its unspent switch (§4.1).
+        let seen = unit_seen(&state, 2);
+        assert_eq!(seen.instance_id, set.id);
+        assert_eq!(seen.sick, Some(true));
+        assert!(
+            seen.attack_reason
+                .is_some_and(|reason| reason.contains("summoning sick"))
+        );
+        assert!(seen.can_act);
+
+        // A sick Unit may still switch to Defense.
+        let switched = act(
+            &state,
+            json!({ "type": "switchPosition", "instanceId": set.id, "playerId": "p1" }),
+        );
+        assert_eq!(live_of(&switched, &set.id).position, Some(Position::Def));
+
+        // On its controller's next turn it is awake and attacks.
+        state = end_turn(&state, "p1");
+        state = end_turn(&state, "p2");
+        assert_eq!(unit_seen(&state, 2).sick, None);
+        assert!(attack_count(&state, &set.id) > 0);
+        let before = hero_health(&state, P2);
+        state = act(&state, attack_body(&set.id, "hero-p2"));
+        let attack = must(cloaked_unit().base.attack, "the Cloaked Unit's attack");
+        assert_eq!(hero_health(&state, P2), before - attack);
+    }
+
+    #[test]
+    fn r4237000_revealed_with_rush_it_may_attack_a_unit_not_the_hero_and_with_charge_the_hero_too() {
+        for (def, hero_too) in [(cloaked_rusher(), false), (cloaked_charger(), true)] {
+            let (state, set, enemy) = revealed_later(&format!("r4237000-{}", def.id), &def.id);
+            assert!(state.pending.is_none(), "{}: no Cry, no prompt", def.id);
+            assert_eq!(
+                live_of(&state, &set.id).summoned_turn,
+                Some(state.turn),
+                "{}",
+                def.id
+            );
+            // Sick, but neither Rush nor Charge is asleep (R849000).
+            assert_eq!(unit_seen(&state, 2).sick, None, "{}", def.id);
+
+            assert!(
+                offered(&state, &set.id, &enemy.id),
+                "{}: it may attack the grunt",
+                def.id
+            );
+            assert_eq!(
+                offered(&state, &set.id, "hero-p2"),
+                hero_too,
+                "{}: the hero",
+                def.id
+            );
+            assert_eq!(
+                act_result(&state, attack_body(&set.id, &enemy.id)).error,
+                None,
+                "{}: its attack on the grunt",
+                def.id
+            );
+            let on_hero = act_result(&state, attack_body(&set.id, "hero-p2"));
+            if hero_too {
+                assert_eq!(on_hero.error, None, "{}: Charge hits the hero", def.id);
+            } else {
+                assert!(
+                    refusal(&on_hero).contains("Rush cannot hit the hero"),
+                    "{}",
+                    def.id
+                );
+            }
+        }
     }
 }
 
@@ -1025,6 +1161,8 @@ mod r783009_what_a_hidden_cloaked_card_may_be {
                 cloaked_mourner().id,
                 cloaked_echo().id,
                 cloaked_asker().id,
+                cloaked_rusher().id,
+                cloaked_charger().id,
             ]
         );
     }

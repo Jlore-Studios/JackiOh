@@ -2072,7 +2072,7 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 - **Engine (since patch v0.3.7, R1040, R1041):** the Aura is `alt_play::cloak_hand_aura(Unit)`: while
   it acts on its controller's field, the Unit cards in that hand have Cloaked (R783007), so each may be
   set face-down at its own price (R783004, R783005) and revealed only by its Reveal, offered while it
-  has a unit zone to come out into (R783006); revealed on a later turn it may attack at once. A Unit
+  has a unit zone to come out into (R783006); revealed, it is summoning sick that turn (R4237000). A Unit
   set stays set when the Aura leaves. The face-down permission (`face_down_play`) is gone.
 - **Text (until patch v0.3.7):** Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.
   Aura: You may play your Units face-down as Animated Field Traps that reveal at the

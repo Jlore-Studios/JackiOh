@@ -329,6 +329,30 @@ pub fn cloaked_mourner() -> CardDef {
     unit(7863, "cloaked-mourner", 1, 1, 1, json!([{ "kind": "Cloaked" }]))
 }
 
+/// R4237000: a Cloaked 2/2 with Rush.
+pub fn cloaked_rusher() -> CardDef {
+    unit(
+        7874,
+        "cloaked-rusher",
+        1,
+        2,
+        2,
+        json!([{ "kind": "Cloaked" }, { "kind": "Rush" }]),
+    )
+}
+
+/// R4237000: a Cloaked 2/2 with Charge.
+pub fn cloaked_charger() -> CardDef {
+    unit(
+        7875,
+        "cloaked-charger",
+        1,
+        2,
+        2,
+        json!([{ "kind": "Cloaked" }, { "kind": "Charge" }]),
+    )
+}
+
 /// A Cloaked 1/1 Unit token: set face-down it is still the unit token it was printed as (R11, R2855000).
 pub fn cloaked_token() -> CardDef {
     json_as(spread(
@@ -412,6 +436,8 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         set_resolver(),
         cloaked_echo(),
         cloaked_asker(),
+        cloaked_rusher(),
+        cloaked_charger(),
     ]
 });
 
@@ -459,6 +485,8 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         flying_stacker(),
         flying_reborner(),
         crater_field(),
+        cloaked_rusher(),
+        cloaked_charger(),
     ] {
         table.insert(card.id, both(Script::default()));
     }
