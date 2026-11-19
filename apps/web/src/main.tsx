@@ -104,6 +104,7 @@ import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
 import { MenuShell, menuShellOn } from "./shell/MenuShell.tsx";
 import { Skeleton, useShownAfterDelay, type SkeletonVariant } from "./skeleton/Skeleton.tsx";
+import { loadSceneData, sceneDataReady } from "./cards/art/sceneLoader.ts";
 import { loadCardTables } from "./cards/chinese.ts";
 import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 
@@ -365,20 +366,22 @@ type EngineLoad = "loading" | "ready" | "failed";
  * whose retry asks `loadWasm()` again in place: a failed download is not cached (`wasm/index.ts`).
  * #4180, R1301: the Chinese card tables load beside the module, best-effort, so a tables-chunk
  * failure never bricks a gated screen: readiness is the module alone, and a flagged view's card
- * falls back to English until the tables arrive.
+ * falls back to English until the tables arrive. #4222: the scene tables load beside the module too,
+ * and the gate waits for both, failing closed to this panel on a scene-chunk failure: a painter
+ * fallback would draw the wrong picture and cache it.
  */
 function EngineGate({ children }: { children: ReactNode }): ReactElement {
-  const [load, setLoad] = useState<EngineLoad>(() => (wasmLoaded() ? "ready" : "loading"));
+  const [load, setLoad] = useState<EngineLoad>(() => (wasmLoaded() && sceneDataReady() ? "ready" : "loading"));
   useEffect(() => {
     if (load !== "loading") return;
     let live = true;
-    void loadWasm().then(
+    void Promise.all([loadWasm(), loadSceneData()]).then(
       () => {
         if (live) setLoad("ready");
       },
       (cause: unknown) => {
         if (!live) return;
-        console.error("the engine's WebAssembly module did not load", cause);
+        console.error("the engine's WebAssembly module or the scene tables did not load", cause);
         setLoad("failed");
       },
     );
@@ -957,8 +960,10 @@ if (import.meta.env.MODE !== "test") {
   // R1916000: one more boot on this device's language.
   countLocaleVisit();
   const localeReady = initLocale();
-  // #778: see THE ENGINE LOADS ALONGSIDE above.
+  // #778: see THE ENGINE LOADS ALONGSIDE above. #4222: the scene tables start beside it, so the
+  // first cards wait on both in `EngineGate` and `useEngineReady`, never on the entry chunk's bytes.
   void loadWasm().catch(() => undefined);
+  void loadSceneData().catch(() => undefined);
   void localeReady.then(() => {
     createRoot(host).render(
       <StrictMode>

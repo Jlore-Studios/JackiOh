@@ -427,7 +427,11 @@ from the card's id), so it prints, moves (each layer on its role's beat: `back`,
 picture does, and keeps the card's theme, layout, backdrop, sky scheme, emblem glyph and motif. The
 Stinkyscape and Training Grounds painters hand a recipe card to it (`svg.ts` `sceneArtSvg`), and a Legacy
 card draws its own scene wearing its Core card's frozen emblem (`legacySceneSvg`, R3393001), never its Core
-card's scene.
+card's scene. The kits and both recipe tables reach the client in a chunk `loadSceneData()`
+(`sceneLoader.ts`) fetches beside the engine module (#4222), installed into `scene.ts`'s slot; `scene.ts`
+keeps its API, its types and its small constants and reads the four tables from the slot. Before the install,
+`sceneRecipeOf` throws instead of answering null, so a face drawn before its gate fails a test instead of
+drawing the painter's picture.
 
 The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCENE_KIT_MIN_PER_CATEGORY` of
 each kind, 770 parts since the passes of Classic+ (R3390000), Core (R3392000), Classic+'s Alt art (R3396000),
