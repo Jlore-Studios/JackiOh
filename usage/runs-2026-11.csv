@@ -2802,3 +2802,5 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-19T06:57:11Z,44475220208,claude-7,opus,review,4231,hard,reviewed,,3,36,16786,1924034,1.5434,1,4,,,,,none,,1
 2026-11-19T07:12:34Z,44460079905,agy,gemini-3.8-flash-high,plan,4196,medium,failed,,150.3,120474,17742,0,,1,0,29,29,320,agy,none,,1
 2026-11-19T07:42:14Z,44478032574,claude-1,opus,plan,4196,hard,planned,,25.2,78,33974,3152671,2.0538,3,7,,,0.7,agy,fresh,other,1
+2026-11-19T08:36:36Z,44482651832,claude-1,opus,build,4196,hard,built,,9.5,42,13326,1573019,1.1177,8,10,,,36.7,claude-1,fresh,,1
+2026-11-19T08:48:46Z,44489909187,claude-1,opus,review,4266,hard,approved,,3.3,10,3385,290189,0.5042,10,11,,,0.7,,none,,1
