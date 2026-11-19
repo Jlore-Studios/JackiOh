@@ -28,7 +28,7 @@ use crate::app::App;
 use crate::config::MAX_FRIENDS;
 use crate::db::store::{ChallengeState, DailyInviteState, FriendRequestRow, Profile, StoreError, Tx};
 use crate::notifications::store::NotificationKind;
-use crate::notifications::{Notice, notify};
+use crate::notifications::{Notice, mark_subject, notify};
 use crate::social::live::{nudge_friends, push_social};
 use crate::social::presence::{Standing, Status, standings};
 use crate::social::watch::{revoke_between, revoke_blocked};
@@ -272,6 +272,15 @@ pub async fn post_request(app: &Arc<App>, req: Req) -> ApiResult {
             )],
         )
         .await;
+        // R4233000: taking their request answers it, marking its row read, after the add committed.
+        mark_subject(
+            app,
+            &me,
+            &[NotificationKind::FriendRequest],
+            &theirs.id,
+            Some(&target.id),
+        )
+        .await;
         return Ok(created(json!({ "requestId": theirs.id })));
     }
 
@@ -347,6 +356,15 @@ pub async fn accept_request(app: &Arc<App>, req: Req) -> ApiResult {
         )],
     )
     .await;
+    // R4233000: accepting the request marks its row read, after the add committed.
+    mark_subject(
+        app,
+        &me,
+        &[NotificationKind::FriendRequest],
+        &request_id,
+        Some(&sender_id),
+    )
+    .await;
     let friend = Friend::of(&sender, friendship.since, standing.get(&sender.id), None);
     Ok(crate::api::http::ok(json!({ "friend": to_json(&friend)? })))
 }
@@ -373,6 +391,18 @@ async fn remove_request(app: &App, req: Req, mine: fn(&FriendRequestRow, &str) -
     tx.friends_request_delete(&request.id).await?;
     tx.commit().await?;
     nudge_friends(app, &[&request.from_profile, &request.to_profile]);
+    // R4233000: a decline answers the request, marking its row read. A sender's cancel marks
+    // nothing.
+    if request.to_profile == me {
+        mark_subject(
+            app,
+            &me,
+            &[NotificationKind::FriendRequest],
+            &request.id,
+            Some(&request.from_profile),
+        )
+        .await;
+    }
     Ok(no_content())
 }
 

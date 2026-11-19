@@ -50,7 +50,7 @@ use crate::duos::rooms::{
     start_coop_match,
 };
 use crate::notifications::store::NotificationKind;
-use crate::notifications::{Notice, notify};
+use crate::notifications::{Notice, mark_subject, notify};
 use crate::seats::Taken;
 use crate::social::friends::are_friends;
 use crate::social::live::{nudge_lobby, send_lobby_invite};
@@ -649,6 +649,8 @@ pub async fn enter(app: &Arc<App>, req: Req) -> ApiResult {
     );
     write(app, &lobby, next, &[]).await?;
     tracing::info!(event = "lobby.entered", code = %code, guestProfileId = %profile.id, seat = role(place));
+    // R4233000: entering from the invite answers it, marking its row read, after the enter landed.
+    mark_subject(app, &profile.id, &[NotificationKind::LobbyInvite], &code, None).await;
     Ok(ok(json!({ "code": lobby.code })))
 }
 

@@ -46,6 +46,8 @@ use crate::config::{
 };
 use crate::db::store::{MatchPhase, Profile, QueueMode, ReplayRow, ResultRow};
 use crate::loadout::{Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
+use crate::notifications::mark_subject;
+use crate::notifications::store::NotificationKind;
 
 /// Unit conversion, not configuration.
 const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;
@@ -662,6 +664,18 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         .flat_map(|step| shown_defs(&step.view, &dealt))
         .collect();
     let card_loadouts = cards_due(&shown, &loadouts, &mut BTreeSet::new());
+    // R4233000: a friend opening a replay shared with them marks its row read, once the page built.
+    // The sharer's own opens, and refused or failed ones (returned above), mark nothing.
+    if reader != profile.id {
+        mark_subject(
+            app,
+            &profile.id,
+            &[NotificationKind::ReplayShared],
+            match_id,
+            None,
+        )
+        .await;
+    }
     ok_of(&ReplaySteps {
         match_id: replay.row.id.clone(),
         from: page.from,

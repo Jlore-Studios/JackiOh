@@ -14523,6 +14523,7 @@ mod r4039000_notifications {
             subject: Some(subject.to_string()),
             payload: json!({ "outcome": "win", "reason": "concede" }),
             created_at: at,
+            read: false,
         }
     }
 
@@ -14648,7 +14649,7 @@ mod r4039000_notifications {
             harness.name
         );
         assert_eq!(
-            q!(harness, t => t.notifications_unread(&ana.id)),
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
             5,
             "{}",
             harness.name
@@ -14674,13 +14675,13 @@ mod r4039000_notifications {
             harness.name
         );
         assert_eq!(
-            q!(harness, t => t.notifications_unread(&ana.id)),
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
             1,
             "{}",
             harness.name
         );
         assert_eq!(
-            q!(harness, t => t.notifications_unread(&bo.id)),
+            q!(harness, t => t.notifications_unread(&bo.id, at)),
             1,
             "{}",
             harness.name
@@ -14706,7 +14707,7 @@ mod r4039000_notifications {
             harness.name
         );
         assert_eq!(
-            q!(harness, t => t.notifications_unread(&bo.id)),
+            q!(harness, t => t.notifications_unread(&bo.id, at)),
             1,
             "{}",
             harness.name
@@ -14784,11 +14785,191 @@ mod r4039000_notifications {
         );
     }
 
+    /// R4233000: `notifications_mark_subject` marks only its account's unread rows of one of the
+    /// kinds about the subject (by the actor when one is given): another challenge's row, another
+    /// kind's, another actor's, another account's and read rows stay; a second call marks nothing;
+    /// nothing is deleted and no read row turns unread.
+    async fn r4233000_mark_subject_marks_only_matching_kind_subject_and_actor(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let cy = active_profile(harness, None).await;
+        let at = harness.now();
+        // A read row of the same kind, actor and subject stays read and is never replaced.
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-0", at), 100));
+        q!(harness, t => t.notifications_mark_read(&ana.id, None, at + 1));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-0", at + 2), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)).len(),
+            2,
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-1", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-2", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "ch-1", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&cy.id), "ch-1", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&cy.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-1", at), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)).len(),
+            6,
+            "{}",
+            harness.name
+        );
+
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_subject(&ana.id, &[NotificationKind::DailyChallenge], "ch-1", Some(&bo.id), at + 3)),
+            1,
+            "{}",
+            harness.name
+        );
+        let anas = q!(harness, t => t.notifications_page(&ana.id, None, 10));
+        assert_eq!(
+            anas.iter()
+                .find(|row| row.subject.as_deref() == Some("ch-1")
+                    && row.kind == NotificationKind::DailyChallenge
+                    && row.actor_id.as_deref() == Some(bo.id.as_str()))
+                .and_then(|row| row.read_at),
+            Some(at + 3),
+            "{}: {anas:?}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at + 3)),
+            4,
+            "{}",
+            harness.name
+        );
+        // The mark changes nothing twice, touches no other account and unreads nothing.
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_subject(&ana.id, &[NotificationKind::DailyChallenge], "ch-1", Some(&bo.id), at + 4)),
+            0,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&cy.id, at + 4)),
+            1,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)).len(),
+            6,
+            "{}: nothing deleted",
+            harness.name
+        );
+
+        // With no actor every actor's rows of the kinds match: the other kind's and the other
+        // actor's go, the other challenge's stays.
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_subject(&ana.id, &[NotificationKind::DailyChallenge, NotificationKind::DailyMove], "ch-1", None, at + 5)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at + 5)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10)))
+                .into_iter()
+                .filter(|subject| subject == "ch-2")
+                .count(),
+            1,
+            "{}",
+            harness.name
+        );
+    }
+
+    /// R4233000: `notifications_unread` leaves out a `lobbyInvite` whose lobby is gone, started or
+    /// expired, while other kinds count and the rows stay listed.
+    async fn r4233000_unread_leaves_out_a_dead_lobby_invite(harness: &StoreHarness) {
+        use jackioh_server::lobby::store::Lobby;
+
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let at = harness.now();
+        fn lobby(code: &str, host: &str, at: i64, expires_at: i64, started_at: Option<i64>) -> Lobby {
+            from(json!({
+                "code": code,
+                "host": host,
+                "guest": null,
+                "settings": { "format": "duel", "mode": "bo1" },
+                "hostPick": null,
+                "guestPick": null,
+                "hostReady": false,
+                "guestReady": false,
+                "rev": 0,
+                "catalogVersion": CATALOG_VERSION,
+                "createdAt": at,
+                "expiresAt": expires_at,
+                "matchId": null,
+                "seriesId": null,
+                "startedAt": started_at,
+            }))
+        }
+        assert!(q!(harness, t => t.lobbies_create(&lobby("LOBBAB", &bo.id, at, at + 900_000, None))));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::LobbyInvite, Some(&bo.id), "LOBBAB", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "game-1", at), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            2,
+            "{}: an open lobby's invite counts",
+            harness.name
+        );
+
+        // Started: the invite counts nowhere.
+        let started: Lobby = from(spread(
+            j(&lobby("LOBBAB", &bo.id, at, at + 900_000, None)),
+            json!({ "rev": 1, "startedAt": at + 1 }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&started, 0)));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at + 1)),
+            1,
+            "{}: a started lobby's invite counts nowhere",
+            harness.name
+        );
+
+        // Expired, then gone: still nowhere, while the other kind counts.
+        let expired: Lobby = from(spread(
+            j(&started),
+            json!({ "rev": 2, "startedAt": null, "expiresAt": at - 1 }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&expired, 1)));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            1,
+            "{}: an expired lobby's invite counts nowhere",
+            harness.name
+        );
+        assert!(q!(harness, t => t.lobbies_delete("LOBBAB")));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            1,
+            "{}: a gone lobby's invite counts nowhere",
+            harness.name
+        );
+
+        // Nothing deleted, nothing read: both rows stay listed.
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10))),
+            vec!["game-1", "LOBBAB"],
+            "{}",
+            harness.name
+        );
+    }
+
     both_stores!(
         r4039000_add_replaces_an_unread_row_and_keeps_the_newest,
         r4039000_page_reads_newest_first_before_an_id,
         r4039000_mark_read_touches_only_its_profile_up_to_an_id,
         r4039000_purge_drops_rows_before_its_cutoff,
         r4039000_a_deleted_profile_takes_its_rows_both_ways,
+        r4233000_mark_subject_marks_only_matching_kind_subject_and_actor,
+        r4233000_unread_leaves_out_a_dead_lobby_invite,
     );
 }

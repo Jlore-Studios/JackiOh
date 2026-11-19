@@ -759,3 +759,50 @@ mod r4039000_frames {
         assert_told_nothing(&cy_ws, from[3], "Cy").await;
     }
 }
+
+mod r4233000_push {
+    //! R4233000: a mark that changes a row pushes the owner's social frame, with the new count,
+    //! to its open `/ws/social` sockets.
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r4233000_a_mark_pushes_the_new_count() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        let served = serve(&app);
+        let (_ana_ws, bob_ws) = (connected(&served, &ana).await, connected(&served, &bob).await);
+
+        // Ana asks Bob: his sockets hear the row and the count of one.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/friends/requests",
+            &ana.token,
+            json!({ "username": bob.name }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let request_id = body["requestId"].as_str().expect("a request id").to_string();
+        let from = bob_ws.received();
+        bob_ws
+            .wait_for(from, PROMPTLY, |frame| frame["type"] == "notification")
+            .await
+            .unwrap_or_else(|| panic!("Bob: no notification frame: {:?}", bob_ws.frames()));
+        assert_eq!(next_social(&bob_ws, from).await["notificationsUnread"], 1);
+
+        // Bob accepts: answering marks the row, and the mark pushes his new count of none.
+        // Nothing else in the accept pushes Bob a social frame (the accept is told to Ana).
+        let from = bob_ws.received();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/friends/requests/{request_id}/accept"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(next_social(&bob_ws, from).await["notificationsUnread"], 0);
+    }
+}

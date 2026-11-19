@@ -31,7 +31,7 @@ pub(crate) async fn social_snapshot(app: &App, me: &str) -> Result<Value, ApiErr
     let (incoming, outgoing) = open_challenges(&mut tx, me, now).await?;
     let unread = unread_counts(&mut tx, me).await?;
     let daily_waiting = waiting_count(&mut tx, me, app.daily.now()).await?;
-    let notifications_unread = tx.notifications_unread(me).await?;
+    let notifications_unread = tx.notifications_unread(me, now).await?;
     tx.commit().await?;
     Ok(json!({
         "incoming": to_json(&incoming)?,

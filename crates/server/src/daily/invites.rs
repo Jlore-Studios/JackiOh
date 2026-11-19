@@ -30,7 +30,7 @@ use crate::config::{DAILY_CHALLENGE_TTL_DAYS, DAILY_MAX_ACTIVE_GAMES, DAILY_SEEK
 use crate::daily::games::{NewDaily, prepare_daily};
 use crate::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, ProfileStatus, QueueMode, Tx};
 use crate::notifications::store::NotificationKind;
-use crate::notifications::{Notice, notify};
+use crate::notifications::{Notice, mark_subject, notify};
 use crate::social::friends::are_friends;
 use crate::social::live::push_social;
 use crate::social::{created, no_content, not_found, param, refused};
@@ -335,6 +335,8 @@ pub async fn accept(app: &Arc<App>, req: Req) -> ApiResult {
         ],
     )
     .await;
+    // R4233000: answering the challenge marks its row read, after the accept committed.
+    mark_subject(app, &me, &[NotificationKind::DailyChallenge], &invite.id, None).await;
     Ok(created(json!({ "matchId": match_id })))
 }
 
@@ -372,6 +374,9 @@ async fn close(
             ],
         )
         .await;
+        // R4233000: answering the challenge marks its row read, after the decline committed. A
+        // cancel (and a seek's) marks nothing.
+        mark_subject(app, &me, &[NotificationKind::DailyChallenge], &invite.id, None).await;
     }
     Ok(no_content())
 }
