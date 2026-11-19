@@ -10877,20 +10877,28 @@
         "approvals": [
           "claude"
         ],
-        "builder": "muse",
-        "built_by": "muse",
+        "builder": "claude",
+        "built_by": "claude-8",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "crates/server/tests/api/lobbies.rs"
+          ],
+          "from": "5c858a03fc3157bfbec18d8e6d477e49119afbaf",
+          "main": "47478580a90c023ec3705c65bf8ad07696bd718c"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "44004979129",
-            "tier": "medium"
+            "run": "44460013654",
+            "tier": "strong"
           }
         ],
-        "sha": "5c858a03fc3157bfbec18d8e6d477e49119afbaf",
+        "sha": "c7986b45980fd922022e8bc8f510812ff425310c",
         "tiers": {
-          "claude": "medium"
+          "claude": "strong"
         }
       }
     },
