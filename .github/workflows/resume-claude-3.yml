@@ -48,7 +48,8 @@ jobs:
             echo "::error::SQUISHY_GITHUB_TOKEN is not set: post \`/harness resume claude-3\` on #148 by hand."
             exit 1
           fi
-          body=$(printf '/harness resume claude-3\n\n---\n_Posted by `.github/workflows/resume-claude-3.yml`, 40 hours after [the suspension](%s)._' "$SUSPENSION")
+          body=$(printf '%s\n\n---\n_Posted by %s, 40 hours after [the suspension](%s)._' \
+            "/harness resume claude-3" "\`.github/workflows/resume-claude-3.yml\`" "$SUSPENSION")
           url=$(GH_TOKEN="$SQUISHY_TOKEN" gh issue comment 148 --repo "$REPO" --body "$body")
           echo "Posted the resume: $url" | tee -a "$GITHUB_STEP_SUMMARY"
           gh workflow disable resume-claude-3.yml --repo "$REPO"
