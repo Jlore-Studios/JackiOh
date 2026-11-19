@@ -35081,7 +35081,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-19T22:05:15Z",
         "every": 5,
+        "findings": 0,
         "head": "51bd596b4bbf94e6eaf3e3d5ca3ec3fdabd80a17",
         "issue": 4274,
         "last_why": "interrupted: `claude-1` stops before it starts: 5-hour usage is 75%, at or over its 40% cap outside its hours; it resets at 2026-11-20T00:40:00Z",
@@ -35095,12 +35097,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:068370fa-1795125493",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44624070254",
         "sha": "3271750b6976d62a7e50e200f68ecf434b17396f",
         "started_at": "2026-11-19T21:58:26Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the C module replays golden seeds hash for hash under Node",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 375
