@@ -14779,7 +14779,7 @@
       }
     },
     "4231": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -14808,23 +14808,24 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4207,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-19T03:20:16Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "44455828855",
+      "run_id": "pending:82a06c86-1795071060",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 370,
-      "started_at": "2026-11-19T04:04:55Z",
+      "started_at": "2026-11-19T06:51:17Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 4,
@@ -15913,9 +15914,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T05:56:31Z",
+    "at": "2026-11-19T06:51:17Z",
     "url": "",
-    "what": "review #4260 on muse"
+    "what": "spot-check #4231 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-19T06:43:15Z",
@@ -36697,7 +36698,15 @@
         "n": 370,
         "pr": 4231,
         "queued_at": "2026-11-19T06:45:04Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:82a06c86-1795071060",
         "sha": "a5ff1f2cb14df49fc0222d952ece6ce5ef6282be",
+        "started_at": "2026-11-19T06:51:17Z",
         "status": "queued",
         "title": "Patch: Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)",
         "tries": 0
