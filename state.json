@@ -13709,11 +13709,11 @@
       "asks": [],
       "died": 0,
       "difficulty_by": {
-        "at": "2026-11-19T07:13:16Z",
+        "at": "2026-11-19T07:49:04Z",
         "difficulty": "hard",
-        "provider": "step-up",
-        "tier": "",
-        "why": "failed 3 times at difficulty:medium"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "no line of the rule holds (crates/tools only, three files), but the bot already rated it difficulty:hard (step-up) and a plan may not rate lower"
       },
       "failures": 0,
       "forced": false,
