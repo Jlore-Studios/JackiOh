@@ -129,7 +129,6 @@ mod tests {
                 assert!(!def.token);
                 assert!(!def.tags.contains(&Tag::Token));
                 // §5.1: a random pool never offers the card that generated it; the engine adds that.
-                assert_ne!(def.index, "7");
                 assert_ne!(def.id, "core-007");
             }
 
@@ -205,7 +204,7 @@ mod tests {
                 let def = crate::card_def(id);
                 assert_eq!(def.cost, CardCost::Fixed(3));
                 assert!(!def.token);
-                assert_ne!(def.index, "7");
+                assert_ne!(def.id, "core-007");
             }
 
             let chosen = ids[0].clone();

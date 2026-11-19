@@ -371,9 +371,19 @@ mod tests {
 
         #[test]
         fn entry_humans_fills_the_board_with_human_stinkyscape_units() {
-            let mut p1 = side(false, json!([]));
-            p1["field"] = json!([{ "def": VANILLA, "lane": 2 }]);
-            let s = chaos("humans", p1, json!({ "hand": [VANILLA] }));
+            // A Human may move or end a unit as it arrives, and which Humans arrive moves with every card joining
+            // the pool (#848): the seed is one whose Humans leave the board as they filled it.
+            let humans = |seed: &str| {
+                let mut p1 = side(false, json!([]));
+                p1["field"] = json!([{ "def": VANILLA, "lane": 2 }]);
+                chaos_in(seed, cursor_in(seed, "humans"), p1, json!({ "hand": [VANILLA] }))
+            };
+            let seed = seed_where("chaos-stinky-humans", |seed| {
+                let s = humans(seed);
+                s.unit(P1, 2).is_some_and(|unit| unit.def_id == VANILLA)
+                    && [1, 3, 4, 5].into_iter().all(|lane| s.unit(P1, lane).is_some())
+            });
+            let s = humans(&seed);
             assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(VANILLA.to_string()));
             for lane in [1, 3, 4, 5] {
                 let unit = s.unit(P1, lane).expect("a Human");

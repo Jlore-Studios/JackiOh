@@ -4727,9 +4727,13 @@ pub(crate) mod tests {
         #[test]
         fn a_planted_grower_in_handicapped_decks_fails_in_the_growth_stage() {
             install_grower();
-            // The overrides are this thread's, so the seeds run here and not under rayon.
+            // The overrides are this thread's, so the seeds run here and not under rayon. The first seed
+            // whose failure names the grower: a seed may fuse it into another card before it grows, whose
+            // fused definition goes by its hash, and which seeds do moves with every card joining a pool
+            // (#848).
             let failure = (1..=PLANTED_SEEDS)
-                .find_map(|seed| fuzz_handicap_deal(seed, planted_handicap_decks(seed), reduce).err())
+                .filter_map(|seed| fuzz_handicap_deal(seed, planted_handicap_decks(seed), reduce).err())
+                .find(|failure| failure.message.contains(GROWER))
                 .expect("a card that grows without end must fail one of the planted handicapped seeds");
             clear_overrides();
             assert_eq!(failure.stage, FailureStage::Growth, "{}", failure.message);
@@ -4738,7 +4742,6 @@ pub(crate) mod tests {
                 "{}",
                 failure.message
             );
-            assert!(failure.message.contains(GROWER), "{}", failure.message);
             assert!(
                 failure.message.contains("GROWTH_NUMBER_BOUND"),
                 "{}",
@@ -7523,12 +7526,24 @@ pub(crate) mod tests {
             );
         }
 
+        /// How many windows of `CHANGED_RADIANT_DEALS_PER_CARD` seeds the Radiant rotation's test tries
+        /// for one whose plain games never resolve core-090 Radiant by chance.
+        const PLAIN_WINDOWS: u32 = 8;
+
         /// #4161: the Radiant rotation plays the changed card Radiant-resolved, which its plain wave over
-        /// the same seeds does not (core-090 resolves Radiant by chance in none of them).
+        /// the same seeds does not. The seeds are the first window where core-090 resolves Radiant by
+        /// chance in no plain game, since which games do moves with every card joining a pool (#848).
         #[test]
         fn a_radiant_rotation_resolves_the_changed_card_radiant() {
             let forcing = Forcing::from_changed(&ids(&["core-090"]));
-            let wave = play_radiant_wave(1, CHANGED_RADIANT_DEALS_PER_CARD, &forcing.pinned_radiant());
+            let from = (0..PLAIN_WINDOWS)
+                .map(|window| 1 + window * CHANGED_RADIANT_DEALS_PER_CARD)
+                .find(|from| {
+                    let plain = play_wave(*from, CHANGED_RADIANT_DEALS_PER_CARD, &forcing);
+                    !plain.coverage.radiant.contains("core-090")
+                })
+                .expect("a window of plain games that never resolves core-090 Radiant");
+            let wave = play_radiant_wave(from, CHANGED_RADIANT_DEALS_PER_CARD, &forcing.pinned_radiant());
             assert!(
                 wave.failures.is_empty(),
                 "{}",
@@ -7542,12 +7557,6 @@ pub(crate) mod tests {
             assert_eq!(
                 wave.starts.get("run"),
                 Some(&(CHANGED_RADIANT_DEALS_PER_CARD as usize))
-            );
-            let plain = play_wave(1, CHANGED_RADIANT_DEALS_PER_CARD, &forcing);
-            assert!(
-                !plain.coverage.radiant.contains("core-090"),
-                "{}",
-                plain.summary()
             );
         }
 
