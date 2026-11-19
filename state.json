@@ -35709,7 +35709,8 @@
       "2026-11-19T20:46:01Z,muse,usage-command,call,44604748840,0,2026-11-20T00:58:00Z,47,2026-11-23T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-19T20:41:17Z,44599756345,claude-8,opus,build,4272,hard,built,,21.3,21,5262,612701,0.9056,5,6,,,41.4,claude-8,fresh,,1"
+      "2026-11-19T20:41:17Z,44599756345,claude-8,opus,build,4272,hard,built,,21.3,21,5262,612701,0.9056,5,6,,,41.4,claude-8,fresh,,1",
+      "2026-11-19T20:50:05Z,44604748840,muse,muse-spark-1.3-contributor,build,4274,medium,built,,43.2,0,0,0,,0,0,47,47,13.3,muse,none,,1"
     ]
   },
   "version": 1
