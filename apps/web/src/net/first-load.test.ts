@@ -4,7 +4,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { gzipSync } from "node:zlib";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -54,8 +54,14 @@ const SOURCE = join(SRC, "patches/source.ts");
  * or beside the module. `vite build --mode development`, as CI builds it, measured 834,287 bytes
  * (165,137 less). The budget is now 104 × 8192 (851,968), about 18 KB (2.1%) over that: putting the
  * catalog or the Chinese tables back would cross it.
+ *
+ * #4222 lowered it: the scene kits and both recipe tables (every `sceneKit*.ts`, `figureKit.ts` and
+ * all `*Recipes*.ts`) load in a chunk beside the engine module rather than with the entry chunk.
+ * `vite build --mode development`, as CI builds it, measured 473,538 bytes
+ * (360,749 less). The budget is now 59 × 8192 (483,328), about 10 KB (2.1%)
+ * over that: putting the scene data back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 851_968;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 483_328;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -123,6 +129,41 @@ it("#4130 importing engine.ts and the landing does not run parseCardAudioText", 
   expect(soundTablesNow()).toBeNull();
 });
 
+it("#4222 no non-test module statically imports scene data", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const importsSceneData = (specifier: string): boolean => {
+    const base = specifier.split("/").pop() ?? "";
+    if (!base.endsWith(".ts")) return false;
+    if (base === "sceneData.ts" || base === "figureKit.ts") return true;
+    if (base.startsWith("sceneKit")) return true;
+    return base.includes("Recipes");
+  };
+  const exempt = new Set<string>();
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    const base = basename(rel);
+    const dataFile =
+      rel === "cards/art/sceneData.ts" ||
+      (rel.startsWith("cards/art/") && (base.startsWith("sceneKit") || base === "figureKit.ts" || base.includes("Recipes")));
+    if (dataFile) {
+      exempt.add(rel);
+      return false;
+    }
+    // `import type` lines emit no bytes: only a value import joins the chunk.
+    const text = readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/.test(line))
+      .join("\n");
+    return [...text.matchAll(staticFrom)].some((match) => importsSceneData(match[1] ?? ""));
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+  for (const name of ["cards/art/sceneKit.ts", "cards/art/figureKit.ts", "cards/art/sceneRecipes.ts"]) {
+    expect(exempt, name).toContain(name);
+  }
+});
+
 describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
   /** The entry script and every file it preloads, as files under the built site. */
   function entryAndPreloads(): string[] {
@@ -183,6 +224,32 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     expect(probes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
     for (const probe of probes) {
       for (const text of texts) expect(text).not.toContain(probe as string);
+    }
+  });
+
+  it("#4222 the entry chunk and its preloads hold no scene kit or recipe text", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each occurs in `src` only in the scene data files, their tests, or `ART.md`: a kit part, a
+    // figure pose, and a figure item each a recipe places.
+    const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
+    for (const probe of sceneProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4222 the practice worker's bundle holds no scene data", () => {
+    const assets = join(BUILT, "assets");
+    const scripts = readdirSync(assets).filter((name) => name.endsWith(".js"));
+    expect(scripts.length).toBeGreaterThan(0);
+    const workers = scripts.filter((name) => {
+      const text = readFileSync(join(assets, name), "utf8");
+      return text.includes("the practice engine could not be loaded");
+    });
+    expect(workers.length).toBeGreaterThan(0);
+    const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
+    for (const name of workers) {
+      const text = readFileSync(join(assets, name), "utf8");
+      for (const probe of sceneProbes) expect(text, name).not.toContain(probe);
     }
   });
 
