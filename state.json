@@ -14270,6 +14270,14 @@
         "sha": "13fbe996c7646b7c9a4ed451dda88a9d483e61c6",
         "tiers": {}
       }
+    },
+    "4278": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-19T20:03:41Z",
+      "issue": 4274,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
