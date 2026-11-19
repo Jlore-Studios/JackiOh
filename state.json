@@ -14122,13 +14122,8 @@
     "what": "build #4270 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-19T20:26:29Z",
-    "notes": [
-      "delivered plan #4270 on claude-7 (run 44606317867): planned",
-      "started build #4270 on claude-7 (run 44608958095)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-19T20:34:27Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -14833,7 +14828,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T20:26:29Z",
+  "loop_tick": "2026-11-19T20:34:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
