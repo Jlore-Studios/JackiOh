@@ -81,6 +81,49 @@ mod tests {
         }
     }
 
+    /// M #10 Double Counting: its controller's Deaths run once more (R823).
+    const DOUBLE_COUNTING: &str = "meditative-010";
+    /// Core #96 My Pawn, a Trap that reveals only on a lethal attack.
+    const TRAP: &str = "core-096";
+
+    /// R4265001: the second reset keeps the Trap the first set again, one card (Duos fuzz seed 476).
+    #[test]
+    fn r4265001_a_death_run_twice_keeps_the_trap_its_first_run_set_again() {
+        let mut s = weapon_board(
+            "s084-twice",
+            json!({
+                "mana": 10,
+                "field": [VANILLA],
+                "backrow": [{ "def": DOUBLE_COUNTING, "lane": 1, "faceUp": true }, { "def": TRAP, "lane": 3 }],
+                "hand": [ID, HIT_JOB],
+                "library": filler(4),
+            }),
+            json!({}),
+        );
+        s.play(ID, json!({ "zone": 2 }));
+        let bogos = s.unit_at(P1, 2).id;
+        let trap = s.backrow(P1, 3).expect("the set Trap").id;
+        let destroy = json!({ "target": { "of": "instance", "instanceId": trap } });
+        crate::run_as(&mut s, jackioh_engine::effects::destroy(json_as(destroy)), P1);
+        s.end_turn().end_turn();
+        assert!(s.backrow(P1, 3).is_none());
+        assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == TRAP));
+        hit_job(&mut s, &bogos);
+        assert_eq!(s.last_count(GameEventType::RolledBack), 2);
+        let copies: Vec<String> = ["hand", "graveyard", "exile", "library"]
+            .iter()
+            .flat_map(|zone| s.pile(P1, zone))
+            .chain(s.backrow(P1, 3))
+            .filter(|card| card.def_id == TRAP)
+            .map(|card| card.id)
+            .collect();
+        let set = s.backrow(P1, 3).expect("the Trap stands set again");
+        assert_eq!(copies, vec![set.id.clone()]);
+        let bounced =
+            |event: &GameEvent| matches!(event, GameEvent::Bounced { instance_id, .. } if *instance_id == set.id);
+        assert!(!s.last_events().iter().any(bounced));
+    }
+
     #[test]
     fn the_radiant_death_rebuilds_it_radiant() {
         let mut s = weapon_board(

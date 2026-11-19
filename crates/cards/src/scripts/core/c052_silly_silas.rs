@@ -15,6 +15,7 @@
 //! player's play and card, so the Cry that follows is the player's and reads "left" and "right" from the
 //! player's seat (R3837002); Silas rotates with the rest and may cross back. `script_v0_6_2c` keeps the
 //! scripts through v0.6.2c, both faces staying with their player, for those replays (R767000).
+//! A face-down play by a lent Cloaked (M #45) is set, and revealed, on the player's own side (R4265000).
 //!
 //! The direction is a play-time choice, not a prompt: R81 names this card and §10.6 says no Core card
 //! opens a `direction` prompt, so the script declares `modes` and `chosen_options(ctx)` reads `ctx.modes`.
@@ -165,6 +166,31 @@ mod tests {
 
     mod n52_silly_silas_summoned_for_the_opponent_r3837000 {
         use super::*;
+
+        /// R4265000: Silas set by M #45's lent Cloaked stays on p1's side and reveals there, sick (fuzz seed 9854).
+        #[test]
+        fn r4265000_a_cloaked_play_sets_him_on_his_players_side_and_his_reveal_keeps_him_there() {
+            let mut s = scenario(json!({
+                "seed": "silas-cloaked",
+                "p1": { "mana": 10, "hand": ["core-052"], "field": [{ "def": "meditative-045", "lane": 1 }], "library": ["core-001", "core-001"] },
+                "p2": { "library": ["core-001", "core-001"] },
+            }));
+            s.play("core-052", json!({ "zone": 2, "row": "backrow", "faceDown": "cloaked" }));
+            let set = backrow_at(&s, P1, 2);
+            assert_eq!(set.def_id, "core-052");
+            assert_eq!(set.controller, P1);
+            assert!(set.set_as.is_some());
+            assert!(s.state().players.p2.units.iter().all(Option::is_none));
+            assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Summoned { player: P2, .. })));
+            s.end_turn().end_turn();
+            let turn = s.state().turn;
+            s.activate(set.id.as_str(), json!({ "ability": jackioh_engine::alt_play::CLOAKED_REVEAL }));
+            let revealed = s.card(set.id.as_str()).clone();
+            assert!(matches!(revealed.zone, Zone::Field { player: P1, row: Row::Units, .. }), "{}", slot_of(&revealed));
+            assert_eq!(revealed.controller, P1);
+            assert_eq!(revealed.summoned_turn, Some(turn));
+            assert!(s.attacks_of(set.id.as_str()).is_empty());
+        }
 
         #[test]
         fn r3837000_the_base_face_lands_in_the_opponents_leftmost_open_unit_zone_under_their_control() {
