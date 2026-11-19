@@ -14787,7 +14787,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-18T21:44:46Z",
+      "feedback_since": "2026-11-19T02:13:11Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4207,
@@ -14821,11 +14821,11 @@
         "provider": "claude-3",
         "run": "44414527945"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-19T02:13:11Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "claude"
