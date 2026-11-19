@@ -15792,14 +15792,12 @@
     "what": "review #4254 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-19T02:51:46Z",
+    "at": "2026-11-19T03:01:44Z",
     "notes": [
-      "#4241: `web (unit 7/8)` red in CI run 44441315953; its other early jobs have until 2026-11-19T02:54:22Z to report",
-      "delivered build #4238 on claude-3 (run 44430666818): built",
-      "started review #4253 on claude-3 (run 44447632312)",
-      "started revise #4241 on muse (run 44447713090)",
+      "delivered build #4237 on claude-7 (run 44432197028): built",
+      "started review #4254 on claude-7 (run 44448777505)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16505,7 +16503,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T02:51:46Z",
+  "loop_tick": "2026-11-19T03:01:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
