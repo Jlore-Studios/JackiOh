@@ -15112,13 +15112,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-6",
       "queued_at": "2026-11-19T00:35:15Z",
-      "run_id": "44430573531",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:7c1c22fc-1795053849",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 360,
-      "started_at": "2026-11-19T00:38:01Z",
+      "started_at": "2026-11-19T02:04:32Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15532,9 +15533,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T02:03:54Z",
+    "at": "2026-11-19T02:04:32Z",
     "url": "",
-    "what": "plan #4196 on agy"
+    "what": "spot-check #4239 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-19T01:49:17Z",
@@ -36246,7 +36247,15 @@
         "n": 360,
         "pr": 4239,
         "queued_at": "2026-11-19T01:50:34Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:7c1c22fc-1795053849",
         "sha": "14e3fd964e9c198680f0ebf671d33311631ca666",
+        "started_at": "2026-11-19T02:04:32Z",
         "status": "queued",
         "title": "Patch: a live 1v1 match checkpoints every 32 actions as it is played",
         "tries": 0
