@@ -81,6 +81,8 @@ function WayOutCard({ way, faceUp }: { way: WayOut; faceUp: boolean }): ReactEle
   const [up, setUp] = useState(faceUp);
   // A mouse turns a card over as it arrives, a moment before its click: the click reads this, not a render's `up`.
   const upNow = useRef(faceUp);
+  // #4270: the face's picture draws from the scene tables, which throw until they load (#4222), so it waits as `LostCard`'s face does.
+  const ready = useEngineReady();
   const turnOver = (): void => {
     upNow.current = true;
     setUp(true);
@@ -115,7 +117,7 @@ function WayOutCard({ way, faceUp }: { way: WayOut; faceUp: boolean }): ReactEle
           <CardBack />
         </span>
         <span className="not-found-way__side not-found-way__side--face" aria-hidden="true">
-          <ChoiceCard seed={`not-found:${way.key}`} label={label} detail={t(way.detail)} />
+          {ready ? <ChoiceCard seed={`not-found:${way.key}`} label={label} detail={t(way.detail)} /> : null}
         </span>
       </span>
     </a>

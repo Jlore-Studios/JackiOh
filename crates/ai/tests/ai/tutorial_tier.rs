@@ -9,28 +9,29 @@ use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
 /// Config numbers (CLAUDE.md rule 9). Thresholds accommodate re-deals (R244, SPEC §9.9, R290).
-/// Re-frozen across #775 and #817 (R817000).
+/// Re-frozen across #775 and #817 (R817000), and on tutorial-tier-4 after #4173's beam (R4132000, issue #4270).
 struct TutorialTier {
     /// The frozen seed series; no gate or tuning run plays it.
     series: &'static str,
     /// Games 1..tutorialGames against the AI at AI_TUTORIAL.
     tutorial_games: i32,
-    /// Greedy's wins against AI_TUTORIAL the run needs: about half of its 13. Measured: 7 of these 13
-    /// (57 of 100 on seeds 1–100, where a re-dealt run of 13 reaches 6 about 86 times in 100, and an AI
-    /// as strong as Easy, 35 of 100, lets it about once in 4).
+    /// Greedy's wins against AI_TUTORIAL the run needs: about half of its 13. Measured: 9 of these 13
+    /// (tutorial-tier-3's seeds 1–100 gave 49 of 100 after R4132000's beam, 57 before; a re-dealt run
+    /// of 13 reaches 6 about 68 times in 100 at 49% and 86 at 57%, and an AI as strong as Easy, 35 of
+    /// 100, lets it about once in 4).
     greedy_wins_vs_tutorial: i32,
     /// Games 1..easyGames are played at Easy too, for the comparison on the same seeds. An Easy game
     /// costs the AI more than twice the search of a tutorial one (4 crystals give it more to try), so
     /// this is kept smaller than tutorialGames.
     easy_games: i32,
     /// How many more of seeds 1..easyGames greedy wins against AI_TUTORIAL than against Easy. Measured:
-    /// 5 against 1 (57 against 35 on seeds 1–100, where a re-dealt run of 8 keeps AI_TUTORIAL ahead
-    /// about 74 times in 100).
+    /// 5 against 1 on tutorial-tier-4's seeds 1–8 (57 against 35 on tutorial-tier-3's seeds 1–100
+    /// before R4132000, where a re-dealt run of 8 keeps AI_TUTORIAL ahead about 74 times in 100).
     greedy_margin_over_easy: i32,
 }
 
 const TUTORIAL_TIER: TutorialTier = TutorialTier {
-    series: "tutorial-tier-3",
+    series: "tutorial-tier-4",
     tutorial_games: 13,
     greedy_wins_vs_tutorial: 6,
     easy_games: 8,
