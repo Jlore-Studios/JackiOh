@@ -108,6 +108,8 @@ A **panic** is an engine invariant broken (SURFACE §4.4.9). In WebAssembly it i
 an `unreachable` trap and the instance is dead, so it must be **replaced by a fresh one**, with its
 state lost. The panic's text (message and place) is kept before the trap, and is still readable at
 `jackioh_result_ptr()` and `jackioh_result_len()` afterwards, as the result buffer holds it; log it.
+The module ships without its `name` section (#4275's smaller build strips it), so a trap's backtrace
+carries no function names; the text above still reads.
 
 ## The bindings
 

@@ -221,11 +221,45 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
       rustup target add "$WASM_TARGET"
     fi
   fi
-  cargo build -p jackioh-wasm-c --release --target "$WASM_TARGET"
+  # #4275: the C module a port translates carries every byte, so it builds small. Scoped
+  # `CARGO_PROFILE_RELEASE_*` env on this line alone (never exported: the browser module above is
+  # untouched): `opt-level = "z"` (9.8 MB raw saved alone), one codegen unit (7.3 MB alone, and
+  # thinner LTO across the crate) and no name section (6.8 MB; a trap's backtrace loses names, but
+  # the panic's text stays readable, checked below). Together they took the module from 42,987,413
+  # to 18,760,875 B raw (7,453,285 to 3,438,587 gzipped) on 2026-11-19. Kept out: `opt-level = "s"`
+  # (smaller raw alone, bigger beside strip), `lto = "fat"` (miscompiles to a module V8 rejects:
+  # "not enough arguments on the stack"), `panic = "abort"` (19 KB saved for a workspace-wide
+  # constraint) and `wasm-opt -Oz` (below, when it is on PATH at all).
+  CARGO_PROFILE_RELEASE_OPT_LEVEL=z \
+    CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
+    CARGO_PROFILE_RELEASE_STRIP=symbols \
+    cargo build -p jackioh-wasm-c --release --target "$WASM_TARGET"
+  # `wasm-opt -Oz` when it is on PATH, shrinking the module in place; skipped with a message when
+  # it is not (as here and on CI, which have no wasm-opt).
+  if command -v wasm-opt >/dev/null 2>&1; then
+    wasm-opt -Oz "$C_MODULE" -o "$C_MODULE.opt" && mv "$C_MODULE.opt" "$C_MODULE"
+  else
+    echo "build-wasm: no wasm-opt on PATH, skipping -Oz" >&2
+  fi
   if ! command -v node >/dev/null 2>&1; then
     echo "build-wasm: node is needed to check that the C module imports nothing (JACKIOH_WASM_C=1)" >&2
     exit 1
   fi
   node -e 'const fs = require("fs"); const found = WebAssembly.Module.imports(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); if (found.length > 0) { console.error("build-wasm: the C module imports " + JSON.stringify(found)); process.exit(1); }' "$C_MODULE"
-  echo "build-wasm: built $C_MODULE, which imports nothing"
+  # The panic's text must stay readable at jackioh_result_ptr()/jackioh_result_len() after the
+  # trap (crates/wasm/c/README.md, Errors and traps): a huge alloc panics deterministically, and
+  # the hook stows its message before the unreachable trap. Any silence fails the build.
+  node --input-type=module -e '
+    import { readFileSync } from "node:fs";
+    const bytes = readFileSync(process.argv[1]);
+    const { instance } = await WebAssembly.instantiate(bytes, {});
+    instance.exports.init();
+    let trapped = false;
+    try { instance.exports.jackioh_alloc(0xffffffff); } catch { trapped = true; }
+    if (!trapped) { console.error("build-wasm: the C module did not trap on its panic probe"); process.exit(1); }
+    const len = instance.exports.jackioh_result_len();
+    const text = Buffer.from(instance.exports.memory.buffer.slice(instance.exports.jackioh_result_ptr(), instance.exports.jackioh_result_ptr() + len)).toString("utf8");
+    if (!text) { console.error("build-wasm: the C module kept no panic text after the trap"); process.exit(1); }
+  ' "$C_MODULE"
+  echo "build-wasm: built $C_MODULE, which imports nothing: $(wc -c <"$C_MODULE") B raw, $(gzip -9 -c "$C_MODULE" | wc -c) B gzipped"
 fi
