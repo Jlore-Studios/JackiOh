@@ -14255,24 +14255,16 @@
         ],
         "builder": "claude",
         "built_by": "claude-3",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/09-architecture.md"
-          ],
-          "from": "5e71cb6206357c4ef4588b760e8e76c7294527e4",
-          "main": "14e3fd964e9c198680f0ebf671d33311631ca666"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "44444057750",
+            "run": "44458803568",
             "tier": "strong"
           }
         ],
-        "sha": "40d3bca01d592a4556673155ca16e994c3ab034e",
+        "sha": "ed6a023e65c7f3a18c671b1b692ac92593c5c585",
         "tiers": {
           "claude": "strong"
         }
