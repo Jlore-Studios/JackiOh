@@ -15011,15 +15011,8 @@
       "taken_asks": []
     },
     "4238": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44427962568",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-19T00:34:16Z",
-        "until": "2026-11-19T01:04:16Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15031,10 +15024,9 @@
         "reason": "planned on opus",
         "trail": "p crates/tools/fuzz-corpus/README.md 2>/dev/null | cut -c1-300\", \"description\": \"Check fuzz corpus for pinned hashes\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/classify.rs | cut -c1-400\", \"description\": \"Read classify.rs header\"}\n- Bash: {\"command\": \"grep -n \\\"claims\\\\|fn rule\\\\|RULE_MIN_GAMES\\\\|\\\\\\\"rule\\\\\\\"\\\" crates/tools/src/classify.rs | head -40\", \"description\": \"Find claims logic in classify\"}\n- Bash: {\"command\": \"sed -n 1405,1430p crates/tools/src/classify.rs; sed -n 1,40p crates/tools/src/claims.rs | cut -c1-300\", \"description\": \"Read claims check behavior\"}\n- Bash: {\"command\": \"sed -n 1370,1404p crates/tools/src/classify.rs\", \"description\": \"Read how classify reads base and head\"}\n- Bash: {\"command\": \"sed -n 40,200p crates/tools/src/claims.rs\", \"description\": \"Read claims problems function\"}\n- Bash: {\"command\": \"grep -rn \\\"parent-bin\\\" docs/*.md crates/tools/README.md bot/README.md .harness 2>/dev/null | cut -c1-300 | head -20\", \"description\": \"Find guidance on running classify stage 2\"}\n- Bash: {\"command\": \"sed -n 315,345p docs/issues-and-patches.md\", \"description\": \"Read patch claim guidance in issues-and-patches\"}\n- Bash: {\"command\": \"sed -n 56,100p crates/tools/src/classify.rs\", \"description\": \"Read classify stage-2 constants\"}\n- Bash: {\"command\": \"sed -n 1,60p scripts/worktree.sh\", \"description\": \"Read worktree.sh usage\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" .github/workflows/ci.yml | head -20\", \"description\": \"See how CI runs classify\"}\n- Bash: {\"command\": \"ls spec/rulings/ | grep -E \\\"^R(0688|3546000|3554003|2533000|0065|0011|0218|0767000|0033|0227|0001|0012|0053)\\\\.md$\\\"; grep -n \\\"R690\\\\]\\\\]\\\" spec/11-rulings.md | head -3 | cut -c1-300; \u2026\n- Bash: {\"command\": \"grep -n \\\"R690\\\\b\\\" spec/11-rulings.md | head -3 | cut -c1-200; grep -n \\\"mod r2248000\\\\|^mod \\\\|^ mod \\\" crates/engine/tests/rules/effects_summon.rs | sed -n 1,40p | grep -n \\\"\\\" | awk \u2026\n- Bash: {\"command\": \"sed -n 167p spec/08-catalog.md | grep -o \\\"The Radiant[^|]*\\\\|Recruit[^.]*\\\\.\\\" | head; sed -n 157p spec/08-catalog.md | grep -o \\\"Expedition Map[^;]*;[^;]*\\\" | head -3; sed -n 117p spec\u2026\n- Bash: {\"command\": \"grep -n -i \\\"recruit\\\" crates/engine/README.md docs/v0.3.0/SURFACE.md crates/cards/README.md 2>/dev/null | cut -c1-250 | head; grep -rn -i \\\"recruit\\\" docs/classic-sets.md | grep -i \\\"fu\u2026\n- Bash: {\"command\": \"grep -n -i \\\"fizzl\\\\|no zone\\\\|no open zone\\\\|row full\\\\|row is full\\\\|board is full\\\\|stops\\\\|the same card\\\\|never an older\\\" crates/cards/src/scripts/classic/c001_curse_of_the_forgott\u2026\n- Bash: {\"command\": \"sed -n 1,16p crates/cards/src/scripts/classic/c013_boots_on_the_ground.rs; echo ===; sed -n 1,14p crates/cards/src/scripts/classic/c031_cookie_guild.rs; echo ===; sed -n 1,12p crates/car\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn put\\\\b\\\\|pub fn put(\\\" -A25 crates/engine/tests/rules/fixtures/harness.rs | head -40\", \"description\": \"Read harness put helper\"}\n- Bash: {\"command\": \"grep -n -i \\\"recruit\\\\|is_permanent\\\\|library\\\" crates/engine/src/subsystems/hero_power.rs | head -20; grep -rn \\\"fn .*recruit\\\\|Recruit =>\\\" crates/engine/src/*.rs crates/engine/src/sub\u2026\n- Bash: {\"command\": \"sed -n 1625,1670p crates/engine/tests/rules/rulings_a.rs\", \"description\": \"Read R65 recruit test in rulings_a\"}\n- Bash: {\"command\": \"grep -n \\\"fn player_note_problems\\\" -A60 crates/tools/src/patches.rs | grep -n \\\"push\\\\|format!\\\\|const\\\\|len()\\\" | head -30\", \"description\": \"Read player note rules\"}\n- Bash: {\"command\": \"sed -n 750,800p crates/tools/src/patches.rs\", \"description\": \"Read player note rule details\"}\n- Bash: {\"command\": \"grep -rn \\\"const PLAYER_LINE_MAX\\\" crates/tools/src/; grep -n \\\"\\\\-\\\\-rule\\\\|\\\\-\\\\-plays\\\\|fragment that claims nothing\\\\|claims nothing\\\" crates/tools/src/patches.rs | head -10\", \"descr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4238/.bot-plan.md\", \"content\": \"# Draft plan, issue #4238 (planner notes)\\n\\n## Findings so far\\n- crates/engine/src/effects/summon.rs: `recruit` (~11\u2026\n- Bash: {\"command\": \"grep -n \\\"fn stands_in_backrow\\\\|fn placed\\\\|fn summoned_def_ids\\\\|fn def_ids_of\\\" crates/engine/tests/rules/effects_summon.rs crates/engine/tests/rules/fixtures/harness.rs | head; grep \u2026\n- Bash: {\"command\": \"grep -n \\\"stands_in_backrow\\\" crates/engine/tests/rules/effects_summon.rs | head -3; sed -n 1225,1240p crates/engine/tests/rules/effects_summon.rs\", \"description\": \"Check stands_in_backr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4238/.bot-plan.md\", \"content\": \"## Goal\\n\\nA Recruit (`recruit`, `recruitAll`, either pile) skips any matching card that no summon could place, and ta\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Check plan length\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"A Recruit (`recruit`, `recruitAll`, either pile) skips any matching card that no summon could place, and takes\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"`crates/engine/tests/rules/recruit_variants.rs`. Use its fixtures (`body`, `cheap_unit`, `pricy_unit`, `plain_trap`, `fie\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4238/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" proven_in: recruit_variants.rs, effects_summon.rs (both crates/engine/tests/rules/), crates/cards/src/scripts/classic/c0\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- [ ] Every Recruit skips matching cards that can't land, and each `count` scan rechecks (engine tests green).\\\\n- [ ] R6\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4238/.bot-plan.md\"}\n- said: ## Goal A Recruit (`recruit` or `recruitAll`, from the library or the exile) passes over any matching card that no summon could place. It takes the first card in scan order that both matches and can land. With `count: N`, each scan rechecks this against the board the last scan left. R690 applies on\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-19T00:18:33Z",
       "owner_why": "it plans it",
@@ -15047,9 +15039,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-19T00:14:22Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44427962568",
+      "run_id": "pending:7668ba64-1795048695",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-19T00:18:33Z",
+      "started_at": "2026-11-19T00:38:42Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15252,9 +15244,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T00:38:01Z",
+    "at": "2026-11-19T00:38:42Z",
     "url": "",
-    "what": "review #4239 on muse"
+    "what": "build #4238 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-19T00:25:20Z",
