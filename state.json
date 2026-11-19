@@ -13706,7 +13706,9 @@
     },
     "4196": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6994557444"
+      ],
       "build_next": {
         "from_run": "44478032574",
         "model": "opus",
@@ -13757,9 +13759,7 @@
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [
-        "c:6994557444"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4197": {
