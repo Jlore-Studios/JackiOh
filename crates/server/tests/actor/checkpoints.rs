@@ -156,6 +156,21 @@ struct Seen {
     telemetry: Value,
 }
 
+/// The telemetry with the live clock readings stripped: `clockLeftMs` is recorded as each action
+/// lands and a fold has no clock to read it from, so a checkpoint written while the match is
+/// played differs from a whole-log fold in exactly that field.
+fn telemetry_without_clocks(actor: &MatchActor) -> Value {
+    let mut value = to_json(&actor.telemetry());
+    for timing in value
+        .get_mut("actionTimings")
+        .and_then(Value::as_array_mut)
+        .expect("action timings")
+    {
+        timing.as_object_mut().expect("an object").remove("clockLeftMs");
+    }
+    value
+}
+
 async fn seen(actor: &MatchActor) -> Seen {
     actor.idle().await;
     let state = actor.engine_state();
@@ -258,6 +273,122 @@ async fn a_drained_match_rebuilds_from_its_checkpoint_as_a_full_fold_rebuilds_it
         );
     }
     assert_eq!(logged(&app).await.len(), LOGGED + TAIL);
+}
+
+/// #4224: a live match checkpoints every `MATCH_CHECKPOINT_MIN_ACTIONS` rows as it is played, and a
+/// crash rebuild resumes from the last periodic one, as a co-op match's does.
+#[tokio::test(start_paused = true)]
+async fn a_live_match_checkpoints_every_min_actions_rows_as_it_is_played_and_a_crash_resumes_there() {
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    // One move past the rows played below, so the rebuilt actor can carry its sequence on.
+    let (seed, decks, actions) = game(LOGGED + 1);
+    let row = live_row(&seed, &decks);
+    write_match(&app, &row).await;
+    let actor = actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(0));
+
+    let every = usize::try_from(MATCH_CHECKPOINT_MIN_ACTIONS).expect("a small count");
+    for (n, action) in actions[..LOGGED].iter().enumerate() {
+        let seq = n + 1;
+        assert_eq!(
+            to_json(
+                &actor
+                    .submit(action.player_id, action.nonce.clone(), action.body.clone())
+                    .await
+            ),
+            json!({ "type": "ack", "nonce": action.nonce, "seq": seq }),
+            "at seq {seq}"
+        );
+        if seq == every - 1 {
+            actor.idle().await;
+            assert!(checkpoints(&app).await.is_empty(), "none before the interval");
+        }
+        if seq == every {
+            actor.idle().await;
+            let stored = checkpoints(&app).await;
+            assert_eq!(stored.len(), 1);
+            assert_eq!(stored[0].seq, MATCH_CHECKPOINT_MIN_ACTIONS);
+            assert_eq!(stored[0].nonce, format!("cp-{every}"));
+        }
+    }
+    actor.idle().await;
+    let stored = checkpoints(&app).await;
+    assert_eq!(stored.len(), 1);
+    assert_eq!(
+        stored[0].seq, MATCH_CHECKPOINT_MIN_ACTIONS,
+        "the next is due at twice the interval"
+    );
+    assert_eq!(logs.named("match.checkpoint.written").len(), 1);
+
+    // A crash, or the reaper's stop, writes none: the rebuild resumes from the periodic one.
+    app.matches.stop(MATCH_ID).await;
+    let rebuilt = actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(MATCH_CHECKPOINT_MIN_ACTIONS));
+    let resumed = seen(&rebuilt).await;
+
+    app.matches.stop(MATCH_ID).await;
+    set_checkpoint(&app, None).await;
+    let whole = actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(0));
+    let from_the_log = seen(&whole).await;
+
+    assert_eq!(resumed.hash, from_the_log.hash, "state hash");
+    assert_eq!(resumed.state, from_the_log.state, "state");
+    assert_eq!(resumed.views, from_the_log.views, "views");
+    assert_eq!(resumed.clocks, from_the_log.clocks, "clocks");
+    assert_eq!(
+        telemetry_without_clocks(&rebuilt),
+        telemetry_without_clocks(&whole),
+        "telemetry"
+    );
+    assert_eq!(resumed.hash, hash_state(&folded(&row, &actions[..LOGGED])));
+    assert!(logs.named("match.checkpoint.refused").is_empty());
+    assert!(logs.named("match.fold.errors").is_empty());
+    assert!(logs.named("bot.turns.replay_failed").is_empty());
+    // §9.3: the nonce map and the seq counter are the whole log's on both: a nonce sent again
+    // by its own seat gets its original ack (R4013000: another seat's copy is taken).
+    for actor in [&rebuilt, &whole] {
+        for seq in [1, LOGGED] {
+            let action = &actions[seq - 1];
+            assert_eq!(
+                to_json(
+                    &actor
+                        .submit(action.player_id, action.nonce.clone(), ActionBody::EndTurn)
+                        .await
+                ),
+                json!({ "type": "ack", "nonce": action.nonce, "seq": seq })
+            );
+        }
+    }
+    // The rebuilt actor carries its sequence on from the checkpoint.
+    let next = &actions[LOGGED];
+    assert_eq!(
+        to_json(
+            &rebuilt
+                .submit(next.player_id, next.nonce.clone(), next.body.clone())
+                .await
+        ),
+        json!({ "type": "ack", "nonce": next.nonce, "seq": LOGGED + 1 })
+    );
+    assert_eq!(logged(&app).await.len(), LOGGED + 1);
+
+    // Conceding ends the match, which drops the periodic checkpoint, and the drain's checkpoint on
+    // a finished match writes none.
+    let seat = seat_to_act(&rebuilt.engine_state()).expect("a seat to act");
+    let conceded = rebuilt
+        .submit(seat, "cp-concede".to_string(), ActionBody::Concede)
+        .await;
+    assert_eq!(
+        to_json(&conceded),
+        json!({ "type": "ack", "nonce": "cp-concede", "seq": LOGGED + 2 })
+    );
+    rebuilt.idle().await;
+    assert!(rebuilt.engine_state().result.is_some());
+    assert!(checkpoints(&app).await.is_empty(), "the ending drops it");
+    rebuilt.checkpoint().await;
+    assert!(checkpoints(&app).await.is_empty(), "a finished match writes none");
 }
 
 #[tokio::test(start_paused = true)]
