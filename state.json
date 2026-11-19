@@ -14343,9 +14343,12 @@
     "what": "revise #4281 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-19T22:19:51Z",
+    "at": "2026-11-19T22:26:49Z",
     "notes": [
-      "delivered review #4281 on claude-7 (run 44625392553): approved"
+      "CI on #4281: #4281: queued a CI fix",
+      "started revise #4281 on claude-7 (run 44628876894)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15051,7 +15054,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T22:19:51Z",
+  "loop_tick": "2026-11-19T22:26:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
