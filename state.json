@@ -15374,16 +15374,15 @@
     "what": "build #4237 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-19T00:33:12Z",
+    "at": "2026-11-19T00:45:42Z",
     "notes": [
-      "delivered plan #4238 on claude-3 (run 44427962568): planned",
-      "delivered build #4224 on muse (run 44422938660): built",
-      "delivered build #4233 on muse (run 44422769963): built",
-      "started review #4240 on muse (run 44430486965)",
-      "started review #4239 on muse (run 44430573531)",
-      "started build #4238 on claude-3 (run 44430666818)",
+      "delivered plan #4237 on claude-7 (run 44427877442): planned",
+      "delivered build #4222 on muse (run 44422852839): built",
+      "delivered revise #4210 on claude-8 (run 44419388783): approved",
+      "started review #4241 on muse (run 44432100409)",
+      "started build #4237 on claude-7 (run 44432197028)",
       "nothing more to start: nothing is queued",
-      "pruned 7 plan file(s) older than 7 days"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16089,7 +16088,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T00:33:12Z",
+  "loop_tick": "2026-11-19T00:45:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
