@@ -14821,6 +14821,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 370,
       "started_at": "2026-11-19T04:04:55Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36685,9 +36686,33 @@
         "title": "Patch: every counter on a hero's portrait can be read",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "554905eb713dbb67674c169107dbdaf839081197",
+        "issue": 4207,
+        "merged_at": "2026-11-19T06:45:04Z",
+        "n": 370,
+        "pr": 4231,
+        "queued_at": "2026-11-19T06:45:04Z",
+        "sha": "a5ff1f2cb14df49fc0222d952ece6ce5ef6282be",
+        "status": "queued",
+        "title": "Patch: Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)",
+        "tries": 0
       }
     ],
-    "count": 369
+    "count": 370
   },
   "statistics": {
     "at": "2026-11-19T06:39:45Z"
