@@ -137,7 +137,8 @@ mod tests {
         #[test]
         fn r3549001_the_mineral_pool_is_s_plus_44_to_50() {
             let _registered = drilling(false, "s54-registered", 1);
-            let pool: Vec<String> = crate::query::query(&minerals()).iter().map(|def| def.index.clone()).collect();
+            let pool: Vec<String> =
+                with_pool_shift(0, || crate::query::query(&minerals()).iter().map(|def| def.index.clone()).collect());
             assert_eq!(pool, ["44", "45", "46", "47", "48", "49", "50"]);
             let mut seen: IndexSet<String> = IndexSet::new();
             for (_, card) in finds(false, 150) {

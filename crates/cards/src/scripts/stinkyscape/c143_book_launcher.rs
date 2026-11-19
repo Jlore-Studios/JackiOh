@@ -163,7 +163,7 @@ mod tests {
     /// The ids of the Books whose first target declares `aim`.
     fn aimed(aim: TargetAim) -> Vec<String> {
         crate::register_all();
-        crate::query::pool_ids(&json_as(books(aim)))
+        with_pool_shift(0, || crate::query::pool_ids(&json_as(books(aim))))
     }
 
     #[test]

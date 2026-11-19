@@ -501,7 +501,13 @@ mod tests {
                 });
                 s.state_mut().rng_cursor = cursor;
                 s.play(CHAOS, json!({}));
-                let cast: Vec<Value> = events_of(&s, "cardPlayed").into_iter().skip(1).collect();
+                // The recast edition rolls an entry of its own, which may cast more cards (S+ #142's Jlockeed
+                // casts): the Call to Chaos cast is the one counted.
+                let cast: Vec<Value> = events_of(&s, "cardPlayed")
+                    .into_iter()
+                    .skip(1)
+                    .filter(|event| EDITIONS.contains(&event["defId"].as_str().unwrap_or_default()))
+                    .collect();
                 assert_eq!(cast.len(), 1);
                 assert_eq!(cast[0]["costPaid"], json!(0));
                 editions.insert(cast[0]["defId"].as_str().unwrap_or("").to_string());

@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn r3869002_the_miner_pool_is_the_five_it_named_in_the_same_order() {
         crate::register_all();
-        let pool = crate::query::pool_ids(&crate::query::miners());
+        let pool = with_pool_shift(0, || crate::query::pool_ids(&crate::query::miners()));
         assert_eq!(pool, MINERS.map(str::to_string).to_vec());
     }
 
