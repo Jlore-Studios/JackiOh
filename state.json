@@ -15222,13 +15222,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "032c626fefa6d47c2bb28c06fac4b6cbd209981e",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "44432100409",
+            "tier": "medium"
+          }
+        ],
+        "sha": "e4f05418005d9d399417062a8604034bc536afd7",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4242": {
