@@ -13960,15 +13960,8 @@
       "taken_asks": []
     },
     "4272": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44593606891",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-19T19:32:01Z",
-        "until": "2026-11-19T20:02:01Z"
-      },
       "handoff": {
         "at": "2026-11-19T19:28:57Z",
         "family": "claude",
@@ -13978,9 +13971,8 @@
         "reason": "planned on opus",
         "trail": "AILED|^failures:|panicked|test result|^error\\\" | head -60\", \"des\u2026\n- Bash: {\"command\": \"git show --stat --format='%h %ad %s' --date=iso 4f529c2376 | head; git show --stat --format='%h %ad %s' --date=iso 36c66c0e35 | head -5; git log --format='%h %ad %s' --date=iso 36c66c0e3\u2026\n- Bash: {\"command\": \"ls crates/cards/tests/ crates/cards/tests/cards 2>/dev/null | head -60\", \"description\": \"List cards integration test modules\"}\n- Bash: {\"command\": \"ls crates/cards/tests/cross | head -80; ls crates/cards/tests/cross | wc -l\", \"description\": \"List cross test modules\"}\n- Bash: {\"command\": \"until grep -qE \\\"test result|^error\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4272/a8e64c8a-3e9d-420f-afa6-b79f38977296/tasks/bfwij7uah.output; do sleep 5; done; sleep 3; cat \u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && CARGO_TARGET_DIR=/tmp/ship-target cargo test -p jackioh-cards --test cards r2201001_random_games_under_the_hold 2>&1 | grep -v \\\"^\\\\s*Compiling\\\" | tail -30\", \"descr\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4272/crates/cards/tests/cross/lesson_pools.rs\"}\n- Bash: {\"command\": \"cat spec/rulings/R2201001.md; grep -n '\\\"stinkyscapeplus-123\\\"' -A20 crates/cards/catalog.json 2>/dev/null | head -30 || true; ls crates/cards/*.json | head\", \"description\": \"Read ruling\u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && python3 - <<'EOF'\\np='crates/cards/tests/cross/lesson_pools.rs'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\" if !named_made.contains(&id) && !seen.iter().any(|(named, _)| *\u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && CARGO_TARGET_DIR=/tmp/ship-target cargo test -p jackioh-cards --test cards r2201001_random_games_under_the_hold 2>&1 | grep -v \\\"^\\\\s*Compiling\\\" > /tmp/dbg-4269.txt\u2026\n- Bash: {\"command\": \"sed -n 12,90p /tmp/dbg-4269.txt | grep -v \\\"^\\\\s*[{}],\\\\?$\\\\|^\\\\s*\\\\],\\\\?$\\\" | head -70\", \"description\": \"Show events of the step that made Oct\"}\n- Grep: {\"pattern\": \"fn fused_id|fn parse_fused|\\\"t-\\\\{|format!\\\\(\\\"t-\", \"path\": \"crates/engine/src\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"sed -n 960,1060p crates/engine/src/catalog.rs; sed -n 280,335p crates/engine/src/subsystems/fuse.rs\", \"description\": \"Read fused id parts and construction\"}\n- Bash: {\"command\": \"ls spec/rulings/R0179.md spec/rulings/R3565004.md; sed -n 1,12p spec/rulings/R0179.md; grep -n \\\"text\\\\|hook\\\" spec/rulings/R0179.md | head; sed -n 1,8p spec/rulings/R3565004.md\", \"descr\u2026\n- Bash: {\"command\": \"sed -n 1,10p spec/rulings/R0077.md | cut -c1-600\", \"description\": \"Read R77 for fused hooks\"}\n- Bash: {\"command\": \"cd /tmp/ship-4269 && git checkout -- crates/cards/tests/cross/lesson_pools.rs && python3 - <<'EOF'\\np='crates/cards/tests/cross/lesson_pools.rs'\\ns=open(p).read()\\ns=s.replace(\\\"use jack\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-4272/.bot-plan.md <<'EOF'\\n\\n## Reproduced (scratch worktree /tmp/ship-4269, target /tmp/ship-target)\\n- `jackioh patches ship` -> \\\"shipped v0.6\u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && python3 - <<'EOF'\\np='crates/cards/tests/cross/lesson_pools.rs'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"fn stands_for_any(state: &GameState, def_id: &str, ids: &[&str])\u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && grep -c '\\\"core-001\\\"' crates/cards/catalog.json; git status --short; CARGO_TARGET_DIR=/tmp/ship-target cargo test -p jackioh-cards --test cards lesson_pools 2>&1 | \u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && git checkout -- crates/cards/patches crates/server/.env.example && git clean -fdq crates/cards/patches && git status --short && CARGO_TARGET_DIR=/tmp/ship-target car\u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && CARGO_TARGET_DIR=/tmp/ship-target cargo clippy -p jackioh-cards --all-targets -- -D warnings 2>&1 | grep -E \\\"^(warning|error)|Finished\\\" | head -20\", \"description\":\u2026\n- Grep: {\"pattern\": \"tests/|\\\"/tests\\\"\", \"path\": \"crates/tools/src/classify.rs\", \"output_mode\": \"content\", \"-n\": true, \"head_limit\": 20}\n- Bash: {\"command\": \"sed -n 255,275p crates/tools/src/classify.rs\", \"description\": \"Read classify's test-path rule\"}\n- Bash: {\"command\": \"cd /tmp/ship-4269 && /tmp/ship-target/release/jackioh spec check 2>&1 | tail -5\", \"description\": \"Run spec check in scratch with the fix\", \"timeout\": 600000}\n- Bash: {\"command\": \"until grep -qE \\\"Finished|^error\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4272/a8e64c8a-3e9d-420f-afa6-b79f38977296/tasks/bv6jjpq50.output; do sleep 5; done; sleep 2; cat /tm\u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && /tmp/ship-target/release/jackioh patches ship 2>&1 | tail -1 && CARGO_TARGET_DIR=/tmp/ship-target cargo test -p jackioh-cards --doc 2>&1 | grep -E \\\"test result|FAIL\u2026\n- said: Meanwhile, I'll write the plan draft.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4272/.bot-plan.md\", \"content\": \"# Draft plan, issue #4272 (stuck promotion #4269) \\u2014 near final\\n\\nReproduced in scratch worktree /tmp/ship-4269 (\u2026\n- Bash: {\"command\": \"until grep -qE \\\"test result|^error|FAILED\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4272/a8e64c8a-3e9d-420f-afa6-b79f38977296/tasks/bf537ay1k.output; do sleep 5; done; sleep \u2026\n- Bash: {\"command\": \"cd /tmp/ship-4269 && git status --short | head -3 && CARGO_TARGET_DIR=/tmp/ship-target cargo test -p jackioh-cards --test cards 2>&1 | grep -E \\\"FAILED|test result|^error\\\" | head\", \"des\u2026\n- Bash: {\"command\": \"git worktree remove --force /tmp/ship-4269 && git worktree prune && git worktree list | head -5; git status --short\", \"description\": \"Remove scratch worktree\"}\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-4272/.bot-plan.md <<'EOF'\\n- DONE verifying: full `--test cards` on shipped history with fix: 1228 pass; doc tests ok; scratch removed.\\n- Writin\u2026\n- said: **Goal.** Promotion #4269 (`patches ship` from main at `2de57a9a23`, which ships v0.6.7k, #4268's win-rate refresh, R3882000) is red in `rust (test cards)`. One test fails, and only on the history it ships: `cross::lesson_pools::r2201001_a_held_lesson_shows_no_legendary_or_mythic_card::r2201001_ran\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-19T18:59:32Z",
       "owner_why": "it plans it",
@@ -13991,18 +13983,18 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "run_id": "44593606891",
+      "run_id": "pending:6681bcdd-1795116746",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-19T18:59:32Z",
+      "started_at": "2026-11-19T19:34:36Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-19T18:59:32Z",
+    "at": "2026-11-19T19:34:36Z",
     "url": "",
-    "what": "plan #4272 on claude-8"
+    "what": "build #4272 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-19T19:24:53Z",
