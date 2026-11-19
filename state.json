@@ -14136,10 +14136,14 @@
     "what": "build #4275 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-19T20:02:07Z",
+    "at": "2026-11-19T20:10:03Z",
     "notes": [
-      "delivered plan #4274 on muse (run 44603305843): planned",
-      "started build #4274 on muse (run 44604748840)",
+      "delivered plan #4275 on muse (run 44603380618): planned",
+      "delivered plan #4273 on muse (run 44603220429): planned",
+      "delivered plan #4270 on claude-7 (run 44578001808): failed",
+      "started plan #4270 on claude-7 (run 44606317867)",
+      "started build #4273 on muse (run 44606395709)",
+      "started build #4275 on muse (run 44606479424)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -14846,7 +14850,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T20:02:07Z",
+  "loop_tick": "2026-11-19T20:10:03Z",
   "machine_disk": {
     "issue": null,
     "reading": {
