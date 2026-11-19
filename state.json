@@ -14120,7 +14120,16 @@
       "feedback_since": "2026-11-19T19:34:36Z",
       "issue": 4272,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
+        "reviews": [],
+        "sha": "13fbe996c7646b7c9a4ed451dda88a9d483e61c6",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
