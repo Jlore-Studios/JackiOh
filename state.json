@@ -36701,7 +36701,9 @@
           "provider": "claude-6"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-19T06:59:09Z",
         "every": 5,
+        "findings": 0,
         "head": "554905eb713dbb67674c169107dbdaf839081197",
         "issue": 4207,
         "merged_at": "2026-11-19T06:45:04Z",
@@ -36714,12 +36716,13 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:82a06c86-1795071060",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44475220208",
         "sha": "a5ff1f2cb14df49fc0222d952ece6ce5ef6282be",
         "started_at": "2026-11-19T06:51:17Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 371
