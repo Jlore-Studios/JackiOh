@@ -13997,13 +13997,8 @@
     "what": "build #4272 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-19T19:31:23Z",
-    "notes": [
-      "delivered plan #4272 on claude-8 (run 44593606891): planned",
-      "started build #4272 on claude-8 (run 44599756345)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-19T19:41:22Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -14708,7 +14703,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T19:31:23Z",
+  "loop_tick": "2026-11-19T19:41:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
