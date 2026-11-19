@@ -15187,10 +15187,12 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-19T01:25:49Z",
+        "at": "2026-11-19T04:12:52Z",
         "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "3c6fc9c66e825f378d845ba05cb6ad27e9a0fb04"
+        "carried_from": "3c6fc9c66e825f378d845ba05cb6ad27e9a0fb04",
+        "resolved_by": "`muse` (medium)",
+        "sha": "8e3fc01b67230bde288e7db1757852445d22a009"
       },
       "died": 0,
       "difficulty": "medium",
