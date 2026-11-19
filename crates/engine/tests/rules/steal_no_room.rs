@@ -1,10 +1,10 @@
 //! R4205000 (issue #4205): a steal that reaches a card on the field but has no room for it on the thief's
 //! side (R15; R3546003's GIGA fit, in `giga.rs`) destroys it where it stands, and nothing prevents that
 //! destroy: not Indestructible (R46), not Untributable (R1220), no "would die" replacement (R462's
-//! reading), though a destroy-to-exile aura still exiles it (R1849002). Its Death and Reborn apply on its
-//! own side and it goes to its controller's graveyard (R2618000). A give leaves such a card (R803), and a
-//! card no steal reaches (R13, R1839000) is neither taken nor destroyed. Fixture cards from
-//! `fixtures/stinkyscape_verbs.rs`.
+//! reading), though a destroy-to-exile aura still exiles it (R1849002), where it has died all the same
+//! (R4207000). Its Death and Reborn apply on its own side and it goes to its controller's graveyard
+//! (R2618000). A give leaves such a card (R803), and a card no steal reaches (R13, R1839000) is neither
+//! taken nor destroyed. Fixture cards from `fixtures/stinkyscape_verbs.rs`.
 
 use jackioh_engine::effects::{give_control, steal, steal_all};
 use jackioh_engine::state_check::state_check;
@@ -259,7 +259,7 @@ fn r4205000_r803_give_control_onto_a_full_row_still_leaves_the_card_where_it_is(
 }
 
 #[test]
-fn r4205000_r1849002_with_disintegrex_acting_the_target_is_exiled_instead() {
+fn r4205000_r1849002_r4207000_with_disintegrex_acting_the_target_is_exiled_instead_and_still_dies() {
     let mut s = board(
         "r4205000-disintegrex",
         json!({ "field": [DISINTEGREX, GRUNT, GRUNT, GRUNT, GRUNT] }),
@@ -270,15 +270,20 @@ fn r4205000_r1849002_with_disintegrex_acting_the_target_is_exiled_instead() {
 
     let events = settled(&mut s, steal_of(&target.id), P1);
 
-    s.expect_in_zone(&target, "exile");
-    assert_eq!(destroyed(&events), Vec::<String>::new());
+    // R4207000: exiled instead of reaching its graveyard, it has died all the same, on its own side.
+    assert_eq!(destroyed(&events), vec![target.id.clone()]);
     assert!(
         events
             .iter()
             .any(|event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == target.id))
     );
-    assert_eq!(s.unit(P2, 1), None, "no Reborn");
-    assert_eq!(s.hand(P2).len(), hand_before, "no Death");
+    assert_eq!(
+        s.unit(P2, 1).map(|card| card.id),
+        Some(target.id.clone()),
+        "Reborn returns it from exile to p2's lane"
+    );
+    assert_eq!(s.card(&target).controller, P2);
+    assert_eq!(s.hand(P2).len(), hand_before + 1, "its Death drew a card");
 }
 
 #[test]

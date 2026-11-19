@@ -1,4 +1,4 @@
-//! C #50 Voidwalker (SPEC §8.6 row 50; §6.2 Replacement; R11, R135, R398). Unit 6/3 → 12/6, cost 2, Rare.
+//! C #50 Voidwalker (SPEC §8.6 row 50; §6.2 Replacement; R11, R135, R398, R4207000). Unit 6/3 → 12/6, cost 2, Rare.
 //!   Base:    "Cry: Exile every card in both graveyards.\nAura: Cards that would go to a graveyard are
 //!            exiled instead."
 //!   Radiant: "Cry: Exile every card in your opponent's graveyard.\nAura: Cards your opponent owns that
@@ -8,7 +8,8 @@
 //!            field or a play is the card of the player whose graveyard it is headed for (R2618000), so a
 //!            Unit you stole that dies on your side is yours and is not exiled. Its own card reaches the
 //!            graveyard when it dies: its aura left the field with it (R398). Unit tokens still cease to
-//!            exist (R11).
+//!            exist (R11). A card that dies under the aura has still died: its Death fires, Reborn
+//!            returns it from exile and `destroyed` reports it (R4207000); any other move fires nothing.
 
 use jackioh_engine::effects::exile_matching;
 use jackioh_engine::prelude::*;
@@ -56,6 +57,8 @@ pub fn script() -> CardScripts {
 // C #50 Voidwalker (SPEC §8.6 row 50, BUILD M9 Classic row C 50): the aura takes a death, a discard, a
 // resolved Spell, a fired trap and a burn; unit tokens still cease to exist (R11); its own card reaches
 // the graveyard (R398). Radiant judges by owner: a stolen Unit of theirs dying on your side is exiled.
+// A card that dies under the aura has still died: Death, Reborn from exile, `destroyed` (R4207000); any
+// other move fires nothing.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -79,6 +82,9 @@ mod tests {
     const DEFENDER: &str = "core-003"; // Right-house defender: Reborn; Radiant: Death: summon a base Right-house defender
     const RUSH_TOKEN: &str = "core-t-rush";
     const FILLER: &str = "core-005";
+    const FELINOR: &str = "meditative-094"; // Shrinking Felinor
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const ROCK: &str = "core-066"; // The Rock: Tribute 1
 
     use crate::js;
 
@@ -88,6 +94,16 @@ mod tests {
 
     fn contains_all(have: &[String], want: &[&str]) -> bool {
         want.iter().all(|id| have.iter().any(|card| card == id))
+    }
+
+    /// R4207000: the base stats each Shrinking Felinor on `player`'s unit row was summoned with, lane 1 up
+    /// (`None` for a printed one), so a Death that fired shows as the next, smaller Felinor.
+    fn felinors(s: &Scenario, player: PlayerId) -> Vec<Option<(i32, i32)>> {
+        (1..=5)
+            .filter_map(|lane| s.unit(player, lane))
+            .filter(|unit| unit.def_id == FELINOR)
+            .map(|unit| unit.stats_override.map(|stats| (stats.attack, stats.health)))
+            .collect()
     }
 
     mod c50_voidwalker {
@@ -210,21 +226,75 @@ mod tests {
             }
 
             #[test]
-            fn a_reborn_unit_the_aura_exiles_has_not_died_no_reborn_body_comes_back_and_its_death_hook_does_not_fire() {
+            fn r4207000_a_reborn_unit_fires_its_death_returns_from_exile_and_its_second_death_is_exiled() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] },
+                    "p1": { "hand": [HIT_JOB, HIT_JOB, FILLER], "field": [VOID], "mana": 10 },
                     "p2": { "hand": [FILLER], "field": [{ "def": DEFENDER, "radiant": true }] },
                 }));
                 let defender = s.card(DEFENDER).clone();
-                let targets = pick::unit_at(&s, P2, 1);
-                s.play(HIT_JOB, json!({ "targets": targets }));
+                let copies = |s: &Scenario| {
+                    (1..=5)
+                        .filter_map(|lane| s.unit(P2, lane))
+                        .filter(|unit| unit.def_id == DEFENDER && unit.id != defender.id && !unit.radiant)
+                        .count()
+                };
+                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }));
+                // It died: its Radiant Death summoned a base copy, and Reborn took it back out of exile.
+                assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(defender.id.clone()));
+                s.expect_in_zone(&defender, "field");
+                assert_eq!(copies(&s), 1);
+                assert!(s.events().iter().any(|event| matches!(event, GameEvent::Destroyed { .. })));
+
+                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }));
+                // Its second death, with no Reborn left, is exiled; its Death fires again (R8).
                 s.expect_in_zone(&defender, "exile");
-                assert!([1, 2, 3, 4, 5].iter().all(|lane| s.unit(P2, *lane).is_none()));
-                assert!(
-                    !s.events()
-                        .iter()
-                        .any(|event| matches!(event, GameEvent::Destroyed { .. } | GameEvent::Summoned { .. }))
-                );
+                assert_eq!(copies(&s), 2);
+            }
+
+            #[test]
+            fn r4207000_a_shrinking_felinor_killed_in_combat_fires_its_death_and_is_exiled() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [VOID, FELINOR] },
+                    "p2": { "hand": [FILLER], "field": [MENACE] },
+                }));
+                let felinor = s.unit_at(P1, 2);
+                s.attack(&felinor, s.unit_at(P2, 1));
+                s.expect_in_zone(&felinor, "exile");
+                assert_eq!(felinors(&s, P1), vec![Some((6, 6))]);
+            }
+
+            #[test]
+            fn r4207000_a_shrinking_felinor_destroyed_fires_its_death_and_is_exiled() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] },
+                    "p2": { "hand": [FILLER], "field": [FELINOR] },
+                }));
+                let felinor = s.unit_at(P2, 1);
+                s.play(HIT_JOB, json!({ "targets": pick::instance(&felinor) }));
+                s.expect_in_zone(&felinor, "exile");
+                assert_eq!(felinors(&s, P2), vec![Some((6, 6))]);
+            }
+
+            #[test]
+            fn r4207000_a_shrinking_felinor_tributed_fires_its_death_and_is_exiled() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [ROCK, FILLER], "field": [VOID, FELINOR], "mana": 10 },
+                    "p2": { "hand": [FILLER] },
+                }));
+                let felinor = s.unit_at(P1, 2);
+                s.play(ROCK, json!({ "zone": 3, "tributes": [felinor.id] }));
+                s.expect_in_zone(&felinor, "exile");
+                assert_eq!(felinors(&s, P1), vec![Some((6, 6))]);
+            }
+
+            #[test]
+            fn r4207000_a_discarded_death_card_fires_nothing() {
+                let mut s = scenario(json!({ "p1": { "hand": [ZAO_GAO, FELINOR, FILLER], "field": [VOID] }, "p2": { "hand": [FILLER] } }));
+                let felinor = s.card(FELINOR).clone();
+                s.play(ZAO_GAO, json!({}));
+                s.expect_in_zone(&felinor, "exile");
+                assert!(felinors(&s, P1).is_empty(), "a discard is no death");
+                assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Destroyed { .. })));
             }
 
             #[test]
@@ -398,6 +468,45 @@ mod tests {
                 let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![VOID]);
+            }
+
+            #[test]
+            fn r4207000_an_enemy_shrinking_felinor_killed_in_combat_fires_its_death_and_is_exiled() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }, MENACE] },
+                    "p2": { "hand": [FILLER], "field": [FELINOR] },
+                }));
+                let menace = s.unit_at(P1, 2);
+                let felinor = s.unit_at(P2, 1);
+                s.attack(&menace, &felinor);
+                s.expect_in_zone(&menace, "graveyard");
+                s.expect_in_zone(&felinor, "exile");
+                assert_eq!(felinors(&s, P2), vec![Some((6, 6))]);
+            }
+
+            #[test]
+            fn r4207000_an_enemy_shrinking_felinor_destroyed_fires_its_death_and_is_exiled() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }] },
+                    "p2": { "hand": [FILLER], "field": [FELINOR] },
+                }));
+                let felinor = s.unit_at(P2, 1);
+                s.play(HIT_JOB, json!({ "targets": pick::instance(&felinor) }));
+                s.expect_in_zone(&felinor, "exile");
+                assert_eq!(felinors(&s, P2), vec![Some((6, 6))]);
+            }
+
+            #[test]
+            fn r4207000_an_enemy_shrinking_felinor_tributed_fires_its_death_and_is_exiled() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }] },
+                    "p2": { "hand": [ROCK, FILLER], "field": [FELINOR], "mana": 10 },
+                    "active": "p2",
+                }));
+                let felinor = s.unit_at(P2, 1);
+                s.play(ROCK, json!({ "zone": 3, "tributes": [felinor.id] }));
+                s.expect_in_zone(&felinor, "exile");
+                assert_eq!(felinors(&s, P2), vec![Some((6, 6))]);
             }
 
             #[test]

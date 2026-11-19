@@ -1,0 +1,39 @@
+{
+  "title": "Patch: Death and Reborn still fire when a dying card is exiled instead of going to the graveyard (Voidwalker, Disintegrex)",
+  "sources": "#4207",
+  "notes": "R4207000 (superseding R461; amending R1849002, R398, R1852000 and R2564000): a card the state check collects, or a Sacrifice or Tribute takes, that C #50 Voidwalker's aura (base and Radiant) or Stinkyscape #105 Disintegrex's (base and Radiant) exiles instead of sending to its graveyard has still died: its Death fires in R68's order, Reborn returns it from that exile pile at 1 health, destroyed reports it and the destroyed counter counts it, and a Starship Piece fuses; otherwise it stays in exile. A discard, a resolved Spell, a burn, a spent Trap or a mill under Voidwalker, and a plain exile, still fire nothing. The claimed plays are the families classify's stage 2 names against the base build: those two cards, the cards whose games under either aura now diverge, and the Starships the newly fused pieces build. Replays where such a card died are refused as rules_changed (R767000).",
+  "player": {
+    "title": "Death and Reborn work under Voidwalker and Disintegrex",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A card that dies while Voidwalker or Disintegrex exiles it still fires its Death.",
+      "A Reborn Unit that dies that way still comes back with 1 Health.",
+      "Those cards count as destroyed, and a Starship Piece exiled that way still fuses."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "classic-032",
+    "classic-050",
+    "classicplus-065",
+    "core-t-bread",
+    "meditative-036",
+    "meditative-067",
+    "meditative-091",
+    "stinkyscape-003",
+    "stinkyscape-057",
+    "stinkyscape-074",
+    "stinkyscape-090",
+    "stinkyscape-105",
+    "stinkyscape-134",
+    "stinkyscape-137",
+    "stinkyscapeplus-001",
+    "stinkyscapeplus-018",
+    "stinkyscapeplus-117",
+    "stinkyscapeplus-125",
+    "stinkyscapeplus-t-terminus-starship-entropys-wake"
+  ]
+}

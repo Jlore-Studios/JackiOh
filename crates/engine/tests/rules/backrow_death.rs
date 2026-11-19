@@ -1,7 +1,8 @@
 //! §4.5 step 3's Death for a backrow card (docs/classic-sets.md A5, Classic+ #61 Bauble Bubble, Classic+
 //! #12.8 Frostspatula destroyed in the backrow): a Field Spell, Trap or Field Trap that prints Death
 //! fires it when it goes from its backrow zone to a graveyard — destroyed or sacrificed, as a Unit's
-//! does — in R68's order beside the units of its side, and never on a bounce or an exile (§6.2).
+//! does — in R68's order beside the units of its side, and never on a bounce or an exile (§6.2), though one
+//! that dies into exile fires it (R4207000).
 
 use serde::Serialize;
 
@@ -157,8 +158,7 @@ mod section_4_5_step_3_death_for_a_collected_backrow_card {
     }
 
     #[test]
-    fn r461_a_sacrificed_backrow_card_fires_its_death_one_exiled_instead_of_reaching_its_graveyard_does_not()
-    {
+    fn r4207000_a_backrow_card_fires_its_death_sacrificed_or_dying_into_exile_under_a_voidwalker() {
         let mut state = playing("dc-backrow-sacrifice");
         let pop = put(
             &mut state,
@@ -192,7 +192,8 @@ mod section_4_5_step_3_death_for_a_collected_backrow_card {
         live_mut(&mut walled, &gone.id).marked_destroyed = Some(true);
         let mut void_sink = sink_for(&mut walled);
         state_check(&mut void_sink);
-        assert!(notes(void_sink.state).is_empty());
+        // R4207000 (superseding R461): it died, so its Death fires, and the aura only sends it to exile.
+        assert_eq!(notes(void_sink.state), vec!["bauble:death"]);
         let exiled: Vec<&str> = void_sink
             .state
             .players
@@ -202,6 +203,45 @@ mod section_4_5_step_3_death_for_a_collected_backrow_card {
             .map(|card| card.id.as_str())
             .collect();
         assert_eq!(exiled, vec![gone.id.as_str()]);
-        assert!(events_of_type(void_sink.events, GameEventType::Destroyed).is_empty());
+        assert_eq!(
+            instance_ids(events_of_type(void_sink.events, GameEventType::Destroyed)),
+            vec![gone.id.clone()]
+        );
+
+        // A Sacrifice beside the Voidwalker is a death too, and the aura exiles it the same way.
+        let mut offered = playing("dc-backrow-void-sacrifice");
+        put(
+            &mut offered,
+            &voidwalker.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
+        let given = put(
+            &mut offered,
+            &bauble.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let mut given_sink = sink_for(&mut offered);
+        sacrifice_now(&mut given_sink, &given);
+        assert_eq!(notes(given_sink.state), vec!["bauble:death"]);
+        assert!(
+            given_sink
+                .state
+                .players
+                .p1
+                .exile
+                .iter()
+                .any(|card| card.id == given.id)
+        );
+        assert!(
+            !given_sink
+                .state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.id == given.id)
+        );
     }
 }

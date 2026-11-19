@@ -271,6 +271,9 @@ pub struct RebornEntry {
     /// Brittle for itself and its Reborn copy (`SummonPlacement.brittle`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub brittle: Option<i32>,
+    /// R4207000: the body died into its exile pile, so step 4 returns it from there. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exiled: Option<bool>,
 }
 
 /// One of step 5's reports (`DeathPass.collected`).
@@ -422,9 +425,15 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             },
             Some(token) => reborn_token(token),
         };
-        // §4.5 step 4 returns it only from the graveyard: one a Death hook moved on (exiled, to a hand)
-        // would otherwise be in two zones at once (§10.1).
-        if entry.token.is_none() && copy.zone.z() != ZoneName::Graveyard {
+        // §4.5 step 4 returns it only from the pile it died into, its graveyard or, when a replacement
+        // exiled it as it died, its exile pile (R4207000): one a Death hook moved on (exiled out of its
+        // graveyard, to a hand) would otherwise be in two zones at once (§10.1).
+        let pile = if entry.exiled == Some(true) {
+            ZoneName::Exile
+        } else {
+            ZoneName::Graveyard
+        };
+        if entry.token.is_none() && copy.zone.z() != pile {
             continue;
         }
         prepare_body(&mut copy, entry);
@@ -433,7 +442,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
         if let Some(count) = entry.brittle {
             crate::brittle_count::give_brittle_count(&*sink.state, &mut copy, count);
         }
-        // A body that finds no room keeps these changes in the graveyard.
+        // A body that finds no room keeps these changes in its pile.
         if entry.token.is_none()
             && let Some(card) = find_instance_mut(sink.state, &entry.id)
         {
@@ -458,7 +467,9 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
         }
         let owner = copy.owner;
         let id = copy.id.clone();
-        sink.state.players[owner].graveyard.retain(|card| card.id != id);
+        let side = &mut sink.state.players[owner];
+        side.graveyard.retain(|card| card.id != id);
+        side.exile.retain(|card| card.id != id);
         let turn = sink.state.turn;
         if let Some(body) = find_instance_mut(sink.state, &id) {
             body.reborn_spent = Some(true);
@@ -678,6 +689,8 @@ struct ReadCard {
     at: Option<ZoneRef>,
     token: bool,
     standing: bool,
+    /// R1849002, R4207000: a destroy-to-exile aura sends it to its exile pile instead of its graveyard.
+    exiled: bool,
     snapshot: CardInstance,
 }
 
@@ -685,7 +698,9 @@ struct ReadCard {
 /// once, in R68's order, leaving the pass steps 3 to 5 owe. Every card is read (layers, Reborn, snapshot)
 /// before any moves, since a card's layers depend on the others (#65.1 Spikey Pillow's aura, a #92 Felinor
 /// Fiender's count), so what it "was as it died" (R89) does not hang on lane order. A Sacrifice (§6.3) names
-/// no killer (R42) and bypasses Indestructible, so its caller decides it dies.
+/// no killer (R42) and bypasses Indestructible, so its caller decides it dies. A card a destroy-to-exile aura
+/// (R1849002) or a "would go to a graveyard" replacement (B5 E5) sends elsewhere has died all the same
+/// (R4207000): its Death, Reborn, `destroyed` and Starship fusion are owed as any other's.
 fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause) -> DeathPass {
     let mut pass = DeathPass::default();
 
@@ -702,6 +717,10 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 at: crate::zones::slot_of(sink.state, &unit),
                 token: crate::zones::is_unit_token(sink.state, &unit),
                 standing: crate::zones::stands_in_backrow(sink.state, &unit),
+                // R1849002: judged for every card before any moves, so the aura card dying beside them
+                // exiles itself and the rest; a Sacrifice is no destroy, so this aura leaves it alone.
+                exiled: cause == DeathCause::Collected
+                    && crate::replacements::destroy_exiles(sink.state, &unit),
                 // R78 resets an instance as it leaves, so the Death hook of step 3 reads this snapshot (R89).
                 snapshot: unit.clone(),
                 unit,
@@ -755,18 +774,19 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             .death_via
             .shift_remove(&card.snapshot.id)
             .filter(|_| cause != DeathCause::Sacrificed);
-        let landed = crate::zones::move_to_zone(
-            sink.state,
-            &mut card.unit,
-            OffFieldZone::Graveyard,
-            Default::default(),
-        );
-        if matches!(landed, MoveResult::Replaced) {
-            // R461: a card exiled (or sent to its library) instead of reaching a graveyard has not died: no
-            // Death hook, no Reborn, no `destroyed` for "destroys a Unit" (R42) or the destroyed count (R55).
-            crate::zones::report_graveyard_landing(sink, &card.unit, landed);
-            continue;
+        let to = if card.exiled {
+            OffFieldZone::Exile
+        } else {
+            OffFieldZone::Graveyard
+        };
+        let landed = crate::zones::move_to_zone(sink.state, &mut card.unit, to, Default::default());
+        // R55, R11: counted as `zones::exile_to_pile` counts; a "would go to a graveyard" redirect counts its own.
+        if card.exiled && landed == MoveResult::Moved {
+            sink.state.counters.exiled += 1;
         }
+        // R4207000 (superseding R461): a card a replacement sent elsewhere as it died has still died, so it
+        // goes on below as any collected card; only step 5's `enteredGraveyard` is not its to report.
+        let elsewhere = card.exiled || landed == MoveResult::Replaced;
         pass.owed.push(card.snapshot.clone());
         // R1852000: a piece that died, which the pass's last step fuses into its owner's Starship.
         if card.piece {
@@ -784,11 +804,13 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 pass.owed.push(card.snapshot.clone());
             }
         }
-        pass.collected.push(CollectedEntry {
-            id: card.unit.id.clone(),
-            def_id: card.unit.def_id.clone(),
-            owner: card.unit.owner,
-        });
+        if !elsewhere {
+            pass.collected.push(CollectedEntry {
+                id: card.unit.id.clone(),
+                def_id: card.unit.def_id.clone(),
+                owner: card.unit.owner,
+            });
+        }
         if card.reborn
             && let Some(at) = card.at
         {
@@ -829,6 +851,8 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                     .get(crate::effects::summon::REBORN_BRITTLE_KEY)
                     .and_then(Value::as_i64)
                     .and_then(|count| i32::try_from(count).ok()),
+                // R4207000: a body that died into its exile pile returns from there.
+                exiled: (card.unit.zone.z() == ZoneName::Exile).then_some(true),
             });
         }
         sink.state.counters.destroyed += 1;
@@ -868,6 +892,17 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             radiant: if card.snapshot.radiant { Some(true) } else { None },
             via,
         });
+        // R4207000: then where it went, as `zones::exile_to_pile` reports an exile (a unit token's
+        // included) and B5 E5 a redirected landing.
+        if card.exiled {
+            sink.events.push(GameEvent::Exiled {
+                instance_id: card.unit.id.clone(),
+                def_id: card.unit.def_id.clone(),
+                owner: card.unit.owner,
+            });
+        } else if landed == MoveResult::Replaced {
+            crate::zones::report_graveyard_landing(sink, &card.unit, landed);
+        }
     }
 
     pass
@@ -960,7 +995,7 @@ pub fn run_death_hooks(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
 }
 
 /// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths, in R68's order, by §6.3
-/// Exile's move (`zones::exile_to_pile`, R11, R55): no Death, no Reborn, no `destroyed` (R461), even
+/// Exile's move (`zones::exile_to_pile`, R11, R55): no Death, no Reborn, no `destroyed` (R1124), even
 /// when the hit was lethal.
 fn exile_marked(sink: &mut EngineSink<'_>) {
     let order = active_first(sink.state);
@@ -1171,15 +1206,6 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
                     continue;
                 }
             };
-        // R1849002: what a destroy-to-exile aura reaches, judged for every card before any moves, is
-        // exiled first in R68's order, not collected: no Death, Reborn or `destroyed` (R461, R1124).
-        let (exiled, remaining): (Vec<CardInstance>, Vec<CardInstance>) = remaining
-            .into_iter()
-            .partition(|card| crate::replacements::destroy_exiles(sink.state, &live_or(sink.state, card)));
-        for card in &exiled {
-            let card = live_or(sink.state, card);
-            crate::zones::exile_to_pile(sink, card);
-        }
         let mut collected = collect(sink, &remaining, DeathCause::Collected);
         // R2783001: a keyword recorded for a unit this pass did not collect (a "would die" replacement
         // spared it) says nothing of a later death; one a Death hook's hit records is the next pass's.
