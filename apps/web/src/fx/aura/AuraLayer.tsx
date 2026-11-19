@@ -16,6 +16,7 @@ import type { PlayerId, PlayerView, Tag } from "@jackioh/shared";
 
 import { ANOMALIES, ANOMALY_FOUND_ID, type AnomalyCode } from "../../cards/anomalies.ts";
 import { CardArt } from "../../cards/art/CardArt.tsx";
+import { pointerFrames } from "../../cards/pointerFrame.ts";
 import { newEventsSince, reducedMotionNow } from "../../game/animations.ts";
 import { byTestid } from "../../game/contract.ts";
 import { useSetting } from "../../settings/store.ts";
@@ -23,7 +24,7 @@ import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../constants.ts";
 import { capacityFor } from "../director.ts";
 import { shedAuraScale, shedLevel, shedPointer, subscribeShed } from "../shed.ts";
-import { defaultFrames, defaultNow, defaultVisibility } from "../FxLayer.tsx";
+import { defaultNow, defaultVisibility } from "../FxLayer.tsx";
 import { createFrameLoop } from "../loop.ts";
 import { createFxMemory } from "../memory.ts";
 import { createRng } from "../rng.ts";
@@ -241,7 +242,7 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
     // Motes to draw, or a phase to settle. Without a canvas (no 2D context) only the phases are work.
     const busy = (current: AuraTrack): boolean => (surface !== null && drift.count() > 0) || current.auras.some((aura) => aura.phase !== "standing");
     const loop = createFrameLoop({
-      frames: s.frames ?? defaultFrames(),
+      frames: s.frames ?? pointerFrames(),
       visibility: s.visibility ?? defaultVisibility(),
       now: s.now ?? defaultNow,
       onFrame: ({ dt, now: t }) => {

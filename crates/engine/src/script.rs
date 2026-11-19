@@ -716,6 +716,10 @@ pub struct StaticFlags {
     /// target it and do everything else to it (`restrictions::spell_damage_cannot_reach`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub immune_to_spell_damage: Option<bool>,
+    /// R4154001 (Stinkyscape+ #121.1 Toxopid Leg): "Immune to Toxic". While this Unit is on the field no
+    /// Toxic goes on it: a gain, a rider and a conversion each add nothing (`afflictions::afflict`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub immune_to_toxic: Option<bool>,
     /// R1849002 (Stinkyscape #105 Disintegrex): "Anytime something would be Destroyed, it is Exiled
     /// instead". While this card acts on the field, every permanent the state check collects is exiled
     /// instead (§4.5 step 1, `replacements::destroy_exiles`).
@@ -1205,7 +1209,7 @@ pub struct Script {
     /// Keymaster Keenus's `keywords`): a change that raises it on the field (a Buff's Number row, a
     /// number set, the card made Radiant) draws what it asks beyond the card's list as the change
     /// resolves (`effects::buff::follow_combat_keywords`), so nothing is queued and the layers draw
-    /// nothing. `None` for every other card, and on the scripts kept for v0.6.0b (R767000).
+    /// nothing. `None` for every other card, and on the scripts kept for v0.6.0c (R767000).
     pub combat_keywords_follow: Option<&'static str>,
     /// "When this attacks" (Classic #13, #45, Classic+ #73.1, Stinkyscape #75): run for the attacker before
     /// any damage of each attack, a declared one's once its trap window has closed (before the defender's

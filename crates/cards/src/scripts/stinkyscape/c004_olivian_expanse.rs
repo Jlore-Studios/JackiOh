@@ -7,8 +7,9 @@
 //! card and token tagged Terminus of the sets that ship, three different options shown to its caster
 //! alone: Core #100 Ceaseless Void (tagged Terminus since R1837000), the set's six Terminus tokens
 //! (R1857002) and the Stinkyscape+ set's Terminus cards and tokens. The pick reaches the hand on its
-//! base face. Through v0.6.2b the pool named the first seven by id, as it had to while the set was held
-//! (R1420; `script_v0_6_2b`, kept, R767000).
+//! base face. Through v0.6.3b the pool named the first seven by id, as it had to while the set was held
+//! (R1420; `script_v0_6_3b`, kept, R767000). R4189000: in hand the card glows while its controller's
+//! library is empty, on the Radiant face only while it is also the only card in hand.
 
 use jackioh_engine::config::DISCOVER_OPTIONS;
 use jackioh_engine::effects::{WIN_ON_PLAY_KEY, add_to_hand, discover_from_catalog};
@@ -16,9 +17,9 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-004";
 
-/// R767000: the Terminus cards through v0.6.2b, Core #100 Ceaseless Void and the set's six Terminus
-/// tokens, in catalog order, which `script_v0_6_2b` and Stinkyscape #154 Dice of Doom's kept script name.
-pub const TERMINUS_CARDS_V0_6_2B: [&str; 7] = [
+/// R767000: the Terminus cards through v0.6.3b, Core #100 Ceaseless Void and the set's six Terminus
+/// tokens, in catalog order, which `script_v0_6_3b` and Stinkyscape #154 Dice of Doom's kept script name.
+pub const TERMINUS_CARDS_V0_6_3B: [&str; 7] = [
     "core-100",
     "stinkyscape-004-1",
     "stinkyscape-004-2",
@@ -34,12 +35,12 @@ const PICKED: &str = "picked";
 const FREE: &str = "free";
 const WINS: &str = "wins";
 
-/// The Discover; `kept`, the script through v0.6.2b.
+/// The Discover; `kept`, the script through v0.6.3b.
 fn discover(ctx: &mut EffectContext<'_>, kept: bool) -> Vec<Effect> {
     let free = zone_count(ctx.state, ctx.controller, OffFieldZone::Library) == 0;
     let wins = ctx.radiant && free && zone_count(ctx.state, ctx.controller, OffFieldZone::Hand) == 0;
-    // R3869000: the Terminus pool; R767000: through v0.6.2b, the seven named by id.
-    let pool = if kept { json!({ "defId": TERMINUS_CARDS_V0_6_2B }) } else { json!(crate::query::terminus_cards()) };
+    // R3869000: the Terminus pool; R767000: through v0.6.3b, the seven named by id.
+    let pool = if kept { json!({ "defId": TERMINUS_CARDS_V0_6_3B }) } else { json!(crate::query::terminus_cards()) };
     vec![discover_from_catalog(json_as(json!({
         "step": PICKED,
         "count": DISCOVER_OPTIONS,
@@ -65,28 +66,41 @@ fn picked(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![add_to_hand(json_as(args))]
 }
 
-/// Both faces; `kept`, the script through v0.6.2b.
+/// Both faces; `kept`, the script through v0.6.3b.
 fn faces(kept: bool) -> CardScripts {
     let base = Script {
         cry: Some(hook(move |ctx| discover(ctx, kept))),
         resume: IndexMap::from([(PICKED, hook(picked))]),
+        // R4189000: in hand the card glows while its controller's library is empty, the same
+        // fact the Discover's `FREE` reads.
+        condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
+            ctx.zone == ConditionZone::Hand
+                && zone_count(ctx.state, ctx.controller, OffFieldZone::Library) == 0
+        })),
         ..Script::default()
     };
-    // The face is read off the context, so both faces run the one script.
-    let radiant = base.clone();
+    // The face is read off the context, so both faces run the one script; the Radiant face glows
+    // only while it is also the only card in hand. At resolution the card has left the hand, where
+    // `discover` reads 0 for `WINS`, while a glow read from the hand still holds the card, so 1.
+    let mut radiant = base.clone();
+    radiant.condition_met = Some(condition_hook(|ctx: ConditionContext<'_>| {
+        ctx.zone == ConditionZone::Hand
+            && zone_count(ctx.state, ctx.controller, OffFieldZone::Library) == 0
+            && zone_count(ctx.state, ctx.controller, OffFieldZone::Hand) == 1
+    }));
     CardScripts { base, radiant }
 }
 
 pub fn script() -> CardScripts { faces(false) }
 
-/// R767000: through v0.6.2b the Discover offered the seven Terminus cards it named by id; `KEPT_SCRIPTS`
+/// R767000: through v0.6.3b the Discover offered the seven Terminus cards it named by id; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts { faces(true) }
+pub fn script_v0_6_3b() -> CardScripts { faces(true) }
 
 // S #4 Olivian Expanse — SPEC §8.10 row S 4, BUILD M12 row S 4 (R1870000).
 #[cfg(test)]
 mod tests {
-    use super::{ID, TERMINUS_CARDS_V0_6_2B, script_v0_6_2b};
+    use super::{ID, TERMINUS_CARDS_V0_6_3B, script_v0_6_3b};
     use jackioh_engine::config::{DISCOVER_OPTIONS, HAND_CAP};
     use jackioh_engine::effects::WIN_ON_PLAY_KEY;
     use jackioh_engine::testkit::*;
@@ -128,6 +142,28 @@ mod tests {
     fn terminus() -> Vec<String> {
         crate::register_all();
         crate::query::pool_ids(&crate::query::terminus_cards())
+    }
+
+    /// R4189000: p1 holds Olivian Expanse (Radiant if `radiant`) with `hand` behind it and
+    /// `library`, unplayed, so the glow can be read off the view first.
+    fn holding(seed: &str, radiant: bool, hand: Value, library: Value) -> Scenario {
+        let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
+        cards.extend(hand.as_array().cloned().unwrap_or_default());
+        scenario(json!({
+            "seed": seed,
+            "p1": { "hand": cards, "library": library, "mana": 10 },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+        }))
+    }
+
+    /// Plays the held Expanse and takes the Discover's first option into the hand.
+    fn take_first(s: &mut Scenario) -> CardInstance {
+        s.play(ID, json!({}));
+        assert_discover(s);
+        let options = s.prompt_modes();
+        let choice = options[0].clone();
+        s.answer(json!(choice));
+        s.hand(P1).into_iter().find(|card| card.def_id == choice).expect("the pick is in hand")
     }
 
     /// Answers the open Discover with a playable pick when one is offered, else with the first option.
@@ -236,6 +272,58 @@ mod tests {
             assert!(s.state().result.is_none());
         }
 
+        /// R4189000: the base face glows with an empty library, and the play it promised
+        /// takes the pick at (0) with no win.
+        #[test]
+        fn r4189000_base_glows_with_an_empty_library_and_the_pick_costs_0() {
+            let mut s = holding("r4189000-free", false, json!([]), json!([]));
+            let expanse = s.card(ID).id.clone();
+            assert!(hand_glows(&s, &expanse, P1));
+            assert!(
+                !serde_json::to_string(&s.view(P2)).unwrap().contains("conditionActive"),
+                "the opponent never sees the flag"
+            );
+            let card = take_first(&mut s);
+            assert_eq!(card.cost_override, Some(0));
+            assert!(!card.memory.contains_key(WIN_ON_PLAY_KEY), "the base face carries no win");
+        }
+
+        /// R4189000: the base face stays dark with a card left in the library, and the play
+        /// takes the pick at its printed cost.
+        #[test]
+        fn r4189000_base_dark_with_a_card_left_and_the_pick_costs_printed() {
+            let mut s = holding("r4189000-printed", false, json!([]), json!([FILLER]));
+            let expanse = s.card(ID).id.clone();
+            assert!(!hand_glows(&s, &expanse, P1));
+            let card = take_first(&mut s);
+            assert_eq!(card.cost_override, None);
+            assert!(!card.memory.contains_key(WIN_ON_PLAY_KEY));
+        }
+
+        /// R4189000: the Radiant face glows alone with an empty library, and the play it
+        /// promised takes the pick at (0) carrying the win.
+        #[test]
+        fn r4189000_radiant_glows_alone_and_the_pick_wins() {
+            let mut s = holding("r4189000-wins", true, json!([]), json!([]));
+            let expanse = s.card(ID).id.clone();
+            assert!(hand_glows(&s, &expanse, P1));
+            let card = take_first(&mut s);
+            assert_eq!(card.cost_override, Some(0));
+            assert_eq!(card.memory.get(WIN_ON_PLAY_KEY), Some(&Value::Bool(true)));
+        }
+
+        /// R4189000: the Radiant face stays dark with a second card in hand, and the play
+        /// takes the pick free with no win.
+        #[test]
+        fn r4189000_radiant_dark_with_a_second_card_in_hand_and_the_pick_wins_nothing() {
+            let mut s = holding("r4189000-held", true, json!([FILLER]), json!([]));
+            let expanse = s.card(ID).id.clone();
+            assert!(!hand_glows(&s, &expanse, P1));
+            let card = take_first(&mut s);
+            assert_eq!(card.cost_override, Some(0), "it is still free");
+            assert!(!card.memory.contains_key(WIN_ON_PLAY_KEY));
+        }
+
         #[test]
         fn r1870000_a_hero_at_zero_still_loses_first() {
             let mut s = expanse_offering_a_playable("olivian-zero", true, json!([]), json!([]));
@@ -253,7 +341,7 @@ mod tests {
         #[test]
         fn r3869000_the_pool_is_every_terminus_card_and_token_of_the_sets_that_ship() {
             let pool = terminus();
-            for id in TERMINUS_CARDS_V0_6_2B {
+            for id in TERMINUS_CARDS_V0_6_3B {
                 assert!(pool.contains(&id.to_string()), "{id} is still in it");
             }
             for id in ["stinkyscapeplus-077", "stinkyscapeplus-080", "stinkyscapeplus-t-supernova"] {
@@ -276,12 +364,12 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_2b_offers_only_the_seven_it_named() {
-            crate::under_kept(ID, script_v0_6_2b(), || {
+        fn r767000_the_script_kept_for_v0_6_3b_offers_only_the_seven_it_named() {
+            crate::under_kept(ID, script_v0_6_3b(), || {
                 for n in 0..12 {
                     let s = expanse(&format!("olivian-kept-{n}"), false, json!([]), json!([FILLER]));
                     for option in s.prompt_modes() {
-                        assert!(TERMINUS_CARDS_V0_6_2B.contains(&option.as_str()), "{option}");
+                        assert!(TERMINUS_CARDS_V0_6_3B.contains(&option.as_str()), "{option}");
                     }
                 }
             });

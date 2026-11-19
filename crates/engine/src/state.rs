@@ -296,6 +296,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub marked_exiled: Option<bool>,
+    /// R4205000: marked destroyed by a steal that had no room for it (§6.3 Steal). Nothing keeps it on the
+    /// field: Indestructible drops no mark (R46), no "would die" replacement is offered it; a
+    /// destroy-to-exile aura still exiles it (R1849002). Only ever `Some(true)`; R78's reset clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub unpreventable_destroy: Option<bool>,
     /// Came back through Reborn, so it no longer has it (§4.5 step 4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -1575,8 +1581,8 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub evolutions: Option<i32>,
-    /// R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking at the start of their
-    /// turn (R3540001). Absent at none, so a game without one hashes as before this field existed (D3).
+    /// R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking once at the end of the
+    /// turn (R4154000). Absent at none, so a game without one hashes as before this field existed (D3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hero_burn: Option<i32>,
@@ -2060,19 +2066,45 @@ pub fn side_snapshot_instances_mut(side: &mut SideSnapshot) -> Vec<&mut CardInst
 pub fn rename_in_board_history(state: &mut GameState, from: &str, to: &str) {
     for snapshot in state.board_history.iter_mut().flatten() {
         for player in PLAYER_IDS {
-            let side = &mut snapshot.sides[player];
-            for card in side_snapshot_instances_mut(side) {
-                if card.id == from {
-                    card.id = to.to_string();
-                }
-            }
-            for home in side.homes.iter_mut().flatten() {
-                if home.instance_id == from {
-                    home.instance_id = to.to_string();
-                }
+            rename_in_side(&mut snapshot.sides[player], from, to);
+        }
+    }
+    // R227, R3550007: Bogos Binted's Cry keeps its side in memory, so a card set again under a fresh id goes
+    // back as itself (Duos seed 1616, #4079). Only a note it renamed is written back.
+    let key = crate::subsystems::board_history::SIDE_SNAPSHOT_KEY;
+    for player in PLAYER_IDS {
+        for card in side_cards_mut(&mut state.players[player]) {
+            let Some(slot) = card.memory.get_mut(key).and_then(|note| note.get_mut("side")) else {
+                continue;
+            };
+            let Ok(mut side) = serde_json::from_value::<SideSnapshot>(slot.clone()) else {
+                continue;
+            };
+            if rename_in_side(&mut side, from, to)
+                && let Ok(renamed) = serde_json::to_value(&side)
+            {
+                *slot = renamed;
             }
         }
     }
+}
+
+/// `rename_in_board_history` on one side: its cards and their homes. Whether it renamed anything.
+fn rename_in_side(side: &mut SideSnapshot, from: &str, to: &str) -> bool {
+    let mut renamed = false;
+    for card in side_snapshot_instances_mut(side) {
+        if card.id == from {
+            card.id = to.to_string();
+            renamed = true;
+        }
+    }
+    for home in side.homes.iter_mut().flatten() {
+        if home.instance_id == from {
+            home.instance_id = to.to_string();
+            renamed = true;
+        }
+    }
+    renamed
 }
 
 /// R174, R212, R436: what a queued trigger answering an event carries — the cards the event names,
@@ -2781,6 +2813,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         divine_shield_spent: None,
         marked_destroyed: None,
         marked_exiled: None,
+        unpreventable_destroy: None,
         reborn_spent: None,
         known_as: None,
         tuning: None,

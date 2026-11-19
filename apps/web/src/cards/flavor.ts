@@ -4,14 +4,16 @@
 
 import type { CardDef, CardDefs, Flavor } from "@jackioh/shared";
 
-import { CATALOG } from "../wire/cards.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 
 export const FLAVOR_FALLBACK = "Physical" satisfies Flavor;
 
 /** `undefined` is a card no catalog knows, such as a hidden one. */
 export function flavorOf(
   def: Pick<CardDef, "flavor" | "ingredients"> | undefined,
-  catalog: Readonly<CardDefs> = CATALOG,
+  // #4180: the module's catalog (`game/currentCatalog.ts`), read in the call: flavor draws on the
+  // board and in the inspect overlays, once the module is in.
+  catalog: Readonly<CardDefs> = currentCatalog().cards,
 ): Flavor {
   if (def === undefined) return FLAVOR_FALLBACK;
   if (def.flavor !== undefined) return def.flavor;
@@ -20,10 +22,10 @@ export function flavorOf(
 }
 
 /**
- * The flavor of the card `defId` names: the bundled catalog's entry, else the match's own
- * definition (`PlayerView.defs`, R243). It reads the bundled `CATALOG` and not `CatalogContext`,
+ * The flavor of the card `defId` names: the module catalog's entry, else the match's own
+ * definition (`PlayerView.defs`, R243). It reads `currentCatalog()` and not `CatalogContext`,
  * because a replay's older catalog has no flavors (R1437000).
  */
 export function flavorOfId(defId: string, matchDefs?: Readonly<CardDefs>): Flavor {
-  return flavorOf(CATALOG[defId] ?? matchDefs?.[defId]);
+  return flavorOf(currentCatalog().cards[defId] ?? matchDefs?.[defId]);
 }

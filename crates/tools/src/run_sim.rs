@@ -16,7 +16,9 @@
 //! were played and won, the HP they cost and their turns, then the max HP entering each boss, the rows reached, the fights on each run's
 //! route (R3583001: 12 to 16 on any route to the final boss), the runs won, the score by term
 //! (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add, each
-//! mean and max: only a breakdown shows whether stalling pays), the score and the Embers. The AI plays
+//! mean and max: only a breakdown shows whether stalling pays), the score and the Embers, then the economy: the Coins and Tickets earned, the shops entered, the Coins and
+//! Tickets held entering one, the cheapest shop card and the Remove, Radiant and buff prices charged
+//! (§15.7, §15.8). The AI plays
 //! the player's seat better or worse than a person would, so the table is a guide to tuning the strawmen
 //! (§15.13), not a target. A lost fight is data; an unclean fight, a dead end of the policy
 //! or a run file that does not fold to the run's end is a fault, which exits 1 and names the command
@@ -25,6 +27,17 @@
 //! The policy draws from a stream of its own, never the run's `rng_cursor`, so the run's log still
 //! `run_fold`s to the same end; nothing reads a clock, and each run's results are kept in seed order, so
 //! the output is the same on any thread count.
+//!
+//! A pull request's tests also hold the enemy tiers to wide win-rate bands (R3586000, R3586001). A whole
+//! run dies by its first mini-boss at the tiny budget, so they play fights one at a time from the first
+//! `BAND_SEEDS` runs' starts, the starting deck at full HP, and fail when tier 1 is no longer clearly
+//! winnable, the final boss no longer clearly hard, or an elite no harder than its tier's normal fight. A
+//! deliberate retune of `RUN_TIERS` or `RUN_ELITE_TIERS` changes the bands in the same patch.
+//!
+//! They also hold the economy to wide bands (`ECONOMY_RUNS` stub-won runs for the Coins, Tickets and shops,
+//! `BAND_SEEDS` AI runs of `ECONOMY_AI_FIGHTS` fights for the score and Embers): a deliberate retune of
+//! the prices, the drops or the score row changes them in the same patch. That test adds about 40 s to
+//! `cargo test -p jackioh-tools --bin jackioh run_sim` (about 65 s in all, a debug build on four cores).
 //!
 //! ```text
 //! cargo jackioh run-sim --seeds 8                              # eight runs at full skill and budget
@@ -50,9 +63,9 @@ use jackioh_run::config::{
 };
 use jackioh_run::{
     RunAction, RunContent, RunFightSetup, RunFile, RunNodeKind, RunPassiveKind, RunPhase, RunScoreTerms,
-    RunSetup, RunState, RunUnlocks, run_catalog_content, run_check_setup, run_create, run_embers, run_enemy,
-    run_fight_report, run_fight_setup, run_fold, run_next_cols, run_node, run_reduce, run_score,
-    run_score_terms, run_seed,
+    RunSetup, RunShopGood, RunState, RunUnlocks, run_catalog_content, run_check_setup, run_create,
+    run_embers, run_enemy, run_fight_report, run_fight_setup, run_fold, run_next_cols, run_node, run_reduce,
+    run_score, run_score_terms, run_seed, run_shop_prices,
 };
 use rayon::prelude::*;
 
@@ -420,6 +433,24 @@ struct FightRow {
     turns: i32,
 }
 
+/// The row the tables count for the fight `state` stands on, which `action` played to `next`.
+fn fight_row(state: &RunState, action: &RunAction, next: &RunState) -> Result<FightRow, String> {
+    let (final_hp, turns) = match action {
+        RunAction::FightOver { hp, turns, .. } => (*hp, *turns),
+        _ => (next.hp, 0),
+    };
+    Ok(FightRow {
+        kind: run_node(state).ok_or("the fight stands on no node")?.kind,
+        act: act_of(state),
+        tier: run_enemy(state).map_or(0, |enemy| enemy.tier),
+        hp_before: state.hp,
+        hp_after: next.hp,
+        final_hp,
+        won: !matches!(next.phase, RunPhase::Dead),
+        turns,
+    })
+}
+
 /// One run as played: its file, where it ended, its fights and what went wrong (nothing, for a clean run).
 #[derive(Debug)]
 struct RunOutcome {
@@ -535,20 +566,7 @@ fn play_run(
         let stepped = if matches!(state.phase, RunPhase::Fight) {
             fight(&state).and_then(|action| {
                 let next = run_reduce(&state, content, &action)?;
-                let (final_hp, turns) = match &action {
-                    RunAction::FightOver { hp, turns, .. } => (*hp, *turns),
-                    _ => (next.hp, 0),
-                };
-                fights.push(FightRow {
-                    kind: run_node(&state).ok_or("the fight stands on no node")?.kind,
-                    act: act_of(&state),
-                    tier: run_enemy(&state).map_or(0, |enemy| enemy.tier),
-                    hp_before: state.hp,
-                    hp_after: next.hp,
-                    final_hp,
-                    won: !matches!(next.phase, RunPhase::Dead),
-                    turns,
-                });
+                fights.push(fight_row(&state, &action, &next)?);
                 Ok((action, next))
             })
         } else {
@@ -671,6 +689,57 @@ fn score_parts(end: &RunState, content: &RunContent) -> ScoreParts {
     }
 }
 
+/// One shop as a run first stands in it (§15.8): what it holds and what it asks, the prices after the
+/// relic discount, as `run_shop_prices` gives them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ShopVisit {
+    coins: i32,
+    tickets: i32,
+    /// The least a Card in the stock costs, `None` for a stock of artifacts only.
+    cheapest_card: Option<i32>,
+    remove: i32,
+    radiant: i32,
+    buff: i32,
+}
+
+/// Every shop `file`'s log enters, in order, read by folding the log again. A run `run_create` or
+/// `run_reduce` refuses ends the list there (a faulty run is reported by its own faults).
+fn shop_visits(file: &RunFile, content: &RunContent) -> Vec<ShopVisit> {
+    let Ok(mut state) = run_create(&file.setup, &file.unlocks, content) else {
+        return Vec::new();
+    };
+    let mut visits = Vec::new();
+    for action in &file.log {
+        let Ok(next) = run_reduce(&state, content, action) else {
+            break;
+        };
+        let entered =
+            matches!(next.phase, RunPhase::Shop { .. }) && !matches!(state.phase, RunPhase::Shop { .. });
+        if entered {
+            let prices = run_shop_prices(&next, content);
+            let stock = match &next.phase {
+                RunPhase::Shop { stock } => stock.as_slice(),
+                _ => &[],
+            };
+            visits.push(ShopVisit {
+                coins: next.coins,
+                tickets: next.tickets,
+                cheapest_card: stock
+                    .iter()
+                    .zip(&prices.stock_coins)
+                    .filter(|(item, _)| matches!(item.good, RunShopGood::Card { .. }))
+                    .map(|(_, price)| *price)
+                    .min(),
+                remove: prices.remove_coins,
+                radiant: prices.radiant_tickets,
+                buff: prices.buff_tickets,
+            });
+        }
+        state = next;
+    }
+    visits
+}
+
 /// What the table prints, summed over one skill's runs.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Tally {
@@ -696,6 +765,14 @@ struct Tally {
     scores: Vec<i64>,
     /// Each run's score by term.
     parts: Vec<ScoreParts>,
+    /// Each run's Coins earned (§15.7).
+    coins: Vec<i64>,
+    /// Each run's Tickets earned.
+    tickets: Vec<i64>,
+    /// Every shop every run entered (§15.8).
+    shops: Vec<ShopVisit>,
+    /// The runs that entered at least one shop.
+    shop_runs: usize,
 }
 
 fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
@@ -738,6 +815,11 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
         out.map_rows = out.map_rows.max(outcome.end.map.len());
         out.scores.push(run_score(&outcome.end, content));
         out.parts.push(score_parts(&outcome.end, content));
+        out.coins.push(i64::from(outcome.end.stats.coins_earned));
+        out.tickets.push(i64::from(outcome.end.stats.tickets_earned));
+        let visits = shop_visits(&outcome.file, content);
+        out.shop_runs += usize::from(!visits.is_empty());
+        out.shops.extend(visits);
     }
     out
 }
@@ -825,6 +907,41 @@ impl Tally {
         let embers: Vec<i64> = self.scores.iter().map(|&score| run_embers(score)).collect();
         out.push_str(&format!("score: {}\n", mean_and_max(&self.scores)));
         out.push_str(&format!("Embers: {}\n", mean_and_max(&embers)));
+        out.push_str(&format!("coins earned: {}\n", mean_and_max(&self.coins)));
+        out.push_str(&format!("tickets earned: {}\n", mean_and_max(&self.tickets)));
+        out.push_str(&format!(
+            "shops: {} visits in {} of {} runs\n",
+            self.shops.len(),
+            self.shop_runs,
+            self.runs
+        ));
+        let shop_mean = |value: &dyn Fn(&ShopVisit) -> Option<i64>| {
+            let values: Vec<i64> = self.shops.iter().filter_map(value).collect();
+            mean(values.iter().sum(), values.len())
+        };
+        out.push_str(&format!(
+            "coins held entering a shop: mean {} (n {})\n",
+            shop_mean(&|shop| Some(i64::from(shop.coins))),
+            self.shops.len()
+        ));
+        out.push_str(&format!(
+            "cheapest shop card: mean {}\n",
+            shop_mean(&|shop| shop.cheapest_card.map(i64::from))
+        ));
+        out.push_str(&format!(
+            "tickets held entering a shop: mean {}\n",
+            shop_mean(&|shop| Some(i64::from(shop.tickets)))
+        ));
+        let first = self.shops.first();
+        let price = |value: &dyn Fn(&ShopVisit) -> i32| {
+            first.map_or_else(|| "-".to_string(), |shop| value(shop).to_string())
+        };
+        out.push_str(&format!(
+            "prices: remove {}, Radiant {} Tickets, buff {} Tickets\n",
+            price(&|shop| shop.remove),
+            price(&|shop| shop.radiant),
+            price(&|shop| shop.buff)
+        ));
         out
     }
 }
@@ -898,8 +1015,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 mod tests {
     use jackioh_engine::DeckMark;
     use jackioh_run::config::{
-        RUN_ACT_ROWS, RUN_ACT_TIERS, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN, RUN_STARTER_ARTIFACT_POINTS,
-        RUN_STARTER_ARTIFACTS_MAX,
+        RUN_ACT_ROWS, RUN_ACT_TIERS, RUN_BUFF_TICKETS, RUN_RADIANT_TICKETS, RUN_ROUTE_FIGHTS_MAX,
+        RUN_ROUTE_FIGHTS_MIN, RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX,
     };
     use jackioh_run::{RunPassiveDef, RunStats, run_artifact_points, run_curse_points};
 
@@ -1578,6 +1695,575 @@ mod tests {
                 "{label}: {text}"
             );
         }
+    }
+
+    /// The runs, from `run-sim --from 0`, whose fights the tier bands play.
+    const BAND_SEEDS: u32 = 6;
+    /// The fewest tier-1 fights, in percent, the starting deck may win before the early game is no longer
+    /// clearly winnable (measured at `TEST_BUDGET`: all of 24).
+    const TIER_ONE_WIN_PERCENT_MIN: i64 = 75;
+    /// The most final-boss fights, in percent, the starting deck may win before the boss is no longer
+    /// clearly hard (measured: 2 of 24, 2 of the first 6).
+    const FINAL_BOSS_WIN_PERCENT_MAX: i64 = 50;
+    /// The tiers whose elite is played beside the normal fight it stands on (the cheap ones).
+    const ELITE_BAND_TIERS: [usize; 2] = [1, 2];
+
+    /// A kind of fight the bands play, each from run `n`'s start at full HP with its starting deck.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum BandFight {
+        /// A normal fight at this tier, on the run's first row.
+        Normal(usize),
+        /// An elite at this tier, on that same node: the normal fight's seed and enemy deck.
+        Elite(usize),
+        /// The map's last row, the final boss's.
+        FinalBoss,
+    }
+
+    impl BandFight {
+        /// The tier table's name for this fight.
+        fn label(self) -> String {
+            match self {
+                BandFight::Normal(tier) => format!("tier {tier}"),
+                BandFight::Elite(tier) => format!("elite {tier}"),
+                BandFight::FinalBoss => format!("tier {}", RUN_TIERS.len()),
+            }
+        }
+    }
+
+    /// Run `n`'s start (nothing taken, level 1), standing in a `which` fight.
+    fn band_state(n: u32, which: BandFight, content: &RunContent) -> RunState {
+        let (setup, unlocks) = run_setup(n, &Start::default());
+        let start = run_create(&setup, &unlocks, content).expect("the run is created");
+        let (tier, kind) = match which {
+            BandFight::FinalBoss => {
+                return RunState {
+                    row: Some(start.map.len() - 1),
+                    col: 0,
+                    phase: RunPhase::Fight,
+                    ..start
+                };
+            }
+            BandFight::Normal(tier) => (tier, RunNodeKind::Fight),
+            BandFight::Elite(tier) => (tier, RunNodeKind::Elite),
+        };
+        let col = start.map[0]
+            .iter()
+            .position(|node| node.kind == RunNodeKind::Fight)
+            .unwrap_or(0);
+        let mut state = run_reduce(&start, content, &RunAction::Go { col }).expect("row 0 is a fight row");
+        let (row, col) = (state.row.expect("a row"), state.col);
+        let node = &mut state.map[row][col];
+        node.kind = kind;
+        node.enemy.as_mut().expect("a fight node has an enemy").tier = tier;
+        state
+    }
+
+    /// `which` on run `n`, played to its end at `TEST_BUDGET` and full skill, as the tally's row.
+    fn play_band_fight(n: u32, which: BandFight, content: &RunContent) -> Result<FightRow, String> {
+        let state = band_state(n, which, content);
+        let action = play_fight(&state, content, AI_SKILL_MAX, TEST_BUDGET)?;
+        let next = run_reduce(&state, content, &action)?;
+        fight_row(&state, &action, &next)
+    }
+
+    /// Each fight the bands read, `BAND_SEEDS` times, summed as the tally's tier table sums them, in the
+    /// order listed. The fights play on every core, the slowest first, and come back in input order.
+    fn play_bands(content: &RunContent) -> Result<Vec<(BandFight, KindTally)>, String> {
+        let mut fights = vec![BandFight::FinalBoss];
+        for tier in std::iter::once(1).chain(ELITE_BAND_TIERS) {
+            if !fights.contains(&BandFight::Normal(tier)) {
+                fights.push(BandFight::Normal(tier));
+            }
+        }
+        fights.extend(ELITE_BAND_TIERS.map(BandFight::Elite));
+        let jobs: Vec<(BandFight, u32)> = fights
+            .iter()
+            .flat_map(|&which| (0..BAND_SEEDS).map(move |n| (which, n)))
+            .collect();
+        let rows: Vec<(BandFight, Result<FightRow, String>)> = jobs
+            .into_par_iter()
+            .map(|(which, n)| {
+                let row = play_band_fight(n, which, content).map_err(|e| format!("run {n}, {which:?}: {e}"));
+                (which, row)
+            })
+            .collect();
+        let mut sample: Vec<(BandFight, KindTally)> = fights
+            .iter()
+            .map(|&which| (which, KindTally::default()))
+            .collect();
+        for (which, row) in rows {
+            let at = sample.iter().position(|(played, _)| *played == which);
+            sample[at.expect("a played fight is a listed one")].1.add(&row?);
+        }
+        Ok(sample)
+    }
+
+    /// The bands `sample` breaks, each named with its numbers: tier 1 won at least
+    /// `TIER_ONE_WIN_PERCENT_MIN` percent, the final boss at most `FINAL_BOSS_WIN_PERCENT_MAX` percent,
+    /// each elite costing more HP than the normal fight at its tier. A fight not played breaks its band.
+    fn broken_bands(sample: &[(BandFight, KindTally)]) -> Vec<String> {
+        let sums = |which: BandFight| {
+            sample
+                .iter()
+                .find(|(played, _)| *played == which)
+                .map(|(_, sums)| *sums)
+                .unwrap_or_default()
+        };
+        let percent = i64::from(PERCENT);
+        let mut broken = Vec::new();
+        let first = sums(BandFight::Normal(1));
+        if first.fights == 0 || first.won as i64 * percent < first.fights as i64 * TIER_ONE_WIN_PERCENT_MIN {
+            broken.push(format!(
+                "tier 1 won {} of {}, under {TIER_ONE_WIN_PERCENT_MIN}%: the early game is no longer clearly winnable",
+                first.won, first.fights
+            ));
+        }
+        let boss = sums(BandFight::FinalBoss);
+        if boss.fights == 0 || boss.won as i64 * percent > boss.fights as i64 * FINAL_BOSS_WIN_PERCENT_MAX {
+            broken.push(format!(
+                "the final boss won {} of {}, over {FINAL_BOSS_WIN_PERCENT_MAX}%: it is no longer clearly hard",
+                boss.won, boss.fights
+            ));
+        }
+        for tier in ELITE_BAND_TIERS {
+            let (normal, elite) = (sums(BandFight::Normal(tier)), sums(BandFight::Elite(tier)));
+            if normal.fights == 0 || elite.fights == 0 || elite.hp_lost <= normal.hp_lost {
+                broken.push(format!(
+                    "elite {tier} cost {} HP over {} fights, no more than tier {tier}'s {} over {}: it is no longer harder",
+                    elite.hp_lost, elite.fights, normal.hp_lost, normal.fights
+                ));
+            }
+        }
+        broken
+    }
+
+    /// `sample` as the tier table prints it.
+    fn render_bands(sample: &[(BandFight, KindTally)]) -> String {
+        let mut out = table_header("tier");
+        for (which, sums) in sample {
+            out.push_str(&table_line(&which.label(), sums));
+        }
+        out
+    }
+
+    #[test]
+    fn the_enemy_tiers_hold_run_sims_win_rate_bands() {
+        // R3586000, R3586001: `RUN_TIERS` and `RUN_ELITE_TIERS` are strawmen to tune, not to break. A
+        // whole run dies by its first mini-boss at this budget, so the climb is read from the fights a
+        // run meets, played one at a time from each seed's start (the same game `run-sim` plays there).
+        let content = content();
+        let sample = play_bands(&content).expect("the band fights end clean");
+        let broken = broken_bands(&sample);
+        assert!(
+            broken.is_empty(),
+            "the enemy tiers broke their bands (change the bands only with a deliberate retune):\n{}\n{}",
+            broken.join("\n"),
+            render_bands(&sample)
+        );
+    }
+
+    #[test]
+    fn each_band_names_the_tier_edit_that_breaks_it() {
+        let sums = |fights, won, hp_lost| KindTally {
+            fights,
+            won,
+            hp_lost,
+            turns: 0,
+        };
+        let sound = vec![
+            (BandFight::FinalBoss, sums(6, 2, 152)),
+            (BandFight::Normal(1), sums(6, 6, 13)),
+            (BandFight::Normal(2), sums(6, 6, 6)),
+            (BandFight::Elite(1), sums(6, 6, 23)),
+            (BandFight::Elite(2), sums(6, 6, 21)),
+        ];
+        assert_eq!(broken_bands(&sound), Vec::<String>::new());
+        let with = |which: BandFight, edited: KindTally| -> Vec<(BandFight, KindTally)> {
+            sound
+                .iter()
+                .map(|&(played, sums)| (played, if played == which { edited } else { sums }))
+                .collect()
+        };
+        let broken = |which, edited| broken_bands(&with(which, edited));
+        // The first fights brutal: 3 of 6 won is under the floor, 5 of 6 is not.
+        let brutal = broken(BandFight::Normal(1), sums(6, 3, 13));
+        assert_eq!(brutal.len(), 1);
+        assert!(brutal[0].starts_with("tier 1 won 3 of 6"), "{brutal:?}");
+        assert!(broken(BandFight::Normal(1), sums(6, 5, 13)).is_empty());
+        // The final boss trivial: 6 of 6 won is over the ceiling, 3 of 6 is not.
+        let trivial = broken(BandFight::FinalBoss, sums(6, 6, 20));
+        assert_eq!(trivial.len(), 1);
+        assert!(trivial[0].starts_with("the final boss won 6 of 6"), "{trivial:?}");
+        assert!(broken(BandFight::FinalBoss, sums(6, 3, 120)).is_empty());
+        // An elite no harder than its tier's normal fight: equal HP lost breaks the band.
+        let elite = broken(BandFight::Elite(2), sums(6, 6, 6));
+        assert_eq!(elite.len(), 1);
+        assert!(elite[0].starts_with("elite 2 "), "{elite:?}");
+        // A fight that was not played breaks its band.
+        assert_eq!(broken_bands(&[]).len(), 2 + ELITE_BAND_TIERS.len());
+    }
+
+    /// The stub-won runs the economy bands read (a prefix of them is `BAND_SEEDS`' runs). A won run costs
+    /// no AI, so there are more of them than of the AI's.
+    const ECONOMY_RUNS: u32 = 24;
+    /// The fights each AI run plays before it stops (the first mini-boss ends act 1's route); whole AI runs
+    /// are the test's slow part, so the score and Embers bands are measured on this many.
+    const ECONOMY_AI_FIGHTS: usize = 6;
+    /// The fewest Coins, on average, a won run earns (§15.7) before shops are decoration (measured: mean 707
+    /// over 24 runs, max 870).
+    const COINS_PER_RUN_MIN: i64 = 353;
+    /// The most Coins, on average, a won run earns before nothing in a shop is a choice (measured: as above).
+    const COINS_PER_RUN_MAX: i64 = 1414;
+    /// The fewest Tickets, on average, a won run earns (measured: mean 43, max 55).
+    const TICKETS_PER_RUN_MIN: i64 = 21;
+    /// The most Tickets, on average, a won run earns (measured: as above).
+    const TICKETS_PER_RUN_MAX: i64 = 86;
+    /// The fewest points, on average, an AI run at `TEST_BUDGET` scores (§15.10; measured: mean 470 over
+    /// `BAND_SEEDS` runs of `ECONOMY_AI_FIGHTS` fights, max 1084).
+    const SCORE_PER_RUN_MIN: i64 = 235;
+    /// The most points, on average, an AI run at `TEST_BUDGET` scores (measured: as above).
+    const SCORE_PER_RUN_MAX: i64 = 941;
+    /// The fewest Embers, on average, an AI run pays (measured: mean 4, max 10).
+    const EMBERS_PER_RUN_MIN: i64 = 2;
+    /// The most Embers, on average, an AI run pays (measured: as above).
+    const EMBERS_PER_RUN_MAX: i64 = 8;
+    /// The fewest stub-won runs, in percent, that enter a shop.
+    const SHOP_RUNS_MIN_PERCENT: i64 = 50;
+    /// The most the cheapest shop card may cost, in percent of the Coins a run holds entering a shop.
+    const CARD_PRICE_CEILING_PERCENT: i64 = 50;
+
+    /// What the economy bands read: the stub-won runs' earnings and first shops, the AI runs' scores.
+    #[derive(Clone, Debug, Default, PartialEq, Eq)]
+    struct EconomySample {
+        /// The stub-won runs played.
+        runs: usize,
+        coins: Vec<i64>,
+        tickets: Vec<i64>,
+        /// Each stub-won run's first shop, for the runs that enter one.
+        first_shops: Vec<ShopVisit>,
+        /// Each AI run's score and the Embers it pays.
+        scores: Vec<i64>,
+        embers: Vec<i64>,
+    }
+
+    /// The stub-won runs' Coins, Tickets and first shops, and `BAND_SEEDS` whole AI runs at `TEST_BUDGET`
+    /// and full skill (the tiers test's seeds and budget) for the score and Embers.
+    fn play_economy(content: &RunContent) -> Result<EconomySample, String> {
+        let mut sample = EconomySample {
+            runs: ECONOMY_RUNS as usize,
+            ..EconomySample::default()
+        };
+        for n in 0..ECONOMY_RUNS {
+            let run = play_run(n, content, &Start::default(), &won, None)?;
+            if !run.faults.is_empty() {
+                return Err(run.faults.join("; "));
+            }
+            sample.coins.push(i64::from(run.end.stats.coins_earned));
+            sample.tickets.push(i64::from(run.end.stats.tickets_earned));
+            sample
+                .first_shops
+                .extend(shop_visits(&run.file, content).first().copied());
+        }
+        let ai: Vec<(u32, Result<RunOutcome, String>)> = (0..BAND_SEEDS)
+            .into_par_iter()
+            .map(|n| {
+                let fight = |state: &RunState| play_fight(state, content, AI_SKILL_MAX, TEST_BUDGET);
+                (
+                    n,
+                    play_run(n, content, &Start::default(), &fight, Some(ECONOMY_AI_FIGHTS)),
+                )
+            })
+            .collect();
+        for (n, run) in ai {
+            let run = run.map_err(|e| format!("run {n}: {e}"))?;
+            if !run.faults.is_empty() {
+                return Err(run.faults.join("; "));
+            }
+            let score = run_score(&run.end, content);
+            sample.scores.push(score);
+            sample.embers.push(run_embers(score));
+        }
+        Ok(sample)
+    }
+
+    /// The middle of `values` (the upper one of two), 0 for none.
+    fn median(values: &[i64]) -> i64 {
+        let mut sorted = values.to_vec();
+        sorted.sort_unstable();
+        sorted.get(sorted.len() / 2).copied().unwrap_or(0)
+    }
+
+    /// `values`' mean, rounded down, 0 for none.
+    fn mean_of(values: &[i64]) -> i64 {
+        i64::try_from(values.len()).map_or(0, |n| values.iter().sum::<i64>() / n.max(1))
+    }
+
+    /// The bands `s` breaks, each named with its numbers and the edit that breaks it. A sample with no
+    /// runs breaks every band.
+    fn broken_economy(s: &EconomySample) -> Vec<String> {
+        let percent = i64::from(PERCENT);
+        let mut broken = Vec::new();
+        let (coins, tickets) = (mean_of(&s.coins), mean_of(&s.tickets));
+        if s.coins.is_empty() || !(COINS_PER_RUN_MIN..=COINS_PER_RUN_MAX).contains(&coins) {
+            broken.push(format!(
+                "coins earned per won run {coins} outside {COINS_PER_RUN_MIN}..{COINS_PER_RUN_MAX}: RUN_COINS retuned too far"
+            ));
+        }
+        if s.tickets.is_empty() || !(TICKETS_PER_RUN_MIN..=TICKETS_PER_RUN_MAX).contains(&tickets) {
+            broken.push(format!(
+                "tickets earned per won run {tickets} outside {TICKETS_PER_RUN_MIN}..{TICKETS_PER_RUN_MAX}: RUN_TICKETS retuned too far"
+            ));
+        }
+        let shops = s.first_shops.len();
+        if shops as i64 * percent < s.runs as i64 * SHOP_RUNS_MIN_PERCENT || shops == 0 {
+            broken.push(format!(
+                "only {shops} of {} runs reach a shop, under {SHOP_RUNS_MIN_PERCENT}%: the policy or the map no longer gets to one",
+                s.runs
+            ));
+        }
+        let shop_values = |value: &dyn Fn(&ShopVisit) -> Option<i64>| -> Vec<i64> {
+            s.first_shops.iter().filter_map(value).collect()
+        };
+        let held = median(&shop_values(&|shop| Some(i64::from(shop.coins))));
+        let cheapest = median(&shop_values(&|shop| shop.cheapest_card.map(i64::from)));
+        if shops == 0 || held < cheapest {
+            broken.push(format!(
+                "median run cannot afford the cheapest shop card by its first shop: {held} held, {cheapest} asked: RUN_CARD_PRICE or RUN_COINS"
+            ));
+        }
+        // The cards beside the Coins held on the same visits, so the percent compares like with like.
+        let priced: Vec<&ShopVisit> = s
+            .first_shops
+            .iter()
+            .filter(|shop| shop.cheapest_card.is_some())
+            .collect();
+        let asked: i64 = priced
+            .iter()
+            .filter_map(|shop| shop.cheapest_card)
+            .map(i64::from)
+            .sum();
+        let held_sum: i64 = priced.iter().map(|shop| i64::from(shop.coins)).sum();
+        if priced.is_empty() || asked * percent > held_sum * CARD_PRICE_CEILING_PERCENT {
+            broken.push(format!(
+                "cheapest shop card costs {asked} for every {held_sum} Coins a run holds entering its first shop, over {CARD_PRICE_CEILING_PERCENT}%: the cards are no longer a real choice (RUN_CARD_PRICE or RUN_COINS)"
+            ));
+        }
+        let remove = median(&shop_values(&|shop| Some(i64::from(shop.remove))));
+        if shops == 0 || median(&s.coins) < cheapest + remove {
+            broken.push(format!(
+                "median run cannot afford a Remove plus the cheapest card over its run: {} earned, {} asked: RUN_REMOVE_PRICE, RUN_CARD_PRICE or RUN_COINS",
+                median(&s.coins),
+                cheapest + remove
+            ));
+        }
+        let services = median(&shop_values(&|shop| Some(i64::from(shop.radiant + shop.buff))));
+        if shops == 0 || median(&s.tickets) < services {
+            broken.push(format!(
+                "median run's Tickets cannot pay one Radiant and one buff: {} earned, {services} asked: RUN_TICKETS, RUN_RADIANT_TICKETS or RUN_BUFF_TICKETS",
+                median(&s.tickets)
+            ));
+        }
+        let (score, embers) = (mean_of(&s.scores), mean_of(&s.embers));
+        if s.scores.is_empty() || !(SCORE_PER_RUN_MIN..=SCORE_PER_RUN_MAX).contains(&score) {
+            broken.push(format!(
+                "score per run {score} outside {SCORE_PER_RUN_MIN}..{SCORE_PER_RUN_MAX}: the RUN_SCORE_* row retuned too far"
+            ));
+        }
+        if s.embers.is_empty() || !(EMBERS_PER_RUN_MIN..=EMBERS_PER_RUN_MAX).contains(&embers) {
+            broken.push(format!(
+                "Embers per run {embers} outside {EMBERS_PER_RUN_MIN}..{EMBERS_PER_RUN_MAX}: RUN_SCORE_PER_EMBER retuned too far"
+            ));
+        }
+        broken
+    }
+
+    /// `s` as the economy lines print them.
+    fn render_economy(s: &EconomySample) -> String {
+        let shop = |value: &dyn Fn(&ShopVisit) -> Option<i64>| -> Vec<i64> {
+            s.first_shops.iter().filter_map(value).collect()
+        };
+        format!(
+            "coins earned per won run: {}\ntickets earned per won run: {}\nfirst shops: {} of {} runs\ncoins held entering the first shop: {}\ncheapest shop card: {}\nremove price: {}\nscore per AI run: {}\nEmbers per AI run: {}\n",
+            mean_and_max(&s.coins),
+            mean_and_max(&s.tickets),
+            s.first_shops.len(),
+            s.runs,
+            mean_and_max(&shop(&|v| Some(i64::from(v.coins)))),
+            mean_and_max(&shop(&|v| v.cheapest_card.map(i64::from))),
+            mean_and_max(&shop(&|v| Some(i64::from(v.remove)))),
+            mean_and_max(&s.scores),
+            mean_and_max(&s.embers),
+        )
+    }
+
+    #[test]
+    fn the_economy_holds_run_sims_bands() {
+        // The strawmen of §15.13 (Coins, Tickets, prices, the score row) are to tune, not to break.
+        let content = content();
+        let sample = play_economy(&content).expect("the economy runs end clean");
+        let broken = broken_economy(&sample);
+        assert!(
+            broken.is_empty(),
+            "the economy broke its bands (change the bands only with a deliberate retune):\n{}\n{}",
+            broken.join("\n"),
+            render_economy(&sample)
+        );
+    }
+
+    #[test]
+    fn each_economy_band_names_the_edit_that_breaks_it() {
+        let shop = ShopVisit {
+            coins: 180,
+            tickets: 10,
+            cheapest_card: Some(23),
+            remove: 50,
+            radiant: 3,
+            buff: 2,
+        };
+        let sound = EconomySample {
+            runs: 24,
+            coins: vec![700; 24],
+            tickets: vec![43; 24],
+            first_shops: vec![shop; 22],
+            scores: vec![470; 6],
+            embers: vec![4; 6],
+        };
+        assert_eq!(broken_economy(&sound), Vec::<String>::new());
+        let with_shops = |edit: &dyn Fn(&mut ShopVisit)| {
+            let mut edited = sound.clone();
+            edited.first_shops.iter_mut().for_each(edit);
+            edited
+        };
+        let has = |broken: &[String], starts: &[&str]| {
+            assert_eq!(broken.len(), starts.len(), "{broken:?}");
+            for start in starts {
+                assert!(broken.iter().any(|b| b.starts_with(start)), "{start}: {broken:?}");
+            }
+        };
+        // RUN_CARD_PRICE tenfold: the first shop is out of reach and the card is no choice, nothing else.
+        let dear = broken_economy(&with_shops(&|v| {
+            v.cheapest_card = v.cheapest_card.map(|p| p * 10)
+        }));
+        has(
+            &dear,
+            &[
+                "median run cannot afford the cheapest shop card by its first shop: 180 held, 230 asked: RUN_CARD_PRICE",
+                "cheapest shop card costs ",
+            ],
+        );
+        assert!(dear.iter().all(|b| b.contains("RUN_CARD_PRICE")), "{dear:?}");
+        // RUN_COINS zeroed: no income cannot keep affordability, and its bands go with it; Tickets and the
+        // score stay.
+        let mut broke = with_shops(&|v| v.coins = 0);
+        broke.coins = vec![0; 24];
+        has(
+            &broken_economy(&broke),
+            &[
+                "coins earned per won run 0 ",
+                "median run cannot afford the cheapest shop card",
+                "cheapest shop card costs ",
+                "median run cannot afford a Remove",
+            ],
+        );
+        // RUN_SCORE_PER_EMBER tenfold: the score is the same and its Embers fall to a tenth.
+        let mut stingy = sound.clone();
+        stingy.embers = vec![0; 6];
+        let stingy = broken_economy(&stingy);
+        has(&stingy, &["Embers per run 0 "]);
+        assert!(stingy[0].contains("RUN_SCORE_PER_EMBER"), "{stingy:?}");
+        // The score row tenfold at the same price: the score and the Embers both leave their bands.
+        let mut rich = sound.clone();
+        rich.scores = vec![4700; 6];
+        rich.embers = vec![47; 6];
+        has(
+            &broken_economy(&rich),
+            &["score per run 4700 ", "Embers per run 47 "],
+        );
+        // Edits inside the bands break nothing: a card half as dear again, a fifth less income.
+        let mut mild = with_shops(&|v| v.cheapest_card = v.cheapest_card.map(|p| p * 3 / 2));
+        mild.coins = vec![560; 24];
+        assert_eq!(broken_economy(&mild), Vec::<String>::new());
+        // Services out of a run's means.
+        let mut poor = sound.clone();
+        poor.tickets = vec![4; 24];
+        has(
+            &broken_economy(&poor),
+            &[
+                "tickets earned per won run 4 ",
+                "median run's Tickets cannot pay one Radiant and one buff",
+            ],
+        );
+        // Runs that never reach a shop, and no runs at all.
+        let mut lost = sound.clone();
+        lost.first_shops.truncate(5);
+        assert!(broken_economy(&lost)[0].starts_with("only 5 of 24 runs reach a shop"));
+        assert_eq!(broken_economy(&EconomySample::default()).len(), 9);
+    }
+
+    #[test]
+    fn the_tally_prints_the_economy_lines_after_the_old_rows() {
+        let content = content();
+        let (n, shopped) = (0..ECONOMY_RUNS)
+            .map(|n| {
+                (
+                    n,
+                    play_run(n, &content, &Start::default(), &won, None).expect("a run"),
+                )
+            })
+            .find(|(_, run)| !shop_visits(&run.file, &content).is_empty())
+            .expect("a stub-won run enters a shop");
+        assert!(shopped.faults.is_empty(), "{:?}", shopped.faults);
+        let visits = shop_visits(&shopped.file, &content);
+        assert!(
+            visits
+                .iter()
+                .all(|v| v.radiant == RUN_RADIANT_TICKETS && v.buff == RUN_BUFF_TICKETS && v.remove > 0),
+            "{visits:?}"
+        );
+        // A fresh run's empty log enters no shop.
+        let (setup, unlocks) = run_setup(n, &Start::default());
+        let fresh = RunFile {
+            setup,
+            unlocks,
+            log: Vec::new(),
+        };
+        assert!(shop_visits(&fresh, &content).is_empty());
+        let end = RunState {
+            stats: RunStats {
+                coins_earned: 100,
+                tickets_earned: 7,
+                ..RunStats::default()
+            },
+            ..shopped.end.clone()
+        };
+        let outcomes = vec![
+            shopped,
+            RunOutcome {
+                file: fresh,
+                end,
+                fights: Vec::new(),
+                faults: Vec::new(),
+            },
+        ];
+        let text = tally(&outcomes, &content).render("h");
+        let embers = text.find("Embers: ").expect("the Embers line");
+        for line in [
+            "coins earned: mean ",
+            "tickets earned: ",
+            "shops: ",
+            "cheapest shop card: ",
+            "prices: remove ",
+        ] {
+            assert!(text.find(line).is_some_and(|at| at > embers), "{line}: {text}");
+        }
+        assert!(
+            text.contains("runs won: ") && text.contains("score from rows: "),
+            "{text}"
+        );
+        assert!(
+            text.contains(&format!("shops: {} visits in 1 of 2 runs\n", visits.len())),
+            "{text}"
+        );
     }
 
     #[test]

@@ -5,9 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "../../web/src/wire/serverConfig.ts";
 import { ALERT_WINDOW_MS } from "./alerts.ts";
-import worker, { IMAGE_CHECK_RETRY_MS, IMAGE_CHECK_TIMEOUT_MS, Server, START_WAIT_MS, TOLD_AT_KEY, type Env } from "./index.ts";
+import worker, {
+  IMAGE_CHECK_RETRY_MS,
+  IMAGE_CHECK_TIMEOUT_MS,
+  SETTINGS_FINGERPRINT_KEY,
+  Server,
+  START_WAIT_MS,
+  TOLD_AT_KEY,
+  type Env,
+} from "./index.ts";
 import { FakeNetwork } from "./network.fake.ts";
-import { DAILY_SWEEP_CRON, DAILY_SWEEP_PATH, SERVER_PORT } from "./routing.ts";
+import { DAILY_SWEEP_CRON, DAILY_SWEEP_PATH, SERVER_PORT, settingsFingerprint } from "./routing.ts";
 
 const library = vi.hoisted(() => ({
   fetch: vi.fn<(request: Request) => Promise<Response>>(),
@@ -51,17 +59,46 @@ const COMMIT = "abc123";
 const LISTENING = new Response("from the server");
 /** The context a cron run gets, for a test that is not about what the run tells people. */
 const CRON_CTX = { waitUntil: vi.fn() } as unknown as ExecutionContext;
+/** #4118: the settings of most tests: the commit and nothing else. */
+const SETTINGS = { DEPLOYED_COMMIT: COMMIT };
+/** #4118: the settings after a secret changed. */
+const CHANGED = { DEPLOYED_COMMIT: COMMIT, DEV_PROFILE_IDS: "profile-1" };
+/** #4118: a secret the logs must never carry. */
+const SECRET = "postgresql://postgres:hunter2@db.example.com/postgres";
+const FINGERPRINT = await settingsFingerprint(SETTINGS);
 
-function serverWith(running: boolean): Server {
-  const ctx = { container: { running }, waitUntil: vi.fn() };
-  const env = { DEPLOYED_COMMIT: COMMIT };
-  return new Server(ctx as unknown as ConstructorParameters<typeof Server>[0], env as unknown as ConstructorParameters<typeof Server>[1]);
+/**
+ * #4118: an object's storage over a Map, which two objects can share (a restart), holding `SETTINGS`'
+ * fingerprint unless given another Map.
+ */
+function memoryStorage(entries = new Map<string, unknown>([[SETTINGS_FINGERPRINT_KEY, FINGERPRINT]])) {
+  return {
+    entries,
+    get: vi.fn((key: string) => Promise.resolve(entries.get(key))),
+    put: vi.fn((key: string, value: unknown) => {
+      entries.set(key, value);
+      return Promise.resolve();
+    }),
+  };
 }
 
-/** A server whose `ctx` and `env` the test sets by hand. */
-function serverWithCtx(ctx: unknown, env: unknown): Server {
+/** #4118: every argument a `console.warn` spy got, as text. */
+function logged(warn: { mock: { calls: unknown[][] } }): string {
+  return JSON.stringify(warn.mock.calls.flat().map(String));
+}
+
+function serverWith(running: boolean, storage = memoryStorage()): Server {
+  const ctx = { container: { running }, waitUntil: vi.fn(), storage };
   return new Server(
     ctx as unknown as ConstructorParameters<typeof Server>[0],
+    SETTINGS as unknown as ConstructorParameters<typeof Server>[1],
+  );
+}
+
+/** A server whose `ctx` and `env` the test sets by hand; with no `storage` of its own it gets one holding `SETTINGS`' fingerprint. */
+function serverWithCtx(ctx: unknown, env: unknown): Server {
+  return new Server(
+    { storage: memoryStorage(), ...(ctx as Record<string, unknown>) } as unknown as ConstructorParameters<typeof Server>[0],
     env as unknown as ConstructorParameters<typeof Server>[1],
   );
 }
@@ -153,10 +190,14 @@ describe("the image check on the first request", () => {
   });
 
   it("leaves a server on the deployed commit running", async () => {
-    await serverWith(true).fetch(request());
+    const storage = memoryStorage();
+
+    await serverWith(true, storage).fetch(request());
 
     expect(library.stop).not.toHaveBeenCalled();
     expect(library.destroy).not.toHaveBeenCalled();
+    // Its settings are the ones it started with, so there is nothing to remember.
+    expect(storage.put).not.toHaveBeenCalled();
   });
 
   it("starts a server whose context names no container", async () => {
@@ -444,6 +485,202 @@ describe("the image check on the first request", () => {
   });
 });
 
+/** #4118: a redeploy that names the same commit but other settings restarts a running server. */
+describe("#4118 the settings check on the first request", () => {
+  /** A running container whose `stop` takes it down and whose start brings it back, as the library's would. */
+  function runningContainer(running = true) {
+    const container = { running };
+    library.stop.mockImplementation(() => {
+      container.running = false;
+      return Promise.resolve();
+    });
+    library.startAndWaitForPorts.mockImplementation(() => {
+      container.running = true;
+      return Promise.resolve();
+    });
+    return container;
+  }
+
+  beforeEach(() => {
+    resetLibrary();
+  });
+
+  it("pins its storage key", () => {
+    expect(SETTINGS_FINGERPRINT_KEY).toBe("jackioh:server.settings:fingerprint");
+    expect(SETTINGS_FINGERPRINT_KEY).not.toBe(TOLD_AT_KEY);
+  });
+
+  it("stops a server on the deployed commit whose settings changed, and the request starts the new one", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const container = runningContainer();
+    const storage = memoryStorage();
+
+    expect(await serverWithCtx({ container, storage }, CHANGED).fetch(request())).toBe(LISTENING);
+
+    expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+    expect(library.destroy).not.toHaveBeenCalled();
+    expect(library.startAndWaitForPorts).toHaveBeenCalledOnce();
+    expect(library.startAndWaitForPorts.mock.invocationCallOrder[0]).toBeGreaterThan(library.stop.mock.invocationCallOrder[0]!);
+    expect(warn.mock.calls.filter(([message]) => message === "server.settings_changed")).toEqual([["server.settings_changed"]]);
+    expect(storage.entries.get(SETTINGS_FINGERPRINT_KEY)).toBe(await settingsFingerprint(CHANGED));
+  });
+
+  it("waits RETIRE_WAIT_MS for it, then destroys it", async () => {
+    // `setImmediate` stays real: the fingerprint's digest settles on the event loop, which a fake clock does not drive.
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    try {
+      resetLibrary();
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const storage = memoryStorage();
+      // Waits for the stop itself, not a count of event-loop turns: on a busy runner the digest can take more.
+      const stopped = new Promise<void>((resolve) => {
+        library.stop.mockImplementation(() => {
+          resolve();
+          return Promise.resolve();
+        });
+      });
+
+      const fetching = serverWithCtx({ container: { running: true }, storage }, CHANGED).fetch(request());
+      await stopped;
+      // Still draining: the destroy has to wait for the full wait, not a skipped or shortened one.
+      await vi.advanceTimersByTimeAsync(29_000);
+      expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+      expect(library.destroy).not.toHaveBeenCalled();
+      // Past the wait: the server is still up, so it is destroyed.
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(library.destroy).toHaveBeenCalledOnce();
+      await fetching;
+
+      expect(storage.entries.get(SETTINGS_FINGERPRINT_KEY)).toBe(await settingsFingerprint(CHANGED));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("counts a missing fingerprint as changed", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const container = runningContainer();
+    const storage = memoryStorage(new Map());
+
+    await serverWithCtx({ container, storage }, SETTINGS).fetch(request());
+
+    expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+    expect(storage.entries.get(SETTINGS_FINGERPRINT_KEY)).toBe(FINGERPRINT);
+  });
+
+  it("stores the fingerprint when no server runs, and a new object on that storage leaves the server it started", async () => {
+    const container = runningContainer(false);
+    const storage = memoryStorage(new Map());
+
+    await serverWithCtx({ container, storage }, SETTINGS).fetch(request());
+
+    expect(storage.entries.get(SETTINGS_FINGERPRINT_KEY)).toBe(FINGERPRINT);
+    expect(library.containerFetch).not.toHaveBeenCalled();
+
+    // A restart of the object: the same storage and settings, and the server the first one started.
+    expect(await serverWithCtx({ container, storage }, SETTINGS).fetch(request())).toBe(LISTENING);
+
+    expect(library.containerFetch).toHaveBeenCalledOnce();
+    expect(library.stop).not.toHaveBeenCalled();
+    expect(library.startAndWaitForPorts).toHaveBeenCalledOnce();
+  });
+
+  it("does not loop: after retiring for changed settings, a new object with the same settings leaves the server", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const container = runningContainer();
+    const storage = memoryStorage();
+
+    await serverWithCtx({ container, storage }, CHANGED).fetch(request());
+    await serverWithCtx({ container, storage }, CHANGED).fetch(request());
+
+    expect(library.stop).toHaveBeenCalledOnce();
+    expect(library.startAndWaitForPorts).toHaveBeenCalledOnce();
+  });
+
+  it("remembers the settings after retiring an older commit too", async () => {
+    const container = runningContainer();
+    const storage = memoryStorage(new Map());
+    library.containerFetch.mockResolvedValue(new Response(null, { headers: { "x-deployed-commit": "older" } }));
+
+    await serverWithCtx({ container, storage }, SETTINGS).fetch(request());
+
+    expect(library.stop).toHaveBeenCalledOnce();
+    expect(storage.entries.get(SETTINGS_FINGERPRINT_KEY)).toBe(FINGERPRINT);
+
+    // The server the request started is on the deployed commit: a new object on this storage leaves it.
+    library.containerFetch.mockResolvedValue(new Response(null, { headers: { "x-deployed-commit": COMMIT } }));
+    await serverWithCtx({ container, storage }, SETTINGS).fetch(request());
+
+    expect(library.stop).toHaveBeenCalledOnce();
+  });
+
+  it("leaves the server running when the stored fingerprint cannot be read, and asks again after the retry interval", async () => {
+    vi.useFakeTimers();
+    try {
+      resetLibrary();
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const container = runningContainer();
+      const storage = memoryStorage();
+      storage.get.mockRejectedValueOnce(new Error("storage down"));
+      const env = { ...CHANGED, DATABASE_URL: SECRET };
+      const server = serverWithCtx({ container, storage }, env);
+
+      expect(await server.fetch(request())).toBe(LISTENING);
+      expect(library.stop).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith("server.settings_unreadable", expect.any(Error));
+      expect(logged(warn)).not.toContain("hunter2");
+      expect(logged(warn)).not.toContain(await settingsFingerprint(env));
+
+      // The storage reads again, and the settings are not the ones the server started with.
+      vi.advanceTimersByTime(IMAGE_CHECK_RETRY_MS);
+      expect(await server.fetch(request())).toBe(LISTENING);
+      expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still answers when the fingerprint cannot be written, with no server running", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const container = runningContainer(false);
+    const storage = memoryStorage(new Map());
+    storage.put.mockRejectedValue(new Error("storage down"));
+    const env = { DEPLOYED_COMMIT: COMMIT, DATABASE_URL: SECRET };
+
+    expect(await serverWithCtx({ container, storage }, env).fetch(request())).toBe(LISTENING);
+
+    expect(library.startAndWaitForPorts).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith("server.settings_unwritten", expect.any(Error));
+    expect(logged(warn)).not.toContain("hunter2");
+    expect(logged(warn)).not.toContain(await settingsFingerprint(env));
+  });
+
+  it("still answers when the fingerprint cannot be written after a retire", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const container = runningContainer();
+    const storage = memoryStorage();
+    storage.put.mockRejectedValue(new Error("storage down"));
+
+    expect(await serverWithCtx({ container, storage }, CHANGED).fetch(request())).toBe(LISTENING);
+
+    expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+    expect(warn).toHaveBeenCalledWith("server.settings_unwritten", expect.any(Error));
+    expect(logged(warn)).not.toContain(await settingsFingerprint(CHANGED));
+  });
+
+  it("stores nothing when the retire fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    library.stop.mockRejectedValue(new Error("refused"));
+    const storage = memoryStorage();
+
+    expect(await serverWithCtx({ container: { running: true }, storage }, CHANGED).fetch(request())).toBe(LISTENING);
+
+    expect(warn).toHaveBeenCalledWith("server.retire_failed", expect.any(Error));
+    expect(storage.put).not.toHaveBeenCalled();
+    expect(storage.entries.get(SETTINGS_FINGERPRINT_KEY)).toBe(FINGERPRINT);
+  });
+});
+
 describe("the Worker's routes", () => {
   beforeEach(() => {
     resetLibrary();
@@ -479,6 +716,23 @@ describe("the Worker's routes", () => {
     const forwarded = fetch.mock.calls[0]?.[0] as Request;
     expect(forwarded.headers.has("X-Forwarded-For")).toBe(false);
     expect(await answer.text()).toBe("from the server");
+  });
+
+  it("#4017 forwards a socket's ?token= to the server and logs nothing that holds it", async () => {
+    const fetch = vi.fn((_request: Request) => Promise.resolve(new Response("from the server")));
+    const env = routedEnv(fetch);
+    const spies = (["log", "info", "warn", "error", "debug"] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation(() => undefined),
+    );
+    try {
+      await worker.fetch(new Request("https://jackioh.com/ws/match?matchId=m1&token=SECRET-TOKEN"), env);
+
+      const forwarded = fetch.mock.calls[0]?.[0] as Request;
+      expect(new URL(forwarded.url).searchParams.get("token")).toBe("SECRET-TOKEN");
+      for (const spy of spies) expect(JSON.stringify(spy.mock.calls)).not.toContain("SECRET-TOKEN");
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
   });
 });
 
@@ -675,7 +929,8 @@ describe("#3618 server.unreachable", () => {
 
       expect(handle.storage.get(TOLD_AT_KEY)).toBe(T0);
       expect(TOLD_AT_KEY).toBe("jackioh:server.unreachable:toldAt");
-      expect(handle.ctx.storage.put).toHaveBeenCalledOnce();
+      // #4118: the start's settings are kept in the same storage, under a key of their own.
+      expect(handle.ctx.storage.put.mock.calls.filter(([key]) => key === TOLD_AT_KEY)).toHaveLength(1);
     });
 
     it("remembers across a restart: a new object on the same storage tells nothing inside the window", async () => {
@@ -747,7 +1002,7 @@ describe("#3618 server.unreachable", () => {
 
       expect(network.calls).toHaveLength(0);
       expect(handle.ctx.storage.get).not.toHaveBeenCalled();
-      expect(handle.ctx.storage.put).not.toHaveBeenCalled();
+      expect(handle.storage.has(TOLD_AT_KEY)).toBe(false);
     });
 
     it("falls back to the day's one email when GitHub fails", async () => {

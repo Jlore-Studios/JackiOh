@@ -6,7 +6,7 @@
 // "Readable" is the design's word: the defId is not the sentinel and the table has an entry for it.
 
 import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerId, type UnitView } from "@jackioh/shared";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -44,7 +44,8 @@ import {
   type PlayFrame,
 } from "./cues.ts";
 import { battleshipCues } from "./battleshipCues.ts";
-import { MUSIC_CARDS } from "./musicData.ts";
+import { MUSIC_CARDS } from "./soundTables.ts";
+import { loadSoundTables } from "./soundTablesLoader.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import { signatureCues } from "./signatureCues.ts";
 import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
@@ -56,6 +57,10 @@ import { lookupFromDefs } from "../game/catalog.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
 
 /* Fixtures */
+
+beforeAll(async () => {
+  await loadSoundTables();
+});
 
 const LINES: CardAudioTable = {
   voices: {

@@ -80,9 +80,9 @@ pub struct DuelSetup {
     /// The log's next seq.
     #[cfg_attr(feature = "ts", ts(type = "number"))]
     pub next_seq: i64,
-    /// The nonce and seq of every row already in the log, in log order (§9.3).
-    #[cfg_attr(feature = "ts", ts(type = "Array<[string, number]>"))]
-    pub acked: Vec<(String, i64)>,
+    /// The nonce, seat and seq of every row already in the log, in log order (§9.3, R4013000).
+    #[cfg_attr(feature = "ts", ts(type = "Array<[string, string, number]>"))]
+    pub acked: Vec<(String, PlayerId, i64)>,
     /// The clocks as the store holds them: only the grace deadlines are read back (R744).
     pub clocks: MatchClocks,
     /// R1452: the ladder bot at each home seat, which the host plays; `None` for a person.
@@ -211,9 +211,9 @@ pub struct DuelHost {
     // The log (§9.3)
     #[cfg_attr(feature = "ts", ts(type = "number"))]
     next_seq: i64,
-    /// Each nonce's seq, so a resend writes no second row.
-    #[cfg_attr(feature = "ts", ts(type = "{ [nonce in string]?: number }"))]
-    acks: IndexMap<String, i64>,
+    /// Each nonce's seat and seq, so a resend by its seat writes no second row (R4013000).
+    #[cfg_attr(feature = "ts", ts(type = "{ [nonce in string]?: [string, number] }"))]
+    acks: IndexMap<String, (PlayerId, i64)>,
     /// R1253000: nonces whose reduce panicked, answered `Panicked` again.
     panicked: IndexSet<String>,
     awaiting: Option<Awaiting>,
@@ -327,7 +327,10 @@ impl DuelHost {
             attached_once: PerPlayer::new(bots.p1.is_some(), bots.p2.is_some()),
             bots,
             next_seq,
-            acks: acked.into_iter().collect(),
+            acks: acked
+                .into_iter()
+                .map(|(nonce, seat, seq)| (nonce, (seat, seq)))
+                .collect(),
             panicked: IndexSet::new(),
             awaiting: None,
             run: None,
@@ -995,8 +998,14 @@ impl DuelHost {
         origin: &Origin,
         now: i64,
     ) -> Option<ActionAnswer> {
-        if let Some(seq) = self.acks.get(&nonce) {
-            return Some(ActionAnswer::Ack { seq: *seq });
+        if let Some((seat, seq)) = self.acks.get(&nonce) {
+            // §9.3, R4013000: a reused nonce answers its original ack to its own seat only, with
+            // no second reduce or row; another seat's copy is taken, never applied as either.
+            return Some(if *seat == player {
+                ActionAnswer::Ack { seq: *seq }
+            } else {
+                ActionAnswer::NonceTaken
+            });
         }
         if self.panicked.contains(&nonce) {
             return Some(ActionAnswer::Panicked);
@@ -1072,7 +1081,7 @@ impl DuelHost {
                 let player = action.player_id;
                 let before = std::mem::replace(&mut self.game, after);
                 self.next_seq = seq + 1;
-                self.acks.insert(nonce.clone(), seq);
+                self.acks.insert(nonce.clone(), (player, seq));
                 // R1442: the move as it arrived, on the state it was made in, once the state has moved
                 // on with the log, so nothing the telemetry does can leave the two apart.
                 let clock_left_ms = self.clock.remaining_for(player, now);

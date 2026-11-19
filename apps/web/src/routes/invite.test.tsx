@@ -230,7 +230,7 @@ describe("a refusal is rendered exactly as the server wrote it", () => {
   });
 });
 
-// Redemption paused (§9.4 circuit breaker)
+// Redemption paused (the operator's pause, R4131000)
 
 describe("when redemption is paused", () => {
   it("says so from GET /api/codes/status instead of guessing after a 503", async () => {

@@ -316,9 +316,7 @@ mod tests {
             let card = added(&s).expect("the pick").id;
             let theirs = s.view(P2);
             assert!(!serde_json::to_string(&theirs).unwrap().contains(&format!("\"{card}\"")));
-            // The picked card's own events read "hidden". A card it brings along (S+ #121 Toxopid adds a
-            // Crawler on its first arrival in a hand, R3560000) is a card of its own, which its owner's
-            // opponent reads as any card added to a hand.
+            // The picked card's own events read "hidden".
             let mut hidden = 0;
             for event in &theirs.events {
                 if let GameEvent::AddedToHand { instance_id, .. } | GameEvent::CostChanged { instance_id, .. } = event {

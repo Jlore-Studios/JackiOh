@@ -195,26 +195,3 @@ export function keepHand(options: Common): CoachStep {
     },
   };
 }
-
-export function switchPosition(options: Common & { defId: string; to: "ATK" | "DEF" }): CoachStep {
-  const { defId, to, when, ...rest } = options;
-  const legalSwitch = (ctx: CoachCtx): boolean => {
-    const unit = unitOf(ctx.view, "you", defId);
-    return unit !== undefined && unit.position !== to && ctx.legal.some((action) => action.type === "switchPosition" && action.instanceId === unit.instanceId);
-  };
-  return {
-    kind: "act",
-    anchor: { kind: "unit", side: "you", defId },
-    ...rest,
-    when: (ctx) => myMain(ctx) && legalSwitch(ctx) && (when === undefined || when(ctx)),
-    done: (ctx) => {
-      const unit = unitOf(ctx.view, "you", defId);
-      return unit === undefined || unit.position === to;
-    },
-    moot: (ctx, since) => since !== null && ctx.view.turn !== since.turn,
-    expect: (action, ctx) => {
-      const unit = unitOf(ctx.view, "you", defId);
-      return unit !== undefined && action.type === "switchPosition" && action.instanceId === unit.instanceId;
-    },
-  };
-}

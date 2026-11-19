@@ -1,5 +1,5 @@
 //! M #87 Tatches the Totem (SPEC §8.8 row 87): (0) Unit ((1) until issue #3138), All Tribes (Human,
-//! Felinor, KY, CN, Jlockeed), Legendary, 0/3 → 0/6.
+//! Felinor, KY, CN, Jlockeed), Legendary, 0/4 → 0/8 (0/3 → 0/6 until issue #4154).
 //!
 //! Base:    "While in your hand or deck: After you play a card with a tribal tag, summon this.
 //!          End of turn: Buff {cards|random card|random cards} in your hand."
@@ -11,7 +11,7 @@
 //! the deck alone, which `script_v0_6_4c` keeps for those replays (R767000). A face-down play is a Trap with no tags until revealed (R448), so
 //! it summons nothing. End of turn: one Buff on a uniform pick over the hand (R440); Radiant, then one
 //! Buff on each Unit `adjacent_to` this (§3.1). Issue #3837 took the deck out of the pick; through
-//! v0.6.1b it was over hand and deck, which `script_v0_6_1b` keeps for those replays (R767000). "All
+//! v0.6.2c it was over hand and deck, which `script_v0_6_2c` keeps for those replays (R767000). "All
 //! Tribes" is all five tribal tags in the catalog's `tags`, read off them by the client — no catalog
 //! field of its own.
 
@@ -46,8 +46,8 @@ fn summon_on_tribal() -> TriggerDef {
 
 /// The piles the end-of-turn Buff picks from: the hand since issue #3837.
 const ZONES: &[&str] = &["hand"];
-/// Through v0.6.1b: the hand or the deck.
-const ZONES_V0_6_0C: &[&str] = &["hand", "library"];
+/// Through v0.6.2c: the hand or the deck.
+const ZONES_V0_6_2C: &[&str] = &["hand", "library"];
 
 fn end_of_turn(radiant: bool, zones: &'static [&'static str]) -> Hook {
     hook(move |ctx| {
@@ -102,10 +102,10 @@ pub fn script_v0_6_4c() -> CardScripts {
     tatches(ZONES, false)
 }
 
-/// R767000: the end-of-turn Buff over hand and deck, through v0.6.1b; `KEPT_SCRIPTS` folds those
+/// R767000: the end-of-turn Buff over hand and deck, through v0.6.2c; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_1b() -> CardScripts {
-    tatches(ZONES_V0_6_0C, false)
+pub fn script_v0_6_2c() -> CardScripts {
+    tatches(ZONES_V0_6_2C, false)
 }
 
 // M #87 Tatches the Totem — SPEC §8.8 row 87, BUILD M10 row M 87.
@@ -162,7 +162,7 @@ mod tests {
         /// from the deck as ever (a summon pays nothing).
         #[test]
         fn issue_3138_it_costs_0_plays_for_no_mana_and_is_summoned_from_the_deck_on_both_faces() {
-            for (radiant, health) in [(false, 3), (true, 6)] {
+            for (radiant, health) in [(false, 4), (true, 8)] {
                 let mut s = scenario(json!({
                     "p1": { "mana": 0, "hand": [{ "def": TATCHES, "radiant": radiant }, FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -389,8 +389,8 @@ mod tests {
             }
 
             #[test]
-            fn r767000_the_kept_v0_6_1b_script_reaches_the_deck() {
-                crate::under_kept(ID, script_v0_6_1b(), || {
+            fn r767000_the_kept_v0_6_2c_script_reaches_the_deck() {
+                crate::under_kept(ID, script_v0_6_2c(), || {
                     let mut deck_hit = false;
                     for seed in 1..=20 {
                         let mut s = standing(seed, false);

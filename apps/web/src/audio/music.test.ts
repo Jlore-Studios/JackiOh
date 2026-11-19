@@ -26,6 +26,7 @@ import {
 import { createAudioEngine } from "./engine.ts";
 import { createMusicPlayer, type FocusPort, type MusicPlayer } from "./music.ts";
 import { resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
+import { deferSoundTablesForTests } from "./soundTablesLoader.ts";
 import { FakeFetch, fakeContextFactory, settle, type FakeAudio, type FakeNode } from "./test/fakeAudio.ts";
 import type { AudioEngine, MusicManifest, MusicTrack } from "./types.ts";
 
@@ -913,5 +914,59 @@ describe("background: the OS closes the context mid-game (issue #2034)", () => {
     expect(ramp).toMatchObject({ method: "setTargetAtTime", value: 1, time: r.audio.currentTime, timeConstant: MUSIC_FOCUS_TC_S });
     expect(events.filter((e) => (e.method === "setValueAtTime" || e.method === "linearRampToValueAtTime") && e.value === 1)).toEqual([]);
     expect(r.audio.violations).toEqual([]);
+  });
+
+  describe("#4130 lazy sound tables loading in music player", () => {
+    it("#4130 a track requested before tables arrive starts once tables load", async () => {
+      const deferred = deferSoundTablesForTests();
+      const factory = fakeContextFactory({ decodedSeconds: 30 });
+      const engine = createAudioEngine({ createContext: factory.create, speech: null, visibility: () => "visible" });
+      const fetch = new FakeFetch();
+      const player = createMusicPlayer({ engine: () => engine, manifest: undefined, fetchBytes: fetch.fetchBytes });
+      live.push({ engine, player });
+      engine.unlock();
+      await settle();
+
+      player.request({ track: "menu" });
+      await settle();
+      expect(player.current()).toBeNull();
+      expect(player.log()).toEqual([]);
+
+      deferred.resolve({
+        cardAudio: { voices: {}, effects: {}, cards: {}, emotes: {} },
+        voiceManifest: { version: 1, format: "test", files: {} },
+        musicManifest: MANIFEST,
+        musicCards: {},
+      });
+      await settle();
+
+      expect(player.current()).toBe("menu");
+      expect(player.log().map((e) => e.track)).toEqual(["menu"]);
+    });
+
+    it("#4130 a sting requested before tables arrive plays once tables load", async () => {
+      const deferred = deferSoundTablesForTests();
+      const factory = fakeContextFactory({ decodedSeconds: 30 });
+      const engine = createAudioEngine({ createContext: factory.create, speech: null, visibility: () => "visible" });
+      const fetch = new FakeFetch();
+      const player = createMusicPlayer({ engine: () => engine, manifest: undefined, fetchBytes: fetch.fetchBytes });
+      live.push({ engine, player });
+      engine.unlock();
+      await settle();
+
+      player.playSting("intro-a");
+      await settle();
+      expect(player.log()).toEqual([]);
+
+      deferred.resolve({
+        cardAudio: { voices: {}, effects: {}, cards: {}, emotes: {} },
+        voiceManifest: { version: 1, format: "test", files: {} },
+        musicManifest: MANIFEST,
+        musicCards: {},
+      });
+      await settle();
+
+      expect(player.log().filter((e) => e.kind === "sting").map((e) => e.track)).toEqual(["intro-a"]);
+    });
   });
 });

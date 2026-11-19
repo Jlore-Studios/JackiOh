@@ -1488,7 +1488,7 @@ impl<T: PartialEq> OneOrMany<T> {
     }
 }
 
-/// `{ min?: number; max?: number }`: `CatalogQuery.costRange` and `TargetFilter.costRange`.
+/// `{ min?: number; max?: number }`: `TargetFilter.costRange`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(
     feature = "ts",
@@ -1503,60 +1503,6 @@ pub struct CostRange {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub max: Option<i32>,
-}
-
-/// §5.1: the one query every random pool and Discover goes through. Every field narrows; `{}` is every
-/// non-token card of every set (R380: a pool that names no set draws from all of them).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(
-    feature = "ts",
-    derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/")
-)]
-#[serde(rename_all = "camelCase")]
-pub struct CatalogQuery {
-    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub type_: Option<OneOrMany<CardType>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub cost: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub cost_range: Option<CostRange>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub tags: Option<Vec<Tag>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub not_tags: Option<Vec<Tag>>,
-    /// R1422: has at least one of these tags ("a random Human, Book, CN, or AI-Generated card"), where
-    /// `tags` asks for every one of its tags. A Fruit or Prime tag here takes its tokens as `tags`
-    /// does (R382, R1421).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub any_tags: Option<Vec<Tag>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub rarity: Option<OneOrMany<Rarity>>,
-    /// A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub set: Option<OneOrMany<SetName>>,
-    /// R387: never these definitions, by catalog id — a card's own id, so it never generates itself
-    /// (§5.1, B4.1). An index is unique only within its set, so a pool never excludes by index.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub exclude_def_id: Option<OneOrMany<String>>,
-    /// R382: tokens may come out of this pool beside the cards — Dropshipping's "(including tokens)".
-    /// Without it a pool holds no token, except that a Fruit pool holds the Grapes.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub with_tokens: Option<bool>,
-    /// R1080: the printed base attack and health a pool asks for (M #51's "random 1/1s").
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "ts", ts(optional))]
-    pub stats: Option<AttackHealth>,
 }
 
 string_union! {

@@ -8,7 +8,7 @@
 //! target prompt opened then (§10.6): the condition is only known at resolution, so the pick cannot be
 //! declared with the play (R81); a face-down option names nothing but its id to its chooser (R177).
 //! §6.3 Steal: R15 places it in the same lane of the controller's row if free, else the first free zone;
-//! with none it stays with its owner. The change of control is an entry (R171). R33: a stolen
+//! with none it is destroyed where it stands instead, past Indestructible (R4205000). The change of control is an entry (R171). R33: a stolen
 //! face-down trap stays face-down, read by its new controller. R195: in hand the card glows when the
 //! opponent controls enough permanents now. The threshold is the declared `threshold` (R386).
 
@@ -173,7 +173,7 @@ mod tests {
             }
 
             #[test]
-            fn r15_with_no_free_zone_in_your_row_the_pick_stays_with_them_and_nothing_is_stolen() {
+            fn r15_r4205000_with_no_free_zone_in_your_row_the_random_pick_is_destroyed_and_nothing_is_stolen() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR], "field": [MENACE, MENACE, MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -182,9 +182,15 @@ mod tests {
                 s.play(TECH, json!({ "zone": 5 }));
 
                 assert!(stolen_ids(&s).is_empty());
-                let defs: Vec<Option<String>> =
-                    (1..=5).map(|l| s.unit(PlayerId::P2, l).map(|unit| unit.def_id.clone())).collect();
-                assert_eq!(defs, vec![Some(VANILLA.to_string()); 5]);
+                let standing = (1..=5).filter(|l| s.unit(PlayerId::P2, *l).is_some()).count();
+                assert_eq!(standing, 4, "the random pick is destroyed where it stood");
+                let graveyard: Vec<String> =
+                    s.pile(PlayerId::P2, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                assert_eq!(graveyard, vec![VANILLA.to_string()]);
+                assert_eq!(
+                    s.events().iter().filter(|event| matches!(event, GameEvent::Destroyed { .. })).count(),
+                    1
+                );
             }
 
             #[test]
@@ -325,7 +331,7 @@ mod tests {
             }
 
             #[test]
-            fn r15_with_your_unit_row_full_the_prompt_still_opens_and_a_unit_you_pick_stays_with_them() {
+            fn r15_r4205000_with_your_unit_row_full_the_prompt_still_opens_and_the_unit_you_pick_is_destroyed() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR], "field": [MENACE, MENACE, MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -336,8 +342,11 @@ mod tests {
                 s.answer(json!([{ "pick": "instance", "instanceId": picked }]));
 
                 assert!(stolen_ids(&s).is_empty());
-                assert_eq!(s.unit(PlayerId::P2, 1).map(|unit| unit.id.clone()), Some(picked.clone()));
-                assert_eq!(s.card(&picked).controller, PlayerId::P2);
+                assert_eq!(s.unit(PlayerId::P2, 1), None);
+                s.expect_in_zone(picked.as_str(), "graveyard");
+                assert!(s.events().iter().any(
+                    |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == picked)
+                ));
             }
 
             #[test]

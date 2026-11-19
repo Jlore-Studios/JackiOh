@@ -579,6 +579,47 @@ fn r3286000_with_no_relic_left_to_offer_the_reward_has_none() {
     }
 }
 
+/// R3286000: a won mini-boss dealt no drop rolls Gold-or-better-or-nothing, never a lower relic,
+/// even with Bronze and Silver relics open. The deal leaves no drop exactly when no unheld
+/// Gold-or-better relic was left as the map was made, which the placeholder content never does,
+/// so this trims those relics from the content.
+#[test]
+fn r3286000_a_won_mini_boss_dealt_no_drop_rolls_gold_or_better_or_none() {
+    let full = content();
+    let mut content = full.clone();
+    content.passives.retain(|p| {
+        !(matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic)
+            && !p.unobtainable
+            && p.tier >= Some(RUN_MINI_BOSS_DROP_TIER))
+    });
+    assert!(
+        content.passives.iter().any(|p| {
+            matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic) && !p.unobtainable
+        }),
+        "a lower relic is still open"
+    );
+    let run_setup = RunSetup {
+        artifacts: vec!["temp-picky".into()],
+        ..setup(&full)
+    };
+    let state = run_create(&run_setup, &RunUnlocks::default(), &content).unwrap();
+    let rows = mini_boss_rows(&state);
+    assert!(!rows.is_empty());
+    for row in rows {
+        assert_eq!(
+            state.map[row][0].artifact, None,
+            "row {row}: no Gold-or-better relic was left to deal"
+        );
+        let reward = act(&fighting_on(&state, row), &content, won(20));
+        assert_eq!(offered(&reward), None, "row {row}");
+        assert!(
+            matches!(reward.phase, RunPhase::Reward { ref packs, .. } if !packs.is_empty()),
+            "{:?}",
+            reward.phase
+        );
+    }
+}
+
 #[test]
 fn the_artifact_comes_before_the_pack_and_greedy_keeps_one_more() {
     let content = content();
@@ -1087,6 +1128,53 @@ fn an_unknown_curse_and_content_missing_an_enemy_tier_or_an_event_are_refused() 
     eventless.events.clear();
     let refused = run_create(&setup(&content), &unlocks, &eventless).unwrap_err();
     assert!(refused.contains("no event"), "{refused}");
+}
+
+/// R4067000: a setup listing a curse twice is refused by the setup check, the create and the
+/// fold, naming the curse.
+#[test]
+fn r4067000_a_curse_listed_twice_is_refused() {
+    let content = content();
+    let id = content.curses[0].id.clone();
+    let mut cursed = setup(&content);
+    cursed.curses = vec![id.clone(), id.clone()];
+    let refused = run_check_setup(&cursed, &RunUnlocks::default(), &content).unwrap_err();
+    assert!(refused.contains(&id), "{refused}");
+    assert!(refused.contains("is taken twice"), "{refused}");
+    let refused = run_create(&cursed, &RunUnlocks::default(), &content).unwrap_err();
+    assert!(refused.contains(&id), "{refused}");
+    assert!(refused.contains("is taken twice"), "{refused}");
+    let file = RunFile {
+        setup: cursed,
+        unlocks: RunUnlocks::default(),
+        log: Vec::new(),
+    };
+    let refused = run_fold(&file, &content).unwrap_err();
+    assert!(refused.contains(&id), "{refused}");
+    assert!(refused.contains("is taken twice"), "{refused}");
+}
+
+/// R4067000: distinct curses are accepted as before, worth their points' sum in the score.
+#[test]
+fn r4067000_distinct_curses_are_accepted_unchanged() {
+    let content = content();
+    let mut distinct = setup(&content);
+    distinct.curses = vec![content.curses[0].id.clone(), content.curses[1].id.clone()];
+    assert_eq!(
+        run_check_setup(&distinct, &RunUnlocks::default(), &content),
+        Ok(())
+    );
+    let state = run_create(&distinct, &RunUnlocks::default(), &content).unwrap();
+    let points: i32 = content.curses[..2].iter().map(|c| c.points).sum();
+    assert_eq!(run_curse_points(&state, &content), points);
+    let mut scored = state;
+    scored.row = Some(0);
+    scored.stats.fights_won = 1;
+    let base = RUN_SCORE_ROW + i64::from(RUN_SCORE_FIGHT.fight);
+    assert_eq!(
+        run_score(&scored, &content),
+        base * (i64::from(PERCENT) + i64::from(points) * RUN_SCORE_CURSE_POINT_PERCENT) / i64::from(PERCENT)
+    );
 }
 
 /// §15.5: tiles are dealt by `RUN_TILE_WEIGHTS`: a roll under the first weight is the first item,

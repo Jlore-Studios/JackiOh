@@ -4,10 +4,14 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { gzipSync } from "node:zlib";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { soundTablesNow } from "../audio/soundTablesLoader.ts";
+import "../audio/engine.ts";
+import "../routes/landing.tsx";
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const SRC = join(WEB, "src");
@@ -39,8 +43,25 @@ const SOURCE = join(SRC, "patches/source.ts");
  * feed's lines and the social socket's `notification` frame are in the first load. CI's build of the pull
  * request merged into `main` (#4068, run 43822008191) measured 1,081,650 bytes. The budget is now 135 × 8192
  * (1,105,920), about 24 KB (2.2%) over that: putting `patches.json` back would still cross it.
+ *
+ * #4130 lowered it: the sound tables (voice lines, card audio settings, music manifest) load when
+ * sound first needs them rather than with the entry chunk. `vite build --mode development`, as CI builds
+ * it, measured 980,254 bytes (101,386 less). The budget is now 122 × 8192 (999,424), about 19 KB (2.0%)
+ * over that: putting either `patches.json` or the sound tables back would cross it.
+ *
+ * #4180 lowered it: the catalog the engine module already ships leaves the entry chunk (every screen
+ * reads the module's `currentCatalog()`), and the Chinese card tables load with the reader's language
+ * or beside the module. `vite build --mode development`, as CI builds it, measured 834,287 bytes
+ * (165,137 less). The budget is now 104 × 8192 (851,968), about 18 KB (2.1%) over that: putting the
+ * catalog or the Chinese tables back would cross it.
+ *
+ * #4222 lowered it: the scene kits and both recipe tables (every `sceneKit*.ts`, `figureKit.ts` and
+ * all `*Recipes*.ts`) load in a chunk beside the engine module rather than with the entry chunk.
+ * `vite build --mode development`, as CI builds it, measured 473,538 bytes
+ * (360,749 less). The budget is now 59 × 8192 (483,328), about 10 KB (2.1%)
+ * over that: putting the scene data back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 1_105_920;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 483_328;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -61,6 +82,86 @@ it("#3499 no non-test module imports patches.json statically", () => {
   });
   expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
   expect(readFileSync(SOURCE, "utf8")).toContain("import.meta.glob");
+});
+
+it("#4180 no non-test module imports catalog.json statically or dynamically", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticImport = /from\s+["'][^"']*catalog\.json["']/u;
+  const dynamicImport = /import\(\s*["'][^"']*catalog\.json["']\s*\)/u;
+  const offenders = files.filter((path) => {
+    // The `@jackioh/cards` surface: the lazy chunks' shared catalog, never the entry's.
+    if (relative(SRC, path) === "wire/cards.ts") return false;
+    const text = readFileSync(path, "utf8");
+    return staticImport.test(text) || dynamicImport.test(text);
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+});
+
+it("#4180 only cards/chinese.ts names the Chinese sidecars, through a lazy glob", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const sidecar = /chinese(-terms)?\.json/u;
+  const namers = files.filter((path) => sidecar.test(readFileSync(path, "utf8")));
+  expect(namers.map((path) => relative(SRC, path))).toEqual(["cards/chinese.ts"]);
+  const loader = readFileSync(join(SRC, "cards/chinese.ts"), "utf8");
+  expect(loader).toContain("import.meta.glob");
+  expect(loader).not.toMatch(/from\s+["'][^"']*chinese(-terms)?\.json["']/u);
+  expect(loader).not.toMatch(/import\(\s*["'][^"']*chinese(-terms)?\.json["']\s*\)/u);
+});
+
+it("#4130 no non-test module imports sound tables or raw sound data files statically", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticDataImport = /from\s+["'][^"']*(?:voice-manifest\.json|voice-text\.json|card-audio\.json5|music-manifest\.json|music-cards\.json)["']/u;
+  const rawDataImport = /["'][^"']*(?:voice-manifest\.json|voice-text\.json|card-audio\.json5|music-manifest\.json|music-cards\.json)\?raw["']/u;
+  const staticTablesImport = /from\s+["'][^"']*soundTables(?:\.ts)?["']/u;
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    if (rel === "audio/soundTables.ts") return false;
+    const text = readFileSync(path, "utf8");
+    return staticDataImport.test(text) || rawDataImport.test(text) || staticTablesImport.test(text);
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+});
+
+it("#4130 importing engine.ts and the landing does not run parseCardAudioText", () => {
+  expect(soundTablesNow()).toBeNull();
+});
+
+it("#4222 no non-test module statically imports scene data", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const importsSceneData = (specifier: string): boolean => {
+    const base = specifier.split("/").pop() ?? "";
+    if (!base.endsWith(".ts")) return false;
+    if (base === "sceneData.ts" || base === "figureKit.ts") return true;
+    if (base.startsWith("sceneKit")) return true;
+    return base.includes("Recipes");
+  };
+  const exempt = new Set<string>();
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    const base = basename(rel);
+    const dataFile =
+      rel === "cards/art/sceneData.ts" ||
+      (rel.startsWith("cards/art/") && (base.startsWith("sceneKit") || base === "figureKit.ts" || base.includes("Recipes")));
+    if (dataFile) {
+      exempt.add(rel);
+      return false;
+    }
+    // `import type` lines emit no bytes: only a value import joins the chunk.
+    const text = readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/.test(line))
+      .join("\n");
+    return [...text.matchAll(staticFrom)].some((match) => importsSceneData(match[1] ?? ""));
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+  for (const name of ["cards/art/sceneKit.ts", "cards/art/figureKit.ts", "cards/art/sceneRecipes.ts"]) {
+    expect(exempt, name).toContain(name);
+  }
 });
 
 describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
@@ -95,6 +196,60 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
     for (const probe of probes()) {
       for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4130 the entry chunk and its preloads hold no sound tables or json5", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    const soundProbes = [
+      "Stand behind me. Way behind.",
+      "Every card's sounds (SPEC §10.11, R655)",
+      "aac-lc 44100 stereo 80k",
+      "JSON5: invalid character",
+    ];
+    for (const probe of soundProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4180 the entry chunk and its preloads hold no Chinese card name", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    const cards = JSON.parse(readFileSync(join(WEB, "../../crates/cards/chinese.json"), "utf8")) as Record<string, { name?: unknown }>;
+    const ids = Object.keys(cards).filter((id) => id !== "//");
+    const first = cards[ids[0] ?? ""];
+    const last = cards[ids.at(-1) ?? ""];
+    const terms = JSON.parse(readFileSync(join(WEB, "../../crates/cards/chinese-terms.json"), "utf8")) as { radiant?: unknown };
+    const probes = [first?.name, last?.name, terms.radiant];
+    expect(ids.length).toBeGreaterThan(0);
+    expect(probes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    for (const probe of probes) {
+      for (const text of texts) expect(text).not.toContain(probe as string);
+    }
+  });
+
+  it("#4222 the entry chunk and its preloads hold no scene kit or recipe text", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each occurs in `src` only in the scene data files, their tests, or `ART.md`: a kit part, a
+    // figure pose, and a figure item each a recipe places.
+    const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
+    for (const probe of sceneProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4222 the practice worker's bundle holds no scene data", () => {
+    const assets = join(BUILT, "assets");
+    const scripts = readdirSync(assets).filter((name) => name.endsWith(".js"));
+    expect(scripts.length).toBeGreaterThan(0);
+    const workers = scripts.filter((name) => {
+      const text = readFileSync(join(assets, name), "utf8");
+      return text.includes("the practice engine could not be loaded");
+    });
+    expect(workers.length).toBeGreaterThan(0);
+    const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
+    for (const name of workers) {
+      const text = readFileSync(join(assets, name), "utf8");
+      for (const probe of sceneProbes) expect(text, name).not.toContain(probe);
     }
   });
 

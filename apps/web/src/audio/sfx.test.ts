@@ -10,7 +10,7 @@ import { CHAOS_REVEAL_MAX, EFFECT_PITCH_JITTER, IMPACT_AMOUNT_CAP } from "./cons
 import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, renderSfx, type SfxRecipe, type SfxSpec } from "./sfx.ts";
 import { FakeAudio, FakeNode, type FakeParam, type ParamEvent } from "./test/fakeAudio.ts";
 import type { SfxId, SfxParams } from "./types.ts";
-import { CARD_AUDIO } from "./voiceData.ts";
+import { CARD_AUDIO } from "./soundTables.ts";
 import { ANOMALY_CODES, type AnomalyCode } from "../cards/anomalies.ts";
 
 /** The SfxId union, in its declared order. */

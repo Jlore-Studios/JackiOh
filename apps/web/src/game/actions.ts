@@ -1037,6 +1037,22 @@ export function onClickTarget(
         return startAttack(legal, target.instanceId) ?? { interaction };
       }
       if (isBuilding(interaction)) {
+        // R3864000, R391, R446: a Tribute may pay for its own zone, so once the play asks only its zone, a click on your
+        // unit is a click on its zone (e2e spec 48, #4079: the tribute was appended again and the play never finished).
+        // Only a unit the play tributes: it is lit, so its click stops at the card (Card.tsx `fire`), while any other
+        // unit's click goes on to its zone itself (R3821000), which a second answer here would play twice.
+        if (
+          target.on === "unit" &&
+          target.side === "you" &&
+          outstandingNeed(interaction)?.kind === "zone" &&
+          someCandidateFixesTribute(interaction, target.instanceId)
+        ) {
+          const zone: ZoneChoice = { row: "units", lane: target.lane };
+          if (someCandidateFixesZone(interaction, zone)) {
+            const next = narrowedBy(interaction, { zone });
+            return next === null ? { interaction } : settle(next);
+          }
+        }
         const asTribute = target.on === "unit" ? narrowByTribute(interaction, target.instanceId) : null;
         if (asTribute !== null) return settle(asTribute);
         const asTarget = narrowByTarget(interaction, { pick: "instance", instanceId: target.instanceId });

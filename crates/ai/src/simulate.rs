@@ -18,7 +18,7 @@ use jackioh_engine::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::candidates::action_key;
+use crate::candidates::{action_key, plague_aims_first, plague_placement_open};
 use crate::config::{
     AI_EVAL, AI_KY_COMPETITION_EXPECTED_STREAK, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AI_SEARCH,
 };
@@ -529,7 +529,9 @@ pub(crate) enum AnswersTried {
 }
 
 /// The answers `best_auto_answer` tries of `answerer`'s prompt (excluding Concede).
-/// `Drawn` (#1382) sorts by `action_key` and samples up to `AI_SEARCH.max_auto_answer_options` (R185).
+/// `Drawn` (#1382) sorts by `action_key` and samples up to `AI_SEARCH.max_auto_answer_options` (R185), but
+/// takes every answer of a Plague Counter's placement under a Living Bomb, the enemy's permanents first
+/// (`plague_aims_first`, R4154402).
 fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> Vec<ActionBody> {
     let answers = legal_actions(state, answerer)
         .into_iter()
@@ -540,6 +542,11 @@ fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> V
     let mut keyed: Vec<(String, ActionBody)> = answers.map(|answer| (action_key(&answer), answer)).collect();
     keyed.sort_by(|a, b| a.0.cmp(&b.0));
     let ordered: Vec<ActionBody> = keyed.into_iter().map(|(_, answer)| answer).collect();
+    // R4154402: a Plague Counter placed under a Living Bomb is a destroy aimed, so every answer is tried,
+    // the enemy's permanents first, never a draw of a few.
+    if plague_placement_open(state, answerer) {
+        return plague_aims_first(state, answerer, ordered);
+    }
     let cap = AI_SEARCH.max_auto_answer_options.max(1) as usize;
     if ordered.len() <= cap {
         return ordered;
@@ -1068,6 +1075,19 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
 
 /// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797, R3772000).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
+    position_signature(state, seat, false)
+}
+
+/// R4132000: `search_signature` without where its cards stand: each side's unit parts sorted (each
+/// leads with its unit's id, so the order is canonical) and its backrow signed as its cards sorted,
+/// empty zones left out. The beam's lane variants read it; a lane that changes a card (an aura's
+/// stats, a Cry's work) still splits two positions.
+pub fn lane_free_signature(state: &GameState, seat: PlayerId) -> String {
+    position_signature(state, seat, true)
+}
+
+/// The two signatures' one body; `lane_free` is R4132000's.
+fn position_signature(state: &GameState, seat: PlayerId, lane_free: bool) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
         format!(
@@ -1094,30 +1114,38 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         ),
     ];
     for player in PLAYER_IDS {
-        for unit in active_units_of(state, player) {
-            let attacks = unit
-                .exertion
-                .attacks
-                .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
-            // R1829000: a card a Stack pile uncovers keeps its id and is summoning sick again, so the
-            // sickness is part of the position, or two children that differ only in it would merge.
-            let exerted = format!(
-                "{}{}{}",
-                attacks,
-                if unit.exertion.switched { 1 } else { 0 },
-                if is_sick(state, unit) { "z" } else { "" }
-            );
-            parts.push(format!(
-                "{}:{}:{}/{}:{}:{}:{}",
-                unit.id,
-                unit.damage,
-                unit.buffs.attack,
-                unit.buffs.health,
-                exerted,
-                unit.position.map_or("ATK", |position| position.as_str()),
-                unit_play_signature(state, unit),
-            ));
+        let mut units: Vec<String> = active_units_of(state, player)
+            .into_iter()
+            .map(|unit| {
+                let attacks = unit
+                    .exertion
+                    .attacks
+                    .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
+                // R1829000: a card a Stack pile uncovers keeps its id and is summoning sick again, so the
+                // sickness is part of the position, or two children that differ only in it would merge.
+                let exerted = format!(
+                    "{}{}{}",
+                    attacks,
+                    if unit.exertion.switched { 1 } else { 0 },
+                    if is_sick(state, unit) { "z" } else { "" }
+                );
+                format!(
+                    "{}:{}:{}/{}:{}:{}:{}",
+                    unit.id,
+                    unit.damage,
+                    unit.buffs.attack,
+                    unit.buffs.health,
+                    exerted,
+                    unit.position.map_or("ATK", |position| position.as_str()),
+                    unit_play_signature(state, unit),
+                )
+            })
+            .collect();
+        // R4132000: the lane-free signature lists no lane order.
+        if lane_free {
+            units.sort();
         }
+        parts.extend(units);
         // R1839000: a Dormant card is no active unit, yet it fills its zone and counts down: it is part of
         // the position, said only when there is one, so every other signature stays as it was.
         for unit in units_on_field_of(state, player) {
@@ -1129,24 +1157,28 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 parts.push(format!("s{}:{}:{}", unit.id, unit.def_id, ship.pieces.len()));
             }
         }
-        let backrow = state.players[player]
-            .backrow
-            .iter()
-            .map(|card| {
-                card.as_ref().map_or("-".to_string(), |card| {
-                    // R686: a revealed card shows its face but is not face-up (a Trap of it still fires).
-                    let face = if card.face_up == Some(true) {
-                        "^"
-                    } else if card.revealed == Some(true) {
-                        "~"
-                    } else {
-                        ""
-                    };
-                    format!("{}{face}:{:?}", card_signature(card), card.counters)
-                })
+        let zones = state.players[player].backrow.iter().map(|card| {
+            card.as_ref().map(|card| {
+                // R686: a revealed card shows its face but is not face-up (a Trap of it still fires).
+                let face = if card.face_up == Some(true) {
+                    "^"
+                } else if card.revealed == Some(true) {
+                    "~"
+                } else {
+                    ""
+                };
+                format!("{}{face}:{:?}", card_signature(card), card.counters)
             })
-            .collect::<Vec<_>>()
-            .join(",");
+        });
+        // R4132000: the lane-free signature signs the backrow's cards alone, sorted.
+        let backrow = if lane_free {
+            sorted(zones.flatten())
+        } else {
+            zones
+                .map(|zone| zone.unwrap_or_else(|| "-".to_string()))
+                .collect::<Vec<_>>()
+                .join(",")
+        };
         parts.push(format!("b{backrow}"));
         push_side_parts(state, player, &mut parts);
     }

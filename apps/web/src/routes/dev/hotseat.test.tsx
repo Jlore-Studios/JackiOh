@@ -533,6 +533,16 @@ describe("window.__jackioh in a production build", () => {
     // the fresh `wasm/index.ts` as setup.ts did.
     const wasm = await import("../../wasm/index.ts");
     wasm.loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../wasm/pkg/jackioh_wasm_bg.wasm")));
+    // #4222: the reset drops the scene tables with the modules, and the fresh board's faces are drawn
+    // from them: install the fresh `scene.ts` as setup.ts did, as `CardFace.test.tsx` does.
+    const scene = await import("../../cards/art/scene.ts");
+    const sceneData = await import("../../cards/art/sceneData.ts");
+    scene.installSceneData({
+      SCENE_KIT: sceneData.SCENE_KIT,
+      drawFigure: sceneData.drawFigure,
+      SCENE_RECIPES: sceneData.SCENE_RECIPES,
+      ALT_SCENE_RECIPES: sceneData.ALT_SCENE_RECIPES,
+    });
 
     const engine = await import("../../game/engine.ts");
     const route = await import("./hotseat.tsx");

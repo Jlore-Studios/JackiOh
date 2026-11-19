@@ -14,8 +14,8 @@ import { useId, useState, type ReactElement } from "react";
 
 import type { CardType, KeywordKind, Rarity, SetName, Tag } from "@jackioh/shared";
 
-import { CARD_TABLES } from "../../cards/chinese.ts";
-import { t, useLocale } from "../../i18n/i18n.ts";
+import { readerTerms } from "../../cards/chinese.ts";
+import { t } from "../../i18n/i18n.ts";
 import {
   COST_BUCKETS,
   DECK_CHIP_TAGS,
@@ -140,8 +140,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
   } = props;
   // The type, tag and rarity chips print the card frame's own words in the reader's language
   // (cards/chinese.ts, R1303); a language with no card table reads the catalog's English.
-  const locale = useLocale();
-  const terms = CARD_TABLES[locale]?.terms;
+  const terms = readerTerms();
 
   const setSets = (set: SetName) => {
     onFilter({ ...filter, sets: toggled(filter.sets, set) });

@@ -160,8 +160,3 @@ pub fn lanes_meet(a: &CardInstance, b: &CardInstance) -> bool {
     let lanes = lanes_of(b);
     lanes_of(a).iter().any(|lane| lanes.contains(lane))
 }
-
-/// R3546003: whether a GIGA `card` moved to `to` lands whole: every spanned slot takes a move.
-pub fn lands_whole(state: &GameState, card: &CardInstance, to: ZoneSlot) -> bool {
-    !is_giga(card) || fits(to, |slot| takes_move(state, slot))
-}

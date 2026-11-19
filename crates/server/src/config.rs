@@ -560,18 +560,16 @@ pub const REDEMPTION_RESPONSE_FLOOR_MS: i64 = 250;
 pub const REDEMPTION_IDENTICAL_ERROR: &str = "This invite code is invalid.";
 
 // ---------------------------------------------------------------------------------------------
-// The circuit breaker (§9.4).
+// The operator's redemption pause (§9.4).
 // ---------------------------------------------------------------------------------------------
 
-// SPEC §9.4: "A global circuit breaker disables redemption and alerts when system-wide failures
-// cross a threshold in a window" — SPEC fixes neither the threshold nor the window.
-//
-// SPEC §11 R106: 100 failed redemption attempts (across all profiles and IPs) within 600 s trips
-// the breaker. High enough that normal typo/expired-code traffic never trips it, low enough to
-// catch a scripted brute-force attempt quickly.
-pub const REDEMPTION_CIRCUIT_FAILURE_THRESHOLD: i64 = 100;
-/// SPEC §11 R106: the rolling window the circuit breaker counts failures over, in seconds.
-pub const REDEMPTION_CIRCUIT_WINDOW_SECONDS: i64 = 600;
+// R4131000 (replacing R106's breaker, which opened on 100 system-wide failures in 600 s): no count
+// of failures pauses redemption for everyone. §9.4 steps 2 and 3 block one profile and one address
+// for the rest of their hour; the database's switch (`moderate redemption off`) is the only pause.
+/// R4131000: how long this process keeps refusing redemption before the store after the database
+/// answered that it is paused, so the code screen says "paused" and further presses spend no try, in
+/// seconds. The switch's state is re-read once it lapses.
+pub const REDEMPTION_PAUSE_MIRROR_SECONDS: i64 = 600;
 
 // ---------------------------------------------------------------------------------------------
 // The invite-cluster watch (§9.8).
@@ -834,14 +832,17 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 /// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
 /// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
 /// telemetry's replay about 0.50 ms, while a checkpoint (some 75 KB) takes about 0.3 ms to serialize
-/// and hash, plus its write.
+/// and hash, plus its write. #4169: a co-op or 2v2 match's too (`duos::checkpoint`), whose actor also
+/// stores one after every row of its log whose seq is a multiple of it, so a crash costs at most this
+/// many rows' fold.
 pub const MATCH_CHECKPOINT_MIN_ACTIONS: i64 = 32;
 /// #1169: the shape of a checkpoint's body and of what the server folds a log to. A checkpoint
 /// stamped with another is refused and the whole log folded. Bump it when a server change alters
-/// either: the body (`actor::checkpoint::CheckpointBody`), the setup a rebuild folds with
-/// (`Registry::rebuild`'s arguments) or the bot turns it reads (`bot_moved_turns`). A change to the
-/// engine, the cards or `actor/engine.rs` and `actor/telemetry.rs` needs none: the rules fingerprint
-/// (`build.rs`) refuses those.
+/// either: the body (`actor::checkpoint::CheckpointBody`, or a co-op match's
+/// `duos::checkpoint::DuosCheckpointBody`, #4169), the setup a rebuild folds with
+/// (`Registry::rebuild`'s arguments, or `DuosRegistry::rebuild`'s fold inputs) or the bot turns it reads
+/// (`bot_moved_turns`). A change to the engine, the cards or `actor/engine.rs`, `actor/telemetry.rs` and
+/// `duos/engine.rs` needs none: the rules fingerprint (`build.rs`) refuses those.
 pub const MATCH_CHECKPOINT_VERSION: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------
@@ -1601,7 +1602,8 @@ pub const DEV_RATING_MIN: f64 = 100.0;
 /// §14.10, R3074001: the highest rating a dev account may hand-set itself on a ladder, past every
 /// bot's (`SKILL_ELO_TABLE`). Exported to `serverConfig.ts`.
 pub const DEV_RATING_MAX: f64 = 3000.0;
-/// §14.10, R3074000: the newest audit rows `GET /api/admin/audit` answers.
+/// §14.10, R3074000: the page size of every `GET /api/admin/audit` read, the newest matching
+/// audit rows first, `nextBeforeId` naming the cursor of the next older page.
 pub const ADMIN_AUDIT_PAGE: i64 = 200;
 /// §14.13, R3074003: the newest posts `GET /api/admin/news` answers, taken down or not.
 pub const NEWS_POSTS_PAGE: i64 = 100;

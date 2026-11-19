@@ -46,7 +46,7 @@ mod tests {
     const FELINOR: &str = "meditative-025";
     const SPECIESIST: &str = "core-002"; // Speciesist: Cry: destroy target enemy non-Human; radiant: destroy all such
     const GAOKAO: &str = "meditative-034"; // 高考: Destroy neither-CN-nor-KY, then Buff either.
-    const MANDATE: &str = "meditative-078"; // Occidentless Mandate: Exile every non-CN permanent.
+    const MANDATE: &str = "meditative-078"; // Occidentless Mandate: Destroy every non-CN permanent.
     const RCTA: &str = "meditative-035"; // RCTA (CN): Give a non-CN permanent the CN tag (aim: help).
     const ANXIETY: &str = "meditative-052"; // Economic Anxiety: +3 Attack attacking a Unit sharing no tag.
     const SCARAB: &str = "core-007"; // Jewelosco Scarab: no tag and no Taunt
@@ -140,7 +140,7 @@ mod tests {
         let mut s = hunting("felinor-mandate", MANDATE, false, json!([{ "def": VANILLA }]));
         s.play(MANDATE, json!({}));
         assert_eq!(s.unit(P2, 1).expect("stands").def_id, FELINOR);
-        assert!(s.unit(P2, 2).is_none(), "the Vanilla is exiled");
+        assert!(s.unit(P2, 2).is_none(), "the Vanilla is destroyed");
     }
 
     #[test]

@@ -618,7 +618,8 @@ pub fn attack_target_of(state: &GameState, target_id: &str) -> Option<AttackTarg
 /// the question §4.5 step 1 will: 0 or less health or a destroy mark, while an Indestructible unit
 /// falls only to max health 0 or less (R69).
 fn has_fallen(state: &GameState, unit: &CardInstance) -> bool {
-    if !is_active_on_field(state, unit) {
+    // R4205000: nor does a unit a steal had no room for, Indestructible or not.
+    if !is_active_on_field(state, unit) || unit.unpreventable_destroy == Some(true) {
         return true;
     }
     let view = crate::layers::unit_view(state, unit);
@@ -696,13 +697,21 @@ pub fn sweep_weight(state: &GameState, striker: &CardInstance, struck: &CardInst
     }
 }
 
-/// MD-F14, R1283: multiplier for attacks across its lane in combat.
+/// MD-F14, R1283, R3554008: the multiplier on an attacker's strike: a sweep's weight first, else lane
+/// strike's (`strike_back_multiplier_for`).
 pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> i32 {
     // R3554008: a sweep's weight first, so the projections in `lethal.rs` and `query.rs` agree
     // with combat.
     if let Some(weight) = sweep_weight(state, striker, struck) {
         return weight;
     }
+    strike_back_multiplier_for(state, striker, struck)
+}
+
+/// R4156000: the multiplier on a strike back, lane strike's alone (MD-F14, R1283: across its lane in
+/// combat, whichever side attacked). A sweep's weight belongs to the sweeper's own attacks (R3554008), so
+/// a sweeper that is attacked strikes back with its plain attack.
+pub fn strike_back_multiplier_for(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> i32 {
     let Some(printed) = crate::scripts::flags_of(state, striker).lane_multiplier else {
         return 1;
     };
@@ -918,7 +927,9 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
     let attack = attack + bonus.attack;
 
     let hit = attack * lane_multiplier_for(sink.state, &attacker, &defender);
-    let strike_back_attack = strike_back_attack * lane_multiplier_for(sink.state, &defender, &attacker);
+    // R4156000: lane strike's multiplier alone, never a sweep's weight.
+    let strike_back_attack =
+        strike_back_attack * strike_back_multiplier_for(sink.state, &defender, &attacker);
 
     // R783000: a Ranged attacker's strike lands alone — no strike back, a First Strike one included —
     // unless the defender is Ranged too. Its Cleave splashes as ever (R783001).
@@ -2367,11 +2378,8 @@ fn combatant_hooks(
             check_only: None,
         };
         if is_paused(sink) {
+            // R1026, R113: owed behind the check, and the defender's `afterAttacked` is owed after it below.
             owe_engine_hook(sink, &owed);
-            // A Frenzy-only attacker still lets the defender's `afterAttacked` be owed after it.
-            if hooked {
-                return;
-            }
         } else {
             run_after_attack(sink, &owed, None);
         }

@@ -58,7 +58,7 @@ pub enum ActionAnswer {
     Panicked,
     /// The log did not take the row: the action was not applied, and may be sent again.
     NotRecorded,
-    /// Duos: the nonce was first used by the other seat (§9.3), so it is neither acked nor applied.
+    /// Duos and 1v1: the nonce was first used by the other seat (§9.3, R4013000), so it is neither acked nor applied.
     NonceTaken,
 }
 

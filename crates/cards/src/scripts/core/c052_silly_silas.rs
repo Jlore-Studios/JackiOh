@@ -1,6 +1,6 @@
 //! #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
-//! R14, R33, R78, R81, R88, R3837000, R3837001, R3837002). Unit 4/4 → 8/8, Human, cost 4, Legendary
-//! (2/2 → 4/4 until issue #3996; 4/4 → 8/8 until issue #3136). BUILD wave 3 (rotation).
+//! R14, R33, R78, R81, R88, R3837000, R3837001, R3837002). Unit 7/7 → 14/14, Human, cost 4, Legendary
+//! (4/4 → 8/8 until issue #4154; 2/2 → 4/4 until issue #3996; 4/4 → 8/8 until issue #3136). BUILD wave 3 (rotation).
 //!   Base:    "Summon this for your opponent. Cry: choose left or right; rotate every card on the field
 //!            one step around its ring (3.1); cards crossing sides change control"
 //!   Radiant: "Cards that would move to the opponent are bounced to their controller's hand costing 0
@@ -13,8 +13,8 @@
 //! it lands in the opponent's leftmost open unit zone, under their control (R3837000, the
 //! `summonForOpponent` flag), or where the play named when they have none (R3837001). It is still the
 //! player's play and card, so the Cry that follows is the player's and reads "left" and "right" from the
-//! player's seat (R3837002); Silas rotates with the rest and may cross back. `script_v0_6_1b` keeps the
-//! scripts through v0.6.1b, both faces staying with their player, for those replays (R767000).
+//! player's seat (R3837002); Silas rotates with the rest and may cross back. `script_v0_6_2c` keeps the
+//! scripts through v0.6.2c, both faces staying with their player, for those replays (R767000).
 //!
 //! The direction is a play-time choice, not a prompt: R81 names this card and §10.6 says no Core card
 //! opens a `direction` prompt, so the script declares `modes` and `chosen_options(ctx)` reads `ctx.modes`.
@@ -86,9 +86,9 @@ pub fn script() -> CardScripts {
     silly_silas(true)
 }
 
-/// R767000: through v0.6.1b both faces stayed with their player; `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.6.2c both faces stayed with their player; `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_6_1b() -> CardScripts {
+pub fn script_v0_6_2c() -> CardScripts {
     silly_silas(false)
 }
 
@@ -252,8 +252,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_kept_v0_6_1b_script_stays_with_its_player() {
-            crate::under_kept(super::super::ID, super::super::script_v0_6_1b(), || {
+        fn r767000_the_kept_v0_6_2c_script_stays_with_its_player() {
+            crate::under_kept(super::super::ID, super::super::script_v0_6_2c(), || {
                 let mut s = scenario(json!({ "p1": { "hand": ["core-052"] } }));
                 s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
                 assert_eq!(landed(&s), (P1, 1));
@@ -479,7 +479,7 @@ mod tests {
             // Neither card crosses, so the radiant clause never applies and both simply step one lane.
             assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
             assert_eq!(s.unit_at(P1, 4).def_id, "core-053");
-            s.expect_stats("core-052", json!({ "attack": 8, "maxHealth": 8 }));
+            s.expect_stats("core-052", json!({ "attack": 14, "maxHealth": 14 }));
         }
 
         #[test]

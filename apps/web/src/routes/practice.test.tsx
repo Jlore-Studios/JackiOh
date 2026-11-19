@@ -47,7 +47,7 @@ import type {
   PracticeSnapshot,
   PracticeStartConfig,
 } from "../practice/protocol.ts";
-import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResume, readPracticeResumeState } from "../practice/resume.ts";
+import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResumeState } from "../practice/resume.ts";
 import { memorySaveStore } from "../practice/saveStore.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
@@ -1644,7 +1644,21 @@ describe("R668 resuming a practice game after a reload", () => {
     expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Hard");
     expect(host.requests.filter((body) => body.type === "resume")).toEqual([{ type: "resume", config: LEFT }]);
     expect(host.starts()).toEqual([]);
-    expect(readPracticeResume(), "still the game to come back to").toEqual(LEFT);
+    expect(readPracticeResumeState()?.config ?? null, "still the game to come back to").toEqual(LEFT);
+  });
+
+  it("R3976000 a resumed game wears the portraits it kept", async () => {
+    const kept: PracticeStartConfig = { ...LEFT, portraits: { p1: "gary", p2: "shredder" } };
+    keep(kept);
+    const host = routeHost();
+    renderRoute(host);
+    await screen.findByTestId("game");
+    expect(host.requests.filter((body) => body.type === "resume")).toEqual([{ type: "resume", config: kept }]);
+    const heroPortraits = (): (string | null)[] =>
+      (["hero-you", "hero-opponent"] as const).map((id) => screen.getByTestId(id).querySelector(".hero-portrait")?.getAttribute("data-portrait") ?? null);
+    // The human sits at p2, so the viewer's hero is p2's.
+    await waitFor(() => expect(heroPortraits()).toEqual(["shredder", "gary"]));
+    expect(readPracticeResumeState()?.config ?? null, "kept with its portraits").toEqual(kept);
   });
 
   it("R668 a URL that starts a game wins over the one left, and replaces it", async () => {
@@ -1655,7 +1669,7 @@ describe("R668 resuming a practice game after a reload", () => {
     await screen.findByTestId("game");
     expect(host.requests.some((body) => body.type === "resume")).toBe(false);
     expect(host.starts()).toHaveLength(1);
-    expect(readPracticeResume()).toEqual({
+    expect(readPracticeResumeState()?.config ?? null).toEqual({
       seed: "url1",
       difficulty: "easy",
       humanSeat: "p1",
@@ -1669,7 +1683,7 @@ describe("R668 resuming a practice game after a reload", () => {
     renderRoute(routeHost({ resume: "failed" }));
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
     expect(screen.queryByTestId(T.error)).toBeNull();
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 
   it("R668 leaving the game through New game gives it up", async () => {
@@ -1679,7 +1693,7 @@ describe("R668 resuming a practice game after a reload", () => {
     fireEvent.click(screen.getByTestId(T.newGame));
     fireEvent.click(await screen.findByTestId(T.leaveConfirm));
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 
   it("R668 leaving through Menu gives it up too, and a finished game is not kept", async () => {
@@ -1689,16 +1703,16 @@ describe("R668 resuming a practice game after a reload", () => {
     fireEvent.click(screen.getByTestId(T.menu));
     fireEvent.click(await screen.findByTestId(T.leaveConfirm));
     expect(window.location.pathname).toBe("/");
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
     cleanup();
 
     visit("?seed=over658&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
     await screen.findByTestId("game");
-    expect(readPracticeResume()).not.toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).not.toBeNull();
     concedeOnBoard();
     await screen.findByTestId(T.result);
-    expect(readPracticeResume()).toBeNull();
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 });
 

@@ -1,5 +1,6 @@
 //! Live co-op actors (fullsend SPEC S6, B40): `start` creates an actor, `actor_for` rebuilds one by
-//! folding on the blocking pool under its pinned catalog (R767000), and `stop` drops one.
+//! folding on the blocking pool under its pinned catalog (R767000), from its checkpoint when one passes
+//! its checks (#4169, `duos::checkpoint`), and `stop` drops one.
 //! Sockets are checked for seats before folding (§9.1). A finished match folds back only within
 //! `REMATCH_OFFER_TTL_MS` of `ended_at` (R1398000).
 //!
@@ -12,6 +13,7 @@
 //! `MATCH_OVER_CLOSE_CODE` (R3694000).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
 
 use jackioh_engine::ReplayRefusal;
@@ -30,6 +32,7 @@ use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::duos::actor::{DuosActor, DuosActorInput, create_duos_actor};
+use crate::duos::checkpoint;
 use crate::duos::engine::{self, Pinned};
 use crate::duos::replay::DuosReplayCache;
 use crate::duos::store::{DuosActionRow, DuosMatch, action_of};
@@ -63,6 +66,9 @@ pub struct DuosRegistry {
     actors: Mutex<IndexMap<String, DuosActor>>,
     /// In-flight rebuilds, so two sockets arriving together fold the log once.
     rebuilding: Mutex<IndexMap<String, Rebuild>>,
+    /// #4114: set by `drain`, the restart drain, and never cleared, so an actor that `start` or a
+    /// rebuild makes after it (a rebuild in flight across it or begun after it) is stopped, not kept.
+    draining: AtomicBool,
     /// B41: the finished matches' replays opened lately.
     pub replays: DuosReplayCache,
 }
@@ -126,7 +132,9 @@ fn logged_actions(log: &[DuosActionRow]) -> Result<Vec<DuosAction>, DuosAttachEr
 impl DuosRegistry {
     /// Creates the actor of a match whose row a join just wrote (B33), on the state it began with,
     /// under the catalog it was dealt from.
-    pub fn start(&self, app: &Arc<App>, row: DuosMatch, state: DuosState, pinned: Pinned) -> DuosActor {
+    /// #4114: once the restart drain has begun, the actor is stopped instead of kept; the row is
+    /// written, so the next process folds it back.
+    pub async fn start(&self, app: &Arc<App>, row: DuosMatch, state: DuosState, pinned: Pinned) -> DuosActor {
         let match_id = row.id.clone();
         let actor = create_duos_actor(
             Arc::clone(app),
@@ -137,21 +145,30 @@ impl DuosRegistry {
                 pinned,
             },
         );
-        lock(&self.actors).insert(match_id.clone(), actor.clone());
+        if !self.keep(&match_id, &actor) {
+            DuosRegistry::drain_one(&match_id, &actor).await;
+            return actor;
+        }
         tracing::info!(event = "duos.started", matchId = %match_id);
         actor
     }
 
-    /// B40: a crashed actor rebuilt by folding the match's log.
+    /// B40: a crashed actor rebuilt by folding the match's log, from its checkpoint when one passes its
+    /// checks (#4169).
     async fn rebuild(&self, app: &Arc<App>, match_id: &str) -> Result<DuosActor, DuosAttachError> {
         let store = |error: crate::db::store::StoreError| DuosAttachError::Internal(error.to_string());
-        let (row, log) = one_tx!(app.db, |t| {
+        let (row, log, saved) = one_tx!(app.db, |t| {
             let row = t.duos_matches_get(match_id).await?;
-            let log = match &row {
-                Some(_) => t.duos_actions(match_id).await?,
-                None => Vec::new(),
+            // #4169: the checkpoint the last restart drain or the last periodic write stored, read with
+            // the log it follows.
+            let (log, saved) = match &row {
+                Some(_) => {
+                    let log = t.duos_actions(match_id).await?;
+                    (log, t.duos_matches_checkpoint(match_id).await?)
+                }
+                None => (Vec::new(), None),
             };
-            (row, log)
+            (row, log, saved)
         })
         .map_err(store)?;
         let Some(row) = row else {
@@ -166,13 +183,39 @@ impl DuosRegistry {
             log: logged_actions(&log)?,
         };
         let pinned = pinned_for(&row);
+        let saved_seq = saved.as_ref().map(|saved| saved.seq);
+        let (checked_row, checked_log) = (row.clone(), log.clone());
         // Off the runtime, as the AI's decisions are: a long log is a long fold.
-        let folded = tokio::task::spawn_blocking(move || {
-            catch_unwind(AssertUnwindSafe(|| engine::fold(pinned, &input)))
+        let (folded, from) = tokio::task::spawn_blocking(move || {
+            catch_unwind(AssertUnwindSafe(|| {
+                // #4169: a verified checkpoint folds only the rows after it; otherwise the whole log.
+                let verified = saved.map(|saved| {
+                    checkpoint::verify(&saved, &checked_row, &checked_log).map(|body| (saved.seq, body))
+                });
+                if let Some(Ok((seq, body))) = verified {
+                    let skipped = usize::try_from(seq)
+                        .unwrap_or(input.log.len())
+                        .min(input.log.len());
+                    return (
+                        engine::fold_tail(pinned, body.state, &input.log[skipped..], skipped),
+                        Ok(seq),
+                    );
+                }
+                (engine::fold(pinned, &input), Err(verified.and_then(Result::err)))
+            }))
         })
         .await
         .map_err(|error| DuosAttachError::Internal(error.to_string()))?
         .map_err(|payload| DuosAttachError::Internal(panic_text(payload)))?;
+        // #4169: only the reason, never the body, which holds all four hands and libraries.
+        if let Err(Some(reason)) = from {
+            tracing::warn!(
+                event = "duos.checkpoint.refused",
+                matchId = %match_id,
+                seq = saved_seq.unwrap_or(0),
+                reason = reason.as_str(),
+            );
+        }
         if let Some(at) = folded.refused_at {
             // An action the engine once applied and now refuses is a determinism break: the log no
             // longer folds the match. Rebuild anyway, on the state up to it, and say so loudly.
@@ -202,9 +245,29 @@ impl DuosRegistry {
                 pinned,
             },
         );
-        lock(&self.actors).insert(match_id.to_string(), actor.clone());
-        tracing::info!(event = "duos.rebuilt", matchId = %match_id, actions = actions);
+        if !self.keep(match_id, &actor) {
+            // #4114: the restart drain began before this rebuild landed, so it never saw this actor. It
+            // goes the way the drain's did (checkpointed, #4169, then stopped), so the socket `attach`
+            // hands it hears 1001 and reconnects to the next process, and it writes nothing after the
+            // store closes (#936).
+            DuosRegistry::drain_one(match_id, &actor).await;
+            return Ok(actor);
+        }
+        let from_seq = from.unwrap_or(0);
+        tracing::info!(event = "duos.rebuilt", matchId = %match_id, actions = actions, fromSeq = from_seq);
         Ok(actor)
+    }
+
+    /// #4114: inserts `actor` unless the restart drain has begun, and answers whether it did. The mark is
+    /// read under the actors lock, so an actor inserted before `drain` takes the map is stopped with it,
+    /// and one that finds the mark is the caller's to stop.
+    fn keep(&self, match_id: &str, actor: &DuosActor) -> bool {
+        let mut actors = lock(&self.actors);
+        let kept = !self.draining.load(Ordering::SeqCst);
+        if kept {
+            actors.insert(match_id.to_string(), actor.clone());
+        }
+        kept
     }
 
     /// The live actor, folded back from the store when it is not in memory.
@@ -298,6 +361,36 @@ impl DuosRegistry {
     pub async fn stop(&self, match_id: &str) {
         let actor = lock(&self.actors).shift_remove(match_id);
         let Some(actor) = actor else { return };
+        actor.stop().await;
+        tracing::info!(event = "duos.stopped", matchId = %match_id);
+    }
+
+    /// #936, #4169: stops every actor in memory as `stop` does, each checkpointed first (`drain_one`), at
+    /// once; the logs stay and the next process folds them back from the checkpoints. The registry stays
+    /// open, so a test drains and rebuilds in one process; the process's drain is `drain`. Answers how
+    /// many it stopped.
+    pub async fn stop_all(&self) -> usize {
+        let actors: Vec<(String, DuosActor)> = lock(&self.actors).drain(..).collect();
+        let count = actors.len();
+        let mut stopping = tokio::task::JoinSet::new();
+        for (match_id, actor) in actors {
+            stopping.spawn(async move { DuosRegistry::drain_one(&match_id, &actor).await });
+        }
+        while stopping.join_next().await.is_some() {}
+        count
+    }
+
+    /// #936, #4114: the restart drain (`app::serve_until`): marks the registry draining, then `stop_all`.
+    /// From then on `start` and a rebuild drain the actor they make instead of keeping it (`keep`).
+    pub async fn drain(&self) -> usize {
+        self.draining.store(true, Ordering::SeqCst);
+        self.stop_all().await
+    }
+
+    /// #4169: one actor of the restart drain: checkpointed before its 1001 frames, so a socket that
+    /// reconnects at once finds it stored, then stopped.
+    async fn drain_one(match_id: &str, actor: &DuosActor) {
+        actor.checkpoint().await;
         actor.stop().await;
         tracing::info!(event = "duos.stopped", matchId = %match_id);
     }

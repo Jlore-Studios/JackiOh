@@ -186,6 +186,7 @@ mod the_lethal_solvers_walks {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn ready_gap_counts_exactly_the_units_legal_actions_lists_an_attack_for_from_either_seat() {
         let mut states: Vec<GameState> = vec![wide_board()];
         states.extend(random_policy_states("lethal-ready-gap", 3, 600));
@@ -432,6 +433,7 @@ mod the_positions_the_search_merges {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn two_one_step_children_with_one_signature_score_the_same_and_offer_the_same_moves() {
         register_cards();
         let mut merged = 0;
@@ -861,8 +863,8 @@ mod hero_ineligible_attacks {
         let sick = fresh(&ready, "core-032");
         assert_eq!(ready_gap(&sick, AI), 7.0);
         assert_eq!(ready_gap_by_legal_actions(&sick, AI), 7.0);
-        // R3937000: next turn Prem Panther's 5 destroys Tommy Tempo alone and Tempo Timmy's 3 goes face,
-        // the line `ready_gap` reads this turn; the old order counted 0.
-        assert_eq!(face_threat(&sick, AI), 3);
+        // R3937000: next turn the smallest attacker that destroys Tommy Tempo (a 3/3 since issue #4154) alone,
+        // Tempo Timmy's 3, breaks it first and Prem Panther's 5 goes face.
+        assert_eq!(face_threat(&sick, AI), 5);
     }
 }

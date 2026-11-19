@@ -20,11 +20,12 @@ const COMPONENT_DIR = "cypress/component";
 /**
  * The per-pull-request smoke list (docs/v0.3.0/README.md §7), one spec per user-facing flow: 01 a
  * hotseat game and its replay hash, 06 a networked match, 10 the invite gate, 13 practice against the
- * AI, 19 the queue modes and a series, 46 every menu on one screen (R1581000), 47 every
- * control's tap area under a finger (R2122000), 51 the menus' shell (R3728000). Spec number prefixes,
- * as WEIGHTS keys them.
+ * AI, 19 the queue modes and a series, 51 the menus' shell (R3728000). Specs 46 (every menu on one
+ * screen, R1581000) and 47 (every control's tap area under a finger, R2122000) run in the daily super
+ * run only: issue #4092, an owner decision, cut them because each took a smoke shard to itself (7.1-7.7
+ * and 5.6-6.0 minutes) and set the slowest chain through CI. Spec number prefixes, as WEIGHTS keys them.
  */
-export const SMOKE = ["01", "06", "10", "13", "19", "46", "47", "51"];
+export const SMOKE = ["01", "06", "10", "13", "19", "51"];
 
 /**
  * Seconds per spec on ubuntu-latest, Chrome and Electron's slower: CI run 36973335249 (main at

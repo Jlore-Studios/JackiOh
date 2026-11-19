@@ -331,6 +331,16 @@ describe("the co-op socket's reconnect", () => {
     expect(h.pending()).toBe(0);
   });
 
+  it("R3694000 a co-op close with 1001, a restart's drain, reconnects with a backoff", () => {
+    const h = connected();
+    h.socket().drop(1001, "the server is restarting");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    expect(h.pending()).toBe(1);
+
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+  });
+
   it("R1441 a reconnect waits its backoff plus up to RECONNECT_JITTER of it more", () => {
     const h = connected({ random: () => 0.5 });
     h.socket().drop(1006);
@@ -561,6 +571,26 @@ describe("a co-op socket refused for its sign-in", () => {
       expect(afterRetry.client.snapshot().connection).toBe("refused");
     }
   });
+
+  it("R1115000 a co-op socket opened after a 4401 forgets the refusal: a renewal once the seat is taken or the match is gone opens nothing", () => {
+    for (const [code, connection] of [
+      [SEAT_TAKEN_CLOSE_CODE, "elsewhere"],
+      [4410, "closed"],
+    ] as const) {
+      const h = connected();
+      h.socket().drop(4401, "sign in first");
+      // The page's Reconnect opens a socket on the same token, and the server takes it this time.
+      h.client.connect();
+      h.socket().open();
+      h.socket().drop(code, "gone");
+      expect(h.client.snapshot().connection).toBe(connection);
+
+      h.client.setToken("new");
+      expect(h.sockets, String(code)).toHaveLength(2);
+      expect(h.client.snapshot().connection).toBe(connection);
+      expect(h.pending()).toBe(0);
+    }
+  });
 });
 
 // R1483000: the daily cap's flag on view frames
@@ -736,5 +766,17 @@ describe("R3731002 a 2v2's team B people have disconnect graces too", () => {
     const h = connected();
     h.socket().deliver({ type: "clock", now: 5, roundDeadline: null, graceDeadlines: { a1: null, a2: null, b1: 40 } });
     expect(h.client.snapshot().clock?.graceDeadlines).toEqual({ a1: null, a2: null, b1: 40, b2: null });
+  });
+});
+
+describe("#4015 prototype pollution", () => {
+  it("a duos frame with proto keys does not pollute", () => {
+    expect(parseDuosFrame('{"type":"nope","__proto__":{"polluted":true}}')).toBeNull();
+    expect(parseDuosFrame('{"type":"nope","constructor":{"prototype":{"polluted":true}}}')).toBeNull();
+    expect(parseDuosFrame('{"type":"watchers","count":2,"__proto__":{"polluted":true}}')).toEqual({
+      type: "watchers",
+      count: 2,
+    });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 });

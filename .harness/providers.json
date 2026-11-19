@@ -53,7 +53,9 @@
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.9, "seven_day": 0.9 },
       "build_last": true,
-      "quiet_check": false
+      "quiet_check": false,
+      "off_from": "2026-11-17",
+      "off_reason": "Halted by the owner on 2026-11-17: claude-2 and claude-5 are the two accounts with a weekly cap, and their weekly usage is kept for the owner. The wake (claude-wake.yml) still pings it with Haiku, since off_from does not stop the wake. To turn it back on, remove off_from and off_reason."
     },
     "claude-3": {
       "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes, with no 5-hour cap (lanes_by_cap, #2748), so it works two items at once.",
@@ -108,7 +110,9 @@
       "limits": { "mode": "caps", "five_hour": 0.4, "seven_day": 0.6 },
       "late_week": { "from": "Sun 17:00", "seven_day": 0.9, "five_hour": 0.8, "last_hour": true },
       "hard_cap": 0.9,
-      "quiet_check": false
+      "quiet_check": false,
+      "off_from": "2026-11-17",
+      "off_reason": "Halted by the owner on 2026-11-17: claude-2 and claude-5 are the two accounts with a weekly cap, and their weekly usage is kept for the owner. The wake (claude-wake.yml) still pings it with Haiku, since off_from does not stop the wake. To turn it back on, remove off_from and off_reason."
     },
     "claude-6": {
       "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its window, one outside it, by lanes_by_cap (#2748). Its Sonnet seat runs at `high` (the Sonnet effort test, 2026-11-09: bot/README.md, The Sonnet effort test).",

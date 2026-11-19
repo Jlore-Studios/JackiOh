@@ -6,12 +6,16 @@ import {
   MODULE_ROUTES,
   SERVER_PORT,
   SERVER_ROUTES,
+  SERVER_SECRETS,
+  SERVER_VARS,
   WORKER_ROUTES,
   containerEnv,
   forServer,
   isModulePath,
   isServerPath,
   precompressedModule,
+  settingsFingerprint,
+  type ServerSettings,
 } from "./routing.ts";
 
 describe("isServerPath", () => {
@@ -58,6 +62,23 @@ describe("forServer", () => {
     expect(forwarded.headers.get("Upgrade")).toBe("websocket");
     expect(forwarded.headers.get("Sec-WebSocket-Protocol")).toBe("jackioh.v1");
     expect(forwarded.headers.get("Origin")).toBe("https://jackioh.com");
+  });
+
+  it("forServer ignores hostile headers (#4015)", () => {
+    const headers = new Headers({ "X-Forwarded-For": "evil", "CF-Connecting-IP": "192.0.2.7" });
+    headers.append("__proto__", "x");
+    const forwarded = forServer(new Request("https://jackioh.com/api/queue", { headers }));
+    expect(forwarded.headers.get("X-Forwarded-For")).toBe("192.0.2.7");
+    expect(forwarded.headers.get("__proto__")).toBe("x");
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
+  it("containerEnv drops hostile settings keys (#4015)", () => {
+    const settings = JSON.parse('{"__proto__":{"polluted":true},"PUBLIC_ORIGINS":"https://jackioh.com"}');
+    const vars = containerEnv(settings);
+    expect(vars.PUBLIC_ORIGINS).toBe("https://jackioh.com");
+    expect(Object.hasOwn(vars, "__proto__")).toBe(false);
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
   });
 });
 
@@ -157,5 +178,50 @@ describe("#3183 the engine's brotli-compressed module", () => {
       headers: { "Content-Type": "application/octet-stream", "Cache-Control": "public, max-age=60" },
     });
     expect(precompressedModule(stored).headers.get("Cache-Control")).toBe("public, max-age=60");
+  });
+});
+
+describe("#4118 settingsFingerprint", () => {
+  /** Every setting the container gets, each with a value of its own. */
+  const FULL: Record<string, string> = Object.fromEntries(
+    [...SERVER_VARS, ...SERVER_SECRETS, "DEPLOYED_COMMIT"].map((name) => [name, `v-${name}`]),
+  );
+
+  it("is a 64-character lowercase hex SHA-256 of the sorted environment", async () => {
+    const empty = await settingsFingerprint({});
+
+    expect(empty).toMatch(/^[0-9a-f]{64}$/u);
+    // The SHA-256 of [["NODE_ENV","production"],["PORT","8080"]], which `containerEnv({})` holds.
+    expect(empty).toBe("c7c3f81364c145d758b33b174b0b165477042b321fe624abcdb8fb86a42faeb5");
+  });
+
+  it("gives the same digest for the same settings in another key order", async () => {
+    const reversed = Object.fromEntries(Object.entries(FULL).reverse());
+
+    expect(Object.keys(reversed)).not.toEqual(Object.keys(FULL));
+    expect(await settingsFingerprint(reversed)).toBe(await settingsFingerprint(FULL));
+  });
+
+  it("changes when any one setting changes, or is taken away", async () => {
+    const base = await settingsFingerprint(FULL);
+    const digests = [base];
+
+    for (const name of Object.keys(FULL)) {
+      const changed = await settingsFingerprint({ ...FULL, [name]: "changed" });
+      const { [name]: _taken, ...without } = FULL;
+      const removed = await settingsFingerprint(without);
+      expect(changed, `${name} changed`).not.toBe(base);
+      expect(removed, `${name} removed`).not.toBe(base);
+      digests.push(changed, removed);
+    }
+
+    // No two of them meet: a setting is told from every other.
+    expect(new Set(digests).size).toBe(digests.length);
+  });
+
+  it("reads an empty setting as unset, and ignores what is not a server setting", async () => {
+    const other = { CREATE_ISSUES_TOKEN: "", SERVER: "a binding" } as ServerSettings;
+
+    expect(await settingsFingerprint(other)).toBe(await settingsFingerprint({}));
   });
 });

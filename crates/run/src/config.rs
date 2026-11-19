@@ -213,9 +213,11 @@ pub const RUN_TIERS: [Handicap; RUN_ACTS * (RUN_ACT_TIERS + 1)] = [
     with_health(AI_DIFFICULTY.hard, 50),     // 15, the final boss
 ];
 /// DR5, R3586001, a strawman: an elite's own rows, `(tier, row)`, one for each tier an elite stands
-/// on, rising, each stronger than that tier's `RUN_TIERS` row.
+/// on, none weaker than the one before, each stronger than that tier's `RUN_TIERS` row. Tier 1's is
+/// tier 2's since issue #4154, after which its old row (a turn draw every other turn, 16 health) cost
+/// run-sim's player no more HP than tier 1's normal fight.
 pub const RUN_ELITE_TIERS: [(usize, Handicap); RUN_ACTS * RUN_ACT_TIERS] = [
-    (1, tier_row(3, 0, -1, 2, 16)),
+    (1, tier_row(3, 0, -1, DRAW_EVERY_TURN, 18)),
     (2, tier_row(3, 0, -1, DRAW_EVERY_TURN, 18)),
     (3, tier_row(3, 0, 0, DRAW_EVERY_TURN, 20)),
     (4, tier_row(4, 0, 0, DRAW_EVERY_TURN, 22)),

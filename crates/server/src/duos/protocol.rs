@@ -12,11 +12,11 @@ use serde_json::{Map, Value, json};
 use jackioh_engine::config::{BACKROW_ZONES, UNIT_ZONES};
 use jackioh_engine::duos::DUOS_NONCE_PREFIX;
 use jackioh_engine::wire::{DuosActionBody, DuosSeat, DuosView};
-use jackioh_engine::{CombatForecast, PlayerId};
+use jackioh_engine::{CombatForecast, PlayerId, is_player_id};
 
 pub use crate::actor::protocol::encode;
 use crate::actor::protocol::{
-    ClientMessage, MAX_FRAME_BYTES, MalformedMessage, SocketErrorCode, client_nonce, is_int, is_player_id,
+    ClientMessage, MAX_FRAME_BYTES, MalformedMessage, SocketErrorCode, client_nonce, is_int,
     parse_client_message,
 };
 use crate::economy::rewards::GameEconomy;

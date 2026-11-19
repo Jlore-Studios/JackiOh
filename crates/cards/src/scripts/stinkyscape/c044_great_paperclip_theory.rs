@@ -104,7 +104,7 @@ mod tests {
         p2["library"] = filler(6);
         scenario(json!({
             "seed": "great-paperclip",
-            "p1": { "hand": cards, "library": filler(6), "mana": 41 },
+            "p1": { "hand": cards, "library": filler(6), "mana": 42 },
             "p2": p2,
         }))
     }

@@ -3,10 +3,11 @@
 //! states. §9.8's brute-force row names the same mitigations.
 //!
 //! Still this file's: R107's response floor ("identical time" is padding, and SQL cannot pad);
-//! R106's circuit breaker, which disables redemption before the store is touched; R145's distinct
-//! refusals, decided here from the router's profile. R1310000: a redemption that makes the account
+//! R4131000's mirror of the operator's pause, which refuses redemption before the store is touched
+//! (no failure count pauses it: steps 2 and 3 block one profile or one address for their hour, never
+//! everyone); R145's distinct refusals, decided here from the router's profile. R1310000: a redemption that makes the account
 //! active pays its tracks' first rewards in its transaction, while the economy is live. R2124000: a
-//! redemption repeating an `Idempotency-Key` answers what it committed, before the breaker and R145's
+//! redemption repeating an `Idempotency-Key` answers what it committed, before the pause and R145's
 //! checks (`economy::idempotency`); every outcome is padded.
 
 use std::sync::{Arc, Mutex};
@@ -21,8 +22,7 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json, 
 use crate::app::App;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, INVITE_CODE_LENGTH, MS_PER_SECOND,
-    REDEMPTION_CIRCUIT_FAILURE_THRESHOLD, REDEMPTION_CIRCUIT_WINDOW_SECONDS, REDEMPTION_IDENTICAL_ERROR,
-    REDEMPTION_RESPONSE_FLOOR_MS,
+    REDEMPTION_IDENTICAL_ERROR, REDEMPTION_PAUSE_MIRROR_SECONDS, REDEMPTION_RESPONSE_FLOOR_MS,
 };
 use crate::db::store::{Db, InviteCode, Profile, ProfileStatus, RedeemInviteCodeInput, RedeemResult, Tx};
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
@@ -38,10 +38,10 @@ pub const DEFAULT_INVITE_CODE_MAX_USES: i32 = 1;
 
 // R145: outcomes that depend on the code share one identical error, while those that depend only
 // on the caller's own account are reported distinctly, as they leak nothing about the code space;
-// the rate-limit and breaker refusals are the same kind. The strings are not in SPEC: a client
+// the rate-limit and pause refusals are the same kind. The strings are not in SPEC: a client
 // branches on the `ApiError` code, never the sentence.
 const RATE_LIMITED_MESSAGE: &str = "Too many invite code attempts. Try again later.";
-const BREAKER_MESSAGE: &str = "Invite redemption is temporarily unavailable. Try again later.";
+const PAUSED_MESSAGE: &str = "Invite redemption is temporarily unavailable. Try again later.";
 const ALREADY_ACTIVE_MESSAGE: &str = "This account is already active.";
 // Mirrors `assert_active`'s wording in http.rs so a banned account reads the same sentence
 // wherever it is turned away.
@@ -55,9 +55,7 @@ struct Limits {
     redeem_per_profile_per_hour: i64,
     redeem_window_ms: i64,
     redeem_constant_ms: u64,
-    breaker_failure_threshold: i64,
-    breaker_window_ms: i64,
-    breaker_cooldown_ms: i64,
+    pause_mirror_ms: i64,
 }
 
 fn limits() -> Limits {
@@ -65,9 +63,7 @@ fn limits() -> Limits {
         redeem_per_profile_per_hour: CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
         redeem_window_ms: CODE_ATTEMPT_WINDOW_SECONDS * MS_PER_SECOND,
         redeem_constant_ms: REDEMPTION_RESPONSE_FLOOR_MS as u64,
-        breaker_failure_threshold: REDEMPTION_CIRCUIT_FAILURE_THRESHOLD,
-        breaker_window_ms: REDEMPTION_CIRCUIT_WINDOW_SECONDS * MS_PER_SECOND,
-        breaker_cooldown_ms: REDEMPTION_CIRCUIT_WINDOW_SECONDS * MS_PER_SECOND,
+        pause_mirror_ms: REDEMPTION_PAUSE_MIRROR_SECONDS * MS_PER_SECOND,
     }
 }
 
@@ -160,25 +156,22 @@ pub async fn mint_invite_code(deps: MintDeps<'_>, input: MintInput) -> Result<Mi
     })
 }
 
-// The circuit breaker (§9.4)
+// The operator's pause (§9.4, R4131000)
 
-/// §9.4: "A global circuit breaker disables redemption and alerts when system-wide failures cross
-/// a threshold in a window."
+/// R4131000: this process's mirror of the database's pause (`moderate redemption off`), the one thing
+/// that refuses redemption to everyone. No count of failures opens it: a guess spread over many
+/// addresses cannot find an 80-bit code, and a breaker it could trip would shut sign-ups for every
+/// honest player while it ran.
 ///
-/// A value, not module state: `App` holds one (`app.breaker`), so each test gets a fresh one.
+/// A value, not module state: `App` holds one (`app.redemption_pause`), so each test gets a fresh one.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct BreakerState {
-    /// Epoch ms until which redemption is disabled; 0 while closed.
-    pub open_until: i64,
-    /// How many times this breaker has opened. One alert per opening.
-    pub openings: u32,
+pub struct PauseState {
+    /// Epoch ms until which redemption is refused before the store; 0 while it is not paused.
+    pub paused_until: i64,
 }
 
-pub fn create_breaker_state() -> BreakerState {
-    BreakerState {
-        open_until: 0,
-        openings: 0,
-    }
+pub fn create_pause_state() -> PauseState {
+    PauseState { paused_until: 0 }
 }
 
 // Redemption
@@ -212,8 +205,8 @@ pub struct RedeemInput<'a> {
     /// auth server's `email_confirmed_at`, never a user-editable claim. How long a yes may be
     /// remembered is R159 (`EMAIL_CONFIRMED_CACHE_TTL_MS`).
     pub email_verified: bool,
-    /// Omitted by a direct caller, in which case this redemption gets a breaker of its own.
-    pub breaker: Option<&'a Mutex<BreakerState>>,
+    /// Omitted by a direct caller, in which case this redemption gets a mirror of its own.
+    pub pause: Option<&'a Mutex<PauseState>>,
     /// The request's `Idempotency-Key` (R2124000), or `None` for a redemption sent without one,
     /// which runs as every redemption did before keys.
     pub key: Option<&'a RequestKey>,
@@ -239,12 +232,12 @@ async fn replay_of(
 }
 
 pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutcome, ApiError> {
-    let own_breaker = Mutex::new(create_breaker_state());
-    let breaker = input.breaker.unwrap_or(&own_breaker);
+    let own_pause = Mutex::new(create_pause_state());
+    let pause = input.pause.unwrap_or(&own_pause);
     let limits = limits();
     let now = crate::app::now_ms();
 
-    // R2124000: a key that came before answers first, ahead of the breaker and R145's account
+    // R2124000: a key that came before answers first, ahead of the pause and R145's account
     // checks, since the redemption it replays made the account active. A redemption with no key
     // reads nothing here.
     if let Some(key) = input.key {
@@ -256,12 +249,12 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
         }
     }
 
-    // R106's breaker, checked before step 1: while it is open nothing touches the profile, the
-    // attempt log or the code table.
-    if now < lock(breaker).open_until {
+    // R4131000: the mirrored pause, checked before step 1: while it holds nothing touches the
+    // profile, the attempt log or the code table.
+    if now < lock(pause).paused_until {
         return Ok(RedeemOutcome::Refused(ApiError::new(
             ApiErrorCode::Unavailable,
-            BREAKER_MESSAGE,
+            PAUSED_MESSAGE,
         )));
     }
 
@@ -338,22 +331,17 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
         keep(&mut tx, &profile.id, input.key, &redeemed_body()).await?;
     }
     tx.commit().await?;
-    let failed = !matches!(result, RedeemResult::Ok);
 
     if matches!(result, RedeemResult::CircuitOpen) {
-        // The database's own switch (`app.settings.redemption_enabled`) is off. Mirrored in the
-        // process's breaker for its cooldown, so `GET /api/codes/status` says "paused" (R192) and further
+        // The database's own switch (`app.settings.redemption_enabled`) is off. Mirrored here for
+        // `REDEMPTION_PAUSE_MIRROR_SECONDS`, so `GET /api/codes/status` says "paused" (R192) and further
         // presses are refused before the store, each of which would log an attempt and spend one of the
         // account's tries. No alert: an operator flipped the switch.
-        let mut state = lock(breaker);
-        state.open_until = state.open_until.max(now + limits.breaker_cooldown_ms);
+        let mut state = lock(pause);
+        state.paused_until = state.paused_until.max(now + limits.pause_mirror_ms);
     }
 
-    let outcome = outcome_for(result, &limits);
-    if failed {
-        note_failure(app, breaker, now).await?;
-    }
-    Ok(outcome)
+    Ok(outcome_for(result, &limits))
 }
 
 /// `Tx::redeem`'s result as the response §9.4 owes. Every code-dependent result collapses onto
@@ -380,38 +368,10 @@ fn outcome_for(result: RedeemResult, limits: &Limits) -> RedeemOutcome {
             RedeemOutcome::Refused(rate_limited(RATE_LIMITED_MESSAGE, limits.redeem_window_ms))
         }
         RedeemResult::CircuitOpen => {
-            RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unavailable, BREAKER_MESSAGE))
+            RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unavailable, PAUSED_MESSAGE))
         }
         RedeemResult::InvalidCode => RedeemOutcome::Refused(identical_code_error()),
     }
-}
-
-/// §9.4: the breaker "disables redemption and alerts when system-wide failures cross a threshold
-/// in a window". Counted after the transaction commits, so the failure just logged is included.
-async fn note_failure(app: &App, breaker: &Mutex<BreakerState>, now: i64) -> Result<(), ApiError> {
-    let limits = limits();
-    let mut tx = app.db.begin(None).await?;
-    let failures = tx.codes_count_failures(now - limits.breaker_window_ms).await?;
-    tx.commit().await?;
-    if (failures as i64) < limits.breaker_failure_threshold {
-        return Ok(());
-    }
-    let mut state = lock(breaker);
-    // Already open: never alert twice for one opening.
-    if now < state.open_until {
-        return Ok(());
-    }
-
-    state.open_until = now + limits.breaker_cooldown_ms;
-    state.openings += 1;
-    tracing::error!(
-        event = "codes.breaker_open",
-        failures = failures as i64,
-        threshold = limits.breaker_failure_threshold,
-        "windowMs" = limits.breaker_window_ms,
-        "openUntil" = state.open_until,
-    );
-    Ok(())
 }
 
 // Routes
@@ -440,7 +400,7 @@ fn plain_code_of(body: &Value) -> Result<String, ApiError> {
 async fn redeem_for_request(
     app: &App,
     req: &Req,
-    breaker: &Mutex<BreakerState>,
+    pause: &Mutex<PauseState>,
 ) -> Result<RedeemOutcome, ApiError> {
     // `AuthLevel::User` guarantees the caller; the guard is here because `Req` types it optional.
     let caller = match caller_of(req) {
@@ -464,7 +424,7 @@ async fn redeem_for_request(
             plain_code: &plain_code,
             ip_hash: &req.address,
             email_verified: caller.user.email_verified,
-            breaker: Some(breaker),
+            pause: Some(pause),
             key: key.as_ref(),
         },
     )
@@ -477,8 +437,8 @@ pub async fn redeem(app: &Arc<App>, req: Req) -> ApiResult {
     // Measured from the handler's first line: §9.4's "identical time" is about the response the
     // client sees, not about the lookup alone.
     let started_at = tokio::time::Instant::now();
-    let outcome = redeem_for_request(app, &req, &app.breaker).await?;
-    // Every branch is padded to the same floor — the successes too, and the breaker's 503 —
+    let outcome = redeem_for_request(app, &req, &app.redemption_pause).await?;
+    // Every branch is padded to the same floor — the successes too, and the pause's 503 —
     // so no timing difference survives to distinguish missing from expired from exhausted.
     pad_to(started_at, limits().redeem_constant_ms).await;
     match outcome {
@@ -495,8 +455,8 @@ pub async fn redeem(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn get_status(app: &Arc<App>, req: Req) -> ApiResult {
     let limits = limits();
     let now = crate::app::now_ms();
-    let open_until = lock(&app.breaker).open_until;
-    let open = now < open_until;
+    let paused_until = lock(&app.redemption_pause).paused_until;
+    let paused = now < paused_until;
     let since = now - limits.redeem_window_ms;
     let profile_id = req.caller.as_ref().map(|caller| caller.profile.id.clone());
 
@@ -520,8 +480,8 @@ pub async fn get_status(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json(
         200,
         json!({
-            "redemptionEnabled": !open,
-            "retryAfterMs": if open { open_until - now } else { 0 },
+            "redemptionEnabled": !paused,
+            "retryAfterMs": if paused { paused_until - now } else { 0 },
             "attemptsRemaining": attempts_remaining,
             "attemptsRetryAfterMs": attempts_retry_after_ms,
         }),

@@ -26,6 +26,7 @@ import { PHONE_SHEET_QUERY } from "../../breakpoints.ts";
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
 import { readerTerms } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
+import { queryList } from "../mediaQuery.ts";
 
 import {
   HAT_LABELS,
@@ -65,15 +66,11 @@ import "./craft.css";
 
 const TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap"];
 
-/** The phone sheet query (`PHONE_SHEET_QUERY`). Read in a try/catch, as `tutorial/Coach.tsx` does. */
+/** The phone sheet query (`PHONE_SHEET_QUERY`). Read through `queryList` (`game/mediaQuery.ts`). */
 const CRAFT_SHEET_QUERY = PHONE_SHEET_QUERY;
 
 function sheetQuery(): MediaQueryList | null {
-  try {
-    return typeof window.matchMedia === "function" ? window.matchMedia(CRAFT_SHEET_QUERY) : null;
-  } catch {
-    return null;
-  }
+  return queryList(CRAFT_SHEET_QUERY);
 }
 
 type DragPayload =

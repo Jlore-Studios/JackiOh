@@ -31,6 +31,7 @@ import { CardBack, CardDetail, CardFace, FullScreenArt, faceModel, useFullScreen
 import { readerName } from "../cards/chinese.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
+import { pointerFrames } from "../cards/pointerFrame.ts";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
 import { flightsOf } from "../economy/bars.ts";
@@ -40,7 +41,7 @@ import { EmptyState } from "../empty/EmptyState.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
-import { defaultFrames, defaultNow, defaultVisibility } from "../fx/FxLayer.tsx";
+import { defaultNow, defaultVisibility } from "../fx/FxLayer.tsx";
 import { useFxSettings } from "../fx/settings.ts";
 import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
@@ -193,7 +194,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
       surface,
       domRoot: domRef.current!,
       now: defaultNow,
-      frames: defaultFrames(),
+      frames: pointerFrames(),
       visibility: defaultVisibility(),
       measure: resolveAnchor,
       shakeSink: NO_SHAKE,

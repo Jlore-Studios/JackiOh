@@ -111,6 +111,8 @@ mod tests {
 
     /// What each of the Prime's casts dealt the enemy hero in all, by cast: a Spell's damage is raised by
     /// the Spell Damage on its side, a split's total once (each of its hits is 1) and a single hit whole.
+    /// A Trample excess is left out: it is the rest of a hit on a unit, which the Spell Damage raised there,
+    /// and which cast tramples into which unit moves with every Spell joining the pool (#848).
     fn hero_damage_by_cast(s: &Scenario, prime: &str) -> Vec<i64> {
         let casts: IndexSet<String> = casts_during(s, prime).iter().map(|cast| text(&cast.event, "instanceId")).collect();
         let mut totals: IndexMap<String, i64> = IndexMap::new();
@@ -135,7 +137,7 @@ mod tests {
             if !casts.contains(source) {
                 continue;
             }
-            if event["targetId"] != "hero-p2" {
+            if event["targetId"] != "hero-p2" || event["via"] == "Trample" {
                 continue;
             }
             *totals.entry(source.to_string()).or_insert(0) += event["amount"].as_i64().unwrap_or(0);

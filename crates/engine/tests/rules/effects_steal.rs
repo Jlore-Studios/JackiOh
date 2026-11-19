@@ -179,7 +179,7 @@ mod r15_steal_s6_3_m3_t1 {
     }
 
     #[test]
-    fn r15_leaves_a_card_with_nowhere_to_go_with_its_owner() {
+    fn r15_marks_a_card_with_nowhere_to_go_destroyed_where_it_stands() {
         let mut state = game();
         for lane in 1..=5 {
             put(
@@ -204,6 +204,9 @@ mod r15_steal_s6_3_m3_t1 {
         );
         assert_eq!(live(&state, &victim.id).controller, PlayerId::P2);
         assert_eq!(events.len(), 0);
+        // R4205000: it stays only until the state check collects it, and nothing prevents that.
+        assert_eq!(live(&state, &victim.id).marked_destroyed, Some(true));
+        assert_eq!(live(&state, &victim.id).unpreventable_destroy, Some(true));
     }
 
     #[test]
@@ -313,7 +316,7 @@ mod r15_steal_s6_3_m3_t1 {
     }
 
     #[test]
-    fn r15_c86_steals_every_enemy_unit_in_lane_order_and_leaves_the_excess_with_its_owner() {
+    fn r15_c86_steals_every_enemy_unit_in_lane_order_and_marks_the_excess_destroyed() {
         let mut state = game();
         put(
             &mut state,
@@ -341,7 +344,7 @@ mod r15_steal_s6_3_m3_t1 {
         let events = run(&mut state, steal_all(Default::default()), as_p1());
 
         // Lane 1 and 2 are taken, so the first two land in lanes 3 and 4; the third takes lane 5 and
-        // the last two find nothing free.
+        // the last two find nothing free, so they are marked destroyed where they stand (R4205000).
         assert_eq!(
             id_at(&state, PlayerId::P1, Row::Units, 3),
             Some(enemies[0].id.clone())
@@ -375,6 +378,16 @@ mod r15_steal_s6_3_m3_t1 {
                 PlayerId::P2
             ]
         );
+        assert_eq!(
+            enemies
+                .iter()
+                .map(|card| live(&state, &card.id).unpreventable_destroy)
+                .collect::<Vec<_>>(),
+            vec![None, None, None, Some(true), Some(true)]
+        );
+        for excess in &enemies[3..] {
+            assert_eq!(live(&state, &excess.id).marked_destroyed, Some(true));
+        }
         assert_eq!(
             events_json(&events, "controlChanged")
                 .iter()

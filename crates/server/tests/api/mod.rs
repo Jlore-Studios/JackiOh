@@ -53,6 +53,7 @@ pub mod results;
 pub mod retention;
 pub mod rewards;
 pub mod seats;
+pub mod secret_comparisons;
 pub mod series;
 pub mod settings;
 pub mod shares;

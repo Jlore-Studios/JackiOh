@@ -536,6 +536,40 @@ mod r3546003_moves_whole {
         let stayed = live(state, &id);
         assert_eq!(where_is(state, &stayed), "p2 units 1", "no fit, so no steal");
         assert_eq!(stayed.controller, P2);
+        assert_eq!(
+            stayed.marked_destroyed,
+            Some(true),
+            "R4205000: marked destroyed instead"
+        );
+    }
+
+    #[test]
+    fn r4205000_r3546003_a_giga_with_no_fit_is_destroyed() {
+        let mut s = board(
+            "r4205000-giga-no-fit",
+            json!({ "field": [field_unit(PLAIN, 1), field_unit(PLAIN, 3), field_unit(PLAIN, 5)] }),
+            json!({ "field": [field_unit(GIGA_UNIT, 1)] }),
+        );
+        let id = s.unit(P2, 1).expect("no GIGA in lane 1").id.clone();
+        let stolen = run_effect(s.state_mut(), steal(json_as(json!({ "instanceId": id }))), P1);
+        assert!(stolen.is_empty(), "no fit, so nothing changes sides");
+        let state = s.state_mut();
+        let mut bench = Bench::new(&*state);
+        state_check(&mut bench.sink(state));
+        let state = s.state();
+        let gone = live(state, &id);
+        assert_eq!(where_is(state, &gone), "graveyard");
+        assert_eq!(gone.owner, P2);
+        assert!(
+            is_empty(state, slot(P2, Row::Units, 1)),
+            "its four zones are free"
+        );
+        assert!(
+            bench
+                .events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == id))
+        );
     }
 
     #[test]

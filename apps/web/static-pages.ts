@@ -17,6 +17,8 @@ import type { Plugin } from "vite";
 
 import { shellTestid } from "./src/auth/testids.ts";
 import { motifFor } from "./src/cards/art/motifs.ts";
+import { installSceneData } from "./src/cards/art/scene.ts";
+import { ALT_SCENE_RECIPES, drawFigure, SCENE_KIT, SCENE_RECIPES } from "./src/cards/art/sceneData.ts";
 import { proceduralArtUri } from "./src/cards/art/svg.ts";
 import { compositionFor, themeFor } from "./src/cards/art/themes.ts";
 import { almanacShelf } from "./src/game/deckbuilder/shelf.ts";
@@ -29,6 +31,11 @@ import { SHIPPED_SETS, fillParams } from "./src/wire/catalog.ts";
 import { DECK_SIZE, HERO_HEALTH, MAX_MANA } from "./src/wire/engineConfig.ts";
 import { MIN_ACCOUNT_AGE_YEARS } from "./src/wire/serverConfig.ts";
 import type { CardCost, CardDefs } from "./src/wire/index.ts";
+
+// #4222: the static pages render outside every gate (the build's `writeBundle`, the dev server's
+// artwork middleware), so the scene tables their faces draw through are installed here, the way
+// `src/test/setup.ts` installs them for jsdom. Build-time only: this module never ships to the client.
+installSceneData({ SCENE_KIT, drawFigure, SCENE_RECIPES, ALT_SCENE_RECIPES });
 
 export type PublicPage = { readonly path: string; readonly description: string };
 

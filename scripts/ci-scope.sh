@@ -47,7 +47,15 @@
 # them, no job does; training/history/ is not among them), and the notebooks' project, analysis/
 # (#445: no file in crates/, apps/, e2e/, spec/ or a per-pull-request job reads it; super.yml's
 # `notebooks` job runs its tests once a day), but for the five record files and reports of
-# analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to.
+# analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to, and the
+# mutation-testing tooling, which mutants.yml runs and checks on its own trigger
+# (.cargo/mutants.toml, scripts/mutants.sh, scripts/mutants-runner.sh), and the pool probe
+# (scripts/pool-probe.sh), which a person runs. Nothing in crates/, apps/, e2e/ or spec/ reads
+# any of the four: only comments name them (crates/run/src/tests.rs:987,
+# crates/engine/src/testkit/pool_probe.rs:7, the two Stryker configs, .github/mutants-floor.txt's
+# header, mutants.yml itself), and no per-pull-request job runs them (no workflow names
+# pool-probe.sh; `grep mutants .github/workflows/ci.yml` finds nothing). A later CI job that
+# starts reading one of these files must take it off the list in the same pull request.
 # Nothing a test, a build or a check reads is on the list, and nothing under crates/: ci.yml's
 # `rust (classify)` (#1370) reads every change to the cards, the engine and the AI, and runs exactly
 # when `full` does. The other docs are
@@ -59,8 +67,17 @@
 #
 # Past the skip list, each changed file turns lines on, and a line no file turned on is false:
 #
+#  - A diff in which every file is one `cargo jackioh patches ship` or `patches cut` writes runs `full`
+#    and only rust_cards_lib, rust_cards, rust_server and rust_tools_wasm, plus web when
+#    apps/web/.env.production is in it (#4094, an owner-decided cut of per-pull-request coverage: the
+#    WASM module and the client embed the catalog, yet web, e2e, the engine's and the AI's groups and every
+#    db line stay off; the push to `main` and the daily super run still run everything). Those files are
+#    crates/cards/patches/'s v*.json, patches.json, shipped.json, index.json, card_metrics/, records/ and
+#    pending/, crates/server/.env.example and apps/web/.env.production, and both patches.json and
+#    shipped.json must be in the diff, as no other pull request edits them. Any other file in the diff
+#    scopes as below.
 #  - Run everything but the db suites: the workspace's Cargo.toml, Cargo.lock, rust-toolchain.toml,
-#    .cargo/, anything under .github/ that is not on the skip list, and this script. Of these, only
+#    .cargo/ but .cargo/mutants.toml, anything under .github/ that is not on the skip list, and this script. Of these, only
 #    .github/ and this script run infra too: the terraform steps read no cargo file.
 #  - infra: infra/, which nothing else reads (no web or e2e line turns on for it).
 #  - The db suites, each on what its script exercises (each script's header says): the migrations
@@ -79,7 +96,7 @@
 #    a pull request leaves runs in the daily super run (docs/v0.3.0/README.md §7), and its skip
 #    passes the check.
 #  - clippy: any Rust source, manifest, lockfile, clippy.toml, rustfmt.toml, the toolchain or
-#    .cargo/.
+#    .cargo/ but .cargo/mutants.toml.
 #  - The Rust test groups follow the crate graph (`cargo metadata`, dev-dependencies included): a
 #    group runs when the change is in a crate it tests or in any crate those build on. The engine or
 #    the cards run every group (the engine's tests build on the cards and read their catalog); the AI
@@ -94,9 +111,11 @@
 #    (radiant_standard.rs), spec/07-tokens.md (the catalog test's table of tokens, R1177001) and
 #    spec/08-catalog.md (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
-#    tools' patches tests read) tools, wasm, the first as well as server; crates/server/tests/'s
+#    tools' patches tests read; the ship case above takes precedence) tools, wasm, the first as well as server; crates/server/tests/'s
 #    actor/, api/, bots/, loops/ and support/ (acceptance.rs holds their helpers to support/'s,
-#    #2385) tools, wasm as well as server; and
+#    #2385) tools, wasm as well as server; crates/server/migrations/0068_v0_5_retcon.sql and
+#    0087_v0_5_13_retcon.sql (the tools' r2532000 and r3631001 retcon tests read them through
+#    repo_root().join(MIGRATIONS_REL), #4157) tools, wasm as well as server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
 #    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
 #    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
@@ -141,7 +160,9 @@
 #    them), the web's unit tests, the docs, spec/,
 #    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (the Dockerfile,
 #    wrangler.jsonc and the Worker, apps/edge/: e2e smoke boots jackioh-server itself, behind no
-#    Worker), the lint and unit-test configs, and the scripts no build runs.
+#    Worker), the lint and unit-test configs, and the scripts no build runs (scripts/browse.sh,
+#    scripts/promote-production.sh, scripts/promote-staging.sh, scripts/server-image.sh,
+#    scripts/worktree.sh).
 #
 # apps/web/src/net/ci-scope.test.ts holds every line both ways, and holds `web` and `e2e` to every
 # repository path their sources name; crates/tools/tests/acceptance.rs holds the Rust groups to
@@ -198,6 +219,7 @@ skipped() {
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
     .github/workflows/triage.yml | .github/workflows/ci-duration.yml) ;;
     .github/workflows/pr-title.yml) ;;
+    .cargo/mutants.toml | scripts/mutants.sh | scripts/mutants-runner.sh | scripts/pool-probe.sh) ;;
     *) return 1 ;;
   esac
 }
@@ -226,6 +248,54 @@ on() {
     esac
   done
 }
+
+# Prints every line: full, and the rest by what was turned on.
+emit() {
+  echo "full=true"
+  case " $turned " in
+    *" db_sql "* | *" db_store "* | *" db_deploy "*) echo "db=true" ;;
+    *) echo "db=false" ;;
+  esac
+  for name in $LINES; do
+    case "$name" in
+      full | db) continue ;;
+    esac
+    case " $turned " in
+      *" $name "*) echo "$name=true" ;;
+      *) echo "$name=false" ;;
+    esac
+  done
+}
+
+# True for a diff in which every file is one `cargo jackioh patches ship` or `patches cut` writes
+# (#4094), and both history files are in it, which no other pull request edits.
+ships() {
+  saw_patches=false
+  saw_shipped=false
+  for file in $files; do
+    case "$file" in
+      crates/cards/patches/patches.json) saw_patches=true ;;
+      crates/cards/patches/shipped.json) saw_shipped=true ;;
+      crates/cards/patches/index.json | crates/cards/patches/v*.json | crates/cards/patches/card_metrics/* | \
+        crates/cards/patches/records/* | crates/cards/patches/pending/* | \
+        crates/server/.env.example | apps/web/.env.production) ;;
+      *) return 1 ;;
+    esac
+  done
+  [ "$saw_patches" = true ] && [ "$saw_shipped" = true ]
+}
+
+if ships; then
+  echo "ci-scope: a patches ship or cut (#4094): only the cards, the server and the tools read what it writes" >&2
+  on rust_cards_lib rust_cards rust_server rust_tools_wasm
+  for file in $files; do
+    case "$file" in
+      apps/web/.env.production) on web ;;
+    esac
+  done
+  emit
+  exit 0
+fi
 
 for file in $files; do
   skipped "$file" && continue
@@ -264,6 +334,7 @@ for file in $files; do
     crates/ai/*) on rust_ai rust_ai_slow rust_server rust_tools_wasm ;;
     crates/server/tests/actor/* | crates/server/tests/api/* | crates/server/tests/bots/* | crates/server/tests/loops/* | \
       crates/server/tests/support/*) on rust_server rust_tools_wasm ;;
+    crates/server/migrations/*) on rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
     crates/shared/* | crates/run/*) on rust_server rust_tools_wasm ;;
     crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
@@ -324,17 +395,4 @@ if git diff --no-renames -U0 "$base...$head" -- apps crates e2e 2>/dev/null |
   on rust_tools_wasm
 fi
 
-echo "full=true"
-case " $turned " in
-  *" db_sql "* | *" db_store "* | *" db_deploy "*) echo "db=true" ;;
-  *) echo "db=false" ;;
-esac
-for name in $LINES; do
-  case "$name" in
-    full | db) continue ;;
-  esac
-  case " $turned " in
-    *" $name "*) echo "$name=true" ;;
-    *) echo "$name=false" ;;
-  esac
-done
+emit

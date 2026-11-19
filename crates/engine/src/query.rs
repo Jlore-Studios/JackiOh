@@ -416,7 +416,7 @@ pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Optio
 pub use crate::plague::{permanents_on_field, plague_multiplier_of, plague_on, plague_on_field};
 
 // Burn and Toxic (Stinkyscape+ E2, R3540000), ruled by `afflictions.rs`.
-pub use crate::afflictions::{burn_on, hero_burn_of, hero_toxic_of, toxic_on};
+pub use crate::afflictions::{burn_on, converts_to, hero_burn_of, hero_toxic_of, toxic_on};
 
 // Readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
 
@@ -553,9 +553,29 @@ pub fn own_turn_redirect_left(state: &GameState, card: &CardInstance) -> Option<
 /// turn: its declared `pool` (R386) less what it has soaked on its controller's current turn, at
 /// least 0. `None` for a card with no pool.
 pub fn damage_pool_left(state: &GameState, card: &CardInstance) -> Option<i32> {
+    Some((damage_pool_cap(state, card)? - crate::damage::damage_pool_used(state, card)).max(0))
+}
+
+/// R3550004: `card`'s whole damage pool, its declared `pool` (R386), at least 0: what it soaks once it
+/// refills at the start of its controller's turn. `None` for a card with no pool.
+fn damage_pool_cap(state: &GameState, card: &CardInstance) -> Option<i32> {
     let pool = crate::scripts::flags_of(state, card).damage_pool?;
-    let cap = crate::params::declared_or(state, card, "pool", pool).max(0);
-    Some((cap - crate::damage::damage_pool_used(state, card)).max(0))
+    Some(crate::params::declared_or(state, card, "pool", pool).max(0))
+}
+
+/// R4064000: what `player`'s damage pools (R3550004) may soak between them, read off the cards §4.4
+/// step 3b reads: what each has left this turn, or, `refilled`, its whole pool (its next turn start).
+pub fn damage_pool_of(state: &GameState, player: PlayerId, refilled: bool) -> i32 {
+    crate::damage::acting_texts_of(state, player)
+        .iter()
+        .filter_map(|card| {
+            if refilled {
+                damage_pool_cap(state, card)
+            } else {
+                damage_pool_left(state, card)
+            }
+        })
+        .sum()
 }
 
 /// R3572002: the game-wide worth of a Warhero Token before its face doubles it (R3548002): 0 until
@@ -1034,7 +1054,8 @@ pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
     CombatForecast { attacks, lethal }
 }
 
-/// One attack's forecast, its ids left empty for the caller.
+/// One attack's forecast, its ids left empty for the caller. A blow of 1 or more from a source that
+/// exiles what it damages removes its target as a Poisonous one destroys it (R1124, R4111000), either way.
 fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> AttackForecast {
     let mine = unit_view(state, attacker);
     let attacker_size = mine.attack + mine.health;
@@ -1055,10 +1076,18 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
     let theirs = unit_view(state, defender);
     let bonus = crate::combat::attack_mod_for(state, attacker, defender);
     let hit = (mine.attack + bonus.attack) * crate::combat::lane_multiplier_for(state, attacker, defender);
-    let back = theirs.attack * crate::combat::lane_multiplier_for(state, defender, attacker);
+    // R4156000: a strike back takes lane strike's multiplier alone, never a sweep's weight.
+    let back_multiplier = crate::combat::strike_back_multiplier_for(state, defender, attacker);
+    let back = theirs.attack * back_multiplier;
     let strikes_back = crate::combat::takes_strike_back(state, attacker, defender);
-    // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land.
-    let falls = strikes_back && falls_to_first_strike(state, attacker, defender);
+    // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land,
+    // and so does one whose first blow exiles it (R1124, R4111000).
+    let exiled_first = has_keyword(&theirs.keywords, KeywordKind::FirstStrike)
+        && !has_keyword(&mine.keywords, KeywordKind::FirstStrike)
+        && exiles_on_damage(state, defender)
+        && hit_on_unit(state, defender, attacker, back) > 0;
+    let falls =
+        strikes_back && (falls_to_first_strike(state, attacker, defender, back_multiplier) || exiled_first);
     let mut dealt = if falls {
         0
     } else {
@@ -1069,7 +1098,7 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         dealt = dealt.min(theirs.health.max(0));
     }
     let poisons = bonus.poisonous || has_keyword(&mine.keywords, KeywordKind::Poisonous);
-    let kills = dealt > 0 && (poisons || dealt >= theirs.health);
+    let kills = dealt > 0 && (poisons || exiles_on_damage(state, attacker) || dealt >= theirs.health);
     // One First Strike attacker that destroys its target is not struck back (§4.3 step 1).
     let strikes_first = has_keyword(&mine.keywords, KeywordKind::FirstStrike)
         && !has_keyword(&theirs.keywords, KeywordKind::FirstStrike);
@@ -1078,8 +1107,10 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
     } else {
         hit_on_unit(state, defender, attacker, back)
     };
-    let survives =
-        taken <= 0 || (taken < mine.health && !has_keyword(&theirs.keywords, KeywordKind::Poisonous));
+    let survives = taken <= 0
+        || (taken < mine.health
+            && !has_keyword(&theirs.keywords, KeywordKind::Poisonous)
+            && !exiles_on_damage(state, defender));
     AttackForecast {
         attacker_id: String::new(),
         target_id: String::new(),
@@ -1091,6 +1122,12 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         attacker_size,
         target_size: theirs.attack + theirs.health,
     }
+}
+
+/// R1124, R4111000: whether `source`'s damage exiles the Unit it lands on (Meditative #72 The Banisher),
+/// which the forecast counts as it counts Poisonous: any blow of 1 or more removes its target.
+fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
+    crate::scripts::flags_of(state, source).exiles_on_damage == Some(true)
 }
 
 /// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.

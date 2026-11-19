@@ -5,7 +5,8 @@
 // pointer (`(pointer: coarse), (max-width: 600px)`), so over 600 px the browser emulates touch, as an iPad
 // is held (CDP's `Emulation.setTouchEmulationEnabled`, Chrome only). Two tests check the measure itself
 // (index.css's `--hit-min` is `HIT_MIN_PX`, and a probe narrower than the minimum fails).
-// Per pull request: SMOKE holds 47. Networked as 46.
+// Daily only (issue #4092): SMOKE in scripts/shard-specs.mjs does not hold 47, which took a smoke shard to
+// itself (6 minutes); super.yml plays it. Networked as 46.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
 import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
@@ -47,7 +48,7 @@ const MS_PER_SECOND = 1000;
 const SEED = seedFor("47-tap-areas");
 /** The series the intercept answers, as spec 46's: a v4 UUID's shape, nothing the server holds. */
 const SERIES_ID = "00000000-0000-4000-8000-000000002122";
-/** p2, not 46's p1: the smoke shard runs 46 then 47 on one server, and both specs' menus in one minute pass R109's allowance for one account. */
+/** p2, not 46's p1: a shard that plays 46 and 47 on one server has both specs' menus in one minute, which passes R109's allowance for one account. */
 const SIGNED_IN = accounts.p2;
 /**
  * The signed-in screens that draw nothing of `SIGNED_IN`'s own sign in as p4 (46's spare is p3), which only

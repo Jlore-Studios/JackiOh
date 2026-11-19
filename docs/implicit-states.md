@@ -4,7 +4,7 @@ Some of the code's states have no name: several fields read together (an `Option
 "pending" field beside what it guards) hold them, where one enum would. This file maps them: for each, its
 fields, every combination of their values, what moves it between them, and whether each combination can
 happen. It was started by #3678. The code audit's fourth part (`.github/hygiene/code.md` section 4, #3719)
-extends it on each run: #3899's mapped states 4 to 6 and checked states 1 to 3 again.
+extends it on each run: #3899's mapped states 4 to 6 and checked states 1 to 3 again; #4114's mapped states 7 to 9 and checked 1 to 6 again.
 
 How to read and extend it:
 
@@ -26,18 +26,21 @@ How to read and extend it:
 
 ## 1. A match actor's seat
 
-**Checked at** `656a2238acf5`, plus #3899's pull request. Since #3678 (`git log d0f7305317.. -- <its files>`):
+**Checked at** `b0e998a29b`, plus #4114's pull request. Since `656a2238acf5` (`git log 656a2238acf5.. -- <its
+files>`): `9889adcf9b` (#3896, R3731002) gives a 2v2's team B people the seats b1 and b2 in the co-op actor
+(S13, S14), and `9cea15006d` (#3826) has `ws_server.rs` report the upgrade's route health, which moves no
+row. Checked before at `656a2238acf5`, plus #3899's pull request; since #3678 (`git log d0f7305317.. -- <its files>`):
 #3742 (R3694000) closes a finished match's sockets with `MATCH_OVER_CLOSE_CODE` once its rematch window
 ends (S9), #3783 (R3767000) closes a replaced seat socket with `SEAT_TAKEN_CLOSE_CODE` (S12), and #3899
 gives a socket handed to an actor the reaper let go the same 4411 (S10).
 
 **Files:** `crates/server/src/actor/match_actor.rs` (`Core`, `attach`, `on_frame`, `on_socket_gone`,
-`detach`, `halt`), `crates/server/src/duos/actor.rs` (the same for a co-op person's seat),
+`detach`, `halt`), `crates/server/src/duos/actor.rs` (the same for a co-op person's seat, and in a 2v2 for team B's people's),
 `crates/shared/src/host/duel.rs` and `crates/shared/src/host/duos.rs` (the machine's `stopped`,
 `voided`, `connected`), `crates/server/src/actor/guard.rs` (`SeatGuard`'s last answered hello),
 `crates/server/src/actor/ws_server.rs` (`Socket`).
 
-**Fields,** per home seat (the seat the account began in; a co-op person's seat a1 or a2):
+**Fields,** per home seat (the seat the account began in; a co-op person's seat a1 or a2, and in a 2v2 b1 or b2):
 
 - `sockets[home]`: none, an open `Socket`, or a closed one the actor has not yet heard close;
 - `hello_pending[home]` (P): none, or the socket generation whose Hello is queued and unrun;
@@ -68,11 +71,16 @@ actor, G = 0, no socket). `Core` is never serialized, so a JSON round trip does 
 | S10 | stopped, then a socket attached to it | Reachable: a handle held across the stop (in production `Registry::attach` holds one between `actor_for` and `attach`, and `stop`, `stop_all` or `reap_finished` can run between the two on another of `#[tokio::main]`'s worker threads) | Closed and never greeted, with the close the stop gave the sockets it held: 1001 after `stop`, `stop_all` or R776000's let-go, so the client reconnects to the rebuilt actor (§9.5, R776000, the README's drain line); `MATCH_OVER_CLOSE_CODE` after `reap_finished`, which no client reconnects on, since a 1001 would send it into R1285000's refusal again and again (R3694000, its Rejected) | #3678 fixed the 1v1 actor greeting such a socket. **#3899: was a mismatch, fixed**: both actors closed it 1001 after the reaper too, so its client reconnected into R1285000's refusal. `halt_with` now keeps its close (`Core.halted_with`, set under the lock that stops the machine) and `attach` gives it to the late socket. `crates/server/tests/actor/match_actor.rs::seat_states_3678::a_socket_handed_to_a_stopped_actor_is_closed_going_away_and_never_greeted`, `…::seat_states_3678::r3694000_a_socket_handed_to_an_actor_the_reaper_let_go_hears_the_match_is_over` (new; failed before the fix with `left: Some(1001) right: Some(4411)`), `crates/server/tests/actor/duos.rs::seat_states_3678::a_socket_handed_to_a_stopped_duos_actor_is_closed_going_away`, `…::seat_states_3678::r3694000_a_socket_handed_to_a_coop_actor_the_reaper_let_go_hears_the_match_is_over` (new; failed the same way) |
 | S11 | voided (and so stopped), then a socket attached to it | Reachable: a handle held across Glitch's void | The socket hears only the void's close, `MATCH_VOIDED_CLOSE_CODE`, never a view (R679); the voided arm goes before the stopped one | `crates/server/tests/actor/glitch.rs::glitchs_void::a_socket_handed_to_the_actor_it_held_across_the_void_hears_only_the_void` (new) |
 | S12 | a second socket for one home seat while the first is open | Reachable: a second tab, or another device (a reconnect before the old socket closed is the same, and the client's own replacement of a stale socket lets it go first, so its close is never heard) | The newer socket takes the seat, the older is closed with `SEAT_TAKEN_CLOSE_CODE` (4412), and no grace starts since the seat was never empty (R744; `on_socket_gone`'s comment). The replaced client goes to `elsewhere` (`apps/web/src/game/net.ts`'s and `duos/socket.ts`'s `onclose`): no backoff, no reconnect, and its page says the game is open in another tab or on another device with a Play here button that takes the seat back (R3767000). A watcher's replacement stays 1000 | `crates/server/tests/actor/match_actor.rs::seat_states_3678::r3767000_a_second_socket_for_one_seat_replaces_the_first_with_seat_taken_and_starts_no_grace`, `crates/server/tests/actor/duos.rs::seat_states_3678::r3767000_a_second_socket_for_one_duos_seat_replaces_the_first_with_seat_taken` (new); the web's, `apps/web/src/game/net.test.ts`, `apps/web/src/duos/socket.test.ts`, `apps/web/src/routes/match.test.tsx` and `apps/web/src/duos/DuosRoute.test.tsx`, each under "R3767000" |
-| S13 | (co-op) a socket for an AI seat, b1 or b2 | Unreachable from the routes: `DuosActor::seat_of` answers a1 or a2 only. A held handle reaches `attach`'s guard | Team B's seats are the AI's (§13.7) and only a human seat's socket is greeted (§13); the guard closes it 1000 and greets nothing | `crates/server/tests/actor/duos.rs::seat_states_3678::a_socket_handed_to_an_ai_seat_is_closed_and_never_greeted` (new) |
+| S13 | (co-op) a socket for an AI team's seat, b1 or b2 | Unreachable from the routes: `DuosActor::seat_of` (`DuosMatch::seat_of`) answers none for an empty profile, and an AI team's b1 and b2 hold `""` (`duos/store.rs`; `duos/rooms.rs` names them only for a 2v2), so it answers a1 or a2 only. A held handle reaches `attach`'s guard (`DuosTeamB::person`: none for an AI team's seat) | Team B's seats are the AI's (§13.7) and only a human seat's socket is greeted (§13); the guard closes it 1000 and greets nothing | `crates/server/tests/actor/duos.rs::seat_states_3678::a_socket_handed_to_an_ai_seat_is_closed_and_never_greeted` (new) |
+| S14 | (2v2) a socket for a team-B person's seat, b1 or b2 | Reachable: a four-account private lobby's 2v2 (R3731002); `seat_of` answers b1 or b2, and S1 to S12 hold for it as for a1 and a2 (the same per-slot arrays) | Greeted with its own seat's view; a drop starts its grace, the AI plays the seat past it, and its return takes it back (R3731002, §13.7) | `crates/server/tests/actor/duos.rs::two_v_two::r3731002_four_sockets_play_a_two_v_two_to_its_end`, `…::two_v_two::r3731002_a_team_b_disconnect_hands_the_seat_to_the_ai_and_its_return_takes_it_back` |
 
 ## 2. The engine's paused action
 
-**Checked at** `656a2238acf5`. Since #3678 (`git log d0f7305317.. -- <its files>`): `@setResolved` (R3806000,
+**Checked at** `b0e998a29b`. Since `656a2238acf5`: `72dc211abd` (#3811) has `end_game` also clear each player's
+`turn_log.played_before_end` (R3800003), a field outside this state, and `6b457de6f4` (#3859, I16),
+`d7851b0b47` (#3938, I17), `7767d9815a` (#3924), `3292f2ea70` (#3973) and `b8093a6f3f` (#4025, I9) add or
+refactor testkit invariants; I7 and the state's fields are unchanged, so no row moved. Checked before at
+`656a2238acf5`; since #3678 (`git log d0f7305317.. -- <its files>`): `@setResolved` (R3806000,
 #3817), the chaos launch watch's resume step (R3570004, #3786), `sink_bottom_starters` in setup
 (R3558006, #3786) and the testkit's invariants I16 (#3746) and I17 (#3799); none touches `pending`, `work`,
 `work_cursor`, `mulligan` or `result`, and I7 is unchanged, so no row moved.
@@ -116,8 +124,11 @@ out. No shape is changed here.
 
 ## 3. The dungeon run's position
 
-**Checked at** `13bd66f47171`, plus #3678's pull request; unchanged at `656a2238acf5` (`git log d0f7305317..
--- crates/run/src/lib.rs apps/web/src/dungeon/store.ts` prints nothing).
+**Checked at** `b0e998a29b`, plus #4114's pull request. Since `656a2238acf5`, `a040a62718` (#4097) has
+`run_create` refuse a curse taken twice and a mini-boss's replacement drop roll at its tier floor, which made
+`fight_won`'s two roll arms one (#4114 merges them); neither touches `row`, `col`, `phase` or HP, so no row
+moved. Checked before at `13bd66f47171`, plus #3678's pull request; unchanged at `656a2238acf5` (`git log
+d0f7305317.. -- crates/run/src/lib.rs apps/web/src/dungeon/store.ts` prints nothing).
 
 **Files:** `crates/run/src/lib.rs` (`RunState`, `run_create`, `apply`, `fight_won`, `with_max_hp`,
 `run_node`, `run_enemy`), `apps/web/src/dungeon/store.ts` (the device keeps a run as its `RunFile`, the
@@ -153,7 +164,8 @@ device never keeps a `RunState`, only the log it folds, so no run file reaches t
 
 ## 4. The web's stored session
 
-**Checked at** `656a2238acf5`, plus #3899's pull request.
+**Checked at** `b0e998a29b`: unchanged since `656a2238acf5`, plus #3899's pull request (`git log 656a2238acf5..
+-- apps/web/src/net/session.ts apps/web/src/net/storage.ts` prints nothing).
 
 **Files:** `apps/web/src/net/session.ts` (`readSession`, `writeSession`, `clearSession`),
 `apps/web/src/net/storage.ts` (`sessionStorageOrNull`, `localStorageOrNull`: a storage that throws on
@@ -187,18 +199,23 @@ Its rows are W1 to W10 (W for the web's session), never `R<n>`.
 
 ## 5. The web's live game
 
-**Checked at** `656a2238acf5`, plus #3899's pull request.
+**Checked at** `b0e998a29b`. Since `656a2238acf5`, plus #3899's pull request: `88b1df6f05` (#3902, R3729001)
+keeps the moment a tab queued beside its mode, for the menus' queue banner and its Cancel (L14 to L17).
 
 **Files:** `apps/web/src/net/liveGame.ts` (`useQueueFollow`, `useLiveGame`, `rememberQueued`,
-`forgetQueued`), `apps/web/src/routes/play.tsx` (the lobby's own watch, which `/play` runs instead),
-`apps/web/src/net/gate.ts` (`callWithRenewal`).
+`forgetQueued`, `readQueuedSince`), `apps/web/src/routes/play.tsx` (the lobby's own watch, which `/play`
+runs instead), `apps/web/src/net/gate.ts` (`callWithRenewal`), `apps/web/src/shell/QueueBanner.tsx` (the
+menus' queue banner).
 
-**Fields:** the queue follow's: the mode this tab is queued in (`queued`, `sessionStorage["jackioh.play.queued"]`),
+**Fields:** the queue follow's: the mode this tab is queued in (`queued`, `sessionStorage["jackioh.play.queued"]`)
+and the moment it queued (`QUEUE_SINCE_KEY`, `sessionStorage["jackioh.play.queuedSince"]`, the banner's clock),
 whether the path is `/play`, `found` (a pairing being announced), `endedReads` (R897000's reads in a row
 that say the ticket is gone) and `reading` (a read out); the banner's (`useLiveGame`): the account read,
 `polled` (the last poll's game, paired with the account read it followed) and `watched` (the game polled).
 
-**What moves it:** `rememberQueued` and `forgetQueued` (`/play`'s Find a match and Leave queue); a
+**What moves it:** `rememberQueued` and `forgetQueued` (`/play`'s Find a match and Leave queue; each writes
+or removes the mode and the moment together); the queue banner's Cancel (`dequeue`, then `forgetQueued`; a
+refused one keeps both), which also ends `/play`'s wait; a
 navigation; a read every `SERIES_POLL_SECONDS` (the follow, R3207001) or `LIVE_GAME_POLL_SECONDS` (the
 banner), and at once on `pageWake` (R3205000); a read naming a game (`found`, then a navigation after
 `MATCH_FOUND_NAV_DELAY_MS`); a signed-out answer or no session; a reload (the queue is kept, the
@@ -220,6 +237,10 @@ the banner's.
 | L11 | a gone read, a failed read, a gone read | Reachable: as it says | **Unspecified** (R897000 says a failed read keeps the wait, not whether it breaks the row); as `/play`'s watch, it neither counts nor breaks it, so the third read ends the wait | › "R897000 a failed read between two gone reads does not break the row" (new) |
 | L12 | queued, a read answered signed out (the renewal found no account) | Reachable: the refresh token is revoked | **Unspecified**; the follow forgets the queue, as with no session | › "R765 a read answered signed out forgets the queue" (new) |
 | L13 | `found` and `queued` both set | Unreachable: `forgetQueued` runs just before `setFound`, in the same answer | — | — |
+| L14 | queued, a moment kept | Reachable: Find a match | The banner's clock counts from the moment, and a reload keeps it (R3729001) | `apps/web/src/net/liveGame.test.tsx` › "R3729001 the moment the queue began is written with the mode, read back and cleared with it"; `apps/web/src/shell/MenuShell.test.tsx` › "R3729001 the clock counts from when the tab queued and advances every tick" |
+| L15 | queued, no moment or a malformed one | Reachable: a tab that queued before #3902 (a version), or a storage that took the mode and refused the moment (`setStored` swallows the throw); malformed only by hand | Counts from when the banner mounted (R3729001) | › "R3729001 a missing or malformed moment reads as none"; `MenuShell.test.tsx` › "R3729001 with no moment kept the clock counts from when the banner first showed" |
+| L16 | a moment, not queued | Unreachable through the machinery: `rememberQueued` writes the mode first and `forgetQueued` removes both, so only a storage that refuses the short mode and takes the longer moment, or a hand-set key, leaves one; nothing reads it then (`MenuShell` mounts the banner only while a queue is kept) and the next queue overwrites it | — | — |
+| L17 | queued, the banner's Cancel | Reachable: Cancel on any menu screen, `/play` included | The queue is left on the server, then forgotten, and `/play`'s wait ends; a refused Cancel keeps the search (R3729001) | `MenuShell.test.tsx` › "R3728002 R3729001 the queue search shows on every menu screen, /play included, and Cancel dequeues and forgets it", › "R3729001 a mode the server has counted no wait for shows no wait, and a refused Cancel keeps the search on screen"; `apps/web/src/routes/play.test.tsx` › "R3729001 inside the menus' shell the banner shows the search, and Cancel there ends the wait here" |
 | B1 | the account not ready | Reachable: loading, anonymous, an error | No banner, no poll (R765) | › "R765 useLiveGame is the account's game, and none for an account that is not ready" |
 | B2 | a live game, polled | Reachable: an account read naming a game | Read again every `LIVE_GAME_POLL_SECONDS`, gone once a read says it ended; a co-op game too (R765, R3207001, R1566000) | › "R765 a live game is read again every LIVE_GAME_POLL_SECONDS, and is gone once a read says it ended", › "R1566000 useLiveGame offers a live co-op game, …", › "R3205000 the live-game banner's read pauses in a hidden tab, …" |
 | B3 | no live game | Reachable: an account read naming none | Nothing is polled (R765) | › "R765 an account with no live game is not polled" |
@@ -227,7 +248,11 @@ the banner's.
 
 ## 6. `Game.tsx`'s layers
 
-**Checked at** `656a2238acf5`, plus #3899's pull request.
+**Checked at** `b0e998a29b`. Since `656a2238acf5`, plus #3899's pull request: `ff38380a54` (#3976) and
+`e3dbd4c61a` (#3839) pass the heroes their portraits and the prompt a sequence clock, `1b3c343975` (#3910)
+words the turn banner for a cut-short turn and the autopilot, `3643877e46` (#3821) words the notice when no
+attack is offered, and `fa6d2f2f88` (#3884) adds an animated `armorGained`, one more event a burst may hold
+(G2, G3); none moves a row.
 
 **Files:** `apps/web/src/game/Game.tsx` (`interaction`, `selectionKey`, the runner with `shown` against
 `view`, `legal`, `lastSent`, `promptOver`), `apps/web/src/game/drag/DragLayer.tsx` (`press`, `flight`,
@@ -275,6 +300,154 @@ piece, the opening deal); a prompt opening or answered; a setting changed. Its r
 | G23 | a flight on a replay board | Unreachable: a replay board mounts no drag layer (`replay ? null : <DragLayer …/>`) | — | — |
 | G24 | a flight with drag to play off | Unreachable: a press does not arm while the setting is off | — | `drag-layer.test.tsx` › "B39 with drag to play off, a long move starts no drag and a release over a zone sends nothing" |
 
+## 7. The web's match socket
+
+**Checked at** `b0e998a29b`, plus #4114's pull request.
+
+**Files:** `apps/web/src/game/net.ts` (`createMatchClient`, `createBackoff`, `createWakeProbe`, `letGo`),
+`apps/web/src/duos/socket.ts` (`createDuosClient`, the same machine for a co-op seat).
+
+**Fields:** the snapshot's `connection` (`connecting`, `open`, `reconnecting`, `refused`, `closed`,
+`elsewhere`); the `socket` the client holds (none, or one connecting or open); `stopped` (a deliberate
+`close()`); the backoff's `pending` step and its `retry` count; `awaitingFirstView` (a new socket's first
+view clears an older error); `refusedToken` (the token a 4401 refused, R1115000); and the wake probe's
+timer (R1441).
+
+**What moves it:** `connect()` (the page's mount and its Reconnect and Play here buttons: `stopped`
+cleared, a waiting step cut short, a socket opened); `close()` (the page's unmount); `setToken` (the gate's
+renewal, R194); a socket's `onopen` (the steps start over); its `onclose`, by code: 1006, 1000 or 1001
+reconnect on the backoff, 4401, 4403 and 4404 refuse, 4410 (R679) and 4411 (R3694000) close, 4412
+(R3767000) goes `elsewhere`; a socket factory that throws; the backoff's timer; and a page wake (the tab
+shown, the network back), whose probe replaces a socket silent past `WS_PING_INTERVAL_SECONDS` that does
+not answer. The client is a closure, never serialized; a reload starts it from nothing. Its rows are N1 to
+N17 (N for the network), never `R<n>`. The co-op client runs the same machine, and
+`apps/web/src/duos/socket.test.ts` holds its tests, the new 1001 one (N3) and N15's among them, each named
+as here with "co-op".
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| N1 | `connecting`, a socket not yet open, no step | Reachable: `connect()` | `hello` on open asks for a fresh full view (§9.5); the token rides the handshake, never the address (R1379000) | `apps/web/src/game/net.test.ts` › "sends `hello` on open: §9.5's 'push me a fresh full view'", › "R1379000 the address names the match and never the token, which is offered as a subprotocol" |
+| N2 | `open`, a probe waiting | Reachable: a page wake past the silence | Replaced if the probe goes unanswered, kept if it answers (R1441) | › "R1441 a silent socket is replaced when the tab turns visible, and the new socket sends hello", › "R1441 a quiet socket that answers the probe is kept", › "R1441 a socket heard within the ping interval is not probed" |
+| N3 | `reconnecting`, no socket, a step waiting | Reachable: a close with 1006, 1000 or 1001 | Reopened after the step, plus up to `RECONNECT_JITTER` of it (R1441); 1001 is the restart drain's close, which the client reconnects on (R3694000, R1115000) | › "reopens after an unexpected close, with a backoff", › "R3767000 a close with 1000 still reconnects", › "R3694000 a close with 1001, a restart's drain, reconnects with a backoff" (new), › "R1441 a reconnect waits its backoff plus up to a quarter more" |
+| N4 | `reconnecting` with a transport error, no socket, a step waiting | Reachable: the browser refuses to construct the socket (a bad URL, a blocked scheme) | **Unspecified**: retried on the backoff like a dropped socket, its error shown (`errorCode` `transport`) until a view clears it | › "a socket the browser cannot construct is retried on the backoff, with a transport error" (new) |
+| N5 | `reconnecting`, a socket connecting | Reachable: N3's step fires, or `connect()` during N3 | The connection reads `reconnecting` until the socket opens; `connect()` cuts the step short (the match bar's Reconnect now) | › "reopens after an unexpected close, with a backoff", › "connect() during a backoff opens a socket at once and drops the pending retry" |
+| N6 | `reconnecting`, no socket, no step | Unreachable: every move into `reconnecting` either opens a socket (`replace`) or schedules a step (`onclose`, a throwing factory), and the step's timer opens one | — | — |
+| N7 | `refused` by a 4401, `refusedToken` set | Reachable: the handshake's token is refused | Final for that token; a renewed token opens one more socket that carries it; one renewed before the close arrived opens it at once (R1115000) | › "R1115000 a 4401, then a renewed token, opens one more socket that carries it", › "R1115000 the token the 4401 refused opens no socket", › "R1115000 a 4401 on the socket a renewed token opened is final for that token", › "R1115000 a token renewed before the 4401 arrives opens one more socket at once" |
+| N8 | `refused` by a 4403 or 4404, `refusedToken` none | Reachable: not a seat of the match, or no such match | Final: no backoff, no renewal reopens it (R1115000) | › "does not retry a refusal: 4401/4403/4404 are settled answers", › "R1115000 a 4403 or 4404 is not reopened by a renewed token, even after a 4401's retry" |
+| N9 | `closed`, `stopped`, no socket, no step | Reachable: `close()` | Nothing reopens it, and a late frame of the old socket is ignored | › "close() stops the reconnect and the socket", › "a view that arrives after close() is ignored" |
+| N10 | `closed` by 4410 or 4411, not stopped | Reachable: the match voided (R679) or finished past its rematch window (R3694000) | Final, no error, the last view kept; a wake opens nothing (R679, R3694000) | › "R679 a voided match's close (4410) is final: no reconnect, the last view kept", › "R3694000 a finished match's close (MATCH_OVER_CLOSE_CODE) is final: no reconnect, no error, the last view kept" |
+| N11 | `elsewhere`, no socket, no step, no probe | Reachable: a 4412, another tab or device took the seat | No backoff, no socket however long, the last view kept; Play here (`connect()`) opens exactly one socket, with the newest token (R3767000) | › "R3767000 a close with SEAT_TAKEN_CLOSE_CODE leaves the client elsewhere: …", › "R3767000 connect() takes the seat back by opening exactly one socket", › "R3767000 a wake probe waiting when the seat is taken is dropped" (new), › "R3767000 a renewed token while elsewhere opens no socket, and Play here carries it" (new) |
+| N12 | `stopped` with a socket, a step or a probe | Unreachable: `close()` cancels the step, disposes the probe and lets the socket go, and `letGo` drops its `onclose`; `open` and `schedule` do nothing while stopped | — | — |
+| N13 | `open` with no socket | Unreachable: every path that drops the socket (`onclose`, `replace`, `close()`) sets the connection in the same step | — | — |
+| N14 | a socket already closing when the page wakes | Reachable: the browser has begun the close (readyState 2) and the page wakes past the silence | Replaced at once, the old one let go with 1000 "replaced", no probe sent (R1441) | › "R1441 a socket that never opened is replaced at once when the page wakes", › "R1441 a socket already closing when the page wakes is replaced at once" (new) |
+| N15 | `refusedToken` set outside `refused` | Was reachable: a 4401, then Reconnect (`connect()`), the server takes that socket, then a 4412 or a 4410; `setToken` with a renewed token then opened a socket from `elsewhere` or onto a gone match | A refusal is its handshake's (R1115000): once a socket opens after it, a renewal reopens nothing. From `elsewhere` only Play here opens a socket (R3767000); a voided match is gone (R679) | **#4114: was a mismatch, fixed**: `open` now clears `refusedToken` with each socket it creates, in both clients. › "R1115000 a socket opened after a 4401 forgets the refusal: a renewal once the seat is taken or the match is gone opens nothing" (new; failed before the fix: "4412: expected [ FakeSocket{ …(9) }, …(2) ] to have a length of 2 but got 3") |
+| N16 | a socket and a waiting step at once | Was reachable only through N15 (a renewal opening a socket while a 1006's step waited); unreachable since: `connect()` cancels the step before it opens, and nothing else opens a socket while a step waits | The step's `open` finds the socket and does nothing | N15's test |
+| N17 | the backoff past its last step | Reachable: six drops in a row | The last step (`RECONNECT_DELAYS_MS`'s last) repeats; an opened socket starts the steps over (R1441) | › "R1441 the backoff's last step repeats, and an opened socket starts the steps over" (new) |
+
+## 8. A match's registry entry
+
+**Checked at** `b0e998a29b`, plus #4114's pull request.
+
+**Files:** `crates/server/src/actor/registry.rs` (`start`, `rebuild`, `actor_for`, `attach`, `stop`,
+`stop_all`, `drain`, `reap_finished`, `forget`), `crates/server/src/duos/registry.rs` (the same for a
+co-op match; since #4169 it has a `stop_all` too, and its drain checkpoints each actor before it stops it,
+as a match's does), `crates/server/src/app.rs` (`serve_until`, the restart drain's order).
+
+**Fields,** per match id: `actors[id]` (the live actor in memory, or none); `rebuilding[id]` (a rebuild in
+flight, shared by every caller that finds it); the store's row (none, live or finished; a void deletes it,
+R679), its log (purged from a finished match after `MATCH_ACTION_RETENTION_DAYS`, R1285000) and its
+checkpoint (#1169); and, since #4114, the registry's `draining` mark, set by the restart drain and never
+cleared.
+
+**What moves it:** `start` (the row written, the actor inserted, §9.2); `actor_for` (an actor in memory is
+returned, else one rebuild folds the row's log or checkpoint and inserts it, §9.5); `attach` (`actor_for`,
+then the seat's socket); `stop` (the actor leaves memory, the log stays); `drain`, the restart drain (the
+registry marked draining, then `stop_all`: every actor checkpointed, then stopped with 1001); `stop_all`
+alone (the same without the mark, which a test calls to drain and rebuild in one process); `reap_finished` (a finished actor past its rematch
+window leaves with `MATCH_OVER_CLOSE_CODE`, R3694000); `forget` (a void's actor leaves without `stop`,
+R679); the retention purge; a restart (memory empty, the store as it was). Its rows are A1 to A13 (and
+A10b, A10c), never `R<n>`.
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| A1 | no row, no actor | Reachable: a match id that never was, or a voided one | "no such match", 4404, nothing folded (§9.1, R679) | `crates/server/tests/actor/glitch.rs::glitchs_void::r679_closes_both_sockets_with_the_voided_close_code_after_a_last_view_that_shows_the_void` (its late attach) |
+| A2 | a finished row whose log was purged, no actor | Reachable: the retention purge, then a socket | Not found, nothing folded or filed (R1285000) | `crates/server/tests/actor/recovery.rs::r1285000_a_finished_match_whose_log_was_purged::r1285000_answers_not_found_on_attach_folds_nothing_and_files_no_report`, `crates/server/tests/actor/ws_server.rs::a_finished_matchs_seats_may_reopen_its_socket::r1285000_a_finished_match_whose_log_was_purged_is_not_found_inside_its_window` |
+| A3 | a live row, no actor | Reachable: a restart, a crash, `stop` | The next socket rebuilds it from `(seed, log)` or its checkpoint to the same state and view (§9.5, #1169) | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::rebuilds_an_actor_for_a_socket_that_arrives_when_nothing_is_in_memory`, `…::m6_t4_crash_recovery::killing_the_actor_mid_game_and_reconnecting_yields_the_same_view_for_for_both_players`, `crates/server/tests/actor/checkpoints.rs::a_drained_match_rebuilds_from_its_checkpoint_as_a_full_fold_rebuilds_it` |
+| A4 | a finished row, its log kept, no actor | Reachable: `reap_finished` past the window, or a restart | A seat's socket rebuilds it inside the window; past the window it is refused (R1285000) | `crates/server/tests/actor/ws_server.rs::a_finished_matchs_seats_may_reopen_its_socket::a_seat_reopens_its_socket_on_its_finished_match`, `…::r1285000_a_seat_is_refused_its_finished_matchs_socket_once_the_rematch_window_has_passed`, `crates/server/tests/actor/telemetry.rs::r1442_play_telemetry_through_the_actor::r1442_the_backfill_and_a_rebuild_fold_a_finished_match_after_the_reaper_dropped_its_actor` |
+| A5 | a rebuild in flight, a second socket arrives | Reachable: both seats reconnect together | One fold, both sockets on the one actor (`rebuilding`'s doc) | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::folds_the_log_once_when_both_sockets_arrive_together` |
+| A6 | a rebuild that failed | Reachable: the store fails a read, or the fold panics | The socket is refused (1011 for an internal error, `AttachError`), nothing is kept, and the next socket rebuilds | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_the_store_fails_is_not_kept_and_the_next_socket_rebuilds` (new), `crates/server/tests/actor/long_fold.rs::a_rebuild_whose_fold_panics_is_an_internal_error_and_registers_no_actor` |
+| A7 | a `rebuilding` entry whose creator was dropped | Reachable only if the call that made the entry is cancelled mid-rebuild. Every production caller runs where nothing cancels it (a socket's `on_upgrade` task) except the bot loop's `kick_off_bot_match`, which `stop_loops` aborts in the restart drain, after which the process ends | **Unspecified**: the entry is never removed, so the next caller initialises the cell again and the actor it caches is handed to every later `actor_for` that misses the map, a stopped one after a `stop` | — (for a person) |
+| A8 | a live actor in memory | Reachable: `start`, or a rebuild | Every socket for the match reaches it (§9.2: one actor per match) | `crates/server/tests/actor/match_actor.rs::m6_t4_the_match_actor::two_websocket_clients_complete_a_scripted_game` |
+| A9 | `start` and a rebuild of the same id at once | Reachable only as a race: a socket for the id between `start`'s row write and its insert | **Unspecified**: whichever inserts second wins the map, and a socket attached to the other plays on an actor no one else reaches (§9.2 asks for one) | — (for a person) |
+| A10 | a rebuild in flight across the restart drain | Was reachable: the drain runs while a rebuild reads the store, and the rebuild inserts after it | Every live match checkpointed and stopped with 1001 (`crates/server/README.md`, the drain; `stop_all`'s doc: no grace stored) | **#4114: was a mismatch, fixed**: the rebuilt actor was left live after the drain, never checkpointed nor stopped, so the shutdown's `close_all` closed its socket while it still ran and its `on_socket_gone` stored a grace the drained matches do not. `drain` now marks the registry draining before `stop_all`, and a rebuild that finds the mark as it inserts (under the actors lock) drains its own actor instead (checkpointed, stopped), which `attach` then closes 1001 (S10). `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_in_flight_across_the_restart_drain_is_stopped_too` (new; failed before the fix: `left: ["match-recovery"] right: []`, the rebuilt actor still live after the drain) |
+| A10b | a rebuild begun after the restart drain | Was reachable: `serve_until` runs `stop_accepting`, `stop_loops`, `server.await`, then the drain; axum's graceful shutdown waits on no upgraded socket, so a socket upgraded just before `stop_accepting` whose `authenticate_upgrade` outlasts the rest reaches `attach`, and its rebuild, after the drain | As A10 | **#4114: was a mismatch, fixed** by the same mark. A count bumped by each `stop_all` (this pull request's first fix) caught only a rebuild that read it before the drain; this one read the bumped count and inserted a live actor. `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_begun_after_the_restart_drain_is_stopped_too` (new; failed without the mark: `left: ["match-recovery"] right: []`) |
+| A10c | a match `start`s once the restart drain has begun | Was reachable by the code's order: `stop_all` drains each actor's queue so a result being written lands (its doc), and a series game's result starts the series' next game (`results.rs`'s `resume_series`, `series.rs`'s `start_series_game`), which inserted its actor after `stop_all` had taken the map. The test reaches it through `start` after `drain`, not through a series' last result | As A10: the row is written, so the next process rebuilds it | **#4114: was a mismatch, fixed** by the same mark: `start` drains the actor it made instead of keeping it (`Registry::keep`). `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_match_started_after_the_restart_drain_is_stopped_too` (new; failed without the mark: `left: ["match-started-late"] right: []`) |
+| A11 | a rebuild in flight across `stop`, a reap or `forget` | Reachable only as a race | **Unspecified**: the rebuild inserts what it read, a fold of the store's log (§9.5), so nothing is lost; a voided match's row is gone, so its rebuild answers not found | — |
+| A12 | a void whose delete the store failed | Reachable: the store fails `forgetVoided` | The row stays live, so the next socket rebuilds the actor, which folds to the same void and voids it again (`on_void`'s comment, R679) | `crates/server/tests/actor/glitch.rs::glitchs_void::r679_a_void_the_store_failed_to_forget_is_voided_again_by_the_next_socket` (new) |
+| A13 | a series game started again under the same id | Reachable: a voided Conquest game | The series plays the same game again, a new actor under the old id (R679) | `crates/server/tests/actor/glitch.rs::glitchs_void::r679_a_voided_conquest_game_never_happened_the_series_plays_the_same_game_again` |
+
+The co-op registry holds A6, A7, A9 and A11 the same way. **#4114: its A10 and A10b were a mismatch,
+fixed**: the drain stopped each co-op actor with `stop` from a `live()` snapshot, so a co-op rebuild that
+landed after that loop was left live and could write its log after the store closed (#936, the drain's own
+comment). Its A10c was found unreachable: every co-op `start` is a request's (a room's join, the lobby's
+start, the co-op rematch in `duos/again.rs`), which `server.await` finishes before the drain; the same mark
+guards it anyway. `DuosRegistry::drain` now marks the registry draining and stops every actor in memory, and
+`start` or a rebuild that finds the mark stops its own actor (`DuosRegistry::keep`), which `attach` then
+closes 1001. Since #4169 each is checkpointed before it is stopped (`DuosRegistry::drain_one`), as a
+match's is.
+`crates/server/tests/actor/duos.rs::registry_states_4114::a_coop_rebuild_in_flight_across_the_restart_drain_is_stopped_too`
+(new; failed without the mark: "left live after the drain"),
+`…::registry_states_4114::a_coop_rebuild_begun_after_the_restart_drain_is_stopped_too` (new; failed without
+the mark: `left: None right: Some(1001)`, the socket greeted on a live actor) and
+`…::registry_states_4114::a_coop_match_started_after_the_restart_drain_is_stopped_too` (new; failed
+without the mark: "left live after the drain").
+
+## 9. The practice game kept for a resume
+
+**Checked at** `b0e998a29b`, plus #4114's pull request.
+
+**Files:** `apps/web/src/practice/resume.ts` (R, read as untrusted input), `apps/web/src/practice/saveStore.ts`
+(W's IndexedDB store), `apps/web/src/practice/controller.ts` (`begin`, `applySnapshot`),
+`apps/web/src/routes/practice.tsx` (the banner, Save and leave, Back), `crates/shared/src/host/practice/host.rs`
+(`resume`, `save`: which save may fold).
+
+**Fields:** R, the page's record (`localStorage["jackioh.practice.game"]`: the setup, seed, seat, difficulty
+and deck, with `sandbox`, `earning`, `dailyDeal` and `portraits`, and `saved`, R765); W, the worker's save
+(IndexedDB: its config, log, AI cursor, catalog and hash, R668; a run fight has a slot of its own); and
+whether the game is over.
+
+**What moves it:** a game's start (R written without `saved`, `controller.ts:307`; W after every answer);
+the game's end (R cleared, `controller.ts:222`, and W, `host.rs`'s `save`); a resume that fails (R cleared,
+`controller.ts:313`); Save and leave, or Back while a resume folds (R written `saved`, `practice.tsx:734`,
+`:759`); Leave without saving, New game, Menu, a lesson or Play practice (R cleared); a reload (both kept);
+a deploy that moves `CATALOG_VERSION`; a second tab (one R and one W for the device). A run fight touches
+neither (R2706000, R3476000). Its rows are K1 to K21 (K for kept), never `R<n>`.
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| K1 | neither | Reachable: a first visit, or a game that ended | The setup, no banner (R668) | `apps/web/src/routes/practice.test.tsx` › "B32 renders with no account, session or server: three difficulty radios on easy and random plus every preset" |
+| K2 | R and W of one game, R not saved, after a reload | Reachable: start a game, reload | Picked up at once, folded to the saved hash, the AI at its cursor (R668; R765: a reload "still picks it up"); a URL that starts a game wins and replaces it (R668) | › "R668 with no params that start a game, the game this device left is asked back as resume and shows", › "R765 a reload in the middle of a game, never left through the menu, still picks it up at once (R668)", › "R668 a URL that starts a game wins over the one left, and replaces it"; `apps/web/src/practice/driver.test.ts` › "R668 a new core folds the saved log back to the same state, snapshot and AI stream" |
+| K3 | R saved, W of the same game | Reachable: New game or Menu, then Save and leave | Not picked up: the setup shows its banner (R765) | › "R765 Save and leave from New game keeps the game: the setup shows its banner, and so does the next visit, with no resume", › "R765 Save and leave from Menu goes to the main menu, and /practice then shows the banner" |
+| K4 | K3, then Resume | Reachable: the banner's Resume | Folds as a reload does; R is written again without `saved` (R765) | › "R765 Resume picks the saved game up as a resume, and a reload after that picks it up at once (R668)" |
+| K5 | a resume still folding, then Back | Reachable: Back on the loading screen | Kept as saved, for the banner; Back from a new game's deal gives it up (R765) | › "R765 Back while a resume is still folding keeps the game, saved for the banner; Back from a new game's deal gives it up" |
+| K6 | W only | Reachable: Leave without saving (R cleared, nothing clears W), or a localStorage that refuses the write | Nothing offers it again; the next game's save replaces W (R765) | › "R765 Leave without saving gives the game up: no banner now, and none on the next visit" |
+| K7 | R only, not saved | Reachable: no IndexedDB, or a database that will not open, then a reload | Refused, and the page shows the setup (R668) | › "R668 a game the worker cannot bring back is forgotten, and the player lands on the setup"; `driver.test.ts` › "R668 a resume of a game the store does not hold, of another game, or from another catalog fails and changes nothing"; `apps/web/src/practice/saveStore.test.ts` › "R668 a malformed row is no save, and a database that will not open is memory only" |
+| K8 | R saved only | Reachable: K3, then W lost | The banner shows; a Resume that cannot fold says so and the banner goes (R765) | › "R765 a Resume the worker cannot fold says so on the setup, and the banner is gone" |
+| K9 | R and W of two games that differ in seed, seat, difficulty or sandbox | Reachable: two tabs (B starts another game, A answers, B reloads), or a full localStorage that keeps the old R | Refused, the setup (R668: "a save of another game … is refused") | `driver.test.ts` › the K7 refusal test; `crates/shared/tests/practice.rs::r668_a_resume_of_no_save_another_game_or_another_catalog_fails` |
+| K9b | R and W of two games with one seed, seat, difficulty and sandbox but another deck | Reachable: two tabs on `?seed=s&difficulty=easy&seat=p1&deck=random` and the same with `deck=preset:<id>`, then a reload with no parameters | Refused: R668 names the page's setup "seed, seat, difficulty, deck", and a save of another game is refused | **Mismatch, named for a person, not fixed**: `host.rs`'s `resume` compares seed, seat, difficulty and sandbox, never the deck, and folds W's own config, so the page resumes the other tab's game under its own setup. No test |
+| K10 | W from another catalog | Reachable: a deploy that moves `CATALOG_VERSION` between visits | Refused, the setup (R668, R2882000) | `driver.test.ts` › the K7 refusal test; the `practice.rs` test above |
+| K11 | a W that does not fold to its hash | Unreachable: the machine writes W from its own log and hash, and one build folds one way (R187). **Representable when serialized**: an edited IndexedDB row | Refused (R668) | `driver.test.ts` › the K7 refusal test (its tampered and forged saves) |
+| K12 | a malformed R | Reachable by hand, or across builds: an older build reading a newer one's R (a portrait or deck kind it does not know) | No game (`resume.ts`'s header) | › `apps/web/src/practice/resume.test.ts` › "R668 reads anything malformed as no game", › "R765 a flag that is not true or false is malformed: no game", › "R3976000 a game is kept with its portraits, and portraits naming an unknown one are malformed" |
+| K13 | storage that throws or refuses | Reachable: a private window, a full quota | No game and nothing thrown (R668). **Unspecified**: a full localStorage keeps the previous R, so Save and leave may not mark it saved and a new start may leave the old game's R (K9); a refused IndexedDB write keeps the previous answer's save, which resumes one answer back | `resume.test.ts` › "R668 storage that throws is no game, and a refused write throws nothing"; `routes/practice.test.tsx` › "a localStorage that refuses the write still starts the game" |
+| K14 | the game over | Reachable: concede, win or lose (R and W cleared, K1); over with R saved is unreachable in one tab, for the leave question shows only while the game is on | A finished game is not resumed and clears the save (R668) | › "R668 leaving through Menu gives it up too, and a finished game is not kept", › "B33 once the game is over, practice-new-game goes straight back to setup"; `driver.test.ts` › "R668 a lesson is never kept, and a finished game clears the save" |
+| K15 | a lesson | Reachable: `?lesson=` or its path | Never kept, and starting one ends the saved game (R668, R765) | `resume.test.ts` › "R668 a lesson is never remembered: writing one forgets the free game"; › "R765 starting a tutorial lesson from the path ends the saved game too" |
+| K16 | a sandbox, earning or daily game kept | Reachable: the Sandbox box, a server seed, Play today's deal | Kept as each one; a sandbox resumes only for a page that remembers one (R923000, R1303001, R2882000) | `resume.test.ts` › "R923000 a sandbox game is kept as one, and a sandbox flag that is not true is malformed", › "R1303001 a game on a server seed is kept as one, so its end is claimed after a reload, and a flag that is not true is malformed", › "R2882000 today's deal is kept as one, and a day that is not a string is malformed"; `driver.test.ts` › "R923000 R668 a sandbox game resumes as a sandbox, and only for a page that remembers a sandbox"; › "R1303001 a game on a server seed picked up after a reload is still claimed at its end, on its own seed" |
+| K17 | a game kept with its portraits, resumed | Reachable: any free game since R3976000, then a reload | The resumed board wears the portraits it kept (R3976000: "a resumed game keeps them") | › "R3976000 a resumed game wears the portraits it kept" (new) |
+| K18 | a run fight | Reachable: the dungeon's fight | Leaves R and the free game's W alone (R2706000, R3476000) | `apps/web/src/practice/controller.test.ts` › "R2706000 a run fight's start goes as given and leaves practice's memory alone", › "R3476000 a run fight's missed resume and start leave practice's memory alone"; `saveStore.test.ts` › "R3476000 the free game and the run fight coexist, and each clear leaves the other" |
+| K19 | one tab's end clears the other tab's game | Reachable: tab A plays X; tab B starts Y (R and W are Y's); A concedes, clearing R and W; B's next answer writes W again (K6), so a reload of B loses Y | **Unspecified**: R668 and R765 speak of one game per device | — |
+| K20 | a stale banner clears another tab's R | Reachable: A saves and leaves X, both tabs show the banner; B starts Y; A's Resume is refused (W is Y's) and clears Y's R (`controller.ts:313`) | **Unspecified** (R765 drops "a save that will not fold", not another game's) | — |
+| K21 | a failing engine or IndexedDB on a reload, with a good R and W | Reachable: the WebAssembly load fails, or the database will not open | **Unspecified**: R668 refuses another game, another catalog or another fold; the page clears R anyway (`controller.ts:313`), and the game is lost though W holds it | › "R668 a game the worker cannot bring back is forgotten, and the player lands on the setup" (its failed resume) |
+
 ## Not states (versions)
 
 Each reads an older record; nothing is removed.
@@ -287,6 +460,18 @@ Each reads an older record; nothing is removed.
   log, never a `RunState`):
   `crates/run/src/tests.rs::a_fight_over_kept_before_its_report_and_a_state_before_its_max_hp_bonus_still_read`
   (new).
+- A queue kept before #3902 has no moment (`QUEUE_SINCE_KEY`): the banner counts from when it mounted
+  (L15), `apps/web/src/net/liveGame.test.tsx` › "R3729001 a missing or malformed moment reads as none".
+- A co-op match's `team_b` (#3896, R3731002) is `serde(default)` on the machine and on the match's options,
+  which write it only for a 2v2, so a row older than the 2v2 has the shape every co-op row still has and
+  reads back as the AI team (S13): every co-op rebuild reads one, as
+  `crates/server/tests/actor/duos.rs::b40_the_rebuild::b40_a_hello_from_an_account_with_no_seat_folds_nothing_and_a_seats_hello_rebuilds_the_match`.
+- A practice record kept before R765 has no `saved` and reads as a game the player was in; one kept
+  before R924000's picker has no `leanNewest` and reads as the newest set; one kept before R3976000 has no
+  `portraits` and is dealt them again (K2, K17): `apps/web/src/practice/resume.test.ts` › "R765 a game kept
+  before R765 carries no flag and reads as one the player was in (R668)", › "R924000 a random deck's pick is
+  kept, a game kept before the picker reads as it was, and a bad pick is malformed", › "R3976000 a game is
+  kept with its portraits, and portraits naming an unknown one are malformed".
 - The engine's two thread-locals (the shipped catalog a replay folds under, R767000; whether the step in
   flight holds its random pools, R2201001), each set for one call and put back after it (CLAUDE.md
   rule 4).
@@ -296,13 +481,34 @@ Each reads an older record; nothing is removed.
 - **The fixes.** S10 (#3678's, and #3899's for the reaper's close), L10, G7 and G9, each with a test
   that failed before it. S10 rests on R3694000's rule and its Rejected; L10 on R897000's "in a row" and
   `/play`'s own count; G7 and G9 on #2924's drop at the turn change and R658's "drag stays two clicks".
-  If any reads as a decision instead, it needs a ruling in a pull request of its own.
+  If any reads as a decision instead, it needs a ruling in a pull request of its own. #4114's: N15 (both
+  socket clients forget a 4401's refusal once a socket opens after it, so a renewal never opens a socket
+  from `elsewhere` or onto a gone match; R1115000's "a refusal is its handshake's", R3767000, R679) and
+  A10, A10b and A10c, in both registries (a match that `start` or a rebuild makes once the restart
+  drain has begun, a rebuild in flight across it or begun after it among them, is checkpointed and
+  stopped as the drain's are; the server README's drain line and `stop_all`'s doc). The co-op A10c has
+  no production path found; the mark guards it anyway.
+- **Mismatches named, not fixed:** K9b (a practice save of another deck on the same seed, seat,
+  difficulty and sandbox resumes, where R668 names the deck in the page's setup: `host.rs`'s `resume`
+  never compares it; comparing it must first say how an older record's deck, normalised on read, compares).
 - **Unspecified:** D7 (an abandoned run keeps its HP, while a lost fight drops it to 0); L9 and L12 (a
   queued tab with no session, or answered signed out, forgets its queue); L11 (a failed read neither
   counts nor breaks R897000's row); G4 and G15 (a selection, and a drag, kept when a prompt opens in the
   same turn, so a stale attack is sent under the prompt); G8 (a drag let go while a burst plays sends
   what a click then could not: R658 may call it a mismatch); G13 (a second tap while the answered prompt
   fades sends the answer again); G21 (a reconnect's view does not drain the runner, though `drain()`'s
-  doc says it does). S12 (two tabs of one account on one seat) was decided in R3767000.
+  doc says it does). S12 (two tabs of one account on one seat) was decided in R3767000. #4114's: N4 (a
+  socket the browser cannot construct is retried on the backoff with a transport error); the Reconnect
+  button after a 4401 offers the refused token again (`connect()`); a co-op client with no token at all
+  is refused and a later `setToken` opens nothing, which only a client made without `useDuosMatch` meets
+  (the hook gives the token before it connects); after a 4401, `setToken` keeps the refusal's error in
+  the 1v1 client until a view clears it and clears it at once in the co-op one; A7 (a rebuild whose
+  caller is cancelled leaves its cell behind, and the cell hands its actor, a stopped one after a `stop`,
+  to later callers; only the bot loop's abort in the drain cancels one); A9 (`start` and a rebuild of one
+  id at once leave two actors); A11 (a rebuild across `stop`, a reap or `forget` inserts what it folded);
+  K13 (a full localStorage keeps the previous record; a refused IndexedDB write resumes one answer back);
+  K19 to K21 (two tabs, and a failing engine or IndexedDB, clear another game's record or a good one).
 - **Not shown:** E5′ (mulligans open with work owed); W10 (a duplicated tab: jsdom cannot copy a tab).
-- **Representable when serialized:** E7 to E10 (`GameState`), D3 and D5 (`RunState`).
+- **Representable when serialized:** E7 to E10 (`GameState`), D3 and D5 (`RunState`), K11 (a practice
+  save edited in IndexedDB), and a practice record with `run`, `aiBanned` or `lastBoard` (`resume.ts`'s
+  `isConfig` checks no extra keys; with `run`, a resume would read the run fight's slot).

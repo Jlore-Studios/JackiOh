@@ -435,7 +435,7 @@ them to its controller's own view of a card acting on the field) wears one contr
 left this turn ("∞" for Activate ♾️; on a card listing several, the sum of its usable abilities'), the
 ability's words (its `{key}`s filled from the card's `params`) as tooltip and accessible name. It is
 `activate-<instanceId>` with its badge `activate-uses-<instanceId>`; each ability counts its own uses and
-cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the ability a press names. It is
+cooldown (R1751000). It is
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
 view's `reason`, and a press shows that reason in the board's reason line and sends nothing (R3768000). A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,
@@ -1404,7 +1404,7 @@ each committing what it rendered back to the branch, and a Linux job runs `--che
 asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
 flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
 missing from the manifest falls back to the browser's `speechSynthesis`, with the voice's `web`
-pitch and rate.
+pitch and rate. The sound tables load with the first sound, not with the page.
 
 ## The engine as WebAssembly
 
@@ -1423,14 +1423,20 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   so a screen that does not wait for it (the landing, the shop, `/replays`) draws a face only through
   `useEngineReady` or `WhenEngineReady` (`src/wasm/`), the way the landing's fan, "Your table" showcase and
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
+  The scene kits and both recipe tables load in a chunk beside the module (#4222:
+  `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
+  and `test/setup.ts` installs the tables synchronously.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match
-  screens also call `loadWasm()`; Save-Data turns it all off, a production build has no dev
+  screens also call `loadWasm()`; engine routes also start `loadSceneData()` beside it (#4222).
+  Save-Data turns it all off, a production build has no dev
   chunk, and a screen whose code is already in shows no fallback.
 - `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
   §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,
-  and `currentCatalogLookup()`, the board's names over them, each built once. No screen asks
+  and `currentCatalogLookup()`, the board's names over them, each built once. The landing fan, the
+  command menu, the lost card, the Almanac, the stats page, the hero portraits, the sound tables and
+  the art helpers read it too (#4180: the entry chunk carries no catalog of its own). No screen asks
   `GET /api/catalog`; `game/currentCatalog.test.ts` fails a client file that names it.
 - `src/wire/` keeps every import the client had when these packages were TypeScript working
   unchanged: `@jackioh/shared` is the generated wire types plus hand-kept helpers, `@jackioh/engine`
@@ -1460,6 +1466,8 @@ held by guards against Title Case labels outside their allowlist.
 
 ## Internationalisation
 
-The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The game log's lines are `jackioh-shared`'s too (#3108, `crates/shared/src/log/`, with its sentences in the same dictionary file): `game/logLines.ts` asks the module for a line for each event of a view, and `game/Log.tsx` draws them and keeps the history of the lines it was shown (R745). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.
+The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). What a card face prints is `jackioh-shared`'s (#3106), in the reader's words: its face and glossary strings are a dictionary there (`crates/shared/data/<tag>.json`, read through `Locale` in `crates/shared/src/face/`), so a language adds that file and its `Locale` variant too, and `cards/model.ts` passes the reader's tag with every call. The client draws the spans the face model returns (`cards/RulesText.tsx`) and words none of them. The game log's lines are `jackioh-shared`'s too (#3108, `crates/shared/src/log/`, with its sentences in the same dictionary file): `game/logLines.ts` asks the module for a line for each event of a view, and `game/Log.tsx` draws them and keeps the history of the lines it was shown (R745). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, either branch of `t(cond ? "a" : "b")`, or either operand of `??`/`||`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line. Words that reach `t()` through a variable instead — the option labels and details in `game/modeText.ts` on both faces, the `ANOMALIES` names, the mark words, `DrawOffer`'s texts, the card settings' fields and the board-names options, `CardList`'s default order — are walked the same way by a second R711000 test that fails naming the table and the value; a new table feeding `t()` joins that walk in `i18n.test.ts`.
 
 The language button (`src/i18n/LanguageButton.tsx`) stays only until the device has settled on its language (R1916000): `localStorage["jackioh.locale.settledVisits"]` counts the boots, every language change and the settings' reset set it back to 0, and from the third unchanged boot the button leaves the top bar and the board while settings' Language row stays.
+
+A language's card tables load with its language: `LOCALES["zh-CN"].load` awaits `loadCardTables()` (`src/cards/chinese.ts`) beside the dictionary, and `EngineGate` and `useEngineReady` load them best-effort beside the module, so a Chinese reader's first paint and a flagged view's first face are already Chinese (R711000, R1301, #4180). Until they arrive every lookup falls back to English, as `t()` does for a missing entry, and a tables-chunk failure never bricks a gated screen: readiness is the module alone. `src/net/first-load.test.ts` holds the entry chunk to it: no Chinese card name inside, and a gzip budget the tables never enter.

@@ -296,6 +296,12 @@ describe("R3214000 the social socket", () => {
     expect(h.pending(), "the stale socket's close is not heard").toBe(0);
   });
 
+  it("a frame with proto keys does not pollute (#4015)", () => {
+    expect(parseSocialPush('{"type":"friends","__proto__":{"polluted":true}}')).toEqual({ kind: "friends" });
+    expect(parseSocialPush('{"type":"nope","constructor":{"prototype":{"polluted":true}}}')).toBeNull();
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("R3214000 reads social, chat and friends frames and nothing else", () => {
     expect(parseSocialPush(JSON.stringify(SOCIAL))).toEqual({ kind: "social", read: { incoming: [], outgoing: [], unread: { "f-ann": 2 } } });
     expect(parseSocialPush(JSON.stringify({ type: "chat", friendId: "f-ann" }))).toEqual({ kind: "chat", friendId: "f-ann" });

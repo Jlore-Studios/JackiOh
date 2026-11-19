@@ -62,7 +62,7 @@ gallery plays every entry.
 | `classic-036` | Burn | Spell | cast bolt | 1.00 | bolt | cast: the census agrees (bolt) |
 | `classic-037` | Last Hurrah | Spell | cast flight | 1.25 | bolt | cast: fatigue; it draws your deck, which flight (#2786) reads |
 | `classic-038` | Jackiestan Auctioneer | Field Trap | cast bolt Hustle/cash | 1.28 | bolt | cast: the census agrees (bolt), in Hustle's cash sub-look |
-| `classic-039` | Outbreak | Spell | cast tally | 1.35 | bolt | cast: it places counters, which tally (#2786) reads |
+| `classic-039` | Outbreak | Spell | cast tally | 1.55 | bolt | cast: it places counters, which tally (#2786) reads |
 | `classic-040` | MC Tech | Unit | cry tether | 1.19 | none: no motif reads controlChanged | cry: no census family reads controlChanged, which tether (#2786) reads |
 | `classic-041` | State of the Game | Unit | none: vanilla | — | none: vanilla | the census agrees |
 | `classic-042` | Transmutable Toxins | Field Spell | cast tally; activate tally; aura toxic board | 1.28 | wipe | cast and activate: it places counters, which tally (#2786) reads; the census's wipe read the deaths they cause |
@@ -85,7 +85,7 @@ gallery plays every entry.
 | `classic-059` | Plague Doctor | Unit | cry bolt | 1.08 | bolt | cry: the census agrees (bolt) |
 | `classic-060` | Pile On | Spell | cast conjure Physical/sport | 1.75 | none: no motif reads summoned | cast: no census family reads summoned, which conjure (#2786) reads; sport sub-look |
 | `classic-061` | Plague Bringer Goliath | Unit | cry tally | 1.36 | offering | cry: the census's offering read its Tribute, a cost; its Cry places counters, which tally (#2786) reads |
-| `classic-062` | Living Bomb | Field Spell | cast nova; trigger nova; aura toxic board | 1.28 | bolt | cast and trigger: its kills of every countered permanent land at once, which nova draws; a set-piece candidate |
+| `classic-062` | Living Bomb | Field Spell | cast nova; trigger nova; aura toxic board | 1.36 | bolt | cast and trigger: its kills of every countered permanent land at once, which nova draws; a set-piece candidate |
 | `classic-063` | Crop Dusting | Trap | cast tally | 1.08 | nova | cast: the census's nova read fatigue; it places counters, which tally (#2786) reads |
 | `classic-064` | Malzahar's Recycler | Field Spell | cast flight; trigger flight; aura arcane side | 1.19 | bolt | cast and trigger: fatigue; it draws, which flight (#2786) reads |
 | `classic-065` | Ace in the Hole | Trap | cast conjure | 1.16 | none: vanilla | cast: its Recruit summons, which conjure (#2786) reads |
@@ -107,7 +107,7 @@ gallery plays every entry.
 | `classic-081` | The Power to Thrive | Field Spell | cast flight; activate flight; aura bloom side | 1.28 | bolt | cast and activate: fatigue; its Activate draws or heals, and flight (#2786) reads the draw |
 | `classic-082` | Sheeople | Unit | death flight Beast/wool | 1.08 | bolt | death: fatigue; its Death draws, which flight (#2786) reads; wool sub-look |
 | `classic-083` | Flame Lance | Spell | cast lance | 1.24 | lance | cast: the census agrees (lance) |
-| `classic-084` | Lockdown | Field Spell | cast bind Dark/curse; trigger bind Dark/curse; aura frost board Dark/curse | 1.28 | none: vanilla | cast and trigger: no census family reads locked, which bind (#2786) reads; curse sub-look |
+| `classic-084` | Lockdown | Field Spell | cast bind Dark/curse; trigger bind Dark/curse; aura frost board Dark/curse | 1.19 | none: vanilla | cast and trigger: no census family reads locked, which bind (#2786) reads; curse sub-look |
 | `classic-085` | King Wagtoggle | Unit | signature; entrance royalCloak; bespoke crownSwap; aura cloakShimmer tile | 1.85 | none: no motif reads swapped | signature (#3389): a velvet cloak sweeps in and he tips his crown; the two decks cross under a crown, and its Radiant Recruit leaps out of its new deck; a crimson shimmer runs along its cloak |
 | `classic-086` | Genn | Unit | none: vanilla | — | none: vanilla | the census agrees: no text |
 | `classic-087` | Plague Chalice | Field Spell | cast negate; trigger negate; aura void zone | 1.55 | negate | cast and trigger: the census agrees (negate) |

@@ -1,65 +1,73 @@
 //! M+ #2 NA Tech (SPEC §8.9 row 2; R1100, R1183000, R1183001, R2521007, R3869005): (0) Spell ((1) until issue #3138), Epic.
 //!
 //! Base:    "Fuse the card with the lowest win rate and the card with the highest win rate, and add
-//!          it to your hand. It costs ({setCost})."
+//!          it to your hand."
 //! Radiant: "Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win
-//!          rate, and add it to your hand. It costs ({setCost})."
+//!          rate, and add it to your hand."
 //! Engine: M #50 CN Tech's table, the game's win-rate snapshot (R3049000), read from both ends — the
 //! leader (`win_rate_leader`, R1100: the highest Wilson lower bound, R3049001) and the trailer
 //! (`win_rate_trailer`, R1183000: the same floor and tie-breaks, the lowest upper bound, never the
 //! leader); a game handed none ranks its version's frozen table by the exact rate (R1266000). Neither
 //! is ever NA Tech itself (R387); they are fused trailer first into one
-//! transient hand card (`fuse_generated`'s two pools, R1108; R77, R102) at a `costOverride` of
-//! setCost (R1183001). The Radiant face fuses both ingredients on their Radiant faces (R469). Tunes:
-//! setCost 2 ↓ (Radiant 0).
+//! transient hand card (`fuse_generated`'s two pools, R1108; R77, R102) at the price the fusion gives
+//! it, the `fused` hand price: its ingredients' printed costs summed, at most `FUSE_COST_CAP` (R77,
+//! R4154102). The Radiant face fuses both ingredients on their Radiant faces (R469). Tunes: none.
+//! Through v0.6.6h it printed "It costs ({setCost})." (2, Radiant 0), a `costOverride` (R1183001;
+//! `script_v0_6_6h`, kept, R767000).
 //!
 //! The fallback (#3869, R3869005): an end the table cannot name is a random non-token card of the sets
 //! that ship, never NA Tech, the end the table names or the other ingredient (`distinct`), so the two
-//! ends stay distinct, as R142 had it before #2521. Through v0.6.2b a missing end was a named card,
+//! ends stay distinct, as R142 had it before #2521. Through v0.6.3b a missing end was a named card,
 //! Core #75 Infinite Reserves for the lowest and Core #35 Lunar Eclipse for the highest, unless the
-//! other end was that card (R2521007; `script_v0_6_2b`, kept, R767000).
+//! other end was that card (R2521007; `script_v0_6_3b`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditativeplus-002";
 
-/// R767000, R2521007: the highest end through v0.6.2b when the table named none: Core #35 Lunar
+/// R767000, R2521007: the highest end through v0.6.3b when the table named none: Core #35 Lunar
 /// Eclipse, 33/48, the leader of v0.4.0's provisional table, as M #50 CN Tech's.
-pub const FALLBACK_LEADER_V0_6_2B: &str = "core-035";
-/// R767000, R2521007: the lowest end through v0.6.2b when the table named none: Core #75 Infinite
+pub const FALLBACK_LEADER_V0_6_3B: &str = "core-035";
+/// R767000, R2521007: the lowest end through v0.6.3b when the table named none: Core #75 Infinite
 /// Reserves, 7/43, that table's trailer.
-pub const FALLBACK_TRAILER_V0_6_2B: &str = "core-075";
+pub const FALLBACK_TRAILER_V0_6_3B: &str = "core-075";
 
-/// R3869005: a missing end is random (`None`); R767000: through v0.6.2b (`kept`) it was `card`, unless
+/// R3869005: a missing end is random (`None`); R767000: through v0.6.3b (`kept`) it was `card`, unless
 /// the other end was that card already.
 fn fallback(kept: bool, card: &str, other_end: Option<&str>) -> Option<String> {
     (kept && other_end != Some(card)).then(|| card.to_string())
 }
 
-/// The Cry; `kept`, the script through v0.6.2b.
-fn tech(radiant: bool, kept: bool) -> Script {
+/// The Cry; `kept`, the script through v0.6.3b; `set_cost`, the declared `setCost` it was priced at
+/// through v0.6.6h (R1183001), else the fusion's own price (R4154102).
+fn tech(radiant: bool, kept: bool, set_cost: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let named_leader = win_rate_leader(&*ctx.state, ID);
             let mut skipped = vec![ID];
             skipped.extend(named_leader.as_deref());
             let named_trailer = win_rate_trailer(&*ctx.state, &skipped);
-            // R3869005: a missing end is random; R767000: through v0.6.2b, its hard-coded card.
-            let leader = named_leader.clone().or_else(|| fallback(kept, FALLBACK_LEADER_V0_6_2B, named_trailer.as_deref()));
-            let trailer = named_trailer.or_else(|| fallback(kept, FALLBACK_TRAILER_V0_6_2B, named_leader.as_deref()));
+            // R3869005: a missing end is random; R767000: through v0.6.3b, its hard-coded card.
+            let leader = named_leader.clone().or_else(|| fallback(kept, FALLBACK_LEADER_V0_6_3B, named_trailer.as_deref()));
+            let trailer = named_trailer.or_else(|| fallback(kept, FALLBACK_TRAILER_V0_6_3B, named_leader.as_deref()));
             // R1183001: a named end is its own pool; a missing one is any card but the named ones.
             let named: Vec<&str> = [trailer.as_deref(), leader.as_deref()].into_iter().flatten().collect();
             let pool = |end: &Option<String>| match end {
                 Some(id) => json!({ "defId": id }),
                 None => json!({ "excludeDefId": named }),
             };
-            vec![fuse_generated(json_as(json!({
+            let mut args = json!({
                 "count": 2,
                 "pools": [pool(&trailer), pool(&leader)],
                 "distinct": true,
                 "radiant": radiant,
-                "costOverride": param(ctx, "setCost"),
-            })))]
+            });
+            if set_cost {
+                args["costOverride"] = json!(param(ctx, "setCost"));
+            } else {
+                args["handPrice"] = json!("fused");
+            }
+            vec![fuse_generated(json_as(args))]
         })),
         ..Script::default()
     }
@@ -67,21 +75,30 @@ fn tech(radiant: bool, kept: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: tech(false, false),
-        radiant: tech(true, false),
+        base: tech(false, false, false),
+        radiant: tech(true, false, false),
     }
 }
 
-/// R767000: through v0.6.2b a missing end was Lunar Eclipse or Infinite Reserves (R2521007);
+/// R767000: after v0.6.3b through v0.6.6h the fused card cost the declared `setCost` (R1183001);
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: tech(false, true),
-        radiant: tech(true, true),
+        base: tech(false, false, true),
+        radiant: tech(true, false, true),
     }
 }
 
-// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2 (R1100, R77, R3869005).
+/// R767000: through v0.6.3b a missing end was Lunar Eclipse or Infinite Reserves (R2521007);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_3b() -> CardScripts {
+    CardScripts {
+        base: tech(false, true, true),
+        radiant: tech(true, true, true),
+    }
+}
+
+// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2 (R1100, R77, R3869005, R4154102).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,8 +113,8 @@ mod tests {
     const MIDDLE: &str = "core-002";
     const FILLER: &str = "core-005";
     /// Core #35 Lunar Eclipse and Core #75 Infinite Reserves: v0.4.0's table's two ends.
-    const LUNAR_ECLIPSE: &str = FALLBACK_LEADER_V0_6_2B;
-    const INFINITE_RESERVES: &str = FALLBACK_TRAILER_V0_6_2B;
+    const LUNAR_ECLIPSE: &str = FALLBACK_LEADER_V0_6_3B;
+    const INFINITE_RESERVES: &str = FALLBACK_TRAILER_V0_6_3B;
 
     /// R3869005: whether `id` may stand in for a missing end: a non-token card of a set that ships,
     /// never NA Tech.
@@ -147,6 +164,28 @@ mod tests {
         added[0].clone()
     }
 
+    /// R767000: `run` under a kept script, with the `setCost` the card declared through v0.6.6h (2,
+    /// Radiant 0).
+    fn kept<T>(scripts: CardScripts, run: impl FnOnce() -> T) -> T {
+        crate::under_kept_as(
+            ID,
+            scripts,
+            |def| {
+                def.params = serde_json::from_value(json!([
+                    { "key": "setCost", "base": 2, "radiant": 0, "better": "down", "step": 1, "min": 0 }
+                ]))
+                .expect("the v0.6.6h params");
+            },
+            run,
+        )
+    }
+
+    /// R4154102: the price the fusion gives the leader and the trailer's card: their printed costs
+    /// summed, at most `FUSE_COST_CAP` (R77).
+    fn fusion_price() -> i32 {
+        (query_cost(&crate::card_def(TRAILER)) + query_cost(&crate::card_def(LEADER))).min(FUSE_COST_CAP)
+    }
+
     fn ingredients(s: &Scenario, card: &CardInstance) -> Vec<(String, bool)> {
         def_of(Some(s.state()), &card.def_id)
             .ingredients
@@ -161,30 +200,37 @@ mod tests {
         use super::*;
 
         /// Issue #3138: it costs (0), from (1), on both faces: played with no mana at all, and the fused
-        /// card is still added at its own price (the `setCost`, (2) and (0)).
+        /// card is still added at its own price (the fusion's since issue #4154).
         #[test]
         fn issue_3138_it_costs_0_and_plays_for_no_mana_on_both_faces() {
-            for (radiant, set_cost) in [(false, 2), (true, 0)] {
+            for radiant in [false, true] {
                 register_win_rates(the_table());
                 let mut s = casting("na-tech-free", radiant, 1);
                 s.state_mut().players.p1.mana.current = 0;
                 let card = fused(&mut s);
                 s.expect_mana(P1, 0);
-                assert_eq!(card.cost_override, Some(set_cost), "radiant {radiant}");
+                assert_eq!(card.cost_override, None, "radiant {radiant}");
+                assert_eq!(effective_cost(s.state(), &card, Default::default()), fusion_price(), "radiant {radiant}");
             }
         }
 
+        /// R4154102: the fused card costs what the fusion gives it, its ingredients' printed costs summed,
+        /// at most (4), on both faces; no set price.
         #[test]
-        fn r1183001_fuses_the_trailer_and_the_leader_into_one_card_at_2() {
-            register_win_rates(the_table());
-            let mut s = casting("na-tech", false, 1);
-            let card = fused(&mut s);
-            assert_eq!(
-                ingredients(&s, &card),
-                vec![(TRAILER.to_string(), false), (LEADER.to_string(), false)]
-            );
-            assert_eq!(card.cost_override, Some(2), "it costs (2)");
-            assert!(!card.radiant);
+        fn r4154102_fuses_the_trailer_and_the_leader_into_one_card_at_the_fusions_price() {
+            for radiant in [false, true] {
+                register_win_rates(the_table());
+                let mut s = casting("na-tech", radiant, 1);
+                let card = fused(&mut s);
+                assert_eq!(
+                    ingredients(&s, &card),
+                    vec![(TRAILER.to_string(), radiant), (LEADER.to_string(), radiant)]
+                );
+                assert_eq!(card.cost_override, None, "radiant {radiant}: no set price");
+                assert_eq!(effective_cost(s.state(), &card, Default::default()), fusion_price(), "radiant {radiant}");
+                let def = def_of(Some(s.state()), &card.def_id).clone();
+                assert_eq!(def.cost, CardCost::Fixed(fusion_price()), "radiant {radiant}");
+            }
         }
 
         #[test]
@@ -261,7 +307,7 @@ mod tests {
                     assert!(a_random_stand_in(s.state(), id), "{id}");
                     assert!(!radiant);
                 }
-                assert_eq!(card.cost_override, Some(2));
+                assert_eq!(card.cost_override, None);
                 seen.extend(made.into_iter().map(|(id, _)| id));
             }
             seen.sort();
@@ -270,15 +316,15 @@ mod tests {
         }
 
         #[test]
-        fn r767000_r2521007_the_script_kept_for_v0_6_2b_fuses_infinite_reserves_and_lunar_eclipse() {
+        fn r767000_r2521007_the_script_kept_for_v0_6_3b_fuses_infinite_reserves_and_lunar_eclipse() {
             register_win_rates(table(vec![]));
-            crate::under_kept(ID, script_v0_6_2b(), || {
+            kept(script_v0_6_3b(), || {
                 let mut s = casting("na-tech-kept", false, 1);
                 let card = fused(&mut s);
                 assert_eq!(
                     ingredients(&s, &card),
                     vec![(INFINITE_RESERVES.to_string(), false), (LUNAR_ECLIPSE.to_string(), false)],
-                    "the same two on every seed through v0.6.2b"
+                    "the same two on every seed through v0.6.3b"
                 );
             });
             clear_overrides();
@@ -336,17 +382,28 @@ mod tests {
             assert_eq!(burned.len(), 1, "the fused card burned");
         }
 
+        /// R767000, R1183001: after v0.6.3b through v0.6.6h the fused card cost the declared `setCost`,
+        /// (2) and Radiant (0), read through `param` (issue #4154).
         #[test]
-        fn r386_its_set_cost_reads_through_param() {
-            register_win_rates(the_table());
-            let mut s = casting("na-tech-param", false, 1);
-            step_param(s.card_mut(ID), "setCost", 1);
-            let card = fused(&mut s);
-            assert_eq!(card.cost_override, Some(3));
+        fn r767000_the_script_kept_for_v0_6_6h_sets_the_fused_cards_cost() {
+            kept(script_v0_6_6h(), || {
+                for (radiant, set_cost) in [(false, 2), (true, 0)] {
+                    register_win_rates(the_table());
+                    let mut s = casting("na-tech-kept-v0-6-6e", radiant, 1);
+                    let card = fused(&mut s);
+                    assert_eq!(card.cost_override, Some(set_cost), "radiant {radiant}");
+                }
+                register_win_rates(the_table());
+                let mut s = casting("na-tech-param", false, 1);
+                step_param(s.card_mut(ID), "setCost", 1);
+                let card = fused(&mut s);
+                assert_eq!(card.cost_override, Some(3));
+            });
+            clear_overrides();
         }
 
         #[test]
-        fn the_radiant_face_fuses_both_ingredients_radiant_and_it_costs_0() {
+        fn the_radiant_face_fuses_both_ingredients_radiant_at_the_fusions_price() {
             register_win_rates(the_table());
             let mut s = casting("na-tech-radiant", true, 1);
             let card = fused(&mut s);
@@ -355,7 +412,7 @@ mod tests {
                 vec![(TRAILER.to_string(), true), (LEADER.to_string(), true)]
             );
             assert!(card.radiant, "every ingredient Radiant: the card is (R469)");
-            assert_eq!(card.cost_override, Some(0));
+            assert_eq!(card.cost_override, None);
             let def = def_of(Some(s.state()), &card.def_id).clone();
             let (leader, trailer) = (crate::card_def(LEADER), crate::card_def(TRAILER));
             let summed = |a: Option<i32>, b: Option<i32>| Some(a.unwrap_or(0) + b.unwrap_or(0));
@@ -381,7 +438,7 @@ mod tests {
                 assert!(radiant, "{id} is Radiant");
             }
             assert!(card.radiant);
-            assert_eq!(card.cost_override, Some(0));
+            assert_eq!(card.cost_override, None);
         }
 
         #[test]

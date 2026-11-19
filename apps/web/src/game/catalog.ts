@@ -18,7 +18,7 @@ import {
 } from "@jackioh/shared";
 
 import { glitchInfo, isGlitch } from "../cards/glitch.ts";
-import type { RolledPower } from "../cards/index.ts";
+import type { RolledPower } from "../wire/generated/RolledPower.ts";
 import type { NamedTally } from "../cards/tallies.ts";
 
 export type CardInfo = {

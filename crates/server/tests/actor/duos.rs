@@ -3566,6 +3566,11 @@ mod two_v_two {
     use jackioh_server::config::JLORE_COOP_WIN;
 
     const SEATS: [&str; 4] = ["a1", "a2", "b1", "b2"];
+    /// The seed every 2v2 here starts from (R143: the test app is in end-to-end mode, which takes a
+    /// lobby's seed). A random pick freezes only its lean, so a fresh seed dealt fresh decks, and about
+    /// one in a hundred drew a Cognitive Offloading in round 1 or 2, whose autopilot ended that seat's
+    /// turn before the test could (#3564's flake, in `versus`).
+    const VERSUS_SEED: &str = "seed-r3731002";
 
     /// A 2v2 started from a four-account lobby over HTTP; nobody connected yet.
     struct Versus {
@@ -3610,7 +3615,14 @@ mod two_v_two {
             }
         }
         let path = format!("/api/lobbies/{code}/start");
-        let (status, started) = api(&app, "POST", &path, &lobby[0].token, json!({})).await;
+        let (status, started) = api(
+            &app,
+            "POST",
+            &path,
+            &lobby[0].token,
+            json!({ "seed": VERSUS_SEED }),
+        )
+        .await;
         assert_eq!(status, 200, "{started}");
         let match_id = started["matchId"].as_str().expect("a match id").to_string();
         let mut t = app.db.begin(None).await.expect("a transaction");
@@ -3963,5 +3975,103 @@ mod two_v_two {
         }
         let (status, _) = api(&v.app, "GET", &path, &v.outsider.token, Value::Null).await;
         assert_eq!(status, 404);
+    }
+}
+
+// #4114 (`docs/implicit-states.md`, state 8, A10 and A10b): a co-op rebuild that lands after the
+// restart drain, in flight across it or begun after it
+
+mod registry_states_4114 {
+    use super::*;
+    use crate::support::socket::create_fake_socket;
+    use crate::support::store::fake_ref;
+    use jackioh_server::actor::ws_server::CLOSE_GOING_AWAY;
+
+    /// A10: the drain stops every co-op actor in memory (#936). A rebuild already reading the store
+    /// when it runs lands after it, and is stopped too, never left live to write its log after the
+    /// store closes; a socket handed to it hears 1001 and no view.
+    #[tokio::test(start_paused = true)]
+    async fn a_coop_rebuild_in_flight_across_the_restart_drain_is_stopped_too() {
+        let h = duos("easy").await;
+        let held = registry(&h.app);
+        held.stop(&h.match_id).await;
+
+        let guard = fake_ref(&h.app).lock().await;
+        let (app, match_id) = (Arc::clone(&h.app), h.match_id.clone());
+        let rebuilding = tokio::spawn(async move { registry(&app).actor_for(&app, &match_id).await });
+        for _ in 0..4 {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(held.drain().await, 0);
+        drop(guard);
+
+        let actor = rebuilding
+            .await
+            .expect("the rebuild ran")
+            .expect("the rebuild folded the match");
+        assert!(!held.has(&h.match_id), "left live after the drain");
+        let late = create_fake_socket();
+        actor.attach(DuosSeat::A1, late.socket());
+        settle().await;
+        actor.idle().await;
+        assert_eq!(late.close_code(), Some(CLOSE_GOING_AWAY));
+        assert!(late.of_type("view").is_empty());
+    }
+
+    /// A10b: a socket upgraded before the drain whose sign-in is still being read when it runs says
+    /// hello after it, so its rebuild begins after the drain. It is stopped too: the socket hears 1001
+    /// and no view, and nothing is left live.
+    #[tokio::test(start_paused = true)]
+    async fn a_coop_rebuild_begun_after_the_restart_drain_is_stopped_too() {
+        let h = duos("easy").await;
+        let held = registry(&h.app);
+        held.stop(&h.match_id).await;
+        assert_eq!(held.drain().await, 0);
+
+        let late = h.served.connect(DUOS_PATH, &h.host.token).await;
+        late.send_json(hello(&h.match_id)).await;
+        assert_eq!(late.wait_closed(PROMPTLY).await, Some(CLOSE_GOING_AWAY));
+        assert!(late.of_type("view").is_empty(), "{:?}", late.frames());
+        assert!(!held.has(&h.match_id), "left live after the drain");
+    }
+
+    /// A10c: a co-op match a join starts once the drain has begun has its row written and its actor
+    /// stopped at once, never kept live; its people's sockets hear 1001 and reconnect to the next
+    /// process. Every co-op `start` is a request's, which the drain waits for, so this guards the order
+    /// rather than a path found in production.
+    #[tokio::test(start_paused = true)]
+    async fn a_coop_match_started_after_the_restart_drain_is_stopped_too() {
+        let h = duos("easy").await;
+        let held = registry(&h.app);
+        let late_guest = account(&h.app, 4, "Dee").await;
+        let (status, created) = api(
+            &h.app,
+            "POST",
+            "/api/duos/rooms",
+            &h.outsider.token,
+            json!({ "difficulty": "easy", "random": true }),
+        )
+        .await;
+        assert_eq!(status, 201, "{created}");
+        let code = created["code"].as_str().expect("a room code");
+        assert_eq!(held.drain().await, 1);
+
+        let (status, joined) = api(
+            &h.app,
+            "POST",
+            &format!("/api/duos/rooms/{code}/join"),
+            &late_guest.token,
+            json!({ "random": true }),
+        )
+        .await;
+        assert_eq!(status, 200, "{joined}");
+        let late_id = joined["matchId"].as_str().expect("a match id").to_string();
+        assert!(!held.has(&late_id), "left live after the drain");
+
+        let late = h.served.connect(DUOS_PATH, &h.outsider.token).await;
+        late.send_json(hello(&late_id)).await;
+        assert_eq!(late.wait_closed(PROMPTLY).await, Some(CLOSE_GOING_AWAY));
+        assert!(late.of_type("view").is_empty(), "{:?}", late.frames());
+        assert!(!held.has(&late_id), "left live after the drain");
     }
 }

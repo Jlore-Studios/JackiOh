@@ -15,16 +15,20 @@
 //! A passed line's Float is credited for what it took toward an own Float-discount card still out of
 //! reach (`float_credit`, #3695). The Burn and Toxic still to come on a unit or a hero count by the ticks
 //! they will deal (`afflicted`, `coming_hero_ticks`, R3822000). While a Feng Shui acts, the seat's next
-//! face-up play counts by the verdict its last element gives it (`feng_shui_outlook`, R3951100).
+//! face-up play counts by the verdict its last element gives it (`feng_shui_outlook`, R3951100). An own
+//! dead Tradable card counts less than its price (`dead_in_hand`, R4154400), an own card that sells from the
+//! hand as the Credits its sale brings (`hand_sale_worth`, R4154401), and a permanent a Living Bomb destroys
+//! at its controller's next turn start as a Brittle 1 one (`plague_doomed`, R4154402).
 //! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
 //! handicap or a difficulty (R180).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
+use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::config::{
-    BRITTLE_TICK, BURN_DECAY, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH,
-    JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+    BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT,
+    JADE_BEAUTY_AT, MAX_MANA, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::float::float_cuts_in_hand;
@@ -36,23 +40,25 @@ use jackioh_engine::{
     SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
     active_brittle_count, active_units_of, acts_to_awaken, animated_with_stats, armor_of, attack_restriction,
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, brittle_due_by, burn_on, cannot_attack,
-    card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of,
-    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
-    first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of,
-    hero_armor_of, hero_burn_of, hero_toxic_of, is_dormant_starship, is_extra_turn_card, is_slumbering,
-    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
-    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook,
-    unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
-    yard_at_turn_start,
+    card_at, card_keywords, card_type_of_face, converts_to, credit_lapsing, damage_pool_of, death_hook_of,
+    dormant_starship_of, effective_cost, effective_life, exit_mark, face_of, find_def, find_instance,
+    find_instance_mut, first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword,
+    heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship,
+    is_extra_turn_card, is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
+    is_tradable, launched_starship_of, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, plague_on,
+    playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, sell_quote, sells_from_hand,
+    settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on,
+    trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused,
+    with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
+use crate::candidates::{Side, action_key, blow, cleaved_neighbours, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS,
+    AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -129,6 +135,54 @@ fn brittle_share(card: &CardInstance, w: &EvalWeights) -> f64 {
     }
 }
 
+/// R4154402: whether a Living Bomb (`AI_PLAGUE_BOMBS`) lies in either backrow at all, the cheap test
+/// `plague_doomed` and the move order ask before anything else.
+pub(crate) fn plague_bomb_on_field(state: &GameState) -> bool {
+    PLAYER_IDS.into_iter().any(|player| {
+        state.players[player]
+            .backrow
+            .iter()
+            .flatten()
+            .any(|card| AI_PLAGUE_BOMBS.contains(&card.def_id.as_str()))
+    })
+}
+
+/// R4154402, R400: whether a Living Bomb will destroy `card`, a permanent, at the start of its controller's
+/// next turn: it carries a Plague Counter (`plague_on`), it is not Indestructible (R46), and a card of
+/// `AI_PLAGUE_BOMBS` holds the hook that fires then where the engine's trigger queue would find it
+/// (`trigger_holders_with_hook`: face-up, its text on, the face that prints the hook), the start-of-turn
+/// hook of one its controller holds (the base face's) or the start-of-the-opponent's-turn hook of one the
+/// other side holds (either face's). Each destroys every permanent with a Plague Counter that the player
+/// whose turn starts controls. Plague Counters are public (R471) and so is a face-up Living Bomb.
+pub fn plague_doomed(state: &GameState, card: &CardInstance) -> bool {
+    if plague_on(card) <= 0
+        || !plague_bomb_on_field(state)
+        || unit_has(state, card, KeywordKind::Indestructible)
+    {
+        return false;
+    }
+    let bomb_holds = |hook: HookName, side: PlayerId| {
+        trigger_holders_with_hook(state, hook, Some(side))
+            .into_iter()
+            .any(|holder| {
+                matches!(holder.zone, TriggerZone::Backrow | TriggerZone::Field)
+                    && AI_PLAGUE_BOMBS.contains(&holder.card.def_id.as_str())
+            })
+    };
+    bomb_holds(HookName::StartOfTurn, card.controller)
+        || bomb_holds(HookName::StartOfOpponentTurn, card.controller.opponent())
+}
+
+/// R4154402: the share of itself a permanent keeps while a Living Bomb will destroy it at the start of its
+/// controller's next turn (`plague_doomed`): Brittle 1's (`brittle_discount`), since a crumble comes at that
+/// same stage. 1 otherwise, and 1 at a zero `brittle_discount` (the frozen baseline's), which reads nothing.
+fn plague_share(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+    if w.brittle_discount == 0.0 || !plague_doomed(state, card) {
+        return 1.0;
+    }
+    1.0 - w.brittle_discount
+}
+
 /// Whether the unit may attack at all: no "Can't attack" keyword, no E35 status bars it, and it is
 /// not Frozen through its controller's next turn (R1174000: one that thaws at this turn's cleanup
 /// swings next turn).
@@ -172,6 +226,61 @@ pub(crate) fn crumbles_before_swing(
         NEXT_START_TURNS
     };
     brittle_due_by(unit, state.turn + wait)
+}
+
+/// R4065000: whether the first tick of the unit's own Burn and Toxic (`tick_damage`, as `afflicted` reads it:
+/// Burn meets its Armor, Toxic pierces it, its own cap holds each hit and an unspent Divine Shield negates the
+/// first) destroys it at the start of its controller's next turn, before that turn's attacks, with no body
+/// back that may attack at once: every start of its controller's turns ticks (`afflictions::tick_at_turn_start`,
+/// R3540001), so no turn number is asked. An Indestructible unit takes none. With `on_turn_swings` the player
+/// on turn still has this turn's attacks to come, after this turn's tick, as in `crumbles_before_swing`. With
+/// `w.pool_and_conversion_read`, its side's damage pools meet the tick refilled, as `afflicted` reads them
+/// (R4064000). An unspent Reborn brings its body back summoning sick (R83) when the Toxic tick at its
+/// controller's turn start kills it, which keeps it out unless the body has Charge, or Rush when `at_hero` is
+/// false; a Burn that kills it alone ticks at the end of the turn under way (R4154000), so its body is back
+/// before that turn starts and swings. Either way a body that swings counts, at the unit's own reads, as before.
+pub(crate) fn afflicted_before_swing(
+    state: &GameState,
+    unit: &CardInstance,
+    view: &UnitView,
+    on_turn_swings: bool,
+    at_hero: bool,
+    w: &EvalWeights,
+) -> bool {
+    let (burn, toxic) = (burn_on(unit), toxic_on(unit));
+    if (burn == 0 && toxic == 0)
+        || has_keyword(&view.keywords, KeywordKind::Indestructible)
+        || (on_turn_swings && state.active == unit.controller)
+    {
+        return false;
+    }
+    let shielded = has_keyword(&view.keywords, KeywordKind::DivineShield);
+    let pool = refilled_pool(state, unit.controller, w);
+    let cap = unit_damage_cap(state, unit);
+    let mut shield = shielded;
+    let (taken, _) = tick_damage(view, cap, burn, toxic, &mut shield, pool);
+    if taken < view.health {
+        return false;
+    }
+    if !has_keyword(&view.keywords, KeywordKind::Reborn) {
+        return true;
+    }
+    // R4154000: a Burn the tick at the end of the turn under way kills brings the Reborn body back before its
+    // controller's next turn starts, so it is not summoning sick then and swings, the hero included.
+    let mut shield = shielded;
+    let (burned, _) = tick_damage(view, cap, burn, 0, &mut shield, pool);
+    if burned >= view.health {
+        return false;
+    }
+    let (_, body) = reborn_return(state, unit);
+    !(has_keyword(&body.keywords, KeywordKind::Charge)
+        || (!at_hero && has_keyword(&body.keywords, KeywordKind::Rush)))
+}
+
+/// R1124, R4065001: whether a hit from `unit` exiles the Unit it damages, read as `damage.rs`'s step 7 reads
+/// it (`exiles_on_damage`, Meditative #72 The Banisher), when `w.exile_on_damage_read` is on.
+pub(crate) fn exiles_what_it_damages(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> bool {
+    w.exile_on_damage_read && flags_of(state, unit).exiles_on_damage == Some(true)
 }
 
 /// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
@@ -278,7 +387,7 @@ impl TurnHookPrice {
 /// R2424000, R2477000, R2564000, R2688000, R3064000: the prices a decision's root probed, passed by
 /// reference from `decide` through the search to every scorer that reads them, and the two facts about the
 /// root they ride with: whether it holds a Starship (R3038003), and whether its view names mostly cards the
-/// learned network has no row for (R3479000).
+/// learned network has no row for (R3479000); and in a Duos duel the pool's coming loss (R4188000).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Prices {
     pub deaths: Vec<DeathPrice>,
@@ -295,10 +404,14 @@ pub struct Prices {
     /// no row for (`learned::unknown_root`), so its finalists are scored by the hand eval alone
     /// (`learned::finalist_score_with`), whatever the line, as with `starship_root`.
     pub unknown_root: bool,
+    /// R4188000: in a Duos duel, the deciding seat and what the enemy board of its teammate's duel is
+    /// about to take off the team's shared pool next round (`duos_pool_loss`). None in every 1v1 decision.
+    pub pool_loss: Option<(PlayerId, i32)>,
 }
 
 impl Prices {
-    /// No price: what every call outside a decision reads (the probes, the baselines, the tools).
+    /// No price: what every call outside a decision reads (the probes, the baselines, the tools), but
+    /// `cargo jackioh positions`, which prices a row as its decision would (`decision_prices_at`, R4070000).
     pub const NONE: &'static Prices = &Prices {
         deaths: Vec::new(),
         turn_hooks: Vec::new(),
@@ -307,7 +420,17 @@ impl Prices {
         awakenings: Vec::new(),
         starship_root: false,
         unknown_root: false,
+        pool_loss: None,
     };
+
+    /// R4188000: the pool's coming loss when `seat` is the seat it was read for, else 0. The evaluation
+    /// also scores the opponent with the decision's prices (reply.rs `judged`, simulate.rs's answerer).
+    pub fn pool_loss_of(&self, seat: PlayerId) -> i32 {
+        match self.pool_loss {
+            Some((owner, loss)) if owner == seat => loss,
+            _ => 0,
+        }
+    }
 }
 
 /// R3038003: whether `state` holds a Starship `seat` can see: a hull on either side, Dormant or
@@ -359,14 +482,17 @@ fn turn_hook_price(state: &GameState, card: &CardInstance, w: &EvalWeights, pric
 }
 
 /// R2564000, R2603000: what one use of a card's Activate gives its controller, as a decision's root priced
-/// it (`activation_prices`), and the card it prices: its definition, its face and its controller, so the
-/// same card the search moves or makes later reads the same price. The controller is in the key since
-/// each copy aims at a different board.
+/// it (`activation_prices`), and the card it prices: its definition, its face, its controller and the
+/// power it holds (R4197000), so the same card the search moves or makes later reads the same price. The
+/// controller is in the key since each copy aims at a different board.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ActivationPrice {
     pub def_id: String,
     pub radiant: bool,
     pub controller: PlayerId,
+    /// R4197000: the power the card held when it was priced (`memory.power`, R43), since #98 Heroic
+    /// Power's Activate is its power's; `None` for every other card.
+    pub power: Option<String>,
     pub price: f64,
 }
 
@@ -377,13 +503,24 @@ impl ActivationPrice {
             def_id: card.def_id.clone(),
             radiant: card.radiant,
             controller: card.controller,
+            power: held_power(card).map(str::to_string),
             price: 0.0,
         }
     }
 
     fn is_for(&self, card: &CardInstance) -> bool {
-        self.def_id == card.def_id && self.radiant == card.radiant && self.controller == card.controller
+        self.def_id == card.def_id
+            && self.radiant == card.radiant
+            && self.controller == card.controller
+            && self.power.as_deref() == held_power(card)
     }
+}
+
+/// R4197000, R43: the power `card` holds, which only #98 Heroic Power writes; `None` for every other card.
+fn held_power(card: &CardInstance) -> Option<&str> {
+    card.memory
+        .get(subsystems::POWER_KEY)
+        .and_then(serde_json::Value::as_str)
 }
 
 /// R2688000: what a unit's next attack gives its controller through its "when this attacks" and
@@ -470,13 +607,51 @@ fn awaken_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices:
     }
 }
 
+/// R3540001: what one turn-start tick of `burn` and then `toxic` deals `view`'s unit, its own `cap` holding
+/// each hit (R2179005), and whether it spent the unit's Divine Shield: Burn's hit meets its Armor and Toxic's
+/// pierces it, an unspent `shield` negates the first hit it meets (and is spent), and its side's damage pools,
+/// with `pool` left at the tick (`refilled_pool`, R4064000), soak what they can of each hit. One reading for
+/// the worth (`afflicted`, R3822000) and the threat (`afflicted_before_swing`, R4065000).
+fn tick_damage(
+    view: &UnitView,
+    cap: Option<i32>,
+    burn: i32,
+    toxic: i32,
+    shield: &mut bool,
+    pool: i32,
+) -> (i32, bool) {
+    let mut taken: i32 = 0;
+    let mut popped = false;
+    let mut left = pool;
+    for (amount, piercing) in [(burn, false), (toxic, true)] {
+        if amount <= 0 {
+            continue;
+        }
+        if *shield {
+            *shield = false;
+            popped = true;
+            continue;
+        }
+        let hit = if piercing {
+            amount
+        } else {
+            amount.saturating_sub(view.armor).max(0)
+        };
+        taken = taken.saturating_add(soaked(&mut left, cap.map_or(hit, |cap| hit.min(cap))));
+    }
+    (taken, popped)
+}
+
 /// R3822000: `value`, a unit's worth inside its Brittle share, less what its Burn and Toxic will deal it
-/// over its controller's next `AI_AFFLICTION_TICKS` turn starts, and the share the unit keeps: 1, or
-/// `1 − unit_doomed / n` when the nth tick kills it. Each tick is R3540001's, before the start-of-turn
-/// triggers: Burn's hit, dropping by `BURN_DECAY` after it, then Toxic's; an unspent Divine Shield
+/// over the next `AI_AFFLICTION_TICKS` ticks, and the share the unit keeps: 1, or `1 − unit_doomed / n`
+/// when the nth tick kills it. Each tick is Burn's hit, the first tick alone, since a Burn hits once at
+/// the end of the turn and is gone (R4154000, `burning_at`), then Toxic's at its controller's turn start
+/// (R3540001); an unspent Divine Shield
 /// negates the first (its worth goes), Armor meets Burn's and Toxic pierces it, the unit's own cap holds
-/// both (R2179005), and an Indestructible unit takes none. Nothing is read with no counter or both
-/// weights at 0.
+/// both (R2179005), and an Indestructible unit takes none. With `w.pool_and_conversion_read`, its side's
+/// damage pools soak what they can of each tick's hits, refilled at the turn start before it (R4064000);
+/// each unit is read alone, as if no other tick had spent them first. Nothing is read with no counter or
+/// both weights at 0.
 fn afflicted(
     state: &GameState,
     unit: &CardInstance,
@@ -492,28 +667,18 @@ fn afflicted(
         return (value, 1.0);
     }
     let cap = unit_damage_cap(state, unit);
+    let pool = refilled_pool(state, unit.controller, w);
     let mut shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
     let mut spent = 0.0;
     let mut taken: i32 = 0;
     let mut share = 1.0;
     for tick in 1..=AI_AFFLICTION_TICKS {
-        let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
-        for (amount, piercing) in [(burning, false), (toxic, true)] {
-            if amount <= 0 {
-                continue;
-            }
-            if shield {
-                shield = false;
-                spent = w.keyword.divine_shield;
-                continue;
-            }
-            let hit = if piercing {
-                amount
-            } else {
-                amount.saturating_sub(view.armor).max(0)
-            };
-            taken = taken.saturating_add(cap.map_or(hit, |cap| hit.min(cap)));
+        let burning = burning_at(burn, tick);
+        let (hit, popped) = tick_damage(view, cap, burning, toxic, &mut shield, pool);
+        if popped {
+            spent = w.keyword.divine_shield;
         }
+        taken = taken.saturating_add(hit);
         if taken >= view.health {
             share = 1.0 - w.unit_doomed / f64::from(tick);
             break;
@@ -521,6 +686,12 @@ fn afflicted(
     }
     let lost = spent + w.health * f64::from(taken.min(view.health.max(0)));
     (value - w.unit_affliction * lost, share)
+}
+
+/// R4154000: the Burn the `tick`th projected tick deals: the whole count on the first, since a Burn hits
+/// once at the end of the turn and is then removed, and none after it.
+fn burning_at(burn: i32, tick: i32) -> i32 {
+    if tick == 1 { burn } else { 0 }
 }
 
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
@@ -583,9 +754,17 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
     // death too. R2565000: and what one firing of its turn hooks gives, a firing that harms it a debt.
     // R3822000: less what its Burn and Toxic will deal it; a unit a tick kills keeps the smaller of that
     // share and its Brittle one, both ends coming at the same stage.
+    // R4154402: a unit a Living Bomb destroys at its controller's next turn start keeps Brittle 1's share
+    // too, the smallest counting, and its Plague Counters, the destroy waiting, bank it nothing.
     let (value, doom) = afflicted(state, unit, &view, value, w);
-    value * brittle_share(unit, w).min(doom)
-        + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
+    let plague = plague_share(state, unit, w);
+    let counters = if plague < 1.0 {
+        0.0
+    } else {
+        w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
+    };
+    value * brittle_share(unit, w).min(doom).min(plague)
+        + counters
         + w.death * death_price(state, unit, w, prices)
         + w.turn_hook * turn_hook_price(state, unit, w, prices)
 }
@@ -717,6 +896,65 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
     (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift + turn - shift)
         * brittle_share(card, w)
         * kept
+}
+
+/// R4154400, §2.3: the crystals a turn adds to a seat's maximum until it reaches `MAX_MANA`.
+const CRYSTALS_PER_TURN: i32 = 1;
+
+/// R4154400, §2.3: the crystals `side`'s next refresh brings, read off the public counts and never through
+/// the handicap (R180), as `lost_crystals` reads them: this turn's maximum, `CRYSTALS_PER_TURN` more while it
+/// is under `MAX_MANA`, moved by the next-turn rider (`rider_crystals`). Temporary mana a later play might
+/// make is not counted.
+fn next_turn_crystals(side: &PlayerState) -> i32 {
+    let max = side.mana.max;
+    let grown = if max < MAX_MANA {
+        max + CRYSTALS_PER_TURN
+    } else {
+        max
+    };
+    grown + rider_crystals(side)
+}
+
+/// R4154400: whether `card`, in `seat`'s own hand, is a dead Tradable card: Tradable now (`is_tradable`, a
+/// lent Tradable included, R1864002) with an own cost (`own_cost`; an X-cost card has none) that neither this
+/// turn's crystals nor its next refresh's (`next_turn_crystals`) pay for. A Trade swaps it for a card drawn
+/// and puts it back in the deck, under the top (R2657003), so the move order tries that Trade before the
+/// plays (`candidates.rs`) and `material` holds it at `dead_tradable_discount` off.
+pub fn dead_in_hand(state: &GameState, seat: PlayerId, card: &CardInstance) -> bool {
+    own_cost(state, card).is_some_and(|cost| cost > next_turn_crystals(&state.players[seat]))
+        && is_tradable(state, card)
+}
+
+/// R4154401: what a card that sells from the hand (`sells_from_hand`, Stinkyscape #89 Spice, R1861000) is
+/// worth in its holder's hand while the Marketplace quotes it (`sell_quote`): the Credits its sale brings
+/// now, at `market_credit` each, since a sale is on offer every turn of its holder's at no mana. `None`
+/// without `w.hand_sale_credits` (the frozen baseline's) or a quote: then it is priced as any hand card.
+pub fn hand_sale_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> Option<f64> {
+    if !w.hand_sale_credits || !sells_from_hand(state, card) {
+        return None;
+    }
+    sell_quote(state, card).map(|credits| w.market_credit * f64::from(credits))
+}
+
+/// An own hand card's place in `material`: `doomed_hand_card_value`, but a card that sells from the hand at
+/// what its sale brings (`hand_sale_worth`, R4154401), and a dead Tradable card at `dead_tradable_discount`
+/// off (`dead_in_hand`, R4154400; no reading at a zero share).
+fn own_hand_card_value(
+    state: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    doomed: bool,
+    w: &EvalWeights,
+) -> f64 {
+    if let Some(credits) = hand_sale_worth(state, card, w) {
+        return credits;
+    }
+    let value = doomed_hand_card_value(state, card, doomed, w);
+    if w.dead_tradable_discount != 0.0 && dead_in_hand(state, seat, card) {
+        value * (1.0 - w.dead_tradable_discount)
+    } else {
+        value
+    }
 }
 
 /// R3951100: whether a Feng Shui acts on either side of the field (Meditative #40, R984), which
@@ -987,23 +1225,75 @@ fn yard_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &
 /// turn starts, each tick a hit as `projected_hero_damage` reads it (Burn's through Armor, Toxic's
 /// piercing it, R3540001; the divisors and caps for both), at most all but 1 of its life: the reply
 /// already plays out a tick that kills. 0 at a zero `hero_affliction`, with neither counter, or at 1 life.
+/// With `w.pool_and_conversion_read`, the side's damage pools soak what they can of each tick's hits,
+/// refilled at the turn start before it (R4064000).
 fn coming_hero_ticks(state: &GameState, player: PlayerId, w: &EvalWeights) -> i32 {
-    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
+    hero_ticks(
+        state,
+        player,
+        hero_burn_of(state, player),
+        hero_toxic_of(state, player),
+        w,
+    )
+}
+
+/// `coming_hero_ticks` with `burn` and `toxic` on `player`'s hero in place of the counters it has.
+fn hero_ticks(state: &GameState, player: PlayerId, burn: i32, toxic: i32, w: &EvalWeights) -> i32 {
     let life = effective_life(state, player);
     if w.hero_affliction == 0.0 || (burn == 0 && toxic == 0) || life <= 1 {
         return 0;
     }
+    let pool = refilled_pool(state, player, w);
     let mut taken: i32 = 0;
     for tick in 1..=AI_AFFLICTION_TICKS {
-        let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        let burning = burning_at(burn, tick);
+        let mut left = pool;
         if burning > 0 {
-            taken = taken.saturating_add(subsystems::projected_hero_damage(state, player, burning, false));
+            let hit = subsystems::projected_hero_damage(state, player, burning, false);
+            taken = taken.saturating_add(soaked(&mut left, hit));
         }
         if toxic > 0 {
-            taken = taken.saturating_add(subsystems::projected_hero_damage(state, player, toxic, true));
+            let hit = subsystems::projected_hero_damage(state, player, toxic, true);
+            taken = taken.saturating_add(soaked(&mut left, hit));
         }
     }
     taken.min(life - 1)
+}
+
+/// R4064001: the life `amount` more of `kind` on `player`'s hero takes over the coming ticks
+/// (`coming_hero_ticks`), past what its counters take already: what a hit that Burns or is Toxic instead
+/// costs a hero.
+pub(crate) fn hero_ticks_added(
+    state: &GameState,
+    player: PlayerId,
+    kind: Affliction,
+    amount: i32,
+    w: &EvalWeights,
+) -> i32 {
+    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
+    let (more_burn, more_toxic) = match kind {
+        Affliction::Burn => (burn.saturating_add(amount), toxic),
+        Affliction::Toxic => (burn, toxic.saturating_add(amount)),
+    };
+    hero_ticks(state, player, more_burn, more_toxic, w) - hero_ticks(state, player, burn, toxic, w)
+}
+
+/// R4064000: what `player`'s damage pools soak of one turn start's ticks, refilled first (the refill,
+/// `turns_started`, comes before the tick, R3540001); 0 without `w.pool_and_conversion_read`.
+fn refilled_pool(state: &GameState, player: PlayerId, w: &EvalWeights) -> i32 {
+    if w.pool_and_conversion_read {
+        damage_pool_of(state, player, true)
+    } else {
+        0
+    }
+}
+
+/// R4064000: what is left of `hit` once damage pools with `left` to soak take what they can, taken off
+/// `left` (§4.4 step 3b).
+fn soaked(left: &mut i32, hit: i32) -> i32 {
+    let take = hit.min(*left).max(0);
+    *left -= take;
+    hit - take
 }
 
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor, less
@@ -1076,8 +1366,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         let def = find_def(Some(state), &card.def_id);
         match def {
             Some(def) if readable_by(state, card, seat) => {
-                value += brittle_share(card, w)
-                    * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
+                // R4154402: a card a Living Bomb destroys at its controller's next turn start keeps Brittle
+                // 1's share, the smaller of that and its own Brittle share counting.
+                let kept = brittle_share(card, w).min(plague_share(state, card, w));
+                value += kept * (w.backrow_base + w.backrow_per_cost * f64::from(query_cost(def)));
                 // R2477000, R2565000: what one firing of its turn hooks gives its controller, as the root
                 // priced it; either side's, since a card the seat can read is one it may price.
                 value += w.turn_hook * turn_hook_price(state, card, w, prices);
@@ -1087,7 +1379,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 value += w.death * death_price(state, card, w, prices);
                 // R2603000: what one use of its Activate gives its controller, as the root priced it, inside
                 // its Brittle share as a unit's is (R2564000); either side's.
-                value += brittle_share(card, w) * w.activation * activation_price(state, card, w, prices);
+                value += kept * w.activation * activation_price(state, card, w, prices);
                 // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share), with stats (R2280000).
                 if w.animated_share != 0.0 && animated_with_stats(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w, prices);
@@ -1116,7 +1408,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     let doomed = discards_hand(state, player);
     if player == seat {
         for card in &side.hand {
-            value += doomed_hand_card_value(state, card, doomed, w);
+            value += own_hand_card_value(state, seat, card, doomed, w);
         }
         // R3951100: the verdict the seat's next face-up play would get (no reading at a zero share).
         if w.feng_shui_outlook != 0.0 {
@@ -1162,15 +1454,21 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
 /// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
 /// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
-/// under way: the player on turn has made this turn's attacks. With `w.static_attack_flags_read`, a unit that
-/// can only attack the Unit across lands nothing on a hero (R3550001), and one that Ignores Taunt is bound by no
-/// Taunt (R3560007).
+/// under way: the player on turn has made this turn's attacks. With `w.affliction_kills_before_swing`, nor does
+/// a unit the first tick of its own Burn and Toxic destroys first (`afflicted_before_swing`, R4065000), read the
+/// same way. With `w.static_attack_flags_read`, a unit that can only attack the Unit across lands nothing on a
+/// hero (R3550001), and one that Ignores Taunt is bound by no Taunt (R3560007). With
+/// `w.pool_and_conversion_read`, each hit meets §4.4 steps 3a and 3b as the walk's doc says, each side's pools
+/// read as they will stand when the attacks come (R4064000, R4064001).
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
 
 /// `face_threat_with`, `on_turn_swings` saying whether the player on turn still has this turn's attacks to
-/// come (R3793000). `evaluate_priced` reads it off its `NextSwing`.
+/// come (R3793000). `evaluate_priced` reads it off its `NextSwing`. With `w.frozen_sick_before_swing` and those
+/// attacks this turn's, the engine's refusals of this turn apply (R4170000): a Frozen unit counts no attack, one
+/// summoning sick without Rush or Charge none, and one with Rush but no Charge none on a hero. `face_threat_with`
+/// reads the end of the turn under way, so the flag never acts there.
 fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_turn_swings: bool) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     // R1849005, #3287: while The Gauntlet acts, `attack_restriction` bars a Unit in its lanes from the hero.
@@ -1180,6 +1478,10 @@ fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_t
     let hero = AttackTarget::Hero {
         player: attacker.opponent(),
     };
+    // R4064000: the attacks are this turn's only when the player on turn still has them to come.
+    let swings_now = state.active == attacker && on_turn_swings;
+    // R4170000: and then the engine's refusals of this turn apply to them.
+    let refused_now = w.frozen_sick_before_swing && swings_now;
     for unit in active_units_of(state, attacker) {
         let view = unit_view(state, unit);
         let ready = view.position == Position::Atk || (w.deft_defense_attacks && deft_in_defense(&view));
@@ -1193,18 +1495,34 @@ fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_t
         if w.brittle_crumbles_before_swing && crumbles_before_swing(state, unit, &view, on_turn_swings) {
             continue;
         }
+        // R4065000, #4065: nor does one the first tick of its own Burn and Toxic destroys first.
+        if w.affliction_kills_before_swing
+            && afflicted_before_swing(state, unit, &view, on_turn_swings, true, w)
+        {
+            continue;
+        }
+        // R4170000, #4170: this turn a Frozen unit declares no attack, whatever cleanup thaws it, and nor does
+        // one that entered the field this turn without Rush or Charge (§4.2 step 1). With Rush and no Charge it
+        // may attack only Units (§6.1): a Taunt binds it, but it lands nothing on the hero.
+        if refused_now && (unit.frozen.is_some() || is_asleep(state, unit, &view.keywords)) {
+            continue;
+        }
+        let sick_off_hero =
+            refused_now && is_sick(state, unit) && !has_keyword(&view.keywords, KeywordKind::Charge);
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
-        // Nor is it summoning sick then, so only a restriction (`may_hit_hero`) keeps a swing off the hero.
+        // Read at the end of the turn under way, nor is it summoning sick then, so only a restriction
+        // (`may_hit_hero`) keeps a swing off the hero; a side that swings this turn met its sickness above.
         // R3550001, #3909: a unit that can only attack the Unit across never hits a hero. Its flag is read
         // first, so a board with no such unit asks `attack_restriction` nothing more than before.
         let across_only =
             w.static_attack_flags_read && flags_of(state, unit).attacks_only_across == Some(true);
-        let may_hit_hero = !(gauntlet || across_only) || attack_restriction(state, unit, &hero).is_ok();
+        let may_hit_hero =
+            !sick_off_hero && (!(gauntlet || across_only) || attack_restriction(state, unit, &hero).is_ok());
         for _ in 0..attacks_per_turn(state, unit) {
             attacks.push((unit, view.attack, may_hit_hero));
         }
     }
-    damage_past_taunts_with(state, attacker.opponent(), &attacks, w)
+    damage_past_taunts_from(state, attacker.opponent(), &attacks, w, swings_now)
 }
 
 /// §4.5 step 4: a Reborn unit comes back at 1 health.
@@ -1249,18 +1567,73 @@ pub fn damage_past_taunts(
 /// bonuses (R1120) stay out. A hit that may not hit the hero (R1849005, #1823) lands nothing past the Taunts.
 /// With `w.static_attack_flags_read`, an attacker that Ignores Taunt (R3560007) is bound by none, Defense
 /// Position's included. With `w.best_attack_order_past_taunts` (R3937000) the walk runs as the flag's doc
-/// says, the larger of its two orders counting.
+/// says, the larger of its two orders counting. With `w.pool_and_conversion_read`, a hit that Burns or is
+/// Toxic instead deals nothing (§4.4 step 3a, R4064001), and the defender's damage pools soak what they
+/// have left, once across the walk's hits in the order it counts them (step 3b, R4064000); the attacks
+/// are this turn's, so each side's pools are read as they stand now. With `w.exile_on_damage_read`
+/// (R4065001), a hit or a Cleave splash from an attacker that exiles what it damages removes the Taunt it
+/// damages, with no Reborn body back, and a First Strike Taunt that does stops an attacker it damages whole.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
     attacks: &[(&CardInstance, i32, bool)],
     w: &EvalWeights,
 ) -> i32 {
-    let (smallest_first, breaker_behind) = soak_past_taunts(state, defender, attacks, w, false);
+    damage_past_taunts_from(state, defender, attacks, w, true)
+}
+
+/// `damage_past_taunts_with`, `swings_now` saying whether the attacks are this turn's: when not, each side
+/// whose turn starts before they land meets them with its damage pools refilled (R4064000, `WalkPools`).
+fn damage_past_taunts_from(
+    state: &GameState,
+    defender: PlayerId,
+    attacks: &[(&CardInstance, i32, bool)],
+    w: &EvalWeights,
+    swings_now: bool,
+) -> i32 {
+    let pools = WalkPools::of(state, defender, swings_now, w);
+    let (smallest_first, breaker_behind) = soak_past_taunts(state, defender, attacks, w, false, pools);
     if !breaker_behind {
         return smallest_first;
     }
-    smallest_first.max(soak_past_taunts(state, defender, attacks, w, true).0)
+    smallest_first.max(soak_past_taunts(state, defender, attacks, w, true, pools).0)
+}
+
+/// R4064000: the damage pools (§4.4 step 3b) a walk of `defender`'s Taunts meets, and whether it reads
+/// them and the conversions (step 3a, R4064001) at all (`w.pool_and_conversion_read`).
+#[derive(Clone, Copy)]
+struct WalkPools {
+    read: bool,
+    /// What the defender's pools soak between its Taunts and its hero.
+    defender: i32,
+    /// What the attacker's pools soak of one First Strike Taunt's strike back.
+    attacker: i32,
+}
+
+impl WalkPools {
+    /// `swings_now`: the attacks are this turn's. A side's pools refill first when its turn starts
+    /// before the swings: the attacker's always, the defender's when the attacker is on turn with this
+    /// turn's attacks made.
+    fn of(state: &GameState, defender: PlayerId, swings_now: bool, w: &EvalWeights) -> Self {
+        if !w.pool_and_conversion_read {
+            return Self {
+                read: false,
+                defender: 0,
+                attacker: 0,
+            };
+        }
+        let attacker = defender.opponent();
+        Self {
+            read: true,
+            defender: damage_pool_of(state, defender, state.active == attacker && !swings_now),
+            attacker: damage_pool_of(state, attacker, !swings_now),
+        }
+    }
+
+    /// R4064001: whether `source`'s hits Burn or are Toxic instead of dealing damage, as the walk reads it.
+    fn converts(&self, state: &GameState, source: &CardInstance) -> bool {
+        self.read && converts_to(state, source).is_some()
+    }
 }
 
 /// `damage_past_taunts_with`'s walk in one order (R3937000), and whether a Taunt had a lone breaker behind a
@@ -1271,6 +1644,7 @@ fn soak_past_taunts(
     attacks: &[(&CardInstance, i32, bool)],
     w: &EvalWeights,
     breaker_first: bool,
+    pools: WalkPools,
 ) -> (i32, bool) {
     let mut breaker_behind = false;
     let mut free: Vec<(&CardInstance, i32, bool)> = attacks.to_vec();
@@ -1283,6 +1657,8 @@ fn soak_past_taunts(
     stands.sort_by_key(|stand| stand.view.health + stand.view.armor);
 
     let mut total = 0;
+    // R4064000: what the defender's pools have left as the walk's hits land, in the order it counts them.
+    let mut pool = pools.defender;
     let mut i = 0;
     while i < stands.len() {
         let target = AttackTarget::Unit {
@@ -1295,9 +1671,9 @@ fn soak_past_taunts(
         });
         // R3937000: the smallest attacker that destroys this Taunt alone, when a smaller one comes first.
         if w.best_attack_order_past_taunts
-            && let Some(at) = bound
-                .iter()
-                .position(|(attacker, attack, _)| breaks_alone(state, attacker, *attack, &stands[i]))
+            && let Some(at) = bound.iter().position(|(attacker, attack, _)| {
+                breaks_alone(state, attacker, *attack, &stands[i], pool, &pools, w)
+            })
             && at > 0
         {
             if breaker_first {
@@ -1310,26 +1686,51 @@ fn soak_past_taunts(
         // R3937000: the attackers this Taunt stops whole, waiting until it is destroyed.
         let mut stopped: Vec<(&CardInstance, i32, bool)> = Vec::new();
         let mut poisoned = false;
-        while stands[i].health > 0 && !poisoned {
+        // R4065001: an exiling hit removes the Taunt whole: no Reborn body comes back.
+        let mut exiled = false;
+        while stands[i].health > 0 && !poisoned && !exiled {
             let Some((attacker, attack, may_hit_hero)) = bound.next() else {
                 break;
             };
-            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view) {
+            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view, &pools, w) {
                 if w.best_attack_order_past_taunts {
                     stopped.push((attacker, attack, may_hit_hero));
                 }
                 continue;
             }
             let keywords = unit_view(state, attacker).keywords;
+            let exiling = exiles_what_it_damages(state, attacker, w);
             let pierce = pierces(state, Some(attacker), None);
+            // R4064001: a hit that Burns or is Toxic instead deals the Taunt nothing.
+            let converts = pools.converts(state, attacker);
             // R3937000: a hit the Taunt's Armor would take whole waits, with no hit and no splash yet; a
-            // Divine Shield still takes it, so it still goes in to pop one.
+            // Divine Shield still takes it, so it still goes in to pop one. R4064001: so does one that
+            // converts.
             if w.best_attack_order_past_taunts
                 && !stands[i].shield
-                && dealt_to(state, attack, &stands[i], pierce) <= 0
+                && (converts || dealt_to(state, attack, &stands[i], pierce) <= 0)
             {
                 stopped.push((attacker, attack, may_hit_hero));
                 continue;
+            }
+            // The hit on the Taunt, worked out before its splash: it lands first (§4.4 step 10), so it and
+            // its Trample excess meet the pools first (R4064000). Step 1: a Divine Shield takes the whole
+            // hit, one that converts included; step 3a (R4064001): one that converts is the Taunt's
+            // counter, no damage. Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346);
+            // a hit it takes whole is no damage instance at all (R1361). Step 3b: the pools soak what they
+            // have left of the rest, never on an Indestructible Taunt.
+            let dealt = if stands[i].shield || converts {
+                0
+            } else if has_keyword(&stands[i].view.keywords, KeywordKind::Indestructible) {
+                dealt_to(state, attack, &stands[i], pierce)
+            } else {
+                soaked(&mut pool, dealt_to(state, attack, &stands[i], pierce))
+            };
+            // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
+            if has_keyword(&keywords, KeywordKind::Trample) && dealt > stands[i].health {
+                let excess =
+                    subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
+                total += soaked(&mut pool, excess);
             }
             // The splash belongs to the attack rather than to the hit (R63), so it lands even when
             // the hit on the Taunt itself is stopped below. Only live neighbouring Taunts matter:
@@ -1338,7 +1739,14 @@ fn soak_past_taunts(
                 // Combat-only bonuses stay out of the threat model, so the splash is Poisonous
                 // from the attacker's own keyword alone.
                 let poisonous = has_keyword(&keywords, KeywordKind::Poisonous);
-                let from = side_of(state, attacker);
+                let mut from = side_of(state, attacker);
+                from.converts = if pools.read {
+                    converts_to(state, attacker)
+                } else {
+                    None
+                };
+                // R4065001: an exiling splash by these weights' flag, not `side_of`'s `AI_EVAL`.
+                from.exiles = exiling;
                 for neighbour in cleaved_neighbours(state, attacker, &stands[i].unit) {
                     let Some(j) = stands.iter().position(|stand| stand.unit.id == neighbour.id) else {
                         continue;
@@ -1358,26 +1766,31 @@ fn soak_past_taunts(
                         poisonous: false,
                         pierce: false,
                         cap: unit_damage_cap(state, &stands[j].unit),
+                        exiles: false,
+                        converts: None,
+                        pool,
                     };
                     let splash = blow(&from, attack, poisonous, &to);
+                    pool -= splash.soaked;
                     if splash.pops_shield {
                         stands[j].shield = false;
                     } else {
                         // Step 9: what Trample lands beyond the neighbour's health is a hit on
-                        // the hero (R63), as for the main hit below.
+                        // the hero (R63), as for the main hit above.
                         if has_keyword(&keywords, KeywordKind::Trample) && splash.dealt > stands[j].health {
-                            total += subsystems::projected_hero_damage(
+                            let excess = subsystems::projected_hero_damage(
                                 state,
                                 defender,
                                 splash.dealt - stands[j].health,
                                 pierce,
                             );
+                            total += soaked(&mut pool, excess);
                         }
                         if splash.kills {
                             // §4.5 step 4: a destroyed Reborn neighbour comes back and binds what
                             // is left, unless its body has no Taunt. Only a later stand is ever
-                            // removed, so `i` stays valid.
-                            if has_keyword(&stands[j].view.keywords, KeywordKind::Reborn) {
+                            // removed, so `i` stays valid. An exiled one never comes back (R1124).
+                            if !exiling && has_keyword(&stands[j].view.keywords, KeywordKind::Reborn) {
                                 match reborn_body(state, &stands[j].unit) {
                                     Some((body, view)) => stands[j] = TauntStand::of(body, view),
                                     None => {
@@ -1398,29 +1811,25 @@ fn soak_past_taunts(
                 stands[i].shield = false;
                 continue;
             }
-            // Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346); a hit it takes
-            // whole is no damage instance at all (R1361).
-            let dealt = dealt_to(state, attack, &stands[i], pierce);
             if dealt <= 0 {
                 continue;
             }
-            // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
-            if has_keyword(&keywords, KeywordKind::Trample) && dealt > stands[i].health {
-                total += subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
-            }
             // Step 7: Poisonous destroys with any damage dealt.
             poisoned = has_keyword(&keywords, KeywordKind::Poisonous);
+            // R1124, R4065001: an exiling hit removes it with any damage dealt.
+            exiled = exiling;
             stands[i].health -= dealt;
         }
         unbound.extend(bound);
         // R3937000: a destroyed Taunt frees the attackers that waited on it (a Reborn body binds them again).
-        if stands[i].health <= 0 || poisoned {
+        if stands[i].health <= 0 || poisoned || exiled {
             unbound.extend(stopped);
         }
         unbound.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
         free = unbound;
         // §4.5 step 4: a destroyed Reborn Taunt comes back and binds what is left.
         if (stands[i].health <= 0 || poisoned)
+            && !exiled
             && has_keyword(&stands[i].view.keywords, KeywordKind::Reborn)
             && let Some((body, view)) = reborn_body(state, &stands[i].unit)
         {
@@ -1431,11 +1840,15 @@ fn soak_past_taunts(
     }
 
     for (attacker, hit, may_hit_hero) in &free {
-        if !may_hit_hero {
+        // R4064001: a hit that Burns or is Toxic instead deals the hero nothing.
+        if !may_hit_hero || pools.converts(state, attacker) {
             continue;
         }
         let pierce = pierces(state, Some(attacker), None);
-        total += subsystems::projected_hero_damage(state, defender, *hit, pierce);
+        total += soaked(
+            &mut pool,
+            subsystems::projected_hero_damage(state, defender, *hit, pierce),
+        );
     }
     (total, breaker_behind)
 }
@@ -1453,28 +1866,54 @@ fn dealt_to(state: &GameState, attack: i32, stand: &TauntStand, pierce: bool) ->
 
 /// R3937000: whether `attacker`'s one hit of `attack` destroys `stand` as the walk left it: no Divine Shield
 /// takes it, no First Strike destroys the attacker first, and what gets past the Armor is the stand's
-/// health or more, or any of it from a Poisonous attacker.
-fn breaks_alone(state: &GameState, attacker: &CardInstance, attack: i32, stand: &TauntStand) -> bool {
-    if stand.shield || falls_to_first_strike(state, attacker, &stand.unit, &stand.view) {
+/// health or more, or any of it from a Poisonous attacker or, by `w`'s flag, one that exiles what it
+/// damages (R4065001). With `pools.read`, a hit that converts destroys nothing (R4064001), and the
+/// defender's `pool` left soaks what it can first (R4064000).
+fn breaks_alone(
+    state: &GameState,
+    attacker: &CardInstance,
+    attack: i32,
+    stand: &TauntStand,
+    mut pool: i32,
+    pools: &WalkPools,
+    w: &EvalWeights,
+) -> bool {
+    if stand.shield
+        || pools.converts(state, attacker)
+        || falls_to_first_strike(state, attacker, &stand.unit, &stand.view, pools, w)
+    {
         return false;
     }
     let dealt = dealt_to(state, attack, stand, pierces(state, Some(attacker), None));
+    let dealt = if has_keyword(&stand.view.keywords, KeywordKind::Indestructible) {
+        dealt
+    } else {
+        soaked(&mut pool, dealt)
+    };
     dealt > 0
         && (dealt >= stand.health
-            || has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Poisonous))
+            || has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Poisonous)
+            || exiles_what_it_damages(state, attacker, w))
 }
 
 /// §4.3 step 1 and R93, as `subsystems::lethal`'s private `falls_to_first_strike` reads it: a First Strike Taunt
 /// strikes an attacker without it first, and an attacker that falls there never lands its hit. The strike back runs
 /// the §4.4 steps that can stop it (Divine Shield, Armor, which a Pierce Taunt skips, R346, the attacker's own cap,
-/// R2179005, Indestructible, the zero rule); a Poisonous Taunt destroys with any damage. A Ranged attacker takes
-/// none from a non-Ranged Taunt (R783000).
+/// R2179005, Indestructible, the zero rule); a Poisonous Taunt destroys with any damage, and by `w`'s flag one
+/// that exiles what it damages removes with any (R4065001; `subsystems::lethal`'s copy does not read the exile).
+/// A Ranged attacker takes none from a non-Ranged Taunt (R783000). With `pools.read`, a Taunt whose hits
+/// convert destroys nothing (R4064001), and the attacker's whole pool meets its strike back (R4064000).
 fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
     taunt: &CardInstance,
     view: &UnitView,
+    pools: &WalkPools,
+    w: &EvalWeights,
 ) -> bool {
+    if pools.converts(state, taunt) {
+        return false;
+    }
     if view.attack <= 0
         || !has_keyword(&view.keywords, KeywordKind::FirstStrike)
         || !takes_strike_back(state, attacker, taunt)
@@ -1494,7 +1933,12 @@ fn falls_to_first_strike(
         (view.attack - mine.armor).max(0)
     };
     let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
-    dealt > 0 && (has_keyword(&view.keywords, KeywordKind::Poisonous) || dealt >= mine.health)
+    let mut left = pools.attacker;
+    let dealt = soaked(&mut left, dealt);
+    dealt > 0
+        && (has_keyword(&view.keywords, KeywordKind::Poisonous)
+            || exiles_what_it_damages(state, taunt, w)
+            || dealt >= mine.health)
 }
 
 /// §4.5 step 4: the body a destroyed Reborn unit comes back as, a reset instance (R78) without Reborn
@@ -2354,6 +2798,122 @@ fn rekeyed_activation_prices(
     }
 }
 
+/// R4197000: the card `seat`'s own open prompt resumes on (`resume.instance_id`) when it is one of the
+/// seat's cards the probes try (`activate_sources`) and its face declares an Activate (`script_of`), as
+/// #98 Heroic Power's does while its Cry's Discover of a power is open (R3134002). `None` at a prompt
+/// that is not the seat's, or whose card is anything else: a Spell's, a hand card's, a card with no
+/// Activate.
+fn prompt_card(world: &GameState, seat: PlayerId) -> Option<&CardInstance> {
+    let pending = world
+        .pending
+        .as_ref()
+        .filter(|pending| pending.player_id == seat)?;
+    let id = pending.resume.instance_id.as_deref()?;
+    activate_sources(world, seat)
+        .into_iter()
+        .find(|card| card.id == id)
+        .filter(|card| !script_of(world, *card).activations.is_empty())
+}
+
+/// R4197000, R3575400: the activation prices a decision at `seat`'s own open prompt passes for the power
+/// each answer leaves the prompt's card (`prompt_card`), so a pick that lasts the game reads what each
+/// power keeps giving. Each answer `legal_actions` lists is played once on a copy of `world`, in
+/// `action_key` order, with both players' automatic turn end off (R345); where it leaves the seat's own
+/// main phase with no prompt open and the card holding a power it did not hold before, the seat ends its
+/// turn and then the enemy (`next_turn`), and the card's uses alone are tried at the start of the seat's
+/// next turn (`price_uses`), as R3575400 prices a hand card. The price is keyed by the card as the answer
+/// leaves it, its power included (`ActivationPrice::key`). Nothing is priced, and no node spent, at a
+/// zero `activation` weight, once the game is over, outside the seat's own main phase, or at any prompt
+/// whose card is not `prompt_card`; an answer that fails, leaves a prompt open, leaves the card's power
+/// as it was, or that the nodes do not reach prices nothing. At most `AI_PROMPT_ACTIVATION_PROBE_NODES`
+/// nodes of `counter`.
+pub fn prompt_activation_prices(
+    world: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+) -> Vec<ActivationPrice> {
+    let mut priced: Vec<ActivationPrice> = Vec::new();
+    if AI_EVAL.activation == 0.0
+        || world.result.is_some()
+        || world.active != seat
+        || world.phase != Phase::Main
+    {
+        return priced;
+    }
+    let Some(card) = prompt_card(world, seat) else {
+        return priced;
+    };
+    let mut answers: Vec<ActionBody> = legal_actions(world, seat)
+        .into_iter()
+        .filter(|action| matches!(action, ActionBody::Answer { .. }))
+        .collect();
+    answers.sort_by_cached_key(action_key);
+    // R345: automatic turn end off before the answer, else a pick that leaves nothing to play ends the
+    // turn inside the answer's own reduce.
+    let mut start = world.clone();
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    let hidden = hidden_card_ids(world, seat);
+    let probes = create_sub_counter(counter, AI_PROMPT_ACTIVATION_PROBE_NODES);
+    for answer in &answers {
+        let answered = match simulate(&start, seat, answer, &probes, Prices::NONE) {
+            None => break,
+            Some(Err(_)) => continue,
+            Some(Ok(answered)) => answered,
+        };
+        if answered.pending.is_some()
+            || answered.result.is_some()
+            || answered.active != seat
+            || answered.phase != Phase::Main
+        {
+            continue;
+        }
+        let Some(now) = activate_sources(&answered, seat)
+            .into_iter()
+            .find(|other| other.id == card.id)
+        else {
+            continue;
+        };
+        if held_power(now).is_none()
+            || held_power(now) == held_power(card)
+            || priced.iter().any(|entry| entry.is_for(now))
+        {
+            continue;
+        }
+        // From here as `rekeyed_activation_prices`' tail: two turn ends, the card's uses alone.
+        let Some(enemy_turn) = next_turn(&answered, seat, &probes) else {
+            break;
+        };
+        let Some(enemy_turn) = enemy_turn else {
+            continue;
+        };
+        let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), &probes) else {
+            break;
+        };
+        let Some(own_turn) = own_turn else {
+            continue;
+        };
+        let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
+            .into_iter()
+            .filter(|other| other.id != now.id)
+            .map(ActivationPrice::key)
+            .collect();
+        let mut fresh: Vec<ActivationPrice> = Vec::new();
+        let cut = !price_uses(&own_turn, seat, &hidden, &probes, &mut tried, &mut fresh);
+        if let Some(price) = fresh.into_iter().map(|entry| entry.price).reduce(f64::max) {
+            priced.push(ActivationPrice {
+                price,
+                ..ActivationPrice::key(now)
+            });
+        }
+        if cut {
+            break;
+        }
+    }
+    priced
+}
+
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
 /// (§6.3), so `script_of` runs none of its text and neither of its attack hooks fires (nor its wake
 /// trigger, R3064000), and it is
@@ -2669,8 +3229,11 @@ pub fn evaluate_priced(
     let seat_life = effective_life(state, seat);
     let opp_life = effective_life(state, opp);
     let threat_share = if seat_first { w.answerable_threat } else { 1.0 };
+    // R4188000: the threat is judged against that life less what the teammate's duel is about to take
+    // off the pool.
+    let threat_life = seat_life - prices.pool_loss_of(seat);
     let threat = threat_share
-        * (if enemy_damage >= seat_life {
+        * (if enemy_damage >= threat_life {
             w.lethal_threat
         } else {
             w.threat_per_damage * f64::from(enemy_damage)

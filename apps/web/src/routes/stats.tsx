@@ -8,7 +8,8 @@
 // offered patch is a tab, and the newest, short of games, says its data is still being collected (R3324000).
 // The header names the current patch (R3324001), and the games tile the patch its games were collected on
 // (R3447000). The Cards tab also holds the games panel (R1994000) and the cards made during a game, the Tokens and
-// the Other created cards, two sortable sections that share no row (R2089000, R2370000, R3184002, R3324002); its
+// the Other created cards, two sections that share no row and show the deck table's columns, opening a row's
+// drill-down as a deck row does (R2089000, R2370000, R3184002, R3324002, R4155000); its
 // on/off controls are the Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art
 // card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played
 // synergy. R3838000: its "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx).
@@ -16,7 +17,6 @@
 // cards, as readable text, no face (PlainText.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
-import catalogJson from "@jackioh/cards/catalog.json";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
@@ -27,6 +27,7 @@ import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   cardStatsPath,
@@ -65,7 +66,7 @@ import { PlainCard, PlainTextButton, usePlainText } from "../stats/PlainText.tsx
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
-import { TierChip, adjustedText, percentText, tierRank } from "../stats/TierChip.tsx";
+import { TierChip, adjustedText, tierRank } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
 import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -74,14 +75,20 @@ import { Segmented, Tabs } from "../tabs/index.ts";
 import "../auth/tavern.css";
 import "./stats.css";
 
-const CATALOG = catalogJson as unknown as CardDefs;
-
 /** Unit conversion, not configuration: a rate as a percentage has two more decimal places than as a fraction. */
 const PERCENT_PLACES = 2;
 
+/**
+ * #4180: the module's catalog (`game/currentCatalog.ts`), read in a call, never at import: the page
+ * sits behind `EngineGate` (`main.tsx`), so the module is in before any of these run.
+ */
+function catalog(): CardDefs {
+  return currentCatalog().cards;
+}
+
 /** A card's name as the reader reads it: the catalog's Chinese for a reader of Chinese, else the server's own. */
 function shownName(id: string, name: string): string {
-  return drawnInChinese(false) ? chineseName(id, name, CATALOG[id]) : name;
+  return drawnInChinese(false) ? chineseName(id, name, catalog()[id]) : name;
 }
 
 /** Whether a card answers the search box: the server's name, the name as the reader reads it, or the id holds the text. */
@@ -95,7 +102,7 @@ function matchesSearch(card: { id: string; name: string }, search: string): bool
 }
 
 function keywordKinds(id: string): KeywordKind[] {
-  const def = CATALOG[id];
+  const def = catalog()[id];
   if (!def) return [];
   const kinds = new Set<KeywordKind>();
   for (const kw of def.base?.keywords ?? []) {
@@ -114,7 +121,7 @@ function keywordName(kind: KeywordKind): string {
 /** R279, R3887000: every card a card's text names, token or not, the card itself left out, in the text's order. */
 function referencesOf(def: CardDef): CardDef[] {
   return [...new Set(def.refs ?? [])].flatMap((id) => {
-    const named = CATALOG[id];
+    const named = catalog()[id];
     return named !== undefined && id !== def.id ? [named] : [];
   });
 }
@@ -124,9 +131,9 @@ function tokensOf(def: CardDef): CardDef[] {
   return referencesOf(def).filter((named) => named.token);
 }
 
-/** R3887000: a card as plain text, or null for an id the catalog holds no card of (The Coin). */
+/** R3887000: a card as plain text, or null for an id the catalog holds no card of. */
 function plainCardOf(id: string): ReactElement | null {
-  const def = CATALOG[id];
+  const def = catalog()[id];
   return def === undefined ? null : <PlainCard def={def} />;
 }
 
@@ -558,7 +565,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
   const keywordOptions = useMemo(() => {
     const present = new Set<KeywordKind>();
-    for (const [id, def] of Object.entries(CATALOG)) {
+    for (const [id, def] of Object.entries(catalog())) {
       if (def.token) continue;
       for (const kind of keywordKinds(id)) {
         present.add(kind);
@@ -645,13 +652,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R2089000: the Created cards the search box asks for, as it asks for the deck rows; R3324002: the tokens
   // among them in a section of their own, and every other in its own, so no card is in both.
   const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
-  const tokenCards = createdCards.filter((card) => CATALOG[card.id]?.token === true);
-  const otherCreatedCards = createdCards.filter((card) => CATALOG[card.id]?.token !== true);
+  const tokenCards = createdCards.filter((card) => catalog()[card.id]?.token === true);
+  const otherCreatedCards = createdCards.filter((card) => catalog()[card.id]?.token !== true);
 
   const summary = cardStatsData?.summary;
 
 
-  const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
+  const drillDownDef = cardDrillDownId ? catalog()[cardDrillDownId] : undefined;
   const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
   const drillDownRadiantFace =
     drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
@@ -660,7 +667,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
 
   return (
-    <CardDefsProvider defs={CATALOG}>
+    <CardDefsProvider defs={catalog()}>
       <div className="app-shell app-shell--wide tavern stats-page one-screen" data-testid={statsTestid.screen}>
         <header>
           <BackLink title={t("Statistics")}>
@@ -962,7 +969,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             ) : view === "grid" ? (
               <ul className={`stats-grid${plain.shown ? " stats-grid--plain" : ""}`} data-testid={statsTestid.cardsGrid}>
                 {filteredCards.map((card) => {
-                  const def = CATALOG[card.id];
+                  const def = catalog()[card.id];
                   const plainCard = plain.shown ? plainCardOf(card.id) : null;
                   const face = def && plainCard === null ? faceModel({ defId: card.id, def, radiant: false }) : null;
 
@@ -1189,62 +1196,29 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               </TableScroll>
             )}
 
-            {/* R3022000: what the tiers mean, and the field the cards are read against */}
-            {tiers && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
-              <div className="stats-sample-hint stats-tiers-note" data-testid={statsTestid.tiersNote}>
-                <p>
-                  {t("Tier S is above {high} with its whole 95% range above 50%: a nerf candidate. Tier F is below {low} with its whole range below 50%: a buff candidate. A, B, C and D split the {low} to {high} band into quarters from the top.", {
-                    high: percentText(tiers.bandHigh),
-                    low: percentText(tiers.bandLow),
-                  })}
-                </p>
-                <p>
-                  {tiers.cards > 0
-                    ? t("Read against {cards} cards: the average card reads 50%, and real cards differ by about {spread} points (one standard deviation).", {
-                        cards: formatNumber(tiers.cards),
-                        spread: (tiers.spread * 100).toFixed(1),
-                      })
-                    : t("Too few cards have enough games to measure the rest against: the average card is taken to read 50%, and real cards to differ by about {spread} points.", {
-                        spread: (tiers.spread * 100).toFixed(1),
-                      })}
-                </p>
-                {typeof tiers.baseline === "number" && (
-                  <p>
-                    {t("A card that is almost never left undrawn, such as a Quickdraw card, and the Dormant Starship are read against the average deck, which wins {baseline} of its games.", {
-                      baseline: percentText(tiers.baseline),
-                    })}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* R2895000: what a range means, while they show */}
-            {showRanges && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
-              <p className="stats-sample-hint" data-testid={statsTestid.rangesNote}>
-                {t("A range is where the card's true rate most likely sits, 95% sure. Two cards whose ranges overlap may be no different.")}
-                {tiers && ` ${t("The percentage under a tier is how much of the card's Adjusted range lies inside that tier.")}`}
-              </p>
-            )}
-
-            {/* R2089000, R3324002: the cards made during a game, apart from the deck cards above: the tokens, then
-                every other, no card in both */}
+            {/* R2089000, R3324002, R4155000: the cards made during a game, apart from the deck cards above:
+                the tokens, then every other, no card in both, in the deck table's columns, opening the drill-down */}
             {!cardStatsLoading && !cardStatsError && (
               <>
                 <CreatedPanel
                   kind="tokens"
-                  field={tiers?.created}
                   created={tokenCards}
                   minSample={minSample}
                   nameOf={shownName}
                   plainCardOf={plain.shown ? plainCardOf : undefined}
+                  visibleThumbnail={visibleCols.thumbnail}
+                  visibleGames={visibleCols.games}
+                  onOpen={(id, opener) => openDrillDown(id, opener)}
                 />
                 <CreatedPanel
                   kind="other"
-                  field={tiers?.created}
                   created={otherCreatedCards}
                   minSample={minSample}
                   nameOf={shownName}
                   plainCardOf={plain.shown ? plainCardOf : undefined}
+                  visibleThumbnail={visibleCols.thumbnail}
+                  visibleGames={visibleCols.games}
+                  onOpen={(id, opener) => openDrillDown(id, opener)}
                 />
               </>
             )}
@@ -1279,12 +1253,6 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               <EmptyState text={t("No games on patch {patch} yet.", { patch: setsData.patch })} />
             ) : (
               <>
-                <p className="stats-player-note">
-                  {t(
-                    "How each set's cards do on patch {patch}, in decks that mix every set. A set's win rate pools its cards' games; its mean and median are over its cards with {minSample} games or more.",
-                    { patch: setsData.patch, minSample: setsMinSample },
-                  )}
-                </p>
                 <section className="stats-summary-tiles stats-sets-leaders" data-testid={statsTestid.setsLeaders} aria-label={t("Best sets")}>
                   <div className="stats-summary-tile">
                     <span className="stats-summary-label">{t("Highest win rate")}</span>
@@ -1428,12 +1396,6 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                     </section>
                   ))}
                 </div>
-                <p className="stats-sample-hint stats-sets-note">
-                  {t(
-                    "★ marks the highest win rate. ± is the margin: about how far luck alone can move a win rate. The true margin is wider, since one game counts every card in both decks, so sets less than two or three margins apart are too close to call. A card is strong or weak when it is {z} of its own margins or more over or under 50%.",
-                    { z: SET_STATS_OUTLIER_Z },
-                  )}
-                </p>
               </>
             )}
           </>
@@ -1454,9 +1416,6 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 value={playerSearch}
                 onChange={(e) => setPlayerSearch(e.target.value)}
               />
-              <p className="stats-player-note">
-                {t("Player stats are public by default. Ratings and ranks are not shown here.")}
-              </p>
             </div>
 
             {playersLoading ? (
@@ -1487,7 +1446,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                     {playersList.map((p) => {
                       const rate = p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "—";
                       const topCard = p.favouriteCards?.[0];
-                      const favCardDef = topCard ? CATALOG[topCard.id] : undefined;
+                      const favCardDef = topCard ? catalog()[topCard.id] : undefined;
                       const favCardName = topCard ? (favCardDef ? readerName(favCardDef) : topCard.id) : "—";
                       return (
                         <tr key={p.profileId} className="stats-tr">

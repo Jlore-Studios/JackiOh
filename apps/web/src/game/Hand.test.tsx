@@ -15,7 +15,7 @@ import { __resetSettingsForTests } from "../settings/store.ts";
 import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptyHandView, emptySide, fullBoardView, hiddenCardsView } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
-import { RIFFLE_LEAVES } from "./config.ts";
+import { BOARD_CARD_BUDGET, RIFFLE_LEAVES } from "./config.ts";
 import Hand, { HAND_EMPTY_TEXT, handEmptyTestid } from "./Hand.tsx";
 import { revealTestid } from "./reveal.ts";
 
@@ -175,6 +175,18 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
     // And the row the board renders at the game's end is the one the rule selects.
     renderBoard(finished(), { onClick: vi.fn() });
     expect(screen.getByTestId("hand-opponent")).toHaveAttribute("data-revealed", "true");
+  });
+
+  it("R434 at tablet portrait an ended board's field rows give the revealed hand its height", () => {
+    // #4079 (practice-table at 768x1024): the face-up hand is a hand card tall, so the four field rows shrink to
+    // leave both hands their 1.3 rows each; the rule is the tablet-portrait block's alone.
+    const rules = boardRules();
+    const ended = rules.filter((rule) => rule.selectors.includes('.board:has(> .hand-opponent[data-revealed="true"])'));
+    expect(ended).toHaveLength(1);
+    const { minPx, fixedPx, rows, maxPx } = BOARD_CARD_BUDGET.tabletEnded;
+    expect(ended[0]?.body).toContain(`--card-h: clamp(${minPx}px, calc((100cqh - ${fixedPx}px) / ${rows}), ${maxPx}px)`);
+    // The upright tablet's rows and the face-up hand's 1.3 more.
+    expect(rows).toBeCloseTo(BOARD_CARD_BUDGET.tablet.rows + 1.3);
   });
 
   it("R434 the flip is scaled by --anim-scale and stopped under reduced motion, which leaves the face up", () => {

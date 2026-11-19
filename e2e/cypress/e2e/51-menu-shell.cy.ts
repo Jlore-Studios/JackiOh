@@ -18,11 +18,13 @@ import { expectShellNav } from "../../support/shell.ts";
 import { COLLECTION_SCREEN, FRIENDS_BUTTON, FRIENDS_CLOSE, FRIENDS_PANEL, PLAY_HUB, SHOP_PANEL, ts } from "../../support/testids.ts";
 
 /**
- * R109 refuses an account past 300 requests a minute, and each size here opens about ten screens. 46 signs
- * in as p1 too: smoke's split (WEIGHTS) runs it on the other shard's server, and 47, which runs just before
- * 51, signs in as p2. A 429 here means 51 shared a minute with another p1 spec: give it p2.
+ * R109 refuses an account past 300 requests a minute, and each size here opens about ten screens, so the sizes
+ * sign in as the four players in turn, one a size, as 38's shell block does. Seven sizes as p1 alone ran it past
+ * its minute inside 51 and left it spent for the spec after 51 on its server: 55, which signs in as all four,
+ * met a 429 on its first read in the daily shard 8 (#4079). In turn, no account here takes more than two sizes
+ * a minute. 46 (p1 and p3) and 47 (p2 and p4) can share 51's server too.
  */
-const SIGNED_IN = accounts.p1;
+const SIGNED_IN = [accounts.p1, accounts.p2, accounts.p3, accounts.p4] as const;
 
 /** The drawer's scrim (game/Dialog.tsx's `drawer`), which covers the window. */
 const DRAWER_SCRIM = ".dialog-scrim[data-drawer]";
@@ -78,17 +80,18 @@ function withoutCloseWatcher(win: Cypress.AUTWindow): void {
 
 describe("51 — the menus' shell (issue #3728)", () => {
   before(() => {
-    cy.freeAccount(SIGNED_IN());
+    for (const account of SIGNED_IN) cy.freeAccount(account());
   });
 
-  for (const size of MENU_SIZES) {
+  for (const [index, size] of MENU_SIZES.entries()) {
+    const signedIn = SIGNED_IN[index % SIGNED_IN.length] ?? accounts.p1;
     describe(size.label, () => {
       beforeEach(() => {
         cy.viewport(size.width, size.height);
       });
 
       it("R3728000 Home, Play, Collection, Shop are one tap away and Friends opens in place", () => {
-        cy.visitAs(SIGNED_IN(), routes.landing());
+        cy.visitAs(signedIn(), routes.landing());
         cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
         expectShellNav(true);
         for (const { item, path, root } of DESTINATIONS) {
@@ -102,7 +105,7 @@ describe("51 — the menus' shell (issue #3728)", () => {
       });
 
       it("R3728001 the drawer closes on Escape, Back and a tap outside", () => {
-        cy.visitAs(SIGNED_IN(), routes.collection());
+        cy.visitAs(signedIn(), routes.collection());
         cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
 
         openDrawer();
@@ -118,7 +121,7 @@ describe("51 — the menus' shell (issue #3728)", () => {
         }
         expectDrawerClosed(routes.collection());
 
-        cy.visitAs(SIGNED_IN(), routes.collection(), { onBeforeLoad: withoutCloseWatcher });
+        cy.visitAs(signedIn(), routes.collection(), { onBeforeLoad: withoutCloseWatcher });
         cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
         openDrawer();
         cy.window().then((win) => {
@@ -133,7 +136,7 @@ describe("51 — the menus' shell (issue #3728)", () => {
 
       it("R3728000 screenshots", () => {
         for (const { screen, path, root } of SHOTS) {
-          cy.visitAs(SIGNED_IN(), path());
+          cy.visitAs(signedIn(), path());
           cy.get(ts(root), { timeout: timeouts.view }).should("be.visible");
           if (screen === "home") fanDealt();
           expectShellNav(true);

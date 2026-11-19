@@ -244,9 +244,51 @@ function haystackOf(def: CardDef): string {
     .toLowerCase();
 }
 
+/** Issue #4203: the stat term's grammar lives in the client's own constants (CLAUDE.md rule 9):
+ *  a side is a number with an optional bound marker, joined by the separator. */
+export const STAT_SEPARATOR = "/";
+export const STAT_OR_MORE = "+";
+export const STAT_OR_LESS = "-";
+
+const STAT_TERM = new RegExp(
+  `^(\\d+)(\\${STAT_OR_MORE}|\\${STAT_OR_LESS})?\\${STAT_SEPARATOR}(\\d+)(\\${STAT_OR_MORE}|\\${STAT_OR_LESS})?$`,
+);
+
+type StatBound = "exact" | "atLeast" | "atMost";
+
+function boundOf(marker: string | undefined): StatBound {
+  if (marker === STAT_OR_MORE) return "atLeast";
+  if (marker === STAT_OR_LESS) return "atMost";
+  return "exact";
+}
+
+function meetsBound(stat: number, value: number, bound: StatBound): boolean {
+  if (bound === "atLeast") return stat >= value;
+  if (bound === "atMost") return stat <= value;
+  return stat === value;
+}
+
+/**
+ * Issue #4203: a stat term (`3/4`, `3+/4-`) tests the base face's printed stats (the numbers
+ * `statOf` sorts by). Returns `null` when `term` is no stat term, so the caller falls back to
+ * the text match. A card with no stats never matches, not even a bound like `0+/5+`.
+ */
+function statTermMatches(def: CardDef, term: string): boolean | null {
+  const match = STAT_TERM.exec(term);
+  if (match === null) return null;
+  const attack = def.base.attack;
+  const health = def.base.health;
+  if (attack === undefined || health === undefined) return false;
+  return (
+    meetsBound(attack, Number.parseInt(match[1] ?? "", 10), boundOf(match[2])) &&
+    meetsBound(health, Number.parseInt(match[3] ?? "", 10), boundOf(match[4]))
+  );
+}
+
 /**
  * Every term has to occur, case-insensitively, in the card's name, type, tags, rarity, either
  * face's text or keywords, or, for a reader of Chinese, in the Chinese card tables (R711000).
+ * A stat term (issue #4203) matches the base face's stats instead, and never the text.
  */
 export function searchMatches(def: CardDef, query: string): boolean {
   const terms = query
@@ -256,7 +298,10 @@ export function searchMatches(def: CardDef, query: string): boolean {
     .filter((term) => term.length > 0);
   if (terms.length === 0) return true;
   const haystack = haystackOf(def);
-  return terms.every((term) => haystack.includes(term));
+  return terms.every((term) => {
+    const stat = statTermMatches(def, term);
+    return stat === null ? haystack.includes(term) : stat;
+  });
 }
 
 /**

@@ -260,10 +260,11 @@ describe("R3394000 Stinkyscape's early Alt art restaged", () => {
     expect(Object.keys(STINKYSCAPE_ALT_RECIPES).sort()).toEqual(TABLE);
     for (const id of TABLE) expect(ALT_SCENE_RECIPES[id], id).toBe(alt(id));
     expect(ALT_PICTURE_CHANGE_MIN).toBe(0.6);
-    // The own painter cards are the table's cards with no normal recipe: Olivian Expanse, the early Starship Pieces and the Dormant Starship.
+    // The own painter cards are the table's cards with no normal recipe: Olivian Expanse, the early Starship Pieces (and the Orca, which
+    // left the keyword in #4154 but is drawn as the ship it shipped as) and the Dormant Starship.
     expect(TABLE.filter((id) => !Object.hasOwn(STINKYSCAPE_RECIPES, id)).sort()).toEqual([...OWN_PAINTER].sort());
     for (const id of OWN_PAINTER) expect(Object.hasOwn(SCENE_RECIPES, id), id).toBe(false);
-    expect(OWN_PAINTER.filter((id) => STARSHIP_PIECES.has(id))).toHaveLength(12);
+    expect(OWN_PAINTER.filter((id) => STARSHIP_PIECES.has(id))).toHaveLength(11);
     expect(Object.keys(PIECE_SUBJECT).sort()).toEqual([...OWN_PAINTER].sort());
     const seen = new Map<string, string>(Object.entries(SCENE_RECIPES).map(([id, scene]) => [JSON.stringify(scene), id]));
     for (const [id, scene] of Object.entries(ALT_SCENE_RECIPES)) if (!TABLE.includes(id)) seen.set(JSON.stringify(scene), `${id}#alt`);

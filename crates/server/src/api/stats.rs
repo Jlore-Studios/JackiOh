@@ -534,6 +534,13 @@ pub struct CardDrillDownResponse {
     pub co_played: Vec<CoPlayedRate>,
 }
 
+/// A `public, max-age=…` answer for a route that knows nothing about its caller.
+///
+/// Only an `AuthLevel::None` route whose handler never reads the caller may use this: no
+/// `req.caller`, `caller_of`/`caller_profile`, `Authorization`, `Cookie`, `Accept-Language`,
+/// `X-Forwarded-*`, `X-Original-URL`/`X-Rewrite-URL`, or any other caller-carried header, and
+/// unknown query parameters must stay ignored. Shared caches key on the URL alone, so anything
+/// caller-shaped in the body would be served to every later caller (cache poisoning).
 pub(crate) fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
     let mut response = Response::new(Body::from(body.to_string()));
     *response.status_mut() = StatusCode::OK;

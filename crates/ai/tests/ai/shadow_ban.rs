@@ -303,6 +303,7 @@ mod sweep_flags_b25 {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn b25_sweep_card_on_tempo_timmy_over_2_seeds_plays_2_games_and_flags_no_error() {
         jackioh_cards::register_all();
         let result = js(sweep_card(
@@ -537,6 +538,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r186_giga_glowy_jelly_bean_6_mana_is_judged_at_hards_seven_crystals() {
         jackioh_cards::register_all();
         let hard = js(sweep_card(
@@ -1130,6 +1132,7 @@ mod a_slow_decision_timed_again_r977000 {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r977000_a_decision_the_clock_found_slow_and_the_retimer_found_fast_is_a_raw_timeout_not_a_timeout() {
         jackioh_cards::register_all();
         let (result, handed, budget) =
@@ -1145,6 +1148,7 @@ mod a_slow_decision_timed_again_r977000 {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r977000_a_decision_slow_by_the_clock_and_by_the_retimer_is_a_timeout() {
         jackioh_cards::register_all();
         let (result, handed, _) = with_one_slow_decision(true, |options| sweep_card("core-011", options));
@@ -1177,6 +1181,7 @@ mod a_slow_decision_timed_again_r977000 {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn r977000_without_a_retimer_every_decision_the_clock_found_slow_is_a_timeout() {
         jackioh_cards::register_all();
         let clock = Cell::new(0.0_f64);

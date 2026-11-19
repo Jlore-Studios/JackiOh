@@ -83,3 +83,16 @@ def test_first_games_nest():
     large = set(D.first_games(positions, rows, 10))
     assert small < large
     assert len(D.games_of(positions, np.array(sorted(small)))) == 5
+
+
+def test_standardizer_floors_rare_features_at_min_spread():
+    assert D.MIN_SPREAD == 0.25
+    dense = np.zeros((10_000, 3))
+    dense[0, 0] = 1.0  # present in 1 of 10,000 rows: a spread near 0.01
+    dense[:, 1] = np.tile([0.0, 1.0], 5_000)  # a common 0/1 feature: a spread of 0.5
+    dense[:, 2] = 7.0  # a constant feature
+    scaler = D.Standardizer.fit(dense)
+    assert scaler.scale[0] == D.MIN_SPREAD
+    assert scaler.scale[1] == pytest.approx(0.5)
+    assert scaler.scale[2] == 1.0
+    assert scaler.apply(dense)[0, 0] == pytest.approx(4.0, abs=0.01)

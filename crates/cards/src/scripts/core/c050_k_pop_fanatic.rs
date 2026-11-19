@@ -1,13 +1,13 @@
 //! #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R46, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282,
-//! R437, R767000, R1045000).
-//!   (2) Unit, Human, Epic, 1/1 → 2/2.
-//!   Base:    "Can't Defend; Cry: Allure an enemy permanent."
-//!   Radiant: "Divine Shield, Can't Defend; Cry: Allure an enemy permanent. Make it Radiant when you steal
-//!            it." (R275; "Divine Shield" and, since #2657, Can't Defend, R2657000, are printed in
-//!            `catalog.json`).
+//! R437, R767000, R1045000, R4205000).
+//!   (3) Unit, Human, Epic, 1/1 → 2/2 ((2) until issue #4154).
+//!   Base:    "Cry: Allure an enemy permanent."
+//!   Radiant: "Divine Shield; Cry: Allure an enemy permanent. Make it Radiant when you steal it." (R275;
+//!            "Divine Shield" is printed in `catalog.json`; the Can't Defend both faces printed from #2657,
+//!            R2657000, went in issue #4154).
 //!
-//! Allure (§6.3, R963, R1045000) is a delayed steal that destroys a target with no open zone in its row
-//! (`otherwise: destroy`, R46). The target is declared at PLAY time (R81) over both enemy rows (§6.3),
+//! Allure (§6.3, R963, R1045000) is a delayed steal; like every steal it destroys a target with no open
+//! zone in its row, past Indestructible (R4205000). The target is declared at PLAY time (R81) over both enemy rows (§6.3),
 //! validated by R90; a face-down trap may be named unseen (§9.1), a Stack pile offers its top (R13).
 //! The delay (§8.2 Engine cell) is keyed to the TARGET, so it fires even if K-Pop Fanatic died (R76,
 //! R127); R62 and R68 order it, `run_resume` re-enters it through `resume` alone (§10.6), hence
@@ -26,12 +26,11 @@ const STEAL_STEP: &str = "steal";
 const TARGET_KEY: &str = "targetId";
 
 /// The delayed steal as one version of the card makes it: the mark its target carries while it waits
-/// (R437), and what the steal does when this side has no free zone in the target's row.
+/// (R437).
 #[derive(Clone, Copy)]
 struct Pending {
     mark: &'static str,
     color: &'static str,
-    otherwise: Option<StealOtherwise>,
 }
 
 impl Pending {
@@ -43,25 +42,22 @@ impl Pending {
     fn steal_of(&self, target_id: &str) -> Effect {
         steal(StealTarget {
             instance_id: Some(target_id.to_string()),
-            otherwise: self.otherwise,
             ..StealTarget::default()
         })
     }
 }
 
-/// R1045000: Allure (§6.3, R963): Allure's pink mark, and a target with no room on this side destroyed.
+/// R1045000: Allure (§6.3, R963): Allure's pink mark.
 const ALLURE: Pending = Pending {
     mark: ALLURE_MARK,
     color: ALLURE_MARK_COLOR,
-    otherwise: Some(StealOtherwise::Destroy),
 };
 
-/// R767000: the plain steal of v0.3.7b and before: a purple `steal` mark, and a target with no room left
-/// with the opponent (R15).
+/// R767000: the plain steal of v0.3.7b and before: a purple `steal` mark. Its target with no room was
+/// left with the opponent (R15) until R4205000, which destroys it under every version.
 const PLAIN_STEAL: Pending = Pending {
     mark: "steal",
     color: "purple",
-    otherwise: None,
 };
 
 /// The play-time pick (R81), read straight off the context — reading state is not mutating it.
@@ -116,7 +112,7 @@ fn steal_step(ctx: &mut EffectContext<'_>, pending: Pending) -> Vec<Effect> {
 
 /// The radiant face's step: the steal, then R282's rider on the card it took and nothing else.
 /// `takeable` is read as the list is built, before the steal; `for_each_card` reads its set after it (a
-/// target destroyed for want of room, R1045000, still stands under the other player).
+/// target destroyed for want of room, R4205000, still stands under the other player).
 fn radiant_steal_step(ctx: &mut EffectContext<'_>, pending: Pending) -> Vec<Effect> {
     let Some(target_id) = captured_target_id(ctx) else {
         return vec![];
@@ -428,8 +424,8 @@ mod tests {
         #[test]
         fn r76_base_it_fizzles_when_the_target_is_already_under_your_control() {
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 5.
-                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 7 },
+                // K-Pop Fanatic costs 3 and Snom Bunny Mind Control 6 (issue #4154).
+                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
@@ -531,13 +527,13 @@ mod tests {
             let CardScripts { base, radiant } = faces();
             assert_eq!(def.id, KPOP);
             assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.cost, CardCost::Fixed(2));
+            assert_eq!(def.cost, CardCost::Fixed(3));
             assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));
             assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(2)));
-            // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions), with
-            // Can't Defend on both faces since #2657 (R2657000).
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::CantDefend]);
-            assert_eq!(def.base.keywords, vec![Keyword::CantDefend]);
+            // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions); the
+            // Can't Defend both faces had from #2657 (R2657000) went in issue #4154.
+            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield]);
+            assert!(def.base.keywords.is_empty());
 
             let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }]);
             assert_eq!(serde_json::to_value(&base.targets).unwrap(), decl);
@@ -694,8 +690,8 @@ mod tests {
         #[test]
         fn r282_a_target_already_this_player_s_is_not_made_radiant_the_delayed_steal_took_nothing_r76() {
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 5.
-                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 7 },
+                // K-Pop Fanatic costs 3 and Snom Bunny Mind Control 6 (issue #4154).
+                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
@@ -848,7 +844,7 @@ mod tests {
         #[test]
         fn r437_r76_a_steal_that_fizzles_on_a_card_already_this_player_s_takes_the_mark_away_too() {
             let mut g = scenario(json!({
-                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 7 },
+                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 9 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
@@ -977,8 +973,8 @@ mod tests {
                 let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
                 state = act(&mut log, &state, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
             }
-            // With K-Pop Fanatic at (2), p1's 1 mana of turn 1 may pay for nothing, and the turn has then
-            // ended by itself (R82).
+            // With K-Pop Fanatic at (3) (issue #4154), p1's 1 mana of turn 1 may pay for nothing, and the turn
+            // has then ended by itself (R82).
             if state.active == P1 {
                 state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p1" }));
             }
@@ -996,6 +992,11 @@ mod tests {
                 json!({ "type": "play", "instanceId": token.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p2" }),
             );
             state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p2" }));
+            // K-Pop Fanatic costs (3): the turns pass until p1's begins with 3 mana.
+            while !(state.active == P1 && state.players.p1.mana.current >= 3) {
+                let active = state.active;
+                state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": active }));
+            }
             let fanatic = state
                 .players
                 .p1
@@ -1034,7 +1035,8 @@ mod tests {
     mod n50_k_pop_fanatic_r1045000_allure_reaches_every_permanent {
         use super::*;
 
-        /// Core #66 Rock Wall: Indestructible, so a destroy leaves it standing (R46).
+        /// Core #66 Rock Wall: Indestructible, so an ordinary destroy leaves it standing (R46), though a
+        /// steal with no room for it does not (R4205000).
         const WALL: &str = "core-066";
         /// Core #75 Infinite Reserves: a Field Spell with nothing to do in these cases.
         const RESERVES: &str = "core-075";
@@ -1058,10 +1060,10 @@ mod tests {
             let old_base = "Cry: Choose an enemy permanent. At the start of your next turn, steal it.";
             let old_radiant = "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it and make it Radiant.";
 
-            assert_eq!(def.base.text, "Can't Defend\nCry: Allure an enemy permanent.");
+            assert_eq!(def.base.text, "Cry: Allure an enemy permanent.");
             assert_eq!(
                 def.radiant.text,
-                "Divine Shield, Can't Defend\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
+                "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
             );
             assert!(def.base.text.len() < old_base.len());
             assert!(def.radiant.text.len() < old_radiant.len());
@@ -1089,7 +1091,7 @@ mod tests {
         }
 
         #[test]
-        fn r1045000_an_indestructible_allured_unit_with_no_room_stays_where_it_is() {
+        fn r1045000_r4205000_an_indestructible_allured_unit_with_no_room_is_destroyed() {
             crate::register_all();
             let mut g = full_row(json!({ "def": WALL, "lane": 2 }));
             let prey = g.unit_at(P2, 2);
@@ -1099,8 +1101,15 @@ mod tests {
             g.end_turn();
 
             assert_eq!(g.state().active, P1);
-            assert_eq!(unit_id(&g, P2, 2), Some(prey.id.clone()));
-            assert_eq!(g.card(&prey).controller, P2);
+            g.expect_in_zone(&prey, "graveyard");
+            assert_eq!(g.card(&prey).owner, P2);
+            assert_eq!(unit_id(&g, P2, 2), None);
+            assert!(g.events().iter().any(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == prey.id)
+            ));
+            assert!(!g.events().iter().any(
+                |event| matches!(event, GameEvent::PositionSwitched { instance_id, .. } if *instance_id == prey.id)
+            ));
             assert_eq!(count_events(&g, GameEventType::ControlChanged), 0);
         }
 
@@ -1137,7 +1146,7 @@ mod tests {
         }
 
         #[test]
-        fn r1045000_r767000_a_game_on_v0_3_7_folds_under_the_kept_plain_steal_its_mark_purple_and_a_full_row_leaving_the_target() {
+        fn r1045000_r767000_r4205000_a_game_on_v0_3_7_folds_under_the_kept_plain_steal_its_mark_purple_and_a_full_row_now_destroying_the_target() {
             crate::register_all();
             let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
@@ -1153,9 +1162,9 @@ mod tests {
                 g.end_turn();
 
                 assert_eq!(g.state().active, P1);
-                assert_eq!(unit_id(&g, P2, 2), Some(prey.id.clone()));
-                assert_eq!(g.card(&prey).controller, P2);
-                assert!(!g
+                g.expect_in_zone(&prey, "graveyard");
+                assert_eq!(unit_id(&g, P2, 2), None);
+                assert!(g
                     .events()
                     .iter()
                     .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == prey.id)));

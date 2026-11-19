@@ -11,12 +11,23 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach } from "vitest";
 
+import { installSceneData } from "../cards/art/scene.ts";
+import { ALT_SCENE_RECIPES, drawFigure, SCENE_KIT, SCENE_RECIPES } from "../cards/art/sceneData.ts";
+import { loadCardTables } from "../cards/chinese.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { loadWasmSync } from "../wasm/index.ts";
 
 // A path, not `new URL(…, import.meta.url)`: Vite rewrites that into an asset URL against the page's
 // origin, which `readFileSync` refuses.
 loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../wasm/pkg/jackioh_wasm_bg.wasm")));
+
+// #4180: the Chinese card tables load on demand in the client, but every test reads them as already
+// there, the way the engine module is: the setup awaits them before any test file is imported.
+await loadCardTables();
+
+// #4222: the scene tables load beside the engine module in the client, but every art test reads them
+// as already installed, the way the module is: the setup installs them before any test file imports.
+installSceneData({ SCENE_KIT, drawFigure, SCENE_RECIPES, ALT_SCENE_RECIPES });
 
 let reducedMotion = false;
 

@@ -114,7 +114,11 @@ mod tests {
         }
     }
 
+    /// Outbreak's placement on `instance_id`, brought back to 1 (Radiant 2) by Nerfs of its `tokens`: issue
+    /// #4154 made it 2 (Radiant 4), and these tests measure the Slime's multiplier on a placement of 1.
     fn outbreak_on<'a>(s: &'a mut Scenario, instance_id: &str) -> &'a mut Scenario {
+        let nerfs = if s.card(OUTBREAK).radiant { -2 } else { -1 };
+        step_param(s.card_mut(OUTBREAK), "tokens", nerfs);
         s.play(OUTBREAK, json!({ "targets": [{ "pick": "instance", "instanceId": instance_id }] }))
     }
 
@@ -341,7 +345,7 @@ mod tests {
             #[test]
             fn s6_3_vanilla_a_vanilla_copy_has_no_text_so_a_placement_of_1_on_it_puts_1() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": POSTDOC, "radiant": true }, OUTBREAK, ANCHOR], "field": [SLIME], "library": [X, X, X] },
+                    "p1": { "hand": [{ "def": POSTDOC, "radiant": true }, OUTBREAK, ANCHOR], "field": [SLIME], "library": [X, X, X], "mana": 10 },
                     "p2": { "hand": [ANCHOR] },
                 }));
                 let slime = s.card(SLIME).id.clone();

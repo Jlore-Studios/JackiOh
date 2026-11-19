@@ -4,8 +4,10 @@
 //!   - a gain (`afflict`): the verbs, the "Damage also Burns N / applies Toxic N" riders and the
 //!     conversion all add to the count already there (R3540000), reported as `counterChanged` with
 //!     `placed`;
-//!   - the tick (`tick_at_turn_start`): at the start of its owner's turn each count deals its damage,
-//!     Burn's unpierced and then dropping by `BURN_DECAY`, Toxic's piercing and lasting (R3540001);
+//!   - the ticks: at the end of every turn each Burn deals its count as unpierced damage and is then
+//!     removed (`tick_burn_at_turn_end`, R4154000), and at the start of its owner's turn each Toxic deals
+//!     its count as piercing damage and stays (`tick_at_turn_start`, R3540001);
+//!   - an immunity: a Unit whose text says "Immune to Toxic" takes no Toxic (R4154001);
 //!   - the riders and the conversion (`ride_damage`, `converts_to`), which §4.4 reads off the source's
 //!     static flags (R3540002, R3540003);
 //!   - a Vanilla's clearing (`clear_afflictions`, R3540004), and the reads, re-exported by `query.rs`.
@@ -14,7 +16,6 @@
 //! takes a Unit's off as it leaves the field. Neither is a keyword: the layers never see them, so a
 //! Nerf or a Buff cannot move them.
 
-use crate::config::BURN_DECAY;
 use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
@@ -130,6 +131,9 @@ pub fn afflict(sink: &mut EngineSink<'_>, target: &DamageTarget, kind: Afflictio
         let carries = find_instance(sink.state, &instance.id).is_some_and(|live| {
             crate::zones::acts_on_field(sink.state, live)
                 && crate::zones::in_units_row_or_standing(sink.state, live)
+                // R4154001: "Immune to Toxic" takes none, by a verb, a rider or a conversion alike.
+                && !(kind == Affliction::Toxic
+                    && crate::scripts::flags_of(sink.state, live).immune_to_toxic == Some(true))
         });
         if !carries {
             return 0;
@@ -158,7 +162,7 @@ pub(crate) fn clear_afflictions(sink: &mut EngineSink<'_>, card_id: &str) {
 
 /// R3540003, §4.4 step 3a: what the damage `source` deals turns into, if it states a conversion. A source
 /// that states both burns.
-pub(crate) fn converts_to(state: &GameState, source: &CardInstance) -> Option<Affliction> {
+pub fn converts_to(state: &GameState, source: &CardInstance) -> Option<Affliction> {
     let flags = crate::scripts::flags_of(state, source);
     if flags.damage_burns == Some(true) {
         Some(Affliction::Burn)
@@ -200,39 +204,15 @@ pub(crate) fn ride_damage(sink: &mut EngineSink<'_>, source: &CardInstance, targ
 }
 
 /// R3540001: the start of `player`'s turn, in the Brittle stage: their hero first, then their Units in
-/// R68's order, each takes its Burn as a sourceless §4.4 hit (so Armor and Divine Shield meet it), which
-/// then drops by `BURN_DECAY` whatever the hit did, and then its Toxic as a piercing one, which stays.
-/// The targets are read before the first hit, and no state check runs inside the tick (R59): the stage's
-/// settle collects what it killed.
+/// R68's order, each takes its Toxic as a sourceless piercing §4.4 hit, so Armor never meets it while
+/// Divine Shield still does, and the count stays. Burn no longer ticks here (R4154000). The targets are
+/// read before the first hit, and no state check runs inside the tick (R59): the stage's settle collects
+/// what it killed.
 pub fn tick_at_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
     if sink.state.result.is_some() {
         return;
     }
-    let mut targets = vec![DamageTarget::Hero { player }];
-    targets.extend(
-        crate::zones::acting_on(sink.state, player, StandingAt::AmongUnits)
-            .into_iter()
-            .filter(|card| burn_on(card) > 0 || toxic_on(card) > 0)
-            .cloned()
-            .map(|instance| DamageTarget::Unit { instance }),
-    );
-    for target in targets {
-        let burn = counter_on(sink.state, &target, Affliction::Burn);
-        if burn > 0 {
-            deal_damage(
-                sink,
-                DamageArgs {
-                    source: None,
-                    target: target.clone(),
-                    amount: burn,
-                    flags: Some(DamageFlags {
-                        via: Some(KeywordKind::Burn),
-                        ..Default::default()
-                    }),
-                },
-            );
-            set_counter(sink, &target, Affliction::Burn, (burn - BURN_DECAY).max(0));
-        }
+    for target in carrying(sink.state, player, Affliction::Toxic) {
         let toxic = counter_on(sink.state, &target, Affliction::Toxic);
         if toxic > 0 {
             deal_damage(
@@ -250,4 +230,52 @@ pub fn tick_at_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
             );
         }
     }
+}
+
+/// R4154000: the end of every turn, after its delayed effects and before cleanup: the player whose turn
+/// it is first, then their opponent, each their hero and then their Units in R68's order, takes its Burn
+/// as one sourceless unpierced §4.4 hit (so Armor and Divine Shield meet it), and the Burn is then
+/// removed whatever the hit did. The targets are read before the first hit and no state check runs
+/// inside the tick (R59): the settle after it collects what it killed.
+pub fn tick_burn_at_turn_end(sink: &mut EngineSink<'_>, active: PlayerId) {
+    if sink.state.result.is_some() {
+        return;
+    }
+    let mut targets = carrying(sink.state, active, Affliction::Burn);
+    targets.extend(carrying(sink.state, active.opponent(), Affliction::Burn));
+    for target in targets {
+        let burn = counter_on(sink.state, &target, Affliction::Burn);
+        if burn > 0 {
+            deal_damage(
+                sink,
+                DamageArgs {
+                    source: None,
+                    target: target.clone(),
+                    amount: burn,
+                    flags: Some(DamageFlags {
+                        via: Some(KeywordKind::Burn),
+                        ..Default::default()
+                    }),
+                },
+            );
+            set_counter(sink, &target, Affliction::Burn, 0);
+        }
+    }
+}
+
+/// `player`'s hero and then each of their Units acting among the units in R68's order that carries a
+/// `kind` count, read once before a tick's first hit.
+fn carrying(state: &GameState, player: PlayerId, kind: Affliction) -> Vec<DamageTarget> {
+    let mut targets = vec![DamageTarget::Hero { player }];
+    targets.extend(
+        crate::zones::acting_on(state, player, StandingAt::AmongUnits)
+            .into_iter()
+            .filter(|card| match kind {
+                Affliction::Burn => burn_on(card) > 0,
+                Affliction::Toxic => toxic_on(card) > 0,
+            })
+            .cloned()
+            .map(|instance| DamageTarget::Unit { instance }),
+    );
+    targets
 }

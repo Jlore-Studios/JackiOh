@@ -869,3 +869,71 @@ describe("#2252 a play names what it aimed at, and a hit off combat what dealt i
     expect(lines(withEvents(board(), [play(), hit()]))).toEqual([`Opponent played ${nameOf(SPELL)} for 1`, DEALT]);
   });
 });
+
+describe("#4140 the log speaks its newest line to screen readers", () => {
+  const lost = (n: number): GameEvent => ({ type: "healthLost", player: "p1", amount: n });
+  const said = (n: number): string => `You lost ${String(n)} health`;
+  const announcer = (): HTMLElement => screen.getByTestId(testid.logLive);
+
+  it("#4140 a mount with history says nothing", () => {
+    render(<Log view={withEvents(baseView(), [lost(1), lost(2)])} />);
+    const live = announcer();
+    expect(live).toHaveAttribute("aria-live", "polite");
+    expect(live).toHaveAttribute("aria-atomic", "true");
+    expect(live.textContent).toBe("");
+  });
+
+  it("#4140 a new line is announced once when it lands", () => {
+    const first = [lost(1)];
+    const { rerender } = render(<Log view={withEvents(baseView(), first)} />);
+    expect(announcer().textContent).toBe("");
+    const both = withEvents(baseView(), [...first, lost(2)]);
+    rerender(<Log view={both} />);
+    expect(announcer().textContent).toBe(said(2));
+    rerender(<Log view={both} />);
+    expect(announcer().textContent).toBe(said(2));
+  });
+
+  it("#4174 repeated words still announce each arrival", () => {
+    const { rerender } = render(<Log view={withEvents(baseView(), [lost(1)])} />);
+    expect(announcer().textContent).toBe("");
+    const primed = announcer().firstElementChild;
+    rerender(<Log view={withEvents(baseView(), [lost(1), lost(1)])} />);
+    expect(announcer().textContent).toBe(said(1));
+    const first = announcer().firstElementChild;
+    expect(first).not.toBeNull();
+    expect(first).not.toBe(primed);
+    rerender(<Log view={withEvents(baseView(), [lost(1), lost(1), lost(1)])} />);
+    expect(announcer().textContent).toBe(said(1));
+    const second = announcer().firstElementChild;
+    expect(second).not.toBeNull();
+    expect(second).not.toBe(first);
+  });
+
+  it("#4140 revealing the phone log and re-rendering announces nothing extra", () => {
+    const view = withEvents(baseView(), [lost(1), lost(2)]);
+    const { rerender } = render(<Log view={view} />);
+    expect(announcer().textContent).toBe("");
+    rerender(<Log view={view} revealed />);
+    expect(announcer().textContent).toBe("");
+    rerender(<Log view={withEvents(baseView(), [lost(1), lost(2)])} />);
+    expect(announcer().textContent).toBe("");
+  });
+
+  it("#4140 a redacted arrival announces its shown redacted words", () => {
+    const trap: GameEvent = { type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 2 };
+    const { rerender } = render(<Log view={withEvents(baseView(), [])} />);
+    expect(announcer().textContent).toBe("");
+    rerender(<Log view={withEvents(baseView(), [trap])} />);
+    expect(announcer().textContent).toBe("The opponent's face-down trap fired");
+    expect(announcer().textContent).not.toMatch(/hidden|core-\d+|\bc\d+\b/);
+  });
+
+  it("#4140 a new turn announces the turn's own line", () => {
+    const third: GameEvent = { type: "turnStarted", player: "p1", turn: 3 };
+    const { rerender } = render(<Log view={withEvents(baseView(), [third])} />);
+    expect(announcer().textContent).toBe("");
+    rerender(<Log view={withEvents(baseView(), [third, { type: "turnStarted", player: "p2", turn: 4 }])} />);
+    expect(announcer().textContent).toBe("Turn 4: Opponent");
+  });
+});

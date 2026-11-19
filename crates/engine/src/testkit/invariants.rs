@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The seventeen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
+//! The eighteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
 //! one bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -27,10 +27,11 @@
 //!      zones, never from `view_for`'s rules (R763, R764; a Glitch's reset or boards, R676, R678).
 //!   I7 no orphaned work (§9.3, §10.3, R113): a live game with no prompt open (§10.6, R265) has `work` empty;
 //!      a game over keeps its debt (I5; Classic #52 Final Gambit, #56 Spell Tyrant).
-//!   I8 every attack, switch, activation and play `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2,
-//!      §10.5; #1192, #2978), as the server reduces without `legal_actions`. Not probed: R345, R923000,
-//!      R79 and a well-formed `answer` (R90, #992); a malformed one is the fuzz's probe (#1574, #1694).
-//!      Under a Mayor (R1200) a target is refused.
+//!   I8 every attack, switch, activation, play, Trade, shop buy and shop sale `reduce` accepts is listed
+//!      (§4.1, §4.2, §6.3, §9.1, §10.2, §10.5; R1838000, R1853003; #1192, #2978, #4143), as the server
+//!      reduces without `legal_actions`. Not probed: R345, R923000, R79 and a well-formed `answer` (R90,
+//!      #992); a malformed one is the fuzz's probe (#1574, #1694). Under a Mayor (R1200) a target is
+//!      refused.
 //!   I9 the wire tells the truth (§10.3, §10.10, #1719): `turnEnded` names the turn under way (§2.2), each
 //!      `fatigue` is the next draw's `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902), the last `manaChanged`
 //!      is `mana` (§2.3), and no 1v1 hero's health moves without its `damage`, `healthLost`, `healed`,
@@ -51,8 +52,10 @@
 //!      sampled with it; a seat barred to the tutorial's cards (R2533000) is not asked.
 //!   I14 every action `legal_actions` lists, `reduce` accepts (§10.2; #3062), I8's converse: each seat's
 //!      listing is reduced on a copy of the state, at most `I14_ACTION_CAP` of a long one spread over it,
-//!      and a refusal or a panic is reported with the action and the seed. Run at setup (the mulligan's
-//!      subsets) and every `I14_GATE_STRIDE`-th state; not in Duos.
+//!      verifying that `reduce` accepts it without refusal or panic, and verifying the resulting state
+//!      and events with the stateless invariants (I5, I7, I10, I11, I16 and I17; #4057); invariants
+//!      requiring shadow history (I2, I3, I4, I9's health tally, I12) remain on the played path. Run at
+//!      setup (the mulligan's subsets) and every `I14_GATE_STRIDE`-th state; not in Duos.
 //!   I15 every Activate ability a seat may see is held to the listing (§10.8, R384, R3061000): while it may
 //!      act, each shown on a unit or backrow top of either side is `usable` exactly when `legal_actions`
 //!      lists an `activate` of it and carries `reason` exactly when not; read off I6's view and listing in
@@ -69,6 +72,10 @@
 //!      hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
 //!      mana and card `damage` are 0 or more (§2.3), and every `damage` event deals more than 0 (R63,
 //!      R1361, R1362).
+//!   I18 every plain attack does what its seat's forecast said (R3100000, R4111000; #4111): `before` keeps
+//!      the `combat_forecast` entry of a chosen `attack`, and `after` holds `PlayedAttack::read` of the
+//!      step to it; what it skips is `foreseeable_attack`'s and `plain_combat`'s (a hook, a trap, a
+//!      redirect, a damage chain, a reflection, a prompt or a turn end). 1v1 only.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -86,6 +93,7 @@ use crate::prompts::prompt_owner_of;
 use crate::reduce::ReduceResult;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
+use crate::testkit::played_attack::PlayedAttack;
 use crate::wire::{
     Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
     DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
@@ -102,6 +110,8 @@ pub const I6_GATE_STRIDE: usize = 5;
 /// I8 under the 1,000-seed waves: every this-many-th state (#1192); the test sweep checks every state.
 /// Measured on 2026-10-18 (2 cores), seeds 1–1000: `cargo jackioh fuzz` 103 s before I8, 104 s with
 /// this stride (`--handicap` 130 s, 129 s); I8 on every state, 314 s and 417 s.
+/// Measured on 2026-11-18 (4 cores), seeds 1–200, after #4143's Trade and Marketplace forges:
+/// `cargo jackioh fuzz` 50 s before, 51 s after, at this stride.
 pub const I8_GATE_STRIDE: usize = 100;
 
 /// I14 under every wave and the test sweep: every this-many-th state, and setup's always (#3062).
@@ -658,7 +668,8 @@ fn price_held(card: &CardInstance) -> Vec<&'static str> {
 }
 
 /// R636, R3556008: whether an aura gives Windfury: a unit gone by an action's end may have attacked
-/// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217).
+/// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217), and so may an animated
+/// card back in its backrow by then (R383, M #66 Fiery Waraxe, fuzz seed 1013, #4079).
 fn aura_gives_windfury(state: &GameState) -> bool {
     crate::layers::aura_entries(state).iter().any(|entry| {
         entry
@@ -827,6 +838,101 @@ fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> 
             ));
         }
     }
+    found
+}
+
+/// I5: the check that ends the game is the last thing that happens (§2.5, R216).
+fn game_over_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if let Some(over) = events
+        .iter()
+        .position(|event| matches!(event, GameEvent::GameOver { .. }))
+        && over + 1 < events.len()
+    {
+        let later: Vec<&str> = events[over + 1..]
+            .iter()
+            .map(|event| event.event_type().as_str())
+            .collect();
+        found.push(format!(
+            "I5 event after game over: {} followed gameOver on turn {} (§2.5, R216)",
+            later.join(", "),
+            state.turn
+        ));
+    }
+    found
+}
+
+/// I7: a live game with no prompt open owes no paused sequence (§9.3, §10.3, R113).
+fn orphaned_work_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if state.result.is_none()
+        && state.pending.is_none()
+        && state.mulligan.is_none()
+        && (!state.work.is_empty() || state.work_cursor != 0)
+    {
+        let owed: Vec<String> = state
+            .work
+            .iter()
+            .map(|item| {
+                format!(
+                    "{} ({}, {}, {})",
+                    item.id, item.resume.def_id, item.resume.hook, item.resume.step
+                )
+            })
+            .collect();
+        found.push(format!(
+            "I7 orphaned work: {} item(s) owed [{}] with work cursor {} on turn {} and no prompt open \
+             (§9.3, §10.3, R113)",
+            state.work.len(),
+            owed.join(", "),
+            state.work_cursor,
+            state.turn
+        ));
+    }
+    found
+}
+
+/// I10: no prompt held by the opponent while its holder is not the active player (§10.6, R1279000).
+fn opponent_prompt_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    if state.result.is_none()
+        && let Some(pending) = &state.pending
+        && pending.player_id != state.active
+        && prompt_owner_of(pending) != pending.player_id
+    {
+        let asked_by = pending.resume.instance_id.as_deref();
+        let asker = match asked_by.and_then(|id| find_instance(state, id)) {
+            Some(card) => name_of(card),
+            None => format!(
+                "{} ({})",
+                asked_by.unwrap_or("no instance"),
+                pending.resume.def_id
+            ),
+        };
+        found.push(format!(
+            "I10 opponent prompt off turn: {asker} opened prompt {} for {}, held for {}, on turn {} while {} \
+             is the active player (§10.6, R1279000)",
+            pending.id,
+            pending.player_id,
+            prompt_owner_of(pending),
+            state.turn,
+            state.active
+        ));
+    }
+    found
+}
+
+/// The stateless invariants gathered for one post-action state (§10.2, #4057): I5, I7, I10, I11, I16
+/// and I17. Each reads only the state and the action's events, so it runs on both the played path and
+/// every branch action I14 reduces.
+pub fn branch_state_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    found.extend(game_over_findings(events, state));
+    found.extend(orphaned_work_findings(state));
+    found.extend(opponent_prompt_findings(state));
+    found.extend(unit_token_pile_findings(state));
+    found.extend(card_record_findings(state));
+    found.extend(state_check_findings(events, state));
     found
 }
 
@@ -1613,11 +1719,13 @@ type PlayZoneGroup = (
     Option<RevealAt>,
 );
 
-/// I8 for one seat: every `switchPosition`, `attack`, `activate`, `activatePower` and `play` that
-/// `legal` does not hold and `reduce` accepts (§4.1, §4.2, §9.1, §10.2, §10.5; #2978). Switches,
-/// attacks and activations are built from the board alone; plays are forged at the card level (a
-/// playable hand or graveyard card no listed play names) and at the zone level (a real lane no listed
-/// play of an otherwise listed card names). Empty when clean.
+/// I8 for one seat: every `switchPosition`, `attack`, `activate`, `activatePower`, `trade`,
+/// `marketBuy`, `marketSell` and `play` that `legal` does not hold and `reduce` accepts (§4.1, §4.2,
+/// §6.3, §9.1, §10.2, §10.5; #2978, #4143). Switches, attacks and activations are built from the board
+/// alone; a `trade` and a `marketSell` are forged for every hand card and a `marketBuy` for every offer
+/// index in the Marketplace (#4143); plays are forged at the card level (a playable hand or graveyard
+/// card no listed play names) and at the zone level (a real lane no listed play of an otherwise listed
+/// card names). Empty when clean.
 pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBody]) -> Vec<String> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
@@ -1680,6 +1788,48 @@ pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBod
                     state.turn
                 ));
             }
+        }
+    }
+    // I8's forged deals (§10.2, §6.3; #4143): a `trade` and a `marketSell` for every hand card, whatever it
+    // is, and a `marketBuy` for every offer index the Marketplace holds, the other seat's lots among them.
+    // `why_trade_refused`, `why_market_buy_refused` and `why_market_sell_refused` are the reducer's own
+    // refusals (the limit, the Credits, the stock, the phase) and the listing's, so these fire only where
+    // the reducer's acceptance and the listing part ways.
+    for card in &state.players[player].hand {
+        if accepts(ActionBody::Trade {
+            instance_id: card.id.clone(),
+        }) {
+            found.push(format!(
+                "I8 unlisted trade accepted: {player} may trade {} on turn {}, though legalActions does not \
+                 list it (§10.2, R1838000)",
+                name_of(card),
+                state.turn
+            ));
+        }
+        if accepts(ActionBody::MarketSell {
+            instance_id: card.id.clone(),
+        }) {
+            found.push(format!(
+                "I8 unlisted marketSell accepted: {player} may sell {} on turn {}, though legalActions does \
+                 not list it (§10.2, R1853003, R1861000)",
+                name_of(card),
+                state.turn
+            ));
+        }
+    }
+    let offers = state.marketplace.as_ref().map_or(0, |market| market.offers.len());
+    for offer in 0..offers as i32 {
+        if accepts(ActionBody::MarketBuy { offer }) {
+            let lot = state
+                .marketplace
+                .as_ref()
+                .and_then(|market| crate::marketplace::offered_to(market, player).nth(offer as usize))
+                .map_or("no such offer", |(_, lot)| lot.def_id.as_str());
+            found.push(format!(
+                "I8 unlisted marketBuy accepted: {player} may buy offer {offer} ({lot}) on turn {}, though \
+                 legalActions does not list it (§10.2, R1853003, R2250002)",
+                state.turn
+            ));
         }
     }
     // I8's forged plays (§10.2, §10.5; #2978): a `play` `reduce` accepts that `legal` never lists.
@@ -1807,8 +1957,9 @@ fn sampled(legal: &[ActionBody], rotate: u32) -> Vec<&ActionBody> {
         .collect()
 }
 
-/// I14 for one seat (§10.2; #3062): each action of `legal` (at most `I14_ACTION_CAP`, spread over the list)
-/// sent to `reducer` on a copy of `state`; each it refuses or panics on is a finding. Empty when clean.
+/// I14 for one seat (§10.2; #3062, #4057): each action of `legal` (at most `I14_ACTION_CAP`, spread over the
+/// list) sent to `reducer` on a copy of `state`; each it refuses, panics on, or leaves with a stateless
+/// invariant violation on the resulting board is a finding. Empty when clean.
 pub fn listed_refused(
     state: &GameState,
     player: PlayerId,
@@ -1829,6 +1980,13 @@ pub fn listed_refused(
                          lists it, and reduce refused it: {error} (§10.2)",
                         state.turn, state.seed
                     ));
+                } else {
+                    for finding in branch_state_findings(&result.events, &result.state) {
+                        found.push(format!(
+                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
+                            state.turn, state.seed
+                        ));
+                    }
                 }
             }
             Err(payload) => found.push(format!(
@@ -2147,7 +2305,7 @@ struct ChosenExertion {
 const HERO_TARGET_PREFIX: &str = "hero-";
 
 /// The seat a `hero-<player>` target id names (the spelling `damage` and `healed` use), or None for a unit.
-fn hero_seat_of(target_id: &str) -> Option<PlayerId> {
+pub(crate) fn hero_seat_of(target_id: &str) -> Option<PlayerId> {
     let named = target_id.strip_prefix(HERO_TARGET_PREFIX)?;
     PLAYER_IDS.into_iter().find(|seat| seat.as_str() == named)
 }
@@ -2173,6 +2331,18 @@ struct ShadowAttack {
     killed: bool,
     forced: bool,
     answered: bool,
+}
+
+/// I18 (R3100000, #4111): the forecast entry of the attack `before` saw chosen, with what it was told
+/// of the step: the turn and both cards' labels are read before the attack, since it may remove the
+/// attacker, and `foreseeable` is `foreseeable_attack` on the board it was chosen on.
+#[derive(Clone, Debug)]
+struct KeptForecast {
+    entry: crate::query::AttackForecast,
+    turn: i32,
+    attacker: String,
+    target: String,
+    foreseeable: bool,
 }
 
 /// Every card on the field, a card dormant under a Stack pile and the backrow included (§3.2).
@@ -2224,10 +2394,123 @@ fn name_of(card: &CardInstance) -> String {
     format!("{} ({}, {}'s)", card.id, card.def_id, card.controller)
 }
 
+/// I18: a card as its message names it, `<id> (<def id> "<name>")`, or a hero's `hero-<player>` id.
+/// The name is the catalog's, `?` for a definition no catalog lists (`def_of` would panic).
+fn card_label(state: &GameState, id: &str) -> String {
+    match find_instance(state, id) {
+        Some(card) => {
+            let name =
+                crate::catalog::find_def(Some(state), &card.def_id).map_or("?", |def| def.name.as_str());
+            format!("{id} ({} \"{name}\")", card.def_id)
+        }
+        None => id.to_string(),
+    }
+}
+
+/// I18 (#4111): whether the board `attacker_id`'s attack on `target_id` is chosen on lets its forecast
+/// foretell all of it. Each `false` is a source R3100000's forecast leaves out, since the board does
+/// not show what it will do:
+/// - no attacker card;
+/// - the attacker or a Unit target in a split or shared damage chain (§4.4 steps 0b and 8b, R3554007),
+///   which R4032000 leaves unprojected;
+/// - the attacker's "When this attacks" (R2285000) or "After this attacks" (R2285001), or the Unit
+///   target's "After this is attacked" (MD-C26);
+/// - a card acting for the attacker's side with "After one of your Units attacks" (R2199000), or for
+///   the target's side with "When one of your Units is attacked" (R1849008). `hook_marks.rs` marks none
+///   of these attack hooks with a `hookResolving`, so `plain_combat` cannot see them run;
+/// - for a Unit target, a card acting for its side that reflects an attacker's strike back onto it
+///   (Stinkyscape #104 Reflective Plating's Radiant face, §4.4 step 8a, R1849003): the forecast's
+///   `taken` is the strike back alone (fuzz seed 1298), until the forecast projects it.
+fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> bool {
+    let Some(attacker) = find_instance(state, attacker_id) else {
+        return false;
+    };
+    let (target, target_side) = match hero_seat_of(target_id) {
+        Some(seat) => (None, seat),
+        None => match find_instance(state, target_id) {
+            Some(unit) => (Some(unit), unit.controller),
+            None => return false,
+        },
+    };
+    let chained = |card: &CardInstance| card.split_chain.is_some() || card.shared_chain.is_some();
+    if chained(attacker) || target.is_some_and(chained) {
+        return false;
+    }
+    let script = crate::scripts::script_of(state, attacker);
+    if script.when_attacks.is_some() || script.after_attack.is_some() {
+        return false;
+    }
+    if target.is_some_and(|unit| crate::scripts::script_of(state, unit).after_attacked.is_some()) {
+        return false;
+    }
+    let attacking_side = crate::damage::acting_texts_of(state, attacker.controller);
+    if attacking_side
+        .iter()
+        .any(|card| crate::scripts::script_of(state, card).ally_attack.is_some())
+    {
+        return false;
+    }
+    let defending_side = crate::damage::acting_texts_of(state, target_side);
+    if defending_side
+        .iter()
+        .any(|card| crate::scripts::script_of(state, card).ally_attacked.is_some())
+    {
+        return false;
+    }
+    !(target.is_some()
+        && defending_side
+            .iter()
+            .any(|card| crate::scripts::flags_of(state, card).reflects_to_attacker == Some(true)))
+}
+
+/// I18 (#4111): whether one step's `events`, and the `state` it left, were `entry`'s attack and nothing
+/// the forecast does not foretell. All of these hold:
+/// - no prompt is open after it (R3477000: an answer is still to come);
+/// - exactly one `attackDeclared`, with the entry's ids, not forced (R53) and no substitute's (R1202);
+/// - no `hookResolving` (R2783000: a hook ran), `trapFired` (R3477000), `attackCancelled` or
+///   `redirected` (of the attack, R1122, or of a hit, §4.4 steps 0a and 4a, which R4032000 leaves
+///   unprojected);
+/// - no `turnEnded`, `turnAutoEnded` or `turnCutShort`: the next turn's hits would read as the
+///   attack's (R82).
+fn plain_combat(events: &[GameEvent], state: &GameState, entry: &crate::query::AttackForecast) -> bool {
+    if state.pending.is_some() {
+        return false;
+    }
+    let mut declared = 0;
+    for event in events {
+        match event {
+            GameEvent::AttackDeclared {
+                attacker_id,
+                target_id,
+                forced,
+                instead_of,
+            } => {
+                if *attacker_id != entry.attacker_id
+                    || *target_id != entry.target_id
+                    || *forced
+                    || instead_of.is_some()
+                {
+                    return false;
+                }
+                declared += 1;
+            }
+            GameEvent::HookResolving { .. }
+            | GameEvent::TrapFired { .. }
+            | GameEvent::AttackCancelled { .. }
+            | GameEvent::Redirected { .. }
+            | GameEvent::TurnEnded { .. }
+            | GameEvent::TurnAutoEnded { .. }
+            | GameEvent::TurnCutShort { .. } => return false,
+            _ => {}
+        }
+    }
+    declared == 1
+}
+
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
-/// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
-/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11, I12, I16 and I17, `hidden` is I6, I13 and
-/// I15 for both seats, `unlisted` is I8 and `listed` is I14.
+/// run against it. `before` is I1, I3, I12's chosen-action snapshot and I18's kept forecast, `after`
+/// feeds one action's events into the shadow and runs I2, I4, I5, I7, I9, I10, I11, I12, I16, I17 and
+/// I18, `hidden` is I6, I13 and I15 for both seats, `unlisted` is I8 and `listed` is I14.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -2284,6 +2567,13 @@ pub struct InvariantMonitor {
     health: PerPlayer<i32>,
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
+    /// I18: whether this monitor holds attacks to their forecast; `new` sets it, and the Duos monitor
+    /// clears it on its duels (#4111).
+    judge_forecast: bool,
+    /// I18: the forecast of the attack `before` saw chosen, for `after` to judge.
+    forecast_kept: Option<KeptForecast>,
+    /// I18: how many attacks `after` held to their forecast, so a filter that judges nothing shows.
+    forecast_judged: usize,
 }
 
 /// R781004: whether `later`, the rest of an action's events, summons `id` again (back through Reborn): an
@@ -2323,7 +2613,15 @@ impl InvariantMonitor {
             fatigue: start.players.map(|_, side| side.fatigue_count),
             health: start.players.map(|_, side| side.hero.health),
             dormant: dormant_cards(start),
+            judge_forecast: true,
+            forecast_kept: None,
+            forecast_judged: 0,
         }
+    }
+
+    /// I18: how many attacks this monitor held to their forecast (#4111).
+    pub fn forecast_judged(&self) -> usize {
+        self.forecast_judged
     }
 
     fn stint_of(&self, id: &str) -> i32 {
@@ -2817,9 +3115,29 @@ impl InvariantMonitor {
         self.hold_hero_floor(seat, state);
     }
 
-    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot.
-    /// Empty when clean.
+    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot and the
+    /// forecast I18 holds a chosen attack to. Empty when clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
+        // I18: the forecast the seat was shown for the attack it chose, kept for `after` (R3100000).
+        self.forecast_kept = None;
+        if self.judge_forecast
+            && let ActionBody::Attack {
+                attacker_id,
+                target_id,
+            } = action
+        {
+            self.forecast_kept = crate::query::combat_forecast(state, player)
+                .attacks
+                .into_iter()
+                .find(|entry| entry.attacker_id == *attacker_id && entry.target_id == *target_id)
+                .map(|entry| KeptForecast {
+                    turn: state.turn,
+                    attacker: card_label(state, attacker_id),
+                    target: card_label(state, target_id),
+                    foreseeable: foreseeable_attack(state, attacker_id, target_id),
+                    entry,
+                });
+        }
         let mut found: Vec<String> = Vec::new();
         self.chosen_exertion = match action {
             ActionBody::Attack { attacker_id, .. } => {
@@ -2927,9 +3245,11 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12, I16 and I17 against the
-    /// resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12, I16, I17 and I18 against
+    /// the resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
+        // I18: a kept forecast is this step's alone.
+        let kept = self.forecast_kept.take();
         let mut found: Vec<String> = Vec::new();
         // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
         let began_on = self.turn;
@@ -2938,23 +3258,6 @@ impl InvariantMonitor {
         // still resolving then (R1869002: a kill an ambush's Discovers delayed credits on landing).
         if !self.attack_open {
             self.attack = None;
-        }
-
-        // I5: the check that ends the game is the last thing that happens (§2.5, R216).
-        if let Some(over) = events
-            .iter()
-            .position(|event| matches!(event, GameEvent::GameOver { .. }))
-            && over + 1 < events.len()
-        {
-            let later: Vec<&str> = events[over + 1..]
-                .iter()
-                .map(|event| event.event_type().as_str())
-                .collect();
-            found.push(format!(
-                "I5 event after game over: {} followed gameOver on turn {} (§2.5, R216)",
-                later.join(", "),
-                self.turn
-            ));
         }
 
         for (index, event) in events.iter().enumerate() {
@@ -3137,7 +3440,12 @@ impl InvariantMonitor {
                             || find_instance(state, &attacker_id).is_some_and(|attacker| {
                                 crate::scripts::script_of(state, attacker).after_attack.is_some()
                                     || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
-                            });
+                            })
+                            // R3543003, R781004: a unit that drew its keywords (`note_drawn_windfury`) and is
+                            // gone by the end may have drawn Frenzy (a Drone Corvette, Duos seed 1778, #4079).
+                            || (self.drawn_windfury.contains(&attacker_id)
+                                && find_instance(state, &attacker_id)
+                                    .is_none_or(|card| card.zone.z() != ZoneName::Field));
                         if answers {
                             self.credit_kill(&attacker_id);
                         }
@@ -3360,8 +3668,13 @@ impl InvariantMonitor {
                     };
                     // R3550001: a Unit that "can attack N times per turn" declares N attacks.
                     // R636, R3556008: one gone by the end may have had an aura's Windfury, read where the action left it.
-                    let gone =
-                        find_instance(state, declarer).is_none_or(|card| card.zone.z() != ZoneName::Field);
+                    // R383: an animated card back in its backrow by the action's end is read as a gone unit (fuzz
+                    // seed 1013, #4079).
+                    let gone = find_instance(state, declarer).is_none_or(|card| {
+                        card.zone.z() != ZoneName::Field
+                            || (!matches!(card.zone, Zone::Field { row: Row::Units, .. })
+                                && crate::animated::face_type_of(state, card) != CardType::Unit)
+                    });
                     let per_turn = if self.windfury.get(declarer) == Some(&current)
                         || (gone && aura_gives_windfury(state))
                     {
@@ -3464,64 +3777,23 @@ impl InvariantMonitor {
             }
         }
 
-        // I7: a live game with no prompt open owes no paused sequence (§9.3, §10.3, R113).
-        if state.result.is_none()
-            && state.pending.is_none()
-            && state.mulligan.is_none()
-            && (!state.work.is_empty() || state.work_cursor != 0)
+        found.extend(branch_state_findings(events, state));
+        // I18: a plain attack did what its seat's forecast said (R3100000, R4111000).
+        if let Some(kept) = kept
+            && kept.foreseeable
+            && plain_combat(events, state, &kept.entry)
         {
-            let owed: Vec<String> = state
-                .work
-                .iter()
-                .map(|item| {
-                    format!(
-                        "{} ({}, {}, {})",
-                        item.id, item.resume.def_id, item.resume.hook, item.resume.step
-                    )
-                })
-                .collect();
-            found.push(format!(
-                "I7 orphaned work: {} item(s) owed [{}] with work cursor {} on turn {} and no prompt open \
-                 (§9.3, §10.3, R113)",
-                state.work.len(),
-                owed.join(", "),
-                state.work_cursor,
-                state.turn
-            ));
+            self.forecast_judged += 1;
+            let forecast = PlayedAttack::forecast(&kept.entry);
+            let played = PlayedAttack::read(events, state, &kept.entry.attacker_id, &kept.entry.target_id);
+            if played != forecast {
+                found.push(format!(
+                    "I18 forecast drift: {} attacking {} on turn {} was forecast {forecast} but did {played} \
+                     (R3100000)",
+                    kept.attacker, kept.target, kept.turn
+                ));
+            }
         }
-
-        // I10: no prompt held by the opponent while its holder is not the active player (§10.6, R1279000).
-        if state.result.is_none()
-            && let Some(pending) = &state.pending
-            && pending.player_id != state.active
-            && prompt_owner_of(pending) != pending.player_id
-        {
-            let asked_by = pending.resume.instance_id.as_deref();
-            let asker = match asked_by.and_then(|id| find_instance(state, id)) {
-                Some(card) => name_of(card),
-                None => format!(
-                    "{} ({})",
-                    asked_by.unwrap_or("no instance"),
-                    pending.resume.def_id
-                ),
-            };
-            found.push(format!(
-                "I10 opponent prompt off turn: {asker} opened prompt {} for {}, held for {}, on turn {} while {} \
-                 is the active player (§10.6, R1279000)",
-                pending.id,
-                pending.player_id,
-                prompt_owner_of(pending),
-                state.turn,
-                state.active
-            ));
-        }
-
-        // I11: a definition-level Unit token never reaches an off-field pile (§3, §3.2, R11).
-        found.extend(unit_token_pile_findings(state));
-        // I16: every card's own record agrees with the pile that holds it (§3.2, R78, R766).
-        found.extend(card_record_findings(state));
-        // I17: the state check ran and the numbers are in range (§2.3, §4.5, R63, R69).
-        found.extend(state_check_findings(events, state));
         // A chosen action can confirm at most this one reduction. In Duos, `after` also visits the
         // untouched duel, so no marker may survive to match another duel's later event.
         self.chosen_exertion = None;
@@ -3557,7 +3829,7 @@ impl InvariantMonitor {
     }
 
     /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack, switch,
-    /// activation and play `reduce` accepts. Empty when clean.
+    /// activation, play, Trade, buy and sale `reduce` accepts. Empty when clean.
     pub fn unlisted(&self, state: &GameState) -> Vec<String> {
         let Some(player) = crate::reduce::seat_to_act(state) else {
             return Vec::new();
@@ -3645,11 +3917,14 @@ pub fn create_duos_invariant_monitor(start: &DuosState) -> DuosInvariantMonitor 
 
 impl DuosInvariantMonitor {
     pub fn new(start: &DuosState) -> DuosInvariantMonitor {
+        // I18 judges no Duos attack: Duos is out of #4111's scope, and a Duos seat is shown a subset of
+        // its duel's forecast entries.
+        let duel = |index: usize| InvariantMonitor {
+            judge_forecast: false,
+            ..InvariantMonitor::new(&start.duels[index])
+        };
         DuosInvariantMonitor {
-            monitors: [
-                InvariantMonitor::new(&start.duels[0]),
-                InvariantMonitor::new(&start.duels[1]),
-            ],
+            monitors: [duel(0), duel(1)],
             view_tamper: None,
         }
     }
@@ -3780,6 +4055,16 @@ mod tests {
             b1: ids[size * 2..size * 3].to_vec(),
             b2: ids[size * 3..size * 4].to_vec(),
         }
+    }
+
+    /// I18 (#4111): a Duos seat is shown a subset of its duel's forecast entries, so neither duel's
+    /// monitor judges an attack by the duel's own forecast; a 1v1 monitor does.
+    #[test]
+    fn i18_a_duos_duel_monitor_judges_no_forecast() {
+        let state = crate::testkit::duos_scenario::duos_scenario("i18-duos", test_decks(), None);
+        let monitor = create_duos_invariant_monitor(&state);
+        assert!(monitor.monitors.iter().all(|duel| !duel.judge_forecast));
+        assert!(create_invariant_monitor(&state.duels[0]).judge_forecast);
     }
 
     #[test]

@@ -10,8 +10,9 @@
 use std::cell::Cell;
 
 use jackioh_ai::{
-    AI_GATE_BUDGET, AiOptions, SearchBudget, decide, duos_decide, duos_decision, duos_greedy_action,
-    duos_passes, greedy_action, starting_life,
+    AI_EVAL, AI_GATE_BUDGET, AiOptions, NextSwing, Prices, SearchBudget, decide, duos_decide, duos_decision,
+    duos_greedy_action, duos_passes, duos_pool_loss, evaluate_priced, face_threat, greedy_action,
+    starting_life,
 };
 use jackioh_engine::config::{
     DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, duos_ai_team,
@@ -1398,4 +1399,184 @@ fn b32_a_greedy_seat_owes_nothing_off_its_turn_or_once_the_game_is_over() {
             "{seat} owes nothing once the game is over"
         );
     }
+}
+
+// R4188000
+
+/// Two of these for A1: 5 face damage each, and B1's 7/7 can neither kill one nor be hurt by one.
+const WALLED: &str = "stand-in (1) 5/20";
+/// Five 1-cost Units that can never stand in Defense Position: they fill B1's turn and wall nothing.
+const NO_WALLS: [&str; 5] = [
+    "stand-in (1) 1/1 Can't Defend",
+    "stand-in (1) 1/2 Can't Defend",
+    "stand-in (1) 2/1 Can't Defend",
+    "stand-in (1) 1/3 Can't Defend",
+    "stand-in (1) 2/2 Can't Defend",
+];
+/// Team B's pool in the issue's example.
+const POOL: i32 = 8;
+/// What a probed weight adds, so a term that counts moves the score by far more than rounding.
+const PROBE: f64 = 1000.0;
+
+/// A fresh `def_id` in Attack Position in `seat`'s unit zone `lane`; returns its instance id.
+fn field_unit(state: &mut DuosState, seat: DuosSeat, def_id: &str, lane: i32) -> String {
+    let player = seat.player();
+    let game = &mut state.duels[seat.duel()];
+    let row = Row::Units;
+    let mut unit = new_instance(game, def_id, player, Zone::Field { player, row, lane });
+    let slot = ZoneSlot { player, row, lane };
+    let placed = place_on_field(game, &mut unit, slot, PlaceOnFieldOptions::default());
+    assert!(placed, "{seat}'s unit zone {lane} takes the unit");
+    find_instance_mut(game, &unit.id)
+        .expect("the placed unit")
+        .position = Some(Position::Atk);
+    unit.id
+}
+
+/// `seat` at `own` HP, or spent, and its team's pool at `pool` in both duels and the wrapper's (§13.4,
+/// B15): a spent seat's hero health reads the pool.
+fn set_life(state: &mut DuosState, seat: DuosSeat, own: i32, spent: bool, pool: i32) {
+    state.teams[seat.team()].pool = pool;
+    side(state, seat)
+        .duos
+        .as_mut()
+        .expect("a duel holds Duos life")
+        .spent = spent;
+    side(state, seat).hero.health = own;
+    for at in [seat, seat.teammate()] {
+        let life = side(state, at).duos.as_mut().expect("a duel holds Duos life");
+        life.pool = pool;
+        if life.spent {
+            side(state, at).hero.health = pool;
+        }
+    }
+}
+
+/// The issue's example, round 2: B1 at 5 own HP with BIG in Attack Position and five Units in hand that
+/// cannot defend, the mana to play them all, against A1's two `WALLED` (10 face damage, against 13 of
+/// B1's life); B2 at `mate_own` HP or spent, against A2's Mr. Vanilla (4); team B's pool at `POOL`.
+/// Returns the state and BIG's id.
+fn pool_loss_state(seed: &str, mate_own: i32, mate_spent: bool) -> (DuosState, String) {
+    let mut state = round_two(seed, DUOS_HUMAN_TEAM);
+    let big = field_unit(&mut state, B1, BIG, 1);
+    field_unit(&mut state, A1, WALLED, 1);
+    field_unit(&mut state, A1, WALLED, 2);
+    field_unit(&mut state, A2, ONE_DROP, 1);
+    set_hand(&mut state, B1, &NO_WALLS);
+    set_mana(&mut state, B1, NO_WALLS.len() as i32);
+    set_life(&mut state, B1, 5, false, POOL);
+    set_life(&mut state, B2, mate_own, mate_spent, POOL);
+    (state, big)
+}
+
+/// Whether the lethal threat term counts in B1's score of its duel under `prices`.
+fn reads_lethal(state: &DuosState, prices: &Prices) -> bool {
+    let duel = &state.duels[B1.duel()];
+    let mut probed = AI_EVAL;
+    probed.lethal_threat += PROBE;
+    evaluate_priced(duel, B1.player(), NextSwing::Enemy, &probed, prices)
+        != evaluate_priced(duel, B1.player(), NextSwing::Enemy, &AI_EVAL, prices)
+}
+
+#[test]
+fn r4188000_a_seat_counts_what_its_teammates_enemy_takes_off_the_pool_and_walls() {
+    let seed = "duos-ai-r4188000";
+    let (state, big) = pool_loss_state(seed, 0, true);
+    assert_eq!(face_threat(&state.duels[0], PlayerId::P1), 10);
+    assert_eq!(effective_life(&state.duels[0], PlayerId::P2), 13);
+    assert_eq!(face_threat(&state.duels[1], PlayerId::P1), 4);
+    assert_eq!(effective_life(&state.duels[1], PlayerId::P2), POOL, "B2 is spent");
+    assert_eq!(duos_pool_loss(&state, B1), 4, "B2 has no own HP to take A2's 4");
+
+    let lost = Prices {
+        pool_loss: Some((B1.player(), 4)),
+        ..Prices::default()
+    };
+    assert!(reads_lethal(&state, &lost), "10 against 13 less 4");
+    assert!(!reads_lethal(&state, Prices::NONE), "10 against 13");
+
+    let wall = ActionBody::SwitchPosition {
+        instance_id: big.clone(),
+    };
+    assert_eq!(duos_decide(&state, B1, &mut opts(seed)), Some(duel(wall.clone())));
+    let mut walled = state.duels[0].clone();
+    find_instance_mut(&mut walled, &big).expect("BIG stands").position = Some(Position::Def);
+    assert!(
+        face_threat(&walled, PlayerId::P1) < 13 - 4,
+        "BIG's Taunt holds one attacker off"
+    );
+    assert_ne!(
+        decided_alone(&state, B1, seed),
+        wall,
+        "the 1v1 decision, reading 13, does not wall"
+    );
+}
+
+#[test]
+fn r4188000_a_teammate_whose_own_hp_takes_the_whole_threat_costs_the_pool_nothing() {
+    let seed = "duos-ai-r4188000-own-hp";
+    let (state, _) = pool_loss_state(seed, DUOS_OWN_HEALTH, false);
+    assert_eq!(duos_pool_loss(&state, B1), 0);
+    let mut options = opts(seed);
+    let mut plain = opts(seed);
+    let alone = decide(&state.duels[0], PlayerId::P2, &mut plain).expect("the 1v1 decide plays");
+    assert_ne!(alone.action, ActionBody::EndTurn, "no pass stands in for it");
+    assert_eq!(duos_decide(&state, B1, &mut options), Some(duel(alone.action)));
+    assert_eq!(options.rng.cursor(), plain.rng.cursor());
+}
+
+#[test]
+fn r4188000_own_hp_takes_its_part_first_and_the_pool_caps_the_loss() {
+    let (mut state, _) = pool_loss_state("duos-ai-r4188000-parts", 2, false);
+    assert_eq!(duos_pool_loss(&state, B1), 4 - 2);
+    set_life(&mut state, B2, 0, true, 3);
+    assert_eq!(effective_life(&state.duels[1], PlayerId::P2), 3);
+    assert_eq!(duos_pool_loss(&state, B1), 3, "no more than the pool holds");
+}
+
+#[test]
+fn r4188000_nothing_is_counted_when_the_teammates_duel_does_not_turn_to_the_enemy_next() {
+    let seed = "duos-ai-r4188000-next";
+    let (mut state, _) = pool_loss_state(seed, 0, true);
+    side(&mut state, B2).extra_turns = Some(1);
+    assert_eq!(duos_pool_loss(&state, B1), 0, "R846: B2 takes the next turn too");
+
+    let mut state = round_one(seed, None);
+    field_unit(&mut state, A2, ONE_DROP, 1);
+    set_life(&mut state, B2, 0, true, POOL);
+    assert_eq!(face_threat(&state.duels[1], PlayerId::P1), 4);
+    assert_eq!(duos_pool_loss(&state, B1), 0, "duel 1 is on A2's turn");
+}
+
+#[test]
+fn r4188000_a_hidden_card_in_the_teammates_opponents_hand_or_backrow_changes_neither_loss_nor_decision() {
+    let seed = "duos-ai-r4188000-hidden";
+    let (mut state, _) = pool_loss_state(seed, 0, true);
+    let player = A2.player();
+    let game = &mut state.duels[A2.duel()];
+    let row = Row::Backrow;
+    let mut trap = new_instance(game, "core-041", player, Zone::Field { player, row, lane: 1 });
+    let slot = ZoneSlot { player, row, lane: 1 };
+    assert!(place_on_field(
+        game,
+        &mut trap,
+        slot,
+        PlaceOnFieldOptions::default()
+    ));
+
+    let mut variant = state.clone();
+    swap_hidden_hand_card(&mut variant, A2, BIG);
+    find_instance_mut(&mut variant.duels[A2.duel()], &trap.id)
+        .expect("the face-down card")
+        .def_id = "core-096".to_string();
+    assert_ne!(state.duels[1], variant.duels[1]);
+
+    assert_eq!(duos_pool_loss(&state, B1), duos_pool_loss(&variant, B1));
+    let mut options = opts(seed);
+    let mut other = opts(seed);
+    assert_eq!(
+        duos_decide(&state, B1, &mut options),
+        duos_decide(&variant, B1, &mut other)
+    );
+    assert_eq!(options.rng.cursor(), other.rng.cursor());
 }

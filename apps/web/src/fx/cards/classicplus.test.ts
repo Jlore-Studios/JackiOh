@@ -10,7 +10,7 @@
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { CARD_AUDIO } from "../../audio/voiceData.ts";
+import { CARD_AUDIO } from "../../audio/soundTables.ts";
 import { HIDDEN_ID, planEntries } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { envOf } from "../../test/signatures.ts";

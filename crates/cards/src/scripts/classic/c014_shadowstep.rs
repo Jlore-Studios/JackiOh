@@ -327,7 +327,7 @@ mod tests {
                     "backrow": [{ "def": SHADOWSTEP, "faceUp": false }],
                     "library": [STOCKPILE],
                 },
-                "p2": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 5, "library": [STOCKPILE, STOCKPILE] },
+                "p2": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 6, "library": [STOCKPILE, STOCKPILE] },
             }));
             let menace = s.card(MENACE).clone();
             s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }));
@@ -374,7 +374,7 @@ mod tests {
         #[test]
         fn r2618000_a_stolen_unit_of_theirs_you_control_that_dies_returns_to_your_hand() {
             let mut s = scenario(json!({
-                "p1": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 5, "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
+                "p1": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 6, "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
                 "p2": { "hand": [BIG_FELINOR, STOCKPILE], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] },
             }));
             let menace = s.card(MENACE).clone();
@@ -530,6 +530,32 @@ mod tests {
             s.play(BIG_FELINOR, json!({}));
             let copy = s.hand(P1).into_iter().find(|card| card.def_id == MENACE);
             assert_eq!(copy.and_then(|card| card.cost_override), Some(1));
+        }
+
+        /// R4205000: nothing prevents the destroy of a card a steal had no room for, so no "would die"
+        /// replacement is offered it: the Radiant flicker does not fire and stays set.
+        #[test]
+        fn r4205000_a_unit_a_steal_has_no_room_for_dies_past_the_radiant_flicker() {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [MIND_CONTROL, STOCKPILE],
+                    "mana": 6,
+                    "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+                    "library": [STOCKPILE],
+                },
+                "p2": {
+                    "hand": [STOCKPILE],
+                    "field": [MENACE],
+                    "backrow": [{ "def": SHADOWSTEP, "faceUp": false, "radiant": true }],
+                    "library": [STOCKPILE, STOCKPILE],
+                },
+            }));
+            let menace = s.card(MENACE).clone();
+            s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }));
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
+            s.expect_in_zone(&menace, "graveyard");
+            assert!(s.pile(P2, "graveyard").iter().any(|card| card.id == menace.id));
+            assert_eq!(backrow_def(&s, P2, 1), Some(SHADOWSTEP.to_string()));
         }
     }
 

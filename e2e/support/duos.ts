@@ -4,6 +4,7 @@
 // views are S2's `DuosView`, camelCase, restated as far as the specs read them, since e2e type-checks alone.
 
 import { socketProtocols } from "../../apps/web/src/net/socketProtocols.ts";
+import { isRecord } from "../../apps/web/src/wire/json.ts";
 import { apiUrl, bearerHeaders, server, timeouts, type E2EAccount } from "./config.ts";
 
 /** S8's path; support/config.ts's `routes` predate it. */
@@ -35,10 +36,6 @@ export type DuosViewLike = {
   concedeOfferedBy?: string | null;
   result?: { outcome?: string; winner?: string | null; reason?: string } | null;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 type Waiter = { match: (frame: Frame) => boolean; resolve: (frame: Frame) => void; timer: ReturnType<typeof setTimeout> };
 

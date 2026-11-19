@@ -679,3 +679,35 @@ mod r4039000_the_share_feed {
         assert_eq!(shares_told(&w, &w.d).await, Vec::new());
     }
 }
+
+mod r4233000_read_on_open {
+    //! R4233000 (#4233): a friend's read of a replay shared with them marks its `replayShared`
+    //! row read.
+    use super::*;
+    use crate::support::store::feed;
+
+    #[tokio::test]
+    async fn r4233000_a_friends_read_of_a_shared_replay_marks_its_row() {
+        let w = world("share-read").await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let rows = feed(&w.app, &w.c).await;
+        assert_eq!(rows["unread"], 1, "{rows}");
+        assert_eq!(rows["notifications"][0]["kind"], "replayShared", "{rows}");
+        assert_eq!(rows["notifications"][0]["read"], false, "{rows}");
+
+        // Opening the shared replay marks its row read; the row stays listed.
+        let (status, body) = w.replay(&w.c).await;
+        assert_eq!(status, 200, "{body}");
+        let rows = feed(&w.app, &w.c).await;
+        assert_eq!(rows["unread"], 0, "{rows}");
+        assert_eq!(rows["notifications"][0]["kind"], "replayShared", "{rows}");
+        assert_eq!(rows["notifications"][0]["read"], true, "{rows}");
+
+        // The sharer's own opens mark nothing: their count stands as it was.
+        let before = feed(&w.app, &w.a).await["unread"].clone();
+        let (status, _) = w.replay(&w.a).await;
+        assert_eq!(status, 200);
+        assert_eq!(feed(&w.app, &w.a).await["unread"], before);
+    }
+}

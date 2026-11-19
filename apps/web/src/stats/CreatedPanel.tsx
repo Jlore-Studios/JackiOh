@@ -1,29 +1,24 @@
 // The Created cards of /stats (SPEC §9.11, R2089000), below the Cards tab's table, in two sections that share no
 // row (R3324002): the catalog's tokens, and every other card made during a game (generated and Discovered cards,
 // copies, transforms' results, The Coin). A row counts the seats that made a copy: Win rate pools them, used or
-// not (R2370000), Used splits by a copy Radiant at its first use, and Not used is the baseline. The figures and
-// R654's floor ("—" below it) are the server's, and Win rate is read off them, nothing counted anew (CLAUDE.md
-// rule 7). R4082000: Tier and Adjusted are the server's too, each card read against the other Created cards, and
-// the rows open on Adjusted, best first, as the deck table does; every header sorts them (R3184002). It scrolls,
-// never fixed (R1646000). R3887000: with the Plain text button on, a catalog card's name cell holds the card as
+// not (R2370000). The figures and R654's floor ("—" below it) are the server's, and Win rate is read off them,
+// nothing counted anew (CLAUDE.md rule 7). R4082000: Tier and Adjusted are the server's too, each card read against
+// the other Created cards, and the rows open on Adjusted, best first, as the deck table does; every header sorts
+// them (R3184002). R4155000: both sections show the deck table's columns in its order under its labels, honour
+// the tab's Columns toggle as it does, and a row opens the same drill-down a deck row opens. It scrolls, never
+// fixed (R1646000). R3887000: with the Plain text button on, a catalog card's name cell holds the card as
 // plain text.
 
 import { useId, useState, type ReactElement, type ReactNode } from "react";
-import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
-import type { PublicCreatedStat, PublicCreatedTiers } from "../net/api.ts";
-import { faceRate, formatPlayedDelta } from "./model.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
+import type { PublicCreatedStat } from "../net/api.ts";
+import { faceRate } from "./model.ts";
 import { TableScroll } from "./TableScroll.tsx";
 import { statsTestid } from "./testids.ts";
-import { TierChip, adjustedText, percentText, tierRank } from "./TierChip.tsx";
+import { TierChip, adjustedText, tierRank } from "./TierChip.tsx";
 
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
-
-/** A rate as the cards table shows one, or "—" when there is none or it is below the floor. */
-export function rateText(games: number, rate: number | null, minSample: number): string {
-  const shown = faceRate(games, rate, minSample);
-  return shown === null ? "—" : `${Math.round(shown * PERCENT)}%`;
-}
 
 /**
  * R2370000: a Created card's win rate: the wins of the seats that made one, used or not, over their games (each
@@ -37,18 +32,8 @@ export function createdWinRate(card: PublicCreatedStat): number | null {
   return wins / card.games;
 }
 
-/** R3184002: the Created tables' columns, every one sortable. */
-export type CreatedColumn =
-  | "name"
-  | "games"
-  | "tier"
-  | "adjusted"
-  | "winRate"
-  | "used"
-  | "notUsed"
-  | "usedRadiant"
-  | "usedNormal"
-  | "delta";
+/** R3184002, R4155000: the Created tables' columns, every one sortable, as the deck table's. */
+export type CreatedColumn = "name" | "games" | "tier" | "adjusted" | "winRate";
 
 /** R3184002: a header's sort: the column and its direction. */
 export type CreatedSort = { col: CreatedColumn; dir: "asc" | "desc" };
@@ -61,7 +46,7 @@ function adjustedOf(card: PublicCreatedStat): number | null {
   return card.hasEnoughGames ? (card.adjustedWinRate ?? null) : null;
 }
 
-/** R3184002: a column's figure as the row shows it: its games, or its rate or delta, null for "—". */
+/** R3184002: a column's figure as the row shows it: its games, or its rate, null for "—". */
 function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name" | "tier">, minSample: number): number | null {
   switch (col) {
     case "games":
@@ -70,16 +55,6 @@ function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name" | "t
       return adjustedOf(card);
     case "winRate":
       return faceRate(card.games, createdWinRate(card), minSample);
-    case "used":
-      return faceRate(card.createdPlayedGames, card.createdPlayedWinRate, minSample);
-    case "notUsed":
-      return faceRate(card.createdNotPlayedGames, card.createdNotPlayedWinRate, minSample);
-    case "usedRadiant":
-      return faceRate(card.createdPlayedRadiantGames, card.createdPlayedRadiantWinRate, minSample);
-    case "usedNormal":
-      return faceRate(card.createdPlayedNormalGames, card.createdPlayedNormalWinRate, minSample);
-    case "delta":
-      return card.createdPlayedDelta;
   }
 }
 
@@ -146,49 +121,28 @@ function SortHeader({
 /** R3324002: which of the two sections a panel is: the tokens, or every other Created card. */
 export type CreatedKind = "tokens" | "other";
 
-/** R4082000: a signed number of points to a tenth ("+6.1"), as the Created tiers' note reads the centre. */
-function pointsText(fraction: number): string {
-  const points = (fraction * PERCENT).toFixed(1);
-  return fraction >= 0 ? `+${points}` : points;
-}
-
-/** R4082000: what a panel's Tier and Adjusted are read against, from the server's Created field. */
-function CreatedTiersNote({ field }: { field: PublicCreatedTiers }): ReactElement {
-  return (
-    <span data-testid={statsTestid.createdTiersNote}>
-      {field.cards > 0
-        ? t(
-            "Tier and Adjusted read each card against the other Created cards, whose average reads 50%: a seat makes one only after playing what makes it, so the seats that make an average one win {baseline} of their games, {center} points against the average deck, and real ones differ by about {spread} points. The Coin and the cards only a rule makes are read against the average deck.",
-            {
-              baseline: percentText(field.baseline),
-              center: pointsText(field.center),
-              spread: (field.spread * PERCENT).toFixed(1),
-            },
-          )
-        : t(
-            "Tier and Adjusted read each card against the average deck, as too few Created cards have enough games to read them against each other.",
-          )}
-    </span>
-  );
-}
-
 export function CreatedPanel({
   kind,
   created,
   minSample,
-  field,
   nameOf,
   plainCardOf,
+  visibleThumbnail,
+  visibleGames,
+  onOpen,
 }: {
   kind: CreatedKind;
   created: readonly PublicCreatedStat[];
   minSample: number;
-  /** R4082000: the Created field the tiers are read against; absent from a server deployed before it. */
-  field?: PublicCreatedTiers;
   /** A card's name as the page shows it. */
   nameOf: (id: string, name: string) => string;
   /** R3887000: a card's plain text, or null for an id with none; the name stands in for it. */
   plainCardOf?: (id: string) => ReactNode;
+  /** R4155000: the tab's Columns toggle, honoured as the deck table honours it. */
+  visibleThumbnail: boolean;
+  visibleGames: boolean;
+  /** R4155000: a row opens the card's drill-down, as a deck row does. */
+  onOpen: (id: string, opener: HTMLElement) => void;
 }): ReactElement | null {
   const locale = useLocale();
   const titleId = useId();
@@ -210,66 +164,74 @@ export function CreatedPanel({
       <h2 id={titleId} className="stats-games-title">
         {tokens ? t("Tokens") : t("Other created cards")}
       </h2>
-      <p className="stats-sample-hint stats-games-note">
-        {tokens
-          ? t("Tokens made during the game.")
-          : t("Every other card made during the game: generated and Discovered cards, copies and The Coin.")}{" "}
-        {t(
-          "Win rate is of the seats that made one, used or not; Used of those that used one, Not used of those that made one and used none. Each needs {minSample} games.",
-          { minSample },
-        )}
-        {field && (
-          <>
-            {" "}
-            <CreatedTiersNote field={field} />
-          </>
-        )}
-      </p>
       <TableScroll labeledBy={titleId}>
         <table className="stats-table" data-testid={tokens ? statsTestid.tokensTable : statsTestid.createdTable}>
           <thead>
             <tr>
-              <SortHeader col="name" label={tokens ? t("Token") : t("Card")} {...header} />
-              <SortHeader col="games" label={t("Games")} {...header} />
+              {visibleThumbnail && (
+                <th className="stats-th--thumb" scope="col">
+                  {t("Card")}
+                </th>
+              )}
+              <SortHeader col="name" label={t("Name")} {...header} />
+              {visibleGames && <SortHeader col="games" label={t("Games")} {...header} />}
               <SortHeader col="tier" label={t("Tier")} {...header} />
               <SortHeader col="adjusted" label={t("Adjusted")} {...header} />
               <SortHeader col="winRate" label={t("Win rate")} {...header} />
-              <SortHeader col="used" label={t("Used")} {...header} />
-              <SortHeader col="notUsed" label={t("Not used")} {...header} />
-              <SortHeader col="usedRadiant" label={t("Used Radiant")} {...header} />
-              <SortHeader col="usedNormal" label={t("Used normal")} {...header} />
-              <SortHeader col="delta" label={t("Used vs not used")} {...header} />
             </tr>
           </thead>
           <tbody>
-            {rows.map((card) => (
-              <tr key={card.id} className="stats-tr" data-card-id={card.id}>
-                <th scope="row" className="stats-td stats-td--name">
-                  {plainCardOf?.(card.id) ?? nameOf(card.id, card.name)}
-                </th>
-                <td className="stats-td">{formatNumber(card.games)}</td>
-                <td className="stats-td">
-                  <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.createdTierCell} />
-                </td>
-                <td className="stats-td" data-testid={statsTestid.createdAdjustedCell}>
-                  {adjustedText(adjustedOf(card))}
-                </td>
-                <td className="stats-td">{rateText(card.games, createdWinRate(card), minSample)}</td>
-                <td className="stats-td">
-                  {rateText(card.createdPlayedGames, card.createdPlayedWinRate, minSample)}
-                </td>
-                <td className="stats-td">
-                  {rateText(card.createdNotPlayedGames, card.createdNotPlayedWinRate, minSample)}
-                </td>
-                <td className="stats-td">
-                  {rateText(card.createdPlayedRadiantGames, card.createdPlayedRadiantWinRate, minSample)}
-                </td>
-                <td className="stats-td">
-                  {rateText(card.createdPlayedNormalGames, card.createdPlayedNormalWinRate, minSample)}
-                </td>
-                <td className="stats-td">{formatPlayedDelta(card.createdPlayedDelta) ?? "—"}</td>
-              </tr>
-            ))}
+            {rows.map((card) => {
+              const plainCard = plainCardOf?.(card.id) ?? null;
+              const adjusted = adjustedOf(card);
+              const winRate = faceRate(card.games, createdWinRate(card), minSample);
+              return (
+                <tr
+                  key={card.id}
+                  className="stats-tr"
+                  data-card-id={card.id}
+                  onClick={(e) => onOpen(card.id, e.currentTarget)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOpen(card.id, e.currentTarget);
+                    }
+                  }}
+                >
+                  {visibleThumbnail && (
+                    <td className="stats-td stats-td--thumb">
+                      <span className="stats-card-thumb-badge" data-rarity={card.rarity}>
+                        {card.cost}
+                      </span>
+                    </td>
+                  )}
+                  <td className="stats-td stats-td--name">
+                    {plainCard ?? <span className="stats-card-name-link">{nameOf(card.id, card.name)}</span>}
+                  </td>
+                  {visibleGames && <td className="stats-td">{card.games}</td>}
+                  <td className="stats-td">
+                    <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.createdTierCell} />
+                  </td>
+                  <td className="stats-td" data-testid={statsTestid.createdAdjustedCell}>
+                    {adjusted === null ? (
+                      "—"
+                    ) : (
+                      <div className="stats-winrate-cell">
+                        <span className="stats-winrate-text">{adjustedText(adjusted)}</span>
+                        <div className="stats-confidence-bar">
+                          <div className="stats-confidence-fill" style={{ width: `${Math.round(adjusted * PERCENT)}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                  <td className="stats-td stats-td--winrate">
+                    {winRate === null ? "—" : <span className="stats-winrate-text">{`${Math.round(winRate * PERCENT)}%`}</span>}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </TableScroll>

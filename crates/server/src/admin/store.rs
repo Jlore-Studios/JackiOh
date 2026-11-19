@@ -22,18 +22,46 @@ pub const RATING_GRANT_REASON: &str = "dev";
 /// so a claim never mistakes one for the other (migration 0080's `news_posts_id_check`).
 pub const NEWS_POST_ID_PREFIX: &str = "post-";
 
-/// R3074000: one row of `public.admin_actions` as it is written: who (a profile id; `None` once
-/// the account is deleted), which route (`<METHOD> <path>`, the path as the request named it), the
-/// request, the values before and after, and when.
+/// The routes a moderation lever's audit row names (`cli::moderate`, migration 0096), each exactly.
+pub const MODERATE_BAN_ROUTE: &str = "CLI moderate ban";
+pub const MODERATE_UNBAN_ROUTE: &str = "CLI moderate unban";
+pub const MODERATE_REVOKE_CODE_ROUTE: &str = "CLI moderate revoke-code";
+pub const MODERATE_REDEMPTION_ROUTE: &str = "CLI moderate redemption";
+/// The allow list `check_route` and migration 0096's `admin_actions_route_check` hold alike.
+pub const MODERATE_ROUTES: [&str; 4] = [
+    MODERATE_BAN_ROUTE,
+    MODERATE_UNBAN_ROUTE,
+    MODERATE_REVOKE_CODE_ROUTE,
+    MODERATE_REDEMPTION_ROUTE,
+];
+
+/// R3074000: one row of `public.admin_actions` as it is written: who (a profile id, or `None` for a
+/// moderation lever: the operator holds no profile), which route (`<METHOD> <path>`, the path as the
+/// request named it, or one of [`MODERATE_ROUTES`]), the request, the values before and after, and
+/// when.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NewAdminAction {
-    pub profile_id: String,
+    pub profile_id: Option<String>,
     pub route: String,
     pub request: Value,
     pub before: Value,
     pub after: Value,
     pub at: i64,
+}
+
+impl NewAdminAction {
+    /// A moderation lever's row (`cli::moderate`): no profile, `route` one of [`MODERATE_ROUTES`].
+    pub fn lever(route: &str, request: Value, before: Value, after: Value, at: i64) -> NewAdminAction {
+        NewAdminAction {
+            profile_id: None,
+            route: route.to_string(),
+            request,
+            before,
+            after,
+            at,
+        }
+    }
 }
 
 /// R3074000: one row of `public.admin_actions` as it is read back, with its id.
@@ -47,6 +75,17 @@ pub struct AdminAction {
     pub before: Value,
     pub after: Value,
     pub at: i64,
+}
+
+/// R3074000: how `GET /api/admin/audit` narrows the audit read. `before_id` is an exclusive
+/// upper bound on the row id, the cursor of the next older page; `profile_id` and `route` are
+/// exact matches. `None` (and, by the time it reaches the store, never an empty string) means
+/// no constraint.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct AdminActionFilter {
+    pub before_id: Option<i64>,
+    pub profile_id: Option<String>,
+    pub route: Option<String>,
 }
 
 /// R3074001: one row of `public.hand_set_ratings`: the account holds a hand-set rating on
@@ -125,15 +164,19 @@ fn refused(why: String) -> StoreError {
     StoreError::Other(format!("admin: {why}"))
 }
 
-/// `admin_actions_route_check`: a dev or admin route, named with its method.
+/// `admin_actions_route_check`: a dev or admin route, named with its method (0080), or a moderation
+/// lever's, named exactly (0096).
 fn check_route(route: &str) -> Result<(), StoreError> {
+    if MODERATE_ROUTES.contains(&route) {
+        return Ok(());
+    }
     let (method, path) = route.split_once(' ').unwrap_or(("", ""));
     let method_ok = ["GET", "POST", "PUT", "PATCH", "DELETE"].contains(&method);
     let path_ok = path.starts_with("/api/dev/") || path.starts_with("/api/admin/");
     if method_ok && path_ok {
         Ok(())
     } else {
-        Err(refused(format!("{route:?} is no dev or admin route")))
+        Err(refused(format!("{route:?} is no dev, admin or moderation route")))
     }
 }
 
@@ -186,9 +229,20 @@ impl Tx<'_> {
         admin_dispatch!(self, actions_append(action))
     }
 
+    /// R3074000: the audit rows matching `filter`, newest first (of two at once, the later
+    /// written), at most `limit` of them.
+    pub async fn admin_actions_page(
+        &mut self,
+        filter: &AdminActionFilter,
+        limit: i64,
+    ) -> StoreResult<Vec<AdminAction>> {
+        admin_dispatch!(self, actions_page(filter, limit))
+    }
+
     /// R3074000: the newest `limit` audit rows, newest first (of two at once, the later written).
     pub async fn admin_actions_recent(&mut self, limit: i64) -> StoreResult<Vec<AdminAction>> {
-        admin_dispatch!(self, actions_recent(limit))
+        self.admin_actions_page(&AdminActionFilter::default(), limit)
+            .await
     }
 
     /// R3074001: the ladders on which the profile holds a hand-set rating, Constructed first.
@@ -289,7 +343,8 @@ mod pg {
     use time::OffsetDateTime;
 
     use super::{
-        AdminAction, HandSetRating, NewAdminAction, NewsPost, RATING_GRANT_REASON, RatingChange, RatingGrant,
+        AdminAction, AdminActionFilter, HandSetRating, NewAdminAction, NewsPost, RATING_GRANT_REASON,
+        RatingChange, RatingGrant,
     };
     use crate::db::pg::{PgTx, ms_of, run_as};
     use crate::db::store::StoreError;
@@ -351,7 +406,7 @@ mod pg {
     }
 
     pub async fn actions_append(t: &mut PgTx<'_>, action: &NewAdminAction) -> Result<i64, StoreError> {
-        run_as(t, Some(action.profile_id.as_str())).await?;
+        run_as(t, action.profile_id.as_deref()).await?;
         let id: i64 = sqlx::query_scalar(
             "insert into public.admin_actions (profile_id, route, request, before_value, after_value, at)
              values ($1::uuid, $2::text, $3::jsonb, $4::jsonb, $5::jsonb,
@@ -369,15 +424,25 @@ mod pg {
         Ok(id)
     }
 
-    pub async fn actions_recent(t: &mut PgTx<'_>, limit: i64) -> Result<Vec<AdminAction>, StoreError> {
+    pub async fn actions_page(
+        t: &mut PgTx<'_>,
+        filter: &AdminActionFilter,
+        limit: i64,
+    ) -> Result<Vec<AdminAction>, StoreError> {
         run_as(t, None).await?;
         let rows = sqlx::query(
             "select id, profile_id, route, request, before_value, after_value, at
                from public.admin_actions
+              where ($2::bigint is null or id < $2)
+                and ($3::text is null or profile_id::text = $3)
+                and ($4::text is null or route = $4)
               order by at desc, id desc
               limit $1::bigint",
         )
         .bind(limit)
+        .bind(filter.before_id)
+        .bind(filter.profile_id.as_deref())
+        .bind(filter.route.as_deref())
         .fetch_all(&mut **t)
         .await?;
         rows.iter().map(action_of).collect()
@@ -597,7 +662,8 @@ mod pg {
 
 mod fake {
     use super::{
-        AdminAction, AdminTables, HandSetRating, NewAdminAction, NewsPost, RatingGrant, newest_first,
+        AdminAction, AdminActionFilter, AdminTables, HandSetRating, NewAdminAction, NewsPost, RatingGrant,
+        newest_first,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::StoreError;
@@ -615,7 +681,7 @@ mod fake {
         let id = tables.actions.iter().map(|row| row.id).max().unwrap_or(0) + 1;
         tables.actions.push(AdminAction {
             id,
-            profile_id: Some(action.profile_id.clone()),
+            profile_id: action.profile_id.clone(),
             route: action.route.clone(),
             request: action.request.clone(),
             before: action.before.clone(),
@@ -625,9 +691,26 @@ mod fake {
         Ok(id)
     }
 
-    pub fn actions_recent(f: &mut FakeTx<'_>, limit: i64) -> Result<Vec<AdminAction>, StoreError> {
+    pub fn actions_page(
+        f: &mut FakeTx<'_>,
+        filter: &AdminActionFilter,
+        limit: i64,
+    ) -> Result<Vec<AdminAction>, StoreError> {
         let tables = call(f, "admin.actions.recent")?;
-        let rows = newest_first(tables.actions.clone(), |row| row.at, |a, b| b.id.cmp(&a.id));
+        let kept: Vec<AdminAction> = tables
+            .actions
+            .iter()
+            .filter(|row| filter.before_id.is_none_or(|before| row.id < before))
+            .filter(|row| {
+                filter
+                    .profile_id
+                    .as_ref()
+                    .is_none_or(|profile| row.profile_id.as_deref() == Some(profile))
+            })
+            .filter(|row| filter.route.as_ref().is_none_or(|route| row.route == *route))
+            .cloned()
+            .collect();
+        let rows = newest_first(kept, |row| row.at, |a, b| b.id.cmp(&a.id));
         Ok(rows
             .into_iter()
             .take(usize::try_from(limit).unwrap_or(0))

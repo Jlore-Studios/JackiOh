@@ -815,6 +815,56 @@ mod r3732001_a_friends_row_says_more {
             assert!(entry.get("lobbyCode").is_none(), "{why}: {entry}");
         }
     }
+
+    #[tokio::test]
+    async fn r3732001_a_two_v_two_lobby_keeps_its_code_until_every_seat_is_taken() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let cyd = account(&app, 3, "Cyd").await;
+        let dov = account(&app, 4, "Dov").await;
+        let eli = account(&app, 5, "Eli").await;
+        befriend(&app, &ada, &bea).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &bea.token,
+            json!({ "format": "2v2" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        heartbeat(&app, &bea).await;
+
+        // The first two entrants each leave an empty seat, so the row keeps the code.
+        for who in [&cyd, &dov] {
+            let (status, body) = api(
+                &app,
+                "POST",
+                &format!("/api/lobbies/{code}/enter"),
+                &who.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 200, "{body}");
+            let entry = friend_entry(&lists(&app, &ada).await, &bea.id);
+            assert_eq!(entry["lobbyCode"], json!(code), "{entry}");
+        }
+
+        // The third fills the last seat, and the row names no lobby.
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/enter"),
+            &eli.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let entry = friend_entry(&lists(&app, &ada).await, &bea.id);
+        assert!(entry.get("lobbyCode").is_none(), "{entry}");
+    }
 }
 
 // B47 — status
@@ -1287,5 +1337,87 @@ mod r4039000_friend_feed {
         assert_eq!(status, 404);
         assert_eq!(feed_kinds(&feed(&app, &ada).await), Vec::<String>::new());
         assert_eq!(feed_kinds(&feed(&app, &bea).await), vec!["friendRequest"]);
+    }
+}
+
+mod r4233000_read_on_open {
+    //! R4233000 (#4233): answering a friend request marks that sender's `friendRequest` row read;
+    //! a row from anyone else is untouched.
+    use super::*;
+    use crate::support::store::feed;
+
+    /// `who`'s `friendRequest` rows as `(actor, subject, read)`, newest first.
+    async fn requests(app: &Arc<App>, who: &Account) -> Vec<(Value, Value, Value)> {
+        feed(app, who).await["notifications"]
+            .as_array()
+            .expect("a page of rows")
+            .iter()
+            .filter(|row| row["kind"] == "friendRequest")
+            .map(|row| {
+                (
+                    row["actor"]["profileId"].clone(),
+                    row["subject"].clone(),
+                    row["read"].clone(),
+                )
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r4233000_accepting_or_declining_a_friend_request_marks_only_that_senders_row() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let cy = account(&app, 3, "Cy").await;
+        let from_ada = requested(&app, &ada, &bea).await;
+        let from_cy = requested(&app, &cy, &bea).await;
+        assert_eq!(feed(&app, &bea).await["unread"], 2);
+
+        // Declining Cy's request marks only Cy's row; Ada's stays unread.
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/friends/requests/{from_cy}/decline"),
+            &bea.token,
+            Value::Null,
+        )
+        .await;
+        assert!((200..300).contains(&status), "{status}: {body}");
+        assert_eq!(
+            requests(&app, &bea).await,
+            vec![
+                (json!(cy.id), json!(from_cy), json!(true)),
+                (json!(ada.id), json!(from_ada), json!(false)),
+            ]
+        );
+        assert_eq!(feed(&app, &bea).await["unread"], 1);
+
+        // Accepting Ada's marks it too; both rows stay listed, newest first.
+        let (status, body) = accept(&app, &bea, &from_ada).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(
+            requests(&app, &bea).await,
+            vec![
+                (json!(cy.id), json!(from_cy), json!(true)),
+                (json!(ada.id), json!(from_ada), json!(true)),
+            ]
+        );
+        assert_eq!(feed(&app, &bea).await["unread"], 0);
+    }
+
+    #[tokio::test]
+    async fn r4233000_a_mutual_add_marks_the_first_request_row() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let from_ada = requested(&app, &ada, &bea).await;
+        // Bea asks back: the mutual add answers Ada's request, marking Bea's row read.
+        let (status, body) = request(&app, &bea, &ada.name).await;
+        assert!((200..300).contains(&status), "{status}: {body}");
+        assert_eq!(
+            requests(&app, &bea).await,
+            vec![(json!(ada.id), json!(from_ada), json!(true))]
+        );
+        assert_eq!(feed(&app, &bea).await["unread"], 0);
     }
 }

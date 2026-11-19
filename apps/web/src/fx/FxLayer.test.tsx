@@ -17,6 +17,7 @@ import {
   type AnimationQueue,
   type RunnerSignal,
 } from "../game/animations.ts";
+import { pointerFrames } from "../cards/pointerFrame.ts";
 import { CatalogContext, lookupFromDefs, type CardLookup } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
@@ -28,7 +29,6 @@ import FxLayer, {
   FX_HOLD_MARK,
   FX_LAYER_MARK,
   catalogFacts,
-  defaultFrames,
   defaultVisibility,
   type FxSeams,
 } from "./FxLayer.tsx";
@@ -1299,14 +1299,14 @@ describe("R3351000 — the shed pointer is followed once an animation frame (#36
 // The mutation audit (#3490): what the tests above left unheld, by the layer's parts.
 
 describe("S9 — the layer's default seams and catalog facts", () => {
-  it("R200 defaultFrames hands requestAnimationFrame's handles to its cancel, and where there is none it never fires: every handle 0", () => {
+  it("R200 pointerFrames hands requestAnimationFrame's handles to its cancel, and where there is none it never fires: every handle 0", () => {
     const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
     const frame = window.requestAnimationFrame;
     try {
-      defaultFrames().cancel(7);
+      pointerFrames().cancel(7);
       expect(cancel).toHaveBeenCalledWith(7);
       Object.defineProperty(window, "requestAnimationFrame", { value: undefined, configurable: true, writable: true });
-      const never = defaultFrames();
+      const never = pointerFrames();
       expect(never.request(() => undefined)).toBe(0);
     } finally {
       Object.defineProperty(window, "requestAnimationFrame", { value: frame, configurable: true, writable: true });

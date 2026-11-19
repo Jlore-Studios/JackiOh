@@ -112,7 +112,7 @@ Embers buy the next level at `RUN_LEVEL_EMBERS`, up to the ladder's top.
 
 Artifacts: at most `RUN_STARTER_ARTIFACTS_MAX`, distinct, worth at most `RUN_STARTER_ARTIFACT_POINTS` by `RUN_TIER_POINTS`. Each is Combat or Economic, not Unobtainable, and a starter or extracted ([[§15.4]]).
 
-Curses: any of the content's ([[§15.9]]).
+Curses: any of the content's, each at most once ([[§15.9]], [[R4067000]]).
 
 The start screen offers the named starting decks of `RUN_PRESET_DECKS` (placeholders until the designer's lists): each holds `RUN_STARTER_SIZE` distinct cards of `RUN_STARTER_CARDS` fitting level 1's slots, so any player may pick any of them from their first run, then tweak the picks in the builder.
 
@@ -294,7 +294,7 @@ Today, beating the final boss ends the run, won.
 
 The designer's content replaces the placeholders.
 
-**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's, each act's and each tier's win rate, HP cost and turns, the elites apart ([[R3586001]]), the max HP at each boss, the rows reached, the fights on each run's route, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target.
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's, each act's and each tier's win rate, HP cost and turns, the elites apart ([[R3586001]]), the max HP at each boss, the rows reached, the fights on each run's route, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add), the Embers (#3065, #3481) and the economy (the Coins and Tickets earned, the shops entered, what is held entering one, the cheapest shop card and the Remove, Radiant and buff prices charged): a guide to tuning the strawmen, not a target. A per-pull-request test holds the strawmen to wide win-rate bands at the tiny budget: tier 1's first fights stay clearly winnable, the final boss clearly hard and an elite harder than the normal fight at its tier ([[R3586000]], [[R3586001]]); a deliberate retune of the tiers moves the bands in the same patch. A second test holds the economy to wide bands in the same way: Coins and Tickets earned by a won run, the cheapest shop card affordable by a run's first shop, Remove, Radiant and buff payable over a run, and the score and Embers a run pays stay within a factor of two of the measured figures; a deliberate retune of the prices, the drops or the score row moves the bands in the same patch.
 
 ### 15.13 Open questions
 

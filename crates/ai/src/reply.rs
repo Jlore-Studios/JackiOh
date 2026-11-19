@@ -6,7 +6,8 @@
 //!    judged after the turn's end while a handed card would be discarded there (R3696001).
 //! 2. Face-up activations (up to AI_REPLY.visible_activations).
 //! 3. Static trades: best value attack (lethal, kill, trade up, face; Deft trials R49).
-//! 4. Defense switches up to AI_REPLY.defense_switches (#1696).
+//! 4. Defense switches up to AI_REPLY.defense_switches (#1696); facing lethal, weighed against the best
+//!    attack (R4187000).
 //!
 //! Step evaluation uses real `reduce` calls (catching unwinds, SURFACE §4.4.9). Countdowns
 //! waiting where reply ends are blended via `AI_REPLY.countdown_share` (#1995, R1181000).
@@ -15,20 +16,21 @@ use std::cmp::Ordering;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
+use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::{
     Action, ActionBody, AttackTarget, CardInstance, DelayedAt, GameState, KeywordKind, Phase, PlayerId,
-    Position, Rng, SECRET_KEY, Selection, card_keywords, effective_life, find_instance, has_countdown,
-    has_keyword, legal_actions, pierces, reduce_unpiloted, secret_of, subsystems, takes_strike_back,
-    temporary_number, unit_view,
+    Position, Rng, SECRET_KEY, Selection, burn_on, card_keywords, converts_to, effective_life, find_instance,
+    has_countdown, has_keyword, legal_actions, pierces, reduce_unpiloted, secret_of, subsystems,
+    takes_strike_back, temporary_number, toxic_on, unit_view,
 };
 
 use crate::candidates::{
-    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of,
+    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of, wall_switches,
 };
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
-    NextSwing, Prices, coming_mana, evaluate_priced, float_credit, heal_converted, heal_worth, kill_worth,
-    unit_worth,
+    NextSwing, Prices, coming_mana, evaluate_priced, float_credit, heal_converted, heal_worth,
+    hero_ticks_added, kill_worth, unit_worth,
 };
 use crate::learned::finalist_score;
 use crate::lethal::{deft_ready_switch, ready_gap};
@@ -65,13 +67,17 @@ pub(crate) struct Fight {
     pub(crate) a: Side,
     pub(crate) t: Side,
     pub(crate) combat: Exchange,
-    /// The attacker's blow on the target.
+    /// The attacker's blow on the target: nothing when a First Strike defender destroys the attacker
+    /// first (§4.3 step 1, R4171000).
     pub(crate) out: Blow,
+    /// The target's strike back on the attacker: nothing when none reaches it (R783000) or a First Strike
+    /// attacker destroys the target first (§4.3 step 1).
+    pub(crate) back: Blow,
     /// Whether the blow destroys the target: never when a First Strike defender destroys the attacker
     /// first.
     pub(crate) kills: bool,
-    /// Whether the strike back destroys the attacker: never when a First Strike attacker destroys the
-    /// target first.
+    /// Whether the strike back destroys the attacker (or exiles it, R4065001): never when a First Strike
+    /// attacker destroys the target first.
     pub(crate) dies: bool,
     /// Whether the blow lands at all (§4.3 step 1).
     pub(crate) lands: bool,
@@ -85,36 +91,66 @@ pub(crate) fn fight(state: &GameState, attacker: &CardInstance, target: &CardIns
     let t = side_of(state, target);
     // R1120, R1283: each strike as the combat reads it, the bonus and the lane multiplier included.
     let combat = exchange(state, attacker, &a.view, target, &t.view);
-    let out = blow(&a, combat.hit, combat.poisonous, &t);
-    let mut kills = out.kills;
-    let mut dies =
-        takes_strike_back(state, attacker, target) && blow(&t, combat.strike_back, t.poisonous, &a).kills;
-    if a.first_strike && !t.first_strike && kills {
-        dies = false;
+    let mut out = blow(&a, combat.hit, combat.poisonous, &t);
+    let mut back = if takes_strike_back(state, attacker, target) {
+        blow(&t, combat.strike_back, t.poisonous, &a)
+    } else {
+        Blow::default()
+    };
+    // §4.3 step 1: a First Strike attacker that destroys its target first takes no strike back.
+    if a.first_strike && !t.first_strike && out.kills {
+        back = Blow::default();
     }
-    if t.first_strike && !a.first_strike && dies {
-        kills = false;
+    // §4.3 step 1, R4171000: an attacker a First Strike defender destroys first strikes nothing at all.
+    let lands = !(t.first_strike && !a.first_strike && back.kills);
+    if !lands {
+        out = Blow::default();
     }
-    // §4.3 step 1: an attacker a First Strike defender destroys first strikes nothing at all.
-    let lands = !(t.first_strike && !a.first_strike && dies);
     Fight {
         a,
         t,
         combat,
+        kills: out.kills,
+        dies: back.kills,
         out,
-        kills,
-        dies,
+        back,
         lands,
     }
 }
 
+/// R4064001: what `amount` more of `kind` costs `unit`, as `afflicted` prices its counters (R3822000):
+/// the worth it loses with them on. A hit that Burns or is Toxic instead is worth this to its striker.
+fn counter_price(
+    state: &GameState,
+    unit: &CardInstance,
+    kind: Affliction,
+    amount: i32,
+    prices: &Prices,
+) -> f64 {
+    if amount <= 0 {
+        return 0.0;
+    }
+    let mut afflicted = unit.clone();
+    match kind {
+        Affliction::Burn => afflicted.counters.burn = Some(burn_on(unit).saturating_add(amount)),
+        Affliction::Toxic => afflicted.counters.toxic = Some(toxic_on(unit).saturating_add(amount)),
+    }
+    (unit_worth(state, unit, &AI_EVAL, prices) - unit_worth(state, &afflicted, &AI_EVAL, prices)).max(0.0)
+}
+
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
-/// (`kill_worth`, #1796), less what its own death removes when it dies too, with First Strike deciding
-/// who strikes first and no strike back on a Ranged attacker unless the target is Ranged too (R783000).
-/// A hit that kills nothing is worth a little per point dealt, so a second attacker can finish what the
-/// first started. A Cleave splash is priced at `AI_REPLY.cleave_share` of what it kills or unshields
-/// (R63), a Trample excess as a face hit and a Lifesteal heal by `heal_worth` (#1820). The move order
-/// reads `kills` and `splash_kills` too (`candidates.rs`'s even trades, #1779, #1821).
+/// (`kill_worth`, #1796; its whole `unit_worth` when the attacker exiles what it damages, R4065001), less
+/// what its own death removes when it dies too (its whole `unit_worth` when the target's strike back
+/// exiles it), with First Strike deciding who strikes first and no strike back on a Ranged attacker
+/// unless the target is Ranged too (R783000). A hit that kills nothing is worth a little per point dealt,
+/// so a second attacker can finish what the first started; an attacker a First Strike defender destroys
+/// first deals nothing and pops nothing, so it is worth only its own loss (R4171000). A Cleave splash is
+/// priced at `AI_REPLY.cleave_share` of what it kills or unshields (R63), a Trample excess as a face hit
+/// and a Lifesteal heal by `heal_worth` (#1820). With
+/// `AI_EVAL.pool_and_conversion_read`, a blow that Burns or is Toxic instead kills nothing and heals
+/// nothing and is worth its counter (`counter_price`, R4064001), and the target side's damage pools soak
+/// the blow, then its splashes (R4064000). The move order reads `kills` and `splash_kills` too
+/// (`candidates.rs`'s even trades, #1779, #1821).
 pub(crate) fn trade_value(
     state: &GameState,
     attacker: &CardInstance,
@@ -133,6 +169,7 @@ pub(crate) fn trade_value(
         t,
         combat,
         out,
+        back,
         kills,
         dies,
         lands,
@@ -154,29 +191,55 @@ pub(crate) fn trade_value(
     let mut splashed = 0;
     let mut splash_kills = false;
     if has_keyword(&a.view.keywords, KeywordKind::Cleave) && lands {
+        // R4064000: the blow spent the target side's pools first; each splash spends what it left.
+        let mut pool = t.pool - out.soaked;
         for neighbour in cleaved_neighbours(state, attacker, target) {
-            let n = side_of(state, &neighbour);
+            let mut n = side_of(state, &neighbour);
+            n.pool = pool;
             let splash = blow(&a, combat.splash, combat.poisonous, &n);
+            pool -= splash.soaked;
             splashed += on_unit(splash.dealt, &n);
             if splash.kills {
                 splash_kills = true;
                 cleave_value += AI_REPLY.cleave_share * unit_worth(state, &neighbour, &AI_EVAL, prices);
             } else if splash.pops_shield {
                 cleave_value += AI_REPLY.cleave_share * AI_EVAL.keyword.divine_shield;
+            } else if let Some(kind) = a.converts {
+                cleave_value +=
+                    AI_REPLY.cleave_share * counter_price(state, &neighbour, kind, splash.converted, prices);
             }
         }
     }
 
+    // R1124, R4065001: what a blow that exiles removes is the whole unit, with no Death left behind and no
+    // Reborn body back (`unit_worth`), where a kill removes `kill_worth`.
+    let removed = |side: &Side, unit: &CardInstance| {
+        if side.exiles {
+            unit_worth(state, unit, &AI_EVAL, prices)
+        } else {
+            kill_worth(state, unit, &AI_EVAL, prices)
+        }
+    };
     let mut value = if kills {
-        kill_worth(state, target, &AI_EVAL, prices)
+        removed(&a, target)
     } else {
         AI_REPLY.chip_per_damage * f64::from(out.dealt.min(t.view.health))
     };
     if out.pops_shield {
         value += AI_EVAL.keyword.divine_shield;
     }
+    // R4064001: a blow that converts is worth the counter it adds, a strike back that does costs the
+    // attacker its own, unless the attacker destroys the target first.
+    if lands && let Some(kind) = a.converts {
+        value += counter_price(state, target, kind, out.converted, prices);
+    }
     if dies {
-        value -= kill_worth(state, attacker, &AI_EVAL, prices);
+        value -= removed(&t, attacker);
+    }
+    if let Some(kind) = t.converts
+        && !(a.first_strike && !t.first_strike && kills)
+    {
+        value -= counter_price(state, attacker, kind, back.converted, prices);
     }
     // §4.4 step 9: what the attack's hits deal beyond each unit's health goes on to the target's hero
     // through its Armor and caps (`projected_damage`: a Cleave's hits too, R176, and nothing when a
@@ -220,9 +283,11 @@ pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
 
 /// The static trader's value of `attacker` hitting `defender`'s hero: `AI_EVAL.win` when
 /// `face_is_lethal`, else `reply_face_value` of what the hit deals through the hero's Armor and caps
-/// (`projected_hero_damage`). A Lifesteal attacker's hit that is not lethal adds the heal of what it
-/// deals (`lifesteal_value`, the term `trade_value` adds for a hit on a unit, #3858). The reply's ranking
-/// and the seat's own move order (`candidates.rs`, #2825) read it alike.
+/// (`projected_hero_damage`), and with `AI_EVAL.pool_and_conversion_read` its side's damage pools
+/// (R4064000); a hit that Burns or is Toxic instead is worth `face_per_damage` of `hero_affliction` of
+/// the life its counter's ticks add (R4064001). A Lifesteal attacker's hit that is not lethal adds the
+/// heal of what it deals (`lifesteal_value`, the term `trade_value` adds for a hit on a unit, #3858).
+/// The reply's ranking and the seat's own move order (`candidates.rs`, #2825) read it alike.
 pub(crate) fn face_value(
     state: &GameState,
     attacker: &CardInstance,
@@ -234,7 +299,20 @@ pub(crate) fn face_value(
     }
     let view = unit_view(state, attacker);
     let pierce = pierces(state, Some(attacker), None);
-    let damage = subsystems::projected_hero_damage(state, defender, view.attack, pierce);
+    let read = AI_EVAL.pool_and_conversion_read;
+    // R4064001: a converting hit deals the hero nothing; it is worth the life its counter's ticks add.
+    if read && let Some(kind) = converts_to(state, attacker) {
+        let struck = subsystems::projected_hero_damage(state, defender, view.attack, pierce);
+        return AI_REPLY.face_per_damage
+            * AI_EVAL.hero_affliction
+            * f64::from(hero_ticks_added(state, defender, kind, struck, &AI_EVAL));
+    }
+    // R4064000: the hit meets what the hero's side's damage pools have left (`projected_damage`, R4032000).
+    let damage = if read {
+        subsystems::projected_damage(state, attacker, &AttackTarget::Hero { player: defender })
+    } else {
+        subsystems::projected_hero_damage(state, defender, view.attack, pierce)
+    };
     let hit = reply_face_value(state, defender, damage);
     // §4.4 step 8: Lifesteal heals the attacker's hero by what the hit deals, on a hero as on a unit
     // (#3858). A lethal hit is the win, whatever it heals.
@@ -594,6 +672,46 @@ fn defense_switch(
     best_try(state, seat.opponent(), &tries, false, counter, prices)
 }
 
+/// Step 4, R4187000: facing lethal, the switches to Defense Position that lower the seat's threat
+/// (`wall_switches`, R2976000), up to `AI_REPLY.defense_switches`, tried with `attack`, the best-ranked
+/// attack, first, one node each; the best by the opponent's own evaluation is kept (`best_try`), so a
+/// winning attack still goes first and a wall only when it beats both that attack and standing still.
+/// Nothing while the opponent's attacks left reach the seat's face together (`ready_gap`), nor for a Deft
+/// unit that may still attack, which keeps its switch for after its attack (R49).
+fn lethal_wall(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    attack: &ActionBody,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Known {
+    let opp = seat.opponent();
+    let attacks_first = |instance_id: &str| {
+        legal.iter().any(
+            |action| matches!(action, ActionBody::Attack { attacker_id, .. } if attacker_id == instance_id),
+        ) && find_instance(state, instance_id)
+            .is_some_and(|unit| has_keyword(&unit_view(state, unit).keywords, KeywordKind::Deft))
+    };
+    let switches: Vec<ActionBody> = legal
+        .iter()
+        .filter(|action| {
+            matches!(action, ActionBody::SwitchPosition { instance_id } if !attacks_first(instance_id))
+        })
+        .cloned()
+        .collect();
+    let walls = wall_switches(state, opp, &switches);
+    if walls.is_empty() || ready_gap(state, opp) <= 0.0 {
+        return Known::Nothing;
+    }
+    let mut tries = vec![attack.clone()];
+    tries.extend(walls.into_iter().take(AI_REPLY.defense_switches.max(0) as usize));
+    if tries.len() < 2 {
+        return Known::Nothing;
+    }
+    best_try(state, opp, &tries, false, counter, prices)
+}
+
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
 pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
     let side = &state.players[seat.opponent()];
@@ -685,15 +803,18 @@ pub fn simulate_reply_with(
             .next();
         // #1696: no attack is worth making, so before it ends its turn the opponent switches a unit
         // its evaluation would rather have in Defense Position.
-        if attack.is_none() {
-            match defense_switch(&current, seat, &legal, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(switched) => {
-                    current = *switched;
-                    continue;
-                }
-                Known::Nothing => {}
+        // R4187000: facing lethal, it weighs a wall against that attack.
+        let walled = match &attack {
+            None => defense_switch(&current, seat, &legal, counter, prices),
+            Some(best) => lethal_wall(&current, seat, &legal, best, counter, prices),
+        };
+        match walled {
+            Known::Cut => return None,
+            Known::Played(switched) => {
+                current = *switched;
+                continue;
             }
+            Known::Nothing => {}
         }
         if !counter.take() {
             return None;
@@ -817,7 +938,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     /// #67 Zoomerbin Oomen, a 1/2.
     const OOMEN: &str = "core-067";
-    /// #20 Pointmaster, a 7/1 First Strike.
+    /// #20 Pointmaster, a 6/1 Rush, First Strike (Radiant 12/2, Divine Shield too).
     const POINTMASTER: &str = "core-020";
     /// M+ #7 Life Mage, whose Radiant face makes healing its controller's hero twice as effective
     /// (R1180003).
@@ -1046,11 +1167,45 @@ mod tests {
             &[Keyword::Lifesteal],
         );
         let trade = trade_value(s.state(), s.card(VANILLA), &s.card(POINTMASTER).id, Prices::NONE);
-        // §4.3 step 1: the Pointmaster's 7 destroys the Vanilla before it strikes.
+        // §4.3 step 1: the Pointmaster's 6 destroys the Vanilla before it strikes, so its blow deals
+        // nothing, chips nothing and heals nothing (R4171000).
         assert!(!trade.kills);
-        let expected =
-            AI_REPLY.chip_per_damage * 1.0 - kill_worth(s.state(), s.card(VANILLA), &AI_EVAL, Prices::NONE);
+        let expected = -kill_worth(s.state(), s.card(VANILLA), &AI_EVAL, Prices::NONE);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    /// R4171000: an attacker without First Strike that a First Strike defender destroys first lands no
+    /// blow, so the static trader prices the attack as the attacker lost and nothing else: no chip on a
+    /// plain Pointmaster's 1 health, no pop of a Radiant one's Divine Shield.
+    #[test]
+    fn r4171000_a_blow_a_first_strike_defender_stops_earns_no_chip_and_no_shield_pop() {
+        jackioh_cards::register_all();
+        for (attacker, radiant) in [(VANILLA, false), (OOMEN, true)] {
+            let s = scenario(json!({
+                "p1": { "field": [attacker] },
+                "p2": { "field": [{ "def": POINTMASTER, "radiant": radiant }] },
+            }));
+            let (unit, pointmaster) = (s.card(attacker), s.card(POINTMASTER));
+            let read = fight(s.state(), unit, pointmaster);
+            assert!(
+                read.t.first_strike && !read.a.first_strike,
+                "{attacker} into {POINTMASTER}"
+            );
+            assert_eq!(read.t.shield, radiant, "{attacker} into {POINTMASTER}");
+            assert!(
+                !read.lands && read.dies && !read.kills,
+                "{attacker} into {POINTMASTER}"
+            );
+            assert_eq!((read.out.dealt, read.out.pops_shield), (0, false), "{attacker}");
+            let trade = trade_value(s.state(), unit, &pointmaster.id, Prices::NONE);
+            let expected = -kill_worth(s.state(), unit, &AI_EVAL, Prices::NONE);
+            assert!(!trade.kills && !trade.splash_kills, "{attacker}");
+            assert!(
+                (trade.value - expected).abs() < 1e-9,
+                "{attacker}: {} vs {expected}",
+                trade.value
+            );
+        }
     }
 
     /// p1's Mr. Vanilla's `face_value` on p2's hero in `setup`, with Lifesteal and without.

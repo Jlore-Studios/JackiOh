@@ -60,8 +60,11 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 }
 
 /// §4.5 step 1: a unit dies at 0 or less health or when marked destroyed; an Indestructible one only
-/// when its max health has fallen to 0 or less (R69).
+/// when its max health has fallen to 0 or less (R69), or when a steal had no room for it (R4205000).
 fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+    if unit.unpreventable_destroy == Some(true) {
+        return true;
+    }
     // R3539003: no damage or aura reaches a Dormant card, so no health judges it; only a destroy mark
     // does.
     if crate::slumber::is_slumbering(unit) {
@@ -116,11 +119,12 @@ fn backrow_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 /// R46: a marked Indestructible unit switches to Attack Position and loses Taunt for the turn; a backrow card
 /// has no position, so an Indestructible Field Spell only has its mark dropped. §10.3: both are reported, the
 /// switch as `positionSwitched` only when there is one (R91), the Taunt as a `keywordGranted` with `lost`
-/// set, so the Taunt that decides what may be attacked (§4.2 step 3) never goes silently.
+/// set, so the Taunt that decides what may be attacked (§4.2 step 3) never goes silently. R4205000: the
+/// mark of a steal that had no room for the card is not dropped, so it switches nothing either.
 fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
         for unit in units_of(sink.state, player) {
-            if unit.marked_destroyed != Some(true) {
+            if unit.marked_destroyed != Some(true) || unit.unpreventable_destroy == Some(true) {
                 continue;
             }
             let view = crate::layers::unit_view(sink.state, &unit);
@@ -160,7 +164,7 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             }
         }
         for card in backrow_of(sink.state, player) {
-            if card.marked_destroyed != Some(true) {
+            if card.marked_destroyed != Some(true) || card.unpreventable_destroy == Some(true) {
                 continue;
             }
             if !has_keyword(
@@ -922,6 +926,39 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     run_death_pass(sink, &mut pass, None);
 }
 
+/// R4154205 (Stinkyscape #70 Z'Zoth's "Trigger their Deaths"): each of `cards`' Death hooks runs now, in
+/// the order given, as §4.5 step 3 runs a dying card's, the card read as it stands (its snapshot, R89):
+/// none dies, so there is no Reborn, no `destroyed`, no graveyard step and no state check after it (the
+/// list's own follows, R59), as after a Sacrifice's pass. Its controller's Cry and Death multiplier
+/// (R823) runs each Death that many more times, as for a Death the check collects. A card with no Death
+/// runs nothing; a hook that asks parks the rest of the run on `state.work` (R113).
+pub fn run_death_hooks(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
+    let mut owed: Vec<CardInstance> = Vec::new();
+    for card in cards {
+        if crate::grants::death_hook_of(sink.state, card).is_none() {
+            continue;
+        }
+        let extra = crate::multipliers::extra_runs(
+            sink.state,
+            card.controller,
+            crate::multipliers::Multiplied::CryAndDeath,
+        )
+        .max(0) as usize;
+        for _ in 0..=extra {
+            owed.push(card.clone());
+        }
+    }
+    if owed.is_empty() {
+        return;
+    }
+    let mut pass = DeathPass {
+        owed,
+        sacrificed: Some(true),
+        ..DeathPass::default()
+    };
+    run_death_pass(sink, &mut pass, None);
+}
+
 /// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths, in R68's order, by §6.3
 /// Exile's move (`zones::exile_to_pile`, R11, R55): no Death, no Reborn, no `destroyed` (R461), even
 /// when the hit was lethal.
@@ -1111,9 +1148,21 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
 
         // B5 E5: before any card moves, the units that would die meet the "would die" replacements
         // (Classic #14's Radiant flicker), which take some of them out of the collection (R462).
+        // R4205000: a card a steal had no room for is not offered, as R462 keeps a Sacrifice out: a
+        // flicker would keep it on the field, which nothing may. It dies with the rest, in R68's order.
+        let preventable: Vec<CardInstance> = dying
+            .iter()
+            .filter(|card| card.unpreventable_destroy != Some(true))
+            .cloned()
+            .collect();
         let remaining: Vec<CardInstance> =
-            match crate::replacements::would_die_window(sink, &dying, &mut resolved_first) {
-                crate::replacements::WouldDie::Die(remaining) => remaining,
+            match crate::replacements::would_die_window(sink, &preventable, &mut resolved_first) {
+                crate::replacements::WouldDie::Die(left) => dying
+                    .into_iter()
+                    .filter(|card| {
+                        card.unpreventable_destroy == Some(true) || left.iter().any(|kept| kept.id == card.id)
+                    })
+                    .collect(),
                 // R1875006: a replacement resolved before anything moved: judge the board it left again.
                 crate::replacements::WouldDie::StartOver => {
                     if sink.state.result.is_some() || sink.state.pending.is_some() {

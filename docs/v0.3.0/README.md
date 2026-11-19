@@ -152,7 +152,7 @@ tests run in seconds. So:
 |---|---|---|
 | `rust` | `cargo fmt --check`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test --workspace` (engine rules tests, every card test, golden replay, AI unit tests, server tests on the fake store, tools tests); `cargo jackioh catalog check`; `patches check`; `spec check`; `fuzz --seeds 200` | < 5 min with `Swatinem/rust-cache` |
 | `web` | `scripts/build-wasm.sh`; `pnpm --dir apps/web typecheck`; `eslint apps/web e2e`; `vitest run --project web`; the `ts-rs` diff check (V20) | < 5 min |
-| `e2e smoke` | Chrome only, specs 01 (hotseat game and replay hash), 06 (networked match), 10 (invite gate), 13 (practice against the AI), 19 (queue modes and series), against a release build of `jackioh-server` | < 5 min |
+| `e2e smoke` | Chrome only, specs 01 (hotseat game and replay hash), 06 (networked match), 10 (invite gate), 13 (practice against the AI), 19 (queue modes and series) and 51 (the menus' shell), against a release build of `jackioh-server`; specs 46 and 47 run daily only (#4092) | < 5 min |
 | `db` | `test:sql`, `test:db`, `test:deploy`, only when `crates/server/migrations/**`, `crates/server/src/db/**`, `crates/server/Dockerfile` or `render.yaml` changed (a skip passes the check) | < 5 min |
 | `bot selftest` | unchanged | — |
 

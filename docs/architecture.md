@@ -156,6 +156,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `duos_rooms` | rooms you host or joined | `auth.uid() in (host, guest)` | none |
 | `duos_matches` | **none** | no policy | none — holds the seed and, in `options`, all four decks, the AI team's included: §3.1's reason for `matches` (SPEC §13.9) |
 | `duos_match_actions` | **none** | no policy | none — the co-op log, which with the seed is every hidden card (§3.1) |
+| `duos_match_checkpoints` | **none** | no policy | none — a live co-op match's whole state, every hand and library (#4169) |
 | `daily_games` | rows you play in | `app.current_profile_id() in (p1_profile_id, p2_profile_id)` | none — a daily game's clock and its public board (turn, both heroes' life, result); its seed, decks and log stay in `matches` and `match_actions` (SPEC §9.13, #3727) |
 | `daily_invites` | rows you sent or received, every column but `choice` | `app.current_profile_id() in (from_profile, to_profile)` | none — `choice` is the sender's frozen deck, hidden from the friend it challenges (§3.1), so the column grant leaves it out |
 | `daily_notify` | **none** | no policy | none — the email setting, its unsubscribe token and when each channel was last sent |
@@ -264,7 +265,10 @@ things in it are not obvious:
   shared-logic crates beside it.
 - **A deploy restarts the server.** A container keeps the image it started with, so the first
   request after a deploy compares the running server's `/healthz` `x-deployed-commit` with the
-  commit the deploy named (`DEPLOYED_COMMIT`) and stops a server on an older one; live matches
+  commit the deploy named (`DEPLOYED_COMMIT`) and stops a server on an older one. It also stops a
+  server on the deployed commit whose settings, the secrets among them, are not the Worker's now,
+  told by a fingerprint of the container's environment kept in the object's storage (#4118), so a
+  redeploy after a secret change takes effect; live matches
   rebuild from `(seed, log)` when their sockets return (§6). The web build and the server deploy in
   the same job, so a client is never ahead of its server.
 
@@ -478,10 +482,13 @@ migration 0014 is applied loses records (each logged as `game.record.failed`), n
 
 One snapshot, and only beside the log. ARCHITECTURE-CCG §2.2: "Append each action as it resolves;
 don't persist snapshots. Periodic snapshots are an optimization for later if replay gets slow." A
-30-player-turn cap (R2) bounds a log's length, so nothing is written as a match is played. The
-restart drain alone stores one checkpoint per live match (`match_checkpoints`, migration 0042,
-#1169), which the very next boot's rebuild resumes when every check passes, folding only the rows
-after it, and otherwise ignores for the whole log; a finished match drops it, and no replay reads it.
+30-player-turn cap (R2) bounds a log's length, so the only thing written beside the log
+as a match is played is its checkpoint. Each
+live match's actor stores one checkpoint every `MATCH_CHECKPOINT_MIN_ACTIONS` rows as played, and
+the restart drain stores one per live match as before (`match_checkpoints`, migration 0042,
+#1169, #4224), which the very next boot's rebuild resumes when every check passes, folding only
+the rows after it, and otherwise ignores for the whole log; a finished match drops it, and no
+replay reads it.
 
 `match_actions` is append-only as a **database** property: `app.deny_row_mutation()` is attached
 `before update or delete`. `collection_grants` gets the same trigger for the same reason.
@@ -489,7 +496,10 @@ after it, and otherwise ignores for the whole log; a finished match drops it, an
 A co-op match is folded the same way (SPEC §13.9): `duos_matches.seed` and `options` (the four decks,
 the teams' rules and the AI seats' handicaps) with `duos_match_actions` reconstruct it through
 `duos_fold`, its duel `d` seeded `{seed}:duel{d}`, and both tables stay out of every client's reach
-for §3.1's reason. A co-op replay (`GET /api/duos/matches/:matchId/replay`) sends a human seat its own
+for §3.1's reason. Its actor keeps a checkpoint as a match's does (`duos_match_checkpoints`, migration
+0097, #4169), stored by the restart drain and also every `MATCH_CHECKPOINT_MIN_ACTIONS` rows while the
+game is played, so a crashed actor's rebuild folds at most that many rows; one that fails a 1v1
+checkpoint's checks is ignored for the whole log, and the end drops it. A co-op replay (`GET /api/duos/matches/:matchId/replay`) sends a human seat its own
 Duos views, step by step, and nothing else.
 
 ---

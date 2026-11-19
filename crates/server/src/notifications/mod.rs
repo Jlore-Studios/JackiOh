@@ -44,6 +44,8 @@ pub struct Notice {
     pub actor: Option<String>,
     pub subject: Option<String>,
     pub payload: Value,
+    /// R4233000: written already read (nobody's dot lights for their own act).
+    pub read: bool,
 }
 
 impl Notice {
@@ -55,12 +57,18 @@ impl Notice {
             actor: Some(actor.to_string()),
             subject: Some(subject.to_string()),
             payload: json!({}),
+            read: false,
         }
     }
 
     /// The notice with `payload` for its words.
     pub fn with(self, payload: Value) -> Notice {
         Notice { payload, ..self }
+    }
+
+    /// The notice written already read: listed under Recent, never a toast, never unread.
+    pub fn read(self) -> Notice {
+        Notice { read: true, ..self }
     }
 }
 
@@ -76,7 +84,10 @@ pub async fn notify(app: &App, notices: Vec<Notice>) {
     match write(app, notices).await {
         Ok(written) => {
             for (row, frame) in &written {
-                send_notification(app, &row.profile_id, frame);
+                // R4233000: a row written already read is history, not news: no toast for it.
+                if row.read_at.is_none() {
+                    send_notification(app, &row.profile_id, frame);
+                }
             }
             let mut told: Vec<&str> = written.iter().map(|(row, _)| row.profile_id.as_str()).collect();
             told.sort_unstable();
@@ -85,6 +96,35 @@ pub async fn notify(app: &App, notices: Vec<Notice>) {
         }
         Err(error) => {
             tracing::warn!(event = "notifications.write_failed", message = %error.message);
+        }
+    }
+}
+
+/// R4233000: marks the caller's unread rows of `kinds` about `subject` (by `actor` when
+/// `Some`) read, after the act that dealt with them committed and in a transaction of its own.
+/// A mark that changed any row pushes the caller's social frame, so every one of their tabs drops
+/// the dot. A failure is logged, as `notify`'s is, and never fails the caller.
+pub async fn mark_subject(
+    app: &App,
+    profile_id: &str,
+    kinds: &[NotificationKind],
+    subject: &str,
+    actor: Option<&str>,
+) {
+    let changed = async {
+        let mut tx = app.db.begin(Some(profile_id)).await?;
+        let changed = tx
+            .notifications_mark_subject(profile_id, kinds, subject, actor, now_ms())
+            .await?;
+        tx.commit().await?;
+        Ok::<u64, ApiError>(changed)
+    }
+    .await;
+    match changed {
+        Ok(0) => {}
+        Ok(_) => push_social(app, &[profile_id]).await,
+        Err(error) => {
+            tracing::warn!(event = "notifications.mark_failed", message = %error.message);
         }
     }
 }
@@ -107,6 +147,7 @@ async fn write(app: &App, notices: Vec<Notice>) -> Result<Vec<(NotificationRow, 
             subject: notice.subject,
             payload: notice.payload,
             created_at: now,
+            read: notice.read,
         };
         rows.push(tx.notifications_add(&new, NOTIFICATIONS_KEEP).await?);
     }
@@ -192,7 +233,7 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
         tx.notifications_delete(&me, &closed).await?;
         rows.retain(|row| !closed.contains(&row.id));
     }
-    let unread = tx.notifications_unread(&me).await?;
+    let unread = tx.notifications_unread(&me, now).await?;
     let actors: Vec<String> = rows.iter().filter_map(|row| row.actor_id.clone()).collect();
     let people = profiles_by_id(&mut tx, &actors).await?;
     tx.commit().await?;
@@ -232,9 +273,10 @@ pub async fn mark_read(app: &Arc<App>, req: Req) -> ApiResult {
                 .ok_or_else(|| bad_request("\"upTo\" must be a notification's id"))?,
         ),
     };
+    let now = now_ms();
     let mut tx = app.db.begin(Some(&me)).await?;
-    tx.notifications_mark_read(&me, up_to, now_ms()).await?;
-    let unread = tx.notifications_unread(&me).await?;
+    tx.notifications_mark_read(&me, up_to, now).await?;
+    let unread = tx.notifications_unread(&me, now).await?;
     tx.commit().await?;
     push_social(app, &[&me]).await;
     Ok(ok(json!({ "unread": unread })))

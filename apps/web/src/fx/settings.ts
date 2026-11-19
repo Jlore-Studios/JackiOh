@@ -5,6 +5,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { localStorageOrNull } from "../net/storage.ts";
+import { isSafeKey } from "../wire/json.ts";
 import { FX_INTENSITY_SCALE, FX_SETTINGS_KEY, FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN } from "./constants.ts";
 
 export type FxIntensity = "off" | "low" | "normal" | "high";
@@ -52,18 +54,10 @@ export function normalizeFxSettings(raw: unknown): FxSettings {
   };
 }
 
-function defaultStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
 /** Absent, throwing or unparsable storage gives the frozen `DEFAULT_FX_SETTINGS` itself; sharing it is safe. */
 export function loadFxSettings(storage?: Storage | null): FxSettings {
   try {
-    const store = storage === undefined ? defaultStorage() : storage;
+    const store = storage === undefined ? localStorageOrNull() : storage;
     if (store === null) return DEFAULT_FX_SETTINGS;
     const text = store.getItem(FX_SETTINGS_KEY);
     if (text === null) return DEFAULT_FX_SETTINGS;
@@ -75,7 +69,7 @@ export function loadFxSettings(storage?: Storage | null): FxSettings {
 
 function persist(settings: FxSettings): void {
   try {
-    const store = defaultStorage();
+    const store = localStorageOrNull();
     if (store === null) return;
     store.setItem(FX_SETTINGS_KEY, JSON.stringify(settings));
   } catch {
@@ -94,6 +88,8 @@ export function getFxSettings(): FxSettings {
 export function setFxSettings(patch: Partial<FxSettings>): FxSettings {
   const merged: Record<string, unknown> = { ...getFxSettings() };
   for (const [key, value] of Object.entries(patch)) {
+    // Issue #4015: a key from outside (the account's copy) never becomes an object key.
+    if (!isSafeKey(key)) continue;
     if (value !== undefined) merged[key] = value;
   }
   const next = normalizeFxSettings(merged);

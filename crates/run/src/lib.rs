@@ -878,7 +878,10 @@ pub fn run_check_setup(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunCont
             "the relics are worth {points} points, over {RUN_STARTER_ARTIFACT_POINTS}"
         ));
     }
-    for id in &setup.curses {
+    for (i, id) in setup.curses.iter().enumerate() {
+        if setup.curses[..i].contains(id) {
+            return Err(format!("{id} is taken twice"));
+        }
         if !content.curses.iter().any(|c| &c.id == id) {
             return Err(format!("{id} is no curse"));
         }
@@ -1839,15 +1842,12 @@ fn fight_won(state: &mut RunState, content: &RunContent, report: &FightReport, r
             _ => None,
         });
     earn(state, coins, tickets);
+    // R3286000: a drop already held, or none, is replaced by a roll; a mini-boss's is of
+    // `RUN_MINI_BOSS_DROP_TIER` or better, as its own dealt drop is (§15.6).
+    let least = (kind == RunNodeKind::MiniBoss).then_some(RUN_MINI_BOSS_DROP_TIER);
     let artifact = match node.artifact {
         Some(id) if !held_ids(state).contains(&id.as_str()) => Some(id),
-        // R3286000: a drop already held is replaced by a roll; a mini-boss's is of
-        // `RUN_MINI_BOSS_DROP_TIER` or better, as its own dealt drop is (§15.6).
-        Some(_) => {
-            let least = (kind == RunNodeKind::MiniBoss).then_some(RUN_MINI_BOSS_DROP_TIER);
-            roll_reward_artifact(state, content, kind, least, rng)
-        }
-        None => roll_reward_artifact(state, content, kind, None, rng),
+        _ => roll_reward_artifact(state, content, kind, least, rng),
     };
     state.phase = RunPhase::Reward {
         artifact,

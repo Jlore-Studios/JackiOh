@@ -27,7 +27,7 @@ import { MenuShell } from "../shell/MenuShell.tsx";
 import LandingRoute from "./landing.tsx";
 import {
   EVEN,
-  ROTATION_POOL,
+  shippedPool,
   dealLandingFan,
   fanPool,
   favoringFullArt,
@@ -547,7 +547,7 @@ describe("R639 the homescreen rotation", () => {
     withGames(ROTATION_MIN_GAMES + 40);
     render(<LandingRoute random={seeded(11)} />);
     const sets = new Set<string>();
-    const poolById = new Map(ROTATION_POOL.map((def) => [def.id, def]));
+    const poolById = new Map(shippedPool().map((def) => [def.id, def]));
     for (let step = 0; step < 60; step += 1) {
       for (const id of shownIds()) sets.add(poolById.get(id)?.set ?? "?");
       act(() => {
@@ -570,7 +570,7 @@ describe("R639 the homescreen rotation", () => {
       withGames(games);
       writeCardSettings({ fullArt });
       const view = render(<LandingRoute random={seeded(17)} />);
-      const byId = new Map(ROTATION_POOL.map((def) => [def.id, def]));
+      const byId = new Map(shippedPool().map((def) => [def.id, def]));
       for (let step = 0; step < 40; step += 1) {
         for (const id of shownIds()) {
           const def = byId.get(id);
@@ -693,7 +693,7 @@ describe("R639 your table", () => {
       "The record": "4 games: 4 won, 0 lost (100% won)",
       "Familiar face": "in 4 of your 4 games",
       Explorer: "1 different card played",
-      Collector: `seen 1 of ${String(ROTATION_POOL.length)} cards`,
+      Collector: `seen 1 of ${String(shippedPool().length)} cards`,
     };
     const titles = (): string => screen.getByTestId(landingTestid.showcaseTitle).textContent ?? "";
     const seen: string[] = [];

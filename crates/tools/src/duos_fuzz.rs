@@ -39,8 +39,8 @@ use crate::fuzz::{
     CHECKPOINT_TIME_BOUND_MS, DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND,
     DUOS_GROWTH_NUMBER_BOUND, ENDINGS_ACT_CHANCE, ENDINGS_ANSWER_CHANCE, ENDINGS_SHARE, FUZZ_POOL, Heaviest,
     Heavy, MALFORMED_ANSWER_PROBE, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, checkpoint_step,
-    duos_acting_card, duos_growth_breach, duos_heaviest_lines, probe_stride, round_trip, state_paused,
-    verify_round_trip, weigh_duos,
+    duos_acting_card, duos_growth_breach, duos_heaviest_lines, join_state_diff, probe_stride, round_trip,
+    state_paused, verify_round_trip, weigh_duos,
 };
 
 /// B25: the seeds `cargo jackioh fuzz --duos` plays when `--seeds` is not given.
@@ -695,6 +695,14 @@ fn check_duos_run(run: &DuosRun) -> Result<String, String> {
     if replayed.state.result != run.state.result {
         return Err("the fold reached a different ending".to_string());
     }
+    // `duos_hash` already covers the whole state, so this is a consistency guard: the fold must
+    // reach the live state whole, not only its hash (§9.3).
+    if replayed.state != run.state {
+        return Err(format!(
+            "the fold reached a different state: {}",
+            join_state_diff(&run.state, &replayed.state)
+        ));
+    }
     Ok(result.reason.clone())
 }
 
@@ -762,6 +770,13 @@ fn check_duos_serial_restart_with(
     }
     if state.result != live.result {
         return Err("checkpoint: the restored game reached a different ending".to_string());
+    }
+    // As above, `duos_hash` covers the whole state: the continued game must equal the live one.
+    if state != *live {
+        return Err(format!(
+            "checkpoint: the restored game reached a different state: {}",
+            join_state_diff(live, &state)
+        ));
     }
     if ms > CHECKPOINT_TIME_BOUND_MS {
         return Err(format!(
@@ -1234,6 +1249,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "daily: off per-PR CI by owner decision (#4093), no per-PR stand-in"]
     fn a_duos_channel_game_concedes_as_a_team_and_one_reaches_the_ceiling_and_each_folds_back() {
         // #1572: each seed's game is folded and checkpointed by `fuzz_duos_seed`, so an empty
         // failure list means a concede and a ceiling ending both fold back to the live hash.

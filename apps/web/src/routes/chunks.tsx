@@ -7,7 +7,8 @@ import { lazy, useState, type ComponentType, type ReactElement } from "react";
 import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, stripTrailingSlashes, watchIdOf } from "../net/navigate.ts";
 import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
-import { loadWasm } from "../wasm/index.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
+import { loadSceneData } from "../cards/art/sceneLoader.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
@@ -144,7 +145,13 @@ export function prefetchRoute(path: string): void {
   if (name === null || prefetched.has(name)) return;
   prefetched.add(name);
   void routeChunks[name]?.load().catch(() => undefined);
-  if (ENGINE_CHUNKS.has(name)) void loadWasm().catch(() => undefined);
+  if (ENGINE_CHUNKS.has(name)) {
+    // #4180: the sound loader awaits the module before its chunk parses against the catalog,
+    // so one call starts both; `loadWasm()` is idempotent, and the test holds the single call.
+    void loadSoundTables().catch(() => undefined);
+    // #4222: the scene tables start beside the module too, so a face draws once both are in.
+    void loadSceneData().catch(() => undefined);
+  }
 }
 
 /**
@@ -155,7 +162,12 @@ export function prefetchRoute(path: string): void {
 export function startScreen(path: string, engine: boolean): void {
   const name = chunkAt(path);
   if (name !== null) void routeChunks[name]?.load().catch(() => undefined);
-  if (engine) void loadWasm().catch(() => undefined);
+  if (engine) {
+    // #4180: as above, the sound loader starts the module too.
+    void loadSoundTables().catch(() => undefined);
+    // #4222: as above, the scene tables start beside the module too.
+    void loadSceneData().catch(() => undefined);
+  }
 }
 
 const INTENT_EVENTS = ["pointerenter", "focus", "touchstart"] as const;

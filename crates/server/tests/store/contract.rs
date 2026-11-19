@@ -1343,8 +1343,8 @@ mod codes {
         assert!(!q!(harness, t => t.codes_revoke_by_hash("no-such-hash")));
     }
 
-    /// §9.4 steps 2-4 and the circuit breaker read exactly these three counters.
-    async fn counts_attempts_by_profile_by_ip_hash_and_by_failure(harness: &StoreHarness) {
+    /// §9.4 steps 2-4 read exactly these counters (R4131000: no failure count is read).
+    async fn counts_attempts_by_profile_and_by_ip_hash(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
         let now = harness.now();
         let ip_hash = format!("ip-{}", id());
@@ -1388,7 +1388,6 @@ mod codes {
             q!(harness, t => t.codes_count_attempts_by_ip(&ip_hash, now - 60_000)),
             2
         );
-        assert_eq!(q!(harness, t => t.codes_count_failures(now - 60_000)), 2);
     }
 
     /// §9.8's watch: one IP hash behind six accounts is a cluster, six hashes with one account each
@@ -1463,7 +1462,7 @@ mod codes {
         claims_a_single_use_code_exactly_once,
         refuses_a_revoked_or_expired_code,
         revokes_a_code_by_hash_idempotently,
-        counts_attempts_by_profile_by_ip_hash_and_by_failure,
+        counts_attempts_by_profile_and_by_ip_hash,
         lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each,
     );
 }
@@ -1675,9 +1674,9 @@ mod redeem {
         assert_eq!(status_of(harness, &profile.id).await, "pending");
     }
 
-    /// §9.4: "A global circuit breaker disables redemption." This is the database's own switch,
-    /// which the store answers `circuit_open` from; the server's R106 breaker (`api/codes.rs`) is a
-    /// separate object that never lets a request reach here while it is open.
+    /// R4131000: the operator's pause, the database's own switch, which the store answers
+    /// `circuit_open` from; the server's mirror of it (`api/codes.rs`) never lets a request reach here
+    /// while it holds.
     async fn refuses_every_redemption_while_the_database_s_redemption_switch_is_off(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
         let code = mint(harness, json!({})).await;
@@ -9109,6 +9108,150 @@ mod duos {
         }))
     }
 
+    /// #4169: a co-op checkpoint row as the actor writes one (its body opaque to the store).
+    fn checkpoint(match_id: &str, seq: i64, nonce: &str, body: &str, at: i64) -> MatchCheckpointRow {
+        from(json!({
+            "matchId": match_id,
+            "seq": seq,
+            "nonce": nonce,
+            "catalogVersion": "v-duos-checkpoint",
+            "rules": "fedcba9876543210",
+            "checkpointVersion": 1,
+            "body": body,
+            "bodyHash": format!("hash-of-{body}"),
+            "at": at,
+        }))
+    }
+
+    /// A stored checkpoint without its `at`, which only has to be a time: Postgres keeps it as a
+    /// `timestamptz`.
+    fn stored(row: Option<MatchCheckpointRow>) -> Option<Value> {
+        row.map(|row| {
+            let mut value = j(&row);
+            assert!(value["at"].is_number(), "{value}");
+            if let Value::Object(map) = &mut value {
+                map.remove("at");
+            }
+            value
+        })
+    }
+
+    /// #4169: a co-op match with its log's first `rows` rows, `n-1` on.
+    async fn logged_match(harness: &StoreHarness, row: &DuosMatch, rows: i64) {
+        q!(harness, t => t.duos_matches_create(row));
+        for seq in 1..=rows {
+            q!(harness, t => t.duos_actions_append(&logged(&row.id, seq, &format!("n-{seq}"), harness.now())));
+        }
+    }
+
+    /// #4169: every field comes back as written, and only a later seq's checkpoint replaces it.
+    async fn s6_a_coop_checkpoint_round_trips_and_only_a_later_seq_replaces_it(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now);
+        logged_match(harness, &row, 3).await;
+        let second = checkpoint(&row.id, 2, "n-2", "{\"at\":2}", now);
+        assert!(q!(harness, t => t.duos_matches_put_checkpoint(&second)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(second.clone()))
+        );
+
+        let earlier = checkpoint(&row.id, 1, "n-1", "{\"at\":1}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&earlier)));
+        let same = checkpoint(&row.id, 2, "n-2", "{\"at\":\"again\"}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&same)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(second.clone()))
+        );
+
+        let third = checkpoint(&row.id, 3, "n-3", "{\"at\":3}", now);
+        assert!(q!(harness, t => t.duos_matches_put_checkpoint(&third)));
+        assert_eq!(
+            stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+            stored(Some(third))
+        );
+    }
+
+    /// #4169: never for a row the log does not hold under that nonce, nor for a match that has ended or
+    /// is not there.
+    async fn s6_a_coop_checkpoint_is_stored_only_for_a_logged_row_of_a_live_match(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now);
+        logged_match(harness, &row, 1).await;
+        for refused in [
+            checkpoint(&row.id, 1, "other", "{}", now),
+            checkpoint(&row.id, 2, "n-2", "{}", now),
+            checkpoint(&id(), 1, "n-1", "{}", now),
+            checkpoint("not-a-uuid", 1, "n-1", "{}", now),
+        ] {
+            assert!(
+                !q!(harness, t => t.duos_matches_put_checkpoint(&refused)),
+                "{refused:?}"
+            );
+        }
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&row.id)).is_none());
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&id())).is_none());
+        assert!(q!(harness, t => t.duos_matches_checkpoint("not-a-uuid")).is_none());
+
+        let result = json!({ "outcome": "draw", "winner": null, "reason": "turnCap" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 1_000)));
+        let ended = checkpoint(&row.id, 1, "n-1", "{}", now);
+        assert!(!q!(harness, t => t.duos_matches_put_checkpoint(&ended)));
+        assert!(q!(harness, t => t.duos_matches_checkpoint(&row.id)).is_none());
+    }
+
+    /// #4169: an ended co-op or 2v2 match is never rebuilt from its checkpoint, so its ending drops it,
+    /// and no later write puts it back; every other match keeps its own.
+    async fn s6_finishing_a_coop_or_two_v_two_match_drops_its_checkpoint_and_no_other(
+        harness: &StoreHarness,
+    ) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let b1 = active_profile(harness, None).await;
+        let b2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let coop = duos_match(&a1.id, &a2.id, now);
+        let made = duos_match(&a1.id, &a2.id, now);
+        let two_v_two: DuosMatch = from(spread(
+            j(&made),
+            json!({ "b1": b1.id, "b2": b2.id, "difficulty": "easy", "options": spread(j(&made.options), json!({ "teamB": "people" })) }),
+        ));
+        assert_eq!(two_v_two.team_b(), jackioh_shared::host::DuosTeamB::People);
+        let other = duos_match(&a1.id, &a2.id, now);
+        for row in [&coop, &two_v_two, &other] {
+            logged_match(harness, row, 2).await;
+            assert!(
+                q!(harness, t => t.duos_matches_put_checkpoint(&checkpoint(&row.id, 2, "n-2", "{}", now)))
+            );
+        }
+
+        let result = json!({ "outcome": "win", "winner": "a", "reason": "concede" });
+        for (ended, kept) in [(&coop, vec![&two_v_two, &other]), (&two_v_two, vec![&other])] {
+            assert!(q!(harness, t => t.duos_matches_finish(&ended.id, &result, now + 1_000)));
+            assert!(q!(harness, t => t.duos_matches_checkpoint(&ended.id)).is_none());
+            assert!(
+                !q!(harness, t => t.duos_matches_put_checkpoint(&checkpoint(&ended.id, 2, "n-2", "{}", now))),
+                "an ended match takes no checkpoint"
+            );
+            for row in kept {
+                assert_eq!(
+                    stored(q!(harness, t => t.duos_matches_checkpoint(&row.id))),
+                    stored(Some(checkpoint(&row.id, 2, "n-2", "{}", now)))
+                );
+            }
+        }
+        let ended = must(q!(harness, t => t.duos_matches_get(&two_v_two.id)), "the 2v2");
+        assert_eq!(
+            (ended.b1.as_str(), ended.b2.as_str()),
+            (b1.id.as_str(), b2.id.as_str())
+        );
+    }
+
     /// B33, B34: a code is held once; the claim is single-shot, never the host's and never past
     /// the expiry; only the host deletes an unjoined room; the reaper keeps a joined one longer.
     async fn s6_rooms_are_claimed_once_and_reaped(harness: &StoreHarness) {
@@ -9450,6 +9593,9 @@ mod duos {
         r1497000_a_profile_seated_in_a_live_co_op_match_is_not_deleted,
         r3731003_a_two_v_two_match_keeps_team_bs_people,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
+        s6_a_coop_checkpoint_round_trips_and_only_a_later_seq_replaces_it,
+        s6_a_coop_checkpoint_is_stored_only_for_a_logged_row_of_a_live_match,
+        s6_finishing_a_coop_or_two_v_two_match_drops_its_checkpoint_and_no_other,
     );
 }
 
@@ -9647,6 +9793,95 @@ mod lobbies {
         assert!(q!(harness, t => t.lobbies_open_of_hosts(&["not-a-uuid".to_string()], now)).is_empty());
     }
 
+    /// R3732001: a 2v2 lobby stays listed until every guest seat is taken. A seated 1v1 or co-op
+    /// lobby (whose `others` are always empty) stays unlisted, as do a full and a started 2v2.
+    async fn r3732001_lists_two_v_two_lobbies_with_an_empty_seat(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let second = active_profile(harness, None).await;
+        let third = active_profile(harness, None).await;
+        let fourth = active_profile(harness, None).await;
+        let now = harness.now();
+        let two_v_two = |code: &str, at: i64| -> Lobby {
+            from(spread(
+                j(&lobby(code, &host.id, FORMAT_COOP, at, now + 900_000)),
+                json!({ "settings": { "format": "2v2" } }),
+            ))
+        };
+        for (code, at) in [
+            ("LOBBFA", now - 1_000),
+            ("LOBBFB", now - 2_000),
+            ("LOBBFC", now - 3_000),
+            ("LOBBFD", now - 4_000),
+            ("LOBBFE", now - 5_000),
+            ("LOBBFF", now - 6_000),
+            ("LOBBFG", now - 7_000),
+        ] {
+            let made = if code == "LOBBFE" {
+                lobby(code, &host.id, FORMAT_DUEL, at, now + 900_000)
+            } else if code == "LOBBFF" {
+                lobby(code, &host.id, FORMAT_COOP, at, now + 900_000)
+            } else {
+                two_v_two(code, at)
+            };
+            assert!(q!(harness, t => t.lobbies_create(&made)));
+        }
+        let seat = |code: &str, at: i64, over: Value| -> Lobby {
+            let format = if code == "LOBBFE" {
+                lobby(code, &host.id, FORMAT_DUEL, at, now + 900_000)
+            } else if code == "LOBBFF" {
+                lobby(code, &host.id, FORMAT_COOP, at, now + 900_000)
+            } else {
+                two_v_two(code, at)
+            };
+            from(spread(j(&format), over))
+        };
+        let empty = |profile: Option<String>| json!({ "profile": profile, "pick": null, "ready": false });
+        // LOBBFA: guest and guest2 taken, guest3 empty. LOBBFB: guest and guest3 taken, guest2
+        // empty. LOBBFC: every guest seat taken. LOBBFD: started with an empty seat. LOBBFE and
+        // LOBBFF: a seated 1v1 and co-op lobby, whose `others` are always empty. LOBBFG: untouched.
+        for (code, at, over) in [
+            (
+                "LOBBFA",
+                now - 1_000,
+                json!({
+                    "guest": guest.id,
+                    "others": [empty(Some(second.id.clone())), empty(None)],
+                    "rev": 1,
+                }),
+            ),
+            (
+                "LOBBFB",
+                now - 2_000,
+                json!({
+                    "guest": guest.id,
+                    "others": [empty(None), empty(Some(third.id.clone()))],
+                    "rev": 1,
+                }),
+            ),
+            (
+                "LOBBFC",
+                now - 3_000,
+                json!({
+                    "guest": guest.id,
+                    "others": [empty(Some(second.id.clone())), empty(Some(third.id.clone()))],
+                    "rev": 1,
+                }),
+            ),
+            ("LOBBFD", now - 4_000, json!({ "rev": 1, "startedAt": now })),
+            ("LOBBFE", now - 5_000, json!({ "guest": guest.id, "rev": 1 })),
+            ("LOBBFF", now - 6_000, json!({ "guest": fourth.id, "rev": 1 })),
+        ] {
+            assert!(q!(harness, t => t.lobbies_update(&seat(code, at, over), 0)));
+        }
+
+        let codes = |lobbies: Vec<Lobby>| lobbies.into_iter().map(|row| row.code).collect::<Vec<_>>();
+        assert_eq!(
+            codes(q!(harness, t => t.lobbies_open_of_hosts(std::slice::from_ref(&host.id), now))),
+            ["LOBBFA", "LOBBFB", "LOBBFG"]
+        );
+    }
+
     /// Migration 0090: a deleted profile takes the lobbies it hosts or sits in.
     async fn r3730000_a_deleted_profile_takes_its_lobbies(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
@@ -9735,6 +9970,7 @@ mod lobbies {
         r3730000_creates_reads_updates_by_revision_and_deletes,
         r3730004_counts_lists_and_reaps,
         r3732001_lists_open_lobbies_of_hosts,
+        r3732001_lists_two_v_two_lobbies_with_an_empty_seat,
         r3730000_a_deleted_profile_takes_its_lobbies,
         r3731000_a_two_v_two_lobby_keeps_its_other_team,
     );
@@ -12420,11 +12656,13 @@ mod ping {
 /// their ledger (R3074001), and the news posts (R3074003).
 mod dev_dashboard {
     use super::*;
-    use jackioh_server::admin::store::{HandSetRating, NewAdminAction, NewsPost, RatingChange, RatingGrant};
+    use jackioh_server::admin::store::{
+        AdminActionFilter, HandSetRating, NewAdminAction, NewsPost, RatingChange, RatingGrant,
+    };
 
     fn action(profile_id: &str, route: &str, at: i64) -> NewAdminAction {
         NewAdminAction {
-            profile_id: profile_id.to_string(),
+            profile_id: Some(profile_id.to_string()),
             route: route.to_string(),
             request: json!({ "jlore": 5, "note": "kept as sent" }),
             before: json!({ "jlore": 0 }),
@@ -12490,6 +12728,90 @@ mod dev_dashboard {
             "{}",
             harness.name
         );
+    }
+
+    /// The audit reads back by cursor and filter: pages newest first with no gaps or repeats,
+    /// and `profile_id` and `route` narrow the read to exact matches.
+    async fn audit_pages_by_cursor_and_filter(harness: &StoreHarness) {
+        let dev = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let jlore = "POST /api/dev/jlore";
+        let rating = "PUT /api/admin/rating";
+        let wrote = [
+            (dev.id.as_str(), jlore, now),
+            (other.id.as_str(), jlore, now + 1),
+            (dev.id.as_str(), rating, now + 2),
+            (other.id.as_str(), rating, now + 3),
+            (dev.id.as_str(), jlore, now + 4),
+        ];
+        let mut ids = Vec::new();
+        for (who, route, at) in wrote {
+            ids.push(q!(harness, t => t.admin_actions_append(&action(who, route, at))));
+        }
+        let order = |rows: Vec<jackioh_server::admin::store::AdminAction>| -> Vec<i64> {
+            rows.into_iter().map(|row| row.id).collect()
+        };
+        let first = q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 2));
+        assert_eq!(order(first.clone()), vec![ids[4], ids[3]], "{}", harness.name);
+        let second = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                before_id: Some(first[1].id),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(second.clone()), vec![ids[2], ids[1]], "{}", harness.name);
+        let third = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                before_id: Some(second[1].id),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(third), vec![ids[0]], "{}", harness.name);
+
+        let of_dev = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                profile_id: Some(dev.id.clone()),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(of_dev), vec![ids[4], ids[2]], "{}", harness.name);
+        let of_rating = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                route: Some(rating.to_string()),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(of_rating), vec![ids[3], ids[2]], "{}", harness.name);
+        let of_dev_rating = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                profile_id: Some(dev.id.clone()),
+                route: Some(rating.to_string()),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert_eq!(order(of_dev_rating), vec![ids[2]], "{}", harness.name);
+        let past_oldest = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                before_id: Some(ids[0]),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert!(past_oldest.is_empty(), "{}: nothing older", harness.name);
+        let unknown = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                profile_id: Some("no such account".to_string()),
+                ..AdminActionFilter::default()
+            },
+            2
+        ));
+        assert!(unknown.is_empty(), "{}", harness.name);
     }
 
     fn glicko(rating: f64) -> Glicko {
@@ -12723,9 +13045,298 @@ mod dev_dashboard {
 
     both_stores!(
         r3074000_an_audit_row_is_kept_newest_first_and_outlives_its_account,
+        audit_pages_by_cursor_and_filter,
         r3074001_a_hand_set_rating_keeps_the_first_earned_one_and_clears_once,
         r3074001_standings_mark_a_hand_set_ladder,
         r3074003_posts_are_kept_listed_and_taken_down_once,
+    );
+}
+
+mod moderate_audit {
+    //! #4141: each moderation lever (`cli::moderate`) that changes something writes one audit row with
+    //! no profile, through both stores; one that changes nothing writes none.
+
+    use super::*;
+    use jackioh_server::admin::store::{
+        AdminAction, MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE, MODERATE_REVOKE_CODE_ROUTE,
+        MODERATE_ROUTES, MODERATE_UNBAN_ROUTE, NewAdminAction,
+    };
+    use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
+    use jackioh_server::api::crypto::{canonical_invite_code, hashes_for_pepper};
+    use jackioh_server::cli::moderate::{ban_profile, revoke_code, set_redemption, unban_profile};
+
+    const PEPPER: &str = "moderate-audit-pepper-of-at-least-thirty-two-characters";
+    /// A profile id no account has: a uuid, since Postgres binds the id as one.
+    const UNKNOWN_PROFILE: &str = "d0000000-0000-4000-8000-000000414100";
+
+    /// The audit, newest first.
+    async fn audit(harness: &StoreHarness) -> Vec<AdminAction> {
+        q!(harness, t => t.admin_actions_recent(10))
+    }
+
+    /// `row` is a lever's: no profile, `route`, and the request and the states before and after.
+    fn assert_lever_row(
+        harness: &StoreHarness,
+        row: &AdminAction,
+        route: &str,
+        request: Value,
+        before: Value,
+        after: Value,
+    ) {
+        assert_eq!(
+            (
+                row.profile_id.as_deref(),
+                row.route.as_str(),
+                &row.request,
+                &row.before,
+                &row.after
+            ),
+            (None, route, &request, &before, &after),
+            "{}",
+            harness.name
+        );
+    }
+
+    /// A ban and an unban that change the status each write a row naming the account and the status
+    /// before and after; an `already …`, an unknown profile and a pending account's unban write none.
+    async fn ban_and_unban_write_a_row_each_and_a_no_op_none(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let id = profile.id.as_str();
+        let request = json!({ "profileId": id });
+
+        assert_eq!(
+            ban_profile(&harness.db, id).await.expect("the ban lands"),
+            format!("banned {id}")
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 1, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_BAN_ROUTE,
+            request.clone(),
+            json!({ "status": "active" }),
+            json!({ "status": "banned" }),
+        );
+
+        assert_eq!(
+            ban_profile(&harness.db, id)
+                .await
+                .expect("the second ban answers"),
+            format!("already banned {id}")
+        );
+        let error = ban_profile(&harness.db, UNKNOWN_PROFILE)
+            .await
+            .expect_err("an unknown profile is refused")
+            .to_string();
+        assert_eq!(error, format!("no such profile {UNKNOWN_PROFILE}"));
+        assert_eq!(audit(harness).await.len(), 1, "{}", harness.name);
+
+        assert_eq!(
+            unban_profile(&harness.db, id).await.expect("the unban lands"),
+            format!("unbanned {id}")
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 2, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_UNBAN_ROUTE,
+            request,
+            json!({ "status": "banned" }),
+            json!({ "status": "active" }),
+        );
+
+        assert_eq!(
+            unban_profile(&harness.db, id)
+                .await
+                .expect("the second unban answers"),
+            format!("already active {id}")
+        );
+        let pending = pending_profile(harness, None).await;
+        let error = unban_profile(&harness.db, &pending.id)
+            .await
+            .expect_err("a pending account is refused")
+            .to_string();
+        assert!(error.contains("pending"), "{}: {error}", harness.name);
+        let error = unban_profile(&harness.db, UNKNOWN_PROFILE)
+            .await
+            .expect_err("an unknown profile is refused")
+            .to_string();
+        assert_eq!(error, format!("no such profile {UNKNOWN_PROFILE}"));
+        assert_eq!(audit(harness).await.len(), 2, "{}", harness.name);
+
+        assert_eq!(
+            ban_profile(&harness.db, &pending.id)
+                .await
+                .expect("the pending ban lands"),
+            format!("banned {}", pending.id)
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 3, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_BAN_ROUTE,
+            json!({ "profileId": pending.id }),
+            json!({ "status": "pending" }),
+            json!({ "status": "banned" }),
+        );
+    }
+
+    /// A revoke writes one row naming the code by its stored hash, never the code in any spelling;
+    /// a second revoke, an unknown code and a malformed one write none.
+    async fn revoke_code_writes_the_hash_and_never_the_code(harness: &StoreHarness) {
+        let minted = mint_invite_code(
+            MintDeps {
+                db: &harness.db,
+                code_pepper: PEPPER,
+            },
+            MintInput::default(),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{}: a code is minted: {error}", harness.name));
+        let canonical = canonical_invite_code(&minted.formatted).expect("a minted code is canonical");
+        let hash = hashes_for_pepper(PEPPER).code(&canonical);
+
+        assert_eq!(
+            revoke_code(&harness.db, PEPPER, &minted.formatted)
+                .await
+                .expect("the revoke lands"),
+            format!("revoked {canonical}")
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 1, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_REVOKE_CODE_ROUTE,
+            json!({ "codeHash": hash }),
+            json!({ "revoked": false }),
+            json!({ "revoked": true }),
+        );
+        let written = serde_json::to_string(&rows[0]).expect("the row serializes");
+        for spelling in [
+            minted.formatted.clone(),
+            canonical.clone(),
+            canonical.replace('-', ""),
+        ] {
+            assert!(
+                !written.contains(&spelling),
+                "{}: the row holds the code {spelling}: {written}",
+                harness.name
+            );
+        }
+
+        assert_eq!(
+            revoke_code(&harness.db, PEPPER, &minted.formatted)
+                .await
+                .expect("the second revoke answers"),
+            format!("already revoked {canonical}")
+        );
+        let error = revoke_code(&harness.db, PEPPER, "ABCD-EFGH-JKLM-NPQR")
+            .await
+            .expect_err("an unminted code is refused")
+            .to_string();
+        assert!(error.contains("unknown code"), "{}: {error}", harness.name);
+        let error = revoke_code(&harness.db, PEPPER, "not-a-code")
+            .await
+            .expect_err("a malformed code is refused")
+            .to_string();
+        assert!(error.contains("not an invite code"), "{}: {error}", harness.name);
+        assert_eq!(audit(harness).await.len(), 1, "{}", harness.name);
+    }
+
+    /// Pausing and resuming redemption each write a row with the switch before and after; setting it
+    /// to where it already stands writes none.
+    async fn redemption_writes_a_row_only_when_the_switch_moves(harness: &StoreHarness) {
+        assert_eq!(
+            set_redemption(&harness.db, false)
+                .await
+                .expect("the switch flips"),
+            "redemption paused"
+        );
+        assert_eq!(
+            set_redemption(&harness.db, false)
+                .await
+                .expect("the switch answers"),
+            "redemption already paused"
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 1, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_REDEMPTION_ROUTE,
+            json!({ "enabled": false }),
+            json!({ "enabled": true }),
+            json!({ "enabled": false }),
+        );
+
+        assert_eq!(
+            set_redemption(&harness.db, true).await.expect("the switch flips"),
+            "redemption resumed"
+        );
+        assert_eq!(
+            set_redemption(&harness.db, true)
+                .await
+                .expect("the switch answers"),
+            "redemption already resumed"
+        );
+        let rows = audit(harness).await;
+        assert_eq!(rows.len(), 2, "{}: {rows:?}", harness.name);
+        assert_lever_row(
+            harness,
+            &rows[0],
+            MODERATE_REDEMPTION_ROUTE,
+            json!({ "enabled": true }),
+            json!({ "enabled": false }),
+            json!({ "enabled": true }),
+        );
+    }
+
+    /// The route guard takes each lever's route, with no profile, and refuses every name near one:
+    /// an allow list, not a prefix.
+    async fn the_route_guard_takes_each_lever_and_no_name_near_one(harness: &StoreHarness) {
+        for route in MODERATE_ROUTES {
+            q!(harness, t => t.admin_actions_append(&NewAdminAction::lever(
+                route,
+                json!({}),
+                json!({}),
+                json!({}),
+                harness.now(),
+            )));
+        }
+        for near in [
+            "CLI moderate ban ",
+            " CLI moderate ban",
+            "cli moderate ban",
+            "CLI moderate",
+            "CLI moderate ban extra",
+            "CLI moderate chat-reports",
+            "CLI moderate redemption on",
+            "CLI mint-code",
+        ] {
+            let outcome = call!(harness, t => t.admin_actions_append(&NewAdminAction::lever(
+                near,
+                json!({}),
+                json!({}),
+                json!({}),
+                harness.now(),
+            )));
+            assert!(outcome.is_err(), "{}: {near:?} was taken", harness.name);
+        }
+        let routes: Vec<String> = audit(harness).await.into_iter().map(|row| row.route).collect();
+        let mut levers: Vec<String> = MODERATE_ROUTES.iter().map(|route| route.to_string()).collect();
+        levers.reverse();
+        assert_eq!(routes, levers, "{}", harness.name);
+    }
+
+    both_stores!(
+        ban_and_unban_write_a_row_each_and_a_no_op_none,
+        revoke_code_writes_the_hash_and_never_the_code,
+        redemption_writes_a_row_only_when_the_switch_moves,
+        the_route_guard_takes_each_lever_and_no_name_near_one,
     );
 }
 
@@ -13912,6 +14523,7 @@ mod r4039000_notifications {
             subject: Some(subject.to_string()),
             payload: json!({ "outcome": "win", "reason": "concede" }),
             created_at: at,
+            read: false,
         }
     }
 
@@ -14037,7 +14649,7 @@ mod r4039000_notifications {
             harness.name
         );
         assert_eq!(
-            q!(harness, t => t.notifications_unread(&ana.id)),
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
             5,
             "{}",
             harness.name
@@ -14063,13 +14675,13 @@ mod r4039000_notifications {
             harness.name
         );
         assert_eq!(
-            q!(harness, t => t.notifications_unread(&ana.id)),
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
             1,
             "{}",
             harness.name
         );
         assert_eq!(
-            q!(harness, t => t.notifications_unread(&bo.id)),
+            q!(harness, t => t.notifications_unread(&bo.id, at)),
             1,
             "{}",
             harness.name
@@ -14095,7 +14707,7 @@ mod r4039000_notifications {
             harness.name
         );
         assert_eq!(
-            q!(harness, t => t.notifications_unread(&bo.id)),
+            q!(harness, t => t.notifications_unread(&bo.id, at)),
             1,
             "{}",
             harness.name
@@ -14173,11 +14785,191 @@ mod r4039000_notifications {
         );
     }
 
+    /// R4233000: `notifications_mark_subject` marks only its account's unread rows of one of the
+    /// kinds about the subject (by the actor when one is given): another challenge's row, another
+    /// kind's, another actor's, another account's and read rows stay; a second call marks nothing;
+    /// nothing is deleted and no read row turns unread.
+    async fn r4233000_mark_subject_marks_only_matching_kind_subject_and_actor(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let cy = active_profile(harness, None).await;
+        let at = harness.now();
+        // A read row of the same kind, actor and subject stays read and is never replaced.
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-0", at), 100));
+        q!(harness, t => t.notifications_mark_read(&ana.id, None, at + 1));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-0", at + 2), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)).len(),
+            2,
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-1", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-2", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "ch-1", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyChallenge, Some(&cy.id), "ch-1", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&cy.id, NotificationKind::DailyChallenge, Some(&bo.id), "ch-1", at), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)).len(),
+            6,
+            "{}",
+            harness.name
+        );
+
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_subject(&ana.id, &[NotificationKind::DailyChallenge], "ch-1", Some(&bo.id), at + 3)),
+            1,
+            "{}",
+            harness.name
+        );
+        let anas = q!(harness, t => t.notifications_page(&ana.id, None, 10));
+        assert_eq!(
+            anas.iter()
+                .find(|row| row.subject.as_deref() == Some("ch-1")
+                    && row.kind == NotificationKind::DailyChallenge
+                    && row.actor_id.as_deref() == Some(bo.id.as_str()))
+                .and_then(|row| row.read_at),
+            Some(at + 3),
+            "{}: {anas:?}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at + 3)),
+            4,
+            "{}",
+            harness.name
+        );
+        // The mark changes nothing twice, touches no other account and unreads nothing.
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_subject(&ana.id, &[NotificationKind::DailyChallenge], "ch-1", Some(&bo.id), at + 4)),
+            0,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&cy.id, at + 4)),
+            1,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_page(&ana.id, None, 10)).len(),
+            6,
+            "{}: nothing deleted",
+            harness.name
+        );
+
+        // With no actor every actor's rows of the kinds match: the other kind's and the other
+        // actor's go, the other challenge's stays.
+        assert_eq!(
+            q!(harness, t => t.notifications_mark_subject(&ana.id, &[NotificationKind::DailyChallenge, NotificationKind::DailyMove], "ch-1", None, at + 5)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at + 5)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10)))
+                .into_iter()
+                .filter(|subject| subject == "ch-2")
+                .count(),
+            1,
+            "{}",
+            harness.name
+        );
+    }
+
+    /// R4233000: `notifications_unread` leaves out a `lobbyInvite` whose lobby is gone, started or
+    /// expired, while other kinds count and the rows stay listed.
+    async fn r4233000_unread_leaves_out_a_dead_lobby_invite(harness: &StoreHarness) {
+        use jackioh_server::lobby::store::Lobby;
+
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let at = harness.now();
+        fn lobby(code: &str, host: &str, at: i64, expires_at: i64, started_at: Option<i64>) -> Lobby {
+            from(json!({
+                "code": code,
+                "host": host,
+                "guest": null,
+                "settings": { "format": "duel", "mode": "bo1" },
+                "hostPick": null,
+                "guestPick": null,
+                "hostReady": false,
+                "guestReady": false,
+                "rev": 0,
+                "catalogVersion": CATALOG_VERSION,
+                "createdAt": at,
+                "expiresAt": expires_at,
+                "matchId": null,
+                "seriesId": null,
+                "startedAt": started_at,
+            }))
+        }
+        assert!(q!(harness, t => t.lobbies_create(&lobby("LOBBAB", &bo.id, at, at + 900_000, None))));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::LobbyInvite, Some(&bo.id), "LOBBAB", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "game-1", at), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            2,
+            "{}: an open lobby's invite counts",
+            harness.name
+        );
+
+        // Started: the invite counts nowhere.
+        let started: Lobby = from(spread(
+            j(&lobby("LOBBAB", &bo.id, at, at + 900_000, None)),
+            json!({ "rev": 1, "startedAt": at + 1 }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&started, 0)));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at + 1)),
+            1,
+            "{}: a started lobby's invite counts nowhere",
+            harness.name
+        );
+
+        // Expired, then gone: still nowhere, while the other kind counts.
+        let expired: Lobby = from(spread(
+            j(&started),
+            json!({ "rev": 2, "startedAt": null, "expiresAt": at - 1 }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&expired, 1)));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            1,
+            "{}: an expired lobby's invite counts nowhere",
+            harness.name
+        );
+        assert!(q!(harness, t => t.lobbies_delete("LOBBAB")));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            1,
+            "{}: a gone lobby's invite counts nowhere",
+            harness.name
+        );
+
+        // Nothing deleted, nothing read: both rows stay listed.
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10))),
+            vec!["game-1", "LOBBAB"],
+            "{}",
+            harness.name
+        );
+    }
+
     both_stores!(
         r4039000_add_replaces_an_unread_row_and_keeps_the_newest,
         r4039000_page_reads_newest_first_before_an_id,
         r4039000_mark_read_touches_only_its_profile_up_to_an_id,
         r4039000_purge_drops_rows_before_its_cutoff,
         r4039000_a_deleted_profile_takes_its_rows_both_ways,
+        r4233000_mark_subject_marks_only_matching_kind_subject_and_actor,
+        r4233000_unread_leaves_out_a_dead_lobby_invite,
     );
 }

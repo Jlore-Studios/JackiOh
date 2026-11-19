@@ -872,6 +872,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       return;
     }
     socket = created;
+    // R1115000: a refusal is its handshake's; a socket opened since (Reconnect) is answered afresh.
+    refusedToken = null;
     awaitingFirstView = true;
     wakeProbe.hear();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });

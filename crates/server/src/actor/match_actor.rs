@@ -215,8 +215,10 @@ enum Task {
     },
     /// Resolves once every task queued before it has run.
     Idle(oneshot::Sender<()>),
-    /// #1169: the restart drain's checkpoint, answered once it is written or passed over.
-    Checkpoint(oneshot::Sender<()>),
+    /// #4224: a checkpoint of the state after the log's newest row. `Some` is the restart drain's,
+    /// answered once it is written or passed over; `None` is the one every
+    /// `MATCH_CHECKPOINT_MIN_ACTIONS`-th row queues while the match is played.
+    Checkpoint(Option<oneshot::Sender<()>>),
     /// R1452: the move the search for a bot home came back with, decided on the state as it stood
     /// when the log's next seq was `version`, in turn `turn`.
     Decided {
@@ -409,7 +411,7 @@ fn answer_message(nonce: &str, answer: ActionAnswer) -> ServerMessage {
             "the action could not be recorded; try again",
             Some(nonce),
         ),
-        // Only a co-op host answers so; a 1v1 nonce is the seat's, whoever sends it.
+        // R4013000: a 1v1 nonce is its own seat's duplicate check, as a co-op host's is: another seat's copy is taken.
         ActionAnswer::NonceTaken => error_message(
             SocketErrorCode::Malformed,
             "that nonce is already taken",
@@ -471,9 +473,9 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     );
 
     let next_seq = log.iter().fold(0, |highest, row| highest.max(row.seq)) + 1;
-    let acked: Vec<(String, i64)> = log
+    let acked: Vec<(String, PlayerId, i64)> = log
         .iter()
-        .map(|row| (row.action.nonce.clone(), row.seq))
+        .map(|row| (row.action.nonce.clone(), row.action.player_id, row.seq))
         .collect();
 
     let portraits = match_row
@@ -639,7 +641,9 @@ impl MatchActor {
             }
             Task::Checkpoint(done) => {
                 self.write_checkpoint().await;
-                let _ = done.send(());
+                if let Some(done) = done {
+                    let _ = done.send(());
+                }
             }
             Task::Decided {
                 home,
@@ -863,11 +867,18 @@ impl MatchActor {
                         }
                     }
                 };
+                // #4224: every MATCH_CHECKPOINT_MIN_ACTIONS-th row is checkpointed, queued behind this
+                // task so no answer waits on the write.
+                let due = outcome == jackioh_shared::host::LogOutcome::Written
+                    && seq % MATCH_CHECKPOINT_MIN_ACTIONS == 0;
                 let outputs = {
                     let mut core = self.lock();
                     self.step_in(&mut core, DuelEvent::Logged { outcome })
                 };
                 self.exec(outputs, answers).await;
+                if due {
+                    self.enqueue(Task::Checkpoint(None));
+                }
             }
             DuelOutput::Record { request } => self.on_record(request, answers).await,
             DuelOutput::Voided { at } => self.on_void(at).await,
@@ -1745,13 +1756,14 @@ impl MatchActor {
         let _ = drained.await;
     }
 
-    /// #1169: resolves once the checkpoint of the state after the log's newest row is written (or
-    /// passed over, `write_checkpoint`), after every task queued before it. The restart drain calls it
-    /// before `stop`; a crash or the reaper's `stop` writes none, and the next rebuild folds from the
-    /// last checkpoint there is or from the start.
+    /// #1169, #4224: resolves once the checkpoint of the state after the log's newest row is
+    /// written (or passed over, `write_checkpoint`), after every task queued before it. The restart
+    /// drain calls it before `stop`; a crash or the reaper's `stop` writes none, and the next rebuild
+    /// folds from the last checkpoint there is (the drain's, or the last periodic one) or from the
+    /// start.
     pub async fn checkpoint(&self) {
         let (done, written) = oneshot::channel();
-        if self.shared.inbox.send(Task::Checkpoint(done)).is_err() {
+        if self.shared.inbox.send(Task::Checkpoint(Some(done))).is_err() {
             return;
         }
         let _ = written.await;

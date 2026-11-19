@@ -1,13 +1,13 @@
 // #1443: where a non-combat damage's source card is, read off the viewer's `PlayerView` only
 // (CLAUDE.md rule 7). A hit counts only when the view shows the source face-up with a `defId` the
-// bundled catalog or the match's own definitions know; a hidden card, an unknown id, a hero power
+// module's catalog or the match's own definitions know; a hidden card, an unknown id, a hero power
 // or no source fires nothing.
 
 import { hasKeyword, type Flavor, type PlayerId, type PlayerView } from "@jackioh/shared";
 
 import { flavorOfId } from "../cards/flavor.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
-import { CATALOG } from "../wire/cards.ts";
 import { flavorLook, type FlavorLook } from "./flavors.ts";
 import type { FxAnchor } from "./types.ts";
 
@@ -29,7 +29,8 @@ function heroAnchor(view: PlayerView, side: Side): FxAnchor {
 
 function readable(defId: string, view: PlayerView): boolean {
   if (defId === HIDDEN_ID) return false;
-  return (CATALOG[defId] ?? view.defs?.[defId]) !== undefined;
+  // #4180: the module's catalog, read in the call: flavor sources draw on the board, once it is in.
+  return (currentCatalog().cards[defId] ?? view.defs?.[defId]) !== undefined;
 }
 
 function sourceOf(defId: string, controller: PlayerId, view: PlayerView, anchor: FxAnchor): FlavorSource | null {

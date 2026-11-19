@@ -273,7 +273,7 @@ export function DeviceTiltSwitch(): ReactElement {
   );
 }
 
-const BOARD_NAMES_OPTIONS = [
+export const BOARD_NAMES_OPTIONS = [
   { value: "artFirst", label: "Art first" },
   { value: "always", label: "Always" },
   { value: "never", label: "Never" },

@@ -14,7 +14,7 @@
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "meditative-001": { cast: { motif: "flight" }, aura: { look: "frost", scope: "zone" } }, // Disruptive Disruptor
+  "meditative-001": { cast: { motif: "flight" }, activate: { motif: "vanish" }, aura: { look: "frost", scope: "zone" } }, // Disruptive Disruptor
   "meditative-002": "none: no motif reads discarded (its trigger's discard row plays)", // Rampaging Rhino
   "meditative-003": { trigger: { motif: "vanish" } }, // Jlockwork Machine
   "meditative-004": { cast: { motif: "flight" } }, // Juicy Kumquat Melon
@@ -23,7 +23,7 @@
   "meditative-007": { bespoke: "introspection", entrance: "poolBreath", aura: { look: "ripple", palette: "Holy", scope: "zone" }, signature: true }, // Introspection
   "meditative-008": { bespoke: "summitAscent", takeover: "ascent", signature: true }, // Reach the Summit
   "meditative-009": { cast: { motif: "bless" }, aura: { look: "arcane", palette: "Nerd/ink", scope: "zone" } }, // Joint Filing
-  "meditative-010": { cast: { motif: "bless" }, aura: { look: "bloom", palette: "Nerd/ink", scope: "zone" } }, // Double Counting
+  "meditative-010": { cast: { motif: "bless" }, activate: { motif: "deal", palette: "Nerd/ink" }, aura: { look: "bloom", palette: "Nerd/ink", scope: "zone" } }, // Double Counting
   "meditative-011": { bespoke: "doubleHeader", entrance: "floodlights", aura: { look: "arcane", scope: "zone" }, signature: true }, // Double Header
   "meditative-012": "none: no board change of its own (its Cry runs your End of turn hooks, each under its own marker)", // Fear Mongerer
   "meditative-013": { trigger: { motif: "bolt" } }, // Gatling Pea

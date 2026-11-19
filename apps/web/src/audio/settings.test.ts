@@ -213,6 +213,17 @@ describe("B13 writing the settings", () => {
     expect(stored()).toEqual({ ...DEFAULTS, master: 1, sfx: 0, voice: 0.5 });
   });
 
+  it("writeAudioSettings drops proto keys (#4015)", () => {
+    const result = writeAudioSettings(
+      JSON.parse(`{"master":0.3,"__proto__":{"polluted":true},"constructor":{"muted":true}}`),
+    );
+
+    expect(result).toEqual({ ...DEFAULTS, master: 0.3 });
+    expect(readAudioSettings()).toEqual({ ...DEFAULTS, master: 0.3 });
+    expect(stored()).toEqual({ ...DEFAULTS, master: 0.3 });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+  });
+
   it("B13 every subscriber is notified exactly once per write, with the new settings", () => {
     const a = listen();
     const b = listen();

@@ -54,8 +54,8 @@ pub struct App {
     pub code_guesses: api::guesses::CodeGuesses,
     /// The catalog this build ships, its version and the deployed commit.
     pub catalog: api::catalog::Catalog,
-    /// §9.4's redemption circuit breaker (R106).
-    pub breaker: Mutex<api::codes::BreakerState>,
+    /// The operator's redemption pause, as this process mirrors it (§9.4, R4131000).
+    pub redemption_pause: Mutex<api::codes::PauseState>,
     /// R768: the opened replays and the replay routes' own allowance.
     pub replays: api::replays::Replays,
     /// SPEC §11 R978000: the public card statistics' computed per-patch reports and R1583000's play
@@ -1274,7 +1274,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         ),
         code_guesses: api::guesses::CodeGuesses::default(),
         catalog,
-        breaker: Mutex::new(api::codes::create_breaker_state()),
+        redemption_pause: Mutex::new(api::codes::create_pause_state()),
         replays: api::replays::Replays::default(),
         card_stats: api::stats::KeptReports::default(),
         queue_presence: api::queue::QueuePresence::new(),
@@ -1585,13 +1585,12 @@ where
     let drained = tokio::time::timeout(drain, async {
         stop_loops(running).await;
         let served = server.await;
-        let matches = app.matches.stop_all().await;
-        // #936: the co-op actors too, so none writes its log after the store closes; each match's
-        // log stays, and the next boot folds it back (`duos::registry`).
-        let duos = crate::duos::registry::registry(&app);
-        for match_id in duos.live() {
-            duos.stop(&match_id).await;
-        }
+        // #4114: `drain`, not `stop_all`, so a match started or rebuilt after it is stopped too.
+        let matches = app.matches.drain().await;
+        // #936, #4169: the co-op actors too, each checkpointed, then stopped, so none writes its log
+        // after the store closes; each match's log stays, and the next boot folds it back from the
+        // checkpoint (`duos::registry`).
+        crate::duos::registry::registry(&app).drain().await;
         actor::ws_server::close_all(&app);
         actor::ws_server::all_closed(&app).await;
         // R2422000: a claim's check and pay outlive its request, so they are waited for apart.

@@ -189,6 +189,126 @@ mod i2_a_unit_gone_under_a_windfury_aura {
     }
 }
 
+/// I2 and an animated card back in its backrow by the action's end that attacked twice inside it under an
+/// aura's Windfury: no Unit by then, it reads as a gone unit does (R636, R383: M #66 Fiery Waraxe under S+
+/// #63 Overdrive Dome; fuzz seed 1013, #4079).
+mod i2_an_animated_card_back_in_its_backrow_under_a_windfury_aura {
+    use super::*;
+
+    const WARAXE: &str = "meditative-066";
+    const DOME: &str = "stinkyscapeplus-063";
+
+    /// p1's Waraxe, the Dome in p1's backrow when `dome`, animates, declares two attacks at p2's Vanilla
+    /// and goes back to its backrow zone, all inside one action.
+    fn animated_twice_then_home(dome: bool) -> Vec<String> {
+        let mut backrow = vec![json!({ "def": WARAXE, "lane": 1 })];
+        if dome {
+            backrow.push(json!({ "def": DOME, "lane": 2 }));
+        }
+        let mut g = scenario(json!({
+            "active": "p2",
+            "p1": { "backrow": backrow },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let waraxe = backrow_at(&g, PlayerId::P1, 1, "the Waraxe");
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        // The animation stamps its entry (`animated::step_into_units`), and the card keeps it back in its backrow.
+        let turn = g.state().turn;
+        find_instance_mut(g.state_mut(), &waraxe.id)
+            .expect("the Waraxe")
+            .summoned_turn = Some(turn);
+        let moved = |kind: &str| {
+            event(json!({
+                "type": kind, "player": "p1", "instanceId": waraxe.id, "defId": WARAXE,
+                "backrowLane": 1, "unitLane": 1,
+            }))
+        };
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": waraxe.id, "targetId": prey.id, "forced": false }),
+            )
+        };
+        monitor.after(
+            &[moved("animated"), declared(), declared(), moved("deanimated")],
+            g.state(),
+        )
+    }
+
+    #[test]
+    fn r636_r383_an_animated_card_back_in_its_backrow_that_attacked_twice_under_a_windfury_aura_is_one_windfury_turn()
+     {
+        assert_eq!(animated_twice_then_home(true), no_violations());
+    }
+
+    #[test]
+    fn r636_an_animated_card_back_in_its_backrow_that_attacked_twice_with_no_windfury_aura_is_still_an_extra_attack()
+     {
+        let found = animated_twice_then_home(false);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// I2 and a Drone Corvette summoned, killing twice and gone inside one action: it drew its keywords
+/// (`note_drawn_windfury`), Frenzy among them maybe, and no state is left to say otherwise, so each kill
+/// may ready it (R3543003, R781004; Duos fuzz seed 1778, #4079).
+mod i2_r3543003_a_drone_corvette_gone_by_the_end {
+    use super::*;
+
+    const CORVETTE: &str = "stinkyscape-t-drone-corvette";
+
+    /// p1's Corvette is summoned and declares three attacks at p2's Vanillas, the first two killing their
+    /// prey when `kills`, and is destroyed, all inside one action.
+    fn three_attacks_then_gone(kills: bool) -> Vec<String> {
+        let mut g = scenario(json!({
+            "p2": { "field": [
+                { "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 },
+            ] },
+        }));
+        let mut preys: Vec<CardInstance> = (1..=3).map(|lane| g.unit_at(PlayerId::P2, lane)).collect();
+        let mut monitor = create_invariant_monitor(g.state());
+        let mut events = vec![event(json!({
+            "type": "summoned", "player": "p1", "instanceId": "corvette", "defId": CORVETTE,
+            "row": "units", "lane": 1,
+        }))];
+        let declared = |prey: &CardInstance| {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": "corvette", "targetId": prey.id, "forced": false }),
+            )
+        };
+        for prey in preys.iter_mut().take(2) {
+            events.push(declared(prey));
+            if kills {
+                jackioh_engine::zones::cease_to_exist(g.state_mut(), prey);
+                events.push(event(json!({
+                    "type": "destroyed", "instanceId": prey.id, "defId": VANILLA, "owner": "p2",
+                    "controller": "p2", "attack": 1, "maxHealth": 1, "killerId": "corvette",
+                })));
+            }
+        }
+        events.push(declared(&preys[2]));
+        events.push(event(json!({
+            "type": "destroyed", "instanceId": "corvette", "defId": CORVETTE, "owner": "p1", "controller": "p1",
+            "attack": 1, "maxHealth": 1,
+        })));
+        monitor.after(&events, g.state())
+    }
+
+    #[test]
+    fn r3543003_a_drone_corvette_summoned_and_gone_inside_one_action_that_kills_twice_may_attack_a_third_time()
+     {
+        assert_eq!(three_attacks_then_gone(true), no_violations());
+    }
+
+    #[test]
+    fn r3543003_a_drone_corvette_gone_by_the_end_that_killed_nothing_may_not_attack_a_third_time() {
+        let found = three_attacks_then_gone(false);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
 /// I2 and R3139004 inside one action: an attack on a Unit that killed nothing readies an attacker whose
 /// own `afterAttack` answers it (Core #89 Corpse Eater), so its next attack in the same action is no extra
 /// attack (daily fuzz seed 11162); one with no such text still declares one.
@@ -1641,6 +1761,86 @@ mod i14_a_listed_action_reduce_refuses {
                 .iter()
                 .any(|finding| finding.starts_with("I14 listed action refused: p2 sent")),
             "{found:?}"
+        );
+    }
+
+    #[test]
+    fn i14_branch_reports_unit_token_in_graveyard_on_accepted_branch_action() {
+        let g = board();
+        let found = listed_refused(
+            g.state(),
+            PlayerId::P1,
+            &[ActionBody::EndTurn],
+            |state, action| {
+                let mut result = reduce(state, action);
+                let token = new_instance(
+                    &mut result.state,
+                    RUSH_TOKEN,
+                    action.player_id,
+                    Zone::Graveyard {
+                        player: action.player_id,
+                    },
+                );
+                result.state.players[action.player_id].graveyard.push(token);
+                result
+            },
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 branch: after "), "{}", found[0]);
+        assert!(found[0].contains("(listed, not played)"), "{}", found[0]);
+        assert!(found[0].contains("I11 unit token in pile:"), "{}", found[0]);
+        assert!(found[0].contains("p1"), "{}", found[0]);
+        assert!(
+            found[0].contains(&format!("turn {}", g.state().turn)),
+            "{}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&format!("seed {}", g.state().seed)),
+            "{}",
+            found[0]
+        );
+    }
+
+    #[test]
+    fn i14_branch_reports_orphaned_work_on_accepted_branch_action() {
+        let g = board();
+        let found = listed_refused(
+            g.state(),
+            PlayerId::P1,
+            &[ActionBody::EndTurn],
+            |state, action| {
+                let mut result = reduce(state, action);
+                result.state.work.push(WorkItem {
+                    id: "w-planted".to_string(),
+                    seq: 0,
+                    owner: action.player_id,
+                    resume: Resume {
+                        def_id: "core-051".to_string(),
+                        hook: "resume".to_string(),
+                        step: "orphaned".to_string(),
+                        radiant: false,
+                        instance_id: None,
+                        data: indexmap::IndexMap::new(),
+                    },
+                });
+                result
+            },
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 branch: after "), "{}", found[0]);
+        assert!(found[0].contains("(listed, not played)"), "{}", found[0]);
+        assert!(found[0].contains("I7 orphaned work:"), "{}", found[0]);
+        assert!(found[0].contains("p1"), "{}", found[0]);
+        assert!(
+            found[0].contains(&format!("turn {}", g.state().turn)),
+            "{}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&format!("seed {}", g.state().seed)),
+            "{}",
+            found[0]
         );
     }
 }
