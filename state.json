@@ -15542,20 +15542,15 @@
     "what": "revise #4241 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-19T01:59:39Z",
+    "at": "2026-11-19T02:11:19Z",
     "notes": [
-      "delivered suggest on muse (run 44440201632): suggested",
-      "delivered suggest on muse (run 44440128274): suggested",
-      "delivered suggest on claude-6 (run 44438422419): suggested",
-      "delivered review #4241 on muse (run 44432100409): approved",
-      "delivered plan #4196 on agy (run 44420914753): failed",
-      "started plan #4196 on agy (run 44441545531)",
-      "started review #4239 on claude-6 (run 44441619780)",
+      "#4241: `web (unit 7/8)` red in CI run 44441315953; its other early jobs have until 2026-11-19T02:13:56Z to report",
+      "#4231: its turn came (it waited 120 minutes for #4234, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
+      "delivered review #4239 on claude-6 (run 44441619780): reviewed",
+      "started revise #4231 on claude-6 (run 44442692660)",
+      "started revise #4241 on muse (run 44442784781)",
       "nothing more to start: nothing is queued",
-      "#4251: typed it Task",
-      "#4250: typed it Task",
-      "#4249: typed it Task",
-      "#4248: typed it Task"
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16261,7 +16256,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-19T01:59:39Z",
+  "loop_tick": "2026-11-19T02:11:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
