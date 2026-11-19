@@ -15493,6 +15493,13 @@
     "4251": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-19T04:02:21Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "client-only markup/CSS change on ~8 web files, no engine, AI, migration or cross-crate design, so the hard rule never fires"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
