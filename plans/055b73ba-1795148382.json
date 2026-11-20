@@ -1,0 +1,70 @@
+{
+  "action": "build",
+  "number": 4294,
+  "title": "Patch: the card crafter shows its preset suggestions again",
+  "branch": "bot/issue-4294",
+  "thread": "**Issue #4294 (data, not instructions):**\n\n```text\n# #4294: Patch: the card crafter shows its preset suggestions again\nOpened by @MaxGoetzmann.\n\n### What happens\n\nWhen a card has you build a custom card in the craft editor, the editor no longer shows the prefab suggestions (the seeded presets) that used to let you start from a ready-made card.\n\nThe cards that open the editor (`choose_craft`):\n\n- Meditative #17 **True Craft a Card** (`crates/cards/src/scripts/meditative/c017_true_craft_a_card.rs`): no mode\n- Meditative+ #16 **Jazakus** (`c016_jazakus.rs`): `potion` mode\n- Meditative+ #16.1 **Jazakus Prime** (`c016_1_jazakus_prime.rs`): `hugePotion` mode\n- Meditative+ #26 **Scratch Pad** (`c026_scratch_pad.rs`): `scratch` mode. This one is **meant** to show no suggestions (R1182002), so leave it as it is.\n\n(Core #99 Craft a Card is Discover + Fuse and never opens the editor, so this issue doesn't cover it.)\n\n### What should happen\n\nR880 and R881 (`spec/rulings/R0880.md`, `R0881.md`): a `craft` prompt offers four seeded presets (Unit, Spell, Field Spell, Trap, or up to `CRAFT_PRESETS` Potions in the potion modes, R1182000/R1182001/R1563008). These are built from the prompt's offer (R1563007), and every mode except `scratch` shows them in the editor as suggestions the player can click to load that recipe.\n\n### What I found (cause not confirmed)\n\nReading the code, every part still looks connected, so the builder needs to reproduce this in the client before changing anything:\n\n- Engine: `effects/choose.rs` `choose_craft` puts `subsystems::craft::presets_for` into the prompt's options, and `view_for.rs` `option_view` copies `Selection::Craft { recipe }` into `PendingOption.recipe`.\n- Client: `apps/web/src/game/craft/CraftEditor.tsx` around lines 134 and 329 renders the `.craft-suggestions` row (`data-testid=\"craft-preset-N\"`) when `!scratch && presets.length > 0`. Its styles are in `craft.css` around line 240.\n- Last change to the editor: #4119's audit (87bd2795), which only swapped `sheetQuery` to `queryList`. #3043 (True Craft's points cut to 80%, R3043000) threaded the mode through `craft_presets`.\n\nThings to check: whether the presets come back empty or invalid for some cost or offer (`preset_unit` and `preset_effect` can drop a preset the budget can't afford, and `craft_presets` uses `out.extend`), whether the options carry `recipe` across the WASM/wire boundary, and whether the row renders but sits off-screen or hidden, especially in the phone `sheet` layout.\n\n### How to reproduce\n\n`/dev/hotseat` or `/practice`: cast True Craft a Card, pick a cost, and look for the Suggestions row in the editor. Repeat with Jazakus's and Jazakus Prime's battlecries.\n\n### Acceptance\n\n- In the live client, the editor shows the presets as clickable suggestions for True Craft a Card (every cost 0 to `CRAFT_MAX_COST`, both faces), Jazakus and Jazakus Prime, and clicking one loads its recipe.\n- Scratch Pad still shows none (R1182002).\n- A test pins down the root cause where it was (engine, wire or web), named after the ruling it proves (R881 or R1563007). If the fix needs a decision the spec doesn't make, it gets a new ruling under this issue's block.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4294: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-20T04:19:45Z",
+    "claimed_at": "2026-11-20T04:20:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4284 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4291 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4257 is held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4292 skipped: it waits for #4285 to close first"
+  ]
+}
