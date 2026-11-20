@@ -1,5 +1,6 @@
-//! C+ #19.1 Top Loser (SPEC §8.7 row 19.1): Armor 3 (Radiant: 6, Immune to Spells, catalog keywords);
-//! never in Defense Position, and only a Unit in its lane may attack it (E35 static flags).
+//! C+ #19.1 Top Loser (SPEC §8.7 row 19.1): a 3/3 with Armor 2 (Radiant: a 6/6 with Armor 2, the base
+//! face's since issue #4292 (4 before), and Immune to Spells; catalog keywords); never in Defense
+//! Position, and only a Unit in its lane may attack it (E35 static flags).
 
 use jackioh_engine::prelude::*;
 
@@ -42,6 +43,7 @@ mod tests {
     const JUNGLE: &str = "classicplus-019-2";
     const BODY: &str = "core-019"; // Midrange Menace: Taunt
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const STAND_IN: &str = "stand-in (1) 5/9";
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
     const SORCERER: &str = "core-068"; // Twisted Sorcerer: Cry deal 4 damage to a target
     const SWITCH_ALL: &str = "core-048"; // 5pek Controller: switch the position of every Unit
@@ -331,30 +333,43 @@ mod tests {
 
             #[test]
             fn s6_1_a_unit_still_reaches_it_a_cry_targets_it_and_a_unit_s_sweep_destroys_it() {
-                // Radiant Twisted Sorcerer's 8 through the Radiant Top Loser's Armor 4 deals 4: the 6/6 is left at 2.
-                let mut s = top_loser(json!({ "hand": [{ "def": SORCERER, "radiant": true }, FILLER] }), true, json!({}));
+                // Twisted Sorcerer's 4 through the Radiant Top Loser's Armor 2 deals 2: the 6/6 is left at 4.
+                let mut s = top_loser(json!({ "hand": [SORCERER, FILLER] }), true, json!({}));
                 let loser = top(&s);
                 s.play(
                     SORCERER,
                     json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": loser.id }] }),
                 );
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 2 }));
+                s.expect_stats(&loser, json!({ "health": 4 }));
                 let mut felinor = top_loser(json!({ "hand": [BIG_FELINOR, FILLER] }), true, json!({}));
                 let loser = top(&felinor);
                 felinor.play(BIG_FELINOR, json!({ "zone": 1 }));
                 felinor.expect_in_zone(&loser, "gone");
             }
 
+            /// Issue #4292: the Radiant face prints the base face's Armor 2 (4 before) and keeps Immune to
+            /// Spells.
+            #[test]
+            fn prints_armor_2_since_issue_4292_and_keeps_immune_to_spells() {
+                let s = top_loser(json!({}), true, json!({}));
+                let loser = top(&s);
+                assert_eq!(s.stats(&loser).armor, 2);
+                assert!(unit_has(s.state(), &loser, KeywordKind::ImmuneToSpells));
+                let face = crate::card_def(TOP).radiant.keywords;
+                assert!(face.contains(&Keyword::Armor { n: 2 }), "{face:?}");
+                assert!(face.contains(&Keyword::ImmuneToSpells), "{face:?}");
+            }
+
             #[test]
             fn s4_2_it_may_still_be_attacked_from_its_lane() {
-                let mut s = top_loser(json!({ "field": [{ "def": BODY, "lane": 3 }] }), true, json!({}));
+                let mut s = top_loser(json!({ "field": [{ "def": STAND_IN, "lane": 3 }] }), true, json!({}));
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
-                // The Menace's 9 through Armor 4 deals 5: the 6/6 is left at 1.
+                // The stand-in's 5 through Armor 2 deals 3: the 6/6 is left at 3.
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 1 }));
+                s.expect_stats(&target, json!({ "health": 3 }));
             }
 
             #[test]

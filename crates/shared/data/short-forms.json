@@ -22,7 +22,7 @@
         "en": "Rush, Brittle 1\nIn your hand, gains the stats of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
       },
       "radiant": {
-        "en": "Rush, Divine Shield, Brittle 3\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
+        "en": "Rush, Brittle 3\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
       }
     },
     "core-095": {
@@ -121,7 +121,7 @@
         "en": "Cry: Nerf other CN and KY cards in play and hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle in its Prime."
       },
       "radiant": {
-        "en": "Divine Shield\nCry: Nerf other CN and KY cards in play and hands {times|time|times}.\nAura: Cloaks your Units.\nDeath: Shuffle in a Prime."
+        "en": "Cry: Nerf other CN and KY cards in play and hands {times|time|times}.\nAura: Cloaks your Units.\nDeath: Shuffle in a Prime."
       }
     },
     "meditative-049-1": {
@@ -129,7 +129,7 @@
         "en": "Float reduces cost.\nCry: Do {picks} at random: Datacenters, Glitches, an AI Girlfriend, Viruses for them, or Nerf their cards."
       },
       "radiant": {
-        "en": "Armor 5\nFloat reduces cost.\nCry: Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
+        "en": "Float reduces cost.\nCry: Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
       }
     },
     "meditative-049-2": {
@@ -451,11 +451,6 @@
         "en": "End of turn: Every Unit eats a Shawarma: 1st, +{health} Health; 2nd, Can't attack; 3rd, Can't Defend and Brittle {brittle2}; no more. Yours eat one."
       }
     },
-    "stinkyscapeplus-064": {
-      "radiant": {
-        "en": "Can't attack, Taunt, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): {embiggenedDamage} damage, GIGA, 0/48."
-      }
-    },
     "stinkyscapeplus-072": {
       "base": {
         "en": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
@@ -509,7 +504,7 @@
         "en": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal allies {heal}.\nAura: Allies ignore the first {pool} damage each turn."
       },
       "radiant": {
-        "en": "Tribute 3, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal allies {heal}.\nAura: Allies ignore the first {pool} damage each turn."
+        "en": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal allies {heal}.\nAura: Allies ignore the first {pool} damage each turn."
       }
     },
     "stinkyscapeplus-132": {
@@ -527,7 +522,7 @@
         "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
       },
       "radiant": {
-        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
+        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
       }
     },
     "stinkyscapeplus-137": {

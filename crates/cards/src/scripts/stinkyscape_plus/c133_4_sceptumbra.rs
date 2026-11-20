@@ -19,7 +19,6 @@
 //! **Ranged**  
 //! **Windfury**  
 //! **Pierce**  
-//! **Rush**  
 //! **Armor 3**  
 //! **Flying**  
 //! **Can’t Defend**  
@@ -27,7 +26,8 @@
 //!
 //! The fusion of Scepter and Antumbra (S+ #113, #118), with art and a name of its own (R3565003). Tribute 2
 //! is the one the two share (R101), and the keywords are catalog data; "Damage also Burns N" is the rider
-//! (R3540002), N declared as `burns` per face (R386).
+//! (R3540002), N declared as `burns` per face (R386). Issue #4292 took the Radiant face's Rush, catalog data
+//! (R767000): it was Scepter's, which keeps it, so this face is the two cards' union less Rush (R4292000).
 
 use jackioh_engine::prelude::*;
 
@@ -200,11 +200,23 @@ mod tests {
         for ingredient in INGREDIENTS {
             let card = crate::card_def(ingredient);
             for (radiant, face, of) in [(false, &fused.base, &card.base), (true, &fused.radiant, &card.radiant)] {
-                for keyword in &of.keywords {
+                // R4292000: the Radiant face drops Scepter's Rush, which the next test proves.
+                let kept = of.keywords.iter().filter(|keyword| !(radiant && **keyword == Keyword::Rush));
+                for keyword in kept {
                     assert!(face.keywords.contains(keyword), "radiant {radiant}: {ID} lacks {keyword:?} of {ingredient}");
                 }
             }
         }
+    }
+
+    #[test]
+    fn r4292000_radiant_drops_scepter_s_rush() {
+        crate::register_all();
+        let scepter = INGREDIENTS[0];
+        let rush = |id: &str| crate::card_def(id).radiant.keywords.contains(&Keyword::Rush);
+        assert!(rush(scepter), "{scepter} keeps Rush");
+        assert!(!rush(ID), "{ID} prints no Rush");
+        // The play: `radiant::cannot_attack_on_its_summon_turn_with_no_rush_since_issue_4292`.
     }
 
     #[test]
@@ -259,13 +271,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn rush_hits_a_unit_not_the_hero() {
+        fn cannot_attack_on_its_summon_turn_with_no_rush_since_issue_4292() {
             let mut s = in_hand(true, TRIBUTE as usize);
             play(&mut s, TRIBUTE);
-            s.expect_refused(|s| s.attack(ID, "hero"));
+            // The Radiant face prints no Rush since issue #4292, so it waits a turn as the base face does.
+            assert!(!keywords_of(s.state(), s.card(ID)).contains(&Keyword::Rush));
             let wall = s.unit_at(P2, 1).id;
-            s.attack(ID, wall.as_str());
-            assert_eq!(s.stats(wall.as_str()).health, 60 - ATTACK[1]);
+            s.expect_refused(|s| s.attack(ID, wall.as_str()));
         }
     }
 }

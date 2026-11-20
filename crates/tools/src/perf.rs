@@ -9,10 +9,9 @@
 //! of PERF_ACTIONS_PER_SEAT evenly spread listed actions of each seat; then it folds the longest of
 //! those games from its log, as a reconnect and `jackioh replay` do, and hashes the result. After
 //! PERF_WARMUP_PASSES passes whose samples are dropped, PERF_PASSES passes are timed (one under
-//! `--smoke`). Two work measures need no clock and cannot flake: the bytes of each `view_for` and the
-//! `reduce` calls of the fold. `--smoke` judges only their two budgets, so every pull request holds
-//! them (#4196), and leaves the five timings to the daily run: one pass on a shared runner is too
-//! noisy to judge a time.
+//! `--smoke`). One work measure needs no clock and cannot flake: the bytes of each `view_for`.
+//! `--smoke` judges only its budget, so every pull request holds it (#4196), and leaves the five
+//! timings to the daily run: one pass on a shared runner is too noisy to judge a time.
 //!
 //! Each budget bounds a measure's median (the p95 is shown, not judged), at the profile the binary
 //! was built at: `cargo test`'s (`*_TEST`, debug assertions on) or release (`*_RELEASE`). No
@@ -37,7 +36,7 @@ use jackioh_engine::{
 };
 
 use crate::fuzz::{actor_of, weigh};
-use crate::gate::{self, MS_PER_SECOND};
+use crate::gate;
 use crate::golden::{STEP_CAP, spec_for_seed};
 
 // The corpus and the passes
@@ -80,9 +79,11 @@ pub const LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 61.0;
 /// `hash_state`, in microseconds, at `cargo test`'s profile: medians 214.2, 212.5 and 215.8, 5x
 /// headroom.
 pub const HASH_STATE_US_BUDGET_TEST: f64 = 1_100.0;
-/// The fold of the longest corpus game and its hash, in milliseconds, at `cargo test`'s profile:
-/// medians 242.0, 242.4 and 240.9 (fuzz seed 37, 256 actions), 5x headroom.
-pub const FOLD_MS_BUDGET_TEST: f64 = 1_300.0;
+/// The fold of the longest corpus game and its hash, per folded action, in microseconds per
+/// action, at `cargo test`'s profile: the largest recorded median is 242.4 ms over 256 actions
+/// (fuzz seed 37; medians 242.0/242.4/240.9), so 242.4*1000/256 = 946.875 us/action, 5x =
+/// 4734.375, rounded up to two significant figures, 5x headroom.
+pub const FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 4_800.0;
 /// `reduce` of one listed action, in microseconds, at release: medians 140.0, 137.9 and 136.4, 5x
 /// headroom.
 pub const REDUCE_US_BUDGET_RELEASE: f64 = 700.0;
@@ -93,18 +94,15 @@ pub const VIEW_FOR_US_BUDGET_RELEASE: f64 = 900.0;
 pub const LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 51.0;
 /// `hash_state`, in microseconds, at release: medians 193.2, 192.4 and 190.1, 5x headroom.
 pub const HASH_STATE_US_BUDGET_RELEASE: f64 = 970.0;
-/// The fold of the longest corpus game and its hash, in milliseconds, at release: medians 199.7,
-/// 199.2 and 198.9 (fuzz seed 37, 256 actions), 5x headroom.
-pub const FOLD_MS_BUDGET_RELEASE: f64 = 1_000.0;
+/// The fold of the longest corpus game and its hash, per folded action, in microseconds per
+/// action, at release: the largest recorded median is 199.7 ms over 256 actions (fuzz seed 37;
+/// medians 199.7/199.2/198.9), so 199.7*1000/256 = 780.1 us/action, 5x = 3900.4, rounded up to
+/// two significant figures, 5x headroom.
+pub const FOLD_US_PER_ACTION_BUDGET_RELEASE: f64 = 4_000.0;
 /// The JSON size of one seat's `view_for`, in bytes, at either profile: a median of 6,976 in all six
 /// runs, 2x headroom. `perf --smoke` read 7,001 on 2026-11-18 (8c6074f25b) and 2026-11-19
 /// (947bae6c11).
 pub const VIEW_FOR_BYTES_BUDGET: f64 = 14_000.0;
-/// The `reduce` calls the fold of the longest corpus game makes (its log's length), at either
-/// profile: 256 in all six runs (fuzz seed 37), 2x headroom. `perf --smoke` read 404 (fuzz seed 29)
-/// on 2026-11-18 (8c6074f25b) and 250 (fuzz seed 30) on 2026-11-19 (947bae6c11): card changes move
-/// the corpus's longest game.
-pub const FOLD_REDUCE_CALLS_BUDGET: f64 = 520.0;
 
 /// The profile this binary was built at, which picks the time budgets.
 const PROFILE: &str = if cfg!(debug_assertions) { "test" } else { "release" };
@@ -114,7 +112,7 @@ const PROFILE: &str = if cfg!(debug_assertions) { "test" } else { "release" };
 /// `perf [--smoke] [--json]`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
-    /// Time the corpus once and judge only the two work budgets (the per-pull-request smoke test).
+    /// Time the corpus once and judge only the work budget (the per-pull-request smoke test).
     #[arg(long)]
     pub smoke: bool,
     /// Print the report as one JSON object instead of the table.
@@ -153,18 +151,16 @@ enum Measure {
     HashState,
     Fold,
     ViewForBytes,
-    FoldReduceCalls,
 }
 
 /// Every measure, in the report's order.
-const MEASURES: [Measure; 7] = [
+const MEASURES: [Measure; 6] = [
     Measure::Reduce,
     Measure::ViewFor,
     Measure::LegalActions,
     Measure::HashState,
     Measure::Fold,
     Measure::ViewForBytes,
-    Measure::FoldReduceCalls,
 ];
 
 impl Measure {
@@ -176,21 +172,19 @@ impl Measure {
             Measure::HashState => "hash_state",
             Measure::Fold => "fold",
             Measure::ViewForBytes => "view_for bytes",
-            Measure::FoldReduceCalls => "fold reduce calls",
         }
     }
 
     fn unit(self) -> &'static str {
         match self {
             Measure::Reduce | Measure::ViewFor | Measure::LegalActions | Measure::HashState => "us",
-            Measure::Fold => "ms",
+            Measure::Fold => "us/action",
             Measure::ViewForBytes => "bytes",
-            Measure::FoldReduceCalls => "calls",
         }
     }
 
-    /// Whether the measure is a time, which only a judged run's passes are enough to judge; the two
-    /// work measures come out the same on every run, so `--smoke` judges them too.
+    /// Whether the measure is a time, which only a judged run's passes are enough to judge; the work
+    /// measure comes out the same on every run, so `--smoke` judges it too.
     fn needs_clock(self) -> bool {
         match self {
             Measure::Reduce
@@ -198,7 +192,7 @@ impl Measure {
             | Measure::LegalActions
             | Measure::HashState
             | Measure::Fold => true,
-            Measure::ViewForBytes | Measure::FoldReduceCalls => false,
+            Measure::ViewForBytes => false,
         }
     }
 
@@ -214,10 +208,12 @@ impl Measure {
             Measure::LegalActions => (LEGAL_ACTIONS_US_BUDGET_RELEASE, "LEGAL_ACTIONS_US_BUDGET_RELEASE"),
             Measure::HashState if test => (HASH_STATE_US_BUDGET_TEST, "HASH_STATE_US_BUDGET_TEST"),
             Measure::HashState => (HASH_STATE_US_BUDGET_RELEASE, "HASH_STATE_US_BUDGET_RELEASE"),
-            Measure::Fold if test => (FOLD_MS_BUDGET_TEST, "FOLD_MS_BUDGET_TEST"),
-            Measure::Fold => (FOLD_MS_BUDGET_RELEASE, "FOLD_MS_BUDGET_RELEASE"),
+            Measure::Fold if test => (FOLD_US_PER_ACTION_BUDGET_TEST, "FOLD_US_PER_ACTION_BUDGET_TEST"),
+            Measure::Fold => (
+                FOLD_US_PER_ACTION_BUDGET_RELEASE,
+                "FOLD_US_PER_ACTION_BUDGET_RELEASE",
+            ),
             Measure::ViewForBytes => (VIEW_FOR_BYTES_BUDGET, "VIEW_FOR_BYTES_BUDGET"),
-            Measure::FoldReduceCalls => (FOLD_REDUCE_CALLS_BUDGET, "FOLD_REDUCE_CALLS_BUDGET"),
         }
     }
 }
@@ -242,6 +238,11 @@ fn seconds<T>(work: impl FnOnce() -> T) -> f64 {
     let took = started.elapsed().as_secs_f64();
     drop(done);
     took
+}
+
+/// The fold's time per folded action, in microseconds per action.
+fn fold_us_per_action(elapsed_secs: f64, actions: usize) -> f64 {
+    elapsed_secs * US_PER_SECOND / actions.max(1) as f64
 }
 
 // The corpus
@@ -470,7 +471,10 @@ fn timed_pass(corpus: &Corpus, kept: &[Vec<Action>]) -> Result<Samples> {
     let started = Instant::now();
     let folded = std::hint::black_box(fold(&corpus.fold));
     let hash = std::hint::black_box(hash_state(&folded.state));
-    samples.fold.push(started.elapsed().as_secs_f64() * MS_PER_SECOND);
+    samples.fold.push(fold_us_per_action(
+        started.elapsed().as_secs_f64(),
+        corpus.fold.log.len(),
+    ));
     if let Some(first) = folded.errors.first() {
         bail!(
             "the fold of fuzz seed {} refused {} action(s); first at nonce \"{}\": {}",
@@ -555,7 +559,7 @@ struct Report {
     corpus: CorpusCounts,
     fold: FoldInfo,
     measures: Vec<Row>,
-    /// One message per median past its budget; under `--smoke`, only the two work measures are judged.
+    /// One message per median past its budget; under `--smoke`, only the work measure is judged.
     failures: Vec<String>,
 }
 
@@ -606,7 +610,6 @@ fn measure(smoke: bool) -> Result<Report> {
                 Measure::HashState => std::mem::take(&mut samples.hash_state),
                 Measure::Fold => std::mem::take(&mut samples.fold),
                 Measure::ViewForBytes => std::mem::take(&mut bytes),
-                Measure::FoldReduceCalls => vec![corpus.fold.log.len() as f64],
             };
             row(measure, taken)
         })
@@ -661,7 +664,7 @@ fn judge(rows: &[Row]) -> Vec<String> {
         .collect()
 }
 
-/// `--smoke`'s verdict: `judge` over the rows that need no clock, the two work measures.
+/// `--smoke`'s verdict: `judge` over the rows that need no clock, the one work measure.
 fn judge_smoke(rows: &[Row]) -> Vec<String> {
     let unclocked: Vec<Row> = rows.iter().filter(|row| !row.needs_clock).cloned().collect();
     judge(&unclocked)
@@ -684,7 +687,7 @@ fn perf_table(report: &Report) -> String {
         report.fold.actions
     );
     if report.smoke {
-        out.push_str("; smoke: work budgets judged, clock budgets not");
+        out.push_str("; smoke: work budget judged, clock budgets not");
     }
     out.push('\n');
     let _ = writeln!(
@@ -768,22 +771,29 @@ mod tests {
     }
 
     #[test]
-    fn under_smoke_only_the_two_work_budgets_fail_even_at_twice_every_budget() {
+    fn under_smoke_only_the_work_budget_fails_even_at_twice_every_budget() {
         let rows: Vec<Row> = MEASURES
             .iter()
             .map(|&measure| row_at(measure, 2.0 * measure.budget().0))
             .collect();
         let failures = judge_smoke(&rows);
-        assert_eq!(failures.len(), 2, "{failures:#?}");
+        assert_eq!(failures.len(), 1, "{failures:#?}");
         assert!(
             failures[0].starts_with("view_for bytes:") && failures[0].ends_with("(VIEW_FOR_BYTES_BUDGET)"),
             "{failures:#?}"
         );
-        assert!(
-            failures[1].starts_with("fold reduce calls:")
-                && failures[1].ends_with("(FOLD_REDUCE_CALLS_BUDGET)"),
-            "{failures:#?}"
-        );
+    }
+
+    #[test]
+    fn fold_divides_the_fold_time_by_its_actions() {
+        assert_eq!(fold_us_per_action(0.2424, 256), 946.875);
+        assert_eq!(Measure::Fold.unit(), "us/action");
+        let expected = if cfg!(debug_assertions) {
+            "FOLD_US_PER_ACTION_BUDGET_TEST"
+        } else {
+            "FOLD_US_PER_ACTION_BUDGET_RELEASE"
+        };
+        assert_eq!(Measure::Fold.budget().1, expected);
     }
 
     #[test]
@@ -821,7 +831,7 @@ mod tests {
         assert_eq!(lines.len(), 2 + MEASURES.len(), "{table}");
         assert!(lines[0].starts_with("perf: "), "{table}");
         assert!(
-            lines[0].ends_with("; smoke: work budgets judged, clock budgets not"),
+            lines[0].ends_with("; smoke: work budget judged, clock budgets not"),
             "{table}"
         );
         assert!(lines[0].contains("fuzz seed 7, 12 actions"), "{table}");

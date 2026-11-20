@@ -339,7 +339,7 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
         assert!(printed_kinds(&g, &fused.def_id).contains(&KeywordKind::DivineShield));
         // The fused definition prints Jilliax's Divine Shield, which K-Pop Fanatic's base face never
         // printed: a keyword the card newly gains applies at once (§5.2), exactly as radiant #50's
-        // printed shield does after a granted one was spent.
+        // printed shield did after a granted one was spent, until issue #4292 took it off that face.
         assert!(kinds(&g, &kpop).contains(&KeywordKind::DivineShield));
     }
 

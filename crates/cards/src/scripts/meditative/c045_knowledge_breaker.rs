@@ -3,10 +3,10 @@
 //! Base:    "Cry: Nerf all other CN and KY cards on the field and in hands.
 //!           Aura: Your Units are Cloaked.
 //!           Death: Shuffle a Knowledge Breaker Prime into your deck."
-//! Radiant: "Divine Shield
-//!           Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.
+//! Radiant: "Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.
 //!           Aura: Your Units are Cloaked.
 //!           Death: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+//!          (Divine Shield too until issue #4292.)
 //! Engine:
 //! - Cry: `degrade` over every other CN or KY card on fields and in hands, `times`; a card in
 //!   Chinese is CN (R1176000).
@@ -319,8 +319,7 @@ mod tests {
                     "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }] },
                 }));
                 let breaker = s.unit(P1, 2).expect("the Breaker");
-                // Hit Job destroys it (the Radiant face's Divine Shield stops damage, not a
-                // destroy): its Death shuffles exactly one Prime.
+                // Hit Job destroys it: its Death shuffles exactly one Prime.
                 s.play(
                     HIT_JOB,
                     json!({ "targets": [{ "pick": "instance", "instanceId": breaker.id }] }),
@@ -550,9 +549,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1042_radiant_nerfs_twice_with_divine_shield_on_fields_and_in_hands() {
+        fn r1042_radiant_nerfs_twice_on_fields_and_in_hands_with_no_divine_shield_since_issue_4292() {
             let def = crate::card_def(BREAKER);
-            assert!(def.radiant.keywords.contains(&Keyword::DivineShield));
+            // Its Radiant face printed Divine Shield until issue #4292; now it prints no keyword, as the base.
+            assert!(def.radiant.keywords.is_empty());
+            assert!(def.base.keywords.is_empty());
             let mut s = spread_board("breaker-cry-radiant", true);
             let breaker = s
                 .hand(P1)
@@ -576,6 +577,8 @@ mod tests {
                 s.card_mut(id.as_str()).cost_mod = -1;
             }
             s.play(&breaker.id, json!({ "zone": 2 }));
+            assert!(s.card(&breaker.id).radiant);
+            assert!(!keywords_of(s.state(), s.card(&breaker.id)).contains(&Keyword::DivineShield));
             let degraded = degraded_ids(&s);
             for id in &reached {
                 assert_eq!(degraded.iter().filter(|hit| *hit == id).count(), 2, "{id}");

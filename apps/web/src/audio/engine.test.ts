@@ -1238,6 +1238,73 @@ describe("B51 caches and prefetch", () => {
 
     expect(r.fetch.urls()).toEqual([url("core-004-play")]);
   });
+
+  it("#4316 no preload asked: tables landing on a running context fetch no voice bytes", async () => {
+    const deferred = deferSoundTablesForTests();
+    const r = rig({ engine: { lines: undefined, manifest: undefined } });
+    const audio = unlocked(r);
+    expect(r.engine.state()).toBe("running");
+
+    deferred.resolve({
+      cardAudio: LINES,
+      voiceManifest: PRELOAD_MANIFEST,
+      musicManifest: { version: 1, format: "", files: {} },
+      musicCards: {},
+    });
+    await elapse(r, VOICE_PREFETCH_DELAY_MS + 5_000);
+
+    expect(r.fetch.fetchBytes).not.toHaveBeenCalled();
+    expect(audio.violations).toEqual([]);
+  });
+
+  it("#4316 a preload asked for before the tables arrive fetches its lines, then the whole manifest", async () => {
+    const deferred = deferSoundTablesForTests();
+    const r = rig({ engine: { lines: undefined, manifest: undefined } });
+    unlocked(r);
+    r.fetch.mode = "hang";
+
+    r.engine.preloadVoices(["core-004-play"]);
+    await settle();
+    expect(r.fetch.fetchBytes, "held for the tables").not.toHaveBeenCalled();
+
+    deferred.resolve({
+      cardAudio: LINES,
+      voiceManifest: PRELOAD_MANIFEST,
+      musicManifest: { version: 1, format: "", files: {} },
+      musicCards: {},
+    });
+    await settle();
+    expect(r.fetch.urls()).toEqual([url("core-004-play")]);
+
+    await elapse(r, VOICE_PREFETCH_DELAY_MS);
+    expect(r.fetch.urls(), "a few at a time").toHaveLength(1 + VOICE_PREFETCH_CONCURRENCY);
+    for (let i = 0; i < 40; i += 1) {
+      r.fetch.release();
+      await settle();
+    }
+
+    const all = Object.keys(PRELOAD_MANIFEST.files).map((key) => url(key));
+    expect(new Set(r.fetch.urls())).toEqual(new Set(all));
+    expect(r.fetch.urls()).toHaveLength(all.length);
+  });
+});
+
+describe("R4316000 no voice bulk prefetch while the browser asks to save data", () => {
+  it("R4316000 while the save-data port holds, preloadVoices fetches only its own keys and nothing else follows", async () => {
+    const saving = rig({ engine: { manifest: PRELOAD_MANIFEST, saveData: () => true } });
+    unlocked(saving);
+    saving.engine.preloadVoices(["core-004-play"]);
+    await elapse(saving, VOICE_PREFETCH_DELAY_MS + 5_000);
+    expect(saving.fetch.urls()).toEqual([url("core-004-play")]);
+
+    const full = rig({ engine: { manifest: PRELOAD_MANIFEST, saveData: () => false } });
+    unlocked(full);
+    full.fetch.mode = "hang";
+    full.engine.preloadVoices(["core-004-play"]);
+    await settle();
+    await elapse(full, VOICE_PREFETCH_DELAY_MS);
+    expect(full.fetch.urls(), "a few at a time").toHaveLength(1 + VOICE_PREFETCH_CONCURRENCY);
+  });
 });
 
 // B58: no background voice work while the board animates

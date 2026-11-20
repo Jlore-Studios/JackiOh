@@ -1,10 +1,10 @@
 //! M #93 Growing Felinor (SPEC §8.8 row 93): (1) Unit, Felinor, Common, 1/1 → 2/2.
 //!
-//! Base:    "Can't be in Defense Position.
+//! Base:    "Can't Defend
 //!           Death: Summon a Growing Felinor Sr."
-//! Radiant: "Divine Shield, Rush
-//!           Can't be in Defense Position.
+//! Radiant: "Rush, Can't Defend
 //!           Death: Summon a Radiant Growing Felinor Sr."
+//!          (Divine Shield too until issue #4292.)
 //! Engine:
 //! - **Can't Defend** (R2657000, the static flag `never_defense` through v0.5.9f), as #65.1 Spikey Pillow: `reduce.rs` refuses the switch
 //!   and `legal_actions` leaves it out, and `combat.rs` checks a switch made as an effect (§6.1).
@@ -79,7 +79,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_cost_1_1_felinor_and_radiant_a_2_2_with_divine_shield_and_rush() {
+        fn is_a_1_cost_1_1_felinor_and_radiant_a_2_2_with_rush_alone_since_issue_4292() {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(1));
             assert!(!def.token);
@@ -87,7 +87,8 @@ mod tests {
             assert_eq!([def.base.attack, def.base.health], [Some(1), Some(1)]);
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(2), Some(2)]);
             assert_eq!(def.base.keywords, vec![Keyword::CantDefend]);
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend]);
+            // Radiant adds Rush alone: it added Divine Shield too until issue #4292.
+            assert_eq!(def.radiant.keywords, vec![Keyword::Rush, Keyword::CantDefend]);
             // R767000: the script kept for v0.5.9f carries the flag the keyword took over from.
             let scripts = script_v0_5_9f();
             assert_eq!(
@@ -158,7 +159,7 @@ mod tests {
             }
 
             #[test]
-            fn r1180_radiant_its_death_summons_a_radiant_sr_with_divine_shield_and_rush() {
+            fn r1180_radiant_its_death_summons_a_radiant_sr_with_rush() {
                 let mut s = game(json!([{ "def": ID, "radiant": true, "lane": 3 }]), 1);
                 let dying = s.unit_at(P1, 3);
                 hit(&mut s, &dying.id);
@@ -166,10 +167,8 @@ mod tests {
                 assert_eq!(next.def_id, NEXT);
                 assert!(next.radiant);
                 s.expect_stats(&next, json!({ "attack": 4, "maxHealth": 4 }));
-                assert_eq!(
-                    keywords_of(s.state(), &next),
-                    vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend]
-                );
+                // No Divine Shield since issue #4292.
+                assert_eq!(keywords_of(s.state(), &next), vec![Keyword::Rush, Keyword::CantDefend]);
                 assert_eq!(s.unit_at(P1, 1).id, next.id);
                 assert!(s.unit(P1, 3).is_none());
             }
@@ -204,19 +203,21 @@ mod tests {
             #[test]
             fn r1180_the_radiant_chain_stays_radiant_up_to_super_senior() {
                 let mut s = game(json!([{ "def": ID, "radiant": true }]), 4);
-                for (def, size) in [
-                    ("meditative-093-1", 4),
-                    ("meditative-093-2", 6),
-                    ("meditative-093-3", 8),
+                // Since issue #4292 only Super Senior, the chain's end, prints Divine Shield.
+                for (def, size, keywords) in [
+                    ("meditative-093-1", 4, vec![Keyword::Rush, Keyword::CantDefend]),
+                    ("meditative-093-2", 6, vec![Keyword::Rush, Keyword::CantDefend]),
+                    (
+                        "meditative-093-3",
+                        8,
+                        vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend],
+                    ),
                 ] {
                     let next = grow(&mut s).unwrap_or_else(|| panic!("expected {def}"));
                     assert_eq!(next.def_id, def);
                     assert!(next.radiant);
                     s.expect_stats(&next, json!({ "attack": size, "maxHealth": size }));
-                    assert_eq!(
-                        keywords_of(s.state(), &next),
-                        vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend]
-                    );
+                    assert_eq!(keywords_of(s.state(), &next), keywords, "{def}");
                 }
                 assert!(grow(&mut s).is_none());
             }

@@ -13,11 +13,11 @@
 //! **Can’t defend**
 //! **Flying**
 //! **End of turn:** Heal all allies 16 hp
-//! **Armor 2**
 //! The first 10 damage allies would take per turn is nullified *{10 left}*
 //!
 //! Tribute 3 is the script's `tribute` (R101); the pool is E6's per-turn damage pool
-//! (`StaticFlags.damage_pool`, R3550004), read through the declared `pool` (R386), after Armor.
+//! (`StaticFlags.damage_pool`, R3550004), read through the declared `pool` (R386), after Armor. Issue #4292
+//! took the Radiant face's Armor 2, catalog data (R767000), so the pool soaks a hit's whole damage.
 
 use jackioh_engine::prelude::*;
 
@@ -229,8 +229,8 @@ mod tests {
             crate::next_turn_of(&mut s, P2);
             let first = s.unit_at(P2, 1).id;
             s.attack(first.as_str(), oct.as_str());
-            // The Radiant face's 2 armor takes 2 of the 3 first, so the pool soaks only the 1 left.
-            let left = pool - if radiant { 1 } else { 3 };
+            // Neither face prints Armor (the Radiant face's 2 went in issue #4292), so the pool soaks all 3.
+            let left = pool - 3;
             let read = left_read(&s);
             assert_eq!(read[0].value, left, "radiant {radiant}");
             assert_eq!(read[0].display, Some(format!("{left} left")), "radiant {radiant}");
@@ -241,9 +241,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn armor_2_is_printed() {
+        fn no_armor_is_printed_since_issue_4292() {
             let s = on_field(true);
-            assert_eq!(s.stats(ID).armor, 2);
+            assert_eq!(s.stats(ID).armor, 0);
         }
     }
 }

@@ -1,5 +1,5 @@
 //! `perf` on the built `jackioh` (#3429): once per pull request, so the harness keeps working and
-//! the two work budgets, which need no clock, are held (#4196), and daily with every median held to
+//! the work budget, which needs no clock, is held (#4196), and daily with every median held to
 //! the test profile's budgets.
 
 use std::io::Write as _;
@@ -12,14 +12,13 @@ use jackioh_engine::testkit::golden::HOTSEAT;
 const BIN: &str = env!("CARGO_BIN_EXE_jackioh");
 
 /// The report's measures, in its order.
-const MEASURES: [&str; 7] = [
+const MEASURES: [&str; 6] = [
     "reduce",
     "view_for",
     "legal_actions",
     "hash_state",
     "fold",
     "view_for bytes",
-    "fold reduce calls",
 ];
 
 fn jackioh(args: &[&str]) -> Output {
@@ -62,22 +61,27 @@ fn perf_smoke_times_the_corpus_once() {
         assert!(number("budget") > 0.0, "{row}");
     }
 
-    // The two work budgets, the ones `--smoke` judges (#4196), each read by its row's name.
-    for name in ["view_for bytes", "fold reduce calls"] {
-        let row = rows
-            .iter()
-            .find(|row| row["measure"] == name)
-            .unwrap_or_else(|| panic!("no {name} row: {report:#}"));
-        let number = |key: &str| row[key].as_f64().unwrap_or(f64::NAN);
-        assert!(
-            number("median") <= number("budget"),
-            "{name} is over its budget: {row}"
-        );
-    }
+    // The work budget, the one `--smoke` judges (#4196), read by its row's name.
+    let row = rows
+        .iter()
+        .find(|row| row["measure"] == "view_for bytes")
+        .unwrap_or_else(|| panic!("no view_for bytes row: {report:#}"));
+    let number = |key: &str| row[key].as_f64().unwrap_or(f64::NAN);
+    assert!(
+        number("median") <= number("budget"),
+        "view_for bytes is over its budget: {row}"
+    );
+
+    // The fold is timed per folded action, so a longer game does not use up its time budget.
+    let row = rows
+        .iter()
+        .find(|row| row["measure"] == "fold")
+        .unwrap_or_else(|| panic!("no fold row: {report:#}"));
+    assert_eq!(row["unit"], "us/action", "{row}");
 }
 
 #[test]
-#[ignore = "daily: ten timed passes over the corpus held to the test profile's budgets; perf_smoke_times_the_corpus_once holds the two work budgets on every pull request"]
+#[ignore = "daily: ten timed passes over the corpus held to the test profile's budgets; perf_smoke_times_the_corpus_once holds the work budget on every pull request"]
 fn perf_holds_every_budget() {
     let output = jackioh(&["perf"]);
     // libtest captures `print!` and `eprint!` alone, so the table reaches the daily log this way.

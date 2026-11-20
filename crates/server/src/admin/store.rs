@@ -79,13 +79,18 @@ pub struct AdminAction {
 
 /// R3074000: how `GET /api/admin/audit` narrows the audit read. `before_id` is an exclusive
 /// upper bound on the row id, the cursor of the next older page; `profile_id` and `route` are
-/// exact matches. `None` (and, by the time it reaches the store, never an empty string) means
-/// no constraint.
+/// exact matches; `since` and `until` are inclusive lower and upper bounds on the row's `at`
+/// (epoch milliseconds). `None` (and, by the time it reaches the store, never an empty string)
+/// means no constraint.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AdminActionFilter {
     pub before_id: Option<i64>,
     pub profile_id: Option<String>,
     pub route: Option<String>,
+    /// Inclusive lower bound on the row's `at`, epoch milliseconds; `None` means no constraint.
+    pub since: Option<i64>,
+    /// Inclusive upper bound on the row's `at`, epoch milliseconds; `None` means no constraint.
+    pub until: Option<i64>,
 }
 
 /// R3074001: one row of `public.hand_set_ratings`: the account holds a hand-set rating on
@@ -436,6 +441,8 @@ mod pg {
               where ($2::bigint is null or id < $2)
                 and ($3::text is null or profile_id::text = $3)
                 and ($4::text is null or route = $4)
+                and ($5::double precision is null or at >= to_timestamp($5::double precision / 1000.0))
+                and ($6::double precision is null or at <= to_timestamp($6::double precision / 1000.0))
               order by at desc, id desc
               limit $1::bigint",
         )
@@ -443,6 +450,8 @@ mod pg {
         .bind(filter.before_id)
         .bind(filter.profile_id.as_deref())
         .bind(filter.route.as_deref())
+        .bind(filter.since)
+        .bind(filter.until)
         .fetch_all(&mut **t)
         .await?;
         rows.iter().map(action_of).collect()
@@ -708,6 +717,8 @@ mod fake {
                     .is_none_or(|profile| row.profile_id.as_deref() == Some(profile))
             })
             .filter(|row| filter.route.as_ref().is_none_or(|route| row.route == *route))
+            .filter(|row| filter.since.is_none_or(|since| row.at >= since))
+            .filter(|row| filter.until.is_none_or(|until| row.at <= until))
             .cloned()
             .collect();
         let rows = newest_first(kept, |row| row.at, |a, b| b.id.cmp(&a.id));
