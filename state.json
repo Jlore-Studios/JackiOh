@@ -15862,14 +15862,8 @@
     "what": "plan #4292 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-20T11:32:01Z",
-    "notes": [
-      "#4292 needs a plan",
-      "started review #4303 on claude-8 (run 44728541565)",
-      "started plan #4292 on claude-8 (run 44728624407)",
-      "nothing more to start: nothing is queued",
-      "pruned 8 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-20T11:40:49Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16574,7 +16568,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T11:32:01Z",
+  "loop_tick": "2026-11-20T11:40:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
