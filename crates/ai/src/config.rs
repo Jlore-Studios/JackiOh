@@ -413,6 +413,14 @@ pub struct EvalWeights {
     /// the order they are counted, refilled where that side's turn starts before they land. Off, every hit
     /// is damage and no pool soaks, as before.
     pub pool_and_conversion_read: bool,
+    /// R4257000, #4257: whether the static Cleave reads (`cleaved_neighbours_with`: the Taunt walk of
+    /// `damage_past_taunts_with` by these weights, the reply's `trade_value` by `AI_EVAL`'s) take the
+    /// engine's splash, `query::cleave_struck` less the target: a GIGA is beside the target from either of
+    /// its lanes and met once (R3546001), and beside a Unit standing in the backrow only a Unit standing
+    /// there is (R1081000). The walk then tries a third order: at a Taunt, the first Cleave attacker that
+    /// destroys it alone goes in first when its splash meets a later Taunt and the two are not both one lane
+    /// wide. Off, the one-lane splash and the two orders, as before.
+    pub giga_cleave_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -630,6 +638,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     best_attack_order_past_taunts: true,
     exile_on_damage_read: true,
     pool_and_conversion_read: true,
+    giga_cleave_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -860,7 +869,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `hand_sale_credits`) is off.
+/// `giga_cleave_read`, `hand_sale_credits`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -880,6 +889,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     best_attack_order_past_taunts: false,
     exile_on_damage_read: false,
     pool_and_conversion_read: false,
+    giga_cleave_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {

@@ -138,7 +138,12 @@ leaves the second unbound (`static_attack_flags_read`, R3550001, R3560007, #3909
 walked as the opponent would attack it: the larger of two orders counts, smallest first and the smallest
 attacker that destroys it alone first, and an attacker its Armor or First Strike would stop whole waits
 until it falls, then goes on to the next Taunt or the hero (`best_attack_order_past_taunts`, R3937000,
-#3937; off in `GREEDY_EVAL`). A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
+#3937; off in `GREEDY_EVAL`). Every static Cleave splash (`cleaved_neighbours`, the walk's and the reply's)
+is the engine's `query::cleave_struck` less the target: a GIGA beside the target from either of its lanes,
+met once, and beside a Unit standing in the backrow only standing Units (R3546001, R1081000). Where such a
+splash through a GIGA meets a later Taunt, the walk tries a third order, that Cleave attacker first
+(`giga_cleave_read`, R4257000, #4257; off in `GREEDY_EVAL`, whose walk keeps the one-lane splash).
+A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
 (`pool_and_conversion_read`, R4064000, R4064001, #4064; off in `GREEDY_EVAL`). A hit from a source whose

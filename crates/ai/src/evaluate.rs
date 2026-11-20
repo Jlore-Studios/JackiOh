@@ -43,17 +43,17 @@ use jackioh_engine::{
     card_at, card_keywords, card_type_of_face, converts_to, credit_lapsing, damage_pool_of, death_hook_of,
     effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
     first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of,
-    hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship, is_extra_turn_card, is_sick,
-    is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, is_tradable, left_field_after,
-    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
-    sell_quote, sells_from_hand, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
-    takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view,
-    units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship, is_extra_turn_card, is_giga,
+    is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, is_tradable,
+    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
+    own_cost, pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance,
+    script_of, sell_quote, sells_from_hand, settle, slots_of, stats_with_buffs, subsystems,
+    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
+    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::candidates::{Side, action_key, blow, cleaved_neighbours, side_of};
+use crate::candidates::{Side, action_key, blow, cleaved_neighbours_with, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
     AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS,
@@ -1416,8 +1416,9 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0 that may swing
 /// (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49), ascending by attack.
 /// Taunts soak the attackers they bind (`damage_past_taunts_with`, in the opponent's better order with
-/// `w.best_attack_order_past_taunts`, R3937000); each remaining attack goes through
-/// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
+/// `w.best_attack_order_past_taunts`, R3937000; a third with `w.giga_cleave_read`, R4257000); each remaining
+/// attack goes through `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the
+/// Anti-oneshot cap), summed.
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
 /// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
 /// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
@@ -1534,7 +1535,9 @@ pub fn damage_past_taunts(
 /// bonuses (R1120) stay out. A hit that may not hit the hero (R1849005, #1823) lands nothing past the Taunts.
 /// With `w.static_attack_flags_read`, an attacker that Ignores Taunt (R3560007) is bound by none, Defense
 /// Position's included. With `w.best_attack_order_past_taunts` (R3937000) the walk runs as the flag's doc
-/// says, the larger of its two orders counting. With `w.pool_and_conversion_read`, a hit that Burns or is
+/// says, the larger of its two orders counting. With `w.giga_cleave_read` (R4257000) its Cleave splash is the
+/// engine's (`cleaved_neighbours_with`), and a third order, as the flag's doc says, counts when it is larger.
+/// With `w.pool_and_conversion_read`, a hit that Burns or is
 /// Toxic instead deals nothing (§4.4 step 3a, R4064001), and the defender's damage pools soak what they
 /// have left, once across the walk's hits in the order it counts them (step 3b, R4064000); the attacks
 /// are this turn's, so each side's pools are read as they stand now. With `w.exile_on_damage_read`
@@ -1559,11 +1562,16 @@ fn damage_past_taunts_from(
     swings_now: bool,
 ) -> i32 {
     let pools = WalkPools::of(state, defender, swings_now, w);
-    let (smallest_first, breaker_behind) = soak_past_taunts(state, defender, attacks, w, false, pools);
-    if !breaker_behind {
-        return smallest_first;
+    let (mut best, breaker_behind, cleave_behind) =
+        soak_past_taunts(state, defender, attacks, w, WalkOrder::Ascending, pools);
+    if breaker_behind {
+        best = best.max(soak_past_taunts(state, defender, attacks, w, WalkOrder::BreakerFirst, pools).0);
     }
-    smallest_first.max(soak_past_taunts(state, defender, attacks, w, true, pools).0)
+    // R4257000: with `w.giga_cleave_read` only, so `cleave_behind` is false without it.
+    if cleave_behind {
+        best = best.max(soak_past_taunts(state, defender, attacks, w, WalkOrder::CleaveFirst, pools).0);
+    }
+    best
 }
 
 /// R4064000: the damage pools (§4.4 step 3b) a walk of `defender`'s Taunts meets, and whether it reads
@@ -1603,17 +1611,32 @@ impl WalkPools {
     }
 }
 
-/// `damage_past_taunts_with`'s walk in one order (R3937000), and whether a Taunt had a lone breaker behind a
-/// smaller attacker, the one case where the orders can differ.
+/// The order `soak_past_taunts` sends each Taunt's bound attackers in (R3937000, R4257000).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum WalkOrder {
+    /// The attackers that may not hit the hero first, then the rest, each ascending by attack.
+    Ascending,
+    /// The same, the first that destroys the Taunt alone going in first (R3937000).
+    BreakerFirst,
+    /// The same, the first Cleave attacker that destroys it alone and splashes a later Taunt through a GIGA
+    /// going in first (R4257000).
+    CleaveFirst,
+}
+
+/// `damage_past_taunts_with`'s walk in `order` (R3937000, R4257000), whether a Taunt had a lone breaker
+/// behind a smaller attacker, and whether one had a lone Cleave breaker whose splash meets a later Taunt
+/// through a GIGA behind another attacker (`first_giga_splash_breaker`): the cases where the orders can
+/// differ.
 fn soak_past_taunts(
     state: &GameState,
     defender: PlayerId,
     attacks: &[(&CardInstance, i32, bool)],
     w: &EvalWeights,
-    breaker_first: bool,
+    order: WalkOrder,
     pools: WalkPools,
-) -> (i32, bool) {
+) -> (i32, bool, bool) {
     let mut breaker_behind = false;
+    let mut cleave_behind = false;
     let mut free: Vec<(&CardInstance, i32, bool)> = attacks.to_vec();
     free.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
     let mut stands: Vec<TauntStand> = active_units_of(state, defender)
@@ -1643,10 +1666,24 @@ fn soak_past_taunts(
             })
             && at > 0
         {
-            if breaker_first {
+            if order == WalkOrder::BreakerFirst {
                 bound[..=at].rotate_right(1);
             } else {
                 breaker_behind = true;
+            }
+        }
+        // R4257000: the first Cleave attacker that destroys this Taunt alone and splashes a later one through
+        // a GIGA. A wall with no GIGA left to walk asks nothing more than before.
+        if w.giga_cleave_read
+            && stands[i..].iter().any(|stand| is_giga(&stand.unit))
+            && let Some(at) =
+                first_giga_splash_breaker(state, &bound, &stands[i], &stands[i + 1..], pool, &pools, w)
+            && at > 0
+        {
+            if order == WalkOrder::CleaveFirst {
+                bound[..=at].rotate_right(1);
+            } else {
+                cleave_behind = true;
             }
         }
         let mut bound = bound.into_iter();
@@ -1714,7 +1751,8 @@ fn soak_past_taunts(
                 };
                 // R4065001: an exiling splash by these weights' flag, not `side_of`'s `AI_EVAL`.
                 from.exiles = exiling;
-                for neighbour in cleaved_neighbours(state, attacker, &stands[i].unit) {
+                for neighbour in cleaved_neighbours_with(state, attacker, &stands[i].unit, w.giga_cleave_read)
+                {
                     let Some(j) = stands.iter().position(|stand| stand.unit.id == neighbour.id) else {
                         continue;
                     };
@@ -1817,7 +1855,7 @@ fn soak_past_taunts(
             subsystems::projected_hero_damage(state, defender, *hit, pierce),
         );
     }
-    (total, breaker_behind)
+    (total, breaker_behind, cleave_behind)
 }
 
 /// §4.4 steps 2 and 3: what a hit of `attack` deals `stand`: its Armor comes off unless the hit pierces (R346),
@@ -1861,6 +1899,32 @@ fn breaks_alone(
         && (dealt >= stand.health
             || has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Poisonous)
             || exiles_what_it_damages(state, attacker, w))
+}
+
+/// R4257000: where in `bound` the first Cleave attacker stands whose one hit destroys `stand` alone
+/// (`breaks_alone`) and whose splash, the engine's (`cleaved_neighbours_with`, R3546001), meets a Taunt in
+/// `later`, the stands the walk has still to reach, where `stand` or that Taunt is GIGA.
+fn first_giga_splash_breaker(
+    state: &GameState,
+    bound: &[(&CardInstance, i32, bool)],
+    stand: &TauntStand,
+    later: &[TauntStand],
+    pool: i32,
+    pools: &WalkPools,
+    w: &EvalWeights,
+) -> Option<usize> {
+    bound.iter().position(|(attacker, attack, _)| {
+        cleaved_neighbours_with(state, attacker, &stand.unit, true)
+            .iter()
+            .any(|neighbour| {
+                later.iter().any(|next| {
+                    next.unit.id == neighbour.id
+                        && has_keyword(&next.view.keywords, KeywordKind::Taunt)
+                        && (is_giga(&stand.unit) || is_giga(&next.unit))
+                })
+            })
+            && breaks_alone(state, attacker, *attack, stand, pool, pools, w)
+    })
 }
 
 /// §4.3 step 1 and R93, as `subsystems::lethal`'s private `falls_to_first_strike` reads it: a First Strike Taunt

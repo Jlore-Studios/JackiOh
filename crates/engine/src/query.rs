@@ -895,6 +895,32 @@ pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<Ca
     out
 }
 
+/// §4.4 step 10, §3.1: the units one attack on `defender` strikes: the defender, then, with Cleave,
+/// each unit adjacent to it on its own side, never one dormant under a Stack (R13). R3546001: a GIGA
+/// beside the target in either of its lanes is met once, by id; R1081000: beside a Unit standing in the
+/// backrow, only a Unit standing there. The lethal projection and the AI's static splash read this one
+/// walk (R4257000).
+pub fn cleave_struck(
+    state: &GameState,
+    attacker: &CardInstance,
+    defender: &CardInstance,
+) -> Vec<CardInstance> {
+    if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
+        return vec![defender.clone()];
+    }
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the target is met once.
+    let mut struck = vec![defender.clone()];
+    for slot in crate::giga::adjacent_slots(state, defender) {
+        if let Some(card) = crate::giga::occupant_at(state, slot)
+            && !struck.iter().any(|met| met.id == card.id)
+            && crate::zones::is_adjacent_card(state, defender, card)
+        {
+            struck.push(card.clone());
+        }
+    }
+    struck
+}
+
 /// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest R396
 /// `cost_now` among the permanents acting for this player (R13, R1824000): an X card's X (0 without
 /// one), a face-down card's `effective_cost` (R351's view), any other's cost as it stands; else `None`.
