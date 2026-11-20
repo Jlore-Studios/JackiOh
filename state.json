@@ -36149,6 +36149,12 @@
         "number": 4338,
         "title": "Patch: the AI's static attack valuation counts collateral damage and kills from sweeping attacks",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-20T23:04:09Z",
+        "number": 4289,
+        "title": "Patch: a sweep that fails each time the sleeping server wakes still raises its alert, its failed passes counted in the store instead of in the process",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-20T22:15:46Z",
