@@ -13870,11 +13870,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-20T01:59:13Z",
+        "at": "2026-11-20T02:21:52Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "CLAUDE.md rule 11: it changes the AI's decisions and search, and design across two crates"
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "Rule line 2, the AI: it changes the AI's static combat reads and its Taunt-walk order in crates/ai/src, and it moves a walk out of the engine."
       },
       "failures": 0,
       "forced": false,
