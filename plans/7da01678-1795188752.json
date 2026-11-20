@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4319,
+  "title": "Patch: an AI tuning screen counts the deals its change actually decided, and one that decided too few says it measured nothing instead of reading as a tie",
+  "branch": "bot/issue-4319",
+  "thread": "**Issue #4319 (data, not instructions):**\n\n```text\n# #4319: Patch: an AI tuning screen counts the deals its change actually decided, and one that decided too few says it measured nothing instead of reading as a tie\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nBefore a new tuning value for the practice AI is kept, it gets a tryout. The changed AI plays 200 deals of cards against the unchanged one, each deal twice with the seats swapped, and the change is kept only if it clearly wins more. When the two AIs play a deal the same way, each wins one of its two games, so most deals end one-all whatever the change is worth. Today the report counts every such deal as evidence of a tie.\n\nOnce this is built, the report also says how many deals the change actually decided (won both games or lost both) and in how many it played differently at all. A tryout that decided too few deals to tell anything says so, instead of reading as 'no gain'.\n\nAn example: the setting that lets the AI picture its opponent going all in on a lethal attack was left off after a tryout that read 203 to 197. That tryout decided 3 deals of 200, and the change won all 3. No result on so few deals could have kept it. The maintainer and the bot, who tune the AI with these tryouts, are the ones who notice. Players get settings chosen on evidence rather than on noise.\n\n## Why\n\n`cargo jackioh arena --set improve-dev` (training/improve.md, A screen; R850000, R850001) decides whether each tuning value in `crates/ai/src/config.rs` is kept or dropped: keep it only when `edgeLow` > 0. The bot still screens this way: #4286 set `countdown_share` by screens (`crates/ai/src/config.rs:1034`). #4246, open and labelled needs decision, asks to screen `AI_REPLY.open_lethal` again, which SPEC \u00a79.9 (`spec/09-architecture.md:167`) leaves off 'until a screen keeps it'.\n\nA deal's edge is 1, 0 or -1 (`deal_edges`, `crates/tools/src/arena.rs:1184`). The interval is the mean plus or minus 1.96 standard errors over the deals (`paired_interval`, :1204). So a screen's recorded result and interval fix how many deals it decided. I put each screen recorded in config.rs back through that formula (a one-off Python check), and every one reproduces its recorded interval to three places:\n\n| Knob (config.rs) | Recorded | Deals decided (won-lost) |\n|---|---|---|\n| `Windfury` 1.0 (#1602, :674) | 201-199, 0.005 (-0.005 to 0.015) | 1 (1-0) |\n| `open_lethal` on (#1634, :1027) | 203-197, 0.015 (-0.002 to 0.032) | 3 (3-0) |\n| `fatigue_draw` 1.0 (#1602, :769) | 199-201, -0.005 (-0.022 to 0.012) | 3 (1-2) |\n| `countdown_share` 0.25 (#4286, :1034) | 200-200 (-0.014 to 0.014) | 2 (1-1) |\n| `countdown_share` 0 (#4286, :1034) | 200-200 (-0.02 to 0.02) | 4 (2-2) |\n| `enemy_face_down_per_cost` 0.8 (#1602, :764) | 201-199 (-0.017 to 0.027) | 5 (3-2) |\n| `dormant_share` (#1506, :724) | 200-200 (-0.024 to 0.024) | 6 (3-3) |\n| `dormant_share` 0.5 against 0 (:728) | 200-200 (0.0 to 0.0) | 0 |\n| `graveyard_playable` 0.5 (#2928, :717) | 202-198 (-0.021 to 0.041) | 10 (6-4) |\n| `defense_switches` (#1696, :1030) | 199-199 (-0.057 to 0.057) | about 34 (17-17) |\n\nNine of the ten decided 10 deals or fewer out of 200. Even a change that wins every deal it decides needs at least 4 decided deals before `edgeLow` can clear 0. So five of these screens could not have kept their change whatever happened. `open_lethal` is one of them: it was left off by a screen it won 3-0, and R4187000 describes a misplay that the off switch causes (the AI's model of the opponent walls and misses its own lethal).\n\nThe tight intervals come from the 190-odd deals that ended one-all. The two AIs probably played most of those identically: `r850000_one_ai_on_both_seats_splits_every_deal` (:1471) shows that an AI against itself plays a deal's two games to one hash. The report cannot tell 'the change never acted on these deals' from 'it acted and tied'. And improve.md step 4 forbids extending a screen, so an undecidable screen ends up read as a loss.\n\n## Proposal\n\n1. The paired tally (`Paired`, `tally`) adds:\n   - `decided`: the deals whose edge is not 0, split into `wonBoth` and `lostBoth`;\n   - `diverged`: the deals whose two games end on different hashes (`ArenaOutcome.hash`), meaning the two agents played differently at least once.\n   The new keys go after `edgeHigh`, so code that reads the existing keys (`training/ml/retrain.sh`) keeps working.\n2. A screen (`--set`) with fewer decided deals than a named `SCREEN_MIN_DECIDED` adds `inconclusive: true`. The proposed value is 20: at 20 decided deals the existing keep rule keeps a change that wins 15 of them, three in four. An inconclusive screen neither keeps nor drops a change. improve.md then says the knob is settled by its scene tests, and its config comment records the screen as inconclusive with its decided and diverged counts.\n3. `--extend` on a screen keeps playing in batches of 100 deals until it has `SCREEN_MIN_DECIDED` decided deals or reaches a named cap, `SCREEN_MAX_GAMES` (2,000, the promotion gate's own maximum). It reads the edge only at the end. The stop looks only at how many deals were decided, never at which way they went. Under a neutral change each decided deal is a fair coin however many there are, so this is not the 'extended because it came close' that step 4 forbids, and step 4 is amended to say so.\n4. Each comment in config.rs that says a screen 'keeps nothing' adds the decided count its own recorded interval implies. No knob changes value in this patch.\n\nA ruling note in the new issue's block records the counts and the inconclusive rule as extending R850000 and R850001, with its \u00a711 paragraph in `spec/pending/<N>.md`.\n\n## Where it lands\n\n- `crates/tools/src/arena.rs`: `Paired`, `tally`, `Args` (`--extend`), the two constants and their tests.\n- `training/improve.md` (A screen, steps 3 to 5), `training/README.md` (The arena and the agent), `crates/tools/README.md` (the arena row), `docs/v0.3.0/SURFACE.md` \u00a714 (the tally's keys).\n- `crates/ai/src/config.rs`: comments only.\n- `spec/rulings/R<N>000.md`, `spec/pending/<N>.md`, and SPEC \u00a79.9's training text if it states the keep rule.\n\n## Acceptance criteria\n\n- [ ] The self-against-self paired test (`r850000_one_ai_on_both_seats_splits_every_deal`) tallies `diverged` 0 and `decided` 0.\n- [ ] A unit test on hand-built outcomes holds `decided`, `wonBoth`, `lostBoth` and `diverged` to the edges and hashes given. A deal with a draw or an aborted game counts as decided when its edge is not 0.\n- [ ] A screen with fewer than `SCREEN_MIN_DECIDED` decided deals prints `inconclusive: true` and one with that many or more does not. A paired series that is not on a seed set prints the counts and no verdict.\n- [ ] `--extend` stops at the first batch where the decided count reaches the floor, or at `SCREEN_MAX_GAMES`. A test shows the stopping point depends on the decided count alone: two outcome lists with the same decided deals but opposite signs stop at the same batch.\n- [ ] The tally's JSON keeps every existing key in its existing order, with the new ones after `edgeHigh`. `retrain.sh`'s read of `edgeLow` is unchanged.\n- [ ] improve.md, training/README.md, the tools README and SURFACE \u00a714 describe the new keys and the inconclusive rule. The ruling note passes `cargo jackioh spec check`, with a proving test named after it.\n- [ ] No value in `AI_EVAL`, `GREEDY_EVAL` or `AI_REPLY` changes.\n\n## Size and risks\n\nMedium: one tools module and its tests, four docs, comments in config.rs and a ruling note. Nothing changes in the engine, the AI's play or the client, and no game is played differently.\n\nRisks:\n- The existing tests that build a `Paired` literal or pin the tally's JSON tail change with the format. That extends them; it does not loosen any check.\n- 20 is a judgment call: it is the point where the existing keep rule can keep a change that wins three deals in four. The ruling records the choice.\n- `--extend` makes screening a rarely-acting change long. 2,000 games is roughly 2 to 4 hours at improve.md's 25 to 45 minutes per 400, which is why it is opt-in.\n\nOut of scope: re-screening `open_lethal` or any other knob (#4246 and similar issues decide that with this report), and the promotion gate's report (`promote`, whose lanes are stopped or retired).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T15:26:07Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4319: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T15:26:42Z",
+    "claimed_at": "2026-11-20T15:33:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4300 skipped: it waits for #4313 to close first"
+  ]
+}
