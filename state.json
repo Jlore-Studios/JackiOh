@@ -13746,15 +13746,6 @@
       "failures": 0,
       "feedback_since": "2026-11-20T17:32:28Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-20T18:33:24Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "",
-        "provider": "claude-8",
-        "reason": "built and checked; its own review run, on this subscription, reviews it next",
-        "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -40; sed -n 1,70p e2e/support/axe-exceptions.ts; grep -rn \\\"LOG_LINE_SIZE\\\" --include=*.ts --include=*.tsx --include=*.md . 2>/dev/null | grep -v nod\u2026\n- Bash: {\"command\": \"python3 - <<'E'\\np='e2e/support/axe-exceptions.ts'\\ns=open(p).read()\\na=s.index(\\\"/**\\\\n * WCAG 2.5.8 Target Size (Minimum). With a mouse\\\")\\nb=s.index(\\\"/**\\\\n * WCAG 2.5.8 Target Size \u2026\n- Bash: {\"command\": \"cd e2e && timeout 600 pnpm exec tsc --noEmit -p . 2>&1 | tail -5; echo rc=$?\"}\n- Bash: {\"command\": \"grep -n '\\\"typecheck' package.json; timeout 500 pnpm run typecheck 2>&1 | tail -5; cd .. && git status --short\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the game log's card buttons meet the 24-pixel target on a mouse too\"} --> ## Cross-review finding: the stale axe exception The finding holds, and I fixed it. - **Cause:** `e2e/support/axe-exceptions.ts` still listed the `target-size` exception for `.log\u2026"
-      },
       "interruptions": 0,
       "issue": 4296,
       "kind": "review",
