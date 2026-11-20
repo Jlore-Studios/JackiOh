@@ -11641,7 +11641,7 @@
       "question": "How should the screen for `AI_REPLY.open_lethal` run, now that 800 games don't fit in one bot run on this runner?",
       "queued_at": "2026-11-20T23:06:09Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:4f54e492-1795216197",
+      "run_id": "44834777962",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
