@@ -14865,8 +14865,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-1",
-      "owner_since": "2026-11-20T12:36:18Z",
-      "owner_why": "its approval shipped `96359b9551f4`, and the last approver owns the merge, so it fixes what CI found",
+      "owner_since": "2026-11-20T14:31:15Z",
+      "owner_why": "a person answered its question, so the lane that asked carries the answer out",
       "pending_request": false,
       "planned_at": "2026-11-20T05:13:13Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -15657,13 +15657,16 @@
         "sha": "96359b9551f4034c86787371d4098355e2e7f966"
       },
       "decision": {
+        "answer": "1",
+        "answer_url": "https://github.com/Jlore-Studios/JackiOh/pull/4307#issuecomment-7042084910",
+        "answered_at": "2026-11-20T14:31:15Z",
+        "answered_by": "MaxGoetzmann",
         "asked_at": "2026-11-20T14:12:38Z",
         "assigned": [
           "jgoetzmann",
           "MaxGoetzmann"
         ],
         "default": 1,
-        "ends": "2026-11-21T14:12:38Z",
         "hours": 24,
         "kind": "revise",
         "model": "opus",
@@ -15708,7 +15711,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "question": "How should the two timing-out catalog-wide art tests be handled so #4307 can merge?",
-      "queued_at": "2026-11-20T12:36:16Z",
+      "queued_at": "2026-11-20T14:31:15Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "44737268280",
       "runs_on": "ubuntu-latest",
@@ -15730,7 +15733,7 @@
         "provider": "claude-1",
         "run": "44737268280"
       },
-      "source": "ci",
+      "source": "decision",
       "started_at": "2026-11-20T12:36:57Z",
       "stop_requested": false,
       "taken_asks": [],
