@@ -4,7 +4,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import worker, { forwards, type Env } from "./index.ts";
+import worker, { SECURITY_HEADERS, forwards, notFound, type Env } from "./index.ts";
 
 const ORIGIN = "https://admin.jackioh.com";
 
@@ -113,5 +113,36 @@ describe("the Worker's fetch", () => {
       expect(answer.status, path).toBe(404);
     }
     expect(site).not.toHaveBeenCalled();
+  });
+
+  it("hands a forwarded answer on untouched: no security header added", async () => {
+    const { env, site } = harness();
+    const answer = await call(env, "GET", "/api/admin/me");
+    expect(site).toHaveBeenCalledTimes(1);
+    expect(answer.headers.get("X-Content-Type-Options")).toBeNull();
+  });
+});
+
+describe("#4297 the dashboard Worker's own 404", () => {
+  it("keeps the server's error shape and status", async () => {
+    const answer = notFound();
+    expect(answer.status).toBe(404);
+    const body = (await answer.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("not_found");
+    expect(body.error.message.length).toBeGreaterThan(0);
+  });
+
+  it("carries exactly the four static headers, no CSP and no Permissions-Policy", async () => {
+    expect(Object.keys(SECURITY_HEADERS).sort()).toEqual([
+      "Referrer-Policy",
+      "Strict-Transport-Security",
+      "X-Content-Type-Options",
+      "X-Frame-Options",
+    ]);
+    const answer = notFound();
+    expect(answer.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(answer.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(answer.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+    expect(answer.headers.get("Strict-Transport-Security")).toBe("max-age=31536000; includeSubDomains");
   });
 });

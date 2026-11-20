@@ -179,6 +179,20 @@ describe("#3183 the engine's brotli-compressed module", () => {
     });
     expect(precompressedModule(stored).headers.get("Cache-Control")).toBe("public, max-age=60");
   });
+
+  it("#4297 sets the static security headers on the served module", async () => {
+    const stored = new Response(new Uint8Array([0x1b, 0x2a, 0x00]), {
+      headers: { "Content-Type": "application/octet-stream", ETag: '"v1"' },
+    });
+    const served = precompressedModule(stored);
+    expect(served.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(served.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(served.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+    expect(served.headers.get("Strict-Transport-Security")).toBe("max-age=31536000; includeSubDomains");
+    expect(served.headers.get("Content-Type")).toBe("application/wasm");
+    expect(served.headers.get("Content-Encoding")).toBe("br");
+    expect([...new Uint8Array(await served.arrayBuffer())]).toEqual([0x1b, 0x2a, 0x00]);
+  });
 });
 
 describe("#4118 settingsFingerprint", () => {
