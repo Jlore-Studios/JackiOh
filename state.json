@@ -13630,6 +13630,13 @@
     "4249": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T01:49:43Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard trigger holds: no engine-rules or AI decision/search change, no cross-crate design, no migration, far under 40 files \u2014 one harness file generalized plus mechanical test conversions"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
