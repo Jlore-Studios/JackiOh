@@ -16625,10 +16625,8 @@
     "what": "build #4300 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-20T16:22:51Z",
-    "notes": [
-      "delivered review #4314 on claude-8 (run 44756123687): approved"
-    ],
+    "at": "2026-11-20T16:26:12Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
