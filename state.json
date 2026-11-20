@@ -16123,7 +16123,16 @@
       "feedback_since": "2026-11-20T14:43:36Z",
       "issue": 4313,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "5a08f5955119c7f8b13862ab288c4575e9f30bb5",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
