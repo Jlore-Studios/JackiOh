@@ -35271,7 +35271,9 @@
           "provider": "claude-8"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-20T20:43:17Z",
         "every": 5,
+        "findings": 0,
         "head": "60d167a713e7da391b8a353e037640de5c7c36cc",
         "issue": 4296,
         "merged_at": "2026-11-20T20:34:42Z",
@@ -35284,12 +35286,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:4fb9f0ce-1795206967",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44812888005",
         "sha": "373bd1521212cdfc69be303b00ef6005c1b873a2",
         "started_at": "2026-11-20T20:36:23Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the game log's card buttons meet the 24-pixel target on a mouse too",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 396
