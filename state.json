@@ -11628,20 +11628,20 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-1",
-      "owner_since": "2026-11-20T23:06:09Z",
-      "owner_why": "a person answered its question, so the lane that asked carries the answer out",
+      "owner": "claude-6",
+      "owner_since": "2026-11-20T23:10:14Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-20T02:21:08Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "claude-6",
       "question": "How should the screen for `AI_REPLY.open_lethal` run, now that 800 games don't fit in one bot run on this runner?",
       "queued_at": "2026-11-20T23:06:09Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44660418804",
+      "run_id": "pending:4f54e492-1795216197",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -11660,7 +11660,7 @@
         "provider": "claude-1",
         "run": "44660418804"
       },
-      "started_at": "2026-11-20T02:23:12Z",
+      "started_at": "2026-11-20T23:10:14Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -14623,9 +14623,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T23:09:44Z",
+    "at": "2026-11-20T23:10:14Z",
     "url": "",
-    "what": "plan #3982 on muse"
+    "what": "build #4246 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-20T22:59:36Z",
