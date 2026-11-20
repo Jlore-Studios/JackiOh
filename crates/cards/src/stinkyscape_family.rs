@@ -1031,3 +1031,65 @@ pub(crate) fn drone_float_opponent(core: &str, printed: i32) {
     assert_eq!(s.card(hand.as_str()).cost_mod, 0);
     assert_eq!(drone_price_of(&s, &hand), printed);
 }
+
+// R4334000: a piece in a launched Starship, on the face it fused on.
+
+/// A durable enemy that strikes nothing back: every piece's victim and neighbour in a Starship.
+pub(crate) const DURABLE: &str = "stand-in (1) 0/40";
+
+/// p1's launched Starship, built from one `id` that died `radiant` or not in lane 1 (R1852000,
+/// R1852003), over `p1`/`p2`.
+pub(crate) fn piece_ship(id: &str, seed: &str, radiant: bool, p1: Value, p2: Value) -> (Scenario, String) {
+    let (mut s, ship) = crate::built_starship(
+        seed,
+        json!([{ "def": id, "lane": 1, "radiant": radiant }]),
+        p1,
+        p2,
+    );
+    crate::launch_starship(&mut s, &ship);
+    (s, ship)
+}
+
+/// The declared number `key` the card `id` shows (`CardView.params`, `params_view`).
+pub(crate) fn shown_number(s: &Scenario, id: &str, key: &str) -> Option<i32> {
+    params_view(s.state(), s.card(id)).and_then(|numbers| numbers.get(key).copied())
+}
+
+/// A Starship holding `id` fires its `ability` at the middle of three Durables: the hits, the three
+/// Durables by lane, and the `damage` the Starship shows.
+fn ship_fires(
+    id: &str,
+    seed: &str,
+    radiant: bool,
+    ability: &str,
+) -> (Vec<(String, i32)>, [String; 3], Option<i32>) {
+    let durables = [1, 2, 3].map(|lane| json!({ "def": DURABLE, "lane": lane }));
+    let row = json!({ "field": durables });
+    let (mut s, ship) = piece_ship(id, &format!("{seed}-piece-ship"), radiant, json!({}), row);
+    let lanes = [1, 2, 3].map(|lane| s.unit_at(PlayerId::P2, lane).id);
+    s.activate(
+        ship.as_str(),
+        json!({ "ability": ability, "targets": pick::id(&lanes[1]) }),
+    );
+    (hits(s.last_events()), lanes, shown_number(&s, &ship, "damage"))
+}
+
+/// R4334000: a Starship's Beam hits the chosen Unit and each Unit beside it for `amount`, the number
+/// its card shows.
+pub(crate) fn beam_ship_cleaves(id: &str, seed: &str, radiant: bool, amount: i32) {
+    let (hit, lanes, shown) = ship_fires(id, seed, radiant, "beam");
+    let expected: Vec<(String, i32)> = [&lanes[1], &lanes[0], &lanes[2]]
+        .iter()
+        .map(|id| ((*id).clone(), amount))
+        .collect();
+    assert_eq!(hit, expected, "radiant {radiant}");
+    assert_eq!(shown, Some(amount), "radiant {radiant}");
+}
+
+/// R4334000: a Starship's Repeater or Cannon hits the chosen Unit alone for `amount`, the number its
+/// card shows.
+pub(crate) fn shot_ship_hits(id: &str, seed: &str, ability: &str, radiant: bool, amount: i32) {
+    let (hit, lanes, shown) = ship_fires(id, seed, radiant, ability);
+    assert_eq!(hit, vec![(lanes[1].clone(), amount)], "radiant {radiant}");
+    assert_eq!(shown, Some(amount), "radiant {radiant}");
+}

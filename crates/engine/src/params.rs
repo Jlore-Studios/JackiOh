@@ -8,9 +8,10 @@
 //! may reach (`tunedOn`, R749, R1431; a power's, #98 Heroic Power's, R1430).
 //!
 //! A fused card (R77, R102) runs each ingredient's text against its own declaration (`work::PART_KEY`'s
-//! path); its own numbers are its ingredients' (the first of each key) under one tuning record. A
-//! number a card never declared panics (SURFACE §4.4.9); a digest id's ingredients are read off its
-//! definition in `state.transient_defs` (SURFACE §6.6: no digest table).
+//! path); its own numbers are its ingredients' (the first of each key, each on the face its ingredient
+//! went in on: R469, R4334000) under one tuning record. A number a card never declared panics (SURFACE
+//! §4.4.9); a digest id's ingredients are read off its definition in `state.transient_defs` (SURFACE
+//! §6.6: no digest table).
 
 use indexmap::IndexMap;
 use serde_json::Value;
@@ -30,22 +31,48 @@ use crate::wire::{Param, ParamBetter, ParamTunedOn, Tuning};
 /// B3.4 rule 5: the numbers a definition declares. A catalog card's are its `params`; a fused
 /// definition's (R77, R102) are its ingredients', the first declaration of each key kept.
 pub fn params_of(state: &GameState, def_id: &str) -> Vec<Param> {
+    params_on_face(state, def_id, false)
+        .into_iter()
+        .map(|(param, _)| param)
+        .collect()
+}
+
+/// R102, R469, R4334000: the numbers `def_id` declares, each with the face it reads on. A catalog
+/// card's are on `radiant`. A fused definition's are its ingredients', the first declaration of each
+/// key kept, each on `radiant` or on the Radiant face when R469's mark is on its ingredient or on a
+/// fused ingredient above it, as `fuse::fused_script` builds that ingredient's script.
+fn params_on_face(state: &GameState, def_id: &str, radiant: bool) -> Vec<(Param, bool)> {
     let def = def_of(Some(state), def_id);
     if let Some(params) = def.params.as_ref() {
-        return params.clone();
+        return params.iter().map(|param| (param.clone(), radiant)).collect();
     }
-    let Some(parts) = crate::catalog::fused_id_parts(Some(state), def_id) else {
+    let Some(specs) = crate::catalog::fused_id_specs(Some(state), def_id) else {
         return Vec::new();
     };
-    let mut out: Vec<Param> = Vec::new();
-    for part in parts {
-        for param in params_of(state, &part) {
-            if !out.iter().any(|held| held.key == param.key) {
-                out.push(param);
+    let mut out: Vec<(Param, bool)> = Vec::new();
+    for spec in specs {
+        let face = radiant || spec.radiant == Some(true);
+        for (param, on) in params_on_face(state, &spec.def_id, face) {
+            if !out.iter().any(|(held, _)| held.key == param.key) {
+                out.push((param, on));
             }
         }
     }
     out
+}
+
+/// R4334000: the face a card standing on `radiant` reads `def_id`'s number `key` on: a fused
+/// definition's first declaring part's face (`params_on_face`), as `params_view` shows it; a catalog
+/// card's, or a key no part declares, `radiant`. Only a fused id walks its parts, so a catalog card's
+/// read costs what it did.
+fn face_of(state: &GameState, def_id: &str, key: &str, radiant: bool) -> bool {
+    if crate::catalog::fused_head_len(def_id).is_none() {
+        return radiant;
+    }
+    params_on_face(state, def_id, radiant)
+        .into_iter()
+        .find(|(param, _)| param.key == key)
+        .map_or(radiant, |(_, on)| on)
 }
 
 pub fn param_decl_of(state: &GameState, def_id: &str, key: &str) -> Option<Param> {
@@ -182,10 +209,11 @@ pub fn param_value(
     let Some(param) = param_decl_of(state, &def_id, key) else {
         panic!("{def_id} declares no number \"{key}\" (B3.4 rule 5, CardDef.params)");
     };
+    // R4334000: with no face named, a fused card's number reads on its declaring part's face, the one
+    // its view shows and its text uses.
     let radiant = options
         .radiant
-        .or_else(|| instance.map(|card| card.radiant))
-        .unwrap_or(false);
+        .unwrap_or_else(|| face_of(state, &def_id, key, instance.is_some_and(|card| card.radiant)));
     value_with(
         &param,
         radiant,
@@ -202,7 +230,13 @@ pub fn declared_or(state: &GameState, card: &CardInstance, key: &str, flag: i32)
     let Some(param) = param_decl_of(state, &card.def_id, key) else {
         return flag;
     };
-    let printed = value_with(&param, card.radiant, None, None);
+    // R4334000: printed on the face `param_value` reads it on, so an untuned card moves its flag by 0.
+    let printed = value_with(
+        &param,
+        face_of(state, &card.def_id, key, card.radiant),
+        None,
+        None,
+    );
     flag + param_value(state, Some(card), key, ParamValueOptions::default()) - printed
 }
 
@@ -352,7 +386,7 @@ fn param_read<C: ParamContext + ?Sized>(ctx: &C, key: &str, printed: Option<i32>
     } else {
         None
     };
-    let radiant = copied
+    let mut radiant = copied
         .as_ref()
         .map_or_else(|| ctx.param_radiant(), |copy| copy.radiant);
     let mut def_id: String = match ctx
@@ -367,9 +401,13 @@ fn param_read<C: ParamContext + ?Sized>(ctx: &C, key: &str, printed: Option<i32>
     let path = ctx.param_data().and_then(crate::work::part_path_of);
     for index in path.iter().flatten() {
         let part =
-            crate::catalog::fused_id_parts(Some(state), &def_id).and_then(|parts| parts.get(*index).cloned());
+            crate::catalog::fused_id_specs(Some(state), &def_id).and_then(|specs| specs.get(*index).cloned());
         match part {
-            Some(part) => def_id = part,
+            // R469, R4334000: an ingredient that went in on its Radiant face reads its numbers there.
+            Some(spec) => {
+                radiant = radiant || spec.radiant == Some(true);
+                def_id = spec.def_id;
+            }
             None => {
                 let joined: Vec<String> = path.iter().flatten().map(usize::to_string).collect();
                 panic!(
@@ -384,6 +422,9 @@ fn param_read<C: ParamContext + ?Sized>(ctx: &C, key: &str, printed: Option<i32>
     {
         return printed;
     }
+    // R4334000: a fused definition's own number, read with no place named (an aura's, a condition's), is
+    // the first declaring part's, on that part's face, as `params_view` shows it.
+    let radiant = face_of(state, &def_id, key, radiant);
     param_value(
         state,
         self_,
@@ -395,18 +436,19 @@ fn param_read<C: ParamContext + ?Sized>(ctx: &C, key: &str, printed: Option<i32>
     )
 }
 
-/// B3.4 rule 5, R386: every declared number on the card as it stands, by key, for `CardView.params`.
-/// `None` for a card that declares none, so its view carries no key.
+/// B3.4 rule 5, R386: every declared number on the card as it stands, by key, for `CardView.params`;
+/// a fused card's each on the face its ingredient went in on (R4334000), as its text reads it. `None`
+/// for a card that declares none, so its view carries no key.
 pub fn params_view(state: &GameState, instance: &CardInstance) -> Option<IndexMap<String, i32>> {
-    let params = params_of(state, &instance.def_id);
+    let params = params_on_face(state, &instance.def_id, instance.radiant);
     if params.is_empty() {
         return None;
     }
     let mut out: IndexMap<String, i32> = IndexMap::new();
-    for param in &params {
+    for (param, on) in &params {
         out.insert(
             param.key.clone(),
-            value_with(param, instance.radiant, instance.tuning.as_ref(), None),
+            value_with(param, *on, instance.tuning.as_ref(), None),
         );
     }
     Some(out)
