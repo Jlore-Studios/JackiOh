@@ -16588,12 +16588,10 @@
     "what": "review #4320 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T16:30:52Z",
+    "at": "2026-11-20T16:40:23Z",
     "notes": [
-      "delivered revise #4320 on muse (run 44766921703): built",
-      "started review #4320 on muse (run 44774545076)",
-      "nothing more to start: nothing is queued",
-      "pruned 5 plan file(s) older than 7 days"
+      "delivered review #4320 on muse (run 44774545076): approved",
+      "delivered review #4323 on muse (run 44766559729): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17299,7 +17297,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T16:30:52Z",
+  "loop_tick": "2026-11-20T16:40:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
