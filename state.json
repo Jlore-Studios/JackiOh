@@ -5951,7 +5951,9 @@
     },
     "4041": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7052772586"
+      ],
       "build_next": {
         "from_run": "44834657756",
         "model": "muse-spark-1.3-contributor",
@@ -5990,9 +5992,7 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-20T23:09:17Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:7052772586"
-      ]
+      "taken_asks": []
     },
     "4043": {
       "action": "review",
