@@ -14735,12 +14735,12 @@
       "in_lane": true,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-8",
-      "owner_since": "2026-11-20T03:18:53Z",
-      "owner_why": "it plans it",
+      "owner": "claude-7",
+      "owner_since": "2026-11-20T03:35:43Z",
+      "owner_why": "handed off from `claude-8`: `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-20T07:00:00Z; it can start again only in 2h 24m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
-      "provider": "claude-8",
-      "run_id": "44666880189",
+      "provider": "claude-7",
+      "run_id": "pending:dcf1095f-1795145726",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -14759,7 +14759,7 @@
         "provider": "claude-8",
         "run": "44666880189"
       },
-      "started_at": "2026-11-20T03:18:53Z",
+      "started_at": "2026-11-20T03:35:43Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14776,9 +14776,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T03:35:13Z",
+    "at": "2026-11-20T03:35:43Z",
     "url": "",
-    "what": "build #4284 on claude-7"
+    "what": "plan #4291 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-20T03:25:18Z",
