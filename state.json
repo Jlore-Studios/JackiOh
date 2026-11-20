@@ -36078,14 +36078,6 @@
         "run_id": "44662994287",
         "taken_asks": []
       },
-      "2": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-20T02:45:29Z",
-        "provider": "agy",
-        "run_id": "44663054806",
-        "taken_asks": []
-      },
       "4": {
         "area": "rules",
         "count": 1,
