@@ -1241,5 +1241,11 @@
     "blob": "959a65323e44852b66a43f828486598b9e2564c3",
     "cardMetricsBlob": "a07c18846f773632eac2e9fcd173f41a8327ffe0",
     "recordsBlob": "406cb0357162b2d4942c2dfbd85b6e9c5a2f5042"
+  },
+  {
+    "version": "v0.6.7l",
+    "commit": "d95e050700bb78c9a103a6a5e70ce08324be821e",
+    "blob": "a98bc79ca5b7f79969e645669d0a2f5200805859",
+    "cardMetricsBlob": "5286b98f3110ee84d4d23904682f3c3b453ee591"
   }
 ]
