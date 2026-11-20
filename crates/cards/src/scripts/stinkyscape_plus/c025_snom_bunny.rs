@@ -63,11 +63,12 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::testkit::cursor_where;
+    use jackioh_engine::testkit::{Scenario, cursor_where};
 
     use crate::{filler, scenario, weapon_board};
 
     const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     /// A 6/4 Unit whose name holds no M, O, U, S or E.
     const TYLANNT: &str = "stinkyscape-006"; // Tylannt
@@ -76,6 +77,8 @@ mod tests {
     const DEAR: &str = "stand-in (5) 5/5";
     /// Hit Job: Destroy target Unit.
     const HIT_JOB: &str = "core-016"; // Hit Job
+    /// A Field Spell printing Dormant (R3556000).
+    const DOME: &str = "stinkyscapeplus-063"; // Overdrive Dome
 
     /// Kills the Bunny with a Hit Job, so its Death resolves: the def of the enemy
     /// permanent it took, if any.
@@ -136,6 +139,50 @@ mod tests {
             .filter_map(|lane| s.unit(P1, lane))
             .find(|unit| enemies.contains(&unit.def_id.as_str()))
             .map(|unit| unit.def_id)
+    }
+
+    /// The base Bunny killed by a Hit Job at `cursor`, with `enemies` on the enemy field beside an
+    /// Overdrive Dome asleep in their backrow (R4322000).
+    fn death_beside_a_dormant_dome(cursor: u32, enemies: Value) -> Scenario {
+        let mut s = weapon_board(
+            "s025-dormant",
+            json!({
+                "mana": 10,
+                "hand": [HIT_JOB],
+                "field": [{ "def": ID, "radiant": false }],
+                "library": filler(4),
+            }),
+            json!({
+                "field": enemies,
+                "backrow": [{ "def": DOME, "faceUp": true, "slumber": { "turns": 2 } }],
+                "library": filler(4),
+            }),
+        );
+        s.state_mut().rng_cursor = cursor;
+        let bunny = s.unit_at(P1, 1).id;
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": bunny }] }),
+        );
+        s
+    }
+
+    #[test]
+    fn r4322000_its_death_passes_a_dormant_field_spell_by_and_takes_the_awake_permanent() {
+        for cursor in 0..16u32 {
+            let s = death_beside_a_dormant_dome(cursor, json!([DEAR]));
+            assert_eq!(s.card(DEAR).controller, P1, "cursor {cursor}");
+            assert_eq!(s.card(DOME).controller, P2, "cursor {cursor}");
+            assert_eq!(slumber_turns_of(s.card(DOME)), Some(2), "cursor {cursor}");
+        }
+    }
+
+    #[test]
+    fn r4322000_with_only_a_dormant_dome_nothing_changes_hands_and_nothing_is_drawn() {
+        let s = death_beside_a_dormant_dome(0, json!([]));
+        assert_eq!(s.count("controlChanged"), 0);
+        assert_eq!(s.card(DOME).controller, P2);
+        assert_eq!(s.state().rng_cursor, 0, "no permanent to draw among: no draw");
     }
 
     #[test]

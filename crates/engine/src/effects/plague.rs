@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 
 use crate::catalog::def_of;
 use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, instance_of};
-use crate::plague::{permanents_on_field, place_plague_on, remove_plague};
+use crate::plague::{place_plague_on, reachable_permanents_on_field, remove_plague};
 use crate::prelude::json_as;
 use crate::prompts::{
     AnswerInput, OpenPromptArgs, close_prompt, in_offered_order, open_prompt, resume_at, resume_of,
@@ -185,10 +185,11 @@ fn label_of(state: &GameState, card: &CardInstance) -> String {
     def_of(Some(state), &card.def_id).name.clone()
 }
 
-/// Open the one placement prompt over every permanent on the field (R68's order), or return false
-/// when there is none: the placements fizzle and draw nothing (R129).
+/// Open the one placement prompt over every permanent on the field an effect reaches (R68's order; a
+/// Dormant card is none, R4322000), or return false when there is none: the placements fizzle and draw
+/// nothing (R129).
 fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) -> bool {
-    let cards: Vec<CardInstance> = permanents_on_field(sink.state, player)
+    let cards: Vec<CardInstance> = reachable_permanents_on_field(sink.state, player)
         .into_iter()
         .cloned()
         .collect();
@@ -205,7 +206,7 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
     // R1200: while a Mayor acts the placement is drawn at random too, and nobody is asked.
     let random = mode.is_some_and(|mode| mode.random) || crate::random_targets::targets_random(sink.state);
     if random {
-        let now: Vec<CardInstance> = permanents_on_field(sink.state, player)
+        let now: Vec<CardInstance> = reachable_permanents_on_field(sink.state, player)
             .into_iter()
             .cloned()
             .collect();
