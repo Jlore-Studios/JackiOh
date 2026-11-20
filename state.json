@@ -14203,6 +14203,8 @@
       }
     },
     "4344": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T18:48:12Z",
@@ -14216,8 +14218,11 @@
         "trail": "pec rows I edited:\n- Bash: {\"command\": \"git diff -U0 spec/06-keywords.md spec/08-catalog.md | grep \\\"^+\\\" | cut -c1-20 ; git diff --word-diff=plain -U0 spec/08-catalog.md | grep -o \\\"{+[^+]*+}\\\" | head -5\", \"description\": \"Rev\u2026\n- Bash: {\"command\": \"until ! pgrep -f \\\"jackioh classify\\\" >/dev/null; do sleep 5; done; echo finished; ls -la /tmp/classify-4327.json; tail -c 600 /tmp/classify-4327.err\", \"description\": \"Block until classi\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4327/d639ef66-3e56-46fa-ae37-78e7332b02aa/tasks/bam7wjcua.output; python3 -c \\\"import json; d=json.load(open('/tmp/classify-4327.js\u2026\n- said: Classify stage 2 ran with no problems: a micro Cards change, only `stinkyscapeplus-076` plays differently, and the fragment's claims hold. Fuzz exited 0. Its summary lines:\n- Bash: {\"command\": \"grep -iE \\\"seeds|failed|fail|ok|games\\\" /tmp/fuzz-4327.out | grep -v Compiling | head -12\", \"description\": \"Read fuzz summary lines\"}\n- said: Fuzz: 200 + 100 + 30 seeds passed, 0 failures, 0 replay mismatches. Removing the two extra worktrees and their build dirs:\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/head-4327 && git worktree remove --force ../jackioh-wt/base-4327 && rm -rf /tmp/head-target-4327 /tmp/base-target-4327 /tmp/idx-4327; git worktr\u2026\n- said: Only this worktree remains. Now the full cards and AI suites, as the harness runs them:\n- Bash: {\"command\": \"cargo test -p jackioh-cards -p jackioh-ai --features jackioh-engine/testkit > /tmp/tests-4327.out 2>&1; echo \\\"exit $?\\\" >> /tmp/tests-4327.out\", \"description\": \"Run full cards and AI te\u2026\n- said: While the suites run, checking `names --check` (name comments beside card ids), since I added card ids to the AI test:\n- Bash: {\"command\": \"timeout 900 cargo jackioh names --check 2>&1 | tail -8\", \"description\": \"Check card name comments are current\", \"timeout\": 1000000}\n- Bash: {\"command\": \"timeout 900 cargo jackioh names --check >/dev/null 2>&1; echo \\\"exit $?\\\"; grep -n \\\"names\\\" .github/workflows/ci.yml | head -5\", \"description\": \"Confirm names check exit code and CI use\u2026\n- said: `names --check` passes. Is the mutants check a PR gate?\n- Bash: {\"command\": \"grep -n \\\"mutants\\\" .github/workflows/*.yml | head -5; which cargo-mutants 2>&1 | head -1\", \"description\": \"Check whether mutants runs in CI\"}\n- Bash: {\"command\": \"grep -n \\\"fn r4327001_a_set_summon_is_no_unit_arrival_and_its_reveal_no_summon\\\" crates/engine/tests/rules/cloaked.rs; tail -5 crates/engine/tests/rules/cloaked.rs\", \"description\": \"Loca\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/tests/rules/cloaked.rs'\\ns=open(p).read()\\nassert s.endswith(' \\\"a reveal is no summon\\\"\\\\n );\\\\n }\\\\n}\\\\n')\\ns=s[:-2]+'''\\n #[test]\\n fn r4327000_a_n\u2026\n- said: Waiting for the cards+AI suite before running it (cargo holds the build lock):\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/tests-4327.out; do sleep 10; done; grep -E \\\"^test result|FAILED|panicked|^exit|failures:\\\" /tmp/tests-4327.out | head -30\", \"description\": \"Wait for cards \u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^exit|Running\\\" /tmp/tests-4327.out | tail -12\", \"description\": \"Check interim test suite output\"}\n- said: AI: 61 unit + 961 integration tests pass; `ai_slow` and the cards suite are next. Updating the notes meanwhile:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"In progress: classify stage 2\\\")\\nj=s.index(\\\"## Log\\\")\\ns=s[:i]+\\\"\\\"\\\"Done since: classify stage 2 (in a head worktre\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/tests-4327.out; do sleep 10; done; grep -E \\\"^test result|FAILED|panicked|^exit|failures:\\\" /tmp/tests-4327.out | tail -12\", \"description\": \"Wait for the su\u2026\n- Monitor: {\"description\": \"cards+AI test suite completion\", \"timeout_ms\": 600000, \"command\": \"until grep -q \\\"^exit \\\" /tmp/tests-4327.out; do sleep 10; done; grep -E \\\"^test result|FAILED|panicked|^exit\\\" /tm\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -q \"^exit \" /tmp/tests-4327.out; do sleep 10; done; grep -E \"^test result|FAILED|panicked|^exit\" /tmp/\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^exit|Running\\\" /tmp/tests-4327.out | tail -6\", \"description\": \"Check suite progress\"}\n- said: `ai_slow` is still running. Waiting on it:\n- Bash: {\"command\": \"for i in $(seq 1 57); do grep -q \\\"^exit \\\" /tmp/tests-4327.out && break; sleep 10; done; grep -E \\\"^test result|FAILED|panicked|^exit|Running\\\" /tmp/tests-4327.out | tail -6\", \"descript\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result\\\" /tmp/tests-4327.out; grep -c FAILED /tmp/tests-4327.out\", \"description\": \"List every test result line\"}\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit --test 'rules*' r4327 2>&1 | grep -E \\\"^test |^test result: ok. [1-9]|FAILED|panicked\\\"; cargo test -p jackioh-engine --features testkit -\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-engine --all-targets --features testkit -- -D warnings 2>&1 | grep -E \\\"^(warning|error)|-->|Finished\\\" | head; cargo fmt --check >/dev/null 2>&1; echo \\\"fmt $?\\\"\u2026\n- said: Everything is clean. One last run of the harness's exact clippy command (workspace-wide, no extra features):\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets -- -D warnings 2>&1 | grep -E \\\"^(warning|error)|-->|Finished\\\" | head\", \"description\": \"Run workspace clippy as the harness does\", \"timeout\": 3000\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"Done since: classify stage 2\\\")\\nj=s.index(\\\"## Log\\\")\\ns=s[:i]+\\\"\\\"\\\"Done since: classify stage 2 (in a head worktree\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Ayys LMAO sets its Cloaked summons face-down in the backrow as Traps\"} --> ## What changed S+ #76 Ayys LMAO's three summons, Ayys and Tiny Asteroids alike, are now set face-down in the caster's backrow by their Cloaked. They stand exactly as a Cloaked c\u2026"
       },
       "issue": 4327,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T21:18:26Z",
         "from_run": "44796206265",
         "gates": [
           {
@@ -14309,7 +14314,11 @@
         "source": "build",
         "until": "2026-11-20T21:47:46Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-20T21:17:46Z",
+      "run_id": "pending:ff034854-1795209491",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -14328,6 +14337,9 @@
         "provider": "claude-8",
         "run": "44796206265"
       },
+      "started_at": "2026-11-20T21:18:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -14341,9 +14353,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T21:10:16Z",
+    "at": "2026-11-20T21:18:26Z",
     "url": "",
-    "what": "build #4322 on claude-1"
+    "what": "review #4344 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T21:09:25Z",
