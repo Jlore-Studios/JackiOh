@@ -15069,17 +15069,8 @@
       }
     },
     "4296": {
-      "action": "plan",
-      "asks": [
-        "c:7041395022"
-      ],
-      "build_next": {
-        "from_run": "44749837223",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-20T14:22:15Z",
-        "until": "2026-11-20T14:52:15Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T14:22:06Z",
         "difficulty": "medium",
@@ -15098,10 +15089,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "min-height` has no reliable effect, so `inline-block` is required for the button itself to reach 24 px; it wraps internally so long lines still read as the same lin\u2026\n- 2. In `apps/web/src/game/Log.test.tsx`, add `import { readSheet } from \"../test/setup.ts\";` (the helper `Board.test.tsx` and `Clock.test.tsx` use) and append a new `describe` block at the end of the file, following the `Clock.test.tsx` stylesheet-text assertion style (normalize nothing; assert on r\u2026\n- - `it(\"with a mouse each card-naming log line is a 24px target while the list stays inline\", ...)` asserting the `inspectable.css` text contains `@media (pointer: fine)` and, within that block, `.log .log-card` with both `display: inline-block;` and `min-height: 24px;`, and that the base rule still\u2026\n- - `it(\"on a touch screen each log line keeps its 44px row\", ...)` asserting the text still contains the unchanged `@media (pointer: coarse)` block with `.log .log-card`, `display: flex;` and `min-height: 44px;` verbatim.\n- 3. In `apps/web/src/routes/accessibility.tsx`, delete line 72, the whole `<li>{t(\"With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.\")}</li>` line. Change nothing else on the page.\n- 4. In `apps/web/static-pages.ts`, in the `PAGE_TEXT` `[paths.accessibility]` Known-gaps section, delete only the `\"<li>With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.</li>\" +` string. Note its list omits the deck-builde\u2026\n- 5. In `apps/web/src/i18n/zh-CN.json`, delete the entry whose key is `\"With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.\"` (and its Chinese value). `i18n.test.ts` fails only on missing keys, so this deletion is safe; it ju\u2026\n- 6. Run the verification commands in **Tests** below, in order, and fix only within the five files above if anything is red.\n- ## Tests\n- - New unit/stylesheet tests in `apps/web/src/game/Log.test.tsx`: the two `it(...)` cases named in step 2. They fail without the step-1 CSS (no `pointer: fine` block, no `min-height: 24px`) and pass with it; the coarse test fails if the 44 px block is disturbed.\n- - Existing coverage, run unchanged: `apps/web/src/static-pages.test.ts` (its word-for-word quote test proves the route bullet and `PAGE_TEXT` were removed together), `apps/web/src/i18n/i18n.test.ts` (proves no translation key went missing), and the untouched `Log.test.tsx` suites (R745 history, ann\u2026\n- - Exact commands, each from the repository root:\n- - `pnpm --dir apps/web test src/game/Log.test.tsx`\n- - `pnpm --dir apps/web test src/static-pages.test.ts`\n- - `pnpm --dir apps/web test src/i18n/i18n.test.ts`\n- - `pnpm --dir apps/web typecheck`\n- - `pnpm exec eslint apps/web/src/game/Log.test.tsx apps/web/src/routes/accessibility.tsx apps/web/static-pages.ts`\n- - `cargo fmt --check`\n- - Axe and pixel truth stay with the existing specs, run by CI, not by the builder: `e2e/cypress/e2e/38-accessibility.cy.ts` (axe over both boards at desktop size; expect no new violation) and `e2e/cypress/component/board-layout.cy.tsx` (board pixel budget). Do not edit or run them; jsdom cannot mea\u2026\n- ## Done when\n- - [ ] On a fine pointer each card-naming log line exposes a hit target at least 24 px tall (new stylesheet test green).\n- - [ ] On a coarse pointer each log line keeps its 44 px row (existing block untouched, coarse stylesheet test green).\n- - [ ] The desktop log still looks like the same dense list (base `display: inline` retained; no 44 px rows on desktop) and still scrolls in its capped box with the newest line in view (`board.css` `.log`/`.log-line` and `Log.tsx` scroll logic untouched).\n- - [ ] The accessibility page no longer lists the sub-24-pixel mouse spacing gap, in either the route or `PAGE_TEXT` (quote test green).\n- - [ ] Keyboard, screen-reader and log-history behavior unchanged (existing `Log.test.tsx` suites green; `Log.tsx` unedited).\n- - [ ] All commands in **Tests** pass; no ruling added and `cargo jackioh spec check` needs no run (nothing added or cited).\n- ## Risks\n- - `inline-block` rewraps a long card line inside the button instead of across the `li`. Mitigation: it still renders the same words on the same number of visual lines in the same position; the real-pixel guard is the existing board-layout Cypress spec in CI, and the plan adds no jsdom layout assert\u2026\n- - Devices whose primary pointer is fine but that also have touch get the 24 px rule rather than the 44 px rows. Mitigation: this follows the file's existing primary-pointer split (the coarse block already limits itself to `(pointer: coarse)` with the comment that a narrow mouse window keeps its old\u2026\n- - Removing the bullet from only one of the route / `PAGE_TEXT` / `zh-CN.json` copies breaks the quote test or orphans a key. Mitigation: steps 3\u20135 name all three exact strings, and the static-pages test verifies the first two together.\n- - A builder tempted to \"fix\" spacing in `board.css` (e.g. raising `.log-line` line-height or `.log` max-height) would change the dense look or the capped box. Mitigation: `board.css` is read-only in this plan; the 24 px `min-height` on the button already spaces card lines without touching shared li\u2026\n- ## Open questions\n- None. Every choice the task left open is settled above (media-query placement and exact declarations, test style and names, all three copies of the bullet, no new constant, no ruling); the builder needs no person and no further decision.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4296 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4296/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-20T14:03:32Z",
       "owner_why": "it plans it",
@@ -15114,12 +15104,14 @@
       "provider": "muse",
       "queued_at": "2026-11-20T13:59:12Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44749837223",
+      "run_id": "pending:30f51eea-1795184565",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-20T14:03:32Z",
+      "started_at": "2026-11-20T14:23:04Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7041395022"
+      ]
     },
     "4297": {
       "action": "plan",
@@ -15932,9 +15924,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T14:04:42Z",
+    "at": "2026-11-20T14:23:04Z",
     "url": "",
-    "what": "plan #4298 on muse"
+    "what": "build #4296 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T14:11:51Z",
