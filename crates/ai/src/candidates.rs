@@ -8,10 +8,11 @@ use jackioh_engine::effects::PLAGUE_PLACEMENT_HOOK;
 use jackioh_engine::{
     ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, FengShuiOutcome, GameState, KeywordKind,
     PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
-    attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, converts_to,
-    damage_pool_of, effective_cost, effective_life, find_instance, find_instance_mut, flags_of, has_keyword,
-    is_locked, lane_multiplier_for, legal_actions, midlane_lanes_of, pierces, position_after_switch,
-    row_size, slot_of, strike_back_multiplier_for, subsystems, takes_strike_back, unit_damage_cap, unit_view,
+    attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, cleave_struck,
+    converts_to, damage_pool_of, effective_cost, effective_life, find_instance, find_instance_mut, flags_of,
+    has_keyword, is_locked, lane_multiplier_for, legal_actions, midlane_lanes_of, pierces,
+    position_after_switch, row_size, slot_of, strike_back_multiplier_for, subsystems, takes_strike_back,
+    unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -284,16 +285,35 @@ pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow
     }
 }
 
-/// The units one attack on `target` also strikes (§4.4 step 10, R63): each unit adjacent to the
-/// target on its own side, when the attacker has Cleave — the engine's `struck_by` minus the
-/// defender. One §4.4 implementation serves the reply and the threat model alike.
+/// The units one attack on `target` also strikes (§4.4 step 10, R63), at `AI_EVAL`'s read
+/// (`cleaved_neighbours_with`). One §4.4 implementation serves the reply and the threat model alike.
 pub(crate) fn cleaved_neighbours(
     state: &GameState,
     attacker: &CardInstance,
     target: &CardInstance,
 ) -> Vec<CardInstance> {
+    cleaved_neighbours_with(state, attacker, target, AI_EVAL.giga_cleave_read)
+}
+
+/// The units adjacent to `target` on its own side that the attacker's Cleave strikes too. With
+/// `giga_read` (`EvalWeights.giga_cleave_read`, R4257000), the engine's own walk, `cleave_struck` less
+/// the target: a GIGA in both its lanes and met once (R3546001), beside a Unit standing in the backrow
+/// only standing Units (R1081000). Without it, the one-lane walk of the zones beside the target's own,
+/// as before.
+pub(crate) fn cleaved_neighbours_with(
+    state: &GameState,
+    attacker: &CardInstance,
+    target: &CardInstance,
+    giga_read: bool,
+) -> Vec<CardInstance> {
     if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
         return Vec::new();
+    }
+    if giga_read {
+        return cleave_struck(state, attacker, target)
+            .into_iter()
+            .filter(|unit| unit.id != target.id)
+            .collect();
     }
     let Some(at) = slot_of(state, target) else {
         return Vec::new();
@@ -1237,6 +1257,105 @@ mod tests {
             even_trade(s.state(), &cleaver.id, &reno.id, Prices::NONE),
             Some(trade.value)
         );
+    }
+
+    /// The Jlockeed Large Language Model token, a 2/5 GIGA Taunt.
+    const LLM: &str = "stinkyscapeplus-t-ai-04";
+    /// S #77 Yuma, a 1/8 Flying, so it stands in a backrow zone (R1081000).
+    const YUMA: &str = "stinkyscape-077";
+    /// S #79 Orca, a 3/3 Flying.
+    const ORCA: &str = "stinkyscape-079";
+    /// #18 Bread and Butter, a Field Trap.
+    const TRAP: &str = "core-018";
+
+    fn ids(units: &[CardInstance]) -> Vec<&str> {
+        units.iter().map(|unit| unit.id.as_str()).collect()
+    }
+
+    /// p2's unit in `lane`.
+    fn p2_unit(s: &Scenario, lane: i32) -> CardInstance {
+        s.unit(PlayerId::P2, lane)
+            .unwrap_or_else(|| panic!("no p2 unit in lane {lane}"))
+    }
+
+    #[test]
+    fn r4257000_cleaved_neighbours_meet_a_giga_target_beside_both_its_lanes() {
+        // The GIGA covers lanes 2 and 3, so the units beside it stand in lanes 1 and 4.
+        let s = facing(json!([
+            { "def": OOMEN, "lane": 1 },
+            { "def": LLM, "lane": 2 },
+            { "def": OOMEN, "lane": 4 },
+        ]));
+        let cleaver = s.card(CLEAVER);
+        let (left, giga, right) = (p2_unit(&s, 1), p2_unit(&s, 2), p2_unit(&s, 4));
+        assert_eq!(
+            ids(&cleaved_neighbours(s.state(), cleaver, &giga)),
+            vec![left.id.as_str(), right.id.as_str()],
+            "beside both its lanes, as the engine deals it (R3546001)"
+        );
+        assert_eq!(
+            ids(&cleaved_neighbours_with(s.state(), cleaver, &giga, false)),
+            vec![left.id.as_str()],
+            "the one-lane read, kept with the flag off"
+        );
+    }
+
+    #[test]
+    fn r4257000_cleaved_neighbours_meet_a_giga_beside_the_target_once() {
+        // The GIGA covers lanes 1 and 2: the target in lane 3 is beside its second lane.
+        let s = facing(json!([{ "def": LLM, "lane": 1 }, { "def": VANILLA, "lane": 3 }]));
+        let cleaver = s.card(CLEAVER);
+        let (giga, target) = (p2_unit(&s, 1), p2_unit(&s, 3));
+        assert_eq!(
+            ids(&cleaved_neighbours(s.state(), cleaver, &target)),
+            vec![giga.id.as_str()],
+            "the GIGA beside the target, met once (R3546001)"
+        );
+        assert!(
+            cleaved_neighbours_with(s.state(), cleaver, &target, false).is_empty(),
+            "the one-lane read finds nothing in the GIGA's covered lane"
+        );
+    }
+
+    #[test]
+    fn r4257000_cleaved_neighbours_beside_a_standing_unit_read_only_standing_units() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "p1": { "field": [{ "def": CLEAVER, "statsOverride": { "attack": 3, "health": 6 } }] },
+            "p2": { "backrow": [
+                { "def": ORCA, "row": "backrow", "lane": 1 },
+                { "def": YUMA, "row": "backrow", "lane": 2 },
+                { "def": TRAP, "lane": 3 },
+            ] },
+        }));
+        let cleaver = s.card(CLEAVER);
+        let backrow = |lane| {
+            s.backrow(PlayerId::P2, lane)
+                .unwrap_or_else(|| panic!("nothing in p2's backrow lane {lane}"))
+        };
+        let (orca, yuma, trap) = (backrow(1), backrow(2), backrow(3));
+        assert_eq!(
+            ids(&cleaved_neighbours(s.state(), cleaver, &yuma)),
+            vec![orca.id.as_str()],
+            "beside a Unit standing in the backrow, only a Unit standing there (R1081000)"
+        );
+        assert_eq!(
+            ids(&cleaved_neighbours_with(s.state(), cleaver, &yuma, false)),
+            vec![orca.id.as_str(), trap.id.as_str()],
+            "the one-lane read, kept with the flag off"
+        );
+    }
+
+    #[test]
+    fn r4257000_a_cleave_splash_that_kills_a_giga_beside_the_target_counts_splash_kills() {
+        // The 3 leaves Reno at 3, but the splash of 3 kills the 2/3 GIGA whose second lane is beside it.
+        let s = facing(json!([
+            { "def": LLM, "lane": 1, "statsOverride": { "attack": 2, "health": 3 } },
+            { "def": RENO, "lane": 3 },
+        ]));
+        let (cleaver, reno) = (s.card(CLEAVER), s.card(RENO));
+        let trade = trade_value(s.state(), cleaver, &reno.id, Prices::NONE);
+        assert!(!trade.kills && trade.splash_kills, "{}", trade.value);
     }
 
     /// #8 Mr. Vanilla, a 4/4.

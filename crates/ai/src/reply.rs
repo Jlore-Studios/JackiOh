@@ -144,7 +144,8 @@ fn counter_price(
 /// unless the target is Ranged too (R783000). A hit that kills nothing is worth a little per point dealt,
 /// so a second attacker can finish what the first started; an attacker a First Strike defender destroys
 /// first deals nothing and pops nothing, so it is worth only its own loss (R4171000). A Cleave splash is
-/// priced at `AI_REPLY.cleave_share` of what it kills or unshields (R63), a Trample excess as a face hit
+/// priced at `AI_REPLY.cleave_share` of what it kills or unshields (R63), its neighbours the engine's
+/// (`cleaved_neighbours`: a GIGA in both its lanes, R3546001, R4257000), a Trample excess as a face hit
 /// and a Lifesteal heal by `heal_worth` (#1820). With
 /// `AI_EVAL.pool_and_conversion_read`, a blow that Burns or is Toxic instead kills nothing and heals
 /// nothing and is worth its counter (`counter_price`, R4064001), and the target side's damage pools soak
