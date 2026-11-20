@@ -13924,15 +13924,6 @@
     },
     "4327": {
       "action": "build",
-      "archived": {
-        "at": "2026-11-20T22:22:25Z",
-        "branch": "bot/issue-4327",
-        "head": "a69e66b5b0e7604e0fe8088d7bbf1b1dcc196b04",
-        "issue": 4327,
-        "item": 4344,
-        "pr": 4344,
-        "why": "A person with access to Jlore-Studios/JackiOh: please re-run the failed job `web (unit 6/8)` in https://github.com/Jlore-Studios/JackiOh/actions/runs/44819025790 (Re-run failed jobs). If it fails again with the same timeout, look at whether the same shard times out on `main`: then it is a runner-load flake in art.test.ts that needs an issue of its own, not a change to this PR."
-      },
       "asks": [],
       "died": 0,
       "handoff": {
@@ -14302,14 +14293,6 @@
     },
     "4344": {
       "action": "review",
-      "archived": {
-        "at": "2026-11-20T22:22:25Z",
-        "branch": "bot/issue-4327",
-        "head": "a69e66b5b0e7604e0fe8088d7bbf1b1dcc196b04",
-        "issue": 4327,
-        "pr": 4344,
-        "why": "A person with access to Jlore-Studios/JackiOh: please re-run the failed job `web (unit 6/8)` in https://github.com/Jlore-Studios/JackiOh/actions/runs/44819025790 (Re-run failed jobs). If it fails again with the same timeout, look at whether the same shard times out on `main`: then it is a runner-load flake in art.test.ts that needs an issue of its own, not a change to this PR."
-      },
       "asks": [
         "c:7052769214"
       ],
