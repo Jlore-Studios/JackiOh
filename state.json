@@ -16365,11 +16365,21 @@
     "what": "plan #4321 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T15:07:51Z",
+    "at": "2026-11-20T15:16:47Z",
     "notes": [
-      "delivered build #4313 on muse (run 44756225814): built",
-      "started review #4315 on muse (run 44760533690)",
-      "nothing more to start: nothing is queued"
+      "delivered suggest on claude-7 (run 44759021281): suggested",
+      "delivered suggest on claude-6 (run 44758900034): suggested",
+      "delivered suggest on claude-4 (run 44758782931): suggested",
+      "delivered build #4297 on muse (run 44753027205): built",
+      "started review #4320 on muse (run 44762234093)",
+      "started plan #4318 on claude-4 (run 44762356853)",
+      "started plan #4321 on claude-4 (run 44762476792)",
+      "nothing more to start: nothing is queued",
+      "#4321: typed it Bug",
+      "#4319: typed it Feature",
+      "#4318: typed it Bug",
+      "#4317: typed it Task",
+      "#4316: typed it Feature"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17075,7 +17085,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T15:07:51Z",
+  "loop_tick": "2026-11-20T15:16:47Z",
   "machine_disk": {
     "issue": null,
     "reading": {
