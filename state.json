@@ -37831,7 +37831,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-20T17:43:04Z",
         "every": 5,
+        "findings": 0,
         "head": "3bf166a78942042f428f3b68478dabf4bd6b7c3d",
         "issue": 4316,
         "merged_at": "2026-11-20T17:27:16Z",
@@ -37844,12 +37846,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:7512b9e3-1795195961",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44784379632",
         "sha": "2c51e9304ad10d60ab14239c11ddb623e4490678",
         "started_at": "2026-11-20T17:33:08Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the 17.6 MB of voice lines download in the background only once a game is on screen, and not while the browser asks to save data",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 392
