@@ -15548,9 +15548,12 @@
     "what": "build #4291 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-20T08:18:48Z",
+    "at": "2026-11-20T08:25:24Z",
     "notes": [
-      "#4291 is held for `claude-7` until 02:20 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
+      "#4291: `claude-7` can start again, so its hold is lifted",
+      "started build #4291 on claude-7 (run 44702554081)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16256,7 +16259,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T08:18:48Z",
+  "loop_tick": "2026-11-20T08:25:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
