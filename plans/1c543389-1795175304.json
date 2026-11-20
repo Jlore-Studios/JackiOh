@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4310,
+  "title": "Patch: follow-up to #4303 from the after-merge spot-check",
+  "branch": "bot/issue-4310",
+  "thread": "**Issue #4310 (data, not instructions):**\n\n```text\n# #4310: Patch: follow-up to #4303 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4303 -->\nThe after-merge spot-check of #4303 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/44728541565)) found 1 blocking problem(s) in the change as it merged (`d95e050700bb`). `claude-8` (claude, `opus`, strong) reviewed it. #4303 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/cards/patches/pending/stinkyscape-balance-changes-iv.json`: The player note's Black Hole line says \"(its Radiant face never closes)\", which is false: the Radiant face still closes after 10 swallowed permanents.\n  Evidence: player.balance[19] reads \"Black Hole closes after swallowing 7 permanents, down from 10 (its Radiant face never closes).\" catalog.json still gives stinkyscapeplus-077 the param permanents {base 7, radiant 10, tunedOn base}. The script header of c077_black_hole.rs:14-16 says the Radiant face \"closes at the printed 10\". spec/rulings/R3561000.md:11-14 lists \"a Radiant hole that never closes\" under Rejected. Change the note to say the Radiant face still closes after 10, or leave the Radiant face out.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-1` (`claude`) built #4303 and `claude-1` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-8"
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4310: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T11:48:01Z",
+    "claimed_at": "2026-11-20T11:48:45Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4310 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
