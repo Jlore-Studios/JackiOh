@@ -36981,7 +36981,8 @@
       "2026-11-20T06:27:06Z,claude-4,ping,before,44687542488,52,2026-11-20T07:20:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-20T06:25:54Z,44687471868,claude-6,opus,plan,4294,hard,interrupted,5-hour cap,0,0,0,0,,55,55,,,123.8,muse,none,other,0"
+      "2026-11-20T06:25:54Z,44687471868,claude-6,opus,plan,4294,hard,interrupted,5-hour cap,0,0,0,0,,55,55,,,123.8,muse,none,other,0",
+      "2026-11-20T06:27:06Z,44687542488,claude-4,opus,plan,4286,hard,interrupted,5-hour cap,0,0,0,0,,52,52,,,127.2,muse,none,other,0"
     ]
   },
   "version": 1
