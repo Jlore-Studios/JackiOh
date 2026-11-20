@@ -16839,10 +16839,15 @@
     "what": "review #4325 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T16:40:23Z",
+    "at": "2026-11-20T16:49:46Z",
     "notes": [
-      "delivered review #4320 on muse (run 44774545076): approved",
-      "delivered review #4323 on muse (run 44766559729): approved"
+      "#4320: green and waiting for a person to merge it, so `muse` gives up its claim on it",
+      "delivered build #4319 on muse (run 44767163005): built",
+      "delivered build #4321 on claude-4 (run 44766785982): built",
+      "started review #4326 on claude-4 (run 44777782982)",
+      "started review #4325 on muse (run 44777887769)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17548,7 +17553,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T16:40:23Z",
+  "loop_tick": "2026-11-20T16:49:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
