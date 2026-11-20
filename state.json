@@ -13152,7 +13152,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-20T14:32:06Z",
+      "feedback_since": "2026-11-20T21:02:50Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4290,
@@ -13186,7 +13186,7 @@
         "provider": "claude-1",
         "run": "44768839743"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-20T21:02:50Z",
       "stop_requested": false,
       "taken_asks": [],
