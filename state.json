@@ -37383,7 +37383,8 @@
       "2026-11-20T14:02:34Z,claude-1,stream,call,44737268280,5,2026-11-20T17:00:00Z,,,allowed,40,,"
     ],
     "runs": [
-      "2026-11-20T14:05:25Z,44737268280,claude-1,opus,revise,4307,hard,blocked,,28.4,28,15472,980415,2.9393,2,5,,,0.7,claude-1,resumed,,2"
+      "2026-11-20T14:05:25Z,44737268280,claude-1,opus,revise,4307,hard,blocked,,28.4,28,15472,980415,2.9393,2,5,,,0.7,claude-1,resumed,,2",
+      "2026-11-20T14:12:52Z,44750015630,muse,muse-spark-1.3-contributor,plan,4298,medium,planned,,2.9,0,0,0,,,,,,4.5,,none,,1"
     ]
   },
   "version": 1
