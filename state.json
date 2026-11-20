@@ -8004,17 +8004,27 @@
       "verdict_rounds": 1
     },
     "4117": {
-      "asks": [
-        "c:7052769990"
-      ],
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-20T23:11:44Z",
+      "owner_why": "it took it up",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-20T23:04:46Z",
       "requested_by": "jgoetzmann",
-      "stop_requested": false
+      "run_id": "pending:8a257fd4-1795216283",
+      "runs_on": "night-vm-muse-fill",
+      "started_at": "2026-11-20T23:11:44Z",
+      "stop_requested": false,
+      "taken_asks": [
+        "c:7052769990"
+      ]
     },
     "4118": {
       "action": "build",
@@ -14649,9 +14659,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T23:11:12Z",
+    "at": "2026-11-20T23:11:44Z",
     "url": "",
-    "what": "plan #4332 on agy"
+    "what": "build #4117 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T22:59:36Z",
