@@ -1,0 +1,138 @@
+{
+  "seed": 6180,
+  "catalogVersion": "v0.6.7k",
+  "decks": [
+    [
+      "core-074",
+      "classicplus-022",
+      "meditative-032",
+      "stinkyscape-106",
+      "stinkyscapeplus-010",
+      "meditative-067",
+      "stinkyscapeplus-036",
+      "core-086",
+      "stinkyscape-071",
+      "classicplus-002"
+    ],
+    [
+      "core-034",
+      "classicplus-025",
+      "core-066",
+      "core-018",
+      "traininggrounds-040",
+      "meditativeplus-018",
+      "classicplus-050",
+      "meditative-059",
+      "classic-007",
+      "stinkyscapeplus-088",
+      "classicplus-015",
+      "stinkyscape-037",
+      "stinkyscapeplus-009",
+      "meditative-011",
+      "stinkyscape-143",
+      "core-076",
+      "stinkyscape-098",
+      "classic-081",
+      "stinkyscape-063",
+      "core-041",
+      "stinkyscape-073",
+      "classicplus-059",
+      "meditative-043",
+      "stinkyscape-148",
+      "stinkyscapeplus-107",
+      "meditative-081",
+      "stinkyscapeplus-042",
+      "stinkyscapeplus-119",
+      "stinkyscapeplus-128",
+      "classic-019",
+      "core-055",
+      "stinkyscapeplus-122",
+      "stinkyscapeplus-102",
+      "traininggrounds-047",
+      "core-042",
+      "stinkyscape-115",
+      "stinkyscape-083",
+      "classic-083",
+      "classicplus-065",
+      "stinkyscapeplus-080"
+    ]
+  ],
+  "start": "run",
+  "handicaps": {
+    "p1": {
+      "deckSize": 10,
+      "extraDrawsPerTurn": 0,
+      "extraOpeningCards": 6,
+      "heroArmor": 4,
+      "heroHealth": 31,
+      "manaBonus": 1,
+      "manaCap": 5
+    },
+    "p2": {
+      "deckSize": 40,
+      "extraDrawsPerTurn": 0,
+      "extraOpeningCards": 3,
+      "heroHealth": 34,
+      "manaBonus": 3,
+      "manaCap": 7
+    }
+  },
+  "deckMarks": {
+    "p1": [
+      {
+        "index": 0,
+        "radiant": true,
+        "upgrades": 3
+      },
+      {
+        "index": 5,
+        "radiant": false,
+        "upgrades": 1
+      }
+    ],
+    "p2": [
+      {
+        "index": 10,
+        "radiant": false,
+        "upgrades": 3
+      },
+      {
+        "index": 13,
+        "radiant": true,
+        "upgrades": 2
+      },
+      {
+        "index": 16,
+        "radiant": true,
+        "upgrades": 0
+      },
+      {
+        "index": 23,
+        "radiant": false,
+        "upgrades": 1
+      },
+      {
+        "index": 26,
+        "radiant": false,
+        "upgrades": 3
+      },
+      {
+        "index": 27,
+        "radiant": true,
+        "upgrades": 2
+      },
+      {
+        "index": 33,
+        "radiant": true,
+        "upgrades": 2
+      },
+      {
+        "index": 36,
+        "radiant": true,
+        "upgrades": 2
+      }
+    ]
+  },
+  "endings": false,
+  "found": "Fuzz 2/4 (plain seeds 3126-6250) of super run 44753264287 at a691236 (#4318): I18 on turn 16, 97 actions in, from a run start: p2's S+ #107 Fuse (c69), a sweeper, attacking TG #17 Flaming Felinor (c98) was forecast to deal 6 and not kill, and it killed: the sweep's other hits killed Units whose auras held the Felinor's health up, which the forecast reads as the board shows them. Fixed in #4318 (testkit invariants.rs, R4318000), proven by invariants.rs's r4318000_i18_an_attack_whose_other_hits_can_take_away_a_combatant_s_aura_is_not_judged. Under the catalog of #4318's base (after #4314's pending change) the same setup plays another game, which passes with or without the fix."
+}
