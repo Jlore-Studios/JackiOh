@@ -15342,9 +15342,11 @@
         "by": "`claude` (strong)",
         "sha": "ff9b30bfcd634e777bb31c83ac98063821ce29de"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T03:11:43Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T06:08:43Z",
         "family": "claude",
@@ -15354,6 +15356,7 @@
         "reason": "`claude-1` reached its usage limit",
         "trail": ""
       },
+      "interruptions": 0,
       "issue": 4285,
       "kind": "review",
       "live": "reviewing",
