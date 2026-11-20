@@ -16534,10 +16534,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "68c2535ddb8d63f397708f0cd22639ddbc04bbd9",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "4325": {
