@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4334,
+  "title": "Patch: a Radiant Starship Piece fused into a Starship deals, heals and buffs by its Radiant numbers, not the hull's base ones",
+  "branch": "bot/issue-4334",
+  "thread": "**Issue #4334 (data, not instructions):**\n\n```text\n# #4334: Patch: a Radiant Starship Piece fused into a Starship deals, heals and buffs by its Radiant numbers, not the hull's base ones\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a Radiant Starship Piece dies, its copy joins your Starship on its Radiant face: the Starship gets the Radiant stats and the Radiant text. For 18 of the pieces, though, the number in that text is still the plain card's number. On a launched Starship, a Radiant Beam v3 deals 4 damage instead of 8, a Radiant Cannon v5 deals 9 instead of 18, and a Radiant Healing Capsule heals 2 instead of 4. The Starship's card shows the plain number too.\n\nFive other pieces (After Burner, Warpfield Amplifier, Ultra Capacitor, Magic Module, Hull Repairer) already get this right, so one Starship can hold a Radiant piece that works and a Radiant piece that doesn't. Once this is built, every Radiant piece in a Starship does what its Radiant face says, and the card shows that number. Players of Stinkyscape and Stinkyscape+ Starship decks will notice; nothing else changes.\n\n## Why\n\n- **The spec already says so.** R469: an ingredient fused on its Radiant face gives its Radiant face, text and scripts to both fused forms. \u00a76.1 Starship Piece: a Radiant piece fuses Radiant. R1859001: a fused piece's numbers are read on the face it fused on, so a number its text reads is the Radiant face's too.\n- **The engine fuses it Radiant.** `crates/engine/src/starship.rs:299-317` fuses the copy as a Radiant ingredient, so its stats and script are its Radiant face's (`subsystems/fuse.rs:217-221`).\n- **But `param` reads the host's face.** An ingredient's text runs in a context that keeps the host's `radiant` (`subsystems/fuse.rs:584`, `in_place` at :687, `in_activation_ingredient` at :1462). `param_read` (`params.rs:355-394`) walks the part path with `catalog::fused_id_parts`, which drops R469's Radiant mark (`catalog.rs:979-985`). The Dormant Starship is base, so the number comes out base.\n- **The per-card workaround reaches 5 pieces out of 23.** R1859001 worked around this card by card with `piece_number` (`starship.rs:145-150`; its comment says `param` reads the Starship's face). Only 5 scripts call it. I compared `crates/cards/catalog.json` with the scripts. Of the 72 cards that print Starship Piece or Equip, 18 Starship Pieces declare a number that differs between faces, read it through `param` and run one script on both faces:\n  - Beam, Repeater and Cannon v3 to v5 (S #50 to #60, `damage`): Beam v3 goes 4\u21928, Cannon v5 9\u219218.\n  - Shield Amplifier (S #38, `buff` 2\u21924), Poison Capsule (#40, `counters` 2\u21924), Healing Capsule (#43, `heal` 2\u21924), Spacemine (#49, `targets` 1\u21922).\n  - Patcher Nanobots (#93, `heal` 6\u219212), RR-5000 (#107, `attackGain` 4\u21928), Defensive Crystal (#132, `heroArmor` 1\u21922).\n  - Fire Beam v3 and v4 (S+ #143, #144, `burn` 2\u21924 and 4\u21928).\n- **R1859001 is now wrong.** Its last sentence (no shipped card reads a piece's numbers, so no fused card that ships plays differently) is no longer true.\n- **No test catches it.** Each piece's Radiant tests play it alone (`c143_fire_beam_v3.rs:242`, `cleaves(true, RADIANT_BURN)`; `c050_beam_v3.rs`, `mod radiant`), and its Starship tests use a base piece. Warpfield Amplifier's `r1859001_a_radiant_piece_gives_4_attack_read_on_the_face_it_fused_on` passes only because that card calls `piece_number`.\n- **The card shows the wrong number too.** `params_view` (`params.rs:400`, used by `instance_view.rs:58`) gives a fused card's numbers on the host's face.\n\n## Proposal\n\n1. **Fix it once in the engine, not 18 times in the cards.** `param_read` walks the part path with `catalog::fused_id_specs`. A step on that path that went in on its Radiant face (R469's mark) makes the read Radiant: the face is the host's, or Radiant when the ingredient, or a fused ingredient above it on the path, was marked. This is exactly what `piece_number` reads for its five callers. `params_view` reads a fused card's numbers the same way, each key on the face of the first part that declares it, so the card shows the number it uses.\n2. **Retire `piece_number`** (`starship.rs`, `prelude.rs`). After Burner, Warpfield Amplifier, Ultra Capacitor, Magic Module and Hull Repairer read `param` again, with their tests unchanged.\n   - Rejected alternative: adding `piece_number` to the 18 scripts. That fixes today's cards but leaves every future piece to remember a second way to read a number, which is how 18 of these missed it.\n3. **A new ruling** in the issue's block, following R469 and R1859001: every text of an ingredient fused on its Radiant face (Activate, triggers, Death, aura, When launched) reads its declared numbers on that face through `param`, and the card's view shows those numbers. Its \u00a711 paragraph goes in `spec/pending/<issue>.md`. R1859001's wrong last sentence points to the new note.\n4. **Tests.**\n   - An engine rules test with a fixture piece whose number differs by face: a Radiant piece in a base host reads Radiant, a base piece in a base host reads base, a base piece in a Radiant host reads Radiant, and the view agrees each time.\n   - One test per affected card, in its own file (CLAUDE.md rule 6). The family helpers in `stinkyscape_family.rs` and `built_starship` with `radiant: true` keep each to a few lines.\n5. **A pending patch fragment** that claims the cards `cargo jackioh classify` names as playing differently, with a player note under `fixes`.\n\n## Where it lands\n\n- `crates/engine/src/params.rs` (`param_read`, `params_view`)\n- `crates/engine/src/starship.rs` and `crates/engine/src/prelude.rs` (`piece_number` retired)\n- The five callers: `crates/cards/src/scripts/stinkyscape/c090_after_burner.rs`, `c106_warpfield_amplifier.rs`, `c133_ultra_capacitor.rs`, `c136_magic_module.rs`, `stinkyscape_plus/c014_hull_repairer.rs`\n- The 18 pieces' tests and header comments: `stinkyscape/` c038, c040, c043, c049, c050 to c052, c054 to c056, c058 to c060, c093, c107, c132, and `stinkyscape_plus/` c143, c144; a shared helper in `crates/cards/src/stinkyscape_family.rs`\n- A rules test in `crates/engine/tests/rules/` (beside `fuse_variants.rs`, R469's proof)\n- `spec/rulings/R<next free in the block>.md`, `spec/pending/<issue>.md`, `spec/rulings/R1859001.md`\n- `crates/cards/patches/pending/<slug>.json`\n- SPEC \u00a76.1 (Starship Piece), \u00a76.3 (Fuse), \u00a75.2; R469, R386, R1852000, R1859001\n\n## Acceptance criteria\n\n- [ ] A Radiant Beam v3 fused into a base Starship deals 8, once launched, to its target and to each Unit beside it; a base one deals 4. The Starship's view shows the same number in each case.\n- [ ] Each of the 18 cards named above has a test, in its own file, that a Radiant copy in a base Starship uses its Radiant number. Each such test fails on `main`.\n- [ ] An engine rules test named after the new ruling covers the three face combinations and the view's `params`.\n- [ ] `piece_number` no longer exists, and the R1859001 tests of the five cards that called it pass unchanged.\n- [ ] The ruling note lists its tests in `proven_in`, its paragraph is in `spec/pending/<issue>.md`, and `cargo jackioh spec check` passes. `spec/11-rulings.md` and `spec/INDEX.md` are untouched.\n- [ ] The pending fragment claims every card the classifier names; the classifier's claims check against `origin/main` and `cargo jackioh patches check` pass.\n- [ ] `cargo test -p jackioh-engine` with `testkit`, `cargo test -p jackioh-cards`, `cargo jackioh golden check`, `cargo jackioh fuzz` at 200 seeds, `cargo fmt` and `cargo clippy` all pass.\n\n## Size and risks\n\nHard, since it is an engine rule: roughly 30 files. That is a few dozen lines in `params.rs`, five scripts made simpler, 18 small card tests, one rules test and one ruling.\n\n- Any other fusion that marks an ingredient Radiant inside a base kept card now reads that ingredient's Radiant numbers too, for instance Classic+ #31's Radiant face (\u00a76.3 Fuse's row). That is what R469 already says. The classifier names those cards and the fragment claims them.\n- A replay from an older version that read such a number may fold differently. The builder checks the golden fixture and the classifier's list.\n- Out of scope and unchanged:\n  - A fused card with two parts that share a key still shows one number for both, because the view's `params` is keyed by name.\n  - A Radiant card Equipped from a hand still fuses on its base face, by R77's rule that an ingredient gives only its definition (`subsystems/fuse.rs:2252`).\n- The AI values a Starship with these numbers, so its evaluation shifts; `cargo jackioh gate` should stay within its bounds.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-20T18:24:05Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4334: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T18:24:29Z",
+    "claimed_at": "2026-11-20T18:27:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
