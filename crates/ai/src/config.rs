@@ -1021,7 +1021,10 @@ pub const AI_REPLY: AiReply = AiReply {
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
     // (training/improve.md, A screen); 0 turns it off.
     defense_switches: 4,
-    // #1995: untuned; the training lanes may move it.
+    // #1995: 0.5. #4286's screens (training/improve.md, A screen), each 400 games on improve-dev against
+    // the 0.5 control at ae977ece3e, kept no other value: 0 read 200-200, edge 0.0 (-0.02 to 0.02); 0.25
+    // read 200-200, edge 0.0 (-0.014 to 0.014). 0.75 and 1.0 were not screened: at either, the AI casts
+    // Supply Drop before a Vanilla in meditative_plus.rs's R3696000 and R4159000 test.
     countdown_share: 0.5,
 };
 
