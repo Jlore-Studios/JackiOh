@@ -35916,6 +35916,12 @@
         "number": 4223,
         "title": "Patch: the keyboard reaches the Trade button, the co-op pass control and its pings, and the Plague Counter placement's targets",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-20T01:42:50Z",
+        "number": 4245,
+        "title": "Patch: queued tickets keep their bot-fallback wait across a restart",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
