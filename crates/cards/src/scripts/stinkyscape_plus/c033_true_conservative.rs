@@ -1,4 +1,4 @@
-//! S+ #33 True Conservative (SPEC §8.12 row 33). (4) Unit, Human, Legendary, 3/3 → 6/6.
+//! S+ #33 True Conservative (SPEC §8.12 row 33). (4) Unit, Human, Legendary, 4/4 → 8/8 (3/3 → 6/6 through v0.6.7k, issue #4285).
 //!   Base:    "Cry: Transform ALL Units into a version from their Past."
 //!   Radiant: "Cry: Transform ALL Units into a version from their Past. Yours become their strongest version."
 //!
@@ -6,6 +6,8 @@
 //! (`transform_random` over that card's own `past_ids_of`, R3538002, R129); a card with none is
 //! untouched. The Radiant face makes its controller's Units their strongest past version instead
 //! (R3538003). A Transform fires no Cry (R1) and an Immutable card refuses (R23).
+//! No True Conservative, this one or another on either side, becomes one of its own past versions on
+//! either face (R4321000): the base face's pool leaves them out (R387), and the Radiant face skips them.
 //! Its catalog row, sound, flavour and Chinese entries are already written.
 
 use jackioh_engine::prelude::*;
@@ -51,6 +53,11 @@ fn face(radiant: bool) -> Script {
                     continue;
                 }
                 if radiant && player == controller {
+                    // R387, R4321000: never one of this card's own versions, as the base face's pool
+                    // leaves them out.
+                    if past_card_of(&def_id) == ID {
+                        continue;
+                    }
                     let Some(strong) = strongest(&past, wears_radiant) else {
                         continue;
                     };
@@ -129,8 +136,8 @@ mod tests {
         assert!(!past.is_empty(), "core-013 has a past");
         let mut s = board(false, "true-conservative");
         s.play(ID, json!({ "zone": 3 }));
-        // Yours: True Conservative itself (no past) and the stand-in stand on, core-013 became one
-        // of its past versions.
+        // Yours: True Conservative itself (never its own past, R4321000) and the stand-in (no past)
+        // stand on, core-013 became one of its past versions.
         let mine = field_defs(&s, P1);
         assert!(mine.contains(&ID.to_string()), "{mine:?}");
         assert!(mine.contains(&NEW.to_string()), "{mine:?}");
@@ -159,6 +166,51 @@ mod tests {
         let theirs = field_defs(&s, P2);
         assert_eq!(theirs.len(), 1, "{theirs:?}");
         assert!(past.contains(&theirs[0]), "{theirs:?}");
+    }
+
+    /// R4321000: neither face turns a True Conservative into one of its own past versions, the one
+    /// played or another on either side, though its crafted past here (9/9, Radiant 18/18) is its
+    /// strongest; core-013 beside it still turns, so the Cry ran.
+    #[test]
+    fn r4321000_neither_face_turns_a_true_conservative_into_its_own_past() {
+        crate::register_all();
+        let past_of = |card: &str, attack: i32, health: i32| {
+            let mut def = crate::card_def(card).clone();
+            def.id = format!("{card}{PAST_ID_MARK}v0");
+            def.base.attack = Some(attack);
+            def.base.health = Some(health);
+            def.radiant.attack = Some(attack * 2);
+            def.radiant.health = Some(health * 2);
+            def
+        };
+        let old_past = past_of(OLD, 1, 6);
+        register_past_defs(vec![old_past.clone(), past_of(ID, 9, 9)]);
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "seed": format!("true-conservative-itself-{radiant}"),
+                "p1": {
+                    "hand": [{ "def": ID, "radiant": radiant }, "core-005"],
+                    "field": [{ "def": OLD, "lane": 1 }, { "def": ID, "lane": 2 }],
+                    "library": ["core-005", "core-005", "core-005", "core-005"],
+                    "mana": 4,
+                },
+                "p2": {
+                    "hand": ["core-005"],
+                    "field": [{ "def": ID, "lane": 1 }],
+                    "library": ["core-005", "core-005", "core-005", "core-005"],
+                },
+            }));
+            s.play(ID, json!({ "zone": 3 }));
+            let def_at = |player: PlayerId, lane: i32| s.unit(player, lane).map(|unit| unit.def_id.clone());
+            assert_eq!(def_at(P1, 1), Some(old_past.id.clone()), "radiant {radiant}: the Cry ran");
+            for (player, lane) in [(P1, 2), (P1, 3), (P2, 1)] {
+                assert_eq!(
+                    def_at(player, lane),
+                    Some(ID.to_string()),
+                    "radiant {radiant}: {player:?}'s lane {lane}"
+                );
+            }
+        }
     }
 
     /// Core #13's past as `stats`, oldest first, each its base face's `(attack, health)` at its cost,
