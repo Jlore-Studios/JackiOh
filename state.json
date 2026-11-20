@@ -15071,6 +15071,13 @@
     "4296": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T14:22:06Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "The rule's otherwise-medium line decides it: presentation-only CSS plus copy in one app, with none of the five hard triggers (no engine rules, AI, cross-crate design, migration, or ~40 files)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
