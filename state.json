@@ -14228,7 +14228,9 @@
         "pr": 4344,
         "why": "A person with access to Jlore-Studios/JackiOh: please re-run the failed job `web (unit 6/8)` in https://github.com/Jlore-Studios/JackiOh/actions/runs/44819025790 (Re-run failed jobs). If it fails again with the same timeout, look at whether the same shard times out on `main`: then it is a runner-load flake in art.test.ts that needs an issue of its own, not a change to this PR."
       },
-      "asks": [],
+      "asks": [
+        "c:7052769214"
+      ],
       "died": 0,
       "difficulty": "hard",
       "feedback_since": "2026-11-20T18:48:12Z",
@@ -14248,10 +14250,15 @@
       "pending_request": false,
       "provider": "claude-8",
       "question": "A person with access to Jlore-Studios/JackiOh: please re-run the failed job `web (unit 6/8)` in https://github.com/Jlore-Studios/JackiOh/actions/runs/44819025790 (Re-run failed jobs). If it fails again with the same timeout, look at whether the same shard times out on `main`: then it is a runner-load flake in art.test.ts that needs an issue of its own, not a change to this PR.",
+      "queued_at": "2026-11-20T23:04:35Z",
+      "requested_by": "jgoetzmann",
+      "review_floor": "strong",
+      "review_notes": "CI is green on a69e66b after the re-run; finish the review and the audit.",
       "run_id": "44819147701",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "started_at": "2026-11-20T21:18:26Z",
+      "stop_requested": false,
       "taken_asks": [],
       "votes": {
         "approvals": [],
