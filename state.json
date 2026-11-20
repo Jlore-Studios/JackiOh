@@ -16505,6 +16505,8 @@
     "4324": {
       "action": "review",
       "asks": [],
+      "audit_tier": "medium",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16521,16 +16523,25 @@
       },
       "interruptions": 0,
       "issue": 4296,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The change fixes the violation that the `target-size` exception for `.log .log-card` records, but leaves that exception in place, so spec 38 fails on a stale exception.",
+          "evidence": "axe-exceptions.ts:55 has `{ route: \"hotseat board, a unit in play\", rule: \"target-size\", selector: \".log .log-card\", reason: LOG_LINE_SIZE }`. Its header (lines 1-4) says spec 38 fails on an entry that no longer fires. `e2e/support/a11y.ts:75-96` computes `stale` and asserts it is empty; the spec 38 test at `38-accessibility.cy.ts:394` uses it. The diff gives `.log .log-card` `min-height: 24px` on fine pointers, which is the pointer Chrome and Cypress report, so axe should stop flagging it. The exception then reads as stale and `hotseat board, a unit in play` fails with `exceptions in axe-exceptions.ts that no longer fire`. The plan said not to touch `e2e/`, but the issue's own acceptance criterion is 'verified by axe with no new violation'. That cannot hold while the exception and its `LOG_LINE_SIZE` text (lines 32-38, which describe the gap as an unresolved design decision) stay. Fix: delete the line-55 entry and the now-unused `LOG_LINE_SIZE` constant with its doc comment. Leave the phone `.pile--browsable` entries alone.",
+          "severity": "blocking",
+          "where": "e2e/support/axe-exceptions.ts:55"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-11-20T17:19:34Z",
+      "queued_at": "2026-11-20T17:28:51Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "44782367693",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-20T17:20:31Z",
       "stop_requested": false,
       "taken_asks": [],
