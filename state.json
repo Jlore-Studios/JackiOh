@@ -16761,13 +16761,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "gemini",
         "built_by": "agy",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "gemini",
+            "provider": "agy",
+            "run": "44784161414",
+            "tier": "medium"
+          }
+        ],
         "sha": "11f6362fbbb6e411d72186ba98a5554e4e3ccd3a",
-        "tiers": {}
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     }
   },
