@@ -13130,8 +13130,11 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
-      "ci_fixes": 2,
+      "ci_fixes": 1,
       "ci_on_head": true,
+      "ci_reruns": {
+        "955dd0203fb61d03c1faf3074086efe65f517388": 1
+      },
       "ci_run_id": 44798501717,
       "ci_sha": "955dd0203fb61d03c1faf3074086efe65f517388",
       "cleared": {
