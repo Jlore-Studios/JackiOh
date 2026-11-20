@@ -35180,7 +35180,7 @@
         },
         {
           "kind": "Armor",
-          "n": 4
+          "n": 7
         },
         {
           "kind": "Flying"
@@ -35190,13 +35190,9 @@
         },
         {
           "kind": "Crater"
-        },
-        {
-          "kind": "Armor",
-          "n": 3
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage also Burns {damage}.\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 7, Flying, Can't Defend, Crater\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 38,
@@ -35225,7 +35221,7 @@
         },
         {
           "kind": "Armor",
-          "n": 4
+          "n": 10
         },
         {
           "kind": "Flying"
@@ -35235,27 +35231,15 @@
         },
         {
           "kind": "Crater"
-        },
-        {
-          "kind": "Armor",
-          "n": 6
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 6\nDamage also Burns {damage}.\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 10, Flying, Can't Defend, Crater\nDamage also Burns {burns}."
     },
     "params": [
       {
-        "key": "damage",
-        "base": 4,
-        "radiant": 8,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
         "key": "burns",
-        "base": 5,
-        "radiant": 10,
+        "base": 9,
+        "radiant": 18,
         "better": "up",
         "step": 1,
         "min": 1

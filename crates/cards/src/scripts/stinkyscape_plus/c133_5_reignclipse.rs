@@ -8,13 +8,11 @@
 //! **Windfury**  
 //! **Pierce**  
 //! **Cleave**  
-//! **Armor 4**  
+//! **Armor 7**  
 //! **Flying**  
 //! **Can’t Defend**  
 //! **Crater**  
-//! **Armor 3**  
-//! Damage also **Burns 4**  
-//! Dealing damage **Burns 5**  
+//! Damage also **Burns 9**  
 //! \~\~\~  
 //! 38/46  
 //! **Tribute 3**  
@@ -25,19 +23,18 @@
 //! **Pierce**  
 //! **Rush**  
 //! **Cleave**  
-//! **Armor 4**  
+//! **Armor 10**  
 //! **Flying**  
 //! **Can’t Defend**  
 //! **Crater**  
-//! **Armor 3**  
-//! Damage also **Burns 8**  
-//! Dealing damage **Burns 10**
+//! Damage also **Burns 18**
 //!
 //! The fusion of Reign and Eclipse (S+ #114, #119), with art and a name of its own (R3565003). Tribute 3
 //! is the one the two share (the owner, 2026-11-09: not the list's 4), and every keyword is catalog data:
-//! Armor 4 and Armor 3 stack to 7 (R77), Crater locks its zone on arrival (R783010). The two Burn lines are
-//! one rider (R3540002), the sum of the two, as a Fuse sums `burnsOnDamage` (R102): 4 + 5, Radiant 8 + 10.
-//! Its declared `burns` is Eclipse's line, and a tune of it moves the sum (R386).
+//! Reign's Armor 4 and Eclipse's Armor 3 print as their sum, Armor 7 (Radiant 4 + 6, Armor 10) (R77), and
+//! Crater locks its zone on arrival (R783010). Their two Burn lines are one rider (R3540002), the sum of the
+//! two, as a Fuse sums `burnsOnDamage` (R102): 4 + 5, Radiant 8 + 10, printed as one line since #4293. Its
+//! one declared `burns` is that sum, and a tune of it moves the rider (R386).
 
 use jackioh_engine::prelude::*;
 
@@ -180,14 +177,18 @@ mod tests {
     }
 
     #[test]
-    fn r3565003_the_declared_burns_is_eclipses_line_and_moves_the_sum() {
+    fn r3565003_the_one_declared_burns_is_the_sum_and_a_tune_moves_it() {
+        crate::register_all();
+        let params = crate::card_def(ID).params.clone().unwrap_or_default();
+        let keys: Vec<&str> = params.iter().map(|param| param.key.as_str()).collect();
+        assert_eq!(keys, ["burns"], "#4293: one declared number, the display-only `damage` gone");
         for radiant in [false, true] {
             let s = on_field(radiant, json!([]));
             let declared = param_value(s.state(), Some(s.card(ID)), "burns", ParamValueOptions::default());
-            assert_eq!(declared, ECLIPSE_BURNS[usize::from(radiant)], "radiant {radiant}");
+            assert_eq!(declared, burns(radiant), "radiant {radiant}");
             let mut s = on_field(radiant, json!([WALL]));
             let moved = crate::upgrade_number(&mut s, ID, "burns");
-            assert_eq!(moved, ECLIPSE_BURNS[usize::from(radiant)] + 1, "radiant {radiant}");
+            assert_eq!(moved, burns(radiant) + 1, "radiant {radiant}");
             let wall = s.unit_at(P2, 1).id;
             s.attack(ID, wall.as_str());
             assert_eq!(burn_of(&s, wall.as_str()), burns(radiant) + 1, "radiant {radiant}");
@@ -224,10 +225,37 @@ mod tests {
         for ingredient in INGREDIENTS {
             let card = crate::card_def(ingredient);
             for (radiant, face, of) in [(false, &fused.base, &card.base), (true, &fused.radiant, &card.radiant)] {
-                for keyword in &of.keywords {
+                for keyword in of.keywords.iter().filter(|keyword| !matches!(keyword, Keyword::Armor { .. })) {
                     assert!(face.keywords.contains(keyword), "radiant {radiant}: {ID} lacks {keyword:?} of {ingredient}");
                 }
             }
+        }
+    }
+
+    /// #4293: the two cards' Armors print as one keyword, their sum, Armor 7 (Radiant 10).
+    #[test]
+    fn r3565003_prints_one_armor_the_sum_of_both_fused_cards() {
+        crate::register_all();
+        let fused = crate::card_def(ID);
+        let armors = |keywords: &[Keyword]| -> Vec<i32> {
+            keywords
+                .iter()
+                .filter_map(|keyword| match keyword {
+                    Keyword::Armor { n } => Some(*n),
+                    _ => None,
+                })
+                .collect()
+        };
+        for (radiant, face, armor) in [(false, &fused.base, 7), (true, &fused.radiant, 10)] {
+            let summed: i32 = INGREDIENTS
+                .iter()
+                .map(|ingredient| {
+                    let card = crate::card_def(ingredient);
+                    armors(&(if radiant { &card.radiant } else { &card.base }).keywords).iter().sum::<i32>()
+                })
+                .sum();
+            assert_eq!(armors(&face.keywords), [armor], "radiant {radiant}");
+            assert_eq!(summed, armor, "radiant {radiant}");
         }
     }
 

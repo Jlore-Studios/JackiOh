@@ -529,10 +529,10 @@
     },
     "stinkyscapeplus-133-5": {
       "base": {
-        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
+        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 7, Flying, Can't Defend, Crater\nDamage Burns {burns}."
       },
       "radiant": {
-        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
+        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 10, Flying, Can't Defend, Crater\nDamage Burns {burns}."
       }
     },
     "stinkyscapeplus-137": {

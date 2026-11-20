@@ -1133,7 +1133,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | stinkyscapeplus-133-2 | Macizon | Meets | Stats double 5/3 → 10/6, Reborn is added and the Burn rises 1 → 2 (2×), so both halves meet R275. |
 | stinkyscapeplus-133-3 | Fortnith | Meets | Stats double 11/6 → 22/12, Armor 2 → 4 and the Burn 3 → 6 (2×), and Rush is added, so both halves meet R275. |
 | stinkyscapeplus-133-4 | Sceptumbra | Meets | Stats double 14/18 → 28/36, Rush is added and the Burn rises 4 → 8 (2×), so both halves meet R275. |
-| stinkyscapeplus-133-5 | Reignclipse | Meets | Stats double 19/23 → 38/46, Rush is added, and the Burn on its damage rises 4 → 8 and on dealing damage 5 → 10 (2×), so both halves meet R275. |
+| stinkyscapeplus-133-5 | Reignclipse | Meets | Stats double 19/23 → 38/46, Rush is added, and the Burn on its damage rises 9 → 18 (2×), so both halves meet R275. |
 | stinkyscapeplus-134 | Basket of Crawlers | Meets | It still adds 3 Crawlers to your hand, but they are Radiant Crawlers, with twice the stats and damage: a Radiant rider that meets R275. |
 | stinkyscapeplus-135 | Crawler Swarm | Meets | It still fills your board with Crawlers, but they are Radiant Crawlers, with twice the stats and damage: a Radiant rider that meets R275. |
 | stinkyscapeplus-136 | Crawler Assembly Line | Meets | The Activate still summons 1 Crawler, but a Radiant Crawler instead of a plain one: a Radiant rider that meets R275. |
