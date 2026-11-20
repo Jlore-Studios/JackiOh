@@ -14768,6 +14768,13 @@
     "4286": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T04:29:39Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Rule 2 (The AI): tunes AI_REPLY.countdown_share, which steers the practice AI's reply scoring in crates/ai/src/"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
