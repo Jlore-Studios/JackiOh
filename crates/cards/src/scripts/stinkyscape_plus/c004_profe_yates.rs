@@ -1,8 +1,8 @@
 //! SPEC §8.12 S+ #4 Profe Yates, a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    7/7; "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are
-//!            immune). Then summon two random Traps."
-//!   Radiant: 14/14; "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are
-//!            immune). Then summon three random Radiant Traps."
+//!   Base:    6/6; "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are
+//!            immune). Then summon a random Trap."
+//!   Radiant: 12/12; "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are
+//!            immune). Then summon three random Traps."
 //!
 //! Engine: the Cry exiles one declared permanent of either side, a Unit or a backrow card (R81, TG
 //! #26 Path of Exile's pick, R3996000), that is face-up, carries no CN tag, and whose name and the
@@ -10,8 +10,10 @@
 //! is never offered, its name and text being hidden (R33). With none such standing the play names
 //! none and the Cry summons its traps all the same (R90). Then the traps: independent
 //! `summon_random` draws of non-token Traps/Field Traps of the shipped sets, each face down in the
-//! leftmost open backrow zone (R3567001). It has no Activate since issue #4154.
-//! Kept for replays (R767000): through v0.6.6h the Cry exiled any declared permanent and Yates had
+//! leftmost open backrow zone (R3567001), none of them Radiant since issue #4285. It has no Activate since
+//! issue #4154.
+//! Kept for replays (R767000): through v0.6.7k a 7/7 (Radiant 14/14) whose Cry summoned two random Traps,
+//! three random Radiant Traps on the Radiant face (`script_v0_6_7k`, issue #4285); through v0.6.6h the Cry exiled any declared permanent and Yates had
 //! three Activates of its own, each offered while its target stood and spent on its own uses
 //! (R3996000, R1751000): Overwhelm froze every Unit of both sides in its lane and the lanes beside
 //! it, Yates included (R3567003); Wolf's Maw grounded a declared Flying Unit of either side, which
@@ -47,9 +49,11 @@ const CHOSEN_KEY: &str = "yatesActivate";
 const OVERWHELM_USES: i32 = 1;
 const WOLFS_MAW_USES: i32 = 3;
 const IRON_MANDATE_USES: i32 = 1;
-/// Traps the Cry summons: two, three Radiant ones on the Radiant face.
-const BASE_TRAPS: i32 = 2;
+/// Traps the Cry summons: one, three on the Radiant face, none of them Radiant (issue #4285).
+const BASE_TRAPS: i32 = 1;
 const RADIANT_TRAPS: i32 = 3;
+/// R767000: through v0.6.7k the base face summoned two Traps (the Radiant face three Radiant ones).
+const BASE_TRAPS_V0_6_7K: i32 = 2;
 /// Through v0.6.6h, Overwhelm's reach: Yates's lane and the lanes beside it.
 const LANE_REACH: i32 = 1;
 /// Through v0.6.6h, Wolf's Maw's target check: a Flying Unit.
@@ -165,18 +169,31 @@ fn iron_mandate_ability(chosen_only: bool) -> ActivationDecl {
     }
 }
 
-/// R3567001: the Cry's traps, two random Traps, three random Radiant ones on the Radiant face.
-fn traps(radiant: bool) -> Vec<Effect> {
-    let count = if radiant { RADIANT_TRAPS } else { BASE_TRAPS };
+/// R3567001: `count` random Traps, each on its Radiant face when `radiant_traps`.
+fn summon_traps(count: i32, radiant_traps: bool) -> Vec<Effect> {
     (0..count)
         .map(|_| {
             let mut summon = json!({ "query": { "type": TRAP_TYPES }, "player": "self" });
-            if radiant {
+            if radiant_traps {
                 summon["radiant"] = json!(true);
             }
             summon_random(json_as(summon))
         })
         .collect()
+}
+
+/// R3567001: the Cry's traps, a random Trap, three on the Radiant face, none of them Radiant.
+fn traps(radiant: bool) -> Vec<Effect> {
+    summon_traps(if radiant { RADIANT_TRAPS } else { BASE_TRAPS }, false)
+}
+
+/// R767000: through v0.6.7k, two random Traps, three random Radiant ones on the Radiant face.
+fn traps_v0_6_7k(radiant: bool) -> Vec<Effect> {
+    if radiant {
+        summon_traps(RADIANT_TRAPS, true)
+    } else {
+        summon_traps(BASE_TRAPS_V0_6_7K, false)
+    }
 }
 
 fn flying_check() -> IndexMap<&'static str, TargetCheck> {
@@ -203,8 +220,9 @@ fn holds_mouse(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R4154100: "Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then
-/// summon two random Traps.", and no Activate.
-fn yates(radiant: bool) -> Script {
+/// summon a random Trap." (three on the Radiant face; through v0.6.7k `summon`'s two, three Radiant ones),
+/// and no Activate.
+fn yates(radiant: bool, summon: fn(bool) -> Vec<Effect>) -> Script {
     Script {
         // A permanent of either side, as TG #26 Path of Exile's "Exile a permanent" (R81), that
         // `holds_mouse` admits.
@@ -215,7 +233,7 @@ fn yates(radiant: bool) -> Script {
         )],
         cry: Some(hook(move |_ctx| {
             let mut effects = vec![exile(json_as(json!({ "target": { "of": "chosen" } })))];
-            effects.extend(traps(radiant));
+            effects.extend(summon(radiant));
             effects
         })),
         target_checks: IndexMap::from([(
@@ -234,7 +252,7 @@ fn yates_v0_6_6h(radiant: bool) -> Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))],
         cry: Some(hook(move |_ctx| {
             let mut effects = vec![exile(json_as(json!({ "target": { "of": "chosen" } })))];
-            effects.extend(traps(radiant));
+            effects.extend(traps_v0_6_7k(radiant));
             effects
         })),
         activations: vec![
@@ -263,7 +281,7 @@ fn yates_v0_6_5b(radiant: bool) -> Script {
                 letters: MOUSE.to_string(),
                 spare_tags: vec![Tag::Cn],
             })];
-            effects.extend(traps(radiant));
+            effects.extend(traps_v0_6_7k(radiant));
             if let Some(mode) = ctx.modes.first().cloned() {
                 effects.push(remember(RememberArgs {
                     key: CHOSEN_KEY.to_string(),
@@ -284,8 +302,17 @@ fn yates_v0_6_5b(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: yates(false),
-        radiant: yates(true),
+        base: yates(false, traps),
+        radiant: yates(true, traps),
+    }
+}
+
+/// R767000: after v0.6.6h through v0.6.7k, two random Traps, three random Radiant ones on the Radiant face
+/// (issue #4285); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_7k() -> CardScripts {
+    CardScripts {
+        base: yates(false, traps_v0_6_7k),
+        radiant: yates(true, traps_v0_6_7k),
     }
 }
 
@@ -630,14 +657,13 @@ mod tests {
             assert_eq!(backrow_count(&s, P1), 5);
         }
 
-        #[test]
-        fn r3567001_base_sets_two_face_down_traps() {
-            let s = played("s004-traps", false);
+        /// p1's backrow after a played Yates: `count` face-down Traps, each Radiant when `radiant_traps`.
+        pub(super) fn sets_traps(s: &Scenario, count: usize, radiant_traps: bool) {
             let traps: Vec<CardInstance> = s.state().players[P1].backrow.iter().flatten().cloned().collect();
-            assert_eq!(traps.len(), 2);
+            assert_eq!(traps.len(), count);
             for trap in &traps {
                 assert!(trap.face_up != Some(true), "face down");
-                assert!(!trap.radiant, "base");
+                assert_eq!(trap.radiant, radiant_traps, "{}", trap.def_id);
                 assert!(
                     matches!(
                         crate::card_def(&trap.def_id).type_,
@@ -649,15 +675,48 @@ mod tests {
         }
 
         #[test]
-        fn r3567001_radiant_sets_three_radiant_traps() {
-            let s = played("s004-traps-radiant", true);
-            let traps: Vec<CardInstance> = s.state().players[P1].backrow.iter().flatten().cloned().collect();
-            assert_eq!(traps.len(), 3);
-            for trap in &traps {
-                assert!(trap.face_up != Some(true), "face down");
-                assert!(trap.radiant, "Radiant");
+        fn r3567001_base_sets_one_face_down_trap() {
+            sets_traps(&played("s004-traps", false), 1, false);
+        }
+
+        #[test]
+        fn r3567001_radiant_sets_three_traps_none_of_them_radiant() {
+            sets_traps(&played("s004-traps-radiant", true), 3, false);
+        }
+
+        #[test]
+        fn it_is_a_6_6_and_radiant_12_12() {
+            for (radiant, stats) in [(false, 6), (true, 12)] {
+                let mut s = played("s004-stats", radiant);
+                let yates = s.unit_at(P1, 1).id;
+                s.expect_stats(&yates, json!({ "attack": stats, "health": stats }));
             }
         }
+    }
+
+    /// R767000: the script kept for the replays after v0.6.6h through v0.6.7k (issue #4285): a 7/7 (Radiant
+    /// 14/14) whose Cry summoned two random Traps, three random Radiant ones on the Radiant face.
+    mod v0_6_7k {
+        use super::*;
+
+        #[test]
+        fn r3567001_r767000_base_set_two_traps_and_radiant_three_radiant_ones() {
+            crate::under_kept_as(ID, script_v0_6_7k(), old_stats, || {
+                cry::sets_traps(&played("s004-traps", false), BASE_TRAPS_V0_6_7K as usize, false);
+                cry::sets_traps(&played("s004-traps-radiant", true), RADIANT_TRAPS as usize, true);
+                let mut s = played("s004-stats", true);
+                let yates = s.unit_at(P1, 1).id;
+                s.expect_stats(&yates, json!({ "attack": 14, "health": 14 }));
+            });
+        }
+    }
+
+    /// Yates's stats through v0.6.7k: 7/7, Radiant 14/14.
+    fn old_stats(def: &mut CardDef) {
+        def.base.attack = Some(7);
+        def.base.health = Some(7);
+        def.radiant.attack = Some(14);
+        def.radiant.health = Some(14);
     }
 
     /// R767000: the script kept for the replays after v0.6.5b through v0.6.6h: the exile of any declared
@@ -676,6 +735,7 @@ mod tests {
                         { "key": "damage", "base": 4, "radiant": 4, "better": "up", "step": 1, "min": 1 }
                     ]))
                     .expect("the v0.6.6h params");
+                    old_stats(def);
                 },
                 run,
             )
@@ -768,7 +828,7 @@ mod tests {
                 }));
                 s.play(ID, json!({ "zone": 1 }));
                 assert_eq!(exile_count(&s, P1) + exile_count(&s, P2), 0);
-                assert_eq!(backrow_count(&s, P1), BASE_TRAPS as usize);
+                assert_eq!(backrow_count(&s, P1), BASE_TRAPS_V0_6_7K as usize);
             });
         }
 

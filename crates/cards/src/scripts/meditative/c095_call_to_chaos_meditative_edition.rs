@@ -1,8 +1,8 @@
 //! M #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R28, R87, R423, R436, R1240–R1244,
 //! R3135001). (4) Spell, Call to Chaos, Legendary.
 //!   Base:    "One random effect: Fuse your hand into one card and add 1 copy of it to your hand, both of
-//!            which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards
-//!            to your hand, which cost (0); your hero gains 4 Armor and you heal it 4; summon a Jade
+//!            which cost (1); add 2 random CN cards to your hand, which cost (1); add 2 random Prime cards
+//!            to your hand, which cost (1); your hero gains 3 Armor and you heal it 3; summon a Jade
 //!            Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card
 //!            bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns,
 //!            cast a random Call to Chaos; cast a random Call to Chaos."
@@ -12,7 +12,9 @@
 //! 3 Acclaimed cards were summoned; those numbers are the engine's (`config.rs`), so this file keeps no old
 //! script (R3135001, R767000). Issue #4154 cut the Armor and the heal 5 → 4 (R4154305); through v0.6.6h they
 //! were 5, which `script_v0_6_6h` keeps by rolling the engine's v0.6.6h table (`CHAOS_MED_EFFECTS_V0_6_6H`,
-//! R767000).
+//! R767000). Issue #4285 priced the first three entries' cards (1), from (0), and cut the Armor and the heal
+//! 4 → 3 (R4285005); through v0.6.7k they were (0) and 4, which `script_v0_6_7k` keeps by rolling
+//! `CHAOS_MED_EFFECTS_V0_6_7K` (R767000).
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MED_EFFECTS`,
 //! `subsystems/call_to_chaos_meditative.rs`): the roll, the announcement both players read (R436), the
@@ -43,6 +45,12 @@ fn rolling(table: &'static [subsystems::ChaosEffectDef]) -> CardScripts {
 
 pub fn script() -> CardScripts {
     rolling(subsystems::CHAOS_MED_EFFECTS)
+}
+
+/// R767000, R4285005: what it rolled after v0.6.6h through v0.6.7k, before issue #4285 priced its free cards
+/// (1) and cut its Armor and heal to 3.
+pub fn script_v0_6_7k() -> CardScripts {
+    rolling(subsystems::CHAOS_MED_EFFECTS_V0_6_7K)
 }
 
 /// R767000, R4154305: what it rolled through v0.6.6h, before issue #4154 cut its Armor and heal.
@@ -217,16 +225,16 @@ mod tests {
     }
 
     #[test]
-    fn r3135001_r4154305_the_tuned_modes_name_their_new_numbers_and_the_others_keep_theirs() {
+    fn r3135001_r4285005_the_tuned_modes_name_their_new_numbers_and_the_others_keep_theirs() {
         crate::register_all();
         let labels: Vec<&str> = subsystems::CHAOS_MED_EFFECTS.iter().map(|entry| entry.label).collect();
         assert_eq!(
             labels,
             vec![
-                "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
-                "Add 2 random CN cards to your hand, which cost (0)",
-                "Add 2 random Prime cards to your hand, which cost (0)",
-                "Your hero gains 4 Armor and you heal it 4",
+                "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (1)",
+                "Add 2 random CN cards to your hand, which cost (1)",
+                "Add 2 random Prime cards to your hand, which cost (1)",
+                "Your hero gains 3 Armor and you heal it 3",
                 "Summon a Jade Beauty",
                 "Summon 2 random Acclaimed cards",
                 "Bounce every enemy permanent, then Nerf each card bounced",
@@ -235,13 +243,56 @@ mod tests {
                 "Cast a random Call to Chaos",
             ]
         );
-        assert_eq!((CHAOS_MED_FUSE_COPIES, CHAOS_MED_HERO_ARMOR, CHAOS_MED_HEAL, CHAOS_MED_ACCLAIMED), (1, 4, 4, 2));
+        assert_eq!((CHAOS_MED_FUSE_COPIES, CHAOS_MED_HERO_ARMOR, CHAOS_MED_HEAL, CHAOS_MED_ACCLAIMED), (1, 3, 3, 2));
         assert_eq!((CHAOS_MED_CN_CARDS, CHAOS_MED_PRIME_CARDS, CHAOS_MED_NERFS, CALL_TO_CHAOS_ETERNAL_CAP), (2, 2, 1, 3));
+        assert_eq!(CHAOS_MED_COST, 1);
         let def = crate::card_def(ID);
         for text in [&def.base.text, &def.radiant.text] {
-            assert!(text.contains("add 1 copy of it") && text.contains("both of which"), "{text}");
-            assert!(text.contains("gains 4 Armor and you heal it 4") && text.contains("summon 2 random Acclaimed"), "{text}");
+            assert!(text.contains("add 1 copy of it") && text.contains("both of which cost (1)"), "{text}");
+            assert!(text.contains("gains 3 Armor and you heal it 3") && text.contains("summon 2 random Acclaimed"), "{text}");
+            assert!(!text.contains("(0)"), "{text}");
         }
+    }
+
+    /// R767000, R4285005: the script kept for v0.6.7k rolls the table it had then: entries 1 to 3's cards at (0)
+    /// and entry 4 at 4 Armor and a heal of 4, the other six as today, under the same names in the same order.
+    #[test]
+    fn r767000_r4285005_the_script_kept_for_v0_6_7k_rolls_the_old_table() {
+        crate::register_all();
+        let names = |table: &[subsystems::ChaosEffectDef]| -> Vec<&'static str> {
+            table.iter().map(|entry| entry.name).collect()
+        };
+        assert_eq!(names(subsystems::CHAOS_MED_EFFECTS_V0_6_7K), names(subsystems::CHAOS_MED_EFFECTS));
+        for (old, new) in subsystems::CHAOS_MED_EFFECTS_V0_6_7K.iter().zip(subsystems::CHAOS_MED_EFFECTS) {
+            match old.name {
+                "fuse" | "cn" | "prime" => assert_eq!(old.label, new.label.replace("(1)", "(0)")),
+                "armor" => assert_eq!(old.label, "Your hero gains 4 Armor and you heal it 4"),
+                _ => assert_eq!(old.label, new.label),
+            }
+        }
+        assert_eq!(
+            (CHAOS_MED_COST_V0_6_7K, CHAOS_MED_HERO_ARMOR_V0_6_7K, CHAOS_MED_HEAL_V0_6_7K),
+            (0, 4, 4)
+        );
+        crate::under_kept(ID, script_v0_6_7k(), || {
+            let mut p1 = side(false, json!([]));
+            p1["health"] = json!(20);
+            let mut s = chaos("armor", p1, json!({ "hand": [VANILLA] }));
+            s.expect_health(P1, 20 + 4);
+            assert_eq!(s.state().players.p1.hero.armor, 4);
+            for entry in ["cn", "prime"] {
+                let s = chaos(entry, side(false, json!([])), json!({ "hand": [VANILLA] }));
+                let added = added_to(&s);
+                assert_eq!(added.len(), 2, "{entry}");
+                for card in &added {
+                    assert_eq!(cost_of(&s, card), 0, "{entry}");
+                }
+            }
+            let s = chaos("fuse", side(false, json!([])), json!({ "hand": [VANILLA] }));
+            for card in &s.hand(P1) {
+                assert_eq!(cost_of(&s, card), 0);
+            }
+        });
     }
 
     /// R767000, R4154305: the script kept for v0.6.6h rolls the table it had then: entry 4 at 5 Armor and a heal
@@ -253,11 +304,11 @@ mod tests {
             table.iter().map(|entry| entry.name).collect()
         };
         assert_eq!(names(subsystems::CHAOS_MED_EFFECTS_V0_6_6H), names(subsystems::CHAOS_MED_EFFECTS));
-        for (old, new) in subsystems::CHAOS_MED_EFFECTS_V0_6_6H.iter().zip(subsystems::CHAOS_MED_EFFECTS) {
+        for (old, kept) in subsystems::CHAOS_MED_EFFECTS_V0_6_6H.iter().zip(subsystems::CHAOS_MED_EFFECTS_V0_6_7K) {
             if old.name == "armor" {
                 assert_eq!(old.label, "Your hero gains 5 Armor and you heal it 5");
             } else {
-                assert_eq!(old.label, new.label);
+                assert_eq!(old.label, kept.label);
             }
         }
         assert_eq!((CHAOS_MED_HERO_ARMOR_V0_6_6H, CHAOS_MED_HEAL_V0_6_6H), (5, 5));
@@ -335,7 +386,7 @@ mod tests {
             let s = chaos("fuse", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let hand = s.hand(P1);
             assert!(events_of(&s, "fused").is_empty());
-            // The one fusable card and its one copy, both at (0).
+            // The one fusable card and its one copy, both at (1).
             assert_eq!(hand.len(), 2);
             for card in &hand {
                 assert_eq!(card.def_id, VANILLA);
@@ -344,7 +395,7 @@ mod tests {
         }
 
         #[test]
-        fn entry_cn_adds_two_cn_cards_at_zero() {
+        fn r4285005_entry_cn_adds_two_cn_cards_at_1() {
             crate::register_all();
             let s = chaos("cn", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let added = added_to(&s);
@@ -360,7 +411,7 @@ mod tests {
         }
 
         #[test]
-        fn r1421_entry_prime_adds_two_prime_tokens_at_zero() {
+        fn r1421_r4285005_entry_prime_adds_two_prime_tokens_at_1() {
             crate::register_all();
             let s = chaos("prime", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let added = added_to(&s);
@@ -375,13 +426,13 @@ mod tests {
         }
 
         #[test]
-        fn r4154305_entry_armor_gives_4_armor_and_heals_4() {
+        fn r4285005_entry_armor_gives_3_armor_and_heals_3() {
             crate::register_all();
             let mut p1 = side(false, json!([]));
             p1["health"] = json!(20);
             let mut s = chaos("armor", p1, json!({ "hand": [VANILLA] }));
-            s.expect_health(P1, 20 + 4);
-            assert_eq!(s.state().players.p1.hero.armor, 4);
+            s.expect_health(P1, 20 + 3);
+            assert_eq!(s.state().players.p1.hero.armor, 3);
             assert_eq!(s.state().players.p2.hero.armor, 0);
         }
 

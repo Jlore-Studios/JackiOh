@@ -1,10 +1,10 @@
-//! SPEC §8.12 S+ #19 Normalization Module (Unit 0/2 → 0/4, Starship Piece, Equip, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//! SPEC §8.12 S+ #19 Normalization Module (Unit 0/2 → 0/4, Starship Piece, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
+//!   Base:    "Starship Piece
 //!            Activate: Vanilla a Unit"
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            Activate 2: Vanilla a Unit" — vanilla 2
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one (R1852001).
 //! The Activate is 1 use a turn on the base face and 2 on the Radiant face (R384, R1857003; the issue's
 //! reading of the base face's "Activate" as "Activate 1"). R3552002: its target is a declared Unit on either
@@ -168,6 +168,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             let enemy = s.unit_at(P2, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             s.activate(host.as_str(), at(&enemy));
             assert!(kinds(&s, &enemy).is_empty());

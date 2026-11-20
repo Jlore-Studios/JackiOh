@@ -1,16 +1,17 @@
 //! SPEC §8.12 S+ #39 Mindustrial Cross-over (§5.1, §6.1 Equip and Starship Piece, §6.3 Discover; R65, R387,
 //! R1420, R1878003, R3535000, R3549000): (1) Spell, Rare, a card of the Stinkyscape+ set.
-//!   Base:    "Discover a random Mindustrial Unit, give it Starpiece and Equip."
-//!   Radiant: "Discover a random Radiant Mindustrial Unit, give it Starpiece and Equip, it costs (1) less."
+//!   Base:    "Discover a Mindustrial Unit. Give it Starship Piece."
+//!   Radiant: "Discover a Radiant Mindustrial Unit. Give it Starship Piece. It costs (1) less."
 //!
 //! Engine: one Discover of three (§6.3) from the Stinkyscape+ Units tagged Mindustrial, tokens out, the pool
 //! naming its set so that it reaches them while the set is held (R1420); it never offers this card (R387),
-//! a Spell. The pick reaches its caster's hand (§2.4's cap burns it) given Starship Piece and Equip, kept
-//! onto the field (R1878003), as `addRandomFromCatalog`'s `keywords` rider gives them: a pool of the one
-//! card picked, since `addToHand` has no rider (R3549000). "Starpiece" is Starship Piece (SP5). Played
-//! as a Unit the card may be Equipped into one of its owner's Units, its Starship Piece staying only with
-//! a piece (R1852001); its death fuses a copy into its owner's Dormant Starship (R1852000). The Radiant
-//! face adds the pick Radiant and costing `DISCOUNT` less, never below (0) (R65).
+//! a Spell. The pick reaches its caster's hand (§2.4's cap burns it) given Starship Piece, kept onto the
+//! field (R1878003), as `addRandomFromCatalog`'s `keywords` rider gives it: a pool of the one card picked,
+//! since `addToHand` has no rider (R3549000). "Starpiece" is Starship Piece (SP5). Its death fuses a copy
+//! into its owner's Dormant Starship (R1852000). The Radiant face adds the pick Radiant and costing
+//! `DISCOUNT` less, never below (0) (R65). R4285001: through v0.6.7k it gave Equip too, so the card might be
+//! Equipped into one of its owner's Units, its Starship Piece staying only with a piece (R1852001)
+//! (`script_v0_6_7k`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -26,7 +27,16 @@ fn mindustrial_units() -> CatalogQueryArgs {
     json_as(json!({ "set": SetName::StinkyscapePlus, "type": CardType::Unit, "tags": [Tag::Mindustrial] }))
 }
 
-fn cross_over(radiant: bool) -> Script {
+/// R4285001: what the pick is given: Starship Piece, and through v0.6.7k Equip too (`with_equip`).
+fn granted(with_equip: bool) -> Vec<Keyword> {
+    if with_equip {
+        vec![Keyword::StarshipPiece, Keyword::Equip]
+    } else {
+        vec![Keyword::StarshipPiece]
+    }
+}
+
+fn cross_over(radiant: bool, with_equip: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
             vec![discover_from_catalog(json_as(json!({
@@ -49,7 +59,7 @@ fn cross_over(radiant: bool) -> Script {
                 let mut args = AddRandomFromCatalogArgs {
                     query: Some(json_as(json!({ "defId": [picked] }))),
                     count: Some(1),
-                    keywords: Some(vec![Keyword::StarshipPiece, Keyword::Equip]),
+                    keywords: Some(granted(with_equip)),
                     ..AddRandomFromCatalogArgs::default()
                 };
                 if radiant {
@@ -65,12 +75,21 @@ fn cross_over(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: cross_over(false),
-        radiant: cross_over(true),
+        base: cross_over(false, false),
+        radiant: cross_over(true, false),
     }
 }
 
-// S+ #39 Mindustrial Cross-over — SPEC §8.12 row S+ 39 (R3549000; R1878003, R387, R1420).
+/// R767000, R4285001: through v0.6.7k the pick was given Equip too (issue #4285); `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_7k() -> CardScripts {
+    CardScripts {
+        base: cross_over(false, true),
+        radiant: cross_over(true, true),
+    }
+}
+
+// S+ #39 Mindustrial Cross-over — SPEC §8.12 row S+ 39 (R3549000, R4285001; R1878003, R387, R1420).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,14 +177,14 @@ mod tests {
         }
 
         #[test]
-        fn r3549000_the_pick_reaches_the_hand_with_starpiece_and_equip() {
+        fn r3549000_r4285001_the_pick_reaches_the_hand_with_starship_piece_and_no_equip() {
             let mut s = crossing(false, "s39-pick", 0);
             let picked = pick(&mut s, 1);
             assert!(s.state().pending.is_none(), "one Discover, answered");
             let card = added(&s).expect("the pick reaches the hand");
             assert_eq!(card.def_id, picked);
             assert_eq!(card.zone.z(), ZoneName::Hand);
-            assert_eq!(card.granted_keywords, vec![Keyword::StarshipPiece, Keyword::Equip]);
+            assert_eq!(card.granted_keywords, vec![Keyword::StarshipPiece]);
             assert!(!card.radiant);
             assert_eq!(card.cost_mod, 0, "the printed price");
             assert!(card.cost_override.is_none());
@@ -182,8 +201,8 @@ mod tests {
             }
         }
 
-        #[test]
-        fn r1878003_the_card_keeps_both_keywords_on_the_field_and_wears_them() {
+        /// The (0) pick played into lane 1: the keywords it wears there.
+        fn worn_on_the_field() -> Vec<Keyword> {
             let seed = seed_where("s39-keeps", |seed| {
                 let mut s = crossing(false, seed, 0);
                 s.play(ID, json!({}));
@@ -195,9 +214,30 @@ mod tests {
             s.play(card.id.as_str(), json!({ "zone": 1 }));
             let unit = s.unit(P1, 1).expect("it stands on the field").id;
             assert_eq!(unit, card.id);
-            let keywords = s.stats(unit.as_str()).keywords;
+            s.stats(unit.as_str()).keywords
+        }
+
+        #[test]
+        fn r1878003_r4285001_the_card_keeps_starship_piece_on_the_field_and_has_no_equip() {
+            let keywords = worn_on_the_field();
             assert!(has_keyword(&keywords, KeywordKind::StarshipPiece));
-            assert!(has_keyword(&keywords, KeywordKind::Equip));
+            assert!(!has_keyword(&keywords, KeywordKind::Equip));
+        }
+
+        /// R767000, R4285001: through v0.6.7k the pick was given Equip too, and wore both on the field.
+        #[test]
+        fn r1878003_r767000_the_script_kept_for_v0_6_7k_gives_starship_piece_and_equip() {
+            crate::under_kept(ID, script_v0_6_7k(), || {
+                for radiant in [false, true] {
+                    let mut s = crossing(radiant, "s39-pick", 0);
+                    pick(&mut s, 1);
+                    let card = added(&s).expect("the pick reaches the hand");
+                    assert_eq!(card.granted_keywords, vec![Keyword::StarshipPiece, Keyword::Equip], "radiant {radiant}");
+                }
+                let keywords = worn_on_the_field();
+                assert!(has_keyword(&keywords, KeywordKind::StarshipPiece));
+                assert!(has_keyword(&keywords, KeywordKind::Equip));
+            });
         }
 
         #[test]
@@ -252,7 +292,7 @@ mod tests {
             let next = reduce(&state, &Action::new(body, P1, "s39-policy-answer".to_string()));
             assert!(next.error.is_none(), "{:?}", next.error);
             assert!(next.state.pending.is_none());
-            assert!(next.state.players.p1.hand.iter().any(|card| card.granted_keywords.contains(&Keyword::Equip)));
+            assert!(next.state.players.p1.hand.iter().any(|card| card.granted_keywords.contains(&Keyword::StarshipPiece)));
         }
 
         #[test]
@@ -271,14 +311,14 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3549000_the_pick_is_radiant_with_both_keywords_and_costs_1_less() {
+        fn r3549000_r4285001_the_pick_is_radiant_with_starship_piece_and_costs_1_less() {
             let mut s = crossing(true, "s39-radiant", 0);
             let picked = pick(&mut s, 0);
             let card = added(&s).expect("the pick reaches the hand");
             assert_eq!(card.def_id, picked);
             assert!(card.radiant);
             assert_eq!(card.cost_mod, -DISCOUNT);
-            assert_eq!(card.granted_keywords, vec![Keyword::StarshipPiece, Keyword::Equip]);
+            assert_eq!(card.granted_keywords, vec![Keyword::StarshipPiece]);
         }
 
         #[test]
@@ -335,7 +375,7 @@ mod tests {
             s.play(ID, json!({}));
             s.act(ActionBody::Timeout, P1, "the caster's clock runs out");
             assert!(s.state().pending.is_none());
-            let card = s.hand(P1).into_iter().find(|card| card.granted_keywords.contains(&Keyword::Equip));
+            let card = s.hand(P1).into_iter().find(|card| card.granted_keywords.contains(&Keyword::StarshipPiece));
             assert!(card.is_some_and(|card| card.radiant && card.cost_mod == -DISCOUNT));
         }
     }

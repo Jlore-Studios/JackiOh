@@ -12,7 +12,7 @@ use jackioh_engine::testkit::*;
 
 use super::support::{AI, HUMAN, register_cards, unit};
 
-/// Stinkyscape #52 Cannon v3: (2) 0/2, Starship Piece, Equip, "Activate: Deal 5 damage to an enemy Unit".
+/// Stinkyscape #52 Cannon v3: (2) 0/2, Starship Piece, "Activate: Deal 5 damage to an enemy Unit".
 const CANNON: &str = "stinkyscape-052";
 /// Stinkyscape+ #157 Phantom Shipyard: (4) 0/0, a shipyard Dormant until launched (R3539004).
 const SHIPYARD: &str = "stinkyscapeplus-157";

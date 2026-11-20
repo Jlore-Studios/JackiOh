@@ -1,10 +1,10 @@
 //! SPEC §8.12 S+ #10 Drone Assembler v5 (Unit 0/4 → 0/8, Weapon, cost 4, Legendary), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate 2: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            Activate 2: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one (R1852001).
 //! The Activate is 2 uses a turn (R384, R1857003) with an extra turn cooldown (R1841000): both uses are
 //! its turn's, and a turn it was used in is followed by one of its user's turns it sits out (R3996001).
@@ -282,6 +282,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             let target = s.unit_at(P2, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             s.activate(host.as_str(), at(&target));
             let drones = summoned(s.last_events());

@@ -1,7 +1,7 @@
 //! S #104 Reflective Plating (SPEC §8.10 row 104): (2) Unit, Rare, 0/6 → 0/12, of the
 //! Stinkyscape set.
-//!   Base:    "Starship Piece, Equip / Any damage this takes is dealt to the enemy hero."
-//!   Radiant: "Starship Piece, Equip / Any damage this takes is dealt to the enemy hero and the attacker."
+//!   Base:    "Starship Piece / Any damage this takes is dealt to the enemy hero."
+//!   Radiant: "Starship Piece / Any damage this takes is dealt to the enemy hero and the attacker."
 //! Engine: Starship Piece (R1852000) and Equip (R1086; it passes no Starship Piece to its host,
 //! R1852001) are catalog keywords. `StaticFlags.reflects_damage` (R1849003): what a hit dealt it is dealt
 //! again from it at §4.4 step 8a to its controller's opponent's hero; it still takes the hit, and a hit
@@ -93,6 +93,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             let host = s.unit_at(P1, 1);
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             let fused = s.unit_at(P1, 1);
             assert_eq!(fused.id, host.id, "the host is kept (R1086)");

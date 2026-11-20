@@ -1,10 +1,10 @@
 //! Stinkyscape #53 Flak v3 (SPEC §8.10 row 53; R2521001). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Deal a random {least} to {most} damage to each enemy Unit." — 1 to 3
-//!   Radiant: "Starship Piece, Equip, Lucky 1
+//!   Radiant: "Starship Piece, Lucky 1
 //!            Activate: …the same…" — 2 to 4
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses its base version into its owner's Dormant Starship
 //! (R1852000, R2521000).

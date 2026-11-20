@@ -141,6 +141,20 @@ mod r3560001_graveyard_price_offers_and_prices_the_play {
         assert_eq!(play_cost(s.state(), card), 1);
     }
 
+    /// R4285000: a card that prices itself in the graveyard takes no Flashback floor, even holding Flashback.
+    #[test]
+    fn r4285000_a_graveyard_price_play_takes_no_flashback_floor() {
+        let mut s = graveyard_board(0);
+        let id = grave_id(&s, CRAWLERISH);
+        let card = s.card_mut(id.as_str());
+        card.granted_keywords.push(Keyword::Flashback);
+        card.cost_mod = -1;
+        let card = find_instance(s.state(), &id).expect("held");
+        assert!(unit_has(s.state(), card, KeywordKind::Flashback));
+        assert_eq!(play_cost(s.state(), card), 0);
+        assert!(!plays_in(s.state(), P1, &id).is_empty());
+    }
+
     #[test]
     fn r3560001_with_mana_0_it_is_refused() {
         let s = graveyard_board(0);

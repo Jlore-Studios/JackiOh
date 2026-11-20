@@ -1446,7 +1446,9 @@ mod r4279000_cast_or_summoned {
 
     const VANILLA: &str = "core-008"; // Mr. Vanilla: a Human Unit with no text, so a tribal play.
     const FILLER: &str = "core-005"; // Stockpile: a Spell left in the deck.
-    const TATCHES: &str = "meditative-087"; // Tatches the Totem: after you play a tribal card, summon this from your hand or deck.
+    // Tatches the Totem: after you play a tribal card, summon this from your deck (and from your hand through
+    // v0.6.7k, issue #4285, R4285004).
+    const TATCHES: &str = "meditative-087";
     const TOMMY: &str = "classicplus-026"; // Tommy Tempo: a Unit cast on draw; it ends your turn.
     const HINDER: &str = "core-021"; // Hinder: a Spell cast on draw; then draw again.
 
@@ -1528,24 +1530,42 @@ mod r4279000_cast_or_summoned {
         counted_as_played(&figures(p1, TATCHES));
     }
 
+    /// R767000: `run` under Tatches' script kept for v0.6.7k, which summoned it from the hand too.
+    fn tatches_from_the_hand<T>(run: impl FnOnce() -> T) -> T {
+        register_all();
+        let (_, _, kept) = jackioh_cards::KEPT_SCRIPTS
+            .iter()
+            .find(|(id, version, _)| *id == TATCHES && *version == "v0.6.7k")
+            .expect("Tatches' v0.6.7k script is kept");
+        let shipped: &'static jackioh_engine::ShippedCatalog =
+            Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+                "kept",
+                CATALOG.clone(),
+                IndexMap::from([(TATCHES.to_string(), kept())]),
+            )));
+        jackioh_engine::with_shipped(Some(shipped), run)
+    }
+
+    /// Through v0.6.7k (the hand's summon, issue #4285 took it out, R4285004).
     #[test]
     fn r4279000_tatches_summoned_from_the_hand_is_its_seat_s_once() {
-        register_all();
-        let mut s = scenario(json!({
-            "p1": { "mana": 10, "hand": [VANILLA, TATCHES], "library": [FILLER, FILLER] },
-            "p2": { "hand": [VANILLA], "library": [FILLER, FILLER, FILLER, FILLER] },
-        }));
-        let mut reader = SummaryReader::new(s.state());
-        let turn = s.state().turn;
-        step(&mut reader, &mut s, |s| {
-            s.play(VANILLA, json!({}));
-        });
-        assert!(!s.hand(P1).iter().any(|card| card.def_id == TATCHES));
+        tatches_from_the_hand(|| {
+            let mut s = scenario(json!({
+                "p1": { "mana": 10, "hand": [VANILLA, TATCHES], "library": [FILLER, FILLER] },
+                "p2": { "hand": [VANILLA], "library": [FILLER, FILLER, FILLER, FILLER] },
+            }));
+            let mut reader = SummaryReader::new(s.state());
+            let turn = s.state().turn;
+            step(&mut reader, &mut s, |s| {
+                s.play(VANILLA, json!({}));
+            });
+            assert!(!s.hand(P1).iter().any(|card| card.def_id == TATCHES));
 
-        let p1 = reader.seat(P1, list(&[VANILLA, TATCHES, FILLER, FILLER]));
-        assert_eq!(p1.played, [VANILLA]);
-        assert_eq!(p1.cast_or_summoned, Some(vec![cast(TATCHES, turn)]));
-        counted_as_played(&figures(p1, TATCHES));
+            let p1 = reader.seat(P1, list(&[VANILLA, TATCHES, FILLER, FILLER]));
+            assert_eq!(p1.played, [VANILLA]);
+            assert_eq!(p1.cast_or_summoned, Some(vec![cast(TATCHES, turn)]));
+            counted_as_played(&figures(p1, TATCHES));
+        });
     }
 
     /// Tommy Tempo, a Unit (whose cast's own `summoned` is no second summon), and Hinder, a Spell, each on

@@ -1380,7 +1380,8 @@ mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
 mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
     use super::*;
 
-    const CRATER: &str = "classicplus-034"; // Memory Leak: Field Spell with Crater, Locks its zone
+    // Comet Crash: Field Spell with Crater, Locks its zone (Memory Leak until issue #4285 took its Crater).
+    const CRATER: &str = "stinkyscape-155";
     const CARRIER: &str = "classicplus-033"; // Ivory Tower: a Unit may stack onto its zone
     const FLYING: &str = "classicplus-051"; // Jlockeed's J15 Fighter: Flying
     const TRIBUTE: &str = "core-066"; // The Rock: Tribute 1
@@ -1472,7 +1473,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
             "p2": {},
         }));
         // Crater Locks the zone its card enters (R1850006), which the setup's placement does not
-        // run: play Memory Leak from the hand, answering its mode prompt with the first option.
+        // run: play Comet Crash from the hand, answering any prompt with the first option.
         let crater = g.card(CRATER).clone();
         let into_lane_2 = ZoneChoice {
             row: Row::Backrow,
@@ -1482,8 +1483,8 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
             .plays_of(&crater)
             .into_iter()
             .find(|body| matches!(body, ActionBody::Play { zone: Some(at), .. } if *at == into_lane_2))
-            .expect("a play of Memory Leak into backrow lane 2 is listed");
-        g.act(play, PlayerId::P1, "play Memory Leak into backrow lane 2");
+            .expect("a play of Comet Crash into backrow lane 2 is listed");
+        g.act(play, PlayerId::P1, "play Comet Crash into backrow lane 2");
         let mut answers = 0;
         while g.state().pending.is_some() && answers < 5 {
             let pending = g.state().pending.clone().expect("a prompt is open");
@@ -1507,7 +1508,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
                     lane: 2,
                 }
             ),
-            "Memory Leak Locks its zone as it enters"
+            "Comet Crash Locks its zone as it enters"
         );
         // A Vanilla with the Fiender stacked atop it.
         g.play(VANILLA, json!({ "zone": 1 }));

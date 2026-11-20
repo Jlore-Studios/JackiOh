@@ -1,9 +1,9 @@
-//! SPEC §8.12 S+ #151 Volcanic Rounds (Unit 3/1 → 6/2, cost 4, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base and Radiant: "Starship Piece, Equip
+//! SPEC §8.12 S+ #151 Volcanic Rounds (Unit 5/1 → 10/2, 3/1 → 6/2 through v0.6.7k (issue #4285), cost 4, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
+//!   Base and Radiant: "Starship Piece
 //!            Damage dealt Burns."
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
-//! into it (R1086), which then carries the conversion. R3540003: each hit this card deals turns into its
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001):
+//! Equipped onto one of your Units it fuses into it (R1086), which then carries the conversion. R3540003: each hit this card deals turns into its
 //! target's Burn after Armor, equal to what the hit would have dealt, and deals nothing; a hit of 0 after
 //! Armor converts nothing. The flag holds on both faces, so an Equip converts its host's hits and a
 //! launched Starship carries it.
@@ -46,8 +46,8 @@ mod tests {
     const HOST: &str = "stand-in (1) 4/4 R12/12";
 
     /// The printed attack, and the Radiant face's.
-    const ATTACK: i32 = 3;
-    const RADIANT_ATTACK: i32 = 6;
+    const ATTACK: i32 = 5;
+    const RADIANT_ATTACK: i32 = 10;
 
     fn rounds_on(radiant: bool, p2: Value) -> Scenario {
         weapon_board(
@@ -97,6 +97,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             let target = s.unit_at(P2, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             let attack = s.stats(host.as_str()).attack;
             s.attack(host.as_str(), target.as_str());
@@ -132,7 +133,7 @@ mod tests {
         fn its_stats_are_doubled() {
             let s = rounds_on(true, json!({}));
             let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (6, 2));
+            assert_eq!((view.attack, view.health), (10, 2));
         }
     }
 }

@@ -206,10 +206,10 @@ mod r1240_meditative_95s_table {
         assert_eq!(
             labels_of(CHAOS_MED_EFFECTS),
             vec![
-                "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
-                "Add 2 random CN cards to your hand, which cost (0)",
-                "Add 2 random Prime cards to your hand, which cost (0)",
-                "Your hero gains 4 Armor and you heal it 4",
+                "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (1)",
+                "Add 2 random CN cards to your hand, which cost (1)",
+                "Add 2 random Prime cards to your hand, which cost (1)",
+                "Your hero gains 3 Armor and you heal it 3",
                 "Summon a Jade Beauty",
                 "Summon 2 random Acclaimed cards",
                 "Bounce every enemy permanent, then Nerf each card bounced",
@@ -221,7 +221,7 @@ mod r1240_meditative_95s_table {
     }
 
     #[test]
-    fn r3135001_r4154305_the_tuned_numbers_and_the_modes_left_alone() {
+    fn r3135001_r4285005_the_tuned_numbers_and_the_modes_left_alone() {
         assert_eq!(
             (
                 CHAOS_MED_FUSE_COPIES,
@@ -229,7 +229,7 @@ mod r1240_meditative_95s_table {
                 CHAOS_MED_HEAL,
                 CHAOS_MED_ACCLAIMED
             ),
-            (1, 4, 4, 2)
+            (1, 3, 3, 2)
         );
         assert_eq!(
             (
@@ -239,7 +239,52 @@ mod r1240_meditative_95s_table {
                 CHAOS_MED_COST,
                 CALL_TO_CHAOS_ETERNAL_CAP
             ),
-            (2, 2, 1, 0, 3)
+            (2, 2, 1, 1, 3)
+        );
+    }
+
+    /// R4285005, R767000: the table through v0.6.7k keeps entries 1 to 3 at (0) and entry 4 at 4 and 4, the
+    /// same ten entries in the same order; the v0.6.6h table keeps those (0) prices too.
+    #[test]
+    fn r4285005_the_v0_6_7k_table_keeps_the_old_prices_and_armor() {
+        use jackioh_engine::config::{
+            CHAOS_MED_COST_V0_6_7K, CHAOS_MED_HEAL_V0_6_7K, CHAOS_MED_HERO_ARMOR_V0_6_7K,
+        };
+        use jackioh_engine::subsystems::{CHAOS_MED_EFFECTS_V0_6_6H, CHAOS_MED_EFFECTS_V0_6_7K};
+        assert_eq!(
+            (
+                CHAOS_MED_COST_V0_6_7K,
+                CHAOS_MED_HERO_ARMOR_V0_6_7K,
+                CHAOS_MED_HEAL_V0_6_7K
+            ),
+            (0, 4, 4)
+        );
+        assert_eq!(names_of(CHAOS_MED_EFFECTS_V0_6_7K), names_of(CHAOS_MED_EFFECTS));
+        let old = labels_of(CHAOS_MED_EFFECTS_V0_6_7K);
+        assert_eq!(
+            old[..4],
+            [
+                "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
+                "Add 2 random CN cards to your hand, which cost (0)",
+                "Add 2 random Prime cards to your hand, which cost (0)",
+                "Your hero gains 4 Armor and you heal it 4",
+            ]
+        );
+        assert_eq!(old[4..], labels_of(CHAOS_MED_EFFECTS)[4..]);
+        assert_eq!(labels_of(CHAOS_MED_EFFECTS_V0_6_6H)[..3], old[..3]);
+        let mut state = game("cn-v0-6-7k", None, None);
+        let cn = CHAOS_MED_EFFECTS_V0_6_7K
+            .iter()
+            .find(|entry| entry.name == "cn")
+            .expect("the cn entry");
+        run(&mut state, (cn.build)(), None);
+        assert!(
+            state
+                .players
+                .p1
+                .hand
+                .iter()
+                .all(|each| each.cost_override == Some(0))
         );
     }
 
@@ -481,7 +526,7 @@ mod r1242_the_hand_fusion {
     use super::*;
 
     #[test]
-    fn r1242_r3135001_fuses_every_hand_card_but_immutable_ones_into_one_fresh_card_and_adds_one_copy_both_at_zero()
+    fn r1242_r3135001_fuses_every_hand_card_but_immutable_ones_into_one_fresh_card_and_adds_one_copy_both_at_its_price()
      {
         let mut state = game("fuse", None, None);
         let first = in_hand(&mut state, "fx-1", P1, 1);
@@ -539,7 +584,7 @@ mod r1242_the_hand_fusion {
     }
 
     #[test]
-    fn r1242_r3135001_one_fusable_card_takes_the_zero_and_one_copy() {
+    fn r1242_r3135001_one_fusable_card_takes_the_price_and_one_copy() {
         let mut state = game("fuse-one", None, None);
         let kept = in_hand(&mut state, &immutable.id, P1, 1);
         let only = in_hand(&mut state, "fx-3", P1, 1).remove(0);
@@ -641,13 +686,13 @@ mod the_other_entries {
     use super::*;
 
     #[test]
-    fn entry_cn_and_prime_add_cards_of_their_tag_at_zero() {
+    fn r4285005_entry_cn_and_prime_add_cards_of_their_tag_at_1() {
         let mut state = game("cn", None, None);
         run(&mut state, entry("cn"), None);
         let hand = state.players.p1.hand.clone();
         assert_eq!(hand.len() as i32, CHAOS_MED_CN_CARDS);
         assert!(hand.iter().all(|each| each.def_id == CN.id));
-        assert!(hand.iter().all(|each| each.cost_override == Some(CHAOS_MED_COST)));
+        assert!(hand.iter().all(|each| each.cost_override == Some(1)));
 
         // R1421: only tokens carry Prime, and the Prime pool holds them.
         let mut state = game("prime", None, None);
@@ -655,17 +700,30 @@ mod the_other_entries {
         let hand = state.players.p1.hand.clone();
         assert_eq!(hand.len() as i32, CHAOS_MED_PRIME_CARDS);
         assert!(hand.iter().all(|each| each.def_id == PRIME.id));
-        assert!(hand.iter().all(|each| each.cost_override == Some(CHAOS_MED_COST)));
+        assert!(hand.iter().all(|each| each.cost_override == Some(1)));
     }
 
     #[test]
-    fn r4154305_entry_armor_gives_4_hero_armor_and_heals_4_past_30() {
+    fn r4285005_entry_armor_gives_3_hero_armor_and_heals_3_past_30() {
         let mut state = game("armor", None, None);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
         run(&mut state, entry("armor"), None);
-        assert_eq!(state.players.p1.hero.armor, 4);
-        assert_eq!(state.players.p1.hero.health, HERO_HEALTH + 4);
+        assert_eq!(state.players.p1.hero.armor, 3);
+        assert_eq!(state.players.p1.hero.health, HERO_HEALTH + 3);
         assert_eq!(state.players.p2.hero.armor, 0);
+    }
+
+    /// R4154305, R767000: the table kept for v0.6.6h still gives 5 Armor and heals 5.
+    #[test]
+    fn r4154305_the_v0_6_6h_table_s_entry_armor_gives_5_hero_armor_and_heals_5() {
+        let mut state = game("armor-v0-6-6h", None, None);
+        let armor = jackioh_engine::subsystems::CHAOS_MED_EFFECTS_V0_6_6H
+            .iter()
+            .find(|entry| entry.name == "armor")
+            .expect("the armor entry");
+        run(&mut state, (armor.build)(), None);
+        assert_eq!(state.players.p1.hero.armor, 5);
+        assert_eq!(state.players.p1.hero.health, HERO_HEALTH + 5);
     }
 
     #[test]

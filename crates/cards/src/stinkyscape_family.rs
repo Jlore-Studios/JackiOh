@@ -164,6 +164,7 @@ pub(crate) fn beam_equip_takes_activate(id: &str, seed: &str, damage: i32) {
     );
     let host = s.unit_at(PlayerId::P1, 1).id;
     let target = s.unit_at(PlayerId::P2, 1).id;
+    crate::give_equip(&mut s, id);
     s.play(id, json!({ "zone": 1, "equip": true }));
     let fused = s.card(host.as_str()).clone();
     assert!(!unit_has(s.state(), &fused, KeywordKind::StarshipPiece));
@@ -273,6 +274,7 @@ pub(crate) fn rep_equip_takes_activate(id: &str, seed: &str, damage: i32) {
     );
     let host = s.unit_at(PlayerId::P1, 1).id;
     let target = s.unit_at(PlayerId::P2, 1).id;
+    crate::give_equip(&mut s, id);
     s.play(id, json!({ "zone": 1, "equip": true }));
     let fused = s.card(host.as_str()).clone();
     assert!(!unit_has(s.state(), &fused, KeywordKind::StarshipPiece));
@@ -386,6 +388,7 @@ pub(crate) fn can_equip_takes_activate(id: &str, seed: &str, damage: i32) {
     );
     let host = s.unit_at(PlayerId::P1, 1).id;
     let target = s.unit_at(PlayerId::P2, 1).id;
+    crate::give_equip(&mut s, id);
     s.play(id, json!({ "zone": 1, "equip": true }));
     let fused = s.card(host.as_str()).clone();
     assert!(!unit_has(s.state(), &fused, KeywordKind::StarshipPiece));
@@ -622,6 +625,7 @@ pub(crate) fn flak_equip_takes_activate(id: &str, prefix: &str, range: (i32, i32
         flak_walls(),
     );
     let host = s.unit_at(PlayerId::P1, 1).id;
+    crate::give_equip(&mut s, id);
     s.play(id, json!({ "zone": 1, "equip": true }));
     let fused = s.card(host.as_str()).clone();
     assert!(!unit_has(s.state(), &fused, KeywordKind::StarshipPiece));
@@ -799,6 +803,7 @@ pub(crate) fn miner_equip(id: &str, seed: &str) {
         json!({}),
     );
     let host = s.unit_at(PlayerId::P1, 1).id;
+    crate::give_equip(&mut s, id);
     s.play(id, json!({ "zone": 1, "equip": true }));
     assert_eq!(s.unit_at(PlayerId::P1, 1).id, host);
     s.activate(host.as_str(), miner_dig());

@@ -94,7 +94,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const CHASSIS: &str = "stinkyscape-048"; // Ultralight Chassis: Starship Piece, Equip, Rush: keywords only
+    const CHASSIS: &str = "stinkyscape-048"; // Ultralight Chassis: Starship Piece, Rush: keywords only
     const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor: When launched: +attack/+health per other piece.
     const VANILLA: &str = "core-008"; // Mr. Vanilla
 

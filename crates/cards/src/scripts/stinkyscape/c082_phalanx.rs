@@ -1,5 +1,5 @@
-//! Stinkyscape #82 Phalanx (SPEC §8.10 row 82). Unit 3/3 → 6/6, cost 4, Epic (4/4 → 8/8 with Armor 3 and 6
-//! until #2657).
+//! Stinkyscape #82 Phalanx (SPEC §8.10 row 82). Unit 3/1 → 6/2, cost 4, Epic (3/3 → 6/6 through v0.6.7k,
+//! issue #4285; 4/4 → 8/8 with Armor 3 and 6 until #2657).
 //!   Base:    "Armor 2
 //!            Cry: Discover {weapons|Rare Weapon|Rare Weapons} and Equip them into this." — weapons 2
 //!   Radiant: "Armor 4
@@ -11,7 +11,8 @@
 //! (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host
 //! wears (R77), so a Radiant Phalanx wields its Weapons' Radiant faces. Since #2521 it is no
 //! Starship Piece, and the Weapons it takes, each a piece, leave it none (R1852001), so its death fuses
-//! nothing (R1852000 reads the keyword). Its Armor is a catalog keyword, which a fusion keeps (R77).
+//! nothing (R1852000 reads the keyword). Its Armor is a catalog keyword, which a fusion keeps (R77). Since
+//! issue #4285 the Weapons print no Equip, which the pick never read: they fuse in as before (R4285001).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
@@ -133,6 +134,39 @@ mod tests {
         fn r1862002_the_cry_discovers_n_weapons_of_its_rarity_in_turn_and_equips_each() {
             let (s, host) = arms(false, &RARE);
             armed(&s, &host, 2);
+        }
+
+        /// R4285001: the Weapons print no Equip since issue #4285, and each pick fuses one in all the same.
+        #[test]
+        fn r4285001_its_picks_still_fuse_and_print_no_equip() {
+            crate::register_all();
+            for weapon in RARE.iter().chain(EPIC.iter()) {
+                let def = crate::card_def(weapon);
+                for face in [&def.base, &def.radiant] {
+                    assert!(!face.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Equip), "{weapon}");
+                }
+            }
+            let (s, host) = arms(false, &RARE);
+            let fusions = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Fused { result_instance_id, .. } if *result_instance_id == host))
+                .count();
+            assert_eq!(fusions, PICKS as usize);
+            armed(&s, &host, 2);
+        }
+
+        /// Issue #4285: 3/1, from 3/3, before its Weapons.
+        #[test]
+        fn it_is_a_3_1_and_radiant_6_2() {
+            for (radiant, stats) in [(false, (3, 1)), (true, (6, 2))] {
+                let s = crate::scenario(json!({
+                    "p1": { "field": [{ "def": ID, "radiant": radiant }], "library": crate::filler(4) },
+                    "p2": { "library": crate::filler(4) },
+                }));
+                let me = s.stats(ID);
+                assert_eq!((me.attack, me.health), stats, "radiant {radiant}");
+            }
         }
 
         #[test]

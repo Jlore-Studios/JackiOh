@@ -2280,8 +2280,8 @@ classicplus-034: # Memory Leak
     cast: Memory usage climbing. Climbing.
   zh:
     name: 内存泄漏
-    base: "陨坑\n抉择。\n回合结束时：锁定你对手一侧的一个随机区域。\n在你的对手打出一个单位或场地法术后，锁定其所在的区域。"
-    radiant: "陨坑\n回合结束时：锁定你对手一侧的一个随机区域。\n在你的对手打出一个单位或场地法术后，锁定其所在的区域。"
+    base: "抉择。\n回合结束时：锁定你对手一侧的一个随机区域。\n在你的对手打出一个单位或场地法术后，锁定其所在的区域。"
+    radiant: "回合结束时：锁定你对手一侧的一个随机区域。\n在你的对手打出一个单位或场地法术后，锁定其所在的区域。"
     previews:
       Choose one: 抉择
       "End of turn: Lock a random enemy zone": 回合结束时：锁定你对手一侧的一个随机区域
@@ -2669,8 +2669,8 @@ classicplus-069: # Buff Billy
     death: Skipped leg day.
   zh:
     name: 肌肉比利
-    base: "此单位为2X/3X。\n战吼：强化此单位X次。"
-    radiant: "此单位为4X/6X。\n战吼：强化此单位2X次。"
+    base: "此单位为2X/2X。\n战吼：强化此单位X次。"
+    radiant: "此单位为4X/4X。\n战吼：强化此单位2X次。"
 classicplus-070: # Chaos Machine
   flavour: The machine hums, and everything near it gets bigger.
   voice:
@@ -3282,8 +3282,8 @@ meditative-039-5: # Jade Beauty
     death: Back into the mountain.
   zh:
     name: 玉美人
-    base: "无法攻击，不可摧毁，不可变\n回合结束时：迷惑所有敌方单位。\n当你的玉计数器达到5时，你召唤这张牌。\n在你的下个回合开始时，夺取被这张牌迷惑的单位；若你没有空位，它们会心碎而死。"
-    radiant: "不可摧毁，不可变\n回合结束时：迷惑所有敌方单位。\n当你的玉计数器达到10时，你的玉美人变为光辉。\n在你的下个回合开始时，夺取被这张牌迷惑的单位；若你没有空位，它们会心碎而死。"
+    base: "无法攻击，闪避\n回合结束时：迷惑所有敌方单位。\n当你的玉计数器达到5时，你召唤这张牌。\n在你的下个回合开始时，夺取被这张牌迷惑的单位；若你没有空位，它们会心碎而死。"
+    radiant: "闪避\n回合结束时：迷惑所有敌方单位。\n当你的玉计数器达到10时，你的玉美人变为光辉。\n在你的下个回合开始时，夺取被这张牌迷惑的单位；若你没有空位，它们会心碎而死。"
 meditative-040: # Feng Shui
   flavour: Move the couch three inches to the left, and the whole year goes well.
   voice:
@@ -3781,8 +3781,8 @@ meditative-087: # Tatches the Totem
     death: The totem topples.
   zh:
     name: 塔切斯图腾
-    base: "当这张牌在你的手牌或牌库中时：在你使用一张具有部落标签的牌后，召唤这张牌。\n回合结束时：强化你手牌中的{cards}张随机牌。"
-    radiant: "当这张牌在你的手牌或牌库中时：在你使用一张具有部落标签的牌后，召唤这张牌。\n回合结束时：强化你手牌中的{cards}张随机牌。然后强化与这张牌相邻的每个单位。"
+    base: "当这张牌在你的牌库中时：在你使用一张具有部落标签的牌后，召唤这张牌。\n回合结束时：强化你手牌中的{cards}张随机牌。"
+    radiant: "当这张牌在你的牌库中时：在你使用一张具有部落标签的牌后，召唤这张牌。\n回合结束时：强化你手牌中的{cards}张随机牌。然后强化与这张牌相邻的每个单位。"
 meditative-088: # The True Sheep
   flavour: It insists it is the one. The flock disagrees.
   voice:
@@ -3897,8 +3897,8 @@ meditative-095: # Call to Chaos (Meditative Edition)
     cast: Breathe in. Now roll the dice!
   zh:
     name: 混沌召唤（冥想版）
-    base: 一个随机效果：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得4点护甲，并为其恢复4点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
-    radiant: 三个不同的随机效果，按所列顺序结算：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(0)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(0)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(0)；你的英雄获得4点护甲，并为其恢复4点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
+    base: 一个随机效果：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(1)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(1)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(1)；你的英雄获得3点护甲，并为其恢复3点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
+    radiant: 三个不同的随机效果，按所列顺序结算：将你的手牌融合为一张牌，并将它的1张复制置入你的手牌，这两张牌的法力值消耗均为(1)；将2张随机中国牌置入你的手牌，它们的法力值消耗为(1)；将2张随机至尊牌置入你的手牌，它们的法力值消耗为(1)；你的英雄获得3点护甲，并为其恢复3点生命值；召唤一个玉美人；召唤2张随机赞誉牌；弹回所有敌方永久物，然后削弱每张被弹回的牌；召唤一个中国魔像；在本局对战的剩余时间内，在你的每个回合开始时，施放一张随机混沌召唤；施放一张随机混沌召唤。
 meditative-095-1: # CN Golem
   flavour: Assembled overnight, smashing by noon.
   voice:
@@ -4839,8 +4839,8 @@ stinkyscape-038: # Shield Amplifier
     death: Field collapsed.
   zh:
     name: 护盾增幅器
-    base: "星舰部件，装备，圣盾\n每当此单位在一次攻击中存活下来时，它获得+{buff}/+{buff}。"
-    radiant: "星舰部件，装备，圣盾\n每当此单位在一次攻击中存活下来时，它获得+{buff}/+{buff}。"
+    base: "星舰部件，圣盾\n每当此单位在一次攻击中存活下来时，它获得+{buff}/+{buff}。"
+    radiant: "星舰部件，圣盾\n每当此单位在一次攻击中存活下来时，它获得+{buff}/+{buff}。"
 stinkyscape-039: # The Narcor Project
   flavour: Officially it studies Narcor. Unofficially, the vault is getting crowded.
   voice:
@@ -4929,8 +4929,8 @@ stinkyscape-048: # Ultralight Chassis
     death: Too flimsy.
   zh:
     name: 超轻底盘
-    base: 星舰部件，装备，突袭
-    radiant: 星舰部件，装备，突袭
+    base: 星舰部件，突袭
+    radiant: 星舰部件，突袭
 stinkyscape-049: # Spacemine
   flavour: Floats quietly in the dark, waiting for someone to bump into it.
   voice:
@@ -4949,8 +4949,8 @@ stinkyscape-050: # Beam v3
     death: Emitter cracked.
   zh:
     name: 光束炮v3
-    base: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
-    radiant: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
+    base: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
 stinkyscape-051: # Repeater v3
   flavour: Small rounds, short bursts, very long arguments with the quartermaster.
   voice:
@@ -4959,8 +4959,8 @@ stinkyscape-051: # Repeater v3
     death: Jammed again.
   zh:
     name: 连发炮v3
-    base: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
-    radiant: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    base: "星舰部件\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    radiant: "星舰部件\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
 stinkyscape-052: # Cannon v3
   flavour: One barrel, one shell, one very loud opinion.
   voice:
@@ -4969,8 +4969,8 @@ stinkyscape-052: # Cannon v3
     death: Barrel split.
   zh:
     name: 加农炮v3
-    base: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害。"
-    radiant: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害。"
+    base: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害。"
+    radiant: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害。"
 stinkyscape-053: # Flak v3
   flavour: Fills the sky with shrapnel and the crew with confidence.
   voice:
@@ -4979,8 +4979,8 @@ stinkyscape-053: # Flak v3
     death: Battery silent.
   zh:
     name: 高射炮v3
-    base: "星舰部件，装备\n激活：对每个敌方单位造成随机{least}到{most}点伤害。"
-    radiant: "星舰部件，装备，幸运1\n激活：对每个敌方单位造成随机{least}到{most}点伤害。"
+    base: "星舰部件\n激活：对每个敌方单位造成随机{least}到{most}点伤害。"
+    radiant: "星舰部件，幸运1\n激活：对每个敌方单位造成随机{least}到{most}点伤害。"
 stinkyscape-054: # Beam v4
   flavour: The fourth model. The first three are in a museum, and so is the museum.
   voice:
@@ -4989,8 +4989,8 @@ stinkyscape-054: # Beam v4
     death: Array offline.
   zh:
     name: 光束炮v4
-    base: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
-    radiant: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
+    base: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
 stinkyscape-055: # Repeater v4
   flavour: Six bursts a turn, because the manual said five and nobody reads manuals.
   voice:
@@ -4999,8 +4999,8 @@ stinkyscape-055: # Repeater v4
     death: Out of belts.
   zh:
     name: 连发炮v4
-    base: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
-    radiant: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    base: "星舰部件\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    radiant: "星舰部件\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
 stinkyscape-056: # Cannon v4
   flavour: Heavier shells, longer barrel, the same very loud opinion.
   voice:
@@ -5009,8 +5009,8 @@ stinkyscape-056: # Cannon v4
     death: Breech failure.
   zh:
     name: 加农炮v4
-    base: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害。"
-    radiant: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害。"
+    base: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害。"
+    radiant: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害。"
 stinkyscape-057: # Flak v4
   flavour: Two volleys of everything, everywhere, all at once.
   voice:
@@ -5019,8 +5019,8 @@ stinkyscape-057: # Flak v4
     death: Guns cold.
   zh:
     name: 高射炮v4
-    base: "星舰部件，装备\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复两次。"
-    radiant: "星舰部件，装备，幸运1\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复两次。"
+    base: "星舰部件\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复两次。"
+    radiant: "星舰部件，幸运1\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复两次。"
 stinkyscape-058: # Beam v5
   flavour: Takes a full day to cool. Takes a full fleet to survive.
   voice:
@@ -5029,8 +5029,8 @@ stinkyscape-058: # Beam v5
     death: Core meltdown.
   zh:
     name: 光束炮v5
-    base: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
-    radiant: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
+    base: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害，具有顺劈和穿透。使用后，你的下个回合无法使用。"
 stinkyscape-059: # Repeater v5
   flavour: The barrels glow orange by the third burst, and that is the good part.
   voice:
@@ -5039,8 +5039,8 @@ stinkyscape-059: # Repeater v5
     death: Barrels melted.
   zh:
     name: 连发炮v5
-    base: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
-    radiant: "星舰部件，装备\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    base: "星舰部件\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    radiant: "星舰部件\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
 stinkyscape-060: # Cannon v5
   flavour: Its shells have names. Its crew does not.
   voice:
@@ -5049,8 +5049,8 @@ stinkyscape-060: # Cannon v5
     death: Recoil was too much.
   zh:
     name: 加农炮v5
-    base: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害。"
-    radiant: "星舰部件，装备\n激活：对一个敌方单位造成{damage}点伤害。"
+    base: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害。"
+    radiant: "星舰部件\n激活：对一个敌方单位造成{damage}点伤害。"
 stinkyscape-061: # Flak v5
   flavour: Three volleys, then a moment of silence for whatever was flying.
   voice:
@@ -5059,8 +5059,8 @@ stinkyscape-061: # Flak v5
     death: Last volley spent.
   zh:
     name: 高射炮v5
-    base: "星舰部件，装备\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复三次。"
-    radiant: "星舰部件，装备，幸运1\n激活3：对每个敌方单位造成随机{least}到{most}点伤害，重复三次。"
+    base: "星舰部件\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复三次。"
+    radiant: "星舰部件，幸运1\n激活3：对每个敌方单位造成随机{least}到{most}点伤害，重复三次。"
 stinkyscape-062: # Miner v1
   flavour: Pocket-sized, solar-powered, and convinced every rock is worth something.
   voice:
@@ -5069,8 +5069,8 @@ stinkyscape-062: # Miner v1
     death: Drill bit snapped.
   zh:
     name: 采矿机v1
-    base: "星舰部件，装备\n激活：获得一个随机臭臭星景资源。使用后，你的下个回合无法使用。"
-    radiant: "星舰部件，装备\n激活：获得一个随机光辉臭臭星景资源。使用后，你的下个回合无法使用。"
+    base: "星舰部件\n激活：获得一个随机臭臭星景资源。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件\n激活：获得一个随机光辉臭臭星景资源。使用后，你的下个回合无法使用。"
 stinkyscape-063: # Miner v2
   flavour: The second model added a headlamp. Productivity doubled, morale tripled.
   voice:
@@ -5079,8 +5079,8 @@ stinkyscape-063: # Miner v2
     death: Cave-in!
   zh:
     name: 采矿机v2
-    base: "星舰部件，装备\n激活：获得一个随机臭臭星景资源。"
-    radiant: "星舰部件，装备\n激活：获得一个随机光辉臭臭星景资源。"
+    base: "星舰部件\n激活：获得一个随机臭臭星景资源。"
+    radiant: "星舰部件\n激活：获得一个随机光辉臭臭星景资源。"
 stinkyscape-064: # Miner v3
   flavour: Twin drills, twin hauls, twin complaints about the union rules.
   voice:
@@ -5089,8 +5089,8 @@ stinkyscape-064: # Miner v3
     death: Both drills down.
   zh:
     name: 采矿机v3
-    base: "星舰部件，装备\n激活2：获得一个随机臭臭星景资源。"
-    radiant: "星舰部件，装备\n激活2：获得一个随机光辉臭臭星景资源。"
+    base: "星舰部件\n激活2：获得一个随机臭臭星景资源。"
+    radiant: "星舰部件\n激活2：获得一个随机光辉臭臭星景资源。"
 stinkyscape-065: # Miner v4
   flavour: Mines faster than the market can lower the price.
   voice:
@@ -5099,8 +5099,8 @@ stinkyscape-065: # Miner v4
     death: Claim abandoned.
   zh:
     name: 采矿机v4
-    base: "星舰部件，装备\n激活3：获得一个随机臭臭星景资源。"
-    radiant: "星舰部件，装备\n激活3：获得一个随机光辉臭臭星景资源。"
+    base: "星舰部件\n激活3：获得一个随机臭臭星景资源。"
+    radiant: "星舰部件\n激活3：获得一个随机光辉臭臭星景资源。"
 stinkyscape-066: # Miner v5
   flavour: An asteroid goes in one end and a fortune comes out the other.
   voice:
@@ -5109,8 +5109,8 @@ stinkyscape-066: # Miner v5
     death: The rig is scrap.
   zh:
     name: 采矿机v5
-    base: "星舰部件，装备\n激活5：获得一个随机臭臭星景资源。"
-    radiant: "星舰部件，装备\n激活5：获得一个随机光辉臭臭星景资源。"
+    base: "星舰部件\n激活5：获得一个随机臭臭星景资源。"
+    radiant: "星舰部件\n激活5：获得一个随机光辉臭臭星景资源。"
 stinkyscape-067: # Tractor Beam
   flavour: Anything that floats past is salvage, legally speaking.
   voice:
@@ -5119,8 +5119,8 @@ stinkyscape-067: # Tractor Beam
     death: Beam collapsing.
   zh:
     name: 牵引光束
-    base: "星舰部件，装备\n回合开始时：获得一个随机臭臭星景资源。"
-    radiant: "星舰部件，装备\n回合开始时：获得一个随机光辉臭臭星景资源。"
+    base: "星舰部件\n回合开始时：获得一个随机臭臭星景资源。"
+    radiant: "星舰部件\n回合开始时：获得一个随机光辉臭臭星景资源。"
 stinkyscape-068: # Stratos
   flavour: The cheapest hull that still counts as a ship. Sold by the dozen.
   voice:
@@ -5279,8 +5279,8 @@ stinkyscape-083: # Halo
     death: Ring shattered.
   zh:
     name: 光晕
-    base: 战吼：从2张稀有武器牌中选择一张，并将其装备到此单位上，重复{weapons}次。
-    radiant: 战吼：从2张史诗武器牌中选择一张，并将其装备到此单位上，重复{weapons}次。
+    base: 战吼：发现一张稀有武器牌，并将其装备到此单位上，重复{weapons}次。
+    radiant: 战吼：发现一张史诗武器牌，并将其装备到此单位上，重复{weapons}次。
 stinkyscape-084: # Power Cell
   flavour: Fully powered, and leaking scrap from every seam.
   voice:
@@ -5429,8 +5429,8 @@ stinkyscape-098: # Hull Booster
     death: Plating stripped.
   zh:
     name: 船体增强器
-    base: 星舰部件，装备，护甲2
-    radiant: 星舰部件，装备，护甲4
+    base: 星舰部件，护甲2
+    radiant: 星舰部件，护甲4
 stinkyscape-099: # No-No Words
   flavour: There are words you don't say at the table. Someone just said one.
   voice:
@@ -5447,8 +5447,8 @@ stinkyscape-100: # AP Rounds
     death: Magazine empty.
   zh:
     name: 穿甲弹
-    base: 星舰部件，装备，穿透
-    radiant: 星舰部件，装备，穿透
+    base: 星舰部件，穿透
+    radiant: 星舰部件，穿透
 stinkyscape-101: # Overdrive Module
   flavour: Runs at a hundred and twenty percent, briefly, then at zero, briefly, then again.
   voice:
@@ -5457,8 +5457,8 @@ stinkyscape-101: # Overdrive Module
     death: Rebooting.
   zh:
     name: 超载模块
-    base: 星舰部件，装备，易碎2，复生
-    radiant: 星舰部件，装备，易碎4，复生
+    base: 星舰部件，易碎2，复生
+    radiant: 星舰部件，易碎4，复生
 stinkyscape-102: # Book of Nono-Words
   flavour: A pocket dictionary of things you must never say, sorted by how much they hurt.
   voice:
@@ -5485,8 +5485,8 @@ stinkyscape-104: # Reflective Plating
     death: Shattered.
   zh:
     name: 反射装甲
-    base: "星舰部件，装备\n此单位受到的任何伤害也会对敌方英雄造成。"
-    radiant: "星舰部件，装备\n此单位受到的任何伤害也会对敌方英雄和攻击者造成。"
+    base: "星舰部件\n此单位受到的任何伤害也会对敌方英雄造成。"
+    radiant: "星舰部件\n此单位受到的任何伤害也会对敌方英雄和攻击者造成。"
 stinkyscape-105: # Disintegrex
   flavour: Nothing is left behind. Not even the wreckage.
   voice:
@@ -5665,8 +5665,8 @@ stinkyscape-122: # Vamp Rounds
     death: Bled dry.
   zh:
     name: 吸血弹
-    base: 星舰部件，装备，吸血
-    radiant: 星舰部件，装备，吸血
+    base: 星舰部件，吸血
+    radiant: 星舰部件，吸血
 stinkyscape-123: # Gokugains
   flavour: Gains for him, losses for you, receipts for nobody.
   voice:
@@ -5729,8 +5729,8 @@ stinkyscape-129: # Jlockeed's Missile Pod
     death: Pod's empty.
   zh:
     name: Jlockeed的导弹舱
-    base: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向上取整的伤害。\n加码(2)：星舰部件和装备。"
-    radiant: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向上取整的伤害。\n加码(2)：星舰部件和装备。"
+    base: "回合结束时：造成等同于此单位攻击力的伤害，随机分配到所有敌人身上。\n加码(3)：星舰部件。"
+    radiant: "回合结束时：造成等同于此单位攻击力两倍的伤害，随机分配到所有敌人身上。\n加码(3)：星舰部件。"
 stinkyscape-130: # Jlockeed's Starship Retrofitting Program
   flavour: New fins, new paint, the same invoice. Now with a launch clause.
   voice:
@@ -5805,8 +5805,8 @@ stinkyscape-136: # Magic Module
     death: The magic fizzles.
   zh:
     name: 魔法模块
-    base: "星舰部件，装备，法术伤害+2\n发射时，将{spells}张随机的伤害法术牌置入你的手牌。"
-    radiant: "星舰部件，装备，法术伤害+4\n发射时，将{spells}张随机的伤害法术牌置入你的手牌。"
+    base: "星舰部件，法术伤害+2\n发射时，将{spells}张随机的伤害法术牌置入你的手牌。"
+    radiant: "星舰部件，法术伤害+4\n发射时，将{spells}张随机的伤害法术牌置入你的手牌。"
 stinkyscape-137: # Starfleet Commander
   flavour: Doctrine says strike first. Doctrine also says ask questions later, if at all.
   voice:
@@ -5873,8 +5873,8 @@ stinkyscape-140: # Rush Token Launcher
     death: Out of soldiers.
   zh:
     name: 突袭衍生物发射器
-    base: "星舰部件，装备\n激活：召唤一个突袭衍生物，它攻击一个敌方单位，须优先攻击具有嘲讽的单位。"
-    radiant: "星舰部件，装备\n激活：召唤一个光辉突袭衍生物，它攻击一个敌方单位，须优先攻击具有嘲讽的单位。"
+    base: "星舰部件\n激活：召唤一个突袭衍生物，它攻击一个敌方单位，须优先攻击具有嘲讽的单位。"
+    radiant: "星舰部件\n激活：召唤一个光辉突袭衍生物，它攻击一个敌方单位，须优先攻击具有嘲讽的单位。"
 stinkyscape-141: # Fruit Launcher
   flavour: Designed for orbital food delivery. Redesigned after the first delivery.
   voice:
@@ -5883,8 +5883,8 @@ stinkyscape-141: # Fruit Launcher
     death: Bruised and battered.
   zh:
     name: 水果发射器
-    base: "星舰部件，装备\n激活：选择一个永久物。对其施放一张随机水果牌。"
-    radiant: "星舰部件，装备\n激活：选择一个永久物。对其施放一张随机光辉水果牌。"
+    base: "星舰部件\n激活：选择一个永久物。对其施放一张随机水果牌。"
+    radiant: "星舰部件\n激活：选择一个永久物。对其施放一张随机光辉水果牌。"
 stinkyscape-142: # Jade Launcher
   flavour: Every shot is a gamble. Most shots pay. Some shots are just rocks.
   voice:
@@ -5893,8 +5893,8 @@ stinkyscape-142: # Jade Launcher
     death: Bad luck, after all.
   zh:
     name: 玉石发射器
-    base: "星舰部件，装备\n激活：对一个敌人造成{damage}点伤害，然后获得鸿运石所给予的奖励。"
-    radiant: "星舰部件，装备\n激活2：对一个敌人造成{damage}点伤害，然后获得鸿运石所给予的奖励。"
+    base: "星舰部件\n激活：对一个敌人造成{damage}点伤害，然后获得鸿运石所给予的奖励。"
+    radiant: "星舰部件\n激活2：对一个敌人造成{damage}点伤害，然后获得鸿运石所给予的奖励。"
 stinkyscape-143: # Book Launcher
   flavour: Assigned reading, delivered at terminal velocity.
   voice:
@@ -5903,8 +5903,8 @@ stinkyscape-143: # Book Launcher
     death: Out of print.
   zh:
     name: 书本发射器
-    base: "星舰部件，装备\n激活：选择一个目标。如果它是敌人，施放一张随机有害的书牌，可行时以其为目标。如果它是友方，施放一张随机有益的书牌，可行时以其为目标。"
-    radiant: "星舰部件，装备\n激活：选择一个目标。如果它是敌人，施放一张随机光辉有害书牌，可行时以其为目标。如果它是友方，施放一张随机光辉有益书牌，可行时以其为目标。"
+    base: "星舰部件\n激活：选择一个目标。如果它是敌人，施放一张随机有害的书牌，可行时以其为目标。如果它是友方，施放一张随机有益的书牌，可行时以其为目标。"
+    radiant: "星舰部件\n激活：选择一个目标。如果它是敌人，施放一张随机光辉有害书牌，可行时以其为目标。如果它是友方，施放一张随机光辉有益书牌，可行时以其为目标。"
 stinkyscape-144: # Prepare For Liftoff
   flavour: Fuel the rockets, kiss the dog, and never read the waiver.
   voice:
@@ -5979,8 +5979,8 @@ stinkyscape-149: # Wildar
     cast: One for you, a better one for me.
   zh:
     name: 怀尔达
-    base: 将一张随机混沌召唤置入你对手的手牌，其法力值消耗为(0)。然后将一张随机光辉混沌召唤置入你的手牌。
-    radiant: 将一张随机混沌召唤置入你对手的手牌，其法力值消耗为(0)。然后将一张随机光辉混沌召唤置入你的手牌，其法力值消耗为(0)。
+    base: 将一张随机混沌召唤置入你对手的手牌，其法力值消耗为(1)。然后将一张随机光辉混沌召唤置入你的手牌。
+    radiant: 将一张随机混沌召唤置入你对手的手牌，其法力值消耗为(1)。然后将一张随机光辉混沌召唤置入你的手牌，其法力值消耗为(1)。
 stinkyscape-150: # Call to Chaos (Stinky Edition)
   flavour: The stinkiest roll in the known universe, and somehow the luckiest.
   voice:
@@ -6229,8 +6229,8 @@ stinkyscape-175: # Frost Module
     death: Thawed for good.
   zh:
     name: 冰霜模块
-    base: "星舰部件，装备\n激活：冻结一个敌方单位。"
-    radiant: "星舰部件，装备\n激活2：冻结一个敌方单位。"
+    base: "星舰部件\n激活：冻结一个敌方单位。"
+    radiant: "星舰部件\n激活2：冻结一个敌方单位。"
 stinkyscape-176: # Preemptive Strike
   flavour: "The fleet's oldest rule: if they are going to shoot first, make sure they are too late."
   voice:
@@ -6247,8 +6247,8 @@ stinkyscape-177: # Cloaking Module
     death: Cloak failing. Visible.
   zh:
     name: 隐形模块
-    base: 星舰部件，装备，隐匿，不可变
-    radiant: 星舰部件，装备，隐匿，不可变，法术免疫
+    base: 星舰部件，隐匿，不可变
+    radiant: 星舰部件，隐匿，不可变，法术免疫
 stinkyscape-t-dormant-starship: # Dormant Starship
   flavour: A hull of borrowed parts, dreaming of a sky it has never seen.
   voice:
@@ -7045,8 +7045,8 @@ stinkyscapeplus-004: # Profe Yates
     death: I'll never see the Northern Lights.
   zh:
     name: 耶茨教授
-    base: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤两张随机陷阱。
-    radiant: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤三张随机光辉陷阱。
+    base: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤一张随机陷阱。
+    radiant: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤三张随机陷阱。
 stinkyscapeplus-005: # Dingleberry Droat
   flavour: He blends the whole fruit stand into one very expensive snack and calls it a business plan.
   voice:
@@ -7101,8 +7101,8 @@ stinkyscapeplus-008: # Drone Assembler v3
     death: Line stopped.
   zh:
     name: 无人机组装器v3
-    base: "星舰部件，装备\n激活：指定一个敌人，召唤一个无人截击机攻击它。"
-    radiant: "星舰部件，装备\n激活：指定一个敌人，召唤一个光辉无人截击机攻击它。"
+    base: "星舰部件\n激活：指定一个敌人，召唤一个无人截击机攻击它。"
+    radiant: "星舰部件\n激活：指定一个敌人，召唤一个光辉无人截击机攻击它。"
 stinkyscapeplus-009: # Drone Assembler v4
   flavour: Version four fixed the bugs. Version five will fix the fix.
   voice:
@@ -7111,8 +7111,8 @@ stinkyscapeplus-009: # Drone Assembler v4
     death: Rolling back to version three.
   zh:
     name: 无人机组装器v4
-    base: "星舰部件，装备\n激活：指定一个敌人，召唤一个无人截击机攻击它。使用后，你的下个回合无法使用。"
-    radiant: "星舰部件，装备\n激活：指定一个敌人，召唤一个光辉无人截击机攻击它。使用后，你的下个回合无法使用。"
+    base: "星舰部件\n激活：指定一个敌人，召唤一个无人截击机攻击它。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件\n激活：指定一个敌人，召唤一个光辉无人截击机攻击它。使用后，你的下个回合无法使用。"
 stinkyscapeplus-010: # Drone Assembler v5
   flavour: By version five the drones had a union, a mascot and a retirement plan.
   voice:
@@ -7121,8 +7121,8 @@ stinkyscapeplus-010: # Drone Assembler v5
     death: Reverting. Please wait.
   zh:
     name: 无人机组装器v5
-    base: "星舰部件，装备\n激活2：指定一个敌人，召唤一个无人截击机攻击它。使用后，你的下个回合无法使用。"
-    radiant: "星舰部件，装备\n激活2：指定一个敌人，召唤一个光辉无人截击机攻击它。使用后，你的下个回合无法使用。"
+    base: "星舰部件\n激活2：指定一个敌人，召唤一个无人截击机攻击它。使用后，你的下个回合无法使用。"
+    radiant: "星舰部件\n激活2：指定一个敌人，召唤一个光辉无人截击机攻击它。使用后，你的下个回合无法使用。"
 stinkyscapeplus-011: # Energy Booster
   flavour: It runs on pure enthusiasm and one suspicious extension cord.
   voice:
@@ -7131,8 +7131,8 @@ stinkyscapeplus-011: # Energy Booster
     death: Battery low.
   zh:
     name: 能量增强器
-    base: "星舰部件，装备\n激活：刷新。"
-    radiant: "星舰部件，装备\n激活2：刷新。"
+    base: "星舰部件\n激活：刷新。"
+    radiant: "星舰部件\n激活2：刷新。"
 stinkyscapeplus-012: # Shield Booster
   flavour: A bubble with confidence issues. It pops once, politely.
   voice:
@@ -7141,8 +7141,8 @@ stinkyscapeplus-012: # Shield Booster
     death: Pop.
   zh:
     name: 护盾增强器
-    base: 星舰部件，装备，圣盾
-    radiant: 星舰部件，装备，圣盾
+    base: 星舰部件，圣盾，护甲1
+    radiant: 星舰部件，圣盾，护甲2
 stinkyscapeplus-013: # Shield Repairer
   flavour: It re-blows the bubble every night and asks no questions about the pop.
   voice:
@@ -7151,8 +7151,8 @@ stinkyscapeplus-013: # Shield Repairer
     death: Out of spare bubbles.
   zh:
     name: 护盾修复器
-    base: "星舰部件，装备\n回合结束时：获得圣盾。"
-    radiant: "星舰部件，装备，圣盾\n回合结束时：获得圣盾。"
+    base: "星舰部件\n回合结束时：获得圣盾。"
+    radiant: "星舰部件，圣盾\n回合结束时：获得圣盾。"
 stinkyscapeplus-014: # Hull Repairer
   flavour: Armed with duct tape and a sincere belief that duct tape is a hull.
   voice:
@@ -7161,8 +7161,8 @@ stinkyscapeplus-014: # Hull Repairer
     death: Hull's on its own.
   zh:
     name: 船体修复器
-    base: "星舰部件，装备\n回合结束时：为此单位恢复{health}点生命值。"
-    radiant: "星舰部件，装备\n回合结束时：为此单位恢复{health}点生命值。"
+    base: "星舰部件\n回合结束时：为此单位恢复{health}点生命值。"
+    radiant: "星舰部件\n回合结束时：为此单位恢复{health}点生命值。"
 stinkyscapeplus-015: # Hull Repairer mk2
   flavour: Mark two uses better tape. The tape is also a paid subscription.
   voice:
@@ -7171,8 +7171,8 @@ stinkyscapeplus-015: # Hull Repairer mk2
     death: Subscription expired.
   zh:
     name: 船体修复器mk2
-    base: "星舰部件，装备\n回合结束时：为此单位恢复所有生命值。"
-    radiant: "星舰部件，装备\n回合结束时：为此单位恢复所有生命值，并获得+{health}最大生命值。"
+    base: "星舰部件\n回合结束时：为此单位恢复所有生命值。"
+    radiant: "星舰部件\n回合结束时：为此单位恢复所有生命值，并获得+{health}最大生命值。"
 stinkyscapeplus-016: # Servo Surge
   flavour: It swings twice before you blink, and nobody has ever seen the second swing.
   voice:
@@ -7181,8 +7181,8 @@ stinkyscapeplus-016: # Servo Surge
     death: Servo's seized.
   zh:
     name: 伺服激增
-    base: 星舰部件，装备，风怒
-    radiant: 星舰部件，装备，风怒
+    base: 星舰部件，风怒
+    radiant: 星舰部件，风怒
 stinkyscapeplus-017: # Smoothie
   flavour: Two fruits walk into a blender. One of them comes out in a cup.
   voice:
@@ -7207,8 +7207,8 @@ stinkyscapeplus-019: # Normalization Module
     death: Reverting to factory settings.
   zh:
     name: 标准化模块
-    base: "星舰部件，装备\n激活：白板化一个单位。"
-    radiant: "星舰部件，装备\n激活2：白板化一个单位。"
+    base: "星舰部件\n激活：白板化一个单位。"
+    radiant: "星舰部件\n激活2：白板化一个单位。"
 stinkyscapeplus-020: # B-Patch
   flavour: "Patch notes say: various fixes. They did not say whose."
   voice:
@@ -7407,8 +7407,8 @@ stinkyscapeplus-039: # Mindustrial Cross-over
     cast: Two worlds, one very weird crossing.
   zh:
     name: 智工跨界联动
-    base: 发现一个智工单位，使其获得星舰部件和装备。
-    radiant: 发现一个光辉智工单位，使其获得星舰部件和装备。其法力值消耗减少(1)点。
+    base: 发现一个智工单位，使其获得星舰部件。
+    radiant: 发现一个光辉智工单位，使其获得星舰部件。其法力值消耗减少(1)点。
 stinkyscapeplus-040: # Mender
   flavour: It fixes whatever stands beside it and never asks what it was doing there.
   voice:
@@ -8029,8 +8029,8 @@ stinkyscapeplus-106: # Spectre
     death: Spectre, offline.
   zh:
     name: 幽灵
-    base: 灵活，不可摧毁，巨型，风怒，远程，穿透
-    radiant: 灵活，不可摧毁，巨型，风怒，远程，穿透
+    base: 不可摧毁，巨型，风怒，远程，穿透
+    radiant: 不可摧毁，巨型，风怒，远程，穿透
 stinkyscapeplus-107: # Fuse
   flavour: Short fuse, long reach, no apologies.
   voice:
@@ -8200,7 +8200,7 @@ stinkyscapeplus-122: # Quad
   zh:
     name: 四翼机
     base: "献祭2，无法攻击，无法守备，飞行\n回合结束时：为所有友方恢复{heal}点生命值，并对所有敌人造成{damage}点伤害。"
-    radiant: "献祭2，无法攻击，无法守备，飞行，护甲2\n回合结束时：为所有友方恢复{heal}点生命值，并对所有敌人造成{damage}点伤害。"
+    radiant: "献祭2，无法攻击，无法守备，飞行\n回合结束时：为所有友方恢复{heal}点生命值，并对所有敌人造成{damage}点伤害。"
 stinkyscapeplus-123: # Oct
   flavour: Keeps the whole team dry under eight whirling umbrellas.
   voice:
@@ -8453,8 +8453,8 @@ stinkyscapeplus-143: # Fire Beam v3
     death: Beam offline.
   zh:
     name: 火焰光束v3
-    base: "星舰部件，装备\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
-    radiant: "星舰部件，装备\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
+    base: "星舰部件\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
+    radiant: "星舰部件\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
 stinkyscapeplus-144: # Fire Beam v4
   flavour: Version four adds a warning label. It is aimed at the wrong end.
   voice:
@@ -8463,8 +8463,8 @@ stinkyscapeplus-144: # Fire Beam v4
     death: Warranty void.
   zh:
     name: 火焰光束v4
-    base: "星舰部件，装备\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
-    radiant: "星舰部件，装备\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
+    base: "星舰部件\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
+    radiant: "星舰部件\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
 stinkyscapeplus-145: # Fire Beam v5
   flavour: Version five is version four with a longer beam and a shorter temper.
   voice:
@@ -8473,8 +8473,8 @@ stinkyscapeplus-145: # Fire Beam v5
     death: Out of fuel.
   zh:
     name: 火焰光束v5
-    base: "星舰部件，装备\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
-    radiant: "星舰部件，装备\n激活2：对一个敌方单位施加燃烧{burn}，顺劈。"
+    base: "星舰部件\n激活：对一个敌方单位施加燃烧{burn}，顺劈。"
+    radiant: "星舰部件\n激活2：对一个敌方单位施加燃烧{burn}，顺劈。"
 stinkyscapeplus-146: # Scourge Mortar v3
   flavour: It lobs a gentle suggestion over the wall. The suggestion is a swamp.
   voice:
@@ -8483,8 +8483,8 @@ stinkyscapeplus-146: # Scourge Mortar v3
     death: Jammed. Sorry.
   zh:
     name: 灾厄迫击炮v3
-    base: "星舰部件，装备\n激活：对一个敌方单位施加毒素{toxic}。"
-    radiant: "星舰部件，装备\n激活2：对一个敌方单位施加毒素{toxic}。"
+    base: "星舰部件\n激活：对一个敌方单位施加毒素{toxic}。"
+    radiant: "星舰部件\n激活2：对一个敌方单位施加毒素{toxic}。"
 stinkyscapeplus-147: # Scourge Mortar v4
   flavour: Lobbed with care, received with a cough.
   voice:
@@ -8493,8 +8493,8 @@ stinkyscapeplus-147: # Scourge Mortar v4
     death: Cough, cough, done.
   zh:
     name: 灾厄迫击炮v4
-    base: "星舰部件，装备\n激活：对一个敌方单位施加毒素{toxic}。"
-    radiant: "星舰部件，装备\n激活2：对一个敌方单位施加毒素{toxic}。"
+    base: "星舰部件\n激活：对一个敌方单位施加毒素{toxic}。"
+    radiant: "星舰部件\n激活2：对一个敌方单位施加毒素{toxic}。"
 stinkyscapeplus-148: # Scourge Mortar v5
   flavour: Fifth edition, same recipe, bigger pot.
   voice:
@@ -8503,8 +8503,8 @@ stinkyscapeplus-148: # Scourge Mortar v5
     death: The pot's empty.
   zh:
     name: 灾厄迫击炮v5
-    base: "星舰部件，装备\n激活：对一个敌方单位施加毒素{toxic}。"
-    radiant: "星舰部件，装备\n激活2：对一个敌方单位施加毒素{toxic}。"
+    base: "星舰部件\n激活：对一个敌方单位施加毒素{toxic}。"
+    radiant: "星舰部件\n激活2：对一个敌方单位施加毒素{toxic}。"
 stinkyscapeplus-149: # Flaming Rounds
   flavour: Warm to the touch, and then very much not.
   voice:
@@ -8513,8 +8513,8 @@ stinkyscapeplus-149: # Flaming Rounds
     death: Cooled off.
   zh:
     name: 烈焰弹
-    base: "星舰部件，装备\n伤害同时附加燃烧{burns}。"
-    radiant: "星舰部件，装备\n伤害同时附加燃烧{burns}。"
+    base: "星舰部件\n伤害同时附加燃烧{burns}。"
+    radiant: "星舰部件\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-150: # Scorching Rounds
   flavour: Slightly more committed to the idea of being hot.
   voice:
@@ -8523,8 +8523,8 @@ stinkyscapeplus-150: # Scorching Rounds
     death: Fizzled out.
   zh:
     name: 灼热弹
-    base: "星舰部件，装备\n造成伤害时同时施加燃烧{burns}。"
-    radiant: "星舰部件，装备\n造成伤害时同时施加燃烧{burns}。"
+    base: "星舰部件\n造成伤害时同时施加燃烧{burns}。"
+    radiant: "星舰部件\n造成伤害时同时施加燃烧{burns}。"
 stinkyscapeplus-151: # Volcanic Rounds
   flavour: Aimed at the problem. Geology did the rest.
   voice:
@@ -8533,8 +8533,8 @@ stinkyscapeplus-151: # Volcanic Rounds
     death: Back to sleep.
   zh:
     name: 火山弹
-    base: "星舰部件，装备\n造成的伤害会施加燃烧。"
-    radiant: "星舰部件，装备\n造成的伤害会施加燃烧。"
+    base: "星舰部件\n造成的伤害会施加燃烧。"
+    radiant: "星舰部件\n造成的伤害会施加燃烧。"
 stinkyscapeplus-152: # Venomous Rounds
   flavour: Reads the fine print on every target. The fine print says you.
   voice:
@@ -8543,8 +8543,8 @@ stinkyscapeplus-152: # Venomous Rounds
     death: Antidote found. Ugh.
   zh:
     name: 毒液弹
-    base: "星舰部件，装备\n造成伤害时同时施加毒素{toxic}。"
-    radiant: "星舰部件，装备\n造成伤害时同时施加毒素{toxic}。"
+    base: "星舰部件\n造成伤害时同时施加毒素{toxic}。"
+    radiant: "星舰部件\n造成伤害时同时施加毒素{toxic}。"
 stinkyscapeplus-153: # Noxious Rounds
   flavour: Smells like a bad decision, works like one too.
   voice:
@@ -8553,8 +8553,8 @@ stinkyscapeplus-153: # Noxious Rounds
     death: Air out the room.
   zh:
     name: 蚀毒弹
-    base: "星舰部件，装备\n造成的伤害为毒素伤害。"
-    radiant: "星舰部件，装备\n造成的伤害为毒素伤害。"
+    base: "星舰部件\n造成的伤害为毒素伤害。"
+    radiant: "星舰部件\n造成的伤害为毒素伤害。"
 stinkyscapeplus-154: # Chaos Accelerator
   flavour: A pedal labelled maybe. Nobody has ever let go of it.
   voice:

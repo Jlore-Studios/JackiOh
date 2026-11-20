@@ -1314,12 +1314,14 @@ fn r3941001_written_words_describe_their_cards_effect_honestly() {
         "Oct base must not suggest separate per-ally pools ('their first'), got: {oct_short}"
     );
 
-    // C+ #34 Memory Leak: locks only after a Unit or Field Spell is played, not Traps.
+    // C+ #34 Memory Leak: locks only after a Unit or Field Spell is played, not Traps. Since issue #4285
+    // took its Crater its base face fits whole, so it prints its own words, which say so.
     let leak_base = printed("classicplus-034", false, Locale::En);
-    let leak_short = leak_base.short.expect("Memory Leak base has written words").full;
+    assert!(leak_base.short.is_none(), "Memory Leak base fits whole");
+    let leak_text = leak_base.text.full;
     assert!(
-        leak_short.contains("Unit or Field Spell"),
-        "Memory Leak base must specify Unit or Field Spell, got: {leak_short}"
+        leak_text.contains("Unit or Field Spell"),
+        "Memory Leak base must specify Unit or Field Spell, got: {leak_text}"
     );
 
     // S #39 The Narcor Project (Radiant): both Narcor and Red Narcor can be discarded for Activate.

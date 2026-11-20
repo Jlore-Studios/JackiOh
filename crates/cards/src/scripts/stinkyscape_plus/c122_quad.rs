@@ -4,17 +4,17 @@
 //! **Can’t attack**
 //! **Can’t defend**
 //! **Flying**
-//! **End of turn:** Heal all allies 6 hp and deal 3 damage to all enemies
+//! **End of turn:** Heal all allies 3 hp and deal 3 damage to all enemies
 //! \~\~\~
 //! 6/24
 //! **Tribute 2**
 //! **Can’t attack**
 //! **Can’t defend**
 //! **Flying**
-//! **Armor 2**
-//! **End of turn:** Heal all allies 12 hp and deal 6 damage to all enemies
+//! **End of turn:** Heal all allies 6 hp and deal 6 damage to all enemies
 //!
-//! Tribute 2 is the script's `tribute` (R101, R366); the other keywords and Armor 2 are catalog data.
+//! Tribute 2 is the script's `tribute` (R101, R366); the other keywords are catalog data. Issue #4285 cut
+//! `heal` 6 → 3 (Radiant 12 → 6) and took the Radiant face's Armor 2, both catalog data (R767000).
 //! End of turn (R62) heals first (R1860003), then damages (R1862001).
 
 use jackioh_engine::prelude::*;
@@ -125,9 +125,9 @@ mod tests {
 
     #[test]
     fn r1860003_end_of_turn_heals_allies_then_r1862001_damages_all_enemies() {
-        // Base: heal 6, damage 3. Radiant: heal 12, damage 6.
+        // Base: heal 3, damage 3. Radiant: heal 6, damage 6.
         for radiant in [false, true] {
-            let (heal, damage) = if radiant { (12, 6) } else { (6, 3) };
+            let (heal, damage) = if radiant { (6, 6) } else { (3, 3) };
             let mut s = on_field(
                 radiant,
                 json!({ "health": 20, "field": [{ "def": ID, "radiant": radiant }, { "def": SOLID, "lane": 2, "damage": 4 }] }),
@@ -163,7 +163,7 @@ mod tests {
         s.expect_health(P2, 30 - 3);
         // Its own hero is an ally it heals (R1860003), on top of the 30 a hero starts with: a hero's
         // health has no cap.
-        s.expect_health(P1, 30 + 6);
+        s.expect_health(P1, 30 + 3);
     }
 
     mod base {
@@ -183,9 +183,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn armor_2_is_printed() {
+        fn no_armor_is_printed_since_issue_4285() {
             let s = on_field(true, json!({}), json!({}));
-            assert_eq!(s.stats(ID).armor, 2);
+            assert_eq!(s.stats(ID).armor, 0);
         }
     }
 }

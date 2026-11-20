@@ -60,8 +60,8 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
-    const CHASSIS: &str = "stinkyscape-048"; // Ultralight Chassis: Starship Piece, Equip, Rush: keywords only
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce: keywords only
+    const CHASSIS: &str = "stinkyscape-048"; // Ultralight Chassis: Starship Piece, Rush: keywords only
     const BURNER: &str = "stinkyscape-090"; // After Burner: Starship Piece
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";

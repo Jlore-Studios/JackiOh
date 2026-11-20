@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 175 Frost Module, a card of the Stinkyscape set.
-//! (1) Unit, Common, 2/1 → 4/2: Starship Piece, Equip.
+//! (1) Unit, Common, 2/1 → 4/2: Starship Piece.
 //! "Activate: Freeze an enemy Unit." / Radiant: "Activate 2: Freeze an enemy Unit." (R1860009).
 //!
 //! Engine: Equip (R1086): played onto one of your Units it fuses into it, the host keeping its zone
@@ -98,6 +98,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
             }));
             s.play(VANILLA, json!({ "zone": 1 }));
+            crate::give_equip(&mut s, FROST);
             s.play(FROST, json!({ "zone": 1, "equip": true }));
 
             let host = s.unit(PlayerId::P1, 1).expect("the fused host").clone();

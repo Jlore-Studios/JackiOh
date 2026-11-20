@@ -17,8 +17,8 @@ use serde_json::{Value, json};
 use crate::config::{
     CALL_TO_CHAOS_ETERNAL_CAP, CHAOS_MED_ACCLAIMED, CHAOS_MED_CN_CARDS, CHAOS_MED_COST,
     CHAOS_MED_COST_V0_6_7K, CHAOS_MED_FUSE_COPIES, CHAOS_MED_HEAL, CHAOS_MED_HEAL_V0_6_6H,
-    CHAOS_MED_HEAL_V0_6_7K, CHAOS_MED_HERO_ARMOR, CHAOS_MED_HERO_ARMOR_V0_6_6H,
-    CHAOS_MED_HERO_ARMOR_V0_6_7K, CHAOS_MED_NERFS, CHAOS_MED_PRIME_CARDS,
+    CHAOS_MED_HEAL_V0_6_7K, CHAOS_MED_HERO_ARMOR, CHAOS_MED_HERO_ARMOR_V0_6_6H, CHAOS_MED_HERO_ARMOR_V0_6_7K,
+    CHAOS_MED_NERFS, CHAOS_MED_PRIME_CARDS,
 };
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::ForRestOfGameArgs;
@@ -182,7 +182,12 @@ fn build_fuse_v0_6_7k() -> Effect {
 
 /// 2. Non-token CN cards of every set that ships (R380, R1420), at (1) since R4285005.
 fn build_cn() -> Effect {
-    add_priced("cn", json!({ "tags": ["CN"] }), CHAOS_MED_CN_CARDS, CHAOS_MED_COST)
+    add_priced(
+        "cn",
+        json!({ "tags": ["CN"] }),
+        CHAOS_MED_CN_CARDS,
+        CHAOS_MED_COST,
+    )
 }
 
 /// R4285005, R767000: entry 2 through v0.6.7k, at (0).

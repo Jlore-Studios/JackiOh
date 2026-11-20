@@ -1,10 +1,10 @@
-//! SPEC §8.12 S+ #13 Shield Repairer (Unit 2/2 → 4/4, Starship Piece, Equip, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//! SPEC §8.12 S+ #13 Shield Repairer (Unit 2/2 → 4/4, Starship Piece, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
+//!   Base:    "Starship Piece
 //!            End of turn: gain Divine Shield"
-//!   Radiant: "Starship Piece, Equip, Divine Shield
+//!   Radiant: "Starship Piece, Divine Shield
 //!            End of turn: gain Divine Shield"
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then takes the End-of-turn trigger and gains the shield (R1852000).
 //! "Gain Divine Shield" is `grant_keyword`: it gives a spent or absent shield and does nothing to a
 //! standing one (§6.1). The two faces share the hook; the Radiant face's printed Divine Shield is catalog data.
@@ -98,6 +98,7 @@ mod tests {
                 json!({ "field": [TOUGH] }),
             );
             let host = s.unit_at(P1, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             assert!(!shielded(&s, &host));
             s.end_turn();

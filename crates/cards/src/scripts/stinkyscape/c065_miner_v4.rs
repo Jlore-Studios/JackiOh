@@ -1,10 +1,10 @@
 //! Stinkyscape #65 Miner v4 (SPEC §8.10 row 65). Unit 0/6 → 0/12, cost 3, Epic.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate 3: Gain a random Stinkyscape Resource."
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            Activate 3: Gain a random Radiant Stinkyscape Resource."
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1872000: the Activate, three uses a turn (R384), gains one Resource rolled over every Resource the

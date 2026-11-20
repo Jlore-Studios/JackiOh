@@ -1,29 +1,47 @@
-//! Stinkyscape #83 Halo (SPEC §8.10 row 83). Unit 2/2 → 4/4, cost 4, Epic.
-//!   Base:    "Cry: Choose one of 2 Rare Weapons and Equip it into this, {weapons|time|times}." — weapons 3
-//!   Radiant: "Cry: Choose one of 2 Epic Weapons and Equip it into this, {weapons|time|times}." — weapons 3
+//! Stinkyscape #83 Halo (SPEC §8.10 row 83). Unit 3/1 → 6/1, cost 4, Epic.
+//!   Base:    "Cry: Discover a Rare Weapon and Equip it into this, {weapons|time|times}." — weapons 2
+//!   Radiant: "Cry: Discover an Epic Weapon and Equip it into this, {weapons|time|times}." — weapons 2
 //!
-//! R1862002, R4154104: the Cry is `equip_picks` (R1841002), 3 picks in turn, each a choice of two
-//! (`OPTIONS`, a Discover's prompt offering two) from the Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them whether or not the set ships (R1420,
-//! R1857000). Each pick is a fresh copy, not made Radiant, fused into this with its Activate
-//! (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host
-//! wears (R77), so a Radiant Halo wields its Weapons' Radiant faces. Since #2521 it is no
-//! Starship Piece, and the Weapons it takes, each a piece, leave it none (R1852001), so its death fuses
-//! nothing (R1852000 reads the keyword). Kept for replays (R767000): through v0.6.6h each pick was a
-//! Discover of three, "Discover 3 Rare Weapons" (`script_v0_6_6h`, issue #4154).
+//! R4285003: the Cry is one `equip_picks` (R1841002), a standard Discover of three (§6) of the Weapon-tagged
+//! cards of the rarity, the pool naming its set so that it reaches them whether or not the set ships (R1420,
+//! R1857000), and the one card picked is fused into this `weapons` times (`copies`), each its own fusion
+//! (R102) of a fresh copy, not made Radiant, with its Activate (R1751000): no Cry, no hand. The fusion wears
+//! the face its kept host wears (R77), so a Radiant Halo wields its Weapons' Radiant faces. Its Radiant 6/1
+//! on a 3/1 base is R275's named exception (R4285006). Since #2521 it is no Starship Piece, and the Weapons
+//! it takes, each a piece, leave it none (R1852001), so its death fuses nothing (R1852000 reads the
+//! keyword). Kept for replays (R767000): through v0.6.7k it was a 2/2 (Radiant 4/4) making `weapons` (3)
+//! picks in turn, each a choice of two, "Choose one of 2 Rare Weapons and Equip it into this, 3 times"
+//! (`script_v0_6_7k`, issue #4285); through v0.6.6h each pick was a Discover of three, "Discover 3 Rare
+//! Weapons" (`script_v0_6_6h`, issue #4154).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-083";
 
-/// "Discover 3": the declared `weapons` since #2657 (R2657006), printed before, as a replay of an
-/// older version reads it (`param_or`).
+/// R4285003: "Equip it into this, twice": the declared `weapons`, how many times the one pick is fused in.
+const COPIES: i32 = 2;
+/// "Discover 3": the picks through v0.6.7k, the declared `weapons` since #2657 (R2657006), printed before,
+/// as a replay of an older version reads it (`param_or`).
 const PICKS: i32 = 3;
-/// R4154104: "choose one of 2": each pick's offer, since issue #4154.
+/// R4154104: "choose one of 2": each pick's offer, from issue #4154 through v0.6.7k.
 const OPTIONS: i32 = 2;
 
-/// R1862002, R4154104: PICKS times, a choice of `options` `rarity` Weapons (a Discover's three when
-/// `None`, through v0.6.6h), Equipped into this.
+/// R4285003: one Discover of `rarity` Weapons, its pick Equipped into this `weapons` times.
+fn arm_twice(rarity: Rarity) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![equip_picks(json_as(json!({
+                "query": crate::query::weapons_of(rarity),
+                "copies": param_or(&*ctx, "weapons", COPIES),
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+/// R1862002, R4154104: through v0.6.7k, PICKS times, a choice of `options` `rarity` Weapons (a Discover's
+/// three when `None`, through v0.6.6h), Equipped into this.
 fn arm(rarity: Rarity, options: Option<i32>) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -41,6 +59,15 @@ fn arm(rarity: Rarity, options: Option<i32>) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    CardScripts {
+        base: arm_twice(Rarity::Rare),
+        radiant: arm_twice(Rarity::Epic),
+    }
+}
+
+/// R767000, R4285003: after v0.6.6h through v0.6.7k the Cry made `weapons` picks in turn, each a choice of
+/// two (issue #4285); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_7k() -> CardScripts {
     CardScripts {
         base: arm(Rarity::Rare, Some(OPTIONS)),
         radiant: arm(Rarity::Epic, Some(OPTIONS)),
@@ -97,9 +124,21 @@ mod tests {
         "stinkyscape-143",
     ];
 
-    /// Halo played on the face `radiant`, each of its picks offering `options` of `pool` (fewer once the
-    /// pool runs short), the first taken.
-    fn arms(radiant: bool, pool: &[&str], options: usize) -> (Scenario, String) {
+    /// The catalog row through v0.6.7k: 2/2 (Radiant 4/4), `weapons` 3 (issue #4285).
+    fn old_row(def: &mut CardDef) {
+        def.params = serde_json::from_value(json!([
+            { "key": "weapons", "base": PICKS, "radiant": PICKS, "better": "up", "step": 1, "min": 1, "read": "cry" }
+        ]))
+        .expect("the v0.6.7k params");
+        def.base.attack = Some(2);
+        def.base.health = Some(2);
+        def.radiant.attack = Some(4);
+        def.radiant.health = Some(4);
+    }
+
+    /// Halo played on the face `radiant`: `picks` Discovers in turn, each offering `options` of `pool`
+    /// (fewer once the pool runs short), the first taken and fused in `copies` times.
+    fn arms(radiant: bool, pool: &[&str], options: usize, picks: i32, copies: i32) -> (Scenario, String) {
         let mut s = weapon_board(
             "s083",
             json!({ "hand": [{ "def": ID, "radiant": radiant }] }),
@@ -108,7 +147,7 @@ mod tests {
         s.play(ID, json!({ "zone": 1 }));
         let host = s.unit_at(P1, 1).id;
         let mut held: Vec<String> = Vec::new();
-        for _ in 0..PICKS {
+        for _ in 0..picks {
             let pending = s.state().pending.clone().expect("a Discover is open");
             assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
             assert_eq!(pending.resume.step, EQUIP_PICK_STEP);
@@ -125,6 +164,7 @@ mod tests {
                 "radiant {radiant}: {offered:?}"
             );
             let before = s.stats(host.as_str()).health;
+            let fusions = fused_count(&s);
             s.answer(json!(offered[0]));
             // R77: the fusion wears the face its kept host wears, so a Radiant host takes its picks'
             let def = crate::card_def(&offered[0]);
@@ -134,11 +174,25 @@ mod tests {
                 def.base.health
             }
             .unwrap_or_default();
-            assert_eq!(s.stats(host.as_str()).health, before + gained, "{}", offered[0]);
+            assert_eq!(
+                s.stats(host.as_str()).health,
+                before + copies * gained,
+                "{}",
+                offered[0]
+            );
+            // R102: each copy is its own fusion.
+            assert_eq!(fused_count(&s), fusions + copies as usize, "{}", offered[0]);
             held.push(offered[0].clone());
         }
         assert!(s.state().pending.is_none());
         (s, host)
+    }
+
+    fn fused_count(s: &Scenario) -> usize {
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Fused { .. }))
+            .count()
     }
 
     /// The host takes its Weapons' Activates that turn, and is no Starship Piece: each Weapon is one,
@@ -153,16 +207,35 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r4154104_the_cry_offers_two_weapons_of_its_rarity_n_times_in_turn_and_equips_each() {
-            let (s, host) = arms(false, &RARE, OPTIONS as usize);
+        fn r4285003_one_discover_of_three_its_pick_fused_twice() {
+            let (s, host) = arms(false, &RARE, DISCOVER_OPTIONS as usize, 1, COPIES);
             armed(&s, &host);
+        }
+
+        #[test]
+        fn r4285006_it_is_a_3_1() {
+            let mut s = crate::scenario(json!({
+                "p1": { "field": [ID], "library": crate::filler(4) },
+                "p2": { "library": crate::filler(4) },
+            }));
+            s.expect_stats(ID, json!({ "attack": 3, "health": 1 }));
+        }
+
+        /// R767000, R4285003: through v0.6.7k a 2/2 whose Cry offered two Weapons of its rarity, three
+        /// times in turn, and equipped each once (issue #4285).
+        #[test]
+        fn r767000_r4154104_the_script_kept_for_v0_6_7k_offers_two_weapons_three_times() {
+            crate::under_kept_as(ID, script_v0_6_7k(), old_row, || {
+                let (s, host) = arms(false, &RARE, OPTIONS as usize, PICKS, 1);
+                armed(&s, &host);
+            });
         }
 
         /// R767000: through v0.6.6h each pick was a Discover of three (issue #4154).
         #[test]
         fn r767000_r1862002_the_script_kept_for_v0_6_6h_discovers_from_three() {
-            crate::under_kept(ID, script_v0_6_6h(), || {
-                let (s, host) = arms(false, &RARE, DISCOVER_OPTIONS as usize);
+            crate::under_kept_as(ID, script_v0_6_6h(), old_row, || {
+                let (s, host) = arms(false, &RARE, DISCOVER_OPTIONS as usize, PICKS, 1);
                 armed(&s, &host);
             });
         }
@@ -186,9 +259,27 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r4154104_the_cry_offers_two_epic_weapons_n_times_in_turn_and_equips_each() {
-            let (s, host) = arms(true, &EPIC, OPTIONS as usize);
+        fn r4285003_one_discover_of_three_epic_weapons_its_pick_fused_twice() {
+            let (s, host) = arms(true, &EPIC, DISCOVER_OPTIONS as usize, 1, COPIES);
             armed(&s, &host);
+        }
+
+        #[test]
+        fn r4285006_it_is_a_6_1() {
+            let mut s = crate::scenario(json!({
+                "p1": { "field": [{ "def": ID, "radiant": true }], "library": crate::filler(4) },
+                "p2": { "library": crate::filler(4) },
+            }));
+            s.expect_stats(ID, json!({ "attack": 6, "health": 1 }));
+        }
+
+        /// R767000: through v0.6.7k the Radiant face offered two Epic Weapons, three times in turn.
+        #[test]
+        fn r767000_r4154104_the_script_kept_for_v0_6_7k_offers_two_epic_weapons_three_times() {
+            crate::under_kept_as(ID, script_v0_6_7k(), old_row, || {
+                let (s, host) = arms(true, &EPIC, OPTIONS as usize, PICKS, 1);
+                armed(&s, &host);
+            });
         }
     }
 }

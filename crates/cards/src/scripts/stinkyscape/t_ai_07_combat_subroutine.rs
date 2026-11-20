@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn r1881004_a_dormant_card_is_passed_by() {
-        const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce
+        const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce
         let (mut s, ship) = crate::built_starship(
             "subroutine-dormant",
             json!([{ "def": AP_ROUNDS, "lane": 2 }]),

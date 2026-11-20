@@ -163,7 +163,8 @@ mod tests {
 
     /// The enemy hero and the enemy Units' ids: every split hit lands on one of them.
     fn enemies(s: &Scenario) -> Vec<String> {
-        let mut out: Vec<String> = s.field(P2).iter().map(|unit| unit.id.clone()).collect();
+        let mut out: Vec<String> =
+            (1..=UNIT_ZONES).filter_map(|lane| s.unit(P2, lane)).map(|unit| unit.id).collect();
         out.push("hero-p2".to_string());
         out
     }
@@ -241,9 +242,9 @@ mod tests {
 
     #[test]
     fn its_stats_are_2_2_and_radiant_4_4_and_it_embiggens_at_3() {
-        let s = standing(false);
+        let mut s = standing(false);
         s.expect_stats(pod(&s).as_str(), json!({ "attack": 2, "health": 2 }));
-        let s = standing(true);
+        let mut s = standing(true);
         s.expect_stats(pod(&s).as_str(), json!({ "attack": 4, "health": 4 }));
         assert_eq!(
             crate::card_def(POD).cost,
