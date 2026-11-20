@@ -1215,7 +1215,7 @@ must share an engine version: an `ai/*` branch differs from `main` only under `c
 ### 14.2 `arena` and `promote`
 
 ```
-cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] | --seed <base> --games N [--paired]) [--out <dir>]
+cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] | --seed <base> --games N [--paired]) [--out <dir>]
 cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
 ```
 
@@ -1231,8 +1231,13 @@ are two records) to `--out` (default `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else 
 closes its duel lines: `a`, `b`, `games`, `aWins`, `bWins`, `draws`, `aborted`, and `aShare` (`aWins`
 over `games`) with its 95% Wilson interval `aLow` and `aHigh`, then, for a paired series only,
 `deals` and `edge`, the mean over deals of `a`'s wins less `b`'s over the deal's two games (from −1 to
-1), with its 95% interval `edgeLow` and `edgeHigh` (the mean ± 1.96 standard errors), each share
-rounded to three decimals.
+1), with its 95% interval `edgeLow` and `edgeHigh` (the mean ± 1.96 standard errors), then
+`decided` (the deals whose edge is not 0, split into `wonBoth` and `lostBoth`) and `diverged`
+(the deals whose two games end on different hashes), each share rounded to three decimals. A
+screen (`--set`) with fewer than `SCREEN_MIN_DECIDED` (20) decided deals prints
+`inconclusive: true` and says nothing: it neither keeps nor drops the change (R4319000).
+`--extend` plays a screen on in 100-deal batches until `SCREEN_MIN_DECIDED` deals are decided or
+`SCREEN_MAX_GAMES` (2,000) games are played, reading the edge only at the end.
 
 `promote` plays the lane's deals against the parent, seeds `"<lane>:<tree>:<d>"` where `<tree>` is
 `git rev-parse HEAD:crates/ai/src` (so committing `generation.json` does not change the seeds), each

@@ -147,15 +147,27 @@ that favors one seat gives each AI one game of it (R850000, R850001).
    lane. Each game prints a duel line; the tally that closes them gives the wins and `aShare` with
    its interval (`aLow`, `aHigh`), and the paired result: `deals`, and `edge`, the change's wins
    less the control's as a share of the games, with its 95% interval `edgeLow` to `edgeHigh`.
+   It also gives `decided`, the deals the change actually decided split into `wonBoth` and
+   `lostBoth`, and `diverged`, the deals the two agents played differently; a screen with fewer
+   than `SCREEN_MIN_DECIDED` (20) decided deals prints `inconclusive: true` and says nothing
+   (R4319000).
 3. Keep the change only when `edgeLow` is above 0, and then commit it to the stack (The stack).
    Otherwise revert it. You may stop a screen early when it is plainly losing, never keep one early.
+   A screen reading `inconclusive: true` neither keeps nor drops the change: the knob is settled
+   by its scene tests, and its config comment records the screen as inconclusive with its decided
+   count.
 4. Decide a screen's size before you start it. 400 games is the floor; a change you expect to gain
    only a point or two needs more to show it (`--games 800` plays deals 1 to 400). Never extend a
    screen because it came close, never screen the same change again to get a better read, and never
    keep the best of several arms of a knob because it read best: each arm you keep needs its own
    `edgeLow` above 0, and the stack's screen against the parent (below) says whether the picks hold.
-5. Record every screen in `attempts.md` with its interval, kept or reverted, for example
-   `400 games on improve-dev, 214-186, edge +0.070 (+0.012 to +0.128) vs control 1a2b3c4: kept`.
+   `--extend` is the one exception: decided in advance by the flag, it plays on in 100-deal batches
+   to `SCREEN_MIN_DECIDED` decided deals or `SCREEN_MAX_GAMES`, reading the edge only at the end;
+   the stop looks at how many deals were decided, never which way, so under a neutral change each
+   decided deal is a fair coin however many there are.
+5. Record every screen in `attempts.md` with its interval and its decided (`wonBoth`–`lostBoth`)
+   and diverged counts, kept or reverted, for example `400 games on improve-dev, 214-186, edge
+   +0.070 (+0.012 to +0.128), 12 decided (8–4), 40 diverged vs control 1a2b3c4: kept`.
 
 `cargo jackioh trace` prints one game turn by turn when you need to see why the AI lost it; trace
 the dev set's games, never the gate's.
