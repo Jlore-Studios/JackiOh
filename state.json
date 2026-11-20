@@ -14700,7 +14700,9 @@
     "4284": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T03:59:03Z",
         "family": "claude",
