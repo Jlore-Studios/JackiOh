@@ -15345,6 +15345,7 @@
       "run_id": "44692374776",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 385,
       "started_at": "2026-11-20T07:05:14Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36770,9 +36771,33 @@
         "title": "Patch: intent toward Collection, Decks and other catalog screens prefetches the engine and scene data",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-1"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "ff9b30bfcd634e777bb31c83ac98063821ce29de",
+        "issue": 4285,
+        "merged_at": "2026-11-20T11:32:10Z",
+        "n": 385,
+        "pr": 4303,
+        "queued_at": "2026-11-20T11:32:10Z",
+        "sha": "d95e050700bb78c9a103a6a5e70ce08324be821e",
+        "status": "queued",
+        "title": "Patch: Stinkyscape+ Balance Changes IV",
+        "tries": 0
       }
     ],
-    "count": 384
+    "count": 385
   },
   "statistics": {
     "at": "2026-11-20T11:29:02Z"
