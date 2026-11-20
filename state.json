@@ -15169,7 +15169,16 @@
       "feedback_since": "2026-11-20T04:32:35Z",
       "issue": 4288,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "b16598c413c6fd0944fe4accbdb41c590847c878",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
