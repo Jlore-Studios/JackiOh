@@ -1051,6 +1051,12 @@
         "/harness build"
       ]
     },
+    "c:7052771733": {
+      "at": "2026-11-20T23:04:43Z",
+      "lines": [
+        "/harness build First check whether this test still needs a retry on main's recent e2e smoke (4/4) runs (spec 51 changed in #4240). If it no longer does, close this with the links. Otherwise find the cause as the issue says, from server.log in the cypress-smoke-4-of-4 artifact or by reproducing it locally. Don't skip the test or raise its retries."
+      ]
+    },
     "c:7052772586": {
       "at": "2026-11-20T23:04:40Z",
       "lines": [
