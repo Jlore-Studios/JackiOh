@@ -15179,14 +15179,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-4",
       "queued_at": "2026-11-20T05:14:16Z",
-      "run_id": "44685497770",
+      "run_id": "pending:45a608de-1795155761",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 380,
-      "started_at": "2026-11-20T06:06:45Z",
+      "started_at": "2026-11-20T06:23:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15503,9 +15503,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T06:06:45Z",
+    "at": "2026-11-20T06:23:00Z",
     "url": "",
-    "what": "spot-check #4299 on claude-8"
+    "what": "spot-check #4299 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-20T06:13:19Z",
@@ -36427,12 +36427,12 @@
         "reviewer": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-8",
+          "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:45a608de-1795155761",
         "sha": "5f78ac3f0e59a8b3d53393376631cef3e0376b6e",
-        "started_at": "2026-11-20T06:06:45Z",
+        "started_at": "2026-11-20T06:23:00Z",
         "status": "queued",
         "title": "Patch: intent toward Collection, Decks and other catalog screens prefetches the engine and scene data",
         "tries": 0
