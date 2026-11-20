@@ -16834,12 +16834,17 @@
     "what": "spot-check #4329 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-20T17:17:42Z",
+    "at": "2026-11-20T17:27:49Z",
     "notes": [
-      "delivered review #4326 on claude-4 (run 44777782982): approved",
-      "delivered review #4324 on muse (run 44766673802): built",
-      "started review #4324 on claude-8 (run 44782367693)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4324 on claude-8 (run 44782367693): reviewed",
+      "delivered review #4325 on muse (run 44777887769): approved",
+      "delivered build #4300 on agy (run 44771639918): built",
+      "started review #4330 on agy (run 44784161414)",
+      "started revise #4324 on claude-8 (run 44784276583)",
+      "started review #4329 on claude-8 (run 44784379632)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 1 of 1 waiting run(s) (run 44783955306 on bot/issue-4300)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17545,7 +17550,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T17:17:42Z",
+  "loop_tick": "2026-11-20T17:27:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
