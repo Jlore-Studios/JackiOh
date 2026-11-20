@@ -14623,15 +14623,8 @@
       }
     },
     "4284": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44667775151",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-20T03:33:54Z",
-        "until": "2026-11-20T04:03:54Z"
-      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-20T03:30:38Z",
@@ -14642,9 +14635,8 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"ls /tmp/p4284 2>&1 | head; git log --oneline -1; cat .bot-plan.md | tail -30\", \"description\": \"Check scratch logs survive and read the draft\"}\n- Bash: {\"command\": \"git show --stat --format=\\\"%h %s\\\" HEAD | tail -12; git diff 642ab3464b HEAD --stat -- scripts/promote-staging.sh apps/web/src/net/promote-staging.test.ts docs/deploy-cloudflare.md\", \"de\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Resumed 2026-11-20 (new machine; /tmp scratch lost). main now d70de4becb (#4283: build-wasm C module only).\\n- Daily tests partial (prior run): every on\u2026\n- Bash: {\"command\": \"grep -rln \\\"shellcheck\\\" .github/workflows scripts/*.sh 2>/dev/null | head; which shellcheck\", \"description\": \"Check whether CI runs shellcheck on scripts\"}\n- Bash: {\"command\": \"grep -n \\\"shellcheck\\\" .github/workflows/ci.yml | head -5; shellcheck scripts/promote-staging.sh && echo clean\", \"description\": \"See how CI runs shellcheck and lint the current script\"}\n- Bash: {\"command\": \"mkdir -p /tmp/s4284 && cp scripts/promote-staging.sh /tmp/s4284/p.sh && echo ok\", \"description\": \"Copy the script to scratch for a lint check\"}\n- Read: {\"file_path\": \"/tmp/s4284/p.sh\", \"offset\": 155, \"limit\": 26}\n- Edit: {\"replace_all\": false, \"file_path\": \"/tmp/s4284/p.sh\", \"old_string\": \" map(select(.title == env.GATE_TITLE)) | sort_by(.number) | last // {}\\n | \\\"\\\\(.number // \\\"-\\\") \\\\(.state // \\\"-\\\") \\\\(.closedA\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/tmp/s4284/p.sh\", \"old_string\": \" exit 0\\n fi\\n cand=$(green --created \\\">=$closed\\\")\\n if [ -z \\\"$cand\\\" ]; then\\n echo \\\"$held. #$number closed at $closed; it m\u2026\n- Bash: {\"command\": \"shellcheck /tmp/s4284/p.sh && echo clean; bash -n /tmp/s4284/p.sh && echo syntax-ok\", \"description\": \"Lint and syntax-check the prototype script\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- Prototype re-made in /tmp/s4284/p.sh on the new machine: shellcheck clean, bash -n ok. Writing final plan now.\\nEOF\", \"description\": \"Note prototype status\u2026\n- said: ## Goal Every job that failed in super run 44641848011 is already fixed on `main` by #4281 (642ab3464b). The run tested `b24900c`, which is two commits older than that fix. #4281's work was itself the fix for #4270, the run before this one. That run reported the same failures: - **Daily tests:** th\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-20T00:45:32Z",
       "owner_why": "it plans it",
@@ -14656,9 +14648,9 @@
       "planned_tier": "strong",
       "provider": "claude-7",
       "round_tier": "",
-      "run_id": "44667775151",
+      "run_id": "pending:c2048108-1795145695",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T03:26:49Z",
+      "started_at": "2026-11-20T03:35:13Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
@@ -14784,9 +14776,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T03:26:49Z",
+    "at": "2026-11-20T03:35:13Z",
     "url": "",
-    "what": "plan #4284 on claude-7"
+    "what": "build #4284 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-20T03:25:18Z",
