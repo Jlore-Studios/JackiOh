@@ -326,6 +326,7 @@ jobs:
           fi
           body=$RUNNER_TEMP/issue.md
           {
+            # shellcheck disable=SC2016 # Markdown's backticks, printed as they are.
             printf 'The [scheduled mutants run](%s) of week %s, on `main` at `%s`: one shard of every area (#4038).\n\n' \
               "$RUN_URL" "$week" "$(echo "$SHA" | cut -c1-7)"
             echo "| area | shard | killed | survived | timed out | unviable | left out | score |"
@@ -333,6 +334,7 @@ jobs:
             grep '^|' "$scores" || echo "| no area reported | | | | | | | |"
             if [ -n "$failed" ]; then
               printf '\n### Areas that measured nothing\n\n%s\n\n' "$failed"
+              # shellcheck disable=SC2016 # Markdown's backticks, printed as they are.
               printf 'Find why and fix it, so each measures next week. A lost runner leaves no log: run its shard (`sh scripts/mutants.sh <area> %s`) and watch its memory.\n' "$week"
             fi
             cat <<'TEXT'
@@ -349,6 +351,7 @@ jobs:
 
           TEXT
             cat "$lists"
+            # shellcheck disable=SC2016 # Markdown's backticks, printed as they are.
             printf '\n---\n_Posted by `.github/workflows/mutants.yml`._\n'
           } >"$body"
           open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" \
