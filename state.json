@@ -16953,6 +16953,13 @@
     "4327": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44792836438",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-20T18:47:30Z",
+        "until": "2026-11-20T19:17:30Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
