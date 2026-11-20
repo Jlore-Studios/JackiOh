@@ -419,3 +419,81 @@ mod r386_b3_4_rule_5_a_card_resolves_with_its_number_as_it_stands {
         assert_eq!(state.players.p2.hero.health, before - 5);
     }
 }
+
+mod r4334000_an_ingredient_fused_on_its_radiant_face_reads_its_numbers_there {
+    use super::*;
+
+    /// `ingredient` fused into `kept` (R77), on its Radiant face when `marked` (R469).
+    fn fused_into(
+        state: &mut GameState,
+        ingredient: CardInstance,
+        kept: CardInstance,
+        marked: bool,
+    ) -> CardInstance {
+        let id = ingredient.id.clone();
+        let mut sink = sink_for(state);
+        fuse(
+            &mut sink,
+            FuseArgs {
+                ingredients: vec![ingredient],
+                target: Some(kept),
+                radiant_ingredients: marked.then(|| vec![id]),
+                ..FuseArgs::default()
+            },
+        )
+        .expect("expected a fusion")
+    }
+
+    /// The numbered spell (`damage` 2, Radiant 4) fused into a body on the field, on its Radiant face
+    /// when `marked`, the fused card on its Radiant face when `host_radiant`.
+    fn numbered_in_body(state: &mut GameState, marked: bool, host_radiant: bool) -> CardInstance {
+        let kept = put(state, &body.id, slot(P1, Row::Units, 1), json!({}));
+        let spell = one(in_hand(state, &numbered.id, P1, 1));
+        let fused = fused_into(state, spell, kept, marked);
+        live_mut(state, &fused).radiant = host_radiant;
+        live(state, &fused)
+    }
+
+    /// `damage` on `card`: read by the text in its place on `path`, read with no place named (an
+    /// aura's), and shown in its view (`CardView.params`).
+    fn damage_read(state: &mut GameState, card: &CardInstance, path: &[usize]) -> (i32, i32, Option<i32>) {
+        let now = live(state, card);
+        let shown = params_view(state, &now).and_then(|view| view.get("damage").copied());
+        let mut sink = sink_for(state);
+        let mut ctx = make_context(&mut sink, Some(&now), HookOptions::default());
+        let unplaced = param(&ctx, "damage");
+        ctx.data = part(path);
+        (param(&ctx, "damage"), unplaced, shown)
+    }
+
+    #[test]
+    fn r4334000_a_radiant_ingredient_of_a_base_card_reads_and_shows_its_radiant_number() {
+        let mut state = game();
+        let fused = numbered_in_body(&mut state, true, false);
+        assert_eq!(damage_read(&mut state, &fused, &[0]), (4, 4, Some(4)));
+    }
+
+    #[test]
+    fn r4334000_a_base_ingredient_of_a_base_card_reads_and_shows_its_base_number() {
+        let mut state = game();
+        let fused = numbered_in_body(&mut state, false, false);
+        assert_eq!(damage_read(&mut state, &fused, &[0]), (2, 2, Some(2)));
+    }
+
+    #[test]
+    fn r4334000_a_base_ingredient_of_a_radiant_card_reads_and_shows_its_radiant_number() {
+        let mut state = game();
+        let fused = numbered_in_body(&mut state, false, true);
+        assert_eq!(damage_read(&mut state, &fused, &[0]), (4, 4, Some(4)));
+    }
+
+    #[test]
+    fn r4334000_a_radiant_mark_one_fusion_down_still_reads_radiant() {
+        let mut state = game();
+        let inner = numbered_in_body(&mut state, true, false);
+        let spell = one(in_hand(&mut state, &nerfer.id, P1, 1));
+        let outer = fused_into(&mut state, spell, inner, false);
+        // The kept card comes last (R77): the Radiant spell is ingredient 0 of ingredient 1.
+        assert_eq!(damage_read(&mut state, &outer, &[1, 0]), (4, 4, Some(4)));
+    }
+}

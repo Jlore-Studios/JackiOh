@@ -65,6 +65,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stinkyscape_family as fam;
     use crate::{hits, next_turn_of, upgrade_number, weapon_board};
     use jackioh_engine::query::{burn_on, hero_burn_of};
     use jackioh_engine::subsystems::activate::activate_actions_for;
@@ -243,6 +244,29 @@ mod tests {
             let s = beam_on(true, json!({}));
             let view = s.stats(ID);
             assert_eq!((view.attack, view.health), (0, RADIANT_HEALTH));
+        }
+
+        /// R4334000: a launched Starship holding a Radiant copy Burns its target for the Radiant
+        /// `burn` and shows it; one holding a base copy, the base `burn`.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            for (radiant, amount) in [(true, RADIANT_BURN), (false, BURN)] {
+                let (mut s, ship) = fam::piece_ship(
+                    ID,
+                    "s144-piece-ship",
+                    radiant,
+                    json!({}),
+                    json!({ "field": [{ "def": TOUGH, "lane": 1 }] }),
+                );
+                let target = s.unit_at(P2, 1).id;
+                s.activate(ship.as_str(), at(&target));
+                assert_eq!(burn_of(&s, &target), amount, "radiant {radiant}");
+                assert_eq!(
+                    fam::shown_number(&s, &ship, "burn"),
+                    Some(amount),
+                    "radiant {radiant}"
+                );
+            }
         }
     }
 }

@@ -58,6 +58,7 @@ mod tests {
 
     use crate::scenario;
     use crate::filler;
+    use crate::stinkyscape_family as fam;
 
     const CAPSULE: &str = "stinkyscape-040";
     const MENACE: &str = "core-019"; // Midrange Menace: a Unit, Taunt
@@ -223,6 +224,28 @@ mod tests {
 
             assert_eq!(hits_from(&s, &me), vec![4, 4]);
             s.expect_health(PlayerId::P2, 26);
+        }
+
+        const RADIANT_COUNTERS: i32 = 4;
+
+        /// R4334000: a launched Starship holding a Radiant copy places the Radiant `counters` with
+        /// its fused Cry, and shows them.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            let (mut s, ship) = fam::piece_ship(
+                ID,
+                "s040-piece-ship",
+                true,
+                json!({}),
+                json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
+            );
+            assert_eq!(
+                fam::shown_number(&s, &ship, "counters"),
+                Some(RADIANT_COUNTERS)
+            );
+            let menace = s.card(MENACE).clone();
+            s.answer(json!(menace.id));
+            assert_eq!(s.card(&menace).counters.plague, Some(RADIANT_COUNTERS));
         }
     }
 }
