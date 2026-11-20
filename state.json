@@ -14892,6 +14892,13 @@
     "4290": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T04:30:20Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Rule 1 (engine rules): the forecast, its damage-pipeline reads, and its fuzz oracle all live in crates/engine/src."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
