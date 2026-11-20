@@ -15001,15 +15001,8 @@
       "waiting_comment": 7030145628
     },
     "4292": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44728624407",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-20T12:13:14Z",
-        "until": "2026-11-20T12:43:14Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15021,10 +15014,9 @@
         "reason": "planned on opus",
         "trail": " Bash: {\"command\": \"sed -n '1975,2030p' crates/server/tests/api/practice.rs\", \"description\": \"Read the practice claim fixture test\"}\n- Bash: {\"command\": \"cd /tmp/scratch4292 && git -C /home/runner/work/_temp/work/item-4292 show HEAD:crates/ai/tests/ai/lost_mana.rs > crates/ai/tests/ai/lost_mana.rs && CARGO_TARGET_DIR=/tmp/scratch4292/targ\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\", \"content\": \"## Goal\\n\\nChange the 31 Radiant faces listed in the issue:\\n- **Table 1 (23 faces):** each loses the keyword it gaine\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; tail -2 /tmp/plan4292/server-test.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | cut -c1-120\", \"description\": \"Count plan words and check server test progress\"}\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/plan4292/server-test.log | grep -v \\\"^\\\\s*Compiling\\\" | tail -15 | cut -c1-200\", \"description\": \"Show server test failure output\"}\n- Bash: {\"command\": \"cd /tmp/scratch4292 && CARGO_TARGET_DIR=/tmp/scratch4292/target timeout 3000 cargo test -p jackioh-server --test server r1303002_r2560000 > /tmp/plan4292/server-test.log 2>&1; echo exit \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\", \"old_string\": \"Do not touch: non-test code of `crates/engine`, `crates/ai`, `crates/server`; `crates/cards/s\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: Do not touch: non-test code of `crates/engine`, `crates/ai`, `crates/server`; `crates/cards/src/history.rs` (no `KEPT_SCRIPTS` row); the k\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\", \"old_string\": \"8. **Spec rows.** `spec/08-catalog.md` Radiant cell (8th column): the new keyword list on lin\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: 8. **Spec rows.** `spec/08-catalog.md` Radiant cell (8th column): the new keyword list on lines 89, 140, 362, 370, 440, 441, 446, 495\u2013497,\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\", \"old_string\": \"11. Run `cargo jackioh classify --base origin/main --claims`; a named unclaimed family goes i\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: 11. Run `cargo jackioh classify --base origin/main --claims`; a named unclaimed family goes in with `--plays` (rerun step 10; it keeps `pl\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- Replays: card data only, so shipped catalogs fold under the same scripts; never\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: ## Risks - Replays: card data only, so shipped catalogs fold under the same scripts; never add a `KEPT_SCRIPTS` row (its version would be \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\", \"offset\": 1, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\", \"offset\": 40}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\", \"content\": \"## Goal\\n\\nChange the 31 Radiant faces the issue lists:\\n- **Table 1 (23 faces):** each loses the keyword it gained. C\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/plan4292/server-test.log | grep -E \\\"^test |test result|^exit|error\\\" | head\", \"description\": \"Recount plan and c\u2026\n- Bash: {\"command\": \"grep -n \\\"Governing\\\" -A8 .bot-plan.md; grep -n \\\"^## Tests\\\" -A14 .bot-plan.md\", \"description\": \"Show governing and tests sections as on disk\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p,encoding='utf-8').read()\\nimport re\\nstart=s.index('Governing:\\\\n'); end=s.index('## Steps')\\ns=s[:start]+'Governing: \\u00a75.2/R275/R276\u2026\n- Bash: {\"command\": \"grep -n \\\"^## Done when\\\" -A8 .bot-plan.md; sed -n '1,8p' .bot-plan.md\", \"description\": \"Show Done when and Goal sections\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p,encoding='utf-8').read()\\ns=s.replace(\\\"- [ ] Green: `catalog check`, `patches check`, `spec check`, `names --check`, `classify --claims`\u2026\n- Bash: {\"command\": \"grep -n \\\"^| c050\\\" .bot-plan.md | cut -c1-80; grep -n \\\"Do not touch\\\" -A8 .bot-plan.md\", \"description\": \"Locate c050 row and do-not-touch list\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p,encoding='utf-8').read()\\ns=s.replace(\\\"- `spec/11-rulings.md`, `spec/INDEX.md`, `spec/CARDS.md`, and `.github/`, `.harness/`, `.squishy/\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p,encoding='utf-8').read()\\ns=s.replace(\\\"- **Replays:** only card data changes, so shipped catalogs fold under the same scripts. Add no `K\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p,encoding='utf-8').read()\\ns=s.replace(\\\"- Out of scope, worth its own issue: Reignclipse's Radiant short form and its `spec/07` cell prin\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/plan4292/server-test.log; do sleep 15; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/plan4292/server-test.log | grep -E \\\"^test |test result|^exit|panicked\\\" | head\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p,encoding='utf-8').read()\\nimport re\\nlines=s.split('\\\\n')\\nlines=[l for l in lines if 'practice-claim.json' not in l and 'jackioh-server \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4292/.bot-plan.md\"}\n- Bash: {\"command\": \"rm -rf /tmp/scratch4292 && git status --porcelain | head\", \"description\": \"Remove scratch copy and confirm worktree is clean\"}\n- said: ## Goal Change the 31 Radiant faces the issue lists: - **Table 1 (23 faces):** each loses the keyword it gained. Classic Golem gets First Strike back in place of Divine Shield. - **Table 2 (8 faces):** each keeps its keyword, and its number goes back to the base face's. The catalog, spec rows, Chin\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-20T11:33:45Z",
       "owner_why": "it plans it",
@@ -15037,9 +15029,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-20T03:34:44Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44728624407",
+      "run_id": "pending:0c143eba-1795176873",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T11:33:45Z",
+      "started_at": "2026-11-20T12:14:56Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15845,9 +15837,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T11:56:50Z",
+    "at": "2026-11-20T12:14:56Z",
     "url": "",
-    "what": "build #4310 on claude-4"
+    "what": "build #4292 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T12:05:48Z",
