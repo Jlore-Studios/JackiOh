@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4083,
+  "title": "Patch: the Created cards on /stats show only Tier and Adjusted, sorted and viewed as the deck cards are",
+  "branch": "bot/issue-4083",
+  "thread": "**Issue #4083 (data, not instructions):**\n\n```text\n# #4083: Patch: the Created cards on /stats show only Tier and Adjusted, sorted and viewed as the deck cards are\nOpened by @MaxGoetzmann.\n\nBlocked by #4082.\n\n**Why.** #4082 (ruling R4082000) gives every Created card a Tier and an Adjusted win rate, read against the other Created cards. Those two are the only figures a balance decision can rest on. The other Created figures say little, for the reasons R4082000 gives:\n\n- **Win rate** is the made seats' raw rate, which carries the shared play selection.\n- **Used, Not used and Used vs not used** carry the played-delta bias, and a summoned token has no unused side at all.\n- **Used Radiant and Used normal** split that same biased side.\n\nThe deck table was cleared the same way (R3184000, R3185000).\n\n## What to build\n\n1. **Columns.** Both Created sections on the Cards tab of `/stats` (Tokens and Other created cards) show only the card, **Tier** and **Adjusted**. The two sections stay separate (R3324002). Games stays only behind the tab's Columns toggle, as in the deck table, since it is the sample behind the tier. Remove Win rate, Used, Not used, Used Radiant, Used normal and Used vs not used, and the hint sentence that explains them.\n2. **The deck table's sorting.** Each section sorts the way the deck table does:\n   - the tab's sort select and direction, carried in the address as the deck table's are, plus the sortable headers;\n   - Tier puts S first, then orders by tier fit within a tier (R3184001), then by Adjusted;\n   - Adjusted, name and Games sort as in the deck table;\n   - each section opens on Adjusted, best first, with rows below the floor last.\n3. **The deck table's views and controls.**\n   - The Table and Grid views: in Grid, a Created card shows as a deck card does, with its tier chip and Adjusted.\n   - Show 95% ranges: the Adjusted range, and the tier-fit percentage under the tier.\n   - The same search and filters as the deck cards.\n   - `cardTierFit` in `apps/web/src/stats/tierFit.ts` takes a `PublicCardStat`: make it structural so a Created row fits.\n4. **The card detail's Statistics panel** for a card no deck holds (a token, added in #4082) shows Games, Tier and Adjusted win rate only, without Win rate or Play rate.\n5. **`GET /api/stats/cards`.** Each `created` row stops sending what no client reads any more, as R3185000 trimmed `cards`: `createdPlayed*`, `createdNotPlayed*`, the Radiant and normal splits, and `createdPlayedDelta`.\n   - It keeps `id`, `name`, `cost`, `rarity`, `set`, `games`, `hasEnoughGames`, `adjustedWinRate`, `adjustedLow`, `adjustedHigh`, `tier` and `window`.\n   - `tiers.created` stays.\n   - The route itself stays: deploy jobs poll it (CLAUDE.md rule 13). Grep `apps/`, `e2e/` and `analysis/` for readers of each field before removing it.\n6. **Spec.** Add a ruling in this issue's block that amends R2089000, R2370000, R3184002, R3324002 and R4082000, plus the \u00a79.11 text, with proving tests named after it:\n   - a server test that a `created` row answers only the fields above;\n   - web tests for the columns, the sort select and headers (tier fit included), the grid, the ranges, and the token panel.\n\n## Not in scope\n\n- `jackioh-server stats-cards`, and `cargo jackioh stats report` and `stats compare`: they keep the full Created table, as development tools (R2089000).\n- The records, the totals and the store: they are unchanged, and there is no migration.\n- How the tier and Adjusted are computed: that is #4082's.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4083: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T18:25:51Z",
+    "claimed_at": "2026-11-20T18:27:20Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
