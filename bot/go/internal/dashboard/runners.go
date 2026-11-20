@@ -80,6 +80,7 @@ var Workflows = map[string]string{
 	"mutants.yml":            "weekly: a shard of every area's mutation testing, each area's score in its summary",
 	"patches-ship.yml":       "ships the pending card-patch fragments after a merge",
 	"pr-title.yml":           "holds a pull request's title to the convention",
+	"resume-claude-3.yml":    "one-off, 2026-11-20 22:51 UTC: resumes claude-3 40 hours after its suspension, then disables itself",
 	"promote-production.yml": "production daily, from a passing super run on staging; /promote sooner",
 	"promote-staging.yml":    "every two hours: staging takes main's newest commit whose CI passed",
 	"releases.yml":           "a GitHub release per shipped patch, a pre-release while only staging has it",

@@ -260,6 +260,13 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
     exit 1
   fi
   node -e 'const fs = require("fs"); const found = WebAssembly.Module.imports(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); if (found.length > 0) { console.error("build-wasm: the C module imports " + JSON.stringify(found)); process.exit(1); }' "$C_MODULE"
+  # #4273: a `#[no_mangle]` export whose symbol collides with a libm/host symbol (as `log` did with
+  # libm's `log`) links as a trapping `signature_mismatch:` stub, and every `f64::ln` in the module
+  # then traps with `unreachable`. Fail the build on any such stub.
+  if grep -aq 'signature_mismatch:' "$C_MODULE"; then
+    echo "build-wasm: the C module contains a signature_mismatch stub (a #[no_mangle] export colliding with a libm/host symbol); rename the export" >&2
+    exit 1
+  fi
   # The panic's text must stay readable at jackioh_result_ptr()/jackioh_result_len() after the
   # trap (crates/wasm/c/README.md, Errors and traps): a huge alloc panics deterministically, and
   # the hook stows its message before the unreachable trap. Any silence fails the build.

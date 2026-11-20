@@ -820,7 +820,7 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn bot_decide(call_json: &str, deadline_ms: f64) -> String;
     // #3103: the move a ladder bot owes (SPEC §9.12, R1452, R639000, R747000). A DecideCall in ({ host: DuelHost, request: DecideRequest }), the BotChoice out ({ body, aiCursor, legalCount, lethal, aim }), which the host feeds the machine back as { event: "decided", home, version, turn, choice };
     // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock), its beam wrapped up as ai_decide's (R3498000)
-#[wasm_bindgen] pub fn log(call_json: &str) -> String;
+#[wasm_bindgen] pub fn game_log(call_json: &str) -> String;
     // #3108: jackioh-shared's game log (SPEC §10.10, R97, R745). A LogCall in ({ call: "view", view, locale } | { call: "gap", locale }), a LogAnswer out ({ answer: "lines", lines: (LogLine | null)[] } | { answer: "line", line }):
     // a line for each event of the view's window, final text as spans in the reader's words, naming no card the viewer may not read; the catalog is the one init registered (crates/shared/README.md, src/log/)
 ```
@@ -851,7 +851,7 @@ with the route it missed, a body that arrives still compressed),
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
-`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), `log` (#3108: the game log's lines, the normal module's own too), …).
+`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), `game_log` (#3108: the game log's lines, the normal module's own too), …).
 `apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
 calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
 `practice.worker.ts` awaits it before handling a message.

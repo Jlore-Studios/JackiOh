@@ -2,6 +2,6 @@
 
 /**
  * R2089000: one use of a Created card: its catalog id, the turn (§2.5's counter) and whether it was
- * Radiant then (R1147000).
+ * Radiant then (R1147000). R4279000: also a dealt card's cast or summon by an effect (`castOrSummoned`).
  */
 export type CreatedUse = { card: string, turn: number, radiant: boolean, };

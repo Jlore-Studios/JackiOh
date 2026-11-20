@@ -1688,19 +1688,25 @@ describe("R1966000 the Sets tab", () => {
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
-  it("#3222 stats tabs answer arrow keys, moving between Cards, Sets, and Players", async () => {
+  it("#3222 R4279001 stats tabs answer arrow keys, moving between Cards, Tokens, Sets, and Players", async () => {
     serveSets();
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
 
     const tablist = screen.getByRole("tablist", { name: "Statistics views" });
     const cardsTab = screen.getByTestId(statsTestid.tabCards);
+    const tokensTab = screen.getByTestId(statsTestid.tabTokens);
     const setsTab = screen.getByTestId(statsTestid.tabSets);
     const playersTab = screen.getByTestId(statsTestid.tabPlayers);
 
     expect(cardsTab).toHaveAttribute("aria-selected", "true");
     expect(cardsTab).toHaveAttribute("tabindex", "0");
+    expect(tokensTab).toHaveAttribute("tabindex", "-1");
     expect(setsTab).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(tokensTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(tokensTab);
 
     fireEvent.keyDown(tablist, { key: "ArrowRight" });
     expect(setsTab).toHaveAttribute("aria-selected", "true");
@@ -2273,11 +2279,12 @@ describe("R3447000 the games tile names the patch its games were collected on", 
 });
 
 describe("R1973000 the Daily runs tab is gone", () => {
-  it("R1973000 the page offers Cards, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
+  it("R1973000 R4279001 the page offers Cards, Tokens, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
     at("/stats?tab=ci");
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
-    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Cards", "Sets", "Players"]);
+    const names = screen.getAllByRole("tab").map((tab) => tab.querySelector(".stats-tab-name")?.textContent);
+    expect(names).toEqual(["Cards", "Tokens", "Sets", "Players"]);
     expect(screen.queryByText("Daily runs")).toBeNull();
     expect(requested("/api/stats/ci")).toEqual([]);
   });
@@ -2361,6 +2368,11 @@ describe("R2446000 the Cards table's columns", () => {
 });
 
 describe("R2089000 R3324002 the Created cards and the Tokens", () => {
+  /** R4279001: the Created cards are on the Tokens tab. */
+  async function openTokens(): Promise<void> {
+    fireEvent.click(await screen.findByTestId(statsTestid.tabTokens, undefined, SLOW));
+  }
+
   /** A Created card's figures: `played` seats used one at `playedRate`, `notPlayed` made one and used none. */
   function created(id: string, name: string, played: number, playedRate: number | null, notPlayed: number, notPlayedRate: number | null) {
     return {
@@ -2434,6 +2446,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
     render(<StatsRoute />);
+    await openTokens();
     const tokens = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
     const other = screen.getByTestId(statsTestid.createdTable);
     const rowOf = (table: HTMLElement, id: string): HTMLElement => {
@@ -2450,11 +2463,12 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(coin).toHaveAttribute("data-card-id", "core-t-coin");
   });
 
-  it("R2089000 R2370000 R3324002 R4082000 R4155000 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
+  it("R2089000 R2370000 R3324002 R4082000 R4155000 R4279001 the Tokens tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
     const tiers = { center: 0, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 };
     const field = { center: 0.052, spread: 0.041, cards: 36, baseline: 0.552 };
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, tiers: { ...tiers, created: field }, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
     render(<StatsRoute />);
+    await openTokens();
 
     const tokens = await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
     const others = screen.getByTestId(statsTestid.createdPanel);
@@ -2504,18 +2518,26 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(rowsOf(tokenTable).ids).toEqual(["core-t-rush", "core-t-coin", "core-t-sheep", "core-t-ghoul"]);
     expect(rowsOf(otherTable).ids).toEqual(["core-001"]);
 
-    // No token is a row of the deck table.
-    const deck = screen.getByTestId(statsTestid.cardsTable);
-    expect(deck.querySelector('[data-card-id="core-t-rush"]')).toBeNull();
-
-    // The search box asks of both what it asks of the deck's.
+    // The tab's search box asks of both what the Cards tab's asks of the deck's: one search, kept across the tabs.
     fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "rush" } });
-    expect(screen.getByText("No cards match the selected filters.")).toBeInTheDocument();
     expect(rowsOf(screen.getByTestId(statsTestid.tokensTable)).ids).toEqual(["core-t-rush"]);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
     fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "coin" } });
     expect(rowsOf(screen.getByTestId(statsTestid.tokensTable)).ids).toEqual(["core-t-coin"]);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "zzz" } });
+    expect(screen.getByText("No tokens or created cards match the selected filters.")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "rush" } });
+
+    // The Cards tab keeps the search and shows neither section; no token is a row of its deck table.
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    expect(screen.getByTestId(statsTestid.searchInput)).toHaveValue("rush");
+    expect(screen.getByText("No cards match the selected filters.")).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "" } });
+    const deck = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(deck.querySelector('[data-card-id="core-t-rush"]')).toBeNull();
 
     // The Sets tab counts the deck cards alone and shows neither section.
     fireEvent.click(screen.getByTestId(statsTestid.tabSets));
@@ -2525,10 +2547,27 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
   });
 
+  it("R4279001 ?tab=tokens opens the Tokens tab, and the address follows the tab", async () => {
+    at("/stats?tab=tokens");
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH] });
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.tabTokens)).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByTestId(statsTestid.cardsTable)).toBeNull();
+    // Its name and what it shows, both on the tab.
+    expect(screen.getByTestId(statsTestid.tabTokens)).toHaveTextContent("Tokens and other cards made in games");
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).has("tab")).toBe(false), SLOW);
+    fireEvent.click(screen.getByTestId(statsTestid.tabTokens));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("tab")).toBe("tokens"), SLOW);
+  });
+
   it("R3324002 no Show tokens control, and an old address's tokens=1 opens the page as any other", async () => {
     at("/stats?tokens=1");
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
     render(<StatsRoute />);
+    await openTokens();
 
     await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
     expect(screen.queryByText("Show tokens")).toBeNull();
@@ -2537,16 +2576,19 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(screen.getByTestId(statsTestid.createdPanel)).toBeInTheDocument();
   });
 
-  it("R2089000 R3324002 shows neither section when the response has no Created card, and only the one with rows", async () => {
+  it("R2089000 R3324002 R4279001 shows neither section when the response has no Created card, and only the one with rows", async () => {
+    const none = "No tokens or created cards match the selected filters.";
     render(<StatsRoute />);
-    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await openTokens();
+    await screen.findByText(none, undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
     expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
     cleanup();
 
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [] });
     render(<StatsRoute />);
-    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await openTokens();
+    await screen.findByText(none, undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
     expect(screen.queryByText("Other created cards")).toBeNull();
     expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
@@ -2555,8 +2597,10 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
 
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [COIN] });
     render(<StatsRoute />);
+    await openTokens();
     await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    expect(screen.queryByText(none)).toBeNull();
   });
 
   it("R4155000 a Created row opens the drill-down and ?card=: a token's face and figures, The Coin's face and figures with empty deck-only sections", async () => {
@@ -2592,6 +2636,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
       }),
     );
     render(<StatsRoute />);
+    await openTokens();
     const tokensTable = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
 
     // Clicking a token row opens the drill-down on it, with ?card= in the address.
@@ -2629,6 +2674,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     const user = userEvent.setup();
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, COPY] });
     render(<StatsRoute />);
+    await openTokens();
     await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
     const headersOf = (testid: string): (string | null)[] =>
       within(screen.getByTestId(testid)).getAllByRole("columnheader").map((th) => th.textContent);
@@ -2642,7 +2688,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(headersOf(statsTestid.tokensTable)).toEqual(COLUMNS);
   });
 
-  it("R4155000 no explanatory paragraph renders on the Cards, Sets or Players tabs", async () => {
+  it("R4155000 no explanatory paragraph renders on the Cards, Tokens, Sets or Players tabs", async () => {
     const user = userEvent.setup();
     const tiers = { center: 0.021, spread: 0.034, cards: 412, baseline: 0.4875, bandLow: 0.45, bandHigh: 0.55 };
     vi.stubGlobal(
@@ -2661,7 +2707,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
       }),
     );
     render(<StatsRoute />);
-    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
 
     // Cards tab: none of the removed paragraphs; the kept states still render.
     for (const words of [
@@ -2682,6 +2728,13 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     await user.click(screen.getByTestId(statsTestid.rangesToggle));
     expect(screen.queryByText(/true rate most likely/)).toBeNull();
     await user.click(screen.getByTestId(statsTestid.rangesToggle));
+
+    // Tokens tab: none of them either; its tables still render.
+    await user.click(screen.getByTestId(statsTestid.tabTokens));
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    for (const words of [/Tokens made during/, /generated and Discovered cards/, /Win rate is of the seats/, /against the other Created cards/]) {
+      expect(screen.queryByText(words)).toBeNull();
+    }
 
     // Sets tab: no intro and no footnote; the table still renders.
     await user.click(screen.getByTestId(statsTestid.tabSets));

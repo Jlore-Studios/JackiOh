@@ -729,6 +729,6 @@ export function face(request: FaceCall): FaceAnswer {
  * wire types. The catalog is the module's own and the locale is an argument, so each line is final text as
  * spans for the reader's language (`game/logLines.ts` wraps the calls the log makes).
  */
-export function log(request: LogCall): LogAnswer {
-  return call("log", () => parsed<LogAnswer>(normal.log(json(request))));
+export function gameLog(request: LogCall): LogAnswer {
+  return call("gameLog", () => parsed<LogAnswer>(normal.game_log(json(request))));
 }

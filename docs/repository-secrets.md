@@ -23,7 +23,7 @@ row in the same pull request.
 | Secret | What it is | Read by |
 | --- | --- | --- |
 | `BOT_GITHUB_TOKEN` | A classic token of `@jgoetzmann-bot` (`public_repo`, `workflow`). A pull request or push made with it starts CI, which one made with `GITHUB_TOKEN` never does. It also moves `_production`. [bot/README.md](../bot/README.md), Setting it up | bot-night, bot-commands, bot-status, patches-ship, spec-fold, winrates-refresh, promote-staging, promote-production, releases |
-| `SQUISHY_GITHUB_TOKEN` | A classic token of `@squishy-squooby`, Squishy's account ([bot/README.md](../bot/README.md), Squishy) | squishy-run, squishy-commands, bot-status |
+| `SQUISHY_GITHUB_TOKEN` | A classic token of `@squishy-squooby`, Squishy's account ([bot/README.md](../bot/README.md), Squishy) | squishy-run, squishy-commands, bot-status, resume-claude-3 |
 | `LEARN_LANE_TOKEN` | A fine-grained token that writes contents and pull requests on this repository alone, for the training lanes' promotions. It expires; a run then fails at its deliver step ([training/learn.md](../training/learn.md), Setting it up) | learn, sweep |
 
 ## Model subscriptions
