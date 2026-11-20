@@ -14775,7 +14775,9 @@
     },
     "4286": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7030238487"
+      ],
       "build_next": {
         "from_run": "44694331872",
         "model": "opus",
@@ -14822,9 +14824,7 @@
       "started_at": "2026-11-20T07:21:08Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7030238487"
-      ],
+      "taken_asks": [],
       "waiting_comment": 7032400398
     },
     "4287": {
