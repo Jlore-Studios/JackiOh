@@ -14721,7 +14721,8 @@
       ],
       "strikes": 1,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 7030144182
     },
     "4285": {
       "action": "build",
