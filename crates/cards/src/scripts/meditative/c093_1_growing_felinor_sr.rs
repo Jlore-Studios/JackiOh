@@ -1,11 +1,11 @@
 //! M #93.1 Growing Felinor Sr (SPEC §8.8 row 93.1, SPEC §7 token): (1) Unit, Felinor, Token (printed
 //! Common), 2/2 → 4/4.
 //!
-//! Base:    "Can't be in Defense Position.
+//! Base:    "Can't Defend
 //!           Death: Summon a Growing Felinor Sr Sr."
-//! Radiant: "Divine Shield, Rush
-//!           Can't be in Defense Position.
+//! Radiant: "Rush, Can't Defend
 //!           Death: Summon a Radiant Growing Felinor Sr Sr."
+//!          (Divine Shield too until issue #4292.)
 //! Engine:
 //! - **Can't Defend** (R2657000, the static flag `never_defense` through v0.5.9f), as #65.1 Spikey Pillow: `reduce.rs` refuses the switch
 //!   and `legal_actions` leaves it out, and `combat.rs` checks a switch made as an effect (§6.1).
@@ -82,7 +82,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_cost_token_2_2_felinor_and_radiant_4_4_with_divine_shield_and_rush() {
+        fn is_a_1_cost_token_2_2_felinor_and_radiant_4_4_with_rush_alone_since_issue_4292() {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(1));
             assert!(def.token);
@@ -91,7 +91,8 @@ mod tests {
             assert_eq!([def.base.attack, def.base.health], [Some(2), Some(2)]);
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(4), Some(4)]);
             assert_eq!(def.base.keywords, vec![Keyword::CantDefend]);
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend]);
+            // Radiant adds Rush alone: it added Divine Shield too until issue #4292.
+            assert_eq!(def.radiant.keywords, vec![Keyword::Rush, Keyword::CantDefend]);
             // R767000: the script kept for v0.5.9f carries the flag the keyword took over from.
             let scripts = script_v0_5_9f();
             assert_eq!(
@@ -170,10 +171,8 @@ mod tests {
                 assert_eq!(next.def_id, NEXT);
                 assert!(next.radiant);
                 s.expect_stats(&next, json!({ "attack": 6, "maxHealth": 6 }));
-                assert_eq!(
-                    keywords_of(s.state(), &next),
-                    vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend]
-                );
+                // No Divine Shield since issue #4292.
+                assert_eq!(keywords_of(s.state(), &next), vec![Keyword::Rush, Keyword::CantDefend]);
                 assert_eq!(s.unit_at(P1, 1).id, next.id);
                 assert!(s.unit(P1, 3).is_none());
             }

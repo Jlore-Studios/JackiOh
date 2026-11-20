@@ -1,0 +1,59 @@
+{
+  "title": "Radiant de-keywording",
+  "sources": "#4292",
+  "notes": "Radiant de-keywording (#4292): each Radiant face below kept a new keyword on top of a second upgrade, and the owner chose which one each keeps. Table 1, the keyword goes: Divine Shield off K-Pop Fanatic, Corpse Eater, Helpful Assistant, Knowledge Breaker and Growing Felinor, Sr and Sr Sr (each keeps Rush); Classic Golem prints First Strike again in place of Divine Shield; Poisonous off Knowledge Breaker Prime; Armor 5 off YileGPT Prime; Armor 2 off Force Projector (its aura reads the face's printed Armor, so it lends none, R4292001) and Oct; Pierce and Armor 2 off Surge Wall; Reborn off Macizon; Rush off Mace, Fortress, Reign, Zenith, Antumbra, Eclipse, Fortnith, Sceptumbra and Reignclipse (Macizon and Sceptumbra now drop one keyword of their two cards' union, R4292000, amending R3565003). Table 2, the keyword stays and the number goes back to the base face's: Reoccurring Dream and Legacy: Reoccurring Dream chance 40 to 30 (Lucky 1 kept); Top Loser Armor 4 to 2 (Immune to Spells kept); Flak v3, v4 and v5 damage 2 to 4 back to 1 to 3 (Lucky 1 kept); Fortify Flesh Armor 3 to 7 back to 3 to 5 (Lucky 1 kept); Path of Exile draws 1, from 2 (Cleave kept). Card data only: no script changes, so every shipped catalog folds under the same scripts as it was played (R767000). The three Flak cards are claimed by #4285's pending fragment (Stinkyscape+ Balance Changes IV), which changes them too, so this fragment leaves them out; its player note carries their line.",
+  "player": {
+    "title": "Radiant faces trimmed to one boost each",
+    "new": [],
+    "balance": [
+      "Radiant Reoccurring Dream and Legacy: Reoccurring Dream have a 30% chance, down from 40%.",
+      "Radiant Top Loser has Armor 2, down from 4.",
+      "Radiant Flak v3, v4 and v5 deal a random 1 to 3 damage, down from 2 to 4.",
+      "Radiant Fortify Flesh gives a random 3 to 5 Armor, down from 3 to 7.",
+      "Radiant Path of Exile draws 1 card, down from 2."
+    ],
+    "changes": [
+      "Radiant K-Pop Fanatic, Corpse Eater, Helpful Assistant, Knowledge Breaker and the three Growing Felinors lose Divine Shield.",
+      "Radiant Classic Golem has First Strike again in place of Divine Shield.",
+      "Radiant Knowledge Breaker Prime loses Poisonous.",
+      "Radiant YileGPT Prime loses Armor 5.",
+      "Radiant Force Projector loses Armor 2 and gives your Units none.",
+      "Radiant Surge Wall loses Pierce and Armor 2.",
+      "Radiant Oct loses Armor 2.",
+      "Radiant Macizon loses Reborn.",
+      "Radiant Mace, Fortress, Reign, Zenith, Antumbra, Eclipse, Fortnith, Sceptumbra and Reignclipse lose Rush."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "core-023",
+    "core-050",
+    "core-089",
+    "classicplus-019-1",
+    "classicplus-073-1",
+    "classicplus-t-ai-01",
+    "meditative-045",
+    "meditative-045-1",
+    "meditative-049-1",
+    "meditative-093",
+    "meditative-093-1",
+    "meditative-093-2",
+    "stinkyscape-145",
+    "stinkyscapeplus-042",
+    "stinkyscapeplus-064",
+    "stinkyscapeplus-111",
+    "stinkyscapeplus-112",
+    "stinkyscapeplus-114",
+    "stinkyscapeplus-117",
+    "stinkyscapeplus-118",
+    "stinkyscapeplus-119",
+    "stinkyscapeplus-123",
+    "stinkyscapeplus-133-2",
+    "stinkyscapeplus-133-3",
+    "stinkyscapeplus-133-4",
+    "stinkyscapeplus-133-5",
+    "traininggrounds-026",
+    "traininggrounds-049"
+  ]
+}

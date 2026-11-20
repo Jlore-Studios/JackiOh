@@ -1,8 +1,9 @@
 //! C+ #73.1 Classic Golem (SPEC §8.7 row 73.1, B7). (4) Unit, Token (printed Legendary). 10/10 → 20/20.
 //!   Base:    "Rush, First Strike, Trample, Frenzy / When this attacks a Unit, that Unit transforms into a
 //!            random Radiant Classic or Classic+ Unit."
-//!   Radiant: "Rush, Trample, Divine Shield, Frenzy / When this attacks a Unit, that Unit transforms into a
-//!            random Classic or Classic+ Unit."
+//!   Radiant: "Rush, First Strike, Trample, Frenzy / When this attacks a Unit, that Unit transforms into a
+//!            random Classic or Classic+ Unit." (issue #4292: First Strike again, where Divine Shield had
+//!            taken its place).
 //!   Through v0.5.13g: both faces ended "... If it dies, this may attack again" (`script_v0_5_13g`, kept,
 //!   R767000).
 //!
@@ -190,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn is_a_4_unit_token_printed_legendary_10_10_rush_first_strike_trample_radiant_20_20_trades_first_strike_for_divine_shield() {
+    fn is_a_4_unit_token_printed_legendary_10_10_rush_first_strike_trample_radiant_20_20_keeps_first_strike_since_issue_4292() {
         crate::register_all();
         let def = crate::card_def(ID);
         assert!(def.token);
@@ -199,7 +200,9 @@ mod tests {
         assert_eq!([def.base.attack, def.base.health], [Some(10), Some(10)]);
         assert_eq!(keyword_kinds(&def.base.keywords), vec![json!("Rush"), json!("First Strike"), json!("Trample"), json!("Frenzy")]);
         assert_eq!([def.radiant.attack, def.radiant.health], [Some(20), Some(20)]);
-        assert_eq!(keyword_kinds(&def.radiant.keywords), vec![json!("Rush"), json!("Trample"), json!("Divine Shield"), json!("Frenzy")]);
+        // Issue #4292: the Radiant face prints the base face's keywords, First Strike back in place of the
+        // Divine Shield it had.
+        assert_eq!(keyword_kinds(&def.radiant.keywords), keyword_kinds(&def.base.keywords));
         let CardScripts { base, radiant } = script();
         assert!(base.when_attacks.is_some() && base.after_attack.is_none());
         assert!(radiant.when_attacks.is_some() && radiant.after_attack.is_none());
@@ -442,7 +445,8 @@ mod tests {
             crate::register_all();
             let seed = seed_where_the_golem_survives_and(true, true);
             let mut s = golem(Some(json!(VANILLA)), true, &seed);
-            assert!(keyword_kinds(&s.stats(GOLEM).keywords).contains(&json!("Divine Shield")));
+            let kinds = keyword_kinds(&s.stats(GOLEM).keywords);
+            assert!(kinds.contains(&json!("First Strike")) && !kinds.contains(&json!("Divine Shield")));
             attack_with(&mut s);
             let it = s.card(GOLEM).id.clone();
             assert!(may_attack(&s, &it));

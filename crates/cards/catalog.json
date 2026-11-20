@@ -828,7 +828,7 @@
       {
         "key": "chance",
         "base": 30,
-        "radiant": 40,
+        "radiant": 30,
         "better": "up",
         "step": 10,
         "min": 1,
@@ -1713,12 +1713,8 @@
     "radiant": {
       "attack": 2,
       "health": 2,
-      "keywords": [
-        {
-          "kind": "Divine Shield"
-        }
-      ],
-      "text": "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
+      "keywords": [],
+      "text": "Cry: Allure an enemy permanent. Make it Radiant when you steal it."
     }
   },
   "core-051": {
@@ -3252,14 +3248,11 @@
           "kind": "Rush"
         },
         {
-          "kind": "Divine Shield"
-        },
-        {
           "kind": "Brittle",
           "n": 3
         }
       ],
-      "text": "Rush, Divine Shield, Brittle 3\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      "text": "Rush, Brittle 3\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
     }
   },
   "core-090": {
@@ -8468,7 +8461,7 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 4
+          "n": 2
         },
         {
           "kind": "Immune to Spells"
@@ -8477,7 +8470,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Armor 4, Immune to Spells, Can't Defend\nOnly Units in this lane can attack this."
+      "text": "Armor 2, Immune to Spells, Can't Defend\nOnly Units in this lane can attack this."
     }
   },
   "classicplus-019-2": {
@@ -11114,16 +11107,16 @@
           "kind": "Rush"
         },
         {
-          "kind": "Trample"
+          "kind": "First Strike"
         },
         {
-          "kind": "Divine Shield"
+          "kind": "Trample"
         },
         {
           "kind": "Frenzy"
         }
       ],
-      "text": "Rush, Trample, Divine Shield, Frenzy\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit."
+      "text": "Rush, First Strike, Trample, Frenzy\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit."
     }
   },
   "classicplus-074": {
@@ -11438,12 +11431,9 @@
       "keywords": [
         {
           "kind": "Taunt"
-        },
-        {
-          "kind": "Divine Shield"
         }
       ],
-      "text": "Taunt, Divine Shield\nCry: Discover a card from your deck. It costs (1) less."
+      "text": "Taunt\nCry: Discover a card from your deck. It costs (1) less."
     }
   },
   "classicplus-t-ai-02": {
@@ -13832,12 +13822,8 @@
     "radiant": {
       "attack": 2,
       "health": 6,
-      "keywords": [
-        {
-          "kind": "Divine Shield"
-        }
-      ],
-      "text": "Divine Shield\nCry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+      "keywords": [],
+      "text": "Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
     }
   },
   "meditative-045-1": {
@@ -13886,12 +13872,9 @@
       "keywords": [
         {
           "kind": "Rush"
-        },
-        {
-          "kind": "Poisonous"
         }
       ],
-      "text": "Rush, Poisonous\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: Your Units have Cloaked."
+      "text": "Rush\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: Your Units have Cloaked."
     }
   },
   "meditative-046": {
@@ -14103,13 +14086,8 @@
     "radiant": {
       "attack": 16,
       "health": 40,
-      "keywords": [
-        {
-          "kind": "Armor",
-          "n": 5
-        }
-      ],
-      "text": "Armor 5\nFloat reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "keywords": [],
+      "text": "Float reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     }
   },
   "meditative-049-2": {
@@ -15912,16 +15890,13 @@
       "health": 2,
       "keywords": [
         {
-          "kind": "Divine Shield"
-        },
-        {
           "kind": "Rush"
         },
         {
           "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield, Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr."
+      "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr."
     }
   },
   "meditative-093-1": {
@@ -15960,16 +15935,13 @@
       "health": 4,
       "keywords": [
         {
-          "kind": "Divine Shield"
-        },
-        {
           "kind": "Rush"
         },
         {
           "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield, Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr Sr."
+      "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr Sr."
     }
   },
   "meditative-093-2": {
@@ -16007,16 +15979,13 @@
       "health": 6,
       "keywords": [
         {
-          "kind": "Divine Shield"
-        },
-        {
           "kind": "Rush"
         },
         {
           "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield, Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Super Senior."
+      "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Super Senior."
     }
   },
   "meditative-093-3": {
@@ -20621,7 +20590,7 @@
       {
         "key": "least",
         "base": 1,
-        "radiant": 2,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20629,7 +20598,7 @@
       {
         "key": "most",
         "base": 3,
-        "radiant": 4,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20813,7 +20782,7 @@
       {
         "key": "least",
         "base": 1,
-        "radiant": 2,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20821,7 +20790,7 @@
       {
         "key": "most",
         "base": 3,
-        "radiant": 4,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -21005,7 +20974,7 @@
       {
         "key": "least",
         "base": 1,
-        "radiant": 2,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -21013,7 +20982,7 @@
       {
         "key": "most",
         "base": 3,
-        "radiant": 4,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -24336,7 +24305,7 @@
       {
         "key": "most",
         "base": 5,
-        "radiant": 7,
+        "radiant": 5,
         "better": "up",
         "step": 1,
         "min": 1
@@ -27569,7 +27538,7 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 2,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -28363,7 +28332,7 @@
       {
         "key": "chance",
         "base": 30,
-        "radiant": 40,
+        "radiant": 30,
         "better": "up",
         "step": 10,
         "min": 1,
@@ -30411,13 +30380,8 @@
       "text": "The first {pool} damage allies would take per turn is nullified."
     },
     "radiant": {
-      "keywords": [
-        {
-          "kind": "Armor",
-          "n": 2
-        }
-      ],
-      "text": "Armor 2\nThe first {pool} damage allies would take per turn is nullified."
+      "keywords": [],
+      "text": "The first {pool} damage allies would take per turn is nullified."
     },
     "params": [
       {
@@ -31271,16 +31235,9 @@
         },
         {
           "kind": "Taunt"
-        },
-        {
-          "kind": "Pierce"
-        },
-        {
-          "kind": "Armor",
-          "n": 2
         }
       ],
-      "text": "Can't attack, Taunt, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
+      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
     },
     "params": [
       {
@@ -33270,13 +33227,10 @@
           "kind": "Ranged"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Pierce"
         }
       ],
-      "text": "Immutable, Immune to Spells, Ranged, Rush, Pierce\nDamage also Burns {burns}."
+      "text": "Immutable, Immune to Spells, Ranged, Pierce\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -33344,14 +33298,11 @@
           "kind": "Pierce"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Armor",
           "n": 4
         }
       ],
-      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Rush, Armor 4"
+      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 4"
     }
   },
   "stinkyscapeplus-113": {
@@ -33491,9 +33442,6 @@
           "kind": "Pierce"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Cleave"
         },
         {
@@ -33501,7 +33449,7 @@
           "n": 4
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -33676,13 +33624,10 @@
           "kind": "Pierce"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Flying, Ranged, Pierce, Rush, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 1, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -33744,13 +33689,10 @@
           "kind": "Pierce"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Flying, Ranged, Pierce, Rush, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 2, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -33819,9 +33761,6 @@
           "kind": "Pierce"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Can't Defend"
         },
         {
@@ -33832,7 +33771,7 @@
           "n": 6
         }
       ],
-      "text": "Tribute 3, Flying, Ranged, Pierce, Rush, Can't Defend, Crater, Armor 6\nDamage also Burns {burns}."
+      "text": "Tribute 3, Flying, Ranged, Pierce, Can't Defend, Crater, Armor 6\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -34116,13 +34055,9 @@
         },
         {
           "kind": "Flying"
-        },
-        {
-          "kind": "Armor",
-          "n": 2
         }
       ],
-      "text": "Tribute 3, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal all allies {heal}.\nAura: The first {pool} damage allies would take per turn is nullified."
+      "text": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal all allies {heal}.\nAura: The first {pool} damage allies would take per turn is nullified."
     },
     "params": [
       {
@@ -34656,13 +34591,10 @@
           "kind": "Flying"
         },
         {
-          "kind": "Reborn"
-        },
-        {
           "kind": "Can't Defend"
         }
       ],
-      "text": "Immutable, Immune to Spells, Ranged, Rush, Pierce, Flying, Reborn, Can't Defend\nDamage also Burns {burns}."
+      "text": "Immutable, Immune to Spells, Ranged, Rush, Pierce, Flying, Can't Defend\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -34738,9 +34670,6 @@
           "kind": "Pierce"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Armor",
           "n": 4
         },
@@ -34751,7 +34680,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Rush, Armor 4, Flying, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 4, Flying, Can't Defend\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -34834,9 +34763,6 @@
           "kind": "Pierce"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Armor",
           "n": 3
         },
@@ -34847,7 +34773,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Armor 3, Flying, Can't Defend\nDamage also Burns {burns}."
+      "text": "Tribute 2, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Armor 3, Flying, Can't Defend\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -34940,9 +34866,6 @@
           "kind": "Pierce"
         },
         {
-          "kind": "Rush"
-        },
-        {
           "kind": "Cleave"
         },
         {
@@ -34963,7 +34886,7 @@
           "n": 6
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 6\nDamage also Burns {damage}.\nDamage also Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 6\nDamage also Burns {damage}.\nDamage also Burns {burns}."
     },
     "params": [
       {

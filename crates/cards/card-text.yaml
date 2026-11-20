@@ -481,7 +481,7 @@ core-050: # K-Pop Fanatic
   zh:
     name: 韩流狂热粉
     base: 战吼：迷惑一个敌方永久物。
-    radiant: "圣盾\n战吼：迷惑一个敌方永久物。当你夺取它时，使其变为光辉。"
+    radiant: "战吼：迷惑一个敌方永久物。当你夺取它时，使其变为光辉。"
 core-051: # KY's Private Tutor
   flavour: Tutoring available in every subject except humility.
   voice:
@@ -839,7 +839,7 @@ core-089: # Corpse Eater
   zh:
     name: 噬尸者
     base: "突袭，易碎1\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。\n此单位攻击一个单位后，它可以再次攻击。"
-    radiant: "突袭，圣盾，易碎3\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。\n此单位攻击一个单位后，它可以再次攻击。"
+    radiant: "突袭，易碎3\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。\n此单位攻击一个单位后，它可以再次攻击。"
 core-090: # Super-Virus Injection
   flavour: Spread it around. Let them shuffle it themselves.
   voice:
@@ -2087,7 +2087,7 @@ classicplus-019-1: # Top Loser
   zh:
     name: 上路菜鸡
     base: "护甲2，无法守备\n只有这一纵列的单位可以攻击这个单位。"
-    radiant: "护甲4，法术免疫，无法守备\n只有这一纵列的单位可以攻击这个单位。"
+    radiant: "护甲2，法术免疫，无法守备\n只有这一纵列的单位可以攻击这个单位。"
 classicplus-019-2: # Jungle Loser
   flavour: He ganks when he feels like it, which is rarely.
   voice:
@@ -2712,7 +2712,7 @@ classicplus-073-1: # Classic Golem
   zh:
     name: 经典魔像
     base: "突袭，先攻，践踏，暴怒\n当此单位攻击一个单位时，那个单位变形成为一个随机光辉经典或经典+单位。"
-    radiant: "突袭，践踏，圣盾，暴怒\n当此单位攻击一个单位时，那个单位变形成为一个随机经典或经典+单位。"
+    radiant: "突袭，先攻，践踏，暴怒\n当此单位攻击一个单位时，那个单位变形成为一个随机经典或经典+单位。"
 classicplus-074: # Twice Forward One Step Backwards
   flavour: Two steps forward, one step back, and a lot of glue.
   voice:
@@ -2786,7 +2786,7 @@ classicplus-t-ai-01: # Helpful Assistant
   zh:
     name: 得力助手
     base: "嘲讽\n战吼：从你的牌库中发现一张牌。"
-    radiant: "嘲讽，圣盾\n战吼：从你的牌库中发现一张牌。其法力值消耗减少(1)点。"
+    radiant: "嘲讽\n战吼：从你的牌库中发现一张牌。其法力值消耗减少(1)点。"
 classicplus-t-ai-02: # Scaling Law
   flavour: Bigger is better. Bigger is always better.
   voice:
@@ -3338,7 +3338,7 @@ meditative-045: # Knowledge Breaker
   zh:
     name: 知识破坏者
     base: "战吼：削弱场上和双方手牌中的每张其他中国或KY牌。\n光环：你的单位拥有隐匿。\n亡语：将一张至尊知识破坏者洗入你的牌库。"
-    radiant: "圣盾\n战吼：削弱场上和双方手牌中的每张其他中国或KY牌{times}次。\n光环：你的单位拥有隐匿。\n亡语：将一张光辉至尊知识破坏者洗入你的牌库。"
+    radiant: "战吼：削弱场上和双方手牌中的每张其他中国或KY牌{times}次。\n光环：你的单位拥有隐匿。\n亡语：将一张光辉至尊知识破坏者洗入你的牌库。"
 meditative-045-1: # Knowledge Breaker Prime
   flavour: It broke through thinking about breaking through.
   voice:
@@ -3348,7 +3348,7 @@ meditative-045-1: # Knowledge Breaker Prime
   zh:
     name: 至尊知识破坏者
     base: "突袭\n战吼：召唤{traps}个随机陷阱。消灭每个其他中国或KY永久物。\n光环：你的单位拥有隐匿。"
-    radiant: "突袭，剧毒\n战吼：召唤{traps}个随机光辉陷阱。放逐每个其他中国或KY永久物。\n光环：你的单位拥有隐匿。"
+    radiant: "突袭\n战吼：召唤{traps}个随机光辉陷阱。放逐每个其他中国或KY永久物。\n光环：你的单位拥有隐匿。"
 meditative-046: # Conjure Intellect
   flavour: Three schools of thought, one quiet mind.
   voice:
@@ -3394,7 +3394,7 @@ meditative-049-1: # YileGPT Prime
   zh:
     name: 至尊YileGPT
     base: "结余减费。\n战吼：随机执行以下{picks}项：召唤{datacenters}个Claude的数据中心；将{glitches}张光辉系统故障牌置入你的手牌，其法力值消耗为({setCost})；召唤一个AI女友；用义乐病毒填满你对手的场地；削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
-    radiant: "护甲5\n结余减费。\n战吼：召唤{datacenters}个Claude的数据中心。将{glitches}张光辉系统故障牌置入你的手牌；其法力值消耗为({setCost})。召唤一个AI女友。为你的对手召唤{viruses}个光辉义乐病毒。削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
+    radiant: "结余减费。\n战吼：召唤{datacenters}个Claude的数据中心。将{glitches}张光辉系统故障牌置入你的手牌；其法力值消耗为({setCost})。召唤一个AI女友。为你的对手召唤{viruses}个光辉义乐病毒。削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
 meditative-049-2: # Yile's Virus
   flavour: Have you tried turning it off and on?
   voice:
@@ -3848,7 +3848,7 @@ meditative-093: # Growing Felinor
   zh:
     name: 成长猫族
     base: "无法守备\n亡语：召唤一个成长猫族学长。"
-    radiant: "圣盾，突袭，无法守备\n亡语：召唤一个光辉成长猫族学长。"
+    radiant: "突袭，无法守备\n亡语：召唤一个光辉成长猫族学长。"
 meditative-093-1: # Growing Felinor Sr
   flavour: Promoted for showing up.
   voice:
@@ -3858,7 +3858,7 @@ meditative-093-1: # Growing Felinor Sr
   zh:
     name: 成长猫族学长
     base: "无法守备\n亡语：召唤一个成长猫族学长学长。"
-    radiant: "圣盾，突袭，无法守备\n亡语：召唤一个光辉成长猫族学长学长。"
+    radiant: "突袭，无法守备\n亡语：召唤一个光辉成长猫族学长学长。"
 meditative-093-2: # Growing Felinor Sr Sr
   flavour: Held back a year, on purpose.
   voice:
@@ -3868,7 +3868,7 @@ meditative-093-2: # Growing Felinor Sr Sr
   zh:
     name: 成长猫族学长学长
     base: "无法守备\n亡语：召唤一个成长猫族超级学长。"
-    radiant: "圣盾，突袭，无法守备\n亡语：召唤一个光辉成长猫族超级学长。"
+    radiant: "突袭，无法守备\n亡语：召唤一个光辉成长猫族超级学长。"
 meditative-093-3: # Growing Felinor Super Senior
   flavour: Graduated. Refuses to leave campus.
   voice:
@@ -7432,7 +7432,7 @@ stinkyscapeplus-042: # Force Projector
   zh:
     name: 力场投射器
     base: 每回合，友方将受到的前{pool}点伤害会被抵消。
-    radiant: "护甲2\n每回合，友方将受到的前{pool}点伤害会被抵消。"
+    radiant: "每回合，友方将受到的前{pool}点伤害会被抵消。"
     previews:
       up to {pool} each turn: 前{pool}点伤害
 stinkyscapeplus-043: # Segment
@@ -7626,7 +7626,7 @@ stinkyscapeplus-064: # Surge Wall
   zh:
     name: 浪涌墙
     base: "无法攻击，嘲讽\n回合结束时：对所有敌人造成{damage}点伤害。\n加码(4)：改为对所有敌人造成{embiggenedDamage}点伤害。巨型，0/24。"
-    radiant: "无法攻击，嘲讽，穿透，护甲2\n回合结束时：对所有敌人造成{damage}点伤害。\n加码(4)：改为对所有敌人造成{embiggenedDamage}点伤害。巨型，0/48。"
+    radiant: "无法攻击，嘲讽\n回合结束时：对所有敌人造成{damage}点伤害。\n加码(4)：改为对所有敌人造成{embiggenedDamage}点伤害。巨型，0/48。"
 stinkyscapeplus-065: # Thorium Wall
   flavour: Dense, warm and unbothered. Practically a landlord.
   voice:
@@ -8080,7 +8080,7 @@ stinkyscapeplus-111: # Mace
   zh:
     name: 战锤
     base: "不可变，法术免疫，远程，穿透\n伤害同时附加燃烧{burns}。"
-    radiant: "不可变，法术免疫，远程，突袭，穿透\n伤害同时附加燃烧{burns}。"
+    radiant: "不可变，法术免疫，远程，穿透\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-112: # Fortress
   flavour: A building that learned to walk, and chose to walk toward you.
   voice:
@@ -8090,7 +8090,7 @@ stinkyscapeplus-112: # Fortress
   zh:
     name: 堡垒
     base: 献祭1，不可变，法术免疫，远程，穿透，护甲2
-    radiant: 献祭1，不可变，法术免疫，远程，穿透，突袭，护甲4
+    radiant: 献祭1，不可变，法术免疫，远程，穿透，护甲4
 stinkyscapeplus-113: # Scepter
   flavour: Rules the floor, the ceiling and anything else that stands up.
   voice:
@@ -8110,7 +8110,7 @@ stinkyscapeplus-114: # Reign
   zh:
     name: 君临
     base: "献祭3，不可变，法术免疫，远程，风怒，穿透，顺劈，护甲4\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭3，不可变，法术免疫，远程，风怒，穿透，突袭，顺劈，护甲4\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭3，不可变，法术免疫，远程，风怒，穿透，顺劈，护甲4\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-115: # Flare
   flavour: Quick, bright and gone by lunch. Everyone loved it, briefly.
   voice:
@@ -8140,7 +8140,7 @@ stinkyscapeplus-117: # Zenith
   zh:
     name: 天顶
     base: "献祭1，飞行，远程，穿透，无法守备\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭1，飞行，远程，穿透，突袭，无法守备\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭1，飞行，远程，穿透，无法守备\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-118: # Antumbra
   flavour: A shadow with a payroll and several enormous opinions.
   voice:
@@ -8150,7 +8150,7 @@ stinkyscapeplus-118: # Antumbra
   zh:
     name: 本影
     base: "献祭2，飞行，远程，穿透，无法守备\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭2，飞行，远程，穿透，突袭，无法守备\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭2，飞行，远程，穿透，无法守备\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-119: # Eclipse
   flavour: Day becomes night, and the night has a very short temper.
   voice:
@@ -8160,7 +8160,7 @@ stinkyscapeplus-119: # Eclipse
   zh:
     name: 日蚀
     base: "献祭3，飞行，远程，穿透，无法守备，陨坑，护甲3\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭3，飞行，远程，穿透，突袭，无法守备，陨坑，护甲6\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭3，飞行，远程，穿透，无法守备，陨坑，护甲6\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-120: # Crawler
   flavour: Cheap, loyal, and wildly excited about every single wall.
   voice:
@@ -8210,7 +8210,7 @@ stinkyscapeplus-123: # Oct
   zh:
     name: 八翼机
     base: "献祭3，无法攻击，无法守备，飞行\n回合结束时：为所有友方恢复{heal}点生命值。\n光环：友方将受到的伤害，每回合最多{pool}点无效。"
-    radiant: "献祭3，无法攻击，无法守备，飞行，护甲2\n回合结束时：为所有友方恢复{heal}点生命值。\n光环：友方将受到的伤害，每回合最多{pool}点无效。"
+    radiant: "献祭3，无法攻击，无法守备，飞行\n回合结束时：为所有友方恢复{heal}点生命值。\n光环：友方将受到的伤害，每回合最多{pool}点无效。"
     previews:
       up to {pool} each turn: 每回合最多{pool}点
 stinkyscapeplus-124: # Sei
@@ -8320,7 +8320,7 @@ stinkyscapeplus-133-2: # Macizon
   zh:
     name: 锤平线
     base: "不可变，法术免疫，远程，穿透，飞行，突袭，无法守备\n伤害同时附加燃烧{burns}。"
-    radiant: "不可变，法术免疫，远程，突袭，穿透，飞行，复生，无法守备\n伤害同时附加燃烧{burns}。"
+    radiant: "不可变，法术免疫，远程，突袭，穿透，飞行，无法守备\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-133-3: # Fortnith
   flavour: A castle that learned to hover. The neighbours have filed complaints.
   voice:
@@ -8330,7 +8330,7 @@ stinkyscapeplus-133-3: # Fortnith
   zh:
     name: 堡顶
     base: "献祭1，不可变，法术免疫，远程，穿透，护甲2，飞行，无法守备\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭1，不可变，法术免疫，远程，穿透，突袭，护甲4，飞行，无法守备\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭1，不可变，法术免疫，远程，穿透，护甲4，飞行，无法守备\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-133-4: # Sceptumbra
   flavour: Royalty with a shadow so wide it needs its own postcode.
   voice:
@@ -8340,7 +8340,7 @@ stinkyscapeplus-133-4: # Sceptumbra
   zh:
     name: 权影
     base: "献祭2，不可变，法术免疫，远程，风怒，穿透，护甲3，飞行，无法守备\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭2，不可变，法术免疫，远程，风怒，穿透，突袭，护甲3，飞行，无法守备\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭2，不可变，法术免疫，远程，风怒，穿透，护甲3，飞行，无法守备\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-133-5: # Reignclipse
   flavour: Reign and Eclipse, glued together. Both still insist on going first.
   voice:
@@ -8350,7 +8350,7 @@ stinkyscapeplus-133-5: # Reignclipse
   zh:
     name: 君蚀
     base: "献祭3，不可变，法术免疫，远程，风怒，穿透，顺劈，护甲4，飞行，无法守备，陨坑，护甲3\n伤害同时附加燃烧{damage}。\n伤害同时附加燃烧{burns}。"
-    radiant: "献祭3，不可变，法术免疫，远程，风怒，穿透，突袭，顺劈，护甲4，飞行，无法守备，陨坑，护甲6\n伤害同时附加燃烧{damage}。\n伤害同时附加燃烧{burns}。"
+    radiant: "献祭3，不可变，法术免疫，远程，风怒，穿透，顺劈，护甲4，飞行，无法守备，陨坑，护甲6\n伤害同时附加燃烧{damage}。\n伤害同时附加燃烧{burns}。"
 stinkyscapeplus-134: # Basket of Crawlers
   flavour: They come pre-washed. They are still, somehow, not clean.
   voice:

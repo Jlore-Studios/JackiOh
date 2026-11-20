@@ -1,14 +1,15 @@
-//! SPEC §8.12 S+ #42 Force Projector (R3550004, R3556004; R1420):
+//! SPEC §8.12 S+ #42 Force Projector (R3550004, R3556004, R4292001; R1420):
 //! (3) Field Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "The first {pool} damage allies would take per turn is nullified."
-//!   Radiant: "Armor 2
-//!            The first {pool} damage allies would take per turn is nullified."
+//!   Radiant: "The first {pool} damage allies would take per turn is nullified." (issue #4292 took
+//!            its Armor 2)
 //!
 //! The pool is the E6 per-turn damage pool (`StaticFlags.damagePool`, R3550004): the first N damage
 //! its side would take each turn is nullified after Armor, refilling at the start of its
-//! controller's turn, with a preview of what is left. The Radiant face's Armor 2 is an aura on its
-//! controller's Units (R3556004), read off its own printed Armor — inert on the Field Spell itself
-//! — so a hit soaks Armor first, then the pool.
+//! controller's turn, with a preview of what is left. The Radiant face's aura lends its controller's
+//! Units the Armor the face prints (R3556004), read off its own printed Armor — inert on the Field
+//! Spell itself. Since issue #4292 the face prints none, so the aura lends none and a hit soaks only
+//! the pool (R4292001); a shipped catalog that printed Armor 2 folds with the aura lending 2 (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -35,7 +36,8 @@ fn pool_preview() -> PreviewHook {
     })
 }
 
-/// R3556004: Armor 2 on its controller's Units, read off its own printed Armor.
+/// R3556004: its printed Armor on its controller's Units, read off the face. The Radiant face prints
+/// none since issue #4292 (Armor 2 before), so the aura lends none (R4292001).
 fn armor_aura() -> AuraHook {
     aura_hook(|args: HookArgs<'_>| {
         let n = numbered_keywords_on(args.state, args.self_)
@@ -79,7 +81,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S+ #42 Force Projector — SPEC §8.12 row S+ 42 (R3550004, R3556004).
+// S+ #42 Force Projector — SPEC §8.12 row S+ 42 (R3550004, R3556004, R4292001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,17 +182,19 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3556004_radiant_gives_its_units_armor_2_and_the_pool_soaks_after_it() {
+        fn r4292001_r3556004_radiant_lends_no_armor_and_the_pool_soaks_the_whole_hit() {
             let mut s = projected(true, "s42-radiant");
             assert_eq!(pool_left(&s), Some(10));
             next_turn_of(&mut s, P2);
-            // A 3-attack hit past Armor 2 leaves 1 for the pool, and the Unit takes nothing.
             let ranger = s.unit(P2, 1).expect("a ranger there").id;
             let body = s.unit(P1, 1).expect("a body there").id;
+            // The face prints no Armor since issue #4292, so its aura lends the Unit none (R4292001).
+            assert_eq!(s.stats(body.as_str()).armor, 0);
+            // The pool soaks the whole 3-attack hit, and the Unit takes nothing.
             s.attack(ranger.as_str(), body.as_str());
             s.expect_stats(body.as_str(), json!({ "health": 4, "maxHealth": 4 }));
-            assert_eq!(pool_left(&s), Some(9));
-            // A fresh pool soaks after Armor too: a 13 hit past Armor 2 soaks 10 and deals 1.
+            assert_eq!(pool_left(&s), Some(7));
+            // A fresh pool soaks the first 10 of a 13 hit, and the Unit takes the other 3.
             next_turn_of(&mut s, P1);
             next_turn_of(&mut s, P2);
             assert_eq!(pool_left(&s), Some(10));
@@ -202,7 +206,7 @@ mod tests {
                 }))),
                 P2,
             );
-            s.expect_stats(body.as_str(), json!({ "health": 3, "maxHealth": 4 }));
+            s.expect_stats(body.as_str(), json!({ "health": 1, "maxHealth": 4 }));
             assert_eq!(pool_left(&s), Some(0));
         }
     }

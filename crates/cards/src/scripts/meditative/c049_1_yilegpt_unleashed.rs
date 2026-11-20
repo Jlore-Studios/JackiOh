@@ -1,7 +1,8 @@
 //! M #49.1 YileGPT Prime (SPEC §8.8 row 49.1): (8) Unit, CN, Acclaimed, Prime, Token (printed
-//! Mythic), 8/20 → 16/40 (Radiant: Armor 5). YileGPT Unleashed until #1563. Through v0.5.9f it cost
-//! (10), had Can't attack and "Start of turn: Make [a random permanent / {radiants} random permanents]
-//! of yours Radiant" (`script_v0_5_9f`, kept for those replays, R767000).
+//! Mythic), 8/20 → 16/40 (Radiant: no keyword; Armor 5 until issue #4292). YileGPT Unleashed until
+//! #1563. Through v0.5.9f it cost (10), had Can't attack and "Start of turn: Make [a random permanent
+//! / {radiants} random permanents] of yours Radiant" (`script_v0_5_9f`, kept for those replays,
+//! R767000).
 //!
 //! "Float reduces cost." plus "Cry: Do {picks} of these at random …" / Radiant "Cry: [all five] …"
 //! Engine:
@@ -555,14 +556,16 @@ mod tests {
             use super::*;
 
             #[test]
-            fn radiant_is_16_40_with_armor_5() {
+            fn radiant_is_16_40_with_no_armor_since_issue_4292() {
                 let s = scenario(json!({
                     "seed": "unleashed-radiant-stats",
                     "p1": { "field": [{ "def": UNLEASHED, "radiant": true, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },
                 }));
                 let stats = s.stats(s.unit(P1, 1).expect("unleashed"));
-                assert_eq!((stats.attack, stats.health, stats.armor), (16, 40, 5));
+                // Armor 5 until issue #4292; now its Radiant face prints no keyword, as the base.
+                assert_eq!((stats.attack, stats.health, stats.armor), (16, 40, 0));
+                assert!(crate::card_def(UNLEASHED).radiant.keywords.is_empty());
             }
 
             #[test]

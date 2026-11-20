@@ -17,7 +17,6 @@
 //! **Immune to spells**  
 //! **Ranged**  
 //! **Pierce**  
-//! **Rush**  
 //! **Armor 4**  
 //! **Flying**  
 //! **Can’t Defend**  
@@ -25,7 +24,8 @@
 //!
 //! The fusion of Fortress and Zenith (S+ #112, #117), with art and a name of its own (R3565003). Tribute 1
 //! is the one the two share (R101), and Armor and the rest are catalog data; "Damage also Burns N" is the
-//! rider (R3540002), N declared as `burns` per face (R386).
+//! rider (R3540002), N declared as `burns` per face (R386). Issue #4292 took the Radiant face's Rush, as it
+//! took Fortress's and Zenith's, so the face stays the two cards' union (R4292000, R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -247,13 +247,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn rush_hits_a_unit_not_the_hero() {
+        fn cannot_attack_on_its_summon_turn_with_no_rush_since_issue_4292() {
             let mut s = in_hand(true, TRIBUTE as usize);
             play(&mut s, TRIBUTE);
-            s.expect_refused(|s| s.attack(ID, "hero"));
+            // The Radiant face prints no Rush since issue #4292, so it waits a turn as the base face does.
+            assert!(!keywords_of(s.state(), s.card(ID)).contains(&Keyword::Rush));
             let wall = s.unit_at(P2, 1).id;
-            s.attack(ID, wall.as_str());
-            assert_eq!(s.stats(wall.as_str()).health, 60 - ATTACK[1]);
+            s.expect_refused(|s| s.attack(ID, wall.as_str()));
         }
     }
 }

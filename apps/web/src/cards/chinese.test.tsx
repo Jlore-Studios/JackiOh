@@ -259,8 +259,8 @@ describe("R1301 a Chinese card in a match", () => {
     const radiant = faceModel({ defId: fused.id, def: fused, radiant: true, chinese: true, inPlay: {} });
     expect(radiant.text.full).toBe(`${zh("core-011").radiant}\n${zh("core-089").radiant}`);
     // R102, R1302: each Chinese Radiant line is marked against its own Chinese base line (the Corpse Eater's
-    // 易碎3 against 易碎1, issue #3139, among them).
-    expect(markedText(radiant.text.full, legacyText(radiant.text).marks)).toEqual(["冲锋", "圣盾", "3", "两倍"]);
+    // 易碎3 against 易碎1, issue #3139, among them; its Radiant 圣盾 went in issue #4292).
+    expect(markedText(radiant.text.full, legacyText(radiant.text).marks)).toEqual(["冲锋", "3", "两倍"]);
     // R469: an ingredient fused on its Radiant face puts that face into the base form too.
     const forced = { ...fused, ingredients: [{ defId: "core-011", radiant: true as const }, { defId: "core-089" }] };
     expect(chineseDef(forced).base.text).toBe(`${zh("core-011").radiant}\n${zh("core-089").base}`);

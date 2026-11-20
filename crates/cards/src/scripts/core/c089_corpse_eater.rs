@@ -1,9 +1,9 @@
 //! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89, R3139004).
 //!
 //! Base: "Rush, Brittle 1. While in your hand: whenever a unit on either side dies, this gains its attack and
-//! max health. After this attacks a Unit, it may attack again". Radiant: "Rush, Divine Shield, Brittle 3;
-//! gains double". §8's Conventions: both keyword lists are printed in `catalog.json` (§10.4 layer 1), so no
-//! script grants them and only the gain doubles.
+//! max health. After this attacks a Unit, it may attack again". Radiant: "Rush, Brittle 3; gains double"
+//! (its Divine Shield went in issue #4292). §8's Conventions: both keyword lists are printed in
+//! `catalog.json` (§10.4 layer 1), so no script grants them and only the gain doubles.
 //!
 //! "After this attacks a Unit, it may attack again" (since issue #3139, R3139004) is an `after_attack` hook,
 //! Tmack Trav's (R2285001, R2521002): it runs only for an attacker that survived its combat, and when the
@@ -148,16 +148,14 @@ mod tests {
     mod n89_corpse_eater_printed_faces_s8_conventions {
         use super::*;
 
-        /// Issue #3139: both faces gain Brittle, 1 on the base and 3 on the Radiant face.
+        /// Issue #3139: both faces gain Brittle, 1 on the base and 3 on the Radiant face. Issue #4292 took
+        /// the Radiant face's Divine Shield, so both faces list the same keywords.
         #[test]
-        fn the_keyword_cells_list_rush_and_brittle_and_the_radiant_one_divine_shield_and_brittle_3() {
+        fn the_keyword_cells_list_rush_and_brittle_on_both_faces_since_issue_4292() {
             crate::register_all();
             let def = crate::card_def(ID);
             assert_eq!(kinds(&def.base.keywords), vec![KeywordKind::Rush, KeywordKind::Brittle]);
-            assert_eq!(
-                kinds(&def.radiant.keywords),
-                vec![KeywordKind::Rush, KeywordKind::DivineShield, KeywordKind::Brittle]
-            );
+            assert_eq!(kinds(&def.radiant.keywords), vec![KeywordKind::Rush, KeywordKind::Brittle]);
             let brittle = |keywords: &[Keyword]| keywords.iter().find(|keyword| keyword.kind() == KeywordKind::Brittle).and_then(Keyword::n);
             assert_eq!(brittle(&def.base.keywords), Some(1));
             assert_eq!(brittle(&def.radiant.keywords), Some(3));
@@ -363,7 +361,7 @@ mod tests {
         }
 
         #[test]
-        fn stops_once_on_the_field_and_its_printed_divine_shield_is_the_catalog_s_not_a_grant() {
+        fn stops_once_on_the_field_and_prints_no_divine_shield_since_issue_4292() {
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": EATER, "radiant": true }, FILLER], "field": [{ "def": STRAAZA, "lane": 2 }] },
@@ -371,10 +369,7 @@ mod tests {
             }));
 
             s.play(EATER, json!({}));
-            assert_eq!(
-                kinds(&s.stats(EATER).keywords),
-                vec![KeywordKind::Rush, KeywordKind::DivineShield, KeywordKind::Brittle]
-            );
+            assert_eq!(kinds(&s.stats(EATER).keywords), vec![KeywordKind::Rush, KeywordKind::Brittle]);
             assert!(s.card(EATER).granted_keywords.is_empty());
 
             s.attack(STRAAZA, GARY);

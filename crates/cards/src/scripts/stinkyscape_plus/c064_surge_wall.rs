@@ -9,12 +9,11 @@
 //! **Can’t attack**  
 //! **Can’t defend**  
 //! **End of turn** deal 2 embiggen 4 damage to all enemies  
-//! **Pierce, Armor 2**  
 //! **Embiggen: GIGA**
 //!
 //! The Walls' shared embiggened text (R3555001) plus an end-of-turn hit on every enemy (R62): `damage`
-//! unembiggened, `embiggenedDamage` embiggened, both declared. Pierce on the Radiant face is catalog
-//! data, read off the source as any hit is (R346).
+//! unembiggened, `embiggenedDamage` embiggened, both declared. Issue #4292 took the Radiant face's
+//! Pierce and Armor 2, catalog data (R767000), so its hits stop at Armor as the base face's do (R346).
 
 use jackioh_engine::effects::damage_all;
 use jackioh_engine::prelude::*;
@@ -40,7 +39,7 @@ fn surge_wall(text: Script) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // Pierce and Armor 2 on the Radiant face are catalog data.
+    // The Radiant face's keywords are catalog data (its Pierce and Armor 2 went in issue #4292).
     CardScripts {
         base: surge_wall(super::c065_thorium_wall::embiggened_wall()),
         radiant: surge_wall(super::c065_thorium_wall::embiggened_wall()),
@@ -150,11 +149,13 @@ mod tests {
         }
 
         #[test]
-        fn r346_its_hits_pierce_armor() {
+        fn r346_its_hits_pierce_no_armor_since_issue_4292() {
             let mut s = standing(true, "s64-pierce", json!([ARMORED]));
+            // The face prints neither Pierce nor Armor since issue #4292.
+            assert_eq!(s.stats(ID).armor, 0);
             s.end_turn();
-            // Pierce reads off the source (R346): the full 2 past Armor 5.
-            assert_eq!(s.stats(&s.unit_at(P2, 1).id).health, 9 - 2);
+            // Pierce reads off the source (R346), which has none: Armor 5 takes the whole 2.
+            assert_eq!(s.stats(&s.unit_at(P2, 1).id).health, 9);
         }
     }
 }

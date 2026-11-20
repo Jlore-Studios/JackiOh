@@ -355,8 +355,10 @@ mod tests {
 
         /// Me and Mr Token (Core #15): (1) Unit, "Cry: Summon a Rush Token" (Radiant: three).
         const MR_TOKEN: &str = "core-015";
-        /// K-Pop Fanatic (Core #50): (1) 1/1 Unit with a Cry; Radiant 2/2 with Divine Shield.
+        /// K-Pop Fanatic (Core #50): (3) 1/1 Unit with a Cry; Radiant 2/2 (with Divine Shield until issue
+        /// #4292).
         const KPOP: &str = "core-050";
+        const SUPER_SENIOR: &str = "meditative-093-3"; // Growing Felinor Super Senior
         #[test]
         fn targets_a_face_up_backrow_card_on_the_enemy_side() {
             let mut s = backrow_game("prestige-backrow", false);
@@ -379,23 +381,40 @@ mod tests {
 
         #[test]
         fn radiant_only_keywords_are_lost_and_no_cry_runs() {
+            fn kinds(s: &Scenario, id: &str) -> Vec<KeywordKind> {
+                keywords_of(s.state(), s.card(id))
+                    .iter()
+                    .map(|keyword| keyword.kind())
+                    .collect()
+            }
+            // A Radiant K-Pop Fanatic goes back to its base 1/1, and its Cry did not run: no prompt.
             let mut s = scenario(json!({
                 "seed": "prestige-kpop",
                 "p1": { "mana": 10, "hand": [PRESTIGE, FILLER], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [{ "def": KPOP, "radiant": true }], "library": filler(4) },
             }));
             let kpop = must_unit(&s, "p2", 1);
-            let kinds = |s: &Scenario| -> Vec<KeywordKind> {
-                keywords_of(s.state(), s.card(&kpop.id))
-                    .iter()
-                    .map(|keyword| keyword.kind())
-                    .collect()
-            };
-            assert!(kinds(&s).contains(&KeywordKind::DivineShield));
+            s.expect_stats(&kpop.id, json!({ "attack": 2, "health": 2 }));
             s.play(PRESTIGE, pick::targets(pick::id(&kpop.id)));
-            // Back to the base 1/1 with no Divine Shield, and its Cry did not run: no prompt.
-            assert!(!kinds(&s).contains(&KeywordKind::DivineShield));
+            assert!(!s.card(&kpop.id).radiant);
             s.expect_stats(&kpop.id, json!({ "attack": 1, "health": 1 }));
+            assert!(s.state().pending.is_none());
+            // The Radiant-only keywords, on Super Senior since issue #4292 took K-Pop Fanatic's Radiant
+            // Divine Shield off: its Divine Shield and Rush are lost, and its Can't Defend, on both
+            // faces, stays.
+            let mut s = scenario(json!({
+                "seed": "prestige-super-senior",
+                "p1": { "mana": 10, "hand": [PRESTIGE, FILLER], "library": filler(4) },
+                "p2": { "hand": [FILLER], "field": [{ "def": SUPER_SENIOR, "radiant": true }], "library": filler(4) },
+            }));
+            let senior = must_unit(&s, "p2", 1);
+            assert!(kinds(&s, &senior.id).contains(&KeywordKind::DivineShield));
+            assert!(kinds(&s, &senior.id).contains(&KeywordKind::Rush));
+            s.expect_stats(&senior.id, json!({ "attack": 8, "health": 8 }));
+            s.play(PRESTIGE, pick::targets(pick::id(&senior.id)));
+            assert!(!s.card(&senior.id).radiant);
+            assert_eq!(kinds(&s, &senior.id), vec![KeywordKind::CantDefend]);
+            s.expect_stats(&senior.id, json!({ "attack": 4, "health": 4 }));
             assert!(s.state().pending.is_none());
         }
 

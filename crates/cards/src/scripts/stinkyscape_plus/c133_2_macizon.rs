@@ -17,13 +17,13 @@
 //! **Rush**  
 //! **Pierce**  
 //! **Flying**  
-//! **Reborn**  
 //! **Can’t Defend**  
 //! Damage also **Burns 2**
 //!
 //! The fusion of Mace and Horizon (S+ #111, #116), with art and a name of its own (R3565003). Its
 //! keywords are catalog data; "Damage also Burns N" is the rider (R3540002), N declared as `burns` per face
-//! (R386), as Mace's is.
+//! (R386), as Mace's is. Issue #4292 took the Radiant face's Reborn, catalog data (R767000): it was
+//! Horizon's, which keeps it, so this face is the two cards' union less Reborn (R4292000).
 
 use jackioh_engine::prelude::*;
 
@@ -156,11 +156,29 @@ mod tests {
         for ingredient in INGREDIENTS {
             let card = crate::card_def(ingredient);
             for (radiant, face, of) in [(false, &fused.base, &card.base), (true, &fused.radiant, &card.radiant)] {
-                for keyword in &of.keywords {
+                // R4292000: the Radiant face drops Horizon's Reborn, which the next test proves.
+                let kept = of.keywords.iter().filter(|keyword| !(radiant && **keyword == Keyword::Reborn));
+                for keyword in kept {
                     assert!(face.keywords.contains(keyword), "radiant {radiant}: {ID} lacks {keyword:?} of {ingredient}");
                 }
             }
         }
+    }
+
+    #[test]
+    fn r4292000_radiant_drops_horizon_s_reborn() {
+        crate::register_all();
+        let horizon = INGREDIENTS[1];
+        let reborn = |id: &str| crate::card_def(id).radiant.keywords.contains(&Keyword::Reborn);
+        assert!(reborn(horizon), "{horizon} keeps Reborn");
+        assert!(!reborn(ID), "{ID} prints no Reborn");
+        // What Reborn gave is gone too: a Radiant Macizon that dies stays gone (a token, it leaves play),
+        // where Reborn would bring it back to its lane at 1 health.
+        let mut s = on_field(true, json!(["stand-in (0) 9/9 Ranged"]));
+        s.end_turn();
+        let killer = s.unit_at(P2, 1).id;
+        s.attack(killer.as_str(), ID);
+        assert!(s.unit(P1, 1).is_none(), "no Reborn brings it back");
     }
 
     #[test]

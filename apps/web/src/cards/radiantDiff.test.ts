@@ -119,7 +119,9 @@ describe("R277 the word diff", () => {
     // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too. Core #79 Twinspell's is its base
     // text less "Then this goes to the graveyard.", so it stays on the field to serve each turn (R3044000). Stinkyscape+
     // (§8.12) adds four of the designer's: #31 Soul Read's (less the Tribute when another seen card comes first), #72
-    // Foreshadow's and #73 Ripple's (less Can't attack) and #85 Body Snatch's (less "in Defense Position").
+    // Foreshadow's and #73 Ripple's (less Can't attack) and #85 Body Snatch's (less "in Defense Position"). Classic+
+    // #73.1 Classic Golem's is its base text less "Radiant" since issue #4292 gave it First Strike back in place of
+    // Divine Shield: the Unit it attacks becomes a base-face one, and its doubled stats carry its marks.
     expect(silent).toEqual([
       "core-055",
       "core-079",
@@ -128,6 +130,7 @@ describe("R277 the word diff", () => {
       "classic-060",
       "classicplus-005",
       "classicplus-034",
+      "classicplus-073-1",
       "meditative-022-1",
       "meditative-047",
       "meditative-048",

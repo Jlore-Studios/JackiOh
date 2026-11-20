@@ -1,8 +1,9 @@
 //! #23 Reoccurring Dream (SPEC §8.2, R60, R68, §5.1).
 //!
 //! Base: "30% chance a random card in your hand becomes Radiant. End of turn: returns from the GY to
-//! your hand". Radiant restates the roll only — "Lucky 1 (two rolls, keep the success) at 40%" — so
-//! the return-from-the-graveyard clause is kept (§8 Conventions).
+//! your hand". Radiant restates the roll only — "Lucky 1 (two rolls, keep the success) at 30%", the
+//! base face's chance since issue #4292 (40% before) — so the return-from-the-graveyard clause is
+//! kept (§8 Conventions).
 //! Seeded RNG roll (CLAUDE.md rule 4, R60; Lucky X §6.1).
 //! Graveyard trigger in §2.2 cleanup (R68, §10.5) returns to hand (burns if full, R4, §2.4; R129, R987, R177, §9.1).
 //! Radiant stays through zone moves (R1438). Kept face v0.4.0f (R767000, R1748003).
@@ -11,7 +12,8 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-023";
 
-/// "30%" and "40%" as v0.4.4b printed them, before they were the declared `chance` (R1748003).
+/// "30%" and "40%" as v0.4.4b printed them, before they were the declared `chance` (R1748003); the
+/// kept v0.4.4b script still reads both, though the Radiant face declares 30 since issue #4292.
 const BASE_CHANCE: f64 = 0.3;
 const RADIANT_CHANCE: f64 = 0.4;
 
@@ -91,7 +93,8 @@ fn dream(declared: bool) -> CardScripts {
     };
 
     let radiant = Script {
-        // Lucky 1: roll twice and keep the success (§6.1), each roll at 40%.
+        // Lucky 1: roll twice and keep the success (§6.1), each roll at its declared chance (30%; 40%
+        // until issue #4292), or at the 40% v0.4.4b printed.
         cry: Some(hook(move |ctx| {
             if !any_to_make_radiant(ctx) {
                 return vec![];
@@ -119,7 +122,8 @@ pub fn script_v0_4_4b() -> CardScripts {
 }
 
 // #23 Reoccurring Dream — SPEC §8.2, BUILD M4-T4 row 23 (R60).
-// Tests verify seeded rolls, end-of-turn return, hand full burn, and Radiant Lucky 1 at 40%.
+// Tests verify seeded rolls, end-of-turn return, hand full burn, and Radiant Lucky 1 at its declared
+// chance (30%; 40% until issue #4292).
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -376,8 +380,21 @@ mod tests {
         mod radiant {
             use super::*;
 
+            /// Issue #4292: the Radiant face declares the base face's `chance`, 30 (40 before), and
+            /// keeps its printed Lucky 1.
             #[test]
-            fn lucky_1_at_40_hits_wherever_the_base_30_hits_and_at_more_seeds_besides() {
+            fn declares_the_base_30_since_issue_4292() {
+                crate::register_all();
+                for is_radiant in [false, true] {
+                    let s = dream_in("dream-declared", is_radiant, &OTHERS);
+                    let chance = param_value(s.state(), Some(s.card(DREAM)), "chance", ParamValueOptions::default());
+                    assert_eq!(chance, 30, "radiant {is_radiant}");
+                }
+                assert_eq!(crate::card_def(DREAM).radiant.keywords, vec![Keyword::Lucky { n: 1 }]);
+            }
+
+            #[test]
+            fn lucky_1_at_30_hits_wherever_the_base_hits_and_at_more_seeds_besides() {
                 crate::register_all();
                 let base_hits: Vec<&str> = SEEDS
                     .iter()
@@ -394,7 +411,7 @@ mod tests {
                 for seed in &base_hits {
                     assert!(radiant_hits.contains(seed));
                 }
-                // Two rolls at 40% beat one at 30%: 64% against 30% over enough seeds.
+                // Two rolls at 30% beat one: 51% against 30% over enough seeds.
                 assert!(radiant_hits.len() > base_hits.len());
                 // R60: still one card at a time.
                 assert!(SEEDS.iter().all(|seed| radiants_after_playing(seed, true) <= 1));

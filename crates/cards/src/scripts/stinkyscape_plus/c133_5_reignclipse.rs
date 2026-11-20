@@ -23,21 +23,22 @@
 //! **Ranged**  
 //! **Windfury**  
 //! **Pierce**  
-//! **Rush**  
 //! **Cleave**  
 //! **Armor 4**  
 //! **Flying**  
 //! **Can’t Defend**  
 //! **Crater**  
-//! **Armor 3**  
+//! **Armor 6**  
 //! Damage also **Burns 8**  
 //! Dealing damage **Burns 10**
 //!
 //! The fusion of Reign and Eclipse (S+ #114, #119), with art and a name of its own (R3565003). Tribute 3
 //! is the one the two share (the owner, 2026-11-09: not the list's 4), and every keyword is catalog data:
-//! Armor 4 and Armor 3 stack to 7 (R77), Crater locks its zone on arrival (R783010). The two Burn lines are
-//! one rider (R3540002), the sum of the two, as a Fuse sums `burnsOnDamage` (R102): 4 + 5, Radiant 8 + 10.
-//! Its declared `burns` is Eclipse's line, and a tune of it moves the sum (R386).
+//! Armor 4 and Armor 3 stack to 7 (R77; Radiant 4 and 6, 10), Crater locks its zone on arrival (R783010).
+//! The two Burn lines are one rider (R3540002), the sum of the two, as a Fuse sums `burnsOnDamage` (R102):
+//! 4 + 5, Radiant 8 + 10. Its declared `burns` is Eclipse's line, and a tune of it moves the sum (R386).
+//! Issue #4292 took the Radiant face's Rush, as it took Reign's and Eclipse's, so the face stays the two
+//! cards' union (R4292000, R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -293,13 +294,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn rush_hits_a_unit_not_the_hero() {
+        fn cannot_attack_on_its_summon_turn_with_no_rush_since_issue_4292() {
             let mut s = in_hand(true, TRIBUTE as usize);
             play(&mut s, TRIBUTE);
-            s.expect_refused(|s| s.attack(ID, "hero"));
+            // The Radiant face prints no Rush since issue #4292, so it waits a turn as the base face does.
+            assert!(!keywords_of(s.state(), s.card(ID)).contains(&Keyword::Rush));
             let wall = s.unit_at(P2, 1).id;
-            s.attack(ID, wall.as_str());
-            assert_eq!(s.stats(wall.as_str()).health, 60 - ATTACK[1]);
+            s.expect_refused(|s| s.attack(ID, wall.as_str()));
         }
     }
 }

@@ -419,7 +419,8 @@ pub(crate) fn can_kept_halves_hero(id: &str, seed: &str, damage: i32, kept: fn()
 
 /// The printed Flak ranges, base and Radiant, and the Radiant face's Lucky.
 pub(crate) const FLAK_BASE_RANGE: (i32, i32) = (1, 3);
-pub(crate) const FLAK_RADIANT_RANGE: (i32, i32) = (2, 4);
+/// The base range since issue #4292; (2, 4) before.
+pub(crate) const FLAK_RADIANT_RANGE: (i32, i32) = (1, 3);
 pub(crate) const FLAK_RADIANT_LUCKY: i32 = 1;
 /// The printed odds as the test reads them, lowest first.
 pub(crate) const FLAK_PRINTED: [i32; 3] = [60, 30, 10];
