@@ -36300,7 +36300,8 @@
       "2026-11-20T03:59:02Z,claude-7,refusal,call,44668742350,100,2026-11-20T04:20:00Z,,,rejected,100,,2026-11-20T04:20:00Z"
     ],
     "runs": [
-      "2026-11-20T03:56:55Z,44668802194,claude-7,opus,plan,4291,hard,interrupted,5-hour cap,18,0,0,0,35.3314,19,100,,,20,claude-8,fresh,cap,1"
+      "2026-11-20T03:56:55Z,44668802194,claude-7,opus,plan,4291,hard,interrupted,5-hour cap,18,0,0,0,35.3314,19,100,,,20,claude-8,fresh,cap,1",
+      "2026-11-20T03:59:03Z,44668742350,claude-7,opus,build,4284,hard,interrupted,refusal,20.9,49,13319,1740246,1.1276,18,100,,,175.7,claude-7,fresh,,1"
     ]
   },
   "version": 1
