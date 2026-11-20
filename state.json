@@ -13862,6 +13862,13 @@
     "4257": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T01:59:13Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "CLAUDE.md rule 11: it changes the AI's decisions and search, and design across two crates"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
