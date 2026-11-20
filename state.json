@@ -15202,9 +15202,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T04:56:00Z",
+    "at": "2026-11-20T04:56:31Z",
     "url": "",
-    "what": "suggestions (server) on muse"
+    "what": "suggestions (client) on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T04:48:33Z",
@@ -36598,9 +36598,9 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-20T04:56:00Z",
-    "last_area": "server",
-    "last_run": "2026-11-20T04:56:00Z",
+    "idle_since": "2026-11-20T04:56:31Z",
+    "last_area": "client",
+    "last_run": "2026-11-20T04:56:31Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -36611,6 +36611,14 @@
         "last_run": "2026-11-20T04:56:00Z",
         "provider": "muse",
         "run_id": "44677660112",
+        "taken_asks": []
+      },
+      "2": {
+        "area": "client",
+        "count": 1,
+        "last_run": "2026-11-20T04:56:31Z",
+        "provider": "muse",
+        "run_id": "pending:74cd33f3-1795150573",
         "taken_asks": []
       }
     },
