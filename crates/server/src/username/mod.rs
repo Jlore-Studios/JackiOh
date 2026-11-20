@@ -535,6 +535,12 @@ mod tests {
     }
 
     #[test]
+    fn r1433_reads_every_small_capital_as_its_letter() {
+        // The whole alphabet but x, which has no small capital that NFKC leaves alone.
+        assert_eq!(fold("ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘꞯʀꜱᴛᴜᴠᴡʏᴢ"), "abcdefghijklmnopqrstuvwyz");
+    }
+
+    #[test]
     fn r1432_a_name_shares_one_writing_by_script_extensions() {
         // The kana length mark is Common by script but kana by extension.
         assert!(check_scripts("ラーメン").is_ok());

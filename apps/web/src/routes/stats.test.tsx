@@ -2401,51 +2401,30 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     fireEvent.click(await screen.findByTestId(statsTestid.tabTokens, undefined, SLOW));
   }
 
-  /** A Created card's figures: `played` seats used one at `playedRate`, `notPlayed` made one and used none. */
-  function created(id: string, name: string, played: number, playedRate: number | null, notPlayed: number, notPlayedRate: number | null) {
+  /** A Created card's row: `games` seats made one, used or not; R4083000: nothing else of theirs is sent. */
+  function created(id: string, name: string, games: number) {
     return {
       id,
       name,
       cost: 1,
       rarity: "Token",
       set: "Core",
-      games: played + notPlayed,
-      createdPlayedGames: played,
-      createdPlayedWinRate: playedRate,
-      createdNotPlayedGames: notPlayed,
-      createdNotPlayedWinRate: notPlayedRate,
-      createdPlayedRadiantGames: 0,
-      createdPlayedRadiantWinRate: null,
-      createdPlayedNormalGames: played,
-      createdPlayedNormalWinRate: playedRate,
-      createdPlayedDelta: played >= 20 && notPlayed >= 20 && playedRate !== null && notPlayedRate !== null ? playedRate - notPlayedRate : null,
-      hasEnoughGames: played + notPlayed >= 20,
+      games,
+      hasEnoughGames: games >= 20,
       window: { from: "0.2.0", liveGames: 412, source: "provisional", counted: ["0.2.0"] },
     };
   }
 
-  /**
-   * Rush Token, made during 55 seats' games: 30 used a copy (60%, 8 of them Radiant at its first use, too few
-   * for a rate) and 25 used none (52%), 8 points under: 31 of 55 won (56%).
-   */
-  const RUSH = {
-    ...created("core-t-rush", "Rush Token", 30, 0.6, 25, 0.52),
-    // R4082000: the server's tier and adjusted rate, read against the Created cards.
-    tier: "B",
-    adjustedWinRate: 0.521,
-    createdPlayedRadiantGames: 8,
-    createdPlayedRadiantWinRate: 0.75,
-    createdPlayedNormalGames: 22,
-    createdPlayedNormalWinRate: 12 / 22,
-  };
-  /** 40 seats, each used one, 28 won (70%). */
-  const SHEEP = { ...created("core-t-sheep", "Sheep Token", 40, 0.7, 0, null), tier: "A", adjustedWinRate: 0.533 };
-  /** 12 seats, too few for a rate however many won: no tier, and its adjusted rate unshown. */
-  const GHOUL = { ...created("core-t-ghoul", "Ghoul Token", 12, 0.9, 0, null), tier: null, adjustedWinRate: 0.6 };
-  /** The Coin (core-t-coin, a catalog token): 40 seats, 30 used it (50%) and 10 did not (30%), 18 won (45%). */
-  const COIN = { ...created("core-t-coin", "The Coin", 30, 0.5, 10, 0.3), cost: 0, tier: "D", adjustedWinRate: 0.471 };
-  /** A Created copy of a deck card: no token. 30 seats, each used it, 15 won. */
-  const COPY = { ...created("core-001", "Spark Pup", 30, 0.5, 0, null), tier: "C", adjustedWinRate: 0.49 };
+  /** Rush Token, made during 55 seats' games; R4082000: the server's tier and adjusted rate, read against the Created cards. */
+  const RUSH = { ...created("core-t-rush", "Rush Token", 55), tier: "B", adjustedWinRate: 0.521 };
+  /** 40 seats. */
+  const SHEEP = { ...created("core-t-sheep", "Sheep Token", 40), tier: "A", adjustedWinRate: 0.533 };
+  /** 12 seats, too few for a rate: no tier, and its adjusted rate unshown. */
+  const GHOUL = { ...created("core-t-ghoul", "Ghoul Token", 12), tier: null, adjustedWinRate: 0.6 };
+  /** The Coin (core-t-coin, a catalog token): 40 seats. */
+  const COIN = { ...created("core-t-coin", "The Coin", 40), cost: 0, tier: "D", adjustedWinRate: 0.471 };
+  /** A Created copy of a deck card: no token. 30 seats. */
+  const COPY = { ...created("core-001", "Spark Pup", 30), tier: "C", adjustedWinRate: 0.49 };
 
   /** Answers the card statistics with `body`, and anything else with nothing. */
   function serveCards(body: unknown): void {
@@ -2468,7 +2447,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     };
   }
 
-  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓", "Win rate"];
+  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓"];
 
   it("R3887000 the Tokens and Other created cards list a catalog card as plain text, The Coin among them", async () => {
     window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
@@ -2491,7 +2470,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(coin).toHaveAttribute("data-card-id", "core-t-coin");
   });
 
-  it("R2089000 R2370000 R3324002 R4082000 R4155000 R4279001 the Tokens tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier, adjusted and win rate", async () => {
+  it("R2089000 R2370000 R3324002 R4082000 R4155000 R4279001 the Tokens tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its tier and adjusted", async () => {
     const tiers = { center: 0, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 };
     const field = { center: 0.052, spread: 0.041, cards: 36, baseline: 0.552 };
     serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, tiers: { ...tiers, created: field }, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
@@ -2529,22 +2508,23 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(rowsOf(tokenTable)).toEqual({
       ids: ["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"],
       cells: [
-        ["1", "Sheep Token", "40", "A", "53.3%", "70%"],
-        ["1", "Rush Token", "55", "B", "52.1%", "56%"],
-        ["0", "The Coin", "40", "D", "47.1%", "45%"],
-        ["1", "Ghoul Token", "12", "—", "—", "—"],
+        ["1", "Sheep Token", "40", "A", "53.3%"],
+        ["1", "Rush Token", "55", "B", "52.1%"],
+        ["0", "The Coin", "40", "D", "47.1%"],
+        ["1", "Ghoul Token", "12", "—", "—"],
       ],
     });
     expect(rowsOf(otherTable)).toEqual({
       ids: ["core-001"],
-      cells: [["1", "Spark Pup", "30", "C", "49.0%", "50%"]],
+      cells: [["1", "Spark Pup", "30", "C", "49.0%"]],
     });
 
-    // A header sorts its own table alone. Rush has 55 games; Sheep and The Coin tie at 40 and
+    // A header sorts both tables (R4083000). Rush has 55 games; Sheep and The Coin tie at 40 and
     // keep the server's order, Ghoul's 12 last.
     fireEvent.click(within(tokenTable).getByRole("columnheader", { name: "Games" }));
     expect(rowsOf(tokenTable).ids).toEqual(["core-t-rush", "core-t-coin", "core-t-sheep", "core-t-ghoul"]);
     expect(rowsOf(otherTable).ids).toEqual(["core-001"]);
+    expect(within(otherTable).getByRole("columnheader", { name: /Games/ })).toHaveAttribute("aria-sort", "descending");
 
     // The tab's search box asks of both what the Cards tab's asks of the deck's: one search, kept across the tabs.
     fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "rush" } });
@@ -2709,11 +2689,141 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(headersOf(statsTestid.tokensTable)).toContain("Games");
 
     await user.click(screen.getByTestId(statsTestid.columnGames));
-    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Win rate"]);
-    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Win rate"]);
+    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓"]);
+    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓"]);
 
     await user.click(screen.getByTestId(statsTestid.columnGames));
     expect(headersOf(statsTestid.tokensTable)).toEqual(COLUMNS);
+  });
+
+  it("R4083000 the Tokens tab's sort select, direction and headers are the Cards tab's, in the address, and sort both sections", async () => {
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
+    render(<StatsRoute />);
+    await openTokens();
+    const tokenTable = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    const otherTable = screen.getByTestId(statsTestid.createdTable);
+    const select = screen.getByTestId(statsTestid.sortSelect);
+    const header = (table: HTMLElement, label: string): HTMLElement =>
+      within(table).getByRole("columnheader", { name: new RegExp(`^${label}`) });
+
+    // The columns its tables have, under the Cards tab's labels, opening on Adjusted, best first.
+    expect(within(select).getAllByRole("option").map((option) => [option.getAttribute("value"), option.textContent])).toEqual([
+      ["name", "Name"],
+      ["games", "Games"],
+      ["tier", "Tier"],
+      ["adjustedWinRate", "Adjusted"],
+    ]);
+    expect(select).toHaveValue("adjustedWinRate");
+    expect(screen.getByTestId(statsTestid.sortDir)).toHaveTextContent("↓");
+    expect(rowsOf(tokenTable).ids).toEqual(["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"]);
+
+    // The select sorts both sections, and the address keeps it.
+    fireEvent.change(select, { target: { value: "games" } });
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("sort")).toBe("games"), SLOW);
+    expect(rowsOf(tokenTable).ids).toEqual(["core-t-rush", "core-t-coin", "core-t-sheep", "core-t-ghoul"]);
+    expect(header(tokenTable, "Games")).toHaveAttribute("aria-sort", "descending");
+    expect(header(otherTable, "Games")).toHaveAttribute("aria-sort", "descending");
+
+    // The direction button flips it.
+    fireEvent.click(screen.getByTestId(statsTestid.sortDir));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("dir")).toBe("asc"), SLOW);
+    expect(rowsOf(tokenTable).ids).toEqual(["core-t-ghoul", "core-t-coin", "core-t-sheep", "core-t-rush"]);
+    expect(header(otherTable, "Games")).toHaveAttribute("aria-sort", "ascending");
+
+    // A header of the other section sets the one sort: the select, both sections and the Cards tab follow it.
+    fireEvent.click(header(otherTable, "Tier"));
+    expect(select).toHaveValue("tier");
+    expect(screen.getByTestId(statsTestid.sortDir)).toHaveTextContent("↓");
+    expect(header(tokenTable, "Tier")).toHaveAttribute("aria-sort", "descending");
+    expect(rowsOf(tokenTable).ids).toEqual(["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"]);
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("tier");
+
+    // A Cards tab sort the Created tables lack reads as Adjusted there, in its direction.
+    fireEvent.change(screen.getByTestId(statsTestid.sortSelect), { target: { value: "winRate" } });
+    fireEvent.click(screen.getByTestId(statsTestid.tabTokens));
+    const tokensAgain = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
+    expect(header(tokensAgain, "Adjusted")).toHaveAttribute("aria-sort", "descending");
+    expect(rowsOf(tokensAgain).ids).toEqual(["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"]);
+    cleanup();
+
+    // An address's sort opens the tab on it.
+    at("/stats?tab=tokens&sort=name&dir=desc");
+    render(<StatsRoute />);
+    const byName = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("name");
+    expect(header(byName, "Name")).toHaveTextContent("Name ↓");
+    expect(rowsOf(byName).ids).toEqual(["core-t-coin", "core-t-sheep", "core-t-rush", "core-t-ghoul"]);
+  });
+
+  it("R4083000 the Tokens tab's Grid shows each Created card as the deck grid does, with its tier chip and Adjusted", async () => {
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, GHOUL, COPY] });
+    render(<StatsRoute />);
+    await openTokens();
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.columnGames)).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.columnPlayRate)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(statsTestid.viewGrid));
+    const tokensGrid = await screen.findByTestId(statsTestid.tokensGrid, undefined, SLOW);
+    const createdGrid = screen.getByTestId(statsTestid.createdGrid);
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("view")).toBe("grid"), SLOW);
+    expect(screen.queryByTestId(statsTestid.tokensTable)).toBeNull();
+    expect(screen.queryByTestId(statsTestid.createdTable)).toBeNull();
+    // As in the deck grid, no Columns group.
+    expect(screen.queryByText("Columns")).toBeNull();
+    expect([...tokensGrid.querySelectorAll("li")].map((li) => li.getAttribute("data-card-id"))).toEqual([
+      "core-t-rush",
+      "core-t-coin",
+      "core-t-ghoul",
+    ]);
+    expect([...createdGrid.querySelectorAll("li")].map((li) => li.getAttribute("data-card-id"))).toEqual(["core-001"]);
+
+    const rush = tokensGrid.querySelector('li[data-card-id="core-t-rush"]') as HTMLElement;
+    expect(rush.querySelector(".stats-grid-face")).not.toBeNull();
+    expect(within(rush).getByTestId(statsTestid.createdTierCell)).toHaveTextContent("B");
+    expect(within(rush).getByTestId(statsTestid.createdAdjustedCell)).toHaveTextContent("52.1%");
+    expect(rush).not.toHaveTextContent("Win rate");
+    const ghoul = tokensGrid.querySelector('li[data-card-id="core-t-ghoul"]') as HTMLElement;
+    expect(within(ghoul).getByTestId(statsTestid.createdAdjustedCell)).toHaveTextContent("—");
+  });
+
+  it("R4083000 Show 95% ranges on the Tokens tab puts each Created card's Adjusted range and tier fit under them", async () => {
+    const tiers = { center: 0, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 };
+    // B is 50% to 52.5% of the band: 2.5 of the range's 6.2 points, 40%.
+    const ranged = { ...RUSH, adjustedLow: 0.49, adjustedHigh: 0.552 };
+    const few = { ...GHOUL, adjustedLow: 0.4, adjustedHigh: 0.7 };
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, tiers, created: [ranged, few] });
+    render(<StatsRoute />);
+    await openTokens();
+    const table = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.adjustedRange)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(statsTestid.rangesToggle));
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("ranges")).toBe("1"), SLOW);
+    const rush = table.querySelector('tr[data-card-id="core-t-rush"]') as HTMLElement;
+    expect(within(rush).getByTestId(statsTestid.adjustedRange)).toHaveTextContent("49.0–55.2%");
+    expect(within(rush).getByTestId(statsTestid.tierFit)).toHaveTextContent("40%");
+    const ghoul = table.querySelector('tr[data-card-id="core-t-ghoul"]') as HTMLElement;
+    expect(within(ghoul).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    expect(within(ghoul).queryByTestId(statsTestid.tierFit)).toBeNull();
+  });
+
+  it("R4083000 the Tokens tab has the keyword filter, shared with the Cards tab, and it filters the Created cards", async () => {
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, SHEEP, GHOUL, COPY] });
+    render(<StatsRoute />);
+    await openTokens();
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+
+    fireEvent.change(screen.getByLabelText("Filter by keyword"), { target: { value: "Rush" } });
+    expect(rowsOf(screen.getByTestId(statsTestid.tokensTable)).ids).toEqual(["core-t-rush"]);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("keyword")).toBe("Rush"), SLOW);
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    expect(screen.getByLabelText("Filter by keyword")).toHaveValue("Rush");
   });
 
   it("R4155000 no explanatory paragraph renders on the Cards, Tokens, Sets or Players tabs", async () => {

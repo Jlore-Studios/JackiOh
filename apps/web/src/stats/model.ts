@@ -402,18 +402,3 @@ export function winPercent(stats: PlayerStats): number | null {
 }
 
 export type CardTally = { readonly id: string; readonly count: number };
-
-/**
- * R654, R1147000: a server-calculated rate to show, null when none or below the sample floor: the cards
- * table's Radiant and Normal rates, and the Created cards' (R2089000).
- */
-export function faceRate(
-  games: number | undefined,
-  rate: number | null | undefined,
-  minSample: number,
-): number | null {
-  if (games === undefined || rate === undefined || rate === null || games < minSample) {
-    return null;
-  }
-  return rate;
-}

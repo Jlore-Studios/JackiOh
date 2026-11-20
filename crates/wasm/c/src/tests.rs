@@ -588,12 +588,8 @@ fn run_exports_answer_what_the_core_bodies_answer() {
     assert_ne!(state, "null", "{created}");
 
     let action = json!({ "type": "go", "col": 0 }).to_string();
-    let reduced = call!(run_reduce; state, content, action;);
-    assert_eq!(reduced, expect(wasm_core::run_reduce(&state, &content, &action)));
-    let reduced: Value = serde_json::from_str(&ok(reduced)).expect("JSON");
-    let after = reduced["state"].to_string();
-    assert_ne!(after, "null", "{reduced}");
-
+    // The fold before the reduce: both answer the state after the move, so a fold that answered
+    // nothing would leave the reduce's answer standing in the buffer and match it.
     let file = json!({
         "setup": serde_json::from_str::<Value>(&setup).expect("JSON"),
         "unlocks": serde_json::from_str::<Value>(&unlocks).expect("JSON"),
@@ -604,6 +600,11 @@ fn run_exports_answer_what_the_core_bodies_answer() {
         call!(run_fold; file, content;),
         expect(wasm_core::run_fold(&file, &content))
     );
+    let reduced = call!(run_reduce; state, content, action;);
+    assert_eq!(reduced, expect(wasm_core::run_reduce(&state, &content, &action)));
+    let reduced: Value = serde_json::from_str(&ok(reduced)).expect("JSON");
+    let after = reduced["state"].to_string();
+    assert_ne!(after, "null", "{reduced}");
     // R3496000: this build's own version answers its content, like `run_content`.
     let version = serde_json::to_string(&ok(call!(catalog_version;;))).expect("JSON");
     assert_eq!(

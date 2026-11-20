@@ -200,6 +200,8 @@ describe("R3334002 a broadside's weapons", () => {
     expect(rowSfx(attack("ship"), view)).toEqual(["attack"]);
     expect(sent.filter((s) => s.kind === "sfx")).toEqual(asSent(bed));
     expect(sfxIds(sent)).not.toContain("attack");
+    // Each kind has a sound of its own, by name.
+    expect([...sfxIds(sent)].sort()).toEqual(["starshipBeam", "starshipCannon", "starshipFlak", "starshipLauncher", "starshipRepeater"]);
 
     // An unarmed Starship rams prow first, at the lunge's contact.
     const unarmed = board(launched([ENGINE]));
@@ -217,6 +219,9 @@ describe("R3334002 a broadside's weapons", () => {
     expect(starshipSounds({ ...entry, events: [attack(HIDDEN_DEF_ID)] }, entry.view).cues).toEqual([]);
     expect(rowSfx(attack(HIDDEN_DEF_ID), view)).toEqual(["attack"]);
     expect(starshipSounds({ ...entry, durationMs: 0 }, entry.view).cues).toEqual([]);
+    // A launch's sounds are its bed's (setPieceBeds.ts): an entry that launches the ship sounds no broadside of its own.
+    const launch = { shipId: "ship", player: "p1", anchor: "zone-you-units-3", pieces: 6, name: "The Ninth Life" } as const;
+    expect(starshipSounds({ ...entry, launch }, entry.view)).toEqual({ cues: [], standsFor: [] });
   });
 
   it("R3334002 under Reduce Motion a launched Starship's attack, armed or not, still swings", () => {
@@ -239,6 +244,11 @@ describe("R3334003 a wreck's groan", () => {
       expect(rowSfx(destroyed("ship"), view)).toEqual(["death"]);
       expect(sfxIds(sent)).toEqual(["starshipWreck"]);
       expect(sent).toContainEqual(expect.objectContaining({ kind: "voice", defId: HULL, line: "death" }));
+      // The groan stands in for the ship's death alone: the ship's other events in the entry keep their rows' sounds, and
+      // an entry where the ship only changes groans nothing.
+      const buffed: GameEvent = { type: "buffed", instanceId: "ship", attack: 1, health: 1 };
+      expect(starshipSounds({ ...entry, events: [buffed, ...entry.events] }, entry.view)).toEqual({ cues: bed, standsFor: entry.events });
+      expect(starshipSounds({ ...entry, events: [buffed] }, entry.view)).toEqual({ cues: [], standsFor: [] });
 
       // Inside a wipe its set piece swallows the ship: no groan.
       expect(starshipSounds({ ...entry, wipe: { by: "core-088", sourceId: "nx", sides: ["you"], anchor: null } }, entry.view).cues).toEqual([]);

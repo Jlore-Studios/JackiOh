@@ -517,14 +517,6 @@
         "en": "Add a Radiant Dagger and Flare. The first play of each cost of Radiant Automa-ζ adds the next cost's, Radiant."
       }
     },
-    "stinkyscapeplus-133-5": {
-      "base": {
-        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
-      },
-      "radiant": {
-        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
-      }
-    },
     "stinkyscapeplus-137": {
       "radiant": {
         "en": "Add a Radiant Automa-δ and its Radiant Automa-Ω pair: Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."

@@ -80,16 +80,15 @@ function planPlay(
   interaction: Interaction,
   source: Extract<ClickTarget, { on: "hand" }>,
 ): DragPlan | null {
-  const candidates = legal.filter((body) => body.type === "play" && body.instanceId === source.instanceId);
+  const candidates = legal.filter(
+    (body): body is Extract<ActionBody, { type: "play" }> => body.type === "play" && body.instanceId === source.instanceId,
+  );
   if (candidates.length === 0) return null;
 
   const sourceTestid = testid.handCard(source.instanceId);
   // A hand card the play (or activation) in flight names as a declared target (R81) is picked by
   // clicking it, so its press stays a click rather than lifting it as a play of its own.
-  if (isBuilding(interaction)) {
-    const glow = highlightFor(view, legal, interaction).glow;
-    if (glow !== undefined && glow.has(sourceTestid)) return null;
-  }
+  if (isBuilding(interaction) && dropSetFor(view, legal, interaction).has(sourceTestid)) return null;
 
   const lifted: Playing = { stage: "playing", instanceId: source.instanceId, candidates, picked: {} };
   const dropTestids = dropSetFor(view, legal, lifted);
@@ -100,7 +99,7 @@ function planPlay(
   let anyZone = false;
   let anyTargets = false;
   for (const candidate of candidates) {
-    if (candidate.type !== "play" || candidate.faceDown !== undefined) continue;
+    if (candidate.faceDown !== undefined) continue;
     if (candidate.zone !== undefined) anyZone = true;
     if (candidate.targets !== undefined && candidate.targets.length > 0) anyTargets = true;
   }
@@ -127,11 +126,13 @@ function planAttack(
   if (isBuilding(interaction)) return null;
   const candidates = legal.filter(
     (body): body is Extract<ActionBody, { type: "attack" }> =>
+      // Stryker disable next-line ConditionalExpression: TypeScript's narrowing; only an attack names an attackerId, so any other body fails the second test all the same
       body.type === "attack" && body.attackerId === source.instanceId,
   );
   // R384: a unit with nothing to attack with lifts its Activate ability instead, when it has one.
   if (candidates.length === 0) return planCardActivation(view, legal, source);
   // R1200: while a Mayor acts the attack names no target, so there is nothing to drag it to.
+  // Stryker disable next-line OptionalChaining: past `candidates.length === 1` the first candidate is there
   if (candidates.length === 1 && candidates[0]?.targetId === RANDOM_ATTACK_TARGET) return null;
 
   const lifted: Attacking = { stage: "attacking", attackerId: source.instanceId, candidates };
@@ -217,10 +218,12 @@ function planContinue(
 ): DragPlan | null {
   if (!isBuilding(interaction)) return null;
   if (Object.keys(interaction.picked).length === 0) return null;
+  // Stryker disable next-line ConditionalExpression: an activation's card stands on the field, so its hand (or pile) testid is never among the selected the next lines ask for, and a press on it is refused there all the same
   if (interaction.stage === "playing" && pressed === playSourceTestid(view, interaction.instanceId)) return null;
   const highlight = highlightFor(view, legal, interaction);
   if (!highlight.selected.has(pressed)) return null;
   // What is already picked still glows (every remaining candidate fixes it), but is not a place to go.
+  // Stryker disable next-line ArrayDeclaration: highlightFor gives every build a glow, so the fallback is never read
   const dropTestids = new Set([...(highlight.glow ?? [])].filter((id) => !highlight.selected.has(id)));
   if (dropTestids.size === 0 || outstandingNeed(interaction) === null) return null;
   const source: DragSource =
@@ -254,6 +257,7 @@ export function planDrag(
   source: ClickTarget,
   pressed?: string,
 ): DragPlan | null {
+  // Stryker disable next-line ConditionalExpression: planContinue answers null for a press that names nothing, since no testid it holds or reads is undefined
   if (pressed !== undefined) {
     const continued = planContinue(view, legal, interaction, pressed);
     if (continued !== null) return continued;
@@ -280,8 +284,10 @@ export function resolveDrop(
   plan: DragPlan,
   spot: DropSpot,
 ): ClickResult {
+  // Stryker disable next-line ConditionalExpression: TypeScript's narrowing; a board or outside spot carries no testid, so the drop set never has it
   if (spot.at === "target" && plan.dropTestids.has(spot.testid)) {
     const result = onClickTarget(view, legal, plan.lifted, spot.target);
+    // Stryker disable next-line ConditionalExpression: onClickTarget leaves the board IDLE whenever it sends an action, never the lifted build, so the second test holds whenever the first does
     if (result.action !== undefined || result.interaction !== plan.lifted) return result;
     return { interaction: plan.missed ?? IDLE };
   }

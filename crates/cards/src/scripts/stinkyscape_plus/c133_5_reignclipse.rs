@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #133.5 Reignclipse (R77, R101, R102, R386, R1420, R3535000, R3540002, R3565003): (4) Unit, Mindustrial, Token, Automa-ζ, a card of the held
+//! SPEC §8.12 S+ #133.5 Reignclipse (R77, R101, R102, R386, R1420, R3535000, R3540002, R3565003, R4293000): (4) Unit, Mindustrial, Token, Automa-ζ, a card of the held
 //! Stinkyscape+ set.
 //! 19/23  
 //! **Tribute 3**  
@@ -8,13 +8,11 @@
 //! **Windfury**  
 //! **Pierce**  
 //! **Cleave**  
-//! **Armor 4**  
+//! **Armor 7**  
 //! **Flying**  
 //! **Can’t Defend**  
 //! **Crater**  
-//! **Armor 3**  
-//! Damage also **Burns 4**  
-//! Dealing damage **Burns 5**  
+//! Damage also **Burns 9**  
 //! \~\~\~  
 //! 38/46  
 //! **Tribute 3**  
@@ -24,21 +22,20 @@
 //! **Windfury**  
 //! **Pierce**  
 //! **Cleave**  
-//! **Armor 4**  
+//! **Armor 10**  
 //! **Flying**  
 //! **Can’t Defend**  
 //! **Crater**  
-//! **Armor 6**  
-//! Damage also **Burns 8**  
-//! Dealing damage **Burns 10**
+//! Damage also **Burns 18**
 //!
 //! The fusion of Reign and Eclipse (S+ #114, #119), with art and a name of its own (R3565003). Tribute 3
-//! is the one the two share (the owner, 2026-11-09: not the list's 4), and every keyword is catalog data:
-//! Armor 4 and Armor 3 stack to 7 (R77; Radiant 4 and 6, 10), Crater locks its zone on arrival (R783010).
-//! The two Burn lines are one rider (R3540002), the sum of the two, as a Fuse sums `burnsOnDamage` (R102):
-//! 4 + 5, Radiant 8 + 10. Its declared `burns` is Eclipse's line, and a tune of it moves the sum (R386).
-//! Issue #4292 took the Radiant face's Rush, as it took Reign's and Eclipse's, so the face stays the two
-//! cards' union (R4292000, R767000).
+//! is the one the two share (the owner, 2026-11-09: not the list's 4), and every keyword is catalog data.
+//! The two Armors print as one Armor 7 (Radiant 10), the stacked sum of Armor 4 and Armor 3 (Radiant 4
+//! and 6) (R77, R4293000), and Crater locks its zone on arrival (R783010). The two Burn lines print as
+//! one rider (R3540002) of their sum, 4 + 5, Radiant 8 + 10, as a Fuse sums `burnsOnDamage` (R102).
+//! Its declared `burns` is that sum, 9 (Radiant 18), and a tune of it moves the sum (R386); the
+//! display-only `damage` number is gone (R4293000). Issue #4292 took the Radiant face's Rush, as it took
+//! Reign's and Eclipse's, so the face stays the two cards' union (R4292000, R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -181,18 +178,51 @@ mod tests {
     }
 
     #[test]
-    fn r3565003_the_declared_burns_is_eclipses_line_and_moves_the_sum() {
+    fn r4293000_the_declared_burns_is_the_sum_and_moves_it() {
         for radiant in [false, true] {
             let s = on_field(radiant, json!([]));
             let declared = param_value(s.state(), Some(s.card(ID)), "burns", ParamValueOptions::default());
-            assert_eq!(declared, ECLIPSE_BURNS[usize::from(radiant)], "radiant {radiant}");
+            assert_eq!(declared, burns(radiant), "radiant {radiant}");
             let mut s = on_field(radiant, json!([WALL]));
             let moved = crate::upgrade_number(&mut s, ID, "burns");
-            assert_eq!(moved, ECLIPSE_BURNS[usize::from(radiant)] + 1, "radiant {radiant}");
+            assert_eq!(moved, burns(radiant) + 1, "radiant {radiant}");
             let wall = s.unit_at(P2, 1).id;
             s.attack(ID, wall.as_str());
             assert_eq!(burn_of(&s, wall.as_str()), burns(radiant) + 1, "radiant {radiant}");
         }
+    }
+
+    #[test]
+    fn r4293000_prints_one_armor_and_one_burns_line() {
+        crate::register_all();
+        let def = crate::card_def(ID);
+        for (radiant, face, armor, text) in [
+            (
+                false,
+                &def.base,
+                7,
+                "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 7, Flying, Can't Defend, Crater\nDamage also Burns {burns}.",
+            ),
+            (
+                true,
+                &def.radiant,
+                10,
+                "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 10, Flying, Can't Defend, Crater\nDamage also Burns {burns}.",
+            ),
+        ] {
+            let armors: Vec<_> = face
+                .keywords
+                .iter()
+                .filter(|keyword| matches!(keyword, Keyword::Armor { .. }))
+                .collect();
+            assert_eq!(armors.len(), 1, "radiant {radiant}");
+            assert_eq!(armors[0], &Keyword::Armor { n: armor }, "radiant {radiant}");
+            assert_eq!(face.text, text, "radiant {radiant}");
+        }
+        let params = def.params.clone().unwrap_or_default();
+        assert_eq!(params.len(), 1, "one declared number");
+        assert_eq!(params[0].key, "burns");
+        assert_eq!([params[0].base, params[0].radiant], [9, 18]);
     }
 
     #[test]
@@ -226,6 +256,10 @@ mod tests {
             let card = crate::card_def(ingredient);
             for (radiant, face, of) in [(false, &fused.base, &card.base), (true, &fused.radiant, &card.radiant)] {
                 for keyword in &of.keywords {
+                    // The two Armors print as one Armor of their sum (R4293000); that test covers Armor.
+                    if matches!(keyword, Keyword::Armor { .. }) {
+                        continue;
+                    }
                     assert!(face.keywords.contains(keyword), "radiant {radiant}: {ID} lacks {keyword:?} of {ingredient}");
                 }
             }

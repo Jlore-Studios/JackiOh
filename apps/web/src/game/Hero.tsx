@@ -26,8 +26,8 @@ import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx"
 import { useSetting } from "../settings/store.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
-import { AttackTargetPreview } from "./AttackOutcome.tsx";
-import { outcomeFor } from "./attackOutcome.ts";
+import { AttackOverflowPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
+import { outcomeFor, overflowFor } from "./attackOutcome.ts";
 import HeroTray, { RIFT_SPENT_LABEL, RIFT_SPENT_NOTE } from "./HeroTray.tsx";
 import {
   sideView,
@@ -90,6 +90,8 @@ export default function Hero(props: HeroProps): ReactElement {
   // (R3100000), so it wears no taken marker of its own.
   const hovered = props.highlight?.hoveredAttack;
   const targetOutcome = hovered?.target === testId ? outcomeFor(props.highlight, testId) : undefined;
+  // R4290000: what the hovered attack on a unit tramples onto this hero.
+  const overflow = overflowFor(props.highlight, testId);
 
   // R1331: the portrait reacts as its menu or its view opens, and not at all under either Reduce
   // Motion switch.
@@ -259,6 +261,7 @@ export default function Hero(props: HeroProps): ReactElement {
 
       <PopLayer pops={props.pops} />
       {targetOutcome !== undefined && <AttackTargetPreview outcome={targetOutcome} target={testId} />}
+      {overflow !== undefined && <AttackOverflowPreview overflow={overflow} hero={testId} />}
 
       {emotes !== undefined && menu !== null && inspect && (
         <HeroInspect

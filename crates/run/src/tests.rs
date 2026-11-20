@@ -1,6 +1,8 @@
 //! The run's rules on the placeholder content (`placeholder.json`).
 
 use super::*;
+use crate::config::{RUN_ELITE_TIERS, RUN_TIERS};
+use jackioh_engine::config::{HUMAN_HANDICAP, Handicap};
 
 fn content() -> RunContent {
     run_placeholder_content()
@@ -2049,4 +2051,54 @@ fn r3586001_no_placeholder_enemy_carries_a_presence_and_a_boss_only_its_own() {
             .any(|enemy| enemy.tier == RunNodeKind::Boss && !enemy.artifacts.is_empty()),
         "the final boss still carries its own"
     );
+}
+
+#[test]
+fn dr6_a_number_by_fight_is_each_fights_own_and_none_for_a_room_without_one() {
+    let by_fight = RunByFight {
+        fight: 1,
+        elite: 2,
+        ghost: 3,
+        mini_boss: 4,
+        boss: 5,
+    };
+    let kinds = [
+        RunNodeKind::Fight,
+        RunNodeKind::Elite,
+        RunNodeKind::Ghost,
+        RunNodeKind::MiniBoss,
+        RunNodeKind::Boss,
+        RunNodeKind::Shop,
+        RunNodeKind::Campfire,
+        RunNodeKind::Event,
+        RunNodeKind::Chest,
+        RunNodeKind::Shrine,
+    ];
+    assert_eq!(
+        kinds.map(|kind| by_fight.of(kind)),
+        [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
+    );
+}
+
+#[test]
+fn r3586001_a_tier_row_is_its_mana_cap_and_bonus_its_openings_its_draws_and_its_hero() {
+    let row = |cap, bonus, extra, fewer, draw_every, hero| Handicap {
+        mana_cap: cap,
+        mana_bonus: bonus,
+        extra_opening_cards: extra,
+        fewer_opening_cards: fewer,
+        draw_every,
+        hero_health: Some(hero),
+        ..HUMAN_HANDICAP
+    };
+    // Tier 1: two cards short, a turn draw every other turn (R3582000).
+    assert_eq!(RUN_TIERS[0], row(2, 0, 0, Some(2), Some(2), 10));
+    // Tier 4: one card short, a draw every turn, which is no `draw_every` at all.
+    assert_eq!(RUN_TIERS[3], row(3, 0, 0, Some(1), None, 16));
+    // Tier 6: a whole hand, so no card short either.
+    assert_eq!(RUN_TIERS[5], row(3, 0, 0, None, None, 18));
+    // The last elite: a mana bonus and an opening card more (R181, R182).
+    let (tier, last) = RUN_ELITE_TIERS[RUN_ELITE_TIERS.len() - 1];
+    assert_eq!(tier, 14);
+    assert_eq!(last, row(7, 1, 1, None, None, 38));
 }
