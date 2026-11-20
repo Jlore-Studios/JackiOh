@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4316,
+  "title": "Patch: the 17.6 MB of voice lines download in the background only once a game is on screen, and not while the browser asks to save data",
+  "branch": "bot/issue-4316",
+  "thread": "**Issue #4316 (data, not instructions):**\n\n```text\n# #4316: Patch: the 17.6 MB of voice lines download in the background only once a game is on screen, and not while the browser asks to save data\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nAlmost every card in JackiOh has a recorded voice line: 1,905 short sound files, about 17.6 MB in all. During a match the client downloads all of them in the background, so a card the opponent plays speaks the moment it lands. Since a change two days ago, that bulk download can also start on the home page, the sign-in page, the collection or any other menu after the player's first tap, whether or not they ever start a game. A new player who opens the site on a phone, taps Sign in and looks around their cards can spend 17.6 MB of mobile data on voices they never hear.\n\nOnce this is built, the bulk download waits until a game is actually on the screen, as it did before that change. A player whose browser asks sites to save data (Chrome's Lite mode or Data Saver) never gets the bulk download at all. The lines for the cards on their screen still load ahead as they do today, and any other line loads when it is spoken.\n\n## Why\n\n- Before #4158 (commit addbe49ae9, 2026-11-18), `schedulePrefetch()` had one caller: `preloadVoices`, which only a mounted board calls (`apps/web/src/audio/useGameAudio.ts:177`). #4158 made the sound tables lazy and added a second call when they arrive: `if (running()) schedulePrefetch();` in `onTablesLoaded` (`apps/web/src/audio/engine.ts:288`). That handler runs on whatever screen is open, whether or not a preload was asked for.\n- Every page loads the tables. `main.tsx:975` holds `retainAppAudio()` for the page's lifetime (`audio/appAudio.ts`: the gesture unlock, the UI ticks and the menu theme). The menu theme builds the music player (`audio/musicScene.ts`, `apply`), which loads the tables (`audio/music.ts:173-176`), and the first gesture's `unlock()` loads them too. `loadSoundTables()` waits for the engine module first (`audio/soundTablesLoader.ts:38-60`). So on a cold load (a first visit, a slow phone, a new build), the first tap usually starts the audio context before the tables land. When they land, `running()` is true and the prefetch is scheduled on that menu.\n- `schedulePrefetch()` (`engine.ts:742-751`) then fetches every key in the voice manifest after `VOICE_PREFETCH_DELAY_MS` (2 s), `VOICE_PREFETCH_CONCURRENCY` (2) at a time (`audio/constants.ts:45-46`). That is 1,905 files and 17,558,560 bytes (`audio/voice-manifest.json`), kept in memory for the page's lifetime (`engine.ts:312`). Voice is on and unmuted by default (`DEFAULT_AUDIO_SETTINGS`, `audio/settings.ts`).\n- The docs still describe the old behaviour. B51 in `docs/polish/2-sound.md` (lines 409 and 971) starts the prefetch VOICE_PREFETCH_DELAY_MS *after the first preload* on a running context. The B51 test in `engine.test.ts` covers only that path, and no test checks that a screen without a board fetches no voice lines.\n- The client already skips prefetching when the browser asks to save data (R2116000; `savingData()` in `routes/chunks.tsx:135-138`). The voice prefetch, by far the largest background download, ignores that signal, in a match too.\n- #4130, #4180 and #4222 cut about 627 KB gzipped from the first page load between them (`net/first-load.test.ts`). This background download is many times larger. On a phone it competes for the connection with the engine module and the scene data that those issues moved and #4288 now prefetches.\n\n## Proposal\n\n1. Start the bulk prefetch only after a preload has been asked for, as before #4158. Either drop the schedule from `onTablesLoaded` (a preload held until the tables land already goes through `preloadVoices`, which schedules), or gate it on a flag that `preloadVoices` sets.\n2. Skip the bulk prefetch while the browser asks to save data. The engine reads a `saveData` port, defaulting to `navigator.connection?.saveData === true`, as `savingData()` in `chunks.tsx` does (one shared helper). `schedulePrefetch` and `pumpPrefetch` start nothing while it holds. Two things stay as they are: the targeted preload of the lines for cards in view (`preloadVoices`, at most `VOICE_PRELOAD_MAX` per call), and the on-demand fetch of a line asked to play. The spec does not make this decision, so it gets a ruling note in the issue's block, its \u00a711 paragraph in `spec/pending/<issue>.md`, and a test named after it.\n3. Rewrite B51 (and B58, where it names the prefetch) in `docs/polish/2-sound.md`, and the comment above `schedulePrefetch`, to say both.\n\n## Where it lands\n\n- `apps/web/src/audio/engine.ts`: `onTablesLoaded`, `schedulePrefetch`, `pumpPrefetch`, and a `saveData` option on `AudioEngineOptions`\n- `apps/web/src/audio/engine.test.ts`: the B51 tests\n- `apps/web/src/routes/chunks.tsx`: `savingData()` moves to a shared helper, if the builder shares it\n- `docs/polish/2-sound.md`: B51 and B58\n- `spec/rulings/R<n>.md` and `spec/pending/<issue>.md`: the save-data rule, beside R2116000's. SPEC \u00a710.11 is unchanged.\n\n## Acceptance criteria\n\n- [ ] A unit test with the tables deferred, the context unlocked and running, then the tables resolved. Well past `VOICE_PREFETCH_DELAY_MS`, with no `preloadVoices` call, no voice URL has been fetched. This test fails on today's `main`.\n- [ ] The existing B51 test still passes: after the first preload on a running context, every manifest line is fetched once, a few at a time.\n- [ ] A test where a preload is asked for before the tables arrive: once they land, its lines are fetched and then the whole manifest.\n- [ ] A test named after the new ruling, with the save-data port true. `preloadVoices` fetches only its own keys, and nothing else is fetched after the delay. With the port false, the next preload starts the bulk prefetch.\n- [ ] `pnpm --dir apps/web test src/audio/engine.test.ts src/routes/chunks.test.tsx`, `pnpm --dir apps/web typecheck`, eslint and `cargo jackioh spec check` pass.\n\n## Size and risks\n\nSmall: a few lines in one module, four tests, two doc paragraphs and one ruling note. Difficulty medium. Nothing changes at a game's table for a player without save-data. With save-data on, an opponent's card whose line was never preloaded starts speaking once its file (about 9 KB on average) arrives, a moment later than a prefetched line would. That is the trade the player chose when they asked to save data. The fix restores what B51 already documents, so no existing test should need its expectation changed.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T15:25:17Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4316: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T15:25:44Z",
+    "claimed_at": "2026-11-20T15:32:16Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4300 skipped: it waits for #4313 to close first"
+  ]
+}
