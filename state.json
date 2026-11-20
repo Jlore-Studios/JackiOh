@@ -15165,9 +15165,11 @@
         "by": "`muse` (medium)",
         "sha": "b16598c413c6fd0944fe4accbdb41c590847c878"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T04:32:35Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T05:05:49Z",
         "family": "muse",
@@ -15177,6 +15179,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: intent toward Collection, Decks and other catalog screens prefetches the engine and scene data\"} -->\n- ## What changed and why\n- Hovering, focusing, or touching a link to a card screen previously prefetched only the screen's component chunk, so `EngineGate` showed its \"Loading\u2026\" panel on arrival while the WASM module and scene data downloaded. Now intent toward every `EngineGate`-wrapped screen also starts the engine and sce\u2026\n- - [chunks.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-4288/apps/web/src/routes/chunks.tsx) \u2014 added `collection`, `decks`, `almanac`, `stats`, `patchNotes`, `together`, and `leaderboard` to `ENGINE_CHUNKS`, with a `#4288` comment. No function changes: `chunkAt` already maps `/patch-no\u2026\n- - [chunks.test.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-4288/apps/web/src/routes/chunks.test.tsx) \u2014 added a `vi.doMock` for `loadSceneData` (a direct named import, so `vi.spyOn` cannot intercept it) and three `it(\"R2116000 \u2026\")` tests: catalog screens start `loadWasm()` + `loadScen\u2026\n- - [R2116000.md](/home/agent-muse/actions-runner/_work/_temp/work/item-4288/spec/rulings/R2116000.md) \u2014 widened the engine-starter list to all `EngineGate` screens and appended `issue #4288` to `cards:`; `proven_in` unchanged, no new ruling number.\n- ## How it was tested\n- - `pnpm --dir apps/web test src/routes/chunks.test.tsx` \u2014 12/12 pass (9 existing + 3 new).\n- - `pnpm --dir apps/web test src/net/first-load.test.ts` \u2014 6 passed, 7 skipped (pre-existing skips); entry bundle budget unaffected.\n- - `pnpm --dir apps/web typecheck` \u2014 clean. Note: it needs `NODE_OPTIONS=--max-old-space-size=6144` on this box; the default ~2 GB heap OOMs Node before typechecking starts (environmental, unrelated to the change).\n- - `cargo jackioh spec check` \u2014 ok (2302 rulings, 5792 proofs).\n- - `pnpm exec eslint` on both touched web files \u2014 clean. `git status` shows exactly the three planned files; no Rust touched, so no `fmt`/`clippy` delta.\n- ## Decisions and reviewer notes\n- - Followed the plan exactly; no departures. Exclusions from the plan stand: `account` (no chunk, entry-chunk static), `hotseat`/`duosDev` (dev-only), `fxGallery` (never calls the engine per R2784000), `shop`/`replays` (not `EngineGate`-wrapped).\n- - The `loadSceneData` mock covers the whole test file, so these tests assert call-on-intent wiring only; real scene loading stays covered by the `engine-gate` tests. Worth a second look: the new catalog test expects `loadWasm` \u00d75 via the real `loadSoundTables`, matching the existing Practice/Dungeo\u2026\n- - The folded `spec/11-rulings.md` paragraph for R2116000 keeps its old wording until the daily fold regenerates it from the note.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4288 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4288/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4288,
       "kind": "review",
       "live": "reviewing",
