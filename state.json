@@ -16697,13 +16697,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "queued_at": "2026-11-20T17:01:33Z",
-      "run_id": "44779375937",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:7512b9e3-1795195961",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 390,
-      "started_at": "2026-11-20T17:02:32Z",
+      "started_at": "2026-11-20T17:33:08Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16828,9 +16829,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T17:32:28Z",
+    "at": "2026-11-20T17:33:08Z",
     "url": "",
-    "what": "revise #4324 on claude-8"
+    "what": "spot-check #4329 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T17:17:42Z",
@@ -37842,7 +37843,15 @@
         "n": 390,
         "pr": 4329,
         "queued_at": "2026-11-20T17:27:16Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:7512b9e3-1795195961",
         "sha": "2c51e9304ad10d60ab14239c11ddb623e4490678",
+        "started_at": "2026-11-20T17:33:08Z",
         "status": "queued",
         "title": "Patch: the 17.6 MB of voice lines download in the background only once a game is on screen, and not while the browser asks to save data",
         "tries": 0
