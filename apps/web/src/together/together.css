@@ -33,7 +33,6 @@
 /* R3732002, #3955: the five tabs wrap onto a second row on a phone rather than scroll, so none sits outside the
    window (tabs.css's `overflow-x: auto` would hide the last ones with no cue). */
 .tavern.together-screen .together-tablist {
-  flex: none;
   flex-wrap: wrap;
   overflow-x: visible;
 }
