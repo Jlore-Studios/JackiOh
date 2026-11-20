@@ -15958,14 +15958,12 @@
     "what": "plan #4313 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T14:19:46Z",
+    "at": "2026-11-20T14:30:51Z",
     "notes": [
-      "delivered plan #4298 on muse (run 44750015630): planned",
-      "delivered plan #4297 on muse (run 44749929348): planned",
-      "delivered plan #4296 on muse (run 44749837223): planned",
-      "started build #4296 on muse (run 44752936499)",
-      "started build #4297 on muse (run 44753027205)",
-      "started build #4298 on muse (run 44753119038)",
+      "#4313 needs a plan",
+      "#4307: @MaxGoetzmann answered its question, so it is queued again with the answer",
+      "started revise #4307 on claude-1 (run 44754388945)",
+      "started plan #4313 on muse (run 44754492510)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -16673,7 +16671,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T14:19:46Z",
+  "loop_tick": "2026-11-20T14:30:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
