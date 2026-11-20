@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4257,
+  "title": "Patch: the AI counts a Cleave splash beside a GIGA in both its lanes, as the engine deals it",
+  "branch": "bot/issue-4257",
+  "thread": "**Issue #4257 (data, not instructions):**\n\n```text\n# #4257: Patch: the AI counts a Cleave splash beside a GIGA in both its lanes, as the engine deals it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome units are GIGA: they stand two lanes wide. A unit with Cleave also hits the units on either side of its target, and the game counts a GIGA as beside the target from either of its two lanes. The practice AI has its own quick estimate of a fight, and that estimate still treats every unit as one lane wide. So when a GIGA is on the board, the AI misses the splash.\n\nFor example, the AI is at 6 life behind two Taunts side by side, one of them a two-lane GIGA. The opponent has a Cleave unit and any other unit with 6 attack. One swing kills both Taunts through the splash, and the other unit hits the face for the win. The AI thought its wall would hold, so it neither added a blocker nor raced. The same miss makes it undervalue its own Cleave attacks next to an enemy GIGA.\n\nPlayers at the practice table, and in Duos against the AI team, face an AI that walks into a lethal it could have seen. Nothing else changes.\n\n## Why\n\n- `crates/ai/src/candidates.rs:287-305`, `cleaved_neighbours`, works out the splash as `adjacent(slot_of(target))` read through `card_at`. A GIGA's card sits only in its anchor zone, and the zone it covers holds no card (`crates/engine/src/zones.rs:203`, `card_at`; the R3546000 comment at `:215`). That gives two misses:\n  - When the GIGA is the target, the splash checks its own covered lane and never reaches the unit past it.\n  - When the target stands just past a GIGA's second lane, the splash never reaches the GIGA.\n- The engine walks `giga::adjacent_slots` and `giga::occupant_at`, meets a GIGA once by id, and checks `zones::is_adjacent_card` (R1081000). It does this both in combat (`crates/engine/src/combat.rs:740`, `cleave`, at `:760-784`) and in its own projection (`struck_by`, `crates/engine/src/subsystems/lethal.rs:115`).\n- R3546001 says a GIGA is in both its lanes for every rule that reads a lane in its row, and names Cleave. Two tests in `crates/engine/tests/rules/giga.rs` prove it: `r3546001_cleave_on_a_giga_hits_the_units_beside_both_its_lanes` and `r3546001_a_cleave_beside_a_giga_hits_it_once`.\n- The AI's own comment calls its function the engine's `struck_by` minus the defender. It is actually an older copy, written before R3546001. It also skips `is_adjacent_card`: beside a Unit standing in the backrow, only another standing Unit is adjacent (R1081000). Outside `features.rs`, `crates/ai/src` never mentions GIGA.\n- Two static reads use it:\n  - The Taunt walk (`evaluate.rs:1750`, in `soak_past_taunts`) feeds `face_threat`, the evaluation's lethal threat, `wall_switches_priced` (`candidates.rs:1135`), the order of the lethal solver's `ready_gap` (`lethal.rs:174`) and the Duos pool loss (R4188000).\n  - The reply's `trade_value` (`reply.rs:196`) feeds the opponent's choice of attack, `splash_kills`, and the even-trade kills in the move order (#1779, #1821).\n- On the example board, every order the walk tries reads 0 damage past the Taunts, while the engine lets the 6 through. The board:\n  - The AI has the Jlockeed Large Language Model token (a 2/5 GIGA Taunt) in lanes 1-2 and Thorium Wall (S+ #65, a 0/8 Taunt) in lane 3.\n  - The enemy has the CN Golem token (10/10, Poisonous, Cleave, Pierce) and a unit with 6 attack.\n- No test catches this. The forecast-agreement test (`candidates.rs:1959`, R4171000) compares only the main blow, and `AttackForecast` (`crates/engine/src/query.rs:986`) carries no splash.\n- Shipped cards reach it today, and none of them is shadow-banned, so AI decks are dealt them just as players' decks are:\n  - GIGA: Spectre (S+ #106), Plesiosize (#100), GIGA-ify (#23), Big Time Recruits (#99), the embiggened Walls (#64-#67, which become GIGA Taunts), the drills and Impact Reactor (#52, #53, #56), and the Large Language Model token.\n  - Cleave: Nurse Cleaver (C #73), Jlockeed's Yamato Cannon (S #128), Starfruit (S+ #1), Swarmer (S+ #108), Reign (S+ #114), and the CN Golem and Reignclipse tokens.\n\n## Proposal\n\n1. Make `cleaved_neighbours` the engine's walk. The preferred way is to make `struck_by` a public board fact in `crates/engine/src/query.rs`, with the engine's lethal projection still calling it unchanged, and have `cleaved_neighbours` return it minus the defender. Then one walk serves both crates and the comment becomes true. The fallback is to rebuild the function from the public `adjacent_slots`, `occupant_at` and `is_adjacent_card`, de-duplicated by id.\n2. Put the new read behind an `AI_EVAL` flag (for example `giga_cleave_read`): on in `AI_EVAL`, off in `GREEDY_EVAL`. Every recent fix to a static read does this (`config.rs:925-932`), so the greedy baseline the gates measure against plays as it did. The walk passes its weights' flag; the reply reads `AI_EVAL`'s.\n3. If the change needs a ruling, take one from the issue's block, as R4171000 and R4065001 did. Its section 11 paragraph goes in `spec/pending/<issue>.md`, with a sentence in the Evaluation and reply bullets of section 9.9 and a line in `crates/ai/README.md`.\n\n## Where it lands\n\n- `crates/ai/src/candidates.rs` (`cleaved_neighbours` and its tests), `evaluate.rs`, `reply.rs`, `config.rs`, `crates/ai/README.md`\n- `crates/engine/src/query.rs` and `crates/engine/src/subsystems/lethal.rs`, if `struck_by` moves\n- `spec/09-architecture.md` section 9.9, `spec/rulings/`, `spec/pending/`. The rules it reads: section 3.1, section 4.4 step 10, R63, R3546001, R1081000\n\n## Acceptance criteria\n\n- [ ] A test that fails on `main` builds the example board and shows `face_threat` counting the 6 the splash lets through.\n- [ ] `cleaved_neighbours` on a GIGA target returns the units beside both its lanes, and on a target beside a GIGA returns the GIGA once, mirroring the two engine tests.\n- [ ] Beside a Unit standing in the backrow, it returns only standing Units (R1081000).\n- [ ] The reply's `trade_value` reports `splash_kills` for a Cleave attack whose splash kills a GIGA beside the target.\n- [ ] With the flag off (`GREEDY_EVAL`), the walk reads exactly as it does today, held by a test.\n- [ ] These all pass: any ruling's note naming its test, spec check, the AI crate's tests, the engine's R3546001 rules tests (if `struck_by` moved), clippy, rustfmt and the gate's smoke run. The pull request reports a paired screen on `improve-dev`.\n\n## Size and risks\n\nSmall: one function rewritten (about 20 lines), one flag, five or six tests, and perhaps a ruling. It is difficulty hard by CLAUDE.md rule 11, since it is the AI.\n\nIt changes play only on boards that hold both a GIGA and a Cleave unit, so the gates' seeded games and the practice-claim fixture will probably not move (re-record the fixture if it does). A 400-game screen will not see a gain on a board this rare: this is a correctness fix, and the screen only shows that nothing else moved. Moving `struck_by` into `query.rs` changes nothing about how the engine behaves.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T01:40:30Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4257: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T01:41:03Z",
+    "claimed_at": "2026-11-20T01:41:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4249 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
