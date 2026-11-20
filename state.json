@@ -16769,9 +16769,12 @@
     "what": "review #4324 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-20T17:09:46Z",
+    "at": "2026-11-20T17:17:42Z",
     "notes": [
-      "delivered review #4329 on muse (run 44779375937): approved"
+      "delivered review #4326 on claude-4 (run 44777782982): approved",
+      "delivered review #4324 on muse (run 44766673802): built",
+      "started review #4324 on claude-8 (run 44782367693)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17477,7 +17480,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T17:09:46Z",
+  "loop_tick": "2026-11-20T17:17:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
