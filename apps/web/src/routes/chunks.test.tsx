@@ -11,6 +11,11 @@ vi.doMock("../wasm/index.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   loadWasm,
 }));
+const loadSceneData = vi.fn((): Promise<void> => Promise.resolve());
+vi.doMock("../cards/art/sceneLoader.ts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  loadSceneData,
+}));
 const { resetRoutePrefetchForTests, routeChunk, routeChunks, watchRouteIntent } = await import("./chunks.tsx");
 
 function Stub(): ReactElement {
@@ -23,6 +28,7 @@ let stop: () => void = () => undefined;
 beforeEach(() => {
   resetRoutePrefetchForTests();
   loadWasm.mockClear();
+  loadSceneData.mockClear();
   stop = watchRouteIntent(document);
 });
 
@@ -186,6 +192,87 @@ describe("R2116000 prefetching a screen on intent", () => {
     fireEvent.pointerEnter(screen.getByText("Dungeon stats"));
     expect(stats).toHaveBeenCalledTimes(1);
     expect(loadWasm).toHaveBeenCalledTimes(2);
+  });
+
+  it("R2116000 intent toward the catalog screens starts loadWasm() and loadSceneData()", () => {
+    const collection = vi.spyOn(routeChunks.collection, "load").mockResolvedValue(stubModule);
+    const decks = vi.spyOn(routeChunks.decks, "load").mockResolvedValue(stubModule);
+    const almanac = vi.spyOn(routeChunks.almanac, "load").mockResolvedValue(stubModule);
+    const stats = vi.spyOn(routeChunks.stats, "load").mockResolvedValue(stubModule);
+    const patchNotes = vi.spyOn(routeChunks.patchNotes, "load").mockResolvedValue(stubModule);
+    render(
+      <>
+        <a href="/collection">Collection</a>
+        <a href="/decks">Decks</a>
+        <a href="/almanac">Almanac</a>
+        <a href="/stats">Stats</a>
+        <a href="/patch-notes">Patch notes</a>
+      </>,
+    );
+
+    fireEvent.pointerEnter(screen.getByText("Collection"));
+    fireEvent.focus(screen.getByText("Decks"));
+    fireEvent.touchStart(screen.getByText("Almanac"));
+    fireEvent.pointerEnter(screen.getByText("Stats"));
+    fireEvent.pointerEnter(screen.getByText("Patch notes"));
+
+    expect(collection).toHaveBeenCalledTimes(1);
+    expect(decks).toHaveBeenCalledTimes(1);
+    expect(almanac).toHaveBeenCalledTimes(1);
+    expect(stats).toHaveBeenCalledTimes(1);
+    expect(patchNotes).toHaveBeenCalledTimes(1);
+    expect(loadWasm).toHaveBeenCalledTimes(5);
+    expect(loadSceneData).toHaveBeenCalledTimes(5);
+  });
+
+  it("R2116000 intent toward Together and the leaderboard starts loadWasm() and loadSceneData()", () => {
+    const together = vi.spyOn(routeChunks.together, "load").mockResolvedValue(stubModule);
+    const leaderboard = vi.spyOn(routeChunks.leaderboard, "load").mockResolvedValue(stubModule);
+    render(
+      <>
+        <a href="/together">Together</a>
+        <a href="/leaderboard">Leaderboard</a>
+      </>,
+    );
+
+    fireEvent.pointerEnter(screen.getByText("Together"));
+    fireEvent.focus(screen.getByText("Leaderboard"));
+
+    expect(together).toHaveBeenCalledTimes(1);
+    expect(leaderboard).toHaveBeenCalledTimes(1);
+    expect(loadWasm).toHaveBeenCalledTimes(2);
+    expect(loadSceneData).toHaveBeenCalledTimes(2);
+  });
+
+  it("R2116000 intent toward engine-free screens loads only their chunk", () => {
+    const privacy = vi.spyOn(routeChunks.privacy, "load").mockResolvedValue(stubModule);
+    const terms = vi.spyOn(routeChunks.terms, "load").mockResolvedValue(stubModule);
+    const purchases = vi.spyOn(routeChunks.purchases, "load").mockResolvedValue(stubModule);
+    const accessibility = vi.spyOn(routeChunks.accessibility, "load").mockResolvedValue(stubModule);
+    const copyright = vi.spyOn(routeChunks.copyright, "load").mockResolvedValue(stubModule);
+    render(
+      <>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/purchases">Purchases</a>
+        <a href="/accessibility">Accessibility</a>
+        <a href="/copyright">Copyright</a>
+      </>,
+    );
+
+    fireEvent.pointerEnter(screen.getByText("Privacy"));
+    fireEvent.focus(screen.getByText("Terms"));
+    fireEvent.touchStart(screen.getByText("Purchases"));
+    fireEvent.pointerEnter(screen.getByText("Accessibility"));
+    fireEvent.focus(screen.getByText("Copyright"));
+
+    expect(privacy).toHaveBeenCalledTimes(1);
+    expect(terms).toHaveBeenCalledTimes(1);
+    expect(purchases).toHaveBeenCalledTimes(1);
+    expect(accessibility).toHaveBeenCalledTimes(1);
+    expect(copyright).toHaveBeenCalledTimes(1);
+    expect(loadWasm).not.toHaveBeenCalled();
+    expect(loadSceneData).not.toHaveBeenCalled();
   });
 
   it("R2116000 a production build has no dev-only route to prefetch", async () => {
