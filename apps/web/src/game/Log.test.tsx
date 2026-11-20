@@ -17,6 +17,7 @@ import { EMPTY_LOG_HISTORY, advanceLogHistory } from "./useLogHistory.ts";
 import { CHINESE } from "../cards/chinese.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { baseView, emptySide, fullBoardView, fusedDef, unit, withEvents } from "../test/fixtures.ts";
+import { readSheet } from "../test/setup.ts";
 
 afterEach(() => {
   cleanup();
@@ -935,5 +936,27 @@ describe("#4140 the log speaks its newest line to screen readers", () => {
     expect(announcer().textContent).toBe("");
     rerender(<Log view={withEvents(baseView(), [third, { type: "turnStarted", player: "p2", turn: 4 }])} />);
     expect(announcer().textContent).toBe("Turn 4: Opponent");
+  });
+});
+
+// WCAG 2.5.8: with a mouse each card-naming log line is a 24 px target, while the log
+// still reads as the same dense list; on a touch screen each line keeps its 44 px row.
+// jsdom cannot measure pixels, so these hold the stylesheet text, not a layout.
+describe("the log's card-name target size", () => {
+  const css = readSheet("src/game/inspectable.css");
+
+  it("with a mouse each card-naming log line is a 24px target while the list stays inline", () => {
+    expect(css).toContain("@media (pointer: fine)");
+    expect(css).toMatch(
+      /@media \(pointer: fine\)\s*\{\s*\.log \.log-card\s*\{[^}]*display: inline-block;[^}]*min-height: 24px;[^}]*\}\s*\}/,
+    );
+    // The dense-list look for the fallback: the base rule still reads as the line it is.
+    expect(css).toMatch(/\.log \.log-card\s*\{[^}]*display: inline;/);
+  });
+
+  it("on a touch screen each log line keeps its 44px row", () => {
+    expect(css).toMatch(
+      /@media \(pointer: coarse\)\s*\{\s*\.log \.log-card\s*\{\s*display: flex;\s*align-items: center;\s*width: 100%;\s*min-height: 44px;\s*\}\s*\}/,
+    );
   });
 });

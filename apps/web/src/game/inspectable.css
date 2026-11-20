@@ -70,6 +70,16 @@
   outline-offset: 1px;
 }
 
+/* WCAG 2.5.8: with a mouse each card-naming line is a 24 px target, still an inline
+   dense-list line: the button keeps its inline look, only taller. Touch keeps its
+   44 px row in the block below. */
+@media (pointer: fine) {
+  .log .log-card {
+    display: inline-block;
+    min-height: 24px;
+  }
+}
+
 /* A finger gets a 44 px row (B29). Only where the pointer is coarse: the lines are a dense list, and
    a narrow window with a mouse keeps the log it had. */
 @media (pointer: coarse) {
