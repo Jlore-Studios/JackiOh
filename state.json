@@ -15767,12 +15767,10 @@
     "what": "review #4311 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T12:43:42Z",
+    "at": "2026-11-20T12:52:15Z",
     "notes": [
-      "delivered build #4310 on claude-4 (run 44731710128): built",
-      "started review #4311 on claude-4 (run 44738459031)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #4311 on claude-4 (run 44738459031): approved",
+      "delivered review #4308 on claude-7 (run 44726555389): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16478,7 +16476,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T12:43:42Z",
+  "loop_tick": "2026-11-20T12:52:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
