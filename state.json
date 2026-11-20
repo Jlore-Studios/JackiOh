@@ -36131,6 +36131,12 @@
         "number": 4245,
         "title": "Patch: queued tickets keep their bot-fallback wait across a restart",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-20T23:04:03Z",
+        "number": 4338,
+        "title": "Patch: the AI's static attack valuation counts collateral damage and kills from sweeping attacks",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-20T22:15:46Z",
