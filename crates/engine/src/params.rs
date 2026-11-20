@@ -61,6 +61,20 @@ fn params_on_face(state: &GameState, def_id: &str, radiant: bool) -> Vec<(Param,
     out
 }
 
+/// R4334000: the face a card standing on `radiant` reads `def_id`'s number `key` on: a fused
+/// definition's first declaring part's face (`params_on_face`), as `params_view` shows it; a catalog
+/// card's, or a key no part declares, `radiant`. Only a fused id walks its parts, so a catalog card's
+/// read costs what it did.
+fn face_of(state: &GameState, def_id: &str, key: &str, radiant: bool) -> bool {
+    if crate::catalog::fused_head_len(def_id).is_none() {
+        return radiant;
+    }
+    params_on_face(state, def_id, radiant)
+        .into_iter()
+        .find(|(param, _)| param.key == key)
+        .map_or(radiant, |(_, on)| on)
+}
+
 pub fn param_decl_of(state: &GameState, def_id: &str, key: &str) -> Option<Param> {
     let own = params_of(state, def_id)
         .into_iter()
@@ -195,10 +209,11 @@ pub fn param_value(
     let Some(param) = param_decl_of(state, &def_id, key) else {
         panic!("{def_id} declares no number \"{key}\" (B3.4 rule 5, CardDef.params)");
     };
+    // R4334000: with no face named, a fused card's number reads on its declaring part's face, the one
+    // its view shows and its text uses.
     let radiant = options
         .radiant
-        .or_else(|| instance.map(|card| card.radiant))
-        .unwrap_or(false);
+        .unwrap_or_else(|| face_of(state, &def_id, key, instance.is_some_and(|card| card.radiant)));
     value_with(
         &param,
         radiant,
@@ -215,7 +230,13 @@ pub fn declared_or(state: &GameState, card: &CardInstance, key: &str, flag: i32)
     let Some(param) = param_decl_of(state, &card.def_id, key) else {
         return flag;
     };
-    let printed = value_with(&param, card.radiant, None, None);
+    // R4334000: printed on the face `param_value` reads it on, so an untuned card moves its flag by 0.
+    let printed = value_with(
+        &param,
+        face_of(state, &card.def_id, key, card.radiant),
+        None,
+        None,
+    );
     flag + param_value(state, Some(card), key, ParamValueOptions::default()) - printed
 }
 
@@ -403,14 +424,7 @@ fn param_read<C: ParamContext + ?Sized>(ctx: &C, key: &str, printed: Option<i32>
     }
     // R4334000: a fused definition's own number, read with no place named (an aura's, a condition's), is
     // the first declaring part's, on that part's face, as `params_view` shows it.
-    let radiant = if crate::catalog::fused_head_len(&def_id).is_some() {
-        params_on_face(state, &def_id, radiant)
-            .into_iter()
-            .find(|(param, _)| param.key == key)
-            .map_or(radiant, |(_, on)| on)
-    } else {
-        radiant
-    };
+    let radiant = face_of(state, &def_id, key, radiant);
     param_value(
         state,
         self_,

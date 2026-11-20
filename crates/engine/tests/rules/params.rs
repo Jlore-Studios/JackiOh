@@ -455,10 +455,23 @@ mod r4334000_an_ingredient_fused_on_its_radiant_face_reads_its_numbers_there {
     }
 
     /// `damage` on `card`: read by the text in its place on `path`, read with no place named (an
-    /// aura's), and shown in its view (`CardView.params`).
+    /// aura's), and shown in its view (`CardView.params`). Every other reader of the whole card agrees
+    /// with the view: `param_value` with no face named (a Tribute's worth, an Activate's price, hero
+    /// Armor), KY's Constant's list (`numbers_on`), and `declared_or`, which moves an untuned card's
+    /// flag by nothing.
     fn damage_read(state: &mut GameState, card: &CardInstance, path: &[usize]) -> (i32, i32, Option<i32>) {
         let now = live(state, card);
         let shown = params_view(state, &now).and_then(|view| view.get("damage").copied());
+        assert_eq!(Some(value(state, &now, "damage")), shown, "param_value");
+        assert_eq!(
+            numbers_on(state, &now)
+                .iter()
+                .find(|entry| entry.id == "param:damage")
+                .map(|entry| entry.value),
+            shown,
+            "numbers_on"
+        );
+        assert_eq!(declared_or(state, &now, "damage", 0), 0, "declared_or");
         let mut sink = sink_for(state);
         let mut ctx = make_context(&mut sink, Some(&now), HookOptions::default());
         let unplaced = param(&ctx, "damage");
