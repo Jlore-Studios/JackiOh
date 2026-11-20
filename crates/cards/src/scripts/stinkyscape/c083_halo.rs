@@ -40,14 +40,20 @@ fn arm_twice(rarity: Rarity) -> Script {
     }
 }
 
-/// R1862002, R4154104: through v0.6.7k, PICKS times, a choice of `options` `rarity` Weapons (a Discover's
-/// three when `None`, through v0.6.6h), Equipped into this.
-fn arm(rarity: Rarity, options: Option<i32>) -> Script {
+/// R1862002, R4154104: through v0.6.7k, `weapons` times (the printed PICKS when `declared` is false, as
+/// through v0.5.9f), a choice of `options` `rarity` Weapons (a Discover's three when `None`, through
+/// v0.6.6h), Equipped into this.
+fn arm(rarity: Rarity, options: Option<i32>, declared: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
+            let picks = if declared {
+                param_or(&*ctx, "weapons", PICKS)
+            } else {
+                PICKS
+            };
             let mut args = json!({
                 "query": crate::query::weapons_of(rarity),
-                "times": param_or(&*ctx, "weapons", PICKS),
+                "times": picks,
             });
             if let Some(options) = options {
                 args["options"] = json!(options);
@@ -69,8 +75,8 @@ pub fn script() -> CardScripts {
 /// two (issue #4285); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_7k() -> CardScripts {
     CardScripts {
-        base: arm(Rarity::Rare, Some(OPTIONS)),
-        radiant: arm(Rarity::Epic, Some(OPTIONS)),
+        base: arm(Rarity::Rare, Some(OPTIONS), true),
+        radiant: arm(Rarity::Epic, Some(OPTIONS), true),
     }
 }
 
@@ -78,16 +84,20 @@ pub fn script_v0_6_7k() -> CardScripts {
 /// folds those replays under it.
 pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: arm(Rarity::Rare, None),
-        radiant: arm(Rarity::Epic, None),
+        base: arm(Rarity::Rare, None, true),
+        radiant: arm(Rarity::Epic, None, true),
     }
 }
 
 /// R767000, R2657006: the same Discover of three through v0.5.9f, kept apart because those versions
-/// declared no `weapons` (it printed "Discover 3", which `param_or` reads); `KEPT_SCRIPTS` folds those
-/// replays under it.
+/// declared no `weapons`: it printed "Discover 3", so it makes PICKS picks and reads no `weapons`, which
+/// a past version of then (R3538002) would read off the catalog's card now (R3574001), 2 and copies
+/// since #4285; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_9f() -> CardScripts {
-    script_v0_6_6h()
+    CardScripts {
+        base: arm(Rarity::Rare, None, false),
+        radiant: arm(Rarity::Epic, None, false),
+    }
 }
 
 // Stinkyscape #83 Halo — SPEC §8.10 row 83, BUILD M12 row S 83 (#2521; R4154104, R1841002, R1751000,
@@ -139,12 +149,28 @@ mod tests {
     /// Halo played on the face `radiant`: `picks` Discovers in turn, each offering `options` of `pool`
     /// (fewer once the pool runs short), the first taken and fused in `copies` times.
     fn arms(radiant: bool, pool: &[&str], options: usize, picks: i32, copies: i32) -> (Scenario, String) {
+        arms_of(ID, radiant, pool, options, picks, copies)
+    }
+
+    /// `arms` of the definition `def`, a past version's id among them, the card in hand turned into it as
+    /// a Transform does (R3538002).
+    fn arms_of(
+        def: &str,
+        radiant: bool,
+        pool: &[&str],
+        options: usize,
+        picks: i32,
+        copies: i32,
+    ) -> (Scenario, String) {
         let mut s = weapon_board(
             "s083",
             json!({ "hand": [{ "def": ID, "radiant": radiant }] }),
             json!({ "field": [VANILLA] }),
         );
-        s.play(ID, json!({ "zone": 1 }));
+        let mut card = s.card(ID).clone();
+        card.def_id = def.to_string();
+        s.card_mut(ID).def_id = def.to_string();
+        s.play(&card, json!({ "zone": 1 }));
         let host = s.unit_at(P1, 1).id;
         let mut held: Vec<String> = Vec::new();
         for _ in 0..picks {
@@ -238,6 +264,21 @@ mod tests {
                 let (s, host) = arms(false, &RARE, DISCOVER_OPTIONS as usize, PICKS, 1);
                 armed(&s, &host);
             });
+        }
+
+        /// R767000, R3574001: a past version of v0.5.9f or before (R3538002), which declared no `weapons`
+        /// and printed "Discover 3 Rare Weapons", makes three Discovers, not the catalog's `weapons` now.
+        #[test]
+        fn r3574001_a_past_version_through_v0_5_9f_still_discovers_three_times() {
+            crate::register_all();
+            for past in ["v0.5.8b", "v0.5.9f"] {
+                let past = format!("{ID}{PAST_ID_MARK}{past}");
+                assert!(
+                    jackioh_engine::catalog::def_of(None, &past).params.is_none(),
+                    "{past} declares no weapons"
+                );
+                arms_of(&past, false, &RARE, DISCOVER_OPTIONS as usize, PICKS, 1);
+            }
         }
 
         #[test]
