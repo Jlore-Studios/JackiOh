@@ -16349,7 +16349,11 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "muse",
+      "merge_owner_gave_up": {
+        "at": "2026-11-20T16:50:18Z",
+        "provider": "muse",
+        "sha": "84884ed52f1a161b0aed24eef5eb78eded0390ca"
+      },
       "pending_request": false,
       "provider": "muse",
       "question": "",
