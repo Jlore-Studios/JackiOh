@@ -16748,9 +16748,11 @@
         "by": "`gemini` (medium)",
         "sha": "11f6362fbbb6e411d72186ba98a5554e4e3ccd3a"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T16:16:00Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T17:21:34Z",
         "family": "gemini",
@@ -16760,6 +16762,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- said: I have launched `perf_holds_every_budget` (`cargo test -p jackioh-tools --test perf perf_holds_every_budget -- --ignored`) and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo build --release -p jackioh-tools && target/release/jackioh perf\n- said: I have launched `cargo build --release -p jackioh-tools && target/release/jackioh perf` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo test -p jackioh-tools --test acceptance readme\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo fmt --check\n- said: I have launched `cargo fmt --check` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo fmt\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo fmt --check\n- said: I have launched `cargo fmt --check` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo clippy -p jackioh-tools --all-targets -- -D warnings\n- said: I have launched `cargo clippy -p jackioh-tools --all-targets -- -D warnings` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo test -p jackioh-tools --test perf\n- said: I have launched `cargo test -p jackioh-tools --test perf` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo test -p jackioh-tools --test perf perf_holds_every_budget -- --ignored\n- said: I have launched `cargo test -p jackioh-tools --test perf perf_holds_every_budget -- --ignored` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo fmt --check\n- said: I have launched `cargo fmt --check` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check\n- said: I have launched `cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check` and will wait for it to complete.\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4300/.bot-notes.md\", \"StartLine\": 1}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4300/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the perf corpus times handicapped, run-start and Duos games too\"} --> ## What changed and why The engine performance speedometer in [`crates/tools/src/perf.rs`](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4300/crates/tools/src/perf.rs) p\u2026"
       },
+      "interruptions": 0,
       "issue": 4300,
       "kind": "review",
       "live": "reviewing",
