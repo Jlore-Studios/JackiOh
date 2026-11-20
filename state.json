@@ -15758,7 +15758,7 @@
     "what": "review #4311 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T13:28:22Z",
+    "at": "2026-11-20T13:35:00Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16464,7 +16464,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T13:28:22Z",
+  "loop_tick": "2026-11-20T13:35:00Z",
   "machine_disk": {
     "issue": null,
     "reading": {
