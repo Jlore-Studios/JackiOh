@@ -1,18 +1,17 @@
-//! The pool probe (#3117, R380) over the cards' tests: every random pool rotated one place, as one more
-//! card in it would move every roll, so a test that pins where a roll lands fails here before the pull
-//! request that next adds a card to its pool fails it. super.yml's daily tests job runs it (#4181);
-//! `sh scripts/pool-probe.sh` runs the cards', AI's, server's and tools' tests that way by hand.
+//! The pool probe (#3117, R380) over the suites that draw from real cards: every random pool
+//! rotated one place, as one more card in it would move every roll, so a test that pins where a roll
+//! lands fails here before the pull request that next adds a card to its pool fails it. super.yml's
+//! daily tests job runs them (#4181); `sh scripts/pool-probe.sh` runs the same suites that way by hand.
 
 use std::io::Write as _;
 use std::path::Path;
 use std::process::Command;
 
-/// The probe: the cards' tests at `cards lib`'s opt-levels (.github/ci/rust-test.toml), every one run
-/// whatever fails, offline (the outer run fetched every crate), uncoloured for `failed` to read.
-const PROBE: &[&str] = &[
-    "test",
-    "-p",
-    "jackioh-cards",
+/// The probe's shared flags: the package's tests at `cards lib`'s opt-levels
+/// (.github/ci/rust-test.toml), every one run whatever fails, offline (the outer run fetched every
+/// crate), uncoloured for `failed` to read. Every probe passes the same flags, so all four share one
+/// fingerprint and one `target/pool-probe` build.
+const PROBE_FLAGS: &[&str] = &[
     "--features",
     "jackioh-engine/pool-probe",
     "--no-fail-fast",
@@ -38,7 +37,7 @@ fn failed(stdout: &str) -> Vec<&str> {
 }
 
 /// What a failed probe says: each test it failed and the two fixes, or, if none failed, the build's end.
-fn report(stdout: &str, stderr: &str) -> String {
+fn report(stdout: &str, stderr: &str, suite: &str, package: &str) -> String {
     let names = failed(stdout);
     if names.is_empty() {
         let lines: Vec<&str> = stderr.lines().collect();
@@ -47,16 +46,54 @@ fn report(stdout: &str, stderr: &str) -> String {
     }
     let listed: Vec<String> = names.iter().map(|name| format!("  {name}")).collect();
     format!(
-        "the pool probe (every random pool rotated one place, #3117) failed {} of the cards' tests: each \
+        "the pool probe (every random pool rotated one place, #3117) failed {} of the {} tests: each \
          leans on where a roll lands, so the pull request that next adds a card to its pool would fail it \
          (R380):\n{}\n\
          Convert each as crates/engine/src/testkit/pool_probe.rs's header says: a test of a pool's content \
          or order reads it under `with_pool_shift(0, …)`; a test of a roll searches for it with `seed_where` \
          or `cursor_where` (#848) or builds the position directly. One runs alone with \
-         `cargo test -p jackioh-cards --features jackioh-engine/pool-probe <name>`.",
+         `cargo test -p {package} --features jackioh-engine/pool-probe <name>`.",
         names.len(),
+        suite,
         listed.join("\n"),
     )
+}
+
+/// Runs the probe over `-p {package}`'s tests and fails with `report` naming each test it failed.
+/// `suite` is the possessive the report names (`"AI's"`), `package` the `-p` flag and the rerun hint.
+fn run_probe(package: &str, suite: &str) {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let output = Command::new(env!("CARGO"))
+        .arg("test")
+        .arg("-p")
+        .arg(package)
+        .args(PROBE_FLAGS)
+        .arg("--target-dir")
+        .arg(root.join(TARGET_DIR))
+        .current_dir(&root)
+        .output()
+        .expect("cargo runs");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // libtest captures `print!` and `eprint!` alone, so each binary's summary and failures (every failed
+    // test's panic among them) reach the daily log this way, as tests/perf.rs writes its table.
+    {
+        let mut log = std::io::stderr().lock();
+        let mut in_failures = false;
+        for line in stdout.lines() {
+            in_failures |= line == "failures:";
+            let summary = line.starts_with("test result:");
+            if in_failures || summary {
+                let _ = writeln!(log, "{line}");
+            }
+            in_failures &= !summary;
+        }
+    }
+    assert!(
+        output.status.success(),
+        "{}",
+        report(&stdout, &stderr, suite, package)
+    );
 }
 
 #[test]
@@ -85,8 +122,12 @@ test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
             "scripts::c::tests::pins_an_order"
         ]
     );
-    let said = report(stdout, "");
+    let said = report(stdout, "", "cards'", "jackioh-cards");
     assert!(said.contains("failed 2 of the cards' tests"), "{said}");
+    assert!(
+        said.contains("cargo test -p jackioh-cards --features jackioh-engine/pool-probe"),
+        "{said}"
+    );
     for part in [
         "scripts::a::tests::pins_a_roll",
         "scripts::c::tests::pins_an_order",
@@ -97,9 +138,17 @@ test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
         assert!(said.contains(part), "{part} missing from: {said}");
     }
     assert!(!said.contains("scripts::b::"), "{said}");
+    let ai = report(stdout, "", "AI's", "jackioh-ai");
+    assert!(ai.contains("failed 2 of the AI's tests"), "{ai}");
+    assert!(
+        ai.contains("cargo test -p jackioh-ai --features jackioh-engine/pool-probe"),
+        "{ai}"
+    );
     let broken = report(
         "",
         "error: could not compile `jackioh-cards` (lib test) due to 1 previous error",
+        "cards'",
+        "jackioh-cards",
     );
     assert!(broken.contains("could not compile"), "{broken}");
 }
@@ -107,29 +156,23 @@ test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
 #[test]
 #[ignore = "daily: rebuilds the cards' tests under the pool-probe feature and runs them, about five minutes; the engine's pool_probe canary keeps the rotation itself per pull request"]
 fn every_cards_test_passes_with_every_random_pool_rotated() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let output = Command::new(env!("CARGO"))
-        .args(PROBE)
-        .arg("--target-dir")
-        .arg(root.join(TARGET_DIR))
-        .current_dir(&root)
-        .output()
-        .expect("cargo runs");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    // libtest captures `print!` and `eprint!` alone, so each binary's summary and failures (every failed
-    // test's panic among them) reach the daily log this way, as tests/perf.rs writes its table.
-    {
-        let mut log = std::io::stderr().lock();
-        let mut in_failures = false;
-        for line in stdout.lines() {
-            in_failures |= line == "failures:";
-            let summary = line.starts_with("test result:");
-            if in_failures || summary {
-                let _ = writeln!(log, "{line}");
-            }
-            in_failures &= !summary;
-        }
-    }
-    assert!(output.status.success(), "{}", report(&stdout, &stderr));
+    run_probe("jackioh-cards", "cards'");
+}
+
+#[test]
+#[ignore = "daily: rebuilds the AI's tests under the pool-probe feature and runs them; the engine's pool_probe canary keeps the rotation itself per pull request"]
+fn every_ai_test_passes_with_every_random_pool_rotated() {
+    run_probe("jackioh-ai", "AI's");
+}
+
+#[test]
+#[ignore = "daily: rebuilds the server's tests under the pool-probe feature and runs them; the engine's pool_probe canary keeps the rotation itself per pull request"]
+fn every_server_test_passes_with_every_random_pool_rotated() {
+    run_probe("jackioh-server", "server's");
+}
+
+#[test]
+#[ignore = "daily: rebuilds the tools' tests under the pool-probe feature and runs them; the engine's pool_probe canary keeps the rotation itself per pull request"]
+fn every_tools_test_passes_with_every_random_pool_rotated() {
+    run_probe("jackioh-tools", "tools'");
 }

@@ -1783,6 +1783,11 @@ mod tests {
         let rows: Vec<(BandFight, Result<FightRow, String>)> = jobs
             .into_par_iter()
             .map(|(which, n)| {
+                // The bands pin tuned outcomes, not rolls (#3117): each job reads the pools as they
+                // are, the recorded pins `deck.rs` keeps under `with_pool_shift(0)`. The hold sits in
+                // the job so a shared rayon worker draws unshifted pools and puts its shift back for
+                // the next test.
+                let _unshifted = jackioh_engine::testkit::hold_pool_shift(0);
                 let row = play_band_fight(n, which, content).map_err(|e| format!("run {n}, {which:?}: {e}"));
                 (which, row)
             })

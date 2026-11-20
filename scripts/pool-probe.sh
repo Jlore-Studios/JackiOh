@@ -6,9 +6,10 @@
 # position directly, and a test of a pool's content or order reads it under `with_pool_shift(0, …)`.
 #
 # By hand, not per pull request: it builds four crates' tests with a feature no per-PR group enables and
-# runs the AI's and the server's games, which does not fit the eight-minute job budget (`ci.yml`'s header),
-# and no workflow runs it. The cards' share runs daily: `crates/tools/tests/pool_probe.rs` builds and runs
-# their tests under the feature in a `#[ignore = "daily: …"]` test super.yml's daily tests job runs (#4181).
+# runs the AI's and the server's games, which does not fit the eight-minute job budget (`ci.yml`'s header).
+# Each share runs daily: `crates/tools/tests/pool_probe.rs` builds and runs each package's tests under the
+# feature in an `#[ignore = "daily: …"]` test super.yml's daily tests job runs (#4181); a by-hand run
+# reproduces a daily failure.
 # The per-PR check is `pool_probe`'s canary in the engine's own tests. Extra arguments go to `cargo test`.
 set -eu
 
