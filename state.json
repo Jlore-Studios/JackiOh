@@ -16274,6 +16274,13 @@
     "4318": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44762356853",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-20T17:58:19Z",
+        "until": "2026-11-20T18:28:19Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
