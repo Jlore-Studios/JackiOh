@@ -13628,17 +13628,8 @@
       "suggestion": true
     },
     "4249": {
-      "action": "plan",
-      "asks": [
-        "c:7027705696"
-      ],
-      "build_next": {
-        "from_run": "44655574825",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-20T01:49:53Z",
-        "until": "2026-11-20T02:19:53Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T01:49:43Z",
         "difficulty": "medium",
@@ -13657,10 +13648,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": ") and R380 (`spec/rulings/R0380.md`: a pool naming no set draws from every set that shi\u2026\n- ## Steps\n- 1. Re-read the contract: `crates/engine/src/testkit/pool_probe.rs` header (the only two legal conversions: read a pool's content/order under `with_pool_shift(0, \u2026)` \u2014 `hold_pool_shift(0)` for async tests \u2014 or search the roll with `seed_where`/`cursor_where` (#848) or build the position directly), `\u2026\n- 2. Time the new coverage first, before editing: run `cargo test -p jackioh-ai -p jackioh-server -p jackioh-tools --features jackioh-engine/pool-probe --no-fail-fast` and record wall time. Cards take about five minutes; the three together must leave the daily-tests job (`super.yml`, 60-minute timeou\u2026\n- 3. In `crates/tools/tests/pool_probe.rs`, generalize without changing the cards probe's behavior: keep `failed()` as is (the `test <name> ... FAILED` format is suite-independent); change `report(stdout, stderr)` to `report(stdout, stderr, suite: &str, package: &str)` so it says `failed N of the {su\u2026\n- 4. Add three tests beside `every_cards_test_passes_with_every_random_pool_rotated`, each calling `run_probe`: `every_ai_test_passes_with_every_random_pool_rotated` (`-p jackioh-ai`, suite `\"AI's\"`), `every_server_test_passes_with_every_random_pool_rotated` (`-p jackioh-server`, suite `\"server's\"`),\u2026\n- 5. Update the per-PR unit test `the_report_names_every_failed_test_and_both_fixes` for the new `report` signature: pass a suite label, assert the message names the suite, still assert both fixes (`with_pool_shift(0, \u2026)`, `seed_where`, `cursor_where`), the failed names, and the broken-build tail pat\u2026\n- 6. Update `scripts/pool-probe.sh`'s header (lines 8\u201311) to say the cards', AI's, server's and tools' shares each run daily via the corresponding `#[ignore = \"daily: \u2026\"]` test in `crates/tools/tests/pool_probe.rs`, and that by-hand runs remain for reproducing a daily failure. Change no command.\n- 7. Run each new probe alone: `cargo test -p jackioh-tools --test pool_probe <new test> -- --ignored --test-threads=1`, starting with AI. Collect every `FAILED` name from the report.\n- 8. Convert each failure with exactly one documented pattern: content/order assertions read the pool under `with_pool_shift(0, \u2026)` (copy `crates/ai/tests/ai/deck.rs:838`); pinned-roll assertions search with `seed_where`/`cursor_where` (copy `crates/ai/tests/ai/activate.rs:423` / `training_grounds.rs\u2026\n- 9. Re-run the three rotated probes to green, then run the proof commands in **Tests** and **Done when**.\n- ## Tests\n- - `crates/tools/tests/pool_probe.rs`, `the_report_names_every_failed_test_and_both_fixes` (per-PR unit test, updated): asserts `failed()` parsing, suite label, both fixes, build-failure tail. Run `cargo test -p jackioh-tools --test pool_probe the_report_names_every_failed_test_and_both_fixes`.\n- - `crates/tools/tests/pool_probe.rs`, `every_ai_test_passes_with_every_random_pool_rotated` (new, daily): rotated `jackioh-ai` suite passes. Run `cargo test -p jackioh-tools --test pool_probe every_ai_test_passes_with_every_random_pool_rotated -- --ignored`.\n- - Same for `every_server_test_passes_with_every_random_pool_rotated` and `every_tools_test_passes_with_every_random_pool_rotated`, each with its package's command.\n- - Each converted test file keeps its own existing tests as the proof (e.g. `cargo test -p jackioh-ai --test ai deck::`, `cargo test -p jackioh-server --test server actor::`), run both normally and under `--features jackioh-engine/pool-probe`.\n- - Proof commands: `cargo test -p jackioh-tools`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, and `cargo jackioh spec check` only if a converted test cites a ruling id.\n- ## Done when\n- - [ ] Three daily tests exist, one per package, each failing with a report that names every failed test and both documented fixes.\n- - [ ] The first rotated run's failures are all converted with the documented patterns; all three rotated runs pass.\n- - [ ] No new per-PR job; the engine's `pool_probe` canary still passes per-PR; every `#[ignore]` reads `#[ignore = \"daily: \u2026\"]`.\n- - [ ] `cargo test -p jackioh-tools`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings` pass (`cargo jackioh spec check` if a ruling is cited).\n- - [ ] Timed run shows the daily-tests job still fits its hour; `scripts/pool-probe.sh` header describes the new daily coverage.\n- ## Risks\n- - Daily runtime: the server/tools suites are heavier than cards'. Mitigation: time first (step 2), share one target dir and one opt-level fingerprint so the four probes compile once; parallel outer threads serialize on cargo's build lock, which is safe.\n- - Statistical tests (AI deck curve over seeds, arena/gate waves) may look probe-broken while merely seed-sensitive: convert by searching the roll, never by widening a tolerance \u2014 tolerances are named constants (CLAUDE.md rule 9) and checks are never weakened.\n- - `deckable_pool()` in `crates/server/tests/actor/engine_real.rs` slices catalog order directly, so it is rotation-sensitive by construction; expect it to need `with_pool_shift(0, \u2026)` or a searched seed.\n- - `scripts/pool-probe.sh` is referenced by `scripts/ci-scope.sh`'s skip map: header-only change keeps that mapping valid.\n- ## Open questions\n- None blocking. Conditional handoff: if step 2 shows the three rotated suites threaten the daily-tests job's hour, the only lever is the workflow timeout under `.github/`, which the bot may not change \u2014 report the measured times and hand that part to a person instead of scoping the probes down silen\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4249 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4249/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-20T01:42:27Z",
       "owner_why": "it plans it",
@@ -13673,12 +13663,14 @@
       "provider": "muse",
       "queued_at": "2026-11-20T01:41:26Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44655574825",
+      "run_id": "pending:7b948302-1795139421",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-20T01:42:27Z",
+      "started_at": "2026-11-20T01:50:36Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7027705696"
+      ]
     },
     "4251": {
       "action": "build",
@@ -14599,9 +14591,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T01:42:27Z",
+    "at": "2026-11-20T01:50:36Z",
     "url": "",
-    "what": "plan #4249 on muse"
+    "what": "build #4249 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T01:41:02Z",
