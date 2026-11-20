@@ -16297,9 +16297,11 @@
         "by": "`muse` (medium)",
         "sha": "2e0151e6e6099fc823e5dd675fee6d9342d5c568"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T14:23:37Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T15:10:32Z",
         "family": "muse",
@@ -16309,6 +16311,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Worker's own answers carry the site's security headers\"} -->\n- All three Worker-synthesized answers now carry the site's four static security headers, and the dashboard's `_headers` forces HTTPS for a year.\n- What changed: `SECURITY_HEADERS` (frozen 4-entry record: nosniff, DENY, strict-origin-when-cross-origin, year-long HSTS) plus `withSecurityHeaders()` in [routing.ts](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4297/apps/edge/src/routing.ts), called by `precompressedModule`; the site Wor\u2026\n- Tests: new `#4297` cases pin the Workers' headers to `apps/web/public/_headers` (edge `config.test.ts`), assert module answers keep `application/wasm` + `br` + body bytes, assert both 404s carry the four headers, and assert proxied answers gain none. Verified: `vitest --project edge` 146 passed; ad\u2026\n- Decisions: the admin worker test cannot read the game `_headers` file (its tsconfig has no Node types, and adding them would weaken the Workers-runtime guard), so the value-pin lives in `headers.test.ts`, which reads the worker source as text \u2014 the same style edge `config.test.ts` already uses for \u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4297 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4297/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4297,
       "kind": "review",
       "live": "reviewing",
