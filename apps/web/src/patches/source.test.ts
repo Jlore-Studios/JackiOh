@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 import { daily } from "../test/daily.ts";
-import { EMPTY_PATCH_SOURCE, fileStem, loadersByStem, realPatchSource, sourceFromLoaders, type Loader, type Patch, type Snapshot } from "./source.ts";
+import { fileStem, loadersByStem, type Loader } from "./loaders.ts";
+import { EMPTY_PATCH_SOURCE, realPatchSource, sourceFromLoaders, type Patch, type Snapshot } from "./source.ts";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 

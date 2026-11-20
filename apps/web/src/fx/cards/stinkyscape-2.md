@@ -33,10 +33,10 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-095` | Faction: Vanguard Coalition | Spell | cast send | 1.28 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `stinkyscape-096` | Ocean Tsunami | Unit | cry send Hustle/ore | 1.45 | vanish | cry: the census's vanish is one exile in its window; its own effect fills the hand (addedToHand), which send reads; Hustle/ore for its Resources |
 | `stinkyscape-097` | Asteroid Field | Spell | cast barrage | 1.16 | nova | kept: #2784's example; the census's nova reads the same hits, which barrage rains one by one |
-| `stinkyscape-098` | Hull Booster | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Equip, Armor), which the keyword beats draw |
+| `stinkyscape-098` | Hull Booster | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Armor; Equip too through v0.6.7k), which the keyword beats draw |
 | `stinkyscape-099` | No-No Words | Spell | cast bolt Dark/curse | 1.24 | bolt | cast: the census agrees (bolt); Dark/curse for its hex |
-| `stinkyscape-100` | AP Rounds | Unit | none: vanilla | — | none: no motif reads fused | keywords only (Equip, Pierce); the census's fused is other pieces' fuse, the Starship part's |
-| `stinkyscape-101` | Overdrive Module | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Equip, Brittle, Reborn) |
+| `stinkyscape-100` | AP Rounds | Unit | none: vanilla | — | none: no motif reads fused | keywords only (Pierce; Equip too through v0.6.7k); the census's fused is other pieces' fuse, the Starship part's |
+| `stinkyscape-101` | Overdrive Module | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Brittle, Reborn; Equip too through v0.6.7k) |
 | `stinkyscape-102` | Book of Nono-Words | Spell | cast send Nerd/ink | 1.35 | bolt | cast: the census's bolt is one damage in its window; its own effect is addedToHand, which send reads; Nerd/ink for its book |
 | `stinkyscape-103` | Vxyl | Unit | cry send | 1.28 | none: no motif reads addedToHand | cry: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `stinkyscape-104` | Reflective Plating | Unit | none: its reflection is standing, with no moment of its own; the damage rows draw the hits | — | none: no motif reads questProgressed | the census's questProgressed is another card's; its reflected damage is another hit's row |
@@ -58,7 +58,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-119` | Unsecure System | Spell | cast bless Tech/glitch | 1.55 | none: no motif reads keywordGranted | cast: no census family reads buffed and keywordGranted, which bless reads; Tech/glitch for its hack |
 | `stinkyscape-120` | Wild System | Spell | cast nova Tech/glitch | 1.55 | nova | cast: the census agrees (nova); Tech/glitch for its hack; a set-piece candidate |
 | `stinkyscape-121` | System Schematic | Spell | cast send Tech/hologram | 1.35 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/hologram for its schematic |
-| `stinkyscape-122` | Vamp Rounds | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Equip, Lifesteal) |
+| `stinkyscape-122` | Vamp Rounds | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Lifesteal; Equip too through v0.6.7k) |
 | `stinkyscape-123` | Gokugains | Unit | none: its Nerf is secret (R202) | — | none: no motif reads turnAutoEnded | its Cry's Nerf is hidden from everyone until the card is played (R202), so nothing may show it |
 | `stinkyscape-124` | Jlockeed's Shipbuilding Grant | Spell | cast send Tech/rocket | 1.16 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/rocket for its ships |
 | `stinkyscape-125` | Jlockeed's Spacerace Propaganda | Field Spell | cast conjure Tech/rocket; activate send Tech/rocket; aura ember zone Tech/rocket | 1.28 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; activate: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/rocket for its ships |
@@ -122,7 +122,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-174` | Aerelret | Trap | cast conjure Tech/rocket | 1.65 | nova | cast: a Trap's cast is its firing, which plans nothing until firings open a window; the census's nova is the attack that goes on, while its own effect summons, which conjure reads; Tech/rocket for its ships |
 | `stinkyscape-175` | Frost Module | Unit | none: no motif reads marked | — | none: vanilla | the census agrees: its Activate's freeze is `marked`, whose own row brands the card |
 | `stinkyscape-176` | Preemptive Strike | Spell | bespoke preemptiveStrike | 1.62 | bolt | signature (R3334004): rings of fire and a red spark strike on its player's hero, then a red brand on the Dormant Starship it wakes; the launch is the Starship part's (#2782), and the Doctrine it casts plays its own entry |
-| `stinkyscape-177` | Cloaking Module | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Equip, Cloaked, Immutable) |
+| `stinkyscape-177` | Cloaking Module | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Cloaked, Immutable; Equip too through v0.6.7k) |
 | `stinkyscape-t-dormant-starship` | Dormant Starship | Unit | signature; entrance shipyardRollout | 1.74 | none: unseen | signature (R3334004): it rolls out of its shipyard in weld sparks and settles in a ring and dust at its foot, in Tech/rocket; its fuse and launch are the Starship part's (#2782) |
 | `stinkyscape-t-drone-interceptor` | Drone Interceptor | Unit | none: token | — | bolt | a token never played: keywords only; the census's window is other cards' noise |
 | `stinkyscape-t-drone-corvette` | Drone Corvette | Unit | none: token | — | bolt | a token never played: keywords only; the census's window is other cards' noise |

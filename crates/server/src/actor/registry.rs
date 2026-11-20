@@ -403,7 +403,8 @@ impl Registry {
                 Some(row) => bots_of(&mut t, &row.players).await?,
                 None => PerPlayer::new(None, None),
             };
-            // #1169: the checkpoint the last restart drain stored, read with the log it follows.
+            // #1169: the checkpoint the last restart drain, or since #4224 the last periodic one,
+            // stored, read with the log it follows.
             let saved = match &match_row {
                 Some(_) => t.matches_checkpoint(match_id).await?,
                 None => None,

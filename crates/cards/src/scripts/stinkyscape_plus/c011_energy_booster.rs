@@ -1,10 +1,10 @@
-//! SPEC §8.12 S+ #11 Energy Booster (Unit 1/1 → 2/2, Starship Piece, Equip, cost 3, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//! SPEC §8.12 S+ #11 Energy Booster (Unit 1/1 → 2/2, Starship Piece, cost 3, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
+//!   Base:    "Starship Piece
 //!            Activate 1: Refresh"
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            Activate 2: Refresh"
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one (R1852001).
 //! R3548003: Refresh gives back this turn's uses of every Activate on your permanents except Activates
 //! that Refresh, so the Booster stays spent; the engine's `refresh_ability` is that Activate, its id the
@@ -103,6 +103,7 @@ mod tests {
                 json!({ "field": [TOUGH, TOUGH, TOUGH] }),
             );
             let host = s.unit_at(P1, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             assemble(&mut s);
             assert_eq!(offers(&s, ASSEMBLER), 0);

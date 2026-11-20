@@ -7,8 +7,10 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { FeedNotification } from "../net/notifications.ts";
-import { at, meBody, refusal, signIn, stubServer, type StubServer } from "../test/stubServer.ts";
+import { at, meBody, must, refusal, signIn, stubServer, type StubServer } from "../test/stubServer.ts";
+import { fakeSockets, type FakeSocket } from "../test/fakeSocket.ts";
 import { ChallengeToast } from "../together/ChallengeToast.tsx";
+import { setSocialSocketFactory } from "../together/socialSocket.ts";
 import { feedLine, feedPath, resetFeedForTests } from "./feed.ts";
 import { InboxBell } from "./InboxBell.tsx";
 import { forgetInvites } from "./invites.ts";
@@ -35,12 +37,14 @@ type World = {
   challenge: boolean;
   /** The feed's read fails. */
   failing: boolean;
+  /** How many of the next marks fail. */
+  markFails: number;
 };
 
 const PAGE = 3;
 
 function world(over: Partial<World> = {}): World {
-  return { feed: [], unread: 0, challenge: false, failing: false, ...over };
+  return { feed: [], unread: 0, challenge: false, failing: false, markFails: 0, ...over };
 }
 
 function serve(state: World): StubServer {
@@ -67,6 +71,10 @@ function serve(state: World): StubServer {
       return { status: 200, body: { notifications: page, nextBefore, unread: state.feed.filter((each) => !each.read).length } };
     }
     if (method === "POST" && path === "/api/notifications/read") {
+      if (state.markFails > 0) {
+        state.markFails -= 1;
+        return refusal(500, "internal", "The mark did not land.");
+      }
       const upTo = (call.body as { upTo?: number } | undefined)?.upTo ?? Number.POSITIVE_INFINITY;
       state.feed = state.feed.map((each) => (each.id <= upTo ? { ...each, read: true } : each));
       state.unread = state.feed.filter((each) => !each.read).length;
@@ -178,6 +186,96 @@ describe("R4039001 the inbox's Recent section", () => {
         expect(screen.queryByTestId(inboxTestid.dot)).toBeNull();
       }, SOON);
       expect(bell).toHaveAttribute("aria-label", "Inbox");
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R4039001 opening the panel marks an older unread row below a page its acts already read",
+    async () => {
+      signIn("tok-feed");
+      // R4233000: the acts the rows are about marked 5, 4 and 3 read; 2, older than the page, is not.
+      const state = world({ feed: [row(5, "dailyMove"), row(4, "dailyEnded"), row(3, "friendRequest"), row(2, "lobbyInvite", { read: false })], unread: 1 });
+      const server = serve(state);
+      shell();
+      await screen.findByTestId(inboxTestid.dot, undefined, SOON);
+
+      await openPanel();
+      await waitFor(() => {
+        expect(server.to("POST", "/api/notifications/read")).toHaveLength(1);
+      }, SOON);
+      expect(server.to("POST", "/api/notifications/read")[0]?.body).toEqual({ upTo: 5 });
+      await waitFor(() => {
+        expect(screen.queryByTestId(inboxTestid.dot)).toBeNull();
+      }, SOON);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R4039001 a mark that fails is sent again at the next opening",
+    async () => {
+      signIn("tok-feed");
+      const state = world({ feed: [row(4, "dailyChallenge", { read: false })], unread: 1, markFails: 1 });
+      const server = serve(state);
+      shell();
+      await screen.findByTestId(inboxTestid.dot, undefined, SOON);
+      await openPanel();
+      await waitFor(() => {
+        expect(server.to("POST", "/api/notifications/read")).toHaveLength(1);
+      }, SOON);
+      fireEvent.click(screen.getByTestId(inboxTestid.close));
+      await waitFor(() => {
+        expect(screen.queryByTestId(inboxTestid.panel)).toBeNull();
+      }, SOON);
+      expect(state.unread, "the failed mark left the row unread at the server").toBe(1);
+      expect(screen.getByTestId(inboxTestid.dot)).toBeInTheDocument();
+
+      await openPanel();
+      await waitFor(() => {
+        expect(server.to("POST", "/api/notifications/read")).toHaveLength(2);
+      }, SOON);
+      expect(server.to("POST", "/api/notifications/read")[1]?.body).toEqual({ upTo: 4 });
+      await waitFor(() => {
+        expect(screen.queryByTestId(inboxTestid.dot)).toBeNull();
+      }, SOON);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R4039001 a row pushed while the panel is open reads the page again and marks it",
+    async () => {
+      const fake = fakeSockets();
+      setSocialSocketFactory(fake.factory);
+      try {
+        signIn("tok-feed");
+        const state = world({ feed: [row(3, "friendAccepted")] });
+        const server = serve(state);
+        shell();
+        const panel = await openPanel();
+        await waitFor(() => {
+          expect(recentRows(panel)).toHaveLength(1);
+        }, SOON);
+        expect(server.to("POST", "/api/notifications/read")).toHaveLength(0);
+        const socket: FakeSocket = must(fake.sockets.at(-1), "the tab's social socket");
+        socket.open();
+
+        const pushed = row(4, "dailyMove", { read: false });
+        state.feed = [pushed, ...state.feed];
+        state.unread = 1;
+        socket.deliver({ type: "notification", notification: pushed });
+        await waitFor(() => {
+          expect(recentRows(panel)).toHaveLength(2);
+        }, SOON);
+        await waitFor(() => {
+          expect(server.to("POST", "/api/notifications/read")).toHaveLength(1);
+        }, SOON);
+        expect(server.to("POST", "/api/notifications/read")[0]?.body).toEqual({ upTo: 4 });
+        expect(state.unread).toBe(0);
+      } finally {
+        setSocialSocketFactory(null);
+      }
     },
     TEST_MS,
   );

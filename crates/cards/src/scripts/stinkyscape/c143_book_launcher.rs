@@ -1,10 +1,10 @@
 //! Stinkyscape #143 Book Launcher (SPEC §8.10 row 143). Unit 0/3 → 0/6, Weapon, cost 3, Epic.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Choose a target. If it's an enemy, cast a random harmful Book, on it if it can
 //!            be. If it's an ally, cast a random helpful Book, on it if it can be."
 //!   Radiant: "… a random Radiant harmful Book … a random Radiant helpful Book …"
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! One Activate, once a turn (R384), since #2657: a declared Unit or hero on either side (R81). The side

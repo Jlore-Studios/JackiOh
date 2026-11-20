@@ -222,7 +222,7 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
             Some(code) => tx
                 .lobbies_get(code)
                 .await?
-                .is_some_and(|lobby| lobby.started_at.is_none() && lobby.expires_at > now),
+                .is_some_and(|lobby| lobby.open_at(now)),
             None => false,
         };
         if !open {

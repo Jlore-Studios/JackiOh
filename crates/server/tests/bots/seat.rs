@@ -115,7 +115,10 @@ fn miss_tally(game: usize) -> MissTally {
 
 #[test]
 fn r2214000_a_strength_zero_miss_makes_far_fewer_beginners_mistakes_than_random() {
-    const GAMES: usize = 20;
+    // 40 since issue #4285: its card changes moved the 20 games' positions, whose 296 bad-attack picks drew
+    // 20 random and 12 miss mistakes, too few to tell the 2× apart from noise; over 40 the two are 57 and 15
+    // of 670.
+    const GAMES: usize = 40;
     // The games are played side by side, each on a thread of its own: one after another they took
     // most of a minute, the last test `rust (test server)` waited on (#2323). Each count is a sum over
     // the games, the same in any order.

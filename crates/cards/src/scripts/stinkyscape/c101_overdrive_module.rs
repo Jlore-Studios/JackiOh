@@ -1,6 +1,6 @@
 //! SPEC §8.10 Stinkyscape 101 Overdrive Module, a card of the Stinkyscape set.
-//! (2) Unit, Rare, 5/5 → 10/10: Starship Piece, Equip, Brittle 2, Reborn.
-//! Radiant: Starship Piece, Equip, Brittle 4, Reborn.
+//! (2) Unit, Rare, 5/5 → 10/10: Starship Piece, Brittle 2, Reborn.
+//! Radiant: Starship Piece, Brittle 4, Reborn.
 //!
 //! Keywords only (§6.1): its script is empty. Equip (R1086): played onto one of your Units it
 //! fuses into it, the host keeping its zone and taking its stats, keywords and text (R77, R102),
@@ -65,6 +65,7 @@ mod tests {
             "p2": { "hand": [ANCHOR], "library": filler(4) },
         }));
         s.play(VANILLA, json!({ "zone": 1 }));
+        crate::give_equip(&mut s, MODULE);
         s.play(MODULE, json!({ "zone": 1, "equip": true }));
 
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");

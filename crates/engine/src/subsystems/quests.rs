@@ -21,7 +21,7 @@ use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, GameState, active_first, find_instance, find_instance_mut};
 use crate::stays::moves_in;
 use crate::wire::{
-    CardType, GameEvent, GameEventType, PLAYER_IDS, PlayerId, QuestItemView, QuestOpenView, QuestStageState,
+    CardType, GameEvent, GameEventType, PlayerId, QuestItemView, QuestOpenView, QuestStageState,
     QuestStageView, QuestView, Row, Tag, ZoneName, opponent_of,
 };
 use crate::zones::{active_units_of, card_at, slots_of};
@@ -621,16 +621,10 @@ fn quest_cards_in_order(state: &GameState) -> Vec<CardInstance> {
     out
 }
 
-fn hero_side(id: &str) -> Option<PlayerId> {
-    PLAYER_IDS
-        .into_iter()
-        .find(|player| id == format!("hero-{}", player.as_str()))
-}
-
 /// R212: the side a card or hero stood on when an event happened: off a later change of control or
 /// `destroyed`, else off the card where it is now.
 fn side_when(state: &GameState, id: &str, after: &[GameEvent]) -> Option<PlayerId> {
-    if let Some(hero) = hero_side(id) {
+    if let Some(hero) = crate::combat::hero_seat_of(id) {
         return Some(hero);
     }
     for event in after {
@@ -781,7 +775,7 @@ fn credit_of(
             let dealt = source_id
                 .as_ref()
                 .is_some_and(|source| side_when(state, source, after) == Some(me));
-            let taken = hero_side(target_id) == Some(me);
+            let taken = crate::combat::hero_seat_of(target_id) == Some(me);
             i32::from(dealt || taken)
         }
         _ => 0,

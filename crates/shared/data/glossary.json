@@ -254,7 +254,7 @@
     {
       "id": "Flashback",
       "label": "Flashback",
-      "rule": "Can be played from your graveyard once, at its cost",
+      "rule": "Can be played from your graveyard once, at its cost, but at least (1)",
       "section": "§6.1",
       "aliases": []
     },

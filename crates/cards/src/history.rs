@@ -82,10 +82,10 @@ use crate::scripts::stinkyscape::{
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
-    c037_scorch, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall,
-    c066_plastanium_wall, c067_phase_wall, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse,
-    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
+    c037_scorch, c039_mindustrial_cross_over, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall,
+    c065_thorium_wall, c066_plastanium_wall, c067_phase_wall, c079_a_glimpse_into_the_endless_sea,
+    c080_the_last_voyage, c082_endless_expedition, c097_selective_enrollment, c104_tireless_cultivation,
+    c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -109,7 +109,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R3837000, R3837003, R3837005), #3800 (R3800003, R3800004, S+ #104), #3869
 /// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002), #3935 (R3935000), #3996
 /// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202), #4079 (R4079000)
-/// and #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305).
+/// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000)
+/// and #4285 (R4285001 to R4285005).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -1103,6 +1104,30 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c001_curse_of_the_forgotten_classic::ID,
         "v0.6.7e",
         c001_curse_of_the_forgotten_classic::script_v0_6_7e,
+    ),
+    // #4285 Stinkyscape+ Balance Changes IV (R4285001 to R4285005): the last scripts before it.
+    (
+        c129_jlockeeds_missile_pod::ID,
+        "v0.6.7k",
+        c129_jlockeeds_missile_pod::script_v0_6_7k,
+    ),
+    (c083_halo::ID, "v0.6.7k", c083_halo::script_v0_6_7k),
+    (c149_wildar::ID, "v0.6.7k", c149_wildar::script_v0_6_7k),
+    (c004_profe_yates::ID, "v0.6.7k", c004_profe_yates::script_v0_6_7k),
+    (
+        c087_tatches_the_totem::ID,
+        "v0.6.7k",
+        c087_tatches_the_totem::script_v0_6_7k,
+    ),
+    (
+        c039_mindustrial_cross_over::ID,
+        "v0.6.7k",
+        c039_mindustrial_cross_over::script_v0_6_7k,
+    ),
+    (
+        c095_call_to_chaos_meditative_edition::ID,
+        "v0.6.7k",
+        c095_call_to_chaos_meditative_edition::script_v0_6_7k,
     ),
 ];
 

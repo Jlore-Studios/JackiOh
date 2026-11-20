@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #38 Arc (Unit 0/5 → 0/10, Mindustrial, Common, cost 2), a card of the Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #38 Arc (Unit 0/4 → 0/8, 0/5 → 0/10 through v0.6.7k (issue #4285), Mindustrial, Common, cost 2), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Can't Defend
 //!            Activate {damage}: Deal {damage2} damage to a Unit. This randomly chains to an adjacent Unit. It
 //!            repeats until no valid targets remain. It cannot chain to the same Unit twice in one Activate." —
@@ -85,7 +85,7 @@ mod tests {
 
     /// What each hit of the chain deals: the catalog's `damage2`.
     const DAMAGE: i32 = 2;
-    const RADIANT_HEALTH: i32 = 10;
+    const RADIANT_HEALTH: i32 = 8;
     const SEEDS: usize = 20;
 
     fn at(target: &str) -> Value {

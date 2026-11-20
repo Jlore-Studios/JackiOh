@@ -38,7 +38,7 @@ import {
   runReduce,
   runScore,
 } from "../wasm/index.ts";
-import { isRecord } from "../wire/json.ts";
+import { isRecord, isStringArray } from "../wire/json.ts";
 import {
   DUNGEON_ELAPSED_MIN_MS,
   DUNGEON_ELAPSED_START_MS,
@@ -161,10 +161,6 @@ export function playedMs(elapsedMs: number, resumedAt: number | null, now: numbe
 
 // Reading what the device holds: untrusted data must parse to the current shape or become nothing.
 
-function isStrings(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
 function isCount(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
@@ -172,15 +168,15 @@ function isCount(value: unknown): value is number {
 function parseUnlocks(raw: unknown): RunUnlocks | null {
   if (!isRecord(raw)) return null;
   const { level, cards, artifacts, owned } = raw;
-  if (!isCount(level) || level < DUNGEON_FIRST_LEVEL || !isStrings(cards) || !isStrings(artifacts)) return null;
-  if (owned !== null && !isStrings(owned)) return null;
+  if (!isCount(level) || level < DUNGEON_FIRST_LEVEL || !isStringArray(cards) || !isStringArray(artifacts)) return null;
+  if (owned !== null && !isStringArray(owned)) return null;
   return { level, cards, artifacts, owned };
 }
 
 function parseSetup(raw: unknown): RunSetup | null {
   if (!isRecord(raw)) return null;
   const { seed, starter, artifacts, curses } = raw;
-  if (typeof seed !== "string" || !isStrings(starter) || !isStrings(artifacts) || !isStrings(curses)) return null;
+  if (typeof seed !== "string" || !isStringArray(starter) || !isStringArray(artifacts) || !isStringArray(curses)) return null;
   return { seed, starter, artifacts, curses };
 }
 
@@ -204,7 +200,7 @@ function parseKept(raw: unknown): KeptRun | null {
   if (catalog !== null && typeof catalog !== "string") return null;
   const extractedCards = raw.extractedCards === undefined ? [] : raw.extractedCards;
   const extractedArtifacts = raw.extractedArtifacts === undefined ? [] : raw.extractedArtifacts;
-  if (!isStrings(extractedCards) || !isStrings(extractedArtifacts)) return null;
+  if (!isStringArray(extractedCards) || !isStringArray(extractedArtifacts)) return null;
   // R3502000: a run kept before its time played was kept has no `elapsedMs` and starts counting when it loads;
   // one that holds a value nothing wrote is dropped like any other.
   if (elapsedMs !== undefined && !isCount(elapsedMs)) return null;
@@ -233,7 +229,7 @@ function parseRecord(raw: unknown): RunRecord | null {
   const { seed, daily, mode, curses, cursePoints, rowReached, won, score, embers, timeMs, endedAt, stats } = raw;
   const parsedStats = parseStats(stats);
   if (typeof seed !== "string" || typeof daily !== "boolean" || (mode !== "sandbox" && mode !== "campaign")) return null;
-  if (!isStrings(curses) || !isCount(rowReached) || typeof won !== "boolean" || !isCount(embers) || !isCount(timeMs)) return null;
+  if (!isStringArray(curses) || !isCount(rowReached) || typeof won !== "boolean" || !isCount(embers) || !isCount(timeMs)) return null;
   if (typeof cursePoints !== "number" || !Number.isFinite(cursePoints) || typeof score !== "number" || !Number.isFinite(score)) return null;
   if (typeof endedAt !== "string" || parsedStats === null) return null;
   return { seed, daily, mode, curses, cursePoints, rowReached, won, score, embers, timeMs, endedAt, stats: parsedStats };

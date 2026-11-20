@@ -1,10 +1,11 @@
-//! C+ #34 Memory Leak (SPEC §8.7 row 34): (1) Field Spell, Epic (issue #4154: was (2); #2521: was (3), and gained Crater).
-//!   Base:    "Crater". Choose one: "End of turn: Lock a random enemy zone"; or
+//! C+ #34 Memory Leak (SPEC §8.7 row 34): (1) Field Spell, Epic (issue #4154: was (2); #2521: was (3), and gained Crater;
+//! issue #4285: lost Crater).
+//!   Base:    Choose one: "End of turn: Lock a random enemy zone"; or
 //!            "After your opponent plays a Unit or Field Spell, Lock its zone."
-//!   Radiant: "Crater", and both, no choice.
-//! Crater is the catalog keyword on both faces, the engine's (§6.1): a face-up Field Spell with it
-//! Locks the backrow zone it enters, any way it enters, before its Cry (R1850006, `crater::
-//! lock_on_arrival`), so no card-side code is needed. The mode is declared with the play (R81) and
+//!   Radiant: both, no choice.
+//! From #2521 through v0.6.7k Crater was the catalog keyword on both faces, the engine's (§6.1), which Locked
+//! the backrow zone it entered as it entered (R1850006); since issue #4285 it prints none, catalog data a
+//! replay folds under (R767000), so no card-side code changed. The mode is declared with the play (R81) and
 //! remembered on the instance (`memory.mode`). "A random zone" is one of the opponent's ten not Locked
 //! yet (`lockRandomZone`, nothing when all are); "its zone" is where the played card landed, Locked
 //! once it resolves (a cast counts, R70).
@@ -105,8 +106,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #34 Memory Leak — SPEC §8.7 row 34, BUILD M9 Classic+ row C+ 34 (the must-pass row): Crater Locks
-// the backrow zone it enters as it enters, on both faces (R1850006, #2521); the mode is chosen with the
+// C+ #34 Memory Leak — SPEC §8.7 row 34, BUILD M9 Classic+ row C+ 34 (the must-pass row): no Crater since
+// issue #4285 (from #2521 through v0.6.7k it Locked the backrow zone it entered, R1850006); the mode is chosen with the
 // play (R81) and kept in `memory.mode`; all ten zones Locked, nothing and no random draw (R129); a cast
 // counts (R70); a Locked unit zone takes a Reborn return there (R175, R688).
 #[cfg(test)]
@@ -187,8 +188,9 @@ mod tests {
                 assert_eq!(leak(Some("afterPlay"), json!({})).card(LEAK).memory.get("mode"), Some(&json!("afterPlay")));
             }
 
+            /// Issue #4285: it prints no Crater, so the backrow zone it enters stays open.
             #[test]
-            fn r1850006_crater_locks_the_backrow_zone_it_enters_as_it_enters() {
+            fn issue_4285_it_has_no_crater_and_its_own_zone_stays_open() {
                 crate::register_all();
                 for mode in ["endOfTurn", "afterPlay"] {
                     let mut s = scenario(json!({
@@ -197,22 +199,11 @@ mod tests {
                     }));
                     let from = s.events().len();
                     s.play(LEAK, json!({ "modes": [mode], "zone": 3 }));
-                    // Its own zone, and only it; the Leak stays in it (a Lock evicts nothing, R688).
-                    assert_eq!(locked_of(&s, P1), vec![lane("backrow", 3)]);
+                    assert!(!has_keyword(&s.stats(LEAK).keywords, KeywordKind::Crater));
+                    assert_eq!(locked_of(&s, P1).len(), 0);
                     assert_eq!(locked_of(&s, P2).len(), 0);
                     assert_eq!(s.backrow(P1, 3).map(|card| card.def_id).as_deref(), Some(LEAK));
-                    assert!(s.events()[from..].iter().any(|event| matches!(
-                        event,
-                        GameEvent::Locked { player: P1, row: Row::Backrow, lane: 3 }
-                    )));
-                    // As it enters, before its Cry: the Lock comes before the Leak resolves.
-                    let locked = s.events()[from..]
-                        .iter()
-                        .position(|event| matches!(event, GameEvent::Locked { player: P1, .. }));
-                    let resolved = s.events()[from..]
-                        .iter()
-                        .position(|event| matches!(event, GameEvent::CardResolved { def_id, .. } if def_id == LEAK));
-                    assert!(locked.is_some() && resolved.is_some() && locked < resolved);
+                    assert!(locked_events(&s.events()[from..]).is_empty());
                 }
             }
 
@@ -227,9 +218,9 @@ mod tests {
                 crate::register_all();
                 let mut s = leak(Some("endOfTurn"), json!({}));
                 assert_eq!(locked_of(&s, P2).len(), 0);
-                // Its own backrow zone, Locked by its Crater as it entered (R1850006), and no other of p1's.
+                // None of p1's zones: it has no Crater since issue #4285.
                 let own = locked_of(&s, P1);
-                assert_eq!(own.len(), 1);
+                assert_eq!(own.len(), 0);
                 let from = s.events().len();
                 s.end_turn(); // p1's end of turn: one Lock.
                 assert_eq!(locked_of(&s, P2).len(), 1);
@@ -371,8 +362,8 @@ mod tests {
                 }));
                 s.play(LEAK, json!({ "modes": ["afterPlay"], "zone": 1 }));
                 s.play(MENACE, json!({}));
-                // Only the Leak's own backrow zone, its Crater's (R1850006): the Menace's stays open.
-                assert_eq!(locked_of(&s, P1), vec![lane("backrow", 1)]);
+                // Neither the Leak's zone (no Crater since issue #4285) nor the Menace's.
+                assert_eq!(locked_of(&s, P1).len(), 0);
                 assert_eq!(locked_of(&s, P2).len(), 0);
             }
 
@@ -424,14 +415,16 @@ mod tests {
         mod radiant {
             use super::*;
 
+            /// Issue #4285: no Crater on the Radiant face either.
             #[test]
-            fn r1850006_crater_locks_the_backrow_zone_it_enters_on_the_radiant_face_too() {
+            fn issue_4285_the_radiant_face_has_no_crater_either() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": LEAK, "radiant": true }, FILLER], "library": [FILLER, FILLER], "mana": 4 },
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
                 }));
                 s.play(LEAK, json!({ "zone": 4 }));
-                assert_eq!(locked_of(&s, P1), vec![lane("backrow", 4)]);
+                assert!(!has_keyword(&s.stats(LEAK).keywords, KeywordKind::Crater));
+                assert_eq!(locked_of(&s, P1).len(), 0);
                 assert_eq!(locked_of(&s, P2).len(), 0);
                 assert_eq!(s.backrow(P1, 4).map(|card| card.def_id).as_deref(), Some(LEAK));
             }

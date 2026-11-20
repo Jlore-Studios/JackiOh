@@ -611,6 +611,27 @@ pub(crate) fn upgrade_number(s: &mut jackioh_engine::testkit::Scenario, card: &s
     tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Upgrade)
 }
 
+/// R4285001: gives Equip in hand (R1878003) to `card`, the first hand card with that instance or def id: a
+/// Starship Piece prints no Equip since issue #4285, so a test of a piece's text on a host Equips it as a
+/// lent Equip would (S #16 Rod of Ages, R1869000).
+#[cfg(test)]
+pub(crate) fn give_equip(s: &mut jackioh_engine::testkit::Scenario, card: &str) {
+    let state = s.state_mut();
+    let held = jackioh_engine::PLAYER_IDS
+        .into_iter()
+        .find_map(|player| {
+            state.players[player]
+                .hand
+                .iter()
+                .position(|held| held.id == card || held.def_id == card)
+                .map(|at| (player, at))
+        })
+        .unwrap_or_else(|| panic!("{card} is in no hand"));
+    state.players[held.0].hand[held.1]
+        .granted_keywords
+        .push(jackioh_engine::Keyword::Equip);
+}
+
 /// R1438: grants Lucky `n` to `card`.
 #[cfg(test)]
 pub(crate) fn give_lucky(s: &mut jackioh_engine::testkit::Scenario, card: &str, n: i32) {

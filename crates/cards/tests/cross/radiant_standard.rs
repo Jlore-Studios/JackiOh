@@ -20,8 +20,11 @@ fn entries() -> Vec<&'static CardDef> {
 /// R275: the factor a Radiant Unit's attack and health are held to.
 const STAT_FACTOR: i32 = 2;
 
-/// R275's named exceptions to the stat half, by id, with the reason; none remain.
-const STAT_EXCEPTIONS: &[(&str, &str)] = &[];
+/// R275's named exceptions to the stat half, by id, with the reason.
+const STAT_EXCEPTIONS: &[(&str, &str)] = &[(
+    "stinkyscape-083",
+    "R4285006: S #83 Halo's Radiant 6/1 on its 3/1 base, the designer's printed numbers (Stinkyscape+ Balance Changes IV)",
+)];
 
 /// `docs/radiant-audit.md`, the card-by-card record of R275's effect half.
 const AUDIT: &str = include_str!("../../../../docs/radiant-audit.md");
@@ -151,8 +154,24 @@ mod r275_the_radiant_power_standard_spec_5_2 {
         }
         assert_eq!(
             STAT_EXCEPTIONS.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-            Vec::<&str>::new()
+            vec!["stinkyscape-083"]
         );
+    }
+
+    /// R4285006: Halo doubles its attack and keeps its health, 3/1 → 6/1, the one exception.
+    #[test]
+    fn r4285006_halo_is_the_named_exception_a_6_1_on_a_3_1() {
+        let card = CATALOG.get("stinkyscape-083").expect("Halo");
+        assert_eq!(
+            (
+                card.base.attack,
+                card.base.health,
+                card.radiant.attack,
+                card.radiant.health
+            ),
+            (Some(3), Some(1), Some(6), Some(1))
+        );
+        assert!(is_exception(&card.id));
     }
 
     #[test]

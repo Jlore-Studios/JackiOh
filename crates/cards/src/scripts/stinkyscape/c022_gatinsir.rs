@@ -11,7 +11,7 @@
 //! its card fires that card's Cry (R411): each Phalanx that arrived then runs its Cry for Gatinsir's
 //! controller, in the order they arrived (R2176000; a Warp Disruptor prints none). The attack then goes
 //! on as declared (ST9's AMBUSH, R1875002). The Warp Disruptors' aura acts at once.
-//! Radiant: all of them Radiant (Phalanx 6/6). Tunes: chance 30 ↑ (step 10, max 100), disruptors 2 ↑,
+//! Radiant: all of them Radiant (Phalanx 6/2). Tunes: chance 30 ↑ (step 10, max 100), disruptors 2 ↑,
 //! phalanxes 2 ↑.
 
 use jackioh_engine::effects::summon;
@@ -341,8 +341,9 @@ mod tests {
                 vec![(PHALANX.to_string(), true), (PHALANX.to_string(), true)]
             );
             let phalanx = s.unit_at(P2, 1);
-            // A Phalanx 6/6 (8/8 until #2657), with the two Disruptors' +2 each, before its Cry arms it.
-            s.expect_stats(&phalanx, json!({ "attack": 6 + 2 + 2, "health": 6 }));
+            // A Phalanx 6/2 (6/6 through v0.6.7k, issue #4285; 8/8 until #2657), with the two Disruptors' +2
+            // each, before its Cry arms it.
+            s.expect_stats(&phalanx, json!({ "attack": 6 + 2 + 2, "health": 2 }));
             assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
         }
 

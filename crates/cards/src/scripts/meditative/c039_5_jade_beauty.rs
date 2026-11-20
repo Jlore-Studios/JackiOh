@@ -1,20 +1,21 @@
 //! Meditative #39.5 Jade Beauty (SPEC §8.8 row 39.5). (10) Unit, CN, Token (printed Mythic),
 //! 20/20 → 40/40.
 //!
-//!   Base:    "Can't attack, Indestructible, Immutable
+//!   Base:    "Can't attack, Evasive
 //!            End of turn: Allure every enemy Unit.
 //!            You summon this when your Jade Counter reaches 5.
 //!            At the start of your next turn, steal the Units this charmed, or they die of heartbreak
 //!            if you have no room."
-//!   Radiant: "Indestructible, Immutable
+//!   Radiant: "Evasive
 //!            End of turn: Allure every enemy Unit.
 //!            Your Jade Beauties become Radiant when your Jade Counter reaches 10.
 //!            At the start of your next turn, steal the Units this charmed, or they die of heartbreak
 //!            if you have no room." (The last line is Allure's reminder, which the face hides behind
 //!            "…", #1017.)
 //!
-//! Engine: a Unit token that ME-JADE summons (no Cry). Indestructible (R46). Immutable (R23): no
-//! Nerf, Buff, Transform or Fuse-onto, though Radiant still applies. Each end of its controller's
+//! Engine: a Unit token that ME-JADE summons (no Cry). Evasive (§6.1), catalog data: no attack may target
+//! it, and it is never in Defense Position. Through v0.6.7k (issue #4285) it was Indestructible (R46) and
+//! Immutable (R23) instead, which the shipped catalogs keep for those replays (R767000). Each end of its controller's
 //! turn (R62) it runs ME-ALLURE over every enemy Unit then on the field (MD-C4). The counter's 10
 //! turns it Radiant on the field (§5.2), its damage kept, and nothing fires again. Handed out as a
 //! card by C+ #23's every-token pool (R382), it is played at its printed (10), with no Cry to fire.
@@ -70,8 +71,6 @@ mod tests {
     const DEFENDER: &str = "core-003";
     /// #16 Hit Job (Destroy target unit).
     const HIT_JOB: &str = "core-016";
-    /// C+ #72 Book of Nerf.
-    const NERF: &str = "classicplus-072";
 
     fn beauty_lane(s: &Scenario) -> i32 {
         (1..=5)
@@ -203,9 +202,8 @@ mod tests {
         let lane = beauty_lane(&s);
 
         s.end_turn();
-        // R76: the Beauty is exiled (Immutable stops Nerf, Buff, Transform and Fuse, and a Spell's
-        // target in play, R781001 — not an exile of every permanent), yet the Allure still lands at
-        // p1's next start.
+        // R76: the Beauty is exiled (an exile of every permanent), yet the Allure still lands at p1's
+        // next start.
         s.play(AUDIT, json!({}));
         assert!(s.unit(P1, lane).is_none());
         s.end_turn();
@@ -213,8 +211,18 @@ mod tests {
         assert_eq!(s.card(&prey).controller, P1);
     }
 
+    /// Issue #4285: Can't attack and Evasive, no longer Indestructible or Immutable, on both faces' prints.
     #[test]
-    fn r781001_cant_attack_and_core_016_hit_job_cannot_target_it() {
+    fn issue_4285_it_prints_evasive_and_neither_indestructible_nor_immutable() {
+        crate::register_all();
+        let def = crate::card_def(ID);
+        let kinds = |face: &CardFace| face.keywords.iter().map(Keyword::kind).collect::<Vec<_>>();
+        assert_eq!(kinds(&def.base), vec![KeywordKind::CantAttack, KeywordKind::Evasive]);
+        assert_eq!(kinds(&def.radiant), vec![KeywordKind::Evasive]);
+    }
+
+    #[test]
+    fn cant_attack_and_since_issue_4285_hit_job_destroys_it() {
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [HIT_JOB, FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
@@ -224,26 +232,23 @@ mod tests {
 
         s.expect_refused(|s| s.attack(&beauty, "hero"));
 
-        // Hit Job is a Spell, so it can't target the Immutable Beauty in play (R781001).
+        // No longer Immutable or Indestructible: Hit Job targets it and destroys it.
         s.end_turn();
-        s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] })));
-        s.end_turn();
-        assert_eq!(s.unit(P1, lane).map(|unit| unit.id), Some(beauty));
+        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] }));
+        assert!(s.unit(P1, lane).is_none_or(|unit| unit.id != beauty));
     }
 
     #[test]
-    fn r781001_r23_classicplus_072_book_of_nerf_cannot_target_it() {
+    fn issue_4285_evasive_no_enemy_attack_may_target_it() {
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
-            "p2": { "hand": [NERF, FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
+            "p2": { "hand": [FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
         }));
         let lane = beauty_lane(&s);
         let beauty = s.unit(P1, lane).expect("the Beauty").id.clone();
-
         s.end_turn();
-        s.expect_refused(|s| s.play(NERF, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] })));
-
-        s.expect_stats(&beauty, json!({ "attack": 20, "health": 20 }));
+        let attacker = s.unit(P2, 3).expect("p2's Vanilla").id;
+        s.expect_refused(|s| s.attack(attacker.as_str(), beauty.as_str()));
     }
 
     #[test]
@@ -266,7 +271,7 @@ mod tests {
         assert!(s.card(&prey).zone.z() != ZoneName::Field, "the 40 hit kills the prey");
 
         // §5.2: made Radiant on the field, its damage is kept — a hurt Beauty ascends hurt.
-        // Indestructible, it takes no damage in play (§4.5), so the setup gives it 2.
+        // The setup gives it 2 damage.
         let mut s = scenario(json!({
             "p1": {
                 "hand": ["meditative-039-4", "meditative-039-4", FILLER],

@@ -14,7 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::{MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA};
+use crate::config::{FLASHBACK_MIN_PRICE, MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA};
 use crate::script::EngineSink;
 use crate::script::{GraveyardPlayPermission, HookArgs};
 use crate::state::{CardInstance, EngineError, GameState};
@@ -127,6 +127,40 @@ pub fn spends_flashback(
         })
 }
 
+/// R4285000: the price a play of this card from its owner's graveyard takes once Flashback's floor holds:
+/// at least FLASHBACK_MIN_PRICE when the play at `price` would be Flashback's (`spends_flashback`, the
+/// keyword printed or lent, R1869003), else `price` as it is. A play a field permission covers at that
+/// price (C #28 Second Wind's, C #74 Corpse Plantation's) is the permission's and takes no floor, nor does a
+/// card that prices itself there (`graveyardPrice`, R3560001); a card in a hand never does.
+pub fn flashback_floor(state: &GameState, card: &CardInstance, price: i32) -> i32 {
+    let player = card.zone.player();
+    if in_own_graveyard(state, player, card)
+        && crate::scripts::flags_of(state, card).graveyard_price.is_none()
+        && spends_flashback(state, player, card, price, None)
+    {
+        price.max(FLASHBACK_MIN_PRICE)
+    } else {
+        price
+    }
+}
+
+/// R4285000: what a play at `price` asks of a Plague payment: the price before Flashback's floor, since
+/// a play a Plague permission pays is the permission's and spends no Flashback (`spends_flashback`), so
+/// a (0) card with Flashback stays one no counter pays for. `card` carries the play's X and embiggen, as
+/// `price` was read off it.
+pub fn plague_price(state: &GameState, card: &CardInstance, price: i32) -> i32 {
+    price.min(crate::mana::play_cost_before_flashback_floor(state, card))
+}
+
+/// The price a grant's payment meets: a Plague permission's `plague_price`, any other's the play's own.
+fn price_for(grant: &GraveyardGrant, price: i32, plague_at: i32) -> i32 {
+    if grant.permission.plague == Some(true) {
+        plague_at
+    } else {
+        price
+    }
+}
+
 /// R454, R65: whether a play may take this card from its player's graveyard now (it lies there and a
 /// permission admits its type). Such a card is priced as a play wherever it is read (R65).
 pub fn playable_from_graveyard(state: &GameState, card: &CardInstance) -> bool {
@@ -143,6 +177,7 @@ fn plague_on(card: &CardInstance) -> i32 {
 /// permission without `plague` admits the price and the mana covers it, and, per Plague permission that
 /// admits it, each number of tokens from MIN_PLAGUE_PAYMENT up to what the card holds and the price
 /// allows, the rest in mana. `play_choices::graveyard_play_actions_for` crosses these with its choices.
+/// R4285000: the tokens meet the `plague_price`, so `card` is the play's own, its X and embiggen stamped.
 pub fn graveyard_payments_for(
     state: &GameState,
     player: PlayerId,
@@ -153,11 +188,12 @@ pub fn graveyard_payments_for(
         return Vec::new();
     }
     let grants = admitting(state, player, card);
+    let plague_at = plague_price(state, card, price);
     // R1223, R3548004: a graveyard play may borrow too, or pay on infinite mana.
     let mut out: Vec<PlayPayment> = Vec::new();
     let priced: Vec<&GraveyardGrant> = grants
         .iter()
-        .filter(|grant| price >= grant.permission.min_price.unwrap_or(0))
+        .filter(|grant| price_for(grant, price, plague_at) >= grant.permission.min_price.unwrap_or(0))
         .collect();
     if priced.iter().any(|grant| grant.permission.plague != Some(true))
         && crate::credit::can_pay(state, player, price)
@@ -169,10 +205,10 @@ pub fn graveyard_payments_for(
             continue;
         }
         // Integer division (SURFACE §4.4.4); a negative price admits no token.
-        let most = plague_on(&grant.source).min(price.div_euclid(PLAGUE_TOKEN_MANA));
+        let most = plague_on(&grant.source).min(plague_at.div_euclid(PLAGUE_TOKEN_MANA));
         let mut tokens = MIN_PLAGUE_PAYMENT;
         while tokens <= most {
-            if crate::credit::can_pay(state, player, price - tokens * PLAGUE_TOKEN_MANA) {
+            if crate::credit::can_pay(state, player, plague_at - tokens * PLAGUE_TOKEN_MANA) {
                 out.push(PlayPayment {
                     plague: Some(PlagueSpend {
                         from: grant.source.id.clone(),
@@ -188,7 +224,8 @@ pub fn graveyard_payments_for(
 
 /// E11, R454: why a play of this graveyard card at this price, paid as the action says, is refused
 /// (`graveyard_play_actions_for` asked from the other side, §10.2), or `Ok`. Mana is part of the
-/// answer, since a Plague payment changes what the mana has to cover.
+/// answer, since a Plague payment changes what the mana has to cover. R4285000: a Plague payment meets
+/// the `plague_price`, so `card` is the play's own, its X and embiggen stamped.
 pub fn why_graveyard_play_refused(
     state: &GameState,
     player: PlayerId,
@@ -200,9 +237,10 @@ pub fn why_graveyard_play_refused(
     if grants.is_empty() {
         return Err(EngineError::new("you may not play that card from your graveyard"));
     }
+    let plague_at = plague_price(state, card, price);
     let priced: Vec<&GraveyardGrant> = grants
         .iter()
-        .filter(|grant| price >= grant.permission.min_price.unwrap_or(0))
+        .filter(|grant| price_for(grant, price, plague_at) >= grant.permission.min_price.unwrap_or(0))
         .collect();
     if priced.is_empty() {
         // `grants` is not empty here, so the least is a number (SURFACE §4.4.4's Math.min guard).
@@ -244,10 +282,10 @@ pub fn why_graveyard_play_refused(
     if plague.tokens > plague_on(&grant.source) {
         return Err(EngineError::new("there are not that many Plague Counters there"));
     }
-    if plague.tokens * PLAGUE_TOKEN_MANA > price {
+    if plague.tokens * PLAGUE_TOKEN_MANA > plague_at {
         return Err(EngineError::new("that is more Plague Counters than the price"));
     }
-    if !crate::credit::can_pay(state, player, price - plague.tokens * PLAGUE_TOKEN_MANA) {
+    if !crate::credit::can_pay(state, player, plague_at - plague.tokens * PLAGUE_TOKEN_MANA) {
         return Err(EngineError::new("the rest of the price is more than your mana"));
     }
     Ok(())
@@ -256,7 +294,8 @@ pub fn why_graveyard_play_refused(
 /// R1571000: the refusal for the payment the player would try at this price: mana alone where a
 /// permission without `plague` admits the price, or where none does (which names the floor); else the
 /// most Plague Counters a Plague permission could spend, at least MIN_PLAGUE_PAYMENT, from the one that
-/// could spend the most (the first in lane order among equals).
+/// could spend the most (the first in lane order among equals). R4285000: `card` is the play's own, its
+/// X and embiggen stamped, as for `graveyard_payments_for`.
 pub fn why_graveyard_price_unpaid(
     state: &GameState,
     player: PlayerId,
@@ -264,14 +303,15 @@ pub fn why_graveyard_price_unpaid(
     price: i32,
 ) -> Option<String> {
     let grants = admitting(state, player, card);
+    let plague_at = plague_price(state, card, price);
     let priced: Vec<&GraveyardGrant> = grants
         .iter()
-        .filter(|grant| price >= grant.permission.min_price.unwrap_or(0))
+        .filter(|grant| price_for(grant, price, plague_at) >= grant.permission.min_price.unwrap_or(0))
         .collect();
     let mut best: Option<(i32, &GraveyardGrant)> = None;
     if !priced.iter().any(|grant| grant.permission.plague != Some(true)) {
         for &grant in &priced {
-            let tokens = plague_on(&grant.source).min(price.div_euclid(PLAGUE_TOKEN_MANA));
+            let tokens = plague_on(&grant.source).min(plague_at.div_euclid(PLAGUE_TOKEN_MANA));
             if best.is_none_or(|(most, _)| tokens > most) {
                 best = Some((tokens, grant));
             }

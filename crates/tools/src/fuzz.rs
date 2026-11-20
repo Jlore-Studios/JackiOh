@@ -2124,24 +2124,6 @@ impl Heaviest {
     }
 }
 
-/// Every card instance both sides hold, in every zone: a copy of `side_cards`'s list in
-/// `crates/engine/src/state.rs` (private there), in its order.
-pub(crate) fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
-    PLAYER_IDS.into_iter().flat_map(move |player| {
-        let side = &state.players[player];
-        side.hand
-            .iter()
-            .chain(side.library.iter())
-            .chain(side.graveyard.iter())
-            .chain(side.exile.iter())
-            .chain(side.units.iter().flatten().flatten())
-            .chain(side.backrow.iter().flatten())
-            .chain(side.backrow_piles.iter().flatten().flatten())
-            .chain(side.carried.iter().flatten().flatten())
-            .chain(side.resolving.iter())
-    })
-}
-
 /// The largest absolute number a card instance carries: its damage, buffs, cost changes, X, exertion
 /// count, overridden stats, counters, Brittle count, play count, tuned numbers and every number in its
 /// memory. Turn stamps (`summoned_turn`, `frozen`, Brittle's `since`) are left out: they count turns,
@@ -2201,9 +2183,10 @@ pub(crate) fn largest_in_json(value: &Value) -> i64 {
 /// One action's weights, in `MEASURES`' order: the events `reduce` returned, the largest number on
 /// any instance of `state` (the state it produced) and the instances in it.
 pub(crate) fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
-    let (largest, instances) = instances_of(state).fold((0_i64, 0_i64), |(largest, count), card| {
-        (largest.max(largest_number(card)), count + 1)
-    });
+    let (largest, instances) = jackioh_engine::every_instance(state)
+        .fold((0_i64, 0_i64), |(largest, count), card| {
+            (largest.max(largest_number(card)), count + 1)
+        });
     [
         i64::try_from(events.len()).unwrap_or(i64::MAX),
         largest,
@@ -2227,7 +2210,7 @@ pub(crate) fn acting_card(state: &GameState, body: &ActionBody) -> Option<String
 
 /// The def id of the first instance carrying `value` as its largest number.
 fn holder_of_largest(state: &GameState, value: i64) -> String {
-    instances_of(state)
+    jackioh_engine::every_instance(state)
         .find(|card| largest_number(card) == value)
         .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
 }
@@ -2293,7 +2276,7 @@ pub(crate) fn weigh_duos(events: &[DuosEvent], state: &DuosState) -> [i64; 3] {
     let (largest, instances) = state
         .duels
         .iter()
-        .flat_map(instances_of)
+        .flat_map(jackioh_engine::every_instance)
         .fold((0_i64, 0_i64), |(largest, count), card| {
             (largest.max(largest_number(card)), count + 1)
         });
@@ -2318,7 +2301,7 @@ fn duos_holder_of_largest(state: &DuosState, value: i64) -> String {
     state
         .duels
         .iter()
-        .flat_map(instances_of)
+        .flat_map(jackioh_engine::every_instance)
         .find(|card| largest_number(card) == value)
         .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
 }

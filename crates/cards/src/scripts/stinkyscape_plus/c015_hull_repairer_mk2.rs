@@ -1,11 +1,11 @@
-//! SPEC §8.12 S+ #15 Hull Repairer mk2 (Unit 0/4 → 0/8, Starship Piece, Equip, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//! SPEC §8.12 S+ #15 Hull Repairer mk2 (Unit 1/4 → 2/8, 0/4 → 0/8 through v0.6.7k, Starship Piece, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
+//!   Base:    "Starship Piece
 //!            End of turn: Heal this to full health"
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            End of turn: Heal this to full health, and gain +{health} max health" — health 2
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
-//! into it (R1086), which then takes the End-of-turn trigger (R1852000). The heal is `heal` with `toFull`
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped
+//! onto one of your Units it fuses into it (R1086), which then takes the End-of-turn trigger (R1852000). The heal is `heal` with `toFull`
 //! (as C #19 Midrange Menace's); the Radiant face then `buff`s its health alone, which raises current and
 //! maximum health together (as S+ #47 Plastanium's), in the text's order. The +2 is the declared `health`.
 
@@ -65,6 +65,7 @@ mod tests {
             json!({ "field": [ENEMY] }),
         );
         let host = s.unit_at(P1, 1).id;
+        crate::give_equip(&mut s, ID);
         s.play(ID, json!({ "zone": 1, "equip": true }));
         (s, host)
     }
@@ -78,7 +79,7 @@ mod tests {
             s.card_mut(ID).damage = 3;
             s.end_turn();
             assert_eq!(s.card(ID).damage, 0);
-            s.expect_stats(ID, json!({ "attack": 0, "health": 4, "maxHealth": 4 }));
+            s.expect_stats(ID, json!({ "attack": 1, "health": 4, "maxHealth": 4 }));
         }
 
         #[test]

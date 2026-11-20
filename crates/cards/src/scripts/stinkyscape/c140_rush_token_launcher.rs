@@ -1,7 +1,7 @@
 //! Stinkyscape #140 Rush Token Launcher (SPEC §8.10 row 140). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Summon a Rush Token that attacks an enemy Unit, Taunt Units first."
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            Activate: Summon a Radiant Rush Token that attacks an enemy Unit, Taunt Units first."
 //!
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
@@ -310,6 +310,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             let target = s.unit_at(P2, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             s.activate(host.as_str(), at(&target));
             assert_eq!(summoned(s.last_events()).len(), 1);

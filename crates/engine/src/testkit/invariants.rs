@@ -83,6 +83,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
 
+use crate::combat::{HERO_TARGET_PREFIX, hero_seat_of};
 use crate::config::{
     BACKROW_ZONES, FATIGUE_DAMAGE, MIN_CHOSEN_X, MIN_PLAGUE_PAYMENT, UNIT_ZONES, WINDFURY_ATTACKS,
 };
@@ -207,19 +208,7 @@ fn awaiting_shuffle(state: &GameState) -> Vec<Returned> {
 
 /// Every card the state holds, in every pile (`find_instance`'s piles) and beneath a holder (R1850003).
 fn cards_of(state: &GameState) -> Vec<&CardInstance> {
-    let mut out: Vec<&CardInstance> = Vec::new();
-    for player in PLAYER_IDS {
-        let side = &state.players[player];
-        out.extend(side.hand.iter());
-        out.extend(side.library.iter());
-        out.extend(side.graveyard.iter());
-        out.extend(side.exile.iter());
-        out.extend(side.units.iter().flatten().flatten());
-        out.extend(side.backrow.iter().flatten());
-        out.extend(side.backrow_piles.iter().flatten().flatten());
-        out.extend(side.carried.iter().flatten().flatten());
-        out.extend(side.resolving.iter());
-    }
+    let mut out: Vec<&CardInstance> = crate::state::every_instance(state).collect();
     // R1850003: a card held beneath another, face-up when it was taken (`effects::hold`).
     out.extend(state.held.iter().flatten().map(|entry| &entry.card));
     out
@@ -2302,15 +2291,6 @@ struct ChosenExertion {
     deft: bool,
 }
 
-/// A hero is a target `hero-<player>` (the combat's facts, `after_attack_of`).
-const HERO_TARGET_PREFIX: &str = "hero-";
-
-/// The seat a `hero-<player>` target id names (the spelling `damage` and `healed` use), or None for a unit.
-pub(crate) fn hero_seat_of(target_id: &str) -> Option<PlayerId> {
-    let named = target_id.strip_prefix(HERO_TARGET_PREFIX)?;
-    PLAYER_IDS.into_iter().find(|seat| seat.as_str() == named)
-}
-
 /// B5 E35, R1869002: the fresh exertion a kill gave its attacker in one stint on one turn: `at` is how
 /// many attacks it had declared there then (none once a settling took it back), `before` the credit it
 /// held there before it.
@@ -3263,10 +3243,7 @@ impl InvariantMonitor {
             }
             let targets: Vec<String> = crate::combat::attack_targets(state, unit)
                 .iter()
-                .map(|target| match target {
-                    DamageTarget::Hero { player } => format!("hero-{player}"),
-                    DamageTarget::Unit { instance } => instance.id.clone(),
-                })
+                .map(crate::reduce::attack_target_id)
                 .collect();
             if let Some(violation) = InvariantMonitor::sick_attack(state, unit, &targets, "offered") {
                 found.push(violation);

@@ -664,18 +664,18 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         .flat_map(|step| shown_defs(&step.view, &dealt))
         .collect();
     let card_loadouts = cards_due(&shown, &loadouts, &mut BTreeSet::new());
-    // R4233000: a friend opening a replay shared with them marks its row read, once the page built.
-    // The sharer's own opens, and refused or failed ones (returned above), mark nothing.
-    if reader != profile.id {
-        mark_subject(
-            app,
-            &profile.id,
-            &[NotificationKind::ReplayShared],
-            match_id,
-            None,
-        )
-        .await;
-    }
+    // R4233000: a friend opening a replay shared with them marks its row read, once the page built,
+    // a seat of the match the other seat shared it with among them (#4291: they read it as their own
+    // seat). Only the caller's own `replayShared` rows are marked, so a sharer's open, which holds none
+    // unless it was shared with them too, and refused or failed opens (returned above) mark nothing.
+    mark_subject(
+        app,
+        &profile.id,
+        &[NotificationKind::ReplayShared],
+        match_id,
+        None,
+    )
+    .await;
     ok_of(&ReplaySteps {
         match_id: replay.row.id.clone(),
         from: page.from,

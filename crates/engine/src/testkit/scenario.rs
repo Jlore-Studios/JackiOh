@@ -1243,15 +1243,9 @@ fn refusal_of(run: impl FnOnce()) -> Option<String> {
     }
 }
 
-/// Any panic passes, so it is for a call that is not a refused step: `scenario(…)` itself, a harness
-/// check that fails loudly (`Scenario::expect_refused` takes a refusal only).
-pub fn expect_throw(run: impl FnOnce()) {
-    if refusal_of(run).is_none() {
-        panic!("expect_throw: the call ran through; it should have been refused");
-    }
-}
-
-/// `expect_throw` whose panic message contains `text`.
+/// Passes when `run` panics with a message containing `text`: for a call that is not a refused step
+/// (`scenario(…)` itself, a harness check that fails loudly; `Scenario::expect_refused` takes a
+/// refusal only).
 pub fn expect_throw_with(run: impl FnOnce(), text: &str) {
     match refusal_of(run) {
         None => {

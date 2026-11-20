@@ -2298,7 +2298,7 @@ mod stinkyscape {
         #[test]
         fn r384_its_launch_through_the_listed_activate() {
             const HIT_JOB: &str = "core-016";
-            const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce
+            const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Pierce
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": AP_ROUNDS, "lane": 2 }], "hand": [HIT_JOB, STOCKPILE], "library": [X, X], "mana": 10 },
                 "p2": { "hand": [FILLER], "library": [X, X] },

@@ -72,9 +72,7 @@ const INDEX_FILE = "index";
 const SHIPPED_FILE = "shipped";
 const TECHNICAL_FILE = "technical";
 
-import { fileStem, loadersByStem, type Loader } from "./loaders.ts";
-export { fileStem, loadersByStem };
-export type { Loader } from "./loaders.ts";
+import { loadersByStem, type Loader } from "./loaders.ts";
 
 function readPatches(value: unknown): readonly Patch[] {
   if (!Array.isArray(value)) throw new Error("patches.json is not a list of patches");

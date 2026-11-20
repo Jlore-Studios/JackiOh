@@ -720,6 +720,11 @@ pub const VOLATILITY_RADIANT_BUFF_MULTIPLIER: i32 = 3;
 pub const MIN_PLAGUE_PAYMENT: i32 = 1;
 /// B5 E11, R454: what one Plague Counter spent as mana pays of a price ("each counter pays (1)").
 pub const PLAGUE_TOKEN_MANA: i32 = 1;
+/// §6.1 Flashback, R4285000: the least a play by Flashback from the graveyard costs, after every discount,
+/// at each of an embiggen card's prices ("You must spend at least (1) to cast a card from your graveyard by
+/// Flashback", Stinkyscape+ Balance Changes IV, #4285). A field permission's play and a `graveyardPrice`
+/// play take no such floor.
+pub const FLASHBACK_MIN_PRICE: i32 = 1;
 /// B5 E12, R452: how many casts one random cast and every cast made inside its resolution may make in
 /// all (Classic+ #47 Jogg's Box, #38.1 Solarius Prime), as R28 caps a Call to Chaos chain and R58 a
 /// cast-on-draw chain: a random cast whose casts cast at random cannot multiply without end.
@@ -1153,12 +1158,19 @@ pub const CHAOS_MED_FUSE_COPIES: i32 = 1;
 pub const CHAOS_MED_CN_CARDS: i32 = 2;
 /// §8.8 row 95 entry 3: "Add 2 random Prime cards to your hand" (R1421).
 pub const CHAOS_MED_PRIME_CARDS: i32 = 2;
-/// §8.8 row 95 entry 4: "Your hero gains 4 Armor" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
-/// R3135001; 5 through v0.6.6h, `CHAOS_MED_HERO_ARMOR_V0_6_6H`, #4154, R4154305).
-pub const CHAOS_MED_HERO_ARMOR: i32 = 4;
-/// §8.8 row 95 entry 4: "and you heal it 4" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
-/// R3135001; 5 through v0.6.6h, `CHAOS_MED_HEAL_V0_6_6H`, #4154, R4154305).
-pub const CHAOS_MED_HEAL: i32 = 4;
+/// §8.8 row 95 entry 4: "Your hero gains 3 Armor" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
+/// R3135001; 5 through v0.6.6h, `CHAOS_MED_HERO_ARMOR_V0_6_6H`, #4154, R4154305; 4 through v0.6.7k,
+/// `CHAOS_MED_HERO_ARMOR_V0_6_7K`, #4285, R4285005).
+pub const CHAOS_MED_HERO_ARMOR: i32 = 3;
+/// §8.8 row 95 entry 4: "and you heal it 3" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
+/// R3135001; 5 through v0.6.6h, `CHAOS_MED_HEAL_V0_6_6H`, #4154, R4154305; 4 through v0.6.7k,
+/// `CHAOS_MED_HEAL_V0_6_7K`, #4285, R4285005).
+pub const CHAOS_MED_HEAL: i32 = 3;
+/// R4285005, R767000: entry 4's Armor through v0.6.7k, which the table the M #95 script kept for those
+/// replays builds (`CHAOS_MED_EFFECTS_V0_6_7K`) reads.
+pub const CHAOS_MED_HERO_ARMOR_V0_6_7K: i32 = 4;
+/// R4285005, R767000: entry 4's heal through v0.6.7k (`CHAOS_MED_EFFECTS_V0_6_7K`).
+pub const CHAOS_MED_HEAL_V0_6_7K: i32 = 4;
 /// R4154305, R767000: entry 4's Armor through v0.6.6h, which the table the M #95 script kept for those
 /// replays builds (`CHAOS_MED_EFFECTS_V0_6_6H`) reads.
 pub const CHAOS_MED_HERO_ARMOR_V0_6_6H: i32 = 5;
@@ -1168,8 +1180,12 @@ pub const CHAOS_MED_HEAL_V0_6_6H: i32 = 5;
 pub const CHAOS_MED_ACCLAIMED: i32 = 2;
 /// §8.8 row 95 entry 7: "then Nerf each card bounced", once each (R1244).
 pub const CHAOS_MED_NERFS: i32 = 1;
-/// §8.8 row 95 entries 1, 2 and 3: the cards "cost (0)" (`costOverride`).
-pub const CHAOS_MED_COST: i32 = 0;
+/// §8.8 row 95 entries 1, 2 and 3: the cards "cost (1)" (`costOverride`; (0) through v0.6.7k,
+/// `CHAOS_MED_COST_V0_6_7K`, #4285, R4285005).
+pub const CHAOS_MED_COST: i32 = 1;
+/// R4285005, R767000: entries 1, 2 and 3's price through v0.6.7k, which the tables the M #95 scripts kept
+/// for those replays build (`CHAOS_MED_EFFECTS_V0_6_7K`, `CHAOS_MED_EFFECTS_V0_6_6H`) read.
+pub const CHAOS_MED_COST_V0_6_7K: i32 = 0;
 /// §8.8 row 95 entry 9, R1241: the most rest-of-game "cast a random Call to Chaos" effects one player
 /// holds; a roll of the entry for a player at the cap resolves into nothing.
 pub const CALL_TO_CHAOS_ETERNAL_CAP: i32 = 3;

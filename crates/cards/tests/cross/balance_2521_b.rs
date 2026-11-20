@@ -892,21 +892,24 @@ fn memory_leak_into_lane_2(radiant: bool) -> Scenario {
     s
 }
 
+/// B28's Crater (R1850006) held from #2521 through v0.6.7k; issue #4285 took it off both faces, so the zone
+/// Memory Leak enters stays open (catalog data, which a replay of those versions folds under, R767000).
 #[test]
-fn b28_memory_leak_locks_its_backrow_zone_as_it_enters() {
-    assert!(
-        card_def(MEMORY_LEAK)
-            .base
-            .keywords
-            .iter()
-            .any(|keyword| keyword.kind() == KeywordKind::Crater),
-        "Memory Leak prints Crater"
-    );
+fn b28_issue_4285_memory_leak_no_longer_locks_its_backrow_zone_as_it_enters() {
+    for face in [card_def(MEMORY_LEAK).base, card_def(MEMORY_LEAK).radiant] {
+        assert!(
+            !face
+                .keywords
+                .iter()
+                .any(|keyword| keyword.kind() == KeywordKind::Crater),
+            "Memory Leak prints no Crater"
+        );
+    }
     for radiant in [false, true] {
         let s = memory_leak_into_lane_2(radiant);
         assert!(
-            is_locked(s.state(), slot(P1, Row::Backrow, 2)),
-            "radiant {radiant}: its zone is Locked"
+            !is_locked(s.state(), slot(P1, Row::Backrow, 2)),
+            "radiant {radiant}: its zone stays open"
         );
     }
 }

@@ -1740,7 +1740,7 @@ export type PublicCreatedStat = {
 };
 
 /** R4082000: what a Created card a card's text makes is read against, as fractions. */
-export type PublicCreatedTiers = {
+type PublicCreatedTiers = {
   /** How much more the seats that make an average Created card win than the average deck; 0 when too few were read. */
   center: number;
   /** The spread (one standard deviation) of real Created cards' lifts; the deck cards' when too few were read. */

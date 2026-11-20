@@ -113,7 +113,7 @@ pub(crate) fn set_counter(sink: &mut EngineSink<'_>, target: &DamageTarget, kind
     }
     store(sink.state, target, kind, value);
     sink.events.push(GameEvent::CounterChanged {
-        instance_id: crate::damage::target_id(target),
+        instance_id: crate::reduce::attack_target_id(target),
         counter: kind.counter(),
         value,
         placed: None,
@@ -142,7 +142,7 @@ pub fn afflict(sink: &mut EngineSink<'_>, target: &DamageTarget, kind: Afflictio
     let value = counter_on(sink.state, target, kind).saturating_add(amount);
     store(sink.state, target, kind, value);
     sink.events.push(GameEvent::CounterChanged {
-        instance_id: crate::damage::target_id(target),
+        instance_id: crate::reduce::attack_target_id(target),
         counter: kind.counter(),
         value,
         placed: Some(amount),

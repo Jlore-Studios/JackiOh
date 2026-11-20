@@ -616,6 +616,14 @@ async fn read_body(method: &Method, headers: &HeaderMap, body: Body) -> Result<V
 
 // Small typed readers, so no handler repeats a `match` on the value's type.
 
+/// A query parameter, trimmed, when it is present and not empty after trimming.
+pub(crate) fn query_trimmed(req: &Req, name: &str) -> Option<String> {
+    req.query
+        .get(name)
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
 pub fn str(body: &Value, key: &str) -> Result<String, ApiError> {
     match body.get(key) {
         Some(Value::String(value)) if !value.is_empty() => Ok(value.clone()),

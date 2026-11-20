@@ -238,7 +238,7 @@ describe("R3405001 Meditative's Spell signatures", () => {
     expect(cast.cues[0]).not.toHaveProperty("size");
     expect(castOf(CHAOS, D, 0, "p2").cues[0]).toMatchObject({ side: "opponent" });
     const view = fullBoardView();
-    const rolled: GameEvent = { type: "chaosRolled", player: "p1", instanceId: "ex", defId: CHAOS, effects: ["Your hero gains 4 Armor and you heal it 4"] };
+    const rolled: GameEvent = { type: "chaosRolled", player: "p1", instanceId: "ex", defId: CHAOS, effects: ["Your hero gains 3 Armor and you heal it 3"] };
     const golem: GameEvent = { type: "summoned", player: "p1", instanceId: "fx-golem", defId: CN_GOLEM, row: "units", lane: 2 };
     const [roll, landing, bounced] = run(CHAOS, [rolled, golem, { type: "bounced", instanceId: foeOf(view), defId: "core-008", owner: "p2" }], 900, "p1", view);
     expect(roll?.row).toBe("replace");
@@ -246,7 +246,7 @@ describe("R3405001 Meditative's Spell signatures", () => {
     const panel = roll?.cues[0];
     if (panel?.kind !== "chaos") throw new Error("no panel");
     expect(panel.durationMs).toBe(FX_CHAOS_DICE_PANEL_MS);
-    expect(panel.lines.map((line) => line.text)).toEqual(["Hero gains 4 Armor and heals 4"]);
+    expect(panel.lines.map((line) => line.text)).toEqual(["Hero gains 3 Armor and heals 3"]);
     for (const line of panel.lines) expect(line.landMs).toBeLessThanOrEqual(FX_CHAOS_DICE_REEL_MS);
     expect(roll?.cues[1]).toMatchObject({ preset: "poison", at: CENTRE, delayMs: 0 });
     // The CN Golem it summons lands with its own entrance; a bounce is its own row's.

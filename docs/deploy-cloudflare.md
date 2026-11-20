@@ -160,7 +160,10 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
   pushed after the close, at once, and starts the super run on it. A run that passes ends the freeze
   and promotes production; a run still red opens a new issue. A red run with no issue (its `report`
   never ran) gets one from `scripts/promote-staging.sh`, and the daily run never tests a commit a
-  finished run already tested. A manual run of *promote staging* moves it as ever.
+  finished run already tested. A red run on a commit pushed before the previous issue closed (one
+  that started before that fix merged, #4284) never tested the fix: `_staging` moves to test it as at
+  the close, and the run's issue stays open until a run passes. A manual run of *promote staging*
+  moves it as ever.
 - `_staging` only moves forward along `main`, to a commit whose push-to-main CI run passed: a
   candidate it already has is a no-op, and a `_staging` that holds anything `main` does not fails the
   run. Its ruleset (`infra/github.tf`) refuses deletion and force pushes.

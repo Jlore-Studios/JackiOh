@@ -488,6 +488,36 @@ async fn audit_read_pages_by_cursor_and_filters() {
     .await;
 }
 
+/// #4291: a filter that is blank once trimmed is no filter, as the stats reads' `query_trimmed` (one
+/// helper since #4291) takes theirs: the read lists what an unfiltered one lists.
+#[tokio::test]
+async fn admin_audit_reads_a_blank_filter_as_none() {
+    let (app, tokens) = admin_app(true).await;
+    let dev = &tokens.dev_aal2;
+    expect(&app, "POST", "/api/dev/jlore", dev, json!({ "jlore": 40 }), 200).await;
+    expect(
+        &app,
+        "PUT",
+        "/api/admin/rating",
+        dev,
+        json!({ "ladder": "random", "rating": 1700 }),
+        200,
+    )
+    .await;
+    let unfiltered = expect(&app, "GET", "/api/admin/audit", dev, Value::Null, 200).await;
+    assert_eq!(unfiltered["actions"].as_array().expect("actions").len(), 2);
+    let blank = expect(
+        &app,
+        "GET",
+        "/api/admin/audit?profile_id=%20&route=%20",
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(blank["actions"], unfiltered["actions"]);
+}
+
 /// #4141: the moderation levers' rows read back on the audit as they are, naming no account (the
 /// operator holds none), and a revoked code shows only as its stored hash.
 #[tokio::test]
