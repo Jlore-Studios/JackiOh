@@ -311,4 +311,56 @@ mod r4285000_flashback_floor {
         );
         assert_eq!(landed.flashback_spent, None);
     }
+
+    #[test]
+    fn r4285000_a_plague_payment_meets_the_unfloored_price_so_no_counter_pays_for_a_0_flashback_unit() {
+        // Corpse Plantation's shape: a Plague-only permission with two counters on it.
+        let mut grave = playing("r4285000-plague");
+        let field = put(
+            &mut grave,
+            &plague_field().id,
+            slot(P1, Row::Backrow, 2),
+            json!({}),
+        );
+        must(find_instance_mut(&mut grave, &field.id), "the permission")
+            .counters
+            .plague = Some(2);
+        let body = in_graveyard(&mut grave, &flashback_unit().id, P1);
+        discounted(&mut grave, &body.id);
+        let plague_play = json!({
+            "type": "play",
+            "instanceId": body.id,
+            "zone": { "row": "units", "lane": 1 },
+            "plague": { "from": field.id, "tokens": 1 },
+            "playerId": "p1",
+        });
+
+        // Its mana play is Flashback's and floored at (1); no play is offered in its Plague Counters,
+        // as before the floor, and one is refused.
+        assert_eq!(price(&grave, &body.id), 1);
+        let offered = plays_in(&grave, P1, &body.id);
+        assert!(!offered.is_empty());
+        assert!(
+            offered
+                .iter()
+                .all(|action| matches!(action, ActionBody::Play { plague: None, .. }))
+        );
+        assert!(act_result(&grave, plague_play.clone()).error.is_some());
+
+        // At (1) before any floor, one counter still pays it and the play keeps Flashback.
+        must(find_instance_mut(&mut grave, &body.id), "the Unit").cost_mod = -1;
+        assert_eq!(price(&grave, &body.id), 1);
+        assert!(
+            plays_in(&grave, P1, &body.id)
+                .iter()
+                .any(|action| matches!(action, ActionBody::Play { plague: Some(_), .. }))
+        );
+        let paid = act_result(&grave, plague_play);
+        assert_eq!(paid.error, None);
+        let standing = must(
+            find_instance(&paid.state, &body.id).cloned(),
+            "the Unit on the field",
+        );
+        assert!(has_flashback(&paid.state, &standing));
+    }
 }

@@ -268,6 +268,12 @@ pub fn play_cost(state: &GameState, instance: &CardInstance) -> i32 {
     effective_cost(state, instance, CostOptions { as_play: Some(true) })
 }
 
+/// R4285000: what a play of this card now costs before Flashback's floor: the price a Plague payment
+/// meets (`graveyard_play::plague_price`), since such a play is its permission's and spends no Flashback.
+pub fn play_cost_before_flashback_floor(state: &GameState, instance: &CardInstance) -> i32 {
+    priced(state, instance, CostOptions { as_play: Some(true) }, false).cost
+}
+
 /// R455: the `costRule` modifiers a play of this card at this price spends — the ones "until used" that
 /// changed its price (Classic #2's next Trap or Field Spell). A cast spends none, since it pays nothing
 /// (R70), and an X-cost card none, since no modifier reaches it (R65).
@@ -354,6 +360,18 @@ pub fn override_of(card: &CardInstance) -> Option<i32> {
 }
 
 fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) -> Price {
+    priced(state, instance, options, true)
+}
+
+/// `price_of`, with Flashback's floor (R4285000) held or not.
+fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flashback_floor: bool) -> Price {
+    let floored = |cost: i32| {
+        if flashback_floor {
+            crate::graveyard_play::flashback_floor(state, instance, cost)
+        } else {
+            cost
+        }
+    };
     let side = &state.players[instance.controller];
     let override_ = override_of(instance);
     let floor = cost_floor_of(instance);
@@ -375,7 +393,7 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         };
         // R4285000: Flashback's floor holds for an X card too.
         return Price {
-            cost: crate::graveyard_play::flashback_floor(state, instance, 0.max(printed).max(floor)),
+            cost: floored(0.max(printed).max(floor)),
             used_rules: Vec::new(),
         };
     }
@@ -452,7 +470,7 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
 
     // R4285000: a play by Flashback from the graveyard costs at least (1), each embiggen price apart.
     Price {
-        cost: crate::graveyard_play::flashback_floor(state, instance, 0.max(climbed.price).max(floor)),
+        cost: floored(0.max(climbed.price).max(floor)),
         used_rules: climbed.used,
     }
 }
