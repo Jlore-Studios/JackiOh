@@ -15767,11 +15767,8 @@
     "what": "review #4311 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T12:52:15Z",
-    "notes": [
-      "delivered review #4311 on claude-4 (run 44738459031): approved",
-      "delivered review #4308 on claude-7 (run 44726555389): approved"
-    ],
+    "at": "2026-11-20T13:00:31Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16476,7 +16473,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T12:52:15Z",
+  "loop_tick": "2026-11-20T13:00:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
