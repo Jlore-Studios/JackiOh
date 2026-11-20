@@ -14757,28 +14757,19 @@
     "what": "build #4041 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T23:05:47Z",
+    "at": "2026-11-20T23:13:44Z",
     "notes": [
-      "#4250 needs a plan",
-      "#4332 needs a plan",
-      "#4348 needs a plan",
-      "#4349 needs a plan",
-      "#4246: @jgoetzmann answered its question, so it is queued again with the answer",
-      "#4331: @jgoetzmann answered its question, so it is queued again with the answer",
-      "delivered review #4345 on claude-6 (run 44820433739): approved",
-      "started build #4331 on claude-8 (run 44834431017)",
-      "started review #4344 on claude-4 (run 44834488348)",
-      "started plan #4250 on muse (run 44834545313)",
-      "started plan #3925 on claude-8 (run 44834603420)",
-      "started plan #4041 on muse (run 44834657756)",
-      "started plan #3982 on muse (run 44834717266)",
-      "started build #4246 on claude-6 (run 44834777962)",
-      "started plan #4247 on muse (run 44834842145)",
-      "started plan #4332 on agy (run 44834905934)",
-      "started build #4117 on muse (run 44834974051)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 4 plan file(s) older than 7 days",
-      "runner gate: started 1 of 1 waiting run(s) (run 44834325857 on bot/issue-4334)"
+      "answered a comment on #4219 that was never answered",
+      "answered a comment on #4225 that was never answered",
+      "answered a comment on #4317 that was never answered",
+      "#4219 needs a plan",
+      "#4225 needs a plan",
+      "#4317 needs a plan",
+      "delivered plan #4041 on muse (run 44834657756): planned",
+      "delivered plan #4250 on muse (run 44834545313): planned",
+      "started build #4250 on muse (run 44835679234)",
+      "started build #4041 on muse (run 44835763483)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15484,7 +15475,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T23:05:47Z",
+  "loop_tick": "2026-11-20T23:13:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
