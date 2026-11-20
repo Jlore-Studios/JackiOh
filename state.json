@@ -11798,17 +11798,8 @@
       "verdict_rounds": 1
     },
     "4250": {
-      "action": "plan",
-      "asks": [
-        "c:7052756917"
-      ],
-      "build_next": {
-        "from_run": "44834545313",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-20T23:16:11Z",
-        "until": "2026-11-20T23:46:11Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T23:16:03Z",
         "difficulty": "medium",
@@ -11827,10 +11818,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Steps\n- 1. `apps/web/src/game/net.ts`, `createBackoff` (~line 322): change `reset` doc from \"Starts the steps over, as an opened socket does.\" to \"Starts the steps over, as a socket that delivered a view does.\"\n- 2. `apps/web/src/game/net.ts`, `createMatchClient` \u2192 `onopen` (~line 881): delete the `backoff.reset();` line. Keep `wakeProbe.hear()`, `patch({ connection: \"open\" })`, and the `hello` send (`{ type: \"hello\", token, matchId }`) exactly as is.\n- 3. `apps/web/src/game/net.ts`, `handleFrame` \u2192 `case \"view\"` (~line 789): inside the existing `if (fresh)` / `awaitingFirstView` branch, call `backoff.reset()` where `fresh` is true (the socket's first delivered view). Copy the pattern from `apps/web/src/together/socialSocket.ts` `onmessage`, which\u2026\n- 4. `apps/web/src/duos/socket.ts`, `createDuosClient` \u2192 `created.onopen` (~line 395): delete the `backoff.reset();` line. Keep `wakeProbe.hear()`, `patch({ connection: \"open\" })`, and the `hello` send exactly as is.\n- 5. `apps/web/src/duos/socket.ts`, `handle` \u2192 `case \"view\"` (~line 320): where `fresh` (`awaitingFirstView`) is true, call `backoff.reset()` before/alongside clearing the flag, mirroring step 3. Non-view frames change nothing.\n- 6. `apps/web/src/game/net.test.ts`, test `R1441 the backoff's last step repeats, and an opened socket starts the steps over` (~line 1006): after each `h.socket().open()` that is meant to reset the backoff, add `h.socket().deliver({ type: \"view\", view: baseView() })` before the drop. The pre-reset l\u2026\n- 7. `spec/rulings/R4250000.md` (new): front matter `id: R4250000`, title `A match or co-op socket's backoff starts over on its first view, not on open`, `cards: \"\u00a79.5, \u00a79.8, R1441, R148, R2478000, R3214000, R1115000, issue #4250\"`, `proven_in` listing `apps/web/src/game/net.test.ts` and `apps/web/sr\u2026\n- 8. `spec/pending/4250.md` (new): one paragraph in the style of `spec/pending/4335.md`: `**[[R4250000]] <title> (issue #4250, 2026-11-20)**: \u2026` followed by two sentences (reset on first view; refused-after-open climbs as never-opened does).\n- 9. Add the tests in **Tests** below, then run the commands there plus `cargo jackioh spec check`.\n- ## Tests\n- Harness pattern in both files: `connect()` then `socket().open()` (no view yet), `drop(code)` to close, `runTimers()` to open the next socket, `delays()` to read each backoff step (random seam `() => 0`, so delays equal `RECONNECT_DELAYS_MS` steps exactly). Six 4429 drops with no view must yield `[\u2026\n- - `apps/web/src/game/net.test.ts`, `it(\"R4250000 a socket refused with 4429 after open climbs the backoff\")`: loop six times open-then-drop(4429); assert `delays()` equals `[...RECONNECT_DELAYS_MS, 5000]`; assert `connection` is `\"reconnecting\"` and `pending()` is 1 after each drop.\n- - `apps/web/src/game/net.test.ts`, `it(\"R4250000 a socket closed with 1011 after open climbs the backoff\")`: same loop with code 1011; same delay assertion.\n- - `apps/web/src/game/net.test.ts`, `it(\"R4250000 a socket that delivered a view starts the backoff over\")`: open, deliver `{ type: \"view\", view: baseView() }`, drop(1006); assert last delay is `RECONNECT_DELAYS_MS[0]` (250) even after prior climbs.\n- - `apps/web/src/game/net.test.ts`, extend refusal/unchanged coverage in the new tests: 4401/4403/4404 still `refused` with no retry (`pending()` 0); 4410 still `closed`; seat-taken still `elsewhere`; `hello` frame `{ type: \"hello\", token: \"tok\", matchId: \"m-1\" }` still sent on every `open()`.\n- - `apps/web/src/duos/socket.test.ts`, mirror three tests with the co-op harness (`view(round)` helper, `HELLO = { type: \"hello\", matchId: \"dm-1\" }`): `it(\"R4250000 a co-op socket refused with 4429 after open climbs the backoff\")`, `it(\"R4250000 a co-op socket closed with 1011 after open climbs the \u2026\n- Commands (from repo root):\n- ```sh\n- pnpm -C apps/web test src/game/net.test.ts src/duos/socket.test.ts\n- cargo jackioh spec check\n- cargo fmt --check\n- cargo clippy -p jackioh-tools --all-targets -- -D warnings\n- ```\n- ## Done when\n- - [ ] Six straight open-then-4429 closes climb every step then repeat the last, in both clients; same for 1011.\n- - [ ] A socket that delivered a view then dropped waits the first step again, in both clients.\n- - [ ] 4401/4403/4404 stay `refused` (no retry), 4410/`MATCH_OVER_CLOSE_CODE` stay `closed`, seat-taken stays `elsewhere`, `hello` still sent on every open, wake probe and Reconnect button unchanged.\n- - [ ] New tests are named `R4250000`, listed in the note's `proven_in`, and `cargo jackioh spec check` passes.\n- - [ ] `pnpm -C apps/web test src/game/net.test.ts src/duos/socket.test.ts` passes; `cargo fmt --check` clean.\n- ## Risks\n- - A server that sent a view and closed at once would now reset then climb from step 0 \u2014 same as today, and no current server path does this.\n- - Only `view` resets; `ack`/`error`/`clock`/`portraits` before the first view do not (by design \u2014 the game has not been delivered). Tests must deliver a real `view` frame, not another frame type.\n- - Watch `REFUSAL_CLOSE_CODES` handling stays untouched: 4429/1011 must keep falling through to `patch({ connection: \"reconnecting\" })` + `backoff.schedule()`, never added to the refusal list.\n- ## Open questions\n- None. Hearthstone semantics settle nothing here (stated in the task); the rejected 4429-as-refusal alternative is documented in the ruling note.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4250 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4250/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-20T23:08:23Z",
       "owner_why": "it plans it",
@@ -11843,12 +11833,14 @@
       "provider": "muse",
       "queued_at": "2026-11-20T23:03:55Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44834545313",
+      "run_id": "pending:e3858f67-1795216610",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-20T23:08:23Z",
+      "started_at": "2026-11-20T23:17:18Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7052756917"
+      ]
     },
     "4251": {
       "action": "build",
@@ -14768,9 +14760,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T23:11:44Z",
+    "at": "2026-11-20T23:17:18Z",
     "url": "",
-    "what": "build #4117 on muse"
+    "what": "build #4250 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T23:05:47Z",
