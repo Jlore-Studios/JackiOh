@@ -14818,6 +14818,13 @@
     "4288": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T04:28:53Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-rule line fires: no engine rules, AI, cross-crate design, migration, or ~40 files \u2014 one web set plus its test and a ruling-note edit."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
