@@ -37817,16 +37817,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "rules",
-        "count": 1,
-        "last_run": "2026-11-20T14:58:57Z",
-        "provider": "claude-7",
-        "run_id": "44758684612",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
