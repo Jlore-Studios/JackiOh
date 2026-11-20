@@ -15553,6 +15553,8 @@
       }
     },
     "4305": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T08:34:40Z",
@@ -15566,8 +15568,11 @@
         "trail": " are clean. Next I'll run the harness's own web test selection in the background, then take the live look (step 7).\n- Bash: {\"command\": \"git rev-parse --verify -q origin/main >/dev/null && echo has-origin-main; echo \\\"- Prompt.test 63/63, typecheck, eslint craft/ clean; new test fails without step 1 (heading not found). R\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web-changed.log 2>&1;\u2026\n- said: Meanwhile, step 7: looking at the live client. Loading the walkthrough skill.\n- Skill: {\"skill\": \"ui-walkthrough\"}\n- said: The dev server's predev step rebuilds the WASM into the folder the running tests read, so I'll wait for the background test run to finish before starting it.\n- Bash: {\"command\": \"tail -c 600 /tmp/web-changed.log\", \"description\": \"Check progress of the background web test run\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- said: While the tests run, I'll check how the hotseat route reads a custom deck from localStorage.\n- Bash: {\"command\": \"grep -rn 'jackioh.e2e.decks' apps/web/src | head -5\", \"description\": \"Find where the e2e deck override is read\"}\n- Bash: {\"command\": \"grep -n 'E2E_DECKS_KEY' -A12 apps/web/src/routes/dev/hotseat.tsx | sed -n 1,40p\", \"description\": \"Read how hotseat parses the deck override\"}\n- Monitor: {\"command\": \"until grep -qE 'Test Files|Error:|ERR_' /tmp/web-changed.log; do sleep 2; done; grep -E 'Test Files|Tests |FAIL|\\u00d7|Error' /tmp/web-changed.log | head -20\", \"description\": \"harness we\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -qE 'Test Files|Error:|ERR_' /tmp/web-changed.log; do sleep 2; done; grep -E 'Test Files|Tests |FAIL|\u00d7\u2026\n- Bash: {\"command\": \"timeout 590 sh -c 'until grep -qE \\\"Test Files\\\" /tmp/web-changed.log; do sleep 3; done'; grep -E 'Test Files|Tests |FAIL|\\u00d7' /tmp/web-changed.log | head -20; tail -c 300 /tmp/web-ch\u2026\n- said: The harness's web selection passes: 112 files, 2589 tests. Now I'll start the dev server for the live look.\n- Bash: {\"command\": \"echo \\\"- Harness web selection (--changed origin/main): 112 files, 2589 tests passed. Starting dev server for step 7.\\\" >> .bot-notes.md; ss -ltn 2>/dev/null | grep -c ':5173 ' || true\",\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web dev --port 5173 --strictPort > /tmp/dev-4294.log 2>&1\", \"description\": \"Serve the web client in dev mode on port 5173\", \"timeout\": 3600000, \"run_in_background\": true}\n- Bash: {\"command\": \"timeout 590 sh -c 'until curl -s -o /dev/null http://localhost:5173/; do sleep 3; done'; tail -5 /tmp/dev-4294.log\", \"description\": \"Wait until the dev server answers\", \"timeout\": 600000}\n- Bash: {\"command\": \"sh scripts/browse.sh open \\\"http://localhost:5173/dev/hotseat?seed=15\\\" 2>&1 | tail -3\\nDECK=$(python3 -c 'import json;print(json.dumps({\\\"decks\\\":{\\\"craft\\\":[\\\"meditative-017\\\",\\\"medita\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh eval \\\"async () => {\\n const until = Date.now() + 15000;\\n while (!window.__jackioh && Date.now() < until) await new Promise((r) => setTimeout(r, 100));\\n const j = \u2026\n- Bash: {\"command\": \"sh scripts/browse.sh eval \\\"() => { const row = document.querySelector('.craft-suggestions'); const r = row.getBoundingClientRect(); const h = row.querySelector('h3').getBoundingClientRe\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4294/.cache/browse/i4294-panel.png\"}\n- said: At 1280\u00d7720 the heading sits above the buttons. Next I'll check that clicking the second suggestion loads it, then look at the phone layout.\n- Bash: {\"command\": \"sh scripts/browse.sh click \\\"getByTestId('craft-preset-1')\\\" 2>&1 | tail -1; sh scripts/browse.sh eval \\\"() => ({ face: document.querySelector('[data-testid=craft-face]').textContent.sli\u2026\n- said: Clicking \"Static Trait\" loads that Field Spell preset, and Craft stays enabled. Now the phone sheet layout on an iPhone 13 profile.\n- Bash: {\"command\": \"sh scripts/browse.sh open \\\"--device=iPhone 13\\\" \\\"http://localhost:5173/dev/hotseat?seed=15\\\" 2>&1 | tail -1\\nDECK=$(python3 -c 'import json;print(json.dumps({\\\"decks\\\":{\\\"craft\\\":[\\\"me\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4294/.cache/browse/i4294-sheet.png\"}\n- said: The phone sheet is right too: the heading sits above 44 px buttons, beside the small card. Cleaning up the browser and the dev server.\n- Bash: {\"command\": \"sh scripts/browse.sh close 2>&1 | tail -1; rm -f .cache/browse/i4294-*.png; git status --short\", \"description\": \"Close the browser and remove this task's screenshots\"}\n- TaskStop: {\"task_id\": \"bx820m21o\"}\n- Bash: {\"command\": \"ss -ltnp 2>/dev/null | grep ':5173 ' || echo \\\"5173 free\\\"\", \"description\": \"Confirm the dev server stopped listening\"}\n- said: Step 7 is done and everything is cleaned up. Last: `spec check` for the R-ids the new comments and test names cite, and `classify --claims`, which CI runs.\n- Bash: {\"command\": \"echo \\\"- Step 7 looked: panel 1280x720 and iPhone 13 sheet, heading over buttons, preset-1 click loads Static Trait. Running spec check + classify.\\\" >> .bot-notes.md; cargo jackioh spec\u2026\n- said: `spec check` passes and `classify` reports the change as Internal, so no patch fragment is needed. A final look at the diff:\n- Bash: {\"command\": \"git diff -- apps/web/src/game/craft/CraftEditor.tsx apps/web/src/game/craft/craft.css\", \"description\": \"Show the component and stylesheet diff\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index(\\\"## State\\\")\\nend=s.index(\\\"## Log\\\")\\ns=s[:start]+\\\"\\\"\\\"## State\\n\\n- Build pass 1 (opus, 2026-11-20): DONE. Steps\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the card crafter shows its preset suggestions again\"} --> The bug as reported did not reproduce on base: the editor was still showing its presets. They sat as bare buttons under the card face, and the first one repeats the card's own name, so the row re\u2026"
       },
       "issue": 4294,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T09:38:02Z",
         "from_run": "44703662193",
         "gates": [
           {
@@ -15659,7 +15664,11 @@
         "source": "build",
         "until": "2026-11-20T10:06:16Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-20T09:36:16Z",
+      "run_id": "pending:e1c7006a-1795167458",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15678,6 +15687,9 @@
         "provider": "claude-6",
         "run": "44703662193"
       },
+      "started_at": "2026-11-20T09:38:02Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15827,9 +15839,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T08:34:40Z",
+    "at": "2026-11-20T09:38:02Z",
     "url": "",
-    "what": "build #4294 on claude-6"
+    "what": "review #4305 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-20T09:28:48Z",
