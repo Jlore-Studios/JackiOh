@@ -13993,6 +13993,37 @@
     "4331": {
       "action": "build",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-20T21:41:09Z",
+        "assigned": [],
+        "default": 1,
+        "ends": "2026-11-21T21:41:09Z",
+        "hours": 24,
+        "kind": "build",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Print the exception on The Greatest Heist: its Stage 3 reward reads \"Steal your opponent's mana crystals, even past 4.\" Both faces change in catalog.json and chinese.json (\u5956\u52b1\uff1a\u593a\u53d6\u4f60\u5bf9\u624b\u7684\u6cd5\u529b\u6c34\u6676\uff0c\u53ef\u8d85\u8fc74\u4e2a\u3002), and so do the quest view's reward text in the script and the card's row in \u00a78. The fragment claims stinkyscape-007 through `cards` and drops `plays`. In Too Deep's change ships in the same patch without its own claim, as Phase Wall's did (R3935001).",
+            "tradeoff": "This is card text the issue did not ask for, and it no longer matches the designer's card notes. The exception is real, though: players cannot work it out from \u00a72.3's cap of 4."
+          },
+          {
+            "change": "Keep the fragment as it stands (`plays: classic-090`, which is true) and have a person merge it past the red `rust (classify)` once.",
+            "tradeoff": "A required check is overridden by hand, and the next script change on a rare path hits the same problem."
+          },
+          {
+            "change": "First, in its own issue, teach `patches check` and `classify --claims` to accept a fragment that claims a card whose old script the branch keeps in `KEPT_SCRIPTS` at the newest shipped version, even when the forced games never reach the change (this amends R646 and R1370000). Then ship this patch on top of it.",
+            "tradeoff": "It is the most work and delays this patch. It also loosens R1370000's evidence rule to the author's word plus the kept row, which is the owner's call."
+          },
+          {
+            "change": "Leave the fragment out. Every check passes, and the change ships under the next card patch's version.",
+            "tradeoff": "It breaks the rule that a change to how a card plays adds a fragment (docs/ADDING_CARDS.md, patches.rs), and players get no patch note. Games stamped v0.6.8 that are played between the merge and the next ship, and that end In Too Deep's line on J or K or reach the Heist's Stage 3, would be refused on replay."
+          }
+        ],
+        "problem": "The change is built: spent Quests go to the graveyard (R4331000) and stolen crystals stand past the cap (R4331001). Every check I ran passes except one: CI's `rust (classify)` (R1370000). I reproduced it locally as CI runs it, with main's build of the base commit as `--parent-bin`. It refutes the fragment's `plays: [\"classic-090\"]` with: \"pending/spent-quests-and-stolen-crystals.json claims \\\"classic-090\\\" plays differently, but its games against the base build play as before (R1370000)\".\n\nThe reason is that both changes only show at the very end of a Quest line. In classify's 40 forced games, which In Too Deep and The Greatest Heist share as one group (R4145000), no game ends In Too Deep's base line on J or K, and none reaches the Heist's Stage 3. The Claude session that wrote this fragment saw In Too Deep confirmed against an older main. The three versions shipped since then (v0.6.7l, v0.6.7m and v0.6.8) changed the deals.\n\nRemoving `plays` turns classify green: I checked it, exit 0 and no problems. But then `patches check` fails with \"claims nothing ... but a patch ships a change\". Leaving the fragment out passes both checks, but it breaks the rule that a change to how a card plays adds a fragment. The change would then ship with no version of its own and no player note. The classifier has no way to accept a script change that its games never reach. Working around one check or the other is a decision about the project's gates, so it is not mine to make alone.",
+        "provider": "claude-8",
+        "question": "How should this patch's fragment claim a script change that classify's forced games never reach?",
+        "why": "it keeps every check honest with the smallest change, ships the patch under its own version with its player note, and puts on the card a rules exception players otherwise could not see"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14017,6 +14048,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
+      "question": "How should this patch's fragment claim a script change that classify's forced games never reach?",
       "queued_at": "2026-11-20T18:55:18Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "44812821016",
