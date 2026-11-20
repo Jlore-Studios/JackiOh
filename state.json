@@ -16154,9 +16154,11 @@
         "by": "`muse` (medium)",
         "sha": "5a08f5955119c7f8b13862ab288c4575e9f30bb5"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T14:43:36Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T15:00:39Z",
         "family": "muse",
@@ -16166,6 +16168,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: perf drops `fold reduce calls`, a card-driven game length, and times the fold per action\"} -->\n- ## What changed and why\n- `cargo jackioh perf` no longer measures `fold reduce calls`. That number was the corpus's longest game length (fold does exactly one `reduce` per log action), so card PRs moved it \u2014 256 \u2192 404 \u2192 250 in two days \u2014 against a 520 cap, failing PRs with nothing slower. The fold timing is now reported and\u2026\n- - `Measure::FoldReduceCalls`, `FOLD_REDUCE_CALLS_BUDGET`, its report row, smoke judgement, and unit-test arms are gone; `MEASURES` is 7\u21926 and `--smoke` judges only `VIEW_FOR_BYTES_BUDGET`.\n- - `Fold` unit is now `us/action`. `FOLD_MS_BUDGET_TEST/RELEASE` became `FOLD_US_PER_ACTION_BUDGET_TEST = 4_800.0` / `_RELEASE = 4_000.0`, re-derived in the comments from the recorded calibration (test: 242.4 ms max median over 256 actions \u2192 946.875 us/action \u2192 5x = 4734.375 \u2192 4,800; release: 199.7 \u2026\n- - Integration test checks the `fold` row's unit is `us/action` and judges only `view_for bytes` under smoke; the daily test's reason still names `perf_smoke_times_the_corpus_once` as holding the work budget per PR.\n- ## Tests\n- - `cargo test -p jackioh-tools --bin jackioh perf::` \u2014 8 passed, including renamed `under_smoke_only_the_work_budget_fails_even_at_twice_every_budget` (exactly 1 failure) and new `fold_divides_the_fold_time_by_its_actions` (asserts `fold_us_per_action(0.2424, 256) == 946.875`, unit, and budget-cons\u2026\n- - `cargo test -p jackioh-tools --test perf` \u2014 smoke test passed (6 rows, no `fold reduce calls`), daily test ignored with the updated reason.\n- - `cargo test -p jackioh-tools --test acceptance` \u2014 46 passed.\n- - `cargo clippy -p jackioh-tools --all-targets -- -D warnings` \u2014 clean. `cargo fmt --check` \u2014 clean.\n- - `grep -rn \"FOLD_REDUCE_CALLS_BUDGET\\|fold reduce calls\\|FoldReduceCalls\" crates/ apps/ e2e/ docs/` \u2014 no hits.\n- ## Decisions\n- - Renamed the constants (`FOLD_US_PER_ACTION_*`, not `FOLD_MS_*`) since the values are no longer milliseconds; keeping the old names would lie about the unit.\n- - Unit string `us/action` (single token) over `us per action`, which would break the table test's whitespace parsing.\n- - Divide at the sampling point in `timed_pass` so `Samples.fold` is uniformly per-action, rather than later in `measure()`/`row()`, keeping it unit-testable without running the corpus.\n- - Two unlisted-by-plan touch-ups the removal forced: dropped the now-unused `MS_PER_SECOND` import (`use crate::gate;`) and singularized the `needs_clock` doc comment.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4313 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4313/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4313,
       "kind": "review",
       "live": "reviewing",
