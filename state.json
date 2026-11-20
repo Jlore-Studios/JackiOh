@@ -15905,12 +15905,8 @@
     "what": "build #4310 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T11:55:21Z",
-    "notes": [
-      "delivered plan #4310 on claude-4 (run 44730627853): planned",
-      "started build #4310 on claude-4 (run 44731710128)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-20T11:59:05Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16615,7 +16611,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T11:55:21Z",
+  "loop_tick": "2026-11-20T11:59:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
