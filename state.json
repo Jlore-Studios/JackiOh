@@ -16628,7 +16628,7 @@
       }
     },
     "4324": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cross_rounds": 1,
@@ -16648,10 +16648,12 @@
       },
       "interruptions": 0,
       "issue": 4296,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T18:37:57Z",
         "from_run": "44784276583",
         "gates": [
           {
@@ -16750,7 +16752,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "44784276583",
+      "run_id": "pending:ce743330-1795199861",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16771,7 +16773,7 @@
         "run": "44784276583"
       },
       "source": "",
-      "started_at": "2026-11-20T17:32:28Z",
+      "started_at": "2026-11-20T18:37:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17089,9 +17091,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T18:28:51Z",
+    "at": "2026-11-20T18:37:57Z",
     "url": "",
-    "what": "plan #4293 on muse"
+    "what": "review #4324 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T18:25:46Z",
