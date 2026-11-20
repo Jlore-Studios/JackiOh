@@ -106,6 +106,14 @@ const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>([
   // The board's card faces and log lines, and the list's numbers (`dailyConstants`), are the module's.
   "daily",
   "dailyGame",
+  // #4288: the catalog screens read the module's currentCatalog() behind EngineGate (#4180, #4222), so intent starts it too.
+  "collection",
+  "decks",
+  "almanac",
+  "stats",
+  "patchNotes",
+  "together",
+  "leaderboard",
 ]);
 
 /** The chunk drawing `path` (query ignored), or null. */

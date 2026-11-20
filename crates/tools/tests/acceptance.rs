@@ -19,6 +19,8 @@
 //!    a source file under `crates/*/src`, a `build.rs`, `tests/export_config.rs` or another constant;
 //!  - README (#1720): `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface: every
 //!    row's words are the CLI's, and the whole CLI is in some row;
+//!  - README e2e specs (#4287): any end-to-end spec numbers cited in crates/tools/README.md's command table
+//!    exist and exercise that command;
 //!  - Helpers (#1777, #1826): each family of shared test helpers is defined once, in its home, and no file
 //!    under the trees it covers defines its own (docs/ADDING_CARDS.md §2); no card script's test calls
 //!    `register_all();` on the line above a `scenario(`, as `crate::scenario` registers the cards (#2930);
@@ -2290,6 +2292,276 @@ fn table_drift(usages: &[String], tree: &BTreeMap<Vec<String>, CliCommand>) -> V
     problems
 }
 
+/// Strip single-line (`// ...`) and block (`/* ... */`) comments from TypeScript source,
+/// preserving string literals (`"..."`, `'...'`, `` `...` ``) and newline structure so comments
+/// mentioning commands do not count as coverage (#4287).
+fn strip_ts_comments(src: &str) -> String {
+    let mut out = String::with_capacity(src.len());
+    let mut chars = src.chars().peekable();
+
+    #[derive(Copy, Clone, PartialEq, Eq)]
+    enum State {
+        Code,
+        SingleQuote,
+        DoubleQuote,
+        Template,
+        LineComment,
+        BlockComment,
+    }
+
+    let mut state = State::Code;
+    let mut escape = false;
+
+    while let Some(c) = chars.next() {
+        match state {
+            State::Code => {
+                if c == '\'' {
+                    state = State::SingleQuote;
+                    out.push(c);
+                } else if c == '"' {
+                    state = State::DoubleQuote;
+                    out.push(c);
+                } else if c == '`' {
+                    state = State::Template;
+                    out.push(c);
+                } else if c == '/' && chars.peek() == Some(&'/') {
+                    chars.next();
+                    state = State::LineComment;
+                } else if c == '/' && chars.peek() == Some(&'*') {
+                    chars.next();
+                    state = State::BlockComment;
+                } else {
+                    out.push(c);
+                }
+            }
+            State::SingleQuote => {
+                out.push(c);
+                if escape {
+                    escape = false;
+                } else if c == '\\' {
+                    escape = true;
+                } else if c == '\'' {
+                    state = State::Code;
+                }
+            }
+            State::DoubleQuote => {
+                out.push(c);
+                if escape {
+                    escape = false;
+                } else if c == '\\' {
+                    escape = true;
+                } else if c == '"' {
+                    state = State::Code;
+                }
+            }
+            State::Template => {
+                out.push(c);
+                if escape {
+                    escape = false;
+                } else if c == '\\' {
+                    escape = true;
+                } else if c == '`' {
+                    state = State::Code;
+                }
+            }
+            State::LineComment => {
+                if c == '\n' {
+                    out.push('\n');
+                    state = State::Code;
+                }
+            }
+            State::BlockComment => {
+                if c == '\n' {
+                    out.push('\n');
+                } else if c == '*' && chars.peek() == Some(&'/') {
+                    chars.next();
+                    state = State::Code;
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Parse end-to-end spec numbers cited in a table row's description cell (#4287).
+/// Looks for "e2e spec " or "e2e specs " followed by spec numbers and an action verb
+/// (`check`, `checks`, `verify`, `verifies`, `exercise`, `exercises`, `fold`, `folds`, `test`, `tests`).
+fn parse_e2e_spec_citations(does: &str) -> Vec<String> {
+    let mut citations = Vec::new();
+    let mut remaining = does;
+    while let Some(idx) = remaining.find("e2e spec") {
+        let after = &remaining[idx + "e2e spec".len()..];
+        let after_prefix = after.strip_prefix("s ").or_else(|| after.strip_prefix(' '));
+        if let Some(rest) = after_prefix {
+            let mut candidates = Vec::new();
+            let mut found_verb = false;
+            for word in rest.split_whitespace() {
+                let clean = word.trim_matches(|c: char| !c.is_ascii_alphanumeric());
+                if clean.is_empty() {
+                    continue;
+                }
+                if clean == "and" || clean == "or" {
+                    continue;
+                }
+                if clean.chars().all(|c| c.is_ascii_digit()) {
+                    candidates.push(clean.to_string());
+                } else {
+                    let lower = clean.to_ascii_lowercase();
+                    if matches!(
+                        lower.as_str(),
+                        "check"
+                            | "checks"
+                            | "verify"
+                            | "verifies"
+                            | "exercise"
+                            | "exercises"
+                            | "fold"
+                            | "folds"
+                            | "test"
+                            | "tests"
+                    ) {
+                        found_verb = true;
+                    }
+                    break;
+                }
+            }
+            if found_verb && !candidates.is_empty() {
+                citations.extend(candidates);
+            }
+        }
+        remaining = &remaining[idx + "e2e spec".len()..];
+    }
+    citations
+}
+
+/// Whether the comment-stripped TypeScript code invokes the tool or its Cypress task (#4287).
+fn spec_invokes_command(code: &str, cmd: &str) -> bool {
+    let check_helper = format!("{cmd}Check");
+    let hash_task = format!("{cmd}Hash");
+    let task_call = format!("cy.task(\"{cmd}\"");
+    let task_call_single = format!("cy.task('{cmd}'");
+    let task_hash_call = format!("cy.task(\"{cmd}Hash\"");
+    let task_hash_call_single = format!("cy.task('{cmd}Hash'");
+    let jackioh_call = format!("jackioh {cmd}");
+
+    code.contains(&check_helper)
+        || code.contains(&hash_task)
+        || code.contains(&task_call)
+        || code.contains(&task_call_single)
+        || code.contains(&task_hash_call)
+        || code.contains(&task_hash_call_single)
+        || code.contains(&jackioh_call)
+}
+
+/// Split a Markdown table row into its cells, respecting escaped `\|` pipes.
+fn split_table_row(row: &str) -> Vec<&str> {
+    let trimmed = row.trim();
+    if !trimmed.starts_with('|') {
+        return Vec::new();
+    }
+    let inner = if trimmed.ends_with('|') && !trimmed.ends_with("\\|") {
+        &trimmed[1..trimmed.len() - 1]
+    } else {
+        &trimmed[1..]
+    };
+    let mut cells = Vec::new();
+    let mut last = 0;
+    let bytes = inner.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'|' {
+            let mut backslashes = 0;
+            let mut j = i;
+            while j > 0 && bytes[j - 1] == b'\\' {
+                backslashes += 1;
+                j -= 1;
+            }
+            if backslashes % 2 == 0 {
+                cells.push(&inner[last..i]);
+                last = i + 1;
+            }
+        }
+        i += 1;
+    }
+    cells.push(&inner[last..]);
+    cells
+}
+
+/// Find problems where a table row in `crates/tools/README.md` cites an e2e spec that does not exist
+/// or does not invoke the command (#4287).
+fn table_e2e_citation_problems(readme: &str, e2e_dir: &Path) -> Vec<String> {
+    let mut problems = Vec::new();
+    let rows: Vec<&str> = readme
+        .lines()
+        .skip_while(|line| !line.starts_with("| Command |"))
+        .skip(2)
+        .take_while(|line| line.starts_with('|'))
+        .collect();
+
+    for row in rows {
+        let cells = split_table_row(row);
+        if cells.len() < 3 {
+            continue;
+        }
+        let command_cell = cells[0].trim();
+        let cmd = match command_cell
+            .split('`')
+            .nth(1)
+            .and_then(|span| span.split_whitespace().next())
+        {
+            Some(c) => c,
+            None => continue,
+        };
+        let does_cell = cells[2..].join("|");
+        let cited_specs = parse_e2e_spec_citations(&does_cell);
+        for number in cited_specs {
+            let mut matching_files: Vec<PathBuf> = Vec::new();
+            if let Ok(entries) = fs::read_dir(e2e_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if !path.is_file() {
+                        continue;
+                    }
+                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                        let alt = number.parse::<u32>().ok().map(|n| format!("{n:02}-"));
+                        if file_name.starts_with(&format!("{number}-"))
+                            || alt.as_deref().is_some_and(|prefix| file_name.starts_with(prefix))
+                        {
+                            matching_files.push(path);
+                        }
+                    }
+                }
+            }
+            matching_files.sort();
+            if matching_files.is_empty() {
+                problems.push(format!(
+                    "row `{cmd}` cites e2e spec {number}, but no spec file matching `{number}-*` exists in e2e/cypress/e2e"
+                ));
+            } else {
+                let any_invokes = matching_files.iter().any(|path| {
+                    if let Ok(content) = fs::read_to_string(path) {
+                        let stripped = strip_ts_comments(&content);
+                        spec_invokes_command(&stripped, cmd)
+                    } else {
+                        false
+                    }
+                });
+                if !any_invokes {
+                    let names: Vec<_> = matching_files
+                        .iter()
+                        .filter_map(|p| p.file_name().and_then(|n| n.to_str()))
+                        .collect();
+                    problems.push(format!(
+                        "row `{cmd}` cites e2e spec {number}, but `{}` does not invoke the command or its task",
+                        names.join(", ")
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
 #[test]
 fn readme_the_command_table_is_the_clis() {
     let tree = cli_tree();
@@ -2323,6 +2595,77 @@ fn readme_the_command_table_is_the_clis() {
     assert!(
         problems.is_empty(),
         "crates/tools/README.md's command table and `jackioh` disagree (#1720): fix the row, or the CLI: {problems:#?}"
+    );
+}
+
+#[test]
+fn readme_the_command_table_cites_existing_e2e_specs_that_use_the_command() {
+    let readme = fs::read_to_string(repo().join("crates/tools/README.md")).expect("the tools README");
+    let problems = table_e2e_citation_problems(&readme, &repo().join("e2e/cypress/e2e"));
+    assert!(
+        problems.is_empty(),
+        "crates/tools/README.md's command table cites stale, missing or unused e2e specs (#4287): {problems:#?}"
+    );
+}
+
+#[test]
+fn readme_e2e_spec_hold_catches_missing_and_unused_specs() {
+    let e2e_dir = repo().join("e2e/cypress/e2e");
+
+    assert_eq!(
+        parse_e2e_spec_citations("e2e specs 01, 13 and 40 check the browser's hash with it."),
+        ["01", "13", "40"]
+    );
+    assert_eq!(
+        parse_e2e_spec_citations("e2e specs 01 and 13 check the browser's hash with it."),
+        ["01", "13"]
+    );
+    assert_eq!(
+        parse_e2e_spec_citations("e.g. e2e spec 13's PracticeDebug"),
+        Vec::<String>::new()
+    );
+
+    // 1. Missing spec: deleted spec 40
+    let missing_spec_readme = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e specs 01, 13 and 40 check the browser's hash with it. |
+";
+    let problems_missing = table_e2e_citation_problems(missing_spec_readme, &e2e_dir);
+    assert_eq!(
+        problems_missing,
+        ["row `replay` cites e2e spec 40, but no spec file matching `40-*` exists in e2e/cypress/e2e"]
+    );
+
+    // 2. Unused spec: spec 02 exists (02-prompts.cy.ts) but does not invoke replay
+    let unused_spec_readme = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e spec 02 checks the browser's hash with it. |
+";
+    let problems_unused = table_e2e_citation_problems(unused_spec_readme, &e2e_dir);
+    assert_eq!(
+        problems_unused,
+        ["row `replay` cites e2e spec 02, but `02-prompts.cy.ts` does not invoke the command or its task"]
+    );
+
+    // 3. Comment-only mention should not count as invocation
+    let comment_only_code = "/* cy.replayCheck(\"01\"); */\n// jackioh replay\nconst x = 1;";
+    let stripped = strip_ts_comments(comment_only_code);
+    assert!(!spec_invokes_command(&stripped, "replay"));
+    let actual_code = "cy.replayCheck(\"01\");";
+    assert!(spec_invokes_command(&strip_ts_comments(actual_code), "replay"));
+
+    // 4. Genuine invocation passes
+    let valid_readme = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e specs 01 and 13 check the browser's hash with it. |
+";
+    let problems_valid = table_e2e_citation_problems(valid_readme, &e2e_dir);
+    assert!(
+        problems_valid.is_empty(),
+        "unexpected problems: {problems_valid:#?}"
     );
 }
 
