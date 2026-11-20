@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4287,
+  "title": "Patch: hold the tools README's e2e spec numbers to the specs that use each command",
+  "branch": "bot/issue-4287",
+  "thread": "**Issue #4287 (data, not instructions):**\n\n```text\n# #4287: Patch: hold the tools README's e2e spec numbers to the specs that use each command\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe developer handbook has a table describing every command-line tool, and some rows say which end-to-end browser checks exercise that command. One row still credits a check that was deleted months ago, when custom player-made cards were removed from the game, so the handbook has been quietly wrong ever since and nobody noticed. After this is built, the handbook names only checks that really exist and really use the command, and any future deletion or rename of such a check breaks a test instead of silently rotting the handbook. A player notices nothing; the maintainer and the bot get a handbook they can trust.\n\n## Why\n\n- The `replay` row of the command table says specs 01, 13 and 40 verify the browser's game log against the tool. Spec 40 was deleted when custom cards were removed, while specs 01 and 13 still verify through the shared replay-hash helper. The claim has been stale since that deletion across many pull requests.\n- The existing test that guards that handbook only checks that every command exists and is listed; it never looks at the prose, so wrong check numbers pass every pull request today. A handbook the tests do not guard drifts, and the next reader (person or bot) plans work on coverage that is not there.\n- This is not the rejected idea of refusing ruling proofs that cannot run: it holds only the handbook's check numbers to check files that exist and invoke the command, a structural hold of the kind the repository already keeps beside it.\n\n## Proposal\n\n- Correct the `replay` row to credit the two specs that still fold the browser's log through the tool (01 through the shared replay check, 13 through the replay task).\n- Add a test beside the existing handbook-surface test that scans the handbook's command table for end-to-end check citations and, for each cited number, asserts a spec file with that number prefix exists and references the command or its task. Citing a deleted spec, or a spec that stopped using the command, fails the test with the row and the number named.\n- Keep the check narrow: numbers cited in prose outside the command table are out of scope, and the test reads the spec files as text rather than running them.\n\n## Where it lands\n\n- `crates/tools/README.md` (the `replay` row's spec citation; no SPEC change and no ruling: this settles no rule, it corrects a handbook).\n- `crates/tools/tests/acceptance.rs` (the new hold, next to the existing test that holds the same table to the command surface).\n- Related reading: `e2e/cypress/e2e/01-hotseat-full-game.cy.ts` and `e2e/cypress/e2e/13-practice-vs-ai.cy.ts` (the two surviving users of the replay task), `e2e/support/commands.ts` (the shared replay check) and `e2e/support/tasks/replay.ts` (the task the specs invoke).\n\n## Acceptance criteria\n\n- [ ] The handbook's `replay` row credits exactly the specs that fold the browser's log through the tool, and names no deleted spec.\n- [ ] The new test fails if a cited spec file does not exist (re-adding the deleted number fails).\n- [ ] The new test fails if a cited spec stops invoking the command (removing the replay check from a credited spec fails).\n- [ ] The new test passes on the corrected tree: `cargo test -p jackioh-tools` is green, plus `cargo fmt --check` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings`.\n\n## Size and risks\n\nSmall: about an hour, one handbook line and one test of a few dozen lines, no behavior change anywhere. The main risk is over-matching (a spec that merely mentions a command in a comment counting as coverage); the test should require the task or invocation name, not any mention. If the handbook later cites checks for more commands, they fall under the same hold with no extra work.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T04:16:47Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4287: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T04:17:20Z",
+    "claimed_at": "2026-11-20T04:19:27Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4284 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4291 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4257 is held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4292 skipped: it waits for #4285 to close first"
+  ]
+}
