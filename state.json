@@ -17005,17 +17005,8 @@
       "stop_requested": false
     },
     "4334": {
-      "action": "plan",
-      "asks": [
-        "c:7047352922"
-      ],
-      "build_next": {
-        "from_run": "44794687223",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-20T19:02:32Z",
-        "until": "2026-11-20T19:32:32Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T19:02:24Z",
         "difficulty": "hard",
@@ -17034,10 +17025,9 @@
         "reason": "planned on opus",
         "trail": "D_CODE_LINES\\\\|COMPLICATED_CODE_LINES' crates/cards/build.rs crates/engine/src/config.rs crates/cards/src/*.rs 2>/dev/null | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; sed -n '50,75p' crates/cards/build.rs; grep -n 'COMPLICATED_CODE_LINES' -A2 crates/engine/src/config.rs | head -5\", \"description\": \"Read how bu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -rn '\\\\.delta\\\\b' crates/engine/src crates/ai/src | grep -v '^.*//' | head -10; grep -rn 'steppable_params' crates/engine/src crates/ai/sr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n '^| Ranged\\\\|^| Flying' spec/06-keywords.md | cut -c1-700\", \"description\": \"Read the Ranged and Flying keyword rows\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; sed -n '/mod radiant/,$p' crates/cards/src/scripts/stinkyscape/c132_defensive_crystal.rs; python3 -I -c \\\"\\nimport json\\nc=json.load(open('crat\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334/crates/cards/src/scripts; for f in stinkyscape/c05[0-9]_*.rs stinkyscape/c060_*.rs stinkyscape_plus/c14[34]_*.rs stinkyscape/c038_* stinkyscape/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n 'plays\\\\|player note\\\\|fixes' docs/ADDING_CARDS.md | head -15\", \"description\": \"Check ADDING_CARDS guidance on fragments and player not\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; sed -n '210,235p' docs/ADDING_CARDS.md\", \"description\": \"Read ADDING_CARDS replay/KEPT_SCRIPTS guidance\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -rn 'pub fn folding[a-z_]*\\\\|pub fn folds_[a-z_]*\\\\|pub fn shipped_before\\\\|pub fn played_before' crates/engine/src | head -10; grep -rn '\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -rn 'folding_before\\\\|played_before\\\\|folds_under' crates/engine/src --include=*.rs | head; grep -n 'FOLDING' crates/engine/src/catalog.rs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -l 'cards: \\\".*S+ #' spec/rulings/*.md | head -3; grep -h 'cards: \\\".*S+ #' spec/rulings/*.md | head -2; grep -h '^cards:.*\\u00a75\\\\b\\\\|^c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n '^##' spec/05-card-types.md spec/06-keywords.md | head -20\", \"description\": \"List section headings in \\u00a75 and \\u00a76\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; sed -n '39,51p' spec/05-card-types.md | cut -c1-900\", \"description\": \"Read \\u00a75.2 Radiant\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n '4\\\\.4\\\\.9' docs/v0.3.0/SURFACE.md | head -3; awk '/4\\\\.4\\\\.9/{f=1} f{print; n++} n>25{exit}' docs/v0.3.0/SURFACE.md | grep -n 'fused\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n 'params_view\\\\|param_value\\\\|paramValue' docs/v0.3.0/SURFACE.md | head -5\", \"description\": \"Search SURFACE for params functions\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n '`names' crates/tools/README.md | cut -c1-900\", \"description\": \"Read the names command's description\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n 'stinkyscape_family' crates/cards/src/lib.rs; grep -n 'launch_starship\\\\|built_starship' crates/cards/src/stinkyscape_family.rs | head\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; sed -n '183,191p' crates/cards/src/lib.rs\", \"description\": \"Check the cfg attribute on the family module\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n 'fn armor_of' -A6 crates/cards/src/scripts/stinkyscape/c132_defensive_crystal.rs; sed -n '/mod radiant/,/^ }/p' crates/cards/src/script\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n -i 'backrow' spec/04-combat.md | cut -c1-400 | head -8\", \"description\": \"Check whether backrow Units may attack\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -rn -i 'backrow unit\\\\|in the backrow.*attack\\\\|attacks from the backrow\\\\|R1081000' spec/03-zones.md spec/04-combat.md | cut -c1-300 | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; sed -n '29p' spec/03-zones.md | cut -c300-1200\", \"description\": \"Read the Flexible backrow placement rule\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -rn 'attack(ship\\\\|attack(&ship' crates/cards/src crates/cards/tests | head -5\", \"description\": \"Find tests where a Starship declares an a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -rln 'stand_in_backrow' crates/cards/src | head -3; grep -rn 'stand_in_backrow' -A4 crates/cards/src/scripts | grep 'attack(' | head -3\", \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -rn 'stands_in_backrow' crates/engine/src/restrictions.rs crates/engine/src/combat*.rs crates/engine/src/legal*.rs 2>/dev/null | head -5; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; grep -n -i 'player note\\\\|`player`' docs/issues-and-patches.md docs/ADDING_CARDS.md | cut -c1-400 | head -8\", \"description\": \"Find player note \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; sed -n '370,410p' docs/issues-and-patches.md | cut -c1-600\", \"description\": \"Read the player note writing rules\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; git grep -n 'piece_number' -- ':!crates/cards/src/scripts' ':!crates/engine/src/starship.rs' ':!crates/engine/src/prelude.rs' | head; git grep \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4334/.bot-plan.md\", \"content\": \"# Draft plan #4334 (opus planner) \\u2014 near final; final message = the plan below\\n\\nFindings (verified): param_read\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: it changes how `param` and `params_view` in crates/engine/src/params.rs read a fused card's numbers, and it retires an engine helper\"} --> ## Goal A Starship Piece that fused into a Starship on its Radiant face reads its declared numbers on tha\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-20T18:38:27Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -17050,19 +17040,21 @@
       "provider": "claude-6",
       "queued_at": "2026-11-20T18:24:29Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44794687223",
+      "run_id": "pending:37e338a8-1795201416",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T18:38:27Z",
+      "started_at": "2026-11-20T19:03:55Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7047352922"
+      ]
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T18:49:09Z",
+    "at": "2026-11-20T19:03:55Z",
     "url": "",
-    "what": "build #4293 on muse"
+    "what": "build #4334 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-20T18:55:27Z",
