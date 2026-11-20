@@ -14824,7 +14824,8 @@
       "started_at": "2026-11-20T06:24:07Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7032400398
     },
     "4287": {
       "action": "build",
