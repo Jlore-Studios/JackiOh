@@ -14957,11 +14957,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-20T04:30:20Z",
+        "at": "2026-11-20T05:13:10Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Rule 1 (engine rules): the forecast, its damage-pipeline reads, and its fuzz oracle all live in crates/engine/src."
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Engine rules: the forecast and lethal projection in crates/engine/src change, and the fuzz oracle and web client must agree on a new wire shape"
       },
       "failures": 0,
       "forced": false,
