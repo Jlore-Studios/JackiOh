@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4249,
+  "title": "Patch: the pool probe rotates the AI, server and tools suites too, not only the cards' tests",
+  "branch": "bot/issue-4249",
+  "thread": "**Issue #4249 (data, not instructions):**\n\n```text\n# #4249: Patch: the pool probe rotates the AI, server and tools suites too, not only the cards' tests\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery game starts by dealing decks out of the shared card pool, and adding a single card to the pool shifts every random deal after it. There is a daily check that re-runs the card tests with every pool rotated one place, so it catches tests that secretly depend on exactly where a random deal lands before the next new card breaks them. But the practice-AI tests, the server tests and the developer-tools tests deal out of the same pools, and they never get that treatment. Once this is built, they do: the same daily rotation runs over those three suites, and any test that fails only because the pool moved gets rewritten so it no longer depends on the pool's order. Players notice nothing directly. The maintainer notices the next time a new card joins the game and the daily run stays green in suites nobody had ever probed.\n\n## Why\n\n- One more card in a pool moves every draw from it (R380). The rotation feature exists exactly for this: under it every pool the catalog query returns is shifted one place, and the documented fixes are to read a pool under a zero shift for content/order tests, or to search for the roll (or build the position directly) for roll tests (`crates/engine/src/testkit/pool_probe.rs` header).\n- The hand script says it all: `scripts/pool-probe.sh` runs the suites that draw from real cards (`jackioh-cards`, `jackioh-ai`, `jackioh-server`, `jackioh-tools`) under the rotation feature, and its header admits no workflow runs it and only the cards' share runs daily.\n- The daily test (`crates/tools/tests/pool_probe.rs`, about five minutes) builds and runs only `-p jackioh-cards`. The per-PR cover is only the engine's rotation canary, which keeps the rotation itself working, not any suite's tests.\n- The other three suites really do draw from the live pools: the AI's deck builder deals from a catalog query over every set (`crates/ai/src/deck.rs`), the server's actor and duos engines and their tests deal real decks (`crates/server/tests/actor/engine_real.rs` deals seeded decks from the deckable pool), and the tools' arena, gate and fuzz waves deal from the same pools.\n- Precedent: the cards-only probe already paid off twice (the daily-probe issue and the 22 failing card tests that had to stop depending on where a roll lands). The same breakage class is sitting unprobed in three more suites, and it will surface at the worst moment: the pull request that next adds a card to a pool.\n\n## Proposal\n\n- Mirror the existing daily cards test with daily rotation coverage for the other three suites named in `scripts/pool-probe.sh`: add `#[ignore = \"daily: ...\"]` test(s) in `crates/tools/tests/pool_probe.rs` that shell out to the same kind of rotated run for `jackioh-ai`, `jackioh-server` and `jackioh-tools` (same feature flag and opt-level config, same isolated target directory), generalizing the existing `failed`/`report` helpers so a failure names each suite's tests and both documented fixes.\n- Time it first with the script's four-package command; if the three suites together threaten the daily tests job's hour, split them into one daily test per package so the log shows which suite broke.\n- Convert every failure the first rotated run finds, using only the header's documented patterns (zero-shift reads for content/order tests; roll search or directly built positions for roll tests).\n- Change nothing per pull request: the engine canary stays the per-PR cover, since full rotated suites do not fit the eight-minute job budget (as the script's header already states).\n- Update `scripts/pool-probe.sh`'s header so it says what now runs daily and what is still by hand.\n\n## Where it lands\n\n- `crates/tools/tests/pool_probe.rs` (new daily test(s), generalized failure report)\n- `scripts/pool-probe.sh` (header docs only)\n- Tests converted where the probe fails them, most likely under `crates/ai/src`, `crates/server/tests` and `crates/tools/src`\n- SPEC: R380 and the deck-legal pool (SPEC \u00a72.6); no spec or ruling text changes, since the probe guards an existing ruling\n\n## Acceptance criteria\n\n- [ ] A daily test runs the AI, server and tools suites with every random pool rotated one place and fails with a per-test report (naming each test and both fixes) when one leans on where a roll lands\n- [ ] Every failure the first rotated run finds is converted to the documented patterns, so the rotated run passes\n- [ ] Per-PR CI is unchanged: no new per-PR job, and the engine's rotation canary still passes per pull request\n- [ ] `cargo test -p jackioh-tools` passes, plus `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, and `cargo jackioh spec check` (only if a converted test cites a ruling)\n- [ ] The daily tests job still finishes inside its hour with the new coverage in it\n\n## Size and risks\n\nMedium (`difficulty:medium`): a small harness change plus a bounded number of mechanical test conversions. Main risk is volume: the cards' share needed 22 conversions, and the server suite is the largest of the three, so the first rotated run may find a pile of them; each conversion follows an already-documented pattern. Second risk is daily runtime (cards take about five minutes; the server and tools suites are heavier), mitigated by timing first and splitting one test per package if needed. Rejected alternative: running the rotated suites on every pull request, which the script's header already rules out on the eight-minute budget; daily is where this check lives.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T01:41:00Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4249: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T01:41:26Z",
+    "claimed_at": "2026-11-20T01:42:27Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
