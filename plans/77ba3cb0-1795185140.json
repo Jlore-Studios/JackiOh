@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4313,
+  "title": "Patch: perf drops `fold reduce calls`, a card-driven game length, and times the fold per action",
+  "branch": "bot/issue-4313",
+  "thread": "**Issue #4313 (data, not instructions):**\n\n```text\n# #4313: Patch: perf drops `fold reduce calls`, a card-driven game length, and times the fold per action\nOpened by @MaxGoetzmann.\n\n## What it actually means\nThe engine's speed check (`cargo jackioh perf`) has a per-pull-request number called \"fold reduce calls\". It sounds like engine work, but it is only how many moves the longest of 40 random test games takes. Card changes move that number all the time and the engine's speed never does: it went 256 \u2192 404 \u2192 250 in two days of card PRs, against a cap of 520. So a card that makes random games longer can fail a pull request's `rust` check with nothing slower, and the fix would be re-measuring a number that proves nothing. That's the same trap as the 240 golden games that #2578 retired. Once this is built, the check no longer has that number, and the timed replay is judged per move, so a longer test game doesn't use up its time budget either.\n\n## Why\n- `crates/engine/src/replay.rs:838`: `fold` makes exactly one `reduce` per log action. So the measure is `corpus.fold.log.len()` (`crates/tools/src/perf.rs:609`), and its own doc comment says \"(its log's length)\". It can't catch a fold that does more work per action, because no such fold exists. The only thing it can move on is the corpus's longest game length, which depends on the cards.\n- The corpus is dealt from the live shipped pool, so every card PR re-deals it. `FOLD_REDUCE_CALLS_BUDGET`'s comment already logs this: 256 (seed 37, calibration), 404 (seed 29, 2026-11-18), 250 (seed 30, 2026-11-19). #4196's plan named this risk (\"a card change can cross it without making the engine any slower\") and left it alone.\n- The timed `fold` measure has the same drift in another form. It times the fold of whichever game is longest, so its median grows with that game's length: a 404-action game folds about 58% slower than the 256-action game its budget was calibrated on, with no engine change. Its 5x headroom absorbs that today, but drift uses headroom meant for real slowdowns.\n- #4300 (perf corpus adds handicapped, run-start and Duos games) adds more game types to the corpus, which widens this drift. It waits for this issue.\n\n## Proposal\n1. Remove the `fold reduce calls` measure: `Measure::FoldReduceCalls`, `FOLD_REDUCE_CALLS_BUDGET`, its report row, its smoke judgement and the unit-test cases that name it. `--smoke` then judges one work budget, `VIEW_FOR_BYTES_BUDGET`. Update the module header, `Args::smoke`, `Report::failures` and the smoke table's suffix to match.\n2. Report and judge `fold` per folded action: the fold of the longest corpus game plus its hash, divided by its log length, in microseconds per action. Keep the report's `fold` object (seed, actions) so the game is still named. Re-derive `FOLD_*_BUDGET_TEST` and `_RELEASE` from the calibration already recorded in their comments (medians of 242.0/242.4/240.9 ms and 199.7/199.2/198.9 ms over 256 actions, seed 37) the way the file documents, 5x the largest median per action rounded up to two significant figures, and say so in the comments. No new runner measurement is needed.\n3. `crates/tools/tests/perf.rs`: drop `\"fold reduce calls\"` from `MEASURES` and from the smoke test's work-budget loop, rename the fold row's unit if it changes, and update the file header and the daily test's `daily:` reason (it must still name `perf_smoke_times_the_corpus_once` as what holds the remaining work budget on every pull request, `acceptance.rs`'s `daily_every_ignored_test_says_it_runs_daily`).\n4. `crates/tools/README.md`, the `perf` row: what smoke judges and the fold's unit.\n\nNo workflow, deploy or person runs this row by name (only `crates/tools/` reads it), so dropping it touches nothing outside the codebase (CLAUDE.md rule 13).\n\n## Where it lands\n- `crates/tools/src/perf.rs`\n- `crates/tools/tests/perf.rs`\n- `crates/tools/README.md` (`perf` row)\n- No SPEC section or ruling: tooling (#3429, #4196), no game rule changes, no catalog change.\n\n## Acceptance criteria\n- [ ] `perf --json` has no `fold reduce calls` row and the source has no `FOLD_REDUCE_CALLS_BUDGET`.\n- [ ] Under `--smoke`, only `view_for bytes` is judged: a unit test sets every row to twice its budget and gets exactly one failure, naming `VIEW_FOR_BYTES_BUDGET`.\n- [ ] The full run judges the six remaining measures: the existing over- and at-budget unit tests pass with the shorter list.\n- [ ] The `fold` row is per action. A unit test (or the smoke test) checks that its median equals the fold's time divided by `fold.actions`, up to rounding.\n- [ ] `FOLD_MS`/per-action budget comments show the arithmetic from the recorded calibration.\n- [ ] `cargo test -p jackioh-tools --test perf`, `cargo test -p jackioh-tools --bin jackioh perf::`, `cargo test -p jackioh-tools --test acceptance`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings` and `cargo fmt --check` pass.\n\n## Size and risks\nSmall: one module, its integration test and one README row. The risk is that smoke loses its only check on fold length, but that was never an engine-speed property. The fold's time stays budgeted daily, now per action, and a game that stalls or blows up is still caught by the fuzz (`cargo jackioh fuzz`'s growth measures and STEP_CAP). Rejected: raising the 520 cap (keeps a number that moves with cards) and pinning the fold to the hotseat fixture (a fixed log makes the count a constant, which still measures nothing).\n\nRaised from a review of #4300 in a Claude Code session.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4313: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T14:29:06Z",
+    "claimed_at": "2026-11-20T14:32:45Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4300 skipped: it waits for #4313 to close first"
+  ]
+}
