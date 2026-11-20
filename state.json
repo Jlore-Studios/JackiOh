@@ -16497,11 +16497,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-20T18:35:59Z",
+        "at": "2026-11-20T19:26:20Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "CLAUDE.md rule 11 hard-rule 1: the change is engine rules in crates/engine/src/ (plague.rs, effects, query.rs)"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Rule 1, engine rules: it changes four random picks in crates/engine/src (exile_random_from, ask_placement, enemy_permanents, field_cards_of)"
       },
       "failures": 0,
       "forced": false,
