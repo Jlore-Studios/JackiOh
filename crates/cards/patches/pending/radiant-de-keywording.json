@@ -1,7 +1,7 @@
 {
   "title": "Radiant de-keywording",
-  "sources": "#4292",
-  "notes": "Radiant de-keywording (#4292): each Radiant face below kept a new keyword on top of a second upgrade, and the owner chose which one each keeps. Table 1, the keyword goes: Divine Shield off K-Pop Fanatic, Corpse Eater, Helpful Assistant, Knowledge Breaker and Growing Felinor, Sr and Sr Sr (each keeps Rush); Classic Golem prints First Strike again in place of Divine Shield; Poisonous off Knowledge Breaker Prime; Armor 5 off YileGPT Prime; Armor 2 off Force Projector (its aura reads the face's printed Armor, so it lends none, R4292001) and Oct; Pierce and Armor 2 off Surge Wall; Reborn off Macizon; Rush off Mace, Fortress, Reign, Zenith, Antumbra, Eclipse, Fortnith, Sceptumbra and Reignclipse (Macizon and Sceptumbra now drop one keyword of their two cards' union, R4292000, amending R3565003). Table 2, the keyword stays and the number goes back to the base face's: Reoccurring Dream and Legacy: Reoccurring Dream chance 40 to 30 (Lucky 1 kept); Top Loser Armor 4 to 2 (Immune to Spells kept); Flak v3, v4 and v5 damage 2 to 4 back to 1 to 3 (Lucky 1 kept); Fortify Flesh Armor 3 to 7 back to 3 to 5 (Lucky 1 kept); Path of Exile draws 1, from 2 (Cleave kept). Card data only: no script changes, so every shipped catalog folds under the same scripts as it was played (R767000). The three Flak cards are claimed by #4285's pending fragment (Stinkyscape+ Balance Changes IV), which changes them too, so this fragment leaves them out; its player note carries their line. Its plays are the 31 cards with no catalog change of their own that classify's unforced games against the base build show acting differently once a changed Radiant face has moved a game (R1370000).",
+  "sources": "#4292, #4293",
+  "notes": "Radiant de-keywording (#4292): each Radiant face below kept a new keyword on top of a second upgrade, and the owner chose which one each keeps. Table 1, the keyword goes: Divine Shield off K-Pop Fanatic, Corpse Eater, Helpful Assistant, Knowledge Breaker and Growing Felinor, Sr and Sr Sr (each keeps Rush); Classic Golem prints First Strike again in place of Divine Shield; Poisonous off Knowledge Breaker Prime; Armor 5 off YileGPT Prime; Armor 2 off Force Projector (its aura reads the face's printed Armor, so it lends none, R4292001) and Oct; Pierce and Armor 2 off Surge Wall; Reborn off Macizon; Rush off Mace, Fortress, Reign, Zenith, Antumbra, Eclipse, Fortnith, Sceptumbra and Reignclipse (Macizon and Sceptumbra now drop one keyword of their two cards' union, R4292000, amending R3565003). Table 2, the keyword stays and the number goes back to the base face's: Reoccurring Dream and Legacy: Reoccurring Dream chance 40 to 30 (Lucky 1 kept); Top Loser Armor 4 to 2 (Immune to Spells kept); Flak v3, v4 and v5 damage 2 to 4 back to 1 to 3 (Lucky 1 kept); Fortify Flesh Armor 3 to 7 back to 3 to 5 (Lucky 1 kept); Path of Exile draws 1, from 2 (Cleave kept). Card data only: no script changes, so every shipped catalog folds under the same scripts as it was played (R767000). The three Flak cards are claimed by #4285's pending fragment (Stinkyscape+ Balance Changes IV), which changes them too, so this fragment leaves them out; its player note carries their line. Its plays are the 31 cards with no catalog change of their own that classify's unforced games against the base build show acting differently once a changed Radiant face has moved a game (R1370000). Reignclipse (#4293) prints Armor 4 and 3 as one Armor 7 (Radiant 4 and 6 as 10) and its two Burn lines as one rider of the sum, declaring burns 9 (18) with the display-only damage gone (R4293000).",
   "player": {
     "title": "Radiant faces trimmed to one boost each",
     "new": [],
@@ -23,7 +23,9 @@
       "Radiant Macizon loses Reborn.",
       "Radiant Mace, Fortress, Reign, Zenith, Antumbra, Eclipse, Fortnith, Sceptumbra and Reignclipse lose Rush."
     ],
-    "text": [],
+    "text": [
+      "Reignclipse prints one Armor number and one Burns line."
+    ],
     "fixes": []
   },
   "cards": [
