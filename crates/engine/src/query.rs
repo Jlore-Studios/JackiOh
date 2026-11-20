@@ -1218,7 +1218,8 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
 /// same projection as the blow before it (`lethal::struck_units`), so a damage pool the blow spent is
 /// spent (R4032000). Cleave is the attack's, not the blow's: it lands when a Divine Shield,
 /// Indestructible or the zero rule stops the blow (R63), and from a Ranged attacker (R783001); a GIGA
-/// beside the target takes it once (R3546001).
+/// beside the target takes it once (R3546001). `kills` counts a sweep's hit on the same unit after it
+/// (R4290001), which `dealt`, Cleave's alone, does not.
 fn splash_of(
     state: &GameState,
     attacker: &CardInstance,
@@ -1226,20 +1227,35 @@ fn splash_of(
     attack: i32,
     poisons: bool,
 ) -> Vec<SplashHit> {
-    let struck = crate::subsystems::lethal::struck_units(
+    let pools = &mut ProjectedPools::default();
+    let struck = crate::subsystems::lethal::struck_units(state, attacker, defender, attack, pools);
+    let on_hero = DamageTarget::Hero {
+        player: defender.controller,
+    };
+    let swept = crate::subsystems::lethal::swept_units(
         state,
         attacker,
-        defender,
+        Some(defender),
         attack,
-        &mut ProjectedPools::default(),
+        &struck,
+        &on_hero,
+        pools,
     );
+    let destroys = |dealt: i32| dealt > 0 && (poisons || exiles_on_damage(state, attacker));
     struck
         .into_iter()
         .filter(|hit| hit.unit.id != defender.id)
         .map(|hit| {
             let health = unit_view(state, &hit.unit).health;
+            // R4290001: a sweeping Cleaver's sweep hits the unit again after its Cleave hit (R3554008).
+            let after = swept
+                .iter()
+                .find(|swept| swept.unit.id == hit.unit.id)
+                .map_or(0, |swept| swept.dealt);
             SplashHit {
-                kills: hit.dealt > 0 && (poisons || exiles_on_damage(state, attacker) || hit.dealt >= health),
+                kills: destroys(hit.dealt)
+                    || destroys(after)
+                    || (hit.dealt + after > 0 && hit.dealt + after >= health),
                 pops: attack > 0 && is_shielded(state, &hit.unit),
                 instance_id: hit.unit.id,
                 dealt: hit.dealt,

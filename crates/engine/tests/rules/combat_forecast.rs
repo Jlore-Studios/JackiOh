@@ -981,3 +981,69 @@ fn r4290000_every_cleave_and_trample_forecast_is_what_the_engine_s_combat_does()
         "splashed {splashed}, popped {popped}, overflowed {overflowed}"
     );
 }
+
+mod r4290001_a_sweeping_cleaver_s_splash_counts_its_sweep {
+    use super::*;
+
+    /// `geo-fuse` (a 2/20 Ranged Unit whose attacks weigh 5× in its lane and 3× beside it) in p1's lane 2,
+    /// granted Cleave, `target` across it and `left` and `right` beside it: each neighbour takes Cleave's
+    /// 2, then the sweep's 2×3 = 6 (`combat::strike` runs `cleave`, then `sweep`, R3554008).
+    fn sweep_cleave_board(
+        seed: &str,
+        left: &CardDef,
+        right: &CardDef,
+    ) -> (GameState, String, String, String, String) {
+        let mut state = sweep_board(seed);
+        let fuse = put(&mut state, FUSE, slot(P1, Row::Units, 2), json!({}));
+        grant(&mut state, &fuse.id, Keyword::Cleave);
+        let target = put(&mut state, &big_body.id, slot(P2, Row::Units, 2), json!({})); // 5/10
+        let left = put(&mut state, &left.id, slot(P2, Row::Units, 1), json!({}));
+        let right = put(&mut state, &right.id, slot(P2, Row::Units, 3), json!({}));
+        (state, fuse.id, target.id, left.id, right.id)
+    }
+
+    /// The review's board: a 3/3 that Cleave's 2 leaves standing falls to the sweep after it, and a 5/10
+    /// at 8 health that neither hit fells alone falls to the two together.
+    #[test]
+    fn r4290001_a_neighbour_the_sweep_finishes_is_destroyed() {
+        let (mut state, fuse, target, left, right) = sweep_cleave_board("r4290001-finish", &plain, &big_body);
+        find_instance_mut(&mut state, &right)
+            .expect("on the field")
+            .damage = 2;
+        let forecast = forecast_played(&state, &fuse, &target);
+        let small = splash_on(&forecast, &left);
+        assert_eq!(
+            (small.dealt, small.kills),
+            (2, true),
+            "Cleave's 2, then the sweep's 6"
+        );
+        let big = splash_on(&forecast, &right);
+        assert_eq!((big.dealt, big.kills), (2, true), "2 and 6 meet its 8 health");
+
+        find_instance_mut(&mut state, &right)
+            .expect("on the field")
+            .damage = 0;
+        let forecast = forecast_played(&state, &fuse, &target);
+        let big = splash_on(&forecast, &right);
+        assert_eq!((big.dealt, big.kills), (2, false), "2 and 6 fall short of 10");
+    }
+
+    /// Cleave's hit breaks a Divine Shield, so the sweep's lands in full: the unit falls, and a trampling
+    /// sweeper's excess over each neighbour is read at the health Cleave left it.
+    #[test]
+    fn r4290001_the_sweep_lands_past_the_shield_cleave_broke() {
+        let (mut state, fuse, target, left, right) = sweep_cleave_board("r4290001-shield", &shielded, &plain);
+        let forecast = forecast_played(&state, &fuse, &target);
+        let shield = splash_on(&forecast, &left);
+        assert_eq!((shield.dealt, shield.kills, shield.pops), (0, true, true));
+        assert_eq!(forecast.overflow, None, "no Trample, no overflow");
+
+        grant(&mut state, &fuse, Keyword::Trample);
+        let forecast = forecast_played(&state, &fuse, &target);
+        assert!(splash_on(&forecast, &right).kills);
+        // The blow's 10 meets the 5/10's 10 exactly; the sweep's 6 tramples 6 - 2 past the bare 2/2 and
+        // 6 - 1 past the 3/3 Cleave left at 1.
+        let overflow = forecast.overflow.expect("the sweep tramples on");
+        assert_eq!((overflow.hero_id.as_str(), overflow.dealt), ("hero-p2", 4 + 5));
+    }
+}

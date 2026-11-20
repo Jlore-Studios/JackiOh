@@ -123,7 +123,8 @@ pub(crate) fn projected_damage_with(
         // R3554008, R4221003: the blow, then the sweep's hits on the enemy Units, each with its excess.
         DamageTarget::Hero { .. } => {
             let blow = project_hit(state, Some(attacker), target, attack, pools);
-            return blow + swept_excess(state, attacker, None, attack, &on_hero, pools);
+            let swept = swept_units(state, attacker, None, attack, &[], &on_hero, pools);
+            return blow + swept.iter().map(|unit| unit.onto_hero).sum::<i32>();
         }
         DamageTarget::Unit { instance } => instance,
     };
@@ -142,29 +143,29 @@ pub(crate) fn projected_damage_with(
     // Each hit is its own damage instance on the hero, so Armor and the cap apply to each (§4.4), in
     // `combat::strike`'s order: the blow and its excess, then each Cleave hit and its excess, then each
     // of the sweep's (R3554008, R4221003), so the pools soak the first of them (R4032000).
-    let struck: i32 = struck_units(state, attacker, defender, attack, pools)
-        .iter()
-        .map(|unit| unit.onto_hero)
-        .sum();
-    struck + swept_excess(state, attacker, Some(defender), attack, &on_hero, pools)
+    let struck = struck_units(state, attacker, defender, attack, pools);
+    let swept = swept_units(state, attacker, Some(defender), attack, &struck, &on_hero, pools);
+    struck.iter().chain(&swept).map(|unit| unit.onto_hero).sum()
 }
 
-/// R3554008, R4221003: what a sweep's other hits (`combat::sweep`) pass on to the hero: every enemy
-/// Unit the sweep weighs but `struck`, the declared target, takes `attack` times its weight as one
-/// instance, and a Trample attacker's excess over each goes on (§4.4 step 9), as Cleave's does (R176).
-/// Each hit is read on the board as it stands, so a Unit Cleave struck too is read at its health before.
-fn swept_excess(
+/// R3554008, R4221003: the sweep's other hits (`combat::sweep`), after the blow and Cleave's (`before`):
+/// every enemy Unit the sweep weighs but `struck`, the declared target, takes `attack` times its weight
+/// as one instance, with what it deals and what a Trample attacker's excess over it deals the hero (§4.4
+/// step 9), as Cleave's does (R176). R4290001: a Unit an earlier hit of the attack struck is read as that
+/// hit left it, its damage taken and its Divine Shield gone, as the combat deals the sweep after Cleave.
+pub(crate) fn swept_units(
     state: &GameState,
     attacker: &CardInstance,
     struck: Option<&CardInstance>,
     attack: i32,
+    before: &[StruckUnit],
     on_hero: &DamageTarget,
     pools: &mut ProjectedPools,
-) -> i32 {
+) -> Vec<StruckUnit> {
     if crate::scripts::flags_of(state, attacker).sweep_lane.is_none() {
-        return 0;
+        return Vec::new();
     }
-    let mut total = 0;
+    let mut swept = Vec::new();
     for unit in crate::zones::active_units_of(state, opponent_of(attacker.controller)) {
         if struck.is_some_and(|struck| struck.id == unit.id) {
             continue;
@@ -172,10 +173,23 @@ fn swept_excess(
         let Some(weight) = crate::combat::sweep_weight(state, attacker, unit) else {
             continue;
         };
-        let (_, excess) = hit_and_excess(state, attacker, unit, attack * weight, pools);
-        total += project_hit(state, Some(attacker), on_hero, excess, pools);
+        let mut now = unit.clone();
+        if let Some(earlier) = before.iter().find(|earlier| earlier.unit.id == unit.id) {
+            // Step 1: any hit of 1 or more spends a Divine Shield; step 5: what it dealt stays on.
+            if attack > 0 && has_keyword(&unit_view(state, unit).keywords, KeywordKind::DivineShield) {
+                now.divine_shield_spent = Some(true);
+            }
+            now.damage += earlier.dealt;
+        }
+        let (dealt, excess) = hit_and_excess(state, attacker, &now, attack * weight, pools);
+        let onto_hero = project_hit(state, Some(attacker), on_hero, excess, pools);
+        swept.push(StruckUnit {
+            unit: unit.clone(),
+            dealt,
+            onto_hero,
+        });
     }
-    total
+    swept
 }
 
 /// §4.3 step 1 and R93, projected: a defender with First Strike, against an attacker without it,
