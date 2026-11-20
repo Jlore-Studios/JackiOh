@@ -77,9 +77,9 @@ impl PlayedAttack {
                 || !find_instance(after, id).is_some_and(|card| matches!(card.zone, Zone::Field { .. }))
         };
         let popped = |id: &str| -> bool {
-            events
-                .iter()
-                .any(|event| matches!(event, GameEvent::DivineShieldLost { instance_id } if instance_id == id))
+            events.iter().any(
+                |event| matches!(event, GameEvent::DivineShieldLost { instance_id } if instance_id == id),
+            )
         };
         // An alternative win (R850) over a hero still standing is no kill of it.
         let hero_falls = |seat: PlayerId| after.result.is_some() && after.players[seat].hero.health <= 0;

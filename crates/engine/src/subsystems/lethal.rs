@@ -180,8 +180,12 @@ fn swept_excess(
 
 /// The units one attack on `defender` strikes: the defender, then, with Cleave, each unit adjacent to
 /// it on its own side (§4.4 step 10, §3.1), never one dormant under a Stack (R13) nor a Dormant one,
-/// which nothing reaches (§3.1, R1839000; the pipeline's `land` drops a hit on either, R4290000).
-pub(crate) fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> Vec<CardInstance> {
+/// which nothing reaches (§3.2, R1839000; the pipeline's `land` drops a hit on either, R4290000).
+pub(crate) fn struck_by(
+    state: &GameState,
+    attacker: &CardInstance,
+    defender: &CardInstance,
+) -> Vec<CardInstance> {
     if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
         return vec![defender.clone()];
     }

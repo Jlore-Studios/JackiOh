@@ -769,7 +769,11 @@ mod r4290000_splash_and_overflow {
         dormant.damage = 2; // 3/1: struck, it would pass 2 on to the hero
         let forecast = forecast_played(&state, &striker, &target);
         assert_eq!(
-            forecast.splash.iter().map(|hit| hit.instance_id.as_str()).collect::<Vec<_>>(),
+            forecast
+                .splash
+                .iter()
+                .map(|hit| hit.instance_id.as_str())
+                .collect::<Vec<_>>(),
             vec![right.as_str()]
         );
         // The blow's 3 and the right's 3 each end on a 3/3: no excess.
@@ -860,7 +864,12 @@ mod r4290000_splash_and_overflow {
             json!({ "radiant": true }),
         );
         let wall = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
-        put(&mut state, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &anti_oneshot().id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
         let forecast = forecast_played(&state, &striker.id, &wall.id);
         let overflow = forecast.overflow.expect("the excess reaches the hero");
         assert_eq!(overflow.dealt, jackioh_engine::config::ANTI_ONESHOT_CAP.base);
@@ -873,9 +882,7 @@ mod r4290000_splash_and_overflow {
             cleave_board("r4290000-cleave-trample", &plain, &plain, &plain);
         grant(&mut state, &striker, Keyword::Trample);
         for id in [&target, &left, &right] {
-            find_instance_mut(&mut state, id)
-                .expect("on the field")
-                .damage = 2; // 3/1
+            find_instance_mut(&mut state, id).expect("on the field").damage = 2; // 3/1
         }
         state.players[P2].hero.armor = 1;
         let forecast = forecast_played(&state, &striker, &target);
@@ -907,7 +914,10 @@ mod r4290000_splash_and_overflow {
 
         // A plain entry's wire is what it was before the fields came.
         let wire = serde_json::to_value(&forecast).expect("a forecast serializes");
-        assert!(wire.get("splash").is_none() && wire.get("overflow").is_none(), "{wire}");
+        assert!(
+            wire.get("splash").is_none() && wire.get("overflow").is_none(),
+            "{wire}"
+        );
     }
 }
 

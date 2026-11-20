@@ -2447,8 +2447,9 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
         },
     };
     // R4290000: a Cleave attack's other units are judged too, so they are skipped as its target is.
-    let struck: Vec<CardInstance> =
-        target.map_or_else(Vec::new, |unit| crate::subsystems::lethal::struck_by(state, attacker, unit));
+    let struck: Vec<CardInstance> = target.map_or_else(Vec::new, |unit| {
+        crate::subsystems::lethal::struck_by(state, attacker, unit)
+    });
     let chained = |card: &CardInstance| card.split_chain.is_some() || card.shared_chain.is_some();
     if chained(attacker) || struck.iter().any(chained) {
         return false;
@@ -3848,7 +3849,12 @@ impl InvariantMonitor {
         {
             self.forecast_judged += 1;
             let forecast = PlayedAttack::forecast(&kept.entry);
-            let splashed: Vec<String> = kept.entry.splash.iter().map(|hit| hit.instance_id.clone()).collect();
+            let splashed: Vec<String> = kept
+                .entry
+                .splash
+                .iter()
+                .map(|hit| hit.instance_id.clone())
+                .collect();
             let played = PlayedAttack::read(
                 events,
                 state,

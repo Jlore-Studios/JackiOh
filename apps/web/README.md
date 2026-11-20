@@ -1206,7 +1206,9 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   (`tutorial/advice.ts`), so the client does no combat maths. Outside a lesson the board draws it too: while
   an attacker is selected or dragged, each legal target with an entry wears a label (`game/AttackOutcome.tsx`,
   `outcome-<target testid>`) with the damage dealt, the damage taken back, a skull on whichever dies and the
-  struck-through shield mark for a broken Divine Shield; the Show attack outcomes setting (`attackOutcomes`,
+  struck-through shield mark for a broken Divine Shield, each unit a Cleave attack strikes beside it its splash
+  (`outcome-splash-<card testid>`) and the hero a Trample attack reaches its overflow (`outcome-overflow-<hero
+  testid>`, R4290000); the Show attack outcomes setting (`attackOutcomes`,
   on by default) hides it. A seat's 1v1 and Duos `view` frames carry the same field (`net.ts`,
   `duos/socket.ts`), and a watcher's never does.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
