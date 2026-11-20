@@ -16951,15 +16951,8 @@
       }
     },
     "4327": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44792836438",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-20T18:47:30Z",
-        "until": "2026-11-20T19:17:30Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16971,10 +16964,9 @@
         "reason": "planned on opus",
         "trail": " Adding a ruling section\"}\n- Bash: {\"command\": \"grep -n \\\"R3557003\\\\]\\\\] \\\" spec/11-rulings.md | head -3; grep -n \\\"R3557003\\\" spec/*.md | grep -v \\\"^spec/INDEX\\\\|^spec/CARDS\\\" | cut -c1-300\", \"description\": \"Find R3557003 references \u2026\n- Bash: {\"command\": \"grep -n \\\"^| Summon\\\\b\\\\|^| Summon |\\\" spec/06-keywords.md | cut -c1-1500\", \"description\": \"Find the Summon row in spec section 6.3\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct ReduceResult\\\" -A 12 crates/engine/src/reduce.rs | head -16; grep -n \\\"pub fn act_ok\\\\|pub fn act_result\\\" -A 5 crates/engine/tests/rules/fixtures/harness.rs\", \"desc\u2026\n- Bash: {\"command\": \"grep -n \\\"set_as\\\" crates/engine/src/testkit/invariants.rs | head -20; grep -rn \\\"set_as\\\" crates/engine/src/replay.rs crates/engine/src/validator.rs | head\", \"description\": \"Check invar\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub const HIDDEN_ID\\\" crates/engine/src | head -3; grep -n \\\"HIDDEN_ID\\\" crates/engine/src/testkit/mod.rs | head -3; grep -rn \\\"pub use crate::view_for\\\\|HIDDEN_ID\\\" crates/en\u2026\n- Bash: {\"command\": \"grep -rn \\\"HIDDEN_ID\\\" crates/engine/tests/rules/*.rs | head -3; grep -n \\\"HIDDEN_ID\\\\|pub use crate::wire::\\\\*\\\\|pub use crate::wire\\\" crates/engine/src/testkit/prelude.rs crates/engine\u2026\n- Bash: {\"command\": \"grep -n \\\" pub fn \\\" crates/engine/src/testkit/scenario.rs | head -80\", \"description\": \"List Scenario public methods\"}\n- Bash: {\"command\": \"sed -n 1395,1420p crates/engine/src/testkit/scenario.rs; sed -n 1780,1840p crates/engine/src/testkit/scenario.rs; grep -n \\\"enum CardRef\\\" -A 12 crates/engine/src/testkit/scenario.rs\", \"\u2026\n- Bash: {\"command\": \"grep -n \\\"impl From<&CardInstance> for CardRef\\\\|impl From<CardInstance> for CardRef\\\" crates/engine/src/testkit/scenario.rs; grep -rn \\\"\\\\\\\"faceUp\\\\\\\": false\\\\|classic-005\\\" crates/card\u2026\n- Bash: {\"command\": \"grep -rl \\\"stinkyscapeplus-076\\\\\\\"\\\" crates/cards/patches/ 2>/dev/null | head -5; grep -n \\\"fn covering\\\\b\\\\|fn covering(\\\" -A 20 crates/cards/src/history.rs | head -30\", \"description\": \u2026\n- Bash: {\"command\": \"grep -n \\\"| \\\\`names\\\" crates/tools/README.md | cut -c1-900; grep -rn \\\"jackioh names\\\" .github/workflows/ci.yml 2>/dev/null | head -3\", \"description\": \"Read names command docs and CI us\u2026\n- Bash: {\"command\": \"sed -n 565,700p crates/ai/src/observe.rs | grep -n \\\"placeholder\\\\|fn \\\\|granted\\\\|hidden_card\\\\|HIDDEN_DEF_ID\\\" | head -30; grep -n \\\"fn placeholder\\\\|fn hidden_placeholder\\\\|fn blank\\\"\u2026\n- Bash: {\"command\": \"grep -n \\\"fn to_placeholder\\\" -A 40 crates/ai/src/observe.rs\", \"description\": \"Read to_placeholder\"}\n- Bash: {\"command\": \"grep -o 'counted as a Trap play (`faceDown: \\\"cloaked\\\"`, \\\\[\\\\[R783004\\\\]\\\\], \\\\[\\\\[R783005\\\\]\\\\], \\\\[\\\\[R783007\\\\]\\\\]). Set, it is hidden' spec/06-keywords.md; grep -o 'A fresh summon \u2026\n- Bash: {\"command\": \"cat crates/engine/clippy.toml | grep -v \\\"^ *#\\\" | grep -i \\\"threshold\\\\|too\\\" ; cat clippy.toml 2>/dev/null | head; grep -n \\\"pub fn half_of_card\\\\|pub fn lane_in_half\\\" crates/engine/s\u2026\n- Bash: {\"command\": \"grep -n \\\"pub enum GameEvent\\\" -B 8 crates/engine/src/wire/events.rs | head -12; grep -n \\\" Summoned {\\\" -A 3 crates/engine/src/wire/events.rs | head; grep -n \\\" Animated {\\\" -A 6 crates\u2026\n- Bash: {\"command\": \"grep -n \\\"CardAnimated\\\\|Animated\\\" crates/engine/src/animated.rs | grep \\\"GameEvent::\\\" | head -5\", \"description\": \"Find the animation event name\"}\n- Bash: {\"command\": \"grep -rn \\\"CLOAKED_REVEAL\\\\|is_cloaked_set\\\" crates/engine/src --include=*.rs | grep -v \\\"^crates/engine/src/alt_play.rs\\\" | head\", \"description\": \"Find where Reveal is offered\"}\n- Bash: {\"command\": \"sed -n 1029p spec/08-catalog.md | grep -o 'An Ayy is Cloaked as printed.*summons fewer (\\\\[\\\\[R129\\\\]\\\\])\\\\.'; sed -n 1029p spec/08-catalog.md | grep -o 'Radiant: the Ayys are Radiant, t\u2026\n- Bash: {\"command\": \"sed -n 2870,2900p crates/engine/src/testkit/invariants.rs; sed -n 2925,2990p crates/engine/src/testkit/invariants.rs\", \"description\": \"Read invariant using landed summons\"}\n- Bash: {\"command\": \"ls spec/rulings/R0033.md spec/rulings/R0011.md spec/rulings/R767000.md spec/rulings/R0001.md spec/rulings/R0060.md 2>&1; ls spec/rulings | grep -c .\", \"description\": \"Verify cited ruling\u2026\n- Bash: {\"command\": \"ls crates/ai/tests/ | head; grep -n \\\"alt_play\\\" crates/ai/tests/ai/mod.rs crates/ai/tests/*.rs 2>/dev/null | head -3; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A 3 crates/ai/Cargo.toml | head\", \"d\u2026\n- Bash: {\"command\": \"grep -rn \\\"dormantTurns\\\\|exileBelow\\\\|dormant_turns\\\" crates/engine/README.md docs/ADDING_CARDS.md docs/v0.3.0/SURFACE.md 2>/dev/null | head -5\", \"description\": \"Check docs listing summ\u2026\n- Bash: {\"command\": \"for f in crates/engine/src/effects/summon.rs crates/engine/src/effects/hold.rs crates/engine/src/effects/anomaly.rs crates/engine/src/effects/fuse.rs crates/engine/src/effects/starships.\u2026\n- Bash: {\"command\": \"sed -n 978,990p crates/engine/src/effects/summon.rs\", \"description\": \"Inspect the SummonPlacement literal at line 982\"}\n- Bash: {\"command\": \"for loc in crates/tools/src/fused_pairs.rs:644 crates/engine/tests/rules/stand_in.rs:70 crates/engine/tests/rules/rule_benders.rs:758 crates/engine/tests/rules/rule_benders.rs:793 crates\u2026\n- Bash: {\"command\": \"grep -n \\\"pub mod query\\\\|mod query\\\\|pub mod alt_play\\\\|pub mod zones\\\\|pub mod faces\\\" crates/engine/src/lib.rs\", \"description\": \"Check engine module visibility\"}\n- Bash: {\"command\": \"grep -rn \\\"summon_fresh_into\\\\|fn grant_onto\\\\|grant_onto(\\\" crates/engine/src | head\", \"description\": \"Find callers of summon_fresh_into and grant_onto\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4327/.bot-plan.md\", \"content\": \"# Draft plan #4327 (planner notes) \\u2014 shape settled, final message = the plan\\n\\nFindings (verified in code):\\n- s\u2026\n- said: ## Goal S+ #76 Ayys LMAO's three summons (Ayys and Tiny Asteroids alike) are set face-down in the caster's backrow as Traps by their Cloaked. That means hidden from P2, text inert, a backrow card and no Unit, revealed only by Activate: Reveal, and summoning sick on the reveal turn. A new engine sum\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-20T18:26:47Z",
       "owner_why": "it plans it",
@@ -16987,9 +16979,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-20T18:24:40Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44792836438",
+      "run_id": "pending:64fbed3f-1795200474",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T18:26:47Z",
+      "started_at": "2026-11-20T18:48:12Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17159,9 +17151,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T18:38:56Z",
+    "at": "2026-11-20T18:48:12Z",
     "url": "",
-    "what": "plan #4322 on claude-4"
+    "what": "build #4327 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T18:35:19Z",
