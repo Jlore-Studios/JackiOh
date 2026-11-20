@@ -13604,6 +13604,36 @@
     "4246": {
       "action": "build",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-20T04:40:38Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-21T04:40:38Z",
+        "hours": 24,
+        "kind": "build",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Change the predeclared size to 400 games (deals improve-dev:1 to :200), the floor the issue allows. The next bot run builds the control, starts the screen right away (about 60 to 75 minutes) and keeps the switch only if edgeLow is above 0.",
+            "tradeoff": "Half the games. A real gain of a point or two, like #1634's +0.015, will probably read with its low end at or below zero, so a switch that helps could be turned off again."
+          },
+          {
+            "change": "Keep 800. The next bot run starts the screen first, as a detached process outside the shell's 2-hour limit, and leaves the remaining checks to a later pass.",
+            "tradeoff": "The arena alone took more than 117 minutes here. With about 7 minutes of builds, the run's 150 minutes leave little or no margin, and another cut-off costs about 2.5 hours of runner time and subscription use for nothing."
+          },
+          {
+            "change": "Keep 800 and have a person or the improve training lane run the screen on its own machine (training/improve.md, A screen), which has no 2-hour limit, and post the tally line on the issue. A bot then ships true or false with the comment and spec edits from the plan.",
+            "tradeoff": "Needs a person's or a training session's time, so the issue waits until someone runs it. This is the most faithful measurement."
+          }
+        ],
+        "problem": "The plan sets the screen at 800 games, as this issue's predeclaration, and says the builder does not change the size. On this runner 800 games do not fit in one bot run.\n\nI built the control from the committed tip d70de4becb and turned `open_lethal` on. The 8 tests that hold the switch (`open_lethal_1634` and the `r4187000_*` tests) pass with it on. Then I started the 800-game screen at 02:37 UTC. My shell tool stops a background command after 2 hours at most. The candidate's build used about 3 minutes of that, and the arena was stopped at 04:34:40, after 117 minutes of play. The arena prints nothing until every game is done, so no tally exists. The plan estimated 96 minutes, but on this 4-core runner 800 games take longer than 117. Each bot run gets 150 minutes, and the builds take about 7 of them, so starting the same command again would most likely be cut off again.\n\nNothing was measured, so I set `open_lethal` back to false. This run changes no file. Choosing a different size, or a different place to run the screen, is a person's call: the predeclared 800 is what keeps this from looking like re-rolling the switch.",
+        "provider": "claude-1",
+        "question": "How should the screen for `AI_REPLY.open_lethal` run, now that 800 games don't fit in one bot run on this runner?",
+        "why": "the issue itself allows 400 games as the floor, no tally has been read so switching to it now is not fishing, and it is the only size a bot run on this runner can finish and report. If a person can run the 800 themselves, option 3 measures more precisely"
+      },
       "difficulty_by": {
         "at": "2026-11-20T02:21:06Z",
         "difficulty": "hard",
@@ -13635,6 +13665,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-1",
+      "question": "How should the screen for `AI_REPLY.open_lethal` run, now that 800 games don't fit in one bot run on this runner?",
       "queued_at": "2026-11-20T01:43:06Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "44660418804",
