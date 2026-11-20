@@ -16625,11 +16625,9 @@
     "what": "build #4300 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-20T16:13:49Z",
+    "at": "2026-11-20T16:22:51Z",
     "notes": [
-      "delivered plan #4300 on agy (run 44767290746): planned",
-      "started build #4300 on agy (run 44771639918)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4314 on claude-8 (run 44756123687): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17335,7 +17333,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T16:13:49Z",
+  "loop_tick": "2026-11-20T16:22:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
