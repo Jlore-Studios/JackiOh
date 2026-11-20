@@ -15853,6 +15853,24 @@
         "sha": "63ce2894a7515574505cfbff3967f88e594b31df",
         "tiers": {}
       }
+    },
+    "4310": {
+      "difficulty_by": {
+        "at": "2026-11-20T11:48:01Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #4303, a hard change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-20T11:48:01Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 4303,
+      "stop_requested": false
     }
   },
   "labels_synced": "e752b3263433d01e",
