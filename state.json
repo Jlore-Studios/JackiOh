@@ -14774,6 +14774,8 @@
       "stop_requested": false
     },
     "4351": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T23:18:00Z",
@@ -14787,8 +14789,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: accept the ~90-second TOTP replay window in R665 (#4041)\"} -->\n- What changed and why: per the decision comment (option 3 now, option 2 for a person), the ~90-second TOTP code-reuse window in Supabase Auth GoTrue v2.197.0 is accepted and recorded. Two files changed, nothing else:\n- - [spec/rulings/R0665.md](/home/agent-muse/actions-runner/_work/_temp/work/item-4041/spec/rulings/R0665.md): appended the acceptance paragraph (issue #4041, 2026-11-20) \u2014 the window's mechanism, the phishing-grade rationale, the MFA verification attempt hook as the revisit, and the optional upstrea\u2026\n- - [docs/architecture.md](/home/agent-muse/actions-runner/_work/_temp/work/item-4041/docs/architecture.md): the \u00a710 **Two-step sign-in (R665)** bullet no longer points at #4041 as undecided; it records the acceptance and the hook revisit.\n- How tested: `cargo jackioh spec check` passes (`spec check: 2320 rulings, 5831 proofs, 72526 citations in 4603 files, 31752 links: ok`), `cargo fmt --check` passes, and `git diff --stat` shows only those two files. No new tests: the server never sees a code, so nothing in-repo can exercise the wind\u2026\n- Decisions: the only one the plan left open was punctuation \u2014 the note's prior final sentence had no period, so I added one before the new paragraph. Rejected creating a new `R4041000` note or `spec/pending/4041.md` entry, since a new ruling would demand a proving test that cannot exist here.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4041 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4041/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4041,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T23:38:34Z",
         "from_run": "44835763483",
         "gates": [
           {
@@ -14847,8 +14852,15 @@
         "source": "build",
         "until": "2026-11-21T00:07:32Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-20T23:37:32Z",
+      "run_id": "pending:67935bdf-1795217887",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-20T23:38:34Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -14862,9 +14874,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T23:29:28Z",
+    "at": "2026-11-20T23:38:34Z",
     "url": "",
-    "what": "review #4344 on claude-4"
+    "what": "review #4351 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T23:24:56Z",
