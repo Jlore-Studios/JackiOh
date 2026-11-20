@@ -16855,9 +16855,11 @@
         "by": "`muse` (medium)",
         "sha": "3bf166a78942042f428f3b68478dabf4bd6b7c3d"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T15:48:49Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T16:50:32Z",
         "family": "muse",
@@ -16867,6 +16869,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the 17.6 MB of voice lines download in the background only once a game is on screen, and not while the browser asks to save data\"} -->\n- What changed and why: the voice-line bulk prefetch (1,905 files, ~17.6 MB) could start on any screen once the sound tables landed on a running context, even with no board mounted. `onTablesLoaded` in `apps/web/src/audio/engine.ts` no longer schedules the prefetch; only `preloadVoices` (called by a \u2026\n- How tested (all commands run, all output seen):\n- - `pnpm --dir apps/web test src/audio/engine.test.ts` \u2014 102 passed, including the 3 new tests and `R4316000 \u2026`. Briefly restoring the old `if (running()) schedulePrefetch();` line made the new no-preload test fail (34 voice URLs fetched), all else green; removing it again returned to 102 passed.\n- - `pnpm --dir apps/web test src/routes/chunks.test.tsx` \u2014 12 passed, unmodified.\n- - `pnpm --dir apps/web typecheck` \u2014 clean (first attempt crashed node with OOM right after the 26-minute WASM pretest build; retry with a larger heap passed).\n- - `pnpm exec eslint` on the four touched web files \u2014 clean. `cargo fmt --check` \u2014 clean. `cargo jackioh spec check` \u2014 ok (2311 rulings, 5813 proofs).\n- Decisions the issue did not settle: none beyond the plan \u2014 followed it verbatim (drop the `onTablesLoaded` schedule rather than flag-gate it, since a held preload replays through `preloadVoices` anyway). The pending paragraph states \u00a710.11 is unchanged rather than claiming an edit.\n- Reviewer notes: the save-data port is read live on every call (schedule, due-time, pump), so a mid-delay flip either way is honored; with save-data on, an opponent's never-preloaded line still plays once its ~9 KB file arrives. `git status` shows only the 7 intended files.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4316 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4316/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4316,
       "kind": "review",
       "live": "reviewing",
