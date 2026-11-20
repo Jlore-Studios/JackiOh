@@ -14817,7 +14817,9 @@
     },
     "4287": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7030243189"
+      ],
       "build_next": {
         "from_run": "44673636845",
         "model": "gemini-3.8-flash-high",
@@ -14864,9 +14866,7 @@
       "started_at": "2026-11-20T04:19:27Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7030243189"
-      ]
+      "taken_asks": []
     },
     "4288": {
       "action": "build",
