@@ -114,17 +114,43 @@ const U1_HERO = entry("u1", "hero-p2", { dealt: 2 });
 const U3_HERO = entry("u3", "hero-p2", { dealt: 5 });
 const FORECAST: CombatForecast = { attacks: [U1_E1, U1_HERO, U3_HERO], lethal: false };
 
-function renderGame(forecast: CombatForecast | undefined, replay = false) {
+function renderGame(forecast: CombatForecast | undefined, replay = false, view = aimView(), legal = LEGAL) {
   const onAction = vi.fn<(body: ActionBody) => void>();
-  const utils = render(
-    <Game view={aimView()} legal={LEGAL} onAction={onAction} forecast={forecast} replay={replay} />,
-  );
+  const utils = render(<Game view={view} legal={legal} onAction={onAction} forecast={forecast} replay={replay} />);
   return { ...utils, onAction };
 }
+
+/** R4290000: u1 may attack e1, between e2 and e3 on the opponent's side. */
+function cleaveView(): PlayerView {
+  return baseView({
+    you: emptySide("p1", { units: [unit("p1", { instanceId: "u1", defId: "core-066" }), null, null, null, null] }),
+    opponent: emptySide("p2", {
+      hand: { count: 3 },
+      units: [
+        unit("p2", { instanceId: "e2", defId: "core-055" }),
+        unit("p2", { instanceId: "e1", defId: "core-055" }),
+        unit("p2", { instanceId: "e3", defId: "core-055" }),
+        null,
+        null,
+      ],
+    }),
+  });
+}
+
+const CLEAVE_LEGAL: readonly ActionBody[] = [
+  { type: "attack", attackerId: "u1", targetId: "e1" },
+  { type: "attack", attackerId: "u1", targetId: "e2" },
+  { type: "attack", attackerId: "u1", targetId: "e3" },
+  { type: "endTurn" },
+  { type: "concede" },
+];
 
 const markers = (): HTMLElement[] => screen.queryAllByTestId(/^outcome-/);
 const marker = (target: string): HTMLElement => screen.getByTestId(`outcome-${target}`);
 const takenMarker = (attacker: string): HTMLElement => screen.getByTestId(`outcome-taken-${attacker}`);
+const splashMarker = (unitId: string): HTMLElement => screen.getByTestId(`outcome-splash-${unitId}`);
+const overflowMarker = (hero: string): HTMLElement => screen.getByTestId(`outcome-overflow-${hero}`);
+const markerIds = (): string[] => markers().map((element) => element.getAttribute("data-testid") ?? "").sort();
 const marks = (element: HTMLElement): string[] =>
   [...element.querySelectorAll("[data-mark]")].map((mark) => mark.getAttribute("data-mark") ?? "");
 
@@ -384,5 +410,64 @@ describe("R3477000 an aimed attack's targets show the engine's forecast", () => 
     hover(screen.getByTestId("card-e1"));
     expect(marker("card-e1")).toHaveAttribute("data-dealt", "2");
     expect(takenMarker("card-u1")).toHaveAttribute("data-taken", "3");
+  });
+});
+
+describe("R4290000 an aimed attack marks its splash and its overflow", () => {
+  it("R4290000 aiming a Cleave attack marks each neighbor with its splash", () => {
+    const cleave = entry("u1", "e1", {
+      dealt: 3,
+      taken: 1,
+      splash: [
+        { instanceId: "e2", dealt: 3, kills: true, pops: false },
+        { instanceId: "e3", dealt: 0, kills: false, pops: true },
+      ],
+    });
+    renderGame({ attacks: [cleave], lethal: false }, false, cleaveView(), CLEAVE_LEGAL);
+    fireEvent.click(screen.getByTestId("card-u1"));
+    expect(markers()).toEqual([]);
+
+    hover(screen.getByTestId("card-e1"));
+
+    const left = splashMarker("card-e2");
+    expect(screen.getByTestId("card-e2").contains(left)).toBe(true);
+    expect(left).toHaveAttribute("data-dealt", "3");
+    expect(marks(left)).toEqual(["kills"]);
+    const right = splashMarker("card-e3");
+    expect(screen.getByTestId("card-e3").contains(right)).toBe(true);
+    expect(right).toHaveAttribute("data-pops", "true");
+    expect(marks(right)).toEqual(["pops"]);
+    expect(right).toHaveAttribute("title", ATTACK_OUTCOME_NOTE);
+    // The target and the attacker still wear their own.
+    expect(marker("card-e1")).toHaveAttribute("data-dealt", "3");
+    expect(takenMarker("card-u1")).toHaveAttribute("data-taken", "1");
+
+    hover(null);
+    expect(markers()).toEqual([]);
+  });
+
+  it("R4290000 aiming a lethal Trample attack shows the hero's overflow", () => {
+    const trample = entry("u1", "e1", { dealt: 2, taken: 1, overflow: { heroId: "hero-p2", dealt: 3, kills: true } });
+    renderGame({ attacks: [trample, U1_HERO, U3_HERO], lethal: false });
+    fireEvent.click(screen.getByTestId("card-u1"));
+
+    hover(screen.getByTestId("card-e1"));
+    const overflow = overflowMarker("hero-opponent");
+    expect(screen.getByTestId("hero-opponent").contains(overflow)).toBe(true);
+    expect(overflow).toHaveAttribute("data-dealt", "3");
+    expect(marks(overflow)).toEqual(["kills"]);
+    expect(screen.queryByTestId("outcome-hero-opponent")).toBeNull();
+
+    // Aiming at the hero itself shows its own blow, not the other attack's overflow.
+    hover(screen.getByTestId("hero-opponent"));
+    expect(marker("hero-opponent")).toHaveAttribute("data-dealt", "2");
+    expect(screen.queryByTestId("outcome-overflow-hero-opponent")).toBeNull();
+  });
+
+  it("R4290000 a plain attack's preview is unchanged", () => {
+    renderGame(FORECAST);
+    fireEvent.click(screen.getByTestId("card-u1"));
+    hover(screen.getByTestId("card-e1"));
+    expect(markerIds()).toEqual(["outcome-card-e1", "outcome-taken-card-u1"]);
   });
 });

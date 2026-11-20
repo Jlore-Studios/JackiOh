@@ -35,6 +35,9 @@ export const statsTestid = {
   createdTable: "stats-created-table",
   tokensPanel: "stats-tokens-panel",
   tokensTable: "stats-tokens-table",
+  /** R4083000: the Created sections' Grid view. */
+  tokensGrid: "stats-tokens-grid",
+  createdGrid: "stats-created-grid",
   /** R4082000, R4155000: a Created row's tier and adjusted win rate. */
   createdTierCell: "stats-created-tier-cell",
   createdAdjustedCell: "stats-created-adjusted-cell",

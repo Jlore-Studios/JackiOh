@@ -13,12 +13,12 @@ import { sideOf } from "../../../game/contract.ts";
 import { frac, ringCue, shakeCues, tid, tunedBurst } from "../../build.ts";
 import { FX_SLAM_AT } from "../../constants.ts";
 import { figureCue, figureTint } from "../../figures.ts";
-import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
+import { FLAVOR_LOOKS } from "../../flavors.ts";
 import { ENTRANCE_TRAUMA, FOOT, type CardRecipe, type Entrance, type RecipeFixture } from "../recipe.ts";
 import { fieldTile } from "./introspection.ts";
 
 /** The look its leaves and bark wear: Nature's green. */
-const TREE_PALETTE = "Nature";
+const TREE_LOOK = FLAVOR_LOOKS.Nature;
 
 /** Its own definition, which the gallery's Activate and fusion name. */
 const TREE_ID = "meditative-075";
@@ -40,28 +40,26 @@ const TUNING = {
 const TIMING = { treeTailMs: 300, splitAt: 0.3, branchTailMs: 200 } as const;
 
 export const treeSprout: Entrance = ({ D, tgt, intensity: i, view, landing, leadMs }) => {
-  const look = paletteLook(TREE_PALETTE) ?? FLAVOR_LOOKS.Nature;
   const at = tid(tgt);
   const lead = leadMs ?? 0;
   const slam = lead + frac(FX_SLAM_AT, D - lead);
   const split = lead + frac(TIMING.splitAt, slam - lead);
   const side = view === undefined || landing === undefined ? {} : { side: sideOf(view, landing.player) };
   return [
-    figureCue("sapling", at, figureTint(look), lead, D - lead + TIMING.treeTailMs, side),
-    { ...tunedBurst(i, look.particle, tid(tgt, FOOT), "point", split, TUNING.seed), colors: look.colors },
-    ringCue(D, look.particle, at, slam),
-    { ...tunedBurst(i, look.particle, tid(tgt, FOOT), "ring", slam, TUNING.roots), colors: look.colors },
+    figureCue("sapling", at, figureTint(TREE_LOOK), lead, D - lead + TIMING.treeTailMs, side),
+    { ...tunedBurst(i, TREE_LOOK.particle, tid(tgt, FOOT), "point", split, TUNING.seed), colors: TREE_LOOK.colors },
+    ringCue(D, TREE_LOOK.particle, at, slam),
+    { ...tunedBurst(i, TREE_LOOK.particle, tid(tgt, FOOT), "ring", slam, TUNING.roots), colors: TREE_LOOK.colors },
     ...shakeCues(i, ENTRANCE_TRAUMA.treeSprout, slam),
   ];
 };
 
 export const everGrowingTree: CardRecipe = (event, p, play) => {
-  const look = paletteLook(TREE_PALETTE) ?? FLAVOR_LOOKS.Nature;
   switch (event.type) {
     case "activated": {
       if (event.instanceId !== play.instanceId) return null;
       const tile = fieldTile(p.view, play);
-      return { cues: [ringCue(p.D, look.particle, tile, 0), { ...tunedBurst(p.env.intensity, look.particle, tile, "area", 0, TUNING.glow), colors: look.colors }], row: "replace" };
+      return { cues: [ringCue(p.D, TREE_LOOK.particle, tile, 0), { ...tunedBurst(p.env.intensity, TREE_LOOK.particle, tile, "area", 0, TUNING.glow), colors: TREE_LOOK.colors }], row: "replace" };
     }
     case "promptOpened":
       // The Discover's offer is its owner's to read: a sheen over the tree on their seat, nothing on the other.
@@ -70,7 +68,7 @@ export const everGrowingTree: CardRecipe = (event, p, play) => {
     case "fused": {
       if (event.resultInstanceId !== play.instanceId) return null;
       const tile = fieldTile(p.view, play);
-      return { cues: [figureCue("branch", tile, figureTint(look), 0, p.D + TIMING.branchTailMs, { side: sideOf(p.view, play.player) }), ringCue(p.D, look.particle, tile, 0)], row: "replace" };
+      return { cues: [figureCue("branch", tile, figureTint(TREE_LOOK), 0, p.D + TIMING.branchTailMs, { side: sideOf(p.view, play.player) }), ringCue(p.D, TREE_LOOK.particle, tile, 0)], row: "replace" };
     }
     default:
       return null;

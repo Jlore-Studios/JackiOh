@@ -513,6 +513,88 @@ describe("B31 UI click and hover sounds", () => {
     expect(sink.playSfx).not.toHaveBeenCalled();
   });
 
+  it("B31 hovering off a button onto plain content plays nothing", () => {
+    const { root, sink, clock, remove } = rig();
+
+    hover(byId(root, "enabled"), "mouse");
+    clock.advance(UI_HOVER_THROTTLE_MS * 5);
+    hover(byId(root, "plain"), "mouse");
+
+    expect(played(sink)).toEqual(["uiHover"]);
+    remove();
+  });
+
+  it("B31 the first hover is heard even with the clock at zero", () => {
+    const root = mount(PAGE);
+    const sink = uiSink();
+    const remove = installUiSounds(sink, root, new FakeClock(0).now);
+
+    hover(byId(root, "enabled"), "mouse");
+
+    expect(played(sink)).toEqual(["uiHover"]);
+    remove();
+  });
+
+  it("B31 with no clock given, the page's own clock throttles hovers", () => {
+    vi.useFakeTimers({ toFake: ["performance"] });
+    const root = mount(PAGE);
+    const sink = uiSink();
+    const remove = installUiSounds(sink, root);
+
+    hover(byId(root, "enabled"), "mouse");
+    hover(byId(root, "enabled-2"), "mouse");
+    expect(played(sink)).toEqual(["uiHover"]);
+
+    vi.advanceTimersByTime(UI_HOVER_THROTTLE_MS);
+    hover(byId(root, "legal"), "mouse");
+    expect(played(sink)).toEqual(["uiHover", "uiHover"]);
+    remove();
+  });
+
+  it("B31 a click or a hover that a component stops from bubbling is still heard", () => {
+    const { root, sink, clock, remove } = rig();
+    for (const id of ["enabled", "legal"]) {
+      byId(root, id).addEventListener("click", (event) => event.stopPropagation());
+      byId(root, id).addEventListener("pointerover", (event) => event.stopPropagation());
+    }
+
+    fireEvent.click(byId(root, "enabled"));
+    hover(byId(root, "legal"), "mouse");
+    expect(played(sink)).toEqual(["uiClick", "uiHover"]);
+
+    remove();
+    clock.advance(UI_HOVER_THROTTLE_MS * 5);
+    fireEvent.click(byId(root, "enabled"));
+    hover(byId(root, "enabled"), "mouse");
+    expect(played(sink)).toEqual(["uiClick", "uiHover"]);
+  });
+
+  it("B31 a click or a mouse hover on what is no element (a text node, the document) plays nothing and throws nothing", () => {
+    const { root, sink, remove } = rig();
+    const docSink = uiSink();
+    const removeDoc = installUiSounds(docSink, document, new FakeClock().now);
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+      errors.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener("error", onError);
+    const text = byId(root, "plain").firstChild;
+    if (text === null) throw new Error("no text node");
+
+    for (const target of [text, document]) {
+      target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      target.dispatchEvent(new PointerEvent("pointerover", { bubbles: true, pointerType: "mouse" }));
+    }
+    window.removeEventListener("error", onError);
+
+    expect(errors).toEqual([]);
+    expect(sink.playSfx).not.toHaveBeenCalled();
+    expect(docSink.playSfx).not.toHaveBeenCalled();
+    removeDoc();
+    remove();
+  });
+
   it("B31 with the document as root, a click anywhere in the page is heard", () => {
     const root = mount(PAGE);
     const sink = uiSink();

@@ -32209,5 +32209,44 @@
       "v0.6.7m"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.8b",
+    "date": "2026-11-20",
+    "title": "Reignclipse prints one Armor and one Burns line",
+    "source": "#4293",
+    "notes": "Reignclipse (#4293) prints Armor 4 and 3 as one Armor 7 (Radiant 4 and 6 as 10) and its two Burn lines as one rider of the sum, declaring burns 9 (18) with the display-only damage gone; play unchanged (R4293000).",
+    "player": {
+      "title": "Reignclipse prints one Armor and one Burns line",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Reignclipse prints one Armor number and one Burns line."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "2f97a443ec1722bb0ace8405800865c063861ae0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-133"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscapeplus-133-5",
+        "name": "Reignclipse",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text",
+          "params"
+        ]
+      }
+    ]
   }
 ]

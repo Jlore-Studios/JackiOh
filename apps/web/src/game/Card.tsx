@@ -52,8 +52,8 @@ import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "../cards/keywordVisual
 import { TheirCopy } from "../cards/loadouts.ts";
 import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
-import { AttackTakenPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
-import { outcomeFor } from "./attackOutcome.ts";
+import { AttackSplashPreview, AttackTakenPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
+import { outcomeFor, splashFor } from "./attackOutcome.ts";
 import { sameHighlightAt } from "./cardHighlight.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
@@ -351,6 +351,8 @@ function Card(props: CardProps): ReactElement {
     hovered !== undefined && hovered.attacker === testId && hovered.strikesBack
       ? outcomeFor(props.highlight, hovered.target)
       : undefined;
+  // R4290000: the Cleave hit the card takes when it stands beside the hovered target.
+  const splash = splashFor(props.highlight, testId);
   // #1598: a `keywordGranted` that takes the keyword away plays as the icon going (keywordLoss.ts).
   const keywordLost = useKeywordLost(testId);
   // #2435: an `awakened` in flight breaks the card's Dormant seal until the board catches up
@@ -644,6 +646,7 @@ function Card(props: CardProps): ReactElement {
       {takenOutcome !== undefined && takenOutcome.taken > 0 && testId !== undefined && (
         <AttackTakenPreview outcome={takenOutcome} attacker={testId} />
       )}
+      {splash !== undefined && testId !== undefined && <AttackSplashPreview hit={splash} unit={testId} />}
     </div>
   );
 

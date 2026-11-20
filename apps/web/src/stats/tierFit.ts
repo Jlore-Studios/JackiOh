@@ -27,8 +27,14 @@ export function tierFit(tier: CardTier, low: number, high: number, bandLow: numb
   return Math.max(0, Math.min(high, to) - Math.max(low, from)) / (high - low);
 }
 
+/** R3184001, R4083000: what a tier fit reads, a deck card's row or a Created card's alike. */
+export type TierFitCard = Pick<PublicCardStat, "hasEnoughGames" | "tier" | "adjustedLow" | "adjustedHigh">;
+
 /** R3184001: a card's tier fit, or null for a card below the floor, with no tier or no Adjusted range, or with no band. */
-export function cardTierFit(card: PublicCardStat, tiers: PublicStatsTiers | undefined): number | null {
+export function cardTierFit(
+  card: TierFitCard,
+  tiers: Pick<PublicStatsTiers, "bandLow" | "bandHigh"> | undefined,
+): number | null {
   if (!card.hasEnoughGames || !card.tier || !tiers) return null;
   if (typeof card.adjustedLow !== "number" || typeof card.adjustedHigh !== "number") return null;
   return tierFit(card.tier, card.adjustedLow, card.adjustedHigh, tiers.bandLow, tiers.bandHigh);

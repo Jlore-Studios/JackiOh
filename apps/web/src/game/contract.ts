@@ -160,6 +160,16 @@ export const testid = {
    * (`taken` on the forecast entry; AttackOutcome.tsx). `attacker` is its `card-…` testid.
    */
   attackOutcomeTaken: (attacker: string): string => `outcome-taken-${attacker}`,
+  /**
+   * R4290000: the marker on a unit a hovered Cleave attack strikes beside its target, wearing its splash
+   * (the forecast entry's `splash`; AttackOutcome.tsx). `unit` is its `card-…` testid.
+   */
+  attackOutcomeSplash: (unit: string): string => `outcome-splash-${unit}`,
+  /**
+   * R4290000: the marker on the hero a hovered Trample attack on a unit reaches, wearing its overflow (the
+   * forecast entry's `overflow`; AttackOutcome.tsx). `hero` is its `hero-…` testid.
+   */
+  attackOutcomeOverflow: (hero: string): string => `outcome-overflow-${hero}`,
 } as const;
 
 /** The CSS selector for the element whose testid is `id`, its quotes and backslashes escaped. */

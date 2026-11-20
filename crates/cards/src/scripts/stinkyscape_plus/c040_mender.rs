@@ -77,6 +77,11 @@ mod tests {
 
     /// p1's Mender in backrow lane 2 with Units around it; `"mana": 10` plays it from hand.
     fn mended(radiant: bool, seed: &str) -> Scenario {
+        mended_at(radiant, seed, 2)
+    }
+
+    /// The same, with the Mender in backrow lane `zone`.
+    fn mended_at(radiant: bool, seed: &str, zone: i32) -> Scenario {
         let mut s = weapon_board(
             seed,
             json!({
@@ -90,7 +95,7 @@ mod tests {
                 "library": filler(6),
             }),
         );
-        s.play(ID, json!({ "zone": 2 }));
+        s.play(ID, json!({ "zone": zone }));
         s
     }
 
@@ -137,6 +142,19 @@ mod tests {
             }
             assert_eq!(damaged(&s, P1, 4), 2, "p1's lane 4 is no adjacent Unit");
             assert_eq!(damaged(&s, P2, 1), 2, "the enemy across is no adjacent Unit");
+        }
+
+        #[test]
+        fn r3556002_reaches_one_lane_either_side_of_its_own_wherever_it_stands() {
+            let mut s = mended_at(false, "s40-lane-4", 4);
+            wound_all(&mut s);
+            // Lane 4's Mender reaches lanes 3 to 5: lanes 1 and 2 are two and three lanes off.
+            s.end_turn();
+            assert_eq!(damaged(&s, P1, 3), 0, "p1's lane 3 healed to full");
+            assert_eq!(damaged(&s, P1, 4), 0, "p1's lane 4 healed to full");
+            for lane in 1..=2 {
+                assert_eq!(damaged(&s, P1, lane), 2, "p1's lane {lane} is no adjacent Unit");
+            }
         }
 
         #[test]
