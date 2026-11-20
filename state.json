@@ -15044,11 +15044,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-20T04:28:04Z",
+        "at": "2026-11-20T08:33:45Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "torn between medium and hard: root cause unknown across engine presets, view/wire transport, and web render, so rule 3 (design across crates) may apply, and torn takes the harder"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the bot already rated it hard and a planner may not lower that; the change itself is client-only (3 files in apps/web), which on its own would rate medium"
       },
       "handoff": {
         "at": "2026-11-20T04:27:32Z",
