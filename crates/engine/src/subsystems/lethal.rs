@@ -106,7 +106,7 @@ pub(crate) fn projected_damage_with(
     // `combat::strike`'s order: the blow and its excess, then each Cleave hit and its excess, then each
     // of the sweep's (R3554008, R4221003), so the pools soak the first of them (R4032000).
     let mut total = 0;
-    for unit in struck_by(state, attacker, defender) {
+    for unit in crate::query::cleave_struck(state, attacker, defender) {
         let amount = if unit.id == defender.id { hit } else { attack };
         let excess = trample_excess(state, attacker, &unit, amount, pools);
         total += project_hit(state, Some(attacker), &on_hero, excess, pools);
@@ -141,25 +141,6 @@ fn swept_excess(
         total += project_hit(state, Some(attacker), on_hero, excess, pools);
     }
     total
-}
-
-/// The units one attack on `defender` strikes: the defender, then, with Cleave, each unit adjacent to
-/// it on its own side (§4.4 step 10, §3.1), never one dormant under a Stack (R13).
-fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> Vec<CardInstance> {
-    if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
-        return vec![defender.clone()];
-    }
-    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the target is met once.
-    let mut struck = vec![defender.clone()];
-    for slot in crate::giga::adjacent_slots(state, defender) {
-        if let Some(card) = crate::giga::occupant_at(state, slot)
-            && !struck.iter().any(|met| met.id == card.id)
-            && crate::zones::is_adjacent_card(state, defender, card)
-        {
-            struck.push(card.clone());
-        }
-    }
-    struck
 }
 
 /// §4.3 step 1 and R93, projected: a defender with First Strike, against an attacker without it,
