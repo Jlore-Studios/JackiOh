@@ -14935,16 +14935,29 @@
       "stop_requested": false
     },
     "4294": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-20T04:20:06Z",
+      "owner_why": "it took it up",
       "pending_at": "2026-11-20T04:20:03Z",
       "pending_by": "MaxGoetzmann",
-      "pending_request": true
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:055b73ba-1795148382",
+      "runs_on": "night-vm-muse-fill",
+      "started_at": "2026-11-20T04:20:06Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T04:19:27Z",
+    "at": "2026-11-20T04:20:06Z",
     "url": "",
-    "what": "plan #4287 on agy"
+    "what": "build #4294 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T04:09:59Z",
