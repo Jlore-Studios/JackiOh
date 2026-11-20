@@ -14758,13 +14758,11 @@
     "what": "plan #4284 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-20T03:18:03Z",
+    "at": "2026-11-20T03:25:18Z",
     "notes": [
-      "#4291 needs a plan",
-      "started plan #4291 on claude-8 (run 44666880189)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "#4291: typed it Task"
+      "delivered plan #4284 on claude-7 (run 44648396646): failed",
+      "started plan #4284 on claude-7 (run 44667775151)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15470,7 +15468,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T03:18:03Z",
+  "loop_tick": "2026-11-20T03:25:18Z",
   "machine_disk": {
     "issue": null,
     "reading": {
