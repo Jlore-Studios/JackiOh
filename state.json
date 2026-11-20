@@ -16201,6 +16201,13 @@
     "4316": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T15:42:11Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium for the rest: a client-only change in one app, no engine rules, AI, cross-crate design, migration, or 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
