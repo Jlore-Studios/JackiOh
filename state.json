@@ -14374,6 +14374,8 @@
       }
     },
     "4345": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T19:03:55Z",
@@ -14387,8 +14389,11 @@
         "trail": "t/classify-head && git add -A && git -c user.name=bot -c user.email=bot@example.invalid commit -qm \\\"wt: fragment\\\" && /tmp/jackioh-head classify\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; mkdir -p crates/cards/patches/pending && cp ../jackioh-wt/classify-head/crates/cards/patches/pending/radiant-starship-pieces-use-their-radiant-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; cargo fmt --check 2>&1 | head -60\", \"description\": \"Run cargo fmt check\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; cargo fmt -- crates/cards/src/stinkyscape_family.rs crates/engine/tests/rules/params.rs 2>&1 | head; cargo fmt --check 2>&1 | head -5; git diff\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; echo \\\"- fmt clean. Running workspace clippy then workspace tests (harness's line) in background -> /tmp/ws.txt\\\" >> .bot-notes.md; (cargo clip\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/classify-head && (/tmp/jackioh-head golden check 2>&1 | tail -3; echo GOLDEN_DONE; /tmp/jackioh-head fuzz --seeds 200 2>&1 | grep -vE '^\\\\s*$' \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; python3 - <<'EOF'\\nf='.bot-notes.md'\\nsrc=open(f).read()\\ni=src.index('## State'); j=src.index('## Log')\\nstate='''## State\\n\\n- Build pass 1 (\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; git diff crates/cards/src/scripts/stinkyscape/c038_shield_amplifier.rs crates/cards/src/scripts/stinkyscape/c049_spacemine.rs | head -90\", \"des\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4334/crates/cards/src/scripts/stinkyscape/c049_spacemine.rs\", \"old_string\": \" let mut targets: Vec<String> =\\n crate::hits(s.las\u2026\n- Bash: {\"command\": \"until grep -q FUZZ_DONE /tmp/gf.txt 2>/dev/null; do sleep 10; done; cat /tmp/gf.txt | tail -40\", \"description\": \"Wait for golden and fuzz results\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -nE 'seeds 1\\\\.\\\\.|passed|failed|names|catalog check|ok' /tmp/gf.txt | grep -v 'coverage' | head -20\", \"description\": \"Summarize fuzz wave results\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/classify-head && /tmp/jackioh-head fuzz --seeds 200 2>&1 | grep -E 'seeds 1\\\\.\\\\.|panic\\\\(s\\\\)|changed cards:|changed fused pairs|FAIL|fail' | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/classify-head && /tmp/jackioh-head names --check; echo \\\"names exit $?\\\"; /tmp/jackioh-head catalog check > /dev/null 2>&1; echo \\\"catalog exit\u2026\n- Bash: {\"command\": \"until grep -q CLIPPY_DONE /tmp/ws.txt 2>/dev/null; do sleep 10; done; cat /tmp/ws.txt\", \"description\": \"Wait for workspace clippy result\", \"timeout\": 600000}\n- Bash: {\"command\": \"until grep -q TESTS_DONE /tmp/ws.txt 2>/dev/null; do sleep 15; done; grep -E 'FAILED|panicked|^error' /tmp/ws.txt | head -30; grep -c 'test result: ok' /tmp/ws.txt; tail -3 /tmp/ws.txt\",\u2026\n- Bash: {\"command\": \"cat /tmp/ws.txt | tail -15; ps aux | grep -E '[r]ustc --crate-name|deps/' | awk '{print $11}' | head -5\", \"description\": \"Peek at workspace test progress\"}\n- Bash: {\"command\": \"until grep -q TESTS_DONE /tmp/ws.txt 2>/dev/null; do sleep 15; done; grep -E 'FAILED|panicked|^error' /tmp/ws.txt | head -30; grep -c 'test result: ok' /tmp/ws.txt; tail -3 /tmp/ws.txt\",\u2026\n- Bash: {\"command\": \"until grep -q TESTS_DONE /tmp/ws.txt 2>/dev/null; do sleep 15; done; echo done\", \"description\": \"Block until workspace tests finish\", \"timeout\": 600000}\n- Bash: {\"command\": \"tail -5 /tmp/ws.txt; ps aux | grep -E 'target/debug/deps/' | grep -v grep | awk '{print $11}' | head -3\", \"description\": \"Check which test binary is running\"}\n- Bash: {\"command\": \"until grep -q TESTS_DONE /tmp/ws.txt 2>/dev/null; do sleep 15; done; grep -E 'FAILED|panicked|^error' /tmp/ws.txt | head -30; grep -c 'test result: ok' /tmp/ws.txt; grep -c 'test result'\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; git diff --stat | tail -3; git status --short | grep '^??'\", \"description\": \"Show diff stat and new files\"}\n- Bash: {\"command\": \"until grep -q TESTS_DONE /tmp/ws.txt 2>/dev/null; do sleep 15; done; echo finished\", \"description\": \"Wait for workspace tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E 'FAILED|panicked|^error' /tmp/ws.txt | head -30; echo \\\"ok-results: $(grep -c 'test result: ok' /tmp/ws.txt) / all: $(grep -c 'test result' /tmp/ws.txt)\\\"; grep -A3 TESTS_DONE /t\u2026\n- said: Workspace tests: 66 binaries, 21,920 tests, all ok; no diff under `apps/web/src/wire`. Rechecking the last c049 edit, then the web wording test.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; cargo fmt --check 2>&1 | head -20; cargo test -p jackioh-cards r4334000 2>&1 | grep -E 'FAILED|panicked|test result: ok. 18' ; cargo clippy -p \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; echo \\\"- workspace clippy clean; workspace tests 66 binaries ok (21920 passed), no wire diff; fuzz 200 ok; golden ok; names/catalog ok. Running\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; git status --short | grep -v '^ M crates/cards/src/scripts\\\\|^ M crates/engine\\\\|^ M spec' ; cargo jackioh spec check 2>&1 | tail -1; cargo jac\u2026\n- said: All checks pass. Removing the two helper worktrees and their branches.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; git worktree remove --force ../jackioh-wt/classify-head && git worktree remove ../jackioh-wt/classify-base && git branch -D wt/classify-head wt\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4334; python3 - <<'EOF'\\nf='.bot-notes.md'\\nsrc=open(f).read()\\ni=src.index('## State'); j=src.index('## Log')\\nstate='''## State\\n\\n- Build pass 1 (\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Radiant Starship Piece fused into a Starship deals, heals and buffs by its Radiant numbers, not the hull's base ones\"} --> ## What changed **Engine (`crates/engine/src/params.rs`).** The fix is in one place in the engine, not repeated in 18 card scrip\u2026"
       },
       "issue": 4334,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T21:27:08Z",
         "from_run": "44798638562",
         "gates": [
           {
@@ -14480,7 +14485,11 @@
         "source": "build",
         "until": "2026-11-20T21:56:14Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-20T21:26:14Z",
+      "run_id": "pending:c65cd102-1795210006",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -14499,6 +14508,9 @@
         "provider": "claude-6",
         "run": "44798638562"
       },
+      "started_at": "2026-11-20T21:27:08Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -14512,9 +14524,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T21:18:26Z",
+    "at": "2026-11-20T21:27:08Z",
     "url": "",
-    "what": "review #4344 on claude-8"
+    "what": "review #4345 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-20T21:16:36Z",
