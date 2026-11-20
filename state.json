@@ -15706,6 +15706,8 @@
       }
     },
     "4308": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T08:26:28Z",
@@ -15719,8 +15721,11 @@
         "trail": "ify output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; scripts/worktree.sh audit-base origin/main > /tmp/wt.log 2>&1; tail -2 /tmp/wt.log; export CARGO_TERM_COLOR=never; (cd ../jackioh-wt/audit-base\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; git -C ../jackioh-wt/audit-base log -1 --format=%h; git worktree remove --force ../jackioh-wt/audit-base && git branch -D wt/audit-base; git wo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; export CARGO_TERM_COLOR=never; cargo jackioh classify --base origin/main --claims --parent-bin /tmp/parent-jackioh > /tmp/classify.log 2>&1; ec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; git diff origin/main --name-only -- crates | grep '\\\\.rs$' | xargs touch; touch crates/engine/src/lib.rs crates/tools/src/main.rs crates/server\u2026\n- Bash: {\"command\": \"echo \\\"- run 5: fuzz 200 passed; classify needed --parent-bin: built base in ../jackioh-wt/audit-base (removed), binary /tmp/parent-jackioh. Shared CARGO_TARGET_DIR made release artifact\u2026\n- Bash: {\"command\": \"grep -E '^ (FAIL|\\u276f) ' /tmp/vitest-changed.log | grep -oE 'src/[^ ]+\\\\.test\\\\.tsx?' | sort -u; grep -E 'Test Files|Tests ' /tmp/vitest-changed.log; grep -E 'Error: Test timed out|Ass\u2026\n- Bash: {\"command\": \"grep -iE 'timed out|Error:' /tmp/vitest-changed.log | sed 's/[0-9]\\\\+ms//' | sort | uniq -c | sort -rn | head -8; tail -8 /tmp/vitest-changed.log\", \"description\": \"Classify the web failu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; until grep -q 'classify exit' /tmp/classify.log; do sleep 10; done; grep -vE '^\\\\s+Compiling' /tmp/classify.log | tail -30 | cut -c1-300\", \"des\u2026\n- Bash: {\"command\": \"grep -vE '^\\\\s+Compiling' /tmp/classify.log | tail -5 | cut -c1-200; grep -c Compiling /tmp/classify.log; grep -E 'vitest exit|Test Files' /tmp/vitest-changed.log\", \"description\": \"Peek \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; until grep -q 'classify exit' /tmp/classify.log; do sleep 10; done; grep -vE '^\\\\s+Compiling' /tmp/classify.log | tail -30 | cut -c1-300\", \"des\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; grep -rn 'how cards look' crates/tools/src/*.rs | head -5\", \"description\": \"Find classify's card-look rule\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; sed -n 105,135p crates/tools/src/classify.rs\", \"description\": \"Read CARD_VISUALS\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; git checkout origin/main -- apps/web/src/cards/chinese.ts apps/web/src/cards/art/scene.ts apps/web/src/cards/art/scene.test.ts; git diff origin\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; grep -n '\\\"diff\\\"\\\\|name-only\\\\|merge-base\\\\|\\\"HEAD\\\"' crates/tools/src/classify.rs | head -10\", \"description\": \"See how classify lists changed\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; sed -n 1376,1420p crates/tools/src/classify.rs\", \"description\": \"Read classify's head handling\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; W=$(git stash create \\\"audit-4291-tree\\\"); echo $W; git stash list | head -2; export CARGO_TERM_COLOR=never; cargo jackioh classify --base orig\u2026\n- Bash: {\"command\": \"grep -E 'vitest exit|Test Files|Tests ' /tmp/vitest-changed.log\", \"description\": \"Check the changed-files web run's totals\"}\n- Bash: {\"command\": \"ps aux | grep -E 'vitest' | grep -v grep | wc -l; tail -c 600 /tmp/vitest-changed.log\", \"description\": \"Check whether vitest still runs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; git diff origin/main --stat | tail -1; git diff origin/main --name-only | tr '\\\\n' ' '\", \"description\": \"Final changed-file list\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('- Left:'):s.index('## Plan')]\\ns=s.replace(old,'''- Checks green: fmt, c\u2026\n- Bash: {\"command\": \"until ! pgrep -f 'vitest run' >/dev/null; do sleep 15; done; grep -E 'vitest exit|Test Files|Tests ' /tmp/vitest-changed.log; grep -E '^ (FAIL|\\u276f) ' /tmp/vitest-changed.log | grep -o\u2026\n- Bash: {\"command\": \"grep -E 'vitest exit|Test Files|Tests ' /tmp/vitest-changed.log; grep -E '^ (FAIL|\\u276f) ' /tmp/vitest-changed.log | grep -oE 'src/[^ ]+\\\\.test\\\\.tsx?' | sort -u | tr '\\\\n' ' '; echo; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291/apps/web; pgrep -fa 'cargo|rustc|vitest' | head -3; timeout 1500 pnpm exec vitest run --project web src/cards/art/art.test.ts src/cards/art/pict\u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/vitest-rerun.log 2>/dev/null; do sleep 10; done; grep -E '\\u00d7|Test Files|Tests |^exit' /tmp/vitest-rerun.log | head -20\", \"description\": \"Wait for the rerun\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291/apps/web; timeout 900 pnpm exec vitest run --project web src/cards/art/art.test.ts 2>&1 | grep -E '\\u00d7|Test Files|Tests |B1 equal' | head\", \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; git status --short | grep -v '^ M' | head; git worktree list; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('- Left:'):\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4291; git restore --staged apps/web/src/cards/art/scene.test.ts apps/web/src/cards/art/scene.ts apps/web/src/cards/chinese.ts; git status --short | g\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-20\"} --> ## The 2026-11-20 code audit (#4291) This removes dead code, merges duplicated logic, fixes four mismatches outside the engine (each test failed before its fix), corrects s\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-20\"} --> ## The 2026-11-20 code audit (#4291) This removes dead code, merges duplicated logic, fixes four mismatches outside the engine (each test failed before its fix), corrects s\u2026"
       },
       "issue": 4291,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T11:18:41Z",
         "from_run": "44702554081",
         "gates": [
           {
@@ -15812,7 +15817,11 @@
         "source": "build",
         "until": "2026-11-20T11:47:46Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-20T11:17:46Z",
+      "run_id": "pending:81ebd512-1795173499",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15831,6 +15840,9 @@
         "provider": "claude-7",
         "run": "44702554081"
       },
+      "started_at": "2026-11-20T11:18:41Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15844,9 +15856,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T09:55:48Z",
+    "at": "2026-11-20T11:18:41Z",
     "url": "",
-    "what": "review #4307 on claude-1"
+    "what": "review #4308 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-20T11:09:20Z",
