@@ -15314,6 +15314,8 @@
       }
     },
     "4303": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T03:11:43Z",
@@ -15327,8 +15329,11 @@
         "trail": "es/cards/cat\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/data/short-forms.json'\\ns=open(p,encoding='utf-8').read()\\ni=s.index(' \\\"meditative-087\\\": {')\\nj=s.index('\\\\n },\\\\n',i)+len('\\\\n },\\\\n')\\nprint(s[i:j\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-shared -p jackioh-run --features jackioh-engine/testkit 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -E 'test result|FAILED|panicked|^error' | sort | uniq -c | head -2\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-shared --test face r3941001_written_words 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -A12 'panicked' | head -20\", \"description\": \"Read the shared face test failure\",\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features jackioh-engine/testkit --test face r3941001_written_words 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -E -A15 '^---- |panicked' | head -30\", \"descri\u2026\n- Bash: {\"command\": \"sed -n 1285,1360p crates/shared/tests/face.rs\", \"description\": \"Read the written-words test\"}\n- Bash: {\"command\": \"grep -n 'fn printed' -A12 crates/shared/tests/face.rs | head -20; grep -rn 'pub struct FaceModel\\\\|pub struct Face ' -A15 crates/shared/src/face/*.rs | grep -n 'pub text\\\\|pub short' | h\u2026\n- Bash: {\"command\": \"grep -rn 'pub struct FaceModel' -A30 crates/shared/src | grep -n 'pub ' | head -20\", \"description\": \"Read FaceModel's fields\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/tests/face.rs'\\ns=open(p).read()\\na=''' // C+ #34 Memory Leak: locks only after a Unit or Field Spell is played, not Traps.\\n let leak_base = printed(\u2026\n- Bash: {\"command\": \"grep -rn 'summoned after you play a tribal card\\\\|Or Lock their zone\\\\|In hand or deck' apps/web/src e2e crates/shared 2>/dev/null | grep -v node_modules | head; grep -rn 'meditative-087\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/cards/model.test.ts src/cards/radiantDiff.test.ts src/fx/cards/meditative/signatures.units-a.test.ts src/cards/rules.test.ts src/fx/cards/stinkysc\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) web: dropped stale short forms (Memory Leak base, Tatches radiant), shared face test updated; web changed-suite was green but textLimit, now green. Next fuzz 2\u2026\n- Bash: {\"command\": \"git status --short | wc -l; git status --short | grep '^??'; git diff --stat | tail -1\", \"description\": \"Summarize the working tree changes\"}\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/b4285/golden.log 2>/dev/null; do sleep 10; done; tail -5 /tmp/b4285/fuzz.log | cut -c1-400; tail -3 /tmp/b4285/golden.log | cut -c1-300\", \"description\": \"Wait \u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/b4285/golden.log 2>/dev/null; do sleep 10; done; tail -4 /tmp/b4285/fuzz.log | cut -c1-400; tail -3 /tmp/b4285/golden.log | cut -c1-300\", \"description\": \"Wait \u2026\n- Bash: {\"command\": \"grep -E 'seeds|panic|fail|error|mismatch|ok' /tmp/b4285/fuzz.log | grep -v 'Compiling\\\\|Finished\\\\|Running' | cut -c1-300 | head -15\", \"description\": \"Summarize the fuzz output\"}\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) fuzz 200 green (0 panics, 0 mismatches; forced changed cards too), golden check ok. Running full ts workspace test (/tmp/b4285/tws.log).\\\" >> .bot-notes.md; (c\u2026\n- Bash: {\"command\": \"sleep 5; tail -2 /tmp/b4285/tws.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | cut -c1-200\", \"description\": \"Peek at the workspace test progress\"}\n- Bash: {\"command\": \"until grep -q '^WIREDONE' /tmp/b4285/tws.log; do sleep 15; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/b4285/tws.log | grep -E '^test .* FAILED$|^EXIT|^error: [0-9]+ target|^ M|^\\\\?\\\\?' | hea\u2026\n- Bash: {\"command\": \"until grep -q '^WIREDONE' /tmp/b4285/tws.log; do sleep 15; done; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4285/bc6f351c-44e1-43e7-92ac-ee73de3b189f/tasks/btmr41fcn.output\",\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/b4285/tws.log | grep -E 'Running|test result' | tail -4 | cut -c1-200\", \"description\": \"Peek at the workspace test progress\"}\n- Bash: {\"command\": \"tail -3 /tmp/b4285/tws.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | cut -c1-200; ps aux | grep -c '[r]ustc'\", \"description\": \"Check whether the workspace build is still compiling\"}\n- Bash: {\"command\": \"until grep -q '^WIREDONE' /tmp/b4285/tws.log; do sleep 15; done; echo done\", \"description\": \"Block until the workspace test finishes\", \"timeout\": 3600000}\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/b4285/tws.log | grep -E 'test result' | wc -l; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/b4285/tws.log | grep -E '^test .* FAILED$' | head\", \"description\": \"Peek \u2026\n- Bash: {\"command\": \"until grep -q '^WIREDONE' /tmp/b4285/tws.log; do sleep 15; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/b4285/tws.log | grep -E '^test .* FAILED$|^EXIT|^error: [0-9]+ target|^ M|^\\\\?\\\\?' | hea\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace('Running/left: harness web vitest command (--changed origin/main), then jackioh-run/wasm tests, fuzz --seeds 200.','Al\u2026\n- Bash: {\"command\": \"until grep -q '^WIREDONE' /tmp/b4285/tws.log; do sleep 20; done; echo finished\", \"description\": \"Wait for the workspace run\", \"timeout\": 600000}\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/b4285/tws.log | grep -E '^test .* FAILED$|^EXIT|^error: [0-9]+ target|^ M|^\\\\?\\\\?|^WIREDONE' | head -20; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/b4285/tws.log |\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo FMT_OK; cargo clippy --workspace --all-targets -- -D warnings 2>&1 | tail -2; cargo jackioh spec check 2>&1 | tail -1; cargo jackioh patches check 2>&1 | tail -\u2026\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) full ts workspace test EXIT 0, no apps/web/src/wire diff; fmt, clippy, spec/patches/catalog checks green. Done; report written.\\\" >> .bot-notes.md; python3 - <\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Stinkyscape+ Balance Changes IV\"} --> ## Stinkyscape+ Balance Changes IV The whole issue is built: the Flashback floor, the de-keywording, the card table, and the Call to Chaos (Meditative Edition) nerf. Every check I ran passes, including the full `car\u2026"
       },
       "issue": 4285,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T06:05:30Z",
         "from_run": "44666052113",
         "gates": [
           {
@@ -15420,7 +15425,11 @@
         "source": "build",
         "until": "2026-11-20T06:34:29Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-20T06:04:29Z",
+      "run_id": "pending:e34ee989-1795154707",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15439,6 +15448,9 @@
         "provider": "claude-1",
         "run": "44666052113"
       },
+      "started_at": "2026-11-20T06:05:30Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15452,9 +15464,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T05:35:35Z",
+    "at": "2026-11-20T06:05:30Z",
     "url": "",
-    "what": "plan #4291 on claude-7"
+    "what": "review #4303 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-20T05:55:55Z",
