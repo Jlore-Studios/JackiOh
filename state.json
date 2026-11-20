@@ -3440,7 +3440,9 @@
     },
     "3925": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7052770814"
+      ],
       "build_next": {
         "from_run": "44834603420",
         "model": "opus",
@@ -3479,9 +3481,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-20T23:08:50Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:7052770814"
-      ]
+      "taken_asks": []
     },
     "3926": {
       "action": "review",
