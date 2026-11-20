@@ -36155,6 +36155,12 @@
         "number": 4289,
         "title": "Patch: a sweep that fails each time the sleeping server wakes still raises its alert, its failed passes counted in the store instead of in the process",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-20T23:04:12Z",
+        "number": 4248,
+        "title": "Patch: a dungeon fight's report counts only for the fight the run dealt",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-20T22:15:46Z",
