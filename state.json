@@ -15144,13 +15144,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "queued_at": "2026-11-20T05:14:16Z",
-      "run_id": "44679785137",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:f65c176c-1795154784",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 380,
-      "started_at": "2026-11-20T05:15:09Z",
+      "started_at": "2026-11-20T06:06:45Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15456,9 +15457,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T06:06:05Z",
+    "at": "2026-11-20T06:06:45Z",
     "url": "",
-    "what": "build #4257 on claude-8"
+    "what": "spot-check #4299 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T05:55:55Z",
@@ -36372,7 +36373,15 @@
         "n": 380,
         "pr": 4299,
         "queued_at": "2026-11-20T05:46:49Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:f65c176c-1795154784",
         "sha": "5f78ac3f0e59a8b3d53393376631cef3e0376b6e",
+        "started_at": "2026-11-20T06:06:45Z",
         "status": "queued",
         "title": "Patch: intent toward Collection, Decks and other catalog screens prefetches the engine and scene data",
         "tries": 0
