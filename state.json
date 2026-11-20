@@ -14931,6 +14931,13 @@
     "4294": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T04:28:04Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "torn between medium and hard: root cause unknown across engine presets, view/wire transport, and web render, so rule 3 (design across crates) may apply, and torn takes the harder"
+      },
       "kind": "build",
       "live": "building",
       "owner": "muse",
