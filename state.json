@@ -15905,7 +15905,7 @@
     "what": "build #4310 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T11:59:05Z",
+    "at": "2026-11-20T12:05:48Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16611,7 +16611,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T11:59:05Z",
+  "loop_tick": "2026-11-20T12:05:48Z",
   "machine_disk": {
     "issue": null,
     "reading": {
