@@ -341,6 +341,56 @@ describe("the freeze: staging holds still while the super run on it is red (the 
     expect(gh(w).started).toEqual(["super.yml --ref _staging"]);
   });
 
+  it("#4284 moves at once to test the last closed issue's fix when the open issue's red run tested a commit pushed before that close", () => {
+    const w = world();
+    // #7 closed 45 minutes ago, while a run on c1 (pushed 60 minutes ago) was still going; it ended red 10
+    // minutes ago and its report opened #8.
+    frozen(w, [
+      { number: 7, title: GATE, state: "CLOSED", closedAt: ago(45) },
+      { number: 8, title: GATE, state: "OPEN", closedAt: null },
+    ]);
+    edit(w, (s) => {
+      s.super = [finished(w.sha.c1 as string, "failure", 10)];
+    });
+    pushedAgo(w, 5);
+    const r = ok(run(w, "workflow_run"));
+    expect(r.text).toContain(`#8, but that run tested \`${w.sha.c1?.slice(0, 12)}\`, pushed before #7 closed at ${ago(45)}, so it never tested #7's fix: _staging moves now to test it.`);
+    expect(r.output).toBe(`moved=true\nsha=${w.sha.c3}\n`);
+    expect(staging(w)).toBe(w.sha.c3);
+    expect(gh(w).started).toEqual(["super.yml --ref _staging"]);
+    expect(gh(w).log).toContain(`run list --workflow ci.yml --branch main --event push --status success --limit 1 --commit ${w.sha.c1} --created >=${ago(45)} --json headSha --jq .[0].headSha // ""`);
+  });
+
+  it("#4284 holds on the open issue when its red run tested a commit pushed after the last close", () => {
+    const w = world();
+    frozen(w, [
+      { number: 7, title: GATE, state: "CLOSED", closedAt: ago(70) },
+      { number: 8, title: GATE, state: "OPEN", closedAt: null },
+    ]);
+    const r = ok(run(w, "workflow_run"));
+    expect(r.text).toContain("so production waits on a fix: #8. It moves once #8 closes.");
+    expect(r.output).toBe("");
+    expect(staging(w)).toBe(w.sha.c1);
+    expect(gh(w).started).toEqual([]);
+  });
+
+  it("#4284 a red run that never tested the last close's fix waits for a green commit pushed after that close", () => {
+    const w = world();
+    frozen(w, [
+      { number: 7, title: GATE, state: "CLOSED", closedAt: ago(30) },
+      { number: 8, title: GATE, state: "OPEN", closedAt: null },
+    ]);
+    edit(w, (s) => {
+      s.super = [finished(w.sha.c1 as string, "failure", 10)];
+    });
+    expect(ok(run(w, "schedule")).text).toContain(`pushed before #7 closed at ${ago(30)}; it moves to main's first commit after that whose CI passes.`);
+    expect(staging(w)).toBe(w.sha.c1);
+    commit(w, "c4", true, 20);
+    expect(ok(run(w, "workflow_run")).output).toBe(`moved=true\nsha=${w.sha.c4}\n`);
+    expect(staging(w)).toBe(w.sha.c4);
+    expect(gh(w).started).toEqual(["super.yml --ref _staging"]);
+  });
+
   it("starts the super run on a staging that moved since the red run (by hand) with nothing testing it, and holds", () => {
     const w = world();
     frozen(w);
