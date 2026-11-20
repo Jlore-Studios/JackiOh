@@ -814,7 +814,8 @@ pub fn fuse_board_into(args: FuseBoardIntoArgs) -> Effect {
             ingredients.extend(units);
         }
         // Room: a unit zone for the new card, free now or freed by a Unit of the caster's that goes, on
-        // the half `summon_fresh` lands it on (R4318001, R3554003): the same `allow` its entry zone reads.
+        // the half `summon_fresh` lands it on (R4318001, R3554003): the same `allow` its entry zone reads,
+        // and as that zone never the hole's lane (R3554000).
         let half = super::summon::summoner_half(ctx);
         let allow = |lane: i32| crate::geometry::lane_in_half(ctx.state, lane, half);
         let frees_a_zone = ingredients.iter().any(|card| match card.zone {
