@@ -14024,6 +14024,7 @@
         "question": "How should this patch's fragment claim a script change that classify's forced games never reach?",
         "why": "it keeps every check honest with the smallest change, ships the patch under its own version with its player note, and puts on the card a rules exception players otherwise could not see"
       },
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
