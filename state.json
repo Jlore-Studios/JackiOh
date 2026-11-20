@@ -16586,6 +16586,8 @@
       }
     },
     "4325": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T15:49:33Z",
@@ -16599,8 +16601,11 @@
         "trail": "- Verification (tools tests, clippy) is running in the background; I'll report the full results and the spec check once they land.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: an AI tuning screen counts the deals its change actually decided\"} -->\n- What changed and why: `cargo jackioh arena` paired tallies now count the deals a screen actually decided (`decided`, split into `wonBoth`/`lostBoth`) and the deals played differently (`diverged`, different final hashes), printed after `edgeHigh` so existing key order is kept. A `--set` screen with \u2026\n- How tested (commands run, output seen):\n- - `cargo test -p jackioh-tools --bin jackioh arena`: 22 passed, 0 failed \u2014 includes 4 new `r4319000_*` tests (hand-built outcomes incl. draw/aborted deals; inconclusive below/at floor and off seed sets; stop depends on decided count alone with opposite-sign lists; `--extend` needs `--set`) and the \u2026\n- - `cargo clippy -p jackioh-tools --all-targets -- -D warnings`: clean.\n- - `cargo fmt --check`: clean.\n- - `cargo jackioh spec check`: ok (2311 rulings, 5813 proofs).\n- - `cargo test -p jackioh-tools --test acceptance readme_the_command_table_is_the_clis`: ok (covers the new `[--extend]` synopsis).\n- - `git diff` on `crates/ai/src/config.rs`: 25 comment lines changed, 0 code lines \u2014 no value in `AI_EVAL`, `GREEDY_EVAL` or `AI_REPLY` changed. `crates/ai` unit tests not run (comments only; clippy compiled the crate clean).\n- Decisions the issue did not settle, with rejected alternatives:\n- - Existing `tally` unit-test callers pass `screen=false`. The plan's parenthetical suggested true for the split test, but its own explicit `inconclusive: None` literal requires false \u2014 and false is semantically right since those tests are not seed-set screens.\n- - The extend loop's seed continuation is `deals_done + d`, not the plan's `deals_done + deal_of(n)`: `setups` already hands the closure the deal number when paired, so applying `deal_of` again would misnumber every deal past the first. Verified against `setups`.\n- - New-test fifth deal (both-lost, same hash) added beyond the plan's four so `lostBoth` counting is proved by a positive case, not just a zero assertion.\n- Reviewers should look twice at: the `run()` batch loop (seed renumbering `game.n += games_done` keeps duel lines and record ids continuous; decks per deal match a single long run's seeds), and the serde field order on `Paired` (serialization follows declaration order \u2014 that is what keeps new keys a\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4319 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4319/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4319,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T16:53:32Z",
         "from_run": "44767163005",
         "gates": [
           {
@@ -16659,8 +16664,15 @@
         "source": "build",
         "until": "2026-11-20T17:20:58Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-20T16:50:58Z",
+      "run_id": "pending:ec2f2e6c-1795193588",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-20T16:53:32Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16822,9 +16834,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T16:52:54Z",
+    "at": "2026-11-20T16:53:32Z",
     "url": "",
-    "what": "review #4326 on claude-4"
+    "what": "review #4325 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T16:40:23Z",
