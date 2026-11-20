@@ -15510,10 +15510,13 @@
     "what": "plan #4286 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T07:12:54Z",
+    "at": "2026-11-20T07:19:28Z",
     "notes": [
       "#4294 is held for `claude-6` until 01:20 (5-hour usage is 55%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "#4286 is held for `claude-4` until 01:20 (5-hour usage is 52%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+      "#4286 is held for `claude-4` until 01:20 (5-hour usage is 52%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+      "started plan #4294 on claude-6 (run 44694266525)",
+      "started plan #4286 on claude-4 (run 44694331872)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16219,7 +16222,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T07:12:54Z",
+  "loop_tick": "2026-11-20T07:19:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
