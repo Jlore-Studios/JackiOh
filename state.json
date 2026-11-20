@@ -17111,11 +17111,12 @@
     "what": "build #4322 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-20T19:33:36Z",
+    "at": "2026-11-20T19:40:45Z",
     "notes": [
-      "delivered build #4322 on claude-1 (run 44802271184): interrupted",
-      "delivered suggest on muse (run 44801022594): suggested",
-      "#4337: typed it Task"
+      "#4307 is held for `claude-1` until 15:00 (5-hour usage is 36%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))",
+      "#4322 is held for `claude-1` until 15:00 (5-hour usage is 36%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))",
+      "delivered suggest on agy (run 44800934239): suggested",
+      "#4338: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17821,7 +17822,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T19:33:36Z",
+  "loop_tick": "2026-11-20T19:40:45Z",
   "machine_disk": {
     "issue": null,
     "reading": {
