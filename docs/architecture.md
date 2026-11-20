@@ -694,7 +694,7 @@ step that is not yet implemented says which BUILD task delivers it.
      on by default on a new project). Leave phone MFA off: the client offers only an authenticator
      app, and the server's `aal2` rule counts only a verified TOTP factor. Supabase Auth never records
      a used code: its v2.197.0 takes the same code again in a new challenge for about 90 seconds
-     (#4003; what to do about it is #4041).
+     (#4003; issue #4041 accepts the window: exploiting it needs the account's password and a live code seen within about 90 seconds, and the revisit is the MFA verification attempt hook if the projects move to a plan that offers it).
    - **OAuth providers (R666),** for each provider wanted: create an OAuth app at the provider
      (Google Cloud console, GitHub developer settings, Discord developer portal, …) whose
      authorised redirect URI is `https://<ref>.supabase.co/auth/v1/callback`; then Auth → Sign In /
