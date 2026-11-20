@@ -23,7 +23,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::SwapWhat;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
-use crate::rules::fixtures::combat::{big_body, plain};
+use crate::rules::fixtures::combat::{big_body, cleaver, plain};
 use crate::rules::fixtures::combat_reactions::{POOL, register_e6_fixtures};
 use crate::rules::fixtures::harness::{act_ok, both, new_game, put, setup_catalog, slot};
 use crate::rules::fixtures::stinkyscape_verbs::{WARP, register_stinkyscape_verbs};
@@ -1833,7 +1833,7 @@ fn r4221000_i18_an_attack_a_would_die_replacement_can_answer_is_not_judged() {
         )),
         "the attacker flickered instead of dying"
     );
-    let played = PlayedAttack::read(&result.events, &result.state, &attacker, &defender);
+    let played = PlayedAttack::read(&result.events, &result.state, &attacker, &defender, &[]);
     assert!(played.survives, "{played}");
     assert_eq!(
         i18(&mut monitor, &result.events, &result.state),
@@ -1929,6 +1929,62 @@ fn r4221004_i18_an_attack_on_a_reflector_into_the_attacker_s_pool_is_not_judged(
     assert!(found[0].contains("I18 forecast drift"), "{}", found[0]);
 }
 
+/// `i18_board` with a 3/8 Cleave Unit with Trample in p1's lane 2, facing a 3/3 hurt to 1 health in
+/// p2's lane 2, between `i18_board`'s 5/10 in lane 1 and another in lane 3. The forecast's splash is 3
+/// on each 5/10 and its overflow the blow's 2 past the 3/1 onto p2's hero (R4290000). The ids of the
+/// cleaver, the 3/1 and the 5/10 in lane 3.
+fn i18_cleave_board(seed: &str) -> (GameState, String, String, String) {
+    let (mut state, _, _) = i18_board(seed);
+    let striker = put(&mut state, &cleaver.id, slot(P1, Row::Units, 2), json!({}));
+    find_instance_mut(&mut state, &striker.id)
+        .expect("on the field")
+        .granted_keywords
+        .push(Keyword::Trample);
+    let target = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+    find_instance_mut(&mut state, &target.id)
+        .expect("on the field")
+        .damage = 2;
+    let beside = put(&mut state, &big_body.id, slot(P2, Row::Units, 3), json!({}));
+    (state, striker.id, target.id, beside.id)
+}
+
+#[test]
+fn r4290000_i18_holds_a_cleave_s_splash_and_a_trample_s_overflow() {
+    let (state, striker, target, beside) = i18_cleave_board("r4290000-i18");
+    let (mut monitor, result) = i18_attack(&state, &striker, &target);
+    assert_eq!(
+        i18(&mut monitor, &result.events, &result.state),
+        Vec::<String>::new()
+    );
+    assert_eq!(monitor.forecast_judged(), 1);
+
+    for (drifted_onto, what) in [(beside.as_str(), "the splash"), ("hero-p2", "the overflow")] {
+        let (mut monitor, result) = i18_attack(&state, &striker, &target);
+        let found = i18(
+            &mut monitor,
+            &drifted(&result.events, drifted_onto),
+            &result.state,
+        );
+        assert_eq!(found.len(), 1, "{what}: {found:?}");
+        assert!(found[0].contains("I18 forecast drift"), "{what}: {}", found[0]);
+    }
+}
+
+#[test]
+fn r4290000_i18_does_not_judge_a_cleave_beside_a_chained_unit() {
+    let (mut state, striker, target, beside) = i18_cleave_board("r4290000-i18-chained");
+    find_instance_mut(&mut state, &beside)
+        .expect("on the field")
+        .shared_chain = Some(1);
+    let (mut monitor, result) = i18_attack(&state, &striker, &target);
+    assert_eq!(
+        i18(&mut monitor, &drifted(&result.events, &beside), &result.state),
+        Vec::<String>::new(),
+        "a shared damage chain beside the target (R3554007)"
+    );
+    assert_eq!(monitor.forecast_judged(), 0);
+}
+
 #[test]
 fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative_win_as_no_kill() {
     let (state, attacker, defender) = i18_board("r4111000-played");
@@ -1947,6 +2003,7 @@ fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative
         &state,
         &attacker,
         &defender,
+        &[],
     );
     assert!(returned.kills && returned.survives, "{returned}");
 
@@ -1955,7 +2012,7 @@ fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative
     find_instance_mut(&mut exiled, &defender)
         .expect("on the field")
         .zone = Zone::Exile { player: P2 };
-    let read = PlayedAttack::read(&[hit(&defender, 3)], &exiled, &attacker, &defender);
+    let read = PlayedAttack::read(&[hit(&defender, 3)], &exiled, &attacker, &defender, &[]);
     assert!(read.kills, "{read}");
 
     // A game won another way over a hero still standing is no kill of it (R850).
@@ -1965,7 +2022,7 @@ fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative
         winner: Winner::P1,
         reason: GameOverReason::AltWin,
     });
-    let read = PlayedAttack::read(&[hit("hero-p2", 3)], &alt_win, &attacker, "hero-p2");
+    let read = PlayedAttack::read(&[hit("hero-p2", 3)], &alt_win, &attacker, "hero-p2", &[]);
     assert_eq!(
         read,
         PlayedAttack {
@@ -1974,6 +2031,8 @@ fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative
             kills: false,
             survives: true,
             pops: false,
+            splash: Vec::new(),
+            overflow: None,
         }
     );
 
@@ -1983,5 +2042,5 @@ fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative
         winner: Winner::P1,
         reason: GameOverReason::HeroDeath,
     });
-    assert!(PlayedAttack::read(&[hit("hero-p2", 3)], &hero_death, &attacker, "hero-p2").kills);
+    assert!(PlayedAttack::read(&[hit("hero-p2", 3)], &hero_death, &attacker, "hero-p2", &[]).kills);
 }

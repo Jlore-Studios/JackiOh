@@ -17,8 +17,12 @@
 // one (`pops`). The marker takes no click of its own (a press on it is the card's: nothing inside carries
 // a testid, and the wrapper takes no pointer) and sits out of flow, so it moves nothing. The forecast
 // reads the face-up board alone, so its title says a face-down trap can still change the outcome.
+//
+// R4290000: the same attack's other hits wear the target's marker too: each unit a Cleave attack strikes
+// beside the target its splash (the entry's `splash`), and the hero a Trample attack on a unit reaches its
+// overflow (the entry's `overflow`), each with the skull and the shield mark as the target's.
 
-import type { AttackForecast } from "@jackioh/shared";
+import type { AttackForecast, SplashHit, TrampleOverflow } from "@jackioh/shared";
 import type { ReactElement } from "react";
 
 import { KEYWORD_MARK } from "../cards/keywordMarks.ts";
@@ -83,27 +87,56 @@ function ShieldMark(): ReactElement {
   );
 }
 
-/** R3615000: the hovered target's marker, wearing the damage the blow deals it. */
-export function AttackTargetPreview({ outcome, target }: { outcome: AttackForecast; target: string }): ReactElement {
-  const words = [t("Deals {n}", { n: outcome.dealt })];
-  if (outcome.kills) words.push(t("Destroys it"));
-  if (outcome.pops) words.push(t("Breaks its shield"));
+/** One hit's marker on the card that takes it: what it deals, whether it destroys, whether it breaks a shield. */
+function BlowPreview({
+  testId,
+  dealt,
+  kills,
+  pops,
+}: {
+  testId: string;
+  dealt: number;
+  kills: boolean;
+  pops: boolean;
+}): ReactElement {
+  const words = [t("Deals {n}", { n: dealt })];
+  if (kills) words.push(t("Destroys it"));
+  if (pops) words.push(t("Breaks its shield"));
   const note = t(ATTACK_OUTCOME_NOTE);
   return (
     <span
       className="attack-outcome-target"
       role="img"
-      data-testid={testid.attackOutcome(target)}
+      data-testid={testId}
       data-tentative="true"
-      data-dealt={outcome.dealt}
-      data-kills={outcome.kills ? "true" : undefined}
-      data-pops={outcome.pops ? "true" : undefined}
+      data-dealt={dealt}
+      data-kills={kills ? "true" : undefined}
+      data-pops={pops ? "true" : undefined}
       title={note}
       aria-label={[...words, note].join(". ")}
     >
-      <PreviewMark amount={outcome.dealt} skull={outcome.kills ? "kills" : undefined} />
-      {outcome.pops && <ShieldMark />}
+      <PreviewMark amount={dealt} skull={kills ? "kills" : undefined} />
+      {pops && <ShieldMark />}
     </span>
+  );
+}
+
+/** R3615000: the hovered target's marker, wearing the damage the blow deals it. */
+export function AttackTargetPreview({ outcome, target }: { outcome: AttackForecast; target: string }): ReactElement {
+  return (
+    <BlowPreview testId={testid.attackOutcome(target)} dealt={outcome.dealt} kills={outcome.kills} pops={outcome.pops} />
+  );
+}
+
+/** R4290000: the marker on a unit beside the hovered target, wearing the Cleave hit the attack deals it. */
+export function AttackSplashPreview({ hit, unit }: { hit: SplashHit; unit: string }): ReactElement {
+  return <BlowPreview testId={testid.attackOutcomeSplash(unit)} dealt={hit.dealt} kills={hit.kills} pops={hit.pops} />;
+}
+
+/** R4290000: the marker on the hero the hovered attack tramples onto, wearing its overflow. */
+export function AttackOverflowPreview({ overflow, hero }: { overflow: TrampleOverflow; hero: string }): ReactElement {
+  return (
+    <BlowPreview testId={testid.attackOutcomeOverflow(hero)} dealt={overflow.dealt} kills={overflow.kills} pops={false} />
   );
 }
 

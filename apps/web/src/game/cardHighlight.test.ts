@@ -128,6 +128,23 @@ describe("#3609 sameHighlightAt", () => {
     expect(sameHighlightAt({ ...other, outcomes: before.outcomes! }, other, UNIT)).toBe(true);
   });
 
+  it("R4290000 is false when the hovered attack's splash on this card comes or goes, true when it splashes another", () => {
+    const beside: CardReads = { testId: "card-e2", instanceId: "e2" };
+    const hover = { attacker: "card-u2", target: "card-e1", strikesBack: true };
+    const splashing = (instanceId: string): AttackForecast => ({
+      ...forecast(1),
+      splash: [{ instanceId, dealt: 3, kills: true, pops: false }],
+    });
+    const plain: Highlight = { ...BASE, hoveredAttack: hover, outcomes: new Map([["card-e1", forecast(1)]]) };
+    const onThis: Highlight = { ...BASE, hoveredAttack: hover, outcomes: new Map([["card-e1", splashing("e2")]]) };
+    const onAnother: Highlight = { ...BASE, hoveredAttack: hover, outcomes: new Map([["card-e1", splashing("e3")]]) };
+    expect(sameHighlightAt(plain, onThis, beside)).toBe(false);
+    expect(sameHighlightAt(onThis, plain, beside)).toBe(false);
+    expect(sameHighlightAt(plain, onAnother, beside)).toBe(true);
+    // Leaving the target takes the splash off.
+    expect(sameHighlightAt(onThis, { ...BASE, outcomes: onThis.outcomes! }, beside)).toBe(false);
+  });
+
   it("counts a card with no testid and no instance id (a back) as seeing nothing", () => {
     const back: CardReads = { testId: undefined, instanceId: undefined };
     const busy: Highlight = { ...adding(adding(BASE, "legal", "card-u1"), "selected", "card-u1"), hoveredAttack: { attacker: "card-u1", target: "card-e1", strikesBack: true } };

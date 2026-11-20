@@ -74,8 +74,9 @@
 //!      R1361, R1362).
 //!   I18 every plain attack does what its seat's forecast said (R3100000, R4111000; #4111): `before` keeps
 //!      the `combat_forecast` entry of a chosen `attack`, and `after` holds `PlayedAttack::read` of the
-//!      step to it; what it skips is `foreseeable_attack`'s and `plain_combat`'s (a hook, a trap, a
-//!      redirect, a damage chain, a reflection, a prompt or a turn end). 1v1 only.
+//!      step to it, a Cleave attack's splash and a Trample attack's overflow included (R4290000); what it
+//!      skips is `foreseeable_attack`'s and `plain_combat`'s (a hook, a trap, a redirect, a damage chain,
+//!      a reflection, a prompt or a turn end). 1v1 only.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -2411,8 +2412,8 @@ fn card_label(state: &GameState, id: &str) -> String {
 /// foretell all of it. Each `false` is a source R3100000's forecast leaves out, since the board does
 /// not show what it will do:
 /// - no attacker card;
-/// - the attacker or a Unit target in a split or shared damage chain (§4.4 steps 0b and 8b, R3554007),
-///   which R4032000 leaves unprojected;
+/// - the attacker, a Unit target or a unit its Cleave strikes (R4290000) in a split or shared damage
+///   chain (§4.4 steps 0b and 8b, R3554007), which R4032000 leaves unprojected;
 /// - the attacker's "When this attacks" (R2285000) or "After this attacks" (R2285001), or the Unit
 ///   target's "After this is attacked" (MD-C26);
 /// - a card acting for the attacker's side with "After one of your Units attacks" (R2199000), or for
@@ -2425,11 +2426,11 @@ fn card_label(state: &GameState, id: &str) -> String {
 ///   (Reflective Plating's base face, R1849003) while the attacker's side has a damage pool to soak it
 ///   (Stinkyscape+ #42 Force Projector, R3550004): the reflection spends the pool before the strike back
 ///   lands, which the forecast reads against the pool as the board shows it (R4221004; fuzz seed 9305);
-/// - the attacker or a Unit target with cards dormant beneath it in its pile (R1829000; its count is
-///   shown, R13) or holding one (Stinkyscape #135.1 Sack's Unit, R1850003): its leaving the field brings
-///   them in at the state check after the combat, where an aura among them may exile a combatant
-///   (Stinkyscape #115 Scornboi), and the forecast foretells nothing past the combat (R4221002; fuzz
-///   seeds 4897 and 6161);
+/// - the attacker, a Unit target or a unit its Cleave strikes (R4290000) with cards dormant beneath it
+///   in its pile (R1829000; its count is shown, R13) or holding one (Stinkyscape #135.1 Sack's Unit,
+///   R1850003): its leaving the field brings them in at the state check after the combat, where an aura
+///   among them may exile a combatant (Stinkyscape #115 Scornboi), and the forecast foretells nothing
+///   past the combat (R4221002; fuzz seeds 4897 and 6161);
 /// - a card acting for either side with a "would die" replacement (Classic #14 Shadowstep's Radiant
 ///   face, Stinkyscape #138 Pocket Peptides; §4.5 step 1, R4221000): it answers the death check after
 ///   the combat, a flicker or its own `then`, with no `trapFired` or `hookResolving` for `plain_combat`
@@ -2445,8 +2446,11 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
             None => return false,
         },
     };
+    // R4290000: a Cleave attack's other units are judged too, so they are skipped as its target is.
+    let struck: Vec<CardInstance> =
+        target.map_or_else(Vec::new, |unit| crate::subsystems::lethal::struck_by(state, attacker, unit));
     let chained = |card: &CardInstance| card.split_chain.is_some() || card.shared_chain.is_some();
-    if chained(attacker) || target.is_some_and(chained) {
+    if chained(attacker) || struck.iter().any(chained) {
         return false;
     }
     let script = crate::scripts::script_of(state, attacker);
@@ -2484,7 +2488,7 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
             .is_some_and(|slot| !crate::zones::beneath_at(state, slot).is_empty())
             || !crate::query::held_beneath(state, card).is_empty()
     };
-    if brings_in(attacker) || target.is_some_and(brings_in) {
+    if brings_in(attacker) || struck.iter().any(brings_in) {
         return false;
     }
     let pool_soaks_reflection = crate::query::damage_pool_of(state, attacker.controller, false) > 0;
@@ -3844,7 +3848,14 @@ impl InvariantMonitor {
         {
             self.forecast_judged += 1;
             let forecast = PlayedAttack::forecast(&kept.entry);
-            let played = PlayedAttack::read(events, state, &kept.entry.attacker_id, &kept.entry.target_id);
+            let splashed: Vec<String> = kept.entry.splash.iter().map(|hit| hit.instance_id.clone()).collect();
+            let played = PlayedAttack::read(
+                events,
+                state,
+                &kept.entry.attacker_id,
+                &kept.entry.target_id,
+                &splashed,
+            );
             if played != forecast {
                 found.push(format!(
                     "I18 forecast drift: {} attacking {} on turn {} was forecast {forecast} but did {played} \

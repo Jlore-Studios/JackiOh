@@ -983,7 +983,9 @@ pub fn beneficial_on_own_side(state: &GameState, event: &GameEvent) -> Option<St
 /// the target's strike back does to the attacker (§4.3); `kills` says the blow destroys its target (ends
 /// the game, for a hero); `survives` says the attacker outlasts the exchange; and `pops` says the blow
 /// breaks a Divine Shield. A unit's size is its Attack plus its Health, the measure the tutorial's coach
-/// ranks its picks by; a hero target's is 0.
+/// ranks its picks by; a hero target's is 0. R4290000: `splash` is each other unit a Cleave attack
+/// strikes (§4.4 step 10) and `overflow` the Trample excess an attack on a unit sends on to its hero
+/// (step 9), each left off the wire when there is none.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1002,6 +1004,44 @@ pub struct AttackForecast {
     pub pops: bool,
     pub attacker_size: i32,
     pub target_size: i32,
+    /// R4290000: the Cleave hit on each unit beside the target, in the combat's order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub splash: Vec<SplashHit>,
+    /// R4290000: what the attack's Trample excess deals the target's hero, every hit's added up.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub overflow: Option<TrampleOverflow>,
+}
+
+/// R4290000: one Cleave hit on a unit beside an attack's target (§4.4 step 10), in the target's terms:
+/// what it deals that unit, whether it destroys it and whether it breaks its Divine Shield.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SplashHit {
+    pub instance_id: String,
+    pub dealt: i32,
+    pub kills: bool,
+    pub pops: bool,
+}
+
+/// R4290000: what an attack on a unit passes on to that unit's hero through Trample (§4.4 step 9), each
+/// hit's excess its own instance through the hero's Armor and caps (R176), and whether it ends the game.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TrampleOverflow {
+    pub hero_id: String,
+    pub dealt: i32,
+    pub kills: bool,
 }
 
 /// The forecast of one seat's whole turn so far: every attack it may declare, and whether the attackers
@@ -1079,6 +1119,8 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
             pops: false,
             attacker_size,
             target_size: 0,
+            splash: Vec::new(),
+            overflow: None,
         };
     };
     let theirs = unit_view(state, defender);
@@ -1119,6 +1161,16 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         || (taken < mine.health
             && !has_keyword(&theirs.keywords, KeywordKind::Poisonous)
             && !exiles_on_damage(state, defender));
+    let (splash, overflow) = if falls {
+        // R176: an attacker that falls first strikes nothing, so its Cleave never runs.
+        (Vec::new(), None)
+    } else {
+        let attack = mine.attack + bonus.attack;
+        (
+            splash_of(state, attacker, defender, attack, poisons),
+            overflow_of(state, attacker, target),
+        )
+    };
     AttackForecast {
         attacker_id: String::new(),
         target_id: String::new(),
@@ -1129,7 +1181,58 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         pops: !falls && hit > 0 && is_shielded(state, defender),
         attacker_size,
         target_size: theirs.attack + theirs.health,
+        splash,
+        overflow,
     }
+}
+
+/// R4290000, §4.4 step 10: the Cleave hit of `attack` on each unit beside `defender`, read through the
+/// same projection as the blow before it (`lethal::struck_units`), so a damage pool the blow spent is
+/// spent (R4032000). Cleave is the attack's, not the blow's: it lands when a Divine Shield,
+/// Indestructible or the zero rule stops the blow (R63), and from a Ranged attacker (R783001); a GIGA
+/// beside the target takes it once (R3546001).
+fn splash_of(
+    state: &GameState,
+    attacker: &CardInstance,
+    defender: &CardInstance,
+    attack: i32,
+    poisons: bool,
+) -> Vec<SplashHit> {
+    let struck = crate::subsystems::lethal::struck_units(
+        state,
+        attacker,
+        defender,
+        attack,
+        &mut ProjectedPools::default(),
+    );
+    struck
+        .into_iter()
+        .filter(|hit| hit.unit.id != defender.id)
+        .map(|hit| {
+            let health = unit_view(state, &hit.unit).health;
+            SplashHit {
+                kills: hit.dealt > 0 && (poisons || exiles_on_damage(state, attacker) || hit.dealt >= health),
+                pops: attack > 0 && is_shielded(state, &hit.unit),
+                instance_id: hit.unit.id,
+                dealt: hit.dealt,
+            }
+        })
+        .collect()
+}
+
+/// R4290000, §4.4 step 9: what an attack on a unit tramples on to that unit's hero, R44's projection
+/// (each hit's excess its own instance through the hero's Armor and caps, R176), and whether it ends the
+/// game net of a Lifesteal strike back (`is_lethal`). None when nothing reaches the hero; a strike back
+/// never tramples (R1750000).
+fn overflow_of(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> Option<TrampleOverflow> {
+    let dealt = projected_damage(state, attacker, target);
+    (dealt > 0).then(|| TrampleOverflow {
+        hero_id: crate::damage::target_id(&DamageTarget::Hero {
+            player: crate::subsystems::lethal::defending_hero(target),
+        }),
+        dealt,
+        kills: is_lethal(state, attacker, target),
+    })
 }
 
 /// R1124, R4111000: whether `source`'s damage exiles the Unit it lands on (Meditative #72 The Banisher),

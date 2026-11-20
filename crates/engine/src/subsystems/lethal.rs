@@ -29,31 +29,69 @@ pub fn projected_hero_damage(state: &GameState, player: PlayerId, amount: i32, p
     crate::damage::hero_hit_amount(state, player, amount, pierce)
 }
 
-/// §4.4 step 9: what a Trample source's hit on a unit passes on to that unit's hero; steps 1 to 4 and
-/// the zero rule, as `damage::project_hit` reads them (a conversion and the unit's side's damage pool
-/// included, R4032000), can end the hit on the unit first. R176: every hit of the attack counts,
-/// Cleave's (step 10) included, as R63 makes Cleave the attack's and R44 counts "Trample excess from an
-/// attack".
-fn trample_excess(
+/// §4.4 steps 5 and 9: what a hit of `amount` from `source` deals `unit`, and what it passes on to that
+/// unit's hero; steps 1 to 4 and the zero rule, as `damage::project_hit` reads them (a conversion and the
+/// unit's side's damage pool included, R4032000), can end the hit on the unit first. Only a Trample
+/// source passes anything on. R176: every hit of the attack counts, Cleave's (step 10) included, as R63
+/// makes Cleave the attack's and R44 counts "Trample excess from an attack".
+fn hit_and_excess(
     state: &GameState,
     source: &CardInstance,
     unit: &CardInstance,
     amount: i32,
     pools: &mut ProjectedPools,
-) -> i32 {
+) -> (i32, i32) {
     let target = DamageTarget::Unit {
         instance: unit.clone(),
     };
     let after = project_hit(state, Some(source), &target, amount, pools);
     if after <= 0 || !has_keyword(&unit_view(state, source).keywords, KeywordKind::Trample) {
-        return 0;
+        return (after, 0);
     }
-    let health = unit_view(state, unit).health;
+    let health = unit_view(state, unit).health.max(0);
     if after <= health {
-        return 0;
+        return (after, 0);
     }
     // Step 5: only what lands beyond the unit's health becomes the step 9 instance (R63).
-    after - health.max(0)
+    (health, after - health)
+}
+
+/// One unit an attack strikes (`struck_units`): what its hit deals it, and what that hit's Trample
+/// excess deals its hero as its own instance (§4.4 step 9).
+pub(crate) struct StruckUnit {
+    pub unit: CardInstance,
+    pub dealt: i32,
+    pub onto_hero: i32,
+}
+
+/// R4290000: the units an attack of `attack` (its combat-only bonus included) on `defender` strikes, in
+/// `combat::strike`'s order, the blow first, then each Cleave hit (§4.4 step 10), each with what it
+/// deals and what its Trample excess deals the hero. The blow takes the lane's multiplier, a Cleave hit
+/// the bare attack. The hits spend the damage pools in that order (R4032000), as the combat does.
+pub(crate) fn struck_units(
+    state: &GameState,
+    attacker: &CardInstance,
+    defender: &CardInstance,
+    attack: i32,
+    pools: &mut ProjectedPools,
+) -> Vec<StruckUnit> {
+    let hit = attack * crate::combat::lane_multiplier_for(state, attacker, defender);
+    let on_hero = DamageTarget::Hero {
+        player: defender.controller,
+    };
+    struck_by(state, attacker, defender)
+        .into_iter()
+        .map(|unit| {
+            let amount = if unit.id == defender.id { hit } else { attack };
+            let (dealt, excess) = hit_and_excess(state, attacker, &unit, amount, pools);
+            let onto_hero = project_hit(state, Some(attacker), &on_hero, excess, pools);
+            StruckUnit {
+                unit,
+                dealt,
+                onto_hero,
+            }
+        })
+        .collect()
 }
 
 /// The damage a declared attack would deal to the defending hero (R44), assumed legal: §4.2 steps 1
@@ -101,17 +139,14 @@ pub(crate) fn projected_damage_with(
     {
         return 0;
     }
-    let hit = attack * crate::combat::lane_multiplier_for(state, attacker, defender);
     // Each hit is its own damage instance on the hero, so Armor and the cap apply to each (§4.4), in
     // `combat::strike`'s order: the blow and its excess, then each Cleave hit and its excess, then each
     // of the sweep's (R3554008, R4221003), so the pools soak the first of them (R4032000).
-    let mut total = 0;
-    for unit in struck_by(state, attacker, defender) {
-        let amount = if unit.id == defender.id { hit } else { attack };
-        let excess = trample_excess(state, attacker, &unit, amount, pools);
-        total += project_hit(state, Some(attacker), &on_hero, excess, pools);
-    }
-    total + swept_excess(state, attacker, Some(defender), attack, &on_hero, pools)
+    let struck: i32 = struck_units(state, attacker, defender, attack, pools)
+        .iter()
+        .map(|unit| unit.onto_hero)
+        .sum();
+    struck + swept_excess(state, attacker, Some(defender), attack, &on_hero, pools)
 }
 
 /// R3554008, R4221003: what a sweep's other hits (`combat::sweep`) pass on to the hero: every enemy
@@ -137,15 +172,16 @@ fn swept_excess(
         let Some(weight) = crate::combat::sweep_weight(state, attacker, unit) else {
             continue;
         };
-        let excess = trample_excess(state, attacker, unit, attack * weight, pools);
+        let (_, excess) = hit_and_excess(state, attacker, unit, attack * weight, pools);
         total += project_hit(state, Some(attacker), on_hero, excess, pools);
     }
     total
 }
 
 /// The units one attack on `defender` strikes: the defender, then, with Cleave, each unit adjacent to
-/// it on its own side (§4.4 step 10, §3.1), never one dormant under a Stack (R13).
-fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> Vec<CardInstance> {
+/// it on its own side (§4.4 step 10, §3.1), never one dormant under a Stack (R13) nor a Dormant one,
+/// which nothing reaches (§3.1, R1839000; the pipeline's `land` drops a hit on either, R4290000).
+pub(crate) fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> Vec<CardInstance> {
     if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
         return vec![defender.clone()];
     }
@@ -155,6 +191,7 @@ fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance
         if let Some(card) = crate::giga::occupant_at(state, slot)
             && !struck.iter().any(|met| met.id == card.id)
             && crate::zones::is_adjacent_card(state, defender, card)
+            && crate::zones::acts_on_field(state, card)
         {
             struck.push(card.clone());
         }

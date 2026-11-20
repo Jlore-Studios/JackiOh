@@ -6,9 +6,10 @@
 // Activate controls): `legal`, `selected`, `glow`, `condition` and `counted` for its own testid, its unit's
 // `card-` one and its switch's; the three of `legal`, `selected` and `glow` for its Activate controls
 // (`activate-<id>` and `activate-<id>-<ability>`); `outcomes` at its own testid; and the hovered attack's
-// markers, on the target and on the attacker only. If a card's tree reads anything else off a `Highlight`,
-// count it here, or a card would keep drawing what it drew.
+// markers, on the target, on the attacker and (R4290000) on a unit its Cleave strikes beside the target. If
+// a card's tree reads anything else off a `Highlight`, count it here, or a card would keep drawing what it drew.
 
+import { splashFor } from "./attackOutcome.ts";
 import { NO_HIGHLIGHT, testid, type Highlight } from "./contract.ts";
 
 /** What names a card to a `Highlight`: the testid its `Card` carries, and the id of the card in play it draws. */
@@ -56,5 +57,9 @@ export function sameHighlightAt(prev: Highlight | undefined, next: Highlight | u
       if (activateSlice(a[set], prefix) !== activateSlice(b[set], prefix)) return false;
     }
   }
-  return hoveredAt(a, testId) === hoveredAt(b, testId) && takenAt(a, testId) === takenAt(b, testId);
+  return (
+    hoveredAt(a, testId) === hoveredAt(b, testId) &&
+    takenAt(a, testId) === takenAt(b, testId) &&
+    splashFor(a, testId) === splashFor(b, testId)
+  );
 }

@@ -2,7 +2,8 @@
 //! from the board and held to the engine's own combat. The tutorial's coach names an attack by it and does
 //! no combat maths of its own (CLAUDE.md rule 7). Every case plays the forecast attack for real and reads
 //! what the reducer did through the testkit's `PlayedAttack::read`, the reading the fuzz's I18 shares
-//! (#4111): the damage events, the Divine Shield lost and who is left on the field.
+//! (#4111): the damage events, the Divine Shield lost and who is left on the field. R4290000 adds each
+//! Cleave hit beside the target and the Trample excess onto the target's hero.
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -12,14 +13,17 @@ use crate::rules::fixtures::burn_toxic::{
     PLAIN as BT_PLAIN, SHIELDED as BT_SHIELDED, VOLCANIC, add_burn_toxic_fixtures,
 };
 use crate::rules::fixtures::combat::{
-    armored, big_body, charger, first_striker, indestructible, lifestealer, plain, poisonous, rusher,
-    shielded, taunter, trampler, zero_attack,
+    armored, big_body, charger, cleaver, first_striker, indestructible, lifestealer, plain, poisonous,
+    rusher, shielded, taunter, trampler, zero_attack,
 };
 use crate::rules::fixtures::combat_judge::{
     banisher, combat_judge_game, register_combat_judge_fixtures, snare,
 };
 use crate::rules::fixtures::combat_reactions::{POOL, POOL_SIZE, register_e6_fixtures};
 use crate::rules::fixtures::damage_combat;
+use crate::rules::fixtures::giga::{
+    CLEAVER as GIGA_CLEAVER, GIGA_UNIT, PLAIN as GIGA_PLAIN, register_giga_fixtures,
+};
 use crate::rules::fixtures::harness::{act_ok, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
@@ -43,10 +47,14 @@ fn forecast_of(state: &GameState, attacker_id: &str, target_id: &str) -> Option<
         .find(|entry| entry.attacker_id == attacker_id && entry.target_id == target_id)
 }
 
-/// What the engine's combat did when `attacker_id` attacked `target_id`, as the forecast reports it.
+/// What the engine's combat did when `attacker_id` attacked `target_id`, as the forecast reports it: the
+/// units its splash names are read first, in its order (R4290000).
 fn play_out(state: &GameState, attacker_id: &str, target_id: &str) -> PlayedAttack {
+    let splashed: Vec<String> = forecast_of(state, attacker_id, target_id)
+        .map(|entry| entry.splash.into_iter().map(|hit| hit.instance_id).collect())
+        .unwrap_or_default();
     let after = act_ok(state, attack_of(attacker_id, target_id));
-    PlayedAttack::read(&after.events, &after.state, attacker_id, target_id)
+    PlayedAttack::read(&after.events, &after.state, attacker_id, target_id, &splashed)
 }
 
 fn grant(state: &mut GameState, id: &str, keyword: Keyword) {
@@ -642,4 +650,324 @@ mod r4221003_the_forecast_counts_a_sweep_s_trample_onto_the_hero {
         let forecast = forecast_played(&state, &fuse.id, "hero-p2");
         assert_eq!((forecast.dealt, forecast.kills), (2, false));
     }
+}
+
+/// `giga.rs`'s board (R3546001): a 3/8 Cleave Unit in p1's lane 3, facing a 2/6 GIGA across p2's
+/// lanes 1 and 2 and a 1/3 in p2's lane 3, each side with a library and its turn kept open. The ids of
+/// the cleaver, the GIGA and the 1/3.
+fn giga_board(seed: &str) -> (GameState, String, String, String) {
+    register_giga_fixtures();
+    let mut s = scenario(json!({
+        "seed": seed,
+        "active": "p1",
+        "p1": {
+            "field": [{ "def": GIGA_CLEAVER, "lane": 3 }],
+            "library": [GIGA_PLAIN, GIGA_PLAIN, GIGA_PLAIN, GIGA_PLAIN],
+        },
+        "p2": {
+            "field": [{ "def": GIGA_UNIT, "lane": 1 }, { "def": GIGA_PLAIN, "lane": 3 }],
+            "library": [GIGA_PLAIN, GIGA_PLAIN, GIGA_PLAIN, GIGA_PLAIN],
+        },
+    }));
+    for player in [P1, P2] {
+        s.state_mut().players[player].auto_end_turn = Some(false);
+    }
+    let striker = s.unit(P1, 3).expect("no cleaver in lane 3").id.clone();
+    let giga = s.unit(P2, 1).expect("no GIGA in lane 1").id.clone();
+    let plain_id = s.unit(P2, 3).expect("no 1/3 in lane 3").id.clone();
+    (s.state().clone(), striker, giga, plain_id)
+}
+
+/// The splash hit on `id` in `forecast`.
+fn splash_on<'a>(forecast: &'a AttackForecast, id: &str) -> &'a SplashHit {
+    forecast
+        .splash
+        .iter()
+        .find(|hit| hit.instance_id == id)
+        .unwrap_or_else(|| panic!("no splash on {id} in {:?}", forecast.splash))
+}
+
+mod r4290000_splash_and_overflow {
+    use super::*;
+
+    /// A 3/8 Cleave Unit in p1's lane 2, `target` in p2's lane 2 and `left` and `right` beside it.
+    fn cleave_board(
+        seed: &str,
+        target: &CardDef,
+        left: &CardDef,
+        right: &CardDef,
+    ) -> (GameState, String, String, String, String) {
+        let mut state = board(seed);
+        let striker = put(&mut state, &cleaver.id, slot(P1, Row::Units, 2), json!({}));
+        let target = put(&mut state, &target.id, slot(P2, Row::Units, 2), json!({}));
+        let left = put(&mut state, &left.id, slot(P2, Row::Units, 1), json!({}));
+        let right = put(&mut state, &right.id, slot(P2, Row::Units, 3), json!({}));
+        (state, striker.id, target.id, left.id, right.id)
+    }
+
+    #[test]
+    fn r4290000_a_cleave_names_each_neighbour_s_splash() {
+        let (state, striker, target, left, right) =
+            cleave_board("r4290000-splash", &plain, &shielded, &plain);
+        let forecast = forecast_played(&state, &striker, &target);
+        assert_eq!((forecast.dealt, forecast.kills), (3, true));
+        assert_eq!(forecast.splash.len(), 2, "{:?}", forecast.splash);
+        let shield = splash_on(&forecast, &left);
+        assert_eq!(
+            (shield.dealt, shield.kills, shield.pops),
+            (0, false, true),
+            "the Divine Shield takes the whole hit and breaks"
+        );
+        let body = splash_on(&forecast, &right);
+        assert_eq!((body.dealt, body.kills, body.pops), (3, true, false));
+        assert_eq!(forecast.overflow, None, "no Trample, no overflow");
+    }
+
+    #[test]
+    fn r4290000_the_splash_lands_when_the_blow_is_stopped() {
+        for (index, stopper) in [&shielded, &indestructible, &armored].into_iter().enumerate() {
+            let (state, striker, target, left, right) =
+                cleave_board(&format!("r4290000-stopped-{index}"), stopper, &plain, &plain);
+            let forecast = forecast_played(&state, &striker, &target);
+            assert_eq!(forecast.dealt, 0, "{} stops the blow", stopper.id);
+            for id in [&left, &right] {
+                let hit = splash_on(&forecast, id);
+                assert_eq!(
+                    (hit.dealt, hit.kills),
+                    (3, true),
+                    "Cleave is the attack's, not the blow's (R63): beside {}",
+                    stopper.id
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r4290000_a_giga_beside_the_target_takes_the_splash_once() {
+        let (state, striker, giga, plain_id) = giga_board("r4290000-giga");
+        let forecast = forecast_played(&state, &striker, &plain_id);
+        assert_eq!(forecast.splash.len(), 1, "{:?}", forecast.splash);
+        let hit = splash_on(&forecast, &giga);
+        assert_eq!((hit.dealt, hit.kills), (3, false), "a 2/6 GIGA takes 3 once");
+
+        // Beside the GIGA's two lanes, the 1/3 takes the same 3.
+        let forecast = forecast_played(&state, &striker, &giga);
+        assert_eq!(forecast.splash.len(), 1, "{:?}", forecast.splash);
+        let hit = splash_on(&forecast, &plain_id);
+        assert_eq!((hit.dealt, hit.kills), (3, true));
+    }
+
+    /// Fuzz seeds 129, 201, 267, 472, 483, 559, 777 and 884: nothing reaches a Dormant card (§3.1,
+    /// R1839000), so a Cleave beside one strikes it nothing and its Trample sends nothing on from it.
+    #[test]
+    fn r4290000_a_dormant_unit_beside_the_target_takes_no_splash() {
+        let (mut state, striker, target, left, right) =
+            cleave_board("r4290000-dormant", &plain, &plain, &plain);
+        grant(&mut state, &striker, Keyword::Trample);
+        let dormant = find_instance_mut(&mut state, &left).expect("on the field");
+        dormant.slumber = Some(Slumber { turns: None });
+        dormant.damage = 2; // 3/1: struck, it would pass 2 on to the hero
+        let forecast = forecast_played(&state, &striker, &target);
+        assert_eq!(
+            forecast.splash.iter().map(|hit| hit.instance_id.as_str()).collect::<Vec<_>>(),
+            vec![right.as_str()]
+        );
+        // The blow's 3 and the right's 3 each end on a 3/3: no excess.
+        assert_eq!(forecast.overflow, None);
+    }
+
+    #[test]
+    fn r4290000_a_ranged_cleaver_splashes_and_takes_nothing_back() {
+        let (mut state, striker, target, left, right) =
+            cleave_board("r4290000-ranged", &big_body, &plain, &plain);
+        grant(&mut state, &striker, Keyword::Ranged);
+        let forecast = forecast_played(&state, &striker, &target);
+        assert_eq!((forecast.taken, forecast.survives), (0, true));
+        for id in [&left, &right] {
+            assert_eq!(
+                splash_on(&forecast, id).dealt,
+                3,
+                "a Ranged attacker's Cleave splashes as ever (R783001)"
+            );
+        }
+    }
+
+    #[test]
+    fn r4290000_a_cleaver_a_first_strike_defender_destroys_first_splashes_nothing() {
+        let (mut state, striker, target, _, _) =
+            cleave_board("r4290000-first-strike", &big_body, &plain, &plain);
+        find_instance_mut(&mut state, &striker)
+            .expect("on the field")
+            .damage = 4; // 3/4 left
+        grant(&mut state, &target, Keyword::FirstStrike);
+        let forecast = forecast_played(&state, &striker, &target);
+        assert_eq!((forecast.dealt, forecast.survives), (0, false));
+        assert!(
+            forecast.splash.is_empty(),
+            "an attacker that falls first never cleaves (R176): {:?}",
+            forecast.splash
+        );
+        assert_eq!(forecast.overflow, None);
+    }
+
+    #[test]
+    fn r4290000_the_splash_spends_the_pool_after_the_blow() {
+        let mut state = pool_board("r4290000-pool");
+        let striker = put(&mut state, &cleaver.id, slot(P1, Row::Units, 2), json!({}));
+        let target = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
+        put_pool(&mut state, P2);
+        // The pool's 5 soaks the blow's 3 whole, then 2 of the first Cleave hit's 3 (R4032000).
+        let forecast = forecast_played(&state, &striker.id, &target.id);
+        assert_eq!(forecast.dealt, 0);
+        let mut dealt: Vec<i32> = forecast.splash.iter().map(|hit| hit.dealt).collect();
+        dealt.sort_unstable();
+        assert_eq!(dealt, vec![3 - (POOL_SIZE - 3), 3]);
+    }
+
+    #[test]
+    fn r4290000_a_trample_overflow_passes_the_hero_s_armor_and_cap() {
+        let mut state = board("r4290000-overflow");
+        let striker = put(&mut state, &trampler.id, slot(P1, Row::Units, 2), json!({})); // 6/4
+        let wall = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({})); // 3/3
+        state.players[P2].hero.armor = 2;
+        // 6 on a 3-health unit: 3 goes on, less Armor 2.
+        let forecast = forecast_played(&state, &striker.id, &wall.id);
+        assert_eq!(forecast.dealt, 3);
+        assert_eq!(
+            forecast.overflow,
+            Some(TrampleOverflow {
+                hero_id: "hero-p2".into(),
+                dealt: 1,
+                kills: false,
+            })
+        );
+        state.players[P2].hero.health = 1;
+        let forecast = forecast_played(&state, &striker.id, &wall.id);
+        assert!(
+            forecast.overflow.as_ref().is_some_and(|overflow| overflow.kills),
+            "{:?}",
+            forecast.overflow
+        );
+
+        // Anti-oneshot Armor caps the 9 a 12/8 tramples past a 3/3 as one instance.
+        let mut state = board("r4290000-overflow-cap");
+        let striker = put(
+            &mut state,
+            &trampler.id,
+            slot(P1, Row::Units, 2),
+            json!({ "radiant": true }),
+        );
+        let wall = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        put(&mut state, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
+        let forecast = forecast_played(&state, &striker.id, &wall.id);
+        let overflow = forecast.overflow.expect("the excess reaches the hero");
+        assert_eq!(overflow.dealt, jackioh_engine::config::ANTI_ONESHOT_CAP.base);
+        assert!(overflow.dealt < 12 - 3);
+    }
+
+    #[test]
+    fn r4290000_a_cleaving_trampler_s_overflow_is_each_hit_s_excess() {
+        let (mut state, striker, target, left, right) =
+            cleave_board("r4290000-cleave-trample", &plain, &plain, &plain);
+        grant(&mut state, &striker, Keyword::Trample);
+        for id in [&target, &left, &right] {
+            find_instance_mut(&mut state, id)
+                .expect("on the field")
+                .damage = 2; // 3/1
+        }
+        state.players[P2].hero.armor = 1;
+        let forecast = forecast_played(&state, &striker, &target);
+        assert_eq!(forecast.dealt, 1, "a Trample hit deals no more than the health");
+        for id in [&left, &right] {
+            assert_eq!(
+                (splash_on(&forecast, id).dealt, splash_on(&forecast, id).kills),
+                (1, true)
+            );
+        }
+        // Three instances of 2 past a 1-health unit, each less Armor 1 (R176).
+        assert_eq!(forecast.overflow.map(|overflow| overflow.dealt), Some(3));
+    }
+
+    #[test]
+    fn r4290000_no_strike_back_or_hero_target_reports_an_overflow() {
+        let mut state = board("r4290000-no-overflow");
+        let striker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({})); // 3/3
+        let stomper = put(&mut state, &trampler.id, slot(P2, Row::Units, 1), json!({})); // 6/4
+        // A strike back never tramples (R1750000), however far past the attacker's health it goes.
+        let forecast = forecast_played(&state, &striker.id, &stomper.id);
+        assert_eq!((forecast.taken, &forecast.overflow), (6, &None));
+
+        let mut state = board("r4290000-hero-target");
+        let striker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({}));
+        // A hero target's `dealt` is the whole of what reaches it.
+        let forecast = forecast_played(&state, &striker.id, "hero-p2");
+        assert_eq!((forecast.dealt, &forecast.overflow), (6, &None));
+
+        // A plain entry's wire is what it was before the fields came.
+        let wire = serde_json::to_value(&forecast).expect("a forecast serializes");
+        assert!(wire.get("splash").is_none() && wire.get("overflow").is_none(), "{wire}");
+    }
+}
+
+/// The forecast of every attack a Cleave Unit may declare on a random board of three, Trample on half
+/// of them, held to what the reducer does when it is played: the splash on each neighbour and the
+/// overflow onto the hero included (R4290000).
+#[test]
+fn r4290000_every_cleave_and_trample_forecast_is_what_the_engine_s_combat_does() {
+    const CASES: usize = 200;
+    let mut checked = 0;
+    let mut splashed = 0;
+    let mut popped = 0;
+    let mut overflowed = 0;
+    for index in 0..CASES {
+        let seed = format!("r4290000-property-{index}");
+        let mut rng = Rng::new(&seed, 0);
+        let mut state = board(&seed);
+        let bodies = bodies();
+        let striker = put(
+            &mut state,
+            &cleaver.id,
+            slot(P1, Row::Units, 2),
+            json!({ "radiant": rng.chance(0.4) }),
+        );
+        dress(&mut state, &striker.id, &mut rng);
+        if index % 2 == 0 {
+            grant(&mut state, &striker.id, Keyword::Trample);
+        }
+        for lane in 1..=3 {
+            let def = rng.pick(&bodies).cloned().unwrap_or_else(|| plain.clone());
+            let unit = put(
+                &mut state,
+                &def.id,
+                slot(P2, Row::Units, lane),
+                json!({ "radiant": rng.chance(0.4) }),
+            );
+            dress(&mut state, &unit.id, &mut rng);
+        }
+        state.players[P2].hero.health = 1 + rng.int(8);
+        state.players[P2].hero.armor = rng.int(3);
+
+        for forecast in combat_forecast(&state, P1).attacks {
+            let target = &forecast.target_id;
+            assert_eq!(
+                PlayedAttack::forecast(&forecast),
+                play_out(&state, &forecast.attacker_id, target),
+                "{seed}: {} on {target}: attacker {:?}",
+                forecast.attacker_id,
+                unit_view(&state, &live(&state, &striker.id)),
+            );
+            checked += 1;
+            splashed += forecast.splash.iter().filter(|hit| hit.dealt > 0).count();
+            popped += forecast.splash.iter().filter(|hit| hit.pops).count();
+            overflowed += usize::from(forecast.overflow.is_some());
+        }
+    }
+    // The cases reach every branch the new fields have, or the comparison above proves little.
+    assert!(checked > CASES, "checked {checked} attacks");
+    assert!(
+        splashed > 20 && popped > 3 && overflowed > 5,
+        "splashed {splashed}, popped {popped}, overflowed {overflowed}"
+    );
 }
