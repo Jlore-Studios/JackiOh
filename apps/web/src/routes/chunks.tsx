@@ -9,6 +9,7 @@ import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
 import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 import { loadSceneData } from "../cards/art/sceneLoader.ts";
+import { savingData } from "../net/saveData.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
@@ -129,13 +130,6 @@ export function chunkAt(path: string): RouteChunkName | null {
     if (paths[name] === pathname) return name;
   }
   return null;
-}
-
-/** Chromium's Network Information field, absent from TypeScript's DOM types. */
-type SaveDataNavigator = Navigator & { connection?: { saveData?: boolean } };
-
-function savingData(): boolean {
-  return (navigator as SaveDataNavigator).connection?.saveData === true;
 }
 
 /** Each chunk once per page load. */
