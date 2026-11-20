@@ -13616,6 +13616,13 @@
     "4246": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T01:58:30Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Rule line 2 (The AI: its decisions or its search) decides it: the flip changes the opponent's-reply attack ranking in crates/ai/src, and the issue self-rates hard by the AI convention."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
