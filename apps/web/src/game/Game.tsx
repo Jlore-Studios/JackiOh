@@ -123,7 +123,7 @@ function sameOutcomes(a: Highlight["outcomes"], b: Highlight["outcomes"]): boole
 function sameHoveredAttack(a: HoveredAttack | undefined, b: HoveredAttack | undefined): boolean {
   if (a === b) return true;
   if (a === undefined || b === undefined) return false;
-  return a.attacker === b.attacker && a.target === b.target && a.strikesBack === b.strikesBack;
+  return a.attacker === b.attacker && a.target === b.target && a.strikesBack === b.strikesBack && a.overflowOnto === b.overflowOnto;
 }
 
 /**
