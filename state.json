@@ -14477,7 +14477,7 @@
     "what": "plan #4284 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-20T01:22:11Z",
+    "at": "2026-11-20T01:28:32Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15183,7 +15183,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T01:22:11Z",
+  "loop_tick": "2026-11-20T01:28:32Z",
   "machine_disk": {
     "issue": null,
     "reading": {
