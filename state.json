@@ -15892,8 +15892,14 @@
     "what": "plan #4310 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T11:40:49Z",
-    "notes": [],
+    "at": "2026-11-20T11:47:22Z",
+    "notes": [
+      "delivered review #4303 on claude-8 (run 44728541565): reviewed",
+      "started plan #4310 on claude-4 (run 44730627853)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "#4310: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16598,7 +16604,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T11:40:49Z",
+  "loop_tick": "2026-11-20T11:47:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
