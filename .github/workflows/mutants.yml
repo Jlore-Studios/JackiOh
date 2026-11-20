@@ -8,7 +8,9 @@
 #
 # The `report` job then holds each area's score to its line of .github/mutants-floor.txt, beside
 # coverage's floor (#3519): a run that scores an area under its floor fails, naming the area, and
-# the floor file's header says how it is raised. A pull request's twenty mutants are a sample, not
+# the floor file's header says how it is raised. A scheduled run then files the week's sorting as an
+# issue of its own, `Patch: sort week <k>'s mutation survivors`, with the table, every survivor and
+# each area job that measured nothing, handed to the night bot (#4038). A pull request's twenty mutants are a sample, not
 # a score, so its run checks the floor's lines and holds no score to them. The workflow stays
 # outside super.yml: production waits on no five-hour weekly job.
 #
@@ -223,10 +225,15 @@ jobs:
 
   report:
     name: report
-    needs: [rust, web]
+    needs: [plan, rust, web]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The week's issue (below): its jobs read, the issue filed and handed over.
+    permissions:
+      contents: read
+      actions: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -275,3 +282,84 @@ jobs:
             : >"$scores"
           fi
           sh scripts/mutants.sh floor "$scores"
+      # A scheduled week's survivors become an issue of their own (#4038), one a week: the table, the jobs
+      # that measured nothing (a failure, the step's five hours, a lost runner), every survivor, and what
+      # the sort owes, handed to the night bot (.harness/config.json's bot_login) the way ci-duration.yml
+      # hands it a slow job: assigned and queued with bot:build. A week with nothing to sort files nothing;
+      # a dispatch or a pull request never does. A write by this job's token starts no other workflow, so
+      # the label queues it directly (the planner reads its queue from the labels).
+      - name: the week's issue
+        if: always() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          SHARDS: ${{ needs.plan.outputs.shards }}
+          BOT_LOGIN: jgoetzmann-bot
+          # An issue body holds 65,536 characters; the survivors' lists are cut to fit under it.
+          SURVIVORS_CHARS: "50000"
+        run: |
+          week=$(echo "$SHARDS" | tr -d '[] ')
+          title="Patch: sort week $week's mutation survivors"
+          scores=$RUNNER_TEMP/scores.md
+          # The area jobs that measured nothing: failed, out of the step's five hours, or a lost runner's.
+          failed=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate --jq '.jobs[]
+            | select(.name | test("^(cargo-mutants|stryker) \\("))
+            | select(.conclusion != "success" and .conclusion != "skipped")
+            | "- [\(.name)](\(.html_url)): \(.conclusion // .status)"')
+          if ! grep -q ' survived</summary>' "$scores" && [ -z "$failed" ]; then
+            echo "week $week: no survivor, and every area measured"
+            exit 0
+          fi
+          # The survivors' lists, cut at a line to fit, with any block the cut leaves open closed.
+          lists=$RUNNER_TEMP/lists.md
+          grep -v '^|' "$scores" | sed 's/\x1b\[[0-9;]*m//g' | awk -v most="$SURVIVORS_CHARS" '
+            { size += length($0) + 1; if (size > most) { cut = 1; exit } print }
+            END { if (cut) print "CUT" }' >"$lists"
+          if [ "$(tail -n 1 "$lists")" = CUT ]; then
+            sed -i '$d' "$lists"
+            [ $(($(grep -c '^```' "$lists") % 2)) -eq 0 ] || echo '```' >>"$lists"
+            [ "$(grep -c '<details>' "$lists")" = "$(grep -c '</details>' "$lists")" ] || echo '</details>' >>"$lists"
+            printf '\nThe rest is cut to fit an issue: every list is in [the run'"'"'s summary](%s).\n' "$RUN_URL" >>"$lists"
+          fi
+          body=$RUNNER_TEMP/issue.md
+          {
+            printf 'The [scheduled mutants run](%s) of week %s, on `main` at `%s`: one shard of every area (#4038).\n\n' \
+              "$RUN_URL" "$week" "$(echo "$SHA" | cut -c1-7)"
+            echo "| area | shard | killed | survived | timed out | unviable | left out | score |"
+            echo "|---|---|---:|---:|---:|---:|---:|---:|"
+            grep '^|' "$scores" || echo "| no area reported | | | | | | | |"
+            if [ -n "$failed" ]; then
+              printf '\n### Areas that measured nothing\n\n%s\n\n' "$failed"
+              printf 'Find why and fix it, so each measures next week. A lost runner leaves no log: run its shard (`sh scripts/mutants.sh <area> %s`) and watch its memory.\n' "$week"
+            fi
+            cat <<'TEXT'
+
+          ### What to do
+
+          One pull request for the week, `Closes` this issue:
+          1. Give every survivor below one of #3490's four verdicts: a test that kills it (citing the spec section or ruling it holds); an `exclude_re` entry in `.cargo/mutants.toml` or a Stryker disable on the line before, with the reason it is equivalent; dead code removed (CLAUDE.md rule 13); or an issue for a real bug. A survivor in a file changed since the run may be gone: say so.
+          2. Apply each killed mutant by hand and see its test fail. A narrowed run is quickest: cargo-mutants on a file (`-f`), Stryker on a file with only its test files.
+          3. Put a table in the pull request: each area's shard, killed, survived, excluded, its score before and after, and each survivor's verdict.
+          4. Name a line of `.github/mutants-floor.txt` to raise once an area's shards have settled (#3519): that file is a person's to change.
+
+          ### Survivors
+
+          TEXT
+            cat "$lists"
+            printf '\n---\n_Posted by `.github/workflows/mutants.yml`._\n'
+          } >"$body"
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" \
+            --json number,title --jq "map(select(.title == env.title)) | .[0].number // empty")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body-file "$body"
+            echo "commented on #$open"
+            exit 0
+          fi
+          url=$(gh issue create --repo "$REPO" --title "$title" --label architecture --label difficulty:hard --body-file "$body")
+          echo "opened $url"
+          gh issue edit "${url##*/}" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
+            && echo "handed ${url##*/} to @$BOT_LOGIN" \
+            || echo "::warning::could not hand ${url##*/} to @$BOT_LOGIN"

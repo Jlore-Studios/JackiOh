@@ -899,7 +899,15 @@ fn ci_scope_runs_a_crates_groups_for_every_file_it_includes_from_outside_it() {
                     .current_dir(&root)
                     .status()
                     .expect("git runs");
-                if ignored.success() {
+                // 0 is ignored, 1 is not. Anything else is git's error: no repository, as in
+                // cargo-mutants' copy of the tree (scripts/mutants.sh's `tools` area), which
+                // leaves out every gitignored file, so there a path the tree lacks is one.
+                let ignored = match ignored.code() {
+                    Some(0) => true,
+                    Some(1) => false,
+                    _ => !root.join(&path).exists(),
+                };
+                if ignored {
                     return;
                 }
                 found.push(path.clone());
