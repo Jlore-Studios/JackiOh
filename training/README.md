@@ -295,13 +295,19 @@ thread count.
   the log replays, decision times) and a tally at the end: the wins, draws and games without a
   result, and agent `a`'s win share with its 95% Wilson interval (`aShare`, `aLow`, `aHigh`); a
   paired series adds `deals` and `edge`, the mean over deals of `a`'s wins less `b`'s over the deal's
-  two games (−1 to 1), with its 95% interval (`edgeLow`, `edgeHigh`). The gate's report gives the
-  same intervals for its wins. A base that is a lane's name, or one followed by `:`, is refused:
-  those are the gates' own seeds (R850001).
-- `cargo jackioh arena --a … --b … --set improve-dev [--games N]` plays the improve lane's fixed dev
-  set, deals `improve-dev:1` to `:200`, paired, 400 games unless `--games` says more, never fewer
-  (R850001). The improve lane screens every change on it (`improve.md`, How you measure); the gate's
-  hold-out deals are never a screen's.
+  two games (−1 to 1), with its 95% interval (`edgeLow`, `edgeHigh`), then `decided` (the deals
+  whose edge is not 0, split into `wonBoth` and `lostBoth`) and `diverged` (the deals whose two
+  games end on different hashes). The gate's report gives the same intervals for its wins. A base
+  that is a lane's name, or one followed by `:`, is refused: those are the gates' own seeds
+  (R850001).
+- `cargo jackioh arena --a … --b … --set improve-dev [--games N] [--extend]` plays the improve
+  lane's fixed dev set, deals `improve-dev:1` to `:200`, paired, 400 games unless `--games` says
+  more, never fewer (R850001). A screen with fewer than `SCREEN_MIN_DECIDED` (20) decided deals
+  prints `inconclusive: true` and says nothing: it neither keeps nor drops the change (R4319000).
+  `--extend` plays on in 100-deal batches until `SCREEN_MIN_DECIDED` deals are decided or
+  `SCREEN_MAX_GAMES` (2,000) games are played, reading the edge only at the end. The improve lane
+  screens every change on it (`improve.md`, How you measure); the gate's hold-out deals are never
+  a screen's.
 - `cargo jackioh agent` is this build's AI speaking JSON lines on stdin and stdout (`info`,
   `decide`, `quit`; SURFACE §14.1). `bin:<path>` spawns `<path> agent`. The referee holds the true
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng

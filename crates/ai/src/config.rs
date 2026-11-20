@@ -672,7 +672,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         // place: in the graveyard, at `graveyard_playable` of the card's hand price (#2928).
         flashback: 0.0,
         // #1602: off. At 1.0 its screen read 201-199, edge 0.005 (-0.005 to 0.015), which keeps nothing
-        // (training/improve.md, A screen).
+        // (training/improve.md, A screen); inconclusive (R4319000): 1 decided of 200 (won 1, lost 0).
         windfury: 0.0,
     },
     spell_damage: 0.5,
@@ -715,7 +715,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     doomed_hand_discount: 0.5,
     // #2928: an untuned start, half a hand card: a card its owner may still play from the graveyard is
     // one more play, once, and only while its permission lasts. At 0.5 its screen read 202-198, edge 0.01
-    // (-0.021 to 0.041), against the control (training/improve.md, A screen).
+    // (-0.021 to 0.041), against the control (training/improve.md, A screen); inconclusive (R4319000):
+    // 10 decided of 200 (won 6, lost 4).
     graveyard_playable: 0.5,
     // R3951100: an untuned start, half, as R2380000's shares are: the next play is judged by the element
     // the seat ends on only if no other card of its comes first. Issue #3951's scenes in
@@ -723,9 +724,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     feng_shui_outlook: 0.5,
     // R3695001: half, as a turn's wait is for R2380000's shares: a card beneath an own Stack pile acts
     // again only once the cards above it leave. #1506 had it off (at 0.5 and 1.0 its screen read
-    // 200-200, edge 0.0, -0.024 to 0.024), so casting Drone Core X gained only its Shield Layer and
+    // 200-200, edge 0.0, -0.024 to 0.024; inconclusive (R4319000): 6 decided of 200 (won 3, lost 3)),
+    // so casting Drone Core X gained only its Shield Layer and
     // Hard on 7 crystals cast Genn or Greaser over it. At 0.5 the smoke gate read 19, 16 and 20 of 20,
-    // as at 0, its screen against 0 read 200-200, edge 0.0 (0.0 to 0.0), and the sweep of the four Drone
+    // as at 0, its screen against 0 read 200-200, edge 0.0 (0.0 to 0.0; inconclusive (R4319000): 0
+    // decided of 200), and the sweep of the four Drone
     // Cores cast X once in Hard's 3 affordable pass-2 turns, where 0 cast it in none (R3695001).
     dormant_share: 0.5,
     dormant_card: 0.0,
@@ -762,12 +765,12 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     standing_unit_priced_once: true,
     enemy_face_down: 2.0,
     // #1602: off. At 0.8 its screen read 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing
-    // (training/improve.md, A screen).
+    // (training/improve.md, A screen); inconclusive (R4319000): 5 decided of 200 (won 3, lost 2).
     enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
     // #1602: off. At 1.0 its screen read 199-201, edge -0.005 (-0.022 to 0.012), which keeps nothing
-    // (training/improve.md, A screen).
+    // (training/improve.md, A screen); inconclusive (R4319000): 3 decided of 200 (won 1, lost 2).
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
     // R3695000: a crystal Floated toward a Float-discount card still above the crystals counts as one
@@ -1025,15 +1028,17 @@ pub const AI_REPLY: AiReply = AiReply {
     chip_per_damage: 0.3,
     cleave_share: 1.0,
     // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), which keeps nothing
-    // (training/improve.md, A screen).
+    // (training/improve.md, A screen); inconclusive (R4319000): 3 decided of 200 (won 3, lost 0).
     open_lethal: false,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
-    // (training/improve.md, A screen); 0 turns it off.
+    // (training/improve.md, A screen); about 34 decided (17-17, R4319000); 0 turns it off.
     defense_switches: 4,
     // #1995: 0.5. #4286's screens (training/improve.md, A screen), each 400 games on improve-dev against
-    // the 0.5 control at ae977ece3e, kept no other value: 0 read 200-200, edge 0.0 (-0.02 to 0.02); 0.25
-    // read 200-200, edge 0.0 (-0.014 to 0.014). 0.75 and 1.0 were not screened: at either, the AI casts
+    // the 0.5 control at ae977ece3e, kept no other value: 0 read 200-200, edge 0.0 (-0.02 to 0.02),
+    // inconclusive (R4319000), 4 decided of 200 (won 2, lost 2); 0.25 read 200-200, edge 0.0
+    // (-0.014 to 0.014), inconclusive (R4319000), 2 decided of 200 (won 1, lost 1). 0.75 and 1.0
+    // were not screened: at either, the AI casts
     // Supply Drop before a Vanilla in meditative_plus.rs's R3696000 and R4159000 test.
     countdown_share: 0.5,
 };

@@ -105,6 +105,16 @@ const DUEL_PERCENTILE: f64 = 0.95;
 /// none: 200 deals, each played twice.
 pub(crate) const SCREEN_GAMES: i32 = 400;
 
+/// R4319000: a screen with fewer decided deals than this says nothing (`inconclusive: true`): at 20
+/// decided deals the keep rule keeps a change that wins 15 of them, three in four.
+pub(crate) const SCREEN_MIN_DECIDED: usize = 20;
+
+/// R4319000: the most games a screen with `--extend` plays: the promotion gate's own maximum.
+pub(crate) const SCREEN_MAX_GAMES: i32 = 2000;
+
+/// R4319000: the deals each `--extend` batch after the first plays (200 games).
+pub(crate) const SCREEN_EXTEND_DEALS: i32 = 100;
+
 #[derive(clap::Args)]
 pub struct Args {
     /// Agent a: self | random | bin:<path>. It sits p1 on odd games and p2 on even ones.
@@ -126,6 +136,10 @@ pub struct Args {
     /// R850000: play each deal twice with the seats swapped (an even number of games).
     #[arg(long)]
     pub paired: bool,
+    /// R4319000: on a screen (`--set`), keep playing in batches of `SCREEN_EXTEND_DEALS` deals
+    /// until `SCREEN_MIN_DECIDED` deals are decided or `SCREEN_MAX_GAMES` games are played.
+    #[arg(long)]
+    pub extend: bool,
     /// The directory the game records go to (`<dir>/<date>.jsonl`); default `$JACKIOH_TRAINING_OUT`,
     /// else stdout.
     #[arg(long)]
@@ -159,6 +173,9 @@ impl SeedSet {
 /// paired and plays at least `SCREEN_GAMES`; a base that names a training gate's seeds is refused
 /// (R850001), as is an odd paired count.
 fn series(args: &Args) -> anyhow::Result<(String, bool, i32)> {
+    if args.extend && args.set.is_none() {
+        bail!("arena: --extend screens a seed set, so it needs --set improve-dev");
+    }
     let (base, paired, games) = match (args.set, &args.seed) {
         (Some(set), _) => {
             let games = args.games.unwrap_or(SCREEN_GAMES);
@@ -1169,6 +1186,17 @@ pub(crate) struct Paired {
     pub edge: f64,
     pub edge_low: f64,
     pub edge_high: f64,
+    /// R4319000: the deals whose edge is not 0, split into both-won and both-lost.
+    pub decided: usize,
+    pub won_both: usize,
+    pub lost_both: usize,
+    /// R4319000: the deals whose two games end on different hashes, so the two agents played
+    /// differently at least once.
+    pub diverged: usize,
+    /// R4319000: on a screen (`--set`) with fewer than `SCREEN_MIN_DECIDED` decided deals, which
+    /// says nothing; absent otherwise, so passing screens and other series print no new key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inconclusive: Option<bool>,
 }
 
 /// The 95% Wilson score interval of `wins` in `games`, the engine's (R1994000), which the game
@@ -1218,7 +1246,42 @@ pub(crate) fn paired_interval(edges: &[f64]) -> (f64, f64, f64) {
 /// A tally's shares to three places, as the game figures round theirs (R1994000).
 pub(crate) use jackioh_engine::wire::stats::round_share;
 
-pub(crate) fn tally(a: &str, b: &str, outcomes: &[ArenaOutcome], paired: bool) -> Tally {
+/// R4319000: how many of the deals' edges a screen decided, split into both-won and both-lost. The
+/// edges are exact halves, so a deal with a draw or a game without a result counts as decided when
+/// its edge is not 0.
+pub(crate) fn decided_of(edges: &[f64]) -> (usize, usize, usize) {
+    let mut decided = 0;
+    let mut won_both = 0;
+    let mut lost_both = 0;
+    for edge in edges {
+        if *edge != 0.0 {
+            decided += 1;
+        }
+        if *edge == 1.0 {
+            won_both += 1;
+        } else if *edge == -1.0 {
+            lost_both += 1;
+        }
+    }
+    (decided, won_both, lost_both)
+}
+
+/// R4319000: how many deals' two games end on different hashes. A trailing lone game (tests only;
+/// `series()` forces even paired counts) never diverges.
+pub(crate) fn diverged_of(outcomes: &[ArenaOutcome]) -> usize {
+    outcomes
+        .chunks(2)
+        .filter(|deal| deal.len() == 2 && deal[0].hash != deal[1].hash)
+        .count()
+}
+
+/// R4319000: whether `--extend` stops with this many decided deals after this many games: at the
+/// floor, or at the cap. The stop looks at how many deals were decided, never which way they went.
+pub(crate) fn screen_done(decided: usize, games: i32) -> bool {
+    decided >= SCREEN_MIN_DECIDED || games >= SCREEN_MAX_GAMES
+}
+
+pub(crate) fn tally(a: &str, b: &str, outcomes: &[ArenaOutcome], paired: bool, screen: bool) -> Tally {
     let games = outcomes.len();
     let a_wins = outcomes.iter().filter(|outcome| outcome.a_won()).count();
     let (low, high) = wilson_interval(a_wins, games);
@@ -1247,11 +1310,17 @@ pub(crate) fn tally(a: &str, b: &str, outcomes: &[ArenaOutcome], paired: bool) -
                 .collect();
             let edges = deal_edges(&results);
             let (edge, edge_low, edge_high) = paired_interval(&edges);
+            let (decided, won_both, lost_both) = decided_of(&edges);
             Paired {
                 deals: edges.len(),
                 edge: round_share(edge),
                 edge_low: round_share(edge_low),
                 edge_high: round_share(edge_high),
+                decided,
+                won_both,
+                lost_both,
+                diverged: diverged_of(outcomes),
+                inconclusive: (screen && decided < SCREEN_MIN_DECIDED).then_some(true),
             }
         }),
     }
@@ -1270,10 +1339,43 @@ pub(crate) fn records_of(outcomes: &[ArenaOutcome]) -> anyhow::Result<Vec<GameRe
 pub fn run(args: Args) -> anyhow::Result<()> {
     jackioh_cards::register_all();
     let (base, paired, games) = series(&args)?;
+    let screen = args.set.is_some();
     let a = entrant_at(&args.a, args.a_skill)?;
     let b = entrant_at(&args.b, args.b_skill)?;
-    let games = setups(&a, &b, games, paired, |n| format!("{base}:{n}"))?;
-    let outcomes = play_games(&games)?;
+    // R4319000: `--extend` plays a screen in batches after the first, in deal order, until
+    // `SCREEN_MIN_DECIDED` deals are decided or `SCREEN_MAX_GAMES` games are played. `setups`
+    // hands the seed closure the deal's number when paired (which a screen always is), so the
+    // batch's deals continue where the last batch's left off; the edge is read only at the end.
+    let mut outcomes: Vec<ArenaOutcome> = Vec::new();
+    let mut games_done = 0i32;
+    let mut deals_done = 0i32;
+    loop {
+        let batch_games = if games_done == 0 {
+            games
+        } else {
+            (SCREEN_MAX_GAMES - games_done).min(SCREEN_EXTEND_DEALS * 2)
+        };
+        let mut batch = setups(&a, &b, batch_games, paired, |d| {
+            format!("{base}:{}", deals_done + d)
+        })?;
+        for game in &mut batch {
+            game.n += games_done;
+        }
+        outcomes.extend(play_games(&batch)?);
+        games_done += batch_games;
+        deals_done += batch_games / 2;
+        if !(args.extend && screen) {
+            break;
+        }
+        let results: Vec<(Option<GameResult>, PlayerId)> = outcomes
+            .iter()
+            .map(|outcome| (outcome.result, outcome.game.a_seat))
+            .collect();
+        let (decided, _, _) = decided_of(&deal_edges(&results));
+        if screen_done(decided, games_done) {
+            break;
+        }
+    }
     let records = records_of(&outcomes)?;
 
     let path = records_path(args.out.as_deref());
@@ -1281,7 +1383,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     for outcome in &outcomes {
         lines.push(duel_line(outcome, replays(outcome)?)?);
     }
-    let totals = serde_json::to_string(&tally(&a.label, &b.label, &outcomes, paired))?;
+    let totals = serde_json::to_string(&tally(&a.label, &b.label, &outcomes, paired, screen))?;
 
     match &path {
         Some(path) => {
@@ -1481,16 +1583,24 @@ mod tests {
         assert_eq!(outcomes[0].hash, outcomes[1].hash);
         assert_eq!(outcomes[0].log, outcomes[1].log);
         assert!(outcomes[0].result.is_some());
-        let totals = tally("self", "self", &outcomes, true);
+        let totals = tally("self", "self", &outcomes, true, false);
         assert_eq!(
             totals.paired,
             Some(Paired {
                 deals: 1,
                 edge: 0.0,
                 edge_low: -1.0,
-                edge_high: 1.0
+                edge_high: 1.0,
+                decided: 0,
+                won_both: 0,
+                lost_both: 0,
+                diverged: 0,
+                inconclusive: None,
             })
         );
+        let paired = totals.paired.as_ref().unwrap();
+        assert_eq!(paired.decided, 0);
+        assert_eq!(paired.diverged, 0);
     }
 
     #[test]
@@ -1529,16 +1639,24 @@ mod tests {
         assert_eq!(rounded(paired_interval(&edges)), (0.1, 0.003, 0.197));
 
         // An unpaired tally prints no edge; a paired one ends with it.
-        let unpaired = serde_json::to_string(&tally("self", "self", &[], false)).unwrap();
+        let unpaired = serde_json::to_string(&tally("self", "self", &[], false, false)).unwrap();
         assert!(!unpaired.contains("\"deals\""), "{unpaired}");
-        let paired = serde_json::to_string(&tally("self", "self", &[], true)).unwrap();
+        let paired = serde_json::to_string(&tally("self", "self", &[], true, false)).unwrap();
         assert!(
-            paired.ends_with(r#""deals":0,"edge":0.0,"edgeLow":-1.0,"edgeHigh":1.0}"#),
+            paired.ends_with(
+                r#""deals":0,"edge":0.0,"edgeLow":-1.0,"edgeHigh":1.0,"decided":0,"wonBoth":0,"lostBoth":0,"diverged":0}"#
+            ),
             "{paired}"
         );
     }
 
-    fn screen(seed: Option<&str>, set: Option<SeedSet>, games: Option<i32>, paired: bool) -> Args {
+    fn screen(
+        seed: Option<&str>,
+        set: Option<SeedSet>,
+        games: Option<i32>,
+        paired: bool,
+        extend: bool,
+    ) -> Args {
         Args {
             a: AgentSpec::SelfAi,
             b: AgentSpec::Random,
@@ -1546,6 +1664,7 @@ mod tests {
             seed: seed.map(str::to_string),
             set,
             paired,
+            extend,
             out: None,
             a_skill: AI_SKILL_MAX,
             b_skill: AI_SKILL_MAX,
@@ -1555,35 +1674,35 @@ mod tests {
     #[test]
     fn r850001_screens_play_the_dev_set_and_never_a_gates_seeds() {
         assert_eq!(
-            series(&screen(None, Some(SeedSet::ImproveDev), None, false)).unwrap(),
+            series(&screen(None, Some(SeedSet::ImproveDev), None, false, false)).unwrap(),
             ("improve-dev".to_string(), true, SCREEN_GAMES)
         );
         assert_eq!(SCREEN_GAMES, 400);
         assert_eq!(
-            series(&screen(None, Some(SeedSet::ImproveDev), Some(800), false)).unwrap(),
+            series(&screen(None, Some(SeedSet::ImproveDev), Some(800), false, false)).unwrap(),
             ("improve-dev".to_string(), true, 800)
         );
         // A screen on the dev set plays at least 400 games.
-        assert!(series(&screen(None, Some(SeedSet::ImproveDev), Some(398), false)).is_err());
+        assert!(series(&screen(None, Some(SeedSet::ImproveDev), Some(398), false, false)).is_err());
         assert_eq!(
-            series(&screen(Some("improve-try-3"), None, Some(60), false)).unwrap(),
+            series(&screen(Some("improve-try-3"), None, Some(60), false, false)).unwrap(),
             ("improve-try-3".to_string(), false, 60)
         );
         assert_eq!(
-            series(&screen(Some("improve-try-3"), None, Some(60), true)).unwrap(),
+            series(&screen(Some("improve-try-3"), None, Some(60), true, false)).unwrap(),
             ("improve-try-3".to_string(), true, 60)
         );
         // A gate's own seeds, the promotion's hold-out deals, are no screen's.
         for gate in ["improve", "improve:abc", "unban:abc:7", "unban"] {
-            let refused = series(&screen(Some(gate), None, Some(400), true)).unwrap_err();
+            let refused = series(&screen(Some(gate), None, Some(400), true, false)).unwrap_err();
             assert!(refused.to_string().contains("R850001"), "{gate}: {refused}");
         }
         // A base needs its games, a paired series an even count, and every series a game.
-        assert!(series(&screen(Some("improve-try-3"), None, None, false)).is_err());
-        assert!(series(&screen(Some("improve-try-3"), None, Some(5), true)).is_err());
-        assert!(series(&screen(None, Some(SeedSet::ImproveDev), Some(401), false)).is_err());
-        assert!(series(&screen(Some("improve-try-3"), None, Some(0), false)).is_err());
-        assert!(series(&screen(None, None, Some(400), false)).is_err());
+        assert!(series(&screen(Some("improve-try-3"), None, None, false, false)).is_err());
+        assert!(series(&screen(Some("improve-try-3"), None, Some(5), true, false)).is_err());
+        assert!(series(&screen(None, Some(SeedSet::ImproveDev), Some(401), false, false)).is_err());
+        assert!(series(&screen(Some("improve-try-3"), None, Some(0), false, false)).is_err());
+        assert!(series(&screen(None, None, Some(400), false, false)).is_err());
         for own in ["improve-dev", "improve-try-3", "unban-try-1", "improvement:1"] {
             assert!(!crate::promote::is_gate_seed_base(own), "{own}");
         }
@@ -1595,6 +1714,137 @@ mod tests {
                 !seed.starts_with("improve:") && !seed.starts_with("unban:"),
                 "{seed}"
             );
+        }
+    }
+
+    #[test]
+    fn r4319000_extend_needs_a_seed_set() {
+        let refused = series(&screen(Some("improve-try-3"), None, Some(60), false, true)).unwrap_err();
+        assert!(refused.to_string().contains("--extend"), "{refused}");
+        // With a set it behaves as today.
+        assert_eq!(
+            series(&screen(None, Some(SeedSet::ImproveDev), None, false, true)).unwrap(),
+            ("improve-dev".to_string(), true, SCREEN_GAMES)
+        );
+    }
+
+    fn fake_outcome(result: Option<GameResult>, a_seat: PlayerId, hash: &str, n: i32) -> ArenaOutcome {
+        ArenaOutcome {
+            game: ArenaGame {
+                n,
+                seed: format!("r4319000:{n}"),
+                decks: (Vec::new(), Vec::new()),
+                seats: PerPlayer::new(AgentSpec::SelfAi, AgentSpec::Random),
+                skills: PerPlayer::new(AI_SKILL_MAX, AI_SKILL_MAX),
+                a_seat,
+                labels: ("self".to_string(), "random".to_string()),
+                paired: true,
+                turn_actions: None,
+                stop_unsettled: false,
+                self_budget: TEST_BUDGET,
+            },
+            result,
+            log: Vec::new(),
+            hash: hash.to_string(),
+            turns: 0,
+            rejected: Vec::new(),
+            thrown: Vec::new(),
+            fallbacks: PerPlayer::new(0, 0),
+            sim_panics: PerPlayer::new(0, 0),
+            first_sim_panic: None,
+            times: PerPlayer::new(Vec::new(), Vec::new()),
+        }
+    }
+
+    #[test]
+    fn r4319000_decided_won_lost_and_diverged_come_from_edges_and_hashes() {
+        let won = |seat: PlayerId| {
+            Some(GameResult {
+                winner: Winner::from(seat),
+                reason: GameOverReason::HeroDeath,
+            })
+        };
+        let draw = Some(GameResult {
+            winner: Winner::Draw,
+            reason: GameOverReason::TurnCap,
+        });
+        let outcomes = vec![
+            // Both won on the same hash: decided and wonBoth, not diverged.
+            fake_outcome(won(PlayerId::P1), PlayerId::P1, "same", 1),
+            fake_outcome(won(PlayerId::P2), PlayerId::P2, "same", 2),
+            // Split on different hashes: undecided, diverged.
+            fake_outcome(won(PlayerId::P1), PlayerId::P1, "split-a", 3),
+            fake_outcome(won(PlayerId::P1), PlayerId::P2, "split-b", 4),
+            // A draw plus a win: decided (edge 0.5) but neither both-won nor both-lost,
+            // diverged.
+            fake_outcome(draw, PlayerId::P1, "draw-a", 5),
+            fake_outcome(won(PlayerId::P2), PlayerId::P2, "draw-b", 6),
+            // An aborted game plus a loss: decided (edge -0.5), diverged.
+            fake_outcome(None, PlayerId::P1, "abort-a", 7),
+            fake_outcome(won(PlayerId::P1), PlayerId::P2, "abort-b", 8),
+            // Both lost on the same hash: decided and lostBoth, not diverged.
+            fake_outcome(won(PlayerId::P2), PlayerId::P1, "lost", 9),
+            fake_outcome(won(PlayerId::P1), PlayerId::P2, "lost", 10),
+        ];
+        let totals = tally("self", "random", &outcomes, true, true);
+        let paired = totals.paired.as_ref().unwrap();
+        assert_eq!(paired.deals, 5);
+        assert_eq!((paired.decided, paired.won_both, paired.lost_both), (4, 1, 1));
+        assert_eq!(paired.diverged, 3);
+        assert_eq!(paired.inconclusive, Some(true));
+    }
+
+    #[test]
+    fn r4319000_a_short_screen_calls_itself_inconclusive() {
+        let won = |seat: PlayerId| {
+            Some(GameResult {
+                winner: Winner::from(seat),
+                reason: GameOverReason::HeroDeath,
+            })
+        };
+        let both_won = |n: i32| {
+            vec![
+                fake_outcome(won(PlayerId::P1), PlayerId::P1, "h", n),
+                fake_outcome(won(PlayerId::P2), PlayerId::P2, "h", n + 1),
+            ]
+        };
+        let mut full: Vec<ArenaOutcome> = Vec::new();
+        for d in 0..20 {
+            full.extend(both_won(2 * d + 1));
+        }
+        // Nineteen decided deals say nothing.
+        let short = full[..38].to_vec();
+        let json = serde_json::to_string(&tally("self", "random", &short, true, true)).unwrap();
+        assert!(json.contains("\"inconclusive\":true"), "{json}");
+        // The twentieth clears it.
+        let json = serde_json::to_string(&tally("self", "random", &full, true, true)).unwrap();
+        assert!(!json.contains("inconclusive"), "{json}");
+        // A paired series that is not on a seed set calls itself nothing.
+        let json = serde_json::to_string(&tally("self", "random", &short, true, false)).unwrap();
+        assert!(!json.contains("inconclusive"), "{json}");
+    }
+
+    #[test]
+    fn r4319000_extend_stops_on_the_decided_count_alone() {
+        assert!(screen_done(SCREEN_MIN_DECIDED, SCREEN_GAMES));
+        assert!(!screen_done(SCREEN_MIN_DECIDED - 1, SCREEN_GAMES));
+        assert!(screen_done(0, SCREEN_MAX_GAMES));
+        assert!(!screen_done(0, SCREEN_MAX_GAMES - 2));
+        // Two 200-deal lists with the same decided deals but opposite winners: 19 decided in the
+        // first 100-deal batch, the 20th in the second.
+        let decided_at = [
+            3, 11, 23, 37, 41, 55, 59, 63, 71, 77, 80, 83, 89, 90, 93, 95, 96, 98, 99, 150,
+        ];
+        for sign in [1.0, -1.0] {
+            let mut edges = vec![0.0; 200];
+            for d in decided_at {
+                edges[d] = sign;
+            }
+            let (decided_first, _, _) = decided_of(&edges[..100]);
+            let (decided_both, _, _) = decided_of(&edges);
+            assert_eq!((decided_first, decided_both), (19, 20));
+            assert!(!screen_done(decided_first, 200));
+            assert!(screen_done(decided_both, 400));
         }
     }
 
