@@ -15114,17 +15114,8 @@
       ]
     },
     "4297": {
-      "action": "plan",
-      "asks": [
-        "c:7041408336"
-      ],
-      "build_next": {
-        "from_run": "44749929348",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-20T14:21:31Z",
-        "until": "2026-11-20T14:51:31Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T14:21:22Z",
         "difficulty": "medium",
@@ -15143,10 +15134,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": " frozen record `SECURITY_HEADERS` with exactly these four entries, each value copied character-for-character from the `/*` block of `apps/web/public/_headers`: `X-Content-Type-Options: nosniff`, `X-Frame-Options: \u2026\n- 2. Same file, `precompressedModule`: after the `Cache-Control` lines and before the `return`, call `withSecurityHeaders(headers)`. Leave the non-200 early return (`return stored`) exactly as it is, so a 304/404 from `ASSETS` keeps its identity.\n- 3. `apps/edge/src/index.ts`: import `withSecurityHeaders` from `./routing.ts` (extend the existing import list) and change the 404 branch to build the answer through it: create `const headers = new Headers(); withSecurityHeaders(headers); return new Response(\"Not found\", { status: 404, headers });`\u2026\n- 4. `apps/admin/worker/index.ts`: add an exported `SECURITY_HEADERS` record with the same four names and values as routing.ts (comment: `#4297`, kept equal to the site Worker's set; the test pins both to `apps/web/public/_headers`), and pass a copy as `headers` in `notFound()`'s `Response.json` init\u2026\n- 5. `apps/admin/public/_headers`, `/*` block: append `Strict-Transport-Security: max-age=31536000; includeSubDomains` after the `Permissions-Policy` line, copying the game file's value exactly.\n- 6. `apps/edge/src/routing.test.ts`, in the `#3183` describe (copy the existing `precompressedModule` test pattern): add `it(\"#4297 sets the static security headers on the served module\", ...)` asserting the four headers on a 200 answer, and assert `Content-Type` is still `application/wasm`, `Conten\u2026\n- 7. `apps/edge/src/config.test.ts`, after the `#3183 the module's cache rule` describe: add `describe(\"#4297 the Worker's security headers\", ...)` with one `it` asserting `Object.keys(SECURITY_HEADERS).sort()` is exactly the four names, and one `it` parsing `apps/web/public/_headers`' `/*` block (sa\u2026\n- 8. `apps/edge/src/index.test.ts`, `the Worker's routes`: extend the 404 test to assert the four header values on the answer, and extend the forwards test with `expect(answer.headers.get(\"X-Content-Type-Options\")).toBeNull()` and the same for `Strict-Transport-Security`, proving proxied answers gain\u2026\n- 9. `apps/admin/worker/index.test.ts`: in the 404 block, assert the four headers on `notFound()` answers; read `apps/web/public/_headers` (path: `join(dirname(fileURLToPath(import.meta.url)), \"../../web/public/_headers\")`, parsed with the `header()` line-scan style of `apps/admin/headers.test.ts`) a\u2026\n- 10. `apps/admin/headers.test.ts`: add `it(\"#4297 forces HTTPS for a year, like the game site\", ...)` asserting `header(filled, \"Strict-Transport-Security\")` is `max-age=31536000; includeSubDomains`, and assert it equals the game file's value read from `apps/web/public/_headers`.\n- ## Tests\n- - `apps/edge/src/routing.test.ts`, `#4297` module-header tests: four headers present with exact values; `Content-Type`/`Content-Encoding`/body byte-identical; 304/404 identity pass-through still `toBe(stored)`.\n- - `apps/edge/src/config.test.ts`, `#4297` drift test: key set exact; every value equals the game `_headers` `/*` block.\n- - `apps/edge/src/index.test.ts`, extended routes tests: site 404 carries the four headers; proxied `/api/*` answer gains none.\n- - `apps/admin/worker/index.test.ts`, extended 404 tests: JSON 404 carries the four headers with values pinned to the game `_headers` file; error shape (`not_found` code, message, 404) unchanged; forwarded answers gain none.\n- - `apps/admin/headers.test.ts`, `#4297` HSTS test: line present, value exact, equal to the game file's.\n- - Commands (from the repo root unless noted): `pnpm exec vitest run --project edge`; `pnpm --dir apps/admin test worker/index.test.ts headers.test.ts`; then `pnpm --dir apps/admin test build.test.ts` (two real Vite builds, slow, proves the edited `_headers` still fills cleanly); `pnpm --dir apps/ed\u2026\n- ## Done when\n- - [ ] `precompressedModule` answers carry the four headers with `application/wasm` + `br` intact.\n- - [ ] Both Workers' 404s carry the same four headers; error bodies/statuses unchanged.\n- - [ ] Dashboard `_headers` sets the year-long HSTS; its test pins the value to the game file's.\n- - [ ] A test pins the Workers' header set to the `_headers` file(s) so values cannot drift.\n- - [ ] Proxied `/api/*` answers (including R145's error) gain no header: covered by the pass-through assertions.\n- - [ ] Edge suite, the three admin test files, both typechecks, and eslint are green.\n- ## Risks\n- - `instantiateStreaming` needs `Content-Type: application/wasm` exactly: the change only adds headers, never alters type/encoding/body, and the tests assert all three stay byte-identical.\n- - CSP is deliberately not set on Worker answers: its `connect-src` is a per-build placeholder the edge cannot fill, and a hardcoded CSP would break hosts or drift; a CSP on a non-HTML answer buys nothing.\n- - `Permissions-Policy` is deliberately not set: the issue's acceptance set is exactly the four headers (nosniff + framing/referrer/transport), and the drift test asserts the exact key set.\n- - The admin Worker duplicates the four literals (it cannot import the edge package: separate deploy units); both copies are pinned to the same `_headers` file by tests, so a drift fails loudly in both suites.\n- - Non-200 answers from `ASSETS` through `precompressedModule` keep identity pass-through; only the site Worker's own synthesized 404 gains headers.\n- ## Open questions\n- None. Every choice above follows the issue text; the two exclusions (CSP, `Permissions-Policy`) are recorded under Risks with reasons.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4297 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4297/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-20T14:04:07Z",
       "owner_why": "it plans it",
@@ -15159,12 +15149,14 @@
       "provider": "muse",
       "queued_at": "2026-11-20T13:59:47Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44749929348",
+      "run_id": "pending:d53aaf9f-1795184598",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-20T14:04:07Z",
+      "started_at": "2026-11-20T14:23:37Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7041408336"
+      ]
     },
     "4298": {
       "action": "plan",
@@ -15924,9 +15916,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T14:23:04Z",
+    "at": "2026-11-20T14:23:37Z",
     "url": "",
-    "what": "build #4296 on muse"
+    "what": "build #4297 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T14:11:51Z",
