@@ -1051,6 +1051,12 @@
         "/harness build"
       ]
     },
+    "c:7052770814": {
+      "at": "2026-11-20T23:04:46Z",
+      "lines": [
+        "/harness build The open questions are settled in this comment: count every GameEvent; at the cap, drop the rest and return control (no draw); the AI does not plan around the cap."
+      ]
+    },
     "c:7052771733": {
       "at": "2026-11-20T23:04:43Z",
       "lines": [
