@@ -16430,6 +16430,8 @@
       "taken_asks": []
     },
     "4323": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T14:24:11Z",
@@ -16443,8 +16445,11 @@
         "trail": "- Status: implementation and all tests are written; admin app tests (30/30 in both files) and typecheck pass, `cargo fmt` is clean. Two Rust runs are still going in the background \u2014 the store contract suite and the API admin suite \u2014 plus clippy and `spec check` after them. I'll report the full result\u2026\n- Store contract suite is green: all 12 `dev_dashboard` tests pass, including the new `audit_pages_by_since_and_until` on **both** the fake (`memory`) and Postgres stores \u2014 so the two implementations agree, tie-break and in-window paging included.\n- Waiting on the API suite (`api::admin::`, which holds the new `audit_read_filters_by_since_and_until`), then clippy and `cargo jackioh spec check`.The API suite's test binary is actively compiling now (the earlier store run held the build lock). Waiting for its result, then clippy and spec check.St\u2026\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the dev dashboard's audit reads a time range\"} -->\n- ## What changed\n- `GET /api/admin/audit` accepts optional `since`/`until` query bounds (epoch milliseconds, inclusive on the row's `at`), composed with the existing `profile_id`/`route` filters and `before_id` paging. The dashboard's audit page exposes them as Since/Until date-time inputs next to the existing filter\u2026\n- - `crates/server/src/admin/store.rs`: `AdminActionFilter` gains `since`/`until`; pg `actions_page` bounds `at` with `to_timestamp($n::double precision / 1000.0)` (same conversion as `posts_standing`), fake filters on `row.at`. Order stays `(at desc, id desc)`; page size unchanged.\n- - `crates/server/src/api/admin.rs`: `get_audit` parses both bounds (blank means none, like `query_trimmed`), 400s `\"since must be a whole number\"`, `\"until must be a whole number\"`, and `\"since must not be after until\"`, matching the existing `before_id` style. Docs updated.\n- - `apps/admin`: `api.audit()` sends both params; `Audit.tsx` adds the two inputs, an applied window, and a `toMs` (`datetime-local` \u2192 epoch ms) helper; `testids.ts` gains `auditSince`/`auditUntil`.\n- - Spec: one added sentence each in `spec/14-economy.md` \u00a714.10 and `spec/rulings/R3074000.md`. No new ruling, no `spec/pending/` file, no `spec index` run.\n- ## Tests\n- New: `audit_pages_by_since_and_until` (store contract \u2014 middle/point/one-sided/empty windows, composition with `profile_id`/`route`/`before_id`, shared-`at` tie-break, in-window paging with no gaps/repeats), `audit_read_filters_by_since_and_until` (API \u2014 window reads, composed filters, in-window pa\u2026\n- Results, all observed: store contract `dev_dashboard` 12/12 on both `memory` and `postgres` harnesses (fake and Postgres agree); API `api::admin::` 18/18, re-run after the final edit; admin `api.test.ts` 30/30, `Dashboard.test.tsx` 30/30, admin `typecheck` clean; `cargo fmt --check` clean; `cargo c\u2026\n- ## Decisions the issue did not settle\n- - The API test seeds rows through the store with pinned `at` values rather than HTTP writes: three in-process writes share a millisecond, so a middle-window assertion off HTTP writes would be flaky. Rejected alternative: sleeping between writes.\n- - Dashboard tests compute expected params via `Date.parse` of the typed string, so they hold in any browser timezone; only the epoch-ms wire format is pinned, never the widget's zone.\n- - A `read` closure for the API test failed borrowck (a closure can't return a future borrowing its arg), so the `expect` calls are written out. Clippy's `collapsible_if` on the `since > until` guard became a let-chain.\n- ## Reviewer notes\n- The pg predicate binds `Option<i64>` to `$n::double precision` parameters, mirroring the existing `actions_append`/`posts_standing` `to_timestamp($n::double precision / 1000.0)` pattern. `before_id` remains the stable id-based paging cursor; the window only bounds `at`, so concurrent-write timestam\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4298 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4298/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4298,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T15:45:57Z",
         "from_run": "44753119038",
         "gates": [
           {
@@ -16503,8 +16508,15 @@
         "source": "build",
         "until": "2026-11-20T16:13:54Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-20T15:43:54Z",
+      "run_id": "pending:ee05030c-1795189527",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-20T15:45:57Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16604,9 +16616,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T15:33:06Z",
+    "at": "2026-11-20T15:45:57Z",
     "url": "",
-    "what": "plan #4319 on muse"
+    "what": "review #4323 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T15:28:26Z",
