@@ -36611,14 +36611,6 @@
         "provider": "muse",
         "run_id": "44677660112",
         "taken_asks": []
-      },
-      "2": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-20T04:56:31Z",
-        "provider": "muse",
-        "run_id": "44677715681",
-        "taken_asks": []
       }
     },
     "taken_asks": []
