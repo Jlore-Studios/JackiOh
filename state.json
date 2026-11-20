@@ -16243,6 +16243,13 @@
     "4319": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T15:41:26Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium: one tools module plus docs, comments and a ruling; none of the hard triggers hold (no engine rules, no AI decisions or search, comments-only in crates/ai so no cross-crate design, no migration, far under 40 files)"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
