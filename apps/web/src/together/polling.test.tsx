@@ -390,6 +390,87 @@ describe("R3214000 the social socket stands in for the polls", () => {
     expect(reads(server).social, "live again: no poll").toBe(before + 2);
   });
 
+  it("R3214000 a tab signed out under a mounted poll lets its socket go at the next tick, and opens none", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    const first = socket();
+    const before = reads(server).social;
+
+    window.localStorage.removeItem(E2E_SESSION_STORAGE_KEY);
+    await settle({ advance: SOCIAL_POLL_MS });
+    expect(first.closedWith, "the signed-out session's socket is replaced").toEqual({ code: 1000, reason: "session changed" });
+
+    await settle({ advance: 5 * SOCIAL_POLL_MS });
+    expect(sockets, "with no token none opens").toHaveLength(1);
+    expect(reads(server).social, "and no social read is sent").toBe(before);
+  });
+
+  it("R3214000 two screens that poll share one socket, which the last to unmount lets go", async () => {
+    serve();
+    const toast = render(<ChallengeToast />);
+    const together = render(<TogetherRoute />);
+    await settle({ advance: 0 });
+    expect(sockets, "the second poller opens no socket of its own").toHaveLength(1);
+    await goLive();
+
+    toast.unmount();
+    await settle({ advance: SOCIAL_POLL_MS });
+    expect(socket().closedWith, "one screen still polls: the socket stays").toBeNull();
+    together.unmount();
+    expect(socket().closedWith, "the last let it go").toEqual({ code: 1000, reason: "leaving" });
+    await settle({ advance: 5 * SOCIAL_POLL_MS });
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("R3214000 a poll's answer that comes after the socket turned live is dropped", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    expect(sockets).toHaveLength(1);
+    // The mount's read is in flight; the socket turns live with a challenge before it answers.
+    socket().open();
+    socket().deliver({ type: "social", incoming: [INCOMING], outgoing: [], unread: {} });
+    await settle({ advance: 0 });
+    expect(reads(server).social, "the mount's read was sent").toBe(1);
+    expect(screen.getByTestId(challengeToastTestid.toast), "its empty answer took nothing away").toHaveAttribute("data-challenge-id", INCOMING.challengeId);
+  });
+
+  it("R3214000 a renewed session's next tick replaces the socket with one that carries the new token", async () => {
+    serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    const first = socket();
+
+    window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-renewed" }));
+    await settle({ advance: SOCIAL_POLL_MS });
+    expect(first.closedWith).toEqual({ code: 1000, reason: "session changed" });
+    expect(sockets).toHaveLength(2);
+    expect(tokenFromProtocols(socket().protocols)).toBe("tok-renewed");
+    await settle({ advance: 3 * SOCIAL_POLL_MS });
+    expect(sockets, "one replacement, however many ticks").toHaveLength(2);
+  });
+
+  it("R3576000 a tab that goes quiet while a drop's step waits opens no socket until it shows", async () => {
+    serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+
+    setVisibility("hidden");
+    await settle({ advance: HIDDEN_QUIET_MS - 1 });
+    socket().drop(1006);
+    await settle({ advance: 1 });
+    expect(sockets, "quiet before the drop's step ran").toHaveLength(1);
+    await settle({ advance: 10 * firstStepLatestMs });
+    expect(sockets, "the quiet tab's step opens nothing").toHaveLength(1);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(sockets, "shown: a socket opens again").toHaveLength(2);
+  });
+
   it("R3214000 a drop while the tab is hidden reads nothing until it shows (R3205000)", async () => {
     const server = serve();
     render(<ChallengeToast />);

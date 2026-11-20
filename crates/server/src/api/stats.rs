@@ -50,7 +50,9 @@ use jackioh_engine::{
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock, now_ms, ok_of, to_json};
+use crate::api::http::{
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock, now_ms, ok_of, query_trimmed, to_json,
+};
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
@@ -572,14 +574,6 @@ fn locale_compare(a: &str, b: &str) -> Ordering {
 /// A tally's games and wins as `i64`s.
 fn tally_of(tally: &Tally) -> (i64, i64) {
     (tally.games as i64, tally.wins as i64)
-}
-
-/// A query parameter, trimmed, when it is present and not empty after trimming.
-fn query_trimmed(req: &Req, name: &str) -> Option<String> {
-    req.query
-        .get(name)
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
 }
 
 /// R1044000: one patch's totals (every patch's with `None`) over both sources and every mode, each

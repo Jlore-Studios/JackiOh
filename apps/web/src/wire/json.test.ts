@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { isRecord, isSafeKey } from "./json.ts";
+import { isRecord, isSafeKey, isStringArray } from "./json.ts";
 
 describe("isRecord", () => {
   it("takes a plain object", () => {
@@ -31,5 +31,16 @@ describe("isSafeKey", () => {
     expect(isSafeKey("prototype")).toBe(false);
     expect(isSafeKey("p1")).toBe(true);
     expect(isSafeKey("card-1")).toBe(true);
+  });
+});
+
+describe("isStringArray", () => {
+  it("isStringArray holds only an array of strings", () => {
+    expect(isStringArray([])).toBe(true);
+    expect(isStringArray(["a"])).toBe(true);
+    expect(isStringArray(["a", 1])).toBe(false);
+    expect(isStringArray("a")).toBe(false);
+    expect(isStringArray(null)).toBe(false);
+    expect(isStringArray({})).toBe(false);
   });
 });

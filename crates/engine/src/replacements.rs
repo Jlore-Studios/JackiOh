@@ -358,10 +358,7 @@ pub fn lethal_hit_window(
         DamageTarget::Hero { player } => *player,
         DamageTarget::Unit { instance } => instance.controller,
     };
-    let target_id = match target {
-        DamageTarget::Hero { player } => format!("hero-{player}"),
-        DamageTarget::Unit { instance } => instance.id.clone(),
-    };
+    let target_id = crate::reduce::attack_target_id(target);
     let event = ReplacedEvent::LethalHit {
         player: controller,
         amount,
@@ -426,10 +423,7 @@ pub fn lethal_hit_window(
                 }
             };
         let fired = fire(sink, &mut cand);
-        let to_id = match &destination {
-            DamageTarget::Hero { player } => format!("hero-{player}"),
-            DamageTarget::Unit { instance } => instance.id.clone(),
-        };
+        let to_id = crate::reduce::attack_target_id(&destination);
         sink.events.push(GameEvent::Redirected {
             what: RedirectWhat::Damage,
             from_id: target_id.clone(),

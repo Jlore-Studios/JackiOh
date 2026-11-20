@@ -1376,4 +1376,43 @@ mod r4233000_read_on_open {
             "{body}"
         );
     }
+
+    /// #4291 (F17): an invite into a lobby another player filled still counts, though its lobby now
+    /// reads as gone to the invited friend (unspecified: R4233000 leaves out only a lobby gone,
+    /// started or expired).
+    #[tokio::test]
+    async fn r4233000_an_invite_to_a_full_lobby_still_counts() {
+        let t = three().await;
+        befriend(&t.app, &t.host, &t.guest).await;
+        api(&t.app, "POST", "/api/notifications/read", &t.guest.token, json!({})).await;
+        let code = duel(&t.app, &t.host, "random").await;
+        ok_act(&t.app, &t.host, &code, "invite", json!({ "profileId": t.guest.id })).await;
+        ok_act(&t.app, &t.third, &code, "enter", Value::Null).await;
+        assert_eq!(read(&t.app, &t.guest, &code).await.0, 404, "full, it reads as gone to the friend");
+        assert_eq!(social_unread(&t.app, &t.guest).await, json!(1));
+        assert_eq!(
+            invites(&t.app, &t.guest).await,
+            (vec![(json!(code), json!(false))], json!(1))
+        );
+    }
+
+    /// #4291 (F16): an entered invite stays in Recent, read, while its lobby is open; once the lobby
+    /// closes, the next page deletes it as it deletes every invite of a closed lobby (unspecified:
+    /// R4039001 keeps rows as history, R4039000 lists an invite while its lobby is open).
+    #[tokio::test]
+    async fn r4233000_an_entered_invite_leaves_recent_once_its_lobby_closes() {
+        let t = three().await;
+        befriend(&t.app, &t.host, &t.guest).await;
+        api(&t.app, "POST", "/api/notifications/read", &t.guest.token, json!({})).await;
+        let code = duel(&t.app, &t.host, "random").await;
+        ok_act(&t.app, &t.host, &code, "invite", json!({ "profileId": t.guest.id })).await;
+        ok_act(&t.app, &t.guest, &code, "enter", Value::Null).await;
+        assert_eq!(
+            invites(&t.app, &t.guest).await,
+            (vec![(json!(code), json!(true))], json!(0))
+        );
+
+        ok_act(&t.app, &t.host, &code, "leave", Value::Null).await;
+        assert_eq!(invites(&t.app, &t.guest).await, (vec![], json!(0)));
+    }
 }

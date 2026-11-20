@@ -4,7 +4,7 @@ Some of the code's states have no name: several fields read together (an `Option
 "pending" field beside what it guards) hold them, where one enum would. This file maps them: for each, its
 fields, every combination of their values, what moves it between them, and whether each combination can
 happen. It was started by #3678. The code audit's fourth part (`.github/hygiene/code.md` section 4, #3719)
-extends it on each run: #3899's mapped states 4 to 6 and checked states 1 to 3 again; #4114's mapped states 7 to 9 and checked 1 to 6 again.
+extends it on each run: #3899's mapped states 4 to 6 and checked states 1 to 3 again; #4114's mapped states 7 to 9 and checked 1 to 6 again; #4291's mapped states 10 to 12 and checked 1, 2, 6 and 8 again.
 
 How to read and extend it:
 
@@ -26,7 +26,13 @@ How to read and extend it:
 
 ## 1. A match actor's seat
 
-**Checked at** `b0e998a29b`, plus #4114's pull request. Since `656a2238acf5` (`git log 656a2238acf5.. -- <its
+**Checked at** `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b` (`git log b0e998a29b.. -- <its files>`,
+`87bd279557` being #4114's own pull request): `14e3fd964e` (#4239) queues a checkpoint after every
+`MATCH_CHECKPOINT_MIN_ACTIONS`-th logged row (state 10), `17e34d0815` (#4169) gives the co-op actor its
+checkpoint, `094e51ea83` (#4128, R4013000) makes a reused 1v1 nonce its own seat's duplicate, and
+`f3f2d6b6bc` (#4212) logs an upgrade that carries its token in the address; none touches the seat's socket,
+`hello_pending` or `socket_generation`, so no row moved. Checked before at `b0e998a29b`, plus #4114's pull
+request. Since `656a2238acf5` (`git log 656a2238acf5.. -- <its
 files>`): `9889adcf9b` (#3896, R3731002) gives a 2v2's team B people the seats b1 and b2 in the co-op actor
 (S13, S14), and `9cea15006d` (#3826) has `ws_server.rs` report the upgrade's route health, which moves no
 row. Checked before at `656a2238acf5`, plus #3899's pull request; since #3678 (`git log d0f7305317.. -- <its files>`):
@@ -76,7 +82,13 @@ actor, G = 0, no socket). `Core` is never serialized, so a JSON round trip does 
 
 ## 2. The engine's paused action
 
-**Checked at** `b0e998a29b`. Since `656a2238acf5`: `72dc211abd` (#3811) has `end_game` also clear each player's
+**Checked at** `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b`: `80a4d31165` (#4057) runs I7 on I14's
+copies too (E8); `e73836296f` (#4111, I18), `afb994522b` (#4143, I8), `087a371898` (#4254) and `f034bfcd6c`
+(#4255) add or widen other testkit invariants; `70985031f0` (#4122) and `978ccfceda` (#4265) follow renamed
+ids through board history, `69a14a320d` (#4194) adds a hero's Burn and `79474b2d38` (#4234) a card's
+`unpreventable_destroy`, fields outside this state. #4291's pull request reads every card through one
+`every_instance` and the hero ids through one parser, in the same order. None touches `pending`, `work`,
+`work_cursor`, `mulligan` or `result`, so no row moved. Checked before at `b0e998a29b`. Since `656a2238acf5`: `72dc211abd` (#3811) has `end_game` also clear each player's
 `turn_log.played_before_end` (R3800003), a field outside this state, and `6b457de6f4` (#3859, I16),
 `d7851b0b47` (#3938, I17), `7767d9815a` (#3924), `3292f2ea70` (#3973) and `b8093a6f3f` (#4025, I9) add or
 refactor testkit invariants; I7 and the state's fields are unchanged, so no row moved. Checked before at
@@ -114,7 +126,7 @@ round trip, a checkpoint and a replay fold (which rebuild the same values, §10.
 | E5′ | mulligans open with `work` owed | Not shown: `open_mulligans` is setup's last step (`deal_from`), run only after every owed setup item has been taken; no sequence found reaches it. I7's test builds it by hand (`i7_work_owed_behind_an_open_prompt_is_not_orphaned`), which proves the check, not reachability | Owed work waits for the mulligans (I7) | — |
 | E6 | over, no prompt, no mulligans, `work` as it stood | Reachable both ways. Empty: Core #68's Cry kills the enemy hero. Owed: p2 concedes (R211) while p1's Core #7 Discover is open, so the play's rest stays owed | Nothing happens after the game is over, every action refused (§2.5, R216); a game over keeps its debt (testkit invariant I7's note: "a game over keeps its debt") | `crates/cards/tests/cross/paused_sequences.rs::paused_action_states_3678::e6_e7_a_game_won_inside_a_cry_closes_every_prompt`, `…::paused_action_states_3678::e6_e7_a_concession_under_an_open_prompt_closes_it_and_leaves_the_rest_of_the_play_owed` (new) |
 | E7 | over with a prompt open, or with the mulligans open | Unreachable: `end_game` clears `pending` and `mulligan`, `work::paused` stops every scope once `result` is set, and `reduce` refuses every action after (R216) | — | the two E6 tests assert both closed and every action refused |
-| E8 | live, no prompt, no mulligans, `work` owed or cursor ≠ 0 | Unreachable: an action ends by draining `work` (§10.3, `drain_work`) until it is empty or a scope pauses on a prompt or a result, and taking each item resets the cursor. I7 flags it after every action of CI's `cargo jackioh fuzz --seeds 200`, and the 400-game probe never met it. The I7 tests in `invariants.rs` that show it flagged set the fields by hand, so they prove the check, not reachability | Orphaned work (I7) | — |
+| E8 | live, no prompt, no mulligans, `work` owed or cursor ≠ 0 | Unreachable: an action ends by draining `work` (§10.3, `drain_work`) until it is empty or a scope pauses on a prompt or a result, and taking each item resets the cursor. I7 flags it after every action of CI's `cargo jackioh fuzz --seeds 200`, and the 400-game probe never met it. The I7 tests in `invariants.rs` that show it flagged set the fields by hand, so they prove the check, not reachability. Since #4113 (#4057) I7 also runs on the copy I14 reduces each listed action on (`branch_state_findings`, `orphaned_work_findings`); its test there plants the work in the branch's result (`crates/cards/tests/cross/invariants.rs::i14_a_listed_action_reduce_refuses::i14_branch_reports_orphaned_work_on_accepted_branch_action`), which again proves the check, not reachability | Orphaned work (I7) | — |
 | E9 | cursor above the length | Unreachable: `place` inserts at `min(cursor, len)` and sets the cursor one past it, `take_work` and `begin_work_cascade` set 0, `drop_work` clamps to the new length, and an owed AI turn (`ai_policy`) resets it to 0 before it appends what was owed | — | — |
 | E10 | mulligans open and a prompt open | Unreachable: `open_mulligans` does nothing while `pending` is set, and `resolve_mulligans` clears `mulligan` before the answers it resolves can ask (R224, R265) | — | — |
 
@@ -124,7 +136,9 @@ out. No shape is changed here.
 
 ## 3. The dungeon run's position
 
-**Checked at** `b0e998a29b`, plus #4114's pull request. Since `656a2238acf5`, `a040a62718` (#4097) has
+**Checked at** `ae977ece3e`, plus #4291's pull request: unchanged since `b0e998a29b` but for #4114's own pull request
+(`87bd279557`) and #4291's, which reads the store's string lists with the shared `isStringArray`, the same
+test. Checked before at `b0e998a29b`, plus #4114's pull request. Since `656a2238acf5`, `a040a62718` (#4097) has
 `run_create` refuse a curse taken twice and a mini-boss's replacement drop roll at its tier floor, which made
 `fight_won`'s two roll arms one (#4114 merges them); neither touches `row`, `col`, `phase` or HP, so no row
 moved. Checked before at `13bd66f47171`, plus #3678's pull request; unchanged at `656a2238acf5` (`git log
@@ -164,7 +178,8 @@ device never keeps a `RunState`, only the log it folds, so no run file reaches t
 
 ## 4. The web's stored session
 
-**Checked at** `b0e998a29b`: unchanged since `656a2238acf5`, plus #3899's pull request (`git log 656a2238acf5..
+**Checked at** `ae977ece3e`: unchanged since `b0e998a29b` (`git log b0e998a29b.. -- <its files>` prints nothing).
+Checked before at `b0e998a29b`: unchanged since `656a2238acf5`, plus #3899's pull request (`git log 656a2238acf5..
 -- apps/web/src/net/session.ts apps/web/src/net/storage.ts` prints nothing).
 
 **Files:** `apps/web/src/net/session.ts` (`readSession`, `writeSession`, `clearSession`),
@@ -199,7 +214,8 @@ Its rows are W1 to W10 (W for the web's session), never `R<n>`.
 
 ## 5. The web's live game
 
-**Checked at** `b0e998a29b`. Since `656a2238acf5`, plus #3899's pull request: `88b1df6f05` (#3902, R3729001)
+**Checked at** `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
+before at `b0e998a29b`. Since `656a2238acf5`, plus #3899's pull request: `88b1df6f05` (#3902, R3729001)
 keeps the moment a tab queued beside its mode, for the menus' queue banner and its Cancel (L14 to L17).
 
 **Files:** `apps/web/src/net/liveGame.ts` (`useQueueFollow`, `useLiveGame`, `rememberQueued`,
@@ -248,7 +264,9 @@ the banner's.
 
 ## 6. `Game.tsx`'s layers
 
-**Checked at** `b0e998a29b`. Since `656a2238acf5`, plus #3899's pull request: `ff38380a54` (#3976) and
+**Checked at** `ae977ece3e`. Since `b0e998a29b`: `70985031f0` (#4079, R3864000) has a click on a lit unit a play
+tributes, once the play asks only its zone, answer the zone (`onClickTarget`); it is one click of a build,
+with no layer beside it, so no row moved. Checked before at `b0e998a29b`. Since `656a2238acf5`, plus #3899's pull request: `ff38380a54` (#3976) and
 `e3dbd4c61a` (#3839) pass the heroes their portraits and the prompt a sequence clock, `1b3c343975` (#3910)
 words the turn banner for a cut-short turn and the autopilot, `3643877e46` (#3821) words the notice when no
 attack is offered, and `fa6d2f2f88` (#3884) adds an animated `armorGained`, one more event a burst may hold
@@ -302,7 +320,8 @@ piece, the opening deal); a prompt opening or answered; a setting changed. Its r
 
 ## 7. The web's match socket
 
-**Checked at** `b0e998a29b`, plus #4114's pull request.
+**Checked at** `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
+before at `b0e998a29b`, plus #4114's pull request.
 
 **Files:** `apps/web/src/game/net.ts` (`createMatchClient`, `createBackoff`, `createWakeProbe`, `letGo`),
 `apps/web/src/duos/socket.ts` (`createDuosClient`, the same machine for a co-op seat).
@@ -346,7 +365,12 @@ as here with "co-op".
 
 ## 8. A match's registry entry
 
-**Checked at** `b0e998a29b`, plus #4114's pull request.
+**Checked at** `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b`: `17e34d0815` (#4169) checkpoints each
+co-op actor before the drain stops it (`DuosRegistry::drain_one`) and has a co-op rebuild fold from it;
+`1fd0162fbf` (#4131, R4131000) swaps `app.rs`'s redemption breaker for the operator's pause, a field outside
+this state; and `14e3fd964e` (#4239), outside these files, has a live match write a checkpoint every
+`MATCH_CHECKPOINT_MIN_ACTIONS`-th row, which a rebuild after a crash or a `stop` now folds from (A3; the
+checkpoint itself is state 10). Checked before at `b0e998a29b`, plus #4114's pull request.
 
 **Files:** `crates/server/src/actor/registry.rs` (`start`, `rebuild`, `actor_for`, `attach`, `stop`,
 `stop_all`, `drain`, `reap_finished`, `forget`), `crates/server/src/duos/registry.rs` (the same for a
@@ -356,11 +380,14 @@ as a match's does), `crates/server/src/app.rs` (`serve_until`, the restart drain
 **Fields,** per match id: `actors[id]` (the live actor in memory, or none); `rebuilding[id]` (a rebuild in
 flight, shared by every caller that finds it); the store's row (none, live or finished; a void deletes it,
 R679), its log (purged from a finished match after `MATCH_ACTION_RETENTION_DAYS`, R1285000) and its
-checkpoint (#1169); and, since #4114, the registry's `draining` mark, set by the restart drain and never
+checkpoint (#1169: the drain's, or since #4224 the one every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row writes as
+the match is played; state 10 maps it); and, since #4114, the registry's `draining` mark, set by the restart drain and never
 cleared.
 
 **What moves it:** `start` (the row written, the actor inserted, §9.2); `actor_for` (an actor in memory is
-returned, else one rebuild folds the row's log or checkpoint and inserts it, §9.5); `attach` (`actor_for`,
+returned, else one rebuild folds the row's log, or its tail from the last checkpoint stored, and inserts it,
+§9.5); a logged row whose seq is a multiple of `MATCH_CHECKPOINT_MIN_ACTIONS` (the actor's periodic
+checkpoint, #4224, which a crash then rebuilds from); `attach` (`actor_for`,
 then the seat's socket); `stop` (the actor leaves memory, the log stays); `drain`, the restart drain (the
 registry marked draining, then `stop_all`: every actor checkpointed, then stopped with 1001); `stop_all`
 alone (the same without the mark, which a test calls to drain and rebuild in one process); `reap_finished` (a finished actor past its rematch
@@ -372,7 +399,7 @@ A10b, A10c), never `R<n>`.
 |---|---|---|---|---|
 | A1 | no row, no actor | Reachable: a match id that never was, or a voided one | "no such match", 4404, nothing folded (§9.1, R679) | `crates/server/tests/actor/glitch.rs::glitchs_void::r679_closes_both_sockets_with_the_voided_close_code_after_a_last_view_that_shows_the_void` (its late attach) |
 | A2 | a finished row whose log was purged, no actor | Reachable: the retention purge, then a socket | Not found, nothing folded or filed (R1285000) | `crates/server/tests/actor/recovery.rs::r1285000_a_finished_match_whose_log_was_purged::r1285000_answers_not_found_on_attach_folds_nothing_and_files_no_report`, `crates/server/tests/actor/ws_server.rs::a_finished_matchs_seats_may_reopen_its_socket::r1285000_a_finished_match_whose_log_was_purged_is_not_found_inside_its_window` |
-| A3 | a live row, no actor | Reachable: a restart, a crash, `stop` | The next socket rebuilds it from `(seed, log)` or its checkpoint to the same state and view (§9.5, #1169) | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::rebuilds_an_actor_for_a_socket_that_arrives_when_nothing_is_in_memory`, `…::m6_t4_crash_recovery::killing_the_actor_mid_game_and_reconnecting_yields_the_same_view_for_for_both_players`, `crates/server/tests/actor/checkpoints.rs::a_drained_match_rebuilds_from_its_checkpoint_as_a_full_fold_rebuilds_it` |
+| A3 | a live row, no actor | Reachable: a restart, a crash, `stop` | The next socket rebuilds it to the same state and view (§9.5): from the last checkpoint stored when it passes (the drain's or, since #4169 and #4224, the periodic one; #1169), else from `(seed, log)` | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::rebuilds_an_actor_for_a_socket_that_arrives_when_nothing_is_in_memory`, `…::m6_t4_crash_recovery::killing_the_actor_mid_game_and_reconnecting_yields_the_same_view_for_for_both_players`, `crates/server/tests/actor/checkpoints.rs::a_drained_match_rebuilds_from_its_checkpoint_as_a_full_fold_rebuilds_it`, `…::a_live_match_checkpoints_every_min_actions_rows_as_it_is_played_and_a_crash_resumes_there`, `…::a_checkpoint_that_fails_a_check_is_refused_and_the_whole_log_is_folded` |
 | A4 | a finished row, its log kept, no actor | Reachable: `reap_finished` past the window, or a restart | A seat's socket rebuilds it inside the window; past the window it is refused (R1285000) | `crates/server/tests/actor/ws_server.rs::a_finished_matchs_seats_may_reopen_its_socket::a_seat_reopens_its_socket_on_its_finished_match`, `…::r1285000_a_seat_is_refused_its_finished_matchs_socket_once_the_rematch_window_has_passed`, `crates/server/tests/actor/telemetry.rs::r1442_play_telemetry_through_the_actor::r1442_the_backfill_and_a_rebuild_fold_a_finished_match_after_the_reaper_dropped_its_actor` |
 | A5 | a rebuild in flight, a second socket arrives | Reachable: both seats reconnect together | One fold, both sockets on the one actor (`rebuilding`'s doc) | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::folds_the_log_once_when_both_sockets_arrive_together` |
 | A6 | a rebuild that failed | Reachable: the store fails a read, or the fold panics | The socket is refused (1011 for an internal error, `AttachError`), nothing is kept, and the next socket rebuilds | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_the_store_fails_is_not_kept_and_the_next_socket_rebuilds` (new), `crates/server/tests/actor/long_fold.rs::a_rebuild_whose_fold_panics_is_an_internal_error_and_registers_no_actor` |
@@ -386,7 +413,12 @@ A10b, A10c), never `R<n>`.
 | A12 | a void whose delete the store failed | Reachable: the store fails `forgetVoided` | The row stays live, so the next socket rebuilds the actor, which folds to the same void and voids it again (`on_void`'s comment, R679) | `crates/server/tests/actor/glitch.rs::glitchs_void::r679_a_void_the_store_failed_to_forget_is_voided_again_by_the_next_socket` (new) |
 | A13 | a series game started again under the same id | Reachable: a voided Conquest game | The series plays the same game again, a new actor under the old id (R679) | `crates/server/tests/actor/glitch.rs::glitchs_void::r679_a_voided_conquest_game_never_happened_the_series_plays_the_same_game_again` |
 
-The co-op registry holds A6, A7, A9 and A11 the same way. **#4114: its A10 and A10b were a mismatch,
+The co-op registry holds A3, A6, A7, A9 and A11 the same way: since #4169 a co-op rebuild folds from the
+last checkpoint stored, the drain's or the periodic one, when it passes
+(`crates/server/tests/actor/duos_checkpoints.rs::a_drained_coop_match_rebuilds_from_its_checkpoint_as_a_full_fold_rebuilds_it`,
+`…::a_two_v_two_match_checkpoints_every_min_actions_rows_as_it_runs_and_a_crash_resumes_there`,
+`…::a_coop_checkpoint_that_fails_a_check_is_refused_and_the_whole_log_is_folded`,
+`…::the_restart_drain_checkpoints_each_long_coop_match_and_passes_over_a_short_one`). **#4114: its A10 and A10b were a mismatch,
 fixed**: the drain stopped each co-op actor with `stop` from a `live()` snapshot, so a co-op rebuild that
 landed after that loop was left live and could write its log after the store closed (#936, the drain's own
 comment). Its A10c was found unreachable: every co-op `start` is a request's (a room's join, the lobby's
@@ -404,7 +436,8 @@ without the mark: "left live after the drain").
 
 ## 9. The practice game kept for a resume
 
-**Checked at** `b0e998a29b`, plus #4114's pull request.
+**Checked at** `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
+before at `b0e998a29b`, plus #4114's pull request.
 
 **Files:** `apps/web/src/practice/resume.ts` (R, read as untrusted input), `apps/web/src/practice/saveStore.ts`
 (W's IndexedDB store), `apps/web/src/practice/controller.ts` (`begin`, `applySnapshot`),

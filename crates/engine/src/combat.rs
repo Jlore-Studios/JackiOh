@@ -590,23 +590,22 @@ pub fn attack_targets_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> Vec<
         .collect()
 }
 
-/// §4.2 step 2's two possibilities as one id: an enemy unit's instance id, or `hero-<player>`.
-const HERO_TARGET_PREFIX: &str = "hero-";
+/// §4.2 step 2's two possibilities as one id: an enemy unit's instance id, or `hero-<player>`
+/// (`crate::reduce::attack_target_id` writes it, `hero_seat_of` reads it).
+pub(crate) const HERO_TARGET_PREFIX: &str = "hero-";
 
-fn target_id_of(target: &AttackTarget) -> String {
-    match target {
-        DamageTarget::Unit { instance } => instance.id.clone(),
-        DamageTarget::Hero { player } => format!("{HERO_TARGET_PREFIX}{player}"),
-    }
+/// The seat a `hero-<player>` target id names, or None for any other id.
+pub fn hero_seat_of(target_id: &str) -> Option<PlayerId> {
+    let named = target_id.strip_prefix(HERO_TARGET_PREFIX)?;
+    PLAYER_IDS.into_iter().find(|seat| seat.as_str() == named)
 }
 
-/// The inverse of `target_id_of`: the target an `attackDeclared` event or an open `declaredAttack`
+/// The inverse of `attack_target_id`: the target an `attackDeclared` event or an open `declaredAttack`
 /// names (#96 My Pawn reads the event, §4.2 step 5 the state). The `hero-<player>` spelling is this
-/// module's, so nobody else should be parsing it.
+/// module's (`hero_seat_of`), so nobody else should be parsing it.
 pub fn attack_target_of(state: &GameState, target_id: &str) -> Option<AttackTarget> {
-    if let Some(named) = target_id.strip_prefix(HERO_TARGET_PREFIX) {
-        let player = PLAYER_IDS.into_iter().find(|id| id.as_str() == named)?;
-        return Some(DamageTarget::Hero { player });
+    if target_id.starts_with(HERO_TARGET_PREFIX) {
+        return hero_seat_of(target_id).map(|player| DamageTarget::Hero { player });
     }
     let unit = find_instance(state, target_id)?;
     Some(DamageTarget::Unit {
@@ -1216,7 +1215,7 @@ fn fight_declared(sink: &mut EngineSink<'_>, open: DeclaredAttack, since: u32, b
                 sink,
                 &crate::attack_summon::OwedAttackSummon {
                     attacker_id: attacker.id.clone(),
-                    target_id: target_id_of(&target),
+                    target_id: crate::reduce::attack_target_id(&target),
                     forced: false,
                     bounce,
                     declared: Some(open),
@@ -1387,7 +1386,7 @@ pub(crate) fn declare_instead(
         return Ok(());
     }
 
-    let target_id = target_id_of(&target);
+    let target_id = crate::reduce::attack_target_id(&target);
     let declared = DeclaredAttack {
         id: format!("d{}", sink.state.next_seq),
         attacker_id: attacker.id.clone(),
@@ -1552,7 +1551,7 @@ pub(crate) fn force_attack_instead(
 ) {
     sink.events.push(GameEvent::AttackDeclared {
         attacker_id: attacker.id.clone(),
-        target_id: target_id_of(target),
+        target_id: crate::reduce::attack_target_id(target),
         forced: true,
         instead_of: instead_of.map(str::to_string),
     });
@@ -1572,7 +1571,7 @@ fn forced_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &At
     }
     let owed = OwedWhenAttacks {
         attacker_id: attacker.id.clone(),
-        target_id: target_id_of(target),
+        target_id: crate::reduce::attack_target_id(target),
         declared: None,
         since: crate::stays::exit_mark(sink.state),
         stage: None,
@@ -1841,7 +1840,7 @@ pub fn force_attack_own_hero(sink: &mut EngineSink<'_>, attacker: &CardInstance)
     }
     sink.events.push(GameEvent::AttackDeclared {
         attacker_id: attacker.id.clone(),
-        target_id: target_id_of(&target),
+        target_id: crate::reduce::attack_target_id(&target),
         forced: true,
         instead_of: None,
     });
@@ -2321,7 +2320,7 @@ fn close_combat(
     // read as the check closes; they run after the combatants' own hooks. None, nothing runs.
     let allies = OwedAllyAttack {
         attacker_id: snapshot.id.clone(),
-        target_id: target_id_of(target),
+        target_id: crate::reduce::attack_target_id(target),
         forced,
         since,
         holders: ally_attack_holders(sink.state, snapshot.controller),
@@ -2368,7 +2367,7 @@ fn combatant_hooks(
             .collect();
         let owed = OwedAfterAttack {
             attacker_id: snapshot.id.clone(),
-            target_id: target_id_of(target),
+            target_id: crate::reduce::attack_target_id(target),
             snapshot,
             destroyed_ids,
             forced,
@@ -2934,4 +2933,21 @@ pub fn run_owed_ally_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
         return;
     };
     answer_ally_attack(sink, owed, paused_of(&item.resume.data));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hero_target_ids_round_trip() {
+        for seat in PLAYER_IDS {
+            let id = crate::reduce::attack_target_id(&DamageTarget::Hero { player: seat });
+            assert_eq!(id, format!("hero-{seat}"));
+            assert_eq!(hero_seat_of(&id), Some(seat));
+        }
+        for other in ["hero-", "hero-p3", "p1", ""] {
+            assert_eq!(hero_seat_of(other), None, "{other:?}");
+        }
+    }
 }

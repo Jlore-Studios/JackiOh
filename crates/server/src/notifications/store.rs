@@ -470,7 +470,7 @@ mod fake {
         };
         lobbies
             .iter()
-            .any(|lobby| lobby.code == subject && lobby.started_at.is_none() && lobby.expires_at > now)
+            .any(|lobby| lobby.code == subject && lobby.open_at(now))
     }
 
     pub fn mark_read(

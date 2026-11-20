@@ -19,7 +19,7 @@ mod view;
 
 pub use legal::{duos_legal_actions, duos_seats_to_act};
 pub use reduce::{DUOS_NONCE_PREFIX, duos_begin, duos_reduce, passed_card};
-pub use replay::{DuosReplayInput, DuosReplayResult, duos_fold, duos_hash};
+pub use replay::{DuosReplayInput, DuosReplayResult, duos_fold, duos_fold_from, duos_hash};
 pub use state::{
     DuosBegunTurn, DuosReduceResult, DuosState, DuosTeam, duos_create, duos_create_recorded, duos_duel_seed,
 };

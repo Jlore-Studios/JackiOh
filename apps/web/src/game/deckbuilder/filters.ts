@@ -246,9 +246,9 @@ function haystackOf(def: CardDef): string {
 
 /** Issue #4203: the stat term's grammar lives in the client's own constants (CLAUDE.md rule 9):
  *  a side is a number with an optional bound marker, joined by the separator. */
-export const STAT_SEPARATOR = "/";
-export const STAT_OR_MORE = "+";
-export const STAT_OR_LESS = "-";
+const STAT_SEPARATOR = "/";
+const STAT_OR_MORE = "+";
+const STAT_OR_LESS = "-";
 
 const STAT_TERM = new RegExp(
   `^(\\d+)(\\${STAT_OR_MORE}|\\${STAT_OR_LESS})?\\${STAT_SEPARATOR}(\\d+)(\\${STAT_OR_MORE}|\\${STAT_OR_LESS})?$`,

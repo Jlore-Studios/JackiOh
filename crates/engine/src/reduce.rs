@@ -96,7 +96,7 @@ pub fn seat_to_act(state: &GameState) -> Option<PlayerId> {
 pub fn attack_target_id(target: &AttackTarget) -> String {
     match target {
         AttackTarget::Unit { instance, .. } => instance.id.clone(),
-        AttackTarget::Hero { player, .. } => format!("hero-{player}"),
+        AttackTarget::Hero { player, .. } => format!("{}{player}", crate::combat::HERO_TARGET_PREFIX),
     }
 }
 
@@ -134,7 +134,7 @@ fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option
 /// target never reaches the validator (§4.2 step 2).
 fn attack_target_of(state: &GameState, player: PlayerId, target_id: &str) -> Option<AttackTarget> {
     let enemy = opponent_of(player);
-    if target_id == format!("hero-{enemy}") {
+    if crate::combat::hero_seat_of(target_id) == Some(enemy) {
         return Some(AttackTarget::Hero { player: enemy });
     }
     let unit = crate::zones::units_on_field_of(state, enemy)

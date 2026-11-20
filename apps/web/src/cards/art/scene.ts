@@ -24,8 +24,6 @@ import { mixHex, RADIANT_MIX, RADIANT_PALETTE } from "./themes.ts";
 
 export type Rng = () => number;
 
-export { SCENE_BOX } from "./kitDraw.ts";
-
 /** A scene's layers, back to front. */
 export type SceneLayer = "sky" | "far" | "mid" | "subject" | "near" | "light" | "particles";
 export const SCENE_LAYERS: readonly SceneLayer[] = ["sky", "far", "mid", "subject", "near", "light", "particles"];

@@ -1420,4 +1420,43 @@ mod r4233000_read_on_open {
         );
         assert_eq!(feed(&app, &bea).await["unread"], 0);
     }
+
+    /// #4291 (F14): a request its sender cancels is no act of its recipient's, so its row keeps
+    /// counting (unspecified: R4233000 names only the recipient's answers); a request sent again is a
+    /// row of its own, and answering it marks only that one.
+    #[tokio::test]
+    async fn r4233000_a_cancelled_request_keeps_its_row_unread_beside_a_resent_one() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let first = requested(&app, &ada, &bea).await;
+        let (status, body) = api(
+            &app,
+            "DELETE",
+            &format!("/api/friends/requests/{first}"),
+            &ada.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(
+            requests(&app, &bea).await,
+            vec![(json!(ada.id), json!(first), json!(false))]
+        );
+        assert_eq!(feed(&app, &bea).await["unread"], 1);
+
+        let again = requested(&app, &ada, &bea).await;
+        assert_ne!(again, first);
+        assert_eq!(feed(&app, &bea).await["unread"], 2);
+        let (status, body) = accept(&app, &bea, &again).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(
+            requests(&app, &bea).await,
+            vec![
+                (json!(ada.id), json!(again), json!(true)),
+                (json!(ada.id), json!(first), json!(false)),
+            ]
+        );
+        assert_eq!(feed(&app, &bea).await["unread"], 1);
+    }
 }

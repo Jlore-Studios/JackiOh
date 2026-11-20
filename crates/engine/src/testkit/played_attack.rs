@@ -7,7 +7,7 @@ use crate::query::AttackForecast;
 use crate::state::{GameState, find_instance};
 use crate::wire::{GameEvent, Zone};
 
-use super::invariants::hero_seat_of;
+use crate::combat::hero_seat_of;
 
 /// The five facts a forecast entry states about an attack (R3100000): the damage into the target and
 /// into the attacker, whether the target was destroyed (the game won on it, for a hero), whether the

@@ -981,16 +981,7 @@ mod fake {
         if !live || !logged {
             return Ok(false);
         }
-        match tables
-            .checkpoints
-            .iter_mut()
-            .find(|held| held.match_id == row.match_id)
-        {
-            None => tables.checkpoints.push(row.clone()),
-            Some(held) if held.seq < row.seq => *held = row.clone(),
-            Some(_) => return Ok(false),
-        }
-        Ok(true)
+        Ok(crate::db::fake::put_newer_checkpoint(&mut tables.checkpoints, row))
     }
 
     pub fn matches_checkpoint(

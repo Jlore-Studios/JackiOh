@@ -126,6 +126,8 @@ function applySocial(answer: SocialRead): void {
 function tick(): void {
   const token = readSession()?.accessToken ?? null;
   if (token === null) {
+    // R3214000: the signed-out session's socket goes; with no token none opens.
+    socket?.retry();
     refusedToken = null;
     publish(EMPTY);
     return;

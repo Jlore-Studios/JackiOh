@@ -40,12 +40,18 @@ pub fn duos_hash(state: &DuosState) -> String {
 /// Create (as a game already made, R1705003), begin, then apply the log in order, stopping at the
 /// first refused action. Panics as `duos_create` does on a setup `create_recorded_game` refuses.
 pub fn duos_fold(input: &DuosReplayInput) -> DuosReplayResult {
-    let mut state = duos_begin(&duos_create_recorded(&input.options)).state;
+    duos_fold_from(duos_begin(&duos_create_recorded(&input.options)).state, &input.log, 0)
+}
+
+/// `duos_fold` carried on from `state`, the state after a log's first `skipped` actions (a server's
+/// checkpoint, #4169), over the rest of the log, `tail`: it stops at the first action it refuses, and
+/// `refused_at` counts from the log's start.
+pub fn duos_fold_from(mut state: DuosState, tail: &[DuosAction], skipped: usize) -> DuosReplayResult {
     let mut refused_at: Option<usize> = None;
-    for (at, action) in input.log.iter().enumerate() {
+    for (at, action) in tail.iter().enumerate() {
         let result = duos_reduce(&state, action);
         if result.error.is_some() {
-            refused_at = Some(at);
+            refused_at = Some(skipped + at);
             break;
         }
         state = result.state;

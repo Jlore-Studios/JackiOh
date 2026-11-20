@@ -34,7 +34,7 @@ use serde_json::{Value, json};
 use crate::config::{
     AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_CHECK_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS,
     AUTH_SESSION_OUTAGE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS, JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS,
-    JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS, MS_PER_SECOND,
+    JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS, MS_PER_SECOND, NANOS_PER_MS,
 };
 
 /// Who a verified bearer token belongs to.
@@ -267,7 +267,7 @@ fn trim_trailing_slash(url: &str) -> String {
 
 /// ISO-8601 of `ms`: only ever asked whether it is set, never shown.
 fn iso_of(ms: i64) -> String {
-    time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(ms) * 1_000_000)
+    time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(ms) * NANOS_PER_MS)
         .ok()
         .and_then(|at| at.format(&time::format_description::well_known::Rfc3339).ok())
         .unwrap_or_else(|| ms.to_string())

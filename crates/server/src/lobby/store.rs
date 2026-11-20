@@ -159,6 +159,12 @@ impl Tx<'_> {
 }
 
 impl Lobby {
+    /// Whether the lobby is open at `now`: not started and not expired (the fake's reads, and the
+    /// invite's unread test R4233000 names; the Postgres store says the same in SQL).
+    pub fn open_at(&self, now: i64) -> bool {
+        self.started_at.is_none() && self.expires_at > now
+    }
+
     /// Whether `profile_id` hosts or sits in any seat, a 2v2's other team's included.
     pub fn seats(&self, profile_id: &str) -> bool {
         self.host == profile_id
@@ -486,8 +492,7 @@ mod fake {
             .filter(|lobby| {
                 lobby.host == host
                     && lobby.settings.format() == format
-                    && lobby.started_at.is_none()
-                    && lobby.expires_at > at
+                    && lobby.open_at(at)
             })
             .count() as i64)
     }
@@ -514,8 +519,7 @@ mod fake {
                     && (lobby.guest.is_none()
                         || (lobby.settings.format() == FORMAT_TWO_V_TWO
                             && lobby.others.iter().any(|member| member.profile.is_none())))
-                    && lobby.started_at.is_none()
-                    && lobby.expires_at > at
+                    && lobby.open_at(at)
             })
             .cloned()
             .collect();

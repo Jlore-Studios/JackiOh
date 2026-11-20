@@ -3951,6 +3951,35 @@ mod matches {
         assert!(q!(harness, t => t.matches_checkpoint(&row.id)).is_none());
     }
 
+    /// #4291 (C13): a put that runs while the match's ending is still uncommitted waits for it and
+    /// stores nothing, so a finished match never keeps a checkpoint (§9.3: "a match that ends drops
+    /// its checkpoint"). Each runs in a transaction of its own, as the actor's queue and the ending's
+    /// writer do.
+    async fn a_checkpoint_written_as_its_match_finishes_never_outlives_the_ending(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let now = harness.now();
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", now)]));
+        let mut finishing = harness.db.begin(None).await.expect("begin");
+        finishing
+            .matches_finish(&row.id, now)
+            .await
+            .unwrap_or_else(|error| panic!("{}: the ending: {error}", harness.name));
+        let saved = checkpoint(&row.id, 1, "n1", "{}", now);
+        let (stored, ()) = tokio::join!(
+            async { q!(harness, t => t.matches_put_checkpoint(&saved)) },
+            async {
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                finishing.commit().await.expect("commit the ending");
+            },
+        );
+        assert!(!stored, "{}: the put waits for the ending and stores nothing", harness.name);
+        assert!(
+            q!(harness, t => t.matches_checkpoint(&row.id)).is_none(),
+            "{}: the finished match keeps no checkpoint",
+            harness.name
+        );
+    }
+
     /// #1169: an ended match is never rebuilt from its checkpoint; another match keeps its own.
     async fn finishing_a_match_drops_its_checkpoint(harness: &StoreHarness) {
         let now = harness.now();
@@ -3987,6 +4016,7 @@ mod matches {
     both_stores!(
         checkpoint_round_trips_and_only_a_later_seq_replaces_it,
         checkpoint_is_stored_only_for_a_logged_row_of_a_live_match,
+        a_checkpoint_written_as_its_match_finishes_never_outlives_the_ending,
         finishing_a_match_drops_its_checkpoint,
         voiding_a_match_drops_its_checkpoint,
         an_unknown_match_has_no_checkpoint,

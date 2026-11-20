@@ -60,7 +60,8 @@ function account(): string | null {
 
 /**
  * Reads the newest page. The rows older than it that a "Show older" read already holds stay under it. When a
- * row on it is unread, every row up to its newest is marked read, and the social read is asked again.
+ * row on it, or any row of the account's, is unread, every row up to its newest is marked read, and the social
+ * read is asked again.
  */
 export async function openFeed(): Promise<void> {
   if (account() === null) return;
@@ -80,7 +81,9 @@ export async function openFeed(): Promise<void> {
     loaded: true,
   });
   const newest = page.notifications[0];
-  if (newest === undefined || !page.notifications.some((row) => !row.read)) return;
+  // R4039001: every row up to the newest is marked, an older unread one below a page the acts it is about
+  // already read (R4233000) among them, so the page's own rows are not the only test.
+  if (newest === undefined || (page.unread === 0 && page.notifications.every((row) => row.read))) return;
   // A mark that fails leaves them unread at the server, and the next opening marks them again.
   const marked = await attempt(() => markNotificationsRead(newest.id)).then(
     () => true,

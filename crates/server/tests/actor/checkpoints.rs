@@ -391,6 +391,214 @@ async fn a_live_match_checkpoints_every_min_actions_rows_as_it_is_played_and_a_c
     assert!(checkpoints(&app).await.is_empty(), "a finished match writes none");
 }
 
+/// `actions`, the log's rows from seq `first` on, submitted to `actor`, each acked at its seq.
+async fn play(actor: &MatchActor, first: usize, actions: &[Action]) {
+    for (n, action) in actions.iter().enumerate() {
+        let seq = first + n;
+        assert_eq!(
+            to_json(
+                &actor
+                    .submit(action.player_id, action.nonce.clone(), action.body.clone())
+                    .await
+            ),
+            json!({ "type": "ack", "nonce": action.nonce, "seq": seq }),
+            "at seq {seq}"
+        );
+    }
+    actor.idle().await;
+}
+
+/// The checkpoint log lines so far (`match.checkpoint.*`), by event.
+fn checkpoint_lines(logs: &RecordingLogger) -> Vec<String> {
+    logs.entries()
+        .into_iter()
+        .map(|entry| entry.event)
+        .filter(|event| event.starts_with("match.checkpoint."))
+        .collect()
+}
+
+/// #4291 (`docs/implicit-states.md`, C3): a periodic checkpoint replaces the drain's older one, and a
+/// crash then resumes from it.
+#[tokio::test(start_paused = true)]
+async fn a_periodic_checkpoint_replaces_an_older_one_and_a_crash_resumes_from_it() {
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let every = usize::try_from(MATCH_CHECKPOINT_MIN_ACTIONS).expect("a small count");
+    let head = 2 * every;
+    let (seed, decks, actions) = game(head + 1);
+    let row = live_row(&seed, &decks);
+    write_match(&app, &row).await;
+    append(&app, &rows_of(&row, 1, &actions[..LOGGED])).await;
+    actor_of(&app).await;
+    assert_eq!(app.matches.stop_all().await, 1);
+    assert_eq!(checkpoints(&app).await[0].seq, LOGGED as i64);
+
+    let actor = actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(LOGGED));
+    play(&actor, LOGGED + 1, &actions[LOGGED..head]).await;
+    let stored = checkpoints(&app).await;
+    assert_eq!(stored.len(), 1);
+    assert_eq!(stored[0].seq, head as i64, "the periodic one replaced the drain's");
+
+    app.matches.stop(MATCH_ID).await;
+    let rebuilt = actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(head));
+    assert_eq!(
+        hash_state(&rebuilt.engine_state()),
+        hash_state(&folded(&row, &actions[..head]))
+    );
+    assert!(logs.named("match.checkpoint.refused").is_empty());
+}
+
+/// #4291 (C6): the restart drain right after a periodic checkpoint at the log's head stores nothing
+/// new: the one held is as new, so the store keeps it.
+#[tokio::test(start_paused = true)]
+async fn a_drain_right_after_a_periodic_checkpoint_keeps_it() {
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let every = usize::try_from(MATCH_CHECKPOINT_MIN_ACTIONS).expect("a small count");
+    let (seed, decks, actions) = game(every + 1);
+    let row = live_row(&seed, &decks);
+    write_match(&app, &row).await;
+    let actor = actor_of(&app).await;
+    play(&actor, 1, &actions[..every]).await;
+    let periodic = checkpoints(&app).await;
+    assert_eq!(periodic.len(), 1);
+
+    assert_eq!(app.matches.stop_all().await, 1);
+    assert_eq!(checkpoints(&app).await, periodic, "the row is unchanged");
+    assert_eq!(logs.named("match.checkpoint.written").len(), 1);
+    assert_eq!(logs.named("match.checkpoint.kept").len(), 1);
+}
+
+/// #4291 (C8): the row that makes a checkpoint due and a concession queued behind it: the queued
+/// checkpoint finds the match finished and writes nothing, not even a line.
+#[tokio::test(start_paused = true)]
+async fn a_match_finishing_while_its_periodic_checkpoint_is_queued_writes_none() {
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let every = usize::try_from(MATCH_CHECKPOINT_MIN_ACTIONS).expect("a small count");
+    let (seed, decks, actions) = game(every + 1);
+    let row = live_row(&seed, &decks);
+    write_match(&app, &row).await;
+    let actor = actor_of(&app).await;
+    play(&actor, 1, &actions[..every - 1]).await;
+
+    let due = &actions[every - 1];
+    let seat = due.player_id;
+    let (acked, conceded) = tokio::join!(
+        actor.submit(due.player_id, due.nonce.clone(), due.body.clone()),
+        actor.submit(seat, "cp-concede".to_string(), ActionBody::Concede),
+    );
+    assert_eq!(
+        to_json(&acked),
+        json!({ "type": "ack", "nonce": due.nonce, "seq": every })
+    );
+    assert_eq!(
+        to_json(&conceded),
+        json!({ "type": "ack", "nonce": "cp-concede", "seq": every + 1 })
+    );
+    actor.idle().await;
+    assert!(actor.engine_state().result.is_some());
+    assert!(checkpoints(&app).await.is_empty());
+    assert_eq!(checkpoint_lines(&logs), Vec::<String>::new());
+}
+
+/// #4291 (C12): a checkpoint of a match another writer finished between the queue and the store is
+/// kept out by the store's own guard (a live row only).
+#[tokio::test(start_paused = true)]
+async fn a_checkpoint_of_a_match_another_writer_finished_is_kept_out() {
+    use jackioh_server::db::fake::{CallOutcome, FakeTables};
+    use jackioh_server::db::store::MatchStatus;
+
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let every = usize::try_from(MATCH_CHECKPOINT_MIN_ACTIONS).expect("a small count");
+    let (seed, decks, actions) = game(every + 1);
+    let row = live_row(&seed, &decks);
+    write_match(&app, &row).await;
+    let actor = actor_of(&app).await;
+    play(&actor, 1, &actions[..every - 1]).await;
+    fake_ref(&app).lock().await.before_call = Some(std::sync::Arc::new(|method: &str, tables: &mut FakeTables| {
+        if method == "matches.putCheckpoint"
+            && let Some(row) = tables.matches.iter_mut().find(|row| row.id == MATCH_ID)
+        {
+            row.status = MatchStatus::Finished;
+        }
+        CallOutcome::Proceed
+    }));
+    play(&actor, every, &actions[every - 1..every]).await;
+    fake_ref(&app).lock().await.before_call = None;
+    assert!(checkpoints(&app).await.is_empty());
+    assert_eq!(logs.named("match.checkpoint.kept").len(), 1);
+    assert!(logs.named("match.checkpoint.written").is_empty());
+}
+
+/// #4291 (C14): a checkpoint the store fails costs only the shortcut: every row is acked, one warn
+/// line says so, and a later rebuild folds the whole log, the last checkpoint stored being none.
+#[tokio::test(start_paused = true)]
+async fn a_checkpoint_the_store_fails_is_logged_and_the_rebuild_folds_from_the_last_one_stored() {
+    use crate::support::store::{fail_on, stop_failing};
+
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let every = usize::try_from(MATCH_CHECKPOINT_MIN_ACTIONS).expect("a small count");
+    let (seed, decks, actions) = game(LOGGED + 1);
+    let row = live_row(&seed, &decks);
+    write_match(&app, &row).await;
+    let actor = actor_of(&app).await;
+    fail_on(&app, "matches.putCheckpoint", "down").await;
+    play(&actor, 1, &actions[..every]).await;
+    stop_failing(&app).await;
+    let failed = logs.named("match.checkpoint.failed");
+    assert_eq!(failed.len(), 1);
+    assert_eq!(failed[0].level, "warn");
+    assert!(checkpoints(&app).await.is_empty());
+
+    play(&actor, every + 1, &actions[every..LOGGED]).await;
+    app.matches.stop(MATCH_ID).await;
+    let rebuilt = actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(0));
+    assert_eq!(
+        hash_state(&rebuilt.engine_state()),
+        hash_state(&folded(&row, &actions[..LOGGED]))
+    );
+}
+
+/// #4291 (C16, unspecified): a checkpoint the rebuild refuses, at the log's head, is not replaced by
+/// the drain's good one of the same seq (only a later seq replaces a checkpoint), so the next
+/// rebuild refuses it again and folds the whole log.
+#[tokio::test(start_paused = true)]
+async fn a_refused_checkpoint_at_the_logs_head_outlasts_the_drains_good_one() {
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let (_row, _actions) = drained(&app).await;
+    let good = checkpoints(&app).await.pop().expect("the drained checkpoint");
+    let poison = MatchCheckpointRow {
+        rules: "0000000000000000".to_string(),
+        ..good.clone()
+    };
+    set_checkpoint(&app, Some(poison.clone())).await;
+
+    actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(0));
+    assert_eq!(logs.named("match.checkpoint.refused").len(), 1);
+    let kept = logs.named("match.checkpoint.kept").len();
+    assert_eq!(app.matches.stop_all().await, 1);
+    assert_eq!(logs.named("match.checkpoint.kept").len(), kept + 1);
+    assert_eq!(checkpoints(&app).await, vec![poison]);
+
+    actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(0));
+    assert_eq!(logs.named("match.checkpoint.refused").len(), 2);
+}
+
 #[tokio::test(start_paused = true)]
 async fn a_rebuilt_match_carries_its_sequence_on_and_the_next_drain_moves_its_checkpoint_up() {
     install_test_cards();

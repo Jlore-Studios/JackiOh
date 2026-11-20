@@ -1375,16 +1375,19 @@ pub fn matches_put_checkpoint(f: &mut FakeTx<'_>, row: &MatchCheckpointRow) -> R
     if !live || !logged {
         return Ok(false);
     }
-    match tables
-        .match_checkpoints
-        .iter_mut()
-        .find(|existing| existing.match_id == row.match_id)
-    {
-        None => tables.match_checkpoints.push(row.clone()),
+    Ok(put_newer_checkpoint(&mut tables.match_checkpoints, row))
+}
+
+/// #1169: `row` stored as its match's checkpoint when the match has none or an older one (a lower
+/// `seq`), as Postgres's upsert does; false when the one held is as new or newer. A match's and a
+/// co-op match's fake (`duos::store`) both keep theirs so.
+pub(crate) fn put_newer_checkpoint(rows: &mut Vec<MatchCheckpointRow>, row: &MatchCheckpointRow) -> bool {
+    match rows.iter_mut().find(|existing| existing.match_id == row.match_id) {
+        None => rows.push(row.clone()),
         Some(existing) if existing.seq < row.seq => *existing = row.clone(),
-        Some(_) => return Ok(false),
+        Some(_) => return false,
     }
-    Ok(true)
+    true
 }
 
 pub fn matches_checkpoint(

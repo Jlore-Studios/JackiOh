@@ -1,8 +1,10 @@
 //! #1169: a live match's checkpoint (SPEC §9.3, §9.5), so a rebuild folds only the log's tail.
 //!
-//! When the restart drain stops a live match's actor (`Registry::stop_all`), the actor stores what it
-//! holds after the log's newest row (`MatchActor::checkpoint`): the engine state, the play telemetry's
-//! recorder (R1442) and the turn each bot last moved in (R639000), as one JSON `body`.
+//! When the restart drain stops a live match's actor (`Registry::stop_all`), and while the match is
+//! played after every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row its log writes (#4224, `Task::Checkpoint`),
+//! the actor stores what it holds after the log's newest row (`MatchActor::checkpoint`): the engine
+//! state, the play telemetry's recorder (R1442) and the turn each bot last moved in (R639000), as one
+//! JSON `body`.
 //!
 //! The next rebuild (`Registry::rebuild`) resumes all three of its folds from a checkpoint that
 //! passes every check in `verify`, and folds only rows after it. On refusal, the whole log is

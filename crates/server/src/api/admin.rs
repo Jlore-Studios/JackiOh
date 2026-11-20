@@ -27,7 +27,7 @@ use crate::admin::store::{
     RatingGrant,
 };
 use crate::api::dev::dev_caller;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, caller_of, json, ok_of};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, caller_of, json, ok_of, query_trimmed};
 use crate::api::ranked::{dev_leaderboard, usernames_of};
 use crate::app::{App, now_ms};
 use crate::config::{ADMIN_AUDIT_PAGE, DEV_RATING_MAX, DEV_RATING_MIN, NEWS_POSTS_PAGE};
@@ -391,16 +391,10 @@ pub async fn get_audit(app: &Arc<App>, req: Req) -> ApiResult {
                 .map_err(|_| bad_request("before_id must be a whole number"))?,
         ),
     };
-    let present = |name: &str| {
-        req.query
-            .get(name)
-            .map(|value| value.trim().to_string())
-            .filter(|value| !value.is_empty())
-    };
     let filter = AdminActionFilter {
         before_id,
-        profile_id: present("profile_id"),
-        route: present("route"),
+        profile_id: query_trimmed(&req, "profile_id"),
+        route: query_trimmed(&req, "route"),
     };
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let rows = tx.admin_actions_page(&filter, ADMIN_AUDIT_PAGE).await?;
