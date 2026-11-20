@@ -40,7 +40,11 @@ pub fn duos_hash(state: &DuosState) -> String {
 /// Create (as a game already made, R1705003), begin, then apply the log in order, stopping at the
 /// first refused action. Panics as `duos_create` does on a setup `create_recorded_game` refuses.
 pub fn duos_fold(input: &DuosReplayInput) -> DuosReplayResult {
-    duos_fold_from(duos_begin(&duos_create_recorded(&input.options)).state, &input.log, 0)
+    duos_fold_from(
+        duos_begin(&duos_create_recorded(&input.options)).state,
+        &input.log,
+        0,
+    )
 }
 
 /// `duos_fold` carried on from `state`, the state after a log's first `skipped` actions (a server's

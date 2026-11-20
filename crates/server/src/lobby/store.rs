@@ -489,11 +489,7 @@ mod fake {
         let lobbies = call(f, "lobbies.countOpenByHost")?;
         Ok(lobbies
             .iter()
-            .filter(|lobby| {
-                lobby.host == host
-                    && lobby.settings.format() == format
-                    && lobby.open_at(at)
-            })
+            .filter(|lobby| lobby.host == host && lobby.settings.format() == format && lobby.open_at(at))
             .count() as i64)
     }
 

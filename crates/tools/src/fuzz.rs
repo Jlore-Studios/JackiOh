@@ -2183,9 +2183,10 @@ pub(crate) fn largest_in_json(value: &Value) -> i64 {
 /// One action's weights, in `MEASURES`' order: the events `reduce` returned, the largest number on
 /// any instance of `state` (the state it produced) and the instances in it.
 pub(crate) fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
-    let (largest, instances) = jackioh_engine::every_instance(state).fold((0_i64, 0_i64), |(largest, count), card| {
-        (largest.max(largest_number(card)), count + 1)
-    });
+    let (largest, instances) = jackioh_engine::every_instance(state)
+        .fold((0_i64, 0_i64), |(largest, count), card| {
+            (largest.max(largest_number(card)), count + 1)
+        });
     [
         i64::try_from(events.len()).unwrap_or(i64::MAX),
         largest,

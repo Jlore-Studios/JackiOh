@@ -481,6 +481,163 @@ neither (R2706000, R3476000). Its rows are K1 to K21 (K for kept), never `R<n>`.
 | K20 | a stale banner clears another tab's R | Reachable: A saves and leaves X, both tabs show the banner; B starts Y; A's Resume is refused (W is Y's) and clears Y's R (`controller.ts:313`) | **Unspecified** (R765 drops "a save that will not fold", not another game's) | — |
 | K21 | a failing engine or IndexedDB on a reload, with a good R and W | Reachable: the WebAssembly load fails, or the database will not open | **Unspecified**: R668 refuses another game, another catalog or another fold; the page clears R anyway (`controller.ts:313`), and the game is lost though W holds it | › "R668 a game the worker cannot bring back is forgotten, and the player lands on the setup" (its failed resume) |
 
+## 10. A live match's stored checkpoint
+
+**Checked at** `ae977ece3e`, plus #4291's pull request.
+
+**Files:** `crates/server/src/actor/match_actor.rs` (`Task::Checkpoint`, `checkpoint`, `write_checkpoint`),
+`crates/server/src/actor/checkpoint.rs` (`checkpoint_row`, `verify`), `crates/server/src/actor/registry.rs`
+(`rebuild`, `stop_all`), `crates/server/src/db/pg.rs` and `crates/server/src/db/fake.rs`
+(`matches_put_checkpoint`, `matches_finish`, `put_newer_checkpoint`).
+
+**Fields,** per match: the log's newest seq n; the stored checkpoint's seq c (none, or one row, at most one
+per match, #1169); a `Task::Checkpoint` queued (the drain's, or the periodic one every
+`MATCH_CHECKPOINT_MIN_ACTIONS`-th written row queues, #4224); the host's finished, voided and stopped marks;
+the row's status (live or finished; a void deletes it); and the store's answer to a put (written, kept, or
+failed).
+
+**What moves it:** a row written whose seq is a multiple of `MATCH_CHECKPOINT_MIN_ACTIONS` (a periodic
+checkpoint queued behind it); the restart drain (`stop_all`: each actor checkpointed, then stopped); `stop`, a
+crash or the reaper (none written); the match's ending (`matches_finish` deletes the row) or void (the cascade);
+a rebuild (`Registry::rebuild` reads the row with the log and folds the tail from it when `verify` passes, else
+the whole log, §9.5); the store failing a put. Its rows are C1 to C18 (C for checkpoint), never `R<n>`; K is
+state 9's.
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| C1 | n < `MATCH_CHECKPOINT_MIN_ACTIONS`, none stored | Reachable: a short match, drained | Nothing written: a short log folds whole cheaply (`MATCH_CHECKPOINT_MIN_ACTIONS`'s doc) | `crates/server/tests/actor/checkpoints.rs::a_short_match_writes_no_checkpoint` |
+| C2 | the row whose seq is the interval, none stored | Reachable: play 32 rows | One checkpoint at that seq, queued behind the row so no answer waits on it (#4224) | `…::a_live_match_checkpoints_every_min_actions_rows_as_it_is_played_and_a_crash_resumes_there` |
+| C3 | a periodic checkpoint over an older one (c < n) | Reachable: 40 rows drained (c = 40), rebuilt, rows 41 to 64 played | Replaced by the newer (only a later seq replaces one, #1169); a crash resumes from it to `fold(..64)`'s hash (§9.5) | `…::a_periodic_checkpoint_replaces_an_older_one_and_a_crash_resumes_from_it` (new) |
+| C4 | c < n, no actor | Reachable: drained at 40, rows appended after | The rebuild folds the tail from c to the state a whole fold reaches (§9.5) | `…::a_drained_match_rebuilds_from_its_checkpoint_as_a_full_fold_rebuilds_it` |
+| C5 | c = n, rebuilt | Reachable: drained, then rebuilt | The actor carries the log's seq and nonces on, and the next drain moves c up | `…::a_rebuilt_match_carries_its_sequence_on_and_the_next_drain_moves_its_checkpoint_up` |
+| C6 | the drain right after a periodic checkpoint at n | Reachable: 32 rows played, `stop_all` | The store keeps the one held (the same seq), `kept` logged | `…::a_drain_right_after_a_periodic_checkpoint_keeps_it` (new) |
+| C7 | c > n | Unreachable: a put stores only a row the log holds under its nonce (§9.3: the row before the state), and a live match's log only grows. **Representable when serialized**: an edited row is refused for its seq and the log folds whole | Refused (`verify`) | `…::a_checkpoint_that_fails_a_check_is_refused_and_the_whole_log_is_folded` (its "seq" poison) |
+| C8 | a periodic checkpoint queued, the match finishes before it runs | Reachable: the 32nd row and a concession submitted together | Nothing written, no `match.checkpoint.*` line (`write_checkpoint` passes over a finished host) | `…::a_match_finishing_while_its_periodic_checkpoint_is_queued_writes_none` (new) |
+| C9 | the match finished with a checkpoint stored | Reachable: concede after C2 | The ending deletes it (§9.3, #1169) | `crates/server/tests/store/contract.rs::matches::finishing_a_match_drops_its_checkpoint`; C2's test (its concession) |
+| C10 | a periodic checkpoint queued when the actor is stopped | Reachable: `stop` while the 32nd row's write is in flight | Nothing written (`write_checkpoint` passes over a stopped host) | — (no test yet: holding the fake's lock across the write and `stop` is left for the next audit) |
+| C11 | the match voided with a checkpoint stored | Reachable: a void after C2 | Deleted with the match (R679, the cascade) | `crates/server/tests/store/contract.rs::matches::voiding_a_match_drops_its_checkpoint` |
+| C12 | another writer finished the row between the queue and the put | Reachable: the row turned finished as the put runs | The store's live-row guard keeps it out, `kept` logged | `crates/server/tests/actor/checkpoints.rs::a_checkpoint_of_a_match_another_writer_finished_is_kept_out` (new) |
+| C13 | a put while the ending is uncommitted (Postgres) | Reachable: `matches_finish`'s transaction open while a put runs in its own | The put stores nothing, so the ended match keeps none (§9.3: "a match that ends drops its checkpoint") | **#4291: was a mismatch, fixed**: Postgres's put read the row live under the ending's open transaction and stored the checkpoint, which the ending's delete had already passed, so the finished match kept it. The put's live-row guard now locks the row (`for share`), waits for the ending and stores nothing. `crates/server/tests/store/contract.rs::matches::a_checkpoint_written_as_its_match_finishes_never_outlives_the_ending` (new, both stores; failed on Postgres before the fix: "postgres store (db/pg.rs): the put waits for the ending and stores nothing") |
+| C14 | a put the store fails | Reachable: the store down at the 32nd row | Every row acked, one warn `match.checkpoint.failed`; the next rebuild folds from the last checkpoint stored, here none (`write_checkpoint`'s doc) | `crates/server/tests/actor/checkpoints.rs::a_checkpoint_the_store_fails_is_logged_and_the_rebuild_folds_from_the_last_one_stored` (new) |
+| C15 | an older put after a newer one | Unreachable from one actor: its queue writes in seq order, and a rebuilt actor starts at a seq at or past the one stored; the store keeps only a later seq anyway | — | `crates/server/tests/store/contract.rs::matches::checkpoint_round_trips_and_only_a_later_seq_replaces_it` |
+| C16 | a stored checkpoint the rebuild refuses, at the log's head | Reachable: one written under other rules (a deploy that moves `RULES_FINGERPRINT`), then a restart drain before any new row | **Unspecified**: the drain's good one has the same seq, so the store keeps the refused one, and the next rebuild refuses it again and folds the whole log until a later row's checkpoint replaces it | `crates/server/tests/actor/checkpoints.rs::a_refused_checkpoint_at_the_logs_head_outlasts_the_drains_good_one` (new) |
+| C17 | the body read back (its JSON round trip) | Reachable: every rebuild from a checkpoint | The state, the recorder (R1442) and the bot turns (R639000) carry on as a whole fold's; **unspecified**: a periodic checkpoint keeps the live `clockLeftMs` readings a whole fold has no clock for | `…::a_recorder_read_back_from_a_checkpoint_carries_on_as_replaying_the_whole_log`, `…::bot_turns_carried_on_from_a_checkpoint_equal_the_whole_logs`, `…::every_state_of_a_whole_game_checkpoints_and_passes_its_checks`; C2's test strips `clockLeftMs` to compare |
+| C18 | a checkpoint whose match row is gone | Unreachable: `match_checkpoints.match_id` references `matches` `on delete cascade` (`migrations/0042_match_checkpoints.sql`) | — | — |
+
+A co-op or 2v2 match's checkpoint (`crates/server/src/duos/checkpoint.rs`, #4169) holds the same rows through
+the same `verify_body` and the same store guards (`put_newer_checkpoint` keeps both fakes' copies one):
+`crates/server/tests/actor/duos_checkpoints.rs::a_two_v_two_match_checkpoints_every_min_actions_rows_as_it_runs_and_a_crash_resumes_there`
+(C2), `…::a_coop_checkpoint_the_store_fails_to_write_costs_only_the_shortcut` (C14) and
+`…::a_coop_match_ending_after_a_checkpoint_rebuild_drops_its_checkpoint` (C9).
+
+## 11. A notification's read mark
+
+**Checked at** `ae977ece3e`, plus #4291's pull request.
+
+**Files:** `crates/server/src/notifications/mod.rs` (`notify`, `mark_subject`, `list`, `mark_read`) and
+`store.rs`; R4233000's callers (`crates/server/src/daily/games.rs`, `daily/invites.rs`, `social/friends.rs`,
+`lobby/mod.rs`, `api/replays.rs`); `apps/web/src/inbox/feed.ts` (`openFeed`), `InboxBell.tsx`,
+`NotificationToast.tsx`, `RecentSection.tsx` and `apps/web/src/together/socialPoll.ts` (`onNotificationPush`).
+
+**Fields,** per row: `read_at` (none or a moment); its kind, actor and subject (what an act marks it by); for a
+`lobbyInvite`, whether its lobby is open (`Lobby::open_at`); the account's unread count (the social read's
+`notificationsUnread`, the bell's dot); and, in a tab, the feed's page and whether the panel is open.
+
+**What moves it:** `notify` (a row written unread, or read for its own actor's ending, R4233000; it replaces the
+recipient's unread row of the same kind, actor and subject; a `notification` frame for an unread one); an act's
+mark (`mark_subject`: a board read or action, a challenge's accept or decline, a friend request's answer, a lobby's
+enter, a replay's read); the panel's opening (`POST /api/notifications/read` up to the newest row, R4039001); a
+page read (it deletes a closed lobby's invites); the cap (`NOTIFICATIONS_KEEP`) and the daily sweep's purge
+(`NOTIFICATIONS_KEEP_DAYS`); a push to the account's sockets; a reload. Its rows are F1 to F29 (F for feed),
+never `R<n>`; N is state 7's.
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| F1 | a row written unread | Reachable: any notice to another account | Listed, counted, pushed to every socket of its account alone (R4039000) | `crates/server/tests/actor/social_live.rs::r4039000_frames::r4039000_a_notification_reaches_every_socket_of_its_account_alone`, `crates/server/tests/api/notifications.rs::r4039000_the_social_read_counts_unread` |
+| F2 | a row written read | Reachable: the player whose own move or concession ended a daily game | Listed, never counted, no toast or frame (R4233000) | `crates/server/tests/api/daily.rs::r4233000_read_on_open::r4233000_the_senders_own_ended_row_is_written_read`, `crates/server/tests/actor/social_live.rs::r4233000_push::r4233000_a_conceders_own_ended_row_sends_them_no_notification` (new) |
+| F3 | a loss on time, the loser's row | Reachable: the move's time runs out | Unread: the server's act, not the loser's (R4233000, R3727000) | `crates/server/tests/api/daily.rs::r4039000_daily_feed::r4039000_time_up_tells_both_on_time` |
+| F4 | a loss on time, the winner's row | Reachable: as F3 | Unread (R4233000) | F3's test |
+| F5 | a daily game's move and ended rows, then the board read or an action there | Reachable: as it says | Marked read in the read's own transaction, only while unread, pushing the reader's frame (R4233000, R3840000) | `crates/server/tests/api/daily.rs::r4233000_read_on_open::r4233000_a_board_read_marks_its_move_rows_read`, `…::r4233000_an_action_marks_the_same_rows`, `crates/server/tests/actor/social_live.rs::r4233000_push::r4233000_a_board_read_pushes_the_new_count` |
+| F6 | a daily challenge's row, then its accept or decline | Reachable | Marked (R4233000) | `crates/server/tests/api/daily.rs::r4233000_read_on_open::r4233000_accepting_or_declining_a_daily_challenge_marks_its_row` |
+| F7 | a friend request's row, then its accept, decline or a mutual add | Reachable | Only that sender's row marked (R4233000) | `crates/server/tests/api/friends.rs::r4233000_read_on_open::r4233000_accepting_or_declining_a_friend_request_marks_only_that_senders_row`, `…::r4233000_a_mutual_add_marks_the_first_request_row` |
+| F8 | a lobby invite's row, then the lobby entered | Reachable | Marked, still listed (R4233000) | `crates/server/tests/api/lobbies.rs::r4233000_read_on_open::r4233000_entering_a_lobby_marks_its_invite_read` |
+| F9 | a shared replay's row, then the friend reads it | Reachable | Marked (R4233000) | `crates/server/tests/api/shares.rs::r4233000_read_on_open::r4233000_a_friends_read_of_a_shared_replay_marks_its_row` |
+| F10 | a shared replay's row of a seat of the match, the other seat its sharer, then it reads the replay | Was reachable: `share_replay` lets one seat share with the other, a friend | Marked: "a friend's read of a replay shared with them" (R4233000) | **#4291: was a mismatch, fixed**: `replays.rs` marked only a reader reading as someone else's seat, so a seated friend's read marked nothing. It now marks the caller's own `replayShared` rows on every read. `…::r4233000_a_seated_friends_read_of_a_replay_shared_with_them_marks_its_row` (new; failed before the fix: "left: Number(2) right: 1") |
+| F11 | two rows on one replay, from both seats | Reachable: both share with one friend | One read marks both (R4233000 marks by subject) | `…::r4233000_one_read_marks_every_sharers_row_for_the_match` (new) |
+| F12 | an accept's `dailyAnswered` row, then the board it links read | Reachable | **Unspecified**: R4233000 names no act that answers an answer; the board read marks only the move and ended rows, so the answer stays unread until the panel opens | `crates/server/tests/api/daily.rs::r4233000_read_on_open::r4233000_opening_the_board_an_accept_links_leaves_its_answer_unread` (new) |
+| F13 | a daily challenge cancelled by its sender, or lapsed, unanswered | Reachable: a cancel; the sweep past `DAILY_CHALLENGE_TTL_DAYS` | **Unspecified**: no act of the friend's, so the row keeps counting though there is nothing to answer | `…::r4233000_a_challenge_cancelled_or_lapsed_unanswered_keeps_its_row_unread` (new) |
+| F14 | a friend request cancelled, then sent again | Reachable | **Unspecified**: the cancelled one's row keeps counting; the new request is a row of its own (another subject), and answering it marks only that one | `crates/server/tests/api/friends.rs::r4233000_read_on_open::r4233000_a_cancelled_request_keeps_its_row_unread_beside_a_resent_one` (new) |
+| F15 | a lobby invite whose lobby is gone, started or expired | Reachable: the host leaves or starts; the lobby lapses | Counted nowhere, even before a page is read; the page deletes it (R4233000) | `crates/server/tests/api/lobbies.rs::r4233000_read_on_open::r4233000_a_dead_lobby_invite_is_not_counted`, `…::r4039000_the_invite_feed::r4039000_an_invite_lists_until_the_host_leaves_or_starts` |
+| F16 | an entered invite, then its lobby closes | Reachable | **Unspecified**: R4039001 keeps rows as history, while R4039000 lists an invite only while its lobby is open; the page deletes it | `…::r4233000_read_on_open::r4233000_an_entered_invite_leaves_recent_once_its_lobby_closes` (new) |
+| F17 | an invite into a lobby another player filled | Reachable: a third player takes the seat | **Unspecified**: it still counts, though the full lobby reads as gone to the friend (R4233000 leaves out only gone, started or expired) | `…::r4233000_an_invite_to_a_full_lobby_still_counts` (new) |
+| F18 | the panel's mark fails | Reachable: the store or network fails the POST | The rows stay unread at the server and the next opening marks them again (`feed.ts`'s comment) | `apps/web/src/inbox/RecentSection.test.tsx` › "R4039001 a mark that fails is sent again at the next opening" (new) |
+| F19 | unread rows, the bell's dot | Reachable | The dot shows only with no badge, and the panel's opening clears it (R4039001) | `apps/web/src/inbox/RecentSection.test.tsx` › "R4039001 opening the panel marks the feed read up to the newest row shown, and the bell's dot shows only with no badge", › "R4039001 a badge takes the dot's place, and a page with nothing unread sends no mark" |
+| F20 | the panel opened on a page an act already read, an older row unread | Was reachable: an act marks the newest rows (F5 to F9) and an older one stays unread | Every row up to the newest marked: the panel "marks every row up to its newest one read" (R4039001) | **#4291: was a mismatch, fixed**: `openFeed` sent the mark only for an unread row on the page, so the dot stayed lit. It now also marks when the page's `unread` count is not 0. › "R4039001 opening the panel marks an older unread row below a page its acts already read" (new; failed before the fix: "expected [] to have a length of 1 but got +0") |
+| F21 | a row pushed while the panel is open | Reachable: a friend acts while the panel shows | The page read again and marked up to its newest (R4039001) | › "R4039001 a row pushed while the panel is open reads the page again and marks it" (new) |
+| F22 | a mark, an account with two tabs | Reachable | Both tabs' sockets hear the new count (R4233000) | `crates/server/tests/actor/social_live.rs::r4233000_push::r4233000_a_mark_reaches_every_socket_of_its_account` (new), `…::r4233000_a_mark_pushes_the_new_count` |
+| F23 | a pushed row while a board is shown | Reachable | **Unspecified**: the toast is held until the board goes, then shown, though the row may be read by then | `apps/web/src/inbox/NotificationToast.test.tsx` › "R4039001 while a board is shown the toast is held, and it shows once the board goes" |
+| F24 | the socket down, or a reload | Reachable | The poll's social read carries the count (R3214000); the panel reads the page afresh | `apps/web/src/together/polling.test.tsx` › "R3214000 after the connection drops the social poll reads at once and resumes its pace" |
+| F25 | a second notice on an unread row's kind, actor and subject | Reachable: a daily game's next move | Replaces it, so moves never stack; a read row stays beside the new one (R4039000) | `crates/server/tests/store/contract.rs::r4039000_notifications::r4039000_add_replaces_an_unread_row_and_keeps_the_newest`, `crates/server/tests/api/daily.rs::r4039000_daily_feed::r4039000_a_second_move_stands_beside_a_read_row` |
+| F26 | past the cap, or past the keep days | Reachable | The newest `NOTIFICATIONS_KEEP` kept; the sweep purges older rows, read or not (R4039000) | `crates/server/tests/api/notifications.rs::r4039000_the_cap_keeps_the_newest`, `…::r4039000_the_sweep_purges_rows_past_the_keep_days` |
+| F27 | a read row unread again | Unreachable: no write clears `read_at` (`mark_read` and `mark_subject` set it on unread rows only) | — | `crates/server/tests/store/contract.rs::r4039000_notifications::r4233000_mark_subject_marks_only_matching_kind_subject_and_actor` |
+| F28 | a row naming a deleted account | Unreachable: a deleted profile takes its rows both ways | — | `…::r4039000_a_deleted_profile_takes_its_rows_both_ways` |
+| F29 | a `notification` frame for a read row | Unreachable: `notify` sends a frame only for a row written unread. **Representable when serialized**: the frame carries `read` | — | F2's tests |
+
+## 12. The web's social socket
+
+**Checked at** `ae977ece3e`, plus #4291's pull request.
+
+**Files:** `apps/web/src/together/socialSocket.ts` (`openSocialSocket`: `open`, `replace`, `afterClose`, `retry`,
+`close`), `apps/web/src/together/socialPoll.ts` (`start`, `stop`, `tick`, `onLive`, `onQuiet`, `openSocket`),
+`apps/web/src/game/net.ts` (`createBackoff`, `createWakeProbe`, `letGo`, `quietWhileHidden`). `net/social.ts`
+is REST only.
+
+**Fields:** the poll's `pollers` (screens mounted that poll), its `socket` (the client, or none), `reads.live`,
+its `refusedToken` (a session the REST read refused) and the tab's visibility and quiet (`HIDDEN_QUIET_MS`,
+R3576000); the client's own `socket` (none, connecting, open or closing), `openedWith` (the token it was opened
+with), `live` (a `social` frame came), `refusedToken` (a 4401 or 4403's), `waiting` (a drop's backoff step), the
+backoff's step and the wake probe's timer (R1441); `disposed`.
+
+**What moves it:** the first poller's mount and the last's unmount; the poll's tick (`SOCIAL_POLL_MS`), whose
+`retry` opens a socket nothing waits on and replaces one whose token the session no longer holds; a frame
+(`social` turns it live and resets the backoff); a close, by code: a 4401 reopens at once with a token renewed
+meanwhile and is otherwise, as a 4403 is, final for its token; anything else (1000, 1001, 1006, 1011, 4429) is a
+drop on the backoff;
+the factory throwing; a page wake (R1441); the tab hidden, quiet and shown (R3576000); the session renewed,
+switched or signed out. A reload starts it from nothing. Its rows are V1 to V28 (V for the social socket's
+view), never `R<n>`.
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| V1 | two screens polling, one socket | Reachable: the toast and Play together mounted | One socket for the tab; the last to unmount lets it go (`useSocialPoll`'s doc, R3214000) | `apps/web/src/together/polling.test.tsx` › "R3214000 two screens that poll share one socket, which the last to unmount lets go" (new), › "#1831 the toast and Play together share one social read per SOCIAL_POLL_MS" |
+| V2 | no poller | Reachable: V1's last unmount | No socket, no read (`stop`) | V1's test |
+| V3 | a socket open, not live | Reachable: before its first `social` frame | The poll still reads; an error frame changes nothing (R3214000) | `apps/web/src/together/socialSocket.test.ts` › "R3214000 offers the session's token on /ws/social and is live from its first social frame" |
+| V4 | live | Reachable: the first `social` frame | No poll sent; pushes applied (R3214000) | `polling.test.tsx` › "R3214000 while the connection is up no social poll is sent, and a pushed challenge shows" |
+| V5 | a poll's answer arriving once live | Reachable: the mount's read in flight as the socket turns live | **Unspecified**: dropped (the pushed read is newer) | › "R3214000 a poll's answer that comes after the socket turned live is dropped" (new) |
+| V6 | a drop by 1001 (a restart's drain) or 1011 (a server fault) | Reachable | A drop: the backoff, as 1006 (R1441, R1115000); **unspecified** for 1011 | `socialSocket.test.ts` › "R3214000 a restart's drain (1001) and a server fault (1011) are drops" (new) |
+| V7 | a drop while the wake probe waits | Reachable: a wake past the silence, then a close | The probe cancelled; only the drop's step waits (R1441) | › "R3214000 a drop while the wake probe waits cancels it, and a wake while the drop's step waits opens nothing before the step" (new) |
+| V8 | a wake past the silence, an open socket | Reachable | Probed with `hello`; kept if it answers, replaced if not (R1441) | › "R3214000 a woken page probes a quiet socket with hello and replaces it if nothing answers" |
+| V9 | a wake while a drop's step waits | Reachable | Nothing opens before the step (R1441) | V7's test |
+| V10 | a wake with a socket that never opened, or one the browser is closing | Reachable | Replaced at once, no probe (R1441, as N14) | › "R3214000 a socket that never opened, or is already closing, is replaced at once when the page wakes (R1441)" (new) |
+| V11 | a 4401 | Reachable: the handshake's token refused | A renewed token reopens at once; the same one waits for another (R1115000) | › "R3214000 a 4401 reopens at once with a renewed token, and a refusal for the same token waits for another" |
+| V12 | a 4403 (an inactive account, or too many open tabs) | Reachable: a sixth tab of one account | Final for its token (R1115000); **unspecified**: a sixth tab opens nothing when another tab closes, until its token is renewed | › "R3214000 4429 is a drop and 4403 is final for its token" |
+| V13 | a 4429 | Reachable: past the account's budget | A drop on the backoff | V12's test |
+| V14 | a 4404 | Unreachable: the social route closes with 4401, 4403, 1008, 1011 or 1001, never 4404 (`social/live.rs`) | — | — |
+| V15 | a close with 1008 (a malformed frame) | Unreachable: the client sends only `hello` (`HELLO`, the probe's) | — | — |
+| V16 | the session renewed under a live socket | Reachable: the gate's renewal | The next tick replaces it with one carrying the new token (R3214000); **unspecified**: the replacement's drop to the poll reads once more | `polling.test.tsx` › "R3214000 a renewed session's next tick replaces the socket with one that carries the new token" (new); `socialSocket.test.ts` › "R3214000 a frame after the session's token changed is never shown, and the socket opens again for the new one" |
+| V17 | signed out under a mounted poll | Was reachable: the session cleared in another tab or by a refusal | The signed-out session's socket "is replaced" (R3214000, `retry`'s doc); with no token none opens | **#4291: was a mismatch, fixed**: `tick` returned on no token before `retry`, so the old session's socket stayed open and live. It now calls `retry` first. `polling.test.tsx` › "R3214000 a tab signed out under a mounted poll lets its socket go at the next tick, and opens none" (new; failed before the fix: "expected null to deeply equal { code: 1000, …(1) }") |
+| V18 | no session at all | Reachable: a signed-out tab | No socket opens, whatever closed the last (R3214000) | `socialSocket.test.ts` › "R3214000 4429 is a drop and 4403 is final for its token" (its last part) |
+| V19 | a socket the browser cannot construct | Reachable: a blocked scheme | **Unspecified**: retried on the backoff, as the match socket's N4 | › "R3214000 a socket the browser cannot construct is retried on the backoff" (new) |
+| V20 | hidden for less than `HIDDEN_QUIET_MS` | Reachable | The socket kept, the count started over when shown (R3576000) | `polling.test.tsx` › "R3576000 a tab that shows again before HIDDEN_QUIET_MS keeps its socket, and the count starts over" |
+| V21 | quiet | Reachable: hidden for `HIDDEN_QUIET_MS` | The socket let go, the poll paused; one opens when shown (R3576000, R3205000) | › "R3576000 a tab hidden for HIDDEN_QUIET_MS lets its socket go and reads nothing, and opens one again when it shows" |
+| V22 | quiet with a challenge of the tab's own open | Reachable | The poll goes on (R3205000) | › "R3576000 a quiet tab with a challenge of its own open goes on polling for it (R3205000)" |
+| V23 | a drop while hidden | Reachable | No read until shown (R3205000) | › "R3214000 a drop while the tab is hidden reads nothing until it shows (R3205000)" |
+| V24 | quiet while a drop's step waits | Reachable: a drop just before the quiet | The step goes with the client; no socket until shown (R3576000) | › "R3576000 a tab that goes quiet while a drop's step waits opens no socket until it shows" (new) |
+| V25 | a client while no screen polls | Unreachable: `stop` closes it, and only `start` and `onQuiet` (stopped with the poll) open one | — | — |
+| V26 | two clients at once | Unreachable: `openSocket` opens none while one is held, and `onQuiet` lets go of the one held before any other opens | — | — |
+| V27 | `live` with no socket | Unreachable: every path that drops the socket (`onclose`, `replace`, the probe's `replace`) sets it down in the same step, `close` clears it, and `onQuiet` tells the poll | — | — |
+| V28 | the backoff past its last step | Reachable: drops in a row | The last step repeats; a `social` frame starts the steps over (R1441) | › "R3214000 a dropped socket reopens on the match socket's backoff" |
+
 ## Not states (versions)
 
 Each reads an older record; nothing is removed.
@@ -505,6 +662,10 @@ Each reads an older record; nothing is removed.
   before R765 carries no flag and reads as one the player was in (R668)", › "R924000 a random deck's pick is
   kept, a game kept before the picker reads as it was, and a bad pick is malformed", › "R3976000 a game is
   kept with its portraits, and portraits naming an unknown one are malformed".
+- A live match's checkpoint written by an older server, under other rules or another catalog
+  (`checkpoint_version`, `rules`, `catalog_version`) is refused and the whole log folded (C16 is the one at the
+  log's head):
+  `crates/server/tests/actor/checkpoints.rs::a_checkpoint_that_fails_a_check_is_refused_and_the_whole_log_is_folded`.
 - The engine's two thread-locals (the shipped catalog a replay folds under, R767000; whether the step in
   flight holds its random pools, R2201001), each set for one call and put back after it (CLAUDE.md
   rule 4).
@@ -541,7 +702,24 @@ Each reads an older record; nothing is removed.
   id at once leave two actors); A11 (a rebuild across `stop`, a reap or `forget` inserts what it folded);
   K13 (a full localStorage keeps the previous record; a refused IndexedDB write resumes one answer back);
   K19 to K21 (two tabs, and a failing engine or IndexedDB, clear another game's record or a good one).
+- **#4291's fixes,** each with a test that failed before it: V17 (a tab signed out under a mounted poll kept the
+  old session's social socket open and live: R3214000's "is replaced", `retry`'s doc), F20 (the panel's opening
+  sent no mark when the page's rows were read but an older one was not: R4039001's "marks every row up to its
+  newest one read") and F10 (a seat of the match the other seat shared a replay with read it without marking its
+  row: R4233000's "a friend's read of a replay shared with them") and C13 (a Postgres checkpoint put while the
+  match's ending was uncommitted outlived the ending: §9.3's "a match that ends drops its checkpoint"). If any
+  reads as a decision instead, it needs a ruling in a pull request of its own.
+- **#4291's unspecified:** C16 (a refused checkpoint at the log's head outlasts the drain's good one), C17 (a
+  periodic checkpoint keeps the live `clockLeftMs` readings), F12 (an accept's answer stays unread when its board
+  is read), F13 and F14 (a challenge or friend request cancelled or lapsed keeps counting), F16 (an entered invite
+  leaves Recent once its lobby closes), F17 (an invite into a full lobby still counts), F23 (a held toast shows
+  once the board goes, read or not), V5 (a poll's answer after live is dropped), V6's 1011, V12 (a sixth tab's
+  4403 waits for a renewed token), V16 (a renewal's replacement reads once more), V19 (a socket the browser
+  cannot construct is retried on the backoff). C10 has no test yet.
 - **Not shown:** E5′ (mulligans open with work owed); W10 (a duplicated tab: jsdom cannot copy a tab).
-- **Representable when serialized:** E7 to E10 (`GameState`), D3 and D5 (`RunState`), K11 (a practice
+- **Representable when serialized:** C7 (a checkpoint ahead of its log) and a checkpoint row on a finished
+  match (the row's shape allows both; the store's guards and `verify` keep them out), F29 (a `notification` frame
+  carries `read`, which a pushed row always has false), and `NotificationRow`'s `kind` beside a free `subject`
+  and `payload` (nothing in the row ties a kind to its subject's shape); E7 to E10 (`GameState`), D3 and D5 (`RunState`), K11 (a practice
   save edited in IndexedDB), and a practice record with `run`, `aiBanned` or `lastBoard` (`resume.ts`'s
   `isConfig` checks no extra keys; with `run`, a resume would read the run fight's slot).

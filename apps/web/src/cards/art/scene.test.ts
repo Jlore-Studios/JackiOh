@@ -25,7 +25,6 @@ import {
 } from "../constants.ts";
 import { drawFigure, FIGURE_DEFAULT_LOOK, FIGURE_KIT, FIGURE_LOOKS, figureLookFor, POSE_ANCHORS, type FigureLook } from "./figureKit.ts";
 import { fmt, seededRandom } from "./hash.ts";
-import { SCENE_BOX } from "./kitDraw.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf } from "./pictures.ts";
 import { loadSceneData, resetSceneDataForTests } from "./sceneLoader.ts";
@@ -33,6 +32,7 @@ import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MIN, artElements } from "./richness.ts";
 import {
   composeScene,
+  SCENE_BOX,
   SCENE_KIT_MIN_PARTS,
   SCENE_KIT_MIN_PER_CATEGORY,
   SCENE_LAYERS,

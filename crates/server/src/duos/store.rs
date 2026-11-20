@@ -981,7 +981,10 @@ mod fake {
         if !live || !logged {
             return Ok(false);
         }
-        Ok(crate::db::fake::put_newer_checkpoint(&mut tables.checkpoints, row))
+        Ok(crate::db::fake::put_newer_checkpoint(
+            &mut tables.checkpoints,
+            row,
+        ))
     }
 
     pub fn matches_checkpoint(

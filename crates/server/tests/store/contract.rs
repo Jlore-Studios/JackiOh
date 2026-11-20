@@ -3972,7 +3972,11 @@ mod matches {
                 finishing.commit().await.expect("commit the ending");
             },
         );
-        assert!(!stored, "{}: the put waits for the ending and stores nothing", harness.name);
+        assert!(
+            !stored,
+            "{}: the put waits for the ending and stores nothing",
+            harness.name
+        );
         assert!(
             q!(harness, t => t.matches_checkpoint(&row.id)).is_none(),
             "{}: the finished match keeps no checkpoint",

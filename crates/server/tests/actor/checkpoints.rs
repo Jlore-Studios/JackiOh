@@ -439,7 +439,10 @@ async fn a_periodic_checkpoint_replaces_an_older_one_and_a_crash_resumes_from_it
     play(&actor, LOGGED + 1, &actions[LOGGED..head]).await;
     let stored = checkpoints(&app).await;
     assert_eq!(stored.len(), 1);
-    assert_eq!(stored[0].seq, head as i64, "the periodic one replaced the drain's");
+    assert_eq!(
+        stored[0].seq, head as i64,
+        "the periodic one replaced the drain's"
+    );
 
     app.matches.stop(MATCH_ID).await;
     let rebuilt = actor_of(&app).await;
@@ -523,14 +526,15 @@ async fn a_checkpoint_of_a_match_another_writer_finished_is_kept_out() {
     write_match(&app, &row).await;
     let actor = actor_of(&app).await;
     play(&actor, 1, &actions[..every - 1]).await;
-    fake_ref(&app).lock().await.before_call = Some(std::sync::Arc::new(|method: &str, tables: &mut FakeTables| {
-        if method == "matches.putCheckpoint"
-            && let Some(row) = tables.matches.iter_mut().find(|row| row.id == MATCH_ID)
-        {
-            row.status = MatchStatus::Finished;
-        }
-        CallOutcome::Proceed
-    }));
+    fake_ref(&app).lock().await.before_call =
+        Some(std::sync::Arc::new(|method: &str, tables: &mut FakeTables| {
+            if method == "matches.putCheckpoint"
+                && let Some(row) = tables.matches.iter_mut().find(|row| row.id == MATCH_ID)
+            {
+                row.status = MatchStatus::Finished;
+            }
+            CallOutcome::Proceed
+        }));
     play(&actor, every, &actions[every - 1..every]).await;
     fake_ref(&app).lock().await.before_call = None;
     assert!(checkpoints(&app).await.is_empty());

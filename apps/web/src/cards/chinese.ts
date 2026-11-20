@@ -20,7 +20,6 @@ import type { CardDef, CardType, KeywordKind, Rarity, Tag } from "@jackioh/share
 
 import { getLocale, isZhCn, type Locale } from "../i18n/i18n.ts";
 import { loadersByStem, type Loader } from "../patches/loaders.ts";
-import { isRecord } from "../wire/json.ts";
 import { DORMANT_STARSHIP_ID, holdsDormantStarship } from "./fused.ts";
 import { isGlitch } from "./glitch.ts";
 
@@ -81,6 +80,10 @@ export function cardTablesReady(): boolean {
   return tablesReady;
 }
 
+function isTable(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * #4180, R711000: loads the two sidecars once and fills `CHINESE` and `CHINESE_TERMS` in place, so the
  * 20+ call sites and the tests keep reading the same objects. A failed download leaves the tables
@@ -102,7 +105,7 @@ export function loadCardTables(): Promise<void> {
   }
   pendingTables = Promise.all([cards(), terms()])
     .then(([cardsTable, termsTable]) => {
-      if (!isRecord(cardsTable) || !isRecord(termsTable)) throw new Error("the Chinese card tables did not load");
+      if (!isTable(cardsTable) || !isTable(termsTable)) throw new Error("the Chinese card tables did not load");
       const { "//": _generated, ...entries } = cardsTable;
       Object.assign(CHINESE, entries);
       Object.assign(CHINESE_TERMS, termsTable);
@@ -128,7 +131,7 @@ export function resetCardTablesForTests(): void {
 export type CardTable = { readonly cards: Readonly<Record<string, ChineseEntry>>; readonly terms: ChineseTerms };
 
 /** The card tables by locale (R711000): a reader whose language has none reads the catalog's English. */
-const CARD_TABLES: Readonly<Partial<Record<Locale, CardTable>>> = {
+export const CARD_TABLES: Readonly<Partial<Record<Locale, CardTable>>> = {
   "zh-CN": { cards: CHINESE, terms: CHINESE_TERMS },
 };
 

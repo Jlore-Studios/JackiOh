@@ -9,7 +9,8 @@ use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::config::{AI_DIFFICULTY, DUOS_HUMAN_TEAM, Difficulty, HUMAN_HANDICAP, duos_ai_team};
 use jackioh_engine::duos::{
     DuosReduceResult, DuosReplayInput, DuosReplayResult, DuosState, duos_begin, duos_create,
-    duos_create_recorded, duos_fold, duos_fold_from, duos_hash, duos_legal_actions, duos_reduce, duos_view_for,
+    duos_create_recorded, duos_fold, duos_fold_from, duos_hash, duos_legal_actions, duos_reduce,
+    duos_view_for,
 };
 use jackioh_engine::wire::{
     DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosResult, DuosSeat, DuosView,
@@ -64,12 +65,7 @@ pub fn fold(pinned: Pinned, input: &DuosReplayInput) -> DuosReplayResult {
 /// #4169: `fold` carried on from a checkpoint's `state` (the state after the log's first `skipped`
 /// actions) over `tail`, stopping at the first action it refuses as `duos_fold` does; `refused_at`
 /// counts from the log's start, as `fold`'s does.
-pub fn fold_tail(
-    pinned: Pinned,
-    state: DuosState,
-    tail: &[DuosAction],
-    skipped: usize,
-) -> DuosReplayResult {
+pub fn fold_tail(pinned: Pinned, state: DuosState, tail: &[DuosAction], skipped: usize) -> DuosReplayResult {
     registered();
     pinned.run(|| duos_fold_from(state, tail, skipped))
 }

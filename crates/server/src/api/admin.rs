@@ -27,7 +27,9 @@ use crate::admin::store::{
     RatingGrant,
 };
 use crate::api::dev::dev_caller;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, caller_of, json, ok_of, query_trimmed};
+use crate::api::http::{
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, caller_of, json, ok_of, query_trimmed,
+};
 use crate::api::ranked::{dev_leaderboard, usernames_of};
 use crate::app::{App, now_ms};
 use crate::config::{ADMIN_AUDIT_PAGE, DEV_RATING_MAX, DEV_RATING_MIN, NEWS_POSTS_PAGE};

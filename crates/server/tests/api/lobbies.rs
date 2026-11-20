@@ -1384,11 +1384,29 @@ mod r4233000_read_on_open {
     async fn r4233000_an_invite_to_a_full_lobby_still_counts() {
         let t = three().await;
         befriend(&t.app, &t.host, &t.guest).await;
-        api(&t.app, "POST", "/api/notifications/read", &t.guest.token, json!({})).await;
+        api(
+            &t.app,
+            "POST",
+            "/api/notifications/read",
+            &t.guest.token,
+            json!({}),
+        )
+        .await;
         let code = duel(&t.app, &t.host, "random").await;
-        ok_act(&t.app, &t.host, &code, "invite", json!({ "profileId": t.guest.id })).await;
+        ok_act(
+            &t.app,
+            &t.host,
+            &code,
+            "invite",
+            json!({ "profileId": t.guest.id }),
+        )
+        .await;
         ok_act(&t.app, &t.third, &code, "enter", Value::Null).await;
-        assert_eq!(read(&t.app, &t.guest, &code).await.0, 404, "full, it reads as gone to the friend");
+        assert_eq!(
+            read(&t.app, &t.guest, &code).await.0,
+            404,
+            "full, it reads as gone to the friend"
+        );
         assert_eq!(social_unread(&t.app, &t.guest).await, json!(1));
         assert_eq!(
             invites(&t.app, &t.guest).await,
@@ -1403,9 +1421,23 @@ mod r4233000_read_on_open {
     async fn r4233000_an_entered_invite_leaves_recent_once_its_lobby_closes() {
         let t = three().await;
         befriend(&t.app, &t.host, &t.guest).await;
-        api(&t.app, "POST", "/api/notifications/read", &t.guest.token, json!({})).await;
+        api(
+            &t.app,
+            "POST",
+            "/api/notifications/read",
+            &t.guest.token,
+            json!({}),
+        )
+        .await;
         let code = duel(&t.app, &t.host, "random").await;
-        ok_act(&t.app, &t.host, &code, "invite", json!({ "profileId": t.guest.id })).await;
+        ok_act(
+            &t.app,
+            &t.host,
+            &code,
+            "invite",
+            json!({ "profileId": t.guest.id }),
+        )
+        .await;
         ok_act(&t.app, &t.guest, &code, "enter", Value::Null).await;
         assert_eq!(
             invites(&t.app, &t.guest).await,
