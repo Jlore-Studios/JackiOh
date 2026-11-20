@@ -2963,21 +2963,10 @@ mod r2089000_created_card_stats {
         let rush = &created[0];
         assert_eq!(rush["name"], json!(jackioh_cards::CATALOG["core-t-rush"].name));
         assert_eq!(rush["games"], json!(2));
-        assert_eq!(rush["createdPlayedGames"], json!(1));
-        assert_eq!(rush["createdPlayedWinRate"].as_f64(), Some(1.0));
-        assert_eq!(rush["createdNotPlayedGames"], json!(1));
-        assert_eq!(rush["createdNotPlayedWinRate"].as_f64(), Some(0.0));
-        assert_eq!(rush["createdPlayedNormalGames"], json!(1));
-        assert_eq!(rush["createdPlayedRadiantGames"], json!(0));
-        assert!(rush["createdPlayedRadiantWinRate"].is_null());
-        // R654: the delta waits for the floor on both sides.
-        assert!(rush["createdPlayedDelta"].is_null());
         assert_eq!(rush["hasEnoughGames"], json!(false));
         assert!(rush["window"]["from"].is_string());
         let made001 = &created[1];
-        assert_eq!(made001["createdPlayedGames"], json!(1));
-        assert_eq!(made001["createdPlayedRadiantGames"], json!(1));
-        assert_eq!(made001["createdNotPlayedGames"], json!(0));
+        assert_eq!(made001["games"], json!(1));
 
         // `?card=` filters both tables alike.
         let (status, _, only) = get_public(&app, "/api/stats/cards?source=live&card=core-t-rush").await;
@@ -2990,6 +2979,86 @@ mod r2089000_created_card_stats {
             .filter_map(|row| row["id"].as_str())
             .collect();
         assert_eq!(ids, ["core-t-rush"]);
+    }
+
+    #[tokio::test]
+    async fn r4083000_a_created_row_answers_only_the_fields_the_client_reads() {
+        let app = test_app().await;
+        // R2089000's two games: p1 makes a Rush token in both, using it in the first, and a Created core-001
+        // in the first.
+        let records = vec![
+            make_game_record(
+                "live-1",
+                RecordOptions {
+                    p1_played: Some(vec!["core-001"]),
+                    p1_played_radiant: Some(vec![false]),
+                    p1_created_used: Some(json!([
+                        { "card": "core-t-rush", "turn": 2, "radiant": false },
+                        { "card": "core-001", "turn": 3, "radiant": true },
+                    ])),
+                    winner: Some("p1"),
+                    ..RecordOptions::default()
+                },
+            ),
+            make_game_record(
+                "live-2",
+                RecordOptions {
+                    p1_played: Some(vec!["core-001"]),
+                    p1_played_radiant: Some(vec![false]),
+                    p1_created_unused: Some(vec!["core-t-rush"]),
+                    winner: Some("p2"),
+                    ..RecordOptions::default()
+                },
+            ),
+        ];
+        insert_records(&app, records).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/cards?source=live").await;
+        assert_eq!(status, 200);
+        // Every Created row carries these keys and no others: no used, unused, Radiant or normal split and no
+        // played delta, which no client reads.
+        let created = data["created"].as_array().expect("a Created table");
+        assert_eq!(created.len(), 2);
+        for row in created {
+            let mut keys: Vec<&str> = row
+                .as_object()
+                .expect("a row")
+                .keys()
+                .map(String::as_str)
+                .collect();
+            keys.sort_unstable();
+            assert_eq!(
+                keys,
+                [
+                    "adjustedHigh",
+                    "adjustedLow",
+                    "adjustedWinRate",
+                    "cost",
+                    "games",
+                    "hasEnoughGames",
+                    "id",
+                    "name",
+                    "rarity",
+                    "set",
+                    "tier",
+                    "window",
+                ],
+                "{}",
+                row["id"]
+            );
+        }
+        // The games still count every seat that made one, used or not.
+        let rush = find(&data["created"], "id", &json!("core-t-rush")).expect("the Rush token is listed");
+        assert_eq!(rush["games"], json!(2));
+        // The Created cards' field stays, as the tiers are read against it.
+        let mut field: Vec<&str> = data["tiers"]["created"]
+            .as_object()
+            .expect("the Created field")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        field.sort_unstable();
+        assert_eq!(field, ["baseline", "cards", "center", "spread"]);
     }
 }
 
