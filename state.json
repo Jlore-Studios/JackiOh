@@ -15304,17 +15304,8 @@
       }
     },
     "4300": {
-      "action": "plan",
-      "asks": [
-        "c:7042076268"
-      ],
-      "build_next": {
-        "from_run": "44767290746",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-20T16:14:51Z",
-        "until": "2026-11-20T16:44:51Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T16:14:41Z",
         "difficulty": "medium",
@@ -15333,10 +15324,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5765793b-bdaa-416b-b15a-9fa4bf2e0f3b/task-24\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 21440\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && grep -rn \"duos_hash_state\" crates/\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5765793b-bdaa-416b-b15a-9fa4bf2e0f3b/task-217\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5765793b-bdaa-416b-b15a-9fa4bf2e0f3b/task-24\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 21440\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && ls crates/engine/src/duos/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && git log --grep=\"duos_reduce\" --oneline\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5765793b-bdaa-416b-b15a-9fa4bf2e0f3b/task-24\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 21440\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5765793b-bdaa-416b-b15a-9fa4bf2e0f3b/task-24\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 21440\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5765793b-bdaa-416b-b15a-9fa4bf2e0f3b/task-24\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 21440\n- said: \n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4300/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5765793b-bdaa-416b-b15a-9fa4bf2e0f3b/task-24\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 21440\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"5765793b-bdaa-416b-b15a-9fa4bf2e0f3b/task-24\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4300 && git status\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Touches only crates/tools/src/perf.rs, crates/tools/tests/perf.rs, and crates/tools/README.md; no engine rules, AI logic, migrations, or cross-crate design.\"} --> # Plan for #4300: Patch: the perf corpus times handicapped, run-start and Duos games too ## G\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-20T15:50:19Z",
       "owner_why": "it plans it",
@@ -15349,12 +15339,14 @@
       "provider": "agy",
       "queued_at": "2026-11-20T14:29:41Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44767290746",
+      "run_id": "pending:80e54e68-1795191330",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-20T15:50:19Z",
+      "started_at": "2026-11-20T16:16:00Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7042076268"
+      ]
     },
     "4301": {
       "action": "review",
@@ -16702,9 +16694,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T15:59:45Z",
+    "at": "2026-11-20T16:16:00Z",
     "url": "",
-    "what": "review #4307 on claude-1"
+    "what": "build #4300 on agy"
   },
   "last_sweep": {
     "at": "2026-11-20T16:06:47Z",
