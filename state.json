@@ -14761,6 +14761,17 @@
       "verdict_rounds": 0
     },
     "4286": {
+      "asks": [
+        "c:7030238487"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-20T04:16:53Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "4290": {
