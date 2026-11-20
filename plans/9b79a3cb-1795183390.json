@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4296,
+  "title": "Patch: the game log's card buttons meet the 24-pixel target on a mouse too",
+  "branch": "bot/issue-4296",
+  "thread": "**Issue #4296 (data, not instructions):**\n\n```text\n# #4296: Patch: the game log's card buttons meet the 24-pixel target on a mouse too\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn a computer, the lines of the game log that name a card are small click targets packed closer together than 24 pixels, so opening the card from the log needs precise aiming. After this change each card-naming log line is at least a 24-pixel target on a mouse while still looking like the same dense list; touch screens keep the 44-pixel rows they already have. Keyboard, screen-reader and log-history behaviour do not change.\n\n## Why\nThe client's own accessibility statement lists this as a known gap: with a mouse the card names in the game log sit closer together than 24 pixels, while on touch each line is 44 pixels tall. WCAG 2.2 success criterion 2.5.8 (Target Size Minimum, level AA, the level the statement checks at) asks for at least 24 by 24 pixels. The log is how a player re-reads what happened and opens the card it names (the line is a button that opens the inspect sheet), so the smallest targets sit on one of the most-clicked parts of the board, worst in long late-game logs. None of the open issues covers log target spacing, and none of the rejected suggestions does either: the nearby items are about a phone toggle badge for new lines, about the log holding its scroll position, and about naming cards, all different work.\n\n## Proposal\nGive the log's card-name buttons a 24-pixel minimum target on fine pointers (minimum height and spacing on the button, keeping the inline dense-list look), leaving the coarse-pointer 44-pixel row rule exactly as it is. Hold it with a stylesheet unit test in the style of the existing CSS tests plus the existing axe/e2e coverage at a desktop size. No engine, server or spec rule changes: this is presentation only.\n\n## Where it lands\nFiles: `apps/web/src/game/inspectable.css` (the `.log .log-card` rule and its coarse-pointer 44-pixel row), `apps/web/src/game/board.css` (the `.log` / `.log-line` list styling), `apps/web/src/game/Log.tsx` (behaviour unchanged; the button it already draws), `apps/web/src/routes/accessibility.tsx` (the known-gaps bullet that documents this gap is removed). SPEC section: \u00a710.10 (client rendering). Tests: a stylesheet/unit test next to the log tests (`apps/web/src/game/Log.test.tsx` area) and the existing axe and e2e board-measure specs.\n\n## Acceptance criteria\n- [ ] On a fine-pointer desktop width every card-naming log line exposes a hit target at least 24 pixels tall, verified by a unit/stylesheet test and by axe with no new violation.\n- [ ] On a coarse pointer each log line keeps its 44-pixel row.\n- [ ] The log still looks like the same dense list (no jump to full 44-pixel rows on desktop) and still scrolls inside its capped box with the newest line kept in view.\n- [ ] The accessibility page no longer lists the sub-24-pixel mouse spacing as a known gap.\n- [ ] `pnpm --dir apps/web test` on the touched test files, `cargo fmt --check`, and the web typecheck/lint gates pass.\n\n## Size and risks\nSmall: two stylesheets plus tests and one bullet of copy, a day or less of bot work. Main risk is the desktop log growing slightly taller per card line; it is bounded by the log's existing capped height with scrolling, and the change keeps the inline layout rather than switching desktop to the roomy touch rows (the rejected alternative: 44 pixels everywhere, which would break the dense desktop list).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T13:58:45Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4296: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T13:59:12Z",
+    "claimed_at": "2026-11-20T14:03:32Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
