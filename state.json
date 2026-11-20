@@ -14536,9 +14536,7 @@
       "self_check_findings": [],
       "started_at": "2026-11-20T23:07:57Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:7052769214"
-      ],
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
