@@ -1,0 +1,20 @@
+{
+  "title": "Reignclipse prints one Armor and one Burns line",
+  "sources": "#4293",
+  "notes": "Reignclipse (S+ #133.5) printed Reign's and Eclipse's lines side by side: Armor 4 and Armor 3 (Radiant 4 and 6) and two Burns lines of 4 and 5 (8 and 10). It now prints what it played (R3565003): Armor 7 (Radiant 10) and one Damage also Burns 9 (Radiant 18). Its display-only damage number is gone, so a Buff or a Nerf that tunes it always moves the Burn.",
+  "player": {
+    "title": "Reignclipse reads as it plays",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Reignclipse now prints its two Armors as one, Armor 7 (Radiant 10), and its two Burns lines as one, Damage also Burns 9 (Radiant 18). It plays the same."
+    ],
+    "fixes": [
+      "A Buff or a Nerf on Reignclipse always changes its Burn now; one of its numbers did nothing."
+    ]
+  },
+  "cards": [
+    "stinkyscapeplus-133-5"
+  ]
+}
