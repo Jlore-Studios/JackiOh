@@ -14958,17 +14958,8 @@
       "verdict_rounds": 0
     },
     "4290": {
-      "action": "plan",
-      "asks": [
-        "c:7030223938"
-      ],
-      "build_next": {
-        "from_run": "44676158078",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-20T05:13:19Z",
-        "until": "2026-11-20T05:43:19Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T05:13:10Z",
         "difficulty": "hard",
@@ -14987,10 +14978,9 @@
         "reason": "planned on opus",
         "trail": "rc/game/drag/targets.ts apps/web/src/game/*.ts 2>/dev/null | head; cat app\u2026\n- Bash: {\"command\": \"ls apps/web/src/i18n/; grep -rn \\\"Deals {n}\\\\|Takes {n} back\\\" apps/web/src --include=*.ts --include=*.tsx --include=*.json | grep -v \\\"AttackOutcome.tsx\\\" | head\", \"description\": \"Check\u2026\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|describe(\\\" apps/web/src/i18n/i18n.test.ts | head -30; sed -n 135,150p apps/web/src/i18n/zh-CN.json\", \"description\": \"Check i18n tests and nearby zh-CN entries\"}\n- Bash: {\"command\": \"sed -n 95,116p apps/web/src/game/Game.tsx; grep -n \\\"memo(\\\" apps/web/src/game/Hero.tsx apps/web/src/game/Card.tsx | head; grep -n \\\"sameCardProps\\\\|sameHeroProps\\\" -A12 apps/web/src/gam\u2026\n- Bash: {\"command\": \"sed -n 116,135p apps/web/src/game/Game.tsx; sed -n 734,750p apps/web/src/game/Card.tsx; grep -n \\\"export default\\\\|memo\\\" apps/web/src/game/Hero.tsx | head\", \"description\": \"Read sameHov\u2026\n- Bash: {\"command\": \"ls luau; head -30 luau/README.md 2>/dev/null | cut -c1-300\", \"description\": \"Check luau port for generated artifacts\"}\n- Bash: {\"command\": \"grep -rn -i \\\"forecast\\\" docs/v0.3.0/SURFACE.md crates/wasm/README.md crates/engine/README.md apps/web/README.md 2>/dev/null | cut -c1-300 | head\", \"description\": \"Check docs describing \u2026\n- Bash: {\"command\": \"sed -n 28p crates/engine/README.md; sed -n 21p crates/wasm/README.md\", \"description\": \"Read README lines describing forecast\"}\n- Bash: {\"command\": \"grep -n \\\"visual\\\\|--rule\\\\|fragment\\\" docs/issues-and-patches.md | head -30\", \"description\": \"Check patch fragment rules for non-card changes\"}\n- Bash: {\"command\": \"sed -n 118,135p docs/issues-and-patches.md; sed -n 174,186p docs/issues-and-patches.md; sed -n 318,332p docs/issues-and-patches.md\", \"description\": \"Read patch fragment requirements\"}\n- Bash: {\"command\": \"grep -n \\\"fn reflect_damage\\\" -A60 crates/engine/src/damage.rs | head -80\", \"description\": \"Read reflect_damage to see flags it carries\"}\n- Bash: {\"command\": \"grep -n \\\"fn chain_flags\\\" -A14 crates/engine/src/damage.rs; grep -n \\\"split_chain\\\" crates/engine/src/damage.rs | head -5\", \"description\": \"Check chain_flags and split chain handling\"}\n- Bash: {\"command\": \"sed -n 440,640p crates/engine/src/damage.rs\", \"description\": \"Read land() steps 1-4 for shield/indestructible handling\"}\n- Bash: {\"command\": \"grep -n \\\"fn i18_board\\\\|fn i18_attack\\\\|fn drifted\\\\|fn i18(\\\\|fn register_i18_script\\\\|fn destroyed_by\\\" -A22 crates/engine/tests/rules/invariants.rs | head -130\", \"description\": \"Read\u2026\n- Bash: {\"command\": \"sed -n 1,14p apps/web/src/game/cardHighlight.test.ts; grep -n \\\"it(\\\\|describe(\\\" apps/web/src/game/cardHighlight.test.ts; grep -n \\\"hoveredAttack\\\" -B2 -A10 apps/web/src/game/cardHighli\u2026\n- Bash: {\"command\": \"grep -rn \\\"attackOutcome\\\\|outcome-\\\" e2e/support/*.ts e2e/cypress 2>/dev/null | head; grep -rln \\\"testid\\\\b.*contract\\\\|from \\\\\\\"../apps/web/src/game/contract\\\" e2e 2>/dev/null | head -\u2026\n- Bash: {\"command\": \"grep -n \\\"POOL_SIZE\\\\|pub const POOL\\\" crates/engine/tests/rules/fixtures/combat_reactions.rs | head -5; grep -n \\\"pub fn anti_oneshot\\\" -A25 crates/engine/tests/rules/fixtures/scripts.r\u2026\n- Bash: {\"command\": \"sed -n 35,170p crates/engine/tests/rules/fixtures/combat.rs | grep -E '\\\"id\\\"|\\\"base\\\"'\", \"description\": \"List combat fixture ids and stats\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn hero_hit_amount\\\\|pub(crate) fn hero_hit_amount\\\" -A30 crates/engine/src/damage.rs | head -45; grep -n \\\"hero.armor -=\\\\|armor -= \\\\|\\\\.armor = \\\" crates/engine/src/dama\u2026\n- Bash: {\"command\": \"grep -n \\\"fuzz\\\" .github/workflows/ci.yml | head -10\", \"description\": \"Find fuzz step in CI workflow\"}\n- Bash: {\"command\": \"grep -rn \\\"PlayedAttack::read\\\\|PlayedAttack {\\\" crates/ --include=*.rs | grep -v \\\"src/testkit/played_attack.rs\\\"; grep -n \\\"pub(crate) fn hero_seat_of\\\\|pub fn hero_seat_of\\\\|fn hero_s\u2026\n- Bash: {\"command\": \"for r in R0176 R783001 R3546001 R4032000 R3615000 R3477000 R4111000 R1750000 R0063 R4221002 R2783001; do ls spec/rulings/$r.md 2>/dev/null || echo \\\"missing $r\\\"; done; grep -n \\\"^## \\\\|\u2026\n- Bash: {\"command\": \"sed -n 48,75p spec/04-combat.md | cut -c1-500\", \"description\": \"Read SPEC \\u00a74.4 steps for Trample and Cleave\"}\n- Bash: {\"command\": \"grep -n \\\"R3615000\\\\|attackOutcome\\\\|AttackOutcome\\\" apps/web/README.md | cut -c1-300\", \"description\": \"Check web README mentions of the preview\"}\n- Bash: {\"command\": \"sed -n 1203,1214p apps/web/README.md\", \"description\": \"Read web README preview paragraph\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/engine/tests/rules/invariants.rs | grep -n \\\"use\\\\|fixtures\\\" ; grep -n \\\"fn tampered\\\" -A12 crates/engine/tests/rules/invariants.rs | head -16\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"sed -n 428,456p crates/engine/tests/rules/fixtures/combat.rs | tr -s ' \\\\n' ' '; echo; grep -rn \\\"cleaver\\\" crates/engine/tests/rules/*.rs | grep \\\"put(\\\" | head -3\", \"description\": \"Con\u2026\n- Bash: {\"command\": \"sed -n 596,625p crates/engine/tests/rules/damage.rs; grep -n \\\"pub const LANE_COUNT\\\\|pub const LANES\\\\|UNIT_ZONES\\\\|pub const ZONES\\\" crates/engine/src/config.rs | head\", \"description\":\u2026\n- Bash: {\"command\": \"ls spec/rulings/R0044.md spec/rulings/R0063.md; grep -n \\\"Amended by\\\" spec/rulings/R3615000.md | head -3; tail -3 spec/rulings/R3615000.md | cut -c1-300\", \"description\": \"Check R44 and \u2026\n- Bash: {\"command\": \"grep -n \\\"fn adjacent_slots\\\" -A12 crates/engine/src/giga.rs | head -16; grep -n '\\\"test\\\"' apps/web/package.json\", \"description\": \"Check adjacent_slots order and web test script\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4290/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: the forecast and lethal projection in crates/engine/src \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: the forecast and lethal projection in crates/engine/src change, and the fuzz oracle and web client must agree on a new wire shape\"} --> ## Goal Each `AttackForecast` entry gets two new fields: - **`splash`**: one hit for each unit a Cleave atta\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-20T04:42:03Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -15003,12 +14993,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-20T04:15:56Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44676158078",
+      "run_id": "pending:a6084b58-1795151723",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T04:42:03Z",
+      "started_at": "2026-11-20T05:15:44Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7030223938"
+      ]
     },
     "4291": {
       "action": "plan",
@@ -15268,9 +15260,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T05:15:09Z",
+    "at": "2026-11-20T05:15:44Z",
     "url": "",
-    "what": "review #4299 on muse"
+    "what": "build #4290 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-20T05:03:02Z",
