@@ -16741,6 +16741,7 @@
       "run_id": "44779375937",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 390,
       "started_at": "2026-11-20T17:02:32Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37749,9 +37750,33 @@
         "title": "Patch: Stinkyscape+ Balance Changes IV",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "3bf166a78942042f428f3b68478dabf4bd6b7c3d",
+        "issue": 4316,
+        "merged_at": "2026-11-20T17:27:16Z",
+        "n": 390,
+        "pr": 4329,
+        "queued_at": "2026-11-20T17:27:16Z",
+        "sha": "2c51e9304ad10d60ab14239c11ddb623e4490678",
+        "status": "queued",
+        "title": "Patch: the 17.6 MB of voice lines download in the background only once a game is on screen, and not while the browser asks to save data",
+        "tries": 0
       }
     ],
-    "count": 389
+    "count": 390
   },
   "statistics": {
     "at": "2026-11-20T17:21:55Z"
