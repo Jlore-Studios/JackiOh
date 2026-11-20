@@ -16526,6 +16526,13 @@
     "4322": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T18:35:59Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "CLAUDE.md rule 11 hard-rule 1: the change is engine rules in crates/engine/src/ (plague.rs, effects, query.rs)"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
