@@ -2854,3 +2854,6 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-20T04:21:40Z,44656539726,muse,muse-spark-1.3-contributor,build,4249,medium,built,,150,0,0,0,,2,4,48,48,9.2,muse,none,,1
 2026-11-20T04:39:09Z,44673636845,agy,gemini-3.8-flash-high,plan,4287,medium,planned,,14.9,192861,48978,0,,4,6,30,31,2.1,,none,,1
 2026-11-20T04:36:46Z,44660418804,claude-1,opus,build,4246,hard,blocked,,130.4,90,20704,2789719,1.4731,7,63,,,40.1,claude-1,fresh,,1
+2026-11-20T04:59:59Z,44677715681,muse,muse-spark-1.3-contributor,suggest,,,suggested,,2.8,0,0,0,,6,6,49,49,,,none,,1
+2026-11-20T04:58:03Z,44675048331,muse,muse-spark-1.3-contributor,review,4295,medium,approved,,25.4,0,0,0,,5,6,49,49,0.8,,none,,1
+2026-11-20T05:04:43Z,44677660112,muse,muse-spark-1.3-contributor,suggest,,,suggested,,8.1,0,0,0,,6,6,49,49,,,none,,1
