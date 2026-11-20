@@ -2129,7 +2129,7 @@ fn keep_instance(
 /// §5.2: "newly gained keywords apply at once". The fused face can print a keyword the kept card's face did
 /// not — Jilliax's Divine Shield onto a K-Pop Fanatic, a Radiant Saintess's Reborn onto a unit back through
 /// a granted one — and the card gains it with the new text, so a spent shield or Reborn is up again (as
-/// radiant #50's), while one the kept face already printed stays spent. A Vanilla unit prints nothing (§6.3).
+/// radiant #50's was until issue #4292), while one the kept face already printed stays spent. A Vanilla unit prints nothing (§6.3).
 fn gain_printed_keywords(kept: &mut CardInstance, before: &CardDef, after: &CardDef) {
     if kept.vanilla {
         return;

@@ -256,8 +256,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // Classic #28 drop words too, as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862),
     // #47 饕餮's (less "then Freeze this.", issue #3996) and #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
     // Living Potions, the Stinkyscape set's #9 Ticketed and Core #79 Twinspell, whose Radiant face drops
-    // "Then this goes to the graveyard." (R3044000), and Stinkyscape+ #31, #72, #73 and #85 (§8.12)
-    // (radiantDiff.test.ts names all twenty;
+    // "Then this goes to the graveyard." (R3044000), Stinkyscape+ #31, #72, #73 and #85 (§8.12) and
+    // Classic+ #73.1 Classic Golem, less "Radiant" since issue #4292 (radiantDiff.test.ts names all twenty-one;
     // #149 Wildar's Radiant face adds "It costs (0)." (#2657), a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
@@ -267,6 +267,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "classic-060",
       "classicplus-005",
       "classicplus-034",
+      "classicplus-073-1",
       "meditative-022-1",
       "meditative-047",
       "meditative-048",

@@ -1,7 +1,8 @@
 //! TG #26 Path of Exile (SPEC §8.11 row TG 26; §3.1, §6.3 Exile, R11, R55, R81, R2198003): (4) Spell,
 //! Rare, a card of the held Training Grounds set (R1420, R2194000).
 //!   Base:    "Exile a permanent. Draw {draw|card|cards}." — 1.
-//!   Radiant: "Cleave / Exile a permanent. Draw {draw|card|cards}." — 2.
+//!   Radiant: "Cleave / Exile a permanent. Draw {draw|card|cards}." — 1, the base face's since issue
+//!            #4292 (2 before).
 //!
 //! Engine: Core #34 Collateral Damage's verbs: any permanent on either side's field (R81), exiled past
 //! Indestructible, a unit token ceasing to exist (R11, R55); then a `draw`. Radiant's Cleave on a Spell's
@@ -191,13 +192,14 @@ mod tests {
             s.expect_in_zone(&immune, "field");
         }
 
+        /// Issue #4292: the Radiant face draws the base face's one (two before).
         #[test]
-        fn draws_two() {
+        fn draws_one_since_issue_4292() {
             let mut s = board(true, json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
             let held = s.hand(P1).len();
             s.play(PATH, pick::targets(pick::instance(&theirs)));
-            assert_eq!(s.hand(P1).len(), held + 1);
+            assert_eq!(s.hand(P1).len(), held, "the Path left and one card came in");
         }
 
         #[test]

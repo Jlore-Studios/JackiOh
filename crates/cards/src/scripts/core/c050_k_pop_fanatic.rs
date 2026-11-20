@@ -2,9 +2,9 @@
 //! R437, R767000, R1045000, R4205000).
 //!   (3) Unit, Human, Epic, 1/1 → 2/2 ((2) until issue #4154).
 //!   Base:    "Cry: Allure an enemy permanent."
-//!   Radiant: "Divine Shield; Cry: Allure an enemy permanent. Make it Radiant when you steal it." (R275;
-//!            "Divine Shield" is printed in `catalog.json`; the Can't Defend both faces printed from #2657,
-//!            R2657000, went in issue #4154).
+//!   Radiant: "Cry: Allure an enemy permanent. Make it Radiant when you steal it." (R275; the Divine
+//!            Shield it printed went in issue #4292, and the Can't Defend both faces printed from #2657,
+//!            R2657000, in issue #4154).
 //!
 //! Allure (§6.3, R963, R1045000) is a delayed steal; like every steal it destroys a target with no open
 //! zone in its row, past Indestructible (R4205000). The target is declared at PLAY time (R81) over both enemy rows (§6.3),
@@ -444,7 +444,7 @@ mod tests {
         }
 
         #[test]
-        fn radiant_divine_shield_eats_the_first_hit_and_the_delayed_steal_lands_with_its_rider_r282() {
+        fn radiant_prints_no_divine_shield_since_issue_4292_and_the_delayed_steal_lands_with_its_rider_r282() {
             let mut g = scenario(json!({
                 "p1": { "hand": [{ "def": KPOP, "radiant": true }, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 3 }], "library": LIBRARY },
@@ -453,33 +453,25 @@ mod tests {
 
             g.play(KPOP, pick::targets(pick::id(&prey.id)));
             let fanatic = g.unit_at(P1, 1);
+            // The radiant 2/2 upgrades its stats and its rider alone: its Divine Shield went in issue #4292.
             g.expect_stats(&fanatic, json!({ "attack": 2, "maxHealth": 2, "health": 2 }));
-            assert!(g.stats(&fanatic).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::DivineShield));
+            assert!(g.stats(&fanatic).keywords.is_empty());
 
             g.end_turn();
-            g.attack(&prey, &fanatic);
-
-            // §6.1: the shield absorbs the whole hit, so a 4/3 attacker cannot kill the 2/2.
-            g.expect_events(json!(["divineShieldLost"]));
-            g.expect_in_zone(&fanatic, "field");
-            assert_eq!(g.card(&fanatic).damage, 0);
-            assert_eq!(g.card(&fanatic).divine_shield_spent, Some(true));
-            assert_eq!(g.card(&prey).damage, 2);
-
             g.end_turn();
 
             assert_eq!(unit_id(&g, P1, 3), Some(prey.id.clone()));
             assert_eq!(g.card(&prey).controller, P1);
-            // R282: the stolen Duelist becomes Radiant in place (R22): the 8/6 face, its 2 damage kept.
+            // R282: the stolen Duelist becomes Radiant in place (R22): the 8/6 face, undamaged.
             assert!(g.card(&prey).radiant);
-            g.expect_stats(&prey, json!({ "attack": 8, "maxHealth": 6, "health": 4 }));
+            g.expect_stats(&prey, json!({ "attack": 8, "maxHealth": 6, "health": 6 }));
         }
 
         #[test]
         fn radiant_the_steal_still_fires_after_a_radiant_k_pop_fanatic_dies_r76() {
             crate::register_all();
-            // The radiant 2/2's Divine Shield takes TWO hits in the one turn before the steal (R76), and a
-            // unit has one attack exertion per turn (§4.1), so p2 fields two: the Duelist pops the shield.
+            // The radiant 2/2 has no Divine Shield since issue #4292, so the Duelist's one hit kills it in
+            // the turn before the steal (R76), and the 7/7 stays where it is to be taken.
             let mut g = scenario(json!({
                 "p1": { "hand": [{ "def": KPOP, "radiant": true }, FILLER], "library": LIBRARY },
                 "p2": {
@@ -498,8 +490,6 @@ mod tests {
 
             g.end_turn();
             g.attack(&opener, &fanatic);
-            g.expect_in_zone(&fanatic, "field");
-            g.attack(&prey, &fanatic);
             g.expect_in_zone(&fanatic, "graveyard");
 
             g.end_turn();
@@ -530,9 +520,9 @@ mod tests {
             assert_eq!(def.cost, CardCost::Fixed(3));
             assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));
             assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(2)));
-            // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions); the
-            // Can't Defend both faces had from #2657 (R2657000) went in issue #4154.
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield]);
+            // The radiant face prints no keyword: its Divine Shield went in issue #4292, and the Can't Defend
+            // both faces had from #2657 (R2657000) in issue #4154.
+            assert!(def.radiant.keywords.is_empty());
             assert!(def.base.keywords.is_empty());
 
             let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }]);
@@ -762,11 +752,11 @@ mod tests {
         }
     }
 
-    mod n50_k_pop_fanatic_a_radiant_flip_on_the_field_adds_divine_shield_s5_2 {
+    mod n50_k_pop_fanatic_a_radiant_flip_on_the_field_adds_no_divine_shield_s5_2 {
         use super::*;
 
         #[test]
-        fn s5_2_a_base_n50_whose_granted_divine_shield_was_spent_gets_its_radiant_face_s_divine_shield_when_n81_radiates_it() {
+        fn s5_2_a_base_n50_whose_granted_divine_shield_was_spent_gets_none_back_when_n81_radiates_it_since_issue_4292() {
             crate::register_all();
             // #63 Plastic Surgery grants one random keyword (R21); pick the cursor whose roll is Divine
             // Shield, the only way a base #50 (no keywords) ever has one.
@@ -795,19 +785,18 @@ mod tests {
             assert_eq!(s.card(&kpop).damage, 0);
             assert!(!s.stats(&kpop).keywords.iter().any(|k| k.kind() == KeywordKind::DivineShield));
 
-            // #81 dies to #19 and its Death makes p1's other units Radiant: #50's radiant face prints Divine
-            // Shield, which its base face lacks, so it applies at once (§5.2), as a spent shield comes back
-            // when the keyword is granted again (§10.4, `grant_to`).
+            // #81 dies to #19 and its Death makes p1's other units Radiant. #50's radiant face prints no
+            // Divine Shield since issue #4292 (it did before), so the flip lends none (§5.2) and the spent
+            // granted shield stays spent.
             s.attack(SAINTESS, &menace);
             assert!(s.card(&kpop).radiant);
             let kinds: Vec<KeywordKind> = s.stats(&kpop).keywords.iter().map(|k| k.kind()).collect();
-            assert!(kinds.contains(&KeywordKind::DivineShield));
+            assert!(!kinds.contains(&KeywordKind::DivineShield));
 
-            // And it works as one: on p2's turn #19's 9 is negated whole, where the radiant 5/5 would die.
+            // So nothing negates #19's 9 on p2's turn: the radiant #50 dies to it.
             s.end_turn();
             s.attack(&menace, &kpop);
-            s.expect_in_zone(&kpop, "field");
-            assert_eq!(s.card(&kpop).damage, 0);
+            s.expect_in_zone(&kpop, "graveyard");
         }
     }
 
@@ -1061,10 +1050,8 @@ mod tests {
             let old_radiant = "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it and make it Radiant.";
 
             assert_eq!(def.base.text, "Cry: Allure an enemy permanent.");
-            assert_eq!(
-                def.radiant.text,
-                "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
-            );
+            // Issue #4292 took the radiant face's Divine Shield line.
+            assert_eq!(def.radiant.text, "Cry: Allure an enemy permanent. Make it Radiant when you steal it.");
             assert!(def.base.text.len() < old_base.len());
             assert!(def.radiant.text.len() < old_radiant.len());
         }

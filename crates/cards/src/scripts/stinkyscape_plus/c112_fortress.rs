@@ -13,10 +13,10 @@
 //! **Immune to spells**  
 //! **Ranged**  
 //! **Pierce**  
-//! **Rush**  
 //! **Armor 4**
 //!
 //! Tribute 1 is the script's `tribute` (R101, R366); the other keywords and Armor 2 / 4 are catalog data.
+//! Issue #4292 took the Radiant face's Rush, catalog data too (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -33,7 +33,7 @@ pub fn script() -> CardScripts {
         }),
         ..Script::default()
     };
-    // The Radiant face adds Rush and the stats, catalog data, and keeps the Tribute.
+    // The Radiant face changes the stats, catalog data, and keeps the Tribute (its Rush went in issue #4292).
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -155,13 +155,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn rush_hits_a_unit_not_the_hero() {
+        fn cannot_attack_on_its_summon_turn_with_no_rush_since_issue_4292() {
             let mut s = in_hand(true, 1);
             play(&mut s, 1);
-            s.expect_refused(|s| s.attack(ID, "hero"));
+            // The Radiant face prints no Rush since issue #4292, so it waits a turn as the base face does.
+            assert!(!keywords_of(s.state(), s.card(ID)).contains(&Keyword::Rush));
             let wall = s.unit_at(P2, 1).id;
-            s.attack(ID, wall.as_str());
-            assert_eq!(s.stats(wall.as_str()).health, 60 - ATTACK[1]);
+            s.expect_refused(|s| s.attack(ID, wall.as_str()));
         }
     }
 }

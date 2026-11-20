@@ -4,10 +4,11 @@
 //! Base:    "Rush
 //!           Cry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.
 //!           Aura: Your Units have Cloaked."
-//! Radiant: "Rush, Poisonous
+//! Radiant: "Rush
 //!           Cry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY
 //!           permanent.
 //!           Aura: Your Units have Cloaked."
+//!          (Poisonous too until issue #4292.)
 //! Engine: five `summon_random` Traps then `destroy_all` (Radiant: `exile_all`), a card in Chinese
 //! being CN (R1176000), then the Aura: Knowledge Breaker's, Cloaked for the Units in its
 //! controller's hand (`cloak_hand_aura`, R1043).
@@ -276,7 +277,9 @@ mod tests {
         #[test]
         fn r1042_radiant_exiles_with_radiant_traps() {
             let def = crate::card_def(PRIME);
-            assert!(def.radiant.keywords.contains(&Keyword::Poisonous));
+            // Rush alone, as the base: its Radiant face printed Poisonous too until issue #4292.
+            assert_eq!(def.radiant.keywords, vec![Keyword::Rush]);
+            assert_eq!(def.base.keywords, def.radiant.keywords);
             let mut s = scenario(json!({
                 "seed": "prime-exile",
                 "p1": {
@@ -293,6 +296,8 @@ mod tests {
             }));
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 2 }));
+            let worn = keywords_of(s.state(), s.card(&prime.id));
+            assert!(worn.contains(&Keyword::Rush) && !worn.contains(&Keyword::Poisonous), "{worn:?}");
             // Exiled, not destroyed: neither graveyard holds them, and the exile would beat an
             // Indestructible Jade Beauty (through v0.6.7k, issue #4285) as it does any card.
             assert!(s.unit(P1, 1).is_none());
