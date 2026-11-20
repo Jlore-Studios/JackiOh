@@ -9,8 +9,7 @@ export const UI_CLICK_SELECTOR = 'button:not(:disabled), [role="button"]:not([ar
 export const UI_HOVER_SELECTOR = 'button:not(:disabled), [data-legal="true"]';
 
 function elementOf(target: EventTarget | null): Element | null {
-  if (target === null || typeof (target as Partial<Element>).closest !== "function") return null;
-  return target as Element;
+  return target instanceof Element ? target : null;
 }
 
 export function installUiSounds(
@@ -41,12 +40,17 @@ export function installUiSounds(
     sink.playSfx("uiHover");
   };
 
-  // Capture phase: a component that stops propagation still gets its tick.
-  host.addEventListener("click", onClick, { capture: true, passive: true });
-  host.addEventListener("pointerover", onPointerOver, { capture: true, passive: true });
+  const listen = {
+    // Capture phase: a component that stops propagation still gets its tick.
+    capture: true,
+    // Stryker disable next-line BooleanLiteral: neither listener calls preventDefault, so a passive listener and an active one behave alike
+    passive: true,
+  };
+  host.addEventListener("click", onClick, listen);
+  host.addEventListener("pointerover", onPointerOver, listen);
 
   return () => {
-    host.removeEventListener("click", onClick, { capture: true });
-    host.removeEventListener("pointerover", onPointerOver, { capture: true });
+    host.removeEventListener("click", onClick, listen);
+    host.removeEventListener("pointerover", onPointerOver, listen);
   };
 }

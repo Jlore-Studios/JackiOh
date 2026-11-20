@@ -1705,8 +1705,8 @@ export type PublicCardWindow = {
 };
 
 /**
- * R2089000: a Created card's figures, over the seats that made a copy of it during a game. Used: the
- * seats that used one (split by Radiant at its first use); Not used, the delta's baseline: those that used none.
+ * R2089000: a Created card's figures, over the seats that made a copy of it during a game. R4083000: the used
+ * and unused figures are no longer sent.
  */
 export type PublicCreatedStat = {
   id: string;
@@ -1714,18 +1714,8 @@ export type PublicCreatedStat = {
   cost: number;
   rarity: string;
   set: string;
-  /** The seats counted: `createdPlayedGames` and `createdNotPlayedGames`. */
+  /** The seats counted: every one that made a copy, used or not. */
   games: number;
-  createdPlayedGames: number;
-  createdPlayedWinRate: number | null;
-  createdNotPlayedGames: number;
-  createdNotPlayedWinRate: number | null;
-  createdPlayedRadiantGames: number;
-  createdPlayedRadiantWinRate: number | null;
-  createdPlayedNormalGames: number;
-  createdPlayedNormalWinRate: number | null;
-  /** Used's win rate less Not used's, as a fraction; null until both sides have `minSample` games. */
-  createdPlayedDelta: number | null;
   /**
    * R4082000: the made games' win rate read against the Created cards (`tiers.created`), an average one reading
    * 50%, and its 95% range; absent from a server deployed before it.

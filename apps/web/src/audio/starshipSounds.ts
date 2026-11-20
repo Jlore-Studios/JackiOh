@@ -85,6 +85,7 @@ export function starshipSounds(entry: AnimationEntry, view: PlayerView): Starshi
   if (entry.fuse !== undefined) return { cues: dockCues(entry.fuse, D), standsFor: [] };
   if (entry.launch !== undefined) return SILENT;
   const first = entry.events[0];
+  // Stryker disable next-line OptionalChaining: every entry holds at least one event (planEntries takes one or more for each), so first is never undefined; the ?. is for noUncheckedIndexedAccess
   if (first?.type === "attackDeclared") {
     const cues = broadsideCues(first, view, D);
     return cues.length === 0 ? SILENT : { cues, standsFor: [first] };

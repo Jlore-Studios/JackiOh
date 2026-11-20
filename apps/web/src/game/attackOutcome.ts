@@ -4,9 +4,10 @@
 // page reads nothing from the rules: the hovered legal target of the selected or dragged attacker is
 // matched to the forecast's entry for the same `attack` ids, and the markers (AttackOutcome.tsx) draw
 // that entry's numbers as they are (CLAUDE.md rule 7). An attack the forecast has no entry for, or no
-// hovered target, shows nothing.
+// hovered target, shows nothing. R4290000: the entry's `splash` names each unit a Cleave attack strikes
+// beside the target, and its `overflow` the hero a Trample attack reaches; each wears its own marker.
 
-import type { AttackForecast, CombatForecast, PlayerView } from "@jackioh/shared";
+import type { AttackForecast, CombatForecast, PlayerView, SplashHit, TrampleOverflow } from "@jackioh/shared";
 
 import { isRecord } from "../wire/json.ts";
 import { attackTargetTestid, heroPlayerOfTargetId, type Interaction } from "./actions.ts";
@@ -41,9 +42,10 @@ export function attackOutcomes(
 /**
  * R3615000: the one hovered attack whose markers show, by the cards' testids. The target wears the
  * blow it takes (`dealt`); the attacker wears what it takes back (`taken`). `strikesBack` is false on
- * a hero target, which never strikes back (R3100000). Never read by a click.
+ * a hero target, which never strikes back (R3100000). R4290000: `overflowOnto` is the testid of the hero
+ * the attack's Trample excess reaches, when the entry names one. Never read by a click.
  */
-export type HoveredAttack = { attacker: string; target: string; strikesBack: boolean };
+export type HoveredAttack = { attacker: string; target: string; strikesBack: boolean; overflowOnto?: string };
 
 /**
  * R3615000: the hovered attack to preview, or undefined. Only while an attacker is picked, with a
@@ -64,10 +66,12 @@ export function hoveredAttack(
       attackTargetTestid(view, body.targetId) === hovered,
   );
   if (candidate === undefined || candidate.type !== "attack") return undefined;
+  const overflow = outcomes.get(hovered)?.overflow;
   return {
     attacker: testid.card(interaction.attackerId),
     target: hovered,
     strikesBack: heroPlayerOfTargetId(view, candidate.targetId) === null,
+    ...(overflow === undefined ? {} : { overflowOnto: attackTargetTestid(view, overflow.heroId) }),
   };
 }
 
@@ -83,4 +87,18 @@ export function withOutcomes(
 /** The forecast the target `testId` shows, or undefined. */
 export function outcomeFor(highlight: Highlight | undefined, testId: string | undefined): AttackForecast | undefined {
   return testId === undefined ? undefined : highlight?.outcomes?.get(testId);
+}
+
+/** R4290000: the hovered attack's Cleave hit on the unit `testId`, beside its target, or undefined. */
+export function splashFor(highlight: Highlight | undefined, testId: string | undefined): SplashHit | undefined {
+  const hovered = highlight?.hoveredAttack;
+  if (hovered === undefined || testId === undefined) return undefined;
+  return outcomeFor(highlight, hovered.target)?.splash?.find((hit) => testid.card(hit.instanceId) === testId);
+}
+
+/** R4290000: what the hovered attack tramples onto the hero `testId`, or undefined. */
+export function overflowFor(highlight: Highlight | undefined, testId: string | undefined): TrampleOverflow | undefined {
+  const hovered = highlight?.hoveredAttack;
+  if (hovered === undefined || testId === undefined || hovered.overflowOnto !== testId) return undefined;
+  return outcomeFor(highlight, hovered.target)?.overflow;
 }

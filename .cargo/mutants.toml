@@ -343,4 +343,13 @@ exclude_re = [
   # and no other (its loop runs `x.max(0)` times), the very `rng.int(n)` the other branch draws, from the same
   # cursor. Pinned to the `lucky > 0` column (34): the cost comparison's `>` (column 46) is held by a test.
   'c025_snom_bunny\.rs:\d+:34: replace > with >= in snom_bunny',
+  # crates/cards (#4038): S+ #39 Mindustrial Cross-over adds the one card its Discover picked, through a query naming
+  # that card alone, and `addRandomFromCatalog` adds one card when no count is given (`add_to_hand.rs`).
+  'c039_mindustrial_cross_over\.rs:.*delete field count from struct AddRandomFromCatalogArgs expression in cross_over',
+  # crates/run (#4038): `tier_row`'s extra opening cards, `if opening > 0 { opening } else { 0 }`: at 0 both arms are
+  # 0, so `>=` gives every row the same. Pinned to that `>` (column 41); `draw_every`'s `>` (35) is held by a test.
+  'crates/run/src/config\.rs:\d+:41: replace > with >= in tier_row',
+  # crates/wasm/c (#4038): the C module has no clock. Every body it hands `no_clock` takes `NO_DEADLINE_MS`, 0, and
+  # `deadline_ms <= 0` means no clock (wasm_core's `SearchClock::begin`, `lethal_hint`), so none reads what it returns.
+  'crates/wasm/c/src/lib\.rs:.*replace no_clock -> f64 with ',
 ]
