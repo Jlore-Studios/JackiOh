@@ -1050,6 +1050,12 @@
       "lines": [
         "/harness build"
       ]
+    },
+    "c:7052772586": {
+      "at": "2026-11-20T23:04:40Z",
+      "lines": [
+        "/harness build Write option 3 into R665 (or docs/architecture.md \u00a710, if R665 is the wrong place): the ~90-second TOTP replay window GoTrue v2.197.0 allows, why it is accepted, and that option 1's MFA verification attempt hook is the fix to revisit on a plan that offers it. Nothing else: no migration, no hook."
+      ]
     }
   },
   "items": {
