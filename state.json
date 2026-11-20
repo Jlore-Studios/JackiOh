@@ -16942,12 +16942,20 @@
     "what": "plan #4293 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T18:18:28Z",
+    "at": "2026-11-20T18:25:46Z",
     "notes": [
-      "delivered suggest on claude-4 (run 44786118727): suggested",
+      "#4083 needs a plan",
+      "#4293 needs a plan",
+      "#4322 needs a plan",
+      "#4327 needs a plan",
+      "#4334 needs a plan",
+      "started plan #4327 on claude-8 (run 44792836438)",
+      "started plan #4083 on claude-6 (run 44792920198)",
+      "started plan #4334 on muse (run 44792998489)",
+      "started plan #4322 on muse (run 44793079502)",
+      "started plan #4293 on muse (run 44793158285)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "#4334: typed it Task"
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17653,7 +17661,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T18:18:28Z",
+  "loop_tick": "2026-11-20T18:25:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
