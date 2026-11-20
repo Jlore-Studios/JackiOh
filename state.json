@@ -14879,16 +14879,11 @@
     "what": "review #4351 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T23:24:56Z",
+    "at": "2026-11-20T23:36:32Z",
     "notes": [
-      "delivered plan #4247 on muse (run 44834842145): planned",
-      "delivered plan #3982 on muse (run 44834717266): planned",
-      "delivered review #4344 on claude-4 (run 44834488348): reviewed",
-      "started build #3982 on muse (run 44837008276)",
-      "started build #4247 on muse (run 44837081444)",
-      "started review #4344 on claude-4 (run 44837164032)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered build #4041 on muse (run 44835763483): built",
+      "started review #4351 on muse (run 44838295180)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15594,7 +15589,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T23:24:56Z",
+  "loop_tick": "2026-11-20T23:36:32Z",
   "machine_disk": {
     "issue": null,
     "reading": {
