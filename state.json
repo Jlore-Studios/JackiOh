@@ -8929,15 +8929,8 @@
       "verdict_rounds": 1
     },
     "4083": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44792920198",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-20T18:46:58Z",
-        "until": "2026-11-20T19:16:58Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -8949,10 +8942,9 @@
         "reason": "planned on opus",
         "trail": "eb/README.md | cut -c1-220 | head -20\", \"description\": \"Grep d\u2026\n- Bash: {\"command\": \"sed -n 252p crates/server/README.md | fold -w 220; sed -n 620,640p crates/server/README.md\", \"description\": \"Read server README stats lines\"}\n- Bash: {\"command\": \"git grep -n \\\"CreatedPanel\\\\|Created cards\\\\|Tokens tab\\\" -- apps/web/README.md docs/architecture.md docs/v0.3.0/SURFACE.md | cut -c1-250 | head\", \"description\": \"Check web README mentio\u2026\n- Bash: {\"command\": \"for r in R2089000 R2370000 R3184002 R3324002 R3184001; do echo \\\"=== $r\\\"; sed -n 2,3p spec/rulings/$r.md; grep -n \\\"Amended by\\\" spec/rulings/$r.md | cut -c1-300; done\", \"description\": \u2026\n- Bash: {\"command\": \"grep -c \\\"R4155000\\\" spec/11-rulings.md; grep -n \\\"^\\\\*\\\\*\\\\[\\\\[R4155000\\\\]\\\\]\\\" spec/11-rulings.md | cut -c1-300; git show f870ac82aa --stat | head -40\", \"description\": \"See how R415500\u2026\n- Bash: {\"command\": \"grep -n \\\"stats-grid\\\\|stats-created-panel\\\" apps/web/src/routes/stats.css | head -30\", \"description\": \"Check grid CSS selectors\"}\n- Bash: {\"command\": \"git grep -n \\\"created_played_win_rate\\\\|created_played_radiant_games\\\\|created_played_delta\\\" -- crates/server crates/tools | cut -c1-160\", \"description\": \"Find server uses of removed fi\u2026\n- Bash: {\"command\": \"sed -n 440,470p crates/server/tests/store/card_stats.rs\", \"description\": \"Check the stats-cards CLI created test\"}\n- Bash: {\"command\": \"grep -n \\\"Created\\\\|Tokens tab\\\" spec/01-overview.md | cut -c1-300 | head; grep -rn \\\"Used vs not used\\\\|createdPlayedDelta\\\" spec/0*.md | cut -c1-120 | head\", \"description\": \"Check over\u2026\n- Bash: {\"command\": \"git show f870ac82aa --stat | sed -n 40,60p; git show 244f9f8777 --stat | grep -v \\\"^ apps/web/src/i18n\\\" | tail -25\", \"description\": \"Check whether related PRs added patch fragments\"}\n- Bash: {\"command\": \"ls crates/cards/ | head; f=$(git ls-files | grep -E \\\"catalog\\\\.json$\\\" | head -3); echo \\\"$f\\\"; python3 -I - <<'EOF'\\nimport json,subprocess\\nfiles=subprocess.check_output([\\\"git\\\",\\\"ls\u2026\n- Bash: {\"command\": \"python3 -I -c '\\nimport json\\nc=json.load(open(\\\"crates/cards/catalog.json\\\"))\\ncards=c[\\\"cards\\\"] if isinstance(c,dict) and \\\"cards\\\" in c else c\\nif isinstance(cards,dict): it=cards.it\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4083/apps/web/src/routes/stats.test.tsx\", \"offset\": 2343, \"limit\": 27}\n- Bash: {\"command\": \"grep -n \\\"Filter by keyword\\\\|sortSelect\\\\|rangesToggle\\\\|viewGrid\\\" apps/web/src/routes/stats.test.tsx | head -30; grep -n \\\"ADJUSTED_RANGE_DIGITS\\\\|WIN_RATE_RANGE_DIGITS\\\" apps/web/src\u2026\n- Bash: {\"command\": \"sed -n 765,790p apps/web/src/routes/stats.test.tsx; grep -n \\\"R4279001\\\" apps/web/src/routes/stats.test.tsx | cut -c1-200\", \"description\": \"Read options row test and R4279001 tests\"}\n- Bash: {\"command\": \"grep -n \\\"minSample\\\" apps/web/src/routes/stats.tsx | head; grep -n \\\"openDrillDown = \\\\|const openDrillDown\\\\|function openDrillDown\\\" apps/web/src/routes/stats.tsx\", \"description\": \"Ch\u2026\n- Bash: {\"command\": \"ls crates/server/tests/ | head -20; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head -20; grep -rn \\\"mod stats\\\" crates/server/tests/api/mod.rs crates/server/tests/*.rs \u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Shape decided (planner)\\n- Shared sort: Tokens tab reads sortCol/sortDir via createdSortOf (winRate/playRate -> adjustedWinRate, same dir); CreatedPanel\u2026\n- Bash: {\"command\": \"sed -n 540,560p apps/web/src/routes/stats.tsx\", \"description\": \"Read openDrillDown and nearby state\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4083/.bot-plan.md\", \"content\": \"## Goal\\n\\nOn `/stats`, both Created sections (now on the **Tokens** tab, R4279001) show only Card, Name, Tier and Adj\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4083/.bot-plan.md\", \"content\": \"## Goal\\n\\nOn `/stats`, both Created sections (now on the **Tokens** tab, R4279001) show only Card, Name, Tier and Adj\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count plan words again\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4083/.bot-plan.md\", \"content\": \"## Goal\\n\\nOn `/stats`, both Created sections (on the **Tokens** tab since R4279001) will show only Card, Name, Tier a\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count plan words\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np=\\\".bot-plan.md\\\"\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\" - Delete these fields:\\n - `created_played_games`, `created_played_win_rate`;\\n - `created_not_played_games`, `\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4083/.bot-plan.md\", \"offset\": 150, \"limit\": 120}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np=\\\".bot-plan.md\\\"\\ns=open(p).read()\\nstart=s.index(\\\"New `describe(\\\\\\\"R4083000 \\u2026\\\\\\\")`\\\")\\nend=s.index(\\\"Commands:\\\\n```\\\")\\nnew='''New `describe(\\\"R4083000 \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4083/.bot-plan.md\", \"offset\": 1, \"limit\": 80}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np=\\\".bot-plan.md\\\"\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\"On `/stats`, both Created sections (on the **Tokens** tab since R4279001) will show only Card, Name, Tier and Ad\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np=\\\".bot-plan.md\\\"\\ns=open(p).read()\\na=s.index(\\\"## Done when\\\")\\nb=s.index(\\\"## Risks\\\")\\ns=s[:a]+\\\"\\\"\\\"## Done when\\n\\n- [ ] Columns, sort (address-kept, Tier by\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4083/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4083/.bot-plan.md\", \"old_string\": \" - Delete `createdWinRate`, `figure`, the `faceRate` import and `useState`.\", \"new_string\": \"\u2026\n- said: ## Goal Both Created sections on the `/stats` **Tokens** tab (R4279001) show only Card, Name, Tier and Adjusted. Games stays behind the Columns toggle, and Win rate goes. The Tokens tab works as the deck table does: - **Sort:** the same sort select, direction and headers, kept in the address. Tier \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-20T18:27:20Z",
       "owner_why": "it plans it",
@@ -8965,9 +8957,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-20T18:25:51Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44792920198",
+      "run_id": "pending:241896d5-1795200503",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T18:27:20Z",
+      "started_at": "2026-11-20T18:48:41Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17151,9 +17143,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T18:48:12Z",
+    "at": "2026-11-20T18:48:41Z",
     "url": "",
-    "what": "build #4327 on claude-8"
+    "what": "build #4083 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-20T18:35:19Z",
