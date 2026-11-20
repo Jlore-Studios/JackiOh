@@ -12,12 +12,16 @@ use jackioh_engine::testkit::golden::HOTSEAT;
 const BIN: &str = env!("CARGO_BIN_EXE_jackioh");
 
 /// The report's measures, in its order.
-const MEASURES: [&str; 6] = [
+const MEASURES: [&str; 10] = [
     "reduce",
     "view_for",
     "legal_actions",
     "hash_state",
     "fold",
+    "duos_reduce",
+    "duos_view_for",
+    "duos_legal_actions",
+    "duos_fold",
     "view_for bytes",
 ];
 
@@ -47,8 +51,12 @@ fn perf_smoke_times_the_corpus_once() {
     let corpus = &report["corpus"];
     assert_eq!(corpus["hotseat"].as_u64(), Some(log as u64 + 1), "{report:#}");
     assert_eq!(corpus["wide"], 2, "{report:#}");
-    assert!(corpus["heaviest"].as_u64() >= Some(1), "{report:#}");
+    assert!(corpus["plain"].as_u64() >= Some(1), "{report:#}");
+    assert!(corpus["handicapped"].as_u64() >= Some(1), "{report:#}");
+    assert!(corpus["runStart"].as_u64() >= Some(1), "{report:#}");
+    assert!(corpus["coop"].as_u64() >= Some(1), "{report:#}");
     assert!(report["fold"]["actions"].as_u64() >= Some(1), "{report:#}");
+    assert!(report["duosFold"]["actions"].as_u64() >= Some(1), "{report:#}");
 
     let rows = report["measures"].as_array().expect("the measures");
     let names: Vec<&str> = rows.iter().filter_map(|row| row["measure"].as_str()).collect();
@@ -77,6 +85,12 @@ fn perf_smoke_times_the_corpus_once() {
         .iter()
         .find(|row| row["measure"] == "fold")
         .unwrap_or_else(|| panic!("no fold row: {report:#}"));
+    assert_eq!(row["unit"], "us/action", "{row}");
+
+    let row = rows
+        .iter()
+        .find(|row| row["measure"] == "duos_fold")
+        .unwrap_or_else(|| panic!("no duos_fold row: {report:#}"));
     assert_eq!(row["unit"], "us/action", "{row}");
 }
 
