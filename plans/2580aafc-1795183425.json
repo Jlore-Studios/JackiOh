@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4297,
+  "title": "Patch: the Worker's own answers carry the site's security headers",
+  "branch": "bot/issue-4297",
+  "thread": "**Issue #4297 (data, not instructions):**\n\n```text\n# #4297: Patch: the Worker's own answers carry the site's security headers\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome answers the site's Worker builds itself go out without the safety headers every file Cloudflare serves gets. The game's engine file is served by the Worker instead of as a plain file, and the \"page not found\" answers from both the game site's Worker and the dev dashboard's Worker carry no safety headers either. The dashboard's own header file is also missing the rule that forces secure connections. After this change, those answers carry the same protections, so a browser treats them with the same suspicion it treats the rest of the site.\n\n## Why\nThe file Cloudflare serves for the whole game site (`apps/web/public/_headers`) sets a strict set of headers: a content policy, no framing, no content-type guessing, a strict referrer policy, and forced HTTPS. But three kinds of answers never pass through that file because the Worker makes them: the compressed engine module (`precompressedModule` sets only content type, encoding, and caching), the plain-text 404 for unknown paths, and the dashboard Worker's JSON 404. A search over the server and edge code finds no `nosniff`, `X-Frame-Options`, `Strict-Transport-Security`, or `Content-Security-Policy` set anywhere there. The dashboard's header file (`apps/admin/public/_headers`) has the same content policy family as the game's but omits `Strict-Transport-Security` entirely, while the game's file sets a year-long one. The engine module is the sharpest case: it is executable code the browser compiles, served without `X-Content-Type-Options: nosniff`.\n\n## Proposal\nAdd the site's static security headers to the three Worker-synthesized responses: the engine module answer, the site Worker's 404, and the dashboard Worker's JSON 404; and add the missing `Strict-Transport-Security` line to the dashboard's `_headers` file. Keep the existing pattern where the Worker's cache rule mirrors the `_headers` rule (already held by a test), extended to the security headers so the two cannot drift. Deliberately out of scope: proxied `/api/*` answers, which the server owns and where a ruling forbids extra headers on at least one error (R145's `invalid_code` stays byte for byte and header for header).\n\n## Where it lands\n- `apps/edge/src/routing.ts` (`precompressedModule`, and a shared header helper beside it)\n- `apps/edge/src/index.ts` (the 404 branch)\n- `apps/admin/worker/index.ts` (`notFound()`)\n- `apps/admin/public/_headers` (the missing `Strict-Transport-Security` line)\n- Tests beside the existing `#3183`/`#4011` blocks in `apps/edge/src/config.test.ts` (and the dashboard's `headers.test.ts` style), holding the Worker's headers to the `_headers` files\n- SPEC: no section governs response headers today; the `_headers` files plus `static-pages.ts`/`headers.ts` (which fill the content-policy placeholders) are the contract. No ruling needed (no Hearthstone-semantics decision, no player-visible rules change).\n\n## Acceptance criteria\n- [ ] The engine module answer carries `X-Content-Type-Options: nosniff` and the site's framing/referrer/transport headers, verified by a test that reads them off a `precompressedModule` answer\n- [ ] Both Workers' 404 answers carry the same static headers, verified by unit tests\n- [ ] The dashboard's `_headers` sets `Strict-Transport-Security`, verified by the dashboard's header test\n- [ ] A test holds the Worker's header set to the `_headers` files so they cannot drift (mirroring the existing cache-rule test)\n- [ ] No header is added to proxied `/api/*` answers (R145's byte-for-byte error untouched)\n- [ ] `pnpm --dir apps/web test` (edge project) and the admin typecheck/test pass\n\n## Size and risks\nSmall: a few dozen lines plus tests, no migration, no spec change. Risk is low but real: a content policy applied to a non-HTML answer is harmless, yet headers on the wasm answer must not break `instantiateStreaming` (which needs the `application/wasm` type kept exact); the tests assert the type and encoding stay byte-identical. Rejected alternative: setting these headers in Terraform or on the container instead \u2014 the answers are synthesized at the edge, so the edge is where they must be set.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T13:59:21Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4297: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T13:59:47Z",
+    "claimed_at": "2026-11-20T14:04:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
