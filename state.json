@@ -14523,9 +14523,13 @@
     "what": "build #4322 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-20T21:53:35Z",
+    "at": "2026-11-20T21:59:48Z",
     "notes": [
-      "#4322 is held for `claude-1` until 16:00 (5-hour usage is 42%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+      "#4322: `claude-1` can start again, so its hold is lifted",
+      "delivered review #4342 on muse (run 44810445523): approved",
+      "started build #4322 on claude-1 (run 44825375905)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15231,7 +15235,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T21:53:35Z",
+  "loop_tick": "2026-11-20T21:59:48Z",
   "machine_disk": {
     "issue": null,
     "reading": {
