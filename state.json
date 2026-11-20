@@ -15730,8 +15730,11 @@
     "what": "review #4307 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-20T11:02:48Z",
-    "notes": [],
+    "at": "2026-11-20T11:09:20Z",
+    "notes": [
+      "delivered review #4303 on claude-1 (run 44692374776): approved",
+      "runner gate: started 1 of 1 waiting run(s) (run 44725356419 on bot/issue-4285)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16436,7 +16439,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T11:02:48Z",
+  "loop_tick": "2026-11-20T11:09:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
