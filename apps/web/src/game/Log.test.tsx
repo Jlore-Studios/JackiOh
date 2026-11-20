@@ -945,10 +945,10 @@ describe("#4140 the log speaks its newest line to screen readers", () => {
 describe("the log's card-name target size", () => {
   const css = readSheet("src/game/inspectable.css");
 
-  it("with a mouse each card-naming log line is a 24px target while the list stays inline", () => {
-    expect(css).toContain("@media (pointer: fine)");
+  it("with anything but a finger each card-naming log line is a 24px target while the list stays inline", () => {
+    // "Not coarse", so a pointer-less headless browser (the e2e axe run) gets the target too.
     expect(css).toMatch(
-      /@media \(pointer: fine\)\s*\{\s*\.log \.log-card\s*\{[^}]*display: inline-block;[^}]*min-height: 24px;[^}]*\}\s*\}/,
+      /@media not all and \(pointer: coarse\)\s*\{\s*\.log \.log-card\s*\{[^}]*display: inline-block;[^}]*min-height: 24px;[^}]*\}\s*\}/,
     );
     // The dense-list look for the fallback: the base rule still reads as the line it is.
     expect(css).toMatch(/\.log \.log-card\s*\{[^}]*display: inline;/);

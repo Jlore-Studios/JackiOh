@@ -71,9 +71,10 @@
 }
 
 /* WCAG 2.5.8: with a mouse each card-naming line is a 24 px target, still an inline
-   dense-list line: the button keeps its inline look, only taller. Touch keeps its
-   44 px row in the block below. */
-@media (pointer: fine) {
+   dense-list line: the button keeps its inline look, only taller. Written as "not coarse", not
+   "fine": a headless browser (the e2e axe run) reports pointer: none, and it gets the target too.
+   Touch keeps its 44 px row in the block below. */
+@media not all and (pointer: coarse) {
   .log .log-card {
     display: inline-block;
     min-height: 24px;
