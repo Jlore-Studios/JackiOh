@@ -16695,6 +16695,16 @@
         }
       }
     },
+    "4327": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-20T18:24:40Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
+    },
     "4329": {
       "action": "review",
       "asks": [],
