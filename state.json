@@ -37733,14 +37733,6 @@
         "provider": "claude-4",
         "run_id": "44758782931",
         "taken_asks": []
-      },
-      "3": {
-        "area": "server",
-        "count": 1,
-        "last_run": "2026-11-20T15:00:15Z",
-        "provider": "claude-6",
-        "run_id": "44758900034",
-        "taken_asks": []
       }
     },
     "taken_asks": []
