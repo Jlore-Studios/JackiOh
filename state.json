@@ -30242,10 +30242,6 @@
       "refused_until": "2026-11-12T11:30:00Z",
       "spent": [
         {
-          "at": "2026-11-09T10:35:11Z",
-          "minutes": 1.3
-        },
-        {
           "at": "2026-11-09T11:30:45Z",
           "minutes": 2.0
         },
@@ -31040,16 +31036,13 @@
         {
           "at": "2026-11-20T03:42:44Z",
           "minutes": 68.1
+        },
+        {
+          "at": "2026-11-20T07:43:39Z",
+          "minutes": 55.2
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-08T16:19:17Z",
-          "cache": 2546360,
-          "cost": 1.5008,
-          "input": 52,
-          "output": 13197
-        },
         {
           "at": "2026-11-08T16:47:08Z",
           "cache": 6265161,
@@ -32442,14 +32435,21 @@
           "cost": 16.9674,
           "input": 9,
           "output": 8165
+        },
+        {
+          "at": "2026-11-20T07:43:39Z",
+          "cache": 4969785,
+          "cost": 9.2175,
+          "input": 43,
+          "output": 13715
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-20T07:00:00Z",
-          "utilization": 0.89
+          "resets_at": "2026-11-20T12:00:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-11-20T06:13:57Z",
+        "observed_at": "2026-11-20T07:43:39Z",
         "status": "allowed"
       }
     },
@@ -36977,6 +36977,16 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-20T06:08:47Z,claude-8,ping,before,44685428856,86,2026-11-20T07:00:00Z,,,allowed,100,,",
+      "2026-11-20T06:09:37Z,claude-8,stream,call,44685428856,89,2026-11-20T07:00:00Z,,,allowed,100,,",
+      "2026-11-20T06:10:37Z,claude-8,stream,call,44685428856,90,2026-11-20T07:00:00Z,,,allowed,100,,",
+      "2026-11-20T06:30:23Z,claude-8,stream,call,44685428856,90,2026-11-20T07:00:00Z,,,allowed_warning,100,,",
+      "2026-11-20T07:00:09Z,claude-8,stream,call,44685428856,91,2026-11-20T07:00:00Z,,,allowed_warning,85,,",
+      "2026-11-20T07:03:40Z,claude-8,stream,call,44685428856,0,2026-11-20T12:00:00Z,,,allowed,85,,"
+    ]
   },
   "version": 1
 }
