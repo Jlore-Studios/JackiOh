@@ -17100,11 +17100,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-20T18:36:34Z",
+        "at": "2026-11-20T19:02:24Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Engine rules: the fix changes number resolution in crates/engine/src/params.rs (rule 1)"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Engine rules: it changes how `param` and `params_view` in crates/engine/src/params.rs read a fused card's numbers, and it retires an engine helper"
       },
       "failures": 0,
       "forced": false,
