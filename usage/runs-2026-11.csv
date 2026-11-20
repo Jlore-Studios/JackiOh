@@ -2831,3 +2831,6 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-20T01:48:24Z,44655574825,muse,muse-spark-1.3-contributor,plan,4249,medium,planned,,1.6,0,0,0,,0,1,47,48,1,,none,,1
 2026-11-20T01:54:07Z,44656595228,muse,muse-spark-1.3-contributor,plan,4246,medium,planned,,2.5,0,0,0,,2,2,48,48,8,,none,,1
 2026-11-20T01:50:52Z,44655514090,muse,muse-spark-1.3-contributor,plan,4257,medium,planned,,6.5,0,0,0,,0,2,47,48,0.9,,none,,1
+2026-11-20T02:18:55Z,44657694508,claude-1,opus,plan,4246,hard,planned,,15.3,120,48835,5841333,3.1524,0,6,,,17.4,muse,fresh,other,1
+2026-11-20T02:14:03Z,44657631024,claude-8,opus,plan,4257,hard,planned,,10.4,159,60548,9225967,4.2187,0,8,,,19,muse,fresh,other,1
+2026-11-20T02:26:26Z,44659319959,claude-4,opus,plan,4285,hard,interrupted,5-hour cap,9.3,0,0,0,,2,50,,,1,,fresh,,1
