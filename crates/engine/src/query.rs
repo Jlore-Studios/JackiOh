@@ -1255,7 +1255,7 @@ fn splash_of(
 fn overflow_of(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> Option<TrampleOverflow> {
     let dealt = projected_damage(state, attacker, target);
     (dealt > 0).then(|| TrampleOverflow {
-        hero_id: crate::damage::target_id(&DamageTarget::Hero {
+        hero_id: crate::reduce::attack_target_id(&DamageTarget::Hero {
             player: crate::subsystems::lethal::defending_hero(target),
         }),
         dealt,
