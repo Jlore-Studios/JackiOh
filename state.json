@@ -15858,11 +15858,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-20T11:48:01Z",
+        "at": "2026-11-20T11:55:58Z",
         "difficulty": "hard",
-        "provider": "claude-8",
+        "provider": "claude-4",
         "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4303, a hard change"
+        "why": "the bot already rated it hard and a plan may not lower that; by the rule alone this one-line edit to a player note would be medium"
       },
       "failures": 0,
       "forced": false,
