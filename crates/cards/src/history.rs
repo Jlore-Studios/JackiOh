@@ -111,7 +111,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002), #3935 (R3935000), #3996
 /// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202), #4079 (R4079000)
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000)
-/// and #4285 (R4285001 to R4285005).
+/// #4285 (R4285001 to R4285005) and #4327 (R4327002).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -1131,7 +1131,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c095_call_to_chaos_meditative_edition::script_v0_6_7k,
     ),
     // #4327 (R4327002): Ayys LMAO's summons before they were set face-down.
-    (c076_ayys_lmao::ID, "v0.6.7k", c076_ayys_lmao::script_v0_6_7k),
+    (c076_ayys_lmao::ID, "v0.6.8b", c076_ayys_lmao::script_v0_6_8b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

@@ -25,7 +25,7 @@ const AYY: &str = "stinkyscapeplus-076-1";
 const ASTEROID: &str = "stinkyscape-169";
 
 /// The Cry: `summons` fair picks, each summoned set face-down by its Cloaked when `set` (R4327002), else
-/// as through v0.6.7k (R3557003).
+/// as through v0.6.8b (R3557003).
 fn ayys(radiant: bool, set: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -59,8 +59,8 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000, R4327002: the Ayys standing in the backrow and the asteroids in the unit row (R3557003),
-/// through v0.6.7k (issue #4327); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_7k() -> CardScripts {
+/// through v0.6.8b (issue #4327); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_8b() -> CardScripts {
     CardScripts {
         base: ayys(false, false),
         radiant: ayys(true, false),
@@ -72,7 +72,7 @@ pub fn script_v0_6_7k() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use super::{ASTEROID, AYY, ID, script_v0_6_7k};
+    use super::{ASTEROID, AYY, ID, script_v0_6_8b};
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -315,11 +315,11 @@ mod tests {
         assert!(checked);
     }
 
-    /// R767000, R3557003: through v0.6.7k the Ayys stood in the backrow as Units and the asteroids took
+    /// R767000, R3557003: through v0.6.8b the Ayys stood in the backrow as Units and the asteroids took
     /// the unit row, face-up, and a replay of those games folds under that script.
     #[test]
-    fn r3557003_r767000_the_kept_v0_6_7k_script_stands_the_ayys_in_the_backrow_and_the_asteroids_in_the_unit_row() {
-        crate::under_kept(ID, script_v0_6_7k(), || {
+    fn r3557003_r767000_the_kept_v0_6_8b_script_stands_the_ayys_in_the_backrow_and_the_asteroids_in_the_unit_row() {
+        crate::under_kept(ID, script_v0_6_8b(), || {
             for n in 0..6 {
                 let mut s = board(false, &format!("r3557003-places-{n}"), json!({}));
                 s.play(ID, json!({}));
