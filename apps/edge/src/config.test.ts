@@ -13,6 +13,7 @@ import {
   HEALTH_PATH,
   MODULE_CACHE_CONTROL,
   READY_PATH,
+  SECURITY_HEADERS,
   SERVER_SECRETS,
   SERVER_VARS,
   WORKER_ROUTES,
@@ -141,5 +142,32 @@ describe("#3183 the module's cache rule", () => {
     const headers = readFileSync(join(ROOT, "apps/web/public/_headers"), "utf8");
     const rule = /^\/assets\/\*\n\s+Cache-Control: (.+)$/mu.exec(headers)?.[1];
     expect(rule).toBe(MODULE_CACHE_CONTROL);
+  });
+});
+
+describe("#4297 the Worker's security headers", () => {
+  it("is exactly the four static headers, no CSP and no Permissions-Policy", () => {
+    expect(Object.keys(SECURITY_HEADERS).sort()).toEqual([
+      "Referrer-Policy",
+      "Strict-Transport-Security",
+      "X-Content-Type-Options",
+      "X-Frame-Options",
+    ]);
+  });
+
+  it("matches the /* block of public/_headers value for value", () => {
+    const headers = readFileSync(join(ROOT, "apps/web/public/_headers"), "utf8");
+    const lines = headers.split("\n");
+    // The file's only other blocks (`/fonts/*`, `/assets/*`) hold one `Cache-Control` line, so a
+    // line scan for these names reads the `/*` block alone.
+    const value = (name: string): string | undefined =>
+      lines
+        .find((line) => line.trim().startsWith(`${name}:`))
+        ?.trim()
+        .slice(name.length + 1)
+        .trim();
+    for (const [name, expected] of Object.entries(SECURITY_HEADERS)) {
+      expect(value(name), name).toBe(expected);
+    }
   });
 });

@@ -84,6 +84,28 @@ describe.each([
     expect(header(filled, "X-Content-Type-Options")).toBe("nosniff");
   });
 
+  it("#4297 forces HTTPS for a year, like the game site", () => {
+    expect(header(filled, "Strict-Transport-Security")).toBe("max-age=31536000; includeSubDomains");
+    const game = readFileSync(join(ADMIN, "../web/public/_headers"), "utf8");
+    expect(header(filled, "Strict-Transport-Security")).toBe(header(game, "Strict-Transport-Security"));
+  });
+
+  it("#4297 holds the dashboard Worker's 404 headers to the game site's _headers file", () => {
+    // The Worker's project has no Node types, so its test cannot read the file; this one can, and
+    // the Worker's literals are read as text (as config.test.ts reads sources elsewhere).
+    const source = readFileSync(join(ADMIN, "worker/index.ts"), "utf8");
+    const game = readFileSync(join(ADMIN, "../web/public/_headers"), "utf8");
+    for (const name of [
+      "X-Content-Type-Options",
+      "X-Frame-Options",
+      "Referrer-Policy",
+      "Strict-Transport-Security",
+    ]) {
+      const inWorker = new RegExp(`"${name}": "([^"]+)"`, "u").exec(source)?.[1];
+      expect(inWorker, name).toBe(header(game, name));
+    }
+  });
+
   it("applies to every path the build serves", () => {
     const lines = filled.split("\n");
     const at = lines.findIndex((line) => line.trim().startsWith("Content-Security-Policy:"));

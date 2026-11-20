@@ -49,6 +49,7 @@ export function precompressedModule(stored: Response): Response {
   headers.set("Content-Type", "application/wasm");
   headers.set("Content-Encoding", "br");
   if (!headers.has("Cache-Control")) headers.set("Cache-Control", MODULE_CACHE_CONTROL);
+  withSecurityHeaders(headers);
   // `manual` is a Workers-runtime-only body hint with no observable accessor, so no unit test here can
   // tell it from any other string. A disable covers only the line after it, so it stands last.
   // Stryker disable next-line StringLiteral: a Workers-only body hint no test can read (above)
@@ -70,6 +71,26 @@ export function forServer(request: Request): Request {
 
 /** The port the server listens on in the container (its `PORT`). */
 export const SERVER_PORT = 8080;
+
+/**
+ * #4297: the static security headers the Worker's own answers carry, copied character-for-character
+ * from the `/*` block of `apps/web/public/_headers`. The Worker sets them because those answers are
+ * never files Cloudflare serves: `precompressedModule` builds the module's answer and `index.ts`
+ * builds its own 404. `Content-Security-Policy` is excluded: its `connect-src` is a per-build
+ * `%CONNECT_SRC%` placeholder `static-pages.ts` fills, which the edge cannot reproduce, and a
+ * hardcoded CSP would drift or break hosts.
+ */
+export const SECURITY_HEADERS: Readonly<Record<string, string>> = Object.freeze({
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+});
+
+/** #4297: sets `SECURITY_HEADERS` on a Worker-synthesized answer's headers. */
+export function withSecurityHeaders(headers: Headers): void {
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
+}
 
 /** The server's probes (crates/server/src/api/health.rs): the image check reads liveness's `x-deployed-commit`, the daily cron asks for readiness. */
 export const HEALTH_PATH = "/healthz";
