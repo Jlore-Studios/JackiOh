@@ -13928,11 +13928,6 @@
       "owner": "claude-8",
       "owner_since": "2026-11-20T02:00:01Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
-      "paused": {
-        "at": "2026-11-20T03:42:52Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "planned_at": "2026-11-20T02:21:54Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
