@@ -15764,6 +15764,8 @@
       "verdict_rounds": 0
     },
     "4311": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T11:56:50Z",
@@ -15777,8 +15779,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -60; echo ---; grep -rn \\\"Radiant face never closes\\\" crates/cards/patches/; git status --short\", \"description\": \"Read bot notes and find the false note line\"}\n- Bash: {\"command\": \"sed -n 1,30p crates/cards/src/scripts/stinkyscapeplus/c077_black_hole.rs 2>/dev/null || ls crates/cards/src/scripts/ | head; echo ---; sed -n 1,30p spec/rulings/R3561000.md; echo ---; gr\u2026\n- Bash: {\"command\": \"sed -n 1,25p crates/cards/src/scripts/stinkyscape_plus/c077_black_hole.rs; echo ---; python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\ndef walk(o):\\n if isin\u2026\n- said: The finding holds: catalog gives `radiant: 10`, the script header and R3561000 both say the Radiant face closes at the printed 10. Applying the one-line fix.\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4310/crates/cards/patches/pending/stinkyscape-balance-changes-iv.json\", \"offset\": 20, \"limit\": 15}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4310/crates/cards/patches/pending/stinkyscape-balance-changes-iv.json\", \"old_string\": \"down from 10 (its Radiant face never clos\u2026\n- Bash: {\"command\": \"cat > /tmp/state.md <<'EOF'\\nEOF\\npython3 - <<'PY'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate=\\\"\\\"\\\"## State\\n\\n- Done (run 2, build): the Black Hole line in `crates/cards/patches/pendi\u2026\n- said: Now the checks: patches, catalog, spec, classify, and the note-shape tests.\n- Bash: {\"command\": \"(cargo jackioh patches check 2>&1 | tail -5; echo \\\"patches exit ${PIPESTATUS[0]}\\\") ; (cargo jackioh catalog check 2>&1 | tail -3; echo \\\"catalog exit ${PIPESTATUS[0]}\\\"); (cargo jackio\u2026\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims 2>&1 | tail -8; echo \\\"classify exit ${PIPESTATUS[0]}\\\"\", \"description\": \"Run CI's classify check with claims\", \"timeout\": 600000}\n- Bash: {\"command\": \"pnpm --dir apps/web test src/wording.test.ts > /tmp/wording.log 2>&1; echo \\\"exit $?\\\" >> /tmp/wording.log\", \"description\": \"Run the web wording test file in the background\", \"timeout\": \u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools r724001 2>&1 | grep -E \\\"^test |test result|error\\\" | tail -20\", \"description\": \"Run the tools crate's player-note tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo fmt --check; echo \\\"fmt exit $?\\\"; grep -rln \\\"patches/pending\\\" crates/*/src crates/*/build.rs crates/*/tests apps/web/src 2>/dev/null | head\", \"description\": \"Check formatting an\u2026\n- Bash: {\"command\": \"grep -n \\\"pending\\\" crates/cards/tests/cross/card_text.rs | head -5; grep -n -B2 -A3 'name = \\\"cross\\\"' crates/cards/Cargo.toml | head\", \"description\": \"See how the cards cross test read\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools 2>&1 | grep -E \\\"test result|FAILED|panicked|failed\\\" | tail -15\", \"description\": \"Run the whole tools crate test suite\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E \\\"Test Files|Tests |FAIL|exit\\\" /tmp/wording.log | tail -6; git status --short; git diff\", \"description\": \"Show the web test result and the final diff\"}\n- Bash: {\"command\": \"python3 - <<'PY'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: run the checks listed in the plan, then report.\\\",\\\"- Checks green: patches/catalog/spec check, classify --cl\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4303 from the after-merge spot-check\"} --> ## What changed I corrected one line of the player note for Black Hole in `crates/cards/patches/pending/stinkyscape-balance-changes-iv.json` (`player.balance`, line 28). Only the part in brackets \u2026"
       },
       "issue": 4310,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T12:45:29Z",
         "from_run": "44731710128",
         "gates": [
           {
@@ -15870,7 +15875,11 @@
         "source": "build",
         "until": "2026-11-20T13:14:37Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-20T12:44:37Z",
+      "run_id": "pending:07cfc8cb-1795178708",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15889,6 +15898,9 @@
         "provider": "claude-4",
         "run": "44731710128"
       },
+      "started_at": "2026-11-20T12:45:29Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15902,9 +15914,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T12:36:57Z",
+    "at": "2026-11-20T12:45:29Z",
     "url": "",
-    "what": "revise #4307 on claude-1"
+    "what": "review #4311 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-20T12:35:49Z",
