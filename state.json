@@ -15855,15 +15855,8 @@
       }
     },
     "4310": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44730627853",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-20T11:56:06Z",
-        "until": "2026-11-20T12:26:06Z"
-      },
       "difficulty_by": {
         "at": "2026-11-20T11:55:58Z",
         "difficulty": "hard",
@@ -15882,10 +15875,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"cat crates/cards/patches/pending/stinkyscape-balance-changes-iv.json | head -100 && ls crates/cards/patches/pending/ | head -50\", \"description\": \"Show the pending patch fragment\"}\n- Bash: {\"command\": \"ls crates/cards/src/scripts/ | head; f=$(grep -rl \\\"c077_black_hole\\\\|black_hole\\\" crates/cards/src/scripts | head -5); echo \\\"$f\\\"; sed -n 1,40p $(echo \\\"$f\\\" | head -1); cat spec/rulin\u2026\n- Bash: {\"command\": \"grep -n '\\\"stinkyscapeplus-077\\\"' -A40 crates/cards/catalog.json 2>/dev/null | head -60; ls crates/cards/\", \"description\": \"Show catalog entry for Black Hole\"}\n- Bash: {\"command\": \"grep -rn \\\"never closes\\\" --include=*.json --include=*.rs --include=*.ts --include=*.tsx --include=*.md --include=*.yaml . 2>/dev/null | grep -v node_modules | grep -v '^./target' | head\u2026\n- Bash: {\"command\": \"grep -rn \\\"Black Hole closes\\\" --include=*.json --include=*.rs --include=*.ts --include=*.tsx --include=*.md . 2>/dev/null | grep -v node_modules | grep -v '^./target' | head; grep -n -i\u2026\n- Bash: {\"command\": \"sed -n 195,240p docs/ADDING_CARDS.md\", \"description\": \"Read the player note docs section\"}\n- Bash: {\"command\": \"grep -n \\\"Patch notes players read\\\" -A30 docs/issues-and-patches.md | head -50\", \"description\": \"Read the player-note style rules\"}\n- Bash: {\"command\": \"grep -n \\\"pending\\\" apps/web/src/wording.test.ts | head -20; grep -rn \\\"patches/pending\\\" apps/web/src --include=*.ts | head\", \"description\": \"Check how the wording test reads pending fr\u2026\n- Bash: {\"command\": \"sed -n 295,380p apps/web/src/wording.test.ts\", \"description\": \"Read the wording test over player notes\"}\n- Bash: {\"command\": \"grep -n \\\"const OLD_WORDS\\\\|const OLD_TUNING_WORDS\\\\|function oldCostWords\\\" -A8 apps/web/src/wording.test.ts | head -50\", \"description\": \"Read the banned-word patterns\"}\n- Bash: {\"command\": \"git show d95e050700 -- crates/cards/catalog.json | grep -n \\\"Black Hole\\\\|permanents\\\" -B3 -A20 | head -60\", \"description\": \"Show #4303's catalog diff for Black Hole\"}\n- Bash: {\"command\": \"grep -rn \\\"200\\\\b\\\\|PLAYER_LINE\\\\|player_line\\\" crates/tools/src/patches*.rs crates/tools/src/patches/ 2>/dev/null | head -20; ls crates/tools/src | head -50\", \"description\": \"Locate pat\u2026\n- Bash: {\"command\": \"sed -n 750,800p crates/tools/src/patches.rs\", \"description\": \"Read the player note checks\"}\n- Bash: {\"command\": \"sed -n 1,40p .github/workflows/patches-ship.yml\", \"description\": \"Read the patches-ship workflow header\"}\n- Bash: {\"command\": \"git log --oneline -3 origin/main 2>&1 | head; git log --oneline -15 --all -- crates/cards/patches/pending/stinkyscape-balance-changes-iv.json | head; grep -n \\\"Stinkyscape+ Balance Chang\u2026\n- Bash: {\"command\": \"git branch -a --contains 10e309822a 2>&1 | head; git show --stat 10e309822a | head -30\", \"description\": \"Inspect the promotion commit for v0.6.7l\"}\n- Bash: {\"command\": \"git show 10e309822a:crates/cards/patches/patches.json | grep -n \\\"never closes\\\" ; git show 10e309822a:crates/cards/patches/patches.json | grep -n '\\\"version\\\": \\\"v0.6.7l\\\"' \", \"descript\u2026\n- Bash: {\"command\": \"grep -n \\\"fn check\\\\b\\\\|pub fn check\\\\|shipped.*player\\\\|player.*shipped\\\\|history.*changed\\\\|rewrit\\\" crates/tools/src/patches.rs | head -30\", \"description\": \"Look for shipped-history i\u2026\n- Bash: {\"command\": \"sed -n 1701,1760p crates/tools/src/patches.rs; sed -n 6170,6215p crates/tools/src/patches.rs\", \"description\": \"Read check_patches and the shipped note test\"}\n- Bash: {\"command\": \"git log --oneline -40 -- crates/cards/patches/patches.json | grep -v \\\"patches ship\\\" | head -15\", \"description\": \"Find non-promotion edits of patches.json\"}\n- Bash: {\"command\": \"grep -rln \\\"Balance Changes IV\\\" --include=*.json --include=*.ts --include=*.tsx --include=*.md . 2>/dev/null | grep -v node_modules | grep -v '^./target'; grep -rn \\\"player\\\" crates/car\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4310/.bot-plan.md\", \"content\": \"# Draft plan #4310 (planner)\\n\\nFound:\\n- Finding holds. crates/cards/patches/pending/stinkyscape-balance-changes-iv.j\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"the bot already rated it hard and a plan may not lower that; by the rule alone this one-line edit to a player note would be medium\"} --> **Goal.** The spot-check finding is correct. Black Hole's player note in the pending Stinkyscape+ Balance Changes IV frag\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-20T11:48:45Z",
       "owner_why": "it plans it",
@@ -15898,19 +15890,19 @@
       "provider": "claude-4",
       "queued_at": "2026-11-20T11:48:01Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "44730627853",
+      "run_id": "pending:d2a41e07-1795175791",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 4303,
-      "started_at": "2026-11-20T11:48:45Z",
+      "started_at": "2026-11-20T11:56:50Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T11:48:45Z",
+    "at": "2026-11-20T11:56:50Z",
     "url": "",
-    "what": "plan #4310 on claude-4"
+    "what": "build #4310 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-20T11:47:22Z",
