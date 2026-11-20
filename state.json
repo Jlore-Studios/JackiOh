@@ -14576,8 +14576,14 @@
     "what": "plan #4249 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T01:34:50Z",
-    "notes": [],
+    "at": "2026-11-20T01:41:02Z",
+    "notes": [
+      "#4257 needs a plan",
+      "started plan #4257 on muse (run 44655514090)",
+      "started plan #4249 on muse (run 44655574825)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15282,7 +15288,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T01:34:50Z",
+  "loop_tick": "2026-11-20T01:41:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
