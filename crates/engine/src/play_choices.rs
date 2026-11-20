@@ -1904,7 +1904,7 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
     // R1180004: a Spell its player's health price reaches takes no mana, so every price of it is
     // listed, the ones only the health affords included. A face-down play is a Trap's, never priced so.
     let health = crate::mana::health_priced(state, card);
-    let mut out = priced_play_actions(state, player, card, |cost| {
+    let mut out = priced_play_actions(state, player, card, |_, cost| {
         if health || crate::credit::can_pay(state, player, cost) {
             vec![PlayPayment::default()]
         } else {
@@ -2053,8 +2053,10 @@ pub fn graveyard_play_actions_for(
     {
         return Vec::new();
     }
-    priced_play_actions(state, player, card, |price| {
-        crate::graveyard_play::graveyard_payments_for(state, player, card, price)
+    // R4285000: each price's probe, its X and embiggen stamped, since a Plague payment meets the price
+    // before Flashback's floor.
+    priced_play_actions(state, player, card, |probe, price| {
+        crate::graveyard_play::graveyard_payments_for(state, player, probe, price)
     })
 }
 
@@ -2132,8 +2134,8 @@ pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &Card
         state,
         player,
         card,
-        |cost| health || crate::credit::can_pay(state, player, cost),
-        |cost| {
+        |_, cost| health || crate::credit::can_pay(state, player, cost),
+        |_, cost| {
             crate::credit::why_unaffordable(state, card, cost)
                 .err()
                 .map(|error| error.message)
@@ -2142,13 +2144,14 @@ pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &Card
 }
 
 /// R979000, R1571000: `why_hand_card_unplayable`'s order for any play source: `payable` says whether
-/// a payment meets a price, as the source's listing asks it; `refuse_price` refuses a price none meets.
+/// a payment meets a price, as the source's listing asks it; `refuse_price` refuses a price none meets;
+/// each is given the price's probe, its X and embiggen stamped, with the price.
 fn why_unplayable(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
-    payable: impl Fn(i32) -> bool,
-    refuse_price: impl Fn(i32) -> Option<String>,
+    payable: impl Fn(&CardInstance, i32) -> bool,
+    refuse_price: impl Fn(&CardInstance, i32) -> Option<String>,
 ) -> Option<String> {
     // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped alike, is banned (R455).
     let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
@@ -2204,11 +2207,11 @@ fn why_unplayable(
     }
     let Some(cheapest) = prices
         .iter()
-        .filter(|price| payable(price.cost))
+        .filter(|price| payable(&price.probe, price.cost))
         .min_by_key(|price| price.cost)
     else {
         let cheapest = prices.iter().min_by_key(|price| price.cost)?;
-        return refuse_price(cheapest.cost);
+        return refuse_price(&cheapest.probe, cheapest.cost);
     };
     let tribute_sets = legal_tribute_sets(state, player, card);
     // (c) Zone: no set the Tribute could pay leaves a zone: an open one, one the set empties (R391) or a
@@ -2322,8 +2325,8 @@ pub fn why_graveyard_card_unplayable(
         state,
         player,
         card,
-        |cost| !crate::graveyard_play::graveyard_payments_for(state, player, card, cost).is_empty(),
-        |cost| crate::graveyard_play::why_graveyard_price_unpaid(state, player, card, cost),
+        |probe, cost| !crate::graveyard_play::graveyard_payments_for(state, player, probe, cost).is_empty(),
+        |probe, cost| crate::graveyard_play::why_graveyard_price_unpaid(state, player, probe, cost),
     )
 }
 
@@ -2425,15 +2428,15 @@ pub fn with_drawn_target_picks(
     Ok(out)
 }
 
-/// R81, R90's enumeration with the payment left to the caller: for each price, `payments` answers the
-/// ways a play may pay it (none: not offered; `{}`: mana alone), a hand card in mana, a graveyard one
+/// R81, R90's enumeration with the payment left to the caller: for each price, `payments` answers, from
+/// the price's probe (its X and embiggen stamped) and the price, the ways a play may pay it (none: not offered; `{}`: mana alone), a hand card in mana, a graveyard one
 /// perhaps with Plague Counters (`graveyard_play.rs`). R455: a banned price is never offered. R391: each
 /// Tribute set is paired with the zones it leaves open, never with a zone another set empties.
 pub fn priced_play_actions(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
-    payments: impl Fn(i32) -> Vec<PlayPayment>,
+    payments: impl Fn(&CardInstance, i32) -> Vec<PlayPayment>,
 ) -> Vec<PlayAction> {
     let mut out: Vec<PlayAction> = Vec::new();
     let tribute_sets = legal_tribute_sets(state, player, card);
@@ -2447,7 +2450,7 @@ pub fn priced_play_actions(
         cost,
     } in play_prices(state, player, card)
     {
-        let paid = payments(cost);
+        let paid = payments(&probe, cost);
         if paid.is_empty() {
             continue;
         }

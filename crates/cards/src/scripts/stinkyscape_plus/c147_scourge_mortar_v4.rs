@@ -1,10 +1,10 @@
 //! SPEC §8.12 S+ #147 Scourge Mortar v4 (Unit 0/3 → 0/6, Weapon, cost 3, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Toxic {toxic} an enemy Unit" — toxic 4
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            Activate 2: Toxic {toxic} an enemy Unit" — toxic 4
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one (R1852001).
 //! The Activate is 1 use a turn on the base face, 2 on the Radiant face (R384, R1857003). R3544000: its
 //! target is a declared enemy Unit, never a hero (R81, R1862000); the verb adds its Toxic and deals no
@@ -165,6 +165,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             let target = s.unit_at(P2, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             s.activate(host.as_str(), at(&target));
             assert_eq!(toxic_of(&s, &target), TOXIC);

@@ -7712,8 +7712,8 @@
     "params": [
       {
         "key": "tokens",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -9269,20 +9269,12 @@
     "cost": 1,
     "loc": 32,
     "base": {
-      "keywords": [
-        {
-          "kind": "Crater"
-        }
-      ],
-      "text": "Crater\nChoose one.\nEnd of turn: Lock a random enemy zone.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
+      "keywords": [],
+      "text": "Choose one.\nEnd of turn: Lock a random enemy zone.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
     },
     "radiant": {
-      "keywords": [
-        {
-          "kind": "Crater"
-        }
-      ],
-      "text": "Crater\nEnd of turn: Lock a random enemy zone.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
+      "keywords": [],
+      "text": "End of turn: Lock a random enemy zone.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
     }
   },
   "classicplus-035": {
@@ -10934,20 +10926,20 @@
       "health": 0,
       "xStats": {
         "attack": 2,
-        "health": 3
+        "health": 2
       },
       "keywords": [],
-      "text": "This is a 2X/3X.\nCry: Buff this X times."
+      "text": "This is a 2X/2X.\nCry: Buff this X times."
     },
     "radiant": {
       "attack": 0,
       "health": 0,
       "xStats": {
         "attack": 4,
-        "health": 6
+        "health": 4
       },
       "keywords": [],
-      "text": "This is a 4X/6X.\nCry: Buff this 2X times."
+      "text": "This is a 4X/4X.\nCry: Buff this 2X times."
     }
   },
   "classicplus-070": {
@@ -13632,26 +13624,20 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Immutable"
+          "kind": "Evasive"
         }
       ],
-      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
+      "text": "Can't attack, Evasive\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
     },
     "radiant": {
       "attack": 40,
       "health": 40,
       "keywords": [
         {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Immutable"
+          "kind": "Evasive"
         }
       ],
-      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
+      "text": "Evasive\nEnd of turn: Allure every enemy Unit.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
     }
   },
   "meditative-040": {
@@ -15627,13 +15613,13 @@
       "attack": 0,
       "health": 4,
       "keywords": [],
-      "text": "While this is in your hand or deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
+      "text": "While this is in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
     },
     "radiant": {
       "attack": 0,
       "health": 8,
       "keywords": [],
-      "text": "While this is in your hand or deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
+      "text": "While this is in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
     }
   },
   "meditative-088": {
@@ -16152,11 +16138,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 4 Armor and you heal it 4; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      "text": "One random effect: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (1); add 2 random CN cards to your hand, which cost (1); add 2 random Prime cards to your hand, which cost (1); your hero gains 3 Armor and you heal it 3; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 4 Armor and you heal it 4; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (1); add 2 random CN cards to your hand, which cost (1); add 2 random Prime cards to your hand, which cost (1); your hero gains 3 Armor and you heal it 3; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
     }
   },
   "meditative-095-1": {
@@ -19684,13 +19670,13 @@
     "loc": 104,
     "base": {
       "attack": 2,
-      "health": 7,
+      "health": 5,
       "keywords": [],
       "text": "Tribute 1\nCry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
     },
     "radiant": {
       "attack": 4,
-      "health": 14,
+      "health": 10,
       "keywords": [],
       "text": "Tribute 1\nCry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
     }
@@ -20070,13 +20056,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Divine Shield"
         }
       ],
-      "text": "Starship Piece, Equip, Divine Shield\nWhenever this survives an attack, it gains +{buff}/+{buff}."
+      "text": "Starship Piece, Divine Shield\nWhenever this survives an attack, it gains +{buff}/+{buff}."
     },
     "radiant": {
       "attack": 2,
@@ -20086,13 +20069,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Divine Shield"
         }
       ],
-      "text": "Starship Piece, Equip, Divine Shield\nWhenever this survives an attack, it gains +{buff}/+{buff}."
+      "text": "Starship Piece, Divine Shield\nWhenever this survives an attack, it gains +{buff}/+{buff}."
     }
   },
   "stinkyscape-039": {
@@ -20427,13 +20407,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Equip, Rush"
+      "text": "Starship Piece, Rush"
     },
     "radiant": {
       "attack": 6,
@@ -20443,13 +20420,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Equip, Rush"
+      "text": "Starship Piece, Rush"
     }
   },
   "stinkyscape-049": {
@@ -20525,12 +20499,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -20538,12 +20509,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
     }
   },
   "stinkyscape-051": {
@@ -20576,12 +20544,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      "text": "Starship Piece\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
     },
     "radiant": {
       "attack": 0,
@@ -20589,12 +20554,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      "text": "Starship Piece\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
     }
   },
   "stinkyscape-052": {
@@ -20627,12 +20589,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit."
     },
     "radiant": {
       "attack": 0,
@@ -20640,12 +20599,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit."
     }
   },
   "stinkyscape-053": {
@@ -20686,12 +20642,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy Unit."
+      "text": "Starship Piece\nActivate: Deal a random {least} to {most} damage to each enemy Unit."
     },
     "radiant": {
       "attack": 0,
@@ -20701,14 +20654,11 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Lucky",
           "n": 1
         }
       ],
-      "text": "Starship Piece, Equip, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy Unit."
+      "text": "Starship Piece, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy Unit."
     }
   },
   "stinkyscape-054": {
@@ -20741,12 +20691,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -20754,12 +20701,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
     }
   },
   "stinkyscape-055": {
@@ -20792,12 +20736,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      "text": "Starship Piece\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
     },
     "radiant": {
       "attack": 0,
@@ -20805,12 +20746,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      "text": "Starship Piece\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
     }
   },
   "stinkyscape-056": {
@@ -20843,12 +20781,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit."
     },
     "radiant": {
       "attack": 0,
@@ -20856,12 +20791,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit."
     }
   },
   "stinkyscape-057": {
@@ -20902,12 +20834,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy Unit, twice."
+      "text": "Starship Piece\nActivate: Deal a random {least} to {most} damage to each enemy Unit, twice."
     },
     "radiant": {
       "attack": 0,
@@ -20917,14 +20846,11 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Lucky",
           "n": 1
         }
       ],
-      "text": "Starship Piece, Equip, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy Unit, twice."
+      "text": "Starship Piece, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy Unit, twice."
     }
   },
   "stinkyscape-058": {
@@ -20957,12 +20883,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -20970,12 +20893,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
     }
   },
   "stinkyscape-059": {
@@ -21008,12 +20928,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      "text": "Starship Piece\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
     },
     "radiant": {
       "attack": 0,
@@ -21021,12 +20938,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      "text": "Starship Piece\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
     }
   },
   "stinkyscape-060": {
@@ -21059,12 +20973,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit."
     },
     "radiant": {
       "attack": 0,
@@ -21072,12 +20983,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit."
     }
   },
   "stinkyscape-061": {
@@ -21118,12 +21026,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy Unit, three times."
+      "text": "Starship Piece\nActivate: Deal a random {least} to {most} damage to each enemy Unit, three times."
     },
     "radiant": {
       "attack": 0,
@@ -21133,14 +21038,11 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Lucky",
           "n": 1
         }
       ],
-      "text": "Starship Piece, Equip, Lucky 1\nActivate 3: Deal a random {least} to {most} damage to each enemy Unit, three times."
+      "text": "Starship Piece, Lucky 1\nActivate 3: Deal a random {least} to {most} damage to each enemy Unit, three times."
     }
   },
   "stinkyscape-062": {
@@ -21161,12 +21063,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Gain a random Stinkyscape Resource. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Gain a random Stinkyscape Resource. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -21174,12 +21073,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Gain a random Radiant Stinkyscape Resource. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Gain a random Radiant Stinkyscape Resource. Has an extra turn cooldown."
     }
   },
   "stinkyscape-063": {
@@ -21200,12 +21096,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Gain a random Stinkyscape Resource."
+      "text": "Starship Piece\nActivate: Gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 0,
@@ -21213,12 +21106,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Gain a random Radiant Stinkyscape Resource."
+      "text": "Starship Piece\nActivate: Gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-064": {
@@ -21239,12 +21129,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Gain a random Stinkyscape Resource."
+      "text": "Starship Piece\nActivate 2: Gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 0,
@@ -21252,12 +21139,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Gain a random Radiant Stinkyscape Resource."
+      "text": "Starship Piece\nActivate 2: Gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-065": {
@@ -21278,12 +21162,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 3: Gain a random Stinkyscape Resource."
+      "text": "Starship Piece\nActivate 3: Gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 0,
@@ -21291,12 +21172,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 3: Gain a random Radiant Stinkyscape Resource."
+      "text": "Starship Piece\nActivate 3: Gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-066": {
@@ -21317,12 +21195,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 5: Gain a random Stinkyscape Resource."
+      "text": "Starship Piece\nActivate 5: Gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 0,
@@ -21330,12 +21205,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 5: Gain a random Radiant Stinkyscape Resource."
+      "text": "Starship Piece\nActivate 5: Gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-067": {
@@ -21356,12 +21228,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nStart of turn: Gain a random Stinkyscape Resource."
+      "text": "Starship Piece\nStart of turn: Gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 0,
@@ -21369,12 +21238,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nStart of turn: Gain a random Radiant Stinkyscape Resource."
+      "text": "Starship Piece\nStart of turn: Gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-068": {
@@ -21825,7 +21691,7 @@
     "loc": 28,
     "base": {
       "attack": 3,
-      "health": 3,
+      "health": 1,
       "keywords": [
         {
           "kind": "Flying"
@@ -21835,7 +21701,7 @@
     },
     "radiant": {
       "attack": 6,
-      "health": 6,
+      "health": 2,
       "keywords": [
         {
           "kind": "Flying"
@@ -21938,7 +21804,7 @@
     "loc": 19,
     "base": {
       "attack": 3,
-      "health": 3,
+      "health": 1,
       "keywords": [
         {
           "kind": "Armor",
@@ -21949,7 +21815,7 @@
     },
     "radiant": {
       "attack": 6,
-      "health": 6,
+      "health": 2,
       "keywords": [
         {
           "kind": "Armor",
@@ -21973,8 +21839,8 @@
     "params": [
       {
         "key": "weapons",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -21983,16 +21849,16 @@
     ],
     "loc": 19,
     "base": {
-      "attack": 2,
-      "health": 2,
+      "attack": 3,
+      "health": 1,
       "keywords": [],
-      "text": "Cry: Choose one of 2 Rare Weapons and Equip it into this, {weapons|time|times}."
+      "text": "Cry: Discover a Rare Weapon and Equip it into this, {weapons|time|times}."
     },
     "radiant": {
-      "attack": 4,
-      "health": 4,
+      "attack": 6,
+      "health": 1,
       "keywords": [],
-      "text": "Cry: Choose one of 2 Epic Weapons and Equip it into this, {weapons|time|times}."
+      "text": "Cry: Discover an Epic Weapon and Equip it into this, {weapons|time|times}."
     }
   },
   "stinkyscape-084": {
@@ -22180,13 +22046,13 @@
     ],
     "loc": 33,
     "base": {
-      "attack": 4,
+      "attack": 5,
       "health": 4,
       "keywords": [],
       "text": "Aura: Your Humans have Poisonous."
     },
     "radiant": {
-      "attack": 8,
+      "attack": 10,
       "health": 8,
       "keywords": [],
       "text": "Aura: Your Humans have Poisonous.\nCry: Fill your hand with Speciesists."
@@ -22531,14 +22397,11 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Armor",
           "n": 2
         }
       ],
-      "text": "Starship Piece, Equip, Armor 2"
+      "text": "Starship Piece, Armor 2"
     },
     "radiant": {
       "attack": 2,
@@ -22548,14 +22411,11 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Armor",
           "n": 4
         }
       ],
-      "text": "Starship Piece, Equip, Armor 4"
+      "text": "Starship Piece, Armor 4"
     }
   },
   "stinkyscape-099": {
@@ -22609,13 +22469,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Pierce"
         }
       ],
-      "text": "Starship Piece, Equip, Pierce"
+      "text": "Starship Piece, Pierce"
     },
     "radiant": {
       "attack": 6,
@@ -22625,13 +22482,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Pierce"
         }
       ],
-      "text": "Starship Piece, Equip, Pierce"
+      "text": "Starship Piece, Pierce"
     }
   },
   "stinkyscape-101": {
@@ -22654,9 +22508,6 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Brittle",
           "n": 2
         },
@@ -22664,7 +22515,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Starship Piece, Equip, Brittle 2, Reborn"
+      "text": "Starship Piece, Brittle 2, Reborn"
     },
     "radiant": {
       "attack": 10,
@@ -22674,9 +22525,6 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Brittle",
           "n": 4
         },
@@ -22684,7 +22532,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Starship Piece, Equip, Brittle 4, Reborn"
+      "text": "Starship Piece, Brittle 4, Reborn"
     }
   },
   "stinkyscape-102": {
@@ -22778,12 +22626,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nAny damage this takes is dealt to the enemy hero."
+      "text": "Starship Piece\nAny damage this takes is dealt to the enemy hero."
     },
     "radiant": {
       "attack": 0,
@@ -22791,12 +22636,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nAny damage this takes is dealt to the enemy hero and the attacker."
+      "text": "Starship Piece\nAny damage this takes is dealt to the enemy hero and the attacker."
     }
   },
   "stinkyscape-105": {
@@ -23486,13 +23328,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Lifesteal"
         }
       ],
-      "text": "Starship Piece, Equip, Lifesteal"
+      "text": "Starship Piece, Lifesteal"
     },
     "radiant": {
       "attack": 4,
@@ -23502,13 +23341,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Lifesteal"
         }
       ],
-      "text": "Starship Piece, Equip, Lifesteal"
+      "text": "Starship Piece, Lifesteal"
     }
   },
   "stinkyscape-123": {
@@ -23744,30 +23580,20 @@
     "token": false,
     "cost": {
       "base": 1,
-      "embiggen": 2
+      "embiggen": 3
     },
-    "params": [
-      {
-        "key": "divisor",
-        "base": 4,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 26,
     "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [],
-      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
-    },
-    "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
+      "text": "End of turn: Deal damage equal to its Attack split among all enemies.\nEmbiggened (3): Starship Piece."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "End of turn: Deal damage equal to twice its Attack split among all enemies.\nEmbiggened (3): Starship Piece."
     }
   },
   "stinkyscape-130": {
@@ -24059,14 +23885,11 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Spell Damage",
           "n": 2
         }
       ],
-      "text": "Starship Piece, Equip, Spell Damage +2\nWhen launched, add {spells|random Spell that deals damage|random Spells that deal damage} to your hand."
+      "text": "Starship Piece, Spell Damage +2\nWhen launched, add {spells|random Spell that deals damage|random Spells that deal damage} to your hand."
     },
     "radiant": {
       "attack": 8,
@@ -24076,14 +23899,11 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Spell Damage",
           "n": 4
         }
       ],
-      "text": "Starship Piece, Equip, Spell Damage +4\nWhen launched, add {spells|random Spell that deals damage|random Spells that deal damage} to your hand."
+      "text": "Starship Piece, Spell Damage +4\nWhen launched, add {spells|random Spell that deals damage|random Spells that deal damage} to your hand."
     }
   },
   "stinkyscape-137": {
@@ -24324,12 +24144,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Rush Token that attacks an enemy Unit, Taunt Units first."
+      "text": "Starship Piece\nActivate: Summon a Rush Token that attacks an enemy Unit, Taunt Units first."
     },
     "radiant": {
       "attack": 0,
@@ -24337,12 +24154,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Rush Token that attacks an enemy Unit, Taunt Units first."
+      "text": "Starship Piece\nActivate: Summon a Radiant Rush Token that attacks an enemy Unit, Taunt Units first."
     }
   },
   "stinkyscape-141": {
@@ -24365,12 +24179,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Choose a permanent. Cast a random Fruit on it."
+      "text": "Starship Piece\nActivate: Choose a permanent. Cast a random Fruit on it."
     },
     "radiant": {
       "attack": 0,
@@ -24378,12 +24189,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Choose a permanent. Cast a random Radiant Fruit on it."
+      "text": "Starship Piece\nActivate: Choose a permanent. Cast a random Radiant Fruit on it."
     }
   },
   "stinkyscape-142": {
@@ -24420,12 +24228,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy, then gain the reward an Auspicious Rock gives."
+      "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy, then gain the reward an Auspicious Rock gives."
     },
     "radiant": {
       "attack": 0,
@@ -24433,12 +24238,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Deal {damage} damage to an enemy, then gain the reward an Auspicious Rock gives."
+      "text": "Starship Piece\nActivate 2: Deal {damage} damage to an enemy, then gain the reward an Auspicious Rock gives."
     }
   },
   "stinkyscape-143": {
@@ -24461,12 +24263,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Choose a target. If it's an enemy, cast a random harmful Book, on it if it can be. If it's an ally, cast a random helpful Book, on it if it can be."
+      "text": "Starship Piece\nActivate: Choose a target. If it's an enemy, cast a random harmful Book, on it if it can be. If it's an ally, cast a random helpful Book, on it if it can be."
     },
     "radiant": {
       "attack": 0,
@@ -24474,12 +24273,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Choose a target. If it's an enemy, cast a random Radiant harmful Book, on it if it can be. If it's an ally, cast a random Radiant helpful Book, on it if it can be."
+      "text": "Starship Piece\nActivate: Choose a target. If it's an enemy, cast a random Radiant harmful Book, on it if it can be. If it's an ally, cast a random Radiant helpful Book, on it if it can be."
     }
   },
   "stinkyscape-144": {
@@ -24755,11 +24551,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random Radiant Call to Chaos to your hand."
+      "text": "Add a random Call to Chaos to your opponent's hand. It costs (1). Then add a random Radiant Call to Chaos to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random Radiant Call to Chaos to your hand. It costs (0)."
+      "text": "Add a random Call to Chaos to your opponent's hand. It costs (1). Then add a random Radiant Call to Chaos to your hand. It costs (1)."
     }
   },
   "stinkyscape-150": {
@@ -25807,12 +25603,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Freeze an enemy Unit."
+      "text": "Starship Piece\nActivate: Freeze an enemy Unit."
     },
     "radiant": {
       "attack": 4,
@@ -25820,12 +25613,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Freeze an enemy Unit."
+      "text": "Starship Piece\nActivate 2: Freeze an enemy Unit."
     }
   },
   "stinkyscape-176": {
@@ -25872,16 +25662,13 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Cloaked"
         },
         {
           "kind": "Immutable"
         }
       ],
-      "text": "Starship Piece, Equip, Cloaked, Immutable"
+      "text": "Starship Piece, Cloaked, Immutable"
     },
     "radiant": {
       "attack": 4,
@@ -25889,9 +25676,6 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         },
         {
           "kind": "Cloaked"
@@ -25903,7 +25687,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Starship Piece, Equip, Cloaked, Immutable, Immune to Spells"
+      "text": "Starship Piece, Cloaked, Immutable, Immune to Spells"
     }
   },
   "stinkyscape-t-dormant-starship": {
@@ -29119,16 +28903,16 @@
     "cost": 4,
     "loc": 166,
     "base": {
-      "attack": 7,
-      "health": 7,
+      "attack": 6,
+      "health": 6,
       "keywords": [],
-      "text": "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then summon two random Traps."
+      "text": "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then summon a random Trap."
     },
     "radiant": {
-      "attack": 14,
-      "health": 14,
+      "attack": 12,
+      "health": 12,
       "keywords": [],
-      "text": "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then summon three random Radiant Traps."
+      "text": "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then summon three random Traps."
     }
   },
   "stinkyscapeplus-005": {
@@ -29337,12 +29121,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Drone Interceptor to attack an enemy."
+      "text": "Starship Piece\nActivate: Summon a Drone Interceptor to attack an enemy."
     },
     "radiant": {
       "attack": 0,
@@ -29350,12 +29131,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Drone Interceptor to attack an enemy."
+      "text": "Starship Piece\nActivate: Summon a Radiant Drone Interceptor to attack an enemy."
     },
     "refs": [
       "stinkyscape-t-drone-interceptor"
@@ -29381,12 +29159,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -29394,12 +29169,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "refs": [
       "stinkyscape-t-drone-interceptor"
@@ -29425,12 +29197,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate 2: Summon a Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "radiant": {
       "attack": 0,
@@ -29438,12 +29207,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
+      "text": "Starship Piece\nActivate 2: Summon a Radiant Drone Interceptor to attack an enemy. Has an extra turn cooldown."
     },
     "refs": [
       "stinkyscape-t-drone-interceptor"
@@ -29467,12 +29233,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Refresh."
+      "text": "Starship Piece\nActivate: Refresh."
     },
     "radiant": {
       "attack": 2,
@@ -29480,12 +29243,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Refresh."
+      "text": "Starship Piece\nActivate 2: Refresh."
     }
   },
   "stinkyscapeplus-012": {
@@ -29508,13 +29268,14 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
+          "kind": "Divine Shield"
         },
         {
-          "kind": "Divine Shield"
+          "kind": "Armor",
+          "n": 1
         }
       ],
-      "text": "Starship Piece, Equip, Divine Shield"
+      "text": "Starship Piece, Divine Shield, Armor 1"
     },
     "radiant": {
       "attack": 2,
@@ -29524,13 +29285,14 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
+          "kind": "Divine Shield"
         },
         {
-          "kind": "Divine Shield"
+          "kind": "Armor",
+          "n": 2
         }
       ],
-      "text": "Starship Piece, Equip, Divine Shield"
+      "text": "Starship Piece, Divine Shield, Armor 2"
     }
   },
   "stinkyscapeplus-013": {
@@ -29551,12 +29313,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nEnd of turn: Gain Divine Shield."
+      "text": "Starship Piece\nEnd of turn: Gain Divine Shield."
     },
     "radiant": {
       "attack": 4,
@@ -29566,13 +29325,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Divine Shield"
         }
       ],
-      "text": "Starship Piece, Equip, Divine Shield\nEnd of turn: Gain Divine Shield."
+      "text": "Starship Piece, Divine Shield\nEnd of turn: Gain Divine Shield."
     }
   },
   "stinkyscapeplus-014": {
@@ -29588,30 +29344,24 @@
     "cost": 1,
     "loc": 18,
     "base": {
-      "attack": 0,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
-        }
-      ],
-      "text": "Starship Piece, Equip\nEnd of turn: Heal this {health} health."
-    },
-    "radiant": {
-      "attack": 0,
+      "attack": 1,
       "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nEnd of turn: Heal this {health} health."
+      "text": "Starship Piece\nEnd of turn: Heal this {health} health."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Starship Piece"
+        }
+      ],
+      "text": "Starship Piece\nEnd of turn: Heal this {health} health."
     },
     "params": [
       {
@@ -29637,30 +29387,24 @@
     "cost": 2,
     "loc": 21,
     "base": {
-      "attack": 0,
+      "attack": 1,
       "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nEnd of turn: Heal this to full health."
+      "text": "Starship Piece\nEnd of turn: Heal this to full health."
     },
     "radiant": {
-      "attack": 0,
+      "attack": 2,
       "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nEnd of turn: Heal this to full health, and gain +{health} max health."
+      "text": "Starship Piece\nEnd of turn: Heal this to full health, and gain +{health} max health."
     },
     "params": [
       {
@@ -29694,13 +29438,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Windfury"
         }
       ],
-      "text": "Starship Piece, Equip, Windfury"
+      "text": "Starship Piece, Windfury"
     },
     "radiant": {
       "attack": 4,
@@ -29710,13 +29451,10 @@
           "kind": "Starship Piece"
         },
         {
-          "kind": "Equip"
-        },
-        {
           "kind": "Windfury"
         }
       ],
-      "text": "Starship Piece, Equip, Windfury"
+      "text": "Starship Piece, Windfury"
     }
   },
   "stinkyscapeplus-017": {
@@ -29783,12 +29521,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Vanilla a Unit."
+      "text": "Starship Piece\nActivate: Vanilla a Unit."
     },
     "radiant": {
       "attack": 0,
@@ -29796,12 +29531,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Vanilla a Unit."
+      "text": "Starship Piece\nActivate 2: Vanilla a Unit."
     }
   },
   "stinkyscapeplus-020": {
@@ -30339,14 +30071,14 @@
     "cost": 4,
     "loc": 63,
     "base": {
-      "attack": 3,
-      "health": 3,
+      "attack": 4,
+      "health": 4,
       "keywords": [],
       "text": "Cry: Transform ALL Units into a version from their Past."
     },
     "radiant": {
-      "attack": 6,
-      "health": 6,
+      "attack": 8,
+      "health": 8,
       "keywords": [],
       "text": "Cry: Transform ALL Units into a version from their Past. Yours become their strongest version."
     }
@@ -30564,7 +30296,7 @@
     "loc": 41,
     "base": {
       "attack": 0,
-      "health": 5,
+      "health": 4,
       "keywords": [
         {
           "kind": "Can't Defend"
@@ -30574,7 +30306,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 10,
+      "health": 8,
       "keywords": [
         {
           "kind": "Can't Defend"
@@ -30607,11 +30339,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Discover a Mindustrial Unit. Give it Starship Piece and Equip."
+      "text": "Discover a Mindustrial Unit. Give it Starship Piece."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a Radiant Mindustrial Unit. Give it Starship Piece and Equip. It costs (1) less."
+      "text": "Discover a Radiant Mindustrial Unit. Give it Starship Piece. It costs (1) less."
     }
   },
   "stinkyscapeplus-040": {
@@ -30649,7 +30381,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "loc": 31,
     "base": {
       "keywords": [],
@@ -32199,7 +31931,7 @@
     "params": [
       {
         "key": "permanents",
-        "base": 10,
+        "base": 7,
         "radiant": 10,
         "better": "up",
         "step": 1,
@@ -32260,8 +31992,8 @@
     "params": [
       {
         "key": "count",
-        "base": 8,
-        "radiant": 8,
+        "base": 7,
+        "radiant": 7,
         "better": "down",
         "step": 1,
         "min": 1
@@ -33197,9 +32929,6 @@
       "health": 12,
       "keywords": [
         {
-          "kind": "Flexible"
-        },
-        {
           "kind": "Indestructible"
         },
         {
@@ -33215,16 +32944,13 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Flexible, Indestructible, GIGA, Windfury, Ranged, Pierce"
+      "text": "Indestructible, GIGA, Windfury, Ranged, Pierce"
     },
     "radiant": {
       "attack": 6,
       "health": 24,
       "keywords": [
         {
-          "kind": "Flexible"
-        },
-        {
           "kind": "Indestructible"
         },
         {
@@ -33240,7 +32966,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Flexible, Indestructible, GIGA, Windfury, Ranged, Pierce"
+      "text": "Indestructible, GIGA, Windfury, Ranged, Pierce"
     }
   },
   "stinkyscapeplus-107": {
@@ -34324,19 +34050,15 @@
         },
         {
           "kind": "Flying"
-        },
-        {
-          "kind": "Armor",
-          "n": 2
         }
       ],
-      "text": "Tribute 2, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal all allies {heal} and deal {damage} damage to all enemies."
+      "text": "Tribute 2, Can't attack, Can't Defend, Flying\nEnd of turn: Heal all allies {heal} and deal {damage} damage to all enemies."
     },
     "params": [
       {
         "key": "heal",
-        "base": 6,
-        "radiant": 12,
+        "base": 3,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35310,7 +35032,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 16,
     "base": {
       "keywords": [],
@@ -35703,12 +35425,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
+      "text": "Starship Piece\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
     "radiant": {
       "attack": 0,
@@ -35716,12 +35435,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
+      "text": "Starship Piece\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
     "params": [
       {
@@ -35754,12 +35470,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
+      "text": "Starship Piece\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
     "radiant": {
       "attack": 0,
@@ -35767,12 +35480,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
+      "text": "Starship Piece\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
     "params": [
       {
@@ -35805,12 +35515,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
+      "text": "Starship Piece\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
     "radiant": {
       "attack": 0,
@@ -35818,12 +35525,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Burn {burn} an enemy Unit, Cleave."
+      "text": "Starship Piece\nActivate 2: Burn {burn} an enemy Unit, Cleave."
     },
     "params": [
       {
@@ -35856,12 +35560,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Toxic {toxic} an enemy Unit."
+      "text": "Starship Piece\nActivate: Toxic {toxic} an enemy Unit."
     },
     "radiant": {
       "attack": 0,
@@ -35869,12 +35570,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Toxic {toxic} an enemy Unit."
+      "text": "Starship Piece\nActivate 2: Toxic {toxic} an enemy Unit."
     },
     "params": [
       {
@@ -35907,12 +35605,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Toxic {toxic} an enemy Unit."
+      "text": "Starship Piece\nActivate: Toxic {toxic} an enemy Unit."
     },
     "radiant": {
       "attack": 0,
@@ -35920,12 +35615,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Toxic {toxic} an enemy Unit."
+      "text": "Starship Piece\nActivate 2: Toxic {toxic} an enemy Unit."
     },
     "params": [
       {
@@ -35958,12 +35650,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Toxic {toxic} an enemy Unit."
+      "text": "Starship Piece\nActivate: Toxic {toxic} an enemy Unit."
     },
     "radiant": {
       "attack": 0,
@@ -35971,12 +35660,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Toxic {toxic} an enemy Unit."
+      "text": "Starship Piece\nActivate 2: Toxic {toxic} an enemy Unit."
     },
     "params": [
       {
@@ -36007,12 +35693,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage also Burns {burns}."
+      "text": "Starship Piece\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 4,
@@ -36020,12 +35703,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage also Burns {burns}."
+      "text": "Starship Piece\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -36056,12 +35736,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage also Burns {burns}."
+      "text": "Starship Piece\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 6,
@@ -36069,12 +35746,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage also Burns {burns}."
+      "text": "Starship Piece\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -36100,30 +35774,24 @@
     "cost": 4,
     "loc": 16,
     "base": {
-      "attack": 3,
+      "attack": 5,
       "health": 1,
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage dealt Burns."
+      "text": "Starship Piece\nDamage dealt Burns."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 10,
       "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage dealt Burns."
+      "text": "Starship Piece\nDamage dealt Burns."
     }
   },
   "stinkyscapeplus-152": {
@@ -36144,12 +35812,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage also applies Toxic {toxic}."
+      "text": "Starship Piece\nDamage also applies Toxic {toxic}."
     },
     "radiant": {
       "attack": 4,
@@ -36157,12 +35822,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage also applies Toxic {toxic}."
+      "text": "Starship Piece\nDamage also applies Toxic {toxic}."
     },
     "params": [
       {
@@ -36193,12 +35855,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage dealt is Toxic."
+      "text": "Starship Piece\nDamage dealt is Toxic."
     },
     "radiant": {
       "attack": 2,
@@ -36206,12 +35865,9 @@
       "keywords": [
         {
           "kind": "Starship Piece"
-        },
-        {
-          "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDamage dealt is Toxic."
+      "text": "Starship Piece\nDamage dealt is Toxic."
     }
   },
   "stinkyscapeplus-154": {
@@ -36290,7 +35946,7 @@
     "cost": 4,
     "loc": 22,
     "base": {
-      "attack": 3,
+      "attack": 4,
       "health": 6,
       "keywords": [
         {
@@ -36300,7 +35956,7 @@
       "text": "Starship Piece\nWhen launched, cast a random Terminus card."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 8,
       "health": 12,
       "keywords": [
         {

@@ -1,9 +1,9 @@
 //! Stinkyscape #55 Repeater v4 (SPEC §8.10 row 55). Unit 0/3 → 0/6, Weapon, cost 3, Epic.
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate 3: Deal {damage} damage to an enemy Unit, with Pierce." — damage 2
 //!   Radiant: the same text — damage 4
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862000: the Activate's target is a declared enemy Unit (R81), never a hero (#2521). Pierce is

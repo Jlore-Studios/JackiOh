@@ -500,6 +500,10 @@ pub struct EquipPicksArgs {
     /// How many picks, each its own fusion. Default 1.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub times: Option<i32>,
+    /// R4285003: how many times a Discover's one pick is fused in, each its own fusion ("Discover a Rare
+    /// Weapon and Equip it into this, twice", S #83 Halo). Default 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copies: Option<i32>,
     /// Every pick goes in on its Radiant face (R469).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
@@ -589,7 +593,8 @@ fn equip_pool(ctx: &EffectContext<'_>, args: &EquipPicksArgs) -> Option<CatalogQ
 }
 
 /// R1841002: the answer to an Equip pick's Discover. The picked card is fused into the unit that
-/// asked, on its Radiant face when the pick was Radiant, and with picks left the next Discover opens.
+/// asked, on its Radiant face when the pick was Radiant, `copies` times (R4285003), and with picks left
+/// the next Discover opens.
 pub fn equip_pick_step() -> Hook {
     hook(|ctx| {
         let Some(pick) = chosen_options(ctx).into_iter().next() else {
@@ -605,12 +610,17 @@ pub fn equip_pick_step() -> Hook {
         else {
             return Vec::new();
         };
-        let mut out = vec![fuse_cards(FuseCardsArgs {
-            def_ids: Some(vec![pick]),
-            target_instance_id: Some(host.id),
-            radiant_ingredients: args.radiant.filter(|radiant| *radiant),
-            ..FuseCardsArgs::default()
-        })];
+        // R4285003: the one pick fused in `copies` times, each its own fusion (R102).
+        let mut out: Vec<Effect> = (0..args.copies.unwrap_or(1).max(1))
+            .map(|_| {
+                fuse_cards(FuseCardsArgs {
+                    def_ids: Some(vec![pick.clone()]),
+                    target_instance_id: Some(host.id.clone()),
+                    radiant_ingredients: args.radiant.filter(|radiant| *radiant),
+                    ..FuseCardsArgs::default()
+                })
+            })
+            .collect();
         let left = args.times.unwrap_or(1) - 1;
         if left > 0 {
             out.push(equip_picks(EquipPicksArgs {

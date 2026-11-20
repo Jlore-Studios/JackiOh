@@ -1,7 +1,7 @@
 //! S #177 Cloaking Module (SPEC §8.10 row 177): (2) Unit, Rare, 2/2 → 4/4, a card of the Stinkyscape
 //! set (#2521).
-//!   Base:    "Starship Piece, Equip, Cloaked, Immutable"
-//!   Radiant: "Starship Piece, Equip, Cloaked, Immutable, Immune to Spells"
+//!   Base:    "Starship Piece, Cloaked, Immutable"
+//!   Radiant: "Starship Piece, Cloaked, Immutable, Immune to Spells"
 //!
 //! Keywords only (§6.1): its script is empty. Equip (R1086, R77): played onto one of your Units it fuses
 //! into it, Starship Piece only into a piece (R1852001). Cloaked (R783004–R783006): it may be set
@@ -57,6 +57,7 @@ mod tests {
             }));
             s.play(VANILLA, json!({ "zone": 1 }));
             let host = s.unit_at(P1, 1);
+            crate::give_equip(&mut s, MODULE);
             s.play(MODULE, json!({ "zone": 1, "equip": true }));
 
             // R77: the host is kept, a 4/4 that is also a 2/2.

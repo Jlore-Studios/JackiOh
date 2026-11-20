@@ -1,8 +1,8 @@
 //! SPEC §8.12 S+ #153 Noxious Rounds (Unit 1/1 → 2/2, cost 4, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base and Radiant: "Starship Piece, Equip
+//!   Base and Radiant: "Starship Piece
 //!            Damage dealt is Toxic."
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then carries the conversion. R3540003: each hit this card deals turns into its
 //! target's Toxic after Armor, equal to what the hit would have dealt, and deals nothing; a hit of 0 after
 //! Armor converts nothing. The flag holds on both faces, so an Equip converts its host's hits and a
@@ -97,6 +97,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             let target = s.unit_at(P2, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             let attack = s.stats(host.as_str()).attack;
             s.attack(host.as_str(), target.as_str());

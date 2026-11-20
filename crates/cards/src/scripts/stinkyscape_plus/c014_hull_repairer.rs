@@ -1,11 +1,11 @@
-//! SPEC §8.12 S+ #14 Hull Repairer (Unit 0/2 → 0/4, Starship Piece, Equip, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//! SPEC §8.12 S+ #14 Hull Repairer (Unit 1/4 → 2/8, 0/2 → 0/4 through v0.6.7k, Starship Piece, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
+//!   Base:    "Starship Piece
 //!            End of turn: Heal this {health} health" — health 4
-//!   Radiant: "Starship Piece, Equip
+//!   Radiant: "Starship Piece
 //!            End of turn: Heal this {health} health" — health 8
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
-//! into it (R1086), which then takes the End-of-turn trigger and heals itself (R1852000). `heal` restores
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped
+//! onto one of your Units it fuses into it (R1086), which then takes the End-of-turn trigger and heals itself (R1852000). `heal` restores
 //! the declared number, read through `piece_number` so a Radiant piece heals its 8 wherever it stands, never past
 //! full health (§6.3).
 
@@ -67,6 +67,7 @@ mod tests {
             json!({ "field": [ENEMY] }),
         );
         let host = s.unit_at(P1, 1).id;
+        crate::give_equip(&mut s, ID);
         s.play(ID, json!({ "zone": 1, "equip": true }));
         (s, host)
     }
@@ -80,7 +81,7 @@ mod tests {
             s.card_mut(ID).damage = 1;
             s.end_turn();
             assert_eq!(s.card(ID).damage, 0, "healed no more than the damage it had");
-            s.expect_stats(ID, json!({ "health": 2 }));
+            s.expect_stats(ID, json!({ "attack": 1, "health": 4 }));
         }
 
         #[test]
@@ -101,7 +102,7 @@ mod tests {
             s.card_mut(ID).damage = 3;
             s.end_turn();
             assert_eq!(s.card(ID).damage, 0);
-            s.expect_stats(ID, json!({ "attack": 0, "health": 4 }));
+            s.expect_stats(ID, json!({ "attack": 2, "health": 8 }));
         }
 
         #[test]

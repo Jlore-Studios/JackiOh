@@ -4,7 +4,7 @@
 //!             Wrong-House Attacker."
 //!   Radiant: "… to summon a Radiant Right-house defender or a Radiant Wrong-House Attacker."
 //!
-//! The Cry is one placement of 3 on itself (§6.3 Plague Counter, R689; R471's multiplier applies). The
+//! The Cry is one placement of `tokens`, 2 (3 through v0.6.7k, issue #4285, catalog data), on itself (§6.3 Plague Counter, R689; R471's multiplier applies). The
 //! Activate is once per turn (§6.2, R384), its twin the controller's choice, a mode declared in the
 //! `activate` action (R81): "defender" summons a Right-house defender (Core #3, R406), "attacker" a
 //! Wrong-House Attacker (C+ #6), fresh cards, yours, no Cry (R1), R64's placement, on their Radiant faces
@@ -175,15 +175,15 @@ mod tests {
         }
 
         #[test]
-        fn r1704002_cry_places_3_counters() {
+        fn r1704002_cry_places_2_counters() {
             let mut s = setup(json!({}), false, None);
             s.play(HOUSE, json!({ "zone": 1 }));
-            assert_eq!(counters(&s), 3);
+            assert_eq!(counters(&s), 2);
             assert_eq!(summoned(&s), Vec::<String>::new());
             // Nothing at the start of a turn.
             next_turn(&mut s);
             assert_eq!(summoned(&s), Vec::<String>::new());
-            assert_eq!(counters(&s), 3);
+            assert_eq!(counters(&s), 2);
         }
 
         #[test]
@@ -193,7 +193,7 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.activate(HOUSE, json!({ "modes": ["defender"] }));
             assert_eq!(summoned(&s), vec![RIGHT]);
-            assert_eq!(counters(&s), 2);
+            assert_eq!(counters(&s), 1);
             // The controller's choice, no roll.
             assert_eq!(s.state().rng_cursor, cursor);
             let unit = s.unit(P1, 1).expect("a twin in lane 1");
@@ -209,7 +209,7 @@ mod tests {
             s.activate(HOUSE, json!({ "modes": ["attacker"] }));
             assert_eq!(summoned(&s), vec![RIGHT, WRONG]);
             assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(WRONG.to_string()));
-            assert_eq!(counters(&s), 1);
+            assert_eq!(counters(&s), 0);
             s.expect_refused(|s| s.activate(HOUSE, json!({ "modes": [] })));
         }
 
@@ -217,7 +217,7 @@ mod tests {
         fn r1704002_refused_with_no_counter_or_full_board() {
             let mut s = setup(json!({}), false, None);
             s.play(HOUSE, json!({ "zone": 1 }));
-            for mode in ["defender", "attacker", "defender"] {
+            for mode in ["defender", "attacker"] {
                 s.activate(HOUSE, json!({ "modes": [mode] }));
                 next_turn(&mut s);
             }
@@ -229,7 +229,7 @@ mod tests {
 
             let mut full = setup(json!({ "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] }), false, None);
             full.play(HOUSE, json!({ "zone": 1 }));
-            assert_eq!(counters(&full), 3);
+            assert_eq!(counters(&full), 2);
             full.expect_refused_with(
                 |s| s.activate(HOUSE, json!({ "modes": ["defender"] })),
                 "can't be activated now",
@@ -274,10 +274,10 @@ mod tests {
         }
 
         #[test]
-        fn r1704002_cry_places_3_counters() {
+        fn r1704002_cry_places_2_counters() {
             let mut s = setup(json!({}), true, None);
             s.play(HOUSE, json!({ "zone": 1 }));
-            assert_eq!(counters(&s), 3);
+            assert_eq!(counters(&s), 2);
             assert_eq!(summoned(&s), Vec::<String>::new());
         }
 
@@ -299,7 +299,7 @@ mod tests {
                     Some((WRONG.to_string(), true, P1))
                 ]
             );
-            assert_eq!(counters(&s), 1);
+            assert_eq!(counters(&s), 0);
         }
     }
 

@@ -1,9 +1,9 @@
 //! SPEC §8.12 S+ #79 A Glimpse into the Endless Sea (4) Spell, Wincon, Terminus, Mythic, a card of
 //! the Stinkyscape+ set (R1420, R3535000; R3569005, R3569006).
 //!   Base:    "Exile your deck and every permanent. Start an {count} turn countdown. When it ends, win
-//!            the game." (8)
+//!            the game." (7; 8 through v0.6.7k, issue #4285)
 //!   Radiant: "Exile your deck and every permanent. Your hero gains {armor} Armor. Start an {count} turn
-//!            countdown. When it ends, win the game." (8, Armor 5)
+//!            countdown. When it ends, win the game." (7, Armor 5)
 //!
 //! Engine: the whole library is exiled with no draw, so no fatigue (§2.4), as S+ #80 does. The
 //! countdown is `delay` "in N turns" (R1181000): a badge on its owner's side counts down the turns they
@@ -144,9 +144,10 @@ mod tests {
             assert!(s.pile(P1, "library").is_empty(), "the deck is exiled");
             assert_eq!(s.pile(P1, "exile").len(), 5);
             assert!(s.pile(P2, "library").len() == 20, "only the owner's deck");
-            // The countdown is 8 of p1's turns (10 until issue #3951); none of the first seven ends it.
+            // The countdown is 7 of p1's turns (8 through v0.6.7k, issue #4285; 10 until issue #3951); none of
+            // the first six ends it.
             let (turns, winner) = turns_to_win(&mut s, 12);
-            assert_eq!((turns, winner), (8, Some(Winner::P1)));
+            assert_eq!((turns, winner), (7, Some(Winner::P1)));
             assert_eq!(s.state().players[P1].hero.armor, 0, "the base face gives no Armor");
             let result = s.state().result.expect("the game is over");
             assert_eq!(result.reason, GameOverReason::WonByEffect);
@@ -157,14 +158,14 @@ mod tests {
             let mut s = game("glimpse-badge", false);
             s.play(ID, json!({}));
             let at = |turns: i32| vec![format!("{BADGE} in {turns} turns")];
-            assert_eq!(badges(&s, P1), at(8));
-            assert_eq!(badges(&s, P2), at(8), "the other seat reads it too");
+            assert_eq!(badges(&s, P1), at(7));
+            assert_eq!(badges(&s, P2), at(7), "the other seat reads it too");
             // The opponent's turn is no tick of it; p1's own is.
             s.end_turn();
-            assert_eq!(badges(&s, P1), at(8), "the other player's turn does not tick it");
+            assert_eq!(badges(&s, P1), at(7), "the other player's turn does not tick it");
             s.end_turn();
-            assert_eq!(badges(&s, P1), at(7));
-            assert_eq!(badges(&s, P2), at(7));
+            assert_eq!(badges(&s, P1), at(6));
+            assert_eq!(badges(&s, P2), at(6));
         }
 
         #[test]
@@ -174,7 +175,7 @@ mod tests {
             s.play(ID, json!({}));
             let (turns, winner) = turns_to_win(&mut s, 12);
             // With no deck, fatigue (1+2+…) is what the countdown races: 200 health holds.
-            assert_eq!((turns, winner), (8, Some(Winner::P1)));
+            assert_eq!((turns, winner), (7, Some(Winner::P1)));
         }
 
         /// R767000: through v0.6.4c neither face gave Armor (issue #3951).
@@ -192,13 +193,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3569005_radiant_counts_8_and_gives_your_hero_armor_5() {
+        fn r3569005_radiant_counts_7_and_gives_your_hero_armor_5() {
             let mut s = game("glimpse-radiant", true);
             s.play(ID, json!({}));
             assert!(s.pile(P1, "library").is_empty());
             assert_eq!(s.state().players[P1].hero.armor, 5);
             let (turns, winner) = turns_to_win(&mut s, 12);
-            assert_eq!((turns, winner), (8, Some(Winner::P1)));
+            assert_eq!((turns, winner), (7, Some(Winner::P1)));
         }
     }
 
@@ -268,7 +269,7 @@ mod tests {
                 let armor = if radiant { 5 } else { 0 };
                 assert_eq!(s.state().players[P1].hero.armor, armor);
                 let (turns, winner) = turns_to_win(&mut s, 12);
-                assert_eq!((turns, winner), (8, Some(Winner::P1)));
+                assert_eq!((turns, winner), (7, Some(Winner::P1)));
             }
         }
 

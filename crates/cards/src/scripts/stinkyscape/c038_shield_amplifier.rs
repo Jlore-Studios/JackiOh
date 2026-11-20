@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 38 Shield Amplifier, a card of the Stinkyscape set.
-//! (1) Unit, Common, 1/1 → 2/2: Starship Piece, Equip, Divine Shield.
+//! (1) Unit, Common, 1/1 → 2/2: Starship Piece, Divine Shield.
 //! "Whenever this survives an attack, it gains +{buff}/+{buff}." — buff 2, Radiant 4 (R1860000; 3 and 6
 //! until issue #3996).
 //!
@@ -177,6 +177,7 @@ mod tests {
                 "p2": { "hand": [ANCHOR] },
             }));
             s.play(VANILLA, json!({ "zone": 1 }));
+            crate::give_equip(&mut s, AMPLIFIER);
             s.play(AMPLIFIER, json!({ "zone": 1, "equip": true }));
 
             let host = s.unit(PlayerId::P1, 1).expect("the fused host");

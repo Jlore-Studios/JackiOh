@@ -257,7 +257,8 @@ struct Price {
 ///
 /// R455 (E15) adds its rungs through `cost_rules.rs`: after R65's discounts the flat price rules, then the
 /// threshold rules on the number the flat ones left (as R363 reads Curvature), then "costs (N)" sets, then
-/// the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0.
+/// the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0. R4285000: last,
+/// a play by Flashback from the graveyard costs at least FLASHBACK_MIN_PRICE (`flashback_floor`), X included.
 pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostOptions) -> i32 {
     price_of(state, instance, options).cost
 }
@@ -265,6 +266,12 @@ pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostO
 /// R454, R455: what a play of this card now costs, wherever the play takes it from.
 pub fn play_cost(state: &GameState, instance: &CardInstance) -> i32 {
     effective_cost(state, instance, CostOptions { as_play: Some(true) })
+}
+
+/// R4285000: what a play of this card now costs before Flashback's floor: the price a Plague payment
+/// meets (`graveyard_play::plague_price`), since such a play is its permission's and spends no Flashback.
+pub fn play_cost_before_flashback_floor(state: &GameState, instance: &CardInstance) -> i32 {
+    priced(state, instance, CostOptions { as_play: Some(true) }, false).cost
 }
 
 /// R455: the `costRule` modifiers a play of this card at this price spends — the ones "until used" that
@@ -353,6 +360,18 @@ pub fn override_of(card: &CardInstance) -> Option<i32> {
 }
 
 fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) -> Price {
+    priced(state, instance, options, true)
+}
+
+/// `price_of`, with Flashback's floor (R4285000) held or not.
+fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flashback_floor: bool) -> Price {
+    let floored = |cost: i32| {
+        if flashback_floor {
+            crate::graveyard_play::flashback_floor(state, instance, cost)
+        } else {
+            cost
+        }
+    };
     let side = &state.players[instance.controller];
     let override_ = override_of(instance);
     let floor = cost_floor_of(instance);
@@ -372,8 +391,9 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         } else {
             printed_cost(state, instance)
         };
+        // R4285000: Flashback's floor holds for an X card too.
         return Price {
-            cost: 0.max(printed).max(floor),
+            cost: floored(0.max(printed).max(floor)),
             used_rules: Vec::new(),
         };
     }
@@ -448,8 +468,9 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
     let rules = price_rules_for(state, instance.controller, instance, live);
     let climbed = climb_price_rules(cost, &rules, curvature);
 
+    // R4285000: a play by Flashback from the graveyard costs at least (1), each embiggen price apart.
     Price {
-        cost: 0.max(climbed.price).max(floor),
+        cost: floored(0.max(climbed.price).max(floor)),
         used_rules: climbed.used,
     }
 }

@@ -1210,9 +1210,9 @@ fn b14_cloaking_module_is_a_1_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_t
     assert_eq!(def.rarity, Rarity::Rare);
     // (1) since issue #3951, (2) before.
     assert_eq!(query_cost(&def), 1);
+    // R4285001: no Equip since issue #4285.
     let printed = vec![
         KeywordKind::StarshipPiece,
-        KeywordKind::Equip,
         KeywordKind::Cloaked,
         KeywordKind::Immutable,
     ];
@@ -1233,8 +1233,10 @@ fn b14_cloaking_module_is_a_1_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_t
     );
 }
 
+/// R4285001: it prints no Equip since issue #4285, so its equip play is refused; an Equip given in hand
+/// (R1878003) still fuses it into the Unit.
 #[test]
-fn b14_cloaking_module_is_played_onto_a_unit_by_its_equip() {
+fn b14_r4285001_cloaking_module_is_played_onto_a_unit_only_by_a_given_equip() {
     for radiant in [false, true] {
         let mut s = game(json!({
             "p1": {
@@ -1245,6 +1247,14 @@ fn b14_cloaking_module_is_played_onto_a_unit_by_its_equip() {
             },
             "p2": { "hand": [ANCHOR], "library": filler(3) },
         }));
+        s.expect_refused(|s| s.play(CLOAKING_MODULE, json!({ "zone": 1, "equip": true })));
+        let module = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == CLOAKING_MODULE)
+            .expect("in hand")
+            .id;
+        s.card_mut(module.as_str()).granted_keywords.push(Keyword::Equip);
         s.play(CLOAKING_MODULE, json!({ "zone": 1, "equip": true }));
         let host = made_of(&s, &s.unit_at(P1, 1).def_id);
         assert!(

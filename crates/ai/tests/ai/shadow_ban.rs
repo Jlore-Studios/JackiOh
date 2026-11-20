@@ -514,22 +514,44 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     //
     // Easy's check plays one game: game 1 draws Ceaseless Void (100), never at four crystals. A card a
     // discount brings to four crystals will not do: GIGA Glowy Jelly Bean with the Floats of R1563000,
-    // nor Pile On (5) once another card's discount reaches it.
+    // nor Pile On (5) once another card's discount reaches it. Since issue #4285 changed eight cards of
+    // that deal, game 1 runs past turn 25, where the Void's own "Costs (1) less for each card drawn,
+    // played, destroyed or exiled this game" reaches four crystals, so the game plays it at its printed
+    // (100) with that discount taken off its script (`cost`), the same deal and every other card as built.
+
+    /// `run` with Ceaseless Void's own discount taken off, its printed (100) standing (R767000's fold).
+    fn void_at_its_printed_100<T>(run: impl FnOnce() -> T) -> T {
+        jackioh_cards::register_all();
+        let mut void = jackioh_engine::scripts::registered_scripts()
+            .get("core-100")
+            .cloned()
+            .expect("Ceaseless Void's script");
+        void.base.cost = None;
+        void.radiant.cost = None;
+        let shipped: &'static jackioh_engine::ShippedCatalog =
+            Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+                "kept",
+                jackioh_cards::CATALOG.clone(),
+                IndexMap::from([("core-100".to_string(), void)]),
+            )));
+        jackioh_engine::with_shipped(Some(shipped), run)
+    }
 
     #[test]
     fn r186_ceaseless_void_100_mana_is_unswept_at_easys_four_crystals() {
-        jackioh_cards::register_all();
-        let easy = js(sweep_card(
-            "core-100",
-            &SweepOptions {
-                seeds: Some(1),
-                now: None,
-                retime: None,
-                tier: Some(Difficulty::Easy),
-                banned: Some(FIXTURE_BANNED_IDS),
-                setup: None,
-            },
-        ));
+        let easy = js(void_at_its_printed_100(|| {
+            sweep_card(
+                "core-100",
+                &SweepOptions {
+                    seeds: Some(1),
+                    now: None,
+                    retime: None,
+                    tier: Some(Difficulty::Easy),
+                    banned: Some(FIXTURE_BANNED_IDS),
+                    setup: None,
+                },
+            )
+        }));
         assert_eq!(easy["tier"], json!("easy"));
         assert_eq!(easy["drawnGames"], json!(1));
         assert_eq!(easy["affordableTurns"], json!(0));

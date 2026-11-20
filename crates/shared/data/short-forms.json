@@ -62,11 +62,6 @@
         "en": "Activate: Gain {mana} mana. Heal your hero {heal}. Your opponent discards {discards}. Add a Radiant Book, KY, Legendary and (4) Cost card at ({setCost})."
       }
     },
-    "classicplus-034": {
-      "base": {
-        "en": "Crater\nChoose one.\nEnd of turn: Lock a random enemy zone.\nOr Lock their zone when they play a Unit or Field Spell."
-      }
-    },
     "classicplus-037": {
       "base": {
         "en": "Divine Shield\nIn hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast a random non-Unit you played this turn."
@@ -319,10 +314,10 @@
     },
     "stinkyscape-143": {
       "base": {
-        "en": "Starship Piece, Equip\nActivate: Cast a random harmful Book on an enemy, or a random helpful Book on an ally."
+        "en": "Starship Piece\nActivate: Cast a random harmful Book on an enemy, or a random helpful Book on an ally."
       },
       "radiant": {
-        "en": "Starship Piece, Equip\nActivate: Cast a random Radiant harmful Book on an enemy, or a helpful one on an ally."
+        "en": "Starship Piece\nActivate: Cast a random Radiant harmful Book on an enemy, or a helpful one on an ally."
       }
     },
     "stinkyscape-147": {
@@ -557,11 +552,6 @@
     "stinkyscapeplus-t-terminus-starship-dying-ember": {
       "radiant": {
         "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant After Burner, Ultralight Chassis, Spacemine, AP Rounds."
-      }
-    },
-    "meditative-087": {
-      "radiant": {
-        "en": "In hand or deck, summoned after you play a tribal card.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
       }
     },
     "stinkyscapeplus-t-terminus-starship-cold-exodus": {

@@ -1,6 +1,7 @@
 //! Flashback (#783, R783012, R783013): a card with it in its owner's graveyard may be played from there
 //! once, at its cost, as a play for every rule, spending the keyword for good; a play another permission
-//! allows spends nothing. `fixtures/keywords_783.rs` stands in for the cards #781 prints.
+//! allows spends nothing. `fixtures/keywords_783.rs` stands in for the cards #781 prints. Since issue #4285 a
+//! play by Flashback costs at least (1) after every discount (R4285000).
 
 use jackioh_engine::testkit::*;
 
@@ -9,7 +10,7 @@ use super::fixtures::keywords_783::{
     flashback_spell, flashback_unit, picky_wind, plague_field, plain_spell, plain_unit,
     register_keywords_783, second_wind,
 };
-use super::fixtures::play_pipeline_b::in_graveyard;
+use super::fixtures::play_pipeline_b::{in_graveyard, register_pipeline_b, x_spell};
 use super::fixtures::prompt_harness::board;
 
 const P1: PlayerId = PlayerId::P1;
@@ -220,5 +221,146 @@ mod r783013_flashback_spent {
         assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }));
         assert_eq!(standing.flashback_spent, None);
         assert!(has_flashback(&in_plague, &standing));
+    }
+}
+
+/// R4285000: "You must spend at least (1) to cast a card from your graveyard by Flashback": the price after
+/// every discount, printed or lent, an X card's too; a permission's play and a hand's are unfloored.
+mod r4285000_flashback_floor {
+    use super::*;
+    use jackioh_engine::config::FLASHBACK_MIN_PRICE;
+    use jackioh_engine::mana::{CostOptions, effective_cost};
+
+    fn price(state: &GameState, id: &str) -> i32 {
+        let card = must(find_instance(state, id).cloned(), "the card");
+        effective_cost(state, &card, CostOptions { as_play: Some(true) })
+    }
+
+    /// A (2) card discounted to (0), `cost_mod` -2.
+    fn discounted(state: &mut GameState, id: &str) {
+        must(find_instance_mut(state, id), "the card").cost_mod = -2;
+    }
+
+    #[test]
+    fn r4285000_a_flashback_play_costs_at_least_1_after_discounts_and_the_same_card_in_hand_0() {
+        let mut state = playing("r4285000-floor");
+        let spell = in_graveyard(&mut state, &flashback_spell().id, P1);
+        discounted(&mut state, &spell.id);
+        assert_eq!(FLASHBACK_MIN_PRICE, 1);
+        assert_eq!(price(&state, &spell.id), 1);
+
+        // Not offered at 0 mana, offered at 1, and the play pays 1.
+        let mut broke = state.clone();
+        broke.players.p1.mana.current = 0;
+        assert!(plays_in(&broke, P1, &spell.id).is_empty());
+        assert!(cast_spell(&broke, &spell.id).error.is_some());
+        state.players.p1.mana.current = 1;
+        assert!(!plays_in(&state, P1, &spell.id).is_empty());
+        let result = cast_spell(&state, &spell.id);
+        assert_eq!(result.error, None);
+        assert_eq!(result.state.players.p1.mana.current, 0);
+
+        // The same card in a hand is a hand's play and costs (0).
+        let mut hand = playing("r4285000-hand");
+        let held = new_instance(&mut hand, &flashback_spell().id, P1, Zone::Hand { player: P1 });
+        hand.players.p1.hand.push(held.clone());
+        discounted(&mut hand, &held.id);
+        assert_eq!(price(&hand, &held.id), 0);
+    }
+
+    #[test]
+    fn r4285000_a_lent_flashback_is_floored_too() {
+        let mut state = playing("r4285000-lent");
+        let spell = in_graveyard(&mut state, &plain_spell().id, P1);
+        let live = must(find_instance_mut(&mut state, &spell.id), "the Spell");
+        live.granted_keywords.push(Keyword::Flashback);
+        live.cost_mod = -1;
+        let lent = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
+        assert!(has_flashback(&state, &lent));
+        assert_eq!(price(&state, &spell.id), 1);
+        state.players.p1.mana.current = 0;
+        assert!(plays_in(&state, P1, &spell.id).is_empty());
+    }
+
+    #[test]
+    fn r4285000_an_x_card_played_by_flashback_for_x_0_costs_1() {
+        let mut state = playing("r4285000-x");
+        register_pipeline_b();
+        let spell = in_graveyard(&mut state, &x_spell().id, P1);
+        let live = must(find_instance_mut(&mut state, &spell.id), "the X Spell");
+        live.granted_keywords.push(Keyword::Flashback);
+        live.x = Some(0);
+        assert_eq!(price(&state, &spell.id), 1);
+        must(find_instance_mut(&mut state, &spell.id), "the X Spell").x = Some(3);
+        assert_eq!(price(&state, &spell.id), 3);
+    }
+
+    #[test]
+    fn r4285000_a_play_a_field_permission_covers_takes_no_floor_and_keeps_flashback() {
+        let mut state = playing("r4285000-permission");
+        put(&mut state, &second_wind().id, slot(P1, Row::Units, 1), json!({}));
+        let spell = in_graveyard(&mut state, &flashback_spell().id, P1);
+        discounted(&mut state, &spell.id);
+        assert_eq!(price(&state, &spell.id), 0);
+        state.players.p1.mana.current = 0;
+        let result = cast_spell(&state, &spell.id);
+        assert_eq!(result.error, None);
+        let landed = must(
+            graveyard_card(&result.state, &spell.id),
+            "the Spell in the graveyard",
+        );
+        assert_eq!(landed.flashback_spent, None);
+    }
+
+    #[test]
+    fn r4285000_a_plague_payment_meets_the_unfloored_price_so_no_counter_pays_for_a_0_flashback_unit() {
+        // Corpse Plantation's shape: a Plague-only permission with two counters on it.
+        let mut grave = playing("r4285000-plague");
+        let field = put(
+            &mut grave,
+            &plague_field().id,
+            slot(P1, Row::Backrow, 2),
+            json!({}),
+        );
+        must(find_instance_mut(&mut grave, &field.id), "the permission")
+            .counters
+            .plague = Some(2);
+        let body = in_graveyard(&mut grave, &flashback_unit().id, P1);
+        discounted(&mut grave, &body.id);
+        let plague_play = json!({
+            "type": "play",
+            "instanceId": body.id,
+            "zone": { "row": "units", "lane": 1 },
+            "plague": { "from": field.id, "tokens": 1 },
+            "playerId": "p1",
+        });
+
+        // Its mana play is Flashback's and floored at (1); no play is offered in its Plague Counters,
+        // as before the floor, and one is refused.
+        assert_eq!(price(&grave, &body.id), 1);
+        let offered = plays_in(&grave, P1, &body.id);
+        assert!(!offered.is_empty());
+        assert!(
+            offered
+                .iter()
+                .all(|action| matches!(action, ActionBody::Play { plague: None, .. }))
+        );
+        assert!(act_result(&grave, plague_play.clone()).error.is_some());
+
+        // At (1) before any floor, one counter still pays it and the play keeps Flashback.
+        must(find_instance_mut(&mut grave, &body.id), "the Unit").cost_mod = -1;
+        assert_eq!(price(&grave, &body.id), 1);
+        assert!(
+            plays_in(&grave, P1, &body.id)
+                .iter()
+                .any(|action| matches!(action, ActionBody::Play { plague: Some(_), .. }))
+        );
+        let paid = act_result(&grave, plague_play);
+        assert_eq!(paid.error, None);
+        let standing = must(
+            find_instance(&paid.state, &body.id).cloned(),
+            "the Unit on the field",
+        );
+        assert!(has_flashback(&paid.state, &standing));
     }
 }

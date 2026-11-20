@@ -5196,8 +5196,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human, G::Acclaimed],
         R::Legendary,
-        st(2, 7),
-        st(4, 14),
+        st(2, 5),
+        st(4, 10),
     ),
     row(
         "27",
@@ -5656,7 +5656,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
     row("77", "Yuma", c(2), T::Unit, &[], R::Epic, st(1, 8), st(2, 16)),
     row("78", "Ozark", c(3), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
-    row("79", "Orca", emb(4, 5), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
+    row("79", "Orca", emb(4, 5), T::Unit, &[], R::Epic, st(3, 1), st(6, 2)),
     row(
         "80",
         "Galaxy",
@@ -5668,8 +5668,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(4, 4),
     ),
     row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(1, 1), st(2, 2)),
-    row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
-    row("83", "Halo", c(4), T::Unit, &[], R::Epic, st(2, 2), st(4, 4)),
+    row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(3, 1), st(6, 2)),
+    row("83", "Halo", c(4), T::Unit, &[], R::Epic, st(3, 1), st(6, 1)),
     row(
         "84",
         "Power Cell",
@@ -5727,8 +5727,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human, G::Acclaimed],
         R::Legendary,
-        st(4, 4),
-        st(8, 8),
+        st(5, 4),
+        st(10, 8),
     ),
     row("89", "Spice", c(1), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
     row(
@@ -6125,12 +6125,12 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "129",
         "Jlockeed's Missile Pod",
-        emb(1, 2),
+        emb(1, 3),
         T::Unit,
         &[G::Jlockeed],
         R::Epic,
-        st(1, 1),
         st(2, 2),
+        st(4, 4),
     ),
     row(
         "130",
@@ -10822,9 +10822,9 @@ mod faces_that_change_more_than_text_b2_7_e40 {
     }
 
     #[test]
-    fn prints_buff_billy_s_2x_3x_and_4x_6x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
+    fn prints_buff_billy_s_2x_2x_and_4x_4x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
      {
-        // Buff Billy's X is the one it is played for; Meditative+ #20.1 Lil' Kenny's the one M+ #20
+        // Buff Billy's X is the one it is played for (2X/3X and 4X/6X through v0.6.7k, issue #4285); Meditative+ #20.1 Lil' Kenny's the one M+ #20
         // summons it with (R1184003).
         let with_x: Vec<String> = entries()
             .into_iter()
@@ -10836,11 +10836,11 @@ mod faces_that_change_more_than_text_b2_7_e40 {
         assert_eq!(billy.map(|entry| entry.cost), Some(CardCost::X));
         assert_eq!(
             billy.and_then(|entry| entry.base.x_stats).map(json),
-            Some(serde_json::json!({ "attack": 2, "health": 3 }))
+            Some(serde_json::json!({ "attack": 2, "health": 2 }))
         );
         assert_eq!(
             billy.and_then(|entry| entry.radiant.x_stats).map(json),
-            Some(serde_json::json!({ "attack": 4, "health": 6 }))
+            Some(serde_json::json!({ "attack": 4, "health": 4 }))
         );
         let kenny = CATALOG.get("meditativeplus-020-1");
         assert_eq!(
@@ -11476,4 +11476,29 @@ mod every_entry_printed_in_chinese_is_cn_r1176000 {
             "printed in Chinese without the CN tag: {missing:?}"
         );
     }
+}
+
+/// R4285001 (issue #4285, Stinkyscape+ Balance Changes IV): the Starship Pieces lost Equip, so no entry prints
+/// both on either face, and the 53 that did keep Starship Piece.
+#[test]
+fn r4285001_no_entry_prints_both_starship_piece_and_equip() {
+    let prints =
+        |face: &CardFace, kind: KeywordKind| face.keywords.iter().any(|keyword| keyword.kind() == kind);
+    let both: Vec<&str> = CATALOG
+        .values()
+        .filter(|def| {
+            [&def.base, &def.radiant]
+                .into_iter()
+                .any(|face| prints(face, KeywordKind::StarshipPiece) && prints(face, KeywordKind::Equip))
+        })
+        .map(|def| def.id.as_str())
+        .collect();
+    assert_eq!(both, Vec::<&str>::new());
+    let pieces = CATALOG
+        .values()
+        .filter(|def| {
+            prints(&def.base, KeywordKind::StarshipPiece) && prints(&def.radiant, KeywordKind::StarshipPiece)
+        })
+        .count();
+    assert!(pieces >= 53, "{pieces}");
 }

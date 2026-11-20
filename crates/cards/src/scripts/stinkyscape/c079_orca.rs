@@ -1,4 +1,5 @@
-//! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 3/3 → 6/6, cost 4, Embiggened (5), Epic.
+//! Stinkyscape #79 Orca (SPEC §8.10 row 79). Unit 3/1 → 6/2 (3/3 → 6/6 through v0.6.7k, issue #4285), cost
+//! 4, Embiggened (5), Epic.
 //!   Base:    "Flying
 //!            Cry: Choose one of 2 Miners and Equip it into this.
 //!            Embiggened (5): The Miners offered are Radiant."
@@ -10,7 +11,8 @@
 //! (R1175000), the offer is Radiant (R469), the Cry reading the play's stamp (R81); its (5) is past
 //! `MAX_MANA`, so it is played so only with mana an effect gave (R1857001). Flying is a catalog keyword
 //! the engine plays. Issue #4154 took off its Starship Piece, so a Miner equipped into it leaves it no
-//! piece (R1852001) and its death fuses nothing.
+//! piece (R1852001) and its death fuses nothing. Since issue #4285 the Miners print no Equip, which the pick
+//! never read: they fuse in as before (R4285001).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
@@ -95,15 +97,37 @@ mod tests {
         held
     }
 
-    /// #3142: 3/3 on its base face and 6/6 on its Radiant one, until a Miner is equipped.
+    /// Issue #4285: 3/1 on its base face and 6/2 on its Radiant one (3/3 and 6/6 through v0.6.7k), until a
+    /// Miner is equipped.
     #[test]
-    fn it_is_3_3_and_radiant_6_6_before_its_miner() {
-        for (radiant, stats) in [(false, 3), (true, 6)] {
+    fn it_is_3_1_and_radiant_6_2_before_its_miner() {
+        for (radiant, stats) in [(false, (3, 1)), (true, (6, 2))] {
             let (s, host) = played(radiant, false);
             assert!(s.state().pending.is_some(), "the offer is open: nothing is equipped yet");
             let first = s.stats(host.as_str());
-            assert_eq!((first.attack, first.health), (stats, stats), "radiant {radiant}");
+            assert_eq!((first.attack, first.health), stats, "radiant {radiant}");
         }
+    }
+
+    /// R4285001: the Miners print no Equip since issue #4285, and the pick fuses one in all the same.
+    #[test]
+    fn r4285001_its_pick_still_fuses_and_prints_no_equip() {
+        crate::register_all();
+        for miner in MINERS {
+            let def = crate::card_def(miner);
+            for face in [&def.base, &def.radiant] {
+                assert!(!face.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Equip), "{miner}");
+            }
+        }
+        let (mut s, host) = played(false, false);
+        // `answers` holds the host to the pick's health gained; the fusion is reported onto the host.
+        answers(&mut s, &host, 1, false);
+        assert!(s.events().iter().any(|event| matches!(
+            event,
+            GameEvent::Fused { result_instance_id, .. } if *result_instance_id == host
+        )));
+        s.activate(host.as_str(), json!({ "ability": "mine" }));
+        assert_eq!(resources_in_hand_of(s.state(), P1).len(), 1);
     }
 
     #[test]

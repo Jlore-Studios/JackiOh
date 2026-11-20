@@ -2,7 +2,8 @@
 //! R3535000, R3554000, R3554001, R3561000): (4) Spell, Mythic, Terminus, a card of the held
 //! Stinkyscape+ set.
 //!   Base:    "Open a Black Hole in midlane. At the start of each player's turn, it draws their permanents
-//!            one lane closer. It closes after swallowing {permanents} permanents." (10)
+//!            one lane closer. It closes after swallowing {permanents} permanents." (7; 10 through v0.6.7k,
+//!            issue #4285)
 //!   Radiant: "Open a Black Hole in midlane. At the start of the opponent's turn, it draws their
 //!            permanents one lane closer."
 //!
@@ -106,7 +107,7 @@ mod tests {
         assert_eq!(lane_of(&s, &kept), Some(1), "lane 1 stands");
         assert!(s.unit(P1, 3).is_none() && s.unit(P2, 3).is_none());
         let shown = s.view(P2).black_hole.expect("the hole is public");
-        assert_eq!(shown.capacity, 10);
+        assert_eq!(shown.capacity, 7);
     }
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
         let mut s = board(false, "c077-upgraded", vec![], vec![]);
         step_param(s.card_mut(ID), "permanents", 1);
         s.play(ID, json!({}));
-        assert_eq!(s.state().black_hole.map(|hole| hole.closes_at()), Some(11));
+        assert_eq!(s.state().black_hole.map(|hole| hole.closes_at()), Some(8));
     }
 
     #[test]

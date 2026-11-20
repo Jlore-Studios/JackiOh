@@ -1,5 +1,5 @@
-//! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/7 → 4/14 (2/9 → 4/18
-//! until #3041), of the Stinkyscape set.
+//! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/5 → 4/10 (2/7 → 4/14
+//! through v0.6.7k, issue #4285; 2/9 → 4/18 until #3041), of the Stinkyscape set.
 //!   Base:    "Tribute 1
 //!            Cry: Choose one: summon a University, or this gains 'End of turn: Summon a random Starship
 //!            Piece.'"
@@ -407,10 +407,10 @@ mod tests {
     }
 
     #[test]
-    fn r275_radiant_4_14_a_radiant_university_or_a_radiant_piece_at_the_end_of_turn() {
+    fn r275_radiant_4_10_a_radiant_university_or_a_radiant_piece_at_the_end_of_turn() {
         let mut s = paying(true, json!([]));
         cry(&mut s, CRY_UNIVERSITY);
-        s.expect_stats(ID, json!({ "attack": 4, "health": 14 }));
+        s.expect_stats(ID, json!({ "attack": 4, "health": 10 }));
         assert!(university(&s).radiant, "a Radiant University");
 
         let mut s = paying(true, json!([]));
@@ -457,7 +457,7 @@ mod tests {
             assert!(!uni.radiant, "a base University");
             s.expect_stats(&uni, json!({ "attack": 0, "health": 12 }));
             s.expect_refused_with(|s| s.activate(&uni, json!({})), "its own Activate");
-            s.expect_stats(ID, json!({ "attack": 2, "health": 7 }));
+            s.expect_stats(ID, json!({ "attack": 2, "health": 5 }));
         });
     }
 
@@ -573,11 +573,11 @@ mod tests {
     }
 
     #[test]
-    fn r275_r2521003_radiant_4_14_a_base_university_then_a_radiant_piece_and_your_universities() {
+    fn r275_r2521003_radiant_4_10_a_base_university_then_a_radiant_piece_and_your_universities() {
         crate::under_kept(ID, script_v0_5_9f(), || {
             let mut s = board(true, json!([]));
             s.play(ID, json!({ "zone": 1 }));
-            s.expect_stats(ID, json!({ "attack": 4, "health": 14 }));
+            s.expect_stats(ID, json!({ "attack": 4, "health": 10 }));
             let uni = university(&s);
             assert!(!uni.radiant, "a base University from the Radiant face too");
             s.expect_refused_with(|s| s.activate(&uni, json!({})), "its own Activate");

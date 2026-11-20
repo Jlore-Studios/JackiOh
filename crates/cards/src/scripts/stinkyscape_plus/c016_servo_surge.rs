@@ -1,5 +1,5 @@
-//! SPEC §8.12 S+ #16 Servo Surge (Unit 2/1 → 4/2, Starship Piece, Equip, Windfury, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base and Radiant: "Starship Piece, Equip, Windfury"
+//! SPEC §8.12 S+ #16 Servo Surge (Unit 2/1 → 4/2, Starship Piece, Windfury, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
+//!   Base and Radiant: "Starship Piece, Windfury"
 //!
 //! Every word is a catalog keyword the engine plays, so there is nothing to run. Played onto one of your
 //! Units it fuses into it (R1086), which attacks twice a turn with it (§6.1); the Radiant face differs by
@@ -43,6 +43,7 @@ mod tests {
         );
         let host = s.unit_at(P1, 1).id;
         assert!(!windfury(&s, &host));
+        crate::give_equip(&mut s, ID);
         s.play(ID, json!({ "zone": 1, "equip": true }));
         (s, host)
     }

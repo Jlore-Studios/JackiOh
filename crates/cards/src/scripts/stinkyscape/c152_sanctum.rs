@@ -121,6 +121,22 @@ mod tests {
             assert!(graveyard_defs_offered(&s, P1).is_empty());
         }
 
+        /// R4285000: the Flashback Sanctum lends is Flashback, so a (0) card played by it from the graveyard
+        /// costs (1): not offered at 0 mana, and paid 1.
+        #[test]
+        fn r4285000_a_lent_flashback_of_a_0_cost_card_costs_1() {
+            const FREE: &str = "stand-in (0) 1/1 R2/2";
+            let mut s = standing(false, json!([FREE]));
+            let free = s.pile(P1, "graveyard")[0].clone();
+            assert!(flashback(&s, &free));
+            assert_eq!(play_cost(s.state(), s.card(&free.id)), 1);
+            let mut broke = s.state().clone();
+            broke.players.p1.mana.current = 0;
+            assert!(plays_in(&broke, P1, &free.id).is_empty());
+            play_from_graveyard(&mut s, &free, json!({ "zone": { "row": "units", "lane": 2 } }));
+            s.expect_mana(P1, 4 - 1);
+        }
+
         #[test]
         fn r1869003_the_opponents_graveyard_is_not_offered() {
             let s = standing(false, json!([]));

@@ -264,6 +264,14 @@ fn r4064001_an_equipped_rounds_unit_has_no_lethal() {
             json!({}),
         );
         let host = s.unit_at(AI, 1).id;
+        // R4285001: the Rounds print no Equip since issue #4285; one given in hand (R1878003) equips them.
+        let held = s
+            .hand(AI)
+            .into_iter()
+            .find(|card| card.def_id == rounds)
+            .expect("in hand")
+            .id;
+        s.card_mut(held.as_str()).granted_keywords.push(Keyword::Equip);
         s.play(rounds, json!({ "zone": 1, "equip": true }));
         let attack = s.stats(host.as_str()).attack;
         assert!(attack > 0, "{rounds}");

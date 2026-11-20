@@ -1,9 +1,9 @@
 //! SPEC §8.12 S+ #150 Scorching Rounds (Unit 3/1 → 6/2, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Damage also Burns {burns}." — burns 3
 //!   Radiant: the same text — burns 6
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then carries the rider. R3540002: each hit this card deals that its target
 //! survives adds N Burn after the hit; a hit that dealt nothing or killed its target adds nothing. N is
 //! the declared `burns` (R386): each face's flag holds that face's number, so an Equip adds its N to its
@@ -128,6 +128,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             let target = s.unit_at(P2, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             let attack = s.stats(host.as_str()).attack;
             s.attack(host.as_str(), target.as_str());

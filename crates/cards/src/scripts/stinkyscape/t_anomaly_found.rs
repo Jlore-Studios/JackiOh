@@ -544,7 +544,7 @@ mod tests {
             let mut s = setup(&seed, true, json!([]));
             s.play(ID, json!({}));
             assert!(s.state().pending.is_none(), "no question is left");
-            for (lane, def_id, picks) in [(2, HALO, 3), (4, PHALANX, 2)] {
+            for (lane, def_id, picks) in [(2, HALO, 2), (4, PHALANX, 2)] {
                 let card = s.unit(P1, lane).expect("the laid Unit");
                 // R77: each Equip fuses a Weapon into the host, whose definition names every one.
                 assert!(card.def_id.ends_with(&format!("+{def_id}{}", ")".repeat(picks - 1))), "{}", card.def_id);

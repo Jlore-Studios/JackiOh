@@ -1,9 +1,9 @@
 //! SPEC §8.12 S+ #143 Fire Beam v3 (Unit 0/2 → 0/4, Weapon, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Starship Piece, Equip
+//!   Base:    "Starship Piece
 //!            Activate: Burn {burn} an enemy Unit, Cleave" — burn 2
 //!   Radiant: the same text — burn 4
 //!
-//! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it fuses
+//! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it fuses
 //! into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one (R1852001).
 //! The Activate is 1 use a turn (R384, R1857003). R3544000: its target is a declared enemy Unit, never a
 //! hero (R81, R1862000); the verb adds its Burn and deals no damage (R3540000). R3544001: Cleave puts the
@@ -207,6 +207,7 @@ mod tests {
             let host = s.unit_at(P1, 1).id;
             let target = s.unit_at(P2, 1).id;
             let beside = s.unit_at(P2, 2).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             s.activate(host.as_str(), at(&target));
             assert_eq!(burn_of(&s, &target), BURN);

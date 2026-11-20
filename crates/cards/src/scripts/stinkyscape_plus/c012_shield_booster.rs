@@ -1,5 +1,5 @@
-//! SPEC §8.12 S+ #12 Shield Booster (Unit 1/1 → 2/2, Starship Piece, Equip, Divine Shield, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base and Radiant: "Starship Piece, Equip, Divine Shield"
+//! SPEC §8.12 S+ #12 Shield Booster (Unit 1/1 → 2/2, Starship Piece, Divine Shield, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
+//!   Base and Radiant: "Starship Piece, Divine Shield"
 //!
 //! Every word is a catalog keyword the engine plays, so there is nothing to run. Played onto one of your
 //! Units it fuses into it (R1086), which gains the Divine Shield with it (R1852000, §6.1); the Radiant
@@ -71,6 +71,7 @@ mod tests {
             );
             let host = s.unit_at(P1, 1).id;
             assert!(!shielded(&s, &host));
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             assert!(shielded(&s, &host));
         }
@@ -94,6 +95,7 @@ mod tests {
                 json!({}),
             );
             let host = s.unit_at(P1, 1).id;
+            crate::give_equip(&mut s, ID);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             assert!(shielded(&s, &host));
         }
