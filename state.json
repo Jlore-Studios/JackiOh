@@ -3439,17 +3439,8 @@
       "stop_requested": false
     },
     "3925": {
-      "action": "plan",
-      "asks": [
-        "c:7052770814"
-      ],
-      "build_next": {
-        "from_run": "44834603420",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-20T23:46:37Z",
-        "until": "2026-11-21T00:16:37Z"
-      },
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3461,10 +3452,9 @@
         "reason": "planned on opus",
         "trail": "d\": \"grep -rln \\\"jackioh_cards\\\" crates/engine/tests/ | head; grep -rn \\\"jackioh_cards::register_all\\\" crates/engine/tests | head -3\", \"description\": \"Check engine tests that use the cards cr\u2026\n- Bash: {\"command\": \"sed -n 30,80p crates/engine/tests/rules/rule_benders.rs\", \"description\": \"Read rule_benders real-card pattern\"}\n- Bash: {\"command\": \"grep -n '\\\"backrow\\\"\\\\|\\\"radiant\\\"\\\\|\\\"damage\\\"\\\\|\\\"statsOverride\\\"\\\\|\\\"lane\\\"\\\\|\\\"radiantWorld\\\"\\\\|\\\"mana\\\"\\\\|\\\"keywords\\\"\\\\|\\\"position\\\"\\\\|\\\"divineShieldSpent\\\"\\\\|\\\"turn\\\"\\\\|\\\"active\\\"\u2026\n- Bash: {\"command\": \"grep -n \\\"^#\\\\|settle\\\\|work.rs\\\\|state_check\\\" crates/engine/README.md | head -30; grep -n \\\"^#\\\\|6.4\\\\|loopCapped\\\\|ArmorGained\\\" docs/v0.3.0/SURFACE.md | sed -n 1,60p | grep -n \\\"6\\\\.\u2026\n- Bash: {\"command\": \"sed -n 40,50p crates/engine/README.md; sed -n 497,515p docs/v0.3.0/SURFACE.md\", \"description\": \"Read README loop paragraph and SURFACE sink section\"}\n- Bash: {\"command\": \"cd crates/engine && grep -rn \\\"panic!(\\\\\\\"\\\" src --include=*.rs | grep -i \\\"settle\\\\|drain\\\\|pass\\\\|loop\\\\|close\\\\|spin\\\\|steps\\\" | grep -v \\\"testkit\\\" | head -20\", \"description\": \"List \u2026\n- Bash: {\"command\": \"cd crates/engine && sed -n 385,415p src/effects/combat.rs; grep -rn \\\"panic!(\\\" src --include=*.rs | grep -v testkit | grep -i \\\"cap\\\\|guard\\\\|loop\\\\|round\\\" | head\", \"description\": \"Rea\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3925/crates/engine/src/effects/combat.rs\", \"offset\": 380, \"limit\": 36}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3925 && grep -n \\\"turnCutShort\\\\|Turn cut short\\\" spec/*.md | grep -v \\\"11-rulings\\\\|INDEX\\\" | head\", \"description\": \"Find spec mentions of the turn-\u2026\n- Bash: {\"command\": \"grep -n \\\"until nothing changes\\\\|Repeat\\\\|repeat until\\\" spec/04-combat.md | head -5; grep -n \\\"A3.6\\\" -A0 REVIEW.md | head -2\", \"description\": \"Find the state check repeat sentence\"}\n- Bash: {\"command\": \"grep -n \\\"STATE_CHECK_PASS_CAP\\\\|MAX_WORK_STEPS\\\\|SETTLE_PASS\\\" apps/web/src/wire/engineConfig.ts | head; grep -n \\\"pub mod\\\\|mod testkit\\\" crates/engine/src/lib.rs | head -5; grep -n \\\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"^pub mod\\\\|^mod \\\\|^pub(crate) mod\\\" crates/engine/src/lib.rs | head -20; grep -rln \\\"mod work;\\\\|pub mod work\\\" crates/engine/src/ | head\", \"description\": \"Find where engine \u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/engine/src/testkit/duos_scenario.rs | head -30; grep -n \\\"pub fn \\\" crates/engine/src/testkit/duos_scenario.rs | head\", \"description\": \"Read duos scenario testkit hel\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub fn add_counters\\\\|pub fn add_counter\\\\|pub fn place_counters\\\\|pub fn counter(\\\" crates/engine/src/effects/*.rs | head -5; grep -n \\\"CounterChanged {\\\" -A 8 crates/engine/\u2026\n- Bash: {\"command\": \"grep -n \\\"new_instance\\\\|hand.push\\\\|fn give\\\\|fn put_in_hand\\\\|duos_scenario\\\" crates/engine/tests/rules/duos.rs | head -10\", \"description\": \"Check duos test helpers for placing cards\"}\n- Bash: {\"command\": \"grep -n \\\"fn hero_check\\\\|pub fn win_check\\\\|fn forget_spent_killers\\\\|fn units_of\\\\|fn backrow_of\\\\|fn active_first\\\" crates/engine/src/state_check.rs crates/engine/src/win_conditions.r\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"content\": \"## Goal\\n\\nOne engine rule ends every endless resolution loop (\\u00a710.3, new ruling **R3925000**). Each interaction \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the draft plan\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"content\": \"## Goal\\n\\nOne engine rule ends every endless resolution loop (\\u00a710.3, new ruling **R3925000**). Each interaction \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount words in the plan\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\nt=open('.bot-plan.md').read()\\nsections=re.split(r'\\\\n## ',t)\\nfor s in sections:\\n name=s.split('\\\\n',1)[0]\\n words=len(re.findall(r\\\"[A-Za-z0-9_`']+\\\",s))\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"old_string\": \"One engine rule ends every endless resolution loop (\\u00a710.3, new ruling **R3925000**). Eac\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"old_string\": \"1. **config.rs**, beside `STATE_CHECK_PASS_CAP`:\\n - Add `pub const RESOLUTION_EVENT_CAP: usi\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"old_string\": \"7. **state_check.rs**:\\n 1. Move the dying computation (from `let order = active_first\\u2026`\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"old_string\": \"17. **Measure**:\\n - In release, run `JACKIOH_LOOP_PEAK=1 cargo jackioh` with `fuzz --seeds 2\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"old_string\": \"18. **Spec and docs**:\\n - \\u00a710.3: under the diagram, add a paragraph \\\"**The loop cap** \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"old_string\": \"Fixtures go in `crates/engine/tests/rules/loop_cap.rs`, registered as `handicap.rs`'s `regist\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\", \"offset\": 95, \"limit\": 60}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\nt=open(p).read()\\nt=t.replace(\\\"- `cargo test -p jackioh-engine --features testkit --test rules r3925000`\\\",\\\"- `cargo test -p jackioh-engine --featu\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3925/.bot-plan.md\"}\n- said: ## Goal One engine rule ends every endless loop (\u00a710.3, **R3925000**). An interaction (an action, a timeout's answer, an autopilot or AI action, a turn the engine ends) emits at most `RESOLUTION_EVENT_CAP` events, every `GameEvent` counted. At the cap: - the trigger queue and every event not yet of\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-20T23:08:50Z",
       "owner_why": "it plans it",
@@ -3477,11 +3467,13 @@
       "provider": "claude-8",
       "queued_at": "2026-11-20T23:04:58Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44834603420",
+      "run_id": "pending:abb4ee5f-1795218431",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T23:08:50Z",
+      "started_at": "2026-11-20T23:47:35Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7052770814"
+      ]
     },
     "3926": {
       "action": "review",
@@ -14900,9 +14892,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T23:38:34Z",
+    "at": "2026-11-20T23:47:35Z",
     "url": "",
-    "what": "review #4351 on muse"
+    "what": "build #3925 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T23:36:32Z",
