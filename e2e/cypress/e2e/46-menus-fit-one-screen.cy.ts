@@ -70,7 +70,11 @@ const SCREEN = {
   almanac: "almanac",
 } as const;
 
-/** R1581000: the page is no taller than `screens` windows and no wider than one. */
+/**
+ * R1581000: the page is no taller than `screens` windows and no wider than one. R4335000: and it fits without
+ * squeezing a tab row: each shows its tabs whole. `/stats` once fit by crushing its tab row, which scrolls sideways and
+ * so may shrink to nothing, to a 14 px sliver that cut off every tab, and the page's height alone passed it.
+ */
 function expectOnScreen(viewport: MenuSize, screens: number): void {
   cy.window().should((win) => {
     const where = `${String(viewport.width)}x${String(viewport.height)}`;
@@ -79,6 +83,11 @@ function expectOnScreen(viewport: MenuSize, screens: number): void {
     const page = win.document.documentElement;
     expect(page.scrollHeight, `the page's height at ${where}`).to.be.at.most(win.innerHeight * screens);
     expect(page.scrollWidth, `the page's width at ${where}`).to.be.at.most(win.innerWidth);
+    for (const row of win.document.querySelectorAll<HTMLElement>('[role="tablist"]')) {
+      const name = row.getAttribute("aria-label") ?? row.className;
+      // A pixel's give for rounding: a squeezed row is short by most of a tab's height.
+      expect(row.clientHeight, `the tab row "${name}" shows its tabs whole at ${where}`).to.be.at.least(row.scrollHeight - 1);
+    }
   });
 }
 
@@ -241,7 +250,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 R3218000 R3324000 /stats", () => {
+        it("R1581000 R3218000 R3324000 R4335000 /stats", () => {
           visitStatsFigures();
           expectBackLinkBarOrder();
           expectShellNav(false);

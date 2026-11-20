@@ -24,12 +24,6 @@
   gap: var(--space-4);
 }
 
-/* The tab bar keeps its height however tall a tab's body is: it scrolls sideways, so a column left too short would
-   shrink it to nothing. */
-.collection-screen .collection-tablist {
-  flex: none;
-}
-
 .collection-screen .collection-section--fill {
   flex: 1 1 auto;
   min-height: 0;
