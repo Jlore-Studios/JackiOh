@@ -16814,7 +16814,7 @@
     "what": "build #4318 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T18:05:24Z",
+    "at": "2026-11-20T18:11:46Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17520,7 +17520,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T18:05:24Z",
+  "loop_tick": "2026-11-20T18:11:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
