@@ -36167,6 +36167,12 @@
         "number": 4248,
         "title": "Patch: a dungeon fight's report counts only for the fight the run dealt",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-20T23:04:17Z",
+        "number": 4337,
+        "title": "Patch: a saved trio keeps its earlier versions, and one can be restored",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-20T22:15:46Z",
