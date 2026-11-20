@@ -33632,10 +33632,6 @@
       "refused_until": "2026-11-16T00:00:00Z",
       "spent": [
         {
-          "at": "2026-11-11T15:16:01Z",
-          "minutes": 1.5
-        },
-        {
           "at": "2026-11-11T16:35:02Z",
           "minutes": 0.1
         },
@@ -34430,17 +34426,21 @@
         {
           "at": "2026-11-20T15:08:34Z",
           "minutes": 9.0
+        },
+        {
+          "at": "2026-11-20T15:18:39Z",
+          "minutes": 5.7
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-20T19:08:00Z",
-          "utilization": 0.01
+          "utilization": 0.0
         },
-        "observed_at": "2026-11-20T15:08:34Z",
+        "observed_at": "2026-11-20T15:18:39Z",
         "seven_day": {
           "resets_at": "2026-11-23T00:00:00Z",
-          "utilization": 0.5
+          "utilization": 0.49
         },
         "status": "allowed"
       }
@@ -37795,7 +37795,8 @@
       "2026-11-20T15:02:37Z,claude-4,ping,before,44758782931,1,2026-11-20T17:40:00Z,,,allowed,70,,",
       "2026-11-20T15:03:09Z,claude-4,stream,call,44758782931,2,2026-11-20T17:40:00Z,,,allowed,70,,",
       "2026-11-20T15:04:54Z,claude-4,stream,call,44758782931,3,2026-11-20T17:40:00Z,,,allowed,70,,",
-      "2026-11-20T15:06:24Z,claude-4,stream,call,44758782931,4,2026-11-20T17:40:00Z,,,allowed,70,,"
+      "2026-11-20T15:06:24Z,claude-4,stream,call,44758782931,4,2026-11-20T17:40:00Z,,,allowed,70,,",
+      "2026-11-20T14:23:59Z,muse,usage-command,before,44753027205,0,2026-11-20T19:08:00Z,49,2026-11-23T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-20T15:16:16Z,44759021281,claude-7,opus,suggest,,,suggested,,12.3,89,43931,5146005,9.6758,7,52,,,,,none,,1",
