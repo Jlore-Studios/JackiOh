@@ -36104,14 +36104,6 @@
         "provider": "muse",
         "run_id": "44663167414",
         "taken_asks": []
-      },
-      "5": {
-        "area": "ai",
-        "count": 1,
-        "last_run": "2026-11-20T02:46:58Z",
-        "provider": "muse",
-        "run_id": "44663220352",
-        "taken_asks": []
       }
     },
     "taken_asks": []
