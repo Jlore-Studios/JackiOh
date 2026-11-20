@@ -14506,6 +14506,7 @@
     "4344": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-11-20T23:45:53Z",
       "died": 0,
       "difficulty": "hard",
       "feedback_since": "2026-11-20T18:48:12Z",
@@ -14514,6 +14515,7 @@
       "issue": 4327,
       "kind": "review",
       "live": "reviewing",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-4",
       "question": "A person with access to Jlore-Studios/JackiOh: please re-run the failed job `web (unit 6/8)` in https://github.com/Jlore-Studios/JackiOh/actions/runs/44819025790 (Re-run failed jobs). If it fails again with the same timeout, look at whether the same shard times out on `main`: then it is a runner-load flake in art.test.ts that needs an issue of its own, not a change to this PR.",
