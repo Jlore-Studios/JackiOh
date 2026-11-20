@@ -67,18 +67,18 @@ use crate::scripts::meditative_plus::{
     c022_mountaintop_garden,
 };
 use crate::scripts::stinkyscape::{
-    c004_olivian_expanse, c010_2_divine_spirit, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior,
-    c018_imitated_instrumentality, c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh,
-    c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c042_core_researcher,
-    c045_drone_commander, c046_circadian_halfcycler, c050_beam_v3, c051_repeater_v3, c052_cannon_v3,
-    c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5,
-    c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c083_halo, c086_prototype_x2,
-    c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application,
-    c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c140_rush_token_launcher,
-    c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck, c154_dice_of_doom,
-    c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid,
-    c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette,
-    t_drone_interceptor, t_narcor, t_red_narcor,
+    c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c013_asphyxiants_cloud,
+    c016_rod_of_ages, c018_1_melchior, c018_imitated_instrumentality, c023_warp_disruptor,
+    c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix,
+    c036_drone_core_x, c042_core_researcher, c045_drone_commander, c046_circadian_halfcycler, c050_beam_v3,
+    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
+    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x,
+    c083_halo, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447,
+    c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod,
+    c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck,
+    c154_dice_of_doom, c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid,
+    c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower,
+    t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
@@ -1128,6 +1128,14 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c095_call_to_chaos_meditative_edition::ID,
         "v0.6.7k",
         c095_call_to_chaos_meditative_edition::script_v0_6_7k,
+    ),
+    // #4331 (R4331000, R4331001): the last scripts before a spent Quest went to the graveyard and a steal
+    // of mana crystals went past the cap.
+    (c090_in_too_deep::ID, "v0.6.7k", c090_in_too_deep::script_v0_6_7k),
+    (
+        c007_the_greatest_heist::ID,
+        "v0.6.7k",
+        c007_the_greatest_heist::script_v0_6_7k,
     ),
 ];
 
