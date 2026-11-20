@@ -14318,7 +14318,7 @@
       "requested_by": "jgoetzmann",
       "review_floor": "strong",
       "review_notes": "CI is green on a69e66b after the re-run; finish the review and the audit.",
-      "run_id": "pending:b7bbf855-1795216060",
+      "run_id": "44834488348",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "started_at": "2026-11-20T23:07:57Z",
