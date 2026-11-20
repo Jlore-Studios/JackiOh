@@ -15842,7 +15842,7 @@
     "what": "build #4292 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-20T12:21:42Z",
+    "at": "2026-11-20T12:28:25Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16548,7 +16548,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T12:21:42Z",
+  "loop_tick": "2026-11-20T12:28:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
