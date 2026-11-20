@@ -37053,7 +37053,8 @@
       "2026-11-20T05:59:26Z,44681034831,agy,gemini-3.8-flash-high,review,4301,medium,approved,,32.5,562031,34466,0,,10,21,32,35,2.5,,none,,1",
       "2026-11-20T06:01:48Z,44666052113,claude-1,opus,build,4285,hard,built,,139.5,722,215819,140010738,36.7655,8,93,,,58.6,claude-6,fresh,cap,1",
       "2026-11-20T06:10:08Z,44685497770,claude-8,opus,review,4299,medium,interrupted,5-hour cap,0,0,0,0,,89,89,,,,,none,,0",
-      "2026-11-20T06:08:43Z,44685355960,claude-1,opus,review,4303,hard,interrupted,refusal,0.1,2,376,79397,0.5426,99,100,,,1,,none,,1"
+      "2026-11-20T06:08:43Z,44685355960,claude-1,opus,review,4303,hard,interrupted,refusal,0.1,2,376,79397,0.5426,99,100,,,1,,none,,1",
+      "2026-11-20T06:08:55Z,44679860274,claude-1,opus,build,4290,hard,interrupted,refusal,50.3,174,67725,13944138,5.9303,86,100,,,59.8,claude-1,fresh,,1"
     ]
   },
   "version": 1
