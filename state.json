@@ -38391,6 +38391,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-20T17:36:27Z,claude-8,ping,before,44784379632,2,2026-11-20T22:20:00Z,,,allowed,85,,"
+    ],
+    "runs": [
+      "2026-11-20T17:37:34Z,44784379632,claude-8,opus,review,4329,medium,reviewed,,1.1,12,5719,301938,0.5098,2,2,,,,,none,,1"
     ]
   },
   "version": 1
