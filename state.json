@@ -15121,6 +15121,13 @@
     "4298": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T14:20:33Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "none of the five hard lines holds: no engine rules, no AI, one API plus its one client and both store backends (a call-site agreement, not cross-crate design), no migration, about eleven files"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
