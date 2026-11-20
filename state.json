@@ -16839,8 +16839,14 @@
     "what": "suggestions (rules) on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T17:35:55Z",
-    "notes": [],
+    "at": "2026-11-20T17:42:29Z",
+    "notes": [
+      "delivered review #4329 on claude-8 (run 44784379632): reviewed",
+      "started suggest on claude-8 (run 44786048203)",
+      "started suggest on claude-4 (run 44786118727)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17545,7 +17551,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T17:35:55Z",
+  "loop_tick": "2026-11-20T17:42:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
