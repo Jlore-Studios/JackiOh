@@ -321,6 +321,10 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
         // A new socket's first view clears an error from before it (a send while the socket was down).
         const fresh = awaitingFirstView;
         awaitingFirstView = false;
+        // R4250000: only a delivered view proves the server answered, so only it starts the
+        // backoff over; a socket refused after the upgrade climbs the steps, as one that never
+        // opened does.
+        if (fresh) backoff.reset();
         patch({
           view: frame.view,
           legal: frame.legal,
@@ -395,7 +399,6 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     created.onopen = () => {
       if (socket !== created) return;
       wakeProbe.hear();
-      backoff.reset();
       patch({ connection: "open" });
       try {
         created.send(JSON.stringify({ type: "hello", matchId: options.matchId }));

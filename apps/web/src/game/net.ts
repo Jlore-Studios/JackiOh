@@ -321,7 +321,7 @@ export type Backoff = {
   schedule: () => void;
   /** Drops a waiting step. */
   cancel: () => void;
-  /** Starts the steps over, as an opened socket does. */
+  /** Starts the steps over, as a socket that delivered a view does (R4250000). */
   reset: () => void;
 };
 
@@ -789,6 +789,10 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       case "view": {
         const fresh = awaitingFirstView;
         awaitingFirstView = false;
+        // R4250000: only a delivered view proves the server answered, so only it starts the
+        // backoff over; a socket refused after the upgrade climbs the steps, as one that never
+        // opened does.
+        if (fresh) backoff.reset();
         patch({
           view: frame.view,
           jloreCapped: frame.jloreCapped,
@@ -881,7 +885,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     created.onopen = () => {
       if (socket !== created) return;
       wakeProbe.hear();
-      backoff.reset();
       patch({ connection: "open" });
       // §9.5: `hello` requests a fresh full view.
       try {
