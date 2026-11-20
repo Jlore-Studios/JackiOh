@@ -14358,11 +14358,12 @@
     "what": "review #4344 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-20T21:09:25Z",
+    "at": "2026-11-20T21:16:36Z",
     "notes": [
-      "started build #4322 on claude-1 (run 44817920207)",
-      "nothing more to start: nothing is queued",
-      "runner gate: started 1 of 1 waiting run(s) (run 44817938269 on main)"
+      "delivered build #4322 on claude-1 (run 44817920207): interrupted",
+      "delivered build #4327 on claude-8 (run 44796206265): built",
+      "started review #4344 on claude-8 (run 44819147701)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` 5-hour usage is 70%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-20T22:40:00Z; it can start a build or a plan again in 1h 21m; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is idle, but nothing queued is for it; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15068,7 +15069,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T21:09:25Z",
+  "loop_tick": "2026-11-20T21:16:36Z",
   "machine_disk": {
     "issue": null,
     "reading": {
