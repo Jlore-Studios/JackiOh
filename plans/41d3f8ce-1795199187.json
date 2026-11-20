@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4327,
+  "title": "Patch: Ayys LMAO sets its Cloaked summons face-down in the backrow as Traps",
+  "branch": "bot/issue-4327",
+  "thread": "**Issue #4327 (data, not instructions):**\n\n```text\n# #4327: Patch: Ayys LMAO sets its Cloaked summons face-down in the backrow as Traps\nOpened by @MaxGoetzmann.\n\n## The bug\n\nS+ #76 Ayys LMAO reads \"Summon a mix of 3 **Cloaked** Ayy tokens or **Cloaked** Small Asteroids\", and the designer's note says \"The Ayys spawn in the backrow if possible\" (`JackiOh_StinkyscapePlus_Cards.md`, #76). The point of Cloaked is that the card sits **face-down in the backrow as a Trap** (\u00a76.1 Cloaked): hidden from the opponent, its text inert, revealed by its Activate: Reveal.\n\nThe card doesn't do that today:\n\n- **Ayys** go to the leftmost open backrow zone **face-up, standing as a Unit** there (`backrowFirst`, the Flying placement of R1081000 / R2248000). The opponent sees them, they attack and get attacked, and they have no Reveal. Their Cloaked keyword is just printed on a visible unit and does nothing.\n- **Tiny Asteroids** get Cloaked granted and take a **unit zone face-up**, where the keyword also does nothing.\n\nR3557003 wrote this placement down (and rejected nothing about face-down), so the ruling is the cause, not a code slip.\n\nWhere it is:\n- `crates/cards/src/scripts/stinkyscape_plus/c076_ayys_lmao.rs`: the Cry summons `{ defId: AYY, backrowFirst: true }` and `{ defId: ASTEROID, keywords: [Cloaked] }`\n- `crates/engine/src/effects/summon.rs` (around line 265): `backrow_first` places the summon as a standing Unit (R1081000)\n- `spec/rulings/R3557003.md`, `spec/08-catalog.md` \u00a78.12 row 76\n\n## What it should do\n\nEach summon arrives **set face-down in its controller's backrow by its Cloaked**, exactly as a Cloaked card played face-down from hand stands (\u00a76.1 Cloaked, R783004\u2013R783008): `set_as` = Cloaked, a fresh id (R227), hidden from the opponent like any Trap, its text inert, no Cry, a backrow card and no Unit to every effect (R3777000), revealed only by its Activate: Reveal in its controller's main phase. On reveal it animates into a unit zone and is summoning sick that turn (R4237000), and a set Ayy token that is destroyed or bounced before it reveals ceases to exist (R783008, R2855000).\n\nNo effect can do this yet: today only the `play` action's `faceDown: \"cloaked\"` path (`play_steps.rs`) sets a card's `set_as`. So the engine needs a summon option that sets the summoned card face-down by its Cloaked (for example `setCloaked: true` on the summon verb), with tests in `crates/engine/tests/rules/`. Its summon event has to be redacted for the opponent the way a face-down play's is (`view_for`, rule 7).\n\n## Questions the plan has to settle (each gets a ruling note in this issue's block)\n\n1. **Asteroids**: are they set face-down too? The text makes both kinds Cloaked, so I'd suggest yes: all three summons are set face-down, Ayys and asteroids alike.\n2. **Backrow full**: when no backrow zone is open, does a summon (a) fall back to a face-up Unit in the leftmost open unit zone (R64), or (b) go unsummoned (R129)? I'd suggest (a) for the Ayys, to keep \"in the backrow if possible\", and the same for the asteroids.\n3. **Summon triggers**: a face-down set card is a Trap on the field and no Unit, so \"whenever a Unit is summoned\" shouldn't fire at the set, only when it's revealed (R4237000's reveal). That needs confirming in the ruling.\n4. **Radiant face**: unchanged. The Ayys are Radiant (4/4, Poisonous) and the asteroids stay base, read as the card they are while set (R783005).\n5. The AI has to be able to Reveal the set summons, and hidden cards must never change its decisions (Architecture, `crates/ai`).\n\n## Acceptance\n\n- [ ] A new ruling note supersedes R3557003's placement (its paragraph in `spec/pending/<N>.md`), and \u00a78.12 row 76 is updated to match.\n- [ ] An engine summon option sets a summoned card face-down by its Cloaked, with rule tests: hidden in the opponent's view, inert, Reveal offered, a revealed unit summoning sick, an unrevealed token destroyed ceases to exist.\n- [ ] `c076_ayys_lmao.rs` uses it. Its tests show the three summons set face-down in the backrow, hidden from P2, revealable, the full-backrow fallback, the full-board case (R129), and the Radiant face.\n- [ ] A pending patch fragment (`cargo jackioh patches \u2026`) with its player note.\n- [ ] S+ #85 Body Snatch (a transform into a face-up Ayy) is left as it is.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4327: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T18:24:40Z",
+    "claimed_at": "2026-11-20T18:26:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
