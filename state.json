@@ -5950,17 +5950,8 @@
       "verdict_rounds": 0
     },
     "4041": {
-      "action": "plan",
-      "asks": [
-        "c:7052772586"
-      ],
-      "build_next": {
-        "from_run": "44834657756",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-20T23:15:24Z",
-        "until": "2026-11-20T23:45:24Z"
-      },
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -5972,10 +5963,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Goal\n- Write the issue's decided option 3 into the spec: accept Supabase Auth (GoTrue) v2.197.0's ~90-second TOTP code-reuse window, and record why, in the existing `R665` note \u2014 no new ruling number, no migration, no hook, no code. Update the one docs line that still points at the undecided issue so it r\u2026\n- ## Files to touch\n- | File | New / change | What changes |\n- |---|---|---|\n- | `spec/rulings/R0665.md` | change | Append one paragraph to the body accepting the replay window (issue #4041, 2026-11-20); front matter (`id`, `title`, `cards`, `proven_in`) untouched |\n- | `docs/architecture.md` | change | \u00a710 bring-up checklist, **Two-step sign-in (R665)** bullet (lines 693\u2013697): replace the stale `(#4003; what to do about it is #4041)` ending with the decision |\n- Must not touch: `crates/*`, `apps/*`, `e2e/`, `infra/`, any migration, any new `spec/rulings/R*.md`, `spec/pending/`, `spec/11-rulings.md`, `spec/INDEX.md`, `spec/CARDS.md`, or `.github/`, `.harness/`, `.squishy/`, `bot/`. Governing notes: `spec/rulings/R0665.md` (R665), `spec/README.md` (\"Adding a\u2026\n- ## Steps\n- 1. In `spec/rulings/R0665.md`, append a new final paragraph to the body (after the sentence ending \"every write goes through the server\"), separated by a blank line, exactly:\n- `The reuse window is accepted (issue #4041, 2026-11-20): Supabase Auth (GoTrue) v2.197.0 records no used code, so a code stays good for the step before, the step it was made in and the step after (about 90 seconds at a 30-second period with Skew 1), and a new challenge from the same factor takes th\u2026\n- Copy the note's existing American spelling and plain-text style (precedent: the #4042 amendment to `spec/rulings/R3147000.md`). Do not alter the front matter. Do not add any `[[R\u2026]]`/`[[\u00a7\u2026]]` link, any new R-id, or the phrases \"proposed ruling\" / \"no R-row yet\" \u2014 each would fail `spec check`.\n- 2. In `docs/architecture.md`, in the **Two-step sign-in (R665)** bullet, replace `(#4003; what to do about it is #4041).` with `(#4003; issue #4041 accepts the window: exploiting it needs the account's password and a live code seen within about 90 seconds, and the revisit is the MFA verification at\u2026\n- 3. Run `cargo jackioh spec check` (the ruling gate) and `cargo fmt --check` (trivially clean: no Rust changed).\n- ## Tests\n- No new tests: nothing in this repository can exercise Supabase Auth's code-reuse window (the server never sees a code), and R665's existing proving tests already run and are untouched (`crates/server/tests/api/auth.rs`, `apps/web/src/net/auth-methods.test.ts`, `apps/web/src/routes/login-methods.tes\u2026\n- ## Done when\n- - [ ] `spec/rulings/R0665.md` records the acceptance, the ~90-second window, the phishing-grade rationale, the hook revisit condition, and the optional upstream report\n- - [ ] `docs/architecture.md` \u00a710 no longer points at #4041 as undecided\n- - [ ] `cargo jackioh spec check` passes; `cargo fmt --check` passes\n- - [ ] No migration, hook, code, test, ruling-number, pending-file, or fold-file change in the diff\n- ## Risks\n- - Creating `spec/rulings/R4041000.md` or `spec/pending/4041.md` would break the plan: a new ruling demands a proving test that cannot exist here, and a pending paragraph with no new ruling corrupts the daily fold. Amend R665 only.\n- - Editing `spec/11-rulings.md`, `spec/INDEX.md`, or `spec/CARDS.md` would conflict with the daily fold job; R665 has no folded paragraph (verified by grep), so there is nothing to update there.\n- - Any new R-id cited in `spec/`, `crates/`, `apps/web/src/`, `apps/edge/src/`, or `e2e/` without a note fails `spec check`; reference only `issue #4041`.\n- ## Open questions\n- None. The decision comment settles the option; the optional upstream report (option 2) is a person's follow-up and explicitly does not block this issue.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4041 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4041/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-20T23:09:17Z",
       "owner_why": "it plans it",
@@ -5988,11 +5978,13 @@
       "provider": "muse",
       "queued_at": "2026-11-20T23:04:44Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44834657756",
+      "run_id": "pending:831bc9fd-1795216653",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-20T23:09:17Z",
+      "started_at": "2026-11-20T23:18:00Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7052772586"
+      ]
     },
     "4043": {
       "action": "review",
@@ -14760,9 +14752,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T23:17:18Z",
+    "at": "2026-11-20T23:18:00Z",
     "url": "",
-    "what": "build #4250 on muse"
+    "what": "build #4041 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T23:05:47Z",
