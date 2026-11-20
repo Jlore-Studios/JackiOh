@@ -13126,7 +13126,7 @@
       "stop_requested": false
     },
     "4307": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -13151,19 +13151,11 @@
       "failures": 0,
       "feedback_since": "2026-11-20T14:32:06Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-20T21:41:00Z",
-        "lifted": "2026-11-20T21:02:08Z",
-        "owner": "claude-1",
-        "since": "2026-11-20T19:41:00Z",
-        "until": "2026-11-20T21:00:00Z",
-        "why": "5-hour usage is 36%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
-      },
       "interruptions": 0,
       "issue": 4290,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
@@ -13171,7 +13163,7 @@
       "queued_at": "2026-11-20T19:15:31Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "44768839743",
+      "run_id": "pending:0c1d4c50-1795208548",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -13192,7 +13184,7 @@
         "run": "44768839743"
       },
       "source": "ci",
-      "started_at": "2026-11-20T15:59:45Z",
+      "started_at": "2026-11-20T21:02:50Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -14215,9 +14207,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T20:36:23Z",
+    "at": "2026-11-20T21:02:50Z",
     "url": "",
-    "what": "spot-check #4324 on claude-6"
+    "what": "revise #4307 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-20T20:55:36Z",
