@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4286,
+  "title": "Patch: the reply's countdown blend is screened and set where the screen keeps it",
+  "branch": "bot/issue-4286",
+  "thread": "**Issue #4286 (data, not instructions):**\n\n```text\n# #4286: Patch: the reply's countdown blend is screened and set where the screen keeps it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the practice opponent weighs its options on a turn where a delayed effect is still ticking down (the public \"in N turns\" badges), it scores each option twice: once as the board stands, and once with every countdown fired at its next turn start. It then blends the two scores with a fixed guess of half weight per turn waited. That guess was never measured. It was a starting value left for the training program to tune, and the training program no longer runs. Once built, the computer's valuation of every line that leaves a countdown ticking rests on a measured number instead of a guess. Players notice it as a practice opponent that handles countdown cards more sensibly, neither throwing away setup plays nor overpaying for futures that never arrive.\n\n## Why\n\n- `AI_REPLY.countdown_share` is `0.5` in `crates/ai/src/config.rs`, commented `#1995: untuned; the training lanes may move it`.\n- `training/README.md`: the `improve` and `unban` lanes are stopped (#1677) and the `learn` lane is retired (#4159, R4159000). No lane remains to move it, so the guess sits forever unless an ordinary issue screens it.\n- The blend steers real decisions: `crates/ai/src/reply.rs` (`countdowns_due`, R1181000) scores every line with a waiting countdown a second time, fired, and blends at `share^wait`, so a wrong share systematically misevaluates all such lines.\n- Nothing open or rejected covers it: #4246 is the reply's other blend switch (`open_lethal`), #4257 is the Cleave splash beside a GIGA, and the rejected list holds no countdown item.\n\n## Proposal\n\n- Screen candidate values (`0`, `0.25`, `0.5`, `0.75`, `1.0`) with `cargo jackioh arena --a self --b bin:<control> --set improve-dev`, following `training/improve.md` (\"A screen\"): 400 paired games per screen, control built from the committed tip.\n- Set `countdown_share` to the screened winner when its edge over the `0.5` control holds up (paired edge interval clear of zero); otherwise keep `0.5` and record the screen in the constant's comment.\n- Rewrite the constant's comment to name the screen (games, edge, interval) instead of \"untuned\".\n- No ruling note: this tunes a named constant, not a rules decision, so the spec is unchanged.\n\n## Where it lands\n\n- `crates/ai/src/config.rs` (`AI_REPLY.countdown_share`); SPEC \u00a79.9 (practice AI) and R1181000 (countdown badges).\n- `crates/ai/src/reply.rs` stays as it is (the blend arithmetic is unchanged); the screen method lives in `training/improve.md` (\"A screen\") and `crates/tools/src/arena.rs` (`--set improve-dev`).\n\n## Acceptance criteria\n\n- [ ] Screen table posted: each candidate's wins, paired edge and 95% interval against the `0.5` control on `improve-dev`.\n- [ ] `countdown_share` set to the screened value with the screen named in its comment, or kept at `0.5` with the no-keep screen recorded there.\n- [ ] `cargo test -p jackioh-ai` green, countdown tests (`tests/ai/slumber.rs`, `tests/ai/meditative_plus.rs`) included.\n- [ ] `cargo jackioh gate` smoke green.\n- [ ] `cargo fmt --check` and `cargo clippy -p jackioh-ai --all-targets -- -D warnings` clean.\n\n## Size and risks\n\n- Medium work, `difficulty:hard` (the AI, per `docs/issues-and-patches.md`), `priority:low` (class `ai`). One constant plus screens of about 30 to 45 minutes each; run candidates in order and stop early on a clear winner.\n- Risk: screen noise picks a false winner. Mitigated by paired deals and by requiring the interval to clear zero, else `0.5` stays.\n- Risk: none to the rules. Value change only; countdown logic and every signature are untouched.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T04:16:28Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4286: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T04:16:53Z",
+    "claimed_at": "2026-11-20T04:18:16Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4287 needs a plan",
+    "#4284 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4291 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4257 is held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4292 skipped: it waits for #4285 to close first"
+  ]
+}
