@@ -15204,6 +15204,18 @@
     "4301": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "gemini",
+          "model": "gemini-3.8-flash-high",
+          "provider": "agy",
+          "tier": "medium"
+        },
+        "at": "2026-11-20T06:03:37Z",
+        "built_by": "agy",
+        "by": "`gemini` (medium)",
+        "sha": "5b415f47ec86f66c81a4b55dc2cbf0a81366dc4c"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T04:41:30Z",
@@ -15219,6 +15231,7 @@
       "issue": 4287,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-20T05:23:48Z",
