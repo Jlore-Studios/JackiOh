@@ -14777,11 +14777,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-20T04:29:39Z",
+        "at": "2026-11-20T07:35:31Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Rule 2 (The AI): tunes AI_REPLY.countdown_share, which steers the practice AI's reply scoring in crates/ai/src/"
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule 2, the AI: the value steers reply_score's decisions in crates/ai/src (config.rs AI_REPLY.countdown_share)"
       },
       "failures": 0,
       "forced": false,
