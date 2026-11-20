@@ -1,0 +1,19 @@
+{
+  "title": "Ayys LMAO sets its summons face-down",
+  "sources": "#4327",
+  "notes": "S+ #76 Ayys LMAO's three summons are set face-down in the caster's backrow by their Cloaked through the summon verb's new setCloaked (R4327000), no Unit summoned at the set or the reveal (R4327001); with no backrow zone open one is summoned face-up as before; R3557003's placement is superseded and the v0.6.8b script kept for replays (R4327002, R767000). Script and engine only: no catalog change. Rulings R4327000-R4327002.",
+  "player": {
+    "title": "Ayys LMAO sets its summons face-down",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Ayys LMAO's Ayys and Tiny Asteroids are set face-down in your backrow as Cloaked cards, hidden from your opponent until you Reveal them. With your backrow full they are summoned face-up as before."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscapeplus-076"
+  ]
+}

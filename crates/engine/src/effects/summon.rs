@@ -24,10 +24,11 @@ use crate::prelude::json_as;
 use crate::prompts::run_start_of_game;
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectContext, EffectPart};
-use crate::state::{CardInstance, GameState, Slumber, find_instance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, GameState, SetAs, Slumber, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
-    AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
+    AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, RevealAt, Row, Tag, Zone,
+    ZoneName,
 };
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, first_entry_zone_where,
@@ -95,6 +96,10 @@ pub struct SummonPlacement {
     /// backrow zone, standing there as a Unit (R1081000), and only with none open the unit row (R64).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub backrow_first: Option<bool>,
+    /// R4327000: a fresh Unit naming no lane is set face-down by its Cloaked in its side's leftmost
+    /// open backrow zone, as a Cloaked play stands (R783004); with none open it lands as without this.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub set_cloaked: Option<bool>,
     /// R3554009 (S+ #121 Toxopid's Legs): exile the named lane's pile as this lands on it — a void
     /// lane stays void, and a pile holding a Dormant card is left alone. `summon_onto` then fires
     /// Crater on the arrival as ever.
@@ -180,6 +185,11 @@ pub struct SummonArgs {
     /// backrow zone, standing there as a Unit (R1081000), and only with none open the unit row (R64).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub backrow_first: Option<bool>,
+    /// R4327000: the fresh Unit is set face-down by its Cloaked (`SummonPlacement.set_cloaked`). Its
+    /// `keywords` land on the set card unannounced (`give_set_keywords`); no card pairs this with
+    /// `random_keywords`, whose roll is announced.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub set_cloaked: Option<bool>,
     /// R3554009 (S+ #121 Toxopid's Legs): exile the named lane's pile as this lands on it
     /// (`SummonPlacement.exile_below`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -204,6 +214,7 @@ impl SummonArgs {
             chinese: None,
             memory: self.memory.clone(),
             backrow_first: self.backrow_first,
+            set_cloaked: self.set_cloaked,
             exile_below: self.exile_below,
             giga: None,
             enters_evolved: None,
@@ -290,6 +301,30 @@ fn zone_and_stance_for(
     } else {
         None
     }
+}
+
+/// R4327000: the backrow zone a fresh Unit summoned with `set_cloaked` is set into: its side's leftmost
+/// entry zone there (R64, R688), on its summoner's half of a slashed board (R3554003). `None` (a named
+/// lane, no Unit, a GIGA, no zone open) sends the summon where it goes without the option.
+fn cloaked_set_zone(
+    ctx: &EffectContext<'_>,
+    player: PlayerId,
+    probe: &CardInstance,
+    at: &SummonPlacement,
+) -> Option<ZoneSlot> {
+    if at.set_cloaked != Some(true) || at.lane.is_some() || at.giga == Some(true) {
+        return None;
+    }
+    if card_type_of(ctx.state, probe) != CardType::Unit || crate::giga::enters_giga(ctx.state, probe) {
+        return None;
+    }
+    let half = ctx
+        .self_
+        .as_ref()
+        .and_then(|source| crate::geometry::half_of_card(ctx.state, source));
+    first_entry_zone_where(ctx.state, player, Row::Backrow, |lane| {
+        crate::geometry::lane_in_half(ctx.state, lane, half)
+    })
 }
 
 /// R64, R688, R2248000: the zone a summon that names no lane enters, the leftmost entry zone of its
@@ -445,12 +480,16 @@ pub(crate) fn summon_fresh(
     let row = row_of(card_type_of(ctx.state, &probe))?;
     // R3554009: exile the pile below before the zone is read, so the fresh card lands on it.
     exile_below(ctx, player, row, at);
+    // R4327000: set face-down by its Cloaked while its backrow has a zone open.
+    if let Some(slot) = cloaked_set_zone(ctx, player, &probe, at) {
+        return summon_fresh_into(ctx, def_id, player, &slot, at, false, true);
+    }
     let flies = summon_flies(ctx.state, &probe);
     // R3546000: a fresh card printing GIGA takes the leftmost fit, else nothing lands; R3570002: so does
     // one the summon makes GIGA.
     let giga = at.giga == Some(true) || crate::giga::enters_giga(ctx.state, &probe);
     let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies, giga)?;
-    summon_fresh_into(ctx, def_id, player, &slot, at, stands)
+    summon_fresh_into(ctx, def_id, player, &slot, at, stands, false)
 }
 
 /// R1879001: a fresh Unit summoned standing in its controller's backrow zone `at.lane`, as a Flying
@@ -473,9 +512,11 @@ pub(crate) fn summon_fresh_standing(
     if is_reserved(ctx.state, slot) || !is_empty(ctx.state, slot) {
         return None;
     }
-    summon_fresh_into(ctx, def_id, player, &slot, at, true)
+    summon_fresh_into(ctx, def_id, player, &slot, at, true, false)
 }
 
+/// A fresh card of `def_id` placed in `slot`, standing there if `stands` (R1081000) and set face-down by
+/// its Cloaked if `set` (R4327000).
 fn summon_fresh_into(
     ctx: &mut EffectContext<'_>,
     def_id: &str,
@@ -483,10 +524,22 @@ fn summon_fresh_into(
     slot: &ZoneSlot,
     at: &SummonPlacement,
     stands: bool,
+    set: bool,
 ) -> Option<CardInstance> {
     let mut card = new_instance(&mut *ctx.state, def_id, player, Zone::Resolving { player });
     if at.radiant == Some(true) {
         card.radiant = true;
+    }
+    // R4327000: stamped set by its Cloaked before it lands, as a Cloaked play is (R783004), so
+    // `place_on_field` lands it as the Field Trap it is set as (`alt_play::set_type_of`): face-down, no
+    // position. Its id was never public, so it takes no fresh one (R227).
+    if set {
+        card.set_as = Some(SetAs {
+            reveal: RevealAt::Cloaked,
+            set_turn: ctx.state.turn,
+            echo: None,
+            revealing: None,
+        });
     }
     if let Some(armor) = at.armor_override {
         card.armor_override = Some(armor);
@@ -672,6 +725,17 @@ fn grant_summon_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, keywo
     ctx.exits_from = before;
 }
 
+/// R4327000: the `keywords` rider on a card the summon set face-down lands with no `keywordGranted`,
+/// whose keyword would tell the opponent which back took it (R33, CLAUDE.md rule 7).
+fn give_set_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, keywords: Vec<Keyword>) {
+    let Some(live) = find_instance_mut(ctx.state, &card.id) else {
+        return;
+    };
+    for keyword in keywords {
+        crate::effects::buff::grant_onto(live, &keyword);
+    }
+}
+
 /// §6.3 Summon: put a card on the field from anywhere else, with no Cry. With no lane named it takes
 /// the leftmost empty, unlocked, unreserved zone of its row (R64) and fails silently when the row
 /// has none; a named lane fails the same way when it is occupied or Locked (R47).
@@ -695,7 +759,12 @@ pub fn summon(args: SummonArgs) -> Effect {
         };
         if let Some(made) = summon_fresh(ctx, def_id, player, &at) {
             roll_random_keywords(ctx, &made, args.random_keywords);
-            grant_summon_keywords(ctx, &made, args.keywords.clone().unwrap_or_default());
+            let keywords = args.keywords.clone().unwrap_or_default();
+            if made.set_as.is_some() {
+                give_set_keywords(ctx, &made, keywords);
+            } else {
+                grant_summon_keywords(ctx, &made, keywords);
+            }
             // MD-D30, R1126: as `effects::memory::remember` writes (its own stay, its own part's key).
             if let Some(key) = &args.remember_as
                 && let Some(this) = super::targets::self_on_its_stay(ctx)

@@ -169,7 +169,7 @@ pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
 }
 
 /// R21, §10.4: the grant itself, on one instance, by the rules `grant_to` states.
-fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
+pub(crate) fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
     if keyword.kind() == KeywordKind::DivineShield {
         unit.divine_shield_spent = None;
     }
