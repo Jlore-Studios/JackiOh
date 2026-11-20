@@ -14202,7 +14202,16 @@
       "feedback_since": "2026-11-20T18:48:12Z",
       "issue": 4327,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
+        "reviews": [],
+        "sha": "a69e66b5b0e7604e0fe8088d7bbf1b1dcc196b04",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
