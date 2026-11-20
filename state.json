@@ -17083,9 +17083,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T19:04:24Z",
+    "at": "2026-11-20T19:18:39Z",
     "url": "",
-    "what": "plan #4322 on claude-1"
+    "what": "suggestions (ai) on agy"
   },
   "last_sweep": {
     "at": "2026-11-20T19:10:44Z",
@@ -38636,13 +38636,22 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-20T19:11:17Z",
-    "last_area": "rules",
-    "last_run": "2026-11-20T17:44:05Z",
+    "idle_since": "2026-11-20T19:18:39Z",
+    "last_area": "ai",
+    "last_run": "2026-11-20T19:18:39Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "ai",
+        "count": 1,
+        "last_run": "2026-11-20T19:18:39Z",
+        "provider": "agy",
+        "run_id": "pending:93a852ce-1795202299",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
