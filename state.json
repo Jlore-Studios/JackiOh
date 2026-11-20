@@ -15038,15 +15038,8 @@
       "verdict_rounds": 2
     },
     "4293": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44793158285",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-20T18:46:27Z",
-        "until": "2026-11-20T19:16:27Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15058,10 +15051,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "h Rush\", but issue #4292 already took Rush off Radiant Reignclipse on `main` ([[R4292000]]), and the spec wins over issue text. Do not re-add Rush to any face. Final Radiant keywords are the base list with Armor 10.\n- 4. In `crates/cards/catalog.json`, entry `stinkyscapeplus-133-5`: base `keywords`: change `{\"kind\": \"Armor\", \"n\": 4}` to `\"n\": 7` in place (after Cleave) and delete the trailing `{\"kind\": \"Armor\", \"n\": 3}` (after Crater). Base `text` becomes `Tribute 3, Immutable, Immune to Spells, Ranged, Windfury\u2026\n- 5. Confirm `loc` is untouched: run `cargo jackioh catalog loc crates/cards/src/scripts/stinkyscape_plus/c133_5_reignclipse.rs` and expect 20 (`loc` counts non-blank non-comment non-`use` lines; only comments change below).\n- 6. In `c133_5_reignclipse.rs` header comment: base face lists `**Armor 7**` once (after Cleave, no second Armor) and `Damage also **Burns 9**` once; Radiant lists `**Armor 10**` once, no Rush line, and `Damage also **Burns 18**` once. Rewrite the prose paragraph to say the two Armors print as one A\u2026\n- 7. In the same file's tests: rename `r3565003_the_declared_burns_is_eclipses_line_and_moves_the_sum` to `r4293000_the_declared_burns_is_the_sum_and_moves_it`, asserting `param_value(..., \"burns\", ...)` equals `burns(radiant)` (the 9/18 sum) and that `upgrade_number` moves the dealt burn by exactly \u2026\n- 8. In `crates/shared/data/short-forms.json`, entry `stinkyscapeplus-133-5`: keep its terse style, changing only numbers and keys. Base `en`: `Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 7, Flying, Can't Defend, Crater\\nDamage Burns {burns}.` Radiant `en`: same wi\u2026\n- 9. In `crates/cards/card-text.yaml`, entry `stinkyscapeplus-133-5` `zh`: base `\u732e\u796d3\uff0c\u4e0d\u53ef\u53d8\uff0c\u6cd5\u672f\u514d\u75ab\uff0c\u8fdc\u7a0b\uff0c\u98ce\u6012\uff0c\u7a7f\u900f\uff0c\u987a\u5288\uff0c\u62a4\u75327\uff0c\u98de\u884c\uff0c\u65e0\u6cd5\u5b88\u5907\uff0c\u9668\u5751\\n\u4f24\u5bb3\u540c\u65f6\u9644\u52a0\u71c3\u70e7{burns}\u3002`, radiant with `\u62a4\u753210`. Faces must carry exactly the English faces' `{key}`s (`{burns}` only). Run `cargo test -p jackioh-tools --test export_card_text` twice: the\u2026\n- 10. Spec and audit rows. `spec/08-catalog.md` row 133.5: new face cells from step 4 (with `{burns}`), prose now reading that Armor 4 and 3 print as one Armor 7 (Radiant 4 and 6 as 10) ([[R77]], [[R4293000]]), the Burns print as one rider of the sum 9 (18) ([[R102]], [[R3540002]]), declared `burns` \u2026\n- 11. Ruling notes. Write `spec/rulings/R4293000.md` (lowest free in this issue's block): title `Reignclipse prints one Armor and one Burns line (issue #4293)` or similar; `cards: \"\u00a76.1, \u00a78, R77, R102, R386, R3540002, R3565003; S+ #133.5\"`; `proven_in: [crates/cards/src/scripts/stinkyscape_plus/c133_\u2026\n- 12. Fragment. (a) If folding: in `radiant-de-keywording.json`, append `, #4293` to `sources`, append one sentence to `notes` covering the one-Armor one-Burns print plus the `burns` 9 (18) declaration, and add one `player.text` line such as `Reignclipse prints one Armor number and one Burns line.` K\u2026\n- 13. Run the verification in Tests, then `cargo jackioh classify --base origin/main --claims` and expect it to hold: the card is catalog-claimed, and no new `--plays` entries are needed since nothing plays differently.\n- ## Tests\n- - `crates/cards/src/scripts/stinkyscape_plus/c133_5_reignclipse.rs`: new `r4293000_prints_one_armor_and_one_burns_line` (one Armor 7/10, one Burns line, params `burns` 9/18); renamed `r4293000_the_declared_burns_is_the_sum_and_moves_it`; Armor-skipping union test. Command: `cargo test -p jackioh-ca\u2026\n- - Full card cross suite (catalog, params, Chinese, flavour): `cargo test -p jackioh-cards --test cards`.\n- - Shared short forms: `cargo test -p jackioh-shared face`.\n- - Text export (run twice): `cargo test -p jackioh-tools --test export_card_text`.\n- - Checks: `cargo fmt --check`; `cargo jackioh catalog check`; `cargo jackioh patches check`; `cargo jackioh spec check`; `cargo jackioh names --check`; `cargo clippy -p jackioh-cards --all-targets -- -D warnings`; `cargo jackioh classify --base origin/main --claims`.\n- ## Done when\n- - [ ] `catalog.json`, `spec/08-catalog.md`, `spec/07-tokens.md`, `short-forms.json`, the `zh` text (`card-text.yaml` + regenerated `chinese.json`), and `docs/radiant-audit.md` all print Armor 7 (10) and one Burns 9 (18) line; Radiant has no Rush.\n- - [ ] `R4293000.md` exists in this issue's block and amends R3565003, R3565003's Burns/Armor lines cite it, `spec/pending/4293.md` holds its paragraph, and its `r4293000_\u2026` proving tests pass.\n- - [ ] Exactly one pending fragment claims `stinkyscapeplus-133-5` with a hand-written player note, and `patches check`, `spec check`, `catalog check`, `names --check`, and the card's tests pass.\n- - [ ] `loc` still 20, script logic untouched, attack/health/Tribute/other keywords unchanged, and every command in Tests is green.\n- ## Risks\n- - Claiming the card in a new fragment while `radiant-de-keywording.json` still claims it fails `patches check`; step 1 picks the single-claim path before any edit.\n- - Re-adding Rush to the Radiant face (the issue text predates issue #4292) would contradict [[R4292000]] and `main`; it stays off.\n- - Deleting the `damage` param changes what a tune of `burns` starts from, but the script reads the `burnsOnDamage` flag, not params, and the renamed test pins the moved sum; play is unchanged.\n- - A stray `{damage}` in any face or short form, or an extra `{key}` in `zh`, fails `catalog check` or the Chinese cross tests; the new print test pins their absence.\n- - Short-form `{key}`s must stay substitutable and the player note must avoid R/`#`/`\u00a7` cites and long lines, else `face` tests, `wording.test.ts`, or `patches check` fail.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4293 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4293/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-20T18:28:51Z",
       "owner_why": "it plans it",
@@ -15074,9 +15066,9 @@
       "provider": "muse",
       "queued_at": "2026-11-20T18:25:24Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44793158285",
+      "run_id": "pending:3c2285d0-1795200534",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-20T18:28:51Z",
+      "started_at": "2026-11-20T18:49:09Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17143,9 +17135,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T18:48:41Z",
+    "at": "2026-11-20T18:49:09Z",
     "url": "",
-    "what": "build #4083 on claude-6"
+    "what": "build #4293 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T18:35:19Z",
