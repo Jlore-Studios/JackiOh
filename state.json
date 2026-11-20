@@ -14412,9 +14412,11 @@
         "by": "`muse` (medium)",
         "sha": "510f88c54e58edc99bb2bb78ac50718859fb2564"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-19T20:13:40Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-19T23:00:36Z",
         "family": "muse",
@@ -14424,6 +14426,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4275 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4275/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- received SIGTERM; flushed session logs"
       },
+      "interruptions": 0,
       "issue": 4275,
       "kind": "review",
       "live": "reviewing",
