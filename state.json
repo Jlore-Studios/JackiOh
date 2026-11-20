@@ -15706,14 +15706,14 @@
       "interruptions": 0,
       "issue": 4290,
       "kind": "revise",
-      "live": "fixing-ci",
+      "live": "revising",
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
       "question": "How should the two timing-out catalog-wide art tests be handled so #4307 can merge?",
       "queued_at": "2026-11-20T14:31:15Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "44737268280",
+      "run_id": "pending:0b6330b4-1795185100",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15734,7 +15734,7 @@
         "run": "44737268280"
       },
       "source": "decision",
-      "started_at": "2026-11-20T12:36:57Z",
+      "started_at": "2026-11-20T14:32:06Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15941,9 +15941,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T14:24:11Z",
+    "at": "2026-11-20T14:32:06Z",
     "url": "",
-    "what": "build #4298 on muse"
+    "what": "revise #4307 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-20T14:19:46Z",
