@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4290,
+  "title": "Patch: the aimed-attack preview names a Cleave attack's splash and a Trample attack's overflow",
+  "branch": "bot/issue-4290",
+  "thread": "**Issue #4290 (data, not instructions):**\n\n```text\n# #4290: Patch: the aimed-attack preview names a Cleave attack's splash and a Trample attack's overflow\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen you aim an attack today, the numbers you see cover only the two cards in front of you: the blow onto the target and the strike back onto your attacker. Everything else the same attack deals is invisible. Aim a Cleaving unit at a middle blocker and the preview says nothing about the identical blow landing on both neighbors, even though the engine deals it even when a Divine Shield stops the main hit. Aim a Trample unit at a small blocker and the preview hides the excess going to the enemy hero, the very damage that ends the game. After this is built, hovering those attacks shows the splash on each neighbor and the overflow onto the hero, with the same destroyed and shield-broken markers the target already gets, so nobody misattacks because the preview understated their own attack.\n\n## Why\n\n- The engine already deals both hits: SPEC \u00a74.4 step 10 (Cleave, which still happens when steps 1, 4 or the zero rule stop the main hit) and step 9 (Trample overflow as its own instance onto the hero). But the engine's per-attack forecast caps a Trample `dealt` at the target's health and discards the overflow, and it has no splash field at all, so the preview has nothing to show.\n- Two private copies of this math already exist outside the forecast: the practice AI prices a Cleave splash and a Trample excess as a face hit, and open issue #4257 shows that copy is currently wrong beside a GIGA in its lanes. The R3100000 ruling retired the tutorial coach's private combat math for exactly this drift reason; the splash math never got the same treatment, and it is the subtler half (GIGA taking the one hit, a Ranged Cleaver still splashing, overflow never coming from a strike back).\n- The fuzz's I18 oracle reads only the target's blow and the strike back, so the splash and the overflow are the one combat damage no gate holds to anything.\n\n## Proposal\n\n- Extend the engine's per-attack forecast with the attack's other hits, read from the board like the rest of it: for Cleave, one entry per neighboring unit run through the same pipeline steps the engine deals (Divine Shield, Armor, the unit's own cap, Indestructible; a GIGA neighbor taking the one hit; a Ranged attacker's splash landing; under the same conditions the engine's own Cleave call runs, including when the main hit is stopped); for Trample, the overflow instance onto the target controller's hero, projected through the hero's Armor and caps as a new instance, never from a strike back, a reflection, or card text.\n- Hold the new entries in the fuzz by extending its shared oracle to read the splash and the overflow off the step's damage events (Cleave hits already ride tagged), and in the forecast's rules tests, where every forecast attack is already played for real; add a ruling amending R3100000 with those proofs.\n- Show the entries in the aimed-attack preview: splash markers on the neighboring units and the overflow number on the hero, with tests.\n- The AI's own splash counting stays out: it belongs to open issue #4257, not this patch.\n\n## Where it lands\n\n- SPEC \u00a74.4 steps 9 and 10 (no rule change; the forecast is a derived fact), one new ruling note amending R3100000, and its \u00a711 paragraph in the issue's `spec/pending/` file.\n- `crates/engine/src/query.rs` (the forecast and its types), `crates/engine/src/testkit/played_attack.rs` and `crates/engine/src/testkit/invariants.rs` (the shared I18 oracle), `crates/engine/tests/rules/combat_forecast.rs`.\n- `apps/web/src/game/attackOutcome.ts`, `apps/web/src/game/AttackOutcome.tsx`, and their tests (markers only; the client still computes no combat math).\n\n## Acceptance criteria\n\n- [ ] A Cleave attack's forecast entry names each neighboring unit's splash blow, and playing the attack for real deals exactly those amounts, including when a Divine Shield stops the main hit, beside a GIGA, and from a Ranged attacker.\n- [ ] A Trample attack's forecast entry names the overflow instance onto the hero, and it matches the real overflow, including through the hero's Armor and the Anti-oneshot cap, and no strike back or defender ever reports one.\n- [ ] The fuzz holds the new entries on every plain Cleave and Trample attack it plays, through the same oracle its forecast tests share.\n- [ ] Aiming a Cleave attack marks each neighbor with its splash, and aiming a lethal Trample attack shows the hero's overflow; a non-Cleave, non-Trample attack's preview is unchanged.\n- [ ] The new ruling cites the forecast tests, the fuzz oracle and the preview tests in `proven_in`, and `cargo jackioh spec check` is green.\n\n## Size and risks\n\nMedium, about a week: engine forecast math plus tests, a fuzz-oracle extension, small client markers, one ruling. Difficulty hard (engine rules). Risks: the forecast must keep reading the board alone, never a hand or a face-down card (neighbors' shields and Armor are board-visible, so this holds); Stinkyscape sweep weights stay out of scope unless they fall out of the same call for free. Rejected: folding the splash into the target's `dealt` (it would lie about the target's blow and break the existing hold); simulating each attack with `reduce` (R3100000 already rejected it: it would run face-down traps); re-tuning the AI's splash pricing here (open issue #4257 owns it).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T04:15:31Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4290: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T04:15:56Z",
+    "claimed_at": "2026-11-20T04:17:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4286 needs a plan",
+    "#4284 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4291 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4257 is held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4292 skipped: it waits for #4285 to close first"
+  ]
+}
