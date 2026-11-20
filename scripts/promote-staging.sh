@@ -49,6 +49,10 @@
 #   - a red run with no issue (its report job never ran, as on 2026-11-09): this opens the issue and
 #     hands it to the night bot as the report would, REPORT_GRACE_MINUTES after the run ended (the
 #     issue search lags a new issue by a little).
+#   - the red run's issue open, but that run tested a commit pushed before the newest closed issue
+#     closed (#4284: it started before that issue's fix merged, and its report opened a new issue):
+#     it never tested the fix, so staging moves to main's newest green commit pushed after that close
+#     and the super run starts on it, as at the close; the open issue stays open until a run passes.
 # A manual run moves staging as ever, frozen or not.
 #
 # What runs it (EVENT is github.event_name):
@@ -154,14 +158,28 @@ if [ "$EVENT" != workflow_dispatch ]; then
     fi
     issue=$(gh issue list --state all --search "in:title \"$GATE_TITLE\" sort:created-desc" --limit 10 \
       --json number,title,state,closedAt --jq '
-        map(select(.title == env.GATE_TITLE)) | sort_by(.number) | last // {}
-        | "\(.number // "-") \(.state // "-") \(.closedAt // "-")"')
-    read -r number state closed <<<"$issue"
+        map(select(.title == env.GATE_TITLE)) | sort_by(.number)
+        | (last // {}) as $newest | (map(select(.state == "CLOSED")) | last // {}) as $fixed
+        | "\($newest.number // "-") \($newest.state // "-") \($newest.closedAt // "-") \($fixed.number // "-") \($fixed.closedAt // "-")"')
+    read -r number state closed fixed fixed_at <<<"$issue"
     if [ "$state" = OPEN ]; then
-      echo "$held: #$number. It moves once #$number closes."
-      exit 0
-    fi
-    if [ "$closed" = - ] || [ "$(epoch "$closed")" -lt "$(epoch "$ended")" ]; then
+      # #4284: a red run on a commit pushed before the newest closed issue closed never tested that
+      # issue's fix, so staging moves to test it as at the close; the open issue stays open.
+      seen=-
+      [ "$fixed" = - ] || seen=$(green --commit "$tested" --created ">=$fixed_at")
+      if [ -n "$seen" ]; then
+        echo "$held: #$number. It moves once #$number closes."
+        exit 0
+      fi
+      stale="$held: #$number, but that run tested \`${tested:0:12}\`, pushed before #$fixed closed at $fixed_at"
+      cand=$(green --created ">=$fixed_at")
+      if [ -z "$cand" ]; then
+        echo "$stale; it moves to main's first commit after that whose CI passes."
+        exit 0
+      fi
+      attempt=true
+      echo "$stale, so it never tested #$fixed's fix: $STAGING_BRANCH moves now to test it."
+    elif [ "$closed" = - ] || [ "$(epoch "$closed")" -lt "$(epoch "$ended")" ]; then
       if [ $(((NOW - $(epoch "$ended")) / 60)) -lt "$REPORT_GRACE_MINUTES" ]; then
         echo "$held, and its issue is not open yet."
       else
@@ -169,14 +187,15 @@ if [ "$EVENT" != workflow_dispatch ]; then
         report_red "$url" "$tested"
       fi
       exit 0
+    else
+      cand=$(green --created ">=$closed")
+      if [ -z "$cand" ]; then
+        echo "$held. #$number closed at $closed; it moves to main's first commit after that whose CI passes."
+        exit 0
+      fi
+      attempt=true
+      echo "#$number closed at $closed, after the red run: $STAGING_BRANCH moves now to test the fix."
     fi
-    cand=$(green --created ">=$closed")
-    if [ -z "$cand" ]; then
-      echo "$held. #$number closed at $closed; it moves to main's first commit after that whose CI passes."
-      exit 0
-    fi
-    attempt=true
-    echo "#$number closed at $closed, after the red run: $STAGING_BRANCH moves now to test the fix."
   fi
 fi
 
