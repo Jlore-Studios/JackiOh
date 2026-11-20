@@ -13980,6 +13980,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "4332": {
+      "suggestion": true
+    },
     "4334": {
       "action": "build",
       "asks": [],
