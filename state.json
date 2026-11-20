@@ -16933,6 +16933,13 @@
     "4334": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T18:36:34Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Engine rules: the fix changes number resolution in crates/engine/src/params.rs (rule 1)"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
