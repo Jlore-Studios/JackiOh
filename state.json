@@ -15877,7 +15877,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-20T11:48:01Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:1c543389-1795175304",
+      "run_id": "44730627853",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 4303,
       "started_at": "2026-11-20T11:48:45Z",
