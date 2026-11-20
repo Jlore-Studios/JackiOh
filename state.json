@@ -15096,6 +15096,13 @@
     "4297": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T14:21:22Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: no engine rules, no AI, no migration, ~9 files; the only cross-app sharing is one 4-header constant duplicated in two Workers and pinned to one file by tests."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
