@@ -15978,6 +15978,8 @@
       "taken_asks": []
     },
     "4314": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T12:14:56Z",
@@ -15991,8 +15993,11 @@
         "trail": " origin/main --claims 2>&1 | grep -v \\\"^\\\\s*Compiling\\\\|Blocking\\\\|Finished\\\\|Running\\\" | tail -30\", \"description\": \"Run classify with claims against origin/\u2026\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/b4292/tmp.index; rm -f $GIT_INDEX_FILE; git read-tree HEAD && git add -A && TREE=$(git write-tree) && unset GIT_INDEX_FILE && C=$(git commit-tree \\\"$TREE\\\" -p \u2026\n- tool error: Exit code 128 Author identity unknown *** Please tell me who you are. Run git config --global user.email \"you@example.com\" git config --global user.name \"Your Name\" to set your account's default iden\u2026\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/b4292/tmp.index; TREE=$(git write-tree); unset GIT_INDEX_FILE; C=$(GIT_AUTHOR_NAME=tmp GIT_AUTHOR_EMAIL=tmp@localhost GIT_COMMITTER_NAME=tmp GIT_COMMITTER_EMAI\u2026\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --head $(cat /tmp/b4292/tmp_commit) --claims 2>&1 | grep -v \\\"^\\\\s*Compiling\\\\|Blocking\\\\|Finished\\\\|Running\\\" | tail -30\", \"description\": \"Clas\u2026\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --head $(cat /tmp/b4292/tmp_commit) 2>&1 | grep -v \\\"^\\\\s*Compiling\\\\|Blocking\\\\|Finished\\\\|Running\\\" | tail -40 | cut -c1-400\", \"description\": \u2026\n- Bash: {\"command\": \"grep -n '\\\"play-code\\\"\\\\|play_code\\\\|fn strip_comments\\\\|comment' crates/tools/src/classify.rs | head -30\", \"description\": \"See what classify calls play-code\"}\n- Bash: {\"command\": \"sed -n '520,548p' crates/tools/src/classify.rs\", \"description\": \"Read classify's play-code area detection\"}\n- Bash: {\"command\": \"grep -n \\\"fn area_of\\\\|Area::PlayCode\\\\b\\\" crates/tools/src/classify.rs | head; grep -n \\\"fn area_of\\\" -A40 crates/tools/src/classify.rs | grep -n \\\"PlayCode\\\\|engine\\\\|cards/src\\\\|ai/sr\u2026\n- Bash: {\"command\": \"mk() { export GIT_INDEX_FILE=/tmp/b4292/one.index; rm -f $GIT_INDEX_FILE; git read-tree HEAD; git add \\\"$1\\\"; T=$(git write-tree); unset GIT_INDEX_FILE; GIT_AUTHOR_NAME=tmp GIT_AUTHOR_EM\u2026\n- Bash: {\"command\": \"mk() { export GIT_INDEX_FILE=/tmp/b4292/one.index; rm -f $GIT_INDEX_FILE; git read-tree HEAD; git add \\\"$1\\\"; T=$(git write-tree); unset GIT_INDEX_FILE; GIT_AUTHOR_NAME=tmp GIT_AUTHOR_EM\u2026\n- Bash: {\"command\": \"grep -n \\\"left play-code unchecked\\\\|needs --parent-bin\\\" -B12 crates/tools/src/*.rs | head -50\", \"description\": \"Find the claims unchecked play-code error\"}\n- Bash: {\"command\": \"J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; $J classify --base origin/main --head $(cat /tmp/b4292/tmp_commit) --json 2>/dev/null | python3 -I -c \\\"\\nimport json,sys\\nd=j\u2026\n- Bash: {\"command\": \"rm -f /tmp/b4292/tmp.index /tmp/b4292/one.index; cargo jackioh golden check 2>&1 | grep -v \\\"^\\\\s*Compiling\\\\|Blocking\\\\|Finished\\\\|Running\\\" | tail -5\", \"description\": \"Run golden repla\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Run 2: golden check ok (folds to 512357ea). classify (stage 1, on a dangling commit-tree of the working tree, no ref moved): Cards/patch, 25 families, all\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np=\\\".bot-notes.md\\\"; s=open(p,encoding=\\\"utf-8\\\").read()\\nstart=s.index(\\\"## State\\\"); end=s.index(\\\"## Log\\\")\\nnew=\\\"\\\"\\\"## State\\n\\n- Run 2 (builder, opus), 2026-\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\na=json.load(open('/tmp/b4292/catalog.orig.json')); b=json.load(open('crates/cards/catalog.json'))\\nchanged=[k for k in a if a[k]!=b.get(k)]\\nprint(len(\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/b4292/ws_test.log; do sleep 15; done; grep -E \\\"^exit|FAILED|panicked|^test result: FAILED\\\" /tmp/b4292/ws_test.log | head -20\", \"description\": \"Wait for the\u2026\n- Bash: {\"command\": \"grep -v \\\"^\\\\s*Compiling\\\\|Blocking\\\\|Finished\\\\|Running\\\" /tmp/b4292/fuzz.log | tail -12 | cut -c1-400; grep -c \\\"test result\\\" /tmp/b4292/ws_test.log; grep \\\"test result: FAILED\\\\|pani\u2026\n- Bash: {\"command\": \"grep -E \\\"seeds|failed|ok|error\\\" /tmp/b4292/fuzz.log | grep -v Compiling | head -12 | cut -c1-250\", \"description\": \"Show fuzz pass/fail lines\"}\n- Bash: {\"command\": \"tail -5 /tmp/b4292/ws_test.log | cut -c1-200\", \"description\": \"Check workspace test progress\"}\n- Bash: {\"command\": \"grep -n \\\"fn b20_flak_never\\\\|fn b20_radiant_flak\\\" crates/cards/tests/cross/balance_2521_a.rs; grep -n \\\"fn r1857003\\\" crates/cards/src/scripts/stinkyscape/c061_flak_v5.rs; grep -n \\\"fn\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/b4292/ws_test.log; do sleep 15; done; grep -E \\\"^exit|panicked|^test result: FAILED|^failures:\\\" /tmp/b4292/ws_test.log | head -20\", \"description\": \"Wait for\u2026\n- Bash: {\"command\": \"grep -c \\\"^test result\\\" /tmp/b4292/ws_test.log; grep -E \\\"test result: FAILED|panicked|^failures:\\\" /tmp/b4292/ws_test.log | head; tail -2 /tmp/b4292/ws_test.log | cut -c1-200\", \"descri\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/b4292/ws_test.log; do sleep 15; done; grep -E \\\"^exit|test result: FAILED|^failures:\\\" /tmp/b4292/ws_test.log | head -20\", \"description\": \"Keep waiting for w\u2026\n- Bash: {\"command\": \"grep \\\"^test result\\\" /tmp/b4292/ws_test.log | awk '{p+=$4; f+=$6; i+=$8} END {print NR\\\" binaries, \\\"p\\\" passed, \\\"f\\\" failed, \\\"i\\\" ignored\\\"}'; git status --porcelain -- apps/web/src/\u2026\n- Bash: {\"command\": \"J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; $J spec check 2>&1 | tail -1; $J patches check 2>&1 | tail -1; $J catalog check 2>&1 | tail -1 | cut -c1-80; cargo fmt --check\u2026\n- Bash: {\"command\": \"pgrep -af \\\"cargo|vitest|jackioh\\\" | grep -v pgrep | head; git worktree list\", \"description\": \"Check for stray processes and worktrees\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np=\\\".bot-notes.md\\\"; s=open(p,encoding=\\\"utf-8\\\").read()\\nold=\\\"- Pending: workspace cargo test (bg, /tmp/b4292/ws_test.log), fuzz 200 (bg, /tmp/b4292/fuzz.log). Th\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Radiant de-keywording\"} --> ## What changed All 31 Radiant faces the issue lists now keep one upgrade. Base faces, stats and costs are unchanged. The 20 kept cards and Quad are untouched: a script compared `catalog.json` against `main`, and only these 3\u2026"
       },
       "issue": 4292,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T14:42:57Z",
         "from_run": "44734194108",
         "gates": [
           {
@@ -16084,7 +16089,11 @@
         "source": "build",
         "until": "2026-11-20T15:11:44Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-20T14:41:44Z",
+      "run_id": "pending:5716db30-1795185747",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16103,6 +16112,9 @@
         "provider": "claude-8",
         "run": "44734194108"
       },
+      "started_at": "2026-11-20T14:42:57Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16116,9 +16128,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T14:32:45Z",
+    "at": "2026-11-20T14:42:57Z",
     "url": "",
-    "what": "plan #4313 on muse"
+    "what": "review #4314 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T14:30:51Z",
