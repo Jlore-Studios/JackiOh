@@ -13465,6 +13465,7 @@
     "4318": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-11-20T19:16:27Z",
         "family": "claude",
@@ -13487,7 +13488,9 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 4346,
       "provider": "claude-7",
+      "question": "",
       "round_tier": "strong",
       "run_id": "44807877090",
       "runs_on": "ubuntu-latest",
