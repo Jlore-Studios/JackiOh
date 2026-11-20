@@ -16229,14 +16229,11 @@
     "what": "review #4315 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T14:57:47Z",
+    "at": "2026-11-20T15:07:51Z",
     "notes": [
-      "started suggest on claude-7 (run 44758684612)",
-      "started suggest on claude-4 (run 44758782931)",
-      "started suggest on claude-6 (run 44758900034)",
-      "started suggest on claude-7 (run 44759021281)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "delivered build #4313 on muse (run 44756225814): built",
+      "started review #4315 on muse (run 44760533690)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16942,7 +16939,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T14:57:47Z",
+  "loop_tick": "2026-11-20T15:07:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
