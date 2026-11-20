@@ -14806,7 +14806,7 @@
     "what": "plan #4291 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-20T03:49:10Z",
+    "at": "2026-11-20T03:55:54Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15512,7 +15512,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T03:49:10Z",
+  "loop_tick": "2026-11-20T03:55:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
