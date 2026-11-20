@@ -32400,9 +32400,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-20T07:00:00Z",
-          "utilization": 0.86
+          "utilization": 0.89
         },
-        "observed_at": "2026-11-20T03:42:44Z",
+        "observed_at": "2026-11-20T06:13:57Z",
         "status": "allowed"
       }
     },
@@ -37002,7 +37002,8 @@
       "2026-11-20T05:05:04Z,claude-1,stream,call,44666052113,85,2026-11-20T07:00:00Z,,,allowed,100,,",
       "2026-11-20T05:15:34Z,claude-1,stream,call,44666052113,86,2026-11-20T07:00:00Z,,,allowed,100,,",
       "2026-11-20T05:25:49Z,claude-1,stream,call,44666052113,92,2026-11-20T07:00:00Z,,,allowed_warning,100,,",
-      "2026-11-20T05:31:50Z,claude-1,stream,call,44666052113,93,2026-11-20T07:00:00Z,,,allowed_warning,100,,"
+      "2026-11-20T05:31:50Z,claude-1,stream,call,44666052113,93,2026-11-20T07:00:00Z,,,allowed_warning,100,,",
+      "2026-11-20T06:10:08Z,claude-8,ping,before,44685497770,89,2026-11-20T07:00:00Z,,,allowed,85,,"
     ],
     "runs": [
       "2026-11-20T05:59:26Z,44681034831,agy,gemini-3.8-flash-high,review,4301,medium,approved,,32.5,562031,34466,0,,10,21,32,35,2.5,,none,,1",
