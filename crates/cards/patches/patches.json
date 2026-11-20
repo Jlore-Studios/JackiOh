@@ -32248,5 +32248,42 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.8c",
+    "date": "2026-11-20",
+    "title": "Radiant Starship Pieces use their Radiant numbers",
+    "source": "#4334",
+    "notes": "Radiant Starship Pieces use their Radiant numbers (#4334, R4334000): an ingredient fused on its Radiant face (R469) now reads its declared numbers on that face in every text it runs in its place, and a fused card's view shows each number on the face its ingredient went in on. A Radiant Starship Piece's copy fuses Radiant (R1852000), so in a Starship the 18 pieces that read param (Beam, Repeater and Cannon v3 to v5, Shield Amplifier, Poison Capsule, Healing Capsule, Spacemine, Patcher Nanobots, RR-5000, Defensive Crystal, Fire Beam v3 and v4) now deal, heal and buff by their Radiant numbers; R1859001's piece_number, which After Burner, Warpfield Amplifier, Ultra Capacitor, Magic Module and Hull Repairer called, is retired and those five read param with the same numbers. Other fusions with a Radiant-marked ingredient read it Radiant too. The classifier names Soul Shot, Fusion Lab, Lava Golem, Healing Capsule, Spacemine, Beam v4, Repeater v5, Patcher Nanobots, Ultra Capacitor, the Dormant Starship and Farthest Shore. An engine rule, not gated by version: a stored game that read such a number may fold differently (R767000).",
+    "player": {
+      "title": "Radiant Starship Pieces in a Starship fixed",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Radiant Starship Piece fused into your Starship now deals, heals and buffs by its Radiant numbers, and the Starship's card shows them.",
+        "A Radiant card fused into another card, as by Fusion Lab, now uses and shows its Radiant numbers."
+      ]
+    },
+    "commits": [
+      "905eba265bd4b360b34485950f45818218924b75"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-025",
+      "classicplus-031",
+      "core-055",
+      "stinkyscape-043",
+      "stinkyscape-049",
+      "stinkyscape-054",
+      "stinkyscape-059",
+      "stinkyscape-093",
+      "stinkyscape-133",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscapeplus-t-terminus-starship-farthest-shore"
+    ],
+    "changes": []
   }
 ]
