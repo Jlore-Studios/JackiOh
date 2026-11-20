@@ -15340,13 +15340,14 @@
       "merge_owner": "claude-1",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-8",
       "queued_at": "2026-11-20T06:04:29Z",
-      "run_id": "44692374776",
+      "run_id": "pending:28b6258f-1795174366",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 385,
-      "started_at": "2026-11-20T07:05:14Z",
+      "started_at": "2026-11-20T11:33:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15844,9 +15845,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T11:18:41Z",
+    "at": "2026-11-20T11:33:09Z",
     "url": "",
-    "what": "review #4308 on claude-7"
+    "what": "spot-check #4303 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T11:25:23Z",
@@ -36794,7 +36795,15 @@
         "n": 385,
         "pr": 4303,
         "queued_at": "2026-11-20T11:32:10Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:28b6258f-1795174366",
         "sha": "d95e050700bb78c9a103a6a5e70ce08324be821e",
+        "started_at": "2026-11-20T11:33:09Z",
         "status": "queued",
         "title": "Patch: Stinkyscape+ Balance Changes IV",
         "tries": 0
