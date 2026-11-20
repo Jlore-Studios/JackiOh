@@ -3441,6 +3441,13 @@
     "3925": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44834603420",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-20T23:46:37Z",
+        "until": "2026-11-21T00:16:37Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
