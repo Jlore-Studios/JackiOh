@@ -498,10 +498,10 @@ failed).
 
 **What moves it:** a row written whose seq is a multiple of `MATCH_CHECKPOINT_MIN_ACTIONS` (a periodic
 checkpoint queued behind it); the restart drain (`stop_all`: each actor checkpointed, then stopped); `stop`, a
-crash or the reaper (none written); the match's ending (`matches_finish` deletes the row) or void (the cascade);
-a rebuild (`Registry::rebuild` reads the row with the log and folds the tail from it when `verify` passes, else
-the whole log, §9.5); the store failing a put. Its rows are C1 to C18 (C for checkpoint), never `R<n>`; K is
-state 9's.
+crash or the reaper (none written, but a put already in flight lands, C10′); the match's ending (`matches_finish`
+deletes the row) or void (the cascade); a rebuild (`Registry::rebuild` reads the row with the log and folds the
+tail from it when `verify` passes, else the whole log, §9.5); the store failing a put. Its rows are C1 to C18 and
+C10′ (C for checkpoint), never `R<n>`; K is state 9's.
 
 | # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
 |---|---|---|---|---|
@@ -514,7 +514,8 @@ state 9's.
 | C7 | c > n | Unreachable: a put stores only a row the log holds under its nonce (§9.3: the row before the state), and a live match's log only grows. **Representable when serialized**: an edited row is refused for its seq and the log folds whole | Refused (`verify`) | `…::a_checkpoint_that_fails_a_check_is_refused_and_the_whole_log_is_folded` (its "seq" poison) |
 | C8 | a periodic checkpoint queued, the match finishes before it runs | Reachable: the 32nd row and a concession submitted together | Nothing written, no `match.checkpoint.*` line (`write_checkpoint` passes over a finished host) | `…::a_match_finishing_while_its_periodic_checkpoint_is_queued_writes_none` (new) |
 | C9 | the match finished with a checkpoint stored | Reachable: concede after C2 | The ending deletes it (§9.3, #1169) | `crates/server/tests/store/contract.rs::matches::finishing_a_match_drops_its_checkpoint`; C2's test (its concession) |
-| C10 | a periodic checkpoint queued when the actor is stopped | Reachable: `stop` while the 32nd row's write is in flight | Nothing written (`write_checkpoint` passes over a stopped host) | — (no test yet: holding the fake's lock across the write and `stop` is left for the next audit) |
+| C10 | a periodic checkpoint queued when the actor is stopped | Reachable: the 32nd row's write waits on the store (its lock held) and `stop` lands, so the checkpoint is still queued behind the row | Nothing written, no `match.checkpoint.*` line, and the next rebuild folds the whole log (`checkpoint`'s doc: `stop` writes none; `write_checkpoint` passes over a stopped host) | `crates/server/tests/actor/checkpoints.rs::a_periodic_checkpoint_queued_when_the_actor_is_stopped_writes_none` (new; fails with the stopped check removed) |
+| C10′ | a periodic checkpoint in flight when the actor is stopped | Reachable: the 32nd row acked, its checkpoint's put built and waiting on the store's lock, then `stop` | **Unspecified**: `checkpoint`'s doc says `stop` writes none, but `write_checkpoint` checks the stopped mark only before it builds the row, so a put already past it is written (`written` logged); it holds the log's head, and the next rebuild resumes from it to the whole fold's state | `…::a_periodic_checkpoint_in_flight_when_the_actor_is_stopped_is_written` (new) |
 | C11 | the match voided with a checkpoint stored | Reachable: a void after C2 | Deleted with the match (R679, the cascade) | `crates/server/tests/store/contract.rs::matches::voiding_a_match_drops_its_checkpoint` |
 | C12 | another writer finished the row between the queue and the put | Reachable: the row turned finished as the put runs | The store's live-row guard keeps it out, `kept` logged | `crates/server/tests/actor/checkpoints.rs::a_checkpoint_of_a_match_another_writer_finished_is_kept_out` (new) |
 | C13 | a put while the ending is uncommitted (Postgres) | Reachable: `matches_finish`'s transaction open while a put runs in its own | The put stores nothing, so the ended match keeps none (§9.3: "a match that ends drops its checkpoint") | **#4291: was a mismatch, fixed**: Postgres's put read the row live under the ending's open transaction and stored the checkpoint, which the ending's delete had already passed, so the finished match kept it. The put's live-row guard now locks the row (`for share`), waits for the ending and stores nothing. `crates/server/tests/store/contract.rs::matches::a_checkpoint_written_as_its_match_finishes_never_outlives_the_ending` (new, both stores; failed on Postgres before the fix: "postgres store (db/pg.rs): the put waits for the ending and stores nothing") |
@@ -715,7 +716,8 @@ Each reads an older record; nothing is removed.
   leaves Recent once its lobby closes), F17 (an invite into a full lobby still counts), F23 (a held toast shows
   once the board goes, read or not), V5 (a poll's answer after live is dropped), V6's 1011, V12 (a sixth tab's
   4403 waits for a renewed token), V16 (a renewal's replacement reads once more), V19 (a socket the browser
-  cannot construct is retried on the backoff). C10 has no test yet.
+  cannot construct is retried on the backoff), C10′ (a periodic checkpoint whose put is in flight when `stop`
+  lands is written, though `checkpoint`'s doc says `stop` writes none).
 - **Not shown:** E5′ (mulligans open with work owed); W10 (a duplicated tab: jsdom cannot copy a tab).
 - **Representable when serialized:** C7 (a checkpoint ahead of its log) and a checkpoint row on a finished
   match (the row's shape allows both; the store's guards and `verify` keep them out), F29 (a `notification` frame

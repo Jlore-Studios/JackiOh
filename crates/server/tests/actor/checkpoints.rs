@@ -574,6 +574,144 @@ async fn a_checkpoint_the_store_fails_is_logged_and_the_rebuild_folds_from_the_l
     );
 }
 
+/// Lets every task the actor tests spawned run until each waits on something.
+async fn yield_a_while() {
+    for _ in 0..16 {
+        tokio::task::yield_now().await;
+    }
+}
+
+/// #4291 (C10): `stop` lands while the row that makes a checkpoint due waits on the store, so the
+/// periodic checkpoint is still queued behind it: it finds the host stopped and writes nothing, not
+/// even a line, and the next rebuild folds the whole log.
+#[tokio::test(start_paused = true)]
+async fn a_periodic_checkpoint_queued_when_the_actor_is_stopped_writes_none() {
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let every = usize::try_from(MATCH_CHECKPOINT_MIN_ACTIONS).expect("a small count");
+    let (seed, decks, actions) = game(every + 1);
+    let row = live_row(&seed, &decks);
+    write_match(&app, &row).await;
+    let actor = actor_of(&app).await;
+    play(&actor, 1, &actions[..every - 1]).await;
+
+    let guard = fake_ref(&app).lock().await;
+    let due = actions[every - 1].clone();
+    let submitting = {
+        let actor = actor.clone();
+        tokio::spawn(async move { actor.submit(due.player_id, due.nonce, due.body).await })
+    };
+    yield_a_while().await;
+    let stopping = {
+        let app = std::sync::Arc::clone(&app);
+        tokio::spawn(async move { app.matches.stop(MATCH_ID).await })
+    };
+    yield_a_while().await;
+    assert_eq!(app.matches.live(), Vec::<String>::new());
+    drop(guard);
+    submitting.await.expect("the submit ran");
+    stopping.await.expect("the stop ran");
+
+    assert_eq!(logged(&app).await.len(), every, "the due row was written");
+    assert!(checkpoints(&app).await.is_empty());
+    assert_eq!(checkpoint_lines(&logs), Vec::<String>::new());
+    let rebuilt = actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(0));
+    assert_eq!(
+        hash_state(&rebuilt.engine_state()),
+        hash_state(&folded(&row, &actions[..every]))
+    );
+}
+
+/// #4291 (C10′, unspecified): `stop` lands once the periodic checkpoint has passed its check and its
+/// put waits on the store. The stop does not reach it: it is written, at the log's head, and the next
+/// rebuild resumes from it to the whole fold's state.
+#[tokio::test(start_paused = true)]
+async fn a_periodic_checkpoint_in_flight_when_the_actor_is_stopped_is_written() {
+    use jackioh_server::db::fake::{CallOutcome, FakeTables};
+
+    install_test_cards();
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let every = usize::try_from(MATCH_CHECKPOINT_MIN_ACTIONS).expect("a small count");
+    let (seed, decks, actions) = game(every + 1);
+    let row = live_row(&seed, &decks);
+    write_match(&app, &row).await;
+    let actor = actor_of(&app).await;
+    play(&actor, 1, &actions[..every - 1]).await;
+
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+    let guard = {
+        let mut guard = fake_ref(&app).lock().await;
+        let calls = std::sync::Arc::clone(&calls);
+        guard.before_call = Some(std::sync::Arc::new(move |method: &str, _: &mut FakeTables| {
+            calls.lock().expect("the calls").push(method.to_string());
+            CallOutcome::Proceed
+        }));
+        guard
+    };
+    let due = actions[every - 1].clone();
+    let nonce = due.nonce.clone();
+    let submitting = {
+        let actor = actor.clone();
+        tokio::spawn(async move { actor.submit(due.player_id, due.nonce, due.body).await })
+    };
+    yield_a_while().await;
+    // The store's lock is fair: the holder queued behind the row's write takes it next, so the
+    // checkpoint's put, built once the row is acked, waits behind the holder.
+    let (held, holding) = tokio::sync::oneshot::channel::<()>();
+    let (release, released) = tokio::sync::oneshot::channel::<()>();
+    let holder = {
+        let app = std::sync::Arc::clone(&app);
+        tokio::spawn(async move {
+            let _guard = fake_ref(&app).lock().await;
+            let _ = held.send(());
+            let _ = released.await;
+        })
+    };
+    yield_a_while().await;
+    drop(guard);
+    holding.await.expect("the holder took the store");
+    assert_eq!(
+        to_json(&submitting.await.expect("the submit ran")),
+        json!({ "type": "ack", "nonce": nonce, "seq": every })
+    );
+    yield_a_while().await;
+
+    let stopping = {
+        let app = std::sync::Arc::clone(&app);
+        tokio::spawn(async move { app.matches.stop(MATCH_ID).await })
+    };
+    yield_a_while().await;
+    assert_eq!(app.matches.live(), Vec::<String>::new());
+    assert!(!stopping.is_finished(), "the stop waits for the put");
+    release.send(()).expect("the holder waits");
+    holder.await.expect("the holder ran");
+    stopping.await.expect("the stop ran");
+    fake_ref(&app).lock().await.before_call = None;
+
+    let calls = calls.lock().expect("the calls").clone();
+    let appended = calls
+        .iter()
+        .rposition(|method| method == "matches.appendActions")
+        .expect("the due row's write");
+    assert_eq!(calls[appended + 1..], ["matches.putCheckpoint".to_string()]);
+    let stored = checkpoints(&app).await;
+    assert_eq!(stored.len(), 1);
+    assert_eq!(stored[0].seq, every as i64);
+    assert_eq!(
+        checkpoint_lines(&logs),
+        vec!["match.checkpoint.written".to_string()]
+    );
+    let rebuilt = actor_of(&app).await;
+    assert_eq!(from_seq(&logs), json!(every));
+    assert_eq!(
+        hash_state(&rebuilt.engine_state()),
+        hash_state(&folded(&row, &actions[..every]))
+    );
+}
+
 /// #4291 (C16, unspecified): a checkpoint the rebuild refuses, at the log's head, is not replaced by
 /// the drain's good one of the same seq (only a later seq replaces a checkpoint), so the next
 /// rebuild refuses it again and folds the whole log.
