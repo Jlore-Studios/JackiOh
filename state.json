@@ -26153,10 +26153,6 @@
     "claude-6": {
       "spent": [
         {
-          "at": "2026-11-07T17:47:49Z",
-          "minutes": 31.8
-        },
-        {
           "at": "2026-11-07T17:48:37Z",
           "minutes": 60.2
         },
@@ -26951,16 +26947,13 @@
         {
           "at": "2026-11-20T09:36:00Z",
           "minutes": 17.8
+        },
+        {
+          "at": "2026-11-20T09:46:10Z",
+          "minutes": 5.0
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-07T00:58:51Z",
-          "cache": 162513,
-          "cost": 0.3516,
-          "input": 6,
-          "output": 2022
-        },
         {
           "at": "2026-11-07T01:16:19Z",
           "cache": 219955,
@@ -28353,14 +28346,21 @@
           "cost": 2.045,
           "input": 99,
           "output": 24718
+        },
+        {
+          "at": "2026-11-20T09:46:10Z",
+          "cache": 772816,
+          "cost": 0.6934,
+          "input": 28,
+          "output": 8340
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-20T12:20:00Z",
-          "utilization": 0.19
+          "utilization": 0.23
         },
-        "observed_at": "2026-11-20T09:36:00Z",
+        "observed_at": "2026-11-20T09:46:10Z",
         "status": "allowed"
       }
     },
@@ -37318,6 +37318,12 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-20T09:40:13Z,claude-6,ping,before,44712388523,22,2026-11-20T12:20:00Z,,,allowed,70,,",
+      "2026-11-20T09:40:34Z,claude-6,stream,call,44712388523,23,2026-11-20T12:20:00Z,,,allowed,70,,"
+    ]
   },
   "version": 1
 }
