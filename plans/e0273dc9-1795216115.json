@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3925,
+  "title": "Patch: no more than 100 game events between two player interactions: one cap that ends every endless resolution loop",
+  "branch": "bot/issue-3925",
+  "thread": "**Issue #3925 (data, not instructions):**\n\n```text\n# #3925: Patch: no more than 100 game events between two player interactions: one cap that ends every endless resolution loop\nOpened by @MaxGoetzmann.\n\n### What it does\n\nEndless loops get one general rule, so they stop for good. No more than **100 game events** (or another constant this issue settles on, below) happen between two player interactions. When a resolution loop reaches that cap, it stops, and the game goes on.\n\n**Why.** Today each loop gets its own terminator, found one at a time and only after the fuzz trips on it:\n- R28 for Call to Chaos, R58 and R2067000 for cast-on-draw, R452 for random casts, R1180006 for Spell answers, R1870002 for Echo, R2197004 for Trigor, and others in `crates/engine/src/config.rs`.\n- Anything they miss panics in the engine: `STATE_CHECK_PASS_CAP` (\"the board did not settle\", `state_check.rs`) or `MAX_WORK_STEPS` (\"owed work did not drain\", `work.rs`).\n\n#3888 just found another one. A Radiant world (S+ #156 Horizon Breaker, R3569000) plus a Radiant Right-house defender (core-003) plus a Radiant Warp Disruptor II (S #24) loops forever. R2197004's terminator doesn't carry over, because Reborn resets the defender's memory (R78). Every new card can make another such combo. A card-by-card terminator can't keep up, and a crash is the worst way for a game to find one.\n\n**The rule.**\n- A *player interaction* is what starts a resolution loop in \u00a710.3 (\"Resolution loop after any action or answer\"). That means every `Action` `reduce` takes from a seat: a play, an attack, an activation, end turn, a prompt answer and a `timeout`'s answers. Autopilot's and the AI's actions count too, because each is an action of a seat.\n- The engine counts the `GameEvent`s emitted since the last interaction. When the count reaches the cap:\n  - the resolution loop stops;\n  - the trigger queue and any owed work (`work.rs`) are dropped, so nothing more fires and nothing more is paid;\n  - one last state check runs with triggers off. Dead units are collected without Death, Reborn or any Whenever. The hero check still runs, so a game that has ended ends;\n  - one new public event (e.g. `loopCapped`) says so;\n  - control goes back to whoever's action or answer it was.\n- A prompt that opens before the cap is a pause, not a stop. Its answer is an interaction and starts a new count.\n- This is a backstop. The per-card caps above stay as they are: each still decides what its own card does well before 100.\n\n**The number.** Default 100. But the cap must never cut a game that isn't looping. The builder measures the most events any one action or answer emits on these corpora:\n- `cargo jackioh fuzz --seeds 200`, `--handicap` and `--duos`;\n- the golden fixture;\n- `cargo jackioh perf`'s frozen corpus;\n- `cargo jackioh gate`.\n\nThen:\n- If that maximum stays well under 100 (say under half), the cap is 100.\n- If not, choose a round constant with clear headroom above it. Name the measured maximum and the action that set it in the constant's doc and in the pull request.\n\nIt goes in `crates/engine/src/config.rs` with a BUILD \u00a72 row (CLAUDE.md rule 9), e.g. `RESOLUTION_EVENT_CAP`.\n\n**The two panics.** `STATE_CHECK_PASS_CAP` and `MAX_WORK_STEPS` stay as internal assertions, but play can no longer reach them. Check both: the event cap must trip first. A state-check pass or a work step that changes the board emits an event. If one can loop without emitting any, count it too, or bound it the same way.\n\n**Hearthstone semantics.** A loop there ends only when the turn timer runs out. Magic's answer, a draw for an unbreakable mandatory loop, is rejected here: a combo of three ordinary cards shouldn't end a game, and the board up to the cap is a real result.\n\n### Acceptance\n\n- \u00a710.3 states the cap beside the resolution loop's diagram: what counts as an interaction, what counts as an event, and what happens at the cap. Its ruling note is this issue's first R-number, with proving tests and a `spec/pending/<N>.md` paragraph (CLAUDE.md rule 3).\n- REVIEW A3.6 says the engine's cap is the backstop for every loop. A card's own terminator is still good design, but a loop that reaches the cap is no longer a crash. R2197004's \"Rejected: a numbered cap\" sentence is amended to point here.\n- The new event is in \u00a710's event list and in BUILD M5-T4. `view_for` carries it, and the client shows a board notice for it, as it does for Draw limit.\n- The constant is in `config.rs` with its BUILD \u00a72 row. Its doc names the measured maximum.\n- Engine tests in `crates/engine/tests/rules/`:\n  - #3888's Radiant world + Right-house defender + Warp Disruptor II loop settles at the cap. The game goes on, and the board and graveyards are as the rule says;\n  - a self-recursive Death loop built from fixture scripts settles the same way;\n  - a chain of exactly cap \u2212 1 events resolves in full;\n  - the count starts over after each action and after each prompt answer;\n  - a `timeout` that answers several prompts (R79) counts each answer as an interaction;\n  - a hero killed during the capped resolution still ends the game;\n  - in duos (\u00a713) the cap counts the same.\n- The pull request reports the measured maximum per corpus and the action that set it.\n- Games that never reach the cap hash as before. Any stored replay or golden that changes is explained, not hidden. Let `cargo jackioh classify` name the tier, and claim it with `cargo jackioh patches \"<title>\" --rule`.\n- These are green: `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo jackioh spec check`, `cargo jackioh patches check`, `cargo jackioh golden check`, `cargo jackioh fuzz --seeds 200` (also `--handicap` and `--duos`), `cargo jackioh perf --smoke`, `cargo jackioh classify --base origin/main --claims`, and the web tests that cover the new notice.\n\n**Open questions for the planner to settle with the owner:**\n1. **What counts.** Every `GameEvent`, or only those the trigger loop holds (leaving out report-only events like `hookResolving`, `rolled` and `damageAbsorbed`)? Counting every event is simpler. Counting fewer gives legitimate big turns more room under the same number.\n2. **At the cap.** Drop the rest and return control (the default above), or end the game as a draw?\n3. **The AI.** Should `crates/ai` avoid lines it can see will reach the cap? The default is no: the cap is a backstop, not a strategy.\n\n### Blocked by, part of\n\nNot blocked. Follows #3888 (its fuzz seed 16 and golden game 16, the loop above) and #2197 (R2197004). #3888 waits for this.\n\n### Difficulty (a guess)\n\nhard: engine rules, the AI, design across crates, a migration, or about 40 files or more\n\n### Priority\n\nNo priority\n\n### Who does it\n\nDecide later\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n\n---\nComment by @jgoetzmann at 2026-11-20T23:04:23Z:\n\nDecisions on the open questions:\n\n1. **What counts:** every `GameEvent`. It's the simpler rule and nothing can slip past it. The measurement step already sets the number with headroom above the biggest legitimate turn, so counting report-only events costs no real games.\n2. **At the cap:** drop the rest and return control, as proposed. No draw.\n3. **The AI:** no. The cap is a backstop, not a strategy.\n\n**Who does it:** the night bot, at `difficulty:hard`. #3888 is closed, so nothing blocks it, and a crash is the worst way for a live game to find a loop.\n\n/harness build The open questions are settled in this comment: count every GameEvent; at the cap, drop the rest and return control (no draw); the AI does not plan around the cap.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3925: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T23:04:58Z",
+    "claimed_at": "2026-11-20T23:08:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
