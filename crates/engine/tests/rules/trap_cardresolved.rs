@@ -5,7 +5,9 @@
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{Bench, both, events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{
+    Bench, apply_now, both, events_of_type, in_hand, live_mut, new_game, put, slot,
+};
 
 // Fixtures.
 
@@ -377,5 +379,212 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             vec![after.id.clone()]
         );
         assert_eq!(enemy_health(&state), before - 2);
+    }
+}
+
+/// R174, R212: step 4's `summoned`, as the later dispatches of a play meet it.
+fn summoned(instance: &CardInstance) -> GameEvent {
+    json_as(json!({
+        "type": "summoned",
+        "player": instance.controller,
+        "instanceId": instance.id,
+        "defId": instance.def_id,
+        "row": "units",
+        "lane": 1,
+    }))
+}
+
+fn destroy(state: &mut GameState, instance: &CardInstance) {
+    apply_now(
+        state,
+        effects::destroy(json_as(json!({
+            "target": { "of": "instance", "instanceId": instance.id },
+        }))),
+    );
+}
+
+fn resolved_permanent(met: Option<GameEvent>) -> Option<bool> {
+    match met {
+        Some(GameEvent::CardResolved { permanent, .. }) => Some(permanent),
+        _ => None,
+    }
+}
+
+mod the_event_a_later_trap_meets_and_the_owed_dispatch_r61_r113_r174_r212 {
+    use super::*;
+
+    #[test]
+    fn r174_r61_a_play_whose_card_left_the_field_since_the_dispatch_began_meets_no_later_trap() {
+        let mut state = game("r174-standing-summoned");
+        let played = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let event = summoned(&played);
+        let mark = exit_mark(&state);
+        let mut bench = Bench::new(&state);
+        assert_eq!(
+            standing_event(&bench.sink(&mut state), &event, mark),
+            Some(event.clone())
+        );
+
+        // An earlier trap of the same dispatch destroys it: the next trap meets no play (#41 Sheepish
+        // rewrites no bounced unit, R17).
+        destroy(&mut state, &played);
+        let mut after = Bench::new(&state);
+        assert_eq!(standing_event(&after.sink(&mut state), &event, mark), None);
+    }
+
+    #[test]
+    fn r61_r174_a_permanent_no_longer_on_the_field_resolves_as_no_longer_in_play() {
+        let mut state = game("r61-standing-resolved");
+        let played = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let event = resolved(&played, true);
+        let began = exit_mark(&state);
+        let mut standing = Bench::new(&state);
+        assert_eq!(
+            resolved_permanent(standing_event(&standing.sink(&mut state), &event, began)),
+            Some(true)
+        );
+
+        // Destroyed since the dispatch began (#60's tokens kill it), and gone before it began: either
+        // way the play is out of play for the trap that meets it (#85 fuses nothing out of a graveyard).
+        destroy(&mut state, &played);
+        let gone_before = exit_mark(&state);
+        for mark in [began, gone_before] {
+            let mut later = Bench::new(&state);
+            assert_eq!(
+                resolved_permanent(standing_event(&later.sink(&mut state), &event, mark)),
+                Some(false),
+                "mark {mark}"
+            );
+        }
+    }
+
+    #[test]
+    fn r113_a_dispatch_a_prompt_stopped_fires_the_trap_it_still_owed_when_it_resumes() {
+        let mut state = game("r113-owed-resume");
+        let trap = put(
+            &mut state,
+            &after_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let played = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let before = enemy_health(&state);
+        let mark = exit_mark(&state);
+        let mut bench = Bench::new(&state);
+        let run = resume_event_to_traps(
+            &mut bench.sink(&mut state),
+            &resolved(&played, true),
+            std::slice::from_ref(&trap.id),
+            mark,
+            &TrapControllers::new(),
+        );
+        assert_eq!(run.fired, vec![trap.id.clone()]);
+        assert!(run.owed.is_empty());
+        assert_eq!(enemy_health(&state), before - 2);
+    }
+
+    #[test]
+    fn r61_r119_an_owed_trap_off_the_field_turned_face_up_or_meeting_its_own_arrival_does_not_fire() {
+        let mut state = game("r61-owed-gone");
+        let played = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let in_hand = in_hand(&mut state, &after_trap().id, PlayerId::P2, 1)
+            .pop()
+            .expect("a trap in hand");
+        let face_up = put(
+            &mut state,
+            &after_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        live_mut(&mut state, &face_up.id).face_up = Some(true);
+        let arriving = put(
+            &mut state,
+            &after_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            json!({}),
+        );
+        let before = enemy_health(&state);
+        let mark = exit_mark(&state);
+
+        // §5.1: a trap the answer returned to its owner's hand, or one an earlier trap turned face-up
+        // (spent), is no trap set on the field.
+        for owed in [&in_hand, &face_up] {
+            let mut bench = Bench::new(&state);
+            let run = resume_event_to_traps(
+                &mut bench.sink(&mut state),
+                &resolved(&played, true),
+                std::slice::from_ref(&owed.id),
+                mark,
+                &TrapControllers::new(),
+            );
+            assert_eq!(run.fired, Vec::<String>::new(), "{}", owed.id);
+        }
+        // R119: nor does one answer the event of its own arrival.
+        let mut own = Bench::new(&state);
+        let run = resume_event_to_traps(
+            &mut own.sink(&mut state),
+            &resolved(&arriving, true),
+            std::slice::from_ref(&arriving.id),
+            mark,
+            &TrapControllers::new(),
+        );
+        assert_eq!(run.fired, Vec::<String>::new());
+        assert_eq!(enemy_health(&state), before);
+    }
+
+    #[test]
+    fn r212_an_offered_trap_answers_for_the_player_who_held_it_when_the_event_happened() {
+        let mut state = game("r212-offered-controller");
+        let trap = put(
+            &mut state,
+            &after_trap().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let played = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let (p1_before, p2_before) = (state.players.p1.hero.health, state.players.p2.hero.health);
+
+        // The events owed behind this one say the trap changed hands after it happened: it was p1's then.
+        let later = |_: &EngineSink<'_>| LaterMoves {
+            moved: IndexSet::new(),
+            controller_before: [(trap.id.clone(), PlayerId::P1)].into_iter().collect(),
+        };
+        let mut bench = Bench::new(&state);
+        let run = offer_event_to_traps(&mut bench.sink(&mut state), &resolved(&played, true), &later);
+        assert_eq!(run.fired, vec![trap.id.clone()]);
+        assert_eq!(
+            run.controllers,
+            [(trap.id.clone(), PlayerId::P1)]
+                .into_iter()
+                .collect::<TrapControllers>()
+        );
+        // As p1's, its enemy hero is p2's.
+        assert_eq!(state.players.p2.hero.health, p2_before - 2);
+        assert_eq!(state.players.p1.hero.health, p1_before);
     }
 }

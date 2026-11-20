@@ -66,10 +66,10 @@ pub type TrapControllers = IndexMap<String, PlayerId>;
 
 /// An immediate dispatch, as `triggers.rs` parks and resumes it: the traps still owed the event in the
 /// dispatch's order (R68, fixed as it began), who each answers for, and the stays it began with (R174).
+/// Only a dispatch that owes a trap is parked, so with none owed nothing reads the rest.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ImmediateDispatch {
     pub fired: Vec<String>,
-    pub paused: bool,
     pub owed: Vec<String>,
     pub controllers: TrapControllers,
     pub mark: u32,
@@ -504,23 +504,13 @@ fn owe_firing(sink: &mut EngineSink<'_>, firing: TrapFiring) {
 }
 
 /// `work.rs`'s arm for a firing a prompt interrupted (`"@trapFiring"`): the same trap, where it
-/// stopped (R113). The payload came through JSON, so it is read back defensively.
+/// stopped (R113). The payload came through JSON, so it is read back defensively: an object, as
+/// `owe_firing` wrote it (serde would read a struct's fields off an array too), whose every field
+/// serde finds, of its type (a missing one or one of another type is no firing).
 pub fn run_owed_firing(sink: &mut EngineSink<'_>, item: &WorkItem) {
-    let Some(raw) = item.resume.data.get("firing") else {
+    let Some(raw) = item.resume.data.get("firing").filter(|raw| raw.is_object()) else {
         return;
     };
-    if !raw.is_object() {
-        return;
-    }
-    if !raw.get("trapId").is_some_and(Value::is_string) || !raw.get("at").is_some_and(Value::is_number) {
-        return;
-    }
-    if !raw.get("triggers").is_some_and(Value::is_array) || raw.get("event").is_none() {
-        return;
-    }
-    if !matches!(raw.get("controller").and_then(Value::as_str), Some("p1" | "p2")) {
-        return;
-    }
     let Ok(firing) = serde_json::from_value::<TrapFiring>(raw.clone()) else {
         return;
     };
@@ -698,21 +688,14 @@ pub fn offer_event_to_traps(
     event: &GameEvent,
     later: &dyn Fn(&EngineSink<'_>) -> LaterMoves,
 ) -> ImmediateDispatch {
-    let mark = crate::stays::exit_mark(sink.state);
     if is_trap_window_event(event) {
-        return ImmediateDispatch {
-            mark,
-            ..ImmediateDispatch::default()
-        };
+        return ImmediateDispatch::default();
     }
     let watching = traps_watching(sink.state, event);
     if watching.is_empty() {
-        return ImmediateDispatch {
-            paused: crate::work::paused(sink),
-            mark,
-            ..ImmediateDispatch::default()
-        };
+        return ImmediateDispatch::default();
     }
+    let mark = crate::stays::exit_mark(sink.state);
     let moves = later(sink);
     let matches: Vec<TrapMatch> = watching
         .into_iter()
@@ -722,7 +705,6 @@ pub fn offer_event_to_traps(
     if crate::work::paused(sink) {
         return ImmediateDispatch {
             fired: Vec::new(),
-            paused: true,
             owed: matches
                 .iter()
                 .map(|trap_match| trap_match.trap.id.clone())
@@ -734,7 +716,6 @@ pub fn offer_event_to_traps(
     let run = dispatch(sink, event, &matches, mark, &controllers);
     ImmediateDispatch {
         fired: run.fired,
-        paused: run.paused,
         owed: run.owed,
         controllers,
         mark,
@@ -769,7 +750,6 @@ pub fn resume_event_to_traps(
     let run = dispatch(sink, event, &matches, mark, controllers);
     ImmediateDispatch {
         fired: run.fired,
-        paused: run.paused,
         owed: run.owed,
         controllers: controllers.clone(),
         mark,

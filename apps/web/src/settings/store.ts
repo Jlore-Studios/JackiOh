@@ -59,20 +59,11 @@ let snapshot: Settings | null = null;
 
 const subscriptions = new Set<() => void>();
 
-let storageListening = false;
-
-/** Invalid values take their default; never throws. */
+/** Invalid values take their default (text that is not JSON among them); never throws. */
 export function parseSettings(raw: unknown): Settings {
   const next: Settings = { ...DEFAULT_SETTINGS };
   try {
-    let value: unknown = raw;
-    if (typeof value === "string") {
-      try {
-        value = JSON.parse(value) as unknown;
-      } catch {
-        value = null;
-      }
-    }
+    const value: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (!isRecord(value)) return next;
     for (const key of SETTING_KEYS) {
       const candidate = value[key];
@@ -84,14 +75,9 @@ export function parseSettings(raw: unknown): Settings {
   }
 }
 
+/** Neither step throws: `getStored` answers null for storage it cannot read, the defaults' input. */
 function loadStored(): Settings {
-  try {
-    const raw = getStored(SETTINGS_STORAGE_KEY);
-    if (raw === null) return DEFAULT_SETTINGS;
-    return Object.freeze(parseSettings(raw));
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
+  return Object.freeze(parseSettings(getStored(SETTINGS_STORAGE_KEY)));
 }
 
 function persist(settings: Settings): void {
@@ -161,16 +147,11 @@ export function subscribeSettings(listener: () => void): () => void {
     listener();
   };
   subscriptions.add(subscription);
-  if (!storageListening) {
-    window.addEventListener("storage", onStorage);
-    storageListening = true;
-  }
+  // The DOM adds one listener once, however many subscribe.
+  window.addEventListener("storage", onStorage);
   return () => {
     subscriptions.delete(subscription);
-    if (subscriptions.size === 0 && storageListening) {
-      window.removeEventListener("storage", onStorage);
-      storageListening = false;
-    }
+    if (subscriptions.size === 0) window.removeEventListener("storage", onStorage);
   };
 }
 

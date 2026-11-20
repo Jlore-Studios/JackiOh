@@ -787,11 +787,11 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         .into_iter()
         .filter(|def_id| next.transient_defs.contains_key(def_id))
         .collect();
+    // `keep` takes only transient definitions, so each is walked the first time it is kept.
     while let Some(def_id) = keep.pop() {
-        if !next.transient_defs.contains_key(&def_id) || transient.contains(&def_id) {
+        if !transient.insert(def_id.clone()) {
             continue;
         }
-        transient.insert(def_id.clone());
         for id in subsystems::fused_ingredients(&next, &def_id).unwrap_or_default() {
             if next.transient_defs.contains_key(&id) {
                 keep.push(id);

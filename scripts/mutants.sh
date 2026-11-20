@@ -44,7 +44,9 @@ ROOT=$(pwd)
 # two mutants at a time. A mutant's time is mostly compiling its package and its tests again. In the
 # run crate it is 3 s (259 mutants in 13 minutes on #3512's branch), so one shard holds the whole
 # crate; in shared about a minute (243 mutants in 1 h 46 min, shard 16/21 on #3813's branch) and in
-# the AI 3 minutes (118 in 2 h 52 min, shard 1/30 on main, 2026-11-12). The engine's are 6 minutes'
+# the AI 3 minutes (118 in 2 h 52 min, shard 1/30 on main, 2026-11-12), but twice that in policy.rs
+# and observe.rs (shard 24/32 reached 98 of its 118 before the five hours ended, main, 2026-11-15),
+# so an AI shard holds 70. The engine's are 6 minutes'
 # build, since the cards are its tests' dev-dependency and are built again with it, and 2.5 minutes'
 # tests, and the server's 8 to 12 minutes' tests: at 150 and 80 a shard, their first shards on main
 # (2026-11-12) reached about 35 and 25 mutants before the step's five hours ended, so they hold 40 and
@@ -56,7 +58,7 @@ SIZE_ENGINE=40
 SIZE_CARDS=150
 # cards-lib's mutants one at a time (JOBS_CARDS_LIB, below), at about 3 minutes each.
 SIZE_CARDS_LIB=80
-SIZE_AI=120
+SIZE_AI=70
 SIZE_RUN=1000
 SIZE_SHARED=250
 SIZE_SERVER=20
@@ -124,6 +126,13 @@ JOBS_CARDS_LIB=${MUTANTS_JOBS:-1}
 # .github/actions/setup runs, sets CARGO_INCREMENTAL=0): an incremental one from cargo-mutants' fresh
 # copy of the tree takes more memory and is no faster there.
 export CARGO_INCREMENTAL=0
+# The heap, in MiB, of each Node process a web area starts (Stryker and its test runners). A stryker job
+# lost its runner, and every log with it, 73 minutes into web-cards' shard 25/27 (tallies.ts and
+# tilt.ts, main, 2026-11-15). Nothing else of a web shard comes near the runner's 16 GB: a narrowed run
+# of that shard on four cores peaked at 2 GB. So, as TEST_MEMORY does for a Rust test binary, a process
+# whose mutant allocates without end runs out of heap and fails on its own, with its log, while
+# Stryker and its three runners at their usual size leave it room under the 16.
+WEB_HEAP_MB=${MUTANTS_WEB_HEAP_MB:-6144}
 # `$@`, under prlimit with AREA_MEMORY bytes of data for every process it starts when the area sets it.
 capped() {
   if [ -n "$host" ] && [ -n "$AREA_MEMORY" ]; then
@@ -306,7 +315,8 @@ run_web() {
   printf 'shard=%s\nfiles=%s\n' "$label" "$(echo "$mine" | count_lines)" >"$out/area.env"
   echo "mutants: $area shard $label, of the area's $total files:" $mine
   mutate=$(echo "$mine" | sed "s|^$app/||" | paste -sd, -)
-  (cd "$app" && MUTANTS_OUT=$out pnpm exec stryker run stryker.config.mjs --mutate "$mutate" "$@")
+  (cd "$app" && NODE_OPTIONS="--max-old-space-size=$WEB_HEAP_MB${NODE_OPTIONS:+ $NODE_OPTIONS}" \
+    MUTANTS_OUT=$out pnpm exec stryker run stryker.config.mjs --mutate "$mutate" "$@")
 }
 
 run_area() {
