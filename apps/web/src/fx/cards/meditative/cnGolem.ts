@@ -14,12 +14,12 @@ import { sideOf, testid } from "../../../game/contract.ts";
 import { frac, ringCue, shakeCues, tid, tunedBurst } from "../../build.ts";
 import { FX_SLAM_AT } from "../../constants.ts";
 import { figureCue, figureTint } from "../../figures.ts";
-import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
+import { FLAVOR_LOOKS } from "../../flavors.ts";
 import type { FxCue, FxPoint } from "../../types.ts";
 import { ENTRANCE_TRAUMA, FOOT, projectile, type CardRecipe, type Entrance, type RecipeFixture } from "../recipe.ts";
 
 /** The look its joints and its viruses glow in: Toxic, its aura's. */
-const VIRUS_PALETTE = "Toxic";
+const VIRUS_LOOK = FLAVOR_LOOKS.Toxic;
 
 /** The look its stone blocks shed: Brute's dust. */
 const STONE_LOOK = FLAVOR_LOOKS.Brute;
@@ -47,7 +47,7 @@ export const golemLock: Entrance = ({ D, tgt, intensity: i, view, landing, leadM
   const at = tid(tgt);
   const lead = leadMs ?? 0;
   const slam = lead + frac(FX_SLAM_AT, D - lead);
-  const tint = figureTint(paletteLook(VIRUS_PALETTE) ?? FLAVOR_LOOKS.Toxic);
+  const tint = figureTint(VIRUS_LOOK);
   const side = view === undefined || landing === undefined ? {} : { side: sideOf(view, landing.player) };
   const cues: FxCue[] = [
     figureCue("golemBlocks", at, tint, lead, D - lead + TIMING.tailMs, side),
@@ -63,7 +63,6 @@ export const cnGolem: CardRecipe = (event, p, play) => {
   // Its kill trigger's viruses, into the other player's deck (a `trigger` entry; its play's in the gallery).
   if (event.type !== "shuffledIn" || event.player === play.player) return null;
   if (play.hook !== undefined && play.hook !== "trigger") return null;
-  const look = paletteLook(VIRUS_PALETTE) ?? FLAVOR_LOOKS.Toxic;
   const i = p.env.intensity;
   // Out of the Golem while the board shows it (it may have left the field since the kill), else its hero.
   const from = tid(locateInstance(p.view, play.instanceId) ?? testid.hero(sideOf(p.view, play.player)));
@@ -71,8 +70,8 @@ export const cnGolem: CardRecipe = (event, p, play) => {
   const lands = frac(TIMING.leakEnd, p.D);
   return {
     cues: [
-      { ...tunedBurst(i, look.particle, from, "point", 0, TUNING.leak), colors: look.colors },
-      projectile(i, look.particle, from, pile, 0, lands),
+      { ...tunedBurst(i, VIRUS_LOOK.particle, from, "point", 0, TUNING.leak), colors: VIRUS_LOOK.colors },
+      projectile(i, VIRUS_LOOK.particle, from, pile, 0, lands),
       { kind: "ghost", from, to: pile, delayMs: 0, durationMs: lands },
     ],
     row: "replace",
