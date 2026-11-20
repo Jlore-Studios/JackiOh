@@ -14854,11 +14854,11 @@
     "what": "plan #4291 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-20T04:02:15Z",
+    "at": "2026-11-20T04:09:59Z",
     "notes": [
-      "#4257 is held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered plan #4291 on claude-7 (run 44668802194): interrupted",
-      "delivered build #4284 on claude-7 (run 44668742350): interrupted"
+      "#4284 is held for `claude-7` until 22:20 (it refused a call)",
+      "#4291 is held for `claude-7` until 22:20 (it refused a call)",
+      "#4257 is held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15564,7 +15564,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T04:02:15Z",
+  "loop_tick": "2026-11-20T04:09:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
