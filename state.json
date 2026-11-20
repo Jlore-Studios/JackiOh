@@ -36813,7 +36813,10 @@
           "provider": "claude-1"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-20T11:48:00Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4310,
         "head": "ff9b30bfcd634e777bb31c83ac98063821ce29de",
         "issue": 4285,
         "merged_at": "2026-11-20T11:32:10Z",
@@ -36826,12 +36829,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:28b6258f-1795174366",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44728541565",
         "sha": "d95e050700bb78c9a103a6a5e70ce08324be821e",
         "started_at": "2026-11-20T11:33:09Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Stinkyscape+ Balance Changes IV",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 385
