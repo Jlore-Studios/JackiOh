@@ -15713,7 +15713,7 @@
       "question": "How should the two timing-out catalog-wide art tests be handled so #4307 can merge?",
       "queued_at": "2026-11-20T14:31:15Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:0b6330b4-1795185100",
+      "run_id": "44754388945",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
