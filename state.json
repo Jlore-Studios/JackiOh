@@ -14656,14 +14656,6 @@
         "reason": "`claude-7` reached its usage limit",
         "trail": "f \\\\*promote staging\\\\*\\\" docs/deploy-cloudflare.md | head -20\", \"description\": \"Find section 2.2 in deploy doc\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4284/docs/deploy-cloudflare.md\", \"offset\": 153, \"limit\": 16}\n- said: Now writing the State section to the notes before editing.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate='''## State\\n\\nBuild pass 1 (2026-11-20, opus). Plan below is followed as written.\\n- Done: (in progress) steps 1-4.\\n- Next\u2026\n- said: Step 1: the freeze block.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4284/scripts/promote-staging.sh\", \"old_string\": \" --json number,title,state,closedAt --jq '\\n map(select(.title == env.GATE_TITL\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4284/scripts/promote-staging.sh\", \"old_string\": \"# issue search lags a new issue by a little).\\n# A manual run moves staging as \u2026\n- said: Step 3: the docs sentence, re-wrapped at the paragraph's width.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4284/docs/deploy-cloudflare.md\", \"old_string\": \" never ran) gets one from `scripts/promote-staging.sh`, and the daily run never \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4284/apps/web/src/net/promote-staging.test.ts\", \"old_string\": \" it(\\\"starts the super run on a staging that moved since the red \u2026\n- Bash: {\"command\": \"sed -n 157,166p docs/deploy-cloudflare.md | awk '{print length\\\": \\\"$0}'; bash -n scripts/promote-staging.sh && echo bash-ok; command -v shellcheck && shellcheck scripts/promote-staging.\u2026\n- said: Syntax and shellcheck are clean. Running the promote-staging tests now.\n- Bash: {\"command\": \"echo \\\"- running promote-staging.test.ts (expect 28)\\\" >> .bot-notes.md; timeout 600 pnpm exec vitest run --project web apps/web/src/net/promote-staging.test.ts 2>&1 | tail -20\", \"descri\u2026\n- said: The web test setup imports the WASM engine, so it needs `scripts/build-wasm.sh` first (the #4281 unit tests need it too).\n- Bash: {\"command\": \"echo \\\"- vitest needs the wasm pkg first: running scripts/build-wasm.sh\\\" >> .bot-notes.md; time (sh scripts/build-wasm.sh > /tmp/wasm-build.log 2>&1); echo exit=$?; tail -5 /tmp/wasm-bu\u2026\n- said: Now I'll start the four daily tools tests in the background (a long cargo build) and run the web tests in the meantime.\n- Bash: {\"command\": \"echo \\\"- wasm built (3m). Started daily tools tests in background -> /tmp/daily.log\\\" >> .bot-notes.md; CARGO_PROFILE_TEST_DEBUG=0 cargo test -p jackioh-tools --tests --features jackioh-\u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest run --project web apps/web/src/net/promote-staging.test.ts 2>&1 | tail -15\", \"description\": \"Run promote-staging vitest file\", \"timeout\": 620000}\n- said: 28 passed. Now checking the new tests actually fail against the unchanged script (swap in `HEAD`'s copy, then restore).\n- Bash: {\"command\": \"cp scripts/promote-staging.sh /tmp/new-promote.sh && git show HEAD:scripts/promote-staging.sh > scripts/promote-staging.sh && (timeout 600 pnpm exec vitest run --project web apps/web/src\u2026\n- said: As planned: two of the three fail against the old script, and the hold test passes both ways because it pins existing behavior. The script is restored. Next, #4281's two unit tests.\n- Bash: {\"command\": \"echo \\\"- promote-staging.test.ts 28/28; against HEAD's script the 1st and 3rd #4284 tests fail, 2nd passes (pins the hold). Running #4281's unit proofs.\\\" >> .bot-notes.md; timeout 600 p\u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest run --project web apps/web/src/notfound/NotFoundPlay.test.tsx apps/web/src/game/hero-counters.test.tsx 2>&1 | grep -E \\\"Test Files|Tests |FAIL|\\u2713 |\\u00d7\u2026\n- said: Both pass (14 of 14). While the daily tests build, I'll check what #4281 changed so the report names each job's fix accurately.\n- Bash: {\"command\": \"git show --stat --format='%H %s%n%b' 642ab3464b | head -60\", \"description\": \"Show files changed by #4281\"}\n- said: #4281's files line up with the plan's mapping: `tutorial_tier.rs`, `board.css` with `hero-counters`, `audio-recipes`, `emotes-layout` and `NotFoundPlay`. Checking on the daily build:\n- Bash: {\"command\": \"tail -3 /tmp/daily.log; git rev-parse --verify -q origin/main; git merge-base --is-ancestor b24900c 642ab3464b && echo \\\"b24900c is before 642ab3464b\\\"\", \"description\": \"Check daily test\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('## Log')]\\nnew='''## State\\n\\nBuild pass 1 (2026-11-20, opus). Plan followed as written, no dep\u2026\n- Bash: {\"command\": \"until grep -qE \\\"^exit=|Running tests/|Running unittests\\\" /tmp/daily.log; do sleep 5; done; grep -E \\\"Running|exit=|error\\\" /tmp/daily.log | tail -5\", \"description\": \"Wait until the dai\u2026\n- Bash: {\"command\": \"tail -c 600 /tmp/daily.log\", \"description\": \"Show tail of daily test log\"}\n- Bash: {\"command\": \"grep -E \\\"^test |test result|Running\\\" /tmp/daily.log | grep -v \\\"has been running\\\"\", \"description\": \"Summarize daily test results so far\"}\n- said: Three of the four daily tools tests passed: the `run_sim` daily sweep, the stats chunks test and `perf_holds_every_budget`. The pool-probe test is still running, so I'll wait for it.\n- Bash: {\"command\": \"echo \\\"- daily: run_sim sweep ok, stats_chunks ok (348s), perf_holds_every_budget ok; pool_probe running\\\" >> .bot-notes.md; until grep -q \\\"^exit=\\\" /tmp/daily.log; do sleep 10; done; g\u2026\n- said: All four daily tools tests passed. Next, `classify --claims`, then a re-run of the R290 `tutorial_tier` daily tests, since the daily-tests job failed on those.\n- Bash: {\"command\": \"echo \\\"- daily: pool_probe ok (236s); all four exit=0. Running classify --claims\\\" >> .bot-notes.md; timeout 900 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"des\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 4:20am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-20T06:10:14Z",
-        "lifted": "2026-11-20T04:20:40Z",
-        "owner": "claude-7",
-        "since": "2026-11-20T04:10:14Z",
-        "until": "2026-11-20T04:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -14684,7 +14676,7 @@
       "planned_tier": "strong",
       "provider": "claude-7",
       "round_tier": "strong",
-      "run_id": "44668742350",
+      "run_id": "pending:42b301ea-1795148423",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -14703,7 +14695,7 @@
         "provider": "claude-7",
         "run": "44668742350"
       },
-      "started_at": "2026-11-20T03:35:13Z",
+      "started_at": "2026-11-20T04:20:53Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
@@ -14957,9 +14949,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T04:20:06Z",
+    "at": "2026-11-20T04:20:53Z",
     "url": "",
-    "what": "build #4294 on muse"
+    "what": "build #4284 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-20T04:09:59Z",
