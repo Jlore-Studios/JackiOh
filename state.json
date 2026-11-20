@@ -11800,6 +11800,13 @@
     "4250": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T23:16:03Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium: none of the five hard triggers apply \u2014 client-only backoff move in two socket files, no engine/AI/cross-crate/migration/40-file change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
