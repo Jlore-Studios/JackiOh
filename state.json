@@ -16225,6 +16225,23 @@
         "tiers": {}
       }
     },
+    "4318": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "claude-4",
+      "owner_since": "2026-11-20T15:20:50Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "claude-4",
+      "run_id": "pending:ef11132b-1795188021",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-20T15:20:50Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "4320": {
       "action": "review",
       "asks": [],
@@ -16326,9 +16343,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T15:20:07Z",
+    "at": "2026-11-20T15:20:50Z",
     "url": "",
-    "what": "review #4320 on muse"
+    "what": "plan #4318 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-20T15:07:51Z",
