@@ -13769,6 +13769,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 395,
       "started_at": "2026-11-20T18:37:57Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35254,9 +35255,33 @@
         "title": "Patch: the 17.6 MB of voice lines download in the background only once a game is on screen, and not while the browser asks to save data",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "60d167a713e7da391b8a353e037640de5c7c36cc",
+        "issue": 4296,
+        "merged_at": "2026-11-20T20:34:42Z",
+        "n": 395,
+        "pr": 4324,
+        "queued_at": "2026-11-20T20:34:42Z",
+        "sha": "373bd1521212cdfc69be303b00ef6005c1b873a2",
+        "status": "queued",
+        "title": "Patch: the game log's card buttons meet the 24-pixel target on a mouse too",
+        "tries": 0
       }
     ],
-    "count": 394
+    "count": 395
   },
   "statistics": {
     "at": "2026-11-20T20:29:40Z"
