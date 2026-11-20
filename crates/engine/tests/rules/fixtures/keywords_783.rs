@@ -224,6 +224,12 @@ pub fn summon_crater() -> CardDef {
     def(7854, "summon-crater", "Spell", 1, json!([]))
 }
 
+/// R4327000: a Spell at (1) whose Cry summons a mourner, a token and a plain unit given Cloaked, each set
+/// face-down by its Cloaked.
+pub fn summon_set() -> CardDef {
+    def(7876, "summon-set", "Spell", 1, json!([]))
+}
+
 /// A Spell that Recruits.
 pub fn recruiter() -> CardDef {
     def(7855, "recruiter", "Spell", 1, json!([]))
@@ -418,6 +424,7 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         crater_trap(),
         crater_moon(),
         summon_crater(),
+        summon_set(),
         recruiter(),
         flicker_all(),
         stacker(),
@@ -687,6 +694,27 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         both(Script {
             cry: Some(hook(|_ctx| {
                 vec![effects::summon(json_as(json!({ "defId": crater_unit().id })))]
+            })),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        summon_set().id,
+        both(Script {
+            cry: Some(hook(|_ctx| {
+                vec![
+                    effects::summon(json_as(
+                        json!({ "defId": cloaked_mourner().id, "setCloaked": true }),
+                    )),
+                    effects::summon(json_as(
+                        json!({ "defId": cloaked_token().id, "setCloaked": true }),
+                    )),
+                    effects::summon(json_as(json!({
+                        "defId": plain_unit().id,
+                        "setCloaked": true,
+                        "keywords": [{ "kind": "Cloaked" }],
+                    }))),
+                ]
             })),
             ..Script::default()
         }),

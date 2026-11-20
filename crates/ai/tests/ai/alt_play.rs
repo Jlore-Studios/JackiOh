@@ -1,11 +1,15 @@
-//! Face-down plays through the AI's eyes (R1046, R783009, R4237000).
+//! Face-down plays through the AI's eyes (R1046, R783009, R4237000, R4327000).
 //!
 //! A set card redacts to a placeholder with no `setAs`, and `determinize` samples for a hidden backrow
 //! card a Trap, a card that prints Cloaked whatever acts (R783009), or a card an aura lends Cloaked to
 //! in that side's hand now: every Unit while Knowledge Breaker acts there (R1046). A Unit the AI reveals
-//! is summoning sick that turn, so it plans an attack by it only with Rush or Charge (R4237000).
+//! is summoning sick that turn, so it plans an attack by it only with Rush or Charge (R4237000). A card a
+//! summon set face-down by its Cloaked (S+ #76 Ayys LMAO) is offered its Reveal like a played one, and
+//! which card it is changes no decision of its opponent's (R4327000).
 
-use jackioh_ai::{AI_BUDGET, DeterminizeOptions, determinize, lethal_hint, play_ai_turn, redact};
+use jackioh_ai::{
+    AI_BUDGET, AiOptions, DeterminizeOptions, decide, determinize, lethal_hint, play_ai_turn, redact,
+};
 use jackioh_engine::testkit::{
     ActionBody, CardScripts, CardType, GameState, Keyword, RevealAt, Row, ZoneChoice, create_rng, find_def,
     json, legal_actions, register_catalog, register_scripts, registered_catalog, registered_scripts,
@@ -388,4 +392,105 @@ fn r3806000_the_ai_sets_a_spell_under_paranoia_and_reveals_it_for_lethal() {
         "{}",
         trace(&run.turn)
     );
+}
+
+/// S+ #76 Ayys LMAO, its Ayy token and the Tiny Asteroid it may summon instead (R4327002).
+const AYYS_LMAO: &str = "stinkyscapeplus-076";
+const AYY: &str = "stinkyscapeplus-076-1";
+const ASTEROID: &str = "stinkyscape-169";
+
+/// p1, the AI, cast Ayys LMAO on its turn: its three summons set face-down in its backrow (R4327000).
+fn ayys_cast(seed: &str) -> GameState {
+    register_cards();
+    let state = scenario(json!({
+        "seed": seed,
+        "active": "p1",
+        "p1": { "mana": 8, "hand": [AYYS_LMAO], "library": [VANILLA, VANILLA, VANILLA] },
+        "p2": { "mana": 8, "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA] },
+    }))
+    .state()
+    .clone();
+    let spell = state.players[AI].hand[0].id.clone();
+    super::support::act(
+        &state,
+        AI,
+        ActionBody::Play {
+            instance_id: spell,
+            zone: None,
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: None,
+            targets: None,
+            modes: None,
+            plague: None,
+            face_down: None,
+        },
+    )
+}
+
+#[test]
+fn r4327000_the_ai_is_offered_each_reveal_and_its_opponent_sees_placeholders() {
+    let state = ayys_cast("r4327000-ai-reveal");
+    let set: Vec<String> = state.players[AI]
+        .backrow
+        .iter()
+        .flatten()
+        .filter(|card| card.set_as.map(|stamp| stamp.reveal) == Some(RevealAt::Cloaked))
+        .map(|card| card.id.clone())
+        .collect();
+    assert_eq!(set.len(), 3, "three set summons");
+    let offered = legal_actions(&state, AI);
+    for id in &set {
+        assert!(
+            offered.iter().any(|action| matches!(action,
+                ActionBody::Activate { instance_id, ability, .. }
+                    if instance_id == id && ability.as_deref() == Some("reveal"))),
+            "the AI may reveal {id}"
+        );
+    }
+
+    let public = redact(&state, HUMAN);
+    for id in &set {
+        let hidden = public.players[AI]
+            .backrow
+            .iter()
+            .flatten()
+            .find(|card| card.id == *id)
+            .expect("the placeholder");
+        assert_eq!(hidden.set_as, None);
+        assert!(
+            hidden.def_id != AYY && hidden.def_id != ASTEROID,
+            "{}",
+            hidden.def_id
+        );
+        assert!(!hidden.radiant);
+        assert!(
+            hidden.granted_keywords.is_empty(),
+            "the asteroid's Cloaked is hidden too"
+        );
+    }
+}
+
+#[test]
+fn r4327000_which_card_each_set_summon_is_changes_no_decision_of_its_opponent() {
+    let a = super::support::act(&ayys_cast("r4327000-ai-blind"), AI, ActionBody::EndTurn);
+    assert_eq!(a.active, HUMAN);
+    // The same backs, each the other card: an Ayy for an asteroid given Cloaked, and back.
+    let mut b = a.clone();
+    for card in b.players[AI].backrow.iter_mut().flatten() {
+        let ayy = card.def_id == AYY;
+        card.def_id = if ayy { ASTEROID } else { AYY }.to_string();
+        card.radiant = false;
+        card.granted_keywords = if ayy { vec![Keyword::Cloaked] } else { Vec::new() };
+    }
+    assert_ne!(a.players[AI].backrow, b.players[AI].backrow);
+
+    let decided = |state: &GameState| {
+        decide(state, HUMAN, &mut AiOptions::new(create_rng("r4327000-ai", 0)))
+            .map(|decision| (decision.action, decision.line))
+    };
+    let (from_a, from_b) = (decided(&a), decided(&b));
+    assert!(from_a.is_some());
+    assert_eq!(from_a, from_b);
 }
