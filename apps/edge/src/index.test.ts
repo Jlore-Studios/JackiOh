@@ -702,6 +702,16 @@ describe("the Worker's routes", () => {
     expect(env.SERVER.get).not.toHaveBeenCalled();
   });
 
+  it("#4297 carries the static security headers on its own 404", async () => {
+    const env = routedEnv(() => Promise.resolve(new Response("unreached")));
+    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env);
+
+    expect(answer.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(answer.headers.get("X-Frame-Options")).toBe("DENY");
+    expect(answer.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+    expect(answer.headers.get("Strict-Transport-Security")).toBe("max-age=31536000; includeSubDomains");
+  });
+
   it("forwards the server's paths through the one instance, without the caller's address", async () => {
     const fetch = vi.fn((_request: Request) => Promise.resolve(new Response("from the server")));
     const env = routedEnv(fetch);
@@ -716,6 +726,9 @@ describe("the Worker's routes", () => {
     const forwarded = fetch.mock.calls[0]?.[0] as Request;
     expect(forwarded.headers.has("X-Forwarded-For")).toBe(false);
     expect(await answer.text()).toBe("from the server");
+    // #4297: proxied /api/* answers gain nothing.
+    expect(answer.headers.get("X-Content-Type-Options")).toBeNull();
+    expect(answer.headers.get("Strict-Transport-Security")).toBeNull();
   });
 
   it("#4017 forwards a socket's ?token= to the server and logs nothing that holds it", async () => {

@@ -1,5 +1,5 @@
 // `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on four tabs, each a raised
-// button naming what it shows (R4279001): Cards (the filters, not columns, cover cost, rarity and keyword,
+// button showing its name alone (R4279001, R4335000): Cards (the filters, not columns, cover cost, rarity and keyword,
 // R2446000), Tokens (R4279001), Sets (R1966000) and Players (public aggregates, fun stats from #125). No
 // provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661).
 // Below the per-row floor a row reads "not enough games". The Adjusted win rate leads (R2777000), so the table
@@ -255,16 +255,6 @@ function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: st
  * R3324000: the Cards or Sets tab of a patch still collecting its data: the words in place of its figures, and the
  * way to the patch before. No count and no progress (R661).
  */
-/** R4279001: a view's tab, its name over a line of what it shows, so the row reads as places to go. */
-function TabLabel({ name, hint }: { name: string; hint: string }): ReactElement {
-  return (
-    <>
-      <span className="stats-tab-name">{name}</span>
-      <span className="stats-tab-hint">{hint}</span>
-    </>
-  );
-}
-
 function CollectingNote({
   patch,
   previous,
@@ -859,7 +849,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
           items={[
             {
               id: "cards",
-              label: <TabLabel name={t("Cards")} hint={t("Win rate and tier of every card")} />,
+              label: t("Cards"),
               testId: statsTestid.tabCards,
               panelClassName: "stats-panel one-screen__body",
               // R3324000: a patch still collecting its data shows no figures.
@@ -1221,7 +1211,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       },
       {
         id: "tokens",
-        label: <TabLabel name={t("Tokens")} hint={t("Tokens and other cards made in games")} />,
+        label: t("Tokens"),
         testId: statsTestid.tabTokens,
         panelClassName: "stats-panel one-screen__body",
         // R4279001: the cards made during a game, a tab of their own beside the deck cards' (R2089000, R3324002,
@@ -1294,7 +1284,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       },
       {
         id: "sets",
-        label: <TabLabel name={t("Sets")} hint={t("How each set does")} />,
+        label: t("Sets"),
         testId: statsTestid.tabSets,
         panelClassName: "stats-panel one-screen__body",
         // R3324000: a patch still collecting its data has no sets to show.
@@ -1470,7 +1460,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       },
       {
         id: "players",
-        label: <TabLabel name={t("Players")} hint={t("Every player's games and win rate")} />,
+        label: t("Players"),
         testId: statsTestid.tabPlayers,
         panelClassName: "stats-panel one-screen__body",
         panel: (

@@ -24,6 +24,7 @@ import {
   isServerPath,
   precompressedModule,
   settingsFingerprint,
+  withSecurityHeaders,
   type ServerSettings,
 } from "./routing.ts";
 
@@ -258,7 +259,12 @@ export default {
   async fetch(request, env): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (isModulePath(pathname)) return precompressedModule(await env.ASSETS.fetch(request));
-    if (!isServerPath(pathname)) return new Response("Not found", { status: 404 });
+    if (!isServerPath(pathname)) {
+      // #4297: the Worker's own 404 is no file Cloudflare serves, so it carries the static headers itself.
+      const headers = new Headers();
+      withSecurityHeaders(headers);
+      return new Response("Not found", { status: 404, headers });
+    }
     return server(env).fetch(forServer(request));
   },
 

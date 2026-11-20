@@ -12,6 +12,7 @@
   X-Robots-Tag: noindex, nofollow
   Cross-Origin-Opener-Policy: same-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
 
 # The bundle and its chunks (Vite's build output): every name carries its content's hash.
 /assets/*
