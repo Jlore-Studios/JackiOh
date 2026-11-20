@@ -1,7 +1,7 @@
 {
   "title": "Radiant de-keywording",
   "sources": "#4292",
-  "notes": "Radiant de-keywording (#4292): each Radiant face below kept a new keyword on top of a second upgrade, and the owner chose which one each keeps. Table 1, the keyword goes: Divine Shield off K-Pop Fanatic, Corpse Eater, Helpful Assistant, Knowledge Breaker and Growing Felinor, Sr and Sr Sr (each keeps Rush); Classic Golem prints First Strike again in place of Divine Shield; Poisonous off Knowledge Breaker Prime; Armor 5 off YileGPT Prime; Armor 2 off Force Projector (its aura reads the face's printed Armor, so it lends none, R4292001) and Oct; Pierce and Armor 2 off Surge Wall; Reborn off Macizon; Rush off Mace, Fortress, Reign, Zenith, Antumbra, Eclipse, Fortnith, Sceptumbra and Reignclipse (Macizon and Sceptumbra now drop one keyword of their two cards' union, R4292000, amending R3565003). Table 2, the keyword stays and the number goes back to the base face's: Reoccurring Dream and Legacy: Reoccurring Dream chance 40 to 30 (Lucky 1 kept); Top Loser Armor 4 to 2 (Immune to Spells kept); Flak v3, v4 and v5 damage 2 to 4 back to 1 to 3 (Lucky 1 kept); Fortify Flesh Armor 3 to 7 back to 3 to 5 (Lucky 1 kept); Path of Exile draws 1, from 2 (Cleave kept). Card data only: no script changes, so every shipped catalog folds under the same scripts as it was played (R767000). The three Flak cards are claimed by #4285's pending fragment (Stinkyscape+ Balance Changes IV), which changes them too, so this fragment leaves them out; its player note carries their line.",
+  "notes": "Radiant de-keywording (#4292): each Radiant face below kept a new keyword on top of a second upgrade, and the owner chose which one each keeps. Table 1, the keyword goes: Divine Shield off K-Pop Fanatic, Corpse Eater, Helpful Assistant, Knowledge Breaker and Growing Felinor, Sr and Sr Sr (each keeps Rush); Classic Golem prints First Strike again in place of Divine Shield; Poisonous off Knowledge Breaker Prime; Armor 5 off YileGPT Prime; Armor 2 off Force Projector (its aura reads the face's printed Armor, so it lends none, R4292001) and Oct; Pierce and Armor 2 off Surge Wall; Reborn off Macizon; Rush off Mace, Fortress, Reign, Zenith, Antumbra, Eclipse, Fortnith, Sceptumbra and Reignclipse (Macizon and Sceptumbra now drop one keyword of their two cards' union, R4292000, amending R3565003). Table 2, the keyword stays and the number goes back to the base face's: Reoccurring Dream and Legacy: Reoccurring Dream chance 40 to 30 (Lucky 1 kept); Top Loser Armor 4 to 2 (Immune to Spells kept); Flak v3, v4 and v5 damage 2 to 4 back to 1 to 3 (Lucky 1 kept); Fortify Flesh Armor 3 to 7 back to 3 to 5 (Lucky 1 kept); Path of Exile draws 1, from 2 (Cleave kept). Card data only: no script changes, so every shipped catalog folds under the same scripts as it was played (R767000). The three Flak cards are claimed by #4285's pending fragment (Stinkyscape+ Balance Changes IV), which changes them too, so this fragment leaves them out; its player note carries their line. Its plays are the 31 cards with no catalog change of their own that classify's unforced games against the base build show acting differently once a changed Radiant face has moved a game (R1370000).",
   "player": {
     "title": "Radiant faces trimmed to one boost each",
     "new": [],
@@ -55,5 +55,38 @@
     "stinkyscapeplus-133-5",
     "traininggrounds-026",
     "traininggrounds-049"
+  ],
+  "plays": [
+    "classicplus-031",
+    "classicplus-043",
+    "classicplus-060",
+    "core-033",
+    "core-t-rush",
+    "meditative-010",
+    "meditative-018",
+    "meditative-059",
+    "meditative-068",
+    "meditative-079",
+    "meditative-101",
+    "stinkyscape-018",
+    "stinkyscape-043",
+    "stinkyscape-085",
+    "stinkyscape-086",
+    "stinkyscape-112",
+    "stinkyscape-114",
+    "stinkyscape-125",
+    "stinkyscape-134",
+    "stinkyscape-151",
+    "stinkyscape-155",
+    "stinkyscape-t-dormant-starship",
+    "stinkyscape-t-gellium",
+    "stinkyscape-t-korrelite",
+    "stinkyscape-t-reknite",
+    "stinkyscapeplus-121",
+    "stinkyscapeplus-127",
+    "stinkyscapeplus-129",
+    "stinkyscapeplus-131",
+    "stinkyscapeplus-t-supernova",
+    "traininggrounds-027"
   ]
 }
