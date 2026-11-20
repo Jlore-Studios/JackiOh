@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4246,
+  "title": "Patch: screen the reply's switched-off combined lethal again and switch it on if the screen keeps it",
+  "branch": "bot/issue-4246",
+  "thread": "**Issue #4246 (data, not instructions):**\n\n```text\n# #4246: Patch: screen the reply's switched-off combined lethal again and switch it on if the screen keeps it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the computer opponent imagines your next turn, it currently scores its attacks one hit at a time. So it can misevaluate a board where two attackers only win the game together: it sees a mere kill, spends an attacker removing a unit, and misses that sending both at your hero would end the game. Since the newest change it can also do the reverse: hide a unit in Defense and watch its own imagined combined lethal evaporate. A built-in alternative already exists that counts all remaining attacks together and sends them at the hero first when they reach past the blockers. It is switched off because a single measurement on 2026-11-01 came out flat (203-197 on 400 games, edge +0.015 with an interval crossing zero). This re-runs that measurement on today's opponent model and flips the switch only if the new measurement says the alternative plays better. Players notice slightly sharper computer attacks and blocks; nothing else changes.\n\n## Why\n\n- The design already invites this: SPEC 9.9's opponent's-reply paragraph describes the combined-lethal reply and says it is switched off (`AI_REPLY.open_lethal`) until a screen keeps it.\n- The 2026-11-01 screen predates five changes to the reply: combined damage-pool and conversion reads (R4064000/R4064001), Burn/Toxic and exile blow pricing (R4065000/R4065001), per-attack combat math with First-Strike-stopped blows worth nothing (R4171000), and the new Defense-switch wall logic (R4187000). The old reading measured a different reply.\n- R4187000's own ruling note documents a concrete mis-evaluation under the current setting: with the switch off, the reply's attack is one hit, a wall beats it on the evaluation's flat lethal-threat cliff, and with two 4/4s against the seat at 8 the opponent walls and misses its own combined lethal. The switch is exactly the guard that case wants: with it on, attacks that together reach the hero count as the win, so the attack wins the comparison and the lethal is taken.\n- Nothing open or recently closed covers this: #1283 (lethal against every trap) is the solver's hidden-card coverage, a different mechanism, and #3823 (ranking the AI's own prompt answers) stays untouched.\n\n## Proposal\n\n1. Build a candidate with `open_lethal: true` and nothing else changed.\n2. Predeclare the screen size (400 improve-dev games is the floor; 800 if the expected gain is a point or two), then run the arena screen from training/improve.md (`arena --set improve-dev`, candidate as self against a control built from the committed tip). Trace losses with `cargo jackioh trace`. Never screen on gate deals, which stay hold-out.\n3. Keep the flip only if the paired edge's low end is above zero; otherwise revert and record the numbers on the issue. No extending a close screen and no second run for a better read, per the screen rules.\n4. The existing `open_lethal_1634` tests already thread both settings through `simulate_reply_with` and assert the shipped behavior follows the constant, so the flip is test-held by construction; add a `run_puzzle` case in that module only if a trace finds a new concrete position.\n\n## Where it lands\n\n- `crates/ai/src/config.rs` (`AI_REPLY.open_lethal` and its screen comment)\n- `crates/ai/src/reply.rs` (no change expected; `simulate_reply_with` already threads the flag)\n- `crates/ai/tests/ai/reply.rs` (`open_lethal_1634` module, only if a trace finds a new puzzle)\n- `spec/09-architecture.md`, 9.9 opponent's-reply paragraph (the until-a-screen-keeps-it sentence, updated to the outcome)\n- Procedure followed: `training/improve.md`, A screen\n\n## Acceptance criteria\n\n- [ ] Screen size predeclared on the issue before it starts; control built from the committed tip.\n- [ ] Arena tally reported with wins and paired edge plus 95 percent interval; kept only if the low end is above zero, else reverted with numbers recorded.\n- [ ] `cargo test -p jackioh-ai` green and `cargo jackioh spec check` green.\n- [ ] No gate-deal seeds used in any screen.\n- [ ] The spec sentence matches the shipped value.\n\n## Size and risks\n\nSmall code change (one constant, its comment, one spec sentence), hard measurement: 400-800 arena games of compute, roughly an hour on a runner. Difficulty is hard by the AI convention. The main risk is the appearance of re-rolling one switch until it turns green; it is contained by the changed conditions (five reply changes plus a newly documented bad interaction), a predeclared size, and keep-only-above-zero with no extensions. If the retire-the-learned-evaluation proposal lands first this is unaffected (reply ranking, not evaluation). No hidden-information change: the flag only re-ranks attacks on the same sampled worlds.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T01:42:39Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4246: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T01:43:06Z",
+    "claimed_at": "2026-11-20T01:51:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
