@@ -14654,11 +14654,10 @@
     "what": "review #4346 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-20T21:59:48Z",
+    "at": "2026-11-20T22:07:33Z",
     "notes": [
-      "#4322: `claude-1` can start again, so its hold is lifted",
-      "delivered review #4342 on muse (run 44810445523): approved",
-      "started build #4322 on claude-1 (run 44825375905)",
+      "delivered build #4318 on claude-7 (run 44807877090): built",
+      "started review #4346 on claude-7 (run 44826487788)",
       "nothing more to start: nothing is queued",
       "pruned 2 plan file(s) older than 7 days"
     ],
@@ -15366,7 +15365,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T21:59:48Z",
+  "loop_tick": "2026-11-20T22:07:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
