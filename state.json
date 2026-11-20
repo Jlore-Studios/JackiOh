@@ -15144,6 +15144,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-20T14:23:04Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `e2e/support/axe-exceptions.ts:55`: The change fixes the violation that the `target-size` exception for `.log .log-card` records, but leaves that exception in pl"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 3
