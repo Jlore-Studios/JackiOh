@@ -14775,9 +14775,7 @@
     },
     "4286": {
       "action": "plan",
-      "asks": [
-        "c:7030238487"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T04:29:39Z",
         "difficulty": "hard",
@@ -14796,14 +14794,6 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- | `crates/ai/src/config.rs` | change | `AI_REPLY.countdown_share` value (line ~1025) and its comment (line ~1024): screened value plus screen citation in the style of the `open_lethal` / `defense_switches` comments |\n- | Screen table | no file | Recorded in the constant's comment and the pull request body (wins, paired edge, 95% interval per candidate); no new source, test, or spec file |\n- Must not touch: `crates/ai/src/reply.rs` (`reply_score`, `countdowns_due` arithmetic stays as-is), `crates/engine/`, `crates/cards/`, `crates/server/`, `crates/tools/`, `apps/`, `spec/` and `spec/rulings/`, `spec/pending/`, `.github/`, `.harness/`, `.squishy/`, `bot/`, any migration. Governing spec\u2026\n- ## Steps\n- 1. Confirm the base. In this worktree (`bot/issue-4286`, base `d70de4be`), run `git status --porcelain` (must be clean) and `git rev-parse --short HEAD`; record the control SHA for the comment. Read `crates/ai/src/config.rs` lines 971\u20131026 and `crates/ai/src/reply.rs` lines 838\u2013920; do not edit `re\u2026\n- 2. Build the control from the committed tip, per `training/improve.md` (\"A screen\"): `cargo build --release -p jackioh-tools && cp target/release/jackioh ~/control-jackioh`. Rebuild it only if the tip moves; the control measures the `0.5` AI without the change.\n- 3. Screen candidate `0`: in `crates/ai/src/config.rs`, set `AI_REPLY.countdown_share` to `0.0` (value only, comment later), rebuild (`cargo build --release -p jackioh-tools`), then run `cargo jackioh arena --a self --b bin:~/control-jackioh --set improve-dev` (400 paired games, ~30\u201345 min). Record \u2026\n- 4. Repeat step 3 for `0.25`, then `0.75`, then `1.0`, each as its own edit\u2013rebuild\u2013arena run against the same `~/control-jackioh`. Run in this order and stop early on a clear winner only to save time (a plainly losing arm is reverted, never kept early).\n- 5. Decide: the winner is the candidate with the largest `edge` whose `edgeLow` is above 0. If none clears zero, keep `0.5`. If several clear zero, take the largest edge; never keep the best of several arms that only read best by noise (each kept arm needs its own `edgeLow > 0`).\n- 6. Apply the decision in `crates/ai/src/config.rs`: set `countdown_share` to the winner (or leave `0.5`). Replace the `// #1995: untuned; the training lanes may move it.` comment with a screened note copying the `open_lethal` pattern, e.g. `// #1995: <value>. Its screen read <W>-<L>, edge <edge> (<\u2026\n- 7. Verify: run the AI countdown tests, then the crate suite, then the smoke gate, fmt, and clippy (exact commands in Tests). If any test fails, fix the change (value/comment only), never weaken a test or add an allow.\n- ## Tests\n- No new tests: the header of `crates/ai/src/config.rs` states tests pin rankings and puzzle outcomes, never these values, and the blend arithmetic is untouched. These existing tests guard the countdown behavior and must pass as part of the suite:\n- - `crates/ai/tests/ai/meditative_plus.rs`: `the_ai_casts_supply_drop_in_combat_mode_against_three_3_health_units` (Supply Drop countdown weighed past the reply), `r3696000_r4159000_beside_two_castable_vanillas_the_hand_eval_plays_a_vanilla_first`, `r3696000_on_a_tight_budget_the_supply_drop_line_co\u2026\n- - `crates/ai/tests/ai/slumber.rs`: `r2380000_an_own_dormant_card_scores_above_an_empty_zone_and_an_enemy_one_below_it`, `r2380000_fewer_turns_left_is_worth_more` (Dormant countdown pricing; adjacent to delayed-effect scoring).\n- - `crates/ai/tests/ai/reply.rs` (`mod reply_score`): the `reply_score` unit tests around lines 281\u2013580.\n- Commands:\n- - `cargo test -p jackioh-ai --test ai meditative_plus`\n- - `cargo test -p jackioh-ai --test ai slumber`\n- - `cargo test -p jackioh-ai --test ai reply`\n- - `cargo test -p jackioh-ai` (whole crate green)\n- - `cargo jackioh gate` (smoke size green)\n- - `cargo fmt --check`\n- - `cargo clippy -p jackioh-ai --all-targets -- -D warnings`\n- ## Done when\n- - [ ] Screen table recorded (each of `0`, `0.25`, `0.75`, `1.0` vs the `0.5` control: wins, paired edge, 95% interval on `improve-dev`).\n- - [ ] `countdown_share` set to the screened winner, or kept at `0.5` with the no-keep screen recorded in its comment; comment names games, edge, and interval, not \"untuned\".\n- - [ ] Crate suite green, countdown tests included.\n- - [ ] Gate smoke green; rustfmt and clippy clean.\n- - [ ] `reply.rs`, spec, and rulings untouched; no new ruling note; no forbidden paths changed.\n- ## Risks\n- - Screen noise picks a false winner: mitigated by paired deals with seats swapped and by keeping a value only when its `edgeLow` is above 0, else `0.5` stays.\n- - Gate smoke is a small fixed-seed sample that catches a broken AI, not a lost point or two: do not chase its noise or re-run screens to get a better read.\n- - Value-only change: countdown logic, signatures, determinism, hidden-information handling (reply reads only public badges), and crate purity are untouched; the only behavioral shift is the intended re-weighting of lines that leave a countdown ticking.\n- ## Open questions\n- None. Every choice the task leaves open is settled above (candidates, 400 paired games per screen on `improve-dev`, keep rule `edgeLow > 0`, comment style after `open_lethal`/`defense_switches`).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4286 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4286/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "hold": {
-        "ends": "2026-11-20T08:35:19Z",
-        "lifted": "2026-11-20T07:20:27Z",
-        "owner": "claude-4",
-        "since": "2026-11-20T06:35:19Z",
-        "until": "2026-11-20T07:20:00Z",
-        "why": "5-hour usage is 52%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)"
-      },
       "in_lane": true,
       "interruptions": 0,
       "kind": "build",
@@ -14820,12 +14810,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-20T04:16:53Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44687542488",
+      "run_id": "pending:da31865b-1795159247",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T06:24:07Z",
+      "started_at": "2026-11-20T07:21:08Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7030238487"
+      ],
       "waiting_comment": 7032400398
     },
     "4287": {
@@ -15513,9 +15505,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T07:20:34Z",
+    "at": "2026-11-20T07:21:08Z",
     "url": "",
-    "what": "plan #4294 on claude-6"
+    "what": "plan #4286 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-20T07:12:54Z",
