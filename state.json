@@ -15359,6 +15359,13 @@
         "reason": "`claude-1` reached its usage limit",
         "trail": ""
       },
+      "hold": {
+        "ends": "2026-11-20T08:15:53Z",
+        "owner": "claude-1",
+        "since": "2026-11-20T06:15:53Z",
+        "until": "2026-11-20T07:00:00Z",
+        "why": "it refused a call"
+      },
       "issue": 4285,
       "kind": "review",
       "live": "reviewing",
