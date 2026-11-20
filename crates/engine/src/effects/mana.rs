@@ -153,13 +153,23 @@ pub fn change_max_mana(args: ChangeMaxManaArgs) -> Effect {
 }
 
 /// R1854003: "Steal your enemy's mana crystals" (Stinkyscape #7 The Greatest Heist's last reward),
-/// by `mana::move_mana_crystals`. Each side whose mana changed is announced; a steal from a player
-/// with no maximum mana announces nothing.
+/// by `mana::move_mana_crystals`, the thief's gain standing past the cap (R4331001). Each side whose
+/// mana changed is announced; a steal from a player with no maximum mana announces nothing.
 pub fn steal_mana_crystals() -> Effect {
+    steal_mana_crystals_with(crate::mana::CrystalGain::PastTheCap)
+}
+
+/// R767000: the steal v0.6.8 and before ran (R1854003), the thief gaining only up to the cap, for The
+/// Greatest Heist's kept script.
+pub fn steal_mana_crystals_to_cap() -> Effect {
+    steal_mana_crystals_with(crate::mana::CrystalGain::ToTheCap)
+}
+
+fn steal_mana_crystals_with(gain: crate::mana::CrystalGain) -> Effect {
     Effect::new("stealManaCrystals", move |ctx| {
         let thief = ctx.controller;
         let victim = opponent_of(thief);
-        let (lost, gained) = crate::mana::move_mana_crystals(ctx.sink.state, thief, victim);
+        let (lost, gained) = crate::mana::move_mana_crystals(ctx.sink.state, thief, victim, gain);
         if lost > 0 {
             let event = mana_event(victim, &ctx.sink.state.players[victim]);
             ctx.sink.events.push(event);

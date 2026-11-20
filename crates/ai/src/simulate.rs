@@ -980,7 +980,7 @@ fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     )
 }
 
-/// Non-default player parts for `search_signature` (mana, riders R844, locks, fatigue, graveyard, R1854003, R1224, #898).
+/// Non-default player parts for `search_signature` (mana, riders R844, locks, fatigue, graveyard, R1854003, R4331001, R1224, #898).
 fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>) {
     let side = &state.players[player];
     let mana = &side.mana;
@@ -997,6 +997,10 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     // R1854003: mana crystals a steal moved, which every later refresh reads, only while some are.
     if let Some(crystals) = side.mana_crystals {
         parts.push(format!("C{player}{crystals}"));
+    }
+    // R4331001: crystals a steal took past the cap, only while some stand.
+    if let Some(crystals) = side.stolen_mana_crystals {
+        parts.push(format!("S{player}{crystals}"));
     }
     if side
         .locks

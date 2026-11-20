@@ -14,11 +14,12 @@ use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PL
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0; with no handicap, §2.3's "min(number of turns you have started, 4), plus
 /// persistent modifiers". `nextTurnMod` is a one-shot rider the refresh spends, never max mana; other
-/// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap.
+/// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap;
+/// R4331001: stolen crystals count on top of it.
 pub fn max_mana_for(side: &PlayerState) -> i32 {
     let handicap = handicap_of(side);
     let base = mana_crystal_count(side).min(handicap.mana_cap);
-    (base + side.mana.perm_mod).max(0)
+    (base + stolen_mana_crystals_of(side) + side.mana.perm_mod).max(0)
 }
 
 /// R1854003: a player's mana crystals before the cap (Hearthstone's count): the turns they have started
@@ -27,27 +28,57 @@ pub fn mana_crystal_count(side: &PlayerState) -> i32 {
     side.turns_started + handicap_of(side).mana_bonus + side.mana_crystals.unwrap_or(0)
 }
 
+/// R4331001: the crystals a player stole, which stand on top of the cap.
+pub fn stolen_mana_crystals_of(side: &PlayerState) -> i32 {
+    side.stolen_mana_crystals.unwrap_or(0)
+}
+
+/// How a steal counts the thief's gain: past the cap (R4331001, the steal since issue #4331), or inside
+/// it, a thief at the cap gaining none (R1854003, the steal v0.6.8 and before ran, kept, R767000).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CrystalGain {
+    PastTheCap,
+    ToTheCap,
+}
+
 /// R1854003: `thief` steals `victim`'s mana crystals: the victim's max mana falls to their persistent
-/// modifiers alone and their current mana by as much, never below 0, the crystals coming back one a
-/// turn (§2.3); the thief gains as many, full, up to their cap. Returns the max mana the victim lost and
-/// the crystals the thief gained; the caller reports each side whose mana changed (`mana_event`).
-pub fn move_mana_crystals(state: &mut GameState, thief: PlayerId, victim: PlayerId) -> (i32, i32) {
+/// modifiers alone and their current mana by as much, never below 0, their own crystals coming back one
+/// a turn (§2.3) and the ones they had stolen gone for good (R4331001); the thief gains as many, full,
+/// past the cap or up to it as `gain` says. Returns the max mana the victim lost and the crystals the
+/// thief gained; the caller reports each side whose mana changed (`mana_event`).
+pub fn move_mana_crystals(
+    state: &mut GameState,
+    thief: PlayerId,
+    victim: PlayerId,
+    gain: CrystalGain,
+) -> (i32, i32) {
     let side = &mut state.players[victim];
     let count = mana_crystal_count(side);
     let before = side.mana.max;
     if count > 0 {
         side.mana_crystals = Some(side.mana_crystals.unwrap_or(0) - count).filter(|moved| *moved != 0);
     }
+    side.stolen_mana_crystals = None;
     side.mana.max = max_mana_for(side);
     let lost = (before - side.mana.max).max(0);
     side.mana.current = (side.mana.current - lost).max(0);
 
     let side = &mut state.players[thief];
-    let room = (handicap_of(side).mana_cap - mana_crystal_count(side)).max(0);
-    let gained = lost.min(room);
+    let gained = match gain {
+        CrystalGain::PastTheCap => lost,
+        CrystalGain::ToTheCap => lost.min((handicap_of(side).mana_cap - mana_crystal_count(side)).max(0)),
+    };
     if gained > 0 {
         let held = side.mana.max;
-        side.mana_crystals = Some(side.mana_crystals.unwrap_or(0) + gained).filter(|moved| *moved != 0);
+        match gain {
+            CrystalGain::PastTheCap => {
+                side.stolen_mana_crystals = Some(stolen_mana_crystals_of(side) + gained);
+            }
+            CrystalGain::ToTheCap => {
+                side.mana_crystals =
+                    Some(side.mana_crystals.unwrap_or(0) + gained).filter(|moved| *moved != 0);
+            }
+        }
         side.mana.max = max_mana_for(side);
         side.mana.current += side.mana.max - held;
     }

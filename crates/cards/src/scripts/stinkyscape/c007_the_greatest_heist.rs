@@ -12,7 +12,9 @@
 //! Staged Quest (R1854000, next_stage). Cry: Discover Acclaimed/Jelly Bean pool (R1873001, R380).
 //! Stage 1: unitsMadeRadiant (R1854002); reward summons random Acclaimed Unit (R64, R1).
 //! Stage 2: unitsDied; reward rolls Anomaly Found! or Resource (R1873002, §2.4, R1840002, R1840000).
-//! Stage 3: cardsStolen; reward steal_mana_crystals (R1854003).
+//! Stage 3: cardsStolen; reward steal_mana_crystals past the cap (R1854003, R4331001), then the Heist,
+//! spent, goes to the graveyard (end_quest_line, R4331000). Through v0.6.8 the steal stopped at the cap
+//! and the Heist stayed (`script_v0_6_8`, kept, R767000).
 
 use jackioh_engine::effects::{AddToHandArgs, GainResourcesArgs, SummonRandomArgs, gain_resources, summon_random};
 use jackioh_engine::prelude::*;
@@ -91,8 +93,9 @@ fn finds(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
         .collect()
 }
 
-/// Each stage's reward, on the card's own `questCompleted` (R1854000).
-fn rewards(radiant: bool) -> TriggerDef {
+/// Each stage's reward, on the card's own `questCompleted` (R1854000). `kept` is the last reward as
+/// v0.6.8 and before gave it (R767000).
+fn rewards(radiant: bool, kept: bool) -> TriggerDef {
     TriggerDef::new(
         "stage-completed",
         &[GameEventType::QuestCompleted],
@@ -110,7 +113,8 @@ fn rewards(radiant: bool) -> TriggerDef {
                 out.push(next_stage());
                 out
             }
-            Some(VAULTS) => vec![steal_mana_crystals()],
+            Some(VAULTS) if kept => vec![steal_mana_crystals_to_cap()],
+            Some(VAULTS) => vec![steal_mana_crystals(), end_quest_line()],
             _ => vec![],
         },
     )
@@ -130,10 +134,10 @@ fn add_the_pick(radiant: bool) -> Hook {
     })
 }
 
-fn heist(radiant: bool) -> Script {
+fn heist(radiant: bool, kept: bool) -> Script {
     Script {
         stages: stages(),
-        triggers: vec![rewards(radiant)],
+        triggers: vec![rewards(radiant, kept)],
         cry: Some(hook(|_ctx| vec![discover()])),
         resume: IndexMap::from([(PICKED, add_the_pick(radiant))]),
         ..Script::default()
@@ -142,8 +146,17 @@ fn heist(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: heist(false),
-        radiant: heist(true),
+        base: heist(false, false),
+        radiant: heist(true, false),
+    }
+}
+
+/// R767000: the scripts v0.6.8 and before ran, kept for their replays: Stage 3's steal stopped at the
+/// thief's cap (R1854003) and the Heist stayed on the field (issue #4331).
+pub fn script_v0_6_8() -> CardScripts {
+    CardScripts {
+        base: heist(false, true),
+        radiant: heist(true, true),
     }
 }
 
@@ -390,10 +403,41 @@ mod tests {
     }
 
     #[test]
-    fn r1854002_r1854003_stealing_an_enemy_card_meets_stage_3_which_steals_their_mana_crystals() {
+    fn r1854002_r1854003_r4331000_r4331001_stealing_an_enemy_card_meets_stage_3_which_steals_their_mana_crystals_past_the_cap_and_spends_the_heist() {
+        let (s, theirs, mine) = vaults_stolen();
+        let lost = theirs - s.state().players.p2.mana.max;
+        assert!(lost > 0, "their crystals taken");
+        assert!(mine + lost > MAX_MANA, "a steal that only the new rule takes past the cap");
+        assert_eq!(s.state().players.p1.mana.max, mine + lost, "given to p1, past the cap");
+        // R4331000: its last reward was single-use, so the spent Heist went to the graveyard.
+        assert!(s.state().players.p1.backrow[0].is_none(), "the Heist left the field");
+        assert!(
+            s.state().players.p1.graveyard.iter().any(|card| card.def_id == ID),
+            "the Heist is in p1's graveyard"
+        );
+    }
+
+    /// R767000: through v0.6.8 the steal stopped at the cap and the Heist stayed, its line done.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_8_steals_to_the_cap_and_keeps_the_heist() {
+        crate::under_kept(ID, script_v0_6_8(), || {
+            let (s, theirs, mine) = vaults_stolen();
+            let lost = theirs - s.state().players.p2.mana.max;
+            assert!(lost > 0, "their crystals taken");
+            assert_eq!(s.state().players.p1.mana.max, (mine + lost).min(MAX_MANA), "never past the cap");
+            let line = subsystems::quest_memory_of(s.state().players.p1.backrow[0].as_ref().expect("the Heist"))
+                .expect("its line");
+            assert_eq!(line.done.len(), 3, "the line is done: {line:?}");
+            assert!(line.active.is_empty());
+        });
+    }
+
+    /// The Heist at Stage 3 after a round, so each side holds crystals (R1854003: no maximum mana,
+    /// nothing to steal), then an enemy Unit stolen: the game, and each side's maximum mana before it.
+    fn vaults_stolen() -> (Scenario, i32, i32) {
         let mut s = at_the_vaults(false, "heist-vaults", &[MIND_CONTROL]);
-        // A round, so each side holds crystals (R1854003: no maximum mana, nothing to steal). Stage 1's
-        // Unit may be a Wardrum, whose end of turn casts a copy of the Heist, asking its Discover again.
+        // Stage 1's Unit may be a Wardrum, whose end of turn casts a copy of the Heist, asking its
+        // Discover again.
         for _ in 0..2 {
             s.end_turn();
             while s.state().pending.is_some() {
@@ -402,22 +446,18 @@ mod tests {
                 s.answer(json!(first));
             }
         }
+        // Both at the cap, so the crystals p1 steals can only stand past it.
+        let players = &mut s.state_mut().players;
+        for side in [&mut players.p1, &mut players.p2] {
+            side.turns_started = MAX_MANA;
+            side.mana.max = MAX_MANA;
+        }
         s.state_mut().players.p1.mana.current = MANA;
         let theirs = s.state().players.p2.mana.max;
         let mine = s.state().players.p1.mana.max;
         let target = s.unit(P2, 1).expect("p2's Vanilla").id;
         s.play(MIND_CONTROL, json!({ "targets": pick::id(&target) }));
-        let line = subsystems::quest_memory_of(s.state().players.p1.backrow[0].as_ref().expect("the Heist"))
-            .expect("its line");
-        assert_eq!(line.done.len(), 3, "the line is done: {line:?}");
-        assert!(line.active.is_empty());
-        let lost = theirs - s.state().players.p2.mana.max;
-        assert!(lost > 0, "their crystals taken");
-        assert_eq!(
-            s.state().players.p1.mana.max,
-            (mine + lost).min(MAX_MANA),
-            "given to p1, never past the cap"
-        );
+        (s, theirs, mine)
     }
 
     /// The Radiant Heist on `seed`, its Discover answered with the first option, then a Tylannt played

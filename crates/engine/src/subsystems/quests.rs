@@ -462,6 +462,16 @@ pub fn hold_quest_aura(reward_id: impl Into<String>) -> Effect {
     })
 }
 
+/// R4331000: whether a quest line is over with nothing of it lasting: no quest open, waiting to count,
+/// met for the next check or to hear back with, and no reward's aura held (In Too Deep's L and M).
+pub(crate) fn line_spent(memory: &QuestMemory) -> bool {
+    memory.active.is_empty()
+        && memory.waiting.is_empty()
+        && memory.met.is_empty()
+        && memory.hear_back.is_none()
+        && memory.auras.is_empty()
+}
+
 /// The running card as it stands now, if on the field on its run's stay (R174) with a quest tree.
 pub(crate) fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     let on_stay = crate::effects::targets::self_on_its_stay(ctx)?;

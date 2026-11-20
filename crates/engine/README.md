@@ -122,8 +122,10 @@ builds reads its own game's hold without the state (R2201001).
   quest's stages (`Script.stages`, R1854000), run on the same `memory.quest`, with the goals the
   Stinkyscape set's stages count (R1854002); the verbs that move a line or complete it are the
   effects' (`effects/quests.rs`: `complete_quests`, `complete_this_quest`, `open_stage`, `next_stage`,
-  `hear_back`), and "steal your enemy's mana crystals" is `effects::steal_mana_crystals`, the count
-  `PlayerState.mana_crystals` moves inside §2.3's cap (R1854003).
+  `hear_back`, and `end_quest_line`, which sends a spent Quest card to its graveyard, R4331000), and
+  "steal your enemy's mana crystals" is `effects::steal_mana_crystals`: the victim's count
+  `PlayerState.mana_crystals` moves inside §2.3's cap (R1854003), and the thief's gain is
+  `PlayerState.stolen_mana_crystals`, on top of it (R4331001).
 - `evolution.rs` is Evolve and Evolves (§6.2, §6.3, R1849001, R3536000–R3536005): the once-only
   `evolve_now` verb body, the settled state check's `evolve_standing`, the deck-marking
   `mark_library`, the `Evolved` event and the per-player `evolutions` count.
