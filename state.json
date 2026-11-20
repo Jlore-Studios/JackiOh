@@ -38323,6 +38323,9 @@
     "readings": [
       "2026-11-20T17:23:01Z,claude-8,ping,before,44782367693,0,2026-11-20T22:20:00Z,,,allowed,85,,",
       "2026-11-20T17:23:34Z,claude-8,stream,call,44782367693,1,2026-11-20T22:20:00Z,,,allowed,85,,"
+    ],
+    "runs": [
+      "2026-11-20T17:24:21Z,44782367693,claude-8,opus+sonnet,review,4324,medium,reviewed,,1.3,30,9398,741295,0.3857,0,1,,,0.9,muse,none,,2"
     ]
   },
   "version": 1
