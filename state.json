@@ -14841,17 +14841,8 @@
       ]
     },
     "4288": {
-      "action": "plan",
-      "asks": [
-        "c:7030258345"
-      ],
-      "build_next": {
-        "from_run": "44673576338",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-20T04:29:03Z",
-        "until": "2026-11-20T04:59:03Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T04:28:53Z",
         "difficulty": "medium",
@@ -14870,10 +14861,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- | File | New / change | What changes |\n- |---|---|---|\n- | `apps/web/src/routes/chunks.tsx` | change | `ENGINE_CHUNKS` set (lines 96\u2013109): add 7 chunk names with a `#4288` comment |\n- | `apps/web/src/routes/chunks.test.tsx` | change | `vi.doMock` for the scene loader; 3 new `it(\"R2116000 \u2026\")` tests |\n- | `spec/rulings/R2116000.md` | change | Body text (engine-starter list) and `cards:` front matter |\n- Do not touch: anything under `.github/`, `.harness/`, `.squishy/`, `bot/`; `spec/11-rulings.md`, `spec/INDEX.md`, `spec/CARDS.md` (the daily fold owns them); `spec/pending/` (no new ruling, so nothing to fold); `apps/web/src/main.tsx` (its `EngineGate` wrapping is already correct). Governing spec: \u2026\n- ## Steps\n- 1. In `apps/web/src/routes/chunks.tsx`, add to `ENGINE_CHUNKS`, after `\"lobby\"` (order inside the set is irrelevant), exactly:\n- `\"collection\"`, `\"decks\"`, `\"almanac\"`, `\"stats\"`, `\"patchNotes\"`, `\"together\"`, `\"leaderboard\"`.\n- Above the added names put one comment: `// #4288: the catalog screens read the module's currentCatalog() behind EngineGate (#4180, #4222), so intent starts it too.` All seven keys already exist in `routeChunks`; `chunkAt` already maps `/patch-notes` to `\"patchNotes\"` and strips query strings, so no\u2026\n- 2. In `apps/web/src/routes/chunks.test.tsx`, before the existing `await import(\"./chunks.tsx\")`, add:\n- `const loadSceneData = vi.fn((): Promise<void> => Promise.resolve());`\n- `vi.doMock(\"../cards/art/sceneLoader.ts\", () => ({ loadSceneData }));`\n- Copy the existing `vi.doMock(\"../wasm/index.ts\", \u2026)` pattern at the top of the file. `chunks.tsx` imports `loadSceneData` as a direct named binding, so `vi.spyOn` cannot intercept it \u2014 the module mock is required. Keep the real `soundTablesLoader` unmocked so its internal `loadWasm()` call (soundTa\u2026\n- 3. In the same file's `beforeEach`, add `loadSceneData.mockClear();` beside the existing `loadWasm.mockClear()`.\n- 4. Add `it(\"R2116000 intent toward the catalog screens starts loadWasm() and loadSceneData()\", \u2026)`: render links to `/collection`, `/decks`, `/almanac`, `/stats`, `/patch-notes`; spy each chunk's `load` with `mockResolvedValue(stubModule)` (copy the Practice test at line 153); fire `pointerEnter` o\u2026\n- 5. Add `it(\"R2116000 intent toward Together and the leaderboard starts loadWasm() and loadSceneData()\", \u2026)`: links to `/together` (`pointerEnter`) and `/leaderboard` (`focus`); expect both chunk loads once, `loadWasm` twice, `loadSceneData` twice.\n- 6. Add `it(\"R2116000 intent toward engine-free screens loads only their chunk\", \u2026)`: links to `/privacy`, `/terms`, `/purchases`, `/accessibility`, `/copyright` with mixed `pointerEnter`/`focus`/`touchStart`; expect each chunk `load` called once and `loadWasm` plus `loadSceneData` not called. Do no\u2026\n- 7. In `spec/rulings/R2116000.md`, replace the second sentence (`Practice, Play, \u2026 also start the engine, which only matters if the boot download (#778) failed.`) with: `Screens behind EngineGate also start the engine and the scene data: the boards (Practice, Play, a match, a series, a Duos match, a\u2026\n- ## Tests\n- - `pnpm --dir apps/web test src/routes/chunks.test.tsx` \u2014 the 3 new tests plus all existing `R2116000` tests pass.\n- - `pnpm --dir apps/web test src/net/first-load.test.ts` \u2014 passes; the 7 added strings live in the already-entry-chunk `chunks.tsx`, far below the gzip-budget headroom.\n- - `pnpm --dir apps/web typecheck` \u2014 clean.\n- - `cargo jackioh spec check` \u2014 clean (edited note keeps its id, valid `[[\u00a710.10]]` links, and its `proven_in` tests keep their `R2116000` names).\n- ## Done when\n- - [ ] `pointerenter`/`focus`/`touchstart` on `/collection`, `/decks`, `/almanac`, `/stats`, `/patch-notes`, `/together`, `/leaderboard` triggers the chunk import plus `loadWasm()` (via `loadSoundTables`) and `loadSceneData()`.\n- - [ ] Intent on `/privacy`, `/terms`, `/purchases`, `/accessibility`, `/copyright` loads only the chunk \u2014 no `loadWasm()`, `loadSoundTables()`, or `loadSceneData()`.\n- - [ ] Save-Data (`navigator.connection.saveData === true`) still disables all prefetching (existing test).\n- - [ ] `chunks.test.tsx`, `first-load.test.ts`, typecheck, and `spec check` all pass; entry bundle not increased.\n- - [ ] No file outside the three listed above is modified.\n- ## Risks\n- - Real `loadSoundTables()` runs in the new tests (it already does in the Practice/Dungeon tests): it imports `./soundTables.ts` dynamically after the mocked `loadWasm` resolves \u2014 same cost as existing engine-route tests, no flakiness added.\n- - `loadSceneData` is mocked for the whole file, so these tests no longer exercise the real scene import on engine intent \u2014 acceptable: real scene loading is covered by `engine-gate` tests; here only the call-on-intent wiring is under test.\n- - The folded `spec/11-rulings.md` paragraph for `R2116000` keeps its old narrower wording until the daily fold regenerates from the note; precedent (dungeon/daily joining the set under test `B13` with no note change at all).\n- ## Open questions\n- None. Decisions made and rejected: no new ruling number (this applies `R2116000`'s existing decision to more engine-gated screens after #4180/#4222, not a new Hearthstone-semantics call \u2014 minting `R4288000` rejected); no `spec/pending/4288.md` (nothing new to fold); `account` correctly excluded (no\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4288 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4288/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-20T04:18:54Z",
       "owner_why": "it plans it",
@@ -14886,12 +14876,14 @@
       "provider": "muse",
       "queued_at": "2026-11-20T04:18:10Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44673576338",
+      "run_id": "pending:c9c4de23-1795149136",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-20T04:18:54Z",
+      "started_at": "2026-11-20T04:32:35Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7030258345"
+      ]
     },
     "4290": {
       "action": "plan",
@@ -15142,9 +15134,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T04:32:03Z",
+    "at": "2026-11-20T04:32:35Z",
     "url": "",
-    "what": "review #4295 on muse"
+    "what": "build #4288 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T04:16:33Z",
