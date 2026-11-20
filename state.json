@@ -15576,6 +15576,36 @@
         "by": "`claude` (strong)",
         "sha": "96359b9551f4034c86787371d4098355e2e7f966"
       },
+      "decision": {
+        "asked_at": "2026-11-20T14:12:38Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-21T14:12:38Z",
+        "hours": 24,
+        "kind": "revise",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Re-run the failed `web (unit 2/8)` job on #4307 and treat the gate's B1 timeout as runner load; no code change here.",
+            "tradeoff": "Quickest and keeps this pull request in scope, but the tests stay a little over half their 5s limit and can time out again on any busy run, here or on `main`."
+          },
+          {
+            "change": "Open a separate issue to make `artSpec` faster (or have these catalog-wide tests share one pass over the catalog), and re-run CI on #4307 meanwhile.",
+            "tradeoff": "Fixes the cause for every pull request that touches the web, but it is a second piece of work in pinned art code and doesn't unblock #4307 by itself."
+          },
+          {
+            "change": "A person gives these two catalog-wide tests a larger timeout of their own.",
+            "tradeoff": "Clears the flake right away, but it is exactly the kind of check loosening a bot isn't allowed to make, and it hides the slowdown as the catalog grows."
+          }
+        ],
+        "problem": "The feature itself is finished: the engine, the fuzz check, the preview markers and the ruling are all done and tested, and the earlier review approved it. What still blocks it is the web tests check, and the tests that fail there are not ones this branch touches.\n\nThe harness's web gate failed on `src/cards/art/art.test.ts` (B1, \"equal arguments give deep-equal specs for every catalog card\"), which hit the 5000ms timeout. CI run 44735610714's `web (unit 2/8)` failed on `src/cards/art/pictures.test.ts` (R3015002, \"every card offered Full art's signed level...\"), also at 5000ms. Both test every card in the catalog, and nothing they read changes on this branch. Locally they pass alone, in 3227ms and 2640ms. I timed the code under them: `artSpec` takes about 0.67ms per picture, and with 977 cards one pass over base and Radiant takes 1316ms. B1 runs `artSpec` four times per card, so the tests are slow because `artSpec` is, and a busy runner pushes them past 5s.\n\nThe gate runs `vitest --changed origin/main`. This branch changes `wire/index.ts`, `Card.tsx` and the generated wire types, so that run pulls in almost the whole suite (461 files, about 21 minutes). On `main` the same command runs nothing, which is why the harness says this change turned it red. I can't link these tests failing on `main` because I have no GitHub access, so I can't call the failure pre-existing (CLAUDE.md rule 12). My rules forbid raising a test's timeout. Speeding up `artSpec` would mean rewriting card-art code this issue doesn't cover, and its output is pinned by other tests. So a person needs to decide which way to go.",
+        "provider": "claude-1",
+        "question": "How should the two timing-out catalog-wide art tests be handled so #4307 can merge?",
+        "why": "the failing tests and everything they read are the same as on `main`, the branch's own tests are green, and a re-run is the only step that stays within the issue's scope; option 2 is worth filing too"
+      },
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -15588,6 +15618,7 @@
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
+      "question": "How should the two timing-out catalog-wide art tests be handled so #4307 can merge?",
       "queued_at": "2026-11-20T12:36:16Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "44737268280",
