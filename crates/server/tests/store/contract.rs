@@ -12848,6 +12848,89 @@ mod dev_dashboard {
         assert!(unknown.is_empty(), "{}", harness.name);
     }
 
+    /// The audit reads back by window: `since` and `until` bound `at` on both ends, inclusive,
+    /// composed with the other filters and `before_id` paging, newest first inside the window.
+    async fn audit_pages_by_since_and_until(harness: &StoreHarness) {
+        let dev = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let jlore = "POST /api/dev/jlore";
+        let rating = "PUT /api/admin/rating";
+        let wrote = [
+            (dev.id.as_str(), jlore, now),
+            (other.id.as_str(), jlore, now + 1),
+            (dev.id.as_str(), rating, now + 2),
+            (other.id.as_str(), rating, now + 2),
+            (dev.id.as_str(), jlore, now + 4),
+        ];
+        let mut ids = Vec::new();
+        for (who, route, at) in wrote {
+            ids.push(q!(harness, t => t.admin_actions_append(&action(who, route, at))));
+        }
+        let order = |rows: Vec<jackioh_server::admin::store::AdminAction>| -> Vec<i64> {
+            rows.into_iter().map(|row| row.id).collect()
+        };
+        let window = |since: Option<i64>, until: Option<i64>| AdminActionFilter {
+            since,
+            until,
+            ..AdminActionFilter::default()
+        };
+        // A middle window answers exactly its rows, newest first, the shared `at` broken by id.
+        let middle = q!(harness, t => t.admin_actions_page(&window(Some(now + 1), Some(now + 2)), 10));
+        assert_eq!(order(middle), vec![ids[3], ids[2], ids[1]], "{}", harness.name);
+        // Both ends are inside: a point window keeps the rows written at it.
+        let point = q!(harness, t => t.admin_actions_page(&window(Some(now + 2), Some(now + 2)), 10));
+        assert_eq!(order(point), vec![ids[3], ids[2]], "{}", harness.name);
+        // One bound alone constrains its end alone.
+        let from = q!(harness, t => t.admin_actions_page(&window(Some(now + 2), None), 10));
+        assert_eq!(order(from), vec![ids[4], ids[3], ids[2]], "{}", harness.name);
+        let to = q!(harness, t => t.admin_actions_page(&window(None, Some(now + 1)), 10));
+        assert_eq!(order(to), vec![ids[1], ids[0]], "{}", harness.name);
+        // The window composes with the acting account and the route.
+        let of_dev = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                profile_id: Some(dev.id.clone()),
+                ..window(Some(now + 1), Some(now + 2))
+            },
+            10
+        ));
+        assert_eq!(order(of_dev), vec![ids[2]], "{}", harness.name);
+        let of_jlore = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                route: Some(jlore.to_string()),
+                ..window(Some(now + 1), Some(now + 2))
+            },
+            10
+        ));
+        assert_eq!(order(of_jlore), vec![ids[1]], "{}", harness.name);
+        // `before_id` pages inside the window with no gaps or repeats.
+        let first = q!(harness, t => t.admin_actions_page(&window(Some(now + 1), Some(now + 2)), 2));
+        assert_eq!(order(first.clone()), vec![ids[3], ids[2]], "{}", harness.name);
+        let second = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                before_id: Some(first[1].id),
+                ..window(Some(now + 1), Some(now + 2))
+            },
+            2
+        ));
+        assert_eq!(order(second.clone()), vec![ids[1]], "{}", harness.name);
+        let past_oldest = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter {
+                before_id: Some(second[0].id),
+                ..window(Some(now + 1), Some(now + 2))
+            },
+            2
+        ));
+        assert!(
+            past_oldest.is_empty(),
+            "{}: nothing older in the window",
+            harness.name
+        );
+        // A window past every row answers nothing.
+        let empty = q!(harness, t => t.admin_actions_page(&window(Some(now + 10), Some(now + 20)), 10));
+        assert!(empty.is_empty(), "{}", harness.name);
+    }
+
     fn glicko(rating: f64) -> Glicko {
         Glicko {
             rating,
@@ -13080,6 +13163,7 @@ mod dev_dashboard {
     both_stores!(
         r3074000_an_audit_row_is_kept_newest_first_and_outlives_its_account,
         audit_pages_by_cursor_and_filter,
+        audit_pages_by_since_and_until,
         r3074001_a_hand_set_rating_keeps_the_first_earned_one_and_clears_once,
         r3074001_standings_mark_a_hand_set_ladder,
         r3074003_posts_are_kept_listed_and_taken_down_once,

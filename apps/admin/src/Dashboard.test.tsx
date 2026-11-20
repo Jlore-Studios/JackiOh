@@ -1,7 +1,7 @@
 // The dashboard from canned answers: each section shows what the server sent, and each button sends
 // its request as typed; the status line shows the answer, or the server's refusal word for word.
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -428,5 +428,82 @@ describe("Audit", () => {
     });
     expect(screen.getByTestId(testids.auditProfile)).toHaveValue("");
     expect(screen.getByTestId(testids.auditRoute)).toHaveValue("");
+  });
+
+  it("Apply sends the time window and replaces the list", async () => {
+    const since = "2026-11-01T02:00";
+    const until = "2026-11-01T04:00";
+    const filteredUrl = `/api/admin/audit?since=${Date.parse(since)}&until=${Date.parse(until)}`;
+    const { fake, user } = open({
+      [`GET ${filteredUrl}`]: { body: { actions: [AUDIT.actions[0]], nextBeforeId: null } },
+    });
+    await loaded();
+    fireEvent.change(screen.getByTestId(testids.auditSince), { target: { value: since } });
+    fireEvent.change(screen.getByTestId(testids.auditUntil), { target: { value: until } });
+    await user.click(screen.getByTestId(testids.auditApply));
+    await waitFor(() => {
+      expect(fake.sent("GET", filteredUrl)).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(1);
+    });
+    expect(fake.sent("GET", "/api/admin/audit")).toHaveLength(1);
+    expect(screen.queryByTestId(testids.auditOlder)).toBeNull();
+  });
+
+  it("Clear empties the time window too", async () => {
+    const since = "2026-11-01T02:00";
+    const until = "2026-11-01T04:00";
+    const filteredUrl = `/api/admin/audit?since=${Date.parse(since)}&until=${Date.parse(until)}`;
+    const { fake, user } = open({
+      [`GET ${filteredUrl}`]: { body: { actions: [AUDIT.actions[0]], nextBeforeId: null } },
+    });
+    await loaded();
+    fireEvent.change(screen.getByTestId(testids.auditSince), { target: { value: since } });
+    fireEvent.change(screen.getByTestId(testids.auditUntil), { target: { value: until } });
+    await user.click(screen.getByTestId(testids.auditApply));
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(1);
+    });
+    await user.click(screen.getByTestId(testids.auditClear));
+    await waitFor(() => {
+      expect(fake.sent("GET", "/api/admin/audit")).toHaveLength(2);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(2);
+    });
+    expect(screen.getByTestId(testids.auditSince)).toHaveValue("");
+    expect(screen.getByTestId(testids.auditUntil)).toHaveValue("");
+  });
+
+  it("Older keeps the time window", async () => {
+    const since = "2026-11-01T02:00";
+    const until = "2026-11-01T04:00";
+    const window = `since=${Date.parse(since)}&until=${Date.parse(until)}`;
+    const olderUrl = `/api/admin/audit?before_id=7&${window}`;
+    const older = { ...AUDIT.actions[1], id: 5, at: AT - 2 };
+    const { fake, user } = open({
+      [`GET /api/admin/audit?${window}`]: { body: { actions: [AUDIT.actions[0]], nextBeforeId: 7 } },
+      [`GET ${olderUrl}`]: { body: { actions: [older], nextBeforeId: null } },
+    });
+    await loaded();
+    fireEvent.change(screen.getByTestId(testids.auditSince), { target: { value: since } });
+    fireEvent.change(screen.getByTestId(testids.auditUntil), { target: { value: until } });
+    await user.click(screen.getByTestId(testids.auditApply));
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(1);
+    });
+    await user.click(screen.getByTestId(testids.auditOlder));
+    await waitFor(() => {
+      expect(fake.sent("GET", olderUrl)).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(2);
+    });
+    expect(screen.getAllByTestId(testids.auditRow).map((row) => row.dataset["actionId"])).toEqual([
+      "7",
+      "5",
+    ]);
+    expect(screen.queryByTestId(testids.auditOlder)).toBeNull();
   });
 });

@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 
 use jackioh_server::admin::store::{
     MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE, MODERATE_REVOKE_CODE_ROUTE, MODERATE_UNBAN_ROUTE,
-    NewsPost, RatingChange,
+    NewAdminAction, NewsPost, RatingChange,
 };
 use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
 use jackioh_server::api::crypto::canonical_invite_code;
@@ -486,6 +486,170 @@ async fn audit_read_pages_by_cursor_and_filters() {
         400,
     )
     .await;
+}
+
+/// #4298: `since`/`until` narrow the audit to one epoch-millisecond window, inclusive, composed
+/// with the other filters and `before_id` paging; a blank bound is no bound, and a bad one is 400.
+#[tokio::test]
+async fn audit_read_filters_by_since_and_until() {
+    let (app, tokens) = admin_app(true).await;
+    let dev = &tokens.dev_aal2;
+    // Pinned timestamps: writes in one process share a millisecond, so the rows are seeded through
+    // the store with `at` values a window can tell apart.
+    let base = now_ms();
+    let jlore = "POST /api/dev/jlore";
+    let rating = "PUT /api/admin/rating";
+    let news = "POST /api/admin/news";
+    let mut tx = app.db.begin(Some(DEV)).await.expect("a transaction");
+    let mut ids = Vec::new();
+    for (who, route, at) in [
+        (DEV, jlore, base),
+        (OTHER, rating, base + 1),
+        (DEV, news, base + 2),
+    ] {
+        ids.push(
+            tx.admin_actions_append(&NewAdminAction {
+                profile_id: Some(who.to_string()),
+                route: route.to_string(),
+                request: json!({}),
+                before: Value::Null,
+                after: Value::Null,
+                at,
+            })
+            .await
+            .expect("an audit row"),
+        );
+    }
+    tx.commit().await.expect("commit");
+
+    let rows_of = |answer: Value| {
+        answer["actions"]
+            .as_array()
+            .expect("actions")
+            .iter()
+            .filter_map(|row| row["id"].as_i64())
+            .collect::<Vec<_>>()
+    };
+
+    // The window keeps its rows, newest first, on both ends inside.
+    let windowed = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?since={base}&until={}", base + 2),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(windowed), vec![ids[2], ids[1], ids[0]]);
+    // A point window keeps the row written at it.
+    let point = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?since={}&until={}", base + 1, base + 1),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(point), vec![ids[1]]);
+    // One bound alone constrains its end alone.
+    let from = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?since={}", base + 2),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(from), vec![ids[2]]);
+    let to = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?until={base}"),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(to), vec![ids[0]]);
+
+    // The window composes with the acting account and the route.
+    let of_dev = expect(
+        &app,
+        "GET",
+        &format!(
+            "/api/admin/audit?since={base}&until={}&profile_id={DEV}",
+            base + 2
+        ),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(of_dev), vec![ids[2], ids[0]]);
+    let of_rating = expect(
+        &app,
+        "GET",
+        &format!(
+            "/api/admin/audit?since={base}&until={}&route=PUT%20%2Fapi%2Fadmin%2Frating",
+            base + 2
+        ),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(of_rating), vec![ids[1]]);
+
+    // `before_id` pages inside the window.
+    let older = expect(
+        &app,
+        "GET",
+        &format!(
+            "/api/admin/audit?since={base}&until={}&before_id={}",
+            base + 2,
+            ids[2]
+        ),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert_eq!(rows_of(older), vec![ids[1], ids[0]]);
+
+    // A window past every row answers nothing, and a blank bound is no bound.
+    let empty = expect(
+        &app,
+        "GET",
+        &format!("/api/admin/audit?since={}&until={}", base + 10, base + 20),
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    assert!(empty["actions"].as_array().expect("actions").is_empty());
+    let blank = expect(
+        &app,
+        "GET",
+        "/api/admin/audit?since=%20&until=%20",
+        dev,
+        Value::Null,
+        200,
+    )
+    .await;
+    let unfiltered = expect(&app, "GET", "/api/admin/audit", dev, Value::Null, 200).await;
+    assert_eq!(blank["actions"], unfiltered["actions"]);
+
+    // What is no whole number, and a `since` past its `until`, are refused.
+    for path in [
+        "/api/admin/audit?since=abc".to_string(),
+        "/api/admin/audit?until=abc".to_string(),
+        format!("/api/admin/audit?since={}&until={base}", base + 2),
+    ] {
+        expect(&app, "GET", &path, dev, Value::Null, 400).await;
+    }
 }
 
 /// #4291: a filter that is blank once trimmed is no filter, as the stats reads' `query_trimmed` (one
