@@ -16679,23 +16679,12 @@
     "what": "review #4307 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-20T15:40:20Z",
+    "at": "2026-11-20T15:57:45Z",
     "notes": [
-      "CI on #4320: #4320: queued a CI fix",
-      "delivered plan #4319 on muse (run 44764407622): planned",
-      "delivered plan #4316 on muse (run 44764270990): planned",
-      "delivered plan #4321 on claude-4 (run 44762476792): planned",
-      "delivered build #4298 on muse (run 44753119038): built",
-      "delivered build #4296 on muse (run 44752936499): built",
-      "started review #4323 on muse (run 44766559729)",
-      "started review #4324 on muse (run 44766673802)",
-      "started build #4321 on claude-4 (run 44766785982)",
-      "started revise #4320 on muse (run 44766921703)",
-      "started build #4316 on muse (run 44767041110)",
-      "started build #4319 on muse (run 44767163005)",
-      "started plan #4300 on agy (run 44767290746)",
+      "delivered revise #4307 on claude-1 (run 44754388945): built",
+      "started review #4307 on claude-1 (run 44768839743)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17401,7 +17390,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T15:40:20Z",
+  "loop_tick": "2026-11-20T15:57:45Z",
   "machine_disk": {
     "issue": null,
     "reading": {
