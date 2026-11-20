@@ -7932,6 +7932,19 @@
       "suggestion": true,
       "verdict_rounds": 1
     },
+    "4117": {
+      "asks": [
+        "c:7052769990"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-20T23:04:46Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
+    },
     "4118": {
       "action": "build",
       "died": 0,
