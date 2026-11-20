@@ -107,7 +107,6 @@ fn duos_wave_size(raw: Option<u32>) -> u32 {
 }
 
 /// `duos_decks_for_handicaps` with no handicap: the decks `cargo test`'s co-op games deal.
-#[cfg(test)]
 pub fn duos_decks_for_seed(seed: u32) -> DuosDecks {
     duos_decks_for_handicaps(seed, &DuosHandicaps::default())
 }

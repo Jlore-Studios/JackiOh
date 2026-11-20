@@ -2,16 +2,19 @@
 //! frozen corpus of states and each median held to a budget.
 //!
 //! The corpus is the hotseat fixture's states (its opening and the state after each action of its log),
-//! the AI gate's two wide boards (`gate::wide_boards`) and the heaviest states, by the fuzz's growth
-//! measures (`fuzz::weigh`, #1254), of the golden games of seeds PERF_SEED_FIRST..=PERF_SEED_LAST.
-//! Every state is dealt from seeds and fixed streams, so the corpus is the same on every run of a build.
-//! On each state a pass times `legal_actions` and `view_for` for each seat, `hash_state`, and `reduce`
-//! of PERF_ACTIONS_PER_SEAT evenly spread listed actions of each seat; then it folds the longest of
-//! those games from its log, as a reconnect and `jackioh replay` do, and hashes the result. After
-//! PERF_WARMUP_PASSES passes whose samples are dropped, PERF_PASSES passes are timed (one under
-//! `--smoke`). One work measure needs no clock and cannot flake: the bytes of each `view_for`.
-//! `--smoke` judges only its budget, so every pull request holds it (#4196), and leaves the five
-//! timings to the daily run: one pass on a shared runner is too noisy to judge a time.
+//! the AI gate's two wide boards (`gate::wide_boards`), the heaviest states by the fuzz's growth
+//! measures (`fuzz::weigh`, #1254) of plain golden seeds PERF_SEED_FIRST..=PERF_SEED_LAST and handicapped
+//! golden seeds PERF_HANDICAP_SEED_FIRST..=PERF_HANDICAP_SEED_LAST, one run-start game (§15), and one
+//! seeded Duos co-op game (§13). Every state is dealt from seeds and fixed streams, so the corpus is the
+//! same on every run of a build. On each 1v1 state a pass times `legal_actions` and `view_for` for each
+//! seat, `hash_state`, and `reduce` of PERF_ACTIONS_PER_SEAT evenly spread listed actions of each seat;
+//! on each Duos state it times `duos_legal_actions` and `duos_view_for` for all four seats, and
+//! `duos_reduce` of PERF_ACTIONS_PER_SEAT evenly spread listed actions; then it folds the longest 1v1
+//! game and the Duos game from their logs and hashes the results. After PERF_WARMUP_PASSES passes whose
+//! samples are dropped, PERF_PASSES passes are timed (one under `--smoke`). One work measure needs no
+//! clock and cannot flake: the bytes of each `view_for`. `--smoke` judges only its budget, so every pull
+//! request holds it (#4196), and leaves the nine timings to the daily run: one pass on a shared runner
+//! is too noisy to judge a time.
 //!
 //! Each budget bounds a measure's median (the p95 is shown, not judged), at the profile the binary
 //! was built at: `cargo test`'s (`*_TEST`, debug assertions on) or release (`*_RELEASE`). No
@@ -28,14 +31,18 @@ use serde::Serialize;
 use jackioh_cards::register_all;
 use jackioh_engine::replay::{FoldArgs, fold};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::subsystems::choose_action;
+use jackioh_engine::subsystems::{AI_SKIPPED_ACTIONS, choose_action};
 use jackioh_engine::testkit::golden::{HOTSEAT, HOTSEAT_HASH};
 use jackioh_engine::{
-    Action, CreateGameArgs, CreateGameOptions, GameState, PLAYER_IDS, begin_game, create_game,
-    create_recorded_game, hash_state, legal_actions, reduce, view_for,
+    Action, CreateGameArgs, CreateGameOptions, DUOS_SEATS, DeckMark, DuosAction, DuosActionBody,
+    DuosCreateOptions, DuosReplayInput, DuosState, GameState, HUMAN_HANDICAP, PLAYER_IDS, PerPlayerOpt,
+    begin_game, create_game, create_recorded_game, duos_begin, duos_create, duos_fold, duos_hash,
+    duos_legal_actions, duos_reduce, duos_seats_to_act, duos_view_for, hash_state, legal_actions, reduce,
+    view_for,
 };
 
-use crate::fuzz::{actor_of, weigh};
+use crate::duos_fuzz::duos_decks_for_seed;
+use crate::fuzz::{SHIPPED_FUZZ_POOL, actor_of, decks_for_seed_from, weigh, weigh_duos};
 use crate::gate;
 use crate::golden::{STEP_CAP, spec_for_seed};
 
@@ -45,6 +52,10 @@ use crate::golden::{STEP_CAP, spec_for_seed};
 pub const PERF_SEED_FIRST: u32 = 1;
 /// The last golden seed whose game the corpus plays. Forty games keep the smoke test to seconds.
 pub const PERF_SEED_LAST: u32 = 40;
+/// The first golden seed whose game the handicapped wave sample plays (§13.1: 201–240 are handicapped).
+pub const PERF_HANDICAP_SEED_FIRST: u32 = 201;
+/// Ten seeds keep the handicapped sample bounded.
+pub const PERF_HANDICAP_SEED_LAST: u32 = 210;
 /// How many of the games' heaviest states each growth measure adds to the corpus.
 pub const PERF_HEAVIEST_PER_MEASURE: usize = 5;
 /// How many of each seat's listed actions `reduce` is timed on in each state, evenly spread over the
@@ -59,7 +70,7 @@ const US_PER_SECOND: f64 = 1_000_000.0;
 const MEDIAN: f64 = 0.5;
 const P95: f64 = 0.95;
 
-// The budgets, measured on 2026-11-09 on a 4-vCPU GitHub Actions ubuntu runner (AMD EPYC 7763) by
+// The budgets, measured on 2026-11-20 on a 4-vCPU GitHub Actions ubuntu runner (AMD EPYC 7763) by
 // three runs of each profile: `cargo test -p jackioh-tools --test perf perf_holds_every_budget --
 // --ignored` for `cargo test`'s, `target/release/jackioh perf` for release's. Each time budget is
 // 5x the largest of its three medians, rounded up to two significant figures, so a runner several
@@ -67,42 +78,63 @@ const P95: f64 = 0.95;
 // rounded up the same way. A budget crossed by a change that meant to cost more is measured again
 // the same way.
 
-/// `reduce` of one listed action, in microseconds, at `cargo test`'s profile: medians 180.7, 178.7
-/// and 179.4, 5x headroom.
-pub const REDUCE_US_BUDGET_TEST: f64 = 910.0;
-/// `view_for` of one seat, in microseconds, at `cargo test`'s profile: medians 228.3, 228.9 and
-/// 229.3, 5x headroom.
-pub const VIEW_FOR_US_BUDGET_TEST: f64 = 1_200.0;
-/// `legal_actions` of one seat, in microseconds, at `cargo test`'s profile: medians 12.1, 12.0 and
-/// 11.9, 5x headroom.
-pub const LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 61.0;
-/// `hash_state`, in microseconds, at `cargo test`'s profile: medians 214.2, 212.5 and 215.8, 5x
+/// `reduce` of one listed action, in microseconds, at `cargo test`'s profile: medians 1811.0, 1849.9
+/// and 1840.5, 5x headroom.
+pub const REDUCE_US_BUDGET_TEST: f64 = 9_300.0;
+/// `view_for` of one seat, in microseconds, at `cargo test`'s profile: medians 2921.8, 2971.5 and
+/// 2923.5, 5x headroom.
+pub const VIEW_FOR_US_BUDGET_TEST: f64 = 15_000.0;
+/// `legal_actions` of one seat, in microseconds, at `cargo test`'s profile: medians 95.8, 104.5 and
+/// 104.0, 5x headroom.
+pub const LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 530.0;
+/// `hash_state`, in microseconds, at `cargo test`'s profile: medians 2049.9, 2107.1 and 2076.9, 5x
 /// headroom.
-pub const HASH_STATE_US_BUDGET_TEST: f64 = 1_100.0;
+pub const HASH_STATE_US_BUDGET_TEST: f64 = 11_000.0;
 /// The fold of the longest corpus game and its hash, per folded action, in microseconds per
-/// action, at `cargo test`'s profile: the largest recorded median is 242.4 ms over 256 actions
-/// (fuzz seed 37; medians 242.0/242.4/240.9), so 242.4*1000/256 = 946.875 us/action, 5x =
-/// 4734.375, rounded up to two significant figures, 5x headroom.
-pub const FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 4_800.0;
-/// `reduce` of one listed action, in microseconds, at release: medians 140.0, 137.9 and 136.4, 5x
+/// action, at `cargo test`'s profile: the largest recorded median is 5802.8 us over 279 actions
+/// (fuzz seed 34; medians 5734.8/5797.1/5802.8), 5x headroom.
+pub const FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 30_000.0;
+/// `reduce` of one listed action, in microseconds, at release: medians 241.4, 237.5 and 303.3, 5x
 /// headroom.
-pub const REDUCE_US_BUDGET_RELEASE: f64 = 700.0;
-/// `view_for` of one seat, in microseconds, at release: medians 177.9, 179.2 and 175.7, 5x headroom.
-pub const VIEW_FOR_US_BUDGET_RELEASE: f64 = 900.0;
-/// `legal_actions` of one seat, in microseconds, at release: medians 10.1, 10.0 and 10.0, 5x
+pub const REDUCE_US_BUDGET_RELEASE: f64 = 1_600.0;
+/// `view_for` of one seat, in microseconds, at release: medians 306.8, 305.7 and 431.3, 5x headroom.
+pub const VIEW_FOR_US_BUDGET_RELEASE: f64 = 2_200.0;
+/// `legal_actions` of one seat, in microseconds, at release: medians 38.5, 38.4 and 45.6, 5x
 /// headroom.
-pub const LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 51.0;
-/// `hash_state`, in microseconds, at release: medians 193.2, 192.4 and 190.1, 5x headroom.
-pub const HASH_STATE_US_BUDGET_RELEASE: f64 = 970.0;
+pub const LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 230.0;
+/// `hash_state`, in microseconds, at release: medians 186.9, 189.0 and 265.0, 5x headroom.
+pub const HASH_STATE_US_BUDGET_RELEASE: f64 = 1_400.0;
 /// The fold of the longest corpus game and its hash, per folded action, in microseconds per
-/// action, at release: the largest recorded median is 199.7 ms over 256 actions (fuzz seed 37;
-/// medians 199.7/199.2/198.9), so 199.7*1000/256 = 780.1 us/action, 5x = 3900.4, rounded up to
-/// two significant figures, 5x headroom.
-pub const FOLD_US_PER_ACTION_BUDGET_RELEASE: f64 = 4_000.0;
-/// The JSON size of one seat's `view_for`, in bytes, at either profile: a median of 6,976 in all six
-/// runs, 2x headroom. `perf --smoke` read 7,001 on 2026-11-18 (8c6074f25b) and 2026-11-19
-/// (947bae6c11).
-pub const VIEW_FOR_BYTES_BUDGET: f64 = 14_000.0;
+/// action, at release: the largest recorded median is 1197.5 us over 279 actions (fuzz seed 34;
+/// medians 830.5/828.1/1197.5), 5x headroom.
+pub const FOLD_US_PER_ACTION_BUDGET_RELEASE: f64 = 6_000.0;
+/// `duos_reduce` of one listed action, in microseconds, at `cargo test`'s profile: medians 1077.0,
+/// 965.9 and 938.9, 5x headroom.
+pub const DUOS_REDUCE_US_BUDGET_TEST: f64 = 5_400.0;
+/// `duos_reduce` of one listed action, in microseconds, at release: medians 256.8, 263.0 and 422.1,
+/// 5x headroom.
+pub const DUOS_REDUCE_US_BUDGET_RELEASE: f64 = 2_200.0;
+/// `duos_view_for` of one seat, in microseconds, at `cargo test`'s profile: medians 9977.2, 10486.5
+/// and 10367.1, 5x headroom.
+pub const DUOS_VIEW_FOR_US_BUDGET_TEST: f64 = 53_000.0;
+/// `duos_view_for` of one seat, in microseconds, at release: medians 1455.7, 1601.6 and 1988.9, 5x
+/// headroom.
+pub const DUOS_VIEW_FOR_US_BUDGET_RELEASE: f64 = 10_000.0;
+/// `duos_legal_actions` of one seat, in microseconds, at `cargo test`'s profile: medians 77.7, 80.5
+/// and 79.9, 5x headroom.
+pub const DUOS_LEGAL_ACTIONS_US_BUDGET_TEST: f64 = 410.0;
+/// `duos_legal_actions` of one seat, in microseconds, at release: medians 38.2, 35.9 and 43.3, 5x
+/// headroom.
+pub const DUOS_LEGAL_ACTIONS_US_BUDGET_RELEASE: f64 = 220.0;
+/// The fold of the Duos co-op game, per folded action, in microseconds per action, at `cargo test`'s profile:
+/// medians 3570.7, 3606.4 and 3663.8 over 200 actions, 5x headroom.
+pub const DUOS_FOLD_US_PER_ACTION_BUDGET_TEST: f64 = 19_000.0;
+/// The fold of the Duos co-op game, per folded action, in microseconds per action, at release:
+/// medians 653.6, 653.5 and 984.7 over 200 actions, 5x headroom.
+pub const DUOS_FOLD_US_PER_ACTION_BUDGET_RELEASE: f64 = 5_000.0;
+/// The JSON size of one seat's `view_for`, in bytes, at either profile: a median of 7,381 in all six
+/// runs, 2x headroom.
+pub const VIEW_FOR_BYTES_BUDGET: f64 = 15_000.0;
 
 /// The profile this binary was built at, which picks the time budgets.
 const PROFILE: &str = if cfg!(debug_assertions) { "test" } else { "release" };
@@ -150,16 +182,24 @@ enum Measure {
     LegalActions,
     HashState,
     Fold,
+    DuosReduce,
+    DuosViewFor,
+    DuosLegalActions,
+    DuosFold,
     ViewForBytes,
 }
 
 /// Every measure, in the report's order.
-const MEASURES: [Measure; 6] = [
+const MEASURES: [Measure; 10] = [
     Measure::Reduce,
     Measure::ViewFor,
     Measure::LegalActions,
     Measure::HashState,
     Measure::Fold,
+    Measure::DuosReduce,
+    Measure::DuosViewFor,
+    Measure::DuosLegalActions,
+    Measure::DuosFold,
     Measure::ViewForBytes,
 ];
 
@@ -171,14 +211,24 @@ impl Measure {
             Measure::LegalActions => "legal_actions",
             Measure::HashState => "hash_state",
             Measure::Fold => "fold",
+            Measure::DuosReduce => "duos_reduce",
+            Measure::DuosViewFor => "duos_view_for",
+            Measure::DuosLegalActions => "duos_legal_actions",
+            Measure::DuosFold => "duos_fold",
             Measure::ViewForBytes => "view_for bytes",
         }
     }
 
     fn unit(self) -> &'static str {
         match self {
-            Measure::Reduce | Measure::ViewFor | Measure::LegalActions | Measure::HashState => "us",
-            Measure::Fold => "us/action",
+            Measure::Reduce
+            | Measure::ViewFor
+            | Measure::LegalActions
+            | Measure::HashState
+            | Measure::DuosReduce
+            | Measure::DuosViewFor
+            | Measure::DuosLegalActions => "us",
+            Measure::Fold | Measure::DuosFold => "us/action",
             Measure::ViewForBytes => "bytes",
         }
     }
@@ -191,7 +241,11 @@ impl Measure {
             | Measure::ViewFor
             | Measure::LegalActions
             | Measure::HashState
-            | Measure::Fold => true,
+            | Measure::Fold
+            | Measure::DuosReduce
+            | Measure::DuosViewFor
+            | Measure::DuosLegalActions
+            | Measure::DuosFold => true,
             Measure::ViewForBytes => false,
         }
     }
@@ -212,6 +266,26 @@ impl Measure {
             Measure::Fold => (
                 FOLD_US_PER_ACTION_BUDGET_RELEASE,
                 "FOLD_US_PER_ACTION_BUDGET_RELEASE",
+            ),
+            Measure::DuosReduce if test => (DUOS_REDUCE_US_BUDGET_TEST, "DUOS_REDUCE_US_BUDGET_TEST"),
+            Measure::DuosReduce => (DUOS_REDUCE_US_BUDGET_RELEASE, "DUOS_REDUCE_US_BUDGET_RELEASE"),
+            Measure::DuosViewFor if test => (DUOS_VIEW_FOR_US_BUDGET_TEST, "DUOS_VIEW_FOR_US_BUDGET_TEST"),
+            Measure::DuosViewFor => (DUOS_VIEW_FOR_US_BUDGET_RELEASE, "DUOS_VIEW_FOR_US_BUDGET_RELEASE"),
+            Measure::DuosLegalActions if test => (
+                DUOS_LEGAL_ACTIONS_US_BUDGET_TEST,
+                "DUOS_LEGAL_ACTIONS_US_BUDGET_TEST",
+            ),
+            Measure::DuosLegalActions => (
+                DUOS_LEGAL_ACTIONS_US_BUDGET_RELEASE,
+                "DUOS_LEGAL_ACTIONS_US_BUDGET_RELEASE",
+            ),
+            Measure::DuosFold if test => (
+                DUOS_FOLD_US_PER_ACTION_BUDGET_TEST,
+                "DUOS_FOLD_US_PER_ACTION_BUDGET_TEST",
+            ),
+            Measure::DuosFold => (
+                DUOS_FOLD_US_PER_ACTION_BUDGET_RELEASE,
+                "DUOS_FOLD_US_PER_ACTION_BUDGET_RELEASE",
             ),
             Measure::ViewForBytes => (VIEW_FOR_BYTES_BUDGET, "VIEW_FOR_BYTES_BUDGET"),
         }
@@ -348,33 +422,142 @@ fn play_seed(k: u32) -> Result<Played> {
     })
 }
 
-/// The states every pass walks, and the game the fold replays.
-struct Corpus {
-    states: Vec<GameState>,
-    hotseat: usize,
-    wide: usize,
-    heaviest: usize,
-    fold: FoldArgs,
-    fold_seed: u32,
-    fold_hash: String,
+/// A run-start game (§15): decks from fuzz pool, hero health, armor, extra opening cards, mana bonus,
+/// and deck marks deal Radiant cards with upgrades.
+fn play_run_start() -> Result<Played> {
+    let decks = decks_for_seed_from(1, &SHIPPED_FUZZ_POOL);
+    let mut handicaps = PerPlayerOpt::default();
+    let mut marks = PerPlayerOpt::default();
+    for player in PLAYER_IDS {
+        let mut handicap = HUMAN_HANDICAP;
+        handicap.hero_health = Some(35);
+        handicap.hero_armor = Some(5);
+        handicap.extra_opening_cards = 1;
+        handicap.mana_bonus = 1;
+        *handicaps.slot(player) = Some(handicap);
+        *marks.slot(player) = Some(vec![DeckMark {
+            index: 0,
+            radiant: true,
+            upgrades: 1,
+        }]);
+    }
+    let options = CreateGameOptions {
+        seed: "perf-run-start".to_string(),
+        decks: decks.clone(),
+        handicaps: Some(handicaps.clone()),
+        deck_marks: Some(marks.clone()),
+        ..CreateGameOptions::default()
+    };
+    let begun = begin_game(&create_recorded_game(&options));
+    if let Some(error) = begun.error {
+        bail!("perf-run-start: beginGame refused: {error}");
+    }
+    let mut state = begun.state;
+    let mut policy = Rng::new("perf-run-start-policy", 0);
+    let mut order = Rng::new("perf-run-start-order", 0);
+    let mut input = FoldArgs {
+        seed: "perf-run-start".to_string(),
+        decks,
+        handicaps: Some(handicaps),
+        deck_marks: Some(marks),
+        ..FoldArgs::default()
+    };
+    let mut heaviest: [Option<(i64, usize, GameState)>; 3] = [None, None, None];
+
+    while state.result.is_none() && input.log.len() < STEP_CAP {
+        let n = input.log.len();
+        let player = actor_of(&state, &mut order);
+        let chosen = choose_action(&state, player, &mut policy).ok_or_else(|| {
+            anyhow!(
+                "perf-run-start step {n}: no legal action for {player} while the game is live (turn {}): R82 auto-ends \
+                 a turn with nothing left to do, so this is a stall",
+                state.turn
+            )
+        })?;
+        let action = Action::new(chosen, player, format!("perf-run-start-{n}"));
+        let result = reduce(&state, &action);
+        if let Some(error) = result.error {
+            bail!(
+                "perf-run-start step {n}: legalActions offered \"{}\" but reduce refused it: {error}",
+                action.action_type()
+            );
+        }
+        input.log.push(action);
+        for (kept, value) in heaviest.iter_mut().zip(weigh(&result.events, &result.state)) {
+            if kept.as_ref().is_none_or(|(most, _, _)| value > *most) {
+                *kept = Some((value, n + 1, result.state.clone()));
+            }
+        }
+        state = result.state;
+    }
+
+    Ok(Played {
+        seed: 0,
+        input,
+        hash: hash_state(&state),
+        heaviest,
+    })
 }
 
-fn corpus() -> Result<Corpus> {
-    let mut states = hotseat_states()?;
-    let hotseat = states.len();
-    let wide_boards = gate::wide_boards();
-    let wide = wide_boards.len();
-    states.extend(
-        wide_boards
-            .iter()
-            .map(|(name, setup)| gate::wide_state(name, setup)),
-    );
+struct PlayedDuos {
+    input: DuosReplayInput,
+    hash: String,
+    heaviest: [Option<(i64, usize, DuosState)>; 3],
+}
 
-    let games: Vec<Played> = (PERF_SEED_FIRST..=PERF_SEED_LAST)
-        .into_par_iter()
-        .map(play_seed)
-        .collect::<Result<Vec<_>>>()?;
+fn play_coop_game(seed: u32) -> Result<PlayedDuos> {
+    let options = DuosCreateOptions {
+        seed: format!("perf-duos-{seed}"),
+        decks: duos_decks_for_seed(seed),
+        ..DuosCreateOptions::default()
+    };
+    let begun = duos_begin(&duos_create(&options));
+    let mut state = begun.state;
+    let mut rng = Rng::new(&format!("perf-duos-policy-{seed}"), 0);
+    let mut log: Vec<DuosAction> = Vec::new();
+    let mut heaviest: [Option<(i64, usize, DuosState)>; 3] = [None, None, None];
 
+    while log.len() < 200 && state.result.is_none() {
+        let seats = duos_seats_to_act(&state);
+        let Some(&seat) = rng.pick(&seats) else { break };
+        let actions: Vec<DuosActionBody> = duos_legal_actions(&state, seat)
+            .into_iter()
+            .filter(|action| match action {
+                DuosActionBody::Concede => false,
+                DuosActionBody::Duel { body } => !AI_SKIPPED_ACTIONS.contains(&body.action_type()),
+                DuosActionBody::Pass { .. } => true,
+            })
+            .collect();
+        let Some(body) = rng.pick(&actions).cloned() else {
+            break;
+        };
+        let action = DuosAction {
+            seat,
+            nonce: format!("perf-duos-{seed}-{}", log.len()),
+            body,
+        };
+        let result = duos_reduce(&state, &action);
+        if let Some(error) = result.error {
+            bail!("perf duos step {}: duos_reduce refused: {error}", log.len());
+        }
+        log.push(action);
+        for (kept, value) in heaviest.iter_mut().zip(weigh_duos(&result.events, &result.state)) {
+            if kept.as_ref().is_none_or(|(most, _, _)| value > *most) {
+                *kept = Some((value, log.len(), result.state.clone()));
+            }
+        }
+        state = result.state;
+    }
+
+    Ok(PlayedDuos {
+        input: DuosReplayInput { options, log },
+        hash: duos_hash(&state),
+        heaviest,
+    })
+}
+
+fn take_heaviest(games: &[Played]) -> Vec<GameState> {
+    let mut states = Vec::new();
     let mut taken: Vec<(u32, usize)> = Vec::new();
     for measure in 0..3 {
         let mut candidates: Vec<(i64, u32, usize, &GameState)> = games
@@ -399,10 +582,99 @@ fn corpus() -> Result<Corpus> {
             added += 1;
         }
     }
+    states
+}
 
-    // The longest game, the lower seed on a tie.
-    let longest = games
+fn take_heaviest_duos(games: &[PlayedDuos]) -> Vec<DuosState> {
+    let mut states = Vec::new();
+    let mut taken: Vec<usize> = Vec::new();
+    for measure in 0..3 {
+        let mut candidates: Vec<(i64, usize, &DuosState)> = games
+            .iter()
+            .filter_map(|game| {
+                game.heaviest[measure]
+                    .as_ref()
+                    .map(|(value, step, state)| (*value, *step, state))
+            })
+            .collect();
+        candidates.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+        let mut added = 0;
+        for (_, step, state) in candidates {
+            if added == PERF_HEAVIEST_PER_MEASURE {
+                break;
+            }
+            if taken.contains(&step) {
+                continue;
+            }
+            taken.push(step);
+            states.push(state.clone());
+            added += 1;
+        }
+    }
+    states
+}
+
+/// The states every pass walks, and the game the fold replays.
+struct Corpus {
+    states: Vec<GameState>,
+    coop_states: Vec<DuosState>,
+    hotseat: usize,
+    wide: usize,
+    plain: usize,
+    handicapped: usize,
+    run_start: usize,
+    coop: usize,
+    fold: FoldArgs,
+    fold_seed: u32,
+    fold_hash: String,
+    duos_fold: DuosReplayInput,
+    duos_fold_hash: String,
+}
+
+fn corpus() -> Result<Corpus> {
+    let mut states = hotseat_states()?;
+    let hotseat = states.len();
+    let wide_boards = gate::wide_boards();
+    let wide = wide_boards.len();
+    states.extend(
+        wide_boards
+            .iter()
+            .map(|(name, setup)| gate::wide_state(name, setup)),
+    );
+
+    let plain_games: Vec<Played> = (PERF_SEED_FIRST..=PERF_SEED_LAST)
+        .into_par_iter()
+        .map(play_seed)
+        .collect::<Result<Vec<_>>>()?;
+
+    let handicapped_games: Vec<Played> = (PERF_HANDICAP_SEED_FIRST..=PERF_HANDICAP_SEED_LAST)
+        .into_par_iter()
+        .map(play_seed)
+        .collect::<Result<Vec<_>>>()?;
+
+    let run_start_game = play_run_start()?;
+
+    let plain_states = take_heaviest(&plain_games);
+    let plain = plain_states.len();
+    states.extend(plain_states);
+
+    let handicapped_states = take_heaviest(&handicapped_games);
+    let handicapped = handicapped_states.len();
+    states.extend(handicapped_states);
+
+    let run_start_states = take_heaviest(std::slice::from_ref(&run_start_game));
+    let run_start = run_start_states.len();
+    states.extend(run_start_states);
+
+    let coop_game = play_coop_game(1)?;
+    let coop_states = take_heaviest_duos(std::slice::from_ref(&coop_game));
+    let coop = coop_states.len();
+
+    // The longest 1v1 game, the lower seed on a tie.
+    let longest = plain_games
         .iter()
+        .chain(&handicapped_games)
+        .chain(std::slice::from_ref(&run_start_game))
         .reduce(|best, game| {
             if game.input.log.len() > best.input.log.len() {
                 game
@@ -414,12 +686,18 @@ fn corpus() -> Result<Corpus> {
 
     Ok(Corpus {
         states,
+        coop_states,
         hotseat,
         wide,
-        heaviest: taken.len(),
+        plain,
+        handicapped,
+        run_start,
+        coop,
         fold: longest.input.clone(),
         fold_seed: longest.seed,
         fold_hash: longest.hash.clone(),
+        duos_fold: coop_game.input,
+        duos_fold_hash: coop_game.hash,
     })
 }
 
@@ -433,6 +711,10 @@ struct Samples {
     legal_actions: Vec<f64>,
     hash_state: Vec<f64>,
     fold: Vec<f64>,
+    duos_reduce: Vec<f64>,
+    duos_view_for: Vec<f64>,
+    duos_legal_actions: Vec<f64>,
+    duos_fold: Vec<f64>,
 }
 
 impl Samples {
@@ -442,12 +724,16 @@ impl Samples {
         self.legal_actions.extend(pass.legal_actions);
         self.hash_state.extend(pass.hash_state);
         self.fold.extend(pass.fold);
+        self.duos_reduce.extend(pass.duos_reduce);
+        self.duos_view_for.extend(pass.duos_view_for);
+        self.duos_legal_actions.extend(pass.duos_legal_actions);
+        self.duos_fold.extend(pass.duos_fold);
     }
 }
 
 /// One pass: every state in order (each seat's `legal_actions` then `view_for`, then `hash_state`, then
 /// `reduce` of each of `kept`'s actions for that state), then the fold and its hash.
-fn timed_pass(corpus: &Corpus, kept: &[Vec<Action>]) -> Result<Samples> {
+fn timed_pass(corpus: &Corpus, kept: &[Vec<Action>], duos_kept: &[Vec<DuosAction>]) -> Result<Samples> {
     let mut samples = Samples::default();
     for (state, actions) in corpus.states.iter().zip(kept) {
         for seat in PLAYER_IDS {
@@ -491,6 +777,40 @@ fn timed_pass(corpus: &Corpus, kept: &[Vec<Action>]) -> Result<Samples> {
             corpus.fold_hash
         );
     }
+
+    for (state, actions) in corpus.coop_states.iter().zip(duos_kept) {
+        for seat in DUOS_SEATS {
+            samples
+                .duos_legal_actions
+                .push(seconds(|| duos_legal_actions(state, seat)) * US_PER_SECOND);
+            samples
+                .duos_view_for
+                .push(seconds(|| duos_view_for(state, seat)) * US_PER_SECOND);
+        }
+        for action in actions {
+            samples
+                .duos_reduce
+                .push(seconds(|| duos_reduce(state, action)) * US_PER_SECOND);
+        }
+    }
+
+    let started = Instant::now();
+    let duos_folded = std::hint::black_box(duos_fold(&corpus.duos_fold));
+    samples.duos_fold.push(fold_us_per_action(
+        started.elapsed().as_secs_f64(),
+        corpus.duos_fold.log.len(),
+    ));
+    if let Some(at) = duos_folded.refused_at {
+        bail!("the fold of duos co-op game refused action at index {at}");
+    }
+    if duos_folded.hash != corpus.duos_fold_hash {
+        bail!(
+            "the fold of duos co-op game reaches {}, not the live game's {}",
+            duos_folded.hash,
+            corpus.duos_fold_hash
+        );
+    }
+
     Ok(samples)
 }
 
@@ -535,7 +855,10 @@ struct CorpusCounts {
     states: usize,
     hotseat: usize,
     wide: usize,
-    heaviest: usize,
+    plain: usize,
+    handicapped: usize,
+    run_start: usize,
+    coop: usize,
     /// The golden seeds whose games were played, first and last.
     seeds: [u32; 2],
 }
@@ -549,6 +872,13 @@ struct FoldInfo {
     passes: usize,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DuosFoldInfo {
+    actions: usize,
+    passes: usize,
+}
+
 /// What `perf` measured, as the table prints it and `--json` emits it.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -558,6 +888,7 @@ struct Report {
     passes: usize,
     corpus: CorpusCounts,
     fold: FoldInfo,
+    duos_fold: DuosFoldInfo,
     measures: Vec<Row>,
     /// One message per median past its budget; under `--smoke`, only the work measure is judged.
     failures: Vec<String>,
@@ -585,12 +916,33 @@ fn measure(smoke: bool) -> Result<Report> {
         })
         .collect();
 
+    let duos_kept: Vec<Vec<DuosAction>> = corpus
+        .coop_states
+        .iter()
+        .map(|state| {
+            DUOS_SEATS
+                .into_iter()
+                .flat_map(|seat| {
+                    let listed = duos_legal_actions(state, seat);
+                    spread(listed.len(), PERF_ACTIONS_PER_SEAT)
+                        .into_iter()
+                        .map(|i| DuosAction {
+                            seat,
+                            nonce: format!("perf-duos-timed-{seat}-{i}"),
+                            body: listed[i].clone(),
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect()
+        })
+        .collect();
+
     for _ in 0..warmups {
-        timed_pass(&corpus, &kept)?;
+        timed_pass(&corpus, &kept, &duos_kept)?;
     }
     let mut samples = Samples::default();
     for _ in 0..passes {
-        samples.extend(timed_pass(&corpus, &kept)?);
+        samples.extend(timed_pass(&corpus, &kept, &duos_kept)?);
     }
 
     let mut bytes = Vec::new();
@@ -609,6 +961,10 @@ fn measure(smoke: bool) -> Result<Report> {
                 Measure::LegalActions => std::mem::take(&mut samples.legal_actions),
                 Measure::HashState => std::mem::take(&mut samples.hash_state),
                 Measure::Fold => std::mem::take(&mut samples.fold),
+                Measure::DuosReduce => std::mem::take(&mut samples.duos_reduce),
+                Measure::DuosViewFor => std::mem::take(&mut samples.duos_view_for),
+                Measure::DuosLegalActions => std::mem::take(&mut samples.duos_legal_actions),
+                Measure::DuosFold => std::mem::take(&mut samples.duos_fold),
                 Measure::ViewForBytes => std::mem::take(&mut bytes),
             };
             row(measure, taken)
@@ -624,15 +980,22 @@ fn measure(smoke: bool) -> Result<Report> {
         smoke,
         passes,
         corpus: CorpusCounts {
-            states: corpus.states.len(),
+            states: corpus.states.len() + corpus.coop_states.len(),
             hotseat: corpus.hotseat,
             wide: corpus.wide,
-            heaviest: corpus.heaviest,
+            plain: corpus.plain,
+            handicapped: corpus.handicapped,
+            run_start: corpus.run_start,
+            coop: corpus.coop,
             seeds: [PERF_SEED_FIRST, PERF_SEED_LAST],
         },
         fold: FoldInfo {
             seed: corpus.fold_seed,
             actions: corpus.fold.log.len(),
+            passes,
+        },
+        duos_fold: DuosFoldInfo {
+            actions: corpus.duos_fold.log.len(),
             passes,
         },
         measures,
@@ -674,17 +1037,19 @@ fn judge_smoke(rows: &[Row]) -> Vec<String> {
 fn perf_table(report: &Report) -> String {
     let corpus = &report.corpus;
     let mut out = format!(
-        "perf: {} profile, {} timed pass(es) over {} states ({} hotseat, {} wide, {} heaviest of fuzz seeds {}-{}); fold: fuzz seed {}, {} actions",
+        "perf: {} profile, {} timed pass(es) over {} states ({} hotseat, {} wide, {} plain, {} handicapped, {} run-start, {} co-op); fold: fuzz seed {}, {} actions; duos fold: {} actions",
         report.profile,
         report.passes,
         corpus.states,
         corpus.hotseat,
         corpus.wide,
-        corpus.heaviest,
-        corpus.seeds[0],
-        corpus.seeds[1],
+        corpus.plain,
+        corpus.handicapped,
+        corpus.run_start,
+        corpus.coop,
         report.fold.seed,
-        report.fold.actions
+        report.fold.actions,
+        report.duos_fold.actions,
     );
     if report.smoke {
         out.push_str("; smoke: work budget judged, clock budgets not");
@@ -794,6 +1159,13 @@ mod tests {
             "FOLD_US_PER_ACTION_BUDGET_RELEASE"
         };
         assert_eq!(Measure::Fold.budget().1, expected);
+        assert_eq!(Measure::DuosFold.unit(), "us/action");
+        let expected_duos = if cfg!(debug_assertions) {
+            "DUOS_FOLD_US_PER_ACTION_BUDGET_TEST"
+        } else {
+            "DUOS_FOLD_US_PER_ACTION_BUDGET_RELEASE"
+        };
+        assert_eq!(Measure::DuosFold.budget().1, expected_duos);
     }
 
     #[test]
@@ -812,15 +1184,22 @@ mod tests {
             smoke: true,
             passes: 1,
             corpus: CorpusCounts {
-                states: 3,
+                states: 6,
                 hotseat: 1,
                 wide: 1,
-                heaviest: 1,
+                plain: 1,
+                handicapped: 1,
+                run_start: 1,
+                coop: 1,
                 seeds: [PERF_SEED_FIRST, PERF_SEED_LAST],
             },
             fold: FoldInfo {
                 seed: 7,
                 actions: 12,
+                passes: 1,
+            },
+            duos_fold: DuosFoldInfo {
+                actions: 18,
                 passes: 1,
             },
             measures: MEASURES.iter().map(|&measure| row_at(measure, 1.5)).collect(),
@@ -835,6 +1214,7 @@ mod tests {
             "{table}"
         );
         assert!(lines[0].contains("fuzz seed 7, 12 actions"), "{table}");
+        assert!(lines[0].contains("duos fold: 18 actions"), "{table}");
         let header: Vec<&str> = lines[1].split_whitespace().collect();
         assert_eq!(header, ["measure", "unit", "median", "p95", "budget"]);
         for (line, measure) in lines[2..].iter().zip(MEASURES) {
