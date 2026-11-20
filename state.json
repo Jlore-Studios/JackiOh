@@ -14149,6 +14149,8 @@
       "run_id": "44796206265",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-20T18:48:12Z",
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "4329": {
