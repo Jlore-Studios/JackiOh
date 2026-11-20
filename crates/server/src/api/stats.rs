@@ -41,8 +41,8 @@ use jackioh_engine::wire::stats::{
     StatsField, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated,
     WindowedGames, WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate,
     card_drills_of, card_family, card_stats_of, card_window, collapse_gameless, created_adjusted,
-    created_field, created_played_delta, held_adjusted, patch_windows, seen, sources_of, stats_field,
-    tier_of, wilson_interval, win_rate, windowed_card_stats, windowed_game_figures,
+    created_field, held_adjusted, patch_windows, seen, sources_of, stats_field, tier_of, wilson_interval,
+    win_rate, windowed_card_stats, windowed_game_figures,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -97,6 +97,9 @@ pub struct PublicCardStat {
 
 /// R2089000: a Created card's figures, apart from the deck table: the seats that made a Created copy
 /// of it, each once a game. `games` is every one of them, used or not.
+///
+/// R4083000: only what `/stats` reads; the used and unused figures stay in the totals for `stats-cards`
+/// and `stats report`.
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicCreatedStat {
@@ -106,16 +109,6 @@ pub struct PublicCreatedStat {
     pub rarity: String,
     pub set: String,
     pub games: i64,
-    pub created_played_games: i64,
-    pub created_played_win_rate: Option<f64>,
-    pub created_not_played_games: i64,
-    pub created_not_played_win_rate: Option<f64>,
-    pub created_played_radiant_games: i64,
-    pub created_played_radiant_win_rate: Option<f64>,
-    pub created_played_normal_games: i64,
-    pub created_played_normal_win_rate: Option<f64>,
-    /// R654: as the played delta, it waits for the sample floor on both its sides.
-    pub created_played_delta: Option<f64>,
     /// R4082000: the made games' win rate read against the Created cards (`created_adjusted`): an
     /// average Created card reads an even game.
     pub adjusted_win_rate: Option<f64>,
@@ -138,9 +131,7 @@ impl PublicCreatedStat {
         deck: &StatsField,
     ) -> PublicCreatedStat {
         let stats = &row.stats;
-        let (played_games, _) = tally_of(&stats.created_played);
-        let (not_played_games, _) = tally_of(&stats.created_not_played);
-        let games = played_games + not_played_games;
+        let games = i64::from(stats.games());
         let has_enough_games = games >= CARD_STATS_MIN_SAMPLE;
         let adjusted = created_adjusted(stats, created, deck);
         PublicCreatedStat {
@@ -150,18 +141,6 @@ impl PublicCreatedStat {
             rarity: def.rarity.as_str().to_string(),
             set: def.set.as_str().to_string(),
             games,
-            created_played_games: played_games,
-            created_played_win_rate: win_rate(&stats.created_played),
-            created_not_played_games: not_played_games,
-            created_not_played_win_rate: win_rate(&stats.created_not_played),
-            created_played_radiant_games: tally_of(&stats.created_played_radiant).0,
-            created_played_radiant_win_rate: win_rate(&stats.created_played_radiant),
-            created_played_normal_games: tally_of(&stats.created_played_normal).0,
-            created_played_normal_win_rate: win_rate(&stats.created_played_normal),
-            created_played_delta: (played_games >= CARD_STATS_MIN_SAMPLE
-                && not_played_games >= CARD_STATS_MIN_SAMPLE)
-                .then(|| created_played_delta(stats))
-                .flatten(),
             adjusted_win_rate: adjusted.map(|(rate, _)| rate),
             adjusted_low: adjusted.map(|(_, (low, _))| low),
             adjusted_high: adjusted.map(|(_, (_, high))| high),

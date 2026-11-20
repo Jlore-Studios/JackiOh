@@ -10,8 +10,9 @@
 // tile the patch its games were collected on (R3447000). The Cards tab also holds the games panel (R1994000). The
 // Tokens tab holds the cards made during a game, the Tokens and the Other created cards, two sections that share
 // no row and show the deck table's columns, opening a row's drill-down as a deck row does, under the Cards tab's
-// filters (R2089000, R2370000, R3184002, R3324002, R4155000, R4279001). The page's on/off controls are the
-// Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art card's still Epic while
+// filters (R2089000, R2370000, R3184002, R3324002, R4155000, R4279001); R4083000: Tier and Adjusted alone, sorted,
+// viewed and ranged by the Cards tab's own controls, the keyword filter among them. The page's on/off controls are
+// the Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art card's still Epic while
 // the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy. R3838000: its
 // "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx). R3887000: the
 // Cards and Tokens tabs' "Plain text" button prints each card they list, and the drill-down's text and its
@@ -51,7 +52,7 @@ import {
   SET_STATS_OUTLIER_Z,
   WIN_RATE_RANGE_DIGITS,
 } from "../stats/config.ts";
-import { CreatedPanel } from "../stats/CreatedPanel.tsx";
+import { CREATED_SORT_COLUMNS, CreatedPanel, createdSortOf, type CreatedSort } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
 import {
   currentVersion,
@@ -64,6 +65,7 @@ import {
   type PatchWindow,
 } from "../stats/patches.ts";
 import { PlainCard, PlainTextButton, usePlainText } from "../stats/PlainText.tsx";
+import { RangeText, TierFitText } from "../stats/RangeText.tsx";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
@@ -138,6 +140,17 @@ function plainCardOf(id: string): ReactElement | null {
   return def === undefined ? null : <PlainCard def={def} />;
 }
 
+/** R4083000: a Created card's face in the Grid, as the deck grid draws a deck card's; null for an id the catalog holds no card of. */
+function gridFaceOf(id: string): ReactElement | null {
+  const def = catalog()[id];
+  if (def === undefined) return null;
+  return (
+    <div className="stats-grid-face">
+      <CardFace face={faceModel({ defId: id, def, radiant: false })} layout="full" lazyArt />
+    </div>
+  );
+}
+
 /**
  * R1973002: the patch before the one a response shows, as its name and the version to ask its figures
  * at, from the response's patch list; a server without one names the version before.
@@ -179,29 +192,6 @@ const SORT_LABELS: Record<SortColumn, string> = {
 
 function defaultDirection(col: SortColumn): SortDirection {
   return col === "name" ? "asc" : "desc";
-}
-
-/**
- * R2895000: a rate's 95% range under its figure, its ends to `digits` decimals of a percent (Adjusted's tenths,
- * Win rate's whole points); nothing when the server sent none.
- */
-function RangeText({ low, high, digits, testid }: { low?: number | null; high?: number | null; digits: number; testid: string }): ReactElement | null {
-  if (typeof low !== "number" || typeof high !== "number") return null;
-  return (
-    <span className="stats-sample-hint stats-range" data-testid={testid}>
-      {`${(low * 100).toFixed(digits)}–${(high * 100).toFixed(digits)}%`}
-    </span>
-  );
-}
-
-/** R3184001: under a tier, the share of the card's Adjusted range inside the tier's band, to a whole percent; nothing without one. */
-function TierFitText({ fit }: { fit: number | null }): ReactElement | null {
-  if (fit === null) return null;
-  return (
-    <span className="stats-sample-hint stats-range" data-testid={statsTestid.tierFit}>
-      {`${Math.round(fit * 100)}%`}
-    </span>
-  );
 }
 
 /** R2777000: the table's default order, the adjusted win rate descending. */
@@ -547,7 +537,6 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
   }, [drillDownOpen]);
 
-  const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
   // R3022000: the field and band the tiers are read against; absent from a server deployed before them.
   const tiers = cardStatsData?.tiers;
 
@@ -582,6 +571,14 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       setSortCol(col);
       setSortDir(defaultDirection(col));
     }
+  };
+
+  // R4083000: the Tokens tab sorts by the Cards tab's one sort, kept in the address, a column its tables lack read as
+  // Adjusted; a Created header sets it as a deck header does.
+  const createdSort = createdSortOf(sortCol, sortDir);
+  const sortCreatedBy = (next: CreatedSort): void => {
+    setSortCol(next.col);
+    setSortDir(next.dir);
   };
 
   const filteredCards = useMemo(() => {
@@ -650,9 +647,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     return list;
   }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, tiers]);
 
-  // R2089000: the Created cards the search box asks for, as it asks for the deck rows; R3324002: the tokens
-  // among them in a section of their own, and every other in its own, so no card is in both.
-  const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
+  // R2089000: the Created cards the search box asks for, as it asks for the deck rows, and R4083000 the keyword;
+  // R3324002: the tokens among them in a section of their own, and every other in its own, so no card is in both.
+  const createdCards = (cardStatsData?.created ?? []).filter(
+    (card) =>
+      matchesSearch(card, search) && (!keywordFilter || keywordKinds(card.id).includes(keywordFilter as KeywordKind)),
+  );
   const tokenCards = createdCards.filter((card) => catalog()[card.id]?.token === true);
   const otherCreatedCards = createdCards.filter((card) => catalog()[card.id]?.token !== true);
 
@@ -668,8 +668,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
 
   // R4279001: the Cards and Tokens tabs' filters, one set of state: the search, the set, rarity and cost the
-  // read asks for, the match type, and on the Cards tab the keyword, which only the deck table reads.
-  const cardFilters = (withKeyword: boolean): ReactElement => (
+  // read asks for, the match type, and the keyword, which both tabs read (R4083000).
+  const cardFilters = (): ReactElement => (
     <>
       <input
         type="search"
@@ -726,21 +726,19 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
           <option value="6">6+</option>
         </select>
 
-        {withKeyword && (
-          <select
-            className="stats-select"
-            value={keywordFilter}
-            onChange={(e) => setKeywordFilter(e.target.value)}
-            aria-label={t("Filter by keyword")}
-          >
-            <option value="">{t("All keywords")}</option>
-            {keywordOptions.map((kind) => (
-              <option key={kind} value={kind}>
-                {keywordName(kind)}
-              </option>
-            ))}
-          </select>
-        )}
+        <select
+          className="stats-select"
+          value={keywordFilter}
+          onChange={(e) => setKeywordFilter(e.target.value)}
+          aria-label={t("Filter by keyword")}
+        >
+          <option value="">{t("All keywords")}</option>
+          {keywordOptions.map((kind) => (
+            <option key={kind} value={kind}>
+              {keywordName(kind)}
+            </option>
+          ))}
+        </select>
 
         <select
           className="stats-select"
@@ -758,6 +756,110 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       </div>
     </>
   );
+
+  // R3324003: how the cards show, one row of labelled groups, every on/off control a pressed button. R4083000: the
+  // Tokens tab shows the same row, its sort select offering only the columns its tables have and no Play rate column.
+  const cardOptions = (created: boolean): ReactElement => {
+    const columns: readonly SortColumn[] = created ? CREATED_SORT_COLUMNS : SORT_COLUMNS;
+    return (
+      <div className="stats-options">
+        <div className="stats-sort">
+          <span className="stats-sort-label" id="stats-sort-label">
+            {t("Sort")}
+          </span>
+          <select
+            className="stats-select"
+            aria-labelledby="stats-sort-label"
+            data-testid={statsTestid.sortSelect}
+            value={created ? createdSort.col : sortCol}
+            onChange={(e) => {
+              const next = e.target.value as SortColumn;
+              setSortCol(next);
+              setSortDir(defaultDirection(next));
+            }}
+          >
+            {columns.map((col) => (
+              <option key={col} value={col}>
+                {t(SORT_LABELS[col])}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="stats-sort-dir"
+            data-testid={statsTestid.sortDir}
+            aria-label={sortDir === "asc" ? t("Ascending; switch to descending") : t("Descending; switch to ascending")}
+            title={sortDir === "asc" ? t("Ascending") : t("Descending")}
+            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+          >
+            {sortDir === "asc" ? "↑" : "↓"}
+          </button>
+        </div>
+
+        <div className="stats-view-toggle">
+          <span className="stats-sort-label" aria-hidden="true">
+            {t("View")}
+          </span>
+          <Segmented
+            label={t("View")}
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
+              { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
+            ]}
+          />
+        </div>
+
+        {/* R2895000: the 95% ranges, off by default; R3324003: an on/off button in the Segmented's look */}
+        <div className="segmented">
+          <button
+            type="button"
+            className={`segmented__item stats-view-btn ${showRanges ? "segmented__item--selected" : ""}`}
+            data-testid={statsTestid.rangesToggle}
+            aria-pressed={showRanges}
+            onClick={() => setShowRanges((shown) => !shown)}
+          >
+            {t("Show 95% ranges")}
+          </button>
+        </div>
+
+        {/* R3887000: every card as plain text, no face; the device keeps it, apart from Show card text */}
+        <PlainTextButton shown={plain.shown} onToggle={plain.toggle} />
+
+        {/* Column visibility toggles: each on or off on its own, so buttons in the Segmented's look, not one of a few */}
+        {view === "table" && (
+          <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
+            <span className="stats-sort-label" id="stats-columns-label">
+              {t("Columns")}
+            </span>
+            <div className="segmented">
+              <button
+                type="button"
+                className={`segmented__item stats-view-btn ${visibleCols.games ? "segmented__item--selected" : ""}`}
+                data-testid={statsTestid.columnGames}
+                aria-pressed={visibleCols.games}
+                onClick={() => setVisibleCols((c) => ({ ...c, games: !c.games }))}
+              >
+                {t("Games")}
+              </button>
+              {!created && (
+                <button
+                  type="button"
+                  className={`segmented__item stats-view-btn ${visibleCols.playRate ? "segmented__item--selected" : ""}`}
+                  data-testid={statsTestid.columnPlayRate}
+                  aria-pressed={visibleCols.playRate}
+                  onClick={() => setVisibleCols((c) => ({ ...c, playRate: !c.playRate }))}
+                >
+                  {t("Play rate")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <CardDefsProvider defs={catalog()}>
@@ -862,107 +964,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
             {/* Filter controls */}
             <div className="stats-filter-bar">
-              {cardFilters(true)}
+              {cardFilters()}
 
-              {/* R3324003: how the cards show, one row of labelled groups, every on/off control a pressed button */}
-              <div className="stats-options">
-              <div className="stats-sort">
-                <span className="stats-sort-label" id="stats-sort-label">
-                  {t("Sort")}
-                </span>
-                <select
-                  className="stats-select"
-                  aria-labelledby="stats-sort-label"
-                  data-testid={statsTestid.sortSelect}
-                  value={sortCol}
-                  onChange={(e) => {
-                    const next = e.target.value as SortColumn;
-                    setSortCol(next);
-                    setSortDir(defaultDirection(next));
-                  }}
-                >
-                  {SORT_COLUMNS.map((col) => (
-                    <option key={col} value={col}>
-                      {t(SORT_LABELS[col])}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="stats-sort-dir"
-                  data-testid={statsTestid.sortDir}
-                  aria-label={
-                    sortDir === "asc"
-                      ? t("Ascending; switch to descending")
-                      : t("Descending; switch to ascending")
-                  }
-                  title={sortDir === "asc" ? t("Ascending") : t("Descending")}
-                  onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                >
-                  {sortDir === "asc" ? "↑" : "↓"}
-                </button>
-              </div>
-
-              <div className="stats-view-toggle">
-                <span className="stats-sort-label" aria-hidden="true">
-                  {t("View")}
-                </span>
-                <Segmented
-                  label={t("View")}
-                  value={view}
-                  onChange={setView}
-                  options={[
-                    { value: "table", label: t("Table"), testId: statsTestid.viewTable, className: "stats-view-btn" },
-                    { value: "grid", label: t("Grid"), testId: statsTestid.viewGrid, className: "stats-view-btn" },
-                  ]}
-                />
-              </div>
-
-              {/* R2895000: the 95% ranges, off by default; R3324003: an on/off button in the Segmented's look */}
-              <div className="segmented">
-                <button
-                  type="button"
-                  className={`segmented__item stats-view-btn ${showRanges ? "segmented__item--selected" : ""}`}
-                  data-testid={statsTestid.rangesToggle}
-                  aria-pressed={showRanges}
-                  onClick={() => setShowRanges((shown) => !shown)}
-                >
-                  {t("Show 95% ranges")}
-                </button>
-              </div>
-
-              {/* R3887000: every card as plain text, no face; the device keeps it, apart from Show card text */}
-              <PlainTextButton shown={plain.shown} onToggle={plain.toggle} />
-
-              {/* Column visibility toggles: each on or off on its own, so buttons in the Segmented's look, not one of a few */}
-              {view === "table" && (
-                <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
-                  <span className="stats-sort-label" id="stats-columns-label">
-                    {t("Columns")}
-                  </span>
-                  <div className="segmented">
-                    <button
-                      type="button"
-                      className={`segmented__item stats-view-btn ${visibleCols.games ? "segmented__item--selected" : ""}`}
-                      data-testid={statsTestid.columnGames}
-                      aria-pressed={visibleCols.games}
-                      onClick={() => setVisibleCols((c) => ({ ...c, games: !c.games }))}
-                    >
-                      {t("Games")}
-                    </button>
-                    <button
-                      type="button"
-                      className={`segmented__item stats-view-btn ${visibleCols.playRate ? "segmented__item--selected" : ""}`}
-                      data-testid={statsTestid.columnPlayRate}
-                      aria-pressed={visibleCols.playRate}
-                      onClick={() => setVisibleCols((c) => ({ ...c, playRate: !c.playRate }))}
-                    >
-                      {t("Play rate")}
-                    </button>
-                  </div>
-                </div>
-              )}
-              </div>
+              {cardOptions(false)}
             </div>
 
             {/* Table or Grid */}
@@ -1216,36 +1220,19 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         panelClassName: "stats-panel one-screen__body",
         // R4279001: the cards made during a game, a tab of their own beside the deck cards' (R2089000, R3324002,
         // R4155000): the tokens, then every other, no card in both, in the deck table's columns, each row
-        // opening the drill-down, under the Cards tab's filters. R3324000: a collecting patch shows no figures.
+        // opening the drill-down, under the Cards tab's filters. R4083000: the Cards tab's sort, view, ranges and
+        // keyword too, one state for both tabs. R3324000: a collecting patch shows no figures.
         panel: collecting ? (
           <CollectingNote patch={shownPatchName} previous={previousWindow} onPrevious={choosePatch} />
         ) : (
           <>
             <div className="stats-filter-bar">
-              {cardFilters(false)}
-              <div className="stats-options">
-                <PlainTextButton shown={plain.shown} onToggle={plain.toggle} />
-                <div className="stats-view-toggle" role="group" aria-labelledby="stats-columns-label">
-                  <span className="stats-sort-label" id="stats-columns-label">
-                    {t("Columns")}
-                  </span>
-                  <div className="segmented">
-                    <button
-                      type="button"
-                      className={`segmented__item stats-view-btn ${visibleCols.games ? "segmented__item--selected" : ""}`}
-                      data-testid={statsTestid.columnGames}
-                      aria-pressed={visibleCols.games}
-                      onClick={() => setVisibleCols((c) => ({ ...c, games: !c.games }))}
-                    >
-                      {t("Games")}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              {cardFilters()}
+              {cardOptions(true)}
             </div>
 
             {cardStatsLoading ? (
-              <Skeleton variant="table" label={t("Loading card statistics…")} />
+              <Skeleton variant={view === "grid" ? "grid" : "table"} label={t("Loading card statistics…")} />
             ) : cardStatsError ? (
               <div className="stats-error">
                 <p>{t("The card statistics didn't load.")}</p>
@@ -1260,8 +1247,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 <CreatedPanel
                   kind="tokens"
                   created={tokenCards}
-                  minSample={minSample}
+                  sort={createdSort}
+                  onSort={sortCreatedBy}
+                  view={view}
+                  showRanges={showRanges}
+                  tiers={tiers}
                   nameOf={shownName}
+                  faceOf={gridFaceOf}
                   plainCardOf={plain.shown ? plainCardOf : undefined}
                   visibleThumbnail={visibleCols.thumbnail}
                   visibleGames={visibleCols.games}
@@ -1270,8 +1262,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 <CreatedPanel
                   kind="other"
                   created={otherCreatedCards}
-                  minSample={minSample}
+                  sort={createdSort}
+                  onSort={sortCreatedBy}
+                  view={view}
+                  showRanges={showRanges}
+                  tiers={tiers}
                   nameOf={shownName}
+                  faceOf={gridFaceOf}
                   plainCardOf={plain.shown ? plainCardOf : undefined}
                   visibleThumbnail={visibleCols.thumbnail}
                   visibleGames={visibleCols.games}
