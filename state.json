@@ -15087,14 +15087,6 @@
         "reason": "rated difficulty:hard, which needs a stronger model than this run's to plan it",
         "trail": "ewFor` (237) / `craftPreview` (617): only if guilty |\n- | `apps/web/src/game/craft/CraftEditor.tsx` | change, only in outcome C | Presets gate (134) or suggestions row (329): only if guilty |\n- | `apps/web/src/game/craft/craft.css` | change, only in outcome C | `.craft-suggestions` (240) or sheet rules (344): only if guilty |\n- | `apps/web/src/game/Prompt.tsx` | change, only in outcome C | Craft branch (1964): only if it drops options; otherwise read-only |\n- | `crates/engine/tests/rules/craft.rs` | change | Engine pinning test (also the step-2 probe) |\n- | `apps/web/src/game/craft/CraftEditor.test.tsx` | change | Web pinning test (outcomes B/C) |\n- | `spec/rulings/R4294000.md` | new, only if a new undecided decision appears | Ruling note, lowest free in this issue's block |\n- | `spec/pending/4294.md` | new, only if a new ruling appears | The \u00a711 paragraph |\n- Must not touch: `.github/`, `.harness/`, `.squishy/`, `bot/`; `spec/11-rulings.md`, `spec/INDEX.md`, `spec/CARDS.md` (daily fold owns them; never run `cargo jackioh spec index`); `crates/cards/src/scripts/meditative_plus/c026_scratch_pad.rs` behavior; Core #99; budgets or constants except under CLA\u2026\n- ## Steps\n- 1. Baseline first. Run `cargo test -p jackioh-engine --features testkit --test 'rules*' craft`, `cargo test -p jackioh-cards c017_true_craft_a_card`, and `pnpm --dir apps/web test src/game/craft/CraftEditor.test.tsx`. Record greens; do not change code yet.\n- 2. Write the engine pinning test first (it doubles as the probe). In `crates/engine/tests/rules/craft.rs`, copy the `crafted_at` scenario pattern from `crates/cards/src/scripts/meditative/c017_true_craft_a_card.rs` (its `scenario`, `s.play`, `s.answer` helpers): for each cost 0 to `CRAFT_MAX_COST`,\u2026\n- 3. Probe the holder view in the same test file. After opening each prompt above, read `view_for` holder JSON: assert every option carries its `recipe` and the opponent's `Elsewhere` view carries none (R97). If the holder view lacks recipes, outcome B (engine view): fix `option_view`'s Craft arm, ke\u2026\n- 4. Probe the client object. Read `apps/web/src/game/hotseat.test.ts` for the pattern that drives a hotseat game through the real WASM (`engine.viewFor(state, seat)` per `apps/web/src/game/hotseat.ts` 91-92). In a temporary scratch test (delete it after; only the final pinning test ships), open the \u2026\n- 5. Finalize the pinning test at the guilty layer only: outcome A or engine-view B keeps the step-2/3 Rust test; WASM/web B or C adds `it(\"R880 shows the holder's preset recipes as clickable suggestions that load\")` in `CraftEditor.test.tsx`, feeding the captured live pending (or the exact malformed\u2026\n- 6. Run the acceptance sweep through tests, not by eye: True Craft costs 0-4 \u00d7 base/Radiant, Jazakus, Jazakus Prime show 1-4 clickable suggestions that load; Scratch Pad shows none (existing `R1182002` tests in `CraftEditor.test.tsx` and `Prompt.test.tsx` still green, and engine scratch presets stil\u2026\n- 7. Add a ruling only if the fix needed a decision the spec does not make (R1563007 already settles one-to-four presets, so expect none). If one appears: follow Hearthstone semantics, write `spec/rulings/R4294000.md`, name the test `r4294000_\u2026` / `it(\"R4294000 \u2026\")`, list files in `proven_in`, add th\u2026\n- ## Tests\n- - `crates/engine/tests/rules/craft.rs`, `fn r881_presets_answer_every_craft_prompt`: costs 0-4 plus potion/hugePotion modes yield 1-`CRAFT_PRESETS` answerable recipes; run `cargo test -p jackioh-engine --features testkit --test 'rules*' r881_presets`. If guilty layer is the view, extend it with hol\u2026\n- - `apps/web/src/game/craft/CraftEditor.test.tsx`, `it(\"R880 shows the holder's preset recipes as clickable suggestions that load\")` (outcomes B/C only): live-shaped pending renders every `craft-preset-N`, click loads, Craft sends the recipe; run `pnpm --dir apps/web test src/game/craft/CraftEditor.\u2026\n- - Regression: existing `R1182002` scratch tests, `cargo test -p jackioh-cards c016_jazakus` and `c016_1_jazakus_prime`, `cargo fmt --check`, `cargo clippy -p jackioh-engine --all-targets -- -D warnings` (and each touched crate), `cargo jackioh spec check` if any ruling was added or cited.\n- ## Done when\n- - [ ] True Craft (costs 0-4, both faces), Jazakus, Jazakus Prime show clickable preset suggestions that load; Scratch Pad shows none\n- - [ ] Pinning test at the guilty layer fails without the fix and passes with it; no test elsewhere weakened\n- - [ ] Rustfmt, clippy on touched crates, touched web test files, and `spec check` (if ruling added/cited) pass\n- - [ ] No changes outside the Files table; every unsettled decision recorded in the report\n- ## Risks\n- - Determinism/replay: presets come from the match rng; do not add randomness, reorder draws, or change recipe JSON shape (R882 digest stability \u2014 `frame` stays absent on unframed recipes).\n- - Hidden information: recipes travel to the holder only (R97/R880); do not leak them into `Elsewhere`, option counts, or logs.\n- - Purity: `crates/engine` clippy bans hold for tests too (no clock, I/O, threads, statics).\n- - AI/timeout path: engine presets must remain as prompt options even where the client hides them \u2014 never fix display by deleting options (`legalActions`, policy, R79 timeouts answer with one).\n- - Sheet layout shares queries with `prompt.css` via `PHONE_SHEET_QUERY`; do not hardcode a media query or shrink touch targets.\n- ## Open questions\n- None. Reproduction settles the guilty layer; no person-only decision is anticipated. If step 7's ruling becomes necessary, it stays bot-doable under CLAUDE.md rule 3.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill/_work/_temp/work/item-4294 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill/_work/_temp/work/item-4294/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "hold": {
-        "ends": "2026-11-20T08:27:32Z",
-        "lifted": "2026-11-20T07:20:23Z",
-        "owner": "claude-6",
-        "since": "2026-11-20T06:27:32Z",
-        "until": "2026-11-20T07:20:00Z",
-        "why": "5-hour usage is 55%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)"
-      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
@@ -15110,9 +15102,9 @@
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "claude-6",
-      "run_id": "44687471868",
+      "run_id": "pending:70a8ba53-1795159205",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T06:23:32Z",
+      "started_at": "2026-11-20T07:20:34Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7032271881
@@ -15521,9 +15513,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T07:06:23Z",
+    "at": "2026-11-20T07:20:34Z",
     "url": "",
-    "what": "build #4291 on claude-7"
+    "what": "plan #4294 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-20T07:12:54Z",
