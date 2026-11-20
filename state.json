@@ -15517,15 +15517,12 @@
     "what": "plan #4286 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-20T06:22:01Z",
+    "at": "2026-11-20T06:26:12Z",
     "notes": [
       "#4290 is held for `claude-1` until 01:00 (it refused a call)",
       "#4303 is held for `claude-1` until 01:00 (it refused a call)",
-      "started review #4299 on claude-4 (run 44687405807)",
-      "started plan #4294 on claude-6 (run 44687471868)",
-      "started plan #4286 on claude-4 (run 44687542488)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` 5-hour usage is 89%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-20T07:00:00Z; it can start a build or a plan again in 35m; `claude-1` it refused a call; its limit resets at 2026-11-20T07:00:00Z; `claude-4` is busy; `claude-6` is idle, but nothing queued is for it; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is idle, but nothing queued is for it; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4290 held for `claude-1` until 01:00 (it refused a call); #4303 held for `claude-1` until 01:00 (it refused a call)",
-      "pruned 5 plan file(s) older than 7 days"
+      "delivered plan #4294 on claude-6 (run 44687471868): interrupted",
+      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` 5-hour usage is 89%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-20T07:00:00Z; it can start a build or a plan again in 32m; `claude-1` it refused a call; its limit resets at 2026-11-20T07:00:00Z; `claude-4` is busy; `claude-6` 5-hour usage is 55%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-20T07:20:00Z; it can start a build or a plan again in 52m; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is idle, but nothing queued is for it; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4290 held for `claude-1` until 01:00 (it refused a call); #4294 held for `claude-6` until 01:20 (5-hour usage is 55%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)); #4303 held for `claude-1` until 01:00 (it refused a call)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16231,7 +16228,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T06:22:01Z",
+  "loop_tick": "2026-11-20T06:26:12Z",
   "machine_disk": {
     "issue": null,
     "reading": {
