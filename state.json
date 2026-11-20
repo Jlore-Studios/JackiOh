@@ -38713,7 +38713,8 @@
       "2026-11-20T19:18:38Z,claude-1,stream,call,44798711145,35,2026-11-20T22:00:00Z,,,allowed,40,,"
     ],
     "runs": [
-      "2026-11-20T19:16:27Z,44788437741,claude-4,opus,build,4318,hard,interrupted,5-hour cap,74.8,0,0,0,,46,70,,,160.7,claude-4,fresh,,1"
+      "2026-11-20T19:16:27Z,44788437741,claude-4,opus,build,4318,hard,interrupted,5-hour cap,74.8,0,0,0,,46,70,,,160.7,claude-4,fresh,,1",
+      "2026-11-20T19:19:33Z,44798711145,claude-1,opus,plan,4322,hard,planned,,12.4,149,74527,10597775,5.2605,24,35,,,39.1,claude-4,fresh,cap,1"
     ]
   },
   "version": 1
