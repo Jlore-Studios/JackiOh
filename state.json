@@ -14528,6 +14528,7 @@
       "run_id": "44837164032",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 400,
       "started_at": "2026-11-20T23:29:28Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35954,9 +35955,25 @@
         "title": "Patch: the game log's card buttons meet the 24-pixel target on a mouse too",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {},
+        "builder": {},
+        "difficulty": "hard",
+        "every": 5,
+        "head": "ab3aa85f436b3f3a1d90ac21475e43c129df60e5",
+        "issue": 4327,
+        "merged_at": "2026-11-20T23:45:59Z",
+        "n": 400,
+        "pr": 4344,
+        "queued_at": "2026-11-20T23:45:59Z",
+        "sha": "6d718b78293742d4d41e83e8c3cae29108f9c454",
+        "status": "queued",
+        "title": "Patch: Ayys LMAO sets its Cloaked summons face-down in the backrow as Traps",
+        "tries": 0
       }
     ],
-    "count": 399
+    "count": 400
   },
   "statistics": {
     "at": "2026-11-20T23:41:43Z"
