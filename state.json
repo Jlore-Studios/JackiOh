@@ -13634,6 +13634,7 @@
         "question": "How should the screen for `AI_REPLY.open_lethal` run, now that 800 games don't fit in one bot run on this runner?",
         "why": "the issue itself allows 400 games as the floor, no tally has been read so switching to it now is not fishing, and it is the only size a bot run on this runner can finish and report. If a person can run the 800 themselves, option 3 measures more precisely"
       },
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-20T02:21:06Z",
         "difficulty": "hard",
