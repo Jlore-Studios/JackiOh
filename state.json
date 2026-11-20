@@ -15335,6 +15335,8 @@
       }
     },
     "4302": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T04:20:53Z",
@@ -15348,8 +15350,11 @@
         "trail": "- Bash: {\"command\": \"git status --short; git log --oneline -2; head -20 .bot-notes.md; git diff d70de4becb --stat\", \"description\": \"Check worktree state, notes and branch diff\"}\n- said: The notes file came back truncated by the harness. I'll look at it whole before rewriting State.\n- Bash: {\"command\": \"wc -l .bot-notes.md; grep -n \\\"^## \\\" .bot-notes.md; sed -n 10,20p .bot-notes.md | cut -c1-120\", \"description\": \"Inspect notes file structure\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\nlines=open(p).read().split('\\\\n')\\nrest='\\\\n'.join(lines[81:])\\nhead='''## State\\n\\nBuild pass 1 (2026-11-20, opus), resumed after a usage-limit cut\u2026\n- said: Now re-running `classify --claims`, this time keeping its full output to see what \"Internal\" meant.\n- Bash: {\"command\": \"git rev-parse --verify -q origin/main; timeout 900 cargo jackioh classify --base origin/main --claims > /tmp/classify.log 2>&1; echo exit=$?; grep -v \\\"Compiling\\\" /tmp/classify.log | ta\u2026\n- said: `classify` exits 0 and prints only `classify: Internal`. Checking that this is the kind it found, not an error:\n- Grep: {\"pattern\": \"Internal\", \"path\": \"/home/runner/work/_temp/work/item-4284/crates/tools/src\", \"output_mode\": \"content\", \"glob\": \"*classify*\", \"head_limit\": 15}\n- said: `Internal` is a kind (no card or rule change, so no fragment is owed). Re-running the promote-staging test on the fresh checkout; first checking whether the WASM package survived:\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>/dev/null | head -3 || echo \\\"no pkg\\\"; bash -n scripts/promote-staging.sh && shellcheck scripts/promote-staging.sh && echo lint-ok\", \"description\": \"Check was\u2026\n- said: The WASM package is gone with the fresh checkout, so I'm rebuilding it (about 3 minutes) and then running the web tests.\n- Bash: {\"command\": \"echo \\\"- resumed: classify --claims exit 0, kind Internal; lint ok; rebuilding wasm\\\" >> .bot-notes.md; sh scripts/build-wasm.sh > /tmp/wasm-build.log 2>&1; echo wasm-exit=$?; timeout 60\u2026\n- said: 42 of 42 (28 + 14) on the fresh checkout. Last check: the daily job's own failure was the R290 `tutorial_tier` tests in `jackioh-ai`. Re-running them on this branch:\n- Bash: {\"command\": \"echo \\\"- resumed: wasm rebuilt; 3 web files 42/42. Running jackioh-ai tutorial_tier daily tests\\\" >> .bot-notes.md; CARGO_PROFILE_TEST_DEBUG=0 timeout 1500 cargo test -p jackioh-ai --fea\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('- Left:'):s.index('- Dead ends:')]\\nnew='''- Also done after resuming: classify --claims exit 0 (kind Internal); li\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: daily super run failed\"} --> Every job that went red in super run 44641848011 is already fixed on `main`, by #4281 (642ab3464b). The run tested `b24900c`, two commits before that fix. This PR fixes why #4284 exists at all: `_staging` was frozen on a commit\u2026"
       },
       "issue": 4284,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T05:25:42Z",
         "from_run": "44673799519",
         "gates": [
           {
@@ -15441,7 +15446,11 @@
         "source": "build",
         "until": "2026-11-20T05:54:43Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-20T05:24:43Z",
+      "run_id": "pending:1646196e-1795152318",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15460,6 +15469,9 @@
         "provider": "claude-7",
         "run": "44673799519"
       },
+      "started_at": "2026-11-20T05:25:42Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15473,9 +15485,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T05:15:44Z",
+    "at": "2026-11-20T05:25:42Z",
     "url": "",
-    "what": "build #4290 on claude-1"
+    "what": "review #4302 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-20T05:11:58Z",
