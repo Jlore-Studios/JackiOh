@@ -13614,17 +13614,8 @@
       "stop_requested": false
     },
     "4246": {
-      "action": "plan",
-      "asks": [
-        "c:7027731396"
-      ],
-      "build_next": {
-        "from_run": "44657694508",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-20T02:21:14Z",
-        "until": "2026-11-20T02:51:14Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T02:21:06Z",
         "difficulty": "hard",
@@ -13643,10 +13634,9 @@
         "reason": "planned on opus",
         "trail": ", \"description\u2026\n- Bash: {\"command\": \"grep -n -i \\\"edit\\\\|chang\\\\|amend\\\" spec/README.md | head -30\", \"description\": \"Check how existing ruling notes are amended\"}\n- Bash: {\"command\": \"grep -n \\\"fn lethal_wall\\\\|fn wall_switches\\\\|fn ranked_attacks\\\\|fn reply_face_value\\\\|ready_gap\\\" crates/ai/src/reply.rs | head\", \"description\": \"Locate lethal_wall and related functio\u2026\n- Bash: {\"command\": \"sed -n 270,300p crates/ai/src/reply.rs; sed -n 670,714p crates/ai/src/reply.rs\", \"description\": \"Read reply_face_value and lethal_wall\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -5\", \"description\": \"Read classify docs\"}\n- Bash: {\"command\": \"tail -5 /tmp/plan-build.log\", \"description\": \"Check release build progress\"}\n- Bash: {\"command\": \"ls apps/web/src/tutorial/scripts/*.test.ts 2>/dev/null | head; ls apps/web/src/practice/ 2>/dev/null | head; ls apps/web/src/routes/ | grep -i practice; ls e2e/cypress/e2e | grep \\\"^13\\\"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4246/.bot-plan.md\", \"content\": \"# Draft plan #4246 (claude planner, in progress)\\n\\n## Found so far\\n- AI_REPLY.open_lethal at crates/ai/src/config.rs\u2026\n- Bash: {\"command\": \"sed -n 1180,1254p crates/tools/src/arena.rs\", \"description\": \"Read the Tally struct and tally function\"}\n- Bash: {\"command\": \"tail -4 /tmp/plan-build.log\", \"description\": \"Check build progress\"}\n- Bash: {\"command\": \"grep -rln \\\"improve-dev\\\" crates/ai/src docs reviews training/history 2>/dev/null | head; grep -n \\\"screen\\\" crates/ai/src/config.rs | head -30\", \"description\": \"Find previous screen rec\u2026\n- Bash: {\"command\": \"sed -n 700,725p crates/ai/src/config.rs\", \"description\": \"Read a neighbouring screen comment\"}\n- Bash: {\"command\": \"sleep 60; tail -3 /tmp/plan-build.log\", \"description\": \"Wait and check build\"}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -3 /tmp/plan-build.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you\u2026\n- Bash: {\"command\": \"grep -n -i \\\"bot-notes\\\\|pull request's body\\\\|PR body\\\\|report\\\" bot/README.md | head -20\", \"description\": \"Check how builder notes reach the PR\"}\n- Bash: {\"command\": \"sed -n 1715,1735p bot/README.md\", \"description\": \"Read .bot-notes.md handling\"}\n- Bash: {\"command\": \"grep -n \\\"fn r4187000\\\\|fn r4171000\\\\|fn r4064\\\\|fn r4065\\\\|simulate_reply_with\\\" crates/ai/tests/ai/*.rs | head -30\", \"description\": \"List reply tests that may pin ranking\"}\n- Bash: {\"command\": \"sed -n 930,1000p crates/ai/tests/ai/reply.rs\", \"description\": \"Read R4187000 combined-lethal test\"}\n- Bash: {\"command\": \"tail -3 /tmp/plan-build.log\", \"description\": \"Check build progress\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/plan-build.log; do sleep 5; done; tail -6 /tmp/plan-build.log\", \"description\": \"Wait for the release build to finish\", \"timeout\": 1200000, \"run_in_background\u2026\n- Bash: {\"command\": \"grep -n \\\"^| \\\\`trace\\\" crates/tools/README.md | cut -c1-900\", \"description\": \"Read the trace command's docs\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/trace.rs | grep -n \\\"//\\\" | head -40\", \"description\": \"Read trace.rs header comments\"}\n- Bash: {\"command\": \"grep -n \\\"STATS_INTERVAL_Z\\\" crates/engine/src/config.rs | head -3; grep -n \\\"fn series\\\" -A30 crates/tools/src/arena.rs | head -45\", \"description\": \"Read how the arena sizes the dev-set\u2026\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/plan-build.log; do sleep 5; done; tail -6 /tmp/plan-build.log\", \"description\": \"Block until the release build finishes\", \"timeout\": 900000}\n- Bash: {\"command\": \"cp \\\"$CARGO_TARGET_DIR/release/jackioh\\\" /tmp/plan-timing-jackioh && mkdir -p /tmp/plan-timing-out && cd /tmp && (time \\\"$CARGO_TARGET_DIR/release/jackioh\\\" arena --a self --b bin:/tmp/p\u2026\n- Bash: {\"command\": \"grep -n \\\"call_timeout_minutes\\\\|job_budget_minutes\\\\|min_minutes_for_a_call\\\" bot/README.md bot/go/README.md | head\", \"description\": \"Check call timeout semantics\"}\n- Bash: {\"command\": \"grep -rn -i \\\"150 minutes\\\\|call timeout\\\\|CallTimeout\\\" bot/README.md bot/go/README.md | head -8\", \"description\": \"Find call timeout documentation\"}\n- Bash: {\"command\": \"(time cargo test -p jackioh-ai 2>&1 | grep -E \\\"^test result|FAILED|panicked|error\\\" ) > /tmp/plan-aitest.log 2>&1\", \"description\": \"Time the AI crate's test suite on the unchanged tree\"\u2026\n- Bash: {\"command\": \"grep -n -i \\\"smoke\\\" e2e/README.md | head -8\", \"description\": \"Check which specs e2e smoke runs\"}\n- Bash: {\"command\": \"sed -n 726,728p docs/polish/3-ai.md | cat -A | cut -c1-140; grep -o \\\"This is switched off (\\\\`AI_REPLY.open_lethal\\\\`) until a screen keeps it\\\\.\\\" spec/09-architecture.md; grep -n \\\"is\u2026\n- said: Updating the draft with the timing and decisions so far.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4246/.bot-plan.md\", \"old_string\": \"- classify: AI kind needs no patches fragment (earlier AI PRs had none).\\n\", \"new_string\": \"-\u2026\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/plan-aitest.log; do sleep 5; done; cat /tmp/plan-aitest.log | tail -20\", \"description\": \"Wait for the AI test suite timing\", \"timeout\": 2400000}\n- Bash: {\"command\": \"cat rustfmt.toml; ls spec/rulings/ | grep -c \\\"R4187000\\\\|R4064000\\\\|R4171000\\\"\", \"description\": \"Check rustfmt width\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4246/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2, the AI: flipping AI_REPLY.open_lethal in crates/ai/src/config.\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; git status --porcelain | head\", \"description\": \"Check plan length and that the tree is clean\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2, the AI: flipping AI_REPLY.open_lethal in crates/ai/src/config.rs changes how the reply search ranks attacks, so the AI's decisions\"} --> ## Goal Screen `AI_REPLY.open_lethal = true` (the reply counts all of the opponent's remaining attacks together, \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-20T02:00:32Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -13659,12 +13649,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-20T01:43:06Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44657694508",
+      "run_id": "pending:e7a1d996-1795141377",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T02:00:32Z",
+      "started_at": "2026-11-20T02:23:12Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7027731396"
+      ]
     },
     "4249": {
       "action": "build",
@@ -14672,9 +14664,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T02:22:43Z",
+    "at": "2026-11-20T02:23:12Z",
     "url": "",
-    "what": "build #4257 on claude-8"
+    "what": "build #4246 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-20T02:13:17Z",
