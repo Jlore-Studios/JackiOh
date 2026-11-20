@@ -14,7 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::{MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA};
+use crate::config::{FLASHBACK_MIN_PRICE, MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA};
 use crate::script::EngineSink;
 use crate::script::{GraveyardPlayPermission, HookArgs};
 use crate::state::{CardInstance, EngineError, GameState};
@@ -125,6 +125,23 @@ pub fn spends_flashback(
         && !field_admitting(state, player, card).iter().any(|grant| {
             grant.permission.plague != Some(true) && price >= grant.permission.min_price.unwrap_or(0)
         })
+}
+
+/// R4285000: the price a play of this card from its owner's graveyard takes once Flashback's floor holds:
+/// at least FLASHBACK_MIN_PRICE when the play at `price` would be Flashback's (`spends_flashback`, the
+/// keyword printed or lent, R1869003), else `price` as it is. A play a field permission covers at that
+/// price (C #28 Second Wind's, C #74 Corpse Plantation's) is the permission's and takes no floor, nor does a
+/// card that prices itself there (`graveyardPrice`, R3560001); a card in a hand never does.
+pub fn flashback_floor(state: &GameState, card: &CardInstance, price: i32) -> i32 {
+    let player = card.zone.player();
+    if in_own_graveyard(state, player, card)
+        && crate::scripts::flags_of(state, card).graveyard_price.is_none()
+        && spends_flashback(state, player, card, price, None)
+    {
+        price.max(FLASHBACK_MIN_PRICE)
+    } else {
+        price
+    }
 }
 
 /// R454, R65: whether a play may take this card from its player's graveyard now (it lies there and a
