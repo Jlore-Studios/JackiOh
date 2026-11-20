@@ -14538,11 +14538,12 @@
       "requested_by": "jgoetzmann",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "44837164032",
+      "run_id": "pending:f42d14f9-1795218468",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 400,
-      "started_at": "2026-11-20T23:29:28Z",
+      "started_at": "2026-11-20T23:48:11Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -14892,9 +14893,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T23:47:35Z",
+    "at": "2026-11-20T23:48:11Z",
     "url": "",
-    "what": "build #3925 on claude-8"
+    "what": "spot-check #4344 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-20T23:36:32Z",
@@ -35985,7 +35986,15 @@
         "n": 400,
         "pr": 4344,
         "queued_at": "2026-11-20T23:45:59Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:f42d14f9-1795218468",
         "sha": "6d718b78293742d4d41e83e8c3cae29108f9c454",
+        "started_at": "2026-11-20T23:48:11Z",
         "status": "queued",
         "title": "Patch: Ayys LMAO sets its Cloaked summons face-down in the backrow as Traps",
         "tries": 0
