@@ -60,6 +60,7 @@ import type {
 } from "./types.ts";
 import { effectFor, lineFor, voiceKey, voiceUrl } from "./voiceData.ts";
 import { loadSoundTables, onSoundTablesLoaded, soundTablesNow, type SoundTables } from "./soundTablesLoader.ts";
+import { savingData } from "../net/saveData.ts";
 
 export type SpeechPort = {
   speak(text: string, voice: { pitch: number; rate: number; volume: number }, onEnd: () => void): void;
@@ -135,6 +136,7 @@ export type AudioEngineOptions = {
   visibility?: () => DocumentVisibilityState;          // default document.visibilityState ("visible" without a document)
   lines?: CardAudioTable;                              // default loaded tables
   manifest?: VoiceManifest;                            // default loaded tables
+  saveData?: () => boolean;                            // default shared savingData() (R4316000); tests pass an explicit port
   random?: () => number;                               // [0, 1); an effect's pitch variation (R655); default Math.random
 };
 
@@ -255,6 +257,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   const fetchBytes = options.fetchBytes ?? ((url: string) => fetchAudioBytes(url));
   const now = options.now ?? defaultNow;
   const visibility = options.visibility ?? defaultVisibility;
+  const saveData = options.saveData ?? savingData;
   let loadedLines: CardAudioTable | null = options.lines ?? soundTablesNow()?.cardAudio ?? null;
   let loadedManifest: VoiceManifest | null = options.manifest ?? soundTablesNow()?.voiceManifest ?? null;
   const random = options.random ?? Math.random;
@@ -285,7 +288,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
         ctx !== null ? ctx.currentTime : item.requestCtxTime,
       );
     }
-    if (running()) schedulePrefetch();
     if (heldPreload !== null) {
       const held = heldPreload;
       heldPreload = null;
@@ -726,7 +728,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function pumpPrefetch(): void {
     const rest = prefetchRest;
     if (rest === null) return;
-    while (prefetchInFlight < VOICE_PREFETCH_CONCURRENCY && backgroundFree()) {
+    while (prefetchInFlight < VOICE_PREFETCH_CONCURRENCY && !saveData() && backgroundFree()) {
       const key = rest.shift();
       if (key === undefined) return;
       if (bytes.has(key)) continue;
@@ -739,12 +741,12 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /** Once the context runs: every line's bytes, a few at a time, so no first line waits on the network. */
+  /** After the first preload on a running context (never on tables landing alone, never while the browser asks to save data): every line's bytes, a few at a time, so no first line waits on the network. */
   function schedulePrefetch(): void {
-    if (prefetchScheduled || loadedManifest === null) return;
+    if (prefetchScheduled || loadedManifest === null || saveData()) return;
     prefetchScheduled = true;
     later(VOICE_PREFETCH_DELAY_MS, () => {
-      if (loadedManifest === null) return;
+      if (loadedManifest === null || saveData()) return;
       prefetchRest = (Object.keys(loadedManifest.files) as VoiceKey[]).filter((key) => !bytes.has(key));
       pumpPrefetch();
     });
