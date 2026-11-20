@@ -15861,10 +15861,12 @@
     "what": "review #4308 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-20T11:09:20Z",
+    "at": "2026-11-20T11:16:46Z",
     "notes": [
-      "delivered review #4303 on claude-1 (run 44692374776): approved",
-      "runner gate: started 1 of 1 waiting run(s) (run 44725356419 on bot/issue-4285)"
+      "delivered build #4291 on claude-7 (run 44702554081): built",
+      "started review #4308 on claude-7 (run 44726555389)",
+      "nothing more to start: nothing is queued",
+      "pruned 11 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16570,7 +16572,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T11:09:20Z",
+  "loop_tick": "2026-11-20T11:16:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
