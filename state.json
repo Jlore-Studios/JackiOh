@@ -17892,12 +17892,8 @@
       }
     },
     "claude-1": {
-      "refused_until": "2026-11-13T06:20:00Z",
+      "refused_until": "2026-11-20T07:00:00Z",
       "spent": [
-        {
-          "at": "2026-11-05T05:13:25Z",
-          "minutes": 58.7
-        },
         {
           "at": "2026-11-05T05:50:36Z",
           "minutes": 34.8
@@ -18693,16 +18689,13 @@
         {
           "at": "2026-11-20T06:04:07Z",
           "minutes": 139.5
+        },
+        {
+          "at": "2026-11-20T06:14:25Z",
+          "minutes": 0.1
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-04T07:51:25Z",
-          "cache": 8709466,
-          "cost": 3.5846,
-          "input": 157,
-          "output": 40179
-        },
         {
           "at": "2026-11-04T08:07:11Z",
           "cache": 201788,
@@ -20095,15 +20088,23 @@
           "cost": 36.7655,
           "input": 722,
           "output": 215819
+        },
+        {
+          "at": "2026-11-20T06:14:25Z",
+          "cache": 79397,
+          "cost": 0.5426,
+          "input": 2,
+          "output": 376
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-20T07:00:00Z",
-          "utilization": 0.93
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-20T06:04:07Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-11-20T06:14:25Z",
+        "rejected_resets_at": "2026-11-20T07:00:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
@@ -37004,7 +37005,9 @@
       "2026-11-20T05:15:34Z,claude-1,stream,call,44666052113,86,2026-11-20T07:00:00Z,,,allowed,100,,",
       "2026-11-20T05:25:49Z,claude-1,stream,call,44666052113,92,2026-11-20T07:00:00Z,,,allowed_warning,100,,",
       "2026-11-20T05:31:50Z,claude-1,stream,call,44666052113,93,2026-11-20T07:00:00Z,,,allowed_warning,100,,",
-      "2026-11-20T06:10:08Z,claude-8,ping,before,44685497770,89,2026-11-20T07:00:00Z,,,allowed,85,,"
+      "2026-11-20T06:10:08Z,claude-8,ping,before,44685497770,89,2026-11-20T07:00:00Z,,,allowed,85,,",
+      "2026-11-20T06:08:29Z,claude-1,ping,before,44685355960,99,2026-11-20T07:00:00Z,,,allowed_warning,100,,",
+      "2026-11-20T06:08:42Z,claude-1,refusal,call,44685355960,100,2026-11-20T07:00:00Z,,,rejected,100,,2026-11-20T07:00:00Z"
     ],
     "runs": [
       "2026-11-20T05:59:26Z,44681034831,agy,gemini-3.8-flash-high,review,4301,medium,approved,,32.5,562031,34466,0,,10,21,32,35,2.5,,none,,1",
