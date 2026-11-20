@@ -13759,18 +13759,19 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-20T18:37:17Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "44794611453",
+      "run_id": "pending:4fb9f0ce-1795206967",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 395,
-      "started_at": "2026-11-20T18:37:57Z",
+      "started_at": "2026-11-20T20:36:23Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -14224,9 +14225,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T20:35:56Z",
+    "at": "2026-11-20T20:36:23Z",
     "url": "",
-    "what": "build #4331 on claude-8"
+    "what": "spot-check #4324 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-20T20:26:40Z",
@@ -35291,7 +35292,15 @@
         "n": 395,
         "pr": 4324,
         "queued_at": "2026-11-20T20:34:42Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:4fb9f0ce-1795206967",
         "sha": "373bd1521212cdfc69be303b00ef6005c1b873a2",
+        "started_at": "2026-11-20T20:36:23Z",
         "status": "queued",
         "title": "Patch: the game log's card buttons meet the 24-pixel target on a mouse too",
         "tries": 0
