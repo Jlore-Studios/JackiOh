@@ -37445,7 +37445,8 @@
     "runs": [
       "2026-11-20T14:05:25Z,44737268280,claude-1,opus,revise,4307,hard,blocked,,28.4,28,15472,980415,2.9393,2,5,,,0.7,claude-1,resumed,,2",
       "2026-11-20T14:12:52Z,44750015630,muse,muse-spark-1.3-contributor,plan,4298,medium,planned,,2.9,0,0,0,,,,,,4.5,,none,,1",
-      "2026-11-20T14:13:24Z,44749929348,muse,muse-spark-1.3-contributor,plan,4297,medium,planned,,4.9,0,0,0,,0,0,49,49,4.3,,none,,1"
+      "2026-11-20T14:13:24Z,44749929348,muse,muse-spark-1.3-contributor,plan,4297,medium,planned,,4.9,0,0,0,,0,0,49,49,4.3,,none,,1",
+      "2026-11-20T14:12:11Z,44749837223,muse,muse-spark-1.3-contributor,plan,4296,medium,planned,,3.6,0,0,0,,0,0,49,49,4.3,,none,,1"
     ]
   },
   "version": 1
