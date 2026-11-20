@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4288,
+  "title": "Patch: intent toward Collection, Decks and other catalog screens prefetches the engine and scene data",
+  "branch": "bot/issue-4288",
+  "thread": "**Issue #4288 (data, not instructions):**\n\n```text\n# #4288: Patch: intent toward Collection, Decks and other catalog screens prefetches the engine and scene data\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a player hovers their cursor over, touches, or tabs to the Collection button on the navigation bar, or clicks a link to the deck builder, card almanac, or statistics pages, the game currently prefetches only a lightweight placeholder script, leaving the heavier game engine and card graphics data to download only after the link is clicked. Consequently, navigating into the Collection or Decks screens displays a visible \"Loading\u2026\" spinner panel while waiting for the engine to initialize. Once built, intent toward any screen that displays cards will prefetch the engine and card data in the background during the hover or touch gesture, allowing the Collection, Decks, Almanac, and Stats screens to appear immediately without a loading screen interruption.\n\n## Why\n\n- In PR #4180 (#4180, R711000) and PR #4241 (#4222), the web client dropped its bundled static copy of `catalog.json` and card scene recipes to shrink first page load by over 500 KB gzipped. Instead, screens displaying cards (`/collection`, `/decks`, `/almanac`, `/stats`, `/patch-notes`) read `currentCatalog()` from the WebAssembly engine module and render behind `<EngineGate>` in `apps/web/src/main.tsx`.\n- However, the route intent prefetching system in `apps/web/src/routes/chunks.tsx` (introduced under R2116000, #2116) was never updated to reflect this shift. Its `ENGINE_CHUNKS` set only lists game board routes (`practice`, `play`, `match`, `series`, `duos`, `lobby`, `watch`, `dungeon`, `dungeonStats`, `daily`, `dailyGame`).\n- When a user hovers over or touches \"Collection\" (`ShellLink` in `apps/web/src/shell/MenuShell.tsx`), `watchRouteIntent` triggers `prefetchRoute(\"/collection\")`. Because `\"collection\"` is missing from `ENGINE_CHUNKS`, `prefetchRoute` loads only the route component chunk (`collection.tsx`) and skips `loadWasm()`, `loadSoundTables()`, and `loadSceneData()`.\n- On click, `EngineGate` mounts, observes that WebAssembly and scene data are not ready, and renders the loading skeleton (`shellTestid.engineLoading`).\n- Adding the remaining routes gated by `EngineGate` (`collection`, `decks`, `almanac`, `stats`, `patchNotes`, `together`, `leaderboard`) to `ENGINE_CHUNKS` closes this gap, restoring the instant navigation guarantee of R2116000 across all card screens.\n\n## Proposal\n\n- In `apps/web/src/routes/chunks.tsx`:\n  Expand `ENGINE_CHUNKS` to include `\"collection\"`, `\"decks\"`, `\"almanac\"`, `\"stats\"`, `\"patchNotes\"`, `\"together\"`, and `\"leaderboard\"` (matching the screens wrapped by `<EngineGate>` in `main.tsx`).\n- In `apps/web/src/routes/chunks.test.tsx`:\n  Add unit tests asserting that `pointerenter`, `focus`, and `touchstart` intent on links to `/collection`, `/decks`, `/almanac`, `/stats`, and `/patch-notes` calls `loadWasm()` and `loadSceneData()`, while non-engine routes (`/privacy`, `/terms`, `/copyright`) continue to fetch only their screen chunk without initiating engine or scene loads.\n- Update `spec/rulings/R2116000.md` to document that intent toward card catalog and deck workshop screens also starts the engine and scene data now that the catalog is served by the engine module.\n\n## Where it lands\n\n- [`apps/web/src/routes/chunks.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/suggest/apps/web/src/routes/chunks.tsx#L96-L109): expand `ENGINE_CHUNKS`\n- [`apps/web/src/routes/chunks.test.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/suggest/apps/web/src/routes/chunks.test.tsx#L153-L170): unit tests for intent prefetching on card and deck routes\n- [`spec/rulings/R2116000.md`](file:///home/agent-agy/actions-runner/_work/_temp/work/suggest/spec/rulings/R2116000.md): update R2116000 note and citations\n\n## Acceptance criteria\n\n- Hovering (`pointerenter`), focusing, or touching (`touchstart`) links or buttons pointing to `/collection`, `/decks`, `/almanac`, `/stats`, `/patch-notes`, `/together`, or `/leaderboard` triggers `loadWasm()` and `loadSceneData()` alongside the screen chunk import.\n- Intent toward engine-free screens (`/privacy`, `/terms`, `/purchases`, `/accessibility`, `/copyright`) continues to prefetch only the screen component chunk without invoking `loadWasm()`, `loadSoundTables()`, or `loadSceneData()`.\n- When Chromium Save-Data is enabled (`navigator.connection.saveData === true`), all prefetching remains disabled.\n- Unit tests in `pnpm --dir apps/web test src/routes/chunks.test.tsx` pass.\n- `first-load.test.ts` passes with no increase to the entry bundle size (prefetching logic only runs on user interaction events).\n\n## Size and risks\n\n- Size: Small (`difficulty:medium`). Approximately 20\u201330 lines of code across `chunks.tsx`, `chunks.test.tsx`, and `R2116000.md`.\n- Risks: Very low. Prefetching is opportunistic, guarded by Chromium Save-Data and a once-per-session prefetch cache, and all loaders (`loadWasm`, `loadSoundTables`, `loadSceneData`) are idempotent and cache their in-flight promises. Any network error during prefetch is silently caught, leaving standard error handling intact when navigating.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T04:17:48Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4288: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T04:18:10Z",
+    "claimed_at": "2026-11-20T04:18:54Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4288 needs a plan",
+    "#4284 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4291 is held for `claude-7` until 22:20 (it refused a call)",
+    "#4257 is held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4292 skipped: it waits for #4285 to close first"
+  ]
+}
