@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4298,
+  "title": "Patch: the dev dashboard's audit reads a time range",
+  "branch": "bot/issue-4298",
+  "thread": "**Issue #4298 (data, not instructions):**\n\n```text\n# #4298: Patch: the dev dashboard's audit reads a time range\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe dev dashboard has a page listing every admin and dev-tool action ever taken: who did it, which button they pressed, and what changed. Today you can only filter that list by account and by action name, and you page backwards from the newest entry. Once this is built, you can also ask for just one window of time, such as everything from last Tuesday, which turns a long trawl into one lookup. A maintainer tracking down who changed what and when notices; players notice nothing.\n\n## Why\nEvery write of every dev and admin route appends one row to `admin_actions` (R3074000), and that table only grows: ratings, news posts and take-downs, plus every dev-tool write (XP, Jlore, fills, clears, quest tools). The read side, however, has stood still since it was built: `GET /api/admin/audit` filters only by exact account and exact route with cursor paging, and the dashboard page exposes only those two text boxes. There is no way to ask the natural incident question (\"what did anyone do between 2am and 4am?\") short of paging through everything newer. No open or closed issue covers audit time filtering (the audit page and its who/what filters shipped under #4168/#4183, now closed).\n\n## Proposal\nAdd optional `since`/`until` (epoch milliseconds, matching the row's `at` field) to `GET /api/admin/audit` as range bounds on the row id's timestamp, expose them as two date-time inputs on the dashboard's audit page next to the existing filters, and keep everything else unchanged: same page size, same newest-first order, same cursor paging composed with the range. Rejected: relative shortcuts (\"last 24h\") instead of explicit inputs \u2014 explicit bounds compose with the existing cursor and are trivially testable; shortcuts can follow if maintainers want them.\n\n## Where it lands\n- `crates/server/src/api/admin.rs` (`get_audit`, `AdminActionFilter`)\n- Store: the `admin_actions_page` query in `crates/server/src/db/` (fake and Postgres together, plus the contract test in `crates/server/tests/store/contract.rs`)\n- `apps/admin/src/Audit.tsx` (and `api.ts`, `testids.ts`) for the two inputs\n- SPEC \u00a79.1 / R3074000 (the audit paragraph lives there; the change narrows reads, not what is recorded, so the ruling text needs at most a sentence, not a new ruling)\n\n## Acceptance criteria\n- [ ] `GET /api/admin/audit?since=&until=` returns only rows in the window, combined with the existing `profile_id`/`route` filters and `before_id` paging\n- [ ] Bad bounds (non-numbers, `since` after `until`) are 400 with a sentence, like the existing `before_id` validation\n- [ ] The dashboard page offers both bounds, clears them with Clear, and keeps paging inside the window\n- [ ] Fake and Postgres agree (contract test), since the Docker suites are the only place RLS/trigger behavior is checked\n- [ ] `cargo test -p jackioh-server` (incl. the store contract) and the admin app tests pass\n\n## Size and risks\nSmall: one bounded range predicate, two inputs, tests on both sides. Risk: timestamp-vs-id ordering edge cases under concurrent writes \u2014 mitigated by bounding on the row timestamp while keeping `before_id` as the stable paging cursor, and by asserting newest-first order inside a window in the contract test. Rejected alternative: full-text search over the request/before/after JSON \u2014 heavier (needs `pg_trgm` or equivalent, new indexes) for a question time bounds already answer.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-20T13:59:47Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4298: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T14:00:12Z",
+    "claimed_at": "2026-11-20T14:04:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
