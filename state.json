@@ -11737,6 +11737,13 @@
     "4247": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-20T23:25:47Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "test-only change confined to crates/run with stubbed fights; none of the hard lines (engine rules, AI, cross-crate design, migration, ~40 files) holds"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
