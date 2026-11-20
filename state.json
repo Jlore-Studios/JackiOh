@@ -15139,19 +15139,17 @@
     "what": "build #4288 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T04:16:33Z",
+    "at": "2026-11-20T04:27:18Z",
     "notes": [
-      "#4290 needs a plan",
-      "#4284 is held for `claude-7` until 22:20 (it refused a call)",
-      "#4291 is held for `claude-7` until 22:20 (it refused a call)",
       "#4257 is held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "started plan #4290 on muse (run 44673437497)",
-      "started plan #4286 on muse (run 44673509894)",
-      "started plan #4288 on muse (run 44673576338)",
-      "started plan #4287 on agy (run 44673636845)",
-      "started build #4294 on muse (run 44673711531)",
-      "started build #4284 on claude-7 (run 44673799519)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-20T07:00:00Z; it can start a build or a plan again in 1h 38m; `claude-1` is busy; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-20T07:20:00Z; it can start a build or a plan again in 1h 58m; `claude-6` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-20T07:20:00Z; it can start a build or a plan again in 1h 58m; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4257 held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "delivered build #4294 on muse (run 44673711531): planned",
+      "delivered plan #4288 on muse (run 44673576338): planned",
+      "delivered plan #4286 on muse (run 44673509894): planned",
+      "delivered plan #4290 on muse (run 44673437497): planned",
+      "delivered build #4249 on muse (run 44656539726): built",
+      "started review #4295 on muse (run 44675048331)",
+      "started build #4288 on muse (run 44675110940)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-20T07:00:00Z; it can start a build or a plan again in 1h 26m; `claude-1` is busy; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-20T07:20:00Z; it can start a build or a plan again in 1h 46m; `claude-6` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-20T07:20:00Z; it can start a build or a plan again in 1h 46m; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4257 held for `claude-8` until Fri 00:00 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))",
       "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15858,7 +15856,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T04:16:33Z",
+  "loop_tick": "2026-11-20T04:27:18Z",
   "machine_disk": {
     "issue": null,
     "reading": {
