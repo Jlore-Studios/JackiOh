@@ -16528,6 +16528,8 @@
       }
     },
     "4324": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T14:23:04Z",
@@ -16541,8 +16543,11 @@
         "trail": "- All five edits are in and the `Log.test.tsx` run (including its WASM pretest build) is still going. I'll continue with the remaining verification \u2014 static-pages, i18n, typecheck, eslint, and rustfmt \u2014 once it reports back.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the game log's card buttons meet the 24-pixel target on a mouse too\"} -->\n- ## What changed\n- Each card-naming game-log line now exposes a hit target at least 24 pixels tall on fine pointers (mouse), while the log keeps its dense inline look and touch screens keep their 44-pixel rows. The accessibility statement no longer lists the sub-24-pixel mouse spacing as a known gap. Presentation onl\u2026\n- - [inspectable.css](apps/web/src/game/inspectable.css): new `@media (pointer: fine)` block giving `.log .log-card` `display: inline-block` (so `min-height` takes effect on the otherwise `inline` button) and `min-height: 24px`, placed between the base rule and the untouched coarse-pointer 44px block\u2026\n- - [Log.test.tsx](apps/web/src/game/Log.test.tsx): new `describe(\"the log's card-name target size\")` with two stylesheet-text tests \u2014 the fine-pointer 24px rule plus retained `display: inline` base, and the verbatim coarse-pointer 44px block \u2014 using `readSheet` from `src/test/setup.ts`.\n- - [accessibility.tsx](apps/web/src/routes/accessibility.tsx), [static-pages.ts](apps/web/static-pages.ts), [zh-CN.json](apps/web/src/i18n/zh-CN.json): the \"With a mouse, the card names in the game log\u2026\" known-gap bullet removed from all three copies. `board.css`, `Log.tsx`, and `spec/` untouched pe\u2026\n- ## How I tested it\n- - `pnpm --dir apps/web test src/game/Log.test.tsx` \u2014 52/52 pass, including the 2 new tests (re-confirmed via `-t \"target\"`: 4 matched, 4 passed, 0 failed).\n- - `pnpm --dir apps/web test src/static-pages.test.ts` \u2014 24/24 pass, including the word-for-word accessibility quote test proving route and `PAGE_TEXT` match.\n- - `pnpm --dir apps/web test src/i18n/i18n.test.ts` \u2014 7/7 pass with `--testTimeout=120000`.\n- - `pnpm --dir apps/web typecheck` \u2014 exit 0. `pnpm exec eslint` on the three touched web files \u2014 exit 0. `cargo fmt --check` \u2014 exit 0.\n- ## Decisions and things a reviewer should look at twice\n- - No decisions beyond the plan: I followed it exactly and departed nowhere, so there is no rejected alternative to record.\n- - Two environmental flakes on this shared box, both proven unrelated to the change: the i18n whole-source scan test alone takes 6.1 s and trips vitest's default 5 s timeout (passes with a longer timeout; the removed bullet has zero remaining `t()`/locale references), and `tsc` OOM-crashes under Nod\u2026\n- - Real-pixel truth stays with the existing CI specs (`38-accessibility.cy.ts` axe run, board-layout pixel budget), untouched as planned; the new unit tests assert stylesheet text because jsdom cannot measure pixels.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4296 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4296/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4296,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T15:46:37Z",
         "from_run": "44752936499",
         "gates": [
           {
@@ -16601,8 +16606,15 @@
         "source": "build",
         "until": "2026-11-20T16:14:51Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-20T15:44:51Z",
+      "run_id": "pending:1b24d51b-1795189570",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-20T15:46:37Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16616,9 +16628,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T15:45:57Z",
+    "at": "2026-11-20T15:46:37Z",
     "url": "",
-    "what": "review #4323 on muse"
+    "what": "review #4324 on muse"
   },
   "last_sweep": {
     "at": "2026-11-20T15:28:26Z",
