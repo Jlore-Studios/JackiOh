@@ -14707,12 +14707,13 @@
     "what": "build #4285 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-20T03:02:07Z",
+    "at": "2026-11-20T03:09:54Z",
     "notes": [
-      "delivered suggest on agy (run 44663054806): suggested",
-      "delivered suggest on claude-8 (run 44662994287): suggested",
-      "#4289: typed it Bug",
-      "#4288: typed it Task"
+      "delivered build #4285 on claude-6 (run 44664209569): interrupted",
+      "delivered suggest on muse (run 44663167414): suggested",
+      "started build #4285 on claude-1 (run 44666052113)",
+      "nothing more to start: nothing is queued",
+      "#4290: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15418,7 +15419,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T03:02:07Z",
+  "loop_tick": "2026-11-20T03:09:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
