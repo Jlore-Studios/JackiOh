@@ -13867,17 +13867,8 @@
       "stop_requested": false
     },
     "4257": {
-      "action": "plan",
-      "asks": [
-        "c:7027697723"
-      ],
-      "build_next": {
-        "from_run": "44657631024",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-20T02:22:00Z",
-        "until": "2026-11-20T02:52:00Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-20T02:21:52Z",
         "difficulty": "hard",
@@ -13896,10 +13887,9 @@
         "reason": "planned on opus",
         "trail": " \u2026\n- Bash: {\"command\": \"ls spec/rulings/R4257* 2>/dev/null; grep -l \\\"crates/ai/src/candidates.rs\\\" spec/rulings/*.md | head -3; sed -n 1,8p spec/rulings/R4171000.md\", \"description\": \"Check ruling number free a\u2026\n- Bash: {\"command\": \"grep -n \\\"best_attack_order_past_taunts\\\\|frozen_sick_before_swing\\\\|pool_and_conversion_read\\\\|cleaved_neighbours\\\\|Cleave\\\" crates/ai/README.md | cut -c1-250\", \"description\": \"Find the\u2026\n- Bash: {\"command\": \"sed -n 120,150p crates/ai/README.md\", \"description\": \"Read the README's flags paragraph\"}\n- Bash: {\"command\": \"sed -n 624,636p crates/ai/src/config.rs; echo ...; sed -n 850,886p crates/ai/src/config.rs; sed -n 920,935p crates/ai/src/config.rs\", \"description\": \"Read AI_EVAL and GREEDY_EVAL flag bl\u2026\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights = \\\\|-> EvalWeights\\\" crates/ apps/ --include=*.rs | head; grep -rn \\\"evalWeights\\\\|EvalWeights\\\" apps/web/src --include=*.ts -l | head -5\", \"description\": \"Check \u2026\n- Bash: {\"command\": \"grep -rln \\\"poolAndConversionRead\\\\|bestAttackOrderPastTaunts\\\" --exclude-dir=node_modules --exclude-dir=target . 2>/dev/null | head\", \"description\": \"Search for serialized flag names in\u2026\n- Bash: {\"command\": \"grep -n \\\"pub use\\\\|pub mod\\\" crates/ai/src/lib.rs | head -30; grep -rn \\\"face_threat_with(\\\" crates/ai/tests/ai/*.rs | head -3\", \"description\": \"Check jackioh_ai root exports\"}\n- Bash: {\"command\": \"grep -rn -i \\\"paired screen\\\\|improve-dev\\\" crates/tools/README.md crates/ai/README.md docs/*.md 2>/dev/null | cut -c1-300 | head -10\", \"description\": \"Find how the paired improve-dev sc\u2026\n- Bash: {\"command\": \"sed -n 47p crates/tools/README.md | cut -c1-1500; grep -n \\\"paired\\\\|improve-dev\\\" bot/README.md | head -5\", \"description\": \"Read the arena command's description\"}\n- Bash: {\"command\": \"grep -l \\\"improve-dev\\\" spec/rulings/R41*.md spec/rulings/R40*.md 2>/dev/null | head -5; grep -h -o \\\"[^.]*improve-dev[^.]*\\\\.\\\" spec/rulings/R4170000.md spec/rulings/R4171000.md spec/ru\u2026\n- Bash: {\"command\": \"grep -rn \\\"build-parent\\\\|parent-bin\\\\|bin:target\\\\|bin:/\\\" bot/README.md crates/tools/README.md docs/*.md 2>/dev/null | cut -c1-250 | head -8\", \"description\": \"Find how a parent binary \u2026\n- Bash: {\"command\": \"grep -n -i \\\"ai change\\\\|kind.*ai\\\\b\\\\|\\\\`ai\\\\`\\\" docs/issues-and-patches.md | cut -c1-300 | head -10\", \"description\": \"Check whether an AI change needs a patch fragment\"}\n- Bash: {\"command\": \"sed -n 118,140p docs/issues-and-patches.md | cut -c1-600\", \"description\": \"Read the patch kinds paragraph\"}\n- Bash: {\"command\": \"grep -n \\\"| \\\\`gate\\\" crates/tools/README.md | cut -c1-700\", \"description\": \"Read the gate command's description\"}\n- Bash: {\"command\": \"grep -n \\\"bin:\\\" crates/tools/src/arena.rs | head -8\", \"description\": \"Check what arena's bin: agent expects\"}\n- Bash: {\"command\": \"sed -n 1,30p scripts/worktree.sh\", \"description\": \"Read the worktree script's usage\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn hero_hit_amount\\\" -A 25 crates/engine/src/damage.rs | head -35\", \"description\": \"Read hero_hit_amount for the anti-oneshot cap\"}\n- Bash: {\"command\": \"grep -rln \\\"redirect_neighbours\\\\|lethal_attackers_of\\\" docs/ crates/*/README.md spec/ 2>/dev/null | head; grep -n \\\"soak_past_taunts(\\\" crates/ai/src/*.rs\", \"description\": \"Check whethe\u2026\n- Bash: {\"command\": \"sed -n 1,11p crates/engine/src/query.rs; grep -rn \\\"redirect_neighbours\\\" crates/engine/tests | head -3; grep -n \\\"proven_in\\\" -A 6 spec/rulings/R3546001.md\", \"description\": \"Read query.\u2026\n- Bash: {\"command\": \"grep -c \\\"has_keyword\\\\|unit_view\\\\|KeywordKind\\\" crates/engine/src/subsystems/lethal.rs; grep -n \\\"unit_view(\\\\|has_keyword(\\\" crates/engine/src/subsystems/lethal.rs | head\", \"descripti\u2026\n- Bash: {\"command\": \"grep -n \\\"trade_value\\\\|candidate_actions\\\\|evaluate_with\\\\|GREEDY_EVAL\\\\|reply\\\" crates/ai/src/baselines.rs | head -15\", \"description\": \"Check what the greedy baseline reads\"}\n- Bash: {\"command\": \"sed -n 168p spec/09-architecture.md | grep -o \\\"the enemy's face damage next turn[^)]*)[^)]*)\\\" | head -2; sed -n 167p spec/09-architecture.md | grep -o \\\"A hit from a source that exiles\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A 2 crates/ai/Cargo.toml crates/engine/Cargo.toml | head -30; ls crates/ai/tests/\", \"description\": \"Find the AI and engine test binary names\"}\n- Bash: {\"command\": \"grep -ln \\\"giga\\\" crates/engine/tests/rules.rs crates/engine/tests/rules_2.rs crates/engine/tests/rules_3.rs; grep -n \\\"mod cleave\\\\|mod threat\\\" crates/ai/tests/ai.rs crates/ai/tests/ai\u2026\n- Bash: {\"command\": \"grep -rn \\\"giga\\\" crates/engine/tests/*.rs crates/engine/tests/rules/mod.rs 2>/dev/null | head -5; cat crates/ai/tests/ai.rs | head -5; grep -c \\\"\\\" crates/ai/tests/ai_slow.rs\", \"descrip\u2026\n- Bash: {\"command\": \"head -12 crates/engine/tests/rules.rs; head -12 crates/engine/tests/rules_2.rs | grep -n \\\"mod\\\\|path\\\"\", \"description\": \"Check which engine test binary holds rules/mod.rs\"}\n- Bash: {\"command\": \"grep -n \\\"| \\\\`names\\\" crates/tools/README.md | cut -c1-900\", \"description\": \"Read the names command's description\"}\n- Bash: {\"command\": \"grep -n -i \\\"smoke\\\" crates/ai/README.md | cut -c1-250 | head -6\", \"description\": \"Check gate smoke size and duration\"}\n- Bash: {\"command\": \"sed -n 430,456p crates/ai/README.md | cut -c1-300\", \"description\": \"Read the gate matchup sizes\"}\n- Bash: {\"command\": \"grep -rn \\\"fn .*tutorial_tier\\\\|fn r290\\\" crates/ai/tests crates/ai/src | head -5; grep -n \\\"mod\\\\b\\\\|pub mod\\\" crates/ai/tests/ai_slow.rs | head\", \"description\": \"Locate the tutorial ti\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4257/.bot-plan.md\", \"content\": \"# Draft plan #4257 (opus planner, pass 2)\\n\\nStatus: verified muse's plan against code; final plan = my final message.\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2, the AI: it changes the AI's static combat reads and its Taunt-walk order in crates/ai/src, and it moves a walk out of the engine.\"} --> ## Goal The AI's static Cleave splash (`cleaved_neighbours`) becomes the engine's own walk. The engine's priv\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-20T02:00:01Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -13912,12 +13902,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-20T01:41:03Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44657631024",
+      "run_id": "pending:914d3271-1795141347",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T02:00:01Z",
+      "started_at": "2026-11-20T02:22:43Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7027697723"
+      ]
     },
     "4258": {
       "action": "review",
@@ -14680,9 +14672,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T02:14:06Z",
+    "at": "2026-11-20T02:22:43Z",
     "url": "",
-    "what": "plan #4285 on claude-4"
+    "what": "build #4257 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-20T02:13:17Z",
