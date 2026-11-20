@@ -8928,6 +8928,16 @@
       "strikes": 0,
       "verdict_rounds": 1
     },
+    "4083": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-20T18:25:51Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
+    },
     "4084": {
       "action": "build",
       "died": 0,
