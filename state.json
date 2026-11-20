@@ -14037,6 +14037,8 @@
       ]
     },
     "4341": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-20T18:48:41Z",
@@ -14050,8 +14052,11 @@
         "trail": "ive to Hearthstone line\"}\n- Bash: {\"command\": \"grep -n 'answers it as `created`\\\\|Public statistics\\\\|R4082000\\\\|R4155000\\\\|R4279001' spec/09-architecture.md | head -20\", \"description\": \"Locate \\u00a79.11 paragraphs to edit\"}\n- Bash: {\"command\": \"grep -n 'NaN\\\\|old\\\\|reload\\\\|before the deploy\\\\|loaded before' spec/rulings/R3185000.md | head\", \"description\": \"Check what R3185000 says about old clients\"}\n- Bash: {\"command\": \"git grep -n 'createdPlayed\\\\|createdNotPlayed\\\\|created_played_delta\\\\|createdPlayedDelta' -- docs spec analysis e2e apps/edge | grep -v 'spec/11-rulings.md' | head -20\", \"description\": \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4083/spec/rulings/R4083000.md\", \"content\": \"---\\nid: R4083000\\ntitle: \\\"/stats' Created tables show only Tier and Adjusted, sorted, viewed, filtered a\u2026\n- Bash: {\"command\": \"cat > spec/pending/4083.md <<'EOF'\\n**[[R4083000]] /stats' Created tables show Tier and Adjusted alone, sorted and viewed as the deck cards are (issue #4083, 2026-11-20)**: amends [[R208\u2026\n- said: Now the seven amended notes.\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\nnotes = {\\n 'R2089000': ('(issue #2089; amended by R3184002, R3324002, R4155000 and R4279001)', '(issue #2089; amended by R3184002, R3324002, R4155000, R427\u2026\n- said: Now \u00a79.11.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/09-architecture.md'\\ns=open(p).read()\\nold_start=\\\"`GET /api/stats/cards` answers it as `created` and `/stats` shows it on a Tokens tab of its own\\\"\\nold_end=\\\u2026\n- Bash: {\"command\": \"grep -n 'Created' spec/0*.md spec/1[0-9]-*.md 2>/dev/null | grep -v '^spec/11-rulings' | grep -i 'win rate\\\\|tokens tab\\\\|created table\\\\|Created cards.* table' | cut -c1-300 | head\", \"d\u2026\n- Bash: {\"command\": \"sed -n 243p spec/09-architecture.md | grep -o '.\\\\{200\\\\}Created.\\\\{300\\\\}' | head -3; grep -n 'Created\\\\|Tokens tab' spec/01-overview.md | cut -c1-250 | head\", \"description\": \"Check bre\u2026\n- Bash: {\"command\": \"(cargo jackioh spec check > /tmp/spec-check.log 2>&1; echo \\\"EXIT $?\\\" >> /tmp/spec-check.log)\", \"description\": \"Run the spec check\", \"timeout\": 1800000, \"run_in_background\": true}\n- Bash: {\"command\": \"cd apps/web && timeout 600 pnpm typecheck 2>&1 | tail -15; cd ../.. && timeout 600 pnpm exec eslint apps/web/src/stats apps/web/src/routes/stats.tsx apps/web/src/routes/stats.test.tsx ap\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | tail -5; echo \\\"fmt exit $?\\\"\", \"description\": \"Check rustfmt\"}\n- Bash: {\"command\": \"timeout 1500 cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -15\", \"description\": \"Run clippy on the server crate\", \"timeout\": 1600000}\n- said: Clippy, rustfmt, typecheck and eslint are clean. Waiting on the spec check; meanwhile, a self-read of the diff for anything off.\n- Bash: {\"command\": \"git diff apps/web/src/routes/stats.tsx | head -150\", \"description\": \"Review the stats.tsx diff\"}\n- Bash: {\"command\": \"tail -8 /tmp/spec-check.log\", \"description\": \"Read the spec check result\"}\n- Bash: {\"command\": \"git fetch --dry-run 2>/dev/null; git rev-parse origin/main 2>&1 | head -2; (timeout 1700 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '*\u2026\n- Bash: {\"command\": \"timeout 900 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Run classify with claims as CI does\", \"timeout\": 920000}\n- Bash: {\"command\": \"git grep -n 'CREATED_DEFAULT_SORT\\\\|CreatedColumn\\\\|sortCreated\\\\|createdShown\\\\|\\\"adjusted\\\"' -- apps/web/src e2e | grep -v 'CreatedPanel' | head; git status --short\", \"description\": \"C\u2026\n- Bash: {\"command\": \"git grep -n 'PublicCreatedStat\\\\|created.*createdPlayed' -- docs apps/web/README.md crates/server/README.md | head\", \"description\": \"Check docs naming the Created row type\"}\n- Bash: {\"command\": \"grep -rn 'createdPlayed\\\\|createdNotPlayed' crates/server/tests/api/ crates/server/src | head; grep -rln 'createdPlayed' crates/tools crates/server/tests | head\", \"description\": \"Confirm\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\ns=s[:i]+'''## State\\n\\n- 2026-11-20 build pass 1 (opus): everything in the plan is bui\u2026\n- Bash: {\"command\": \"git diff apps/web/src/stats/CardStatsBlock.tsx | head -120\", \"description\": \"Review CardStatsBlock diff\"}\n- Bash: {\"command\": \"sleep 120; tail -8 /tmp/web-changed.log\", \"description\": \"Wait for the changed web tests\", \"timeout\": 200000}\n- tool error: <tool_use_error>Blocked: sleep 120 followed by: tail -8 /tmp/web-changed.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command y\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/web-changed.log; do sleep 5; done; grep -E 'Test Files|Tests |FAIL|EXIT|\\u2717|\\u00d7' /tmp/web-changed.log | head -30\", \"description\": \"Wait for the changed w\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/web-changed.log; do sleep 5; done; grep -E 'Test Files|Tests |FAIL|EXIT' /tmp/web-changed.log | head -30\", \"description\": \"Block until the web test run finishe\u2026\n- Bash: {\"command\": \"timeout 1700 cargo test -p jackioh-server 2>&1 | grep -E '^test result|FAILED|panicked|failed' | head -20\", \"description\": \"Run the whole server crate's tests\", \"timeout\": 1800000}\n- Bash: {\"command\": \"timeout 1700 cargo test -p jackioh-server 2>&1 | grep -E '^test result|^failures:|FAILED' | head -20\", \"description\": \"Summarize the server crate's test results\", \"timeout\": 1800000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\ns=s[:i]+'''## State\\n\\n- 2026-11-20 build pass 1 (opus): DONE. Everything in the plan \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Created cards on /stats show only Tier and Adjusted, sorted and viewed as the deck cards are\"} --> Built as the plan says. Ruling **R4083000** records it. ## What changed **Server: `GET /api/stats/cards`** (`crates/server/src/api/stats.rs`) - Each `\u2026"
       },
       "issue": 4083,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-20T20:11:55Z",
         "from_run": "44796282332",
         "gates": [
           {
@@ -14143,7 +14148,11 @@
         "source": "build",
         "until": "2026-11-20T20:40:39Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-20T20:10:39Z",
+      "run_id": "pending:860e083d-1795205499",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -14162,6 +14171,9 @@
         "provider": "claude-6",
         "run": "44796282332"
       },
+      "started_at": "2026-11-20T20:11:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -14175,9 +14187,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-20T20:03:31Z",
+    "at": "2026-11-20T20:11:55Z",
     "url": "",
-    "what": "build #4318 on claude-7"
+    "what": "review #4341 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-20T20:00:46Z",
