@@ -13617,11 +13617,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-20T01:58:30Z",
+        "at": "2026-11-20T02:21:06Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Rule line 2 (The AI: its decisions or its search) decides it: the flip changes the opponent's-reply attack ranking in crates/ai/src, and the issue self-rates hard by the AI convention."
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule 2, the AI: flipping AI_REPLY.open_lethal in crates/ai/src/config.rs changes how the reply search ranks attacks, so the AI's decisions"
       },
       "failures": 0,
       "forced": false,
