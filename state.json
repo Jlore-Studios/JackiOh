@@ -16659,16 +16659,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "muse",
-        "built_by": "muse",
-        "rejections": [
-          "claude"
-        ],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
         "reviews": [],
-        "sha": "68c2535ddb8d63f397708f0cd22639ddbc04bbd9",
-        "tiers": {
-          "claude": "medium"
-        }
+        "sha": "37b717f2682db1a3ab18fa8f8084a3c71f777750",
+        "tiers": {}
       }
     },
     "4325": {
