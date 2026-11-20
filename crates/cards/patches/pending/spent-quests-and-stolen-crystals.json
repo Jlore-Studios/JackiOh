@@ -1,0 +1,21 @@
+{
+  "title": "Spent Quests and stolen crystals",
+  "sources": "#4331",
+  "notes": "Issue #4331, the owner's rules: a Quest card whose final reward is single-use and not an Aura goes to its graveyard once the reward is given (end_quest_line, R4331000): The Greatest Heist after Stage 3, In Too Deep's base face after J or K (L and M are Auras and keep it; its Radiant face always ends holding them). A steal of mana crystals counts the thief's gain on top of the cap, and a steal from a thief takes those too (stolenManaCrystals, R4331001, amending R1854003). Script changes only: both cards' v0.6.7k scripts are kept for their replays (R767000).",
+  "player": {
+    "title": "Spent Quests and stolen crystals",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A Quest whose last reward is used once, not an Aura, goes to your graveyard after it is given: The Greatest Heist after Stage 3, In Too Deep after J or K (it stays after L or M).",
+      "The Greatest Heist: the mana crystals you steal go past the cap of 4, and a Heist that steals from you takes the ones you stole too."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "classic-090",
+    "stinkyscape-007"
+  ]
+}
