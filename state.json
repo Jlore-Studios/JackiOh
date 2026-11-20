@@ -15102,7 +15102,7 @@
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "claude-6",
-      "run_id": "pending:70a8ba53-1795159205",
+      "run_id": "44694266525",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-20T07:20:34Z",
       "stop_requested": false,
