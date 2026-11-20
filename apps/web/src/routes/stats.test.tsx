@@ -2283,10 +2283,38 @@ describe("R1973000 the Daily runs tab is gone", () => {
     at("/stats?tab=ci");
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
-    const names = screen.getAllByRole("tab").map((tab) => tab.querySelector(".stats-tab-name")?.textContent);
+    const names = screen.getAllByRole("tab").map((tab) => tab.textContent);
     expect(names).toEqual(["Cards", "Tokens", "Sets", "Players"]);
     expect(screen.queryByText("Daily runs")).toBeNull();
     expect(requested("/api/stats/ci")).toEqual([]);
+  });
+});
+
+describe("R4335000 the view tabs show their names alone, in a row that never shrinks", () => {
+  it("R4335000 each tab holds its name and no line of what it shows", async () => {
+    at("/stats");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Cards", "Tokens", "Sets", "Players"]);
+    for (const tab of tabs) expect(tab.children).toHaveLength(0);
+    for (const hint of [
+      "Win rate and tier of every card",
+      "Tokens and other cards made in games",
+      "How each set does",
+      "Every player's games and win rate",
+    ]) {
+      expect(screen.queryByText(hint)).toBeNull();
+    }
+  });
+
+  it("R4335000 the tab row never shrinks, so a long panel on a one-screen page cannot squeeze it out of sight", () => {
+    // jsdom lays nothing out: the rule itself. The row scrolls sideways (overflow-x), so its automatic minimum height
+    // is 0, and only flex-shrink 0 keeps the one-screen body (index.css) from taking its height.
+    const css = readFileSync(resolve(HERE, "../tabs/tabs.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const rule = css.match(/(?:^|\n)\.tabs__tablist\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toMatch(/overflow-x:\s*auto/);
+    expect(rule).toMatch(/flex-shrink:\s*0\s*;/);
   });
 });
 
@@ -2554,8 +2582,8 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
     expect(screen.getByTestId(statsTestid.tabTokens)).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByTestId(statsTestid.cardsTable)).toBeNull();
-    // Its name and what it shows, both on the tab.
-    expect(screen.getByTestId(statsTestid.tabTokens)).toHaveTextContent("Tokens and other cards made in games");
+    // Its name alone on the tab (R4335000).
+    expect(screen.getByTestId(statsTestid.tabTokens)).toHaveTextContent(/^Tokens$/);
 
     fireEvent.click(screen.getByTestId(statsTestid.tabCards));
     await waitFor(() => expect(new URLSearchParams(window.location.search).has("tab")).toBe(false), SLOW);
