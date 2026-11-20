@@ -35882,6 +35882,12 @@
         "number": 4190,
         "title": "Patch: a card extracted in a dungeon run is never dealt back into that run by a pack, a shop or an event",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-20T01:41:51Z",
+        "number": 4223,
+        "title": "Patch: the keyboard reaches the Trade button, the co-op pass control and its pings, and the Plague Counter placement's targets",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
