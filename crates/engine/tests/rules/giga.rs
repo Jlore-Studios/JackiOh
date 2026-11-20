@@ -280,6 +280,41 @@ mod r3546001_both_lanes {
         );
     }
 
+    /// R4257000: `cleave_struck`, the board fact the lethal projection and the AI's static splash read,
+    /// walks the two boards above as the engine deals them.
+    #[test]
+    fn r3546001_the_cleave_struck_board_fact_meets_a_giga_from_either_side() {
+        let ids = |units: Vec<CardInstance>| units.into_iter().map(|unit| unit.id).collect::<Vec<_>>();
+        let s = board(
+            "r3546001-struck-both",
+            json!({ "field": [field_unit(CLEAVER, 1)] }),
+            json!({ "field": [field_unit(GIGA_UNIT, 2), field_unit(PLAIN, 1), field_unit(PLAIN, 4)] }),
+        );
+        let cleaver = s.unit(P1, 1).expect("no cleaver in lane 1");
+        let giga = s.unit(P2, 2).expect("no GIGA in lane 2");
+        let left = s.unit(P2, 1).expect("no plain in lane 1");
+        let right = s.unit(P2, 4).expect("no plain in lane 4");
+        assert_eq!(
+            ids(cleave_struck(s.state(), &cleaver, &giga)),
+            vec![giga.id.clone(), left.id.clone(), right.id.clone()],
+            "a GIGA target, then the units beside both its lanes"
+        );
+
+        let s = board(
+            "r3546001-struck-once",
+            json!({ "field": [field_unit(CLEAVER, 3)] }),
+            json!({ "field": [field_unit(GIGA_UNIT, 1), field_unit(PLAIN, 3)] }),
+        );
+        let cleaver = s.unit(P1, 3).expect("no cleaver in lane 3");
+        let target = s.unit(P2, 3).expect("no plain in lane 3");
+        let giga = s.unit(P2, 1).expect("no GIGA in lane 1");
+        assert_eq!(
+            ids(cleave_struck(s.state(), &cleaver, &target)),
+            vec![target.id.clone(), giga.id.clone()],
+            "the target, then the GIGA beside it once"
+        );
+    }
+
     #[test]
     fn r3546001_only_units_in_this_lane_admits_a_giga_from_either_lane() {
         let mut s = board(
