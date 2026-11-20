@@ -14195,6 +14195,14 @@
         "sha": "c8454562334679d2a179397a5d28cb707d80d5e8",
         "tiers": {}
       }
+    },
+    "4342": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-20T18:49:09Z",
+      "issue": 4293,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
