@@ -3135,6 +3135,91 @@ mod r4233000_read_on_open {
         assert_eq!(unread(&app, &bo).await, Vec::<Value>::new());
     }
 
+    /// #4291 (F12): the accept's `dailyAnswered` row links the board, but reading the board marks
+    /// only the game's move and ended rows, so the answer stays unread (unspecified: R4233000 names
+    /// no act that answers an answer).
+    #[tokio::test]
+    async fn r4233000_opening_the_board_an_accept_links_leaves_its_answer_unread() {
+        let (app, ada, bo) = two_friends().await;
+        read_all(&app, &ada).await;
+        read_all(&app, &bo).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ada.token,
+            random_challenge(&bo, 3),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let challenge = body["id"].as_str().expect("a challenge id").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{challenge}/accept"),
+            &bo.token,
+            json!({ "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let match_id = body["matchId"].as_str().expect("a match id").to_string();
+        let answered = of_kind(&app, &ada, "dailyAnswered").await;
+        assert_eq!(answered.len(), 1, "{answered:?}");
+        assert_eq!(answered[0]["payload"]["matchId"], json!(match_id), "{answered:?}");
+        assert_eq!(answered[0]["read"], json!(false), "{answered:?}");
+
+        let game = read(&app, &ada, &match_id).await;
+        assert_eq!(game["matchId"], json!(match_id), "{game}");
+        let answered = of_kind(&app, &ada, "dailyAnswered").await;
+        assert_eq!(answered[0]["read"], json!(false), "{answered:?}");
+        assert_eq!(social_unread(&app, &ada).await, json!(1));
+    }
+
+    /// #4291 (F13): a challenge its sender cancels, or one that lapses unanswered, is no act of its
+    /// friend's, so its row keeps counting (unspecified: R4233000 names only the friend's answers).
+    #[tokio::test]
+    async fn r4233000_a_challenge_cancelled_or_lapsed_unanswered_keeps_its_row_unread() {
+        let (app, ada, bo) = two_friends().await;
+        read_all(&app, &ada).await;
+        read_all(&app, &bo).await;
+        let challenge = |days: i64| {
+            let app = app.clone();
+            let ada_token = ada.token.clone();
+            let body = random_challenge(&bo, days);
+            async move {
+                let (status, body) = api(&app, "POST", "/api/daily/challenges", &ada_token, body).await;
+                assert_eq!(status, 201, "{body}");
+                body["id"].as_str().expect("a challenge id").to_string()
+            }
+        };
+        let cancelled = challenge(3).await;
+        let (status, body) = api(
+            &app,
+            "DELETE",
+            &format!("/api/daily/challenges/{cancelled}"),
+            &ada.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        let lapsed = challenge(7).await;
+        app.daily
+            .set_offset(jackioh_server::config::DAILY_CHALLENGE_TTL_DAYS * MS_PER_DAY + 1);
+        let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+        assert_eq!(status, 200, "{swept}");
+        assert_eq!(swept["expired"], 1, "{swept}");
+
+        let rows = of_kind(&app, &bo, "dailyChallenge").await;
+        assert_eq!(
+            rows.iter()
+                .map(|row| (row["subject"].clone(), row["read"].clone()))
+                .collect::<Vec<_>>(),
+            vec![(json!(lapsed), json!(false)), (json!(cancelled), json!(false))],
+            "{rows:?}"
+        );
+        assert_eq!(social_unread(&app, &bo).await, json!(2));
+    }
+
     #[tokio::test]
     async fn r4233000_a_mark_failure_leaves_the_move_answered() {
         let logs = record_logs();

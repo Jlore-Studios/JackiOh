@@ -14,11 +14,6 @@ export function tierRank(tier: CardTier | null | undefined): number {
   return tier ? TIER_ORDER.length - TIER_ORDER.indexOf(tier) : -1;
 }
 
-/** R3022000: a band edge or a spread as the tiers' note reads it, a percent to a tenth at most ("45%", "52.5%"). */
-export function percentText(fraction: number): string {
-  return `${String(Number((fraction * 100).toFixed(1)))}%`;
-}
-
 /** R2777000: an adjusted win rate to a tenth of a point, as it moves in tenths near 50%; "—" when there is none. */
 export function adjustedText(rate: number | null | undefined): string {
   return typeof rate === "number" ? `${(rate * 100).toFixed(1)}%` : "—";

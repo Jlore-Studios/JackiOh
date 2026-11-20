@@ -38,7 +38,7 @@ import {
   type TrioInput,
   type TrioSlots,
 } from "../../net/api.ts";
-import { isRecord, isSafeKey } from "../../wire/json.ts";
+import { isRecord, isSafeKey, isStringArray } from "../../wire/json.ts";
 import { pickedDeckCosmetics, type DeckCosmeticFields } from "../../cards/cosmetics.ts";
 import { deckVersionsFrom } from "./deckHistory.ts";
 import { messageOf } from "../../net/errors.ts";
@@ -244,10 +244,6 @@ type Mirror = {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
 function deckFrom(value: unknown): DeckItem | null {

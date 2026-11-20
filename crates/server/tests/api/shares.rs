@@ -710,4 +710,63 @@ mod r4233000_read_on_open {
         assert_eq!(status, 200);
         assert_eq!(feed(&w.app, &w.a).await["unread"], before);
     }
+
+    /// #4291 (F10): a seat may share the match with the other seat, a friend of theirs; that friend's
+    /// read is a read of a replay shared with them too, though they read it as their own seat.
+    #[tokio::test]
+    async fn r4233000_a_seated_friends_read_of_a_replay_shared_with_them_marks_its_row() {
+        let w = world("share-read-seated").await;
+        befriend(&w.app, &w.a, &w.b).await;
+        let before = feed(&w.app, &w.b).await["unread"].as_i64().expect("unread");
+        let (status, body) = w.share(&w.a, &w.b).await;
+        assert_eq!(status, 204, "{body}");
+        let rows = feed(&w.app, &w.b).await;
+        assert_eq!(rows["unread"], before + 1, "{rows}");
+        assert_eq!(rows["notifications"][0]["kind"], "replayShared", "{rows}");
+        assert_eq!(rows["notifications"][0]["read"], false, "{rows}");
+
+        let (status, body) = w.replay(&w.b).await;
+        assert_eq!(status, 200, "{body}");
+        let rows = feed(&w.app, &w.b).await;
+        assert_eq!(rows["unread"], before, "{rows}");
+        assert_eq!(rows["notifications"][0]["kind"], "replayShared", "{rows}");
+        assert_eq!(rows["notifications"][0]["read"], true, "{rows}");
+    }
+
+    /// #4291 (F11): both seats share the match with one friend, two rows on one subject; the friend's
+    /// one read marks both.
+    #[tokio::test]
+    async fn r4233000_one_read_marks_every_sharers_row_for_the_match() {
+        let w = world("share-read-twice").await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let (status, body) = w.share(&w.b, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let shared = |rows: &Value| -> Vec<(Value, Value)> {
+            rows["notifications"]
+                .as_array()
+                .expect("notifications")
+                .iter()
+                .filter(|row| row["kind"] == "replayShared")
+                .map(|row| (row["actor"]["profileId"].clone(), row["read"].clone()))
+                .collect()
+        };
+        let rows = feed(&w.app, &w.c).await;
+        assert_eq!(
+            shared(&rows),
+            vec![(json!(w.b.id), json!(false)), (json!(w.a.id), json!(false))],
+            "{rows}"
+        );
+        let before = rows["unread"].as_i64().expect("unread");
+
+        let (status, body) = w.replay(&w.c).await;
+        assert_eq!(status, 200, "{body}");
+        let rows = feed(&w.app, &w.c).await;
+        assert_eq!(rows["unread"], before - 2, "{rows}");
+        assert_eq!(
+            shared(&rows),
+            vec![(json!(w.b.id), json!(true)), (json!(w.a.id), json!(true))],
+            "{rows}"
+        );
+    }
 }

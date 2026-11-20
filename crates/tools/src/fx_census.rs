@@ -45,8 +45,6 @@ pub(crate) const FX_CENSUS_MAX_FORCED_GAMES: u32 = 20;
 const FX_CENSUS_STEP_CAP: usize = 3000;
 /// Stream head every census game seed, policy seed and nonce hangs off, so `--seeds` replays.
 const FX_CENSUS_STREAM: &str = "jackioh-fx-census";
-/// Head of a hero's target id (`hero-p1`), which sits in no zone.
-const HERO_ID_PREFIX: &str = "hero-";
 /// A played card whose windows show nothing suggests this.
 const VANILLA: &str = "none: vanilla";
 /// A card with no window at all suggests this.
@@ -121,9 +119,7 @@ pub(crate) struct Place {
 /// `id`'s place across one step: a hero by its id, else its field zone in `before` or `after`,
 /// with `from_graveyard` when `before` held it in a graveyard.
 fn place_in(before: &GameState, after: &GameState, id: &str) -> Place {
-    if let Some(seat) = id.strip_prefix(HERO_ID_PREFIX)
-        && let Ok(player) = seat.parse::<PlayerId>()
-    {
+    if let Some(player) = jackioh_engine::hero_seat_of(id) {
         return Place {
             board: Some((player, None)),
             from_graveyard: false,

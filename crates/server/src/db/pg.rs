@@ -3153,7 +3153,9 @@ pub async fn matches_has_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<boo
     get(&row, "logged")
 }
 
-/// #1169: one statement, so the guards and the write cannot come apart.
+/// #1169: one statement, so the guards and the write cannot come apart. #4291: the live-row guard
+/// locks the match row (`for share`), so a put that runs while `matches_finish` is uncommitted waits
+/// for it, then sees the row finished and stores nothing: a finished match never keeps a checkpoint.
 pub async fn matches_put_checkpoint(t: &mut PgTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
     run_as(t, None).await?;
     let done = sqlx::query(concat!(
@@ -3162,7 +3164,7 @@ pub async fn matches_put_checkpoint(t: &mut PgTx<'_>, row: &MatchCheckpointRow) 
          select $1::uuid, $2::bigint, $3::text, $4::text, $5::text, $6::integer, $7::text, $8::text, ",
         ts!("$9"),
         "
-          where exists (select 1 from public.matches m where m.id = $1::uuid and m.status = 'live')
+          where exists (select 1 from public.matches m where m.id = $1::uuid and m.status = 'live' for share)
             and exists (select 1 from public.match_actions a
                          where a.match_id = $1::uuid and a.seq = $2::bigint and a.nonce = $3::text)
          on conflict (match_id) do update set

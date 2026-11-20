@@ -3232,10 +3232,16 @@ fn side_cards_mut(side: &mut PlayerState) -> impl Iterator<Item = &mut CardInsta
         .chain(side.resolving.iter_mut())
 }
 
-pub fn find_instance<'a>(state: &'a GameState, instance_id: &str) -> Option<&'a CardInstance> {
+/// Every card instance both sides hold, in `find_instance`'s order: p1's zones, then p2's, each side
+/// in `side_cards`'s order.
+pub fn every_instance(state: &GameState) -> impl Iterator<Item = &CardInstance> {
     PLAYER_IDS
         .into_iter()
-        .find_map(|player| side_cards(&state.players[player]).find(|card| card.id == instance_id))
+        .flat_map(|player| side_cards(&state.players[player]))
+}
+
+pub fn find_instance<'a>(state: &'a GameState, instance_id: &str) -> Option<&'a CardInstance> {
+    every_instance(state).find(|card| card.id == instance_id)
 }
 
 /// `find_instance`, mutably: TS handed back the live object, which its callers wrote through.

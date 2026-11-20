@@ -963,4 +963,109 @@ mod r4233000_push {
         assert_eq!(status, 200, "{body}");
         assert_told_nothing(&bob_ws, from, "Bob").await;
     }
+
+    /// #4291 (F22): a mark reaches every socket its account holds open, a second tab's too.
+    #[tokio::test(start_paused = true)]
+    async fn r4233000_a_mark_reaches_every_socket_of_its_account() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        let served = serve(&app);
+        let tabs = [connected(&served, &bob).await, connected(&served, &bob).await];
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/friends/requests",
+            &ana.token,
+            json!({ "username": bob.name }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let request_id = body["requestId"].as_str().expect("a request id").to_string();
+        for tab in &tabs {
+            let from = 0;
+            tab.wait_for(from, PROMPTLY, |frame| frame["type"] == "notification")
+                .await
+                .unwrap_or_else(|| panic!("a tab of Bob's: no notification frame: {:?}", tab.frames()));
+        }
+
+        let from: Vec<usize> = tabs.iter().map(WsClient::received).collect();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/friends/requests/{request_id}/accept"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        for (tab, from) in tabs.iter().zip(from) {
+            assert_eq!(next_social(tab, from).await["notificationsUnread"], 0);
+        }
+    }
+
+    /// #4291 (F2): the ending told to the player whose own concession ended a daily game is written
+    /// read, so their socket is sent no `notification` frame for it; the other player's is.
+    #[tokio::test(start_paused = true)]
+    async fn r4233000_a_conceders_own_ended_row_sends_them_no_notification() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "Ana").await;
+        let bob = account(&app, 2, "Bob").await;
+        befriend(&app, &ana, &bob).await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &ana.token,
+            json!({ "friendId": bob.id, "mode": "random", "perMoveDays": 3 }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let challenge_id = body["id"].as_str().expect("a challenge id").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/challenges/{challenge_id}/accept"),
+            &bob.token,
+            json!({ "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let match_id = body["matchId"].as_str().expect("a match id").to_string();
+        let (status, game) = api(
+            &app,
+            "GET",
+            &format!("/api/daily/games/{match_id}"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{game}");
+
+        let served = serve(&app);
+        let (ana_ws, bob_ws) = (connected(&served, &ana).await, connected(&served, &bob).await);
+        let (ana_from, bob_from) = (ana_ws.received(), bob_ws.received());
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/daily/games/{match_id}/actions"),
+            &bob.token,
+            json!({ "after": game["seq"], "nonce": "concede", "action": { "type": "concede" } }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let (_, _, told) = ana_ws
+            .wait_for(ana_from, PROMPTLY, |frame| frame["type"] == "notification")
+            .await
+            .unwrap_or_else(|| panic!("Ana: no notification frame: {:?}", ana_ws.frames()));
+        assert_eq!(told["notification"]["kind"], "dailyEnded", "{told}");
+        assert!(
+            bob_ws
+                .wait_for(bob_from, PROMPTLY, |frame| frame["type"] == "notification")
+                .await
+                .is_none(),
+            "Bob was told of his own concession: {:?}",
+            bob_ws.frames()
+        );
+    }
 }

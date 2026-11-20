@@ -27,7 +27,7 @@ What the other crates call:
 | `registered_catalog()` | the catalog `jackioh_cards::register_all()` installed |
 | `combat_forecast(&GameState, PlayerId) -> CombatForecast` (`query.rs`, R3100000) | what each attack that player may declare would do (the damage after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives, whether a shield breaks) and whether the attackers that reach the enemy hero finish it, projected from the board through the damage pipeline's own readers; the tutorial's coach names its attacks by it |
 | `validator::*` | deck and trio checks (§9.4: D1–D4, T1–T3, L1–L6, R250–R253, R340), shared by the server and, through WASM, the client |
-| `duos::*` (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_hash`, `duos_fold`) | a Duos game (§13): two 1v1 games side by side, below |
+| `duos::*` (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_hash`, `duos_fold`, `duos_fold_from`) | a Duos game (§13): two 1v1 games side by side, below |
 
 `reduce` never panics on an illegal action. It takes no `rng`: the match rng is rebuilt from
 `(state.seed, state.rng_cursor)` and the cursor written back, so `(seed, decks, log)` folds to the

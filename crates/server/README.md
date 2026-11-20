@@ -1162,8 +1162,9 @@ store folds under a transaction-level advisory lock per patch and source, so two
 rows never interleave.
 
 Migration 0042 adds `match_checkpoints` (#1169): at most one row per live match, the state, play
-telemetry and bot turns its actor held after one log row, written by the restart drain and read by
-the next rebuild. It holds both hands and both libraries, so it is server-only like `matches` (RLS
+telemetry and bot turns its actor held after one log row, written by the restart drain and, since
+#4224, after every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row as the match is played, and read by the next
+rebuild. It holds both hands and both libraries, so it is server-only like `matches` (RLS
 on, no policy, no grant). It is written only while the match is live and its log holds that row,
 replaced only by a later seq, deleted by `matches_finish` and with a voided match (on delete
 cascade); the retention purge never meets one.

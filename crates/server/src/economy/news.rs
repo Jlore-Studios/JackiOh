@@ -35,7 +35,7 @@ use crate::api::catalog::PATCHES_JSON;
 use crate::api::http::{ApiError, ApiErrorCode};
 use crate::app::{App, now_ms};
 use crate::config::{
-    MS_PER_DAY, NEWS_POST_SUMMARY_MAX_CHARS, NEWS_POST_TITLE_MAX_CHARS, NEWS_REWARD_CARD_PACKS,
+    MS_PER_DAY, NANOS_PER_MS, NEWS_POST_SUMMARY_MAX_CHARS, NEWS_POST_TITLE_MAX_CHARS, NEWS_REWARD_CARD_PACKS,
     NEWS_REWARD_CARD_TOKENS, NEWS_REWARD_COSMETIC_PACKS, NEWS_REWARD_COSMETIC_TOKENS, NEWS_REWARD_JLORE,
     NEWS_SUMMARY_MAX_SENTENCES, NEWS_TTL_DAYS,
 };
@@ -43,9 +43,6 @@ use crate::cosmetics::{CosmeticRarity, is_slug};
 use crate::db::store::Tx;
 
 pub const NEWS_JSON: &str = include_str!("../../news.json");
-
-/// Unit conversion, not configuration: `time` counts nanoseconds, the server milliseconds.
-const NANOS_PER_MS: i128 = 1_000_000;
 
 /// What an entry tells of: a shipped patch, which names its version, or an alert, which names none.
 #[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]

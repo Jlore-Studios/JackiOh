@@ -109,13 +109,6 @@ pub struct DamageArgs {
 /// Every caller hands the engine's sink (SURFACE §6.5).
 pub type DamageSink<'a> = EngineSink<'a>;
 
-pub(crate) fn target_id(target: &DamageTarget) -> String {
-    match target {
-        DamageTarget::Unit { instance } => instance.id.clone(),
-        DamageTarget::Hero { player } => format!("hero-{player}"),
-    }
-}
-
 fn controller_of(target: &DamageTarget) -> PlayerId {
     match target {
         DamageTarget::Unit { instance } => instance.controller,
@@ -620,7 +613,7 @@ fn land(
         if absorbed > 0 && absorbed >= struck {
             sink.events.push(GameEvent::DamageAbsorbed {
                 source_id: source.map(|card| card.id.clone()),
-                target_id: target_id(target),
+                target_id: crate::reduce::attack_target_id(target),
                 absorbed,
                 combat: flags.is_some_and(|flags| flags.combat == Some(true)),
                 via: flags.and_then(|flags| flags.via),
@@ -706,7 +699,7 @@ fn land(
 
     sink.events.push(GameEvent::Damage {
         source_id: source.map(|card| card.id.clone()),
-        target_id: target_id(target),
+        target_id: crate::reduce::attack_target_id(target),
         amount: dealt,
         combat: flags.is_some_and(|flags| flags.combat == Some(true)),
         absorbed,
