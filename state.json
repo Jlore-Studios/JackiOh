@@ -15853,16 +15853,9 @@
     "what": "plan #4298 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-20T14:02:24Z",
+    "at": "2026-11-20T14:11:51Z",
     "notes": [
-      "#4296 needs a plan",
-      "#4297 needs a plan",
-      "#4298 needs a plan",
-      "started plan #4296 on muse (run 44749837223)",
-      "started plan #4297 on muse (run 44749929348)",
-      "started plan #4298 on muse (run 44750015630)",
-      "nothing more to start: nothing is queued",
-      "pruned 9 plan file(s) older than 7 days"
+      "delivered revise #4307 on claude-1 (run 44737268280): blocked"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16568,7 +16561,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T14:02:24Z",
+  "loop_tick": "2026-11-20T14:11:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
