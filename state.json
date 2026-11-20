@@ -5871,6 +5871,19 @@
       "strikes": 0,
       "verdict_rounds": 0
     },
+    "4041": {
+      "asks": [
+        "c:7052772586"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-20T23:04:44Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
+    },
     "4043": {
       "action": "review",
       "ci_fixed_head": "e04668e6a120ef812609ca5283e4b7a27e750cfe",
