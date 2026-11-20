@@ -80,7 +80,8 @@
   gap: var(--space-6);
 }
 
-.craft-palette section h3 {
+.craft-palette section h3,
+.craft-suggestions h3 {
   margin: 0 0 var(--space-3);
   font-size: var(--type-sm);
   letter-spacing: 0.04em;
@@ -235,12 +236,6 @@
 
 .craft-reasons:empty {
   display: none;
-}
-
-.craft-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
 }
 
 .craft-suggestions button {
