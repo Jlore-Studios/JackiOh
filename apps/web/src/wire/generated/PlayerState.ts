@@ -120,11 +120,18 @@ jade?: number,
 lostRefreshThrough?: number, 
 /**
  * R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
- * started", inside the cap): negative once theirs were stolen, positive once they stole some
- * (`mana::max_mana_for`). Absent (never 0 stored) while none moved, so a game without a steal
+ * started", inside the cap): negative once theirs were stolen, positive once they stole some under
+ * the steal of v0.6.7k and before (`mana::max_mana_for`; R4331001 counts a steal's gain apart). Absent (never 0 stored) while none moved, so a game without a steal
  * hashes as it did before this field existed (D3).
  */
 manaCrystals?: number, 
+/**
+ * R4331001: the mana crystals this player stole (`mana::move_mana_crystals`), counted on top of
+ * the cap rather than inside it, so a steal can take them past it; a steal from this player takes
+ * them too. Absent (never 0 stored) while none were stolen, so a game without a steal hashes as it
+ * did before this field existed (D3).
+ */
+stolenManaCrystals?: number, 
 /**
  * R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
  * starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
