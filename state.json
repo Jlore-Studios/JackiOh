@@ -15547,7 +15547,7 @@
     "what": "build #4294 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-20T08:54:52Z",
+    "at": "2026-11-20T09:01:39Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16253,7 +16253,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T08:54:52Z",
+  "loop_tick": "2026-11-20T09:01:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
