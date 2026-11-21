@@ -113,7 +113,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000),
 /// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001), #4353 (R4353020,
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
-/// hooks), #4350 (R4350000), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
+/// hooks), #4350 (R4350000), #4395 (R4395000), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
 /// Token through v0.1.0d).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -1175,6 +1175,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9c",
         c007_the_greatest_heist::script_v0_6_9c,
     ),
+    // #4395 (R4395000): the last Shadowstep trigger that answered any card of yours that was destroyed.
+    (c014_shadowstep::ID, "v0.6.9e", c014_shadowstep::script_v0_6_9e),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1783,6 +1785,26 @@ mod tests {
             ],
             "v0.6.9d",
         );
+    }
+
+    /// Issue #4395: Shadowstep's base trigger answered any card of yours that was destroyed through
+    /// v0.6.9e, the newest version shipped as it was built, so its row is keyed there; v0.4.12b and before
+    /// keep their own.
+    #[test]
+    fn r767000_issue_4395_shadowstep_is_kept_through_v0_6_9e_the_newest_version_that_ran_it() {
+        crate::register_all();
+        let kept_at = |version: &str| {
+            covering_at(&HISTORY.order, KEPT_SCRIPTS, version, c014_shadowstep::ID)
+                .map(|at| KEPT_SCRIPTS[at].1)
+        };
+        assert_eq!(kept_at("v0.4.12b"), Some("v0.4.12b"));
+        for version in ["v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e"] {
+            assert_eq!(
+                kept_at(version),
+                Some("v0.6.9e"),
+                "{version} ran the script kept at v0.6.9e"
+            );
+        }
     }
 
     /// Issue #4086: each block below was once keyed at a version older than the newest shipped as it

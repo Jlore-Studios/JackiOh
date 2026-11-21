@@ -1,11 +1,13 @@
 //! C #14 Shadowstep (SPEC §8.6 row 14, §4.5, §6.2 Replacement, §6.3 Flicker; R4, R11, R12, R33, R57,
-//! R61, R64, R69, R78, R97, R99, R317). Trap, cost 1 (2 until issue #3136), Common.
+//! R61, R64, R69, R78, R97, R99, R317, R4395000). Trap, cost 1 (2 until issue #3136), Common.
 //!   Base:    "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
 //!   Radiant: "Activates when any of your Units would die: Flicker them instead, so they survive. Add a
 //!            copy of each to your hand. The copies cost ({setCost})."
 //!
-//! BASE: a `destroyed` of a Unit of yours (R99: the condition is its `when`, so an enemy's death leaves
-//! it set). One firing reads the whole §4.5 step 1 pass it stands in and takes every Unit of yours (the
+//! BASE: a `destroyed` of a Unit of yours, read by its definition's type on the face it died on
+//! (R4395000: a Field Spell, Trap or Field Trap of yours is none, alone or beside Units; a Unit standing
+//! in the backrow is one, R1081000). R99: the condition is its `when`, so an enemy's death leaves it
+//! set. One firing reads the whole §4.5 step 1 pass it stands in and takes every Unit of yours (the
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
 //! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78),
 //! which is yours: a Unit you stole died into your graveyard as yours (R2618000).
@@ -44,14 +46,23 @@ fn pass_of(ctx: &EffectContext<'_>, answered: &GameEvent, answered_id: &str) -> 
         .collect()
 }
 
-fn shadowstep() -> TriggerDef {
-    TriggerDef::new("shadowstep", &[GameEventType::Destroyed], |ctx, event| {
+/// R4395000: a `destroyed` event whose card is a Unit, read by its definition on the face it died on, as
+/// M #60 Eschews reads a death.
+fn is_unit(state: &GameState, died: &GameEvent) -> bool {
+    matches!(died, GameEvent::Destroyed { def_id, radiant, .. }
+        if card_type_of_face(state, def_id, *radiant == Some(true)) == CardType::Unit)
+}
+
+/// `units_only` is R4395000's trigger; off, it is what v0.6.9e and before ran: any card of yours destroyed.
+fn shadowstep(units_only: bool) -> TriggerDef {
+    TriggerDef::new("shadowstep", &[GameEventType::Destroyed], move |ctx, event| {
         let GameEvent::Destroyed { instance_id: answered_id, .. } = event else {
             return vec![];
         };
         let cost = param(&*ctx, "setCost");
         pass_of(ctx, event, answered_id)
             .into_iter()
+            .filter(|died| !units_only || is_unit(ctx.state, died))
             .filter_map(|died| match died {
                 GameEvent::Destroyed { instance_id, controller, .. } => Some((instance_id, controller)),
                 _ => None,
@@ -68,11 +79,14 @@ fn shadowstep() -> TriggerDef {
             })
             .collect()
     })
-    .with_when(|ctx, event| matches!(event, GameEvent::Destroyed { controller, .. } if *controller == ctx.controller))
+    .with_when(move |ctx, event| {
+        matches!(event, GameEvent::Destroyed { controller, .. } if *controller == ctx.controller)
+            && (!units_only || is_unit(ctx.state, event))
+    })
 }
 
-fn scripts(copy_face: bool) -> CardScripts {
-    let base = Script { triggers: vec![shadowstep()], ..Script::default() };
+fn scripts(copy_face: bool, units_only: bool) -> CardScripts {
+    let base = Script { triggers: vec![shadowstep(units_only)], ..Script::default() };
 
     let radiant = Script {
         replacements: vec![ReplacementDef {
@@ -122,13 +136,19 @@ fn scripts(copy_face: bool) -> CardScripts {
 }
 
 pub fn script() -> CardScripts {
-    scripts(true)
+    scripts(true, true)
 }
 
 /// R767000: v0.4.12b and every version before it made Shadowstep's hand card from only its definition
 /// and Radiant flag; `KEPT_SCRIPTS` folds those replays under that script.
 pub fn script_v0_4_12b() -> CardScripts {
-    scripts(false)
+    scripts(false, false)
+}
+
+/// R4395000: v0.6.9e and every version before it answered every card of yours that was destroyed;
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9e() -> CardScripts {
+    scripts(true, false)
 }
 
 // C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14 (R33, §4.5, §3.2, R78, R317, R11, R69,
@@ -158,6 +178,10 @@ mod tests {
     const FELINORS: &str = "core-012"; // Duplicating Felinors: a Felinor Big Felinor spares
     const STOCKPILE: &str = "core-005"; // Stockpile: a Spell, a spare card (§2.5)
     const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: "Aura: All Units get a stat penalty."
+    const WALLS: &str = "classicplus-024"; // Crushing Walls (3): destroy every card in lanes 1 and 5
+    const FIRE: &str = "classicplus-t-ai-06"; // Datacenter Fire (2): destroy all Field Spells
+    const FIELD_SPELL: &str = "core-064"; // Gifted Program: a Field Spell
+    const TRAP: &str = "core-060"; // Bear Honeypot: a Trap
 
     fn wipe(radiant_face: bool, mine: Value, opts: Value) -> Scenario {
         scenario(json!({
@@ -173,6 +197,31 @@ mod tests {
                 "field": opts.get("theirs").cloned().unwrap_or(json!([])),
                 "library": [STOCKPILE],
             },
+        }))
+    }
+
+    /// p1 holds a Field Spell and a face-down base Shadowstep; p2 holds Datacenter Fire.
+    fn datacenter() -> Scenario {
+        scenario(json!({
+            "active": "p2",
+            "p1": {
+                "hand": [STOCKPILE],
+                "library": [STOCKPILE],
+                "backrow": [
+                    { "def": FIELD_SPELL, "lane": 1 },
+                    { "def": SHADOWSTEP, "faceUp": false, "lane": 2 },
+                ],
+            },
+            "p2": { "hand": [FIRE, STOCKPILE], "library": [STOCKPILE] },
+        }))
+    }
+
+    /// p1 holds `field` and `backrow` (a face-down base Shadowstep among them); p2 holds Crushing Walls.
+    fn walled(field: Value, backrow: Value) -> Scenario {
+        scenario(json!({
+            "active": "p2",
+            "p1": { "hand": [STOCKPILE], "library": [STOCKPILE], "field": field, "backrow": backrow },
+            "p2": { "hand": [WALLS, STOCKPILE], "library": [STOCKPILE] },
         }))
     }
 
@@ -396,6 +445,73 @@ mod tests {
             s.play(BIG_FELINOR, json!({}));
             assert_eq!(s.card(&menace).cost_override, Some(1));
         }
+
+        /// R4395000: the trigger answers a Unit of yours that dies, not a Field Spell of yours destroyed.
+        #[test]
+        fn r4395000_a_field_spell_of_yours_destroyed_alone_leaves_it_set() {
+            let mut s = datacenter();
+            let program = s.card(FIELD_SPELL).clone();
+            s.play(FIRE, json!({}));
+            s.expect_in_zone(&program, "graveyard");
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
+            assert_eq!(backrow_def(&s, P1, 2), Some(SHADOWSTEP.to_string()));
+        }
+
+        #[test]
+        fn r4395000_a_trap_of_yours_destroyed_alone_leaves_it_set() {
+            let mut s = walled(
+                json!([{ "def": VANILLA, "lane": 3 }]),
+                json!([
+                    { "def": TRAP, "faceUp": false, "lane": 5 },
+                    { "def": SHADOWSTEP, "faceUp": false, "lane": 3 },
+                ]),
+            );
+            let trap = s.card(TRAP).clone();
+            s.play(WALLS, json!({}));
+            s.expect_in_zone(&trap, "graveyard");
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
+            assert_eq!(backrow_def(&s, P1, 3), Some(SHADOWSTEP.to_string()));
+            s.expect_in_zone(VANILLA, "field");
+        }
+
+        #[test]
+        fn r4395000_a_field_spell_destroyed_in_the_same_pass_as_your_unit_stays_in_the_graveyard() {
+            let mut s = walled(
+                json!([{ "def": VANILLA, "lane": 1 }]),
+                json!([
+                    { "def": FIELD_SPELL, "lane": 5 },
+                    { "def": SHADOWSTEP, "faceUp": false, "lane": 3 },
+                ]),
+            );
+            let vanilla = s.card(VANILLA).clone();
+            let program = s.card(FIELD_SPELL).clone();
+            s.play(WALLS, json!({}));
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
+            s.expect_in_zone(&vanilla, "hand");
+            assert_eq!(s.card(&vanilla).cost_override, Some(0));
+            s.expect_in_zone(&program, "graveyard");
+            assert_eq!(def_ids(&s.hand(P1)), [STOCKPILE, VANILLA]);
+        }
+
+        /// R1081000: a Unit standing in the backrow is a Unit, whatever its zone.
+        #[test]
+        fn r4395000_a_unit_of_yours_standing_in_the_backrow_still_comes_back_beside_a_destroyed_field_spell() {
+            let mut s = walled(
+                json!([VANILLA]),
+                json!([
+                    { "def": FIELD_SPELL, "lane": 1 },
+                    { "def": SHADOWSTEP, "faceUp": false, "lane": 3 },
+                ]),
+            );
+            let vanilla = s.card(VANILLA).clone();
+            let program = s.card(FIELD_SPELL).clone();
+            crate::stand_in_backrow(&mut s, &vanilla.id, 5);
+            s.play(WALLS, json!({}));
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
+            s.expect_in_zone(&vanilla, "hand");
+            assert_eq!(s.card(&vanilla).cost_override, Some(0));
+            s.expect_in_zone(&program, "graveyard");
+        }
     }
 
     mod radiant {
@@ -571,6 +687,22 @@ mod tests {
             assert_eq!(copy.stats_override, None);
             assert_eq!(copy.armor_override, None);
         });
+    }
+
+    /// R4395000: v0.4.12b's and v0.6.9e's scripts answer every card of yours that was destroyed, a
+    /// Field Spell included: they hand it back at cost 0 and are spent.
+    #[test]
+    fn r4395000_the_kept_scripts_still_answer_a_destroyed_field_spell_of_yours() {
+        for (version, kept) in [("v0.4.12b", script_v0_4_12b()), ("v0.6.9e", script_v0_6_9e())] {
+            crate::under_kept(SHADOWSTEP, kept, || {
+                let mut s = datacenter();
+                let program = s.card(FIELD_SPELL).clone();
+                s.play(FIRE, json!({}));
+                assert_eq!(s.count(GameEventType::TrapFired), 1, "{version}: it springs");
+                s.expect_in_zone(&program, "hand");
+                assert_eq!(s.card(&program).cost_override, Some(0), "{version}: at cost 0");
+            });
+        }
     }
 
     /// R1081000: a Unit of yours standing in the backrow that would die is one of your Units in the
