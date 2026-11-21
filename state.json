@@ -16045,6 +16045,13 @@
     "4379": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T04:47:37Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule 1: it changes the engine's combat forecast (crates/engine/src/query.rs, state_check.rs) and the fuzz monitor, and adds a ruling and its proofs."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
