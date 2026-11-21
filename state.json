@@ -11135,6 +11135,13 @@
     "4225": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T00:20:16Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is one function's texts and one test in crates/server/src/alerts.rs plus a README paragraph, with no engine, AI, cross-crate, migration or 40-file change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
