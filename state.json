@@ -36402,7 +36402,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-21T20:30:19Z",
         "every": 5,
+        "findings": 2,
+        "follow_up": 4418,
         "head": "2f9315bec479d339338f165205e7bb44fb3a057b",
         "issue": 4403,
         "merged_at": "2026-11-21T20:15:00Z",
@@ -36415,12 +36418,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:f416eb2b-1795292534",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44945953883",
         "sha": "4521cdf8a4a379d1d24a25443d34bd60dab5b024",
         "started_at": "2026-11-21T20:22:34Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: an unowned cosmetic pick is left out of a settings save instead of refusing the whole save",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 425
