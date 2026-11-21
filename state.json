@@ -16905,18 +16905,9 @@
     "what": "build #4403 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T18:02:30Z",
+    "at": "2026-11-21T18:16:56Z",
     "notes": [
-      "started plan #4403 on muse (run 44933406973)",
-      "started plan #4402 on muse (run 44933454154)",
-      "started plan #4397 on muse (run 44933504027)",
-      "started plan #4394 on muse (run 44933578749)",
-      "started plan #4393 on agy (run 44933636850)",
-      "started plan #4396 on claude-3 (run 44933686364)",
-      "started plan #4395 on claude-7 (run 44933734353)",
-      "started plan #4392 on claude-8 (run 44933784623)",
-      "nothing more to start: nothing is queued",
-      "pruned 21 plan file(s) older than 7 days"
+      "started a night run, as a lane was free: #4403 (medium) is queued to build, for `muse`: build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
