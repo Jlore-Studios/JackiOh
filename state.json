@@ -15094,14 +15094,18 @@
     "what": "plan #4225 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-20T23:54:57Z",
+    "at": "2026-11-21T00:05:13Z",
     "notes": [
-      "delivered build #4250 on muse (run 44835679234): built",
-      "delivered review #4346 on claude-7 (run 44826487788): approved",
-      "started review #4355 on muse (run 44840550000)",
-      "started plan #4317 on claude-7 (run 44840617597)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` suspended by @jgoetzmann (off for 40 hours, until Fri 2026-11-20 16:51 CST; a scheduled task resumes it then); `/harness resume claude-3` lifts it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #4344 on claude-4 (run 44839433351): reviewed",
+      "delivered review #4351 on muse (run 44838295180): approved",
+      "delivered build #4322 on claude-1 (run 44825375905): built",
+      "started review #4357 on claude-1 (run 44841829169)",
+      "started plan #4350 on claude-3 (run 44841912575)",
+      "started plan #4348 on muse (run 44842001916)",
+      "started plan #4349 on claude-3 (run 44842091520)",
+      "started plan #4219 on claude-7 (run 44842177589)",
+      "started plan #4225 on claude-6 (run 44842263824)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15807,7 +15811,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-20T23:54:57Z",
+  "loop_tick": "2026-11-21T00:05:13Z",
   "machine_disk": {
     "issue": null,
     "reading": {
