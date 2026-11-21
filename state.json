@@ -16600,16 +16600,8 @@
     "what": "suggestions (server) on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-21T07:18:25Z",
-    "notes": [
-      "#4357: approved and green, so its strikes are cleared",
-      "delivered review #4398 on claude-7 (run 44878458245): approved",
-      "delivered review #4361 on claude-8 (run 44877768386): approved",
-      "started revise #4361 on claude-8 (run 44879799657)",
-      "started suggest on claude-4 (run 44879834258)",
-      "started suggest on claude-7 (run 44879869498)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-21T07:27:41Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17314,7 +17306,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T07:18:25Z",
+  "loop_tick": "2026-11-21T07:27:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
