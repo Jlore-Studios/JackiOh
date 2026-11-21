@@ -456,6 +456,11 @@ describe("scripts/ci-scope.sh", () => {
         "crates/server/src/main.rs",
         "crates/server/migrations/0034_new.sql",
         "crates/tools/src/replay.rs",
+        // The two commands e2e runs, replay and catalog-version, run these four sources (#4219); a manifest is loaded by every cargo command.
+        "crates/tools/src/main.rs",
+        "crates/tools/src/catalog.rs",
+        "crates/tools/src/patches.rs",
+        "crates/tools/Cargo.toml",
         "crates/cards/catalog.json",
         "crates/engine/tests/golden/01-hotseat-full-game.json",
         "package.json",
@@ -469,6 +474,10 @@ describe("scripts/ci-scope.sh", () => {
         "crates/cards/README.md",
         "crates/wasm/c/src/lib.rs",
         "crates/wasm/c/README.md",
+        // The fuzz, the classifier and the fuzz's records: no command e2e runs reads them (#4219).
+        "crates/tools/src/fuzz.rs",
+        "crates/tools/src/classify.rs",
+        "crates/tools/fuzz-corpus/seed-8-v0.4.12d.json",
         "apps/web/src/net/ci-scope.test.ts",
         "apps/web/src/game/Board.test.tsx",
         "docs/architecture.md",
@@ -503,6 +512,25 @@ describe("scripts/ci-scope.sh", () => {
       expect(answerFor(ENGINE, file)[line], `engine + ${file}`).toBe(true);
     });
   }
+
+  // #4219: a diff of the fuzz plus any file that turns e2e on still turns it on, wherever the skip arm sits.
+  it.each([
+    "crates/tools/src/replay.rs",
+    "crates/tools/src/main.rs",
+    "crates/tools/src/catalog.rs",
+    "crates/tools/src/patches.rs",
+    "crates/tools/Cargo.toml",
+    "apps/web/src/main.tsx",
+  ])("#4219 keeps e2e on for a diff of crates/tools/src/fuzz.rs and %s", (file) => {
+    expect(answerFor("crates/tools/src/fuzz.rs", file).e2e, file).toBe(true);
+  });
+
+  it("#4219 changes only the e2e line for the tools' sources", () => {
+    expect(onFor("crates/tools/src/fuzz.rs")).toEqual(["full", "clippy", "rust_tools_wasm"]);
+    expect(onFor("crates/tools/fuzz-corpus/seed-8-v0.4.12d.json")).toEqual(["full", "rust_tools_wasm"]);
+    expect(onFor("crates/tools/src/replay.rs")).toEqual(["full", "clippy", "rust_tools_wasm", "e2e"]);
+    expect(onFor("crates/tools/Cargo.toml")).toEqual(["full", "clippy", "rust_tools_wasm", "web", "e2e"]);
+  });
 
   // `web (promote-production)` runs promote-production.test.ts on its own line; an `on` path turns `web` on too, so that job runs.
   const PROMOTE = {
