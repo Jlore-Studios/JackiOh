@@ -16594,6 +16594,13 @@
     "4395": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T18:29:06Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "The change is a card script, a ruling, a kept script and a fragment in crates/cards and spec/ (about 8 files). It touches no engine rules (rule 1), no AI, no cross-crate contract and no migration."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
