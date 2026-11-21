@@ -187,7 +187,7 @@ mod tests {
             if radiant {
                 json!({})
             } else {
-                json!({ "targets": [{ "pick": "instance", "instanceId": target }] })
+                pick::targets(pick::id(target))
             }
         }
 
