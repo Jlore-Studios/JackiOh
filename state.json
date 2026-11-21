@@ -17052,20 +17052,10 @@
     "what": "build #4390 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-21T18:27:32Z",
+    "at": "2026-11-21T18:43:27Z",
     "notes": [
-      "delivered plan #4391 on claude-1 (run 44934914476): planned",
-      "delivered plan #4395 on claude-7 (run 44933734353): planned",
-      "delivered plan #4396 on claude-3 (run 44933686364): planned",
-      "delivered plan #4393 on agy (run 44933636850): planned",
-      "delivered plan #4394 on muse (run 44933578749): planned",
-      "delivered plan #4402 on muse (run 44933454154): planned",
-      "started build #4394 on muse (run 44936159126)",
-      "started build #4393 on agy (run 44936213075)",
-      "started build #4391 on claude-1 (run 44936264401)",
-      "started build #4396 on claude-3 (run 44936315945)",
-      "started build #4395 on claude-7 (run 44936370457)",
-      "started plan #4402 on claude-6 (run 44936422142)",
+      "delivered plan #4390 on claude-4 (run 44934973251): planned",
+      "started build #4390 on claude-4 (run 44937245440)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -17772,7 +17762,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T18:27:32Z",
+  "loop_tick": "2026-11-21T18:43:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
