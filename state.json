@@ -38305,14 +38305,6 @@
         "provider": "claude-6",
         "run_id": "44874307543",
         "taken_asks": []
-      },
-      "4": {
-        "area": "client",
-        "count": 2,
-        "last_run": "2026-11-21T06:11:44Z",
-        "provider": "claude-7",
-        "run_id": "44874387143",
-        "taken_asks": []
       }
     },
     "taken_asks": []
