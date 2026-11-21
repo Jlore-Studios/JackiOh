@@ -81,6 +81,7 @@ pub mod static_attack_flags;
 pub mod steal_no_room;
 pub mod stinkyscape_plus_s14;
 pub mod stinkyscape_plus_turrets;
+pub mod strike_back;
 pub mod style;
 pub mod support;
 pub mod surface;
