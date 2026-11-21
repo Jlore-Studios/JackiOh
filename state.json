@@ -14987,9 +14987,11 @@
         "by": "`muse` (medium)",
         "sha": "0686476f93ef7d86a9be9e32b9d234a3ea2aa10c"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T23:17:18Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T23:51:57Z",
         "family": "muse",
@@ -14999,6 +15001,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Edits and ruling notes are in place; `cargo fmt --check` is clean. Two verification runs (web tests, spec check) are still going \u2014 I'll report once their results land.The change set is exactly the six intended files. Web tests pass; waiting on the spec check to finalize.<!-- bot: {\"status\": \"done\",\u2026\n- ## What changed and why\n- A socket the server refuses after the upgrade (4429 spent budget, 1011 fault) used to reset its reconnect backoff in `onopen`, so it retried at the first 250 ms step about four times a second for the whole outage. Both game clients now start the backoff over only once the socket has delivered a `vi\u2026\n- - [apps/web/src/game/net.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4250/apps/web/src/game/net.ts): removed `backoff.reset()` from `onopen`; added it to the `view` case of `handleFrame` when the view is the socket's first; updated the `Backoff.reset` doc comment.\n- - [apps/web/src/duos/socket.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4250/apps/web/src/duos/socket.ts): same move (`created.onopen` \u2192 `handle` `view` case).\n- - [apps/web/src/game/net.test.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4250/apps/web/src/game/net.test.ts), [apps/web/src/duos/socket.test.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4250/apps/web/src/duos/socket.test.ts): fixed the R1441 starts-over test to deliver a\u2026\n- - `spec/rulings/R4250000.md` (new) and `spec/pending/4250.md` (new): the ruling, with the rejected alternative (adding 4429 to `REFUSAL_CLOSE_CODES`, which would stop retrying for good when R2478000 wants a retry once the window drains).\n- Unchanged as required: 4401/4403/4404 stay `refused` with no retry, 4410/`MATCH_OVER_CLOSE_CODE` stay `closed`, seat-taken stays `elsewhere`, wake probe and Reconnect button untouched, no server change. Existing tests already cover those paths and all pass unmodified.\n- ## How it was tested\n- - `pnpm --dir apps/web test src/game/net.test.ts src/duos/socket.test.ts` \u2014 2 files, 129 tests passed (88 + 41), exit 0.\n- - `cargo jackioh spec check` \u2014 `spec check: 2321 rulings, 5833 proofs, 72535 citations in 4603 files, 31763 links: ok`.\n- - `cargo fmt --check` \u2014 clean.\n- - `git status` shows exactly the six intended files. `cargo clippy -p jackioh-tools` from the plan was skipped: no Rust file was touched, so it would verify nothing changed here.\n- ## Decisions not settled by the issue\n- None beyond the plan. One judgment call: the new R4250000 \"starts the backoff over\" tests first climb two steps without a view ([250, 500]) and then assert the post-view drop returns to 250, proving the reset fires on view rather than merely never firing. The alternative of asserting only the final\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4250 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4250/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4250,
       "kind": "review",
       "live": "reviewing",
