@@ -16624,17 +16624,8 @@
       ]
     },
     "4395": {
-      "action": "plan",
-      "asks": [
-        "c:7066979707"
-      ],
-      "build_next": {
-        "from_run": "44933734353",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-21T18:29:15Z",
-        "until": "2026-11-21T18:59:15Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T18:29:06Z",
         "difficulty": "medium",
@@ -16653,10 +16644,9 @@
         "reason": "planned on sonnet",
         "trail": " crates/cards\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; sed -n 225,240p crates/cards/catalog.json; sed -n 11545,11575p crates/cards/catalog.json; sed -n 40,150p crates/cards/src/scripts/classic_plus/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -rln \\\"classicplus-t-ai-06\\\" crates/cards/src | head; grep -n \\\"\\\\\\\"core-064\\\\\\\"\\\\|\\\\\\\"core-060\\\\\\\"\\\" -A12 crates/cards/catalog.json | gre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; sed -n 1,200p crates/cards/src/scripts/classic_plus/t_ai_06_datacenter_fire.rs | grep -n \\\"const\\\\|fn \\\\|scenario\\\\|play(\\\" | head -40; sed -n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -n \\\"Cloaked\\\\|set_type\\\\|face-down\\\\|faceDown\\\\|as a Trap\\\\|backrow\\\" crates/cards/src/scripts/meditative/c060_eschews.rs | head -20; gre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -rn \\\"setAs\\\\|set_as\\\" crates/engine/src/testkit* -r | head -8; grep -rln \\\"\\\\\\\"setAs\\\\\\\"\\\" crates/cards/src | head -5\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -rn \\\"set_as\\\" crates/engine/src --include=*.rs -l | head -20; grep -rn \\\"SetAs\\\\b\\\" crates/cards/src --include=*.rs | head -8\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; sed -n 160,215p crates/cards/src/scripts/meditative_plus/c009_magic_amplifier.rs; grep -n \\\"pub struct SetAs\\\" -A14 crates/engine/src/state.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -n \\\"pub fn with_when\\\" -B4 -A12 crates/engine/src/script.rs; grep -n \\\"pub type WhenFn\\\\|type TriggerWhen\\\\|WhenHook\\\" crates/engine/src/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -rn \\\"classic-014\\\\|Shadowstep\\\" --include=*.rs --include=*.ts --include=*.tsx --include=*.json --include=*.yaml -l . 2>/dev/null | grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -n \\\"Shadowstep\\\\|classic-014\\\" crates/ai/src/shadow_ban.rs crates/cards/tests/cross/query.rs crates/cards/tests/cross/catalog.rs crates/e\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; git log --diff-filter=A --name-only --format=\\\"%h\\\" -8 -- 'crates/cards/patches/pending/*.json' | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; git show 646b0c1abb:crates/cards/patches/pending/the-maestro-mc-tech-snom-bunny-and-a-random-plague-counter.json | cut -c1-700; grep -n \\\"fixes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -n \\\"classify\\\" crates/tools/README.md | head -20; ls spec/rulings | grep -E \\\"R1365000|R1370000|R4145000\\\"\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; sed -n 1,30p spec/rulings/R4145000.md | cut -c1-1500; ls ~/.cargo/bin 2>/dev/null | head -3; ls target 2>/dev/null | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -rn \\\"Shadowstep\\\" spec/*.md | grep -v \\\"^spec/11-rulings.md\\\\|^spec/INDEX.md\\\\|^spec/CARDS.md\\\" | cut -c1-260; ls spec | head -40; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; sed -n 77p spec/04-combat.md | cut -c1-1800; grep -n \\\"Shadowstep\\\" spec/rulings/R4111000.md spec/rulings/R4221000.md spec/rulings/R0692.md | c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -rn \\\"const BUSTED_CODE_LINES\\\\|const COMPLICATED_CODE_LINES\\\" crates | head; python3 -I - <<'EOF'\\nimport re\\nsrc=open('crates/cards/src/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; sed -n 1,60p crates/tools/src/card_lists.rs | cut -c1-220; grep -n \\\"fn code_lines\\\\|fn loc_of\\\\|fn count_lines\\\" -A25 crates/tools/src/card_li\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; sed -n 1,80p crates/cards/src/code_lines.rs | cut -c1-200; python3 -I - <<'EOF'\\nimport json\\nfor v in ['v0.6.9e','v0.6.9d']:\\n try:\\n d=json.l\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; python3 -I - <<'EOF'\\nimport json\\np=json.load(open('crates/cards/patches/patches.json'))\\nv=[x['version'] for x in p]\\ni=v.index('v0.4.12b')\\n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -l '\\\"classic-014\\\"' crates/cards/patches/v0.*.json | head -20; ls crates/cards/target 2>/dev/null | head -2; ls /home/runner/work/_temp/w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -n \\\"^### 8\\\\.\\\\|^## 8\\\" spec/08-catalog.md | head; grep -rhn \\\"^cards:.*C #14\\\" spec/rulings | head -3 | cut -c1-200; sed -n 1,12p spec/r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; sed -n 6,20p spec/rulings/R4322000.md | cut -c1-900; grep -rn \\\"pub fn is_dormant\\\" crates/engine/src | head -3; grep -n \\\"fn cards_in_scope\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; python3 -I - <<'EOF'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor k in ['classicplus-024','classicplus-t-ai-06','core-064'\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -n \\\"mutants\\\" .github/workflows/*.yml | head -8; grep -n \\\"radiant\\\" -i crates/cards/src/scripts/classic/c014_shadowstep.rs | head -3; py\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; cat rustfmt.toml .rustfmt.toml 2>/dev/null; cat crates/cards/clippy.toml | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4395; grep -rn \\\"KEPT_SCRIPTS\\\" crates --include=*.rs -l; grep -rn \\\"script_v0_4_12b\\\" crates --include=*.rs | grep -v \\\"c014_shadowstep.rs\\\\|history\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4395/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"Card script, ruling, kept script and fragment in crates/cards and sp\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"The change is a card script, a ruling, a kept script and a fragment in crates/cards and spec/ (about 8 files). It touches no engine rules (rule 1), no AI, no cross-crate contract and no migration.\"} --> ## Goal Shadowstep's base face answers only Units of \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-21T18:06:57Z",
       "owner_why": "it plans it",
@@ -16669,12 +16659,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-21T18:04:47Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44933734353",
+      "run_id": "pending:b01b432c-1795286106",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T18:06:57Z",
+      "started_at": "2026-11-21T18:35:27Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7066979707"
+      ]
     },
     "4396": {
       "action": "build",
@@ -17035,9 +17027,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T18:34:52Z",
+    "at": "2026-11-21T18:35:27Z",
     "url": "",
-    "what": "build #4396 on claude-3"
+    "what": "build #4395 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-21T18:14:27Z",
