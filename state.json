@@ -15280,17 +15280,9 @@
     "what": "build #4349 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-21T00:36:34Z",
+    "at": "2026-11-21T00:49:27Z",
     "notes": [
-      "delivered plan #4349 on claude-3 (run 44842091520): planned",
-      "delivered plan #4350 on claude-3 (run 44841912575): planned",
-      "delivered review #4355 on muse (run 44840550000): approved",
-      "delivered build #4247 on muse (run 44837081444): built",
-      "delivered build #3982 on muse (run 44837008276): blocked",
-      "started review #4360 on muse (run 44845485083)",
-      "started build #4350 on claude-3 (run 44845556436)",
-      "started build #4349 on claude-3 (run 44845622818)",
-      "nothing more to start: nothing is queued"
+      "runner gate: started 1 of 1 waiting run(s) (run 44846425431 on claude/charming-bell-p8etig)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15996,7 +15988,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T00:36:34Z",
+  "loop_tick": "2026-11-21T00:49:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
