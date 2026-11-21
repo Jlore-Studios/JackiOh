@@ -16350,9 +16350,11 @@
         "by": "`muse` (medium)",
         "sha": "af2ad185815f6b88a154e44f94a9549e121b5589"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T04:43:11Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-21T05:45:12Z",
         "family": "muse",
@@ -16362,6 +16364,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the hourly retention purge reaps expired private lobbies\"} -->\n- What changed and why: the hourly retention purge had no lobby step, so expired private lobby rows (with full deck picks) lingered until someone happened to create a lobby. `run_purge` in [retention.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4378/crates/server/src/api/retention.rs) \u2026\n- How tested (commands run, output seen):\n- - `cargo test -p jackioh-server --test server api::retention::` \u2014 5 passed, including the 2 new tests: expired unstarted lobby reaped, live lobby kept, expired started lobby reaped; and reaped lobby's member still reads `currentMatchId: \"match-1\"` on `GET /api/auth/me`.\n- - `cargo test -p jackioh-server --test server_store r3730004` \u2014 both memory and postgres legs pass, file unmodified.\n- - `cargo fmt --check` clean; `cargo clippy -p jackioh-server --all-targets -- -D warnings` clean; `cargo jackioh spec check` ok (2341 rulings, 5886 proofs).\n- Decisions: followed the plan verbatim \u2014 no alternatives needed, no departures. The new tests call `sweep_lobbies` directly because `run_purge` never returns, same as the existing tests calling `purge_expired`/`sweep_expired`. The started-lobby fixture uses create-then-`lobbies_update` because the f\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4378 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4378/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4378,
       "kind": "review",
       "live": "reviewing",
