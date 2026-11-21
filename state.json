@@ -15854,6 +15854,8 @@
       }
     },
     "4380": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-21T00:42:00Z",
@@ -15867,8 +15869,11 @@
         "trail": "nd\": \"cd /home/runner/work/_temp/work/item-4350; sed -n 190,300p crates/cards/tests/cross/game_summary.rs\", \"description\": \"Read play reckoning including replacement\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; grep -rn \\\"pub fn summarize_game\\\" crates | head; grep -n \\\"summary-cards\\\\|fn decks\\\\|SEEDS\\\\|for n in\\\" crates/cards/tests/cross/game_summary\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; sed -n 150,189p crates/cards/tests/cross/game_summary.rs; grep -n \\\"Transformed\\\\|replac\\\\|created\\\" crates/engine/src/game_summary.rs | head -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; sed -n 355,450p crates/engine/src/game_summary.rs\", \"description\": \"Read summary CardPlayed and Transformed handling\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; cp crates/cards/tests/cross/game_summary.rs /tmp/game_summary.rs.orig; python3 - <<'EOF'\\np='crates/cards/tests/cross/game_summary.rs'\\ns=open(\u2026\n- Bash: {\"command\": \"sed -n 52,60p /tmp/dbg39.log | cut -c1-250; echo; sed -n 140,170p /tmp/dbg39.log | cut -c1-250\", \"description\": \"Show debug lines around the divergence\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; sed -n 315,375p crates/cards/tests/cross/game_summary.rs\", \"description\": \"Read the test's hand-trigger cast branch\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; grep -rn \\\"ReplacePlays\\\" crates/engine/src --include=*.rs | grep -v \\\"^crates/engine/src/wire\\\" | head; \", \"description\": \"Find the replace-pl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; sed -n 1140,1230p crates/engine/src/play_steps.rs\", \"description\": \"Read the replace-plays step\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; grep -n \\\"pub fn transform_instance\\\\|created\\\" crates/engine/src/effects/transform.rs | head -20\", \"description\": \"Check whether transform mar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; python3 - <<'EOF'\\np='crates/cards/tests/cross/game_summary.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" for player in PLAYER_IDS {\\n assert_eq!(\\n summar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; cp /tmp/game_summary.rs.orig crates/cards/tests/cross/game_summary.rs; git diff --stat crates/cards/tests/cross/game_summary.rs; grep -n \\\"let \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; python3 - <<'EOF'\\np='crates/cards/tests/cross/game_summary.rs'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1,old; s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; git diff crates/cards/tests/cross/game_summary.rs | head -80; echo \\\"- run 2: workspace test failed on cards cross game_summary seed 39 (test r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; python3 -c \\\"\\nimport json;c=json.load(open('crates/cards/catalog.json'));\\nfor k in ['meditativeplus-017','core-011','classic-023']: print(k,c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; python3 - <<'EOF'\\np='crates/cards/tests/cross/game_summary.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" // replacement took the place of is its new card,\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; cargo test --workspace --no-fail-fast --features jackioh-engine/testkit,jackioh-engine/ts > /tmp/wstest2.log 2>&1; echo \\\"exit $?\\\" >> /tmp/wst\u2026\n- said: Full workspace suite is running again (about 20 minutes). After it I'll run CI's 200-seed fuzz gate.\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/wstest2.log 2>/dev/null; do sleep 15; done; tail -1 /tmp/wstest2.log; grep -E \\\"FAILED|panicked\\\" /tmp/wstest2.log | head -20; grep -c \\\"^test result: ok\\\" /\u2026\n- TaskStop: {\"task_id\": \"bcsnv9wr2\"}\n- Bash: {\"command\": \"grep -c \\\"^test result\\\" /tmp/wstest2.log; grep -E \\\"FAILED|panicked\\\" /tmp/wstest2.log | head; grep \\\"Running\\\" /tmp/wstest2.log | tail -1 | cut -c1-150\", \"description\": \"Check progress\u2026\n- said: Sixteen test binaries in, no failures so far; waiting for the rest.\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/wstest2.log 2>/dev/null; do sleep 15; done; tail -1 /tmp/wstest2.log\", \"description\": \"Wait for workspace tests (part 2)\", \"timeout\": 590000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; grep -c \\\"^test result: ok\\\" /tmp/wstest2.log; grep -E \\\"^test result: FAILED\\\" /tmp/wstest2.log | head; git status --short -- apps/web/src/wir\u2026\n- said: Workspace suite green: 66 test binaries, and `CardInstance.ts` is regenerated. Now the web typecheck, eslint and the fuzz gate.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; echo \\\"- run 2: workspace cargo test green (66 binaries), CardInstance.ts regenerated; running typecheck/eslint/fuzz\\\" >> .bot-notes.md; pnpm -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; timeout 1500 cargo jackioh fuzz --seeds 200 > /tmp/fuzz.log 2>&1; echo \\\"exit $?\\\"; grep -v \\\"Compiling\\\\|Finished\\\\|Running\\\" /tmp/fuzz.log | \u2026\n- Bash: {\"command\": \"grep -iE \\\"fail|violation|mismatch|panic|ok|seeds\\\" /tmp/fuzz.log | grep -v \\\"Compiling\\\" | head -15\", \"description\": \"Check fuzz summary lines\"}\n- said: Fuzz gate green (200 seeds, plus the forced and Radiant waves over the nine changed cards). Final re-run of the cheap checks:\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; cargo fmt --check && echo fmt-ok; cargo jackioh spec check 2>&1 | tail -1; cargo jackioh patches check 2>&1 | tail -1; cargo jackioh catalog ch\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4350; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nstate='''## State\\n\\n- Run 2 (builder\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Enormous Elderberry's cards are Embiggened for no extra mana, not for (0)\"} --> ## What changed The cards Enormous Elderberry (Meditative+ #23) adds now have **no Embiggen premium**. Their Embiggened version costs their normal price, and that price is w\u2026"
       },
       "issue": 4350,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T03:33:11Z",
         "from_run": "44845556436",
         "gates": [
           {
@@ -15960,7 +15965,11 @@
         "source": "build",
         "until": "2026-11-21T04:02:03Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-21T03:32:03Z",
+      "run_id": "pending:241b5d08-1795231969",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15979,6 +15988,9 @@
         "provider": "claude-3",
         "run": "44845556436"
       },
+      "started_at": "2026-11-21T03:33:11Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15992,9 +16004,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T03:23:26Z",
+    "at": "2026-11-21T03:33:11Z",
     "url": "",
-    "what": "suggestions (tests) on claude-1"
+    "what": "review #4380 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-21T03:22:24Z",
