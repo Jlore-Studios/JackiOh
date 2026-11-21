@@ -15344,13 +15344,30 @@
         "sha": "4c4451f237718045d6c88dccebf8f97ffd371120",
         "tiers": {}
       }
+    },
+    "4432": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-21T21:35:31Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:05cc300e-1795296910",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-21T21:35:31Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T21:21:49Z",
+    "at": "2026-11-21T21:35:31Z",
     "url": "",
-    "what": "review #4429 on muse"
+    "what": "plan #4432 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T21:24:36Z",
