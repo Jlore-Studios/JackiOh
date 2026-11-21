@@ -15335,11 +15335,9 @@
     "what": "build #4432 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T21:42:12Z",
+    "at": "2026-11-21T21:50:26Z",
     "notes": [
-      "delivered plan #4432 on muse (run 44952341223): planned",
-      "started build #4432 on muse (run 44953052504)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4429 on muse (run 44951152424): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16045,7 +16043,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T21:42:12Z",
+  "loop_tick": "2026-11-21T21:50:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
