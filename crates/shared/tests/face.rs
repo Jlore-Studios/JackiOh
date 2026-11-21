@@ -821,9 +821,10 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
     assert!(written("meditative-009", true));
     assert_eq!(short_form_of("meditative-009", false), None);
     // Issue #3837: Silly Silas's base face gained "Summon this for your opponent." and clamped, and his
-    // Radiant face, Crater gone, fits.
-    assert!(written("core-052", false));
-    assert_eq!(short_form_of("core-052", true), None);
+    // Radiant face, Crater gone, fit. Issue #4353 took that line off and gave both faces "Float reduces
+    // cost.": the base face fits, and the Radiant face prints words written for it.
+    assert_eq!(short_form_of("core-052", false), None);
+    assert!(written("core-052", true));
     // Training Grounds #38's text is one short line since issue #3139.
     assert_eq!(short_form_of("traininggrounds-038", true), None);
 }

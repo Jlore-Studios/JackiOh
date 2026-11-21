@@ -448,6 +448,7 @@
   "Trample": "践踏",
   "Trap": "陷阱",
   "Windfury": "风怒",
+  "You are immune to fatigue damage": "你免疫疲劳伤害",
   "You have Spell Damage +{amount} this turn": "本回合中，你拥有法术伤害+{amount}",
   "You win at {threshold} Attack and {threshold} Health on your Units ({attack}/{threshold}, {health}/{threshold})": "你的单位总攻击力达到{threshold}且总生命值达到{threshold}时你获胜（{attack}/{threshold}，{health}/{threshold}）",
   "You win at {threshold} cards in your graveyard ({now}/{threshold})": "墓地中有{threshold}张牌时你获胜（{now}/{threshold}）",

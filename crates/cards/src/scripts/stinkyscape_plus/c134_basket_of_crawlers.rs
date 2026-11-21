@@ -1,10 +1,10 @@
-//! SPEC §8.12 S+ #134 Basket of Crawlers (§2.4, §6.3 Add to hand; R386, R1420, R3535000): (2) Spell,
+//! SPEC §8.12 S+ #134 Basket of Crawlers (§2.4, §6.3 Add to hand; R386, R1420, R3535000): (1) Spell,
 //! Mindustrial, Common, a card of the Stinkyscape+ set.
-//!   Base:    "Add 3 Crawlers to your hand."
-//!   Radiant: "Add 3 Radiant Crawlers to your hand."
+//!   Base:    "Add 2 Crawlers to your hand." (3 until issue #4353)
+//!   Radiant: "Add 2 Radiant Crawlers to your hand." (3 until issue #4353)
 //!
 //! Engine: its Cry adds `crawlers` fresh Crawlers (S+ #120) to its caster's hand, one `addToHand` for each,
-//! the number declared per face (R386, 3 on both). The Radiant face adds them Radiant. A full hand burns
+//! the number declared per face (R386, 2 on both; 3 until issue #4353). The Radiant face adds them Radiant. A full hand burns
 //! the overflow (§2.4). No prompt opens and nothing is drawn from the rng.
 
 use jackioh_engine::prelude::*;
@@ -42,8 +42,8 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
-    /// "Add 3 Crawlers", declared as `crawlers`.
-    const CRAWLERS: usize = 3;
+    /// "Add 2 Crawlers", declared as `crawlers` (3 until issue #4353).
+    const CRAWLERS: usize = 2;
 
     fn basketing(radiant: bool, others: usize) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
@@ -60,7 +60,7 @@ mod tests {
     }
 
     #[test]
-    fn declared_crawlers_is_3() {
+    fn declared_crawlers_is_2() {
         let s = basketing(false, 0);
         for radiant in [false, true] {
             let def = crate::card_def(ID);
@@ -75,7 +75,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_three_crawlers() {
+        fn adds_two_crawlers() {
             let mut s = basketing(false, 0);
             s.play(ID, json!({}));
             let held = crawlers(&s);
@@ -89,7 +89,7 @@ mod tests {
         fn s2_4_a_full_hand_burns_the_overflow() {
             let mut s = basketing(false, HAND_CAP as usize - 1);
             s.play(ID, json!({}));
-            // The cast leaves 9 cards in the hand, so one Crawler fits and two burn.
+            // The cast leaves 9 cards in the hand, so one Crawler fits and the other burns.
             assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
             assert_eq!(crawlers(&s).len(), 1);
             let burned = s
@@ -114,7 +114,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_three_radiant_crawlers() {
+        fn adds_two_radiant_crawlers() {
             let mut s = basketing(true, 0);
             s.play(ID, json!({}));
             let held = crawlers(&s);

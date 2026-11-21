@@ -42,7 +42,7 @@ use crate::scripts::classic_plus::{
     c062_kys_papaya, c068_organic_produce, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
-    c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
+    c002_speciesist, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
     c033_unstable_clone_machine, c042_eugenics, c043_big_felinor, c049_snom_bunny_mind_control,
     c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas, c054_straaza, c059_unbiased_immigration,
     c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms, c070_spiteful_stab,
@@ -57,7 +57,7 @@ use crate::scripts::meditative::{
     c045_knowledge_breaker, c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
     c049_yilegpt_tamed, c050_cn_tech, c053_prestige, c054_money_machine, c056_house_party,
     c063_skull_of_jnari, c065_keymaster_keenus, c074_montana_giant, c078_occidentless_mandate, c080_aluneth,
-    c081_deadmans_hand, c085_playtester, c087_tatches_the_totem, c090_spell_basket,
+    c081_deadmans_hand, c083_medina_enforcer, c085_playtester, c087_tatches_the_totem, c090_spell_basket,
     c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior,
     c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem, c095_call_to_chaos_meditative_edition,
     c097_2_wishing_well, c097_8_prison, c099_paranoia, c102_catboy_maid_ssr,
@@ -82,11 +82,11 @@ use crate::scripts::stinkyscape::{
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
-    c037_scorch, c039_mindustrial_cross_over, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall,
-    c065_thorium_wall, c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao,
+    c037_scorch, c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law,
+    c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao,
     c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
     c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg,
-    c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
+    c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond, c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -111,7 +111,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002), #3935 (R3935000), #3996
 /// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202), #4079 (R4079000)
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000)
-/// #4285 (R4285001 to R4285005) and #4327 (R4327002).
+/// #4285 (R4285001 to R4285005), #4327 (R4327002) and #4353 (R4353020, R4353021, R4353022, R4353024,
+/// R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and hooks).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -1132,6 +1133,31 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4327 (R4327002): Ayys LMAO's summons before they were set face-down.
     (c076_ayys_lmao::ID, "v0.6.8b", c076_ayys_lmao::script_v0_6_8b),
+    // #4353 Stinkyscape+ Balance Changes V (R4353020, R4353021, R4353022, R4353024, R4353025): the last
+    // scripts before it.
+    (c059_repeater_v5::ID, "v0.6.8b", c059_repeater_v5::script_v0_6_8b),
+    (c052_silly_silas::ID, "v0.6.8b", c052_silly_silas::script_v0_6_8b),
+    (c002_speciesist::ID, "v0.6.8b", c002_speciesist::script_v0_6_8b),
+    (
+        c083_medina_enforcer::ID,
+        "v0.6.8b",
+        c083_medina_enforcer::script_v0_6_8b,
+    ),
+    (
+        c079_a_glimpse_into_the_endless_sea::ID,
+        "v0.6.8b",
+        c079_a_glimpse_into_the_endless_sea::script_v0_6_8b,
+    ),
+    (
+        c166_mindustrial_revolution::ID,
+        "v0.6.8b",
+        c166_mindustrial_revolution::script_v0_6_8b,
+    ),
+    (
+        c041_mend_projector::ID,
+        "v0.6.8b",
+        c041_mend_projector::script_v0_6_8b,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

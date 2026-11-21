@@ -364,11 +364,12 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
       cy.answerPrompt("zone", { zones: [{ side: "you", row: "units", lane: 2 }] });
 
-      // §3.1 / R14 rotate the unit-zone ring, including Silas: R3837000 lands him in the opponent's lane 1, and
-      // R3837002's "right" carries him across to seat 1's lane 1.
+      // §3.1 / R14 rotate the unit-zone ring, including Silas: since issue #4353 he lands in the zone his play
+      // names, seat 1's lane 2 (R4353025), and "right" carries him on to lane 3 and Timmy to lane 2. At (6) he
+      // is in reach on turn 4 once seat 1's Floats of turns 2 and 3 have lowered his cost (R1563000).
       cy.fieldCardByName("Silly Silas").then((silas) => {
         cy.get(ts(zoneId("you", "units", 2))).find(ts(cardId(timmy))).should("exist");
-        cy.get(ts(zoneId("you", "units", 1))).find(ts(cardId(silas))).should("exist");
+        cy.get(ts(zoneId("you", "units", 3))).find(ts(cardId(silas))).should("exist");
       });
     });
   });

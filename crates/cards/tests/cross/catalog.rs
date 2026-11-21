@@ -104,12 +104,12 @@ const CORE: &[SpecRow] = &[
     row(
         "2",
         "Speciesist",
-        c(3),
+        c(2),
         T::Unit,
         &[G::Human],
         R::Common,
-        st(7, 1),
-        st(14, 2),
+        st(4, 1),
+        st(8, 2),
     ),
     row(
         "3",
@@ -587,7 +587,7 @@ const CORE: &[SpecRow] = &[
     row(
         "52",
         "Silly Silas",
-        c(4),
+        c(6),
         T::Unit,
         &[G::Human],
         R::Legendary,
@@ -4113,12 +4113,12 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "83",
         "Medina Enforcer",
-        c(2),
+        c(3),
         T::Unit,
         &[G::Human],
         R::Rare,
-        st(4, 4),
-        st(8, 8),
+        st(4, 7),
+        st(8, 14),
     ),
     row(
         "84",
@@ -5945,7 +5945,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "112",
         "Job Application",
-        c(1),
+        c(0),
         T::FieldSpell,
         &[G::Quest],
         R::Legendary,
@@ -7316,12 +7316,12 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     row(
         "41",
         "Legacy: Speciesist",
-        c(2),
+        c(3),
         T::Unit,
         &[G::Human, G::Legacy],
         R::Common,
-        st(2, 1),
-        st(4, 2),
+        st(7, 1),
+        st(14, 2),
     ),
     row(
         "42",
@@ -8181,8 +8181,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Mindustrial],
         R::Epic,
-        st(0, 8),
-        st(0, 16),
+        st(0, 10),
+        st(0, 20),
     ),
     row(
         "66",
@@ -8499,7 +8499,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "96",
         "Open Enrollment",
-        c(0),
+        emb(0, 2),
         T::Spell,
         &[],
         R::Common,
@@ -9149,7 +9149,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "153",
         "Noxious Rounds",
-        c(4),
+        c(3),
         T::Unit,
         &[],
         R::Epic,
@@ -10528,19 +10528,22 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         let speciesist = &CATALOG["traininggrounds-041"];
         assert_eq!(speciesist.name, format!("Legacy: {}", core.name));
         assert_eq!(speciesist.tags, [Tag::Human, Tag::Legacy]);
+        // R2195003: issue #4353 gave Core #2's Cry "You have {mana} less mana next turn", which the Legacy
+        // card, frozen against later Core patches, does not print.
+        let frozen = |text: &str| text.replace(" You have {mana} less mana next turn.", "");
         assert_eq!(
             (
                 speciesist.rarity,
-                &speciesist.base.text,
+                speciesist.base.text.clone(),
                 &speciesist.base.keywords,
-                &speciesist.radiant.text,
+                speciesist.radiant.text.clone(),
                 &speciesist.radiant.keywords
             ),
             (
                 core.rarity,
-                &core.base.text,
+                frozen(&core.base.text),
                 &core.base.keywords,
-                &core.radiant.text,
+                frozen(&core.radiant.text),
                 &core.radiant.keywords
             )
         );

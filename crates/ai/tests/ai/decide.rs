@@ -999,9 +999,9 @@ mod the_mulligans_curve {
     // R4110000: nothing dearer than the bound stays, and the cheap cards are ranked by the evaluation's
     // price of a card in hand, not by the unban lane's old table.
 
-    /// The four-drops the old exception kept on Easy, at its bound of 3.
-    const EASY_FOURS: [&str; 5] = [
-        "core-052",        // Silly Silas, 4
+    /// The four-drops the old exception kept on Easy, at its bound of 3 (and Core #52 Silly Silas, until
+    /// issue #4353 made him (6)).
+    const EASY_FOURS: [&str; 4] = [
         "core-054",        // Straaza, 4
         "core-094",        // Genn's Greed, 4
         "classic-068",     // Small Card Lobbyist, 4

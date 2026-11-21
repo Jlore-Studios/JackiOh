@@ -79,7 +79,7 @@ mod threat {
     }
 
     /// Issue #4257's board: p1 at 6 life behind the Jlockeed Large Language Model token (a 2/5 GIGA Taunt) in
-    /// lanes 1-2 and Thorium Wall (S+ #65, a 0/8 Taunt) in lane 3; p2's CN Golem token (10/10, Poisonous,
+    /// lanes 1-2 and Thorium Wall (S+ #65, a 0/10 Taunt) in lane 3; p2's CN Golem token (10/10, Poisonous,
     /// Cleave, Pierce) and Voidwalker (6).
     fn giga_wall() -> GameState {
         board(json!({
