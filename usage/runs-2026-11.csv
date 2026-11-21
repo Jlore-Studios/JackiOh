@@ -2990,3 +2990,17 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-21T00:55:56Z,44834431017,claude-8,opus,build,4331,hard,built,,78.5,163,44583,10167828,4.0893,0,48,,,1.2,claude-8,fresh,,1
 2026-11-21T01:12:18Z,44843934155,claude-7,sonnet+opus,build,4219,medium,built,,12,51,14341,1763305,0.5667,21,25,,,73.4,claude-7,fresh,,1
 2026-11-21T01:24:08Z,44849271300,muse,muse-spark-1.3-contributor,suggest,,,suggested,,6.3,0,0,0,,3,3,58,58,,,none,,1
+2026-11-21T01:19:59Z,44849205231,muse,muse-spark-1.3-contributor,review,4362,medium,reviewed,,2.8,0,0,0,,3,3,58,58,0.2,,none,,1
+2026-11-21T01:20:41Z,44844013043,claude-6,sonnet+opus,build,4225,medium,built,,11.2,36,10094,995590,0.388,19,21,,,73.9,claude-6,fresh,,1
+2026-11-21T01:18:24Z,44843847131,muse,muse-spark-1.3-contributor,build,4348,medium,built,,50.8,0,0,0,,0,3,57,58,81.3,muse,none,,1
+2026-11-21T01:24:27Z,44834777962,claude-6,opus,build,4246,hard,built,,92.3,65,17097,2066980,1.191,17,21,,,4.1,claude-1,fresh,other,1
+2026-11-21T01:33:45Z,44850657880,muse,muse-spark-1.3-contributor,review,4366,medium,reviewed,,1.9,0,0,0,,3,4,58,58,1.6,,none,,1
+2026-11-21T01:34:09Z,44850585610,claude-6,opus,review,4368,hard,reviewed,,0.4,6,2207,137735,0.3497,0,1,,,0.9,,none,,1
+2026-11-21T01:27:12Z,44849329657,muse,muse-spark-1.3-contributor,suggest,,,suggested,,8.9,0,0,0,,3,3,58,58,,,none,,1
+2026-11-21T01:35:25Z,44845622818,claude-3,sonnet+opus,build,4349,medium,built,,11.2,95,21256,3704472,0.9202,17,22,,,97.4,claude-3,fresh,,1
+2026-11-21T01:30:04Z,44843770653,claude-7,sonnet+opus,build,4317,medium,built,,29,123,34702,7244349,1.6428,20,26,,,71.5,claude-7,fresh,,1
+2026-11-21T01:49:28Z,44851939720,claude-6,opus,review,4360,medium,reviewed,,1.2,10,7505,300748,0.6119,1,2,,,,,none,,1
+2026-11-21T01:49:28Z,44851881651,claude-3,sonnet+opus,review,4372,medium,approved,,2.3,33,10834,1138720,0.9492,30,31,,,2.4,,none,,1
+2026-11-21T01:51:04Z,44851828118,claude-7,sonnet+opus,review,4373,medium,approved,,5.3,25,8940,1085368,1.0003,0,2,,,1,,none,,1
+2026-11-21T01:49:51Z,44850510177,muse,muse-spark-1.3-contributor,review,4367,medium,approved,,19.4,0,0,0,,3,4,58,59,2.1,,none,,1
+2026-11-21T01:44:35Z,44834905934,agy,gemini-3.8-flash-high,plan,4332,medium,failed,,150.3,149755,30405,0,,0,1,41,41,7.4,,none,,1
