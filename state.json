@@ -17643,11 +17643,12 @@
     "what": "review #4416 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-21T19:48:41Z",
+    "at": "2026-11-21T19:57:41Z",
     "notes": [
-      "delivered build #4390 on claude-4 (run 44937245440): built",
-      "started review #4416 on claude-4 (run 44943109653)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4415 on claude-1 (run 44942308421): approved",
+      "delivered review #4413 on agy (run 44941384184): approved",
+      "delivered review #4412 on muse (run 44940419065): approved",
+      "delivered review #4411 on muse (run 44939610217): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18353,7 +18354,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T19:48:41Z",
+  "loop_tick": "2026-11-21T19:57:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
