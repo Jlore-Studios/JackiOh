@@ -15883,6 +15883,7 @@
     "4378": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-21T04:39:02Z",
         "difficulty": "medium",
