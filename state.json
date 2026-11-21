@@ -14054,9 +14054,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-21T00:24:50Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-1` 5-hour usage is 44%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-21T03:00:00Z; it can start again only in 2h 35m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-4",
+      "owner_since": "2026-11-21T00:28:48Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-1` 5-hour usage is 44%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-21T03:00:00Z; it can start again only in 2h 35m, more than the 120 minutes an item waits for its",
       "pending_request": false,
       "planned_at": "2026-11-20T19:26:22Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -15036,7 +15036,7 @@
       }
     },
     "4357": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "difficulty": "hard",
       "failures": 0,
@@ -15052,11 +15052,11 @@
       },
       "issue": 4322,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-4",
       "queued_at": "2026-11-21T00:25:24Z",
-      "run_id": "44841829169",
+      "run_id": "pending:48e9633f-1795220896",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15077,7 +15077,7 @@
         "run": "44825375905"
       },
       "source": "conflict",
-      "started_at": "2026-11-21T00:08:44Z",
+      "started_at": "2026-11-21T00:28:48Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15191,9 +15191,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T00:28:03Z",
+    "at": "2026-11-21T00:28:48Z",
     "url": "",
-    "what": "build #4225 on claude-6"
+    "what": "revise #4357 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-21T00:05:13Z",
