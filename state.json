@@ -37223,7 +37223,8 @@
       "2026-11-21T00:38:38Z,claude-6,stream,call,44844013043,21,2026-11-21T01:00:00Z,,,allowed,100,,"
     ],
     "runs": [
-      "2026-11-21T01:19:59Z,44849205231,muse,muse-spark-1.3-contributor,review,4362,medium,reviewed,,2.8,0,0,0,,3,3,58,58,0.2,,none,,1"
+      "2026-11-21T01:19:59Z,44849205231,muse,muse-spark-1.3-contributor,review,4362,medium,reviewed,,2.8,0,0,0,,3,3,58,58,0.2,,none,,1",
+      "2026-11-21T01:20:41Z,44844013043,claude-6,sonnet+opus,build,4225,medium,built,,11.2,36,10094,995590,0.388,19,21,,,73.9,claude-6,fresh,,1"
     ]
   },
   "version": 1
