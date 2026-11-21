@@ -16449,6 +16449,13 @@
     "4392": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T18:15:15Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the work is one new test binary in crates/shared plus a README line, with no engine, AI, migration or cross-crate design change. A fix is made only if the fuzz finds a bug in crates/shared/src/host/, and the plan tells the builder to stop and report if the cause is"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
