@@ -15764,15 +15764,8 @@
     "what": "plan #4375 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-21T02:04:27Z",
-    "notes": [
-      "delivered plan #4374 on muse (run 44853118615): planned",
-      "started build #4374 on muse (run 44854022737)",
-      "started revise #4372 on claude-3 (run 44854087667)",
-      "started plan #4375 on claude-6 (run 44854142218)",
-      "nothing more to start: nothing is queued",
-      "#4375: typed it Bug"
-    ],
+    "at": "2026-11-21T02:14:26Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16477,7 +16470,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T02:04:27Z",
+  "loop_tick": "2026-11-21T02:14:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
