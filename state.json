@@ -16647,6 +16647,13 @@
     "4396": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T18:29:49Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No line of the rule holds: the change is two card-script hooks, a shared read helper in crates/cards, two kept scripts, a ruling, a fragment and ~10 files, with no change to crates/engine, the AI, a migration or a cross-crate contract."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
