@@ -3365,9 +3365,7 @@
     },
     "3925": {
       "action": "build",
-      "asks": [
-        "c:7052770814"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3394,11 +3392,13 @@
       "provider": "claude-8",
       "queued_at": "2026-11-20T23:04:58Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44839363553",
+      "run_id": "pending:d889f924-1795239888",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T23:47:35Z",
+      "started_at": "2026-11-21T05:45:04Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7052770814"
+      ]
     },
     "3926": {
       "action": "review",
@@ -16358,9 +16358,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T05:44:37Z",
+    "at": "2026-11-21T05:45:04Z",
     "url": "",
-    "what": "review #4386 on agy"
+    "what": "build #3925 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-21T05:34:59Z",
