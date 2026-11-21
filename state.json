@@ -15084,6 +15084,18 @@
     "4359": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "at": "2026-11-21T00:58:16Z",
+        "built_by": "muse",
+        "by": "`muse` (medium)",
+        "sha": "54e8fb80f7719087e1917afd1e6febc73d2f9059"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T23:11:44Z",
@@ -15099,6 +15111,7 @@
       "issue": 4117,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-21T00:23:51Z",
