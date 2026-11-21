@@ -14474,6 +14474,7 @@
       "run_id": "44939610217",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 425,
       "started_at": "2026-11-21T19:11:32Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36376,9 +36377,33 @@
         "title": "Patch: a sweep plays each card on every older catalog the build carries and folds the game back, and the four old replays that panic today open",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "2f9315bec479d339338f165205e7bb44fb3a057b",
+        "issue": 4403,
+        "merged_at": "2026-11-21T20:15:00Z",
+        "n": 425,
+        "pr": 4411,
+        "queued_at": "2026-11-21T20:15:00Z",
+        "sha": "4521cdf8a4a379d1d24a25443d34bd60dab5b024",
+        "status": "queued",
+        "title": "Patch: an unowned cosmetic pick is left out of a settings save instead of refusing the whole save",
+        "tries": 0
       }
     ],
-    "count": 424
+    "count": 425
   },
   "statistics": {
     "at": "2026-11-21T20:06:35Z"
