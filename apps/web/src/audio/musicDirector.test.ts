@@ -676,15 +676,15 @@ describe("R4363000 the music prefetch waits while the browser asks to save data"
       director.settle();
       await settle();
       // The current track still downloads on demand; nothing in the background does.
-      expect(fetch.urls()).toContain("/audio/music/tavern-1.m4a");
+      expect(fetch.urls()).toContain("/audio/music/tavern-1.m4a?v=x");
       expect(fetch.urls().filter((u) => u.includes("tavern-danger") || u.includes("victory") || u.includes("intro-a"))).toEqual([]);
 
       saving = false;
       player.setBusy(true);
       player.setBusy(false);
       await settle();
-      expect(fetch.urls()).toContain("/audio/music/tavern-danger.m4a");
-      expect(fetch.urls()).toContain("/audio/music/intro-a.m4a");
+      expect(fetch.urls()).toContain("/audio/music/tavern-danger.m4a?v=x");
+      expect(fetch.urls()).toContain("/audio/music/intro-a.m4a?v=x");
 
       director.onEvent(played("core-097"), view);
       await settle();

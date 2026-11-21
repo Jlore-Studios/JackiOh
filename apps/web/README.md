@@ -1369,6 +1369,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
+- Each track is fetched under its manifest hash (`/audio/music/<id>.m4a?v=<hash>`), so Cloudflare caches
+  it for a year (`/audio/*`, #4393) and a browser returns to it without re-validating.
 - Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
   A Legendary's or Mythic's intro is also its play sting (R3332002): with dynamic music off or the music at zero, its
@@ -1418,7 +1420,9 @@ each committing what it rendered back to the branch, and a Linux job runs `--che
 asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
 flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
 missing from the manifest falls back to the browser's `speechSynthesis`, with the voice's `web`
-pitch and rate. The sound tables load with the first sound, not with the page.
+pitch and rate. The sound tables load with the first sound, not with the page. Each voice line is
+fetched under its manifest hash (`/audio/voice/<key>.m4a?v=<hash>`), so Cloudflare caches it for a
+year (`/audio/*`, #4393) and a returning player's browser keeps it without conditional requests.
 
 ## The engine as WebAssembly
 
