@@ -85,8 +85,8 @@ export function parseMusicCards(raw: unknown, manifest: MusicManifest): Record<s
   return cards;
 }
 
-export function musicUrl(id: string): string {
-  return `${import.meta.env.BASE_URL}audio/music/${id}.m4a`;
+export function musicUrl(id: string, hash: string): string {
+  return `${import.meta.env.BASE_URL}audio/music/${id}.m4a?v=${hash}`;
 }
 
 /** A station's in-game tracks, `<station>-1`, `<station>-2`, …, in order: the ones a match rotates through. */

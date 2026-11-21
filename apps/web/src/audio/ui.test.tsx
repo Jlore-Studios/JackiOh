@@ -22,9 +22,9 @@ import { exposeAudioDebug, type AudioDebugHandle } from "./debug.ts";
 import { createAudioEngine, getAudioEngine, setAudioEngineForTests } from "./engine.ts";
 import { readAudioSettings, resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
 import { FakeClock, FakeFetch, fakeAudioEngine, fakeContextFactory, seedSoundTables, type FakeAudioEngine } from "./test/fakeAudio.ts";
-import type { AudioEngine, AudioState, PlayedCue, SoundSink } from "./types.ts";
+import type { AudioEngine, AudioState, PlayedCue, SoundSink, VoiceKey } from "./types.ts";
 import { installUiSounds } from "./uiSounds.ts";
-import { voiceKeysForView } from "./voiceData.ts";
+import { voiceKeysForView, voiceUrl } from "./voiceData.ts";
 import { CARD_AUDIO, SOUND_TABLES } from "./soundTables.ts";
 import { durationFor } from "../game/animations.ts";
 import Game from "../game/Game.tsx";
@@ -748,7 +748,7 @@ describe("B58 the board's animations hold background voice work", () => {
     });
     setAudioEngineForTests(engine);
     engine.unlock();
-    const url = (key: string): string => `/audio/voice/${key}.m4a`;
+    const url = (key: string): string => voiceUrl(key as VoiceKey, SOUND_TABLES.voiceManifest.files[key]!.hash);
     const advance = async (ms: number): Promise<void> => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(ms);

@@ -26,8 +26,8 @@ export function voiceKey(defId: string, line: PlayableLineKind): VoiceKey {
   return `${defId}-${line}`;
 }
 
-export function voiceUrl(key: VoiceKey): string {
-  return `${import.meta.env.BASE_URL}audio/voice/${key}.m4a`;
+export function voiceUrl(key: VoiceKey, hash: string): string {
+  return `${import.meta.env.BASE_URL}audio/voice/${key}.m4a?v=${hash}`;
 }
 
 /**
