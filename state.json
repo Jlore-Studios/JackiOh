@@ -16552,6 +16552,8 @@
       }
     },
     "4389": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T04:42:38Z",
@@ -16565,8 +16567,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: dashboard-only pull requests skip the e2e smoke specs\"} -->\n- ## What changed and why\n- Dashboard-only pull requests no longer boot the whole game stack for the six per-PR browser specs, which never serve the dashboard. The change adds `apps/admin/*` to the `e2e` off-arm in [scripts/ci-scope.sh](/home/agent-muse/actions-runner/_work/_temp/work/item-4371/scripts/ci-scope.sh), keeping t\u2026\n- I re-verified the reads before editing, and they held: the only code import of dashboard code in the suite is spec 49's import of `testids.ts`; `e2e/support/config.ts` mentions `apps/admin` only in a comment; nothing under `apps/web/src` names it; spec 49 is not in `SMOKE`.\n- ## How I tested it\n- - `sh -n scripts/ci-scope.sh` \u2014 clean.\n- - `pnpm --dir apps/web test src/net/ci-scope.test.ts` \u2014 all 356 tests pass, including the new `#4371` exact-answer case, which pins: dashboard-only diff reports exactly `[\"full\", \"web\"]`; a `testids.ts` diff reports exactly `[\"full\", \"web\", \"e2e\"]`; dashboard-plus-dashboard stays `e2e` false; dashb\u2026\n- ## Decisions and reviewer notes\n- - Followed the plan exactly; no departures. The only wording choice was fitting the header bullet into the existing deploy-files sentence rather than adding a new bullet, matching the Worker's one-clause style.\n- - Case-arm order matters: the `testids.ts` carve-out sits before the off-arm because the first matching pattern wins; moving it after would silently disable it, and the new test case guards this.\n- - Note for review: this PR itself still runs every job, since ci.yml scopes each PR with `main`'s copy of the script \u2014 the new scope takes effect after landing.\n- - No ruling note or `spec check` impact: no game-rules change.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4371 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4371/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4371,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T05:55:08Z",
         "from_run": "44867430387",
         "gates": [
           {
@@ -16625,8 +16630,15 @@
         "source": "build",
         "until": "2026-11-21T06:23:56Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-21T05:53:56Z",
+      "run_id": "pending:f6aa76bf-1795240490",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-21T05:55:08Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16640,9 +16652,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T05:54:39Z",
+    "at": "2026-11-21T05:55:08Z",
     "url": "",
-    "what": "review #4388 on muse"
+    "what": "review #4389 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T05:42:55Z",
