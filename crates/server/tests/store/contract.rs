@@ -8769,6 +8769,40 @@ mod social {
         );
     }
 
+    /// R4391000 (#4391): `shares_put` answers whether it wrote a row, true for a new share and false
+    /// for one already held, which keeps its first `created_at`.
+    async fn r4391000_shares_put_reports_whether_it_wrote_a_row(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 10_000));
+        let mut shares = Vec::new();
+        for _ in 0..2 {
+            let over = id();
+            q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+            q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
+            q!(harness, t => t.matches_finish(&over, now - 5_000));
+            let share: ReplayShare = from(json!({
+                "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - 3_000,
+            }));
+            shares.push(share);
+        }
+
+        assert!(q!(harness, t => t.shares_put(&shares[0])), "{}", harness.name);
+        assert!(!q!(harness, t => t.shares_put(&shares[0])), "{}", harness.name);
+        let later: ReplayShare = from(json!({
+            "matchId": shares[0].match_id, "sharer": a.id, "friend": b.id, "createdAt": now - 1_000,
+        }));
+        assert!(!q!(harness, t => t.shares_put(&later)), "{}", harness.name);
+        let held = q!(harness, t => t.shares_for(&b.id, 10));
+        assert_eq!(held.len(), 1, "{}", harness.name);
+        assert_eq!(held[0].created_at, now - 3_000, "{}", harness.name);
+
+        assert!(q!(harness, t => t.shares_put(&shares[1])), "{}", harness.name);
+        q!(harness, t => t.shares_remove(&shares[0].match_id, &a.id, &b.id));
+        assert!(q!(harness, t => t.shares_put(&shares[0])), "{}", harness.name);
+    }
+
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series not over holds, each one's newest live co-op match, and whose
     /// live 1v1 the viewer may watch (friends, unblocked, live, ranked or not, seating the friend and
@@ -9078,6 +9112,7 @@ mod social {
         s7_replay_shares_are_read_while_friends_and_unblocked,
         s7_replay_shares_hide_a_match_whose_log_the_purge_took,
         s7_replay_shares_list_the_newest_up_to_the_limit,
+        r4391000_shares_put_reports_whether_it_wrote_a_row,
         r1435000_a_sharers_shares_are_read_while_each_friend_may_read_them,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,

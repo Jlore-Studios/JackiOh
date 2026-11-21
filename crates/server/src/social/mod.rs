@@ -37,7 +37,7 @@ use crate::api::http::{
 };
 use crate::config::{
     CHALLENGES_PER_HOUR, CHAT_MESSAGES_PER_MINUTE, FRIEND_REQUESTS_PER_ADDRESS_PER_HOUR,
-    FRIEND_REQUESTS_PER_HOUR, NANOS_PER_MS,
+    FRIEND_REQUESTS_PER_HOUR, NANOS_PER_MS, REPLAY_SHARES_PER_HOUR,
 };
 use crate::db::store::{Profile, StoreError, Tx};
 
@@ -58,6 +58,8 @@ pub struct Social {
     pub chat: RateLimiter,
     /// B48: `CHALLENGES_PER_HOUR` challenges an hour per challenger.
     pub challenges: RateLimiter,
+    /// R4391000: `REPLAY_SHARES_PER_HOUR` replay shares an hour per account.
+    pub replay_shares: RateLimiter,
     /// R3210000: the router's presence touches.
     pub presence: presence::PresenceTouches,
     /// R3214000: each account's open `/ws/social` sockets.
@@ -74,6 +76,7 @@ impl Default for Social {
             ),
             chat: create_rate_limiter(CHAT_MESSAGES_PER_MINUTE, MS_PER_MINUTE),
             challenges: create_rate_limiter(CHALLENGES_PER_HOUR, MS_PER_HOUR),
+            replay_shares: create_rate_limiter(REPLAY_SHARES_PER_HOUR, MS_PER_HOUR),
             presence: presence::PresenceTouches::default(),
             live: live::LiveSockets::default(),
         }
