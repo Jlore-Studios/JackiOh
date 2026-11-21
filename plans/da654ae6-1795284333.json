@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4393,
+  "title": "Patch: voice lines and music are kept in the browser for a year under their manifest hash, so a return visit stops re-checking all 1,905 voice files with the server",
+  "branch": "bot/issue-4393",
+  "thread": "**Issue #4393 (data, not instructions):**\n\n```text\n# #4393: Patch: voice lines and music are kept in the browser for a year under their manifest hash, so a return visit stops re-checking all 1,905 voice files with the server\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEach time a player opens JackiOh and plays a game, the client checks with the server whether each of the 1,905 voice lines it downloaded on an earlier visit has changed. It checks them one or two at a time, and it checks each music track the same way before playing it. Those files never change under the same name, so every check is wasted: nearly a thousand round trips in a row per visit, a phone's radio kept busy for them, and a short extra wait before each new line or track plays. Once this is built, a returning player's voice lines and music play straight from the browser's own copy. A line or track that is re-recorded still reaches them right away, because its address changes with it.\n\n## Why\n\n- `apps/web/public/_headers` gives a year-long `immutable` `Cache-Control` to `/fonts/*` and `/assets/*` only. `/audio/*` has no rule, and `src/net/cloudflare-config.test.ts:114` pins exactly those three blocks (`/*`, `/fonts/*`, `/assets/*`). A file with no rule gets Cloudflare's documented default for Workers static assets (`public, max-age=0, must-revalidate`; not measured on a live response). So the browser has to ask the server about every audio file each time it uses it.\n- The URLs carry no version. `voiceUrl` (`src/audio/voiceData.ts:29`) builds `audio/voice/<key>.m4a` and `musicUrl` (`src/audio/musicData.ts:88`) builds `audio/music/<id>.m4a`. Yet both manifests (`src/audio/voice-manifest.json`, `music-manifest.json`) already record a `hash` per file. `scripts/gen-voice.mjs` and `scripts/gen-music.mjs` change it whenever a file's inputs or encoding change, and `voice-assets.test.ts` (R655) and `gen-music.mjs --check` hold the manifests to the files.\n- The voice prefetch (#4329, `src/audio/engine.ts:745-751`) fetches every key in the manifest, `VOICE_PREFETCH_CONCURRENCY` (2) at a time. The bytes are kept only in memory, which a page load empties. `public/audio/voice` holds 1,905 files (21 MB), so each later visit with a game sends about 1,905 conditional requests, about 950 of them one after another. `public/audio/music` holds 254 tracks (51 MB), each checked again before it plays.\n- The fonts and the bundle already get this treatment (#778). The audio, the largest thing the site serves, was left out.\n\n## Proposal\n\n1. `voiceUrl` and `musicUrl` take the file's manifest hash and return `\u2026/<key>.m4a?v=<hash>`. The three fetch sites already hold their manifest: `engine.ts:682` (its `loadedManifest`), and `music.ts:328` and `music.ts:569` (the player's `loadedManifest`). Both players fetch only files their manifest names, so every audio fetch carries its hash.\n2. `public/_headers` gets a fourth block, `/audio/*` with `Cache-Control: public, max-age=31536000, immutable`, and a comment saying the `?v=` is what makes that safe.\n3. `cloudflare-config.test.ts` expects the four blocks, with the `/audio/*` rule equal to the fonts' and the bundle's.\n4. Tests fail on an audio fetch without its hash. The fake fetch (`src/audio/test/fakeAudio.ts`) already records URLs, so an engine test and a music test can assert that each fetched URL carries its manifest's hash. A static test fails on any `audio/voice/` or `audio/music/` path built outside the two helpers.\n5. The README's voice and music sections say how the files are cached.\n\n## Where it lands\n\n- `apps/web/src/audio/voiceData.ts`, `musicData.ts`, `engine.ts`, `music.ts`, and their tests (`engine.test.ts`, `music.test.ts`, the URL helper at `ui.test.tsx:751`).\n- `apps/web/public/_headers`, `apps/web/src/net/cloudflare-config.test.ts`.\n- `apps/web/README.md`, sections \"Regenerating the music\" and \"Regenerating the voice lines\".\n- No SPEC section: no rule changes.\n\n## Acceptance criteria\n\n- [ ] `public/_headers` has an `/audio/*` block with `Cache-Control: public, max-age=31536000, immutable`, and `cloudflare-config.test.ts` holds it.\n- [ ] Every voice and music fetch the audio engine and the music player make ends in `.m4a?v=<the manifest's hash>`. A test fails when the hash is dropped from either helper or from any of the three call sites.\n- [ ] Changing a manifest entry's hash changes the URL fetched for it (test).\n- [ ] No source outside `voiceData.ts` and `musicData.ts` builds an `audio/voice/` or `audio/music/` path (static test).\n- [ ] `pnpm --dir apps/web test src/audio src/net/cloudflare-config.test.ts` and `pnpm --dir apps/web typecheck` pass.\n\n## Size and risks\n\nMedium: about 8 files in `apps/web`, with no engine, server or Worker change. `apps/web/public/_headers` is one of the bots' review-only paths, so the pull request waits for a person to merge it, as the Worker's headers change (#4320) did. Risks:\n\n- A browser that fetched an audio file at its bare URL would keep that copy for a year. Once this lands no client code does that, and the static test keeps it that way.\n- It relies on Cloudflare's static assets serving the same file whatever the query string. They match on the path, but one look at a voice URL's response headers on staging after the deploy confirms it.\n- A manifest's hash is taken from the file's inputs, not its bytes. A file rendered again from unchanged inputs keeps its URL, so a browser may keep the earlier render of the same line. That is harmless.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T18:05:01Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4393: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T18:05:26Z",
+    "claimed_at": "2026-11-21T18:05:53Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4393 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
