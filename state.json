@@ -15734,22 +15734,20 @@
     "what": "plan #4374 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T01:38:29Z",
+    "at": "2026-11-21T01:51:19Z",
     "notes": [
-      "delivered review #4366 on muse (run 44850657880): reviewed",
-      "delivered review #4368 on claude-6 (run 44850585610): reviewed",
-      "delivered suggest on muse (run 44849329657): suggested",
-      "delivered build #4349 on claude-3 (run 44845622818): built",
-      "delivered build #4317 on claude-7 (run 44843770653): built",
-      "started review #4373 on claude-7 (run 44851828118)",
-      "started review #4372 on claude-3 (run 44851881651)",
-      "started review #4360 on claude-6 (run 44851939720)",
+      "delivered review #4360 on claude-6 (run 44851939720): reviewed",
+      "delivered review #4372 on claude-3 (run 44851881651): approved",
+      "delivered review #4373 on claude-7 (run 44851828118): approved",
+      "delivered review #4367 on muse (run 44850510177): approved",
+      "delivered plan #4332 on agy (run 44834905934): failed",
+      "started revise #4373 on claude-7 (run 44853016428)",
+      "started plan #4332 on agy (run 44853069137)",
+      "started plan #4374 on muse (run 44853118615)",
       "nothing more to start: nothing is queued",
-      "pruned 5 plan file(s) older than 7 days",
-      "#4371: typed it Task",
-      "#4370: typed it Task",
-      "#4369: typed it Task",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
+      "pruned 1 plan file(s) older than 7 days",
+      "#4374: typed it Task",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16455,7 +16453,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T01:38:29Z",
+  "loop_tick": "2026-11-21T01:51:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
