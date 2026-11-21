@@ -412,8 +412,11 @@ pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Optio
 
 // Board facts by workstream: generation (B5 E19, R471)
 // Plague Counters, read here, ruled by `plague.rs` (Classic #27, #39, #43, #59, #69, #87; C+ #3);
-// `permanents_on_field` is every permanent on the field in R68's order, face-down included.
-pub use crate::plague::{permanents_on_field, plague_multiplier_of, plague_on, plague_on_field};
+// `permanents_on_field` is every permanent on the field in R68's order, face-down included;
+// `reachable_permanents_on_field` the same less the Dormant cards (R4322000).
+pub use crate::plague::{
+    permanents_on_field, plague_multiplier_of, plague_on, plague_on_field, reachable_permanents_on_field,
+};
 
 // Burn and Toxic (Stinkyscape+ E2, R3540000), ruled by `afflictions.rs`.
 pub use crate::afflictions::{burn_on, converts_to, hero_burn_of, hero_toxic_of, toxic_on};
@@ -659,12 +662,15 @@ pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameE
 }
 
 /// R3550009: every enemy permanent — the opponent's acting units, then their backrow, each once
-/// (Stinkyscape+ #25 Snom Bunny's Death). Copied from Classic #40 MC Tech's pick.
+/// (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's count and pick read it too. A Dormant
+/// card is none (R4322000): `active_units_of` leaves out a Dormant Unit, and the backrow walk leaves
+/// out a Dormant card.
 pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let enemy = opponent_of(player);
     let backrow: Vec<CardInstance> = crate::zones::slots_of(enemy, Row::Backrow)
         .iter()
         .flat_map(|slot| card_at(state, slot).cloned())
+        .filter(|card| !crate::slumber::is_slumbering(card))
         .collect();
     let mut permanents: Vec<CardInstance> = active_units_of(state, enemy).into_iter().cloned().collect();
     // R1081000: a Unit standing in the backrow is already among the units — one permanent, once.

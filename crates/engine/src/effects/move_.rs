@@ -14,7 +14,7 @@ use crate::effects::targets::{
 };
 use crate::mana::{effective_cost, is_x_cost};
 use crate::ownership::take_into_hand;
-use crate::plague::permanents_on_field;
+use crate::plague::reachable_permanents_on_field;
 use crate::query::zone_cards;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
@@ -120,12 +120,13 @@ pub struct ExileRandomFromArgs {
 }
 
 /// MD-D27 (Meditative #69 The Maestro): exile `count` different random cards of `player`'s zone (the
-/// field's face-down cards included), picked at apply time off the match rng.
+/// field's face-down cards included, never a Dormant one, R4322000), picked at apply time off the match
+/// rng.
 pub fn exile_random_from(args: ExileRandomFromArgs) -> Effect {
     Effect::new("exileRandomFrom", move |ctx| {
         let player = player_of(ctx, args.player);
         let ids: Vec<String> = match args.from {
-            ExileRandomZone::Field => permanents_on_field(ctx.state, player)
+            ExileRandomZone::Field => reachable_permanents_on_field(ctx.state, player)
                 .iter()
                 .filter(|card| card.controller == player)
                 .map(|card| card.id.clone())

@@ -167,3 +167,54 @@ mod r452_r471_placements_inside_a_random_cast {
         );
     }
 }
+
+/// A permanent put on the field Dormant, stamped Slumber by hand (white-box, as `board_geometry.rs`).
+fn put_dormant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> String {
+    let card = put(state, def_id, at, json!({}));
+    find_instance_mut(state, &card.id).expect("the permanent").slumber = Some(Slumber { turns: Some(2) });
+    card.id
+}
+
+fn plague_of(state: &GameState, id: &str) -> i32 {
+    find_instance(state, id)
+        .and_then(|card| card.counters.plague)
+        .unwrap_or(0)
+}
+
+/// R4322000: a placement drawn at random draws only among the permanents an effect reaches, so it
+/// never lands on a Dormant card (§6.1 Dormant, R1839000), as a placement its caster chooses already
+/// does not. A Mayor's placement (R1200) takes the same random branch over the same pool.
+mod r4322000_a_random_placement_never_lands_on_a_dormant_permanent {
+    use super::*;
+
+    #[test]
+    fn r4322000_beside_an_awake_permanent_every_placement_lands_on_the_awake_one() {
+        for n in 0..16 {
+            let mut state = game(&format!("pr-dormant-{n}"));
+            let awake = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({})).id;
+            let dormant = put_dormant(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1));
+            cast_from_box(&mut state);
+            assert!(state.pending.is_none(), "seed {n}");
+            assert_eq!(
+                plague_of(&state, &dormant),
+                0,
+                "seed {n}: none on the Dormant card"
+            );
+            assert_eq!(
+                plague_of(&state, &awake),
+                TOKENS,
+                "seed {n}: all on the awake one"
+            );
+        }
+    }
+
+    #[test]
+    fn r4322000_with_only_dormant_permanents_the_placements_fizzle() {
+        let mut state = game("pr-dormant-only");
+        put_dormant(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
+        put_dormant(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1));
+        cast_from_box(&mut state);
+        assert!(state.pending.is_none());
+        assert_eq!(tokens_on_field(&state), 0);
+    }
+}
