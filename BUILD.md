@@ -142,7 +142,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `TIMEOUT_ANSWER_CAP` | 500 | §2.5, R79 |
 | `CAST_ON_DRAW_CHAIN_CAP` | 20 | R58 |
 | `CAST_ON_DRAW_ACTION_CAP` | `LIBRARY_CAP` (60): cast-on-draw cards one action casts over all its chains | §2.4, R2067000 |
-| `RESOLUTION_EVENT_CAP` | 2000: the most events one interaction emits before its loop stops at the loop cap (measured maximum 455, a play of Stinkyscape #4.6 The Big Crunch, fuzz seed 23; R2067000's sixty-cast action 523) | §10.3, R3925000 |
+| `RESOLUTION_EVENT_CAP` | 2000: the most events one interaction emits before its loop stops at the loop cap (measured maxima: fuzz 455, a play of Stinkyscape #4.6 The Big Crunch, seed 23, also `perf --smoke`'s; handicap 285, a play of Stinkyscape+ #80 The Last Voyage, seed 148; Duos 220, an End turn Classic #57 Echo cut short, seed 60; `gate` 278, an End turn Classic+ #47 Jogg's Box cut short; golden 16, the setup; R2067000's sixty-cast action 523) | §10.3, R3925000 |
 | `LIBRARY_CAP` | 60 | R80 |
 | `ANTI_ONESHOT_CAP` | `{ base: 4, radiant: 3 }` (5 and 3 until #2657) | §8 #73 |
 | `QUICKSTRIKER_COMBO_MULTIPLE` | `{ base: 1, radiant: 2 }`: the X each Quickstriker's granted Combo deals, as one hit | §8 #38, R281 |

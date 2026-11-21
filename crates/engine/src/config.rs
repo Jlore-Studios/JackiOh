@@ -1313,11 +1313,17 @@ pub const LAST_BOARD_CARD_COST: i32 = 0;
 /// R3925000, §10.3: the most events one interaction (an action of a seat, each answer a timeout gives,
 /// an autopilot or AI action, a turn the engine ends for a seat) emits before its resolution loop stops
 /// at the loop cap (`loop_cap.rs`): every `GameEvent` counts. Measured 2026-11-21 with
-/// `JACKIOH_LOOP_PEAK` on the release build: the most any one interaction emitted was 455, a play of
-/// Stinkyscape #4.6 The Big Crunch (fuzz seed 23, step 124, turn 25; `perf --smoke`'s heaviest state is
-/// the same play), against 285 in the handicapped wave, 220 in the Duos wave, 278 in `gate` and 16 in the
-/// golden fixture; R2067000's sixty-cast end of turn (`plays_and_casts.rs`) emits 523. 2,000 keeps about
-/// four times the most a game without a loop reaches.
+/// `JACKIOH_LOOP_PEAK` on the release build, the most events any one interaction emitted per corpus and
+/// the interaction that set it:
+///  - `fuzz --seeds 200`: 455, p1's play of Stinkyscape #4.6 The Big Crunch (seed 23, step 124, turn 25),
+///    the overall maximum; `perf --smoke`'s heaviest is the same play;
+///  - `fuzz --handicap`: 285, p2's play of Stinkyscape+ #80 The Last Voyage (seed 148, turn 26);
+///  - `fuzz --duos`: 220, an End turn that Classic #57 Echo cut short (seed 60, turn 44);
+///  - `gate`: 278, an End turn that Classic+ #47 Jogg's Box cut short (turn 14);
+///  - the golden fixture (`golden check`): 16, the setup.
+///
+/// R2067000's sixty-cast end of turn (`plays_and_casts.rs`) emits 523. 2,000 keeps about four times the
+/// most a game without a loop reaches.
 pub const RESOLUTION_EVENT_CAP: usize = 2_000;
 
 /// §4.5 loops until nothing changes; a check still going round at `RESOLUTION_EVENT_CAP` passes stops at
