@@ -778,7 +778,10 @@ An alert is an error log line marked `alert = true`: `api::http::log_alert`'s (`
 `match.rejections.unusual`, `ranked.profile_missing`, `game_records.fold_poison`, `bug.found`,
 `bug.reports.refused`, `api.route.failing`, and `client.error`, a crash in a player's browser sent to `POST /api/client-errors`, #3619) and `loops.rs`'s (`loop.crashed`, `loop.returned`, and a sweep step's `<step>.failing`). `alerts.rs` (#3595) tells people
 of each, from a tracing layer beside the JSON log, at most once an hour per event in a process
-(`ALERT_WINDOW_MS`; the rest are logged as `alert.held`, and the next notice says how many):
+(`ALERT_WINDOW_MS`; the rest are logged as `alert.held`, and the next notice says how many). `alerts::meaning`
+explains each event in its issue and its email, and `alerts.rs`'s test `every_alert_the_server_raises_says_what_it_means`
+scans the server's source for each `FailingStreak::new` step, `log_alert` event and `alert = true` line and
+fails on one that has no text:
 
 - **A GitHub issue**, with `CREATE_ISSUES_TOKEN`, titled `Patch: alert <event> on <site>` (the site being the
   first of `PUBLIC_ORIGINS`) and labelled `ALERT_ISSUE_LABELS` (`architecture`, `human`: triage assigns both
@@ -807,7 +810,9 @@ pass), with the failure's text in the line's `message` (the issue shows only the
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
 `matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
 purge's seven, `game_records.fold`, `game_records.refile`, `retention.purge`, `chat.purge`, `duos.logs.purge`,
-`idempotency.sweep` and `practice.sweep`. A reaper pass in which any match would not reap counts as failed,
+`idempotency.sweep` and `practice.sweep`. Each step's text in `alerts::meaning` names its job and what
+players notice while it fails (for the matchmaker, that nobody who queues gets a game), and says that the
+email's `message` field holds the error. A reaper pass in which any match would not reap counts as failed,
 so one wedged match is reported while the others reap; a co-op pass in which any match would not end
 (`duos::sweep` answers the ids, #3826) counts as failed too, and the open-room reap (R1450) is a step of its
 own. The first good pass after an alert logs
