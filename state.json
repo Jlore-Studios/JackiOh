@@ -15906,21 +15906,21 @@
     "what": "spot-check #4360 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-21T01:24:37Z",
+    "at": "2026-11-21T01:38:29Z",
     "notes": [
-      "delivered suggest on muse (run 44849271300): suggested",
-      "delivered review #4362 on muse (run 44849205231): reviewed",
-      "delivered build #4225 on claude-6 (run 44844013043): built",
-      "delivered build #4348 on muse (run 44843847131): built",
-      "delivered build #4246 on claude-6 (run 44834777962): built",
-      "started review #4367 on muse (run 44850510177)",
-      "started review #4368 on claude-6 (run 44850585610)",
-      "started review #4366 on muse (run 44850657880)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 44%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-21T03:00:00Z; it can start a build or a plan again in 1h 28m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 1 plan file(s) older than 7 days",
-      "#4365: typed it Task",
-      "#4364: typed it Task",
-      "#4363: typed it Task",
+      "delivered review #4366 on muse (run 44850657880): reviewed",
+      "delivered review #4368 on claude-6 (run 44850585610): reviewed",
+      "delivered suggest on muse (run 44849329657): suggested",
+      "delivered build #4349 on claude-3 (run 44845622818): built",
+      "delivered build #4317 on claude-7 (run 44843770653): built",
+      "started review #4373 on claude-7 (run 44851828118)",
+      "started review #4372 on claude-3 (run 44851881651)",
+      "started review #4360 on claude-6 (run 44851939720)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days",
+      "#4371: typed it Task",
+      "#4370: typed it Task",
+      "#4369: typed it Task",
       "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -16627,7 +16627,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T01:24:37Z",
+  "loop_tick": "2026-11-21T01:38:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
