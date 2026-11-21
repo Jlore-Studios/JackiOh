@@ -32311,5 +32311,478 @@
       "stinkyscapeplus-076"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.8e",
+    "date": "2026-11-21",
+    "title": "Stinkyscape+ Balance Changes V",
+    "source": "#4353",
+    "notes": "The designer's fifth Stinkyscape+ balance pass (#4353). Keywords: an Indestructible Unit card is Immutable innately, never adding the keyword, so no Transform, Vanilla, Fuse-onto, Nerf or Buff reaches it (R4353000; Indestructible Field Spells are not, so Ivory Tower, Heroic Power, In Too Deep and Rod of Ages keep their fusing and tuning); Immutable bars no targeting, R781001's targeting half and R781002 superseded, so Tesla damages and Twice Forward copies an Immutable card (R4353001); Evasive gains Hearthstone's Elusive, no Spell or Field Spell targeting it in play (R4353002); Supernova's fresh Alnilam still takes the board in (R4353003). Cards: Repeater v5 Activate 4 and 2%4 damage, the Beams 3%6, 5%10 and 7%14, Silly Silas (6) with Float reduces cost and no longer summoned for the opponent, Basket of Crawlers 2, Legacy: Speciesist (3) 7/1, Speciesist (2) 4/1 losing 1 mana next turn (R4353021), Medina Enforcer (3) 4/7 on an Activate, Jlockeed Shredder-12's base face without Pierce, A Glimpse into the Endless Sea's fatigue immunity (R4353020), Mindustrial Revolution adding at once (R4353022), Open Enrollment Embiggened (2) (R4353023), Mend Projector's +Health (R4353024, R4353025 for Silas), Accelerationist +3%+6, Thorium Wall 0/10 and 0/40, Job Application (0), Noxious Rounds (3); each changed script keeps its v0.6.8b one (R767000). Rulings R4353000-R4353003 and R4353020-R4353025.",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes V",
+      "new": [],
+      "balance": [
+        "Repeater v5 is Activate 4, up from Activate 3, and deals 2 damage (Radiant 4), down from 3 (Radiant 6).",
+        "Beam v5 deals 7 damage (Radiant 14), down from 8 (Radiant 16); Beam v4 deals 5 (Radiant 10), down from 6 (Radiant 12); Beam v3 deals 3 (Radiant 6), down from 4 (Radiant 8).",
+        "Silly Silas costs (6), up from (4), is no longer summoned for your opponent, and gains \"Float reduces cost.\" on both faces.",
+        "Basket of Crawlers adds 2 Crawlers, down from 3.",
+        "Legacy: Speciesist costs (3), up from (2), and is 7/1 (Radiant 14/2), up from 2/1 (Radiant 4/2).",
+        "Speciesist costs (2), down from (3), and is 4/1 (Radiant 8/2), down from 7/1 (Radiant 14/2); its Cry also leaves you 1 less mana next turn.",
+        "Medina Enforcer costs (3), up from (2), and is 4/7 (Radiant 8/14), up from 4/4 (Radiant 8/8); it Buffs every card in your hand with an Activate, once a turn, instead of at the end of your turn.",
+        "Jlockeed Shredder-12 loses Pierce; its Radiant face keeps it.",
+        "A Glimpse into the Endless Sea also makes you immune to fatigue damage for the rest of the game.",
+        "Mindustrial Revolution also adds its Mindustrial card at once when you cast it.",
+        "Open Enrollment gains Embiggened (2): the cards it adds cost (1) less (Radiant: they cost (0)).",
+        "Mend Projector also gives every Unit it heals +1 Health (Radiant +2).",
+        "Accelerationist has +3/+3 (Radiant +6/+6) for every card that Evolved this game, up from +2/+2 (Radiant +4/+4).",
+        "Thorium Wall is 0/10 (Radiant 0/20), up from 0/8 (Radiant 0/16), and Embiggened 0/40 (Radiant 0/80), up from 0/32 (Radiant 0/64).",
+        "Job Application costs (0), down from (1).",
+        "Noxious Rounds costs (3), down from (4)."
+      ],
+      "changes": [
+        "Indestructible Units are Immutable too: nothing transforms, Silences, Nerfs, Buffs or fuses onto them. Indestructible Field Spells are not.",
+        "Immutable no longer stops Spells, Field Spells and Field Traps from targeting a card; they still can't change its text.",
+        "Evasive cards can't be targeted by Spells or Field Spells, yours or your opponent's, while they are on the field."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "99bf500496f700859a27af3d493cbcc4e1593403"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-005",
+      "classic-019",
+      "classic-020",
+      "classic-061",
+      "classic-062",
+      "classic-071",
+      "classic-082",
+      "classicplus-031",
+      "classicplus-065",
+      "classicplus-071",
+      "core-002",
+      "core-007",
+      "core-031",
+      "core-032",
+      "core-034",
+      "core-037",
+      "core-052",
+      "core-054",
+      "core-083",
+      "core-085",
+      "core-091",
+      "core-092",
+      "core-093",
+      "core-098",
+      "meditative-009",
+      "meditative-024",
+      "meditative-039",
+      "meditative-047",
+      "meditative-049",
+      "meditative-051",
+      "meditative-059",
+      "meditative-079",
+      "meditative-083",
+      "meditative-097",
+      "meditativeplus-022",
+      "meditativeplus-023",
+      "stinkyscape-003",
+      "stinkyscape-009",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-031",
+      "stinkyscape-050",
+      "stinkyscape-051",
+      "stinkyscape-052",
+      "stinkyscape-053",
+      "stinkyscape-054",
+      "stinkyscape-058",
+      "stinkyscape-059",
+      "stinkyscape-062",
+      "stinkyscape-081",
+      "stinkyscape-082",
+      "stinkyscape-085",
+      "stinkyscape-089",
+      "stinkyscape-099",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-130",
+      "stinkyscape-142",
+      "stinkyscape-143",
+      "stinkyscape-151",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite",
+      "stinkyscapeplus-021",
+      "stinkyscapeplus-028",
+      "stinkyscapeplus-041",
+      "stinkyscapeplus-046",
+      "stinkyscapeplus-047",
+      "stinkyscapeplus-048",
+      "stinkyscapeplus-049",
+      "stinkyscapeplus-063",
+      "stinkyscapeplus-065",
+      "stinkyscapeplus-067",
+      "stinkyscapeplus-080",
+      "stinkyscapeplus-083",
+      "stinkyscapeplus-088",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-102",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-141",
+      "stinkyscapeplus-153",
+      "stinkyscapeplus-163",
+      "stinkyscapeplus-t-alnilam",
+      "stinkyscapeplus-t-supernova",
+      "traininggrounds-034",
+      "traininggrounds-037",
+      "traininggrounds-041",
+      "traininggrounds-046",
+      "traininggrounds-058"
+    ],
+    "changes": [
+      {
+        "id": "core-002",
+        "name": "Speciesist",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.attack",
+          "base.text",
+          "radiant.attack",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-083",
+        "name": "Medina Enforcer",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.health",
+          "base.text",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-050",
+        "name": "Beam v3",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-054",
+        "name": "Beam v4",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-058",
+        "name": "Beam v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-059",
+        "name": "Repeater v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-112",
+        "name": "Job Application",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "traininggrounds-041",
+        "name": "Legacy: Speciesist",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-021",
+        "name": "Jlockeed Shredder-12",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-041",
+        "name": "Mend Projector",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-065",
+        "name": "Thorium Wall",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "base.text",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-079",
+        "name": "A Glimpse into the Endless Sea",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-096",
+        "name": "Open Enrollment",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-134",
+        "name": "Basket of Crawlers",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-153",
+        "name": "Noxious Rounds",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-163",
+        "name": "Accelerationist",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-166",
+        "name": "Mindustrial Revolution",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.9",
+    "date": "2026-11-21",
+    "title": "Patch: the daily patch, rolling up v0.6.8b to v0.6.8e",
+    "source": "patches cut at 8fc2bec80eb997ee37a6feb12ec8464fe2dcc142: v0.6.8b, v0.6.8c, v0.6.8d, v0.6.8e",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.8, each a snapshot of its own: v0.6.8b (Reignclipse prints one Armor and one Burns line); v0.6.8c (Radiant Starship Pieces use their Radiant numbers); v0.6.8d (Ayys LMAO sets its summons face-down); v0.6.8e (Stinkyscape+ Balance Changes V).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes V, and 3 more changes",
+      "new": [],
+      "balance": [
+        "Repeater v5 is Activate 4, up from Activate 3, and deals 2 damage (Radiant 4), down from 3 (Radiant 6).",
+        "Beam v5 deals 7 damage (Radiant 14), down from 8 (Radiant 16); Beam v4 deals 5 (Radiant 10), down from 6 (Radiant 12); Beam v3 deals 3 (Radiant 6), down from 4 (Radiant 8).",
+        "Silly Silas costs (6), up from (4), is no longer summoned for your opponent, and gains \"Float reduces cost.\" on both faces.",
+        "Basket of Crawlers adds 2 Crawlers, down from 3.",
+        "Legacy: Speciesist costs (3), up from (2), and is 7/1 (Radiant 14/2), up from 2/1 (Radiant 4/2).",
+        "Speciesist costs (2), down from (3), and is 4/1 (Radiant 8/2), down from 7/1 (Radiant 14/2); its Cry also leaves you 1 less mana next turn.",
+        "Medina Enforcer costs (3), up from (2), and is 4/7 (Radiant 8/14), up from 4/4 (Radiant 8/8); it Buffs every card in your hand with an Activate, once a turn, instead of at the end of your turn.",
+        "Jlockeed Shredder-12 loses Pierce; its Radiant face keeps it.",
+        "A Glimpse into the Endless Sea also makes you immune to fatigue damage for the rest of the game.",
+        "Mindustrial Revolution also adds its Mindustrial card at once when you cast it.",
+        "Open Enrollment gains Embiggened (2): the cards it adds cost (1) less (Radiant: they cost (0)).",
+        "Mend Projector also gives every Unit it heals +1 Health (Radiant +2).",
+        "Accelerationist has +3/+3 (Radiant +6/+6) for every card that Evolved this game, up from +2/+2 (Radiant +4/+4).",
+        "Thorium Wall is 0/10 (Radiant 0/20), up from 0/8 (Radiant 0/16), and Embiggened 0/40 (Radiant 0/80), up from 0/32 (Radiant 0/64).",
+        "Job Application costs (0), down from (1).",
+        "Noxious Rounds costs (3), down from (4)."
+      ],
+      "changes": [
+        "Ayys LMAO's Ayys and Tiny Asteroids are set face-down in your backrow as Cloaked cards, hidden from your opponent until you Reveal them. With your backrow full they are summoned face-up as before.",
+        "Indestructible Units are Immutable too: nothing transforms, Silences, Nerfs, Buffs or fuses onto them. Indestructible Field Spells are not.",
+        "Immutable no longer stops Spells, Field Spells and Field Traps from targeting a card; they still can't change its text.",
+        "Evasive cards can't be targeted by Spells or Field Spells, yours or your opponent's, while they are on the field."
+      ],
+      "text": [
+        "Reignclipse prints one Armor number and one Burns line."
+      ],
+      "fixes": [
+        "A Radiant Starship Piece fused into your Starship now deals, heals and buffs by its Radiant numbers, and the Starship's card shows them.",
+        "A Radiant card fused into another card, as by Fusion Lab, now uses and shows its Radiant numbers."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-005",
+      "classic-019",
+      "classic-020",
+      "classic-061",
+      "classic-062",
+      "classic-071",
+      "classic-082",
+      "classicplus-025",
+      "classicplus-031",
+      "classicplus-065",
+      "classicplus-071",
+      "core-002",
+      "core-007",
+      "core-031",
+      "core-032",
+      "core-034",
+      "core-037",
+      "core-052",
+      "core-054",
+      "core-055",
+      "core-083",
+      "core-085",
+      "core-091",
+      "core-092",
+      "core-093",
+      "core-098",
+      "meditative-009",
+      "meditative-024",
+      "meditative-039",
+      "meditative-047",
+      "meditative-049",
+      "meditative-051",
+      "meditative-059",
+      "meditative-079",
+      "meditative-083",
+      "meditative-097",
+      "meditativeplus-022",
+      "meditativeplus-023",
+      "stinkyscape-003",
+      "stinkyscape-009",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-031",
+      "stinkyscape-043",
+      "stinkyscape-049",
+      "stinkyscape-050",
+      "stinkyscape-051",
+      "stinkyscape-052",
+      "stinkyscape-053",
+      "stinkyscape-054",
+      "stinkyscape-058",
+      "stinkyscape-059",
+      "stinkyscape-062",
+      "stinkyscape-081",
+      "stinkyscape-082",
+      "stinkyscape-085",
+      "stinkyscape-089",
+      "stinkyscape-093",
+      "stinkyscape-099",
+      "stinkyscape-111",
+      "stinkyscape-112",
+      "stinkyscape-130",
+      "stinkyscape-133",
+      "stinkyscape-142",
+      "stinkyscape-143",
+      "stinkyscape-151",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite",
+      "stinkyscapeplus-021",
+      "stinkyscapeplus-028",
+      "stinkyscapeplus-041",
+      "stinkyscapeplus-046",
+      "stinkyscapeplus-047",
+      "stinkyscapeplus-048",
+      "stinkyscapeplus-049",
+      "stinkyscapeplus-063",
+      "stinkyscapeplus-065",
+      "stinkyscapeplus-067",
+      "stinkyscapeplus-076",
+      "stinkyscapeplus-080",
+      "stinkyscapeplus-083",
+      "stinkyscapeplus-088",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-102",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-133",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-141",
+      "stinkyscapeplus-153",
+      "stinkyscapeplus-163",
+      "stinkyscapeplus-t-alnilam",
+      "stinkyscapeplus-t-supernova",
+      "stinkyscapeplus-t-terminus-starship-farthest-shore",
+      "traininggrounds-034",
+      "traininggrounds-037",
+      "traininggrounds-041",
+      "traininggrounds-046",
+      "traininggrounds-058"
+    ],
+    "includes": [
+      "v0.6.8b",
+      "v0.6.8c",
+      "v0.6.8d",
+      "v0.6.8e"
+    ],
+    "changes": []
   }
 ]
