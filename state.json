@@ -37165,7 +37165,9 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-21T03:41:21Z",
         "every": 5,
+        "findings": 0,
         "head": "bc6f1cb0b98857f3fd25b2a7358065e2ee5ce85b",
         "issue": 4317,
         "merged_at": "2026-11-21T03:25:06Z",
@@ -37178,12 +37180,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:cef22dde-1795232005",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44861767104",
         "sha": "1a46b42f91691d55cfe0fc039830cf3ce3b05af4",
         "started_at": "2026-11-21T03:33:45Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the server checks a practice game's deck when it issues the seed, and the hourly purge deletes every account's lapsed seeds",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 410
