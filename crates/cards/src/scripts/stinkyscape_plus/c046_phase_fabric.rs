@@ -1,6 +1,6 @@
-//! SPEC §8.12 S+ #46 Phase Fabric (§6.1 Immutable, Immune to Spells, Evasive; R81, R781001, R1420,
-//! R3535000, R3543002, R3547000, R3547002): (1) Spell, Epic, Mindustrial, Mineral, a card of the held
-//! Stinkyscape+ set.
+//! SPEC §8.12 S+ #46 Phase Fabric (§6.1 Immutable, Immune to Spells, Evasive; R81, R1420, R3535000,
+//! R3543002, R3547000, R3547002, R4353001, R4353002): (1) Spell, Epic, Mindustrial, Mineral, a card of
+//! the held Stinkyscape+ set.
 //!   Base:    "Give a Unit Immutable, Immune to Spells, Divine Shield and Armor {armor}." — 2.
 //!   Radiant: "Give a Unit Immutable, Immune to Spells, Divine Shield, Armor {armor} and Can't be
 //!            attacked." — 4.
@@ -8,9 +8,10 @@
 //! Engine: a declared target, any Unit on either side (R81, R3547000), then `grant_keyword` Immutable
 //! and Immune to Spells, and on the Radiant face Evasive, which is "Can't be attacked" as a keyword
 //! (R3543002, the issue's reading): no attack may target the Unit, it implies Can't Defend without
-//! adding it, and effects still reach it. Immutable and Immune to Spells bar every Spell's pick of the
-//! Unit from then on, this card's own among them (R781001, E35); Immune to Spells is given last, so the
-//! Spell's own remaining grants are not turned away by it (R3547002). Issue #3951 added Divine Shield to
+//! adding it, and effects still reach it, but for a Spell's or a Field Spell's aim (R4353002). Immune to
+//! Spells bars every Spell's pick of the Unit from then on, this card's own among them (E35; Immutable
+//! bars no aim, R4353001); Immune to Spells is given last, so the Spell's own remaining grants are not
+//! turned away by it (R3547002). Issue #3951 added Divine Shield to
 //! both faces; through v0.6.4c neither gave it, which `script_v0_6_4c` keeps for those replays (R767000).
 //! Issue #3996 added Armor `armor` to both faces (§6.1: a granted Armor N, stacking with every other
 //! source), given with the rest before Immune to Spells; through v0.6.5b neither gave it, which
@@ -78,7 +79,7 @@ pub fn script_v0_6_4c() -> CardScripts {
     }
 }
 
-// S+ #46 Phase Fabric — SPEC §8.12 row S+ 46 (R81, R781001, R3543002, R3547000, R3547002).
+// S+ #46 Phase Fabric — SPEC §8.12 row S+ 46 (R81, R3543002, R3547000, R3547002, R4353001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

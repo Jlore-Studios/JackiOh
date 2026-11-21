@@ -1090,6 +1090,23 @@
   }
 }
 
+/* #4349 (R4349000): an iPad mini held upright (744 px) leaves the picker 210 px, where "Compare with" beside a
+   16 px select cut "Another deck or a trio…" to a few letters, and that text needs 218 px even alone. From 601
+   to 760 px, on a screen taller than a phone on its side, the label sits over the select (as from 761 px) and
+   the select takes the body's 13 px (as at 820 px). A phone on its side keeps the row and its 16 px, which
+   stops a phone zooming into the field. */
+@media (min-width: 601px) and (min-height: 501px) and (max-width: 760px) {
+  .ws-compare-pick {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .ws-compare-pick .ws-select {
+    font-size: var(--type-md);
+  }
+}
+
 /* A phone (the one-column editor, R3956000): the head is one row, so the name field takes what
    Back, the portrait and History leave. */
 @media (max-width: 600px) {

@@ -2,7 +2,8 @@
 //!   Base:    "Tribute 2, Charge, Flying, Ranged, Divine Shield, Immutable, Immune to Spells"
 //!   Radiant: "Tribute 2, Charge, Flying, Ranged, Divine Shield, Immutable, Immune to Spells, Pierce"
 //! Engine: its keywords are catalog data (§6.1): Charge, Flying, Ranged, Divine Shield, Immutable (R23,
-//! R781001) and Immune to Spells (E35, `restrictions::spell_cannot_reach`): no Spell may target it,
+//! R4353001: no bar on aim) and Immune to Spells (E35, `restrictions::spell_cannot_reach`): no Spell may
+//! target it,
 //! and a Spell's sweep passes it by, its damage and its destroys alike, its Divine Shield kept; a Unit's
 //! or a Trap's lands. Tribute 2 is its play's cost (§6.3, `StaticFlags.tribute`, R101). Since #2521 it
 //! prints Immune to Spells in place of its Immune to Spell Damage flag (R1849000) and is no Starship

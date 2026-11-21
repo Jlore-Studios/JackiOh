@@ -21,7 +21,7 @@
 //! 2. every note has a `proven_in` path, and each exists and holds a test of the id that runs (#1718,
 //!    `proves`): a Rust `fn` or `mod` named with the token `r<n>`, a TypeScript `it`, `test` or
 //!    `describe` titled with `R<n>`, or an SQL `\echo` heading naming it;
-//! 3. every `r<n>` token of a Rust `fn` or `mod` name and every `R<n>` cited in `CITING_ROOTS`
+//! 3. every `r<n>` token of a Rust `fn` or `mod` name and every `R<n>` cited in `crates`, `apps/web/src`, `apps/edge/src`, `apps/admin/src` or `e2e`
 //!    (comments included) has a note;
 //! 4. every `[[…]]` link in `spec/` outside code resolves to a ruling note, a section heading or a note,
 //!    and a `[[CARDS#…]]` one to a heading `spec/CARDS.md` has as `index` would write it now, not as the
@@ -82,7 +82,7 @@ pub fn run(args: Args) -> Result<()> {
 }
 
 /// The directories `check`'s third rule reads, recursively.
-const CITING_ROOTS: &[&str] = &["crates", "apps/web/src", "apps/edge/src", "e2e"];
+const CITING_ROOTS: &[&str] = &["crates", "apps/web/src", "apps/edge/src", "apps/admin/src", "e2e"];
 
 /// Directories never read: build output, dependencies, test artefacts and generated packages.
 const SKIPPED_DIRS: &[&str] = &[
@@ -1228,7 +1228,18 @@ fn section_ids(text: &str) -> Vec<String> {
 
 /* the checks */
 
-fn check(root: &Path) -> Result<()> {
+/// The counts `problems` returns for `check`'s ok line.
+struct SpecCounts {
+    rulings: usize,
+    proofs: usize,
+    cited: usize,
+    citing_files: usize,
+    links: usize,
+}
+
+/// The problem lines `check` fails on, with the counts for its ok line, so tests can pin each
+/// line without reading stdout.
+fn problems(root: &Path) -> Result<(Vec<String>, SpecCounts)> {
     let notes = read_notes(root)?;
     let mut problems: Vec<String> = Vec::new();
 
@@ -1391,15 +1402,36 @@ fn check(root: &Path) -> Result<()> {
         problems.extend(unlinked_markers(path, text));
     }
 
+    Ok((
+        problems,
+        SpecCounts {
+            rulings: notes.len(),
+            proofs,
+            cited,
+            citing_files,
+            links,
+        },
+    ))
+}
+
+fn check(root: &Path) -> Result<()> {
+    let (problems, counts) = problems(root)?;
     for problem in &problems {
         println!("{problem}");
     }
     if !problems.is_empty() {
         bail!("spec check: {} problem(s)", problems.len());
     }
+    let SpecCounts {
+        rulings,
+        proofs,
+        cited,
+        citing_files,
+        links,
+    } = counts;
     println!(
         "spec check: {} rulings, {proofs} proofs, {cited} citations in {citing_files} files, {links} links: ok",
-        notes.len()
+        rulings
     );
     Ok(())
 }
@@ -1737,13 +1769,15 @@ mod tests {
         let _ = fs::remove_dir_all(&root);
     }
 
-    #[test]
-    fn check_holds_the_pending_paragraphs_to_their_names_and_never_the_index_to_the_notes() {
-        let root = std::env::temp_dir().join(format!("jackioh-spec-pending-{}", std::process::id()));
+    /// A tree `problems` passes: one R3 note proved by one Rust test. Each test passes its
+    /// own `name`, since tests run in parallel under one process id.
+    fn passing_tree(name: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(name);
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("spec").join("rulings")).unwrap();
-        fs::create_dir_all(root.join("spec").join("pending")).unwrap();
         fs::create_dir_all(root.join("crates").join("cards")).unwrap();
+        fs::create_dir_all(root.join("apps").join("edge").join("src")).unwrap();
+        fs::create_dir_all(root.join("apps").join("admin").join("src")).unwrap();
         fs::write(root.join(CATALOG_PATH), "{}").unwrap();
         fs::write(
             root.join("crates").join("fatigue.rs"),
@@ -1755,13 +1789,20 @@ mod tests {
             "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
         )
         .unwrap();
+        root
+    }
+
+    #[test]
+    fn check_holds_the_pending_paragraphs_to_their_names_and_never_the_index_to_the_notes() {
+        let root = passing_tree(&format!("jackioh-spec-pending-{}", std::process::id()));
+        fs::create_dir_all(root.join("spec").join("pending")).unwrap();
         // No index at all and a paragraph pending: a branch writes neither file every branch shares.
         fs::write(
             root.join("spec").join("pending").join("2198.md"),
             "**[[R3]] is new.**\n",
         )
         .unwrap();
-        let clean = check(&root);
+        let (clean, _) = problems(&root).unwrap();
 
         fs::write(root.join("spec").join("pending").join("2199.md"), " \n").unwrap();
         fs::write(
@@ -1769,54 +1810,41 @@ mod tests {
             "**[[R3]]**\n",
         )
         .unwrap();
-        let named = check(&root);
-        let problems = pending_problems(&root, &read_pending(&root).unwrap());
+        let (named, _) = problems(&root).unwrap();
+        let pending = pending_problems(&root, &read_pending(&root).unwrap());
         let _ = fs::remove_dir_all(&root);
-        assert!(clean.is_ok(), "{clean:?}");
-        assert_eq!(named.unwrap_err().to_string(), "spec check: 2 problem(s)");
+        assert!(clean.is_empty(), "{clean:?}");
         assert_eq!(
-            problems,
+            named,
             vec![
                 "spec/pending/2199.md: a pending paragraph is empty".to_string(),
                 "spec/pending/temp-spec-2200.md: a pending paragraph is `spec/pending/<n>.md`, n the number of its issue or pull request".to_string(),
             ]
         );
+        assert_eq!(named, pending);
     }
 
     #[test]
     fn check_reads_edge_workers_citations() {
-        let root = std::env::temp_dir().join(format!("jackioh-spec-edge-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
-        fs::create_dir_all(root.join("spec").join("rulings")).unwrap();
-        fs::create_dir_all(root.join("crates").join("cards")).unwrap();
-        fs::create_dir_all(root.join("apps").join("edge").join("src")).unwrap();
-        fs::write(root.join(CATALOG_PATH), "{}").unwrap();
-        fs::write(
-            root.join("crates").join("fatigue.rs"),
-            "#[test]\nfn r3_fatigue() {}\n",
-        )
-        .unwrap();
-        fs::write(
-            root.join("spec").join("rulings").join("R0003.md"),
-            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
-        )
-        .unwrap();
+        let root = passing_tree(&format!("jackioh-spec-edge-{}", std::process::id()));
         let edge = root.join("apps").join("edge").join("src").join("edge.ts");
         fs::write(&edge, "// R3 ok\n").unwrap();
-        let clean = check(&root);
+        let (clean, _) = problems(&root).unwrap();
         // Built dynamically: this file is itself what `check` reads (rule 3).
-        let bogus = format!("// R{} bogus\n", 999_999);
-        fs::write(&edge, bogus).unwrap();
-        let broken = check(&root);
+        let bogus = 999_999;
+        fs::write(&edge, format!("// R{bogus} bogus\n")).unwrap();
+        let (broken, _) = problems(&root).unwrap();
         fs::write(&edge, "// R3 ok\n").unwrap();
-        let restored = check(&root);
+        let (restored, _) = problems(&root).unwrap();
         let _ = fs::remove_dir_all(&root);
-        assert!(clean.is_ok(), "{clean:?}");
-        // `check` prints each problem and bails with only their count, so the
-        // count pins it: the tree is identical to the passing one but for the
-        // edge file's bogus id (its line names apps/edge/src/edge.ts on stdout).
-        assert_eq!(broken.unwrap_err().to_string(), "spec check: 1 problem(s)");
-        assert!(restored.is_ok(), "{restored:?}");
+        assert!(clean.is_empty(), "{clean:?}");
+        assert_eq!(
+            broken,
+            vec![format!(
+                "apps/edge/src/edge.ts:1: R{bogus} has no note in spec/rulings/"
+            )]
+        );
+        assert!(restored.is_empty(), "{restored:?}");
         assert!(proves("apps/edge/src/routing.test.ts", "it(\"R3 ok\", () => {});", 3).unwrap());
     }
 
@@ -1947,21 +1975,7 @@ mod tests {
 
     #[test]
     fn check_fails_on_an_unlinked_ruling_marker_until_it_links_its_ruling() {
-        let root = std::env::temp_dir().join(format!("jackioh-spec-markers-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
-        fs::create_dir_all(root.join("spec").join("rulings")).unwrap();
-        fs::create_dir_all(root.join("crates").join("cards")).unwrap();
-        fs::write(root.join(CATALOG_PATH), "{}").unwrap();
-        fs::write(
-            root.join("crates").join("fatigue.rs"),
-            "#[test]\nfn r3_fatigue() {}\n",
-        )
-        .unwrap();
-        fs::write(
-            root.join("spec").join("rulings").join("R0003.md"),
-            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
-        )
-        .unwrap();
+        let root = passing_tree(&format!("jackioh-spec-markers-{}", std::process::id()));
         index(&root).unwrap();
         let section = root.join("spec").join("02-core-systems.md");
         fs::write(
@@ -1969,16 +1983,329 @@ mod tests {
             "## 2. Core systems\n\n**Ruling:** the Nth empty draw deals N damage.\n",
         )
         .unwrap();
-        let unlinked = check(&root);
+        let (unlinked, _) = problems(&root).unwrap();
         fs::write(
             &section,
             "## 2. Core systems\n\n**Ruling:** the Nth empty draw deals N damage ([[R3]]).\n",
         )
         .unwrap();
-        let linked = check(&root);
+        let (linked, _) = problems(&root).unwrap();
         let _ = fs::remove_dir_all(&root);
-        assert_eq!(unlinked.unwrap_err().to_string(), "spec check: 1 problem(s)");
-        assert!(linked.is_ok(), "{linked:?}");
+        assert_eq!(
+            unlinked,
+            vec![
+                "spec/02-core-systems.md:3: a ruling marker whose sentence links no ruling: add the `[[R<n>]]` of the note that decides it (REVIEW A2.3)".to_string()
+            ]
+        );
+        assert!(linked.is_empty(), "{linked:?}");
+    }
+
+    #[test]
+    fn problems_rejects_a_note_whose_id_belongs_elsewhere() {
+        let root = passing_tree("jackioh-spec-id-elsewhere");
+        let note = root.join("spec").join("rulings").join("R0003.md");
+        fs::write(
+            &note,
+            "---\nid: R4\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec![
+                "spec/rulings/R0003.md: `id: R4` belongs in R0004.md".to_string(),
+                "spec/rulings/R0003.md: `proven_in` crates/fatigue.rs has no test that runs named after R4 (a #[test] fn, a fn a test macro lists or a mod holding one, with the token r4; an it/test/describe title with R4 and no .skip, .todo, .fixme or .only; or an SQL `### R4: …` heading)".to_string(),
+                "crates/fatigue.rs:2: `r3_fatigue` names r3, which has no note in spec/rulings/".to_string(),
+                "spec/rulings/R0003.md: `cards` names R3, which has no note in spec/rulings/".to_string(),
+            ]
+        );
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_a_duplicate_ruling_id() {
+        let root = passing_tree("jackioh-spec-duplicate-id");
+        let note = root.join("spec").join("rulings").join("R0003.md");
+        let text = fs::read_to_string(&note).unwrap();
+        fs::write(root.join("spec").join("rulings").join("R0004.md"), text).unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec![
+                "spec/rulings/R0004.md: `id: R3` belongs in R0003.md".to_string(),
+                "spec/rulings/R0004.md: R3 is also the id of spec/rulings/R0003.md".to_string(),
+            ]
+        );
+        fs::remove_file(root.join("spec").join("rulings").join("R0004.md")).unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_a_note_with_no_id() {
+        let root = passing_tree("jackioh-spec-no-id");
+        let note = root.join("spec").join("rulings").join("R0003.md");
+        fs::write(
+            &note,
+            "---\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec![
+                "spec/rulings/R0003.md: no `id` in the front matter".to_string(),
+                "crates/fatigue.rs:2: `r3_fatigue` names r3, which has no note in spec/rulings/".to_string(),
+                "spec/rulings/R0003.md: `cards` names R3, which has no note in spec/rulings/".to_string(),
+            ]
+        );
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_a_note_with_a_non_ruling_id() {
+        let root = passing_tree("jackioh-spec-non-ruling-id");
+        let note = root.join("spec").join("rulings").join("R0003.md");
+        fs::write(
+            &note,
+            "---\nid: X3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec![
+                "spec/rulings/R0003.md: `id: X3` is not a ruling id (R<n>)".to_string(),
+                "crates/fatigue.rs:2: `r3_fatigue` names r3, which has no note in spec/rulings/".to_string(),
+                "spec/rulings/R0003.md: `cards` names R3, which has no note in spec/rulings/".to_string(),
+            ]
+        );
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_an_empty_proven_in() {
+        let root = passing_tree("jackioh-spec-empty-proven-in");
+        let note = root.join("spec").join("rulings").join("R0003.md");
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in: []\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec!["spec/rulings/R0003.md: R3 lists no `proven_in` file".to_string()]
+        );
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_a_missing_proof_file() {
+        let root = passing_tree("jackioh-spec-missing-proof");
+        let note = root.join("spec").join("rulings").join("R0003.md");
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/missing.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec!["spec/rulings/R0003.md: `proven_in` crates/missing.rs does not exist".to_string()]
+        );
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_a_renamed_proving_test() {
+        let root = passing_tree("jackioh-spec-renamed-test");
+        let proof = root.join("crates").join("fatigue.rs");
+        fs::write(&proof, "#[test]\nfn fatigue() {}\n").unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec!["spec/rulings/R0003.md: `proven_in` crates/fatigue.rs has no test that runs named after R3 (a #[test] fn, a fn a test macro lists or a mod holding one, with the token r3; an it/test/describe title with R3 and no .skip, .todo, .fixme or .only; or an SQL `### R3: …` heading)".to_string()]
+        );
+        fs::write(&proof, "#[test]\nfn r3_fatigue() {}\n").unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_a_bare_ignored_proving_test() {
+        let root = passing_tree("jackioh-spec-ignored-test");
+        let proof = root.join("crates").join("fatigue.rs");
+        fs::write(&proof, "#[test]\n#[ignore]\nfn r3_fatigue() {}\n").unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec!["spec/rulings/R0003.md: `proven_in` crates/fatigue.rs has no test that runs named after R3 (a #[test] fn, a fn a test macro lists or a mod holding one, with the token r3; an it/test/describe title with R3 and no .skip, .todo, .fixme or .only; or an SQL `### R3: …` heading)".to_string()]
+        );
+        fs::write(&proof, "#[test]\nfn r3_fatigue() {}\n").unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_a_proof_that_is_not_a_test_file() {
+        let root = passing_tree("jackioh-spec-nontest-proof");
+        let note = root.join("spec").join("rulings").join("R0003.md");
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/proof.md\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        fs::write(root.join("crates").join("proof.md"), "# proof\n").unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec!["spec/rulings/R0003.md: `proven_in` crates/proof.md is not a Rust, TypeScript or SQL test file".to_string()]
+        );
+        fs::remove_file(root.join("crates").join("proof.md")).unwrap();
+        fs::write(
+            &note,
+            "---\nid: R3\ntitle: Fatigue effect\ncards: \"R3\"\nproven_in:\n  - crates/fatigue.rs\n---\nNth empty draw deals N damage to your hero\n",
+        )
+        .unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_rejects_an_orphan_rust_test_name() {
+        let root = passing_tree("jackioh-spec-orphan-name");
+        let proof = root.join("crates").join("fatigue.rs");
+        // Built dynamically: this file is itself what `check` reads (rule 3).
+        let bogus = 999_999;
+        fs::write(
+            &proof,
+            format!("#[test]\nfn r3_fatigue() {{}}\n#[test]\nfn r{bogus}_x() {{}}\n"),
+        )
+        .unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec![format!(
+                "crates/fatigue.rs:4: `r{bogus}_x` names r{bogus}, which has no note in spec/rulings/"
+            )]
+        );
+        fs::write(&proof, "#[test]\nfn r3_fatigue() {}\n").unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_resolves_spec_links_both_ways() {
+        let root = passing_tree("jackioh-spec-links");
+        let overview = root.join("spec").join("01-overview.md");
+        // The unknown id is built dynamically: this file is itself what `check` reads (rule 3).
+        let bogus = 999_999;
+        fs::write(
+            &overview,
+            format!(
+                "## 1. Overview\n\nGood: [[R3]] and [[§1]] and [[CARDS#Pools]].\nBad: [[R{bogus}]] and [[§99.9]] and [[no-such-note]] and [[CARDS#Nothing]].\n"
+            ),
+        )
+        .unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec![
+                format!("spec/01-overview.md:4: [[R{bogus}]] resolves to no note or section"),
+                "spec/01-overview.md:4: [[§99.9]] resolves to no note or section".to_string(),
+                "spec/01-overview.md:4: [[no-such-note]] resolves to no note or section".to_string(),
+                "spec/01-overview.md:4: [[CARDS#Nothing]] resolves to no note or section".to_string(),
+            ]
+        );
+        fs::write(
+            &overview,
+            "## 1. Overview\n\nGood: [[R3]] and [[§1]] and [[CARDS#Pools]].\n",
+        )
+        .unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_refuses_an_unresolved_marker_in_code() {
+        let root = passing_tree("jackioh-spec-unresolved-marker");
+        let stale = root.join("crates").join("stale.rs");
+        // Built from UNRESOLVED_MARKERS: this file is itself what `check` reads (rule 7).
+        let marker = UNRESOLVED_MARKERS[0];
+        fs::write(&stale, format!("// {marker} for §11\n")).unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec![format!(
+                "crates/stale.rs:1: `{marker}` says a ruling is still to be written: cite its note in spec/rulings/, or write one (CLAUDE.md rule 3)"
+            )]
+        );
+        fs::remove_file(&stale).unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
+    }
+
+    #[test]
+    fn problems_reads_dashboard_citations() {
+        let root = passing_tree("jackioh-spec-dashboard");
+        let stale = root.join("apps").join("admin").join("src").join("stale.ts");
+        // Built dynamically: this file is itself what `check` reads (rule 3).
+        let bogus = 999_999;
+        fs::write(&stale, format!("// R{bogus} bogus\n")).unwrap();
+        let (found, _) = problems(&root).unwrap();
+        assert_eq!(
+            found,
+            vec![format!(
+                "apps/admin/src/stale.ts:1: R{bogus} has no note in spec/rulings/"
+            )]
+        );
+        fs::write(&stale, "// R3 ok\n").unwrap();
+        let (restored, _) = problems(&root).unwrap();
+        let _ = fs::remove_dir_all(&root);
+        assert!(restored.is_empty(), "{restored:?}");
     }
 
     #[test]

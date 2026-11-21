@@ -59,7 +59,6 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
-    const NETHER: &str = "core-088"; // Twisting Nether: Destroy all permanents.
     const SOFTLOCK: &str = "classicplus-077"; // Anti-Softlock: Unlock every zone.
     const SCHOOL: &str = "meditative-097-3";
     const HEADQUARTERS: &str = "meditative-097-9";
@@ -232,20 +231,17 @@ mod tests {
         }
 
         #[test]
-        fn r1260_r781001_the_locks_outlast_the_wall() {
-            let mut s = setup(false, &[HIT_JOB, NETHER], crowd());
+        fn r1260_r4353001_the_locks_outlast_the_wall_a_spell_destroying_it() {
+            let mut s = setup(false, &[HIT_JOB], crowd());
             play_wall(&mut s);
             s.end_turn().end_turn();
             let wall = s.card(ID).id.clone();
-            // Immutable: Hit Job, a Spell, can't target the Wall in play (R781001); destroying every
-            // permanent reaches it.
-            s.expect_refused(|s| {
-                s.play(
-                    HIT_JOB,
-                    json!({ "targets": [{ "pick": "instance", "instanceId": wall }] }),
-                )
-            });
-            s.play(NETHER, json!({}));
+            // Immutable bars no aim (R4353001): Hit Job, a Spell, may target the Wall in play, and it is
+            // destroyed.
+            s.play(
+                HIT_JOB,
+                json!({ "targets": [{ "pick": "instance", "instanceId": wall }] }),
+            );
             assert!(s.unit(P1, 1).is_none_or(|unit| unit.def_id != ID));
             for lane in LANES {
                 assert!(is_locked(s.state(), slot(P1, lane)), "p1 lane {lane}");

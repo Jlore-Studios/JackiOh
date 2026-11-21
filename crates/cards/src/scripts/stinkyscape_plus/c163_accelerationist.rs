@@ -1,6 +1,7 @@
 //! SPEC §8.12 S+ #163 Accelerationist (Unit 6/6 → 12/12, cost 3, Common), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Aura: Has +{buff}/+{buff} for every card that Evolved this game." (+2)
-//!   Radiant: "Aura: Has +{buff2}/+{buff2} for every card that Evolved this game." (+4)
+//!   Base:    "Aura: Has +{buff}/+{buff} for every card that Evolved this game." (+3; +2 until issue #4353)
+//!   Radiant: "Aura: Has +{buff2}/+{buff2} for every card that Evolved this game." (+6; +4 until issue
+//!            #4353)
 //!
 //! Renumbered from the designer's second #92 (SP5). R3536004: each player counts the cards of theirs that
 //! evolved this game (`evolutions_of`), so it counts both players' evolutions, its own included: the sum of
@@ -81,11 +82,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn two_more_per_evolution() {
+        fn three_more_per_evolution() {
             let mut s = evolve_one(false);
             assert_eq!(evolutions_of(s.state(), P1), 1);
             let this = s.unit_at(P1, 2);
-            s.expect_stats(&this, json!({ "attack": 8, "health": 8 }));
+            s.expect_stats(&this, json!({ "attack": 9, "health": 9 }));
         }
 
         #[test]
@@ -100,7 +101,7 @@ mod tests {
             launch_starship(&mut s, &ship);
             assert_eq!(evolutions_of(s.state(), P2), 1);
             assert_eq!(evolutions_of(s.state(), P1), 0);
-            s.expect_stats(&this, json!({ "attack": 8, "health": 8 }));
+            s.expect_stats(&this, json!({ "attack": 9, "health": 9 }));
         }
 
         #[test]
@@ -115,10 +116,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn four_more_per_evolution() {
+        fn six_more_per_evolution() {
             let mut s = evolve_one(true);
             let this = s.unit_at(P1, 2);
-            s.expect_stats(&this, json!({ "attack": 16, "health": 16 }));
+            s.expect_stats(&this, json!({ "attack": 18, "health": 18 }));
         }
     }
 }

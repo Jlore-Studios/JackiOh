@@ -154,9 +154,9 @@ mod tests {
         }
 
         #[test]
-        fn r781001_an_immutable_card_in_play_is_no_target_and_in_hand_radiant_is_still_its_own_text() {
+        fn r4353001_an_immutable_card_in_play_or_in_hand_may_be_its_target_and_radiant_is_still_its_own_text() {
             let mut s = scenario(json!({
-                "p1": { "hand": [GOLDEN, TIMMY, FILLER], "field": [FELINORS] },
+                "p1": { "hand": [GOLDEN, GOLDEN, TIMMY, FILLER], "field": [FELINORS] },
                 "p2": { "hand": [FILLER] },
             }));
             for card in [FELINORS, TIMMY] {
@@ -164,14 +164,14 @@ mod tests {
                 find_instance_mut(s.state_mut(), &id).expect("the card is in the game").granted_keywords =
                     vec![json_as(json!({ "kind": "Immutable" }))];
             }
-            // A Spell can't target an Immutable card in play (R781001)…
+            // A Spell may target an Immutable card in play (R4353001), as in a hand, and Immutable never
+            // blocks Radiant, the card's own text (§6.1).
             let on_field = pick::card(&s, FELINORS);
-            s.expect_refused(|s| s.play(GOLDEN, json!({ "targets": on_field })));
-            // …but in a hand it may, and Immutable never blocks Radiant, the card's own text (§6.1).
+            s.play(GOLDEN, json!({ "targets": on_field }));
+            assert!(s.card(FELINORS).radiant);
             let held = pick::card(&s, TIMMY);
             s.play(GOLDEN, json!({ "targets": held }));
             assert!(s.card(TIMMY).radiant);
-            assert!(!s.card(FELINORS).radiant);
         }
 
         #[test]

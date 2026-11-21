@@ -14,7 +14,7 @@
 //!            "…", #1017.)
 //!
 //! Engine: a Unit token that ME-JADE summons (no Cry). Evasive (§6.1), catalog data: no attack may target
-//! it, and it is never in Defense Position. Through v0.6.7k (issue #4285) it was Indestructible (R46) and
+//! it, no Spell or Field Spell may target it in play (R4353002), and it is never in Defense Position. Through v0.6.7k (issue #4285) it was Indestructible (R46) and
 //! Immutable (R23) instead, which the shipped catalogs keep for those replays (R767000). Each end of its controller's
 //! turn (R62) it runs ME-ALLURE over every enemy Unit then on the field (MD-C4). The counter's 10
 //! turns it Radiant on the field (§5.2), its damage kept, and nothing fires again. Handed out as a
@@ -59,7 +59,7 @@ mod tests {
     /// #17 Flood (Bounce all Units).
     const FLOOD: &str = "core-017";
     /// C+ #44 Simplicity Audit (Exile every permanent whose card has fewer lines of code than this one,
-    /// 27): an "every" effect, which reaches an Immutable card a Spell may not target (R781001).
+    /// 27): an "every" effect, which reaches an Evasive card a Spell may not target (R4353002).
     const AUDIT: &str = "classicplus-044";
     /// #50 K-Pop Fanatic, a Unit of 65 lines of code: the Audit leaves it standing.
     const FANATIC: &str = "core-050";
@@ -71,6 +71,8 @@ mod tests {
     const DEFENDER: &str = "core-003";
     /// #16 Hit Job (Destroy target unit).
     const HIT_JOB: &str = "core-016";
+    /// C+ #25 Soul Shot (Destroy a random enemy Unit).
+    const SOUL_SHOT: &str = "classicplus-025";
 
     fn beauty_lane(s: &Scenario) -> i32 {
         (1..=5)
@@ -222,19 +224,22 @@ mod tests {
     }
 
     #[test]
-    fn cant_attack_and_since_issue_4285_hit_job_destroys_it() {
+    fn r4353002_cant_attack_no_spell_may_target_it_and_since_issue_4285_a_random_destroy_kills_it() {
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
-            "p2": { "hand": [HIT_JOB, FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
+            "p2": { "hand": [HIT_JOB, SOUL_SHOT, FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
         }));
         let lane = beauty_lane(&s);
         let beauty = s.unit(P1, lane).expect("the Beauty").id.clone();
 
         s.expect_refused(|s| s.attack(&beauty, "hero"));
 
-        // No longer Immutable or Indestructible: Hit Job targets it and destroys it.
+        // Evasive: no Spell may target it in play (R4353002), so Hit Job may not name it…
         s.end_turn();
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] }));
+        s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] })));
+        assert_eq!(s.unit(P1, lane).map(|unit| unit.id), Some(beauty.clone()));
+        // …while a random pick, no target, reaches it, and no longer Indestructible it is destroyed.
+        s.play(SOUL_SHOT, json!({}));
         assert!(s.unit(P1, lane).is_none_or(|unit| unit.id != beauty));
     }
 

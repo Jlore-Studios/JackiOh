@@ -901,12 +901,15 @@ static BOARD_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     pool
 });
 
-/// R23: an Immutable card, on either face, is never fused.
+/// R23: an Immutable card, on either face, is never fused; R4353000: nor an Indestructible Unit card,
+/// which is Immutable innately.
 pub(crate) fn is_immutable(def: &CardDef) -> bool {
+    let unit = def.type_ == CardType::Unit;
     [&def.base, &def.radiant].iter().any(|face| {
-        face.keywords
-            .iter()
-            .any(|keyword| keyword.kind() == KeywordKind::Immutable)
+        face.keywords.iter().any(|keyword| {
+            keyword.kind() == KeywordKind::Immutable
+                || (unit && keyword.kind() == KeywordKind::Indestructible)
+        })
     })
 }
 

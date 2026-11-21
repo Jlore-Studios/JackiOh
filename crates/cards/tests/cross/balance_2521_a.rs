@@ -141,17 +141,18 @@ const NOT_PIECES: [&str; 15] = [
 // B17–B20: the weapons.
 /// B17, B18: the weapons that aim at one enemy Unit — id, name, damage on the base and Radiant faces.
 /// #4154 moved the three Beams' damage down: 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
-/// 12 and 16).
+/// 12 and 16), and #4353 to 3, 5 and 7 (Radiant 6, 10 and 14), and Repeater v5's from 3 (Radiant 6) to 2
+/// (Radiant 4).
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
-    ("stinkyscape-050", "Beam v3", 4, 8),
-    ("stinkyscape-054", "Beam v4", 6, 12),
-    ("stinkyscape-058", "Beam v5", 8, 16),
+    ("stinkyscape-050", "Beam v3", 3, 6),
+    ("stinkyscape-054", "Beam v4", 5, 10),
+    ("stinkyscape-058", "Beam v5", 7, 14),
     (CANNON_V3, "Cannon v3", 5, 10),
     ("stinkyscape-056", "Cannon v4", 7, 14),
     ("stinkyscape-060", "Cannon v5", 9, 18),
     ("stinkyscape-051", "Repeater v3", 1, 2),
     ("stinkyscape-055", "Repeater v4", 2, 4),
-    ("stinkyscape-059", "Repeater v5", 3, 6),
+    ("stinkyscape-059", "Repeater v5", 2, 4),
 ];
 const FLAK_V5: &str = "stinkyscape-061";
 /// B20: each Flak and its rounds an activation.
@@ -1592,9 +1593,9 @@ fn repeater_uses_a_turn(def: &str, uses: i32) {
 }
 
 #[test]
-fn b19_repeater_v5_activates_3_times_a_turn_and_the_4th_is_refused() {
-    // Issue #4154 cut its Activate 4 to Activate 3.
-    repeater_uses_a_turn("stinkyscape-059", 3);
+fn b19_repeater_v5_activates_4_times_a_turn_and_the_5th_is_refused() {
+    // Issue #4154 cut its Activate 4 to Activate 3, and issue #4353 put it back to Activate 4.
+    repeater_uses_a_turn("stinkyscape-059", 4);
 }
 
 #[test]

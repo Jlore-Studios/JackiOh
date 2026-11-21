@@ -472,7 +472,7 @@ pub fn equip_host_at(
             return None;
         }
     }
-    if crate::layers::unit_has(state, top, KeywordKind::Immutable) {
+    if crate::layers::is_immutable(state, top) {
         return None;
     }
     if crate::slumber::is_slumbering(top) {
@@ -630,7 +630,7 @@ fn immutable_fuser(state: &GameState, slot: &ZoneSlot) -> bool {
         None => false,
         Some(top) => {
             crate::scripts::script_of(state, top).flags().fuses_carried == Some(true)
-                && crate::layers::unit_has(state, top, KeywordKind::Immutable)
+                && crate::layers::is_immutable(state, top)
         }
     }
 }
@@ -1156,8 +1156,8 @@ fn reachable(
     if crate::restrictions::spell_cannot_reach(state, Some(card), candidate) {
         return false;
     }
-    // R781001: a Spell's, Field Spell's or Field Trap's `target` never offers an Immutable card in play.
-    if decl.kind == PromptKind::Target && crate::restrictions::immutable_bars(state, Some(card), candidate) {
+    // R4353002: a Spell's or Field Spell's `target` never offers an Evasive card in play.
+    if decl.kind == PromptKind::Target && crate::restrictions::evasive_bars(state, Some(card), candidate) {
         return false;
     }
     // MD-B1, R940: a harmful declaration whose filter names a tribal tag never offers an immune card.
@@ -1380,8 +1380,8 @@ pub fn interceptor_fits_decl(
     };
     card_allowed(state, decl.filter.as_ref(), &probe, card, player)
         && !crate::restrictions::spell_cannot_reach(state, Some(card), &probe)
-        // R781001: nor to an Immutable one, when the source is one Immutable bars.
-        && !(decl.kind == PromptKind::Target && crate::restrictions::immutable_bars(state, Some(card), &probe))
+        // R4353002: nor to an Evasive one, when the source is one Evasive bars.
+        && !(decl.kind == PromptKind::Target && crate::restrictions::evasive_bars(state, Some(card), &probe))
         // MD-B1, R940: a harmful declaration's tribal filter never diverts to an immune interceptor.
         && !(crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm
             && {

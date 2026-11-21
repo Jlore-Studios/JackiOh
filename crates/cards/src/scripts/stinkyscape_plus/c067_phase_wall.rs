@@ -34,7 +34,7 @@ pub fn script_v0_6_5c() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S+ #67 Phase Wall — SPEC §8.12 row S+ 67 (R23, R781001, R3555001, R3935000).
+// S+ #67 Phase Wall — SPEC §8.12 row S+ 67 (R23, R3555001, R3935000).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -57,6 +57,15 @@ fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardI
     None
 }
 
+/// R4353020 (S+ #79 A Glimpse into the Endless Sea): whether `player` is immune to fatigue damage, a
+/// `fatigueImmune` modifier on their side, kept for the rest of the game.
+pub fn fatigue_immune(state: &GameState, player: PlayerId) -> bool {
+    state.players[player]
+        .mods
+        .iter()
+        .any(|modifier| matches!(modifier.kind, crate::state::ModifierKind::FatigueImmune))
+}
+
 /// R3553002 (S+ #30): a backrow card that turns its controller's first draw each turn into a
 /// Warhero Token card.
 fn warhero_draws_source(sink: &EngineSink, player: PlayerId) -> Option<CardInstance> {
@@ -868,6 +877,11 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
             count: fatigue_count,
             amount,
         });
+        // R4353020: a player immune to fatigue damage takes no hit, no damage instance and no report of
+        // one; the draw still happened, counted and announced above with its nominal hit (R1256000).
+        if fatigue_immune(sink.state, player) {
+            return DrawOutcome::Fatigue;
+        }
         // R240, R1362: a fatigue draw whose hit the hero's Armor takes whole (§4.4 step 2) still happened
         // (the count moved, §10.3); the pipeline reports it by `damageAbsorbed` from no source (R1361),
         // no damage instance (R63), in the place in R68's order R240's `damage` of 0 had.

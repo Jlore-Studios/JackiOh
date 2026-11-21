@@ -5,7 +5,7 @@
 //! 288-card fusion (#998), games that never ended (#2243, R1884003), boards that never settled
 //! (R1884004; #2356, R2197005) and a fused copier's targeting cost that panicked (R1850000).
 //!
-//! The body (a `FUSABLE_UNITS` card: no token, no Immutable card, R23) takes the text as R77 has it
+//! The body (a `FUSABLE_UNITS` card: no token, no Immutable card, R23, R4353000) takes the text as R77 has it
 //! (`fused_into`, R179), plays a fixed script then `PAIR_TURNS` random-policy turns under the invariant
 //! monitor and the fuzz's growth bounds, and fails on a panic, an engine cap, a breach, runaway growth,
 //! an unanswerable prompt or `PAIR_STEP_BOUND` actions. The daily run plays `daily_pair_count` pairs,

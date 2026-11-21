@@ -23,7 +23,9 @@ import {
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
   DB_SIDEBAR,
+  DECK_COMPARE_SELECT,
   DECK_DELETE,
+  DECK_EDITOR,
   DECK_LIST,
   DECK_NAME_INPUT,
   NAV_BACK,
@@ -48,6 +50,9 @@ const ONE_SCREEN = 1;
 
 /** A box's edge may sit this far past the window's (a sub-pixel border) and still be inside it. */
 const EDGE_SLACK_PX = 1;
+
+/** #4349: Chrome's select arrow and the gap before it, measured (Inter at 16 px: whole at a 218 px select with 8 px of padding, cut at 214, so 18 to 19.6); 20 rounds up. */
+const SELECT_ARROW_PX = 20;
 
 const MS_PER_SECOND = 1000;
 
@@ -98,6 +103,46 @@ function boxOf(doc: Document, selector: string): DOMRect {
   const box = found?.getBoundingClientRect();
   expect(box?.width, `${selector} is drawn`).to.be.greaterThan(0);
   return box ?? new DOMRect();
+}
+
+/** R4349000: the Compare with picker's label and the option it shows are whole. A native select's scrollWidth never says its text is cut, so the text is measured in the select's own font. */
+function expectComparePickerWhole(select: HTMLSelectElement, where: string): void {
+  const doc = select.ownerDocument;
+  const style = getComputedStyle(select);
+  const shown = select.selectedOptions[0]?.textContent ?? "";
+  expect(shown, "the option the picker shows").to.not.eq("");
+  const probe = doc.createElement("span");
+  probe.textContent = shown;
+  probe.style.cssText = "position: absolute; visibility: hidden; white-space: nowrap;";
+  probe.style.fontFamily = style.fontFamily;
+  probe.style.fontSize = style.fontSize;
+  probe.style.fontWeight = style.fontWeight;
+  probe.style.letterSpacing = style.letterSpacing;
+  doc.body.append(probe);
+  const textPx = probe.getBoundingClientRect().width;
+  probe.remove();
+  const room = select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - SELECT_ARROW_PX;
+  expect(textPx, `"${shown}" is whole in the picker at ${where}`).to.be.at.most(room);
+
+  const pick = select.closest<HTMLElement>(".ws-compare-pick");
+  const label = pick?.querySelector<HTMLElement>(".ws-field-label");
+  expect(pick, "the picker's row").to.not.eq(null);
+  expect(label, "the picker's label").to.not.eq(null);
+  if (pick === null || pick === undefined || label === null || label === undefined) return;
+  const labelBox = label.getBoundingClientRect();
+  const selectBox = select.getBoundingClientRect();
+  expect(Math.ceil(labelBox.right), `the label ends inside the picker at ${where}`).to.be.at.most(Math.ceil(pick.getBoundingClientRect().right));
+  expect(
+    labelBox.bottom <= selectBox.top + EDGE_SLACK_PX || labelBox.right <= selectBox.left + EDGE_SLACK_PX,
+    `the label clears the select at ${where}`,
+  ).to.eq(true);
+  const sidebar = doc.querySelector<HTMLElement>(ts(DB_SIDEBAR));
+  expect(sidebar, "the sidebar").to.not.eq(null);
+  if (sidebar === null) return;
+  expect(sidebar.scrollWidth, `the sidebar does not scroll sideways at ${where}`).to.be.at.most(sidebar.clientWidth + EDGE_SLACK_PX);
+  expect(Math.ceil(selectBox.right), `the select ends inside the sidebar at ${where}`).to.be.at.most(Math.ceil(sidebar.getBoundingClientRect().right));
+  const editor = doc.querySelector<HTMLElement>(ts(DECK_EDITOR));
+  expect(editor?.scrollWidth, `the editor does not overflow sideways at ${where}`).to.be.at.most((editor?.clientWidth ?? 0) + EDGE_SLACK_PX);
 }
 
 /**
@@ -380,6 +425,23 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
               expect(boxOf(doc, ts(DECK_DELETE)).bottom, "the editor's last action is in view").to.be.at.most(viewport.height);
               const side = doc.querySelector(ts(DB_SIDEBAR));
               expect(side?.scrollHeight, "the sidebar does not scroll").to.be.at.most((side?.clientHeight ?? 0) + EDGE_SLACK_PX);
+            });
+          });
+        });
+
+        // R4349000: the Compare with picker reads in full at every size (it was cut to "Another (" at 744x1133).
+        it("R4349000 /decks, a deck open: the Compare with picker reads in full", () => {
+          const cards = allCardIds().slice(0, constants.DECK_SIZE);
+          cy.clearDecks(accounts.p1());
+          cy.saveDeck(accounts.p1(), { name: DECK_NAMES[0], cards }).then((firstId) => {
+            cy.saveDeck(accounts.p1(), { name: DECK_NAMES[1], cards });
+            cy.visitAs(accounts.p1(), routes.deckbuilder());
+            cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
+            cy.get(ts(deckRowId(firstId))).click();
+            cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
+            expectOnScreen(viewport, ONE_SCREEN);
+            cy.get(ts(DECK_COMPARE_SELECT)).should(($select) => {
+              expectComparePickerWhole($select[0] as HTMLSelectElement, `${String(viewport.width)}x${String(viewport.height)}`);
             });
           });
         });

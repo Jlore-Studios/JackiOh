@@ -598,6 +598,23 @@ pub fn unit_has(state: &GameState, instance: &CardInstance, kind: KeywordKind) -
     has_keyword(&unit_view(state, instance).keywords, kind)
 }
 
+/// R4353000: whether `keywords`, the ones the caller reads `instance` by, make it Immutable: the keyword,
+/// or Indestructible on a Unit card (its running face's printed type), which is Immutable innately and
+/// never adds the keyword, as Flying is Flexible (R3543000). An Indestructible Field Spell is not, so
+/// its own fusing and tuning (C+ #33 Ivory Tower, Core #98 Heroic Power) go on. Every rule that asks
+/// whether a card is Immutable asks this or `is_immutable`.
+pub fn immutable_by(state: &GameState, instance: &CardInstance, keywords: &[Keyword]) -> bool {
+    has_keyword(keywords, KeywordKind::Immutable)
+        || (has_keyword(keywords, KeywordKind::Indestructible)
+            && crate::faces::card_type_of_face(state, &instance.def_id, instance.radiant) == CardType::Unit)
+}
+
+/// R4353000: whether `instance`, read through the layers where it is (§10.4), is Immutable
+/// (`immutable_by` over its layered keywords).
+pub fn is_immutable(state: &GameState, instance: &CardInstance) -> bool {
+    immutable_by(state, instance, &unit_view(state, instance).keywords)
+}
+
 /// R3543000: whether a keyword lets its Unit enter its backrow as well as its unit row: Flexible, and
 /// Flying, which has it innately (never added to the keywords, so a Flying Unit's view is unchanged).
 pub fn grants_flexible(kind: KeywordKind) -> bool {

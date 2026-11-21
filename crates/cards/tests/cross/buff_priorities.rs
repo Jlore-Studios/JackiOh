@@ -191,7 +191,7 @@ fn r2436000_a_buff_may_give_a_field_spell_immutable_and_nothing_tunes_it_after()
             ..
         }
     )));
-    // Face-up on the field it is Immutable in play: no Spell, Field Spell or Field Trap targets it (R781001).
+    // Face-up on the field it is Immutable in play, which bars no aim (R4353001).
     assert!(immutable_in_play(s.state(), s.card(LIVING_BOMB)));
     // And no Buff or Nerf changes it again (R23): neither has a row, and another Buff leaves it as it is.
     for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {

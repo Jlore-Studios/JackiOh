@@ -11019,6 +11019,85 @@ mod economy {
         );
     }
 
+    /// R4317001: the purge deletes every account's seeds issued before the time that are unclaimed or
+    /// settled, answers how many, and keeps a seed issued at the time or after and a claim not yet settled.
+    async fn r4317001_the_practice_seeds_purge_deletes_every_accounts_lapsed_unclaimed_and_settled_seeds(
+        harness: &StoreHarness,
+    ) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let claim = practice_claim();
+        let seed = |name: &str, profile_id: &str, issued_at: i64, claimed_at: Option<i64>| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": profile_id, "issuedAt": issued_at, "claimedAt": claimed_at,
+                "setup": {
+                    "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "random", "lean": null },
+                    "lastBoard": [], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        for held in [
+            seed("mine-open", &owner.id, now - 100, None),
+            seed("mine-settled", &owner.id, now - 100, None),
+            seed("mine-claimed", &owner.id, now - 100, None),
+            seed("mine-legacy", &owner.id, now - 100, Some(now - 50)),
+            seed("mine-fresh", &owner.id, now + 1, None),
+            seed("theirs-open", &other.id, now - 100, None),
+            seed("theirs-fresh", &other.id, now + 10, None),
+        ] {
+            q!(harness, t => t.economy_practice_seed_insert(&held));
+        }
+        for name in ["mine-settled", "mine-claimed"] {
+            assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, name, now - 20, &claim)));
+        }
+        assert!(q!(harness, t => t.economy_practice_seed_settle(
+            &owner.id,
+            "mine-settled",
+            PracticeOutcome::Paid,
+            now - 10
+        )));
+        let held = |profile_id: &str, name: &'static str| {
+            let profile_id = profile_id.to_string();
+            async move { q!(harness, t => t.economy_practice_seed_get(&profile_id, name)).is_some() }
+        };
+
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seeds_purge(now)),
+            4,
+            "{}: mine-open, mine-settled, mine-legacy and theirs-open",
+            harness.name
+        );
+        for name in ["mine-open", "mine-settled", "mine-legacy"] {
+            assert!(!held(&owner.id, name).await, "{}: {name} is purged", harness.name);
+        }
+        assert!(
+            !held(&other.id, "theirs-open").await,
+            "{}: another account's seed is purged too",
+            harness.name
+        );
+        for (profile_id, name) in [
+            (&owner.id, "mine-claimed"),
+            (&owner.id, "mine-fresh"),
+            (&other.id, "theirs-fresh"),
+        ] {
+            assert!(held(profile_id, name).await, "{}: {name} stays", harness.name);
+        }
+        assert_eq!(q!(harness, t => t.economy_practice_seeds_purge(now)), 0);
+
+        // Settled, the claim goes with the next purge.
+        assert!(q!(harness, t => t.economy_practice_seed_settle(
+            &owner.id,
+            "mine-claimed",
+            PracticeOutcome::Refused,
+            now
+        )));
+        assert_eq!(q!(harness, t => t.economy_practice_seeds_purge(now)), 1);
+        assert!(!held(&owner.id, "mine-claimed").await);
+        assert!(held(&owner.id, "mine-fresh").await);
+        assert!(held(&other.id, "theirs-fresh").await);
+    }
+
     /// R1301003: a pack opening takes the account's economy lock for its transaction. Taken in
     /// turn, each transaction gets it, a rolled-back one lets it go, and the lock writes no row.
     async fn r1301003_the_economy_lock_is_taken_per_transaction(harness: &StoreHarness) {
@@ -11951,6 +12030,7 @@ mod economy {
         r3500001_a_claimed_unsettled_practice_seed_counts_until_it_settles_or_lapses,
         r2379000_a_practice_seed_release_deletes_only_the_owners_unclaimed_seed,
         r2422000_a_practice_claim_is_kept_until_it_settles_once,
+        r4317001_the_practice_seeds_purge_deletes_every_accounts_lapsed_unclaimed_and_settled_seeds,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
@@ -15081,6 +15161,85 @@ mod r4039000_notifications {
         );
     }
 
+    /// R4348000: `notifications_delete_between` deletes only the rows whose recipient is one
+    /// of the two and whose actor is the other, either way, read or not: a third party's rows
+    /// and rows with no actor stay, and a second call deletes nothing.
+    async fn r4348000_delete_between_removes_only_the_pairs_rows_either_way(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let cy = active_profile(harness, None).await;
+        let at = harness.now();
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::FriendRequest, Some(&bo.id), "ab", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::FriendAccepted, Some(&ana.id), "ba", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::FriendRequest, Some(&cy.id), "ac", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::FriendRequest, Some(&cy.id), "bc", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&cy.id, NotificationKind::FriendRequest, Some(&bo.id), "cb", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyEnded, None, "sys", at), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            3,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&bo.id, at)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_delete_between(&ana.id, &bo.id)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10))),
+            vec!["sys", "ac"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&bo.id, None, 10))),
+            vec!["bc"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&cy.id, None, 10))),
+            vec!["cb"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&bo.id, at)),
+            1,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_delete_between(&ana.id, &bo.id)),
+            0,
+            "{}",
+            harness.name
+        );
+        // A read row between the two goes too.
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "game-9", at), 100));
+        q!(harness, t => t.notifications_mark_read(&ana.id, None, at + 1));
+        assert_eq!(
+            q!(harness, t => t.notifications_delete_between(&ana.id, &bo.id)),
+            1,
+            "{}",
+            harness.name
+        );
+    }
+
     both_stores!(
         r4039000_add_replaces_an_unread_row_and_keeps_the_newest,
         r4039000_page_reads_newest_first_before_an_id,
@@ -15089,5 +15248,6 @@ mod r4039000_notifications {
         r4039000_a_deleted_profile_takes_its_rows_both_ways,
         r4233000_mark_subject_marks_only_matching_kind_subject_and_actor,
         r4233000_unread_leaves_out_a_dead_lobby_invite,
+        r4348000_delete_between_removes_only_the_pairs_rows_either_way,
     );
 }

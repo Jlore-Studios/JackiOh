@@ -106,8 +106,7 @@ mod tests {
     const SILENCE: &str = "classicplus-009";
     /// (4) Field Spell: Aura: your Units have +4 attack, Rush and First Strike.
     const WEAPONS: &str = "core-014";
-    /// (4) 10/10 Unit with Indestructible: an Equip host that keeps Taunt out (R347), and not Immutable
-    /// as State of the Game is since #2179.
+    /// (4) 10/10 Unit with Indestructible, and so Immutable innately (R4353000): no Equip host.
     const THE_ROCK: &str = "core-066";
     const FILLER: &str = "core-005";
     /// (0) Spell: a Unit gains Reborn; Radiant, then it is made Radiant.
@@ -233,7 +232,7 @@ mod tests {
             }
 
             #[test]
-            fn r781004_r1615000_never_taunt_beside_indestructible() {
+            fn r4353000_r1615000_an_indestructible_unit_is_no_equip_host_and_the_draw_holds_no_indestructible() {
                 crate::register_all();
                 for n in 0..24 {
                     let mut s = scenario(json!({
@@ -244,13 +243,15 @@ mod tests {
                     // The Rock's Tribute 1 is a Mr. Vanilla.
                     let tribute = s.unit(P1, 1).expect("the Mr. Vanilla").id;
                     s.play(THE_ROCK, json!({ "zone": 1, "tributes": [tribute] }));
-                    s.play(KEENUS, json!({ "zone": 1, "equip": true }));
-                    let host = s.unit(P1, 1).expect("the fused host");
-                    let drawn = drawn(&s, &host.id);
-                    // The pool holds no Indestructible (R1615000), and the host's own keeps Taunt out (R347).
+                    // Indestructible, the Rock is Immutable innately (R4353000): nothing is Equipped onto it.
+                    s.expect_refused(|s| s.play(KEENUS, json!({ "zone": 1, "equip": true })));
+                    s.play(KEENUS, json!({ "zone": 2 }));
+                    assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(THE_ROCK.to_string()));
+                    let keenus = s.unit(P1, 2).expect("Keenus in a zone of its own");
+                    let drawn = drawn(&s, &keenus.id);
+                    // The pool holds no Indestructible (R1615000).
                     assert_eq!(drawn.len(), 5, "{drawn:?}");
                     assert!(!drawn.contains(&KeywordKind::Indestructible), "{drawn:?}");
-                    assert!(!drawn.contains(&KeywordKind::Taunt), "{drawn:?}");
                 }
             }
 

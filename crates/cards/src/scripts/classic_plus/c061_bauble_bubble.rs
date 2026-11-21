@@ -175,6 +175,8 @@ mod tests {
         #[test]
         fn s6_2_a_bounce_adds_nothing_a_radiant_silly_silas_rotates_it_across_so_it_bounces_home() {
             let mut s = bubble(false, json!([{ "def": SILAS, "radiant": true }, FILLER]), Some(5), json!([]));
+            // Silas costs (6) since issue #4353, past the 4 mana a turn gives.
+            s.state_mut().players.p1.mana.current = 10;
             s.play(SILAS, json!({ "modes": ["right"] }));
             s.expect_in_zone(BAUBLE, "hand");
             let bauble = s.card(BAUBLE).id.clone();

@@ -155,10 +155,12 @@ mod tests {
         }
 
         #[test]
-        fn r781001_r386_an_immutable_unit_in_play_is_no_target_and_stays_unchanged() {
+        fn r4353001_r386_an_immutable_unit_in_play_may_be_its_target_and_stays_unchanged() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] } }));
             let menace = s.unit(P2, 1).expect("Midrange Menace");
-            s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick::id(&menace.id) })));
+            // Immutable bars no aim (R4353001); it still stops every Upgrade, so none is drawn (R386).
+            s.play(BOOK, json!({ "targets": pick::id(&menace.id) }));
+            s.expect_in_zone(BOOK, "graveyard");
             assert!(upgrades(s.events()).is_empty());
             assert!(s.card(&menace.id).tuning.is_none());
             s.expect_stats(&menace.id, json!({ "attack": 18, "maxHealth": 18 }));

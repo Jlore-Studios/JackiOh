@@ -204,7 +204,7 @@ pub fn targetable_options(state: &GameState, args: &OpenPromptArgs) -> Vec<Promp
             }
             // R1839000: nobody targets a Dormant card.
             !crate::slumber::is_slumbering(card)
-                && !crate::restrictions::immutable_bars(state, source, card)
+                && !crate::restrictions::evasive_bars(state, source, card)
                 && crate::targeting::may_target(state, args.player, spell_source, card, None)
         })
         .cloned()

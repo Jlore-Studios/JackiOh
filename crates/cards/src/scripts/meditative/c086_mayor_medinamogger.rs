@@ -94,9 +94,10 @@ mod tests {
             }
 
             #[test]
-            fn r1200_r781001_the_drawn_target_is_never_an_immutable_unit_a_spell_cannot_target() {
+            fn r1200_r4353001_the_drawn_target_may_be_an_immutable_unit_a_spell_may_target() {
                 crate::register_all();
-                for n in 0..8 {
+                let mut menace_drawn = 0;
+                for n in 0..16 {
                     let mut s = scenario(json!({
                         "seed": format!("mayor-immutable-{n}"),
                         "p1": { "hand": ["core-016", FILLER], "field": [MAYOR], "mana": 10 },
@@ -104,12 +105,15 @@ mod tests {
                     }));
                     let menace = s.card("core-019").id.clone();
                     let mayor = s.card(MAYOR).id.clone();
-                    // Hit Job's target is drawn from the legal ones (R1200), and a Spell can't target the
-                    // Radiant Midrange Menace in play (R781001): only the Mayor is left to draw.
+                    // Hit Job's target is drawn from the legal ones (R1200), and a Spell may target the
+                    // Radiant Midrange Menace in play (R4353001): it is drawn from the two, and destroyed.
                     s.play("core-016", json!({}));
-                    s.expect_in_zone(&menace, "field");
-                    s.expect_in_zone(&mayor, "graveyard");
+                    let menace_gone = s.card(&menace).zone.z() == ZoneName::Graveyard;
+                    let mayor_gone = s.card(&mayor).zone.z() == ZoneName::Graveyard;
+                    assert!(menace_gone != mayor_gone, "seed {n}: one of the two was drawn and destroyed");
+                    menace_drawn += usize::from(menace_gone);
                 }
+                assert!(menace_drawn > 0, "the Immutable Menace is among the draws");
             }
 
             #[test]

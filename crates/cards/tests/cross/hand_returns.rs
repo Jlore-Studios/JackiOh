@@ -396,7 +396,7 @@ mod r215_10_3_a_price_given_as_a_card_reaches_a_hand_is_announced {
      {
         let silas = "core-052";
         let mut s = scenario(json!({
-            "p1": { "hand": [silas], "field": [{ "def": RENO, "lane": 5 }] },
+            "p1": { "hand": [silas], "mana": 10, "field": [{ "def": RENO, "lane": 5 }] },
         }));
         let silas_id = s.card(silas).id.clone();
         s.card_mut(&silas_id).radiant = true;
