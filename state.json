@@ -16600,17 +16600,8 @@
       ]
     },
     "4397": {
-      "action": "plan",
-      "asks": [
-        "c:7066969112"
-      ],
-      "build_next": {
-        "from_run": "44933504027",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-21T18:16:15Z",
-        "until": "2026-11-21T18:46:15Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T18:16:05Z",
         "difficulty": "medium",
@@ -16629,10 +16620,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "--set improve-dev` (copy the `--extend` bail), and bail `arena: --forks probes the candidate's AI at full skill, so --a-ski\u2026\n- 6. Add rollouts. For each `ForkPoint`, refold the prefix `fold(seed, decks, log[..at_move])` (a fold error is a fault for all its pairs); `accept` the fork's first action for the candidate arm and the control arm (recording replacements as `accept` does; `None` is a fault). Then `finish_from` each \u2026\n- 7. Add the tally. `#[derive(Serialize)] #[serde(rename_all = \"camelCase\")] pub(crate) struct ForkTally` with `a`, `b`, `trunk_games`, `forks`, `live_forks`, `forks_per_game`, `rollouts` (arms played, faulted included), `fork_edge`, `fork_edge_low`, `fork_edge_high` (via `round_share`), `faults: Vec\u2026\n- 8. Add `mod fork_screen;` to `crates/tools/src/main.rs` beside `mod arena;`. Dispatch `--forks` from `arena::run` into `fork_screen::run`, reusing `series()`, entrants, batching, records, and duel-line printing.\n- 9. Update docs: `crates/tools/README.md` arena row (add `[--forks]` to the command cell; append the fork fields, floor, and keep rule to its cell so `tests/acceptance.rs` README-vs-clap check passes); `docs/v0.3.0/SURFACE.md` \u00a714.2 (synopsis line plus one paragraph: trunk, forks, rollouts, tally fi\u2026\n- 10. Add `spec/rulings/R4397000.md` (front matter `id: R4397000`, title, `cards: \"\u00a79.9, R850000, R850001, R4319000, R1489000\"`, `proven_in: [crates/tools/src/fork_screen.rs]`, body per the proposal's Measure/Rule/Decisions) and `spec/pending/4397.md` (one paragraph in the `**[[R4397000]] \u2026 (issue #4\u2026\n- 11. Report one fork screen in the pull request body with forks, live forks, edge, and run time, changing no knob: build the control from `main` (`cargo build --release -p jackioh-tools && cp target/release/jackioh ~/control-jackioh`), temporarily set `countdown_share` to `0` (against `0.5`) or `ope\u2026\n- 12. Record decisions: control plays both arms onward (a change whose gain compounds reads low, never high); rejected: candidate playing arms onward (arms would differ by more than the fork) and forcing knob-read cards into deals (helps only named-card knobs; #4246 diverged 21 deals unaided).\n- # Tests\n- All in `crates/tools/src/fork_screen.rs` (fast, `arena::TEST_BUDGET`), each asserting what the criterion needs:\n- - `r4397000_self_against_self_finds_no_fork_and_reads_inconclusive`: trunk at test budget with a scripted candidate echoing the control finds 0 forks; tally reads `forks == 0`, `inconclusive == Some(true)`.\n- - `r4397000_an_always_differing_candidate_forks_every_game_at_the_cap`: scripted candidate returning a fixed action finds `games * FORK_MAX_PER_GAME` forks; both arms of a pair refold from the same prefix hash and run the same streams (run one pair twice, hashes identical); full tally JSON byte-ide\u2026\n- - `r4397000_a_candidate_differing_once_finds_exactly_that_fork`: scripted candidate echoing control except at one `(deal, at_move)` finds exactly one fork naming that deal, seat, and move.\n- - `r4397000_a_rollout_fallback_is_counted_and_named`: one fork's pair run with a starved rollout budget (`nodes: 0`) yields `faults` entries exactly `deal 1 fork 1 pair 1 cand: \u2026` / `\u2026 ctl: \u2026` and contributes no wins.\n- - `r4397000_fork_edge_averages_a_deals_forks_first`: pure tally math \u2014 one deal with fork edges `1.0` and `-1.0` means `0.0`; `live_forks` counts only nonzero forks; `paired_interval` over deal means.\n- - `r4397000_extend_plays_on_until_live_forks`: `fork_done(SCREEN_MIN_DECIDED, _) == true`, `fork_done(SCREEN_MIN_DECIDED - 1, _) == false`, `fork_done(0, SCREEN_MAX_GAMES) == true`.\n- Commands: `cargo test -p jackioh-tools fork_screen`, `cargo test -p jackioh-tools acceptance`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo jackioh spec check`.\n- # Done when\n- - [ ] `--forks` plays each dev-set deal once with `b` on both seats, probes `a` until each game's cap, and `--a self --b self` finds 0 forks and reads inconclusive.\n- - [ ] Always-differ and differ-once scripted tests pass; pair arms share prefix state and streams.\n- - [ ] Tally byte-identical across thread counts; rollout faults counted and named by deal, fork, pair.\n- - [ ] The four doc files describe the fork screen and its rule; the ruling note, pending paragraph, and named tests exist; `cargo jackioh spec check` passes.\n- - [ ] `cargo test -p jackioh-tools fork_screen`, `acceptance`, `fmt --check`, and `clippy -p jackioh-tools` pass.\n- - [ ] The pull request body reports one fork screen of `countdown_share` 0-vs-0.5 or `open_lethal` with forks, live forks, edge, run time, and the diff changes no knob.\n- # Risks\n- - Hidden-information leak: the candidate must only ever see `redact(state, seat)`; the probe passes the same redacted view `choose_for` uses, never the true state (CLAUDE.md rule 7). Rollout `accept` and `finish_from` run on true state as the referee does today.\n- - Nondeterminism across threads: rayon completion order must never reach output \u2014 collect trunk outcomes, fork points, arms, and faults in deal/fork/pair order before serializing (the existing `play_games` already preserves game order; keep that property for arms).\n- - `BinAgent` per-game children: spawn one candidate child per trunk game and `quit()` it at the game's end, mirroring `Live::finish`; a spawn failure fails the run before any game is counted, as today.\n- - Scope creep into `arena.rs`: the `play_game` signature stays; only the new optional-probe entry point is added, so `selfplay.rs`, `gate.rs`, and other callers compile unchanged.\n- # Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4397 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4397/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-21T18:04:31Z",
       "owner_why": "it plans it",
@@ -16645,12 +16635,14 @@
       "provider": "muse",
       "queued_at": "2026-11-21T18:03:52Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44933504027",
+      "run_id": "pending:1eb13d80-1795285090",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-21T18:04:31Z",
+      "started_at": "2026-11-21T18:18:31Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7066969112"
+      ]
     },
     "4398": {
       "action": "review",
@@ -16900,9 +16892,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T18:17:56Z",
+    "at": "2026-11-21T18:18:31Z",
     "url": "",
-    "what": "build #4403 on muse"
+    "what": "build #4397 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T18:16:56Z",
