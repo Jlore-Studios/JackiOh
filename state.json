@@ -14984,7 +14984,7 @@
       }
     },
     "4357": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -15003,10 +15003,12 @@
       },
       "interruptions": 0,
       "issue": 4322,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T02:52:08Z",
         "from_run": "44844092405",
         "gates": [
           {
@@ -15103,7 +15105,7 @@
       "question": "",
       "queued_at": "2026-11-21T02:51:10Z",
       "round_tier": "strong",
-      "run_id": "44844092405",
+      "run_id": "pending:11741914-1795229507",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15124,7 +15126,7 @@
         "run": "44844092405"
       },
       "source": "",
-      "started_at": "2026-11-21T00:28:48Z",
+      "started_at": "2026-11-21T02:52:08Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -15924,9 +15926,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T02:41:21Z",
+    "at": "2026-11-21T02:52:08Z",
     "url": "",
-    "what": "suggestions (client) on muse"
+    "what": "review #4357 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-21T02:38:28Z",
