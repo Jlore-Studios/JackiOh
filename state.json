@@ -14320,6 +14320,7 @@
     "4332": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-21T04:55:22Z",
         "difficulty": "medium",
