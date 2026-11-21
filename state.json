@@ -16032,8 +16032,13 @@
     "what": "plan #4375 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-21T04:03:03Z",
-    "notes": [],
+    "at": "2026-11-21T04:10:26Z",
+    "notes": [
+      "delivered plan #4375 on claude-6 (run 44854142218): failed",
+      "started plan #4375 on claude-6 (run 44864910025)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16738,7 +16743,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T04:03:03Z",
+  "loop_tick": "2026-11-21T04:10:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
