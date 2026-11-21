@@ -14,15 +14,18 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::combat::{AttackTarget, attack_target_of};
-use crate::config::{BRITTLE_FIRST_TICK_TURNS, CHINESE_TAG, HAND_CAP, LIBRARY_CAP};
+use crate::config::{BRITTLE_FIRST_TICK_TURNS, CHINESE_TAG, HAND_CAP, LIBRARY_CAP, STATE_CHECK_PASS_CAP};
 use crate::damage::{DamageTarget, ProjectedPools};
 use crate::duos_life::effective_life;
 use crate::layers::{AuraTable, face_of, unit_has, unit_view};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{
-    CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, can_lose, find_instance,
+    CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, active_first, can_lose, find_instance,
+    find_instance_mut,
 };
-use crate::subsystems::lethal::{falls_to_first_strike, is_lethal, projected_damage, projected_damage_with};
+use crate::subsystems::lethal::{
+    StruckUnit, falls_to_first_strike, is_lethal, projected_damage, projected_damage_with, swept_units,
+};
 use crate::wire::{
     ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
     ZoneName, has_keyword, opponent_of,
@@ -1089,12 +1092,45 @@ pub struct CombatForecast {
     pub lethal: bool,
 }
 
+/// R4379000: the units each pass of §4.5's state check after one attack takes off the field, as the
+/// forecast settles it on a scratch copy of the board, by id, each pass in R68's order with its exiles
+/// first (MD-D31). A Reborn unit is listed in the pass it dies in, though its body comes back (R83).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AttackDeaths {
+    pub passes: Vec<Vec<String>>,
+}
+
+impl AttackDeaths {
+    /// Every unit a pass takes off, in the passes' order.
+    pub fn gone(&self) -> impl Iterator<Item = &String> {
+        self.passes.iter().flatten()
+    }
+
+    /// Whether a pass takes off the unit `id`.
+    pub fn goes(&self, id: &str) -> bool {
+        self.gone().any(|gone| gone == id)
+    }
+}
+
+/// R4379000: a unit an attack's hits reach: all they deal it, whether they destroy it, and whether by
+/// exile (R1124).
+struct Reached {
+    id: String,
+    dealt: i32,
+    destroyed: bool,
+    exiled: bool,
+}
+
 /// R3100000: the forecast of every attack `seat` may declare now. It reads only what the board shows
 /// (every unit's stats and keywords through the layers, each hero's Armor and life), never a hand, a
 /// library or a face-down card, and it changes nothing: each damage is the pipeline's own reading (§4.4
 /// steps 1 to 4 through `damage::project_hit`, a conversion and the damage pool included, R4032000;
 /// `projected_damage` on a hero), so no forecast can disagree with the hit. `lethal` adds up the blows
-/// on the enemy hero one after another, so they spend each enemy pool once between them.
+/// on the enemy hero one after another, so they spend each enemy pool once between them. R4379000:
+/// `kills`, `survives` and each splash hit's `kills` count every pass of the state check after the
+/// combat (`attack_deaths`), a death the attack's other hits cause by taking an aura away included;
+/// every damage figure and `lethal` read the board as it stands, since every hit lands before any
+/// check (R59), and no card dormant beneath a pile is read (R13).
 pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
     let enemy = opponent_of(seat);
     let mut attacks = Vec::new();
@@ -1115,7 +1151,7 @@ pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
         ) else {
             continue;
         };
-        let forecast = forecast_attack(state, attacker, &target);
+        let (forecast, _) = forecast_attack(state, attacker, &target);
         let on_enemy_hero = matches!(target, DamageTarget::Hero { player } if player == enemy);
         if on_enemy_hero && hitters.insert(attacker_id.clone()) {
             hero_damage += projected_damage_with(state, attacker, &target, &mut pools);
@@ -1130,26 +1166,45 @@ pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
     CombatForecast { attacks, lethal }
 }
 
-/// One attack's forecast, its ids left empty for the caller. A blow of 1 or more from a source that
-/// exiles what it damages removes its target as a Poisonous one destroys it (R1124, R4111000), either way.
-fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> AttackForecast {
+/// R4379000: the passes of the state check after `attacker`'s attack on `target` (§4.5), as the combat
+/// forecast settles them: what its `kills`, `survives` and splash `kills` count. Only what the board
+/// shows is read: no card dormant beneath a pile (R13), no Death hook, trap or replacement.
+pub fn attack_deaths(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> AttackDeaths {
+    forecast_attack(state, attacker, target).1
+}
+
+/// One attack's forecast, its ids left empty for the caller, and the state check's passes after it
+/// (R4379000). A blow of 1 or more from a source that exiles what it damages removes its target as a
+/// Poisonous one destroys it (R1124, R4111000), either way.
+fn forecast_attack(
+    state: &GameState,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+) -> (AttackForecast, AttackDeaths) {
     let mine = unit_view(state, attacker);
     let attacker_size = mine.attack + mine.health;
     let DamageTarget::Unit { instance: defender } = target else {
         // A hero never strikes back: R44's projection of the blow is the whole of it.
-        return AttackForecast {
+        let kills = is_lethal(state, attacker, target);
+        let mut deaths = settle_deaths(state, &hero_sweep(state, attacker, target));
+        // §4.5 step 2: a blow that ends the game ends it after the check's first pass.
+        if kills {
+            deaths.passes.truncate(1);
+        }
+        let forecast = AttackForecast {
             attacker_id: String::new(),
             target_id: String::new(),
             dealt: projected_damage(state, attacker, target),
             taken: 0,
-            kills: is_lethal(state, attacker, target),
-            survives: true,
+            kills,
+            survives: !deaths.goes(&attacker.id),
             pops: false,
             attacker_size,
             target_size: 0,
             splash: Vec::new(),
             overflow: None,
         };
+        return (forecast, deaths);
     };
     let theirs = unit_view(state, defender);
     let bonus = crate::combat::attack_mod_for(state, attacker, defender);
@@ -1189,29 +1244,53 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
         || (taken < mine.health
             && !has_keyword(&theirs.keywords, KeywordKind::Poisonous)
             && !exiles_on_damage(state, defender));
-    let (splash, overflow) = if falls {
+    let (mut splash, besides, overflow) = if falls {
         // R176: an attacker that falls first strikes nothing, so its Cleave never runs.
-        (Vec::new(), None)
+        (Vec::new(), Vec::new(), None)
     } else {
         let attack = mine.attack + bonus.attack;
-        (
-            splash_of(state, attacker, defender, attack, poisons),
-            overflow_of(state, attacker, target),
-        )
+        let (splash, besides) = splash_of(state, attacker, defender, attack, poisons);
+        (splash, besides, overflow_of(state, attacker, target))
     };
-    AttackForecast {
+    // R4379000: the check after the combat, settled once every hit has landed (R59). The standing
+    // board's `kills` decided the strike back above (§4.3 step 1); a later pass only adds deaths.
+    let mut reached = vec![
+        Reached {
+            id: defender.id.clone(),
+            dealt,
+            destroyed: kills,
+            exiled: dealt > 0 && exiles_on_damage(state, attacker),
+        },
+        Reached {
+            id: attacker.id.clone(),
+            dealt: taken,
+            destroyed: !survives,
+            exiled: taken > 0 && exiles_on_damage(state, defender),
+        },
+    ];
+    reached.extend(besides);
+    let mut deaths = settle_deaths(state, &reached);
+    // §4.5 step 2: a Trample excess that ends the game ends it after the check's first pass.
+    if overflow.as_ref().is_some_and(|overflow| overflow.kills) {
+        deaths.passes.truncate(1);
+    }
+    for hit in &mut splash {
+        hit.kills |= deaths.goes(&hit.instance_id);
+    }
+    let forecast = AttackForecast {
         attacker_id: String::new(),
         target_id: String::new(),
         dealt,
         taken,
-        kills,
-        survives,
+        kills: kills || deaths.goes(&defender.id),
+        survives: survives && !deaths.goes(&attacker.id),
         pops: !falls && hit > 0 && is_shielded(state, defender),
         attacker_size,
         target_size: theirs.attack + theirs.health,
         splash,
         overflow,
-    }
+    };
+    (forecast, deaths)
 }
 
 /// R4290000, §4.4 step 10: the Cleave hit of `attack` on each unit beside `defender`, read through the
@@ -1219,31 +1298,26 @@ fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTa
 /// spent (R4032000). Cleave is the attack's, not the blow's: it lands when a Divine Shield,
 /// Indestructible or the zero rule stops the blow (R63), and from a Ranged attacker (R783001); a GIGA
 /// beside the target takes it once (R3546001). `kills` counts a sweep's hit on the same unit after it
-/// (R4290001), which `dealt`, Cleave's alone, does not.
+/// (R4290001), which `dealt`, Cleave's alone, does not. R4379000: with the splash, every unit besides
+/// the defender the attack's hits reach, a sweep's other hits included, for the check after it.
 fn splash_of(
     state: &GameState,
     attacker: &CardInstance,
     defender: &CardInstance,
     attack: i32,
     poisons: bool,
-) -> Vec<SplashHit> {
+) -> (Vec<SplashHit>, Vec<Reached>) {
     let pools = &mut ProjectedPools::default();
     let struck = crate::subsystems::lethal::struck_units(state, attacker, defender, attack, pools);
     let on_hero = DamageTarget::Hero {
         player: defender.controller,
     };
-    let swept = crate::subsystems::lethal::swept_units(
-        state,
-        attacker,
-        Some(defender),
-        attack,
-        &struck,
-        &on_hero,
-        pools,
-    );
-    let destroys = |dealt: i32| dealt > 0 && (poisons || exiles_on_damage(state, attacker));
-    struck
-        .into_iter()
+    let swept = swept_units(state, attacker, Some(defender), attack, &struck, &on_hero, pools);
+    let exiles = exiles_on_damage(state, attacker);
+    let destroys = |dealt: i32| dealt > 0 && (poisons || exiles);
+    let mut reached: Vec<Reached> = Vec::new();
+    let splash = struck
+        .iter()
         .filter(|hit| hit.unit.id != defender.id)
         .map(|hit| {
             let health = unit_view(state, &hit.unit).health;
@@ -1252,16 +1326,205 @@ fn splash_of(
                 .iter()
                 .find(|swept| swept.unit.id == hit.unit.id)
                 .map_or(0, |swept| swept.dealt);
+            let kills = destroys(hit.dealt)
+                || destroys(after)
+                || (hit.dealt + after > 0 && hit.dealt + after >= health);
+            reached.push(Reached {
+                id: hit.unit.id.clone(),
+                dealt: hit.dealt + after,
+                destroyed: kills,
+                exiled: hit.dealt + after > 0 && exiles,
+            });
             SplashHit {
-                kills: destroys(hit.dealt)
-                    || destroys(after)
-                    || (hit.dealt + after > 0 && hit.dealt + after >= health),
+                kills,
                 pops: attack > 0 && is_shielded(state, &hit.unit),
-                instance_id: hit.unit.id,
+                instance_id: hit.unit.id.clone(),
                 dealt: hit.dealt,
             }
         })
+        .collect();
+    reached.extend(
+        swept
+            .iter()
+            .filter(|hit| !struck.iter().any(|met| met.unit.id == hit.unit.id))
+            .map(|hit| swept_reach(state, attacker, hit, poisons)),
+    );
+    (splash, reached)
+}
+
+/// R4379000, R3554008: what a sweep's hit on a unit no other hit of the attack struck does to it, read
+/// as a Cleave hit's is: any damage destroys it from a Poisonous attack and exiles it from one that
+/// exiles what it damages (R1124).
+fn swept_reach(state: &GameState, attacker: &CardInstance, hit: &StruckUnit, poisons: bool) -> Reached {
+    let dealt = hit.dealt;
+    let exiled = dealt > 0 && exiles_on_damage(state, attacker);
+    Reached {
+        id: hit.unit.id.clone(),
+        dealt,
+        destroyed: dealt > 0 && (poisons || exiled || dealt >= unit_view(state, &hit.unit).health),
+        exiled,
+    }
+}
+
+/// R4379000, R3554008: the units a sweeper's attack on a hero sweeps, read after its blow as
+/// `projected_damage_with` reads them, so the blow spends a damage pool first (R4032000). None for an
+/// attacker that does not sweep.
+fn hero_sweep(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> Vec<Reached> {
+    if crate::scripts::flags_of(state, attacker).sweep_lane.is_none() {
+        return Vec::new();
+    }
+    let attack = unit_view(state, attacker).attack;
+    let pools = &mut ProjectedPools::default();
+    crate::damage::project_hit(state, Some(attacker), target, attack, pools);
+    let poisons = unit_has(state, attacker, KeywordKind::Poisonous);
+    swept_units(state, attacker, None, attack, &[], target, pools)
+        .iter()
+        .map(|hit| swept_reach(state, attacker, hit, poisons))
         .collect()
+}
+
+/// The units on the field in R68's order, the active player's side first (`state_check::units_of`), as
+/// §4.5 step 1 walks them.
+fn units_in_check_order(state: &GameState) -> Vec<CardInstance> {
+    active_first(state)
+        .into_iter()
+        .flat_map(|player| crate::state_check::units_of(state, player))
+        .collect()
+}
+
+/// R4379000: whether one unit's leaving the field can change what §4.5 step 1 reads of another: an aura
+/// in play (§10.4 layer 5) or a unit that sets its own stats from the board (layer 2, R39), the only
+/// layers that read other cards. Without either, the check's first pass after an attack is all of it.
+fn layers_read_the_board(state: &GameState) -> bool {
+    crate::layers::aura_sources(state)
+        .into_iter()
+        .any(|source| !source.vanilla && crate::scripts::script_of(state, source).aura.is_some())
+        || PLAYER_IDS.into_iter().any(|player| {
+            crate::state_check::units_of(state, player)
+                .iter()
+                .any(|unit| !unit.vanilla && crate::scripts::script_of(state, unit).set_stat.is_some())
+        })
+}
+
+/// R4379000: `unit` off the scratch board with every card dormant beneath it in its pile, so none resumes
+/// on top: the forecast is not shown what a pile holds, only its count (R13, R4221002).
+fn take_off(after: &mut GameState, unit: &CardInstance) {
+    if let Some(slot) = slot_of(after, unit)
+        && card_at(after, slot).is_some_and(|top| top.id == unit.id)
+    {
+        let buried = crate::zones::beneath_at(after, slot).to_vec();
+        for card in &buried {
+            crate::zones::remove_from_field(after, card, Default::default());
+        }
+    }
+    crate::zones::remove_from_field(after, unit, Default::default());
+}
+
+/// R4379000, §4.5 steps 1 and 4: one pass's dying units off the scratch board together (R463), each
+/// whose view has Reborn back in its zone without it at 1 health (R83), read once every body is back,
+/// as `state_check::reborn_step` reads it. Its other resets (R78) are not modelled: they change
+/// nothing a later pass reads of it at 1 health.
+fn settle_pass(after: &mut GameState, dying: &[CardInstance]) {
+    let reborn: Vec<bool> = {
+        let auras = AuraTable::new(&*after);
+        dying
+            .iter()
+            .map(|unit| auras.unit_has(unit, KeywordKind::Reborn))
+            .collect()
+    };
+    let mut back: Vec<String> = Vec::new();
+    for (unit, reborn) in dying.iter().zip(reborn) {
+        if !reborn {
+            take_off(after, unit);
+            continue;
+        }
+        if let Some(body) = find_instance_mut(after, &unit.id) {
+            body.granted_keywords
+                .retain(|keyword| keyword.kind() != KeywordKind::Reborn);
+            body.reborn_spent = Some(true);
+            body.vanilla = false;
+            body.marked_destroyed = None;
+            body.damage = 0;
+            back.push(unit.id.clone());
+        }
+    }
+    for id in &back {
+        let Some(body) = find_instance(after, id).cloned() else {
+            continue;
+        };
+        let max_health = unit_view(after, &body).max_health;
+        if let Some(card) = find_instance_mut(after, id) {
+            card.damage = (max_health - 1).max(0);
+        }
+    }
+}
+
+/// R4379000: §4.5's check after an attack whose hits reach `reached`, settled on a scratch copy of the
+/// board until nothing changes: each pass exiles the units marked for it (MD-D31), then takes off every
+/// unit at 0 or less health or marked destroyed, so a unit an aura held up falls a pass after the
+/// aura's source. Nothing is cloned when nothing dies or no layer reads the board, where the first
+/// pass is the units the hits destroy. Death hooks, traps, "would die" replacements, Tribute
+/// conditions (R403), carriers (R446) and the card-on-card standing steps are not modelled.
+fn settle_deaths(state: &GameState, reached: &[Reached]) -> AttackDeaths {
+    if !reached.iter().any(|hit| hit.destroyed) {
+        return AttackDeaths::default();
+    }
+    if !layers_read_the_board(state) {
+        let walk = units_in_check_order(state);
+        let marked = |exiled: bool| {
+            walk.iter()
+                .filter(move |unit| {
+                    reached
+                        .iter()
+                        .any(|hit| hit.id == unit.id && hit.destroyed && hit.exiled == exiled)
+                })
+                .map(|unit| unit.id.clone())
+        };
+        let pass: IndexSet<String> = marked(true).chain(marked(false)).collect();
+        return AttackDeaths {
+            passes: vec![pass.into_iter().collect()],
+        };
+    }
+    let mut after = state.clone();
+    for hit in reached {
+        let Some(unit) = find_instance_mut(&mut after, &hit.id) else {
+            continue;
+        };
+        if hit.dealt > 0 {
+            unit.damage += hit.dealt;
+        }
+        if hit.exiled {
+            unit.marked_exiled = Some(true);
+        } else if hit.destroyed {
+            unit.marked_destroyed = Some(true);
+        }
+    }
+    let mut deaths = AttackDeaths::default();
+    for _ in 0..STATE_CHECK_PASS_CAP {
+        let exiles: Vec<CardInstance> = units_in_check_order(&after)
+            .into_iter()
+            .filter(|unit| unit.marked_exiled == Some(true))
+            .collect();
+        for unit in &exiles {
+            take_off(&mut after, unit);
+        }
+        let dying: Vec<CardInstance> = {
+            let auras = AuraTable::new(&after);
+            let mut met: IndexSet<String> = IndexSet::new();
+            units_in_check_order(&after)
+                .into_iter()
+                .filter(|unit| crate::state_check::is_dying(&auras, unit) && met.insert(unit.id.clone()))
+                .collect()
+        };
+        if exiles.is_empty() && dying.is_empty() {
+            break;
+        }
+        settle_pass(&mut after, &dying);
+        deaths
+            .passes
+            .push(exiles.iter().chain(&dying).map(|unit| unit.id.clone()).collect());
+    }
+    deaths
 }
 
 /// R4290000, §4.4 step 9: what an attack on a unit tramples on to that unit's hero, R44's projection

@@ -2415,11 +2415,10 @@ fn card_label(state: &GameState, id: &str) -> String {
 ///   face, Stinkyscape #138 Pocket Peptides; §4.5 step 1, R4221000): it answers the death check after
 ///   the combat, a flicker or its own `then`, with no `trapFired` or `hookResolving` for `plain_combat`
 ///   to see, and the forecast projects no replacement (fuzz seed 9561);
-/// - a Unit the attack strikes besides its target (a Cleave neighbour, §4.4 step 10; a sweep's other
-///   hit, R3554008) that has a card dormant beneath it or holds one (R4221002's reason, R4318000);
-/// - a death the attack may cause that lowers the other combatant's health or takes its Indestructible
-///   (§4.5 step 1, R69), each unit it strikes counted as dying: a sweep that kills the Units whose auras
-///   held its target up (fuzz seed 6180, R4318000).
+/// - a Unit the state check after the combat takes off, as the forecast settles it (R4379000; a Cleave
+///   neighbour, §4.4 step 10, a sweep's other hit, R3554008, or one an aura no longer holds up), with a
+///   card dormant beneath it or held by it (R4221002's reason, R4318000): its leaving brings that card
+///   in, which the forecast is not shown.
 fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> bool {
     let Some(attacker) = find_instance(state, attacker_id) else {
         return false;
@@ -2477,11 +2476,15 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
     if brings_in(attacker) || struck.iter().any(brings_in) {
         return false;
     }
-    let others = struck_besides_target(state, attacker, target);
-    if others.iter().any(brings_in) {
+    let Some(aimed) = crate::combat::attack_target_of(state, target_id) else {
         return false;
-    }
-    if deaths_lower_a_combatant(state, attacker, target, &others) {
+    };
+    let settled = crate::query::attack_deaths(state, attacker, &aimed);
+    if settled
+        .gone()
+        .filter_map(|id| find_instance(state, id))
+        .any(brings_in)
+    {
         return false;
     }
     let pool_soaks_reflection = crate::query::damage_pool_of(state, attacker.controller, false) > 0;
@@ -2491,71 +2494,6 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
             flags.reflects_to_attacker == Some(true)
                 || (pool_soaks_reflection && flags.reflects_damage == Some(true))
         }))
-}
-
-/// R4318000: the Units `attacker`'s attack on `target` strikes besides its target, each once: a Unit
-/// target's Cleave neighbours (`query::cleave_struck`, §4.4 step 10) and, for a sweeper, every other
-/// enemy Unit its sweep weighs (`combat::sweep_weight`, R3554008).
-fn struck_besides_target(
-    state: &GameState,
-    attacker: &CardInstance,
-    target: Option<&CardInstance>,
-) -> Vec<CardInstance> {
-    let mut out: Vec<CardInstance> = Vec::new();
-    if let Some(defender) = target {
-        out.extend(
-            crate::query::cleave_struck(state, attacker, defender)
-                .into_iter()
-                .skip(1),
-        );
-    }
-    if crate::scripts::flags_of(state, attacker).sweep_lane.is_some() {
-        for unit in crate::zones::active_units_of(state, opponent_of(attacker.controller)) {
-            let met =
-                target.is_some_and(|aimed| aimed.id == unit.id) || out.iter().any(|card| card.id == unit.id);
-            if !met && crate::combat::sweep_weight(state, attacker, unit).is_some() {
-                out.push(unit.clone());
-            }
-        }
-    }
-    out
-}
-
-/// R4318000: whether a death the attack may cause lowers what the state check reads of a combatant
-/// that outlives the combat (§4.5 step 1): its health, or its Indestructible (R69). The forecast reads
-/// auras as the board shows them, so the target and the other struck Units come off a copy of the
-/// board for the attacker, and the attacker and the other struck Units for the target, all as dying.
-fn deaths_lower_a_combatant(
-    state: &GameState,
-    attacker: &CardInstance,
-    target: Option<&CardInstance>,
-    others: &[CardInstance],
-) -> bool {
-    let lowered = |survivor: &CardInstance, dying: Vec<&CardInstance>| -> bool {
-        if dying.is_empty() {
-            return false;
-        }
-        let mut after = state.clone();
-        for card in dying {
-            crate::zones::remove_from_field(
-                &mut after,
-                card,
-                crate::zones::RemoveFromFieldOptions::default(),
-            );
-        }
-        let Some(still) = find_instance(&after, &survivor.id) else {
-            return true;
-        };
-        let was = crate::layers::unit_view(state, survivor);
-        let now = crate::layers::unit_view(&after, still);
-        now.health < was.health
-            || (has_keyword(&was.keywords, KeywordKind::Indestructible)
-                && !has_keyword(&now.keywords, KeywordKind::Indestructible))
-    };
-    if lowered(attacker, target.into_iter().chain(others).collect()) {
-        return true;
-    }
-    target.is_some_and(|defender| lowered(defender, std::iter::once(attacker).chain(others).collect()))
 }
 
 /// I18 (#4111): whether one step's `events`, and the `state` it left, were `entry`'s attack and nothing
