@@ -16419,17 +16419,8 @@
       }
     },
     "4390": {
-      "action": "plan",
-      "asks": [
-        "c:7067072162"
-      ],
-      "build_next": {
-        "from_run": "44934973251",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-21T18:44:23Z",
-        "until": "2026-11-21T19:14:23Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T18:44:13Z",
         "difficulty": "medium",
@@ -16448,10 +16439,9 @@
         "reason": "planned on sonnet",
         "trail": "ver/tests/api/daily.rs; sed -n 380,436p crates/server/tests/api/daily.rs; sed -n 1083,1125p crates/server/tests/api/daily.rs\"}\n- Bash: {\"command\": \"sed -n 1,140p crates/server/src/daily/invites.rs | head -200; grep -n \\\"pub async fn\\\\|fn \\\" crates/server/src/daily/invites.rs | head -40\"}\n- Bash: {\"command\": \"sed -n 140,265p crates/server/src/daily/invites.rs; sed -n 405,520p crates/server/src/daily/invites.rs\"}\n- Bash: {\"command\": \"sed -n 265,404p crates/server/src/daily/invites.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"daily_invites\\\\|daily\\\\.invites\\\\|invites_get\\\\|invites_open_of\\\" crates/server/src --include=*.rs | grep -v \\\"^crates/server/src/db/\\\\(pg\\\\|fake\\\\|store\\\\).rs:.*fn \\\" | head \u2026\n- Bash: {\"command\": \"grep -n \\\"daily-sweep\\\\|sweep\\\\|retention\\\\|Retention\\\" crates/server/README.md | cut -c1-260 | head -40; grep -n \\\"daily_invites\\\\|20\\\" crates/server/tests/sql/01_schema_invariants.sql \u2026\n- Bash: {\"command\": \"grep -n \\\"retention\\\\|run_purge\\\\|purge\\\" docs/v0.3.0/SURFACE.md | cut -c1-240 | head -20; grep -rn \\\"practice.prune\\\\|lobbies.sweep\\\" --include=*.md --include=*.json --include=*.toml --\u2026\n- Bash: {\"command\": \"grep -rn \\\"practice.prune\\\" crates/server/src crates/server/tests | head; sed -n 800,822p crates/server/README.md\"}\n- Bash: {\"command\": \"sed -n 470,560p crates/server/src/alerts.rs; sed -n 840,900p crates/server/src/alerts.rs\"}\n- Bash: {\"command\": \"sed -n 900,990p crates/server/src/alerts.rs; grep -n \\\"retention\\\" crates/server/src/loops.rs | head; grep -rn \\\"FailingStreak::new\\\" crates/server/src | head -30\"}\n- Bash: {\"command\": \"grep -rn \\\"daily-sweep\\\" apps crates docs e2e --include=* -l 2>/dev/null | grep -v node_modules | head; grep -rn \\\"expired.*settled.*emailed\\\" -r crates docs apps --include=*.md --includ\u2026\n- Bash: {\"command\": \"grep -n \\\"daily-sweep\\\" -B2 -A8 apps/edge/src/routing.ts | head -40; grep -n \\\"daily-sweep\\\" -B3 -A8 e2e/support/daily.ts | head -40; grep -n \\\"daily-sweep\\\" apps/edge/README.md crates/s\u2026\n- Bash: {\"command\": \"grep -rn \\\"Swept\\\\b\\\" crates/server --include=*.rs | grep -v \\\"practice\\\" | head; grep -rn \\\"\\\\\\\"emailed\\\\\\\"\\\" crates apps e2e --include=*.rs --include=*.ts | grep -v node_modules | head\u2026\n- Bash: {\"command\": \"grep -n \\\"pub async fn notifications_purge\\\\|pub async fn chat_purge\\\\|pub async fn economy_practice_seeds_purge\\\\|pub async fn idempotency_purge\\\\|pub async fn lobbies_reap\\\" -B4 -A3 cr\u2026\n- Bash: {\"command\": \"sed -n 8950,9010p crates/server/tests/store/contract.rs\"}\n- Bash: {\"command\": \"sed -n 565,640p crates/server/tests/store/contract.rs; grep -n \\\"fn match_row\\\\|fn action_row\\\" -A22 crates/server/tests/store/contract.rs | head -70\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn track\\\\|pub fn failed\\\\|pub fn ok\\\\|pub fn new\\\" -B3 -A14 crates/server/src/loops.rs | head -90\"}\n- Bash: {\"command\": \"grep -n \\\"R3730004\\\\|R4317001\\\\|lobbies_reap\\\\|lobbies.sweep\\\\|purge_expired\\\\|retention loop\\\\|retention purge\\\" crates/server/README.md | cut -c1-300\"}\n- Bash: {\"command\": \"sed -n 1145,1180p crates/server/README.md | cut -c1-400; sed -n 850,900p crates/server/README.md | cut -c1-500\"}\n- Bash: {\"command\": \"sed -n 139,290p crates/server/tests/api/daily.rs\"}\n- Bash: {\"command\": \"sed -n 80,250p crates/server/tests/api/retention.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"challenges.purge\\\\|challengesPurge\\\" crates/server/tests | head -5; grep -rln \\\"pub async fn \\\\(challenges_purge\\\\|daily_invites_expire\\\\)\\\" crates/server/tests | head; sed -n\u2026\n- Bash: {\"command\": \"git log --oneline --all -- spec/rulings/R4317001.md | head -3; git log --oneline -3 -- spec/rulings/R3730004.md; c=$(git log --format=%h -1 -- spec/rulings/R4317001.md); git show --stat \u2026\n- Bash: {\"command\": \"git show 1a46b42f91 -- crates/server/src/alerts.rs crates/server/README.md crates/server/src/api/retention.rs | head -150\"}\n- Bash: {\"command\": \"grep -rln \\\"retention\\\\|kept for\\\" apps/web/src --include=*.tsx --include=*.ts 2>/dev/null | head; grep -rn \\\"shared replay\\\\|daily challenge\\\" docs/*.md 2>/dev/null | grep -i \\\"privacy\\\u2026\n- Bash: {\"command\": \"grep -n \\\"fn keep_only\\\" -B2 -A8 crates/server/src/db/fake.rs; grep -n \\\"^fn by_age\\\" -A6 crates/server/src/db/fake.rs; sed -n 4975,4990p crates/server/src/db/fake.rs\"}\n- Bash: {\"command\": \"sed -n 7960,8000p crates/server/src/db/pg.rs; grep -n \\\"macro_rules! dispatch\\\" -A25 crates/server/src/db/store.rs | head -40\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct DailyTables\\\" -A10 crates/server/src/db/fake.rs; grep -n \\\"pub replay_shares\\\\|pub daily\\\\b\\\\|pub daily:\\\" crates/server/src/db/fake.rs; grep -rn \\\"tables\\\\.daily\\\" \u2026\n- Bash: {\"command\": \"sed -n 246,272p crates/server/tests/api/retention.rs; grep -n \\\"pub struct IdempotencyRow\\\" -B3 -A14 crates/server/src/economy/store.rs\"}\n- Bash: {\"command\": \"sed -n 355,363p crates/server/README.md | cut -c1-200; grep -n \\\"sweep_lobbies\\\\|mod \\\" crates/server/tests/api/retention.rs | head; grep -n \\\"^mod \\\\|^ mod \\\" crates/server/tests/store/\u2026\n- said: Now I'll write the draft file with the whole plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4390/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"Server-only change (crates/server, spec notes): no engine, AI, migra\u2026\n- Bash: {\"command\": \"grep -rn \\\"idempotency.sweep\\\\|\\\\\\\"chat.purge\\\\\\\"\\\" crates apps docs --include=*.rs --include=*.md --include=*.ts 2>/dev/null | grep -v \\\"^crates/server/src/alerts.rs\\\\|^crates/server/RE\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n \\\"after \\\\`r4233000\\\" .bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4390/.bot-plan.md\", \"old_string\": \"(`tests/api/daily.rs`, after `r4233000_\\u2026` is not needed: put it after `r3727000_a_move_a\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Server-only change (crates/server plus spec notes): no engine, AI, migration or cross-crate design, and about 14 files, so none of the five hard lines holds.\"} --> ## Goal After this change the server deletes what nothing can read any more, as it already d\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-21T18:20:19Z",
       "owner_why": "it plans it",
@@ -16464,12 +16454,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-21T18:12:06Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44934973251",
+      "run_id": "pending:dac59d5b-1795286697",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T18:20:19Z",
+      "started_at": "2026-11-21T18:45:19Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7067072162"
+      ]
     },
     "4391": {
       "action": "build",
@@ -17055,9 +17047,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T18:36:01Z",
+    "at": "2026-11-21T18:45:19Z",
     "url": "",
-    "what": "plan #4402 on claude-6"
+    "what": "build #4390 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-21T18:27:32Z",
