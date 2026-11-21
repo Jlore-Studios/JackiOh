@@ -16301,13 +16301,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "44873122123",
+            "tier": "medium"
+          }
+        ],
         "sha": "29e26cd8e1800af933432a1f8381513763d8cfc6",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4388": {
