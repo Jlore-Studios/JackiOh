@@ -15759,20 +15759,14 @@
     "what": "plan #4375 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-21T01:51:19Z",
+    "at": "2026-11-21T02:04:27Z",
     "notes": [
-      "delivered review #4360 on claude-6 (run 44851939720): reviewed",
-      "delivered review #4372 on claude-3 (run 44851881651): approved",
-      "delivered review #4373 on claude-7 (run 44851828118): approved",
-      "delivered review #4367 on muse (run 44850510177): approved",
-      "delivered plan #4332 on agy (run 44834905934): failed",
-      "started revise #4373 on claude-7 (run 44853016428)",
-      "started plan #4332 on agy (run 44853069137)",
-      "started plan #4374 on muse (run 44853118615)",
+      "delivered plan #4374 on muse (run 44853118615): planned",
+      "started build #4374 on muse (run 44854022737)",
+      "started revise #4372 on claude-3 (run 44854087667)",
+      "started plan #4375 on claude-6 (run 44854142218)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#4374: typed it Task",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "#4375: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16478,7 +16472,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T01:51:19Z",
+  "loop_tick": "2026-11-21T02:04:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
