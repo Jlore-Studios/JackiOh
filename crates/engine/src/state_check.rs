@@ -719,6 +719,8 @@ struct ReadCard {
     at: Option<ZoneRef>,
     token: bool,
     standing: bool,
+    /// R4395001: a Field Spell, Trap or Field Trap that dies standing in a unit zone (Animated, R383).
+    animated: bool,
     /// R1849002, R4207000: a destroy-to-exile aura sends it to its exile pile instead of its graveyard.
     exiled: bool,
     snapshot: CardInstance,
@@ -747,6 +749,9 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 at: crate::zones::slot_of(sink.state, &unit),
                 token: crate::zones::is_unit_token(sink.state, &unit),
                 standing: crate::zones::stands_in_backrow(sink.state, &unit),
+                animated: matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                    && crate::faces::card_type_of_face(sink.state, &unit.def_id, unit.radiant)
+                        != crate::CardType::Unit,
                 // R1849002: judged for every card before any moves, so the aura card dying beside them
                 // exiles itself and the rest; a Sacrifice is no destroy, so this aura leaves it alone.
                 exiled: cause == DeathCause::Collected
@@ -920,6 +925,8 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             // R89: its face as it died, which a unit token that has ceased to exist can no longer tell
             // (C+ #12.8 Frostspatula remembers what it killed by definition and face, R409).
             radiant: if card.snapshot.radiant { Some(true) } else { None },
+            // R4395001: an Animated Field Spell or Trap that died standing as a Unit (R383).
+            animated: card.animated.then_some(true),
             via,
         });
         // R4207000: then where it went, as `zones::exile_to_pile` reports an exile (a unit token's

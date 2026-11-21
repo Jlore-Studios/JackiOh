@@ -1,12 +1,12 @@
 //! C #14 Shadowstep (SPEC §8.6 row 14, §4.5, §6.2 Replacement, §6.3 Flicker; R4, R11, R12, R33, R57,
-//! R61, R64, R69, R78, R97, R99, R317, R4395000). Trap, cost 1 (2 until issue #3136), Common.
+//! R61, R64, R69, R78, R97, R99, R317, R4395000, R4395001). Trap, cost 1 (2 until issue #3136), Common.
 //!   Base:    "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
 //!   Radiant: "Activates when any of your Units would die: Flicker them instead, so they survive. Add a
 //!            copy of each to your hand. The copies cost ({setCost})."
 //!
 //! BASE: a `destroyed` of a Unit of yours, read by its definition's type on the face it died on
-//! (R4395000: a Field Spell, Trap or Field Trap of yours is none, alone or beside Units; a Unit standing
-//! in the backrow is one, R1081000). R99: the condition is its `when`, so an enemy's death leaves it
+//! (R4395000: a Field Spell, Trap or Field Trap of yours is none, alone or beside Units, unless it died
+//! standing as a Unit, Animated, R4395001; a Unit standing in the backrow is one, R1081000). R99: the condition is its `when`, so an enemy's death leaves it
 //! set. One firing reads the whole §4.5 step 1 pass it stands in and takes every Unit of yours (the
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
 //! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78),
@@ -46,11 +46,18 @@ fn pass_of(ctx: &EffectContext<'_>, answered: &GameEvent, answered_id: &str) -> 
         .collect()
 }
 
-/// R4395000: a `destroyed` event whose card is a Unit, read by its definition on the face it died on, as
-/// M #60 Eschews reads a death.
-fn is_unit(state: &GameState, died: &GameEvent) -> bool {
-    matches!(died, GameEvent::Destroyed { def_id, radiant, .. }
-        if card_type_of_face(state, def_id, *radiant == Some(true)) == CardType::Unit)
+/// R4395000: a `destroyed` event whose card is a Unit: by its definition's type on the face it died on, as
+/// M #60 Eschews reads a death, or, R4395001, an Animated Field Spell or Trap that died standing in a unit
+/// zone. The trigger loop holds the event without its `animated`, so that is read off the action's own
+/// `destroyed` of the same card.
+fn is_unit(ctx: &EffectContext<'_>, died: &GameEvent) -> bool {
+    let GameEvent::Destroyed { instance_id, def_id, radiant, .. } = died else {
+        return false;
+    };
+    let animated = ctx.events.iter().any(|event| {
+        matches!(event, GameEvent::Destroyed { instance_id: id, animated: Some(true), .. } if id == instance_id)
+    });
+    animated || card_type_of_face(ctx.state, def_id, *radiant == Some(true)) == CardType::Unit
 }
 
 /// `units_only` is R4395000's trigger; off, it is what v0.6.9e and before ran: any card of yours destroyed.
@@ -62,7 +69,7 @@ fn shadowstep(units_only: bool) -> TriggerDef {
         let cost = param(&*ctx, "setCost");
         pass_of(ctx, event, answered_id)
             .into_iter()
-            .filter(|died| !units_only || is_unit(ctx.state, died))
+            .filter(|died| !units_only || is_unit(ctx, died))
             .filter_map(|died| match died {
                 GameEvent::Destroyed { instance_id, controller, .. } => Some((instance_id, controller)),
                 _ => None,
@@ -81,7 +88,7 @@ fn shadowstep(units_only: bool) -> TriggerDef {
     })
     .with_when(move |ctx, event| {
         matches!(event, GameEvent::Destroyed { controller, .. } if *controller == ctx.controller)
-            && (!units_only || is_unit(ctx.state, event))
+            && (!units_only || is_unit(ctx, event))
     })
 }
 
@@ -182,6 +189,7 @@ mod tests {
     const FIRE: &str = "classicplus-t-ai-06"; // Datacenter Fire (2): destroy all Field Spells
     const FIELD_SPELL: &str = "core-064"; // Gifted Program: a Field Spell
     const TRAP: &str = "core-060"; // Bear Honeypot: a Trap
+    const TESLA: &str = "classic-005"; // Tesla: a Field Trap, Animated
 
     fn wipe(radiant_face: bool, mine: Value, opts: Value) -> Scenario {
         scenario(json!({
@@ -491,6 +499,32 @@ mod tests {
             assert_eq!(s.card(&vanilla).cost_override, Some(0));
             s.expect_in_zone(&program, "graveyard");
             assert_eq!(def_ids(&s.hand(P1)), [STOCKPILE, VANILLA]);
+        }
+
+        /// R383, R4395001: an Animated Field Trap standing in a unit zone is a Unit, so its death answers it.
+        #[test]
+        fn r4395001_an_animated_field_trap_of_yours_that_dies_standing_as_a_unit_comes_back() {
+            // Tesla fires on the Unit p2 plays and animates into lane 1; Crushing Walls then kills it there.
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": {
+                    "hand": [STOCKPILE],
+                    "library": [STOCKPILE],
+                    "backrow": [
+                        { "def": TESLA, "faceUp": false, "lane": 1 },
+                        { "def": SHADOWSTEP, "faceUp": false, "lane": 3 },
+                    ],
+                },
+                "p2": { "hand": [VANILLA, WALLS, STOCKPILE], "library": [STOCKPILE], "mana": 10 },
+            }));
+            let tesla = s.card(TESLA).clone();
+            s.play(VANILLA, json!({ "zone": 2 }));
+            assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(TESLA.to_string()));
+            s.expect_in_zone(SHADOWSTEP, "field");
+            s.play(WALLS, json!({}));
+            s.expect_in_zone(SHADOWSTEP, "graveyard");
+            s.expect_in_zone(&tesla, "hand");
+            assert_eq!(s.card(&tesla).cost_override, Some(0));
         }
 
         /// R1081000: a Unit standing in the backrow is a Unit, whatever its zone.
