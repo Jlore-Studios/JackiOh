@@ -532,6 +532,14 @@ describe("scripts/ci-scope.sh", () => {
     expect(onFor("crates/tools/Cargo.toml")).toEqual(["full", "clippy", "rust_tools_wasm", "web", "e2e"]);
   });
 
+  it("#4371 leaves e2e off for a dashboard-only diff but on for the dashboard's test ids", () => {
+    expect(onFor("apps/admin/src/Dashboard.tsx")).toEqual(["full", "web"]);
+    expect(onFor("apps/admin/src/testids.ts")).toEqual(["full", "web", "e2e"]);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "apps/admin/headers.ts").e2e).toBe(false);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "crates/server/src/main.rs").e2e).toBe(true);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "apps/web/src/main.tsx").e2e).toBe(true);
+  });
+
   // `web (promote-production)` runs promote-production.test.ts on its own line; an `on` path turns `web` on too, so that job runs.
   const PROMOTE = {
     on: [

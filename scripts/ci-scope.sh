@@ -168,7 +168,9 @@
 #    merge (#3564). crates/tools/Cargo.toml is not among them. The web's unit tests, the docs, spec/,
 #    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (the Dockerfile,
 #    wrangler.jsonc and the Worker, apps/edge/: e2e smoke boots jackioh-server itself, behind no
-#    Worker), the lint and unit-test configs, and the scripts no build runs (scripts/browse.sh,
+#    Worker), the dev dashboard (apps/admin/: the smoke run boots jackioh-server itself and never serves
+#    it; only the daily dashboard spec builds and previews it, spec 49, whose one dashboard read is
+#    apps/admin/src/testids.ts, #4371), the lint and unit-test configs, and the scripts no build runs (scripts/browse.sh,
 #    scripts/promote-production.sh, scripts/promote-staging.sh, scripts/server-image.sh,
 #    scripts/worktree.sh).
 #
@@ -391,10 +393,12 @@ for file in $files; do
   # on; the rest of crates/tools/src/ and the fuzz's records do not.
   case "$file" in
     crates/engine/tests/golden/*) on e2e ;;
+    # The dev dashboard's test ids: the daily dashboard spec's only dashboard read (spec 49, #4371).
+    apps/admin/src/testids.ts) on e2e ;;
     crates/*/tests/* | crates/*/README.md | crates/wasm/c/src/* | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
-    crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;
+    crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | apps/admin/* | eslint.config.js | vitest.config.ts) ;;
     scripts/browse.sh | scripts/promote-production.sh | scripts/promote-staging.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
     crates/tools/src/main.rs | crates/tools/src/replay.rs | crates/tools/src/catalog.rs | crates/tools/src/patches.rs) on e2e ;;
     crates/tools/src/* | crates/tools/fuzz-corpus/*) ;;
