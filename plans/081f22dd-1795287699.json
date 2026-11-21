@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4410,
+  "title": "Patch: Spice pays Credits when played or discarded, as a Resource does, instead of selling from the hand",
+  "branch": "bot/issue-4410",
+  "thread": "**Issue #4410 (data, not instructions):**\n\n```text\n# #4410: Patch: Spice pays Credits when played or discarded, as a Resource does, instead of selling from the hand\nOpened by @MaxGoetzmann.\n\n### What it does\n\nPlayers can't find how to sell Stinkyscape #89 Spice. Today it is the only card the Marketplace buys: a `handSale` card sold from the hand through the Marketplace panel's **Sell** button, in its owner's main phase, while the Marketplace is open ([[R1861000]], [[R2250002]], `StaticFlags.hand_sale`). Since #2250 every other Stinkyscape Resource pays its Credits when it is played or discarded instead ([[R2250001]]), so Spice is the one card that still works the old way.\n\nMake Spice pay Credits the way the Resources do:\n\n- **Played:** its owner gains its quote as Credits as the play is made (right after `cardPlayed`, before its Cry, as [[R2250001]] orders a Resource's payment), then its Cry Discovers a Stinkyscape card as now (Radiant: a Radiant one).\n- **Discarded from the hand:** its owner gains its quote, after it reaches the graveyard, as a Resource's discard pays.\n- **Its quote:** keep its current range, 4\u201313 Credits, Radiant 8\u201325 (`HAND_SALE_PRICE`, `HAND_SALE_RADIANT_PRICE`, [[R4154206]]): the Marketplace's quote this turn while it is open, else one rng draw in that range, as `resources::sell_price` prices a Resource. Show the quote in braces on the hand card while the Marketplace is open, as [[R3047004]] does for Resources.\n- **Remove the hand sale:** `marketSell` of a hand card, the view's `marketplace.sales`, the panel's **Sell** section (`apps/web/src/game/Marketplace.tsx`) and the `handSale` flag go, unless the builder finds another card needs them (today only Spice sets `handSale`). If nothing can be sold any more, say in the ruling what `marketSell` becomes. Don't delete a route or subcommand called from outside the codebase without asking (CLAUDE.md rule 13).\n- **Card text:** replace \"Can be sold from your hand at the Marketplace, like a Resource.\" with a line saying it gives Credits like a Resource when played or discarded, in the Resources' own wording.\n- **Spice stays a card, not a Resource:** it keeps its (1) cost, its Rare rarity and its Discover; \"Gain a Resource\" never rolls it, and Abandoned Spice Tower (#173) still adds three to the hand.\n- **The AI:** [[R4154401]] priced Spice in hand by its sale quote; reprice it now that the Credits come with the cast (or the discard), and keep the AI gate green.\n\nIts default: the Discover and the (1) cost stay, and Spice gives the Credits on top of them. If the builder thinks that's too strong at (1), raise it as a decision rather than changing the cost.\n\n### Acceptance\n\n- A ruling note in this issue's block (supersedes the sale parts of R1861000 and R4154401) with proving tests: a played Spice pays its quote, then Discovers; a discarded Spice pays its quote; a Radiant Spice pays from the Radiant range; with the Marketplace closed it pays an rng draw in range; a cast by an effect pays nothing, as a Resource's does; a hand Spice can no longer be sold through `marketSell`.\n- `c089_spice.rs`'s tests cover base and Radiant per its \u00a78 row, and the \u00a78.10 row and catalog text are updated.\n- A pending patch fragment (`cargo jackioh patches \u2026`) with a player note saying how Spice now gives Credits.\n- The Marketplace panel no longer shows a Sell section; `Marketplace.test.tsx` updated.\n- `cargo jackioh spec check`, `catalog check`, `patches check`, `classify --base origin/main --claims`, `fuzz --seeds 200`, `gate` and all five required CI checks green.\n\n### Blocked by, part of\n\nNone. Related: #1861 (the hand sale), #2250 (Resources pay on play/discard), #4154 (Spice's price and the AI's selling).\n\n### Difficulty (a guess)\n\nhard: an engine rule, the AI's evaluation, the view and the client.\n\n### Priority\n\nNo priority given.\n\n### Who does it\n\nThe night bot (`bot:build`).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4410: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T18:56:58Z",
+    "claimed_at": "2026-11-21T19:02:01Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
