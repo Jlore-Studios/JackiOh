@@ -1,0 +1,23 @@
+{
+  "title": "Spent Quests and stolen crystals",
+  "sources": "#4331",
+  "notes": "Issue #4331, the owner's rules: a Quest card whose final reward is single-use and not an Aura goes to its graveyard once the reward is given (end_quest_line, R4331000): The Greatest Heist after Stage 3, In Too Deep's base face after J or K (L and M are Auras and keep it; its Radiant face always ends holding them). A steal of mana crystals counts the thief's gain on top of the cap, and a steal from a thief takes those too (stolenManaCrystals, R4331001, amending R1854003). The Greatest Heist's Stage 3 reward now reads \"Steal your opponent's mana crystals, even past 4.\" on both faces, in English and Chinese, and the patch claims it by that text (the owner's call on #4331), since classify's forced games never reach its Stage 3 (R1370000). With the Heist claimed by its catalog change, stage 2 forces In Too Deep's games alone (R4145000), and those end its base line on J or K, so classify confirms In Too Deep in plays. Transmogulate is claimed in plays too: its pool of random Legendaries holds the Heist, so a Transmogulate that makes one shows the Heist's new reward and its new play, and classify's unforced games confirm it (R1370000). Both cards' v0.6.9c scripts are kept for their replays (R767000).",
+  "player": {
+    "title": "Spent Quests and stolen crystals",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A Quest whose last reward is used once, not an Aura, goes to your graveyard after it is given: The Greatest Heist after Stage 3, In Too Deep after J or K (it stays after L or M).",
+      "The Greatest Heist: the mana crystals you steal go past the cap of 4, as its text now says, and a Heist that steals from you takes the ones you stole too."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "stinkyscape-007"
+  ],
+  "plays": [
+    "classic-090",
+    "core-083"
+  ]
+}
