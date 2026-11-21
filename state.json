@@ -16137,6 +16137,13 @@
     "4382": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T04:37:36Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Rule 1 (engine rules): the fix edits `crates/engine/src/params.rs`, which resolves every declared number, and the change also spans the engine, cards and tools crates (rule 3)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
