@@ -15697,6 +15697,8 @@
       }
     },
     "4374": {
+      "action": "plan",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T01:52:10Z",
         "difficulty": "medium",
@@ -15706,20 +15708,30 @@
       },
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-21T01:56:59Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-21T01:52:10Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:0bc0a86a-1795226196",
+      "runs_on": "night-vm-muse",
       "spot_check_of": 4360,
-      "stop_requested": false
+      "started_at": "2026-11-21T01:56:59Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T01:56:24Z",
+    "at": "2026-11-21T01:56:59Z",
     "url": "",
-    "what": "plan #4332 on agy"
+    "what": "plan #4374 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T01:38:29Z",
