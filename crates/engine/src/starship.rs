@@ -145,21 +145,6 @@ pub fn launched_starship_of(state: &GameState, player: PlayerId) -> Option<&Card
         .map(|(_, card)| card)
 }
 
-/// R1859001: a fused piece's declared number `key`, read on the face it fused on: `param` reads the
-/// Starship's face (`ctx.radiant`), while a piece that fused Radiant runs its Radiant script (R469). The
-/// tuning is the Starship's, as `param`'s is.
-pub fn piece_number(ctx: &crate::script::EffectContext<'_>, def_id: &str, radiant: bool, key: &str) -> i32 {
-    crate::params::param_value(
-        &*ctx.state,
-        ctx.live_self(),
-        key,
-        crate::params::ParamValueOptions {
-            def_id: Some(def_id.to_string()),
-            radiant: Some(radiant),
-        },
-    )
-}
-
 // A piece dies (R1852000–R1852002)
 
 /// R2521000: the definition a dead piece's copy is a fresh card of, the piece it was printed as: a fusion

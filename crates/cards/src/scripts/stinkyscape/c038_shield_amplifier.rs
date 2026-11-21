@@ -64,6 +64,7 @@ mod tests {
 
     use crate::scenario;
     use crate::filler;
+    use crate::stinkyscape_family as fam;
 
     const AMPLIFIER: &str = "stinkyscape-038";
     const MENACE: &str = "core-019"; // Midrange Menace: a Unit, Taunt
@@ -248,6 +249,30 @@ mod tests {
             assert_eq!(buffed_on(&s, &id), 1);
             let ship = dormant_starship_of(s.state(), PlayerId::P1).cloned();
             assert!(ship.is_some(), "a piece that died fuses a copy into a Dormant Starship");
+        }
+
+        const RADIANT_BUFF: i32 = 4;
+
+        /// R4334000: a launched Starship holding a Radiant copy gains the Radiant `buff` when it
+        /// survives an attack it made, and shows it.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            let (mut s, ship) = fam::piece_ship(
+                ID,
+                "s038-piece-ship",
+                true,
+                json!({}),
+                json!({ "field": [{ "def": fam::DURABLE, "lane": 1 }] }),
+            );
+            assert_eq!(fam::shown_number(&s, &ship, "buff"), Some(RADIANT_BUFF));
+            // The Starship came in this turn: it attacks on p1's next.
+            crate::next_turn_of(&mut s, PlayerId::P1);
+            let target = s.unit_at(PlayerId::P2, 1);
+            let before = s.stats(ship.as_str());
+            s.attack(ship.as_str(), &target);
+            let after = s.stats(ship.as_str());
+            assert_eq!(after.attack, before.attack + RADIANT_BUFF);
+            assert_eq!(after.max_health, before.max_health + RADIANT_BUFF);
         }
     }
 }

@@ -149,5 +149,13 @@ mod tests {
         fn r1862000_the_enemy_hero_is_never_offered_and_is_refused() {
             fam::can_never_hero(ID, "s060", true);
         }
+
+        /// R4334000: a launched Starship holding a Radiant copy hits the chosen Unit for the Radiant
+        /// `damage` and shows it; one holding a base copy, the base `damage`.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            fam::shot_ship_hits(ID, "s060", "cannon", true, RADIANT_DAMAGE);
+            fam::shot_ship_hits(ID, "s060", "cannon", false, DAMAGE);
+        }
     }
 }

@@ -51,6 +51,7 @@ mod tests {
 
     use crate::scenario;
     use crate::filler;
+    use crate::stinkyscape_family as fam;
 
     const CAPSULE: &str = "stinkyscape-043";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
@@ -147,6 +148,24 @@ mod tests {
             assert_eq!(s.unit(PlayerId::P1, 1).expect("capsule").damage, 0);
             assert_eq!(s.unit(PlayerId::P1, 2).expect("vanilla").damage, 0);
             assert_eq!(heals(&s), vec![4, 2, 3]);
+        }
+
+        const RADIANT_HEAL: i32 = 4;
+
+        /// R4334000: a launched Starship holding a Radiant copy heals its hero the Radiant `heal`
+        /// at the end of the turn, and shows it.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            let (mut s, ship) = fam::piece_ship(
+                ID,
+                "s043-piece-ship",
+                true,
+                json!({ "health": 20 }),
+                json!({}),
+            );
+            assert_eq!(fam::shown_number(&s, &ship, "heal"), Some(RADIANT_HEAL));
+            s.end_turn();
+            s.expect_health(PlayerId::P1, 20 + RADIANT_HEAL);
         }
     }
 }

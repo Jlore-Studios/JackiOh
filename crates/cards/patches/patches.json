@@ -32209,5 +32209,107 @@
       "v0.6.7m"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.8b",
+    "date": "2026-11-20",
+    "title": "Reignclipse prints one Armor and one Burns line",
+    "source": "#4293",
+    "notes": "Reignclipse (#4293) prints Armor 4 and 3 as one Armor 7 (Radiant 4 and 6 as 10) and its two Burn lines as one rider of the sum, declaring burns 9 (18) with the display-only damage gone; play unchanged (R4293000).",
+    "player": {
+      "title": "Reignclipse prints one Armor and one Burns line",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Reignclipse prints one Armor number and one Burns line."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "2f97a443ec1722bb0ace8405800865c063861ae0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-133"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscapeplus-133-5",
+        "name": "Reignclipse",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text",
+          "params"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.8c",
+    "date": "2026-11-20",
+    "title": "Radiant Starship Pieces use their Radiant numbers",
+    "source": "#4334",
+    "notes": "Radiant Starship Pieces use their Radiant numbers (#4334, R4334000): an ingredient fused on its Radiant face (R469) now reads its declared numbers on that face in every text it runs in its place, and a fused card's view shows each number on the face its ingredient went in on. A Radiant Starship Piece's copy fuses Radiant (R1852000), so in a Starship the 18 pieces that read param (Beam, Repeater and Cannon v3 to v5, Shield Amplifier, Poison Capsule, Healing Capsule, Spacemine, Patcher Nanobots, RR-5000, Defensive Crystal, Fire Beam v3 and v4) now deal, heal and buff by their Radiant numbers; R1859001's piece_number, which After Burner, Warpfield Amplifier, Ultra Capacitor, Magic Module and Hull Repairer called, is retired and those five read param with the same numbers. Other fusions with a Radiant-marked ingredient read it Radiant too. The classifier names Soul Shot, Fusion Lab, Lava Golem, Healing Capsule, Spacemine, Beam v4, Repeater v5, Patcher Nanobots, Ultra Capacitor, the Dormant Starship and Farthest Shore. An engine rule, not gated by version: a stored game that read such a number may fold differently (R767000).",
+    "player": {
+      "title": "Radiant Starship Pieces in a Starship fixed",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Radiant Starship Piece fused into your Starship now deals, heals and buffs by its Radiant numbers, and the Starship's card shows them.",
+        "A Radiant card fused into another card, as by Fusion Lab, now uses and shows its Radiant numbers."
+      ]
+    },
+    "commits": [
+      "905eba265bd4b360b34485950f45818218924b75"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-025",
+      "classicplus-031",
+      "core-055",
+      "stinkyscape-043",
+      "stinkyscape-049",
+      "stinkyscape-054",
+      "stinkyscape-059",
+      "stinkyscape-093",
+      "stinkyscape-133",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscapeplus-t-terminus-starship-farthest-shore"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.8d",
+    "date": "2026-11-20",
+    "title": "Ayys LMAO sets its summons face-down",
+    "source": "#4327",
+    "notes": "S+ #76 Ayys LMAO's three summons are set face-down in the caster's backrow by their Cloaked through the summon verb's new setCloaked (R4327000), no Unit summoned at the set or the reveal (R4327001); with no backrow zone open one is summoned face-up as before; R3557003's placement is superseded and the v0.6.8b script kept for replays (R4327002, R767000). Script and engine only: no catalog change. Rulings R4327000-R4327002.",
+    "player": {
+      "title": "Ayys LMAO sets its summons face-down",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Ayys LMAO's Ayys and Tiny Asteroids are set face-down in your backrow as Cloaked cards, hidden from your opponent until you Reveal them. With your backrow full they are summoned face-up as before."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "6d718b78293742d4d41e83e8c3cae29108f9c454"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-076"
+    ],
+    "changes": []
   }
 ]
