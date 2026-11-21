@@ -421,6 +421,16 @@ pub struct EvalWeights {
     /// destroys it alone goes in first when its splash meets a later Taunt and the two are not both one lane
     /// wide. Off, the one-lane splash and the two orders, as before.
     pub giga_cleave_read: bool,
+    /// R4402000, #4402: whether the Taunt walk of `damage_past_taunts_with` (so `face_threat`, the threat and
+    /// pressure terms, `wall_switches_priced`, `ready_gap`, the Duos pool loss and the learned features) reads
+    /// each Taunt's strike back (§4.3), with the §4.4 steps that can stop it, as `falls_to_first_strike` reads
+    /// a First Strike one. An attacker the strike back destroys still lands that hit (R59) but makes none of
+    /// its later swings (R636), and the wounds and the popped shield a strike back leaves carry to its next
+    /// swing; a Ranged attacker takes none from a non-Ranged Taunt (R783000). A Frenzy attacker whose hit
+    /// destroys the Taunt it attacked, and that survives, has its swings back to `attacks_per_turn`
+    /// (R3543003); an exiling hit's removal and a Cleave splash's kill free none. Off, every swing counts and
+    /// Frenzy frees none, as before.
+    pub strike_back_survival_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -639,6 +649,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     exile_on_damage_read: true,
     pool_and_conversion_read: true,
     giga_cleave_read: true,
+    // #4402: on. Its screen, 400 games on improve-dev against the control at 90cb03f196, read 200-200,
+    // edge 0.0 (-0.028 to 0.028); inconclusive (R4319000): 8 decided of 200 (won 4, lost 4), 33 diverged;
+    // its scene tests settle it (training/improve.md, A screen).
+    strike_back_survival_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -872,7 +886,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `giga_cleave_read`, `hand_sale_credits`) is off.
+/// `giga_cleave_read`, `strike_back_survival_read`, `hand_sale_credits`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -893,6 +907,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     exile_on_damage_read: false,
     pool_and_conversion_read: false,
     giga_cleave_read: false,
+    strike_back_survival_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
