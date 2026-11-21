@@ -38337,14 +38337,6 @@
         "run_id": "44874307543",
         "taken_asks": []
       },
-      "3": {
-        "area": "server",
-        "count": 2,
-        "last_run": "2026-11-21T06:11:14Z",
-        "provider": "claude-6",
-        "run_id": "44874347908",
-        "taken_asks": []
-      },
       "4": {
         "area": "client",
         "count": 2,
