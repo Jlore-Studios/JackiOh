@@ -165,10 +165,12 @@ func TestSuggestionPriority_TheSurveyListsEveryClass(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := template.Template
-	assertTrue(t, strings.HasPrefix(text, "<!-- version: 5 -->"), text[:min(len(text), 40)])
+	assertTrue(t, strings.HasPrefix(text, "<!-- version: 6 -->"), text[:min(len(text), 40)])
 	for _, kind := range config.SuggestionClasses {
 		assertIn(t, "- `"+kind+"`: ", text)
 	}
+	// The maintainer asked for no accessibility suggestions (#4384).
+	assertIn(t, "- **Not accessibility**: ", text)
 	names, err := prompts.Placeholders("suggest", config.PromptsDir)
 	if err != nil {
 		t.Fatal(err)
