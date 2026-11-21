@@ -37776,6 +37776,12 @@
         "number": 4370,
         "title": "Patch: a Duos hotseat spec folds its log through the replay check",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-21T04:25:05Z",
+        "number": 4377,
+        "title": "Patch: card controls announce the card's full rules text to screen readers",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-21T04:20:07Z",
