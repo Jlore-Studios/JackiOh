@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4369,
+  "title": "Patch: the changed-cards fuzz rotation plays the Duos wave too",
+  "branch": "bot/issue-4369",
+  "thread": "**Issue #4369 (data, not instructions):**\n\n```text\n# #4369: Patch: the changed-cards fuzz rotation plays the Duos wave too\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a pull request changes a card, the fuzz gate already replays that card in extra forced one-on-one games before merge, so a regression in the card is caught the same day. It never does the same for team games: a card that only breaks through a four-seat game (the shared team pool, passes between teammates, concede offers, four mulligans) is dealt only by chance, and a miss waits for the next daily run. After this change, a card change also gets a small bounded set of forced team games on the same pull request.\n\n## Why\n\n- `run()` in the fuzz CLI returns early for `--duos`, before the changed-cards wave; the manual flags refuse the combination too (`--cards` lists `duos` in its conflicts), so even by hand nobody can force cards into Duos games today.\n- `play_changed_cards` plays a 1v1 forced wave, a Radiant rotation and changed fused pairs, all one-on-one; the Duos wave has its own endings channel, probes and growth bounds, i.e. the repository already treats team games as a distinct failure domain, but changed cards never enter it per pull request.\n- No card script reads team state today, so the risk is not card text branching on teams: it is card hooks meeting engine paths that only exist with four seats (damage routed through the team pool, extra seats owing prompts, concede offers mid-game). Those paths are exactly what random daily deals may never hit for a given card before it merges.\n- This does not repeat #1363 (a pinned Duos failure corpus, closed unbuilt): it adds no corpus files and pins no past failure; and it does not repeat #4146 (rejected): no browser is involved.\n\n## Proposal\n\n- Lift the `--cards`/`--duos` conflict so `fuzz --duos --cards <ids>` forces cards into Duos decks, the same way it does for one-on-one decks; keep `--radiant` conflicting with `--duos`, since the Radiant rotation plays run-start games with deck marks and team games have no such path.\n- Apply the existing forcing (each token resolved to its carrier, sets dealt several cards a seed) to the four Duos seats' decks, and play a bounded changed-Duos rotation inside `play_changed_cards` with its own summary and coverage lines, capped by new named constants sized for the heavier four-seat games.\n- Update the `jackioh-tools` README command table in the same pull request (the acceptance test holds the table to the CLI, so it fails otherwise).\n\n## Where it lands\n\n- `crates/tools/src/fuzz.rs` (wave orchestration, forcing, new bounds), `crates/tools/src/duos_fuzz.rs` (forced Duos decks), `crates/tools/README.md` (command table) and its holding test `crates/tools/tests/acceptance.rs`.\n- SPEC \u00a710.7 (the fuzz gate) and SPEC \u00a713 (team games).\n\n## Acceptance criteria\n\n- [ ] `cargo jackioh fuzz --duos --cards <a changed card>` plays Duos games with that card forced into the seats' decks and reports a `changed cards` line; without `--cards` the wave is unchanged.\n- [ ] A pull request that changes a card plays the bounded Duos rotation after the 1v1 one, and a seed it fails names the seed, the teams and a `reproduce:` line that replays it.\n- [ ] A change with no deckable card still plays nothing extra, and `--radiant --duos` is still refused with the usage error.\n- [ ] `cargo test -p jackioh-tools` passes, including the acceptance test over the README table.\n\n## Size and risks\n\nMedium: a few hundred lines, mostly the Duos forcing path and its tests. The risk is per-pull-request time (team games cost more than one-on-one ones, and the CI job has an eight-minute budget): keep the new seed cap small and count the rotation's seconds in the pull request. No workflow changes are needed.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T04:24:20Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4369: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T04:24:39Z",
+    "claimed_at": "2026-11-21T04:29:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
