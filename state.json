@@ -16224,11 +16224,13 @@
     "what": "build #4332 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-21T04:47:03Z",
+    "at": "2026-11-21T04:54:43Z",
     "notes": [
-      "delivered plan #4379 on claude-7 (run 44866373680): planned",
-      "started plan #4379 on claude-7 (run 44867877834)",
-      "nothing more to start: nothing is queued"
+      "delivered plan #4332 on agy (run 44867514556): planned",
+      "delivered review #4361 on claude-8 (run 44847455393): approved",
+      "started build #4332 on agy (run 44868528148)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16934,7 +16936,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T04:47:03Z",
+  "loop_tick": "2026-11-21T04:54:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
