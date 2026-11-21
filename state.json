@@ -15628,17 +15628,8 @@
       }
     },
     "4369": {
-      "action": "plan",
-      "asks": [
-        "c:7057233394"
-      ],
-      "build_next": {
-        "from_run": "44866333929",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-21T04:38:27Z",
-        "until": "2026-11-21T05:08:27Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T04:38:19Z",
         "difficulty": "medium",
@@ -15657,10 +15648,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "ust not touch | \u00a710.7 documents randomness/scorers, not the gate (no such spec section exists); acceptance test must pass unmodified; harnes\u2026\n- No ruling note and no `spec/pending/4369.md`: this decides no game rule (tooling only; Hearthstone has no fuzz gate, so CLAUDE.md rule 3 mints nothing).\n- ## Steps\n- 1. `crates/tools/src/fuzz.rs`, `Args::cards`: change `conflicts_with_all = [\"duos\", \"regress\"]` to `[\"regress\"]`. Update its doc comment to say the ids go into both decks of every 1v1 seed and into all four seats' decks of every Duos seed (`--duos`). Leave `radiant`'s `conflicts_with_all = [\"handic\u2026\n- 2. `crates/tools/src/fuzz.rs`, after `CHANGED_RADIANT_MAX_SEEDS`: add `pub const CHANGED_DUOS_DEALS_PER_CARD: u32 = 4;` and `pub const CHANGED_DUOS_MAX_SEEDS: u32 = 16;`, each with a doc comment in the style of the lines above (small because four-seat games cost more than 1v1 ones).\n- 3. `crates/tools/src/fuzz.rs`, `impl Forcing`: add `pub(crate) fn deal_duos(&self, seed: u32, decks: DuosDecks) -> DuosDecks` applying `force_into` to each seat's deck (`a1`, `a2`, `b1`, `b2`), returning `decks` untouched when `self.for_seed(seed)` is empty so a wave without `--cards` deals exactly\u2026\n- 4. `crates/tools/src/duos_fuzz.rs`, options: add `fn duos_options_for_seed_forced(seed: u32, forcing: &crate::fuzz::Forcing) -> DuosCreateOptions` \u2014 today's body, but decks come from `duos_decks_for_handicaps` with each seat forced via `crate::golden::force_into(&deck, &forcing.for_seed(seed))`. Ke\u2026\n- 5. `crates/tools/src/duos_fuzz.rs`, played tracking: add `played: IndexSet<String>` to `DuosRun` and to `DuosSeedOutcome`. Add `fn note_duos_played(played: &mut IndexSet<String>, events: &[DuosEvent])` inserting the `def_id` of every `DuosEvent::Duel` whose inner event is `CardPlayed`, `TrapFired`,\u2026\n- 6. `crates/tools/src/duos_fuzz.rs`, signatures: `run(from, seeds, json, forcing: &Forcing)`, `play_duos_wave(from, ran, forcing: &Forcing)`, `fuzz_duos_seed(seed, forcing: &Forcing)` (via `play_duos_game_from` with `duos_options_for_seed_forced`), `failure_report(seed, error, forcing)`, `failure_li\u2026\n- 7. `crates/tools/src/duos_fuzz.rs`, coverage: add `pub(crate) fn duos_coverage_line(outcomes: &[DuosSeedOutcome], forcing: &Forcing) -> String` \u2014 dealt is the union of the four seats' decks recomputed per outcome seed via `duos_options_for_seed_forced` (deterministic, no stored decks needed), playe\u2026\n- 8. `crates/tools/src/fuzz.rs`, `run()`: in the `args.duos` branch, build `let forcing = Forcing::from_cards(&args.cards)?;` and call `crate::duos_fuzz::run(from, args.seeds, args.json, &forcing)`. `plays_changed` stays unchanged (bare gate only).\n- 9. `crates/tools/src/fuzz.rs`, `play_changed_cards`: after `play_radiant_rotation` inside the `forcing.cards` non-empty branch, add `failed.extend(play_changed_duos_rotation(&forcing));`. Add `fn play_changed_duos_rotation(forcing: &Forcing) -> Vec<String>`: `seeds = rotation_seeds(forcing.cards.le\u2026\n- 10. `crates/tools/README.md`: change the duos table row to `` `fuzz --duos [--from N] [--seeds N] [--cards ids\\|set] [--json]` `` and extend the bare-gate paragraph (`Bare (no --from, --handicap, --cards or --json)\u2026`) with one sentence: after the Radiant rotation it plays the changed-Duos rotation \u2026\n- 11. `spec/13-duos.md`: beside the paragraph citing `cargo jackioh fuzz --duos`, add that a pull request changing cards also plays a bounded rotation with those cards forced into all four seats' decks. No `[[R\u2026]]` links, no rule prose.\n- 12. Tests: update existing `duos_fuzz.rs` callers for new params (`a_duos_smoke_wave\u2026`, `a_failure_names\u2026`, `r3731002\u2026` (unchanged, uses wrappers), channel test, `assert_caught`, heaviest test \u2014 pass `&Forcing::default()`; add `played: IndexSet::new()` to the two hand-built `DuosSeedOutcome`s). Add\u2026\n- ## Tests\n- - `cargo test -p jackioh-tools duos` \u2014 all Duos fuzz tests, new and updated.\n- - `cargo test -p jackioh-tools fuzz` \u2014 gate tests incl. the clap conflict test.\n- - `cargo test -p jackioh-tools` \u2014 full tools suite, including `readme_the_command_table_is_the_clis` over the edited README table.\n- - `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo jackioh spec check` (spec prose touched, no ruling ids added).\n- - Once, manually: `cargo jackioh fuzz --duos --from 1 --seeds 1 --cards core-090` \u2014 expect a passing one-seed wave whose summary names the forced card.\n- ## Done when\n- - [ ] `fuzz --duos --cards <id>` forces the card into all four seats' decks and the summary carries the forced line; bare `--duos` output is unchanged.\n- - [ ] A card-changing PR plays the bounded Duos rotation after the 1v1 wave; a failing seed names seed, teams, and a working `reproduce:` line; no-deckable-card changes play nothing extra.\n- - [ ] `--radiant --duos` is still refused with the usage error.\n- - [ ] `cargo test -p jackioh-tools` green (acceptance incl.), fmt/clippy/spec-check clean.\n- ## Risks\n- - PR time budget: Duos games cost more than 1v1; the 4-games-each / 16-seed caps keep the rotation to seconds. If CI timing shows otherwise, lower the caps, never the wave's checks.\n- - Determinism: forcing must draw no rng and reorder only by `force_into` (forced ids first); the empty-forcing path must stay exactly today's deal, or every Duos seed's hash moves.\n- - Duos coverage understates like 1v1 `Coverage` (played means an event named it, not every hook ran); the line mirrors that caveat, it never fails a seed.\n- - `spec check` reads `[[\u2026]]` links and R-ids: the spec edit adds neither.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4369 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4369/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-21T04:29:06Z",
       "owner_why": "it plans it",
@@ -15673,12 +15663,14 @@
       "provider": "muse",
       "queued_at": "2026-11-21T04:24:39Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44866333929",
+      "run_id": "pending:ce02a2a5-1795236238",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-21T04:29:06Z",
+      "started_at": "2026-11-21T04:44:19Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7057233394"
+      ]
     },
     "4371": {
       "action": "build",
@@ -16272,9 +16264,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T04:43:45Z",
+    "at": "2026-11-21T04:44:19Z",
     "url": "",
-    "what": "plan #4332 on agy"
+    "what": "build #4369 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T04:26:25Z",
