@@ -37724,6 +37724,12 @@
         "number": 4364,
         "title": "Patch: axe runs over the live online match board, whose clock, marketplace and match menu the hotseat board never draws",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-21T04:24:05Z",
+        "number": 4370,
+        "title": "Patch: a Duos hotseat spec folds its log through the replay check",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-21T04:20:07Z",
