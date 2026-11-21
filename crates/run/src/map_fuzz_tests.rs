@@ -1,9 +1,9 @@
 //! Random-policy map walks with illegal-action probes (§15.5, §15.7, §15.8): whole runs from
 //! fixed seeds that also fire one illegal action per step, a misclick or a future screen's bad
 //! call. Fights are stubbed as synthetic `FightOver` reports written directly, so the test needs
-//! no AI search and stays deterministic from the run seed and cursor. Every refusal must return
-//! `Err` with the input state clone-equal; every acceptance must keep the run invariants and the
-//! saved file must still `run_fold` back to the live run.
+//! no AI search and stays deterministic from the run seed and cursor. Every illegal probe must
+//! return `Err`; every accepted walk step must keep the run invariants and the saved file must
+//! still `run_fold` back to the live run.
 
 use super::*;
 use crate::config::{
@@ -111,16 +111,15 @@ fn illegal_action(state: &RunState, content: &RunContent, rng: &mut Rng) -> RunA
     }
 }
 
-/// One whole run on `content`: at each step fire one illegal probe (a refusal must leave the
-/// state clone-equal), then take the walk's way on (each acceptance keeps the invariants and the
-/// log so far folds back to the live state). No phase is a dead end; the walk is bounded.
+/// One whole run on `content`: at each step fire one illegal probe (each must be refused),
+/// then take the walk's way on (each acceptance keeps the invariants and the log so far folds
+/// back to the live state). No phase is a dead end; the walk is bounded.
 fn drive(content: &RunContent, tag: &str, n: usize) {
     let mut rng = Rng::new(&format!("mapfuzz-4247-{tag}-{n}"), 0);
     let (setup, unlocks) = fuzz_setup(tag, n, content, &mut rng);
     let mut state =
         run_create(&setup, &unlocks, content).unwrap_or_else(|e| panic!("mapfuzz {tag} {n}: no run: {e}"));
     let mut log = Vec::new();
-    let mut refusals = 0;
     while !matches!(state.phase, RunPhase::Won | RunPhase::Dead) {
         if log.len() >= WALK_MAX_STEPS {
             panic!(
@@ -128,15 +127,11 @@ fn drive(content: &RunContent, tag: &str, n: usize) {
                 state.phase
             );
         }
-        let before = state.clone();
-        match run_reduce(&state, content, &illegal_action(&state, content, &mut rng)) {
-            Err(_) => {
-                assert_eq!(state, before, "mapfuzz {tag} {n}: a refusal changed the state");
-                refusals += 1;
-            }
-            Ok(next) => check_run_invariants(&next, content)
-                .unwrap_or_else(|e| panic!("mapfuzz {tag} {n}: an accepted probe breaks {e}")),
-        }
+        let probe = illegal_action(&state, content, &mut rng);
+        run_reduce(&state, content, &probe).expect_err(&format!(
+            "mapfuzz {tag} {n}: illegal {probe:?} accepted at {:?}",
+            state.phase
+        ));
         let free = free_action(&state, content);
         run_reduce(&state, content, &free)
             .unwrap_or_else(|e| panic!("mapfuzz {tag} {n}: dead end at {:?}: {e}", state.phase));
@@ -170,7 +165,6 @@ fn drive(content: &RunContent, tag: &str, n: usize) {
         .unwrap_or_else(|e| panic!("mapfuzz {tag} {n}: no fold: {e}"));
         assert_eq!(folded, state, "mapfuzz {tag} {n}: the log folds back");
     }
-    assert!(refusals > 0, "mapfuzz {tag} {n}: no refusal probed");
 }
 
 /// The catalog seeds the fast test walks: fixed seeds whose keeps fill the deck to the cap,
