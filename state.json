@@ -16258,6 +16258,8 @@
       }
     },
     "4386": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T04:56:56Z",
@@ -16271,8 +16273,11 @@
         "trail": "- said: Waiting for vitest verification of the failing-host test.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && python3 -c ' with open(\"scripts/build-wasm.sh\") as f: c = f.read() target = \"\"\" # #4332: play the hotseat fixture on the built module t\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && git diff scripts/build-wasm.sh\n- said: \n- read_file: {\"EndLine\": 290, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4332/scripts/build-wasm.sh\", \"StartLine\": 280}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4332/scripts/build-wasm.sh\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && pnpm --dir apps/web test src/net/build-wasm-cache.test.ts\n- said: Waiting for `build-wasm-cache.test.ts` vitest run to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && node -e ' const fs = require(\"fs\"); const file = \"scripts/build-wasm.sh\"; const content = fs.readFileSync(file, \"utf8\"); const target =\u2026\n- said: Waiting for negative test execution on `build-wasm-cache.test.ts`.\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4332/scripts/build-wasm.sh\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && pnpm --dir apps/web test src/net/build-wasm-cache.test.ts\n- said: Waiting for `build-wasm-cache.test.ts` to finish verification.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && cargo fmt --check\n- said: Waiting for `cargo fmt --check` to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && cargo jackioh catalog check\n- said: Waiting for `cargo jackioh catalog check` to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && cargo jackioh spec check\n- said: Waiting for `cargo jackioh spec check` to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4332 && git diff\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4332/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the C module's build plays the hotseat game on the module it built, and fails when the game ends anywhere but where the engine's does\"} --> ## Summary of changes 1. **Replay hotseat game in C module build**: Updated [`scripts/build-wasm.sh`](file:///hom\u2026"
       },
       "issue": 4332,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T05:44:37Z",
         "from_run": "44868528148",
         "gates": [
           {
@@ -16331,8 +16336,15 @@
         "source": "build",
         "until": "2026-11-21T06:13:46Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-21T05:43:46Z",
+      "run_id": "pending:be4c1fef-1795239855",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-21T05:44:37Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -16346,9 +16358,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T05:36:37Z",
+    "at": "2026-11-21T05:44:37Z",
     "url": "",
-    "what": "review #4385 on muse"
+    "what": "review #4386 on agy"
   },
   "last_sweep": {
     "at": "2026-11-21T05:34:59Z",
