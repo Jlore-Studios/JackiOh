@@ -16918,6 +16918,13 @@
     "4402": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T18:32:11Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "it changes the AI's evaluation and search reads (crates/ai), which the rule names as hard"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
