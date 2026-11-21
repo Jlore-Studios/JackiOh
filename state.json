@@ -15936,18 +15936,10 @@
     "what": "review #4357 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-21T02:48:26Z",
+    "at": "2026-11-21T02:59:00Z",
     "notes": [
-      "delivered suggest on muse (run 44857253119): suggested",
-      "delivered suggest on muse (run 44857203883): suggested",
-      "delivered suggest on muse (run 44857152601): suggested",
-      "delivered suggest on muse (run 44857101345): suggested",
-      "delivered revise #4357 on claude-4 (run 44844092405): built",
-      "started review #4357 on claude-4 (run 44858185175)",
-      "nothing more to start: nothing is queued",
-      "#4379: typed it Task",
-      "#4378: typed it Task",
-      "#4377: typed it Feature"
+      "#4357: `rust (test server api 1/4)` red in CI run 44858093677; its other early jobs have until 2026-11-21T03:01:44Z to report",
+      "delivered revise #4373 on claude-7 (run 44853016428): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16653,7 +16645,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T02:48:26Z",
+  "loop_tick": "2026-11-21T02:59:00Z",
   "machine_disk": {
     "issue": null,
     "reading": {
