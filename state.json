@@ -16602,6 +16602,13 @@
     "4397": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T18:16:05Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "single-crate tools change with docs; no engine rule, AI decision/search, cross-crate design, migration, or 40+ files"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
