@@ -38715,7 +38715,8 @@
       "2026-11-21T06:50:21Z,44877067953,claude-1,opus,review,4387,medium,reviewed,,1.6,19,9013,819789,0.9159,92,93,,,,,none,,1",
       "2026-11-21T06:49:38Z,44876363008,claude-3,opus,suggest,,,interrupted,refusal,10.3,0,0,0,13.6117,70,100,,,,,none,,1",
       "2026-11-21T06:49:48Z,44874307543,claude-6,opus,suggest,,,suggested,,36,195,83488,17845439,14.7766,18,23,,,,,none,,1",
-      "2026-11-21T06:48:12Z,44869898685,claude-8,opus,revise,4361,hard,built,,38.2,111,26818,6146418,3.2882,8,19,,,6.2,claude-8,resumed,,1"
+      "2026-11-21T06:48:12Z,44869898685,claude-8,opus,revise,4361,hard,built,,38.2,111,26818,6146418,3.2882,8,19,,,6.2,claude-8,resumed,,1",
+      "2026-11-21T06:49:57Z,44861720871,claude-3,opus,review,4380,hard,interrupted,refusal,140.1,173,42367,7706581,4.9434,42,100,,,1.1,,fresh,,3"
     ]
   },
   "version": 1
