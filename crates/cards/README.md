@@ -286,6 +286,8 @@ time a replay of a game played on it asks (`shipped_catalog`, `carried_versions`
 the build's own, except a script kept for that version in `KEPT_SCRIPTS` (§6). The browser's
 module (a `wasm32` target) carries only the versions from `build.rs`'s `BROWSER_CARRIED_FROM` on:
 it folds only practice games, and one folds on a carried version only with the setup it kept.
+`card_eras` lists a card's runs of carried versions over which its definition and its covering kept
+script stay the same, which `cargo jackioh carried` plays and folds back (R4382000).
 
 ## 5. Tests
 

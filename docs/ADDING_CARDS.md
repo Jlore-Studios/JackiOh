@@ -221,7 +221,8 @@ its own scripts for them. A patch
 that changes what a card's script does, not only a number in its definition, keeps the script it
 replaces: add `(ID, the newest shipped version, a fn that builds the old scripts)` to
 `KEPT_SCRIPTS` in `crates/cards/src/history.rs`. Without it, the replays that script would change are
-refused by their final hash rather than shown wrong. A script that writes its card's words into the
+refused by their final hash rather than shown wrong. `cargo jackioh carried` plays every era of every carried
+catalog and folds it back, so a kept script that is missing and panics there fails it (R4382000, R4382001). A script that writes its card's words into the
 state (a badge, a prompt) reads them with `def_of(Some(&*ctx.state), ID)`, the definition the game
 folds under, never `crate::card_def`, the build's: then a patch to those words keeps no script.
 
@@ -274,6 +275,12 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   those hooks joins the texts, and a new Unit joins the bodies, so the pull request's stride sample can move onto pairs nobody has
   played. A failure prints both ids, the seed and `cargo jackioh fused-pairs --pair <body>+<text>`, which plays it again on any day. Fix
   it, or file it and list the pair in `KNOWN_OPEN` (`crates/tools/src/fused_pairs.rs`) with its open issue; never skip it any other way.
+- **The carried-catalog sweep** (`cargo jackioh carried`, #4382) plays each card on every older catalog the build carries, one era
+  for each run of versions over which its definition and kept script stay the same, and folds the game back as a replay pinned to
+  that version. The `fuzz` gate plays the eras of the cards you changed, and the whole sweep runs daily. A failure names the version,
+  the card and the stage and prints `cargo jackioh carried --catalog <version> --card <id>`, which plays that era again: usually a
+  current script reading what the old definition lacks, or making a card the old catalog lacks, which a kept script fixes. Fix it
+  or report it; never skip it.
 - **A renamed card** (a patch that changes a `name`): run `cargo jackioh names`, which writes the new name into the comment beside its id in `card-audio.json5` (R655), `card-text.yaml` (#2498) and its `fx/cards/` table (R2784000), and into its row in the audit's last section. The audit row of a card older than #3111 still holds its name in its `Card` cell, and `tests/cross/catalog.rs`'s fixture row too: edit those by hand.
 - **A card patched to Legendary or Mythic** (or a token's `printedRarity`) fails `music-assets.test.ts` until it has row 10's intro, and one
   patched down from either until its `intro` is taken out (R1352).

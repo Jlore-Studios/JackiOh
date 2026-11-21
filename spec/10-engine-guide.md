@@ -72,7 +72,7 @@ type PlayerState = {
   turnsStarted: number;         // drives the mana refresh (2.3)
   owedInstalments?: number[];   // the instalment due at each coming refresh, next first, trailing zeros trimmed; absent when empty (M #89, R1223)
   lostRefreshThrough?: number;  // the turnsStarted index through which the refresh gives 0 (R844)
-  manaCrystals?: number;        // mana crystals a steal moved on this player's count, inside the cap: negative for the victim, positive for a thief under the steal of v0.6.9 and before; absent while none moved (Stinkyscape #7, R1854003)
+  manaCrystals?: number;        // mana crystals a steal moved on this player's count, inside the cap: negative for the victim, positive for a thief under the steal of v0.6.9c and before; absent while none moved (Stinkyscape #7, R1854003)
   stolenManaCrystals?: number;  // mana crystals this player stole, on top of the cap; a steal from them takes these too, for good; absent while none (Stinkyscape #7, R4331001)
   extraTurns?: number;           // owed extra turns, taken at the end of the player's turn (R846)
   riftExtraTurn?: true;         // the once-a-game Temporal Rift flag (R847)

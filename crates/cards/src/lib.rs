@@ -59,8 +59,8 @@ pub mod census;
 mod history;
 
 pub use history::{
-    KEPT_SCRIPTS, KeptScript, carried_versions, catalog_at, catalog_defs_at, has_script_at, shipped_catalog,
-    shipped_versions,
+    KEPT_SCRIPTS, KeptScript, card_eras, carried_versions, catalog_at, catalog_defs_at, has_script_at,
+    shipped_catalog, shipped_versions,
 };
 
 /// R1367000: the card patch history as a card's stats window reads it.

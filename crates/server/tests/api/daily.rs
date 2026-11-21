@@ -540,22 +540,37 @@ async fn a_player_not_holding_the_move_may_only_concede() {
 /// other seat holds the move. The game is dealt from a random seed, so the test plays a card whenever
 /// one is legal and ends its turn when none is, until a seat has an attack to forecast. A Mayor dealt
 /// onto the field there draws every attack's target (R1200), and such an attack has no entry (R4188001).
+/// A deal can end its game before either seat has an attack (Olivian Expanse's KYS Last Exam on turn
+/// 2), and then the test deals another.
 #[tokio::test]
 async fn r3855000_a_daily_read_carries_the_forecast_of_its_seats_legal_attacks() {
     /// More than enough turns for a unit to be played and to be old enough to attack.
     const MOVES_TO_AN_ATTACK: usize = 60;
+    /// More deals than random decks ever end early in a row.
+    const DEALS: usize = 5;
     let (app, ada, bo) = two_friends().await;
-    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    let mut match_id = daily_game(&app, &ada, &bo, 1).await;
     past_the_mulligan(&app, [&ada, &bo], &match_id).await;
 
-    let mut found = None;
-    for n in 0..MOVES_TO_AN_ATTACK {
+    let (mut found, mut deals, mut moves) = (None, 1, 0);
+    for n in 0.. {
         let (on_move, waiting) = holder(&app, [&ada, &bo], &match_id).await;
         let game = read(&app, on_move, &match_id).await;
+        if game["over"] == true {
+            assert!(deals < DEALS, "{DEALS} deals ended before an attack: {game}");
+            (deals, moves) = (deals + 1, 0);
+            match_id = daily_game(&app, &ada, &bo, 1).await;
+            past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+            continue;
+        }
         if legal_has(&game, "attack") {
             found = Some((on_move, waiting, game));
             break;
         }
+        if moves == MOVES_TO_AN_ATTACK {
+            break;
+        }
+        moves += 1;
         let action = game["legal"]
             .as_array()
             .and_then(|legal| legal.iter().find(|action| action["type"] == "play"))

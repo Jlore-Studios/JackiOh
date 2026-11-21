@@ -12,7 +12,6 @@ use crate::rng::Rng;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance_mut};
 use crate::wire::{CardType, GameEvent, Keyword, OneOrMany, PlayerId, Row, Zone, ZoneName};
-use crate::zones::{StandingAt, acting_on};
 
 /// Which card becomes Radiant: the pick the play or a prompt carried (#26 Glowy Jelly Bean's hand
 /// pick, R81), `{ of: "self" }` for Radiant Saintess including itself (R22), or an instance id a
@@ -110,10 +109,10 @@ fn gain_printed_shield(ctx: &mut EffectContext<'_>, card: &CardInstance) {
 /// §3.2 and R13: only the top of a Stack pile, or a Unit a carrier holds (R446, R1824000), is on the
 /// field, so only it can be picked.
 fn field_cards_of(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<CardInstance> {
-    acting_on(ctx.state, player, StandingAt::ItsLane)
+    // R1839000, R4322000: nor is a Dormant card, which no effect reaches.
+    crate::plague::reachable_permanents_on_field(ctx.state, player)
         .into_iter()
-        // R1839000: nor is a Dormant card, which no effect reaches.
-        .filter(|card| !crate::slumber::is_slumbering(card))
+        .filter(|card| card.controller == player)
         .cloned()
         .collect()
 }

@@ -7,6 +7,7 @@ mod agent;
 mod arena;
 mod board;
 mod card_lists;
+mod carried;
 mod catalog;
 mod changed;
 mod claims;
@@ -58,6 +59,8 @@ enum Command {
     Fuzz(fuzz::Args),
     /// Each triggered card's text fused onto each fusable Unit and played until the board settles; a daily sample, or one pair (#2381).
     FusedPairs(fused_pairs::Args),
+    /// Each card's era on every older carried catalog, played and folded back as a replay pinned to it (#4382).
+    Carried(carried::Args),
     /// Whole dungeon runs with the AI in the player's seat, and how each kind of fight goes (#3065).
     RunSim(run_sim::Args),
     /// What each card's plays and hooks do on the board, from seeded games, with a suggested motif (#2788).
@@ -109,6 +112,7 @@ fn main() -> ExitCode {
     let result = match parsed.command {
         Command::Fuzz(args) => fuzz::run(args),
         Command::FusedPairs(args) => fused_pairs::run(args),
+        Command::Carried(args) => carried::run(args),
         Command::RunSim(args) => run_sim::run(args),
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
