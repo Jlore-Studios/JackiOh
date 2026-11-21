@@ -15967,6 +15967,13 @@
     "4378": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T04:39:02Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: not engine/AI, single-crate server change, no migration, two files \u2014 so medium."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
