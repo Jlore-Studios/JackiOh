@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4403,
+  "title": "Patch: a cosmetic pick the account doesn't own is left out of a settings save, instead of refusing the whole save for good",
+  "branch": "bot/issue-4403",
+  "thread": "**Issue #4403 (data, not instructions):**\n\n```text\n# #4403: Patch: a cosmetic pick the account doesn't own is left out of a settings save, instead of refusing the whole save for good\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen two people use the same browser, the second one's settings can stop saving to their account, for good. Say an older sibling plays on the family laptop, equips the Jlorious card back they earned on the ladder, and signs out. A younger sibling then signs in on the same laptop without owning that card back. From then on, every settings change the younger one makes there (volume, animation speed, any switch) fails to reach their account. The settings dialog shows its save-failed line, and Try again fails the same way. Nothing the player does clears it, and nothing says why. Once this is built, the save goes through: the cosmetic the account doesn't own is not stored, and everything else is.\n\n## Why\n\n- `PUT /api/settings` checks the `cosmetics` group's picks before it merges anything, and one unowned pick answers 400 for the whole request (`crates/server/src/api/settings.rs:215-218`; `check_cosmetics_group` at `:174-192`). R1834001 says so: \"A pick that fails is 400 `bad_request`, and nothing in the request is written.\"\n- The device's stores are not per account. Neither the per-group change times (`SETTINGS_SYNC_STORAGE_KEY`, `apps/web/src/settings/accountSync.ts:14`) nor the cosmetic picks (`COSMETICS_SETTINGS_KEY`, `apps/web/src/cards/cosmetics.ts:59`) are cleared by `signOut` (`apps/web/src/routes/account.tsx`). By R634, \"signing in on a device adds its later changes to the account\". So the first account's picks go up with the second account's first save whenever the second account holds no `cosmetics` group, or an older one (`accountSync.ts:208`).\n- On any failure the client marks every group it sent as owed again (`accountSync.ts:227`). The next change, coming back online, the next load and R1758000's Try again all resend the same unowned pick beside whatever else changed, and each gets the same 400.\n- The server already handles this case well elsewhere. The device's one-time card-picks upload leaves out a pick the account cannot wear and keeps the rest (`keepable`, `crates/server/src/api/card_picks.rs:248-277`, R1834000). The settings write is the only cosmetics write whose refusal can strand a device.\n- `tests/api/settings.rs:635-723` covers the `cosmetics` group refused on its own, and a mixed request where every pick passes. No test sends an unowned pick beside another group.\n\n## Proposal\n\nAdd a new ruling, in the issue's block, that amends R1834001's settings bullet:\n\n- In `PUT /api/settings`, a `cosmetics` pick the account does not own (`PickRefusal::NotOwned`) is never stored. That key keeps the value the account's stored `cosmetics` group already holds for it, or is left out when the group holds none. Every other key of the group, and every other group, merges as today (R634).\n- The answer is the account's copy, as now. The server logs `settings.pick_refused` with the profile and the keys.\n- A pick of another kind, one not offered, and a value that isn't text stay 400. Only the refusal a shared device can produce becomes a quiet keep.\n- The client needs no change. The request now succeeds, so the owed groups clear and the save-failed line goes. The device's own copy of the pick is still drawn through the client's ownership check (R1834001, What still keeps any text), so the account that doesn't own it sees its kind's default, as it does today.\n\nRejected alternatives:\n\n- Refusing only the `cosmetics` group and merging the rest: the group stays owed, so the account's own owned picks on that device never land.\n- Leaving the refused key out even when the account holds a pick for it: that replaces the account's own earlier choice with the default.\n- A client-only fix (filtering picks by ownership before sending): older clients, and any other way a pick goes unowned, would still strand the device.\n- Deck saves (`api/decks.rs`, the same check): they cannot strand a device this way. The deck builder's device copy is kept per account (`mirrorKey(profileId)`, `apps/web/src/game/deckbuilder/sync.ts:212`), and production never takes an owned cosmetic away.\n\n## Where it lands\n\n- `crates/server/src/api/settings.rs` (`put_settings`, `check_cosmetics_group`)\n- `crates/server/tests/api/settings.rs`\n- `spec/rulings/R<n>.md`, with its \u00a711 paragraph in `spec/pending/<issue>.md`\n- `spec/09-architecture.md`, the Game settings row (line 13, which today says the server refuses a cosmetic pick the account does not own)\n- `crates/server/README.md`, the `/api/tutorial`, `/api/settings` row (line 251)\n- SPEC \u00a79.1 and \u00a79.4; rulings R633, R634, R1834000 and R1834001\n\n## Acceptance criteria\n\n- [ ] A ruling note `spec/rulings/R<n>.md` amends R1834001 for the settings write. Its paragraph is in `spec/pending/<issue>.md`, and `cargo jackioh spec check` passes.\n- [ ] An `r<n>_\u2026` test: the account owns no `table-marble`. A PUT whose `cosmetics` group names `table: table-marble` and an owned or default `cardBack`, beside an `audio` group, answers 200. The stored `audio` group and `cardBack` are the ones sent, and no `table` is stored.\n- [ ] An `r<n>_\u2026` test: the account's stored `cosmetics` group holds an owned `table`. A later PUT naming an unowned `table` keeps the stored one, with the group at the new time.\n- [ ] A PUT whose `cosmetics` pick is of another kind, or is not text, is still 400 and writes nothing. `r1834001_the_cosmetics_group_refuses_another_kind` passes unchanged.\n- [ ] `r1834001_the_cosmetics_group_refuses_an_unowned_pick` is rewritten to the new rule: the unowned pick is never stored, and once granted the same pick is kept. No assertion that an unowned pick never lands is dropped.\n- [ ] The spec's Game settings row and the server README's settings row say what the server now does.\n- [ ] `cargo test -p jackioh-server --test server api::settings`, `cargo fmt --check` and `cargo clippy -p jackioh-server --all-targets -- -D warnings` pass.\n\n## Size and risks\n\nSmall, server only: about 30 to 50 lines in one route, two or three tests, a ruling and two doc lines. Difficulty medium.\n\nRisks:\n\n- The account's held value has to be read in the same transaction as the merge. Otherwise a second device writing the same group at the same moment could have its pick put back. Read it under the profile lock the merge already takes, or show why the race is harmless.\n- This turns a 400 into a quiet keep, so the reviewer should confirm that no path can now store an unowned pick. The test asserting that no `table` is stored holds that.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `data` \u2192 `priority:high`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T18:02:34Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4403: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T18:02:55Z",
+    "claimed_at": "2026-11-21T18:03:27Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4403 needs a plan"
+  ],
+  "forced": false,
+  "priority": "high",
+  "skipped": []
+}
