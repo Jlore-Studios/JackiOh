@@ -1,8 +1,9 @@
 //! SPEC §8.12 S+ #166 Mindustrial Revolution (§10.1 player effects; R62, R65, R127, R458, R1420, R3535000,
 //! R3549004): (2) Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
-//!   Base:    "For the rest of the game at the start of its owner's turn add a random Mindustrial card to
-//!            your hand."
-//!   Radiant: "… add a random Radiant Mindustrial card to your hand, it costs (1) less."
+//!   Base:    "Add a random Mindustrial card to your hand now and at the start of each of your turns, for
+//!            the rest of the game."
+//!   Radiant: "Add a random Radiant Mindustrial card to your hand now and at the start of each of your
+//!            turns, for the rest of the game. Each costs (1) less."
 //!
 //! Engine: C+ #52's player effect for the rest of the game (R458): a `never`-expiry modifier on the caster
 //! that acts at their start of turn among the start-of-turn triggers (R62), before the draw, and never on
@@ -13,7 +14,9 @@
 //! card that reached the hand (§2.4). `forRestOfGame` re-enters `delayed` with no `self` (R127); the
 //! re-entry carries this card's def id, which the verb leaves out of the pool (R387), this card being
 //! Mindustrial itself. The badge is the face as the catalog the game runs under prints it (`def_of`), so a
-//! replay of an older version badges it in that version's words (R767000).
+//! replay of an older version badges it in that version's words (R767000). Since issue #4353 the Cry also
+//! adds the card at once, the same add as a turn start's, before it sets the rest-of-game effect
+//! (R4353022); through v0.6.8b it added none until its owner's next turn, which `script_v0_6_8b` keeps.
 
 use jackioh_engine::effects::for_rest_of_game;
 use jackioh_engine::prelude::*;
@@ -32,29 +35,48 @@ fn mindustrial() -> CatalogQueryArgs {
     json_as(json!({ "set": SetName::StinkyscapePlus, "tags": [Tag::Mindustrial] }))
 }
 
-fn revolution(radiant: bool) -> Script {
+/// The face's add: `CARDS` random Mindustrial cards, Radiant and `DISCOUNT` cheaper on the Radiant face.
+fn add_one(radiant: bool) -> Effect {
+    let mut args = json!({ "query": mindustrial(), "count": CARDS });
+    if radiant {
+        args["radiant"] = json!(true);
+        args["costMod"] = json!(-DISCOUNT);
+    }
+    add_random_from_catalog(json_as(args))
+}
+
+/// `now`: whether the Cry adds the card at once too, before it sets the rest-of-game effect (R4353022,
+/// since issue #4353).
+fn revolution(radiant: bool, now: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let face = if radiant { FaceKind::Radiant } else { FaceKind::Base };
             let label = fill_params(def_of(Some(&*ctx.state), ID), face, None);
-            vec![for_rest_of_game(json_as(json!({ "step": STEP, "label": label })))]
-        })),
-        delayed: Some(hook(move |_ctx| {
-            let mut args = json!({ "query": mindustrial(), "count": CARDS });
-            if radiant {
-                args["radiant"] = json!(true);
-                args["costMod"] = json!(-DISCOUNT);
+            let mut effects = Vec::new();
+            if now {
+                effects.push(add_one(radiant));
             }
-            vec![add_random_from_catalog(json_as(args))]
+            effects.push(for_rest_of_game(json_as(json!({ "step": STEP, "label": label }))));
+            effects
         })),
+        delayed: Some(hook(move |_ctx| vec![add_one(radiant)])),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: revolution(false),
-        radiant: revolution(true),
+        base: revolution(false, true),
+        radiant: revolution(true, true),
+    }
+}
+
+/// R767000: through v0.6.8b the Cry only set the rest-of-game effect, adding nothing until its owner's
+/// next turn (issue #4353); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_8b() -> CardScripts {
+    CardScripts {
+        base: revolution(false, false),
+        radiant: revolution(true, false),
     }
 }
 
@@ -187,6 +209,39 @@ mod tests {
             assert_eq!(s.state().active, P2);
             assert_eq!(delivered(&s), Vec::<GameEvent>::new());
             assert!(s.view(P2).opponent.modifiers.len() == 1, "the badge stays on its owner");
+        }
+
+        /// R4353022: the cast adds one card at once, as a turn start does (Radiant: Radiant and (1) less),
+        /// and still sets the rest-of-game effect, whose turn starts add theirs.
+        #[test]
+        fn r4353022_the_cast_adds_one_mindustrial_card_at_once_and_the_turn_starts_still_add_theirs() {
+            for radiant in [false, true] {
+                let mut s = signed(radiant, &format!("s166-now-{radiant}"), 0);
+                cast(&mut s);
+                let cards = delivered(&s);
+                assert_eq!(cards.len(), CARDS as usize, "radiant {radiant}");
+                let card = s.card(instance_of(&cards[0])).clone();
+                assert_eq!(card.zone.z(), ZoneName::Hand);
+                assert_eq!(card.radiant, radiant);
+                assert_eq!(card.cost_mod, if radiant { -DISCOUNT } else { 0 });
+                assert_eq!(labels(&s).len(), 1, "radiant {radiant}: the rest-of-game effect is set");
+                next_turn(&mut s);
+                assert_eq!(delivered(&s).len(), CARDS as usize, "radiant {radiant}");
+            }
+        }
+
+        /// R767000: through v0.6.8b the cast added nothing; the first card came at its owner's next turn
+        /// (issue #4353).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_8b_adds_nothing_at_the_cast() {
+            crate::under_kept(ID, script_v0_6_8b(), || {
+                let mut s = signed(false, "s166-kept", 0);
+                cast(&mut s);
+                assert_eq!(delivered(&s), Vec::<GameEvent>::new());
+                assert_eq!(labels(&s).len(), 1);
+                next_turn(&mut s);
+                assert_eq!(delivered(&s).len(), CARDS as usize);
+            });
         }
 
         #[test]

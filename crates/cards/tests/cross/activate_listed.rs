@@ -47,6 +47,7 @@ const DISRUPTIVE_DISRUPTOR: &str = "meditative-001";
 const DOUBLE_COUNTING: &str = "meditative-010";
 const MONEY_MACHINE: &str = "meditative-054";
 const GACHAHOLIC: &str = "meditative-101";
+const MEDINA_ENFORCER: &str = "meditative-083";
 const ALUNETH: &str = "meditative-080";
 const TAOTIE: &str = "meditative-047"; // 饕餮
 const YILES_VIRUS: &str = "meditative-049-2";
@@ -59,7 +60,7 @@ const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 103] = [
+const ACTIVATE_CARDS: [&str; 104] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,
@@ -92,6 +93,7 @@ const ACTIVATE_CARDS: [&str; 103] = [
     DISRUPTIVE_DISRUPTOR,
     DOUBLE_COUNTING,
     GACHAHOLIC,
+    MEDINA_ENFORCER,
     ALUNETH,
     TAOTIE,
     YILES_VIRUS,
@@ -1581,6 +1583,38 @@ mod m_n101_gachaholic {
         assert_eq!(pulled[0].granted_keywords, vec![Keyword::Lucky { n: 1 }]);
         let id = s.card(GACHAHOLIC).id.clone();
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
+/// Issue #4353: M #83's "End of turn" became "Activate": Buff every card in your hand, once a turn
+/// (Radiant: three times).
+mod m83_medina_enforcer {
+    use super::*;
+
+    #[test]
+    fn r384_its_activate_buffs_every_card_in_the_hand_once_a_turn() {
+        for (radiant, times) in [(false, 1), (true, 3)] {
+            let mut s = scenario(json!({
+                "p1": { "field": [on(MEDINA_ENFORCER, radiant)], "hand": [STOCKPILE, VANILLA] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let held: Vec<String> = s.hand(P1).into_iter().map(|card| card.id).collect();
+            let events = activate_listed(&mut s, MEDINA_ENFORCER, any);
+            for id in &held {
+                let buffs = events
+                    .iter()
+                    .filter(
+                        |event| matches!(event, GameEvent::Upgraded { instance_id, .. } if instance_id == id),
+                    )
+                    .count();
+                assert_eq!(buffs, times, "radiant {radiant}: {id}");
+            }
+            let id = s.card(MEDINA_ENFORCER).id.clone();
+            assert!(
+                listed(&s, &id).is_empty(),
+                "radiant {radiant}: Activate is once per turn"
+            );
+        }
     }
 }
 

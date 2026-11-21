@@ -1,7 +1,11 @@
 //! SPEC §8.12 S+ #21 Jlockeed Shredder-12, a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    12/16, Tribute 3, Pierce; "Float reduces Tribute requirement by 1.
-//!            End of turn: Deal {damage} damage to all enemies, twice."
+//!   Base:    12/16, Tribute 3; "Float reduces Tribute requirement by 1.
+//!            End of turn: Deal {damage} damage to all enemies, twice." (Pierce too until issue #4353)
 //!   Radiant: 24/32, Tribute 3, Pierce; the same.
+//!
+//! Pierce is catalog data: issue #4353 took it off the base face's keywords and first line, and the
+//! Radiant face keeps it, so the script is the same for both; the shipped catalogs keep the base face's
+//! Pierce through v0.6.8b (R767000).
 //!
 //! Tribute 3 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
 //! printed Tribute (R366), lowered 1 by each of its owner's Floats while it waits in hand, never in the
@@ -116,6 +120,16 @@ mod tests {
 
     mod base {
         use super::*;
+
+        /// Issue #4353: the base face prints no Pierce; the Radiant face keeps it.
+        #[test]
+        fn issue_4353_the_base_face_has_no_pierce_and_the_radiant_face_keeps_it() {
+            let def = crate::card_def(ID);
+            assert!(def.base.keywords.iter().all(|keyword| keyword.kind() != KeywordKind::Pierce));
+            assert!(!def.base.text.contains("Pierce"), "{}", def.base.text);
+            assert!(def.radiant.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Pierce));
+            assert!(def.radiant.text.starts_with("Tribute 3, Pierce\n"), "{}", def.radiant.text);
+        }
 
         #[test]
         fn r3553000_twice_is_two_damage_instances_per_enemy_the_hero_last_each_time() {
