@@ -3019,3 +3019,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-21T03:38:05Z,44861767104,claude-1,opus,review,4373,medium,reviewed,,1.7,21,8884,924596,0.9522,28,31,,,,,none,,1
 2026-11-21T03:43:14Z,44860877809,claude-1,opus,suggest,,,suggested,,17.1,111,56998,10901517,11.4727,8,35,,,,,none,,1
 2026-11-21T04:08:45Z,44854142218,claude-6,opus,plan,4375,hard,failed,,117.3,287,91650,20422810,7.7301,2,17,,,2.5,,fresh,,1
+2026-11-21T04:16:20Z,44864910025,claude-6,opus,plan,4375,hard,blocked,,1.1,18,7832,2272075,8.4679,17,18,,,126.8,claude-6,resumed,,1
