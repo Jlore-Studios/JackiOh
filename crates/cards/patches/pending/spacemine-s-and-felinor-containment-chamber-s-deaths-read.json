@@ -1,0 +1,22 @@
+{
+  "title": "Spacemine's and Felinor Containment Chamber's Deaths read the stats they died with",
+  "sources": "#4396",
+  "notes": "Spacemine's Death hit and Felinor Containment Chamber's Death token read the Attack (and max Health) of the card's own destroyed event, auras included (R4396000); the scripts of v0.6.9e are kept (script_v0_6_9e). Overdrive Module has no script change: classify's stage 2 found its forced games play differently, so its claim is here.",
+  "player": {
+    "title": "Deaths read the stats the card died with",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Spacemine's Death hit for its Attack with auras left off, so under Warp Disruptor a card showing 7 dealt 5. It now deals the Attack it showed as it died, a lowering aura included.",
+      "Felinor Containment Chamber's Death summoned a token of its stats with auras left off, so a 4/1 under Warp Disruptor made a 2/1. The token now has the Attack and Health the Chamber showed as it died."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscape-049",
+    "stinkyscape-101",
+    "stinkyscape-134"
+  ]
+}
