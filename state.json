@@ -16400,13 +16400,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-1",
       "queued_at": "2026-11-21T05:52:33Z",
-      "run_id": "44873122123",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:1321b5d3-1795243517",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 415,
-      "started_at": "2026-11-21T05:55:36Z",
+      "started_at": "2026-11-21T06:45:32Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16548,9 +16549,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T06:45:06Z",
+    "at": "2026-11-21T06:45:32Z",
     "url": "",
-    "what": "review #4357 on claude-4"
+    "what": "spot-check #4387 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-21T06:34:14Z",
@@ -37802,7 +37803,15 @@
         "n": 415,
         "pr": 4387,
         "queued_at": "2026-11-21T06:41:31Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:1321b5d3-1795243517",
         "sha": "aada4130004fa11ea7aa59d1b4d8687934c3454e",
+        "started_at": "2026-11-21T06:45:32Z",
         "status": "queued",
         "title": "Patch: the changed-cards fuzz rotation plays the Duos wave too",
         "tries": 0
