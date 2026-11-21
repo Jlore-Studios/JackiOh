@@ -15310,13 +15310,12 @@
     "what": "review #4422 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T20:57:30Z",
+    "at": "2026-11-21T21:07:58Z",
     "notes": [
-      "started suggest on claude-3 (run 44949081037)",
-      "started suggest on claude-1 (run 44949127736)",
-      "started suggest on claude-3 (run 44949174012)",
-      "started suggest on claude-8 (run 44949232094)",
-      "started suggest on agy (run 44949292853)",
+      "delivered build #4402 on claude-6 (run 44938666623): built",
+      "delivered build #4397 on muse (run 44934809094): built",
+      "started review #4421 on claude-6 (run 44950203343)",
+      "started review #4422 on muse (run 44950261330)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -16023,7 +16022,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T20:57:30Z",
+  "loop_tick": "2026-11-21T21:07:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
