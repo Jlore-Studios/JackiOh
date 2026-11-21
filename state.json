@@ -16581,6 +16581,8 @@
       }
     },
     "4398": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-21T05:14:21Z",
@@ -16594,8 +16596,11 @@
         "trail": "es/tools/src/perf.rs | head -30\", \"description\": \"Check what perf's work budget measures\"}\n- Bash: {\"command\": \"sed -n '10,30p;70,90p' crates/tools/src/perf.rs\", \"description\": \"Read the perf module's work measure description\"}\n- Monitor: {\"description\": \"engine tests and base build completion\", \"timeout_ms\": 600000, \"command\": \"until grep -q '^exit ' /tmp/engine-tests.log 2>/dev/null && grep -qE 'Finished|error' /tmp/base-build.log 2\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: grep -q '^exit ' /tmp/engine-tests.log, grep -qE 'Finished|error' /tmp/base-build.log, tail -1 /tmp/engine-tests.\u2026\n- Bash: {\"command\": \"git diff crates/engine/src/testkit/invariants.rs crates/ai/src/candidates.rs | head -120\", \"description\": \"Review the testkit and AI diffs\"}\n- Bash: {\"command\": \"tail -2 /tmp/base-build.log; grep -c 'test result' /tmp/engine-tests.log\", \"description\": \"Check build and test progress\"}\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/engine-tests.log; do sleep 10; done; grep -E 'test result|FAILED|panicked' /tmp/engine-tests.log | head -40; tail -1 /tmp/engine-tests.log\", \"description\": \"W\u2026\n- Bash: {\"command\": \"until grep -qE 'Finished|error(\\\\[|:)' /tmp/base-build.log; do sleep 10; done; tail -2 /tmp/base-build.log\", \"description\": \"Wait for the baseline build to finish\", \"timeout\": 3000000, \"\u2026\n- Bash: {\"command\": \"until grep -qE 'Finished|error(\\\\[|:)' /tmp/base-build.log && grep -q '^exit ' /tmp/engine-tests.log; do sleep 10; done; echo both-done\", \"description\": \"Wait until both background jobs \u2026\n- Bash: {\"command\": \"tail -2 /tmp/base-build.log; grep -E 'test result|FAILED|panicked|Running' /tmp/engine-tests.log | tail -8\", \"description\": \"Check engine test progress\"}\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/engine-tests.log; do sleep 10; done; grep -E 'test result|FAILED|panicked' /tmp/engine-tests.log | tail -12; tail -1 /tmp/engine-tests.log\", \"description\": \"W\u2026\n- Bash: {\"command\": \"echo \\\"- build run 1: full engine suite (testkit) green. Base build done. Running timed fuzz 200 + 1000 seeds, base then branch.\\\" >> .bot-notes.md\\n(cd ../jackioh-wt/base-4379 && for n \u2026\n- Bash: {\"command\": \"until grep -q '== branch 1000' /tmp/fuzz-compare.log && grep -c '^real' /tmp/fuzz-compare.log | grep -q 4; do sleep 10; done; cat /tmp/fuzz-compare.log\", \"description\": \"Wait for the fuz\u2026\n- Bash: {\"command\": \"cat /tmp/fuzz-compare.log\", \"description\": \"Peek at the comparison so far\"}\n- Bash: {\"command\": \"until grep -c '^real' /tmp/fuzz-compare.log | grep -q 4; do sleep 15; done; cat /tmp/fuzz-compare.log\", \"description\": \"Wait for all four timed fuzz runs\", \"timeout\": 600000}\n- Bash: {\"command\": \"echo \\\"- build run 1: fuzz main vs branch: 200 seeds 38.1s/36.7s, judged 1439/1440; 1000 seeds 3m13s/3m08s, judged 7945/7947; all passed. Next: cards suite, workspace clippy, classify, r\u2026\n- Bash: {\"command\": \"timeout 3000 cargo test -p jackioh-cards > /tmp/cards-tests.log 2>&1; echo \\\"exit $?\\\" >> /tmp/cards-tests.log; grep -E 'test result|FAILED|panicked' /tmp/cards-tests.log | tail -12; tai\u2026\n- Bash: {\"command\": \"grep -rn 'combat_forecast\\\\|attack_deaths' crates --include=*.rs -l | grep -v '/tests/' \", \"description\": \"Find non-test callers of the forecast\"}\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/cards-tests.log; do sleep 10; done; grep -E 'test result|FAILED|panicked' /tmp/cards-tests.log | tail -12; tail -1 /tmp/cards-tests.log\", \"description\": \"Wait\u2026\n- said: Cards suite green. Now workspace clippy and classify.\n- Bash: {\"command\": \"timeout 3000 cargo clippy --workspace --all-targets -- -D warnings > /tmp/clippy-ws.log 2>&1; echo \\\"exit $?\\\" >> /tmp/clippy-ws.log; grep -E '^(error|warning)' -A6 /tmp/clippy-ws.log | \u2026\n- Bash: {\"command\": \"git rev-parse --verify origin/main 2>&1 | head -1; timeout 1500 cargo jackioh classify --base origin/main --claims 2>&1 | grep -v Compiling | tail -20\", \"description\": \"Run classify with\u2026\n- Bash: {\"command\": \"timeout 900 cargo jackioh patches check 2>&1 | tail -2; timeout 900 cargo jackioh catalog check 2>&1 | tail -1; timeout 900 cargo jackioh spec check 2>&1 | tail -1\", \"description\": \"Run \u2026\n- Bash: {\"command\": \"timeout 2000 cargo test -p jackioh-engine --features testkit,ts --lib export_bindings 2>&1 | grep -E 'test result|error' | tail -3; git status --porcelain -- apps/web/src/wire; echo \\\"wi\u2026\n- Bash: {\"command\": \"timeout 2400 cargo test -p jackioh-shared --features jackioh-engine/testkit --test practice 2>&1 | grep -E 'test result|FAILED|panicked|^error' | tail -5\", \"description\": \"Run the shared\u2026\n- Bash: {\"command\": \"grep -rn 'mutants' .github/workflows/*.yml | head -5\", \"description\": \"Check whether CI runs mutation testing\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4379/crates/engine/tests/rules/combat_forecast.rs\", \"offset\": 1108, \"limit\": 16}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4379/crates/engine/tests/rules/combat_forecast.rs\", \"old_string\": \" /// Every hit lands before any check (R59): a Trample blow i\u2026\n- Bash: {\"command\": \"cargo fmt && timeout 1500 cargo test -p jackioh-engine --features testkit --test rules r4379000 2>&1 | grep -E '^test |panicked|left|right|^error|test result' | head -30\", \"description\":\u2026\n- Bash: {\"command\": \"cargo fmt --check && timeout 1500 cargo clippy -p jackioh-engine --all-targets --features testkit -- -D warnings 2>&1 | grep -E '^(error|warning)' -A6 | head -20; echo clippy-exit-checke\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('## Log')\\nnew='''## State\\n\\n- build run 1 (opus, 2026-11-21): DONE. The plan is built, st\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the combat forecast projects an attack past what its own other hits kill\"} --> ## What changed The combat forecast now runs \u00a74.5's state check on a scratch copy of the board after each attack. So when a Cleave or a sweep kills the unit whose aura holds \u2026"
       },
       "issue": 4379,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T07:03:41Z",
         "from_run": "44869935493",
         "gates": [
           {
@@ -16687,7 +16692,11 @@
         "source": "build",
         "until": "2026-11-21T07:33:02Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-21T07:03:02Z",
+      "run_id": "pending:d231303d-1795244607",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16706,6 +16715,9 @@
         "provider": "claude-7",
         "run": "44869935493"
       },
+      "started_at": "2026-11-21T07:03:41Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16719,9 +16731,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T06:55:15Z",
+    "at": "2026-11-21T07:03:41Z",
     "url": "",
-    "what": "review #4380 on claude-6"
+    "what": "review #4398 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-21T06:51:53Z",
