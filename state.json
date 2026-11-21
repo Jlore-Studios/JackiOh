@@ -15662,6 +15662,13 @@
     "4371": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T04:39:45Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: a CI shell-script scope plus its holding test, two files, no engine rules, AI, cross-crate design, migration, or 40-file size"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
