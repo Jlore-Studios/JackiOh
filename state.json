@@ -15250,9 +15250,11 @@
         "by": "`muse` (medium)",
         "sha": "4c4451f237718045d6c88dccebf8f97ffd371120"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T20:43:27Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-21T21:14:05Z",
         "family": "muse",
@@ -15262,6 +15264,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4411 from the after-merge spot-check\"} -->\n- Both spot-check findings are fixed, following the plan with no departures.\n- **Race closed.** `PUT /api/settings` read the held `cosmetics` group with a plain select before the merge took the profile lock, so a concurrent device's committed write could be reverted by the keep-out filter. There is now a `Tx::player_settings_get_for_update` port method: Postgres reads `public\u2026\n- **R1834001 amended.** Its title now ends `amended by R2655000 and R4403000`, `cards` lists R4403000, and the failing-pick paragraph points at R4403000 as the NotOwned exception on `PUT /api/settings`. R4403000's `proven_in` gains the new contract test file.\n- **Tests.** New `r4403000_a_locked_read_answers_what_the_merge_just_left` contract test (None before first write; locked read equals the merged row equals the plain read) passes on both memory and Postgres halves; all 10 `player_settings` contract tests and all 18 `api::settings` tests pass. `cargo \u2026\n- **Decisions.** The one honest limit is disclosed, not decided: no hermetic test can fail without this fix since the fake serializes whole transactions, so the race is closed by the `FOR UPDATE` text (verified by inspection plus the Postgres halves in CI), while the contract test pins the wiring on \u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4418 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4418/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4418,
       "kind": "review",
       "live": "reviewing",
