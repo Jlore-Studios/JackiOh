@@ -15907,17 +15907,8 @@
       ]
     },
     "4379": {
-      "action": "plan",
-      "asks": [
-        "c:7057247086"
-      ],
-      "build_next": {
-        "from_run": "44867877834",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-21T05:12:24Z",
-        "until": "2026-11-21T05:42:24Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T05:12:16Z",
         "difficulty": "hard",
@@ -15936,10 +15927,9 @@
         "reason": "planned on opus",
         "trail": "ne README API table context\"}\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A 40 spec/README.md | head -70\", \"description\": \"Read spec README's Adding a ruling\"}\n- Bash: {\"command\": \"ls spec/; grep -n \\\"forecast\\\" spec/0*.md spec/1[0-9]*.md 2>/dev/null | grep -v \\\"^spec/11-rulings.md\\\" | cut -c1-400 | head -20\", \"description\": \"Find forecast mentions in spec section \u2026\n- Bash: {\"command\": \"sed -n 206p spec/09-architecture.md; echo; sed -n 308p spec/10-engine-guide.md\", \"description\": \"Read the full forecast paragraphs in the spec\"}\n- Bash: {\"command\": \"grep -n \\\"^### 9.10\\\\|^### 4.5\\\\|^## 4\\\\.\\\\|^### 4\\\\.\\\" spec/09-architecture.md spec/04-combat.md | head; cat spec/rulings/R3100000.md | head -30\", \"description\": \"Locate spec headings a\u2026\n- Bash: {\"command\": \"for r in R4111000 R4171000 R4290000 R4221002; do echo \\\"== $r\\\"; head -6 spec/rulings/$r.md; tail -4 spec/rulings/$r.md | cut -c1-400; done; ls spec/rulings | grep -c \\\"^R4379\\\"\", \"descr\u2026\n- Bash: {\"command\": \"ls crates/engine/tests/; grep -n \\\"combat_forecast\\\\|invariants\\\\|fixtures\\\" crates/engine/tests/rules*.rs crates/engine/tests/rules/mod.rs 2>/dev/null | head\", \"description\": \"Find whic\u2026\n- Bash: {\"command\": \"sed -n 1,20p crates/engine/tests/rules/mod.rs; sed -n 150,190p crates/engine/tests/rules/mod.rs; cat crates/engine/tests/rules.rs | head -20\", \"description\": \"Read the rules test module \u2026\n- Bash: {\"command\": \"grep -n \\\"^use \\\\|attack_target_of\\\\|attack_deaths\\\" crates/ai/src/candidates.rs | head -20; grep -n \\\"proven_in\\\" -A4 spec/rulings/R4171000.md\", \"description\": \"Check AI candidates impo\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn sweep_weight\\\" -A 30 crates/engine/src/combat.rs\", \"description\": \"Read sweep_weight\"}\n- Bash: {\"command\": \"ls luau; head -20 luau/README.md 2>/dev/null\", \"description\": \"Check whether the Luau port mirrors engine code\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20\", \"description\": \"Read the classify command's docs\"}\n- Bash: {\"command\": \"grep -n \\\"crates/engine\\\\|Internal\\\\|fn kind_of\\\\|testkit\\\" crates/tools/src/classify.rs | head -30\", \"description\": \"See how classify treats engine source changes\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4379/crates/tools/src/classify.rs\", \"offset\": 255, \"limit\": 80}\n- Bash: {\"command\": \"sed -n 520,680p crates/tools/src/classify.rs | grep -n \\\"PlayCode\\\\|Checked\\\\|fragment\\\\|claims\\\\|Kind::Cards\\\\|unforced\\\\|parent\\\" | head -30\", \"description\": \"See how PlayCode changes \u2026\n- Bash: {\"command\": \"sed -n 610,680p crates/tools/src/classify.rs\", \"description\": \"Read classify's play-code decision\"}\n- Bash: {\"command\": \"sed -n 72,84p crates/engine/src/testkit/invariants.rs; grep -rn \\\"R4318000\\\" crates apps e2e --include=*.rs --include=*.ts --include=*.tsx | grep -v \\\"^crates/engine/src/testkit/invarian\u2026\n- Bash: {\"command\": \"grep -n \\\"^pub fn both\\\\|^pub fn put\\\\|^pub fn slot\\\\|^pub fn new_game\\\\|^pub fn act_ok\\\\|^pub fn live\\\" crates/engine/tests/rules/fixtures/harness.rs; head -12 crates/engine/tests/rules\u2026\n- Bash: {\"command\": \"sed -n 25,80p crates/engine/tests/rules/fixtures/harness.rs; sed -n 155,170p crates/engine/tests/rules/fixtures/harness.rs\", \"description\": \"Read the test harness new_game and both\"}\n- Bash: {\"command\": \"for r in R0013 R0059 R0083 R0463 R0044 R3554008 R4290001 R4171000 R3477000 R1829000 R1850003; do test -f spec/rulings/$r.md && echo \\\"ok $r\\\" || echo \\\"MISSING $r\\\"; done; ls spec/ruling\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4379/crates/engine/src/state_check.rs\", \"offset\": 1000, \"limit\": 40}\n- Bash: {\"command\": \"grep -n \\\"pub fn active_first\\\" -A 6 crates/engine/src/state.rs; grep -n \\\"pub marked_exiled\\\\|pub reborn_spent\\\\|pub buffs\\\" crates/engine/src/state.rs | head\", \"description\": \"Check ac\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4379/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: it changes the combat forecast's projection in crates/en\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn card_at\\\" -A 12 crates/engine/src/zones.rs | head -20; wc -w .bot-plan.md\", \"description\": \"Check card_at and the draft's length\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4379/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: it changes the combat forecast's projection in crates/en\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count the plan's words and characters\"}\n- Bash: {\"command\": \"for r in R0068 R0403 R0446 R0078 R1124; do test -f spec/rulings/$r.md && echo \\\"ok $r\\\" || echo \\\"MISSING $r\\\"; done\", \"description\": \"Verify more cited rulings exist\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4379/.bot-plan.md\", \"old_string\": \" - `proven_in`: both engine test files and `crates/ai/src/candidates.rs`.\", \"new_string\": \" -\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4379/.bot-plan.md\", \"limit\": 30}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4379/.bot-plan.md\", \"old_string\": \"| `spec/rulings/R3100000.md`, `R4111000.md`, `R4171000.md`, `R4290000.md`, `R4318000.md` | ch\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4379/.bot-plan.md\", \"offset\": 30}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4379/.bot-plan.md\", \"old_string\": \"**`invariants.rs`.** Import the fixture.\", \"new_string\": \"**`invariants.rs`.** Import the fix\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4379/.bot-plan.md\", \"old_string\": \" - `survives: !deaths.goes(&attacker.id)`.\\n - **Unit target\", \"new_string\": \" - `survives: !\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: it changes the combat forecast's projection in crates/engine/src/query.rs and the fuzz oracle I18\"} --> ## Goal `combat_forecast` should settle \u00a74.5's state check after each attack on a scratch copy of the board. Then `kills`, `survives` and ea\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-21T04:29:38Z",
       "owner_why": "it plans it",
@@ -15952,12 +15942,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-21T04:26:00Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44867877834",
+      "run_id": "pending:29210f12-1795238044",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T04:48:25Z",
+      "started_at": "2026-11-21T05:14:21Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7057247086"
+      ]
     },
     "4380": {
       "action": "review",
@@ -16155,9 +16147,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T05:13:52Z",
+    "at": "2026-11-21T05:14:21Z",
     "url": "",
-    "what": "revise #4361 on claude-8"
+    "what": "build #4379 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-21T05:03:44Z",
