@@ -17044,21 +17044,33 @@
       }
     },
     "4410": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-8",
+      "owner_since": "2026-11-21T19:02:01Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-21T18:56:58Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:081f22dd-1795287699",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-21T19:02:01Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T19:01:21Z",
+    "at": "2026-11-21T19:02:01Z",
     "url": "",
-    "what": "build #4402 on claude-6"
+    "what": "plan #4410 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-21T18:52:13Z",
