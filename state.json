@@ -4825,9 +4825,7 @@
       "run_id": "44837008276",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-20T23:28:07Z",
-      "taken_asks": [
-        "c:7052771733"
-      ]
+      "taken_asks": []
     },
     "3989": {
       "action": "review",
