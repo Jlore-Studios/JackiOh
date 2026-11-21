@@ -374,6 +374,13 @@ pub const WALK_DRAWN_MAX: i32 = 15;
 /// Tests only: the most turns a walk's random fight report lasts.
 #[cfg(test)]
 pub const WALK_TURNS_MAX: i32 = 12;
+/// Tests only: the seeds per content the map fuzz test (`map_fuzz_tests`) walks with stubbed
+/// fight reports.
+#[cfg(test)]
+pub const MAP_FUZZ_SEEDS: usize = 10;
+/// Tests only: the seeds per content the ignored daily map fuzz sweep walks.
+#[cfg(test)]
+pub const MAP_FUZZ_DAILY_SEEDS: usize = 300;
 /// Tests only: the seeds `map_tests` deals a map from on each content (R3583000, R3583001).
 #[cfg(test)]
 pub const MAP_SEEDS: usize = 200;

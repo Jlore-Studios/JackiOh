@@ -12,6 +12,7 @@ use crate::config::{
     WALK_SEEDS, WALK_TRIES, WALK_TURNS_MAX, WALK_WAY_ON_PERCENT,
 };
 use crate::fight_tests::{catalog_content, engine_takes, fight_options};
+use crate::invariants::check_run_invariants;
 use jackioh_engine::reduce::begin_game;
 use jackioh_engine::rng::Rng;
 use jackioh_engine::state::create_recorded_game;
@@ -51,8 +52,9 @@ fn walk_setup(tag: &str, n: usize, content: &RunContent, rng: &mut Rng) -> (RunS
 
 /// The refusal-free way on from each phase: every clause is accepted while the run lives, so a
 /// refusal names a dead end. The event's is the last option that costs nothing (the placeholder's
-/// "Walk away"); content without one fails loudly here instead of hanging.
-fn free_action(state: &RunState, content: &RunContent) -> RunAction {
+/// "Walk away"); content without one fails loudly here instead of hanging. Shared with the map
+/// fuzz test's driver.
+pub(crate) fn free_action(state: &RunState, content: &RunContent) -> RunAction {
     match &state.phase {
         RunPhase::Map => RunAction::Go {
             col: run_next_cols(state).first().copied().unwrap_or(0),
@@ -102,8 +104,8 @@ fn deck_index(rng: &mut Rng, len: usize) -> usize {
 /// One random action of the phase's kinds with random indices: a column, a fight result mostly won
 /// at a random HP and sometimes lost, a take, a pack, a kept subset, an extraction, a shop or
 /// campfire pick, an event option, a blessing, or leaving. Refusals (what the run cannot pay) are
-/// the caller's to retry.
-fn random_action(state: &RunState, content: &RunContent, rng: &mut Rng) -> RunAction {
+/// the caller's to retry. Shared with the map fuzz test's driver.
+pub(crate) fn random_action(state: &RunState, content: &RunContent, rng: &mut Rng) -> RunAction {
     match &state.phase {
         RunPhase::Map => {
             let row = state.row.map_or(0, |r| r + 1);
@@ -205,56 +207,6 @@ fn random_action(state: &RunState, content: &RunContent, rng: &mut Rng) -> RunAc
     }
 }
 
-/// Every count the walk holds in bounds (§15.2: nothing deals a card the deck holds; §15.4: no
-/// artifact twice; §15.7, §15.8; R2701000: the deck cap). Each failure names its field, and each
-/// has a hand-built failing state below.
-fn check_state(state: &RunState, content: &RunContent) -> Result<(), String> {
-    if matches!(state.phase, RunPhase::Dead) {
-        if state.hp != 0 {
-            return Err(format!("walk: hp {} while dead", state.hp));
-        }
-    } else if !matches!(state.phase, RunPhase::Won) {
-        let max = run_max_hp(state, content);
-        if state.hp < 1 || state.hp > max {
-            return Err(format!("walk: hp {} while alive, max {max}", state.hp));
-        }
-    }
-    if state.coins < 0 {
-        return Err(format!("walk: coins {}", state.coins));
-    }
-    if state.tickets < 0 {
-        return Err(format!("walk: tickets {}", state.tickets));
-    }
-    if state.deck.len() > RUN_DECK_MAX {
-        return Err(format!(
-            "walk: deck holds {} past {RUN_DECK_MAX}",
-            state.deck.len()
-        ));
-    }
-    for (i, card) in state.deck.iter().enumerate() {
-        if state.deck[..i].iter().any(|other| other.id == card.id) {
-            return Err(format!("walk: deck holds {} twice", card.id));
-        }
-    }
-    for (i, artifact) in state.artifacts.iter().enumerate() {
-        if state.artifacts[..i].iter().any(|other| other.id == artifact.id) {
-            return Err(format!("walk: artifact {} twice", artifact.id));
-        }
-        if artifact.level < 1 || artifact.level > RUN_ARTIFACT_LEVEL_MAX {
-            return Err(format!(
-                "walk: artifact {} at level {}",
-                artifact.id, artifact.level
-            ));
-        }
-    }
-    for (i, blessing) in state.blessings.iter().enumerate() {
-        if state.blessings[..i].contains(blessing) {
-            return Err(format!("walk: blessing {blessing} twice"));
-        }
-    }
-    Ok(())
-}
-
 /// Every fight's setup is one the run can start, curses and Combat artifacts included (R2922001).
 /// On the catalog that means the engine takes it: `validate_setup` first (`begin_game` alone is
 /// infallible), then the created game's hero carries the setup's health and armor. The
@@ -333,7 +285,7 @@ fn walk(
         run_reduce(&state, content, &free).unwrap_or_else(|e| {
             panic!("walk {tag} {n}: dead end at {name}: {e}");
         });
-        check_state(&state, content).unwrap_or_else(|e| panic!("walk {tag} {n} at {name}: {e}"));
+        check_run_invariants(&state, content).unwrap_or_else(|e| panic!("walk {tag} {n} at {name}: {e}"));
         if matches!(state.phase, RunPhase::Fight) {
             check_fight(&state, content, engine, tag, n);
         }
@@ -350,7 +302,7 @@ fn walk(
         state = run_reduce(&state, content, &action).unwrap_or_else(|e| {
             panic!("walk {tag} {n}: the picked action fails at {name}: {e}");
         });
-        check_state(&state, content).unwrap_or_else(|e| panic!("walk {tag} {n} after {name}: {e}"));
+        check_run_invariants(&state, content).unwrap_or_else(|e| panic!("walk {tag} {n} after {name}: {e}"));
         log.push(action);
     }
     let folded = run_fold(
@@ -419,7 +371,7 @@ fn started() -> (RunState, RunContent) {
 fn walk_hp_zero_while_alive_fails() {
     let (mut state, content) = started();
     state.hp = 0;
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("hp"), "{err}");
 }
 
@@ -427,7 +379,7 @@ fn walk_hp_zero_while_alive_fails() {
 fn walk_hp_past_the_max_fails() {
     let (mut state, content) = started();
     state.hp = run_max_hp(&state, &content) + 1;
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("hp"), "{err}");
 }
 
@@ -435,7 +387,7 @@ fn walk_hp_past_the_max_fails() {
 fn walk_negative_coins_fail() {
     let (mut state, content) = started();
     state.coins = -1;
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("coins"), "{err}");
 }
 
@@ -443,7 +395,7 @@ fn walk_negative_coins_fail() {
 fn walk_negative_tickets_fail() {
     let (mut state, content) = started();
     state.tickets = -1;
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("tickets"), "{err}");
 }
 
@@ -457,7 +409,7 @@ fn walk_a_deck_past_the_max_fails() {
             buffs: 0,
         })
         .collect();
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("deck"), "{err}");
 }
 
@@ -465,7 +417,7 @@ fn walk_a_deck_past_the_max_fails() {
 fn walk_a_card_twice_fails() {
     let (mut state, content) = started();
     state.deck.push(state.deck[0].clone());
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("twice"), "{err}");
 }
 
@@ -473,7 +425,7 @@ fn walk_a_card_twice_fails() {
 fn walk_an_artifact_twice_fails() {
     let (mut state, content) = started();
     state.artifacts.push(state.artifacts[0].clone());
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("twice"), "{err}");
 }
 
@@ -481,7 +433,7 @@ fn walk_an_artifact_twice_fails() {
 fn walk_an_artifact_past_its_highest_level_fails() {
     let (mut state, content) = started();
     state.artifacts[0].level = RUN_ARTIFACT_LEVEL_MAX + 1;
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("level"), "{err}");
 }
 
@@ -489,7 +441,7 @@ fn walk_an_artifact_past_its_highest_level_fails() {
 fn walk_an_artifact_below_level_one_fails() {
     let (mut state, content) = started();
     state.artifacts[0].level = 0;
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("level"), "{err}");
 }
 
@@ -497,7 +449,7 @@ fn walk_an_artifact_below_level_one_fails() {
 fn walk_a_blessing_twice_fails() {
     let (mut state, content) = started();
     state.blessings = vec!["temp-blessing-vitality".into(), "temp-blessing-vitality".into()];
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("blessing"), "{err}");
 }
 
@@ -506,6 +458,6 @@ fn walk_hp_while_dead_fails() {
     let (mut state, content) = started();
     state.phase = RunPhase::Dead;
     state.hp = 5;
-    let err = check_state(&state, &content).unwrap_err();
+    let err = check_run_invariants(&state, &content).unwrap_err();
     assert!(err.contains("dead"), "{err}");
 }
