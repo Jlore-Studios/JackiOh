@@ -17173,7 +17173,16 @@
       "feedback_since": "2026-11-21T18:33:08Z",
       "issue": 4394,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "12d8b1a0816dda7abcf844a21de637e19c63428a",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
