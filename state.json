@@ -16454,6 +16454,8 @@
       }
     },
     "4388": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T04:43:11Z",
@@ -16467,8 +16469,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the hourly retention purge reaps expired private lobbies\"} -->\n- What changed and why: the hourly retention purge had no lobby step, so expired private lobby rows (with full deck picks) lingered until someone happened to create a lobby. `run_purge` in [retention.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4378/crates/server/src/api/retention.rs) \u2026\n- How tested (commands run, output seen):\n- - `cargo test -p jackioh-server --test server api::retention::` \u2014 5 passed, including the 2 new tests: expired unstarted lobby reaped, live lobby kept, expired started lobby reaped; and reaped lobby's member still reads `currentMatchId: \"match-1\"` on `GET /api/auth/me`.\n- - `cargo test -p jackioh-server --test server_store r3730004` \u2014 both memory and postgres legs pass, file unmodified.\n- - `cargo fmt --check` clean; `cargo clippy -p jackioh-server --all-targets -- -D warnings` clean; `cargo jackioh spec check` ok (2341 rulings, 5886 proofs).\n- Decisions: followed the plan verbatim \u2014 no alternatives needed, no departures. The new tests call `sweep_lobbies` directly because `run_purge` never returns, same as the existing tests calling `purge_expired`/`sweep_expired`. The started-lobby fixture uses create-then-`lobbies_update` because the f\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4378 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4378/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4378,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T05:54:39Z",
         "from_run": "44867472402",
         "gates": [
           {
@@ -16527,8 +16532,15 @@
         "source": "build",
         "until": "2026-11-21T06:23:14Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-21T05:53:14Z",
+      "run_id": "pending:47f46f2f-1795240461",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-21T05:54:39Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16628,9 +16640,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T05:45:04Z",
+    "at": "2026-11-21T05:54:39Z",
     "url": "",
-    "what": "build #3925 on claude-8"
+    "what": "review #4388 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T05:42:55Z",
