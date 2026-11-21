@@ -14454,6 +14454,7 @@
         "by": "`muse` (medium)",
         "sha": "2f9315bec479d339338f165205e7bb44fb3a057b"
       },
+      "closed_at": "2026-11-21T20:14:53Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -14464,6 +14465,7 @@
       "kind": "review",
       "live": "reviewing",
       "merge_owner": "muse",
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-21T19:10:33Z",
