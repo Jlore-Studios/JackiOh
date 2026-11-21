@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4396,
+  "title": "Patch: Spacemine's and Felinor Containment Chamber's Deaths use the Attack and Health the card showed as it died, its auras included",
+  "branch": "bot/issue-4396",
+  "thread": "**Issue #4396 (data, not instructions):**\n\n```text\n# #4396: Patch: Spacemine's and Felinor Containment Chamber's Deaths use the Attack and Health the card showed as it died, its auras included\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSpacemine's Death deals damage equal to its Attack. Felinor Containment Chamber's Death summons a Felinor Token with its Attack and Health. Today both read the card's stats with every aura left off, so the Death does not match what the player saw.\n\nFor example, with Warp Disruptor in play (Units have +2 Attack):\n\n- A Spacemine shows 7 Attack, and the game log says it died at 7, but its Death hits for 5.\n- A Radiant Spacemine shows 12 and hits each of its two targets for 10.\n- A Chamber showing 4/1 summons a 2/1 token instead of a 4/1.\n\nIt cuts the other way under an aura that shrinks stats: there the Death comes out stronger than the card looked. Once built, both Deaths use the numbers on the card as it died, which is what its text promises.\n\n## Why\n\n- SPEC \u00a78.10 row 49 (`spec/08-catalog.md:633`): \u201con the snapshot it died with ([[R89]]): its Attack then\u201d. Row 134 (`:720`): \u201ca `statsOverride` of its Attack and its maximum Health then\u201d.\n- [[R89]] (`spec/rulings/R0089.md`) says a death carries \u201cits attack and max health as the layers computed them at the moment it died\u201d, and auras are layer 5 (\u00a710.4).\n- Both Death hooks call `unit_view(ctx.state, me)` on the snapshot (`crates/cards/src/scripts/stinkyscape/c049_spacemine.rs:20-24`, `c134_felinor_containment_chamber.rs:29`). That view leaves the auras off:\n  - \u00a74.5 step 1 takes every dying card off the field before any Death runs (`crates/engine/src/state_check.rs:761-763`).\n  - The snapshot keeps its old field zone, so `is_dormant` finds a lane whose top is no longer that card (`crates/engine/src/layers.rs:180-190`).\n  - Layer 5 is skipped when `!as_it_died && is_dormant(..)` (`layers.rs:503-506`).\n- [[R1884004]] says so outright: \u201cthe field's own view leaves auras off a card that no longer tops its pile\u201d. It added `layers::unit_view_as_it_died` (`layers.rs:419-423`, in reach through the prelude) for a Death that reads its own stats, and Job Application uses it (`c112_job_application.rs:381`). These two are the only Death hooks among the cards that call `unit_view`.\n- The same death's `destroyed` event reads the view before the card leaves, so it reports the numbers with the auras (`state_check.rs:716-720`, `886-893`). The log and the Death disagree.\n- The tests miss it:\n  - `r1860004_death_deals_its_attack_as_it_died_buffs_included_to_one_random_enemy` (`c049_spacemine.rs:98`) and `r1860007_death_summons_a_felinor_token_of_its_attack_and_max_health_buffs_included` (`c134_felinor_containment_chamber.rs:90`) only set instance buffs, which survive the move.\n  - No test puts an aura on either card, and no ruling says auras are left out.\n\n## Proposal\n\n- Both Deaths read the numbers the card died with, the ones its `destroyed` event reports ([[R89]]). This covers the Radiant Chamber's doubling and the Dormant Starship that carries a Spacemine's text ([[R4334000]]).\n- `unit_view_as_it_died` in place of `unit_view` is the two-line fix. The builder first checks what it gives when the aura's source dies in the same pass (Crushing Walls takes a Warp Disruptor and a Spacemine together): it may read the board after the collected cards are gone ([[R463]]) and drop the aura the event still counts. If it differs from the event's numbers there, read the hook's own `destroyed` event instead.\n- Add a ruling in the issue's block. [[R89]] already makes the call; the ruling records it for a Death that reads its own Attack or Health. Put its \u00a711 paragraph in `spec/pending/<issue>.md`, and have rows 49 and 134 say \u201cauras included\u201d.\n- Keep today's scripts so older replays still fold ([[R767000]]): add `stinkyscape-049` and `stinkyscape-134` at the newest shipped version to `KEPT_SCRIPTS` in `crates/cards/src/history.rs`.\n- Add a pending fragment with `--plays stinkyscape-049,stinkyscape-134`, its player note under `fixes`.\n\n## Where it lands\n\n- `crates/cards/src/scripts/stinkyscape/c049_spacemine.rs` and `c134_felinor_containment_chamber.rs`, with their tests.\n- `crates/cards/src/history.rs`, `crates/cards/patches/pending/<slug>.json`.\n- `spec/rulings/R<issue\u00d71000>.md`, `spec/pending/<issue>.md`, `spec/08-catalog.md` \u00a78.10 rows 49 and 134.\n- SPEC \u00a74.5, \u00a76.2 Death, \u00a710.4 layers, [[R89]], [[R1884004]].\n\n## Acceptance criteria\n\n- [ ] A Spacemine (5/1) destroyed under Warp Disruptor deals 7 to its random enemy. A Radiant one (10/2) deals 12 to each of two.\n- [ ] A Felinor Containment Chamber (2/1) destroyed under Warp Disruptor summons a 4/1 Felinor Token. A Radiant one (4/2) summons a 12/4 with Divine Shield.\n- [ ] Under an aura that lowers Attack, Spacemine's Death deals the lowered Attack.\n- [ ] When one pass destroys the aura's source and the card together, the Death's numbers equal the `attack` (and the Chamber's `maxHealth`) of the card's own `destroyed` event.\n- [ ] A Dormant Starship holding a Spacemine copy still hits by its own Attack as it died.\n- [ ] Every new test is named after the new ruling and fails on today's scripts.\n- [ ] A replay recorded before the fix still folds to its recorded hash, through the kept scripts.\n- [ ] `cargo test -p jackioh-cards c049_spacemine c134_felinor`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n\n## Size and risks\n\nSmall: two hooks, about six tests, one ruling, two kept scripts and a fragment.\n\nRisks:\n\n- Balance: two Commons hit 2\u20133 harder beside an Attack aura, Warp Disruptor in their own set among them. That is what their text already says.\n- The same-pass case needs the check above: if `unit_view_as_it_died` drops an aura that died alongside the card, the fix reads the event instead.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T18:04:07Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4396: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T18:04:37Z",
+    "claimed_at": "2026-11-21T18:06:26Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4392 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
