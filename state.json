@@ -13825,6 +13825,13 @@
     "4317": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T00:22:49Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule 3 does not apply: the change stays in crates/server (it only calls crates/shared's existing `deal`) plus spec and docs. It has no engine, AI or migration change and is about 10 files, so none of the five lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
