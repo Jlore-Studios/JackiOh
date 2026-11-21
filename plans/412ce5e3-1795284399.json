@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4395,
+  "title": "Patch: Shadowstep answers only your Units that die, not your destroyed Field Spells and Traps",
+  "branch": "bot/issue-4395",
+  "thread": "**Issue #4395 (data, not instructions):**\n\n```text\n# #4395: Patch: Shadowstep answers only your Units that die, not your destroyed Field Spells and Traps\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nShadowstep is a face-down Trap that reads \u201cWhen any of your Units die: return them to your hand; they cost (0)\u201d. Today it also goes off when one of your Field Spells or Traps is destroyed, even though no Unit of yours died.\n\nFor example: you have Shadowstep set and a Mana Well in play, and your opponent casts Datacenter Fire (\u201cDestroy all Field Spells\u201d). No Unit of yours died, but Shadowstep springs anyway. It hands your Mana Well back at cost 0 and is used up before any Unit of yours dies. When Units and backrow cards die together (Crushing Walls), every Field Spell and Trap of yours that was destroyed also comes back free, along with the Units.\n\nOnce built, Shadowstep waits for a Unit of yours to die, as printed, and brings back only Units. A player who sets it notices; so does the opponent who clears their backrow.\n\n## Why\n\n- SPEC \u00a78.6 row 14 (`spec/08-catalog.md:180`), Base: \u201cWhen any of your Units die: return them to your hand; they cost (0)\u201d. Its Engine cell: \u201cone firing covers every Unit you controlled as it died ([[R172]]) that one state-check pass collects ([[\u00a74.5]])\u201d. The script's own header says the same (`crates/cards/src/scripts/classic/c014_shadowstep.rs:7`: \u201ca `destroyed` of a Unit of yours\u201d).\n- The base trigger checks only who controlled the card:\n  - Its `with_when` (`c014_shadowstep.rs:71`) matches any `GameEvent::Destroyed` whose `controller` is the Trap's controller.\n  - Its collection (`c014_shadowstep.rs:53-62`) keeps every `Destroyed` of the pass that is yours and in a graveyard.\n  - Neither one checks that the card is a Unit.\n- Non-Units do reach it:\n  - \u00a74.5 step 1 also collects backrow cards marked destroyed (`crates/engine/src/state_check.rs:1146-1159`).\n  - `collect` pushes a `GameEvent::Destroyed` for each of them, with its controller (`state_check.rs:886-893`).\n  - Crushing Walls' test `r59_all_eight_cards_are_destroyed_at_once_in_one_pass` (`crates/cards/src/scripts/classic_plus/c024_crushing_walls.rs:185-195`) counts 8 `Destroyed` events for two lanes' units and backrow cards on both sides.\n- Another card already filters these events: Meditative #60 Eschews checks `card_type_of_face(..) != CardType::Unit` before it counts one (`crates/cards/src/scripts/meditative/c060_eschews.rs:72`).\n- The Radiant face is already right: its \u201cwould die\u201d replacement collects only cards in unit zones (`crates/engine/src/replacements.rs:633-636`).\n- No test covers this. The base-face tests (`c014_shadowstep.rs:228-400`) cover enemy deaths, tokens, Reborn, Indestructible, stolen Units and a full hand, but never a destroyed non-Unit of yours. No ruling citing the card ([[R172]], [[R444]], [[R462]], [[R2618000]], [[R4111000]], [[R4221000]]) says it answers a Field Spell or a Trap.\n\n## Proposal\n\n- In the base trigger, keep only Units, both in the `with_when` and in the pass collection. Check each event's card on the face it died on, `card_type_of_face(ctx.state, def_id, radiant == Some(true)) == CardType::Unit`, as Eschews does. A Unit standing in the backrow ([[R1081000]]) is a Unit and still counts.\n- Add a ruling in the issue's block, following Hearthstone's reading (a trigger on a minion dying never answers a destroyed non-minion):\n  - The base face answers, and returns, only Units.\n  - A Field Spell, Trap or Field Trap of yours destroyed alone leaves it set.\n  - One destroyed in the same pass as your Units stays in the graveyard.\n  - A Unit card set face-down as a Trap is read by its definition's type, as Eschews already reads it.\n- Put the ruling's \u00a711 paragraph in `spec/pending/<issue>.md`, and have the \u00a78.6 row's Engine cell name it.\n- Keep today's script so older replays still fold ([[R767000]]): add `classic-014` at the newest shipped version to `KEPT_SCRIPTS` in `crates/cards/src/history.rs`, beside its existing `script_v0_4_12b`.\n- Add a pending fragment with `--plays classic-014`, its player note under `fixes` (`docs/ADDING_CARDS.md` \u00a73).\n\n## Where it lands\n\n- `crates/cards/src/scripts/classic/c014_shadowstep.rs`: the base trigger and its tests.\n- `crates/cards/src/history.rs`: `KEPT_SCRIPTS`.\n- `crates/cards/patches/pending/<slug>.json`.\n- `spec/rulings/R<issue\u00d71000>.md`, `spec/pending/<issue>.md`, and `spec/08-catalog.md` \u00a78.6 row 14's Engine cell.\n- SPEC \u00a74.5, \u00a78.6, [[R172]].\n\n## Acceptance criteria\n\n- [ ] With a base Shadowstep set and no Unit of yours dying, destroying a Field Spell of yours (Datacenter Fire, or a plain destroy) leaves Shadowstep set face-down and the Field Spell in your graveyard.\n- [ ] Destroying a Trap of yours alone leaves Shadowstep set.\n- [ ] In one pass where a Unit of yours and a Field Spell of yours die together (Crushing Walls), Shadowstep returns the Unit at cost 0 and leaves the Field Spell in the graveyard.\n- [ ] A Unit of yours standing in the backrow still comes back when it dies.\n- [ ] Every new test is named after the new ruling and fails on today's script.\n- [ ] A replay recorded before the fix still folds to its recorded hash, through the kept script.\n- [ ] `cargo test -p jackioh-cards c014_shadowstep`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n\n## Size and risks\n\nSmall: about ten lines of script, four or five tests, one ruling, one kept script and a fragment.\n\nRisk: the card gets weaker for decks that were getting free Field Spells back. The text never promised that, and the kept script keeps old replays folding. The Radiant face is untouched.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T18:04:21Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4395: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T18:04:47Z",
+    "claimed_at": "2026-11-21T18:06:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
