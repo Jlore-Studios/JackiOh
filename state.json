@@ -14900,11 +14900,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-21T20:30:20Z",
+        "at": "2026-11-21T20:42:25Z",
         "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4411, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-list line holds: single-crate locked read plus two ruling-note edits, no engine/AI/cross-crate/migration/40-file change (the migration option is rejected in favor of a FOR UPDATE read)."
       },
       "failures": 0,
       "forced": false,
