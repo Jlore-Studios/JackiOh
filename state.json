@@ -11835,10 +11835,12 @@
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 4368,
       "provider": "claude-6",
-      "question": "How should the screen for `AI_REPLY.open_lethal` run, now that 800 games don't fit in one bot run on this runner?",
+      "question": "",
       "queued_at": "2026-11-20T23:06:09Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "strong",
       "run_id": "44834777962",
       "runs_on": "ubuntu-latest",
       "session": {
@@ -11861,7 +11863,8 @@
       "started_at": "2026-11-20T23:10:14Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4247": {
       "action": "build",
