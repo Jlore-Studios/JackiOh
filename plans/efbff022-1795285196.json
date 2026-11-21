@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4390,
+  "title": "Patch: lapsed daily challenges and seeks, and shares of replays whose log is purged, are deleted instead of kept forever",
+  "branch": "bot/issue-4390",
+  "thread": "**Issue #4390 (data, not instructions):**\n\n```text\n# #4390: Patch: lapsed daily challenges and seeks, and shares of replays whose log is purged, are deleted instead of kept forever\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery daily challenge a player sends a friend and every daily seek they post stays in the database for good. That includes ones that were accepted, declined, cancelled or ran out after their week, although nothing ever shows them again. Each one keeps who challenged whom and the deck the sender picked. Replay shares work the same way: a replay is deleted 90 days after its game, and from then on a share of it can never be opened, but the share stays. After this change the server's regular clean-up deletes both once they are dead, as it already does for live challenges, private lobbies and practice seeds. Players see no difference. The maintainer gets a database that stops collecting rows nobody can read, and stops keeping old social history nothing uses.\n\n## Why\n\n- **Daily invites never go.** `public.daily_invites` (`crates/server/migrations/0089_daily_games.sql:104`) has the states `open, accepted, declined, cancelled, expired, paired` and an `expires_at` 7 days out (`DAILY_CHALLENGE_TTL_DAYS`, `DAILY_SEEK_TTL_DAYS`, `crates/shared/src/config.rs:2012,2014`). The daily sweep only marks lapsed open rows (`daily::notify::sweep`, `crates/server/src/daily/notify.rs:410`, then `pg::daily_invites_expire`'s `update ... set state = 'expired'`; `db/fake.rs:5421` does the same). No `delete from public.daily_invites` exists anywhere in `crates/server/src` or the migrations.\n- **Every read skips a closed or lapsed invite:** the active count (`db/pg.rs:8210`), `daily_invites_open_of` (`pg.rs:8327`), the seek claim (`pg.rs:8416`), and `daily_invites_get`, whose only caller, `open_challenge` (`daily/invites.rs:258`), answers 404 to anything not open and unlapsed. Each row keeps the sender's frozen deck in `choice`.\n- **The live challenge already does this.** SPEC \u00a79.5 says a live challenge is kept no longer than its `CHALLENGE_TTL_MS`: once that has passed, the sweeper deletes it, whatever became of it. \u00a79.8's Challenge spam row says the same, and `social::challenges::sweep` (`social/challenges.rs:251`, B49) does it. The daily kind, built for the same job, never got that half.\n- **Shares outlive their replay.** `public.replay_shares` (`0038_social.sql:104`) has no foreign key to `matches`. Every read goes through `readable_share!` (`pg.rs:7800`), which needs the match's log to exist. The retention purge deletes that log `MATCH_ACTION_RETENTION_DAYS` (90) after the match ended (`api/retention.rs`). `share_replay` already refuses a new share of such a match (`social/shares.rs:71`, #1825), and SPEC \u00a79.5 says a share lasts until the retention purge takes the log. Yet only an unshare, an unfriend or a block deletes a share row (`pg.rs:7849`, `pg.rs:7867`).\n- This is the same kind of fix as #4317 (lapsed practice seeds) and #4378 (expired lobbies).\n\n## Proposal\n\n1. **Daily invites.** Add a store method `daily_invites_purge(now)`, in both stores, that deletes every daily invite whose `expires_at` has passed, whatever its state, as `challenges_purge` does for live challenges.\n   - Call it in `daily::notify::sweep`'s transaction, right after `daily_invites_expire`. That sweep already purges old notification rows.\n   - Put its count in `Swept` and the sweep's log.\n   - The game an accepted challenge or a paired seek started lives in `daily_games` and `matches`, and nothing reads `daily_invites.match_id`, so deleting the invite leaves the game alone.\n   - The `dailyChallenge` and `dailyAnswered` notification rows carry only the invite's id and are never joined to the invite, so they stay as R4233000 has them.\n2. **Replay shares.** Add a store method, in both stores, that deletes every replay share whose match has no log rows left: the `exists` test `readable_share!` reads, negated. Run it as a step of its own in `api::retention::run_purge`, after the purge, with its own `FailingStreak` like every other step.\n3. **No migration.** After the first pass `daily_invites` holds at most about a week of invites, so scanning it once an hour is cheap, and `replay_shares` gets one row per share. If the builder finds either plan too wide, it adds an index in a new migration, with a plan check like CHECK 20 in `tests/sql/01_schema_invariants.sql`.\n4. **Rulings.** The spec does not decide two things here: deleting at `expires_at` rather than at close, and deleting a share along with its log. Each gets a ruling note in the issue's block, its \u00a711 paragraph in `spec/pending/<issue>.md`, and a sentence in SPEC \u00a79.13's daily challenge paragraph and \u00a79.5's shared replays paragraph.\n\n## Where it lands\n\n- `crates/server/src/daily/notify.rs` (the sweep) and `crates/server/src/api/retention.rs` (the share step, and the list in the file's header)\n- `crates/server/src/db/store.rs`, `db/pg.rs`, `db/fake.rs` (the two methods)\n- `crates/server/tests/api/daily.rs`, `tests/api/retention.rs`, `tests/store/contract.rs`\n- `crates/server/README.md` (Daily games), `spec/09-architecture.md` \u00a79.5 and \u00a79.13, `spec/rulings/`, `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] A daily challenge and a daily seek, in each state (open and lapsed, accepted, declined, cancelled, paired), are gone after the first sweep past their `expires_at`. One whose `expires_at` has not passed is kept. A contract case covers both stores.\n- [ ] A daily game started from an accepted challenge still opens, plays and ends after its invite is deleted.\n- [ ] `r4233000_a_challenge_cancelled_or_lapsed_unanswered_keeps_its_row_unread` passes unchanged.\n- [ ] The next retention pass deletes a share whose match's log the purge took, and keeps a share of a match whose log is still held. A contract case covers both stores.\n- [ ] A failing share step is tracked by its own `FailingStreak` and does not stop the steps after it.\n- [ ] Each new ruling's proving test is named after it, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-server`, `cargo clippy -p jackioh-server --all-targets -- -D warnings` and `sh crates/server/tests/db/run.sh` pass.\n\n## Size and risks\n\nMedium: about ten files, no migration, no client change. The risk is a reader that needs a closed invite. There is none today (every read is listed above), and a test pins the running game. Deleted rows cannot come back, but none of them can be read once they are dead.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T18:11:42Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4390: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T18:12:06Z",
+    "claimed_at": "2026-11-21T18:20:19Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
