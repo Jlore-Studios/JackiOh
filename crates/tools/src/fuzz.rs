@@ -117,9 +117,10 @@
 //! # Forced cards (#2387)
 //!
 //! A seed deals 50 of about 630 cards, so a plain wave deals any one card in fewer than one seed in
-//! ten. `--cards` deals the named cards into both decks of every seed of both waves, through `golden.rs`
-//! (a token through the card whose `refs` name it, R279; a Core card and its Legacy card are two,
-//! R2511001). The streams are untouched, so a wave without `--cards` plays as it always did.
+//! ten. `--cards` deals the named cards into both decks of every seed of both 1v1 waves, and into
+//! all four seats' decks of every Duos seed (#4369), through `golden.rs` (a token through the card
+//! whose `refs` name it, R279; a Core card and its Legacy card are two, R2511001). The streams are
+//! untouched, so a wave without `--cards` plays as it always did.
 //!
 //! # Changed cards (#3113)
 //!
@@ -143,6 +144,12 @@
 //! wave does; its `reproduce:` line ends in `--radiant`, which `--cards` takes to pin those cards for
 //! one seed. Which cards resolved Radiant is printed (`changed cards resolved Radiant: …; never: …`)
 //! and never fails the gate: the random policy may not play a card in a few games.
+//!
+//! After it, the changed-Duos rotation (#4369) plays `CHANGED_DUOS_DEALS_PER_CARD` games for each
+//! changed card, at most `CHANGED_DUOS_MAX_SEEDS` seeds: Duos games with the changed cards forced
+//! into all four seats' decks, through the Duos wave's checks with their own summary and coverage
+//! line. It fails the gate as the wave does; its `reproduce:` line names `--duos --cards …`, which
+//! forces those cards into one Duos seed's four decks.
 //!
 //! # The daily top-up (#3113)
 //!
@@ -182,12 +189,12 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
-    CreateGameOptions, DECK_SIZE, DeckMark, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState,
-    EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, HUMAN_HANDICAP, Handicap, KeywordKind, LastBoardEntry,
-    LastBoardInput, PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, SetName, SetupKind,
-    TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game, create_game, create_recorded_game, find_instance, fold,
-    has_standing_draw_offer, hash_state, legal_actions, made_by_a_rule, mulligan_owed, opponent_of, reduce,
-    seat_to_act, subsystems, validate_setup,
+    CreateGameOptions, DECK_SIZE, DeckMark, Difficulty, DuosActionBody, DuosDecks, DuosEvent, DuosSeat,
+    DuosState, EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, HUMAN_HANDICAP, Handicap, KeywordKind,
+    LastBoardEntry, LastBoardInput, PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, SetName,
+    SetupKind, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game, create_game, create_recorded_game,
+    find_instance, fold, has_standing_draw_offer, hash_state, legal_actions, made_by_a_rule, mulligan_owed,
+    opponent_of, reduce, seat_to_act, subsystems, validate_setup,
 };
 use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_STARTER_SIZE, RUN_TIERS};
 use rayon::prelude::*;
@@ -220,11 +227,12 @@ pub struct Args {
     /// unless `--seeds` says otherwise.
     #[arg(long)]
     pub duos: bool,
-    /// Deal these into both decks of every seed of the gate's or the handicapped wave (#2387): card ids,
-    /// each forced as `golden record --force` forces it (a token through the card whose `refs` name it),
-    /// or one set's name as the catalog spells it ("Stinkyscape", "Training Grounds"), whose cards go in
+    /// Deal these into both decks of every seed of the gate's or the handicapped wave, and into all
+    /// four seats' decks of every Duos seed (`--duos`, #4369) (#2387): card ids, each forced as
+    /// `golden record --force` forces it (a token through the card whose `refs` name it), or one
+    /// set's name as the catalog spells it ("Stinkyscape", "Training Grounds"), whose cards go in
     /// FORCED_SET_CARDS_PER_SEED a seed, in turn.
-    #[arg(long, value_name = "IDS|SET", value_delimiter = ',', conflicts_with_all = ["duos", "regress"])]
+    #[arg(long, value_name = "IDS|SET", value_delimiter = ',', conflicts_with_all = ["regress"])]
     pub cards: Vec<String>,
     /// Pin the `--cards` cards Radiant (#4161): every seed then starts as a dungeon fight with them
     /// marked, which is how a failing seed of the changed cards' Radiant rotation is replayed.
@@ -249,7 +257,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     let from = first_seed(args.from);
     if args.duos {
-        return crate::duos_fuzz::run(from, args.seeds, args.json);
+        let forcing = Forcing::from_cards(&args.cards)?;
+        return crate::duos_fuzz::run(from, args.seeds, args.json, &forcing);
     }
     let ran = wave_size(args.seeds);
     let forcing = Forcing::from_cards(&args.cards)?;
@@ -331,6 +340,7 @@ fn play_changed_cards(root: &Path) -> Vec<String> {
             ));
         }
         failed.extend(play_radiant_rotation(&forcing));
+        failed.extend(play_changed_duos_rotation(&forcing));
     }
     if let Err(error) = fused_pairs::play_changed(&changed.ids) {
         failed.push(format!("{error:#}"));
@@ -383,6 +393,32 @@ fn play_radiant_rotation(forcing: &Forcing) -> Vec<String> {
         listed(&resolved),
         listed(&never)
     );
+    failed
+}
+
+/// The changed cards' Duos rotation (#4369), after their Radiant rotation: Duos games with each
+/// card forced into all four seats' decks, `CHANGED_DUOS_DEALS_PER_CARD` deals each at most
+/// `CHANGED_DUOS_MAX_SEEDS` seeds, through the Duos wave's checks. The messages of what failed.
+fn play_changed_duos_rotation(forcing: &Forcing) -> Vec<String> {
+    let seeds = rotation_seeds(forcing.cards.len(), forcing.per_seed, CHANGED_DUOS_DEALS_PER_CARD)
+        .min(CHANGED_DUOS_MAX_SEEDS);
+    println!(
+        "changed cards (Duos): {} forced ({} a seed) over seeds 1..{seeds}: {}",
+        forcing.cards.len(),
+        forcing.per_seed,
+        shown_ids(&forcing.cards)
+    );
+    let outcomes = crate::duos_fuzz::play_duos_wave(1, seeds, forcing);
+    print!("{}", crate::duos_fuzz::summary(1, seeds, &outcomes, forcing));
+    let failures = crate::duos_fuzz::failure_lines(&outcomes, forcing);
+    let mut failed = Vec::new();
+    if !failures.is_empty() {
+        println!("{}", failures.join("\n"));
+        failed.push(format!(
+            "the changed cards' Duos rotation: {} of {seeds} seeds failed",
+            failures.len()
+        ));
+    }
     failed
 }
 
@@ -599,6 +635,16 @@ pub const CHANGED_RADIANT_DEALS_PER_CARD: u32 = 6;
 /// `CHANGED_RADIANT_DEALS_PER_CARD` times, which keeps `rust (checks, fuzz 200)` in its budget.
 pub const CHANGED_RADIANT_MAX_SEEDS: u32 = 30;
 
+/// How many games deal each changed card into all four Duos seats' decks (#4369): the changed-Duos
+/// rotation plays this many, or `CHANGED_DUOS_MAX_SEEDS` seeds when that is fewer. Four-seat games
+/// cost more than 1v1 ones, so this is smaller than `CHANGED_DEALS_PER_CARD`.
+pub const CHANGED_DUOS_DEALS_PER_CARD: u32 = 4;
+
+/// The most seeds the changed-Duos rotation plays (#4369), on top of `CHANGED_WAVE_MAX_SEEDS`'s
+/// wave and the Radiant rotation: a change of many cards deals each fewer than
+/// `CHANGED_DUOS_DEALS_PER_CARD` times, which keeps `rust (checks, fuzz 200)` in its budget.
+pub const CHANGED_DUOS_MAX_SEEDS: u32 = 16;
+
 /// The greatest common divisor of `a` and `b`.
 fn gcd(a: usize, b: usize) -> usize {
     if b == 0 { a } else { gcd(b, a % b) }
@@ -733,6 +779,22 @@ impl Forcing {
         (force_into(&decks.0, &forced), force_into(&decks.1, &forced))
     }
 
+    /// `decks` with this seed's forced cards in all four Duos seats (#4369): untouched when nothing
+    /// is forced, so a Duos wave without `--cards` deals exactly the decks it always dealt and draws
+    /// no extra rng.
+    pub(crate) fn deal_duos(&self, seed: u32, decks: DuosDecks) -> DuosDecks {
+        let forced = self.for_seed(seed);
+        if forced.is_empty() {
+            return decks;
+        }
+        DuosDecks {
+            a1: force_into(&decks.a1, &forced),
+            a2: force_into(&decks.a2, &forced),
+            b1: force_into(&decks.b1, &forced),
+            b2: force_into(&decks.b2, &forced),
+        }
+    }
+
     /// `play` over this seed's forced decks, naming them on the failure.
     fn play(
         &self,
@@ -747,7 +809,20 @@ impl Forcing {
     }
 
     /// The summary's line naming what `--cards` forced, or `None` when it forced nothing.
-    fn summary_line(&self) -> Option<String> {
+    pub(crate) fn summary_line(&self) -> Option<String> {
+        self.summary_line_in("both decks of every seed", "both decks of each seed")
+    }
+
+    /// `summary_line` for a Duos wave (#4369): the cards go into all four seats' decks, not two.
+    pub(crate) fn summary_line_duos(&self) -> Option<String> {
+        self.summary_line_in(
+            "all four seats' decks of every seed",
+            "all four seats' decks of each seed",
+        )
+    }
+
+    /// `summary_line` with the decks named by `every` (the whole list) and `each` (a set's slice).
+    fn summary_line_in(&self, every: &str, each: &str) -> Option<String> {
         if self.cards.is_empty() {
             return None;
         }
@@ -759,20 +834,20 @@ impl Forcing {
         };
         if self.per_seed < self.cards.len() {
             Some(format!(
-                "  forced (--cards {named}): {} of its {} cards into both decks of each seed, in turn{pinned}\n",
+                "  forced (--cards {named}): {} of its {} cards into {each}, in turn{pinned}\n",
                 self.per_seed,
                 self.cards.len()
             ))
         } else {
             Some(format!(
-                "  forced (--cards {named}): {} into both decks of every seed{pinned}\n",
+                "  forced (--cards {named}): {} into {every}{pinned}\n",
                 self.cards.join(", ")
             ))
         }
     }
 
     /// `--json`'s `forced`: `null` when `--cards` forced nothing.
-    fn json(&self) -> Value {
+    pub(crate) fn json(&self) -> Value {
         if self.cards.is_empty() {
             return Value::Null;
         }
@@ -7356,6 +7431,34 @@ pub(crate) mod tests {
                 wave.summary()
             );
         }
+
+        /// #4369: `--cards` forces into Duos seeds too, while `--radiant` still refuses them.
+        #[test]
+        fn cards_force_into_duos_seeds_but_radiant_still_refuses_them() {
+            use clap::Parser;
+            #[derive(Parser)]
+            struct Cli {
+                #[command(flatten)]
+                args: Args,
+            }
+            let parse =
+                |words: &[&str]| Cli::try_parse_from(std::iter::once("fuzz").chain(words.iter().copied()));
+            let duos = parse(&["--duos", "--cards", "core-090"]).expect("--cards with --duos parses");
+            assert_eq!(duos.args.cards, ["core-090".to_string()]);
+            assert!(duos.args.duos);
+            assert!(
+                parse(&["--duos", "--cards", "core-090", "--radiant"]).is_err(),
+                "--radiant --duos is refused"
+            );
+            assert!(
+                parse(&["--duos", "--radiant"]).is_err(),
+                "--radiant --duos is refused without --cards too"
+            );
+            assert!(
+                parse(&["--cards", "core-090", "--regress"]).is_err(),
+                "--cards --regress is still refused"
+            );
+        }
     }
 
     /// #3113: the pull request's gate also plays the cards its change touches.
@@ -7443,6 +7546,19 @@ pub(crate) mod tests {
             assert!(Forcing::from_changed(&[]).cards.is_empty());
             assert!(Forcing::from_changed(&ids(&["no-such-card"])).cards.is_empty());
             assert!(Forcing::from_changed(&[]).for_seed(1).is_empty());
+        }
+
+        /// #4369: the changed-Duos rotation deals each card `CHANGED_DUOS_DEALS_PER_CARD` times in
+        /// at most `CHANGED_DUOS_MAX_SEEDS` seeds, a smaller wave than the 1v1 one.
+        #[test]
+        fn the_changed_duos_rotation_is_bounded_and_smaller_than_the_1v1_wave() {
+            assert!(rotation_seeds(1, 1, CHANGED_DUOS_DEALS_PER_CARD) > 0);
+            assert_eq!(
+                rotation_seeds(100, 10, CHANGED_DUOS_DEALS_PER_CARD).min(CHANGED_DUOS_MAX_SEEDS),
+                CHANGED_DUOS_MAX_SEEDS
+            );
+            const { assert!(CHANGED_DUOS_MAX_SEEDS <= CHANGED_WAVE_MAX_SEEDS) };
+            const { assert!(CHANGED_DUOS_DEALS_PER_CARD <= CHANGED_DEALS_PER_CARD) };
         }
 
         /// #3113: a changed card is in both decks of every seed of its wave, and the summary counts the

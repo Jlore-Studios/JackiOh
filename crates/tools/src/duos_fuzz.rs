@@ -14,12 +14,19 @@
 //! dealt deck (R433), the four decks one seeded shuffle of `FUZZ_POOL` at each seat's size (R184), and
 //! the policy's draws come from streams outside the state. On `ENDINGS_SHARE` of seeds a game also
 //! takes the endings channel (#1572, `duos_endings_action`).
+//!
+//! # Forced cards (#4369)
+//!
+//! `--cards` deals the named cards into all four seats' decks of every seed, through `golden.rs` as
+//! the 1v1 waves force (`Forcing::deal_duos`); a wave without `--cards` deals exactly the decks it
+//! always dealt. The pull request's gate plays a bounded changed-Duos rotation after the 1v1
+//! changed-cards wave, with its own summary and coverage lines.
 
 use std::panic::{self, AssertUnwindSafe};
 use std::time::Instant;
 
 use anyhow::bail;
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::register_all;
 use jackioh_engine::subsystems::AI_SKIPPED_ACTIONS;
 use jackioh_engine::testkit::{
@@ -29,16 +36,17 @@ use jackioh_engine::{
     AI_DIFFICULTY, AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS,
     DUOS_HUMAN_TEAM, DUOS_NONCE_PREFIX, DUOS_REASON_CEILING, DUOS_REASON_CONCEDE, DUOS_REASON_DUEL_RESULT,
     DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DUOS_REASON_VOIDED, DUOS_SEATS, Difficulty, DuosAction,
-    DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosReduceResult, DuosReplayInput, DuosSeat,
-    DuosState, HUMAN_HANDICAP, PerTeam, Rng, TURN_CAP_PLAYER_TURNS, duos_ai_team, duos_begin, duos_create,
-    duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
+    DuosActionBody, DuosCreateOptions, DuosDecks, DuosEvent, DuosHandicaps, DuosReduceResult,
+    DuosReplayInput, DuosSeat, DuosState, GameEvent, HUMAN_HANDICAP, PerTeam, Rng, TURN_CAP_PLAYER_TURNS,
+    duos_ai_team, duos_begin, duos_create, duos_fold, duos_hash, duos_legal_actions, duos_reduce,
+    duos_seats_to_act,
 };
 
 use crate::agent::panic_message;
 use crate::fuzz::{
-    CHECKPOINT_TIME_BOUND_MS, DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND,
-    DUOS_GROWTH_NUMBER_BOUND, ENDINGS_ACT_CHANCE, ENDINGS_ANSWER_CHANCE, ENDINGS_SHARE, FUZZ_POOL, Heaviest,
-    Heavy, MALFORMED_ANSWER_PROBE, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, checkpoint_step,
+    CHECKPOINT_TIME_BOUND_MS, COVERAGE_SHOWN, DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND,
+    DUOS_GROWTH_NUMBER_BOUND, ENDINGS_ACT_CHANCE, ENDINGS_ANSWER_CHANCE, ENDINGS_SHARE, FUZZ_POOL, Forcing,
+    Heaviest, Heavy, MALFORMED_ANSWER_PROBE, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, checkpoint_step,
     duos_acting_card, duos_growth_breach, duos_heaviest_lines, join_state_diff, probe_stride, round_trip,
     state_paused, verify_round_trip, weigh_duos,
 };
@@ -71,18 +79,18 @@ pub const DUOS_ENDINGS_CONCEDE_CHANCE: f64 = 0.004;
 pub const DUOS_ENDINGS_CEILING_CHANCE: f64 = 0.0015;
 
 /// Plays the Duos wave from seed `from` and prints its numbers; fails (exit 1) when a seed failed.
-pub fn run(from: u32, seeds: Option<u32>, json: bool) -> anyhow::Result<()> {
+pub fn run(from: u32, seeds: Option<u32>, json: bool, forcing: &Forcing) -> anyhow::Result<()> {
     let ran = duos_wave_size(seeds);
-    let outcomes = play_duos_wave(from, ran);
+    let outcomes = play_duos_wave(from, ran, forcing);
     if json {
         println!(
             "{}",
-            serde_json::to_string_pretty(&wave_json(from, ran, &outcomes))?
+            serde_json::to_string_pretty(&wave_json(from, ran, &outcomes, forcing))?
         );
     } else {
-        println!("{}", summary(from, ran, &outcomes));
+        println!("{}", summary(from, ran, &outcomes, forcing));
     }
-    let failures = failure_lines(&outcomes);
+    let failures = failure_lines(&outcomes, forcing);
     if !failures.is_empty() {
         if !json {
             println!("{}", failures.join("\n"));
@@ -221,13 +229,21 @@ fn duos_decks_for_handicaps(seed: u32, handicaps: &DuosHandicaps) -> DuosDecks {
 }
 
 /// What seed `seed`'s game is created, folded and checkpointed with (#1573): its stream, its setup's
-/// team rules, handicaps and dealt seats, and decks sized to the handicaps.
+/// team rules, handicaps and dealt seats, and decks sized to the handicaps. Tests play through this;
+/// the waves go through `duos_options_for_seed_forced`, which deals the same decks unforced.
+#[cfg(test)]
 fn duos_options_for_seed(seed: u32) -> DuosCreateOptions {
+    duos_options_for_seed_forced(seed, &Forcing::default())
+}
+
+/// `duos_options_for_seed` with `forcing`'s cards for the seed in all four seats' decks (#4369):
+/// untouched decks when it forces nothing, so the games are the ones the seed always dealt.
+fn duos_options_for_seed_forced(seed: u32, forcing: &Forcing) -> DuosCreateOptions {
     let setup = duos_setup_for_seed(seed);
     let handicaps = setup.handicaps();
     DuosCreateOptions {
         seed: format!("jackioh-duos-fuzz-{seed}"),
-        decks: duos_decks_for_handicaps(seed, &handicaps),
+        decks: forcing.deal_duos(seed, duos_decks_for_handicaps(seed, &handicaps)),
         teams: Some(setup.teams()),
         handicaps: Some(handicaps),
         dealt: (!setup.dealt.is_empty()).then(|| setup.dealt.to_vec()),
@@ -241,11 +257,27 @@ fn max_duos_actions() -> usize {
     usize::try_from(TURN_CAP_PLAYER_TURNS).unwrap_or(0) * AI_PLAYOUT_STEP_CAP * DUOS_DUELS
 }
 
+/// Adds to `played` the def id of every card `events` show played, set, fired or announced
+/// (#4369): the Duos form of the 1v1 wave's `note_played` (#2426).
+fn note_duos_played(played: &mut IndexSet<String>, events: &[DuosEvent]) {
+    for event in events {
+        if let DuosEvent::Duel { event, .. } = event
+            && let GameEvent::CardPlayed { def_id, .. }
+            | GameEvent::TrapFired { def_id, .. }
+            | GameEvent::CardAnnounced { def_id, .. } = event
+        {
+            played.insert(def_id.clone());
+        }
+    }
+}
+
 struct DuosRun {
     options: DuosCreateOptions,
     log: Vec<DuosAction>,
     state: DuosState,
     heaviest: Heaviest,
+    /// The def ids either duel played, set, fired or announced (#4369, #2426), setup's included.
+    played: IndexSet<String>,
     /// The prefix lengths whose end state held paused work in some duel (#1387): step 0 is the
     /// setup state, otherwise the state after that many actions.
     paused: Vec<usize>,
@@ -490,10 +522,22 @@ fn probe_duos_state(
     })
 }
 
+#[cfg(test)]
 fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
     play_duos_game_inner(seed, duos_reduce, |_, _, _, _| {})
 }
 
+/// `play_duos_game` with `forcing`'s cards for the seed in all four seats' decks (#4369).
+fn play_duos_game_forced(seed: u32, forcing: &Forcing) -> Result<DuosRun, String> {
+    play_duos_game_from(
+        seed,
+        duos_options_for_seed_forced(seed, forcing),
+        duos_reduce,
+        |_, _, _, _| {},
+    )
+}
+
+#[cfg(test)]
 fn play_duos_game_inner<F>(seed: u32, probe: DuosReducer, tamper: F) -> Result<DuosRun, String>
 where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
@@ -514,6 +558,9 @@ where
     register_all();
     let begun = duos_begin(&duos_create(&options));
     let mut state = begun.state;
+    // #4369: the cards the game played, from setup's events on, as the 1v1 wave gathers them.
+    let mut played: IndexSet<String> = IndexSet::new();
+    note_duos_played(&mut played, &begun.events);
     let mut monitor = create_duos_invariant_monitor(&state);
     let stride = if cfg!(test) { 1 } else { I6_GATE_STRIDE };
     let probe_stride = probe_stride();
@@ -636,12 +683,14 @@ where
         if let Some(message) = duos_growth_breach(&weights, &state, step, &action_type, card.as_deref()) {
             return Err(format!("growth: {message}"));
         }
+        note_duos_played(&mut played, &result.events);
     }
     Ok(DuosRun {
         options,
         log,
         state,
         heaviest,
+        played,
         paused: paused_steps,
         endings: takes_endings,
     })
@@ -786,7 +835,7 @@ fn check_duos_serial_restart_with(
 }
 
 #[derive(Clone, Debug)]
-struct DuosSeedOutcome {
+pub(crate) struct DuosSeedOutcome {
     seed: u32,
     reason: Option<String>,
     error: Option<String>,
@@ -796,6 +845,54 @@ struct DuosSeedOutcome {
     checkpoint_paused: bool,
     /// What the game's checkpoint round trip cost, in milliseconds (#1387, #3712); zero when it failed.
     checkpoint_ms: u128,
+    /// The def ids the passing game played, set, fired or announced (#4369, #2426); empty when it failed.
+    played: IndexSet<String>,
+}
+
+/// A passing Duos seed's game: its ending, heaviest actions, checkpoint report and played cards.
+struct DuosPassed {
+    reason: String,
+    heaviest: Heaviest,
+    checkpoint_paused: bool,
+    checkpoint_ms: u128,
+    played: IndexSet<String>,
+}
+
+/// The outcome `catch_unwind`'s result carries for `seed`: the passing game's report, a named
+/// failure, or the panic's message.
+fn outcome_of(
+    seed: u32,
+    caught: Result<Result<DuosPassed, String>, Box<dyn std::any::Any + Send>>,
+) -> DuosSeedOutcome {
+    match caught {
+        Ok(Ok(passed)) => DuosSeedOutcome {
+            seed,
+            reason: Some(passed.reason),
+            error: None,
+            heaviest: passed.heaviest,
+            checkpoint_paused: passed.checkpoint_paused,
+            checkpoint_ms: passed.checkpoint_ms,
+            played: passed.played,
+        },
+        Ok(Err(error)) => DuosSeedOutcome {
+            seed,
+            reason: None,
+            error: Some(error),
+            heaviest: Heaviest::default(),
+            checkpoint_paused: false,
+            checkpoint_ms: 0,
+            played: IndexSet::new(),
+        },
+        Err(payload) => DuosSeedOutcome {
+            seed,
+            reason: None,
+            error: Some(format!("panic: {}", panic_message(&*payload))),
+            heaviest: Heaviest::default(),
+            checkpoint_paused: false,
+            checkpoint_ms: 0,
+            played: IndexSet::new(),
+        },
+    }
 }
 
 /// The checkpoint a seed crossed, after its run passed: the step is unused here, only whether it
@@ -811,43 +908,30 @@ fn check_seed_checkpoint(seed: u32, run: &DuosRun) -> Result<(bool, u128), Strin
     .map(|(_, paused, ms)| (paused, ms))
 }
 
+#[cfg(test)]
 fn fuzz_duos_seed(seed: u32) -> DuosSeedOutcome {
+    fuzz_duos_seed_forced(seed, &Forcing::default())
+}
+
+/// `fuzz_duos_seed` with `forcing`'s cards for the seed in all four seats' decks (#4369).
+fn fuzz_duos_seed_forced(seed: u32, forcing: &Forcing) -> DuosSeedOutcome {
     // R1420: the pool is the whole catalog, so this worker thread previews every set for the game.
     let _preview = preview_every_set();
-    let caught = panic::catch_unwind(AssertUnwindSafe(
-        || -> Result<(String, Heaviest, bool, u128), String> {
-            let run = play_duos_game(seed)?;
+    outcome_of(
+        seed,
+        panic::catch_unwind(AssertUnwindSafe(|| -> Result<DuosPassed, String> {
+            let run = play_duos_game_forced(seed, forcing)?;
             let reason = check_duos_run(&run)?;
             let (paused, ms) = check_seed_checkpoint(seed, &run)?;
-            Ok((reason, run.heaviest, paused, ms))
-        },
-    ));
-    match caught {
-        Ok(Ok((reason, heaviest, checkpoint_paused, checkpoint_ms))) => DuosSeedOutcome {
-            seed,
-            reason: Some(reason),
-            error: None,
-            heaviest,
-            checkpoint_paused,
-            checkpoint_ms,
-        },
-        Ok(Err(error)) => DuosSeedOutcome {
-            seed,
-            reason: None,
-            error: Some(error),
-            heaviest: Heaviest::default(),
-            checkpoint_paused: false,
-            checkpoint_ms: 0,
-        },
-        Err(payload) => DuosSeedOutcome {
-            seed,
-            reason: None,
-            error: Some(format!("panic: {}", panic_message(&*payload))),
-            heaviest: Heaviest::default(),
-            checkpoint_paused: false,
-            checkpoint_ms: 0,
-        },
-    }
+            Ok(DuosPassed {
+                reason,
+                heaviest: run.heaviest,
+                checkpoint_paused: paused,
+                checkpoint_ms: ms,
+                played: run.played,
+            })
+        })),
+    )
 }
 
 #[cfg(test)]
@@ -855,78 +939,99 @@ fn fuzz_duos_seed_with<F>(seed: u32, probe: DuosReducer, tamper: F) -> DuosSeedO
 where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
+    fuzz_duos_seed_with_forced(seed, &Forcing::default(), probe, tamper)
+}
+
+/// `fuzz_duos_seed_with` with `forcing`'s cards for the seed in all four seats' decks (#4369): a
+/// test plants a failure in a forced game and reads its report.
+#[cfg(test)]
+fn fuzz_duos_seed_with_forced<F>(
+    seed: u32,
+    forcing: &Forcing,
+    probe: DuosReducer,
+    mut tamper: F,
+) -> DuosSeedOutcome
+where
+    F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
+{
     let _preview = preview_every_set();
-    let caught = panic::catch_unwind(AssertUnwindSafe(
-        || -> Result<(String, Heaviest, bool, u128), String> {
-            let run = play_duos_game_inner(seed, probe, tamper)?;
+    outcome_of(
+        seed,
+        panic::catch_unwind(AssertUnwindSafe(|| -> Result<DuosPassed, String> {
+            let run = play_duos_game_from(
+                seed,
+                duos_options_for_seed_forced(seed, forcing),
+                probe,
+                &mut tamper,
+            )?;
             let reason = check_duos_run(&run)?;
             let (paused, ms) = check_seed_checkpoint(seed, &run)?;
-            Ok((reason, run.heaviest, paused, ms))
-        },
-    ));
-    match caught {
-        Ok(Ok((reason, heaviest, checkpoint_paused, checkpoint_ms))) => DuosSeedOutcome {
-            seed,
-            reason: Some(reason),
-            error: None,
-            heaviest,
-            checkpoint_paused,
-            checkpoint_ms,
-        },
-        Ok(Err(error)) => DuosSeedOutcome {
-            seed,
-            reason: None,
-            error: Some(error),
-            heaviest: Heaviest::default(),
-            checkpoint_paused: false,
-            checkpoint_ms: 0,
-        },
-        Err(payload) => DuosSeedOutcome {
-            seed,
-            reason: None,
-            error: Some(format!("panic: {}", panic_message(&*payload))),
-            heaviest: Heaviest::default(),
-            checkpoint_paused: false,
-            checkpoint_ms: 0,
-        },
-    }
+            Ok(DuosPassed {
+                reason,
+                heaviest: run.heaviest,
+                checkpoint_paused: paused,
+                checkpoint_ms: ms,
+                played: run.played,
+            })
+        })),
+    )
 }
 
 /// Seeds `from..from + ran`, in parallel, read back in seed order, watched for a stalled seed (#3158,
 /// `seed_watch.rs`).
-fn play_duos_wave(from: u32, ran: u32) -> Vec<DuosSeedOutcome> {
+pub(crate) fn play_duos_wave(from: u32, ran: u32, forcing: &Forcing) -> Vec<DuosSeedOutcome> {
     register_all();
     crate::seed_watch::watched(
         "fuzz-duos",
         from,
         ran,
-        |seed| format!("cargo jackioh fuzz --duos --from {seed} --seeds 1"),
-        fuzz_duos_seed,
+        |seed| duos_reproduce_command(seed, forcing),
+        |seed| fuzz_duos_seed_forced(seed, forcing),
     )
 }
 
-fn failure_lines(outcomes: &[DuosSeedOutcome]) -> Vec<String> {
+/// The command that plays Duos seed `seed` alone, with the wave's forced cards for it (#4369), as a
+/// stalled seed's report gives it and a failure's `reproduce:` line names it.
+fn duos_reproduce_command(seed: u32, forcing: &Forcing) -> String {
+    let forced = forcing.for_seed(seed);
+    format!(
+        "cargo jackioh fuzz --duos --from {seed} --seeds 1{}",
+        if forced.is_empty() {
+            String::new()
+        } else {
+            format!(" --cards {}", forced.join(","))
+        }
+    )
+}
+
+pub(crate) fn failure_lines(outcomes: &[DuosSeedOutcome], forcing: &Forcing) -> Vec<String> {
     outcomes
         .iter()
         .filter_map(|outcome| {
             outcome
                 .error
                 .as_ref()
-                .map(|error| failure_report(outcome.seed, error))
+                .map(|error| failure_report(outcome.seed, error, forcing))
         })
         .collect()
 }
 
 /// One failed seed's report (#1573): `seed N: <error>`, then what its game was created with, the
 /// setup, the options a fold takes besides the seed and decks, and each seat's deck, as the 1v1
-/// report prints its two.
-fn failure_report(seed: u32, error: &str) -> String {
-    let options = duos_options_for_seed(seed);
+/// report prints its two. A forced seed also names its forced cards and the `reproduce:` line that
+/// replays it (#4369).
+fn failure_report(seed: u32, error: &str, forcing: &Forcing) -> String {
+    let options = duos_options_for_seed_forced(seed, forcing);
     let mut lines = vec![
         format!("seed {seed}: {error}"),
         format!("  setup: {}", duos_setup_for_seed(seed).label()),
         format!("  options: {}", setup_options_json(&options)),
     ];
+    let forced = forcing.for_seed(seed);
+    if !forced.is_empty() {
+        lines.push(format!("  forced: {}", forced.join(", ")));
+        lines.push(format!("  reproduce: {}", duos_reproduce_command(seed, forcing)));
+    }
     for seat in DUOS_SEATS {
         lines.push(format!(
             "  seed {seed} {seat} deck: {}",
@@ -964,7 +1069,7 @@ fn channel_seeds(outcomes: &[DuosSeedOutcome]) -> usize {
         .count()
 }
 
-fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
+pub(crate) fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome], forcing: &Forcing) -> String {
     let failed = outcomes.iter().filter(|outcome| outcome.error.is_some()).count();
     let mut endings: IndexMap<String, usize> = IndexMap::new();
     for outcome in outcomes {
@@ -980,19 +1085,64 @@ fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
         .map(|outcome| outcome.checkpoint_ms)
         .max()
         .unwrap_or(0);
-    format!(
+    let mut text = format!(
         "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}\n  checkpoints: {paused} paused, {} mid-game fallback; slowest {slowest_ms}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n  endings channel: {} seed(s)\n{}",
         serde_json::to_string(&endings).unwrap_or_default(),
         outcomes.len() - failed - paused,
         channel_seeds(outcomes),
         duos_heaviest_lines(&passed_heaviest(outcomes)),
+    );
+    // A wave without `--cards` prints the summary it always printed.
+    if let Some(line) = forcing.summary_line_duos() {
+        text.push_str(&line);
+        text.push_str(&duos_coverage_line(outcomes, forcing));
+    }
+    text
+}
+
+/// The summary's pool-coverage line (#4369, #2426): over the games that passed, the dealt ids no
+/// `CardPlayed`, `TrapFired` or `CardAnnounced` event named, first `COVERAGE_SHOWN` of them. It
+/// never fails a seed, and played is not every hook run.
+pub(crate) fn duos_coverage_line(outcomes: &[DuosSeedOutcome], forcing: &Forcing) -> String {
+    let mut dealt: IndexSet<String> = IndexSet::new();
+    let mut played: IndexSet<String> = IndexSet::new();
+    for outcome in outcomes.iter().filter(|outcome| outcome.error.is_none()) {
+        // The decks are recomputed from the seed alone: the options are deterministic, so no game
+        // needs to store them.
+        let options = duos_options_for_seed_forced(outcome.seed, forcing);
+        for seat in DUOS_SEATS {
+            dealt.extend(options.decks.of(seat).iter().cloned());
+        }
+        played.extend(outcome.played.iter().cloned());
+    }
+    let mut never: Vec<&str> = dealt
+        .iter()
+        .filter(|id| !played.contains(*id))
+        .map(String::as_str)
+        .collect();
+    never.sort_unstable();
+    let shown = if never.is_empty() {
+        "none".to_string()
+    } else if never.len() > COVERAGE_SHOWN {
+        format!(
+            "{}, … (+{} more)",
+            never[..COVERAGE_SHOWN].join(", "),
+            never.len() - COVERAGE_SHOWN
+        )
+    } else {
+        never.join(", ")
+    };
+    format!(
+        "  coverage: {} of {} dealt pool cards never played: {shown}\n",
+        never.len(),
+        dealt.len(),
     )
 }
 
 /// `--duos --json`: the wave's failures, each measure's heaviest actions and the growth bounds
 /// (#1364). Failures carry the seed, the message and the seed's whole create options (#1573):
 /// Duos has no stage taxonomy, so the `growth:` prefix in the message is the stage name.
-fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::Value {
+fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome], forcing: &Forcing) -> serde_json::Value {
     let passed: Vec<&DuosSeedOutcome> = outcomes
         .iter()
         .filter(|outcome| outcome.error.is_none())
@@ -1010,10 +1160,12 @@ fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::V
         "failures": outcomes.iter().filter_map(|outcome| outcome.error.as_ref().map(|error| serde_json::json!({
             "seed": outcome.seed,
             "message": error,
-            "options": duos_options_for_seed(outcome.seed),
+            "options": duos_options_for_seed_forced(outcome.seed, forcing),
+            "forced": forcing.for_seed(outcome.seed),
         }))).collect::<Vec<_>>(),
         "heaviest": passed_heaviest(outcomes),
         "endingsChannel": channel_seeds(outcomes),
+        "forced": forcing.json(),
         "bounds": {
             "events": DUOS_GROWTH_EVENTS_BOUND,
             "largest": DUOS_GROWTH_NUMBER_BOUND,
@@ -1199,8 +1351,10 @@ mod tests {
             heaviest: Heaviest::default(),
             checkpoint_paused: false,
             checkpoint_ms: 0,
+            played: IndexSet::new(),
         };
-        let lines = failure_lines(std::slice::from_ref(&outcome));
+        let forcing = Forcing::default();
+        let lines = failure_lines(std::slice::from_ref(&outcome), &forcing);
         assert_eq!(lines.len(), 1);
         assert!(
             lines[0].starts_with("seed 9: planted\n  setup: AI team medium, dealt a2, b1\n"),
@@ -1228,7 +1382,7 @@ mod tests {
                 lines[0]
             );
         }
-        let json = wave_json(9, 1, &[outcome]);
+        let json = wave_json(9, 1, &[outcome], &forcing);
         assert_eq!(json["failures"][0]["seed"], serde_json::json!(9));
         assert_eq!(
             json["failures"][0]["options"],
@@ -1238,13 +1392,128 @@ mod tests {
 
     #[test]
     fn a_duos_smoke_wave_ends_every_game_and_folds_it_back() {
-        let outcomes = play_duos_wave(1, duos_wave_size(None));
-        assert_eq!(failure_lines(&outcomes), Vec::<String>::new());
+        let forcing = Forcing::default();
+        let outcomes = play_duos_wave(1, duos_wave_size(None), &forcing);
+        assert_eq!(failure_lines(&outcomes, &forcing), Vec::<String>::new());
+    }
+
+    /// #4369: a forced card goes first into all four seats' decks, each keeping its size and the
+    /// rest of its own cards; default forcing deals exactly today's decks.
+    #[test]
+    fn forced_cards_go_into_all_four_seats_decks_and_default_forcing_deals_todays() {
+        register_all();
+        let _preview = preview_every_set();
+        let forcing = Forcing::from_cards(&["core-090".to_string()]).expect("--cards core-090 forces");
+        assert_eq!(forcing.for_seed(1), ["core-090".to_string()]);
+        let plain = duos_options_for_seed(1);
+        let forced = duos_options_for_seed_forced(1, &forcing);
+        for seat in DUOS_SEATS {
+            let deck = forced.decks.of(seat);
+            let today = plain.decks.of(seat);
+            assert_eq!(deck.len(), today.len(), "{seat}");
+            assert_eq!(deck.first(), Some(&"core-090".to_string()), "{seat}: {deck:?}");
+            assert!(
+                deck.iter().skip(1).all(|id| today.contains(id)),
+                "{seat}: {deck:?}"
+            );
+        }
+        assert_eq!(
+            duos_options_for_seed_forced(1, &Forcing::default()),
+            duos_options_for_seed(1)
+        );
+    }
+
+    /// #4369: a forced seed's failure names the seed, the teams' setup and a `reproduce:` line that
+    /// replays it, and the wave's JSON carries the forced ids.
+    #[test]
+    fn a_forced_failure_names_its_cards_and_its_reproduce_line_replays_it() {
+        use jackioh_engine::PlayerId;
+
+        use crate::fuzz::DUOS_GROWTH_NUMBER_BOUND;
+
+        register_all();
+        let forcing = Forcing::from_cards(&["core-090".to_string()]).expect("--cards core-090 forces");
+        let outcome = fuzz_duos_seed_with_forced(7, &forcing, duos_reduce, |step, state, _, _| {
+            if step == 0 {
+                // Library, never hand: legal actions and monitors are undisturbed, but every
+                // weighed action afterwards sees the planted number.
+                state.duels[0].players[PlayerId::P1].library[0].buffs.attack =
+                    i32::try_from(DUOS_GROWTH_NUMBER_BOUND + 1).unwrap_or(i32::MAX);
+            }
+        });
+        let error = outcome
+            .error
+            .clone()
+            .expect("the planted growth must fail the seed");
+        assert!(error.contains("growth"), "{error}");
+        let lines = failure_lines(std::slice::from_ref(&outcome), &forcing);
+        assert_eq!(lines.len(), 1, "{lines:?}");
+        assert!(
+            lines[0].starts_with("seed 7: growth"),
+            "unexpected report: {}",
+            lines[0]
+        );
+        assert!(
+            lines[0].contains("\n  setup: "),
+            "unexpected report: {}",
+            lines[0]
+        );
+        assert!(
+            lines[0].contains("\n  forced: core-090\n"),
+            "unexpected report: {}",
+            lines[0]
+        );
+        assert!(
+            lines[0]
+                .contains("\n  reproduce: cargo jackioh fuzz --duos --from 7 --seeds 1 --cards core-090\n"),
+            "unexpected report: {}",
+            lines[0]
+        );
+        let options = duos_options_for_seed_forced(7, &forcing);
+        for seat in DUOS_SEATS {
+            assert!(
+                options.decks.of(seat).contains(&"core-090".to_string()),
+                "{seat}: {:?}",
+                options.decks.of(seat)
+            );
+            assert!(
+                lines[0].contains(&format!(
+                    "\n  seed 7 {seat} deck: {}",
+                    options.decks.of(seat).join(", ")
+                )),
+                "unexpected report: {}",
+                lines[0]
+            );
+        }
+        let json = wave_json(7, 1, std::slice::from_ref(&outcome), &forcing);
+        assert_eq!(json["failures"][0]["forced"], serde_json::json!(["core-090"]));
+        assert_eq!(
+            json["failures"][0]["options"],
+            serde_json::to_value(&options).expect("options serialize")
+        );
+    }
+
+    /// #4369: a one-seed forced wave passes, and its summary names the forced card and its coverage.
+    #[test]
+    fn a_one_seed_forced_wave_passes_and_names_its_forced_card() {
+        register_all();
+        let forcing = Forcing::from_cards(&["core-090".to_string()]).expect("--cards core-090 forces");
+        let outcomes = play_duos_wave(1, 1, &forcing);
+        assert_eq!(failure_lines(&outcomes, &forcing), Vec::<String>::new());
+        let text = summary(1, 1, &outcomes, &forcing);
+        assert!(
+            text.contains("  forced (--cards core-090): core-090 into all four seats' decks of every seed\n"),
+            "{text}"
+        );
+        assert!(text.contains("\n  coverage: "), "{text}");
     }
 
     #[test]
     fn r679_duos_seed_1427_whose_glitch_voids_the_game_passes() {
-        assert_eq!(failure_lines(&[fuzz_duos_seed(1427)]), Vec::<String>::new());
+        assert_eq!(
+            failure_lines(&[fuzz_duos_seed(1427)], &Forcing::default()),
+            Vec::<String>::new()
+        );
     }
 
     #[test]
@@ -1258,7 +1527,7 @@ mod tests {
             first.get_or_insert(seed);
             let outcome = fuzz_duos_seed(seed);
             assert_eq!(
-                failure_lines(std::slice::from_ref(&outcome)),
+                failure_lines(std::slice::from_ref(&outcome), &Forcing::default()),
                 Vec::<String>::new()
             );
             seen.extend(outcome.reason);
@@ -1276,9 +1545,9 @@ mod tests {
             );
         }
         let first = first.expect("some seed of 1..=200 takes the channel");
-        let text = summary(first, 1, &[fuzz_duos_seed(first)]);
+        let text = summary(first, 1, &[fuzz_duos_seed(first)], &Forcing::default());
         assert!(text.contains("\n  endings channel: 1 seed(s)\n"), "{text}");
-        let json = wave_json(first, 1, &[fuzz_duos_seed(first)]);
+        let json = wave_json(first, 1, &[fuzz_duos_seed(first)], &Forcing::default());
         assert_eq!(json["endingsChannel"], serde_json::json!(1));
     }
 
@@ -1377,13 +1646,15 @@ mod tests {
                 heaviest: game,
                 checkpoint_paused: true,
                 checkpoint_ms: 2,
+                played: IndexSet::new(),
             }];
-            let summary = summary(1, 1, &outcomes);
+            let forcing = Forcing::default();
+            let summary = summary(1, 1, &outcomes, &forcing);
             assert!(summary.contains("1/3 pass -: 10"), "{summary}");
             assert!(summary.contains("1/3 pass -: 20"), "{summary}");
             assert!(summary.contains("1/3 pass -: 30"), "{summary}");
             assert!(summary.contains("1 paused, 0 mid-game fallback"), "{summary}");
-            let json = wave_json(1, 1, &outcomes);
+            let json = wave_json(1, 1, &outcomes, &forcing);
             assert_eq!(json["heaviest"]["events"][0]["value"], serde_json::json!(10));
             assert_eq!(json["checkpoint"]["paused"], serde_json::json!(1));
             assert_eq!(json["checkpoint"]["midGame"], serde_json::json!(0));
@@ -1572,7 +1843,7 @@ mod tests {
         /// `probe` fails seed 7 naming the probe called `name`, the seed and a step.
         fn assert_caught(probe: DuosReducer, name: &str) {
             let outcome = fuzz_duos_seed_with(7, probe, |_, _, _, _| {});
-            let lines = failure_lines(&[outcome]);
+            let lines = failure_lines(&[outcome], &Forcing::default());
             assert_eq!(lines.len(), 1, "{lines:?}");
             assert!(
                 lines[0].starts_with(&format!("seed 7: {name} probe after step ")),
@@ -1633,7 +1904,10 @@ mod tests {
         /// `name`, the seed and a step: a prompt has to open for the probe to have an answer to forge.
         fn assert_caught_in_some_seed(probe: DuosReducer, name: &str) {
             for seed in 1..=PROMPT_SEEDS {
-                let lines = failure_lines(&[fuzz_duos_seed_with(seed, probe, |_, _, _, _| {})]);
+                let lines = failure_lines(
+                    &[fuzz_duos_seed_with(seed, probe, |_, _, _, _| {})],
+                    &Forcing::default(),
+                );
                 if let Some(line) = lines.first() {
                     assert!(
                         line.starts_with(&format!("seed {seed}: {name} probe after step ")),
