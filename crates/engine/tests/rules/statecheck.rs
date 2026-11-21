@@ -23,17 +23,6 @@ fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
         .collect()
 }
 
-/// The text of a caught panic.
-fn panic_text(payload: Box<dyn std::any::Any + Send>) -> String {
-    if let Some(text) = payload.downcast_ref::<String>() {
-        text.clone()
-    } else if let Some(text) = payload.downcast_ref::<&str>() {
-        (*text).to_string()
-    } else {
-        String::new()
-    }
-}
-
 // Fixture effects: the three verbs these tests need.
 
 /// One effect, one hit per unit on the board: the Big Felinor / Jlockeed Shredder case (R59).
@@ -1150,12 +1139,13 @@ mod the_pass_cap_s4_5_step_5 {
     use super::*;
 
     #[test]
-    fn throws_when_a_board_cannot_settle_rather_than_returning_a_half_checked_one() {
+    fn r3925000_a_board_that_cannot_settle_stops_at_the_cap_rather_than_returning_a_half_checked_one() {
         let mut state = game("never-settles");
         state.active = PlayerId::P1;
 
         // A unit whose Death summons another of the same kind, each arriving already dead: §4.5 step 5
-        // would repeat for ever, so the cap is what stops it — loudly (STATE_CHECK_PASS_CAP).
+        // would repeat for ever, so the loop cap is what stops it (R3925000), well before the pass cap
+        // that stays behind it as an assertion (STATE_CHECK_PASS_CAP).
         let mut catalog = registered_catalog().clone();
         catalog.insert(endless().id, endless());
         register_catalog(catalog);
@@ -1187,14 +1177,22 @@ mod the_pass_cap_s4_5_step_5 {
         live_mut(&mut state, &doomed.id).stats_override = Some(AttackHealth { attack: 0, health: 0 });
 
         let mut sink = Bench::new(&state);
-        let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            state_check(&mut sink.sink(&mut state));
-        }));
-        let message = panic_text(caught.expect_err("the state check settled"));
+        sink.run(&mut state, state_check);
+        let capped: Vec<&GameEvent> = sink
+            .events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::LoopCapped { .. }))
+            .collect();
+        assert_eq!(capped, vec![&GameEvent::LoopCapped { player: PlayerId::P1 }]);
+        assert!(sink.events.len() >= RESOLUTION_EVENT_CAP);
+        // The capped check collected the last body without its Death: no unit at 0/0 stands.
         assert!(
-            message.contains("did not settle in 100 passes"),
-            "unexpected panic: {message}"
+            units_on_field_of(&state, PlayerId::P1)
+                .iter()
+                .all(|unit| unit.def_id != endless().id),
+            "a body still stands"
         );
-        assert_eq!(STATE_CHECK_PASS_CAP, 100);
+        assert!(state.reserved.is_empty());
+        const { assert!(STATE_CHECK_PASS_CAP > RESOLUTION_EVENT_CAP) };
     }
 }

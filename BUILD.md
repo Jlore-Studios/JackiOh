@@ -142,6 +142,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `TIMEOUT_ANSWER_CAP` | 500 | §2.5, R79 |
 | `CAST_ON_DRAW_CHAIN_CAP` | 20 | R58 |
 | `CAST_ON_DRAW_ACTION_CAP` | `LIBRARY_CAP` (60): cast-on-draw cards one action casts over all its chains | §2.4, R2067000 |
+| `RESOLUTION_EVENT_CAP` | 2000: the most events one interaction emits before its loop stops at the loop cap (measured maxima: fuzz 455, a play of Stinkyscape #4.6 The Big Crunch, seed 23, also `perf --smoke`'s; handicap 285, a play of Stinkyscape+ #80 The Last Voyage, seed 148; Duos 220, an End turn Classic #57 Echo cut short, seed 60; `gate` 278, an End turn Classic+ #47 Jogg's Box cut short; golden 16, the setup; R2067000's sixty-cast action 523) | §10.3, R3925000 |
 | `LIBRARY_CAP` | 60 | R80 |
 | `ANTI_ONESHOT_CAP` | `{ base: 4, radiant: 3 }` (5 and 3 until #2657) | §8 #73 |
 | `QUICKSTRIKER_COMBO_MULTIPLE` | `{ base: 1, radiant: 2 }`: the X each Quickstriker's granted Combo deals, as one hit | §8 #38, R281 |
@@ -591,6 +592,7 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `drawLimited` | The deck pile shakes once under a "Draw limit" tag; nothing moves | 300 ms | the library pile gains `data-animating="drawLimited"`; hand and deck counts are unchanged (§2.4) | `fizzle`: smoke puff at the pile |
 | `discardPrevented` | The hand shakes once; nothing leaves it | 300 ms | the hand gains `data-animating="discardPrevented"`; the hand count is unchanged (R800) | `fizzle`: smoke puff over the hand |
 | `turnCutShort` | Banner "Turn cut short" on both seats | 600 ms | banner text; `end-turn` disabled (§6.3 End the turn) | `banner`: muted "Turn cut short" |
+| `loopCapped` | Banner "Loop stopped" on both seats: a loop reached the loop cap (issue #3925, R3925000) | 600 ms | banner text while the entry plays, the turn's words after the burst | `banner`: muted "Loop stopped" |
 | `marked` | The marked card takes its mark: a corruption sparkle in the mark's color, purple for #50's pending steal (R437) | 400 ms | the card carries `data-mark`; a face-down card's back carries it | `radiant`-style pulse in the mark's color |
 | `glitched` | A Glitch resolved (issue #170): a glitch banner names its outcome — the match resets, the seats swap, other games' boards appear, or the match never happened (R676–R679) | 600 ms | the board carries the banner | `banner` fx; static under Reduce motion |
 | `fengShui` | A Feng Shui judged a play (R983): the turn banner shows 吉 or 凶 | 600 ms | the board carries the banner | `banner` fx; static under Reduce motion |

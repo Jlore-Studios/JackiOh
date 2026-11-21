@@ -2047,6 +2047,7 @@
   "No moves left": "无事可做",
   "Call to Chaos:": "混沌召唤：",
   "Turn cut short": "回合被提前结束",
+  "Loop stopped": "循环已停止",
   "Bounce all units": "弹回所有单位",
   "Every unit returns to its controller's hand. Then draw 1.": "每个单位都回到其控制者的手牌。然后抽一张牌。",
   "Bounce enemy units": "弹回敌方单位",

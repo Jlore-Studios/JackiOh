@@ -916,6 +916,11 @@ pub fn run_resumable_list(
         if ctx.state.result.is_some() {
             return ListStatus::Over;
         }
+        // R3925000: at the loop cap card text is off, so the rest of the list never resolves either; it is
+        // done, not over, as the game goes on (a combat stops on `Over`).
+        if crate::loop_cap::capped(&ctx.sink) {
+            return ListStatus::Done;
+        }
 
         let effect = top.effects[top.at].clone();
         if let Some(expand) = &effect.expand {

@@ -120,6 +120,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     flickered: { type: "flickered", player: "p1", instanceId: unit, defId: "core-004", row: "units", lane: 1 },
     drawLimited: { type: "drawLimited", player: "p1" },
     turnCutShort: { type: "turnCutShort", player: "p1", byInstanceId: null },
+    loopCapped: { type: "loopCapped", player: "p1" },
     marked: { type: "marked", instanceId: enemy, mark: "steal", color: "purple", added: true },
     glitched: { type: "glitched", player: "p1", outcome: "swap" },
     fengShui: { type: "fengShui", instanceId: unit, sourceId: "gone", player: "p1", outcome: "positive" },

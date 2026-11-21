@@ -18,7 +18,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::harness::{
-    both, events_of_type, json_of, matches_object, new_game, put, sink_for, slot, spread,
+    Bench, both, events_of_type, json_of, matches_object, new_game, put, sink_for, slot, spread,
 };
 
 // The handlers the engine registers, registered here too
@@ -728,16 +728,19 @@ mod the_work_queue_9_3_r68 {
     }
 
     #[test]
-    fn s9_3_stops_a_sequence_that_keeps_owing_work_instead_of_spinning() {
+    fn r3925000_a_sequence_that_keeps_owing_work_stops_at_the_cap() {
         let mut state = queue();
-        let mut sink = sink_for(&mut state);
-        // The looper card's continuation owes its own item again (see `scripts()`).
-        push_work(&mut sink, looper_resume(), None);
-        panics_with(
-            || {
-                drain_work(&mut sink);
-            },
-            &format!("did not drain in {MAX_WORK_STEPS} steps"),
-        );
+        let mut bench = Bench::new(&state);
+        // The looper card's continuation owes its own item again (see `scripts()`), emitting nothing: the
+        // drain goes round until the loop cap trips by its steps, and the item owed then runs with its
+        // text off, owing nothing more (R3925000), well before `MAX_WORK_STEPS`, an assertion behind it.
+        let drained = bench.run(&mut state, |sink| {
+            push_work(sink, looper_resume(), None);
+            drain_work(sink)
+        });
+        assert!(drained);
+        assert!(state.work.is_empty());
+        assert_eq!(bench.events, vec![GameEvent::LoopCapped { player: state.active }]);
+        const { assert!(MAX_WORK_STEPS > RESOLUTION_EVENT_CAP) };
     }
 }

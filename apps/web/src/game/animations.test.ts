@@ -102,6 +102,7 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   flickered: 300,
   drawLimited: 300,
   turnCutShort: 600,
+  loopCapped: 600,
   marked: 400,
   glitched: 600,
   fengShui: 600,
@@ -246,6 +247,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   flickered: { type: "flickered", player: "p1", instanceId: "u2", defId: "core-004", row: "units", lane: 2 },
   drawLimited: { type: "drawLimited", player: "p2" },
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
+  loopCapped: { type: "loopCapped", player: "p2" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
@@ -362,6 +364,7 @@ const SAMPLE_TARGETS: Record<GameEventType, string> = {
   flickered: testid.zone("you", "units", 2),
   drawLimited: animTestid.library("opponent"),
   turnCutShort: testid.banner,
+  loopCapped: testid.banner,
   marked: testid.card("u6"),
   glitched: testid.banner,
   fengShui: testid.banner,
@@ -466,8 +469,9 @@ describe("ANIMATIONS covers every event type", () => {
 
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
-    // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(96);
+    // pair of eyes on it, so it moves only when a type is deliberately added there (#3925's
+    // `loopCapped`, R3925000, the latest).
+    expect(rows).toHaveLength(97);
   });
 
   it("gives every row an animation name and a testid template", () => {

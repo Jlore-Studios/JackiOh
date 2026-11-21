@@ -59,6 +59,7 @@ pub mod hook_marks;
 pub mod instance_view;
 pub mod kill_credit;
 pub mod layers;
+pub mod loop_cap;
 pub mod mana;
 pub mod marketplace;
 pub mod marks;

@@ -301,6 +301,10 @@ pub fn fire_trap(
     event: &GameEvent,
     controller: Option<PlayerId>,
 ) -> bool {
+    // R3925000: at the loop cap card text is off, so no trap fires.
+    if crate::loop_cap::capped(sink) {
+        return false;
+    }
     let trap = &trap_match.trap;
     let controller = controller.unwrap_or(trap.controller);
     let armed: Vec<String> = {

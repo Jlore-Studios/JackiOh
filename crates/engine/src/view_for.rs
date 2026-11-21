@@ -2525,6 +2525,8 @@ fn redact_event(
         | GameEventType::JadeChanged
         // R3857000: a hero's Armor is public, a player and two numbers.
         | GameEventType::ArmorGained
+        // R3925000: a seat, public.
+        | GameEventType::LoopCapped
         // R860, R864: a kept secret names only its player and id, and a reveal and a prediction
         // are public once they happen.
         | GameEventType::SecretChosen

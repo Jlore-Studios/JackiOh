@@ -1310,11 +1310,30 @@ pub const PROMPT_CARD_OPTION_LIMIT: usize = 4;
 /// C+ #29: "It costs (0)", "Each costs (0)" — a `costOverride` (R65) (`effects::last_board`).
 pub const LAST_BOARD_CARD_COST: i32 = 0;
 
-/// §4.5 loops until nothing changes; this bounds a pathological loop loudly (R69, R89) (`state_check`).
-pub const STATE_CHECK_PASS_CAP: usize = 100;
+/// R3925000, §10.3: the most events one interaction (an action of a seat, each answer a timeout gives,
+/// an autopilot or AI action, a turn the engine ends for a seat) emits before its resolution loop stops
+/// at the loop cap (`loop_cap.rs`): every `GameEvent` counts. Measured 2026-11-21 with
+/// `JACKIOH_LOOP_PEAK` on the release build, the most events any one interaction emitted per corpus and
+/// the interaction that set it:
+///  - `fuzz --seeds 200`: 455, p1's play of Stinkyscape #4.6 The Big Crunch (seed 23, step 124, turn 25),
+///    the overall maximum; `perf --smoke`'s heaviest is the same play;
+///  - `fuzz --handicap`: 285, p2's play of Stinkyscape+ #80 The Last Voyage (seed 148, turn 26);
+///  - `fuzz --duos`: 220, an End turn that Classic #57 Echo cut short (seed 60, turn 44);
+///  - `gate`: 278, an End turn that Classic+ #47 Jogg's Box cut short (turn 14);
+///  - the golden fixture (`golden check`): 16, the setup.
+///
+/// R2067000's sixty-cast end of turn (`plays_and_casts.rs`) emits 523. 2,000 keeps about four times the
+/// most a game without a loop reaches.
+pub const RESOLUTION_EVENT_CAP: usize = 2_000;
 
-/// A drain that keeps parking new work stops here rather than spinning (§2.5's cap spirit) (`work`).
-pub const MAX_WORK_STEPS: usize = 500;
+/// §4.5 loops until nothing changes; a check still going round at `RESOLUTION_EVENT_CAP` passes stops at
+/// the loop cap first (R3925000), so this one past it is an assertion play cannot reach (`state_check`).
+pub const STATE_CHECK_PASS_CAP: usize = RESOLUTION_EVENT_CAP + 1;
+
+/// A drain that keeps parking new work stops at the loop cap first (R3925000), at `RESOLUTION_EVENT_CAP`
+/// steps, and then drains what was owed at the trip with its cards' text off; the room past that is an
+/// assertion play cannot reach (`work`).
+pub const MAX_WORK_STEPS: usize = 2 * RESOLUTION_EVENT_CAP;
 
 /// Enumerating answers is bounded like `legalActions`'s other combinations (R90) (`prompts`).
 pub const MAX_PROMPT_ANSWERS: usize = 256;

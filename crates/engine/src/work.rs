@@ -767,10 +767,13 @@ pub fn run_next_work(sink: &mut EngineSink<'_>) -> bool {
 /// queue is empty; `triggers::settle` drains here before it pops a trigger (§10.3, R59).
 pub fn drain_work(sink: &mut EngineSink<'_>) -> bool {
     begin_work_cascade(sink);
-    for _ in 0..MAX_WORK_STEPS {
+    for step in 0..MAX_WORK_STEPS {
         if paused(sink) {
             return !has_work(sink.state);
         }
+        // R3925000: a drain that keeps owing work stops at the loop cap, and what is owed at the trip then
+        // drains with its cards' text off, so it adds nothing more.
+        crate::loop_cap::trip_if_due(sink, step);
         if !run_next_work(sink) {
             return true;
         }

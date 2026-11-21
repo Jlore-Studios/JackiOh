@@ -390,7 +390,12 @@ fn settle_before_playout(ctx: &mut EffectContext<'_>) {
         .iter()
         .map(|entry| entry.id.clone())
         .collect();
-    for _pass in 0..SETTLE_PASS_CAP {
+    for pass in 0..SETTLE_PASS_CAP {
+        // R3925000: at the loop cap nothing more is offered; the capped check has judged the board.
+        if crate::loop_cap::halted(settle, pass) {
+            crate::loop_cap::offer_nothing(settle);
+            return;
+        }
         state_check(settle);
         if settle.state.result.is_some() || paused(settle) {
             return;

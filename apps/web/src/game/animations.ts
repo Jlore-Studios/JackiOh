@@ -689,6 +689,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R3925000: a banner says a loop reached the loop cap and stopped.
+  loopCapped: {
+    animation: "jk-banner",
+    durationMs: 600,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
   // R437: the mark's sigil brands the card in the mark's colors (fx/brand.ts), and its aura stays
   // on the card while the view lists the mark (cards/CardMarks.tsx).
   marked: {

@@ -26,6 +26,7 @@ use crate::config::{
 };
 use crate::game_over::end_game;
 use crate::layers::AuraTable;
+use crate::loop_cap;
 use crate::modifiers::remove_modifier;
 use crate::play_choices::{PlayAction, graveyard_play_actions_for, play_actions_for};
 use crate::play_steps::run_play_steps;
@@ -404,6 +405,8 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
                 };
                 pick
             };
+            // R3925000: each answer the timeout gives is an interaction of its own.
+            loop_cap::begin_interaction(sink, Some((who, ActionType::Answer)));
             apply_action(sink, &Action::new(pick, who, action.nonce.clone()))?;
             if !turn_clock {
                 return Ok(());
@@ -416,6 +419,7 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
         if !turn_clock || sink.state.phase != Phase::Main {
             return Ok(());
         }
+        loop_cap::begin_interaction(sink, Some((who, ActionType::EndTurn)));
         end_turn(sink);
         settle(sink, SettleOptions::default());
     }
@@ -552,6 +556,8 @@ fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
         }
         if let Some(cut) = turn_cut_due(sink.state) {
             let player = sink.state.active;
+            // R3925000: a turn the engine ends for a seat is an interaction of that seat's.
+            loop_cap::begin_interaction(sink, Some((player, ActionType::EndTurn)));
             remove_modifier(sink, player, &cut.id);
             sink.events.push(GameEvent::TurnCutShort {
                 player,
@@ -565,6 +571,7 @@ fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
             return;
         }
         let (player, turn) = (sink.state.active, sink.state.turn);
+        loop_cap::begin_interaction(sink, Some((player, ActionType::EndTurn)));
         sink.events.push(GameEvent::TurnAutoEnded { player, turn });
         end_turn(sink);
         settle(sink, SettleOptions::default());
@@ -612,6 +619,8 @@ fn run_autopilot(sink: &mut EngineSink<'_>, player: PlayerId) {
 /// settled, due turns ended) but with no second state copy or nonce in the log: it is part of the
 /// action that handed the turn over, and its events are that one's. A refused one changes nothing.
 fn autopilot_step(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
+    // R3925000: an autopilot action is its seat's interaction.
+    loop_cap::begin_interaction(sink, Some((action.player_id, action.action_type())));
     let (saved, events_at, rng) = (sink.state.clone(), sink.events.len(), sink.rng.clone());
     let counted = turn_action_counted(sink.state, action);
     if let Err(error) = apply_action(sink, action) {
@@ -731,6 +740,8 @@ fn reduce_held(state: &GameState, action: &Action, drive_autopilot: bool) -> Red
     let mut rng = Rng::new(&next.seed, next.rng_cursor);
     {
         let mut sink = EngineSink::new(&mut next, &mut events, &mut rng);
+        // R3925000: the action is an interaction, its events counted against the loop cap.
+        loop_cap::begin_interaction(&mut sink, Some((action.player_id, action_type)));
 
         let counted = turn_action_counted(sink.state, action);
         if let Err(error) = apply_action(&mut sink, action) {
@@ -746,8 +757,10 @@ fn reduce_held(state: &GameState, action: &Action, drive_autopilot: bool) -> Red
         end_due_turns(&mut sink, drive_autopilot);
         // R676: a Glitch's reset goes once the action that drew it has settled.
         if sink.state.reset_owed == Some(true) {
+            loop_cap::begin_interaction(&mut sink, None);
             reset_match(&mut sink);
         }
+        loop_cap::end_interaction(&sink);
     }
 
     next.rng_cursor = rng.cursor();
@@ -772,6 +785,7 @@ fn begin_held(state: &GameState) -> ReduceResult {
     {
         let mut sink = EngineSink::new(&mut next, &mut events, &mut rng);
         begin_setup(&mut sink);
+        loop_cap::end_interaction(&sink);
     }
     next.rng_cursor = rng.cursor();
     ReduceResult {

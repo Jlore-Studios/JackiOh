@@ -552,6 +552,11 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         if sink.state.result.is_some() {
             return false;
         }
+        // R3925000: at the loop cap card text is off, so the Deaths still owed never run.
+        if crate::loop_cap::capped(sink) {
+            pass.owed.clear();
+            break;
+        }
 
         let Some(snapshot) = pass.owed.first().cloned() else {
             break;
@@ -636,11 +641,31 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         return false;
     }
 
-    // Neither of these can ask anything, so they finish the pass once step 3 is done.
+    // Neither of these can ask anything, so they finish the pass once step 3 is done. R3925000: at the
+    // loop cap no Reborn body returns and no Starship Piece fuses; the zones held for the returns go free.
+    if crate::loop_cap::capped(sink) {
+        release_reborn_zones(sink, pass);
+        graveyard_step(sink, pass);
+        return true;
+    }
     reborn_step(sink, pass);
     graveyard_step(sink, pass);
     starship_step(sink, pass);
     true
+}
+
+/// R3925000: the zones `collect` held for the pass's Reborn returns (R64), released with no body back,
+/// as `reborn_step` releases one before its return.
+fn release_reborn_zones(sink: &mut EngineSink<'_>, pass: &DeathPass) {
+    for entry in &pass.reborn {
+        if !crate::zones::is_reserved(sink.state, entry.at) {
+            continue;
+        }
+        crate::zones::release_zone(sink.state, entry.at);
+        for slot in entry.giga_zones.iter().flatten() {
+            crate::zones::release_zone(sink.state, *slot);
+        }
+    }
 }
 
 /// R1852000: the pass's last step, each Starship Piece that died in it fusing a copy into its owner's
@@ -1059,11 +1084,21 @@ pub(crate) fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
 }
 
 pub fn state_check(sink: &mut EngineSink<'_>) {
+    // R3925000: at the loop cap the check collects the dead with their text off.
+    if crate::loop_cap::capped(sink) {
+        capped_check(sink);
+        return;
+    }
     // R460, R1875006: the cards whose would-die replacement flickered or resolved its follow-up in this
     // check, which answer no later pass of it, as each card replaces an event at most once.
     let mut resolved_first: Vec<String> = Vec::new();
-    for _pass in 0..STATE_CHECK_PASS_CAP {
+    for pass in 0..STATE_CHECK_PASS_CAP {
         if sink.state.result.is_some() {
+            return;
+        }
+        // R3925000: a check still going round at the loop cap stops there; the trip judged the board.
+        if crate::loop_cap::halted(sink, pass) {
+            capped_check(sink);
             return;
         }
         // R446: a Unit whose carrier is gone steps down, or is marked destroyed for want of a unit zone,
@@ -1122,43 +1157,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             continue;
         }
 
-        let order = active_first(sink.state);
-        let units: Vec<CardInstance> = order
-            .iter()
-            .flat_map(|player| units_of(sink.state, *player))
-            .collect();
-        let dying_ids: Vec<String> = {
-            // #892: one aura table for every unit's death check.
-            let auras = AuraTable::new(&*sink.state);
-            units
-                .iter()
-                .filter(|unit| is_dying(&auras, unit))
-                .map(|unit| unit.id.clone())
-                .collect()
-        };
-        let survivors: Vec<CardInstance> = units
-            .iter()
-            .filter(|unit| !dying_ids.contains(&unit.id))
-            .cloned()
-            .collect();
-        forget_spent_killers(sink, &survivors);
-        // R68's order, which §4.5 step 3's Deaths keep: the active player's side first, each side's units
-        // by lane, then its backrow, so a backrow Death (Classic+ #61, #12.8) fires in its side's place.
-        let mut dying: Vec<CardInstance> = Vec::new();
-        for player in order {
-            dying.extend(
-                units_of(sink.state, player)
-                    .into_iter()
-                    .filter(|unit| dying_ids.contains(&unit.id)),
-            );
-            // R1081000: a Unit standing in the backrow is among `units_of`'s already, collected once.
-            dying.extend(
-                backrow_of(sink.state, player)
-                    .into_iter()
-                    .filter(|card| card.marked_destroyed == Some(true))
-                    .filter(|card| !crate::zones::is_standing_unit(sink.state, card)),
-            );
-        }
+        let dying = dying_now(sink);
 
         if dying.is_empty() {
             // R2783001: nothing died, so no keyword recorded for a death says how anything died.
@@ -1228,6 +1227,75 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
     }
 
-    // §4.5 repeats "until nothing changes"; a board that never settles is a bug, not a draw.
+    // §4.5 repeats "until nothing changes"; the loop cap stops a board that never settles first
+    // (R3925000), so this is an assertion play cannot reach.
     panic!("the board did not settle in {STATE_CHECK_PASS_CAP} passes");
+}
+
+/// §4.5 step 1's collection: the cards the check collects now, in R68's order, which §4.5 step 3's Deaths
+/// keep: the active player's side first, each side's units by lane, then its backrow, so a backrow Death
+/// (Classic+ #61, #12.8) fires in its side's place. A survivor forgets a spent killer (R42).
+fn dying_now(sink: &mut EngineSink<'_>) -> Vec<CardInstance> {
+    let order = active_first(sink.state);
+    let units: Vec<CardInstance> = order
+        .iter()
+        .flat_map(|player| units_of(sink.state, *player))
+        .collect();
+    let dying_ids: Vec<String> = {
+        // #892: one aura table for every unit's death check.
+        let auras = AuraTable::new(&*sink.state);
+        units
+            .iter()
+            .filter(|unit| is_dying(&auras, unit))
+            .map(|unit| unit.id.clone())
+            .collect()
+    };
+    let survivors: Vec<CardInstance> = units
+        .iter()
+        .filter(|unit| !dying_ids.contains(&unit.id))
+        .cloned()
+        .collect();
+    forget_spent_killers(sink, &survivors);
+    let mut dying: Vec<CardInstance> = Vec::new();
+    for player in order {
+        dying.extend(
+            units_of(sink.state, player)
+                .into_iter()
+                .filter(|unit| dying_ids.contains(&unit.id)),
+        );
+        // R1081000: a Unit standing in the backrow is among `units_of`'s already, collected once.
+        dying.extend(
+            backrow_of(sink.state, player)
+                .into_iter()
+                .filter(|card| card.marked_destroyed == Some(true))
+                .filter(|card| !crate::zones::is_standing_unit(sink.state, card)),
+        );
+    }
+    dying
+}
+
+/// R3925000: the check at the loop cap, card text off: the dead are collected (§4.5 step 1) with no "would
+/// die" replacement, Death, Reborn or Starship fusion, and step 2's hero check, then a held win (R850),
+/// still ends a game that has ended. It repeats while a collection leaves more to collect (an aura that
+/// went with the dead); nothing it does can add a card, so it settles.
+fn capped_check(sink: &mut EngineSink<'_>) {
+    for _pass in 0..STATE_CHECK_PASS_CAP {
+        if sink.state.result.is_some() {
+            return;
+        }
+        let dying = dying_now(sink);
+        if dying.is_empty() {
+            sink.frontier.get_mut().death_via.clear();
+            let _ = hero_check(sink) || crate::win_conditions::win_check(sink);
+            return;
+        }
+        let mut collected = collect(sink, &dying, DeathCause::Collected);
+        sink.frontier.get_mut().death_via.clear();
+        if hero_check(sink) {
+            return;
+        }
+        // Step 3 runs no Death while capped; Reborn's zones go free and step 5 reports the graveyard.
+        run_death_pass(sink, &mut collected, None);
+    }
+    panic!("the capped board did not settle in {STATE_CHECK_PASS_CAP} passes (R3925000)");
 }

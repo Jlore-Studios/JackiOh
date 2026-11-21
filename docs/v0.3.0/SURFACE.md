@@ -492,7 +492,10 @@ withholds a marker from a seat that could not read its card and never forwards `
 golden texts leave both out (R2783000, R2783001). Since #3857 `GameEvent::ArmorGained { player, amount,
 armor }` reports a hero's kept Armor gain (`effects::gain_hero_armor`), `armor` being `hero_armor_of`
 after it. It is withheld from the trigger loop, public, takes no room in R168's floor and is left out
-of the golden texts (R3857000).
+of the golden texts (R3857000). Since #3925 `GameEvent::LoopCapped { player }` reports that an
+interaction reached `RESOLUTION_EVENT_CAP` events and its loop stopped (`loop_cap.rs`, whose count rides
+`Frontier.interaction_from` and dies with the action); public, and emitted only by a capped interaction,
+so no game that never reaches the cap hashes differently (R3925000).
 
 ### 6.5 Mutation convention and the per-call sink
 

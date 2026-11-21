@@ -1038,6 +1038,12 @@ pub enum GameEvent {
         amount: i32,
         armor: i32,
     },
+    /// R3925000, §10.3: the interaction `player` began reached `RESOLUTION_EVENT_CAP` events, so its
+    /// resolution loop stopped: the rest was dropped and card text is off until the next interaction
+    /// (`loop_cap.rs`). A report nothing answers. Public: a seat.
+    LoopCapped {
+        player: PlayerId,
+    },
     // -------------------------------------------------------------------------------------------
     // Patch v0.3.X (docs/meditative-set.md M5, MB10's ME-JADE). Its BUILD M5-T4 row, `ANIMATIONS`
     // and `SOUND_CUES` rows came with it, and `viewFor` sends it to both seats as it is.
@@ -1405,6 +1411,7 @@ string_union! {
         ManaSpent = "manaSpent",
         DamageAbsorbed = "damageAbsorbed",
         ArmorGained = "armorGained",
+        LoopCapped = "loopCapped",
         JadeChanged = "jadeChanged",
         SecretChosen = "secretChosen",
         SecretRevealed = "secretRevealed",
@@ -1673,6 +1680,7 @@ impl GameEvent {
             GameEvent::ManaSpent { .. } => GameEventType::ManaSpent,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
             GameEvent::ArmorGained { .. } => GameEventType::ArmorGained,
+            GameEvent::LoopCapped { .. } => GameEventType::LoopCapped,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
             GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
@@ -1787,8 +1795,9 @@ mod tests {
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
         // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
-        // `evolved` (R3536005); and E7's `lineDrawn` (R3554005); and #3857's `armorGained` (R3857000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 96);
+        // `evolved` (R3536005); and E7's `lineDrawn` (R3554005); and #3857's `armorGained` (R3857000);
+        // and #3925's `loopCapped` (R3925000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 97);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1856,6 +1865,19 @@ mod tests {
         assert_eq!(event.event_type().as_str(), "armorGained");
         assert_eq!(event.as_rules_read(), event);
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::ArmorGained));
+    }
+
+    /// R3925000: the loop cap's report names the seat whose interaction it stopped, and the rules read
+    /// it as it is.
+    #[test]
+    fn r3925000_loop_capped_serializes_as_its_player() {
+        let event = GameEvent::LoopCapped { player: PlayerId::P1 };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(json, r#"{"type":"loopCapped","player":"p1"}"#);
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "loopCapped");
+        assert_eq!(event.as_rules_read(), event);
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::LoopCapped));
     }
 
     /// R2783000: the marker names its card, its definition, who runs the hook and which hook; the seats
