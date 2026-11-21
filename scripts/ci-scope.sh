@@ -153,11 +153,19 @@
 #    and for what any web test runs on (the root and the web's package.json, the lockfile, the pnpm
 #    workspace, .nvmrc, both vitest configs and apps/web/src/test/). It turns `web` on too, so the
 #    job that runs it runs.
-#  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
-#    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's tests/golden/,
-#    whose hotseat fixture tools' `replay` includes) and README, the C module's sources (crates/wasm/c/src/:
-#    no client, server or `jackioh` links it; its manifest, which every cargo command loads, is not among
-#    them), the web's unit tests, the docs, spec/,
+#  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (of whose
+#    commands it runs two: `replay`, whose specs 01 and 13 fold the browser's game, and `catalog-version`,
+#    which the shard action runs to boot the server) nor a spec reads: every crate's tests (except the
+#    engine's tests/golden/, whose hotseat fixture tools' `replay` includes) and README, the C module's
+#    sources (crates/wasm/c/src/: no client, server or `jackioh` links it; its manifest, which every cargo
+#    command loads, is not among them), the tools' sources but the four those commands run (#4219: main.rs,
+#    which dispatches them, replay.rs, catalog.rs, whose run_version is `catalog-version`, and patches.rs,
+#    whose `js` parser and repo_root it calls) and the fuzz's records (crates/tools/fuzz-corpus/), so a
+#    change to the fuzz, the classifier or another command leaves e2e off. That is safe: `replay`'s shipped
+#    code names no other module of the crate (acceptance.rs's scan holds it and names the file to add here
+#    when that stops being true), replay.rs's own tests pin the hotseat game's hash in `rust (test tools,
+#    wasm)`, which every change under crates/tools/ runs, and the push to `main` runs e2e smoke after the
+#    merge (#3564). crates/tools/Cargo.toml is not among them. The web's unit tests, the docs, spec/,
 #    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (the Dockerfile,
 #    wrangler.jsonc and the Worker, apps/edge/: e2e smoke boots jackioh-server itself, behind no
 #    Worker), the lint and unit-test configs, and the scripts no build runs (scripts/browse.sh,
@@ -166,7 +174,8 @@
 #
 # apps/web/src/net/ci-scope.test.ts holds every line both ways, and holds `web` and `e2e` to every
 # repository path their sources name; crates/tools/tests/acceptance.rs holds the Rust groups to
-# `cargo metadata` and to every file a crate includes from outside itself.
+# `cargo metadata` and to every file a crate includes from outside itself, and `replay`'s source
+# (tools' replay.rs) to the modules the e2e case keeps on (#4219).
 #
 # Anything else, and any doubt, runs everything (every line true): an empty diff, an unreadable one,
 # a missing argument. ci.yml never calls this for a push or a dispatch, which always run everything.
@@ -378,6 +387,8 @@ for file in $files; do
     vitest.config.ts | apps/web/vitest.config.ts | apps/web/src/test/*) on web web_promote ;;
   esac
 
+  # e2e runs two commands of the `jackioh` binary (header, #4219): the four tools sources they run keep it
+  # on; the rest of crates/tools/src/ and the fuzz's records do not.
   case "$file" in
     crates/engine/tests/golden/*) on e2e ;;
     crates/*/tests/* | crates/*/README.md | crates/wasm/c/src/* | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
@@ -385,6 +396,8 @@ for file in $files; do
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;
     scripts/browse.sh | scripts/promote-production.sh | scripts/promote-staging.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
+    crates/tools/src/main.rs | crates/tools/src/replay.rs | crates/tools/src/catalog.rs | crates/tools/src/patches.rs) on e2e ;;
+    crates/tools/src/* | crates/tools/fuzz-corpus/*) ;;
     *) on e2e ;;
   esac
 done
