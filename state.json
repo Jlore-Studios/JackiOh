@@ -37660,35 +37660,8 @@
     "pinned": true
   },
   "usage_spool": {
-    "readings": [
-      "2026-11-21T02:41:41Z,muse,usage-command,before,44857253119,4,2026-11-21T05:11:00Z,59,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-21T02:44:14Z,muse,usage-command,after,44857253119,5,2026-11-21T05:11:00Z,59,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-21T02:40:31Z,muse,usage-command,before,44857152601,4,2026-11-21T05:11:00Z,59,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-21T02:47:04Z,muse,usage-command,after,44857152601,5,2026-11-21T05:11:00Z,59,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-21T02:39:58Z,muse,usage-command,before,44857101345,4,2026-11-21T05:11:00Z,59,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-21T00:31:28Z,claude-4,ping,before,44844092405,18,2026-11-21T04:10:00Z,,,allowed,50,,",
-      "2026-11-21T00:31:57Z,claude-4,stream,call,44844092405,19,2026-11-21T04:10:00Z,,,allowed,50,,",
-      "2026-11-21T00:36:13Z,claude-4,stream,call,44844092405,20,2026-11-21T04:10:00Z,,,allowed,50,,",
-      "2026-11-21T00:57:29Z,claude-4,stream,call,44844092405,21,2026-11-21T04:10:00Z,,,allowed,50,,",
-      "2026-11-21T01:06:29Z,claude-4,stream,call,44844092405,22,2026-11-21T04:10:00Z,,,allowed,50,,",
-      "2026-11-21T01:07:29Z,claude-4,stream,call,44844092405,23,2026-11-21T04:10:00Z,,,allowed,50,,",
-      "2026-11-21T01:12:44Z,claude-4,stream,call,44844092405,24,2026-11-21T04:10:00Z,,,allowed,50,,",
-      "2026-11-21T02:12:54Z,claude-4,stream,call,44844092405,24,2026-11-21T04:10:00Z,,,allowed,50,,",
-      "2026-11-21T01:58:48Z,claude-7,ping,before,44853016428,2,2026-11-21T06:20:00Z,,,allowed,50,,",
-      "2026-11-21T01:59:22Z,claude-7,stream,call,44853016428,4,2026-11-21T06:20:00Z,,,allowed,50,,",
-      "2026-11-21T02:12:27Z,claude-7,stream,call,44853016428,4,2026-11-21T06:20:00Z,,,allowed,50,,",
-      "2026-11-21T02:50:38Z,claude-7,stream,call,44853016428,6,2026-11-21T06:20:00Z,,,allowed,50,,",
-      "2026-11-21T02:10:52Z,claude-3,stream,call,44854087667,34,2026-11-21T05:10:00Z,,,allowed,,,",
-      "2026-11-21T02:15:07Z,claude-3,stream,call,44854087667,35,2026-11-21T05:10:00Z,,,allowed,,,",
-      "2026-11-21T02:17:17Z,claude-3,stream,call,44854087667,36,2026-11-21T05:10:00Z,,,allowed,,,"
-    ],
+    "readings": [],
     "runs": [
-      "2026-11-21T02:44:14Z,44857253119,muse,muse-spark-1.3-contributor,suggest,,,suggested,,2.4,0,0,0,,4,5,59,59,,,none,,1",
-      "2026-11-21T02:46:08Z,44857203883,muse,muse-spark-1.3-contributor,suggest,,,suggested,,2,0,0,0,,,,,,,,none,,1",
-      "2026-11-21T02:47:04Z,44857152601,muse,muse-spark-1.3-contributor,suggest,,,suggested,,6.4,0,0,0,,4,5,59,59,,,none,,1",
-      "2026-11-21T02:42:20Z,44857101345,muse,muse-spark-1.3-contributor,suggest,,,suggested,,2.2,0,0,0,,4,4,59,59,,,none,,1",
-      "2026-11-21T02:47:34Z,44844092405,claude-4,opus,revise,4357,hard,built,,101.2,4,189,131143,3.0796,18,24,,,3.4,claude-1,fresh,,1",
-      "2026-11-21T02:51:38Z,44853016428,claude-7,sonnet+opus,revise,4373,medium,approved,,14.6,47,8578,3405489,3.3431,2,6,,,0.3,claude-7,resumed,,2",
       "2026-11-21T02:59:52Z,44854087667,claude-3,sonnet+opus,revise,4372,medium,built,,6.7,14,4037,862873,1.4858,34,36,,,2.8,claude-3,resumed,,1"
     ]
   },
