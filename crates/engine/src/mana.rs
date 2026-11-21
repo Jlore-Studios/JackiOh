@@ -34,7 +34,7 @@ pub fn stolen_mana_crystals_of(side: &PlayerState) -> i32 {
 }
 
 /// How a steal counts the thief's gain: past the cap (R4331001, the steal since issue #4331), or inside
-/// it, a thief at the cap gaining none (R1854003, the steal v0.6.8d and before ran, kept, R767000).
+/// it, a thief at the cap gaining none (R1854003, the steal v0.6.9 and before ran, kept, R767000).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CrystalGain {
     PastTheCap,
