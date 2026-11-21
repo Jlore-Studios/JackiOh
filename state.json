@@ -16167,9 +16167,22 @@
     "what": "plan #4382 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-21T04:18:54Z",
+    "at": "2026-11-21T04:26:25Z",
     "notes": [
-      "delivered plan #4375 on claude-6 (run 44864910025): blocked"
+      "#4363 needs a plan",
+      "#4369 needs a plan",
+      "#4371 needs a plan",
+      "#4378 needs a plan",
+      "#4379 needs a plan",
+      "#4382 needs a plan",
+      "started plan #4363 on muse (run 44866210324)",
+      "started plan #4371 on muse (run 44866248494)",
+      "started plan #4378 on muse (run 44866293382)",
+      "started plan #4369 on muse (run 44866333929)",
+      "started plan #4379 on claude-7 (run 44866373680)",
+      "started plan #4382 on claude-1 (run 44866421662)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16875,7 +16888,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T04:18:54Z",
+  "loop_tick": "2026-11-21T04:26:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
