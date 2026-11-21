@@ -15780,6 +15780,7 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-6",
+      "round_tier": "",
       "run_id": "44854142218",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-21T02:07:43Z",
@@ -15788,7 +15789,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4376": {
       "action": "review",
