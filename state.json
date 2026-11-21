@@ -15396,11 +15396,12 @@
     "what": "review #4434 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T22:05:32Z",
+    "at": "2026-11-21T22:13:59Z",
     "notes": [
-      "delivered build #4432 on muse (run 44953052504): built",
-      "started review #4434 on muse (run 44955078763)",
-      "nothing more to start: nothing is queued"
+      "#4434: `bot selftest` red in CI run 44954994581; its other early jobs have until 2026-11-21T22:16:32Z to report",
+      "delivered review #4434 on muse (run 44955078763): approved",
+      "delivered suggest on claude-7 (run 44954313061): suggested",
+      "#4435: typed it Feature"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16106,7 +16107,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T22:05:32Z",
+  "loop_tick": "2026-11-21T22:13:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
