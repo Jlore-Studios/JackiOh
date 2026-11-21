@@ -6,7 +6,8 @@
 //! - `POST /api/friends/requests/:id/accept` makes the friendship; decline/cancel deletes it;
 //!   `DELETE /api/friends/:profileId` ends it (B45), canceling challenges and shares (R1689000).
 //! - `POST /api/blocks` `{profileId}` (B46): ends friendships, requests, challenges, shares,
-//!   watches (B50, B52) and mutes emotes (R1351000). `DELETE /api/blocks/:profileId` lifts it.
+//!   the notifications between the two, either way (R4348000), watches (B50, B52) and mutes
+//!   emotes (R1351000). `DELETE /api/blocks/:profileId` lifts it.
 //!
 //! `GET /api/friends` reads everything in one transaction (`presence::standings`, and one read of the
 //! online friends' open lobbies, R3732001). R3214000: each
@@ -469,6 +470,8 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     let requests = tx.friends_requests_delete_between(&me, &target).await?;
     // B46, B52: a share either way ends for good, so unblocking restores none.
     let shares = tx.shares_remove_between(&me, &target).await?;
+    // R4348000: and the notifications between the two, either way, for the same reason.
+    let notifications = tx.notifications_delete_between(&me, &target).await?;
     // B46, B49: an open challenge either way is canceled and its room freed.
     let closed = tx
         .challenges_close_between(&me, &target, ChallengeState::Canceled)
@@ -489,7 +492,7 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     // R3214000: the blocker's list shows the block. The blocked is told only of what it could already
     // see go (a friend, a request, a challenge), so a block of a stranger reaches it not at all.
     nudge_friends(app, &[&me]);
-    if unfriended || requests > 0 || !closed.is_empty() || !daily_closed.is_empty() {
+    if unfriended || requests > 0 || !closed.is_empty() || !daily_closed.is_empty() || notifications > 0 {
         nudge_friends(app, &[&target]);
         push_social(app, &[&me, &target]).await;
     }
@@ -501,6 +504,7 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
             "challengesClosed": closed.len(),
             "dailyChallengesClosed": daily_closed.len(),
             "sharesRemoved": shares,
+            "notificationsRemoved": notifications,
             "watchersRevoked": watchers,
             "matchesMuted": matches_muted,
         }),
