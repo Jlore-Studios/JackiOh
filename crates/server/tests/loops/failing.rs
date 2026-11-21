@@ -512,6 +512,25 @@ async fn the_hourly_purge_alerts_once_its_failed_passes_reach_the_threshold() {
     purge.abort();
 }
 
+#[tokio::test(start_paused = true)]
+async fn r4317001_a_practice_prune_that_keeps_failing_alerts_on_its_own_streak() {
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let interval = ms(RETENTION_PURGE_INTERVAL_SECONDS);
+    let alerting = alerting_pass(interval);
+    fail_on(&app, "economy.practiceSeeds.purge", "the prune cannot run").await;
+    // The purge's other steps answer: only the practice seeds' own streak fails.
+    let purge = tokio::spawn(retention::run_purge(app.clone()));
+
+    let passes = alerting + 2;
+    assert_eq!(
+        alerts_after_each_pass(&logs, "practice.prune.failing", interval / 2, interval, passes).await,
+        expected_alerts(alerting, passes)
+    );
+    assert_eq!(failing_alerts(&logs), ["practice.prune.failing"]);
+    purge.abort();
+}
+
 /// One sweep loop: the alert its store failure raises, the store method to fail, when its first pass
 /// falls after it starts, how far apart its passes are, and how it is started.
 struct Sweep {

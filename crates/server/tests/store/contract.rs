@@ -11019,6 +11019,85 @@ mod economy {
         );
     }
 
+    /// R4317001: the purge deletes every account's seeds issued before the time that are unclaimed or
+    /// settled, answers how many, and keeps a seed issued at the time or after and a claim not yet settled.
+    async fn r4317001_the_practice_seeds_purge_deletes_every_accounts_lapsed_unclaimed_and_settled_seeds(
+        harness: &StoreHarness,
+    ) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let claim = practice_claim();
+        let seed = |name: &str, profile_id: &str, issued_at: i64, claimed_at: Option<i64>| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": profile_id, "issuedAt": issued_at, "claimedAt": claimed_at,
+                "setup": {
+                    "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "random", "lean": null },
+                    "lastBoard": [], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        for held in [
+            seed("mine-open", &owner.id, now - 100, None),
+            seed("mine-settled", &owner.id, now - 100, None),
+            seed("mine-claimed", &owner.id, now - 100, None),
+            seed("mine-legacy", &owner.id, now - 100, Some(now - 50)),
+            seed("mine-fresh", &owner.id, now + 1, None),
+            seed("theirs-open", &other.id, now - 100, None),
+            seed("theirs-fresh", &other.id, now + 10, None),
+        ] {
+            q!(harness, t => t.economy_practice_seed_insert(&held));
+        }
+        for name in ["mine-settled", "mine-claimed"] {
+            assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, name, now - 20, &claim)));
+        }
+        assert!(q!(harness, t => t.economy_practice_seed_settle(
+            &owner.id,
+            "mine-settled",
+            PracticeOutcome::Paid,
+            now - 10
+        )));
+        let held = |profile_id: &str, name: &'static str| {
+            let profile_id = profile_id.to_string();
+            async move { q!(harness, t => t.economy_practice_seed_get(&profile_id, name)).is_some() }
+        };
+
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seeds_purge(now)),
+            4,
+            "{}: mine-open, mine-settled, mine-legacy and theirs-open",
+            harness.name
+        );
+        for name in ["mine-open", "mine-settled", "mine-legacy"] {
+            assert!(!held(&owner.id, name).await, "{}: {name} is purged", harness.name);
+        }
+        assert!(
+            !held(&other.id, "theirs-open").await,
+            "{}: another account's seed is purged too",
+            harness.name
+        );
+        for (profile_id, name) in [
+            (&owner.id, "mine-claimed"),
+            (&owner.id, "mine-fresh"),
+            (&other.id, "theirs-fresh"),
+        ] {
+            assert!(held(profile_id, name).await, "{}: {name} stays", harness.name);
+        }
+        assert_eq!(q!(harness, t => t.economy_practice_seeds_purge(now)), 0);
+
+        // Settled, the claim goes with the next purge.
+        assert!(q!(harness, t => t.economy_practice_seed_settle(
+            &owner.id,
+            "mine-claimed",
+            PracticeOutcome::Refused,
+            now
+        )));
+        assert_eq!(q!(harness, t => t.economy_practice_seeds_purge(now)), 1);
+        assert!(!held(&owner.id, "mine-claimed").await);
+        assert!(held(&owner.id, "mine-fresh").await);
+        assert!(held(&other.id, "theirs-fresh").await);
+    }
+
     /// R1301003: a pack opening takes the account's economy lock for its transaction. Taken in
     /// turn, each transaction gets it, a rolled-back one lets it go, and the lock writes no row.
     async fn r1301003_the_economy_lock_is_taken_per_transaction(harness: &StoreHarness) {
@@ -11951,6 +12030,7 @@ mod economy {
         r3500001_a_claimed_unsettled_practice_seed_counts_until_it_settles_or_lapses,
         r2379000_a_practice_seed_release_deletes_only_the_owners_unclaimed_seed,
         r2422000_a_practice_claim_is_kept_until_it_settles_once,
+        r4317001_the_practice_seeds_purge_deletes_every_accounts_lapsed_unclaimed_and_settled_seeds,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
