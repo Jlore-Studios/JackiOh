@@ -233,6 +233,8 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Reflect damage",
     "May attack again",
     "Watch first plays",
+    // R4353020: S+ #79 A Glimpse into the Endless Sea's line and its badge, plain words like Immune to damage's row.
+    "Immune to fatigue damage",
   ],
 };
 

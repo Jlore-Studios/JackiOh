@@ -1,0 +1,26 @@
+# TEMPORARY (issue #4353, pull request #4356), deleted before that pull request merges: the session building it
+# cannot build the WASM engine, so this scans lesson "finale"'s seeds on the pull request's merge commit.
+# The scan itself is .github/tmp/finale-seed-scan.test.ts, copied into the web's tests here only.
+name: tmp finale seed scan
+
+on:
+  pull_request:
+    paths: [".github/workflows/tmp-finale-seed-scan.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: the WASM module
+        run: sh scripts/build-wasm.sh
+      - name: scan the finale's seeds
+        run: |
+          cp .github/tmp/finale-seed-scan.test.ts apps/web/src/tutorial/scripts/finale-seed-scan.test.ts
+          FINALE_SCAN=1 FINALE_SCAN_FROM=1 FINALE_SCAN_TO=300 pnpm --dir apps/web exec vitest run src/tutorial/scripts/finale-seed-scan.test.ts 2>&1 | tee scan.log
+          grep "FINALE-SCAN" scan.log
