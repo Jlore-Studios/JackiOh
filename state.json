@@ -37015,7 +37015,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-21T01:52:09Z",
         "every": 5,
+        "findings": 2,
+        "follow_up": 4374,
         "head": "5de65b14838f7b3d2b3beb00097776dfecbefbe4",
         "issue": 4247,
         "merged_at": "2026-11-21T01:11:23Z",
@@ -37028,12 +37031,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:300555f5-1795225439",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44851939720",
         "sha": "f1ddc391cf2be11fc6025668f848b09fc290eeea",
         "started_at": "2026-11-21T01:44:22Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the dungeon run's map layer is fuzzed with refusal and invariant checks",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 407
