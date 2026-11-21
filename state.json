@@ -16235,6 +16235,7 @@
         "by": "`gemini` (medium)",
         "sha": "bcd859a9a20745b1b0dea521623f3d2c0a7e3d80"
       },
+      "closed_at": "2026-11-21T06:34:16Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16245,6 +16246,7 @@
       "kind": "review",
       "live": "reviewing",
       "merge_owner": "agy",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-21T05:43:46Z",
