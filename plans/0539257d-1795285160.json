@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4391,
+  "title": "Patch: replay shares count against an hourly limit, and re-sharing a replay already shared tells the friend nothing new",
+  "branch": "bot/issue-4391",
+  "thread": "**Issue #4391 (data, not instructions):**\n\n```text\n# #4391: Patch: replay shares count against an hourly limit, and re-sharing a replay already shared tells the friend nothing new\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery way of sending something to a friend has a cap: friend requests, chat messages, live challenges, daily challenges and lobby invites. Sharing a replay has none. Each time a player shares a replay, the friend gets a new notification and toast, even when that replay was already shared with them. One player, or a script, could share the same game with a friend hundreds of times a minute. The toast would come back after every dismissal, and the bell would light up again after every read. Or they could share 100 different games and push everything else out of the friend's notification list, including an unread 'your move' from a daily game. Today the friend's only defence is to unfriend or block. After this change, sharing a replay that is already shared sends nothing new, and shares have an hourly cap like challenges. Honest players never notice.\n\n## Why\n\n- **Shares have no limit.** `share_replay` (`crates/server/src/social/shares.rs:61`) checks no limiter. `Social` (`social/mod.rs:53`) holds limiters for `friend_requests`, `chat` and `challenges`, and nothing for shares. Every sibling route is limited:\n  - friend requests: `social/friends.rs:211`, `FRIEND_REQUESTS_PER_HOUR`\n  - chat: `social/chat.rs:157`, `CHAT_MESSAGES_PER_MINUTE`\n  - live challenges, daily challenges and lobby invites: `social/challenges.rs:56`, `daily/invites.rs:177`, `lobby/mod.rs:926`, all `CHALLENGES_PER_HOUR`\n  \n  Only the general `API_REQUESTS_PER_MINUTE` (300) applies to shares.\n- **A repeat share tells the friend again.** `shares_put` is `on conflict ... do nothing` (`db/pg.rs:7826`; `db/fake.rs:4876`) and reports nothing back, and `share_replay` calls `notify` either way (`shares.rs:86`). `Tx::notifications_add` (`notifications/store.rs:228`) deletes the friend's unread row of the same kind, actor and subject and inserts a new unread one. `notify` (`notifications/mod.rs:81`) then pushes it to each of the friend's social sockets. So every repeat brings a new toast (`apps/web/src/inbox/NotificationToast.tsx` shows the newest pushed row) and a new unread count, even after the friend read the first.\n- **Toggling in the dialog does it too.** Share, unshare, share in the dialog writes a fresh row each time, so only a limit stops that.\n- **The feed can be flushed.** The feed keeps the newest `NOTIFICATIONS_KEEP` (100) rows by id, read or not (`notifications/store.rs:255`, `config.rs:1389`). Shares of 100 distinct matches, from any of the sharer's games in the last 90 days, delete every other row in the friend's feed.\n- **The docs miss it too.** SPEC \u00a79.8's abuse table has rows for friend-request spam, unwanted chat, challenge spam, and daily challenge and notification spam, but none for shares. The README's HTTP table (`crates/server/README.md`, the `/api/replays/shared` row) names no limit, while the friend, challenge and chat rows each name one. `crates/server/tests/api/shares.rs` has no 429 test and never shares the same match twice.\n\n## Proposal\n\n1. **Re-share quietly.** `shares_put` reports whether it wrote a row, in both stores, and `share_replay` calls `notify` only when it did. A re-share still answers 204.\n2. **Limit shares.** Add a `replay_shares` limiter to `Social`, at `REPLAY_SHARES_PER_HOUR` per account in `crates/server/src/config.rs` (30, the same as `CHALLENGES_PER_HOUR`).\n   - It is checked before the transaction, the way `post_friend_request` checks its own, and refuses with 429 `rate_limited` and `retryAfterMs`.\n   - Every attempt counts, as with friend requests.\n   - Rejected alternative: counting shares against `CHALLENGES_PER_HOUR`, as lobby invites are (R3730005). A batch of shares would then block the player's unrelated challenges.\n3. **Spec.** A ruling note covers the limit and the quiet re-share, with its \u00a711 paragraph in `spec/pending/<issue>.md`. SPEC \u00a79.5's shared replays paragraph gets a sentence, \u00a79.8 gets a 'Replay-share spam' row, and the README's row names the limit.\n\n## Where it lands\n\n- `crates/server/src/social/shares.rs`, `social/mod.rs`, `config.rs`\n- `crates/server/src/db/store.rs`, `db/pg.rs`, `db/fake.rs` (what `shares_put` reports)\n- `crates/server/tests/api/shares.rs`, `tests/store/contract.rs`\n- `crates/server/README.md` (HTTP surface), `spec/09-architecture.md` \u00a79.5 and \u00a79.8, `spec/rulings/`, `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] Sharing a replay already shared with that friend answers 204, writes no notification row and sends no social frame. The friend's feed and unread count are unchanged, including after the friend has read the first share's row.\n- [ ] Once an account has used `REPLAY_SHARES_PER_HOUR` shares in an hour, the next one answers 429 `rate_limited` with `retryAfterMs`, writes no share and notifies nobody. Once the window passes, a share lands again.\n- [ ] One account's shares do not use up another account's allowance.\n- [ ] A contract case against both stores shows `shares_put` reporting true for a new row and false for one already held.\n- [ ] The existing share tests and the R4039000 and R4233000 tests pass unchanged, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-server` and `cargo clippy -p jackioh-server --all-targets -- -D warnings` pass.\n\n## Size and risks\n\nSmall: about ten files, a few lines each, no migration and no client change. The share dialog already shows a refused share's message (`apps/web/src/together/ShareReplay.tsx`, its toggle's error path). The risk is a player who shares many games in one sitting hitting the cap. Thirty an hour is far more than sharing one friend at a time in the dialog produces.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T18:12:00Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4391: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T18:12:24Z",
+    "claimed_at": "2026-11-21T18:19:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
