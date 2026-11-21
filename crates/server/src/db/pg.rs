@@ -7810,7 +7810,7 @@ macro_rules! readable_share {
     };
 }
 
-pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
+pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<bool, StoreError> {
     if !is_uuid(&share.match_id) || !is_uuid(&share.sharer) || !is_uuid(&share.friend) {
         return Err(StoreError::from(format!(
             "a replay share names an id that is not a UUID: {}",
@@ -7818,7 +7818,7 @@ pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), Sto
         )));
     }
     run_as(t, Some(&share.sharer)).await?;
-    sqlx::query(concat!(
+    let done = sqlx::query(concat!(
         "insert into public.replay_shares (match_id, sharer, friend, created_at)
          values ($1::uuid, $2::uuid, $3::uuid, ",
         ts!("$4"),
@@ -7832,7 +7832,8 @@ pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), Sto
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
-    Ok(())
+    // `do nothing` on a held share affects no row.
+    Ok(done.rows_affected() == 1)
 }
 
 pub async fn shares_remove(

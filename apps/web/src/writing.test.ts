@@ -51,7 +51,10 @@ function trimWord(word: string): string {
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) return name === "test" ? [] : sources(path);
+    // ts-rs's generated wire types hold registry literals verbatim (the card's own straight
+    // quotes in `"Miss" Mrow`'s full arts), not developer-written player prose: not walked,
+    // as `i18n.test.ts`'s `sources()` already holds.
+    if (statSync(path).isDirectory()) return name === "test" || relative(SRC, path) === join("wire", "generated") ? [] : sources(path);
     return /\.(ts|tsx)$/.test(name) && !/\.test\.tsx?$/.test(name) ? [path] : [];
   });
 }
