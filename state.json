@@ -14935,6 +14935,18 @@
       "audit_tier": "",
       "ci_fixed_head": "a6db44fe660f00507b6edfe5f608faaf13dfc8b6",
       "ci_fixes": 1,
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "at": "2026-11-21T05:13:06Z",
+        "built_by": "claude-4",
+        "by": "`claude` (strong)",
+        "sha": "a6db44fe660f00507b6edfe5f608faaf13dfc8b6"
+      },
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -14954,6 +14966,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
