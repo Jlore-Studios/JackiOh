@@ -15127,10 +15127,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "at": "2026-11-21T07:19:44Z",
+        "at": "2026-11-21T09:04:34Z",
         "built_by": "claude-8",
         "by": "`claude` (strong)",
-        "sha": "f604485928f8aed162d0ad440cbb98412efee850"
+        "carried_from": "f604485928f8aed162d0ad440cbb98412efee850",
+        "resolved_by": "`claude` (strong)",
+        "sha": "8071cbc5958fc200733e4744022dea6bab5cb8db"
       },
       "died": 0,
       "difficulty": "hard",
