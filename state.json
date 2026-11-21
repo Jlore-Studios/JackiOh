@@ -15100,13 +15100,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-6",
       "queued_at": "2026-11-21T00:39:42Z",
-      "run_id": "44845485083",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:300555f5-1795225439",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 405,
-      "started_at": "2026-11-21T00:41:21Z",
+      "started_at": "2026-11-21T01:44:22Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15900,9 +15901,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T01:43:46Z",
+    "at": "2026-11-21T01:44:22Z",
     "url": "",
-    "what": "review #4372 on claude-3"
+    "what": "spot-check #4360 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-21T01:24:37Z",
@@ -37032,7 +37033,15 @@
         "n": 405,
         "pr": 4360,
         "queued_at": "2026-11-21T01:11:23Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:300555f5-1795225439",
         "sha": "f1ddc391cf2be11fc6025668f848b09fc290eeea",
+        "started_at": "2026-11-21T01:44:22Z",
         "status": "queued",
         "title": "Patch: the dungeon run's map layer is fuzzed with refusal and invariant checks",
         "tries": 0
