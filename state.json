@@ -38522,20 +38522,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-21T09:07:39Z,claude-8,ping,before,44887893724,2,2026-11-21T13:40:00Z,,,allowed,85,,",
-      "2026-11-21T09:08:10Z,claude-8,stream,call,44887893724,4,2026-11-21T13:40:00Z,,,allowed,85,,",
-      "2026-11-21T09:18:55Z,claude-8,stream,call,44887893724,8,2026-11-21T13:40:00Z,,,allowed,85,,",
-      "2026-11-21T09:29:11Z,claude-8,stream,call,44887893724,10,2026-11-21T13:40:00Z,,,allowed,85,,",
-      "2026-11-21T09:32:26Z,claude-8,stream,call,44887893724,11,2026-11-21T13:40:00Z,,,allowed,85,,",
-      "2026-11-21T09:36:56Z,claude-8,stream,call,44887893724,13,2026-11-21T13:40:00Z,,,allowed,85,,",
-      "2026-11-21T09:47:11Z,claude-8,stream,call,44887893724,14,2026-11-21T13:40:00Z,,,allowed,85,,",
-      "2026-11-21T10:36:05Z,claude-8,stream,call,44887893724,16,2026-11-21T13:40:00Z,,,allowed,85,,"
-    ],
-    "runs": [
-      "2026-11-21T10:41:31Z,44887893724,claude-8,opus,revise,4361,hard,approved,,47,59,16650,4676968,8.3351,2,16,,,0.2,claude-8,resumed,,2"
-    ]
-  },
   "version": 1
 }
