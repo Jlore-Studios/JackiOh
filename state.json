@@ -16899,11 +16899,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-21T18:32:11Z",
+        "at": "2026-11-21T19:00:13Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "it changes the AI's evaluation and search reads (crates/ai), which the rule names as hard"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Rule line 2 (the AI): it changes the evaluation's static Taunt walk in crates/ai/src/evaluate.rs, which feeds face_threat, ready_gap, wall decisions and the Duos pool loss"
       },
       "failures": 0,
       "forced": false,
