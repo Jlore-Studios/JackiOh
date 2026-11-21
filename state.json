@@ -16797,6 +16797,13 @@
     "4403": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T18:16:54Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: one server route plus tests and docs, no engine, AI, cross-crate design, migration, or 40-file span"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
