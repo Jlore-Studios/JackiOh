@@ -38943,7 +38943,8 @@
       "2026-11-21T18:17:21Z,muse,usage-command,after,44933578749,1,2026-11-21T23:08:00Z,63,2026-11-23T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-21T18:18:20Z,44933636850,agy,gemini-3.8-flash-high,plan,4393,medium,planned,,9,398797,41345,0,,0,4,0,1,0.5,,none,,1"
+      "2026-11-21T18:18:20Z,44933636850,agy,gemini-3.8-flash-high,plan,4393,medium,planned,,9,398797,41345,0,,0,4,0,1,0.5,,none,,1",
+      "2026-11-21T18:17:21Z,44933578749,muse,muse-spark-1.3-contributor,plan,4394,medium,planned,,6.6,0,0,0,,1,1,63,63,0.2,,none,,1"
     ]
   },
   "version": 1
