@@ -38381,16 +38381,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "2": {
-        "area": "ai",
-        "count": 2,
-        "last_run": "2026-11-21T06:10:43Z",
-        "provider": "claude-6",
-        "run_id": "44874307543",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
