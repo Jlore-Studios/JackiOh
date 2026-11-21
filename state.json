@@ -17054,6 +17054,13 @@
     "4410": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "44938728617",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-21T19:28:33Z",
+        "until": "2026-11-21T19:58:33Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
