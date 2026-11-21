@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4219,
+  "title": "Patch: a pull request that changes only the fuzz, the classifier or another tool that e2e never runs skips e2e smoke and the builds it waits on",
+  "branch": "bot/issue-4219",
+  "thread": "**Issue #4219 (data, not instructions):**\n\n```text\n# #4219: Patch: a pull request that changes only the fuzz, the classifier or another tool that e2e never runs skips e2e smoke and the builds it waits on\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSometimes the bot changes one of the developer tools and nothing else: the random-game tester, the tool that decides whether a change is a patch, or the dungeon-run simulator. Today the automatic checks still build the browser's copy of the engine and the web client, start a game server, and play the browser smoke tests across four parallel machines.\n\nThose browser tests use only two small commands from the tools. One replays a recorded game to check that the browser reached the same result. The other prints the card patch version.\n\nOnce this is built, a change that leaves those two commands alone skips the browser tests. It also skips the browser and client builds when nothing else needs them. The replay command's own tests still run on every such change, and the browser tests still run on the main branch after the change lands.\n\nThe maintainer and the bot notice: tooling pull requests use fewer shared runners and merge sooner. Players notice nothing.\n\n## Why\n\n- `scripts/ci-scope.sh` turns `e2e` on for any path its e2e case does not list (`*) on e2e`, line 388).\n  - Nothing under `crates/tools/src/` is listed, so a diff of only `crates/tools/src/fuzz.rs` runs `e2e smoke`.\n  - The header (line 156) gives the reason as \"the `jackioh` binary (whose `replay` specs 01 and 13 run)\".\n- e2e runs exactly two of the binary's commands:\n  - `replay`, which `e2e/support/tasks/replay-runner.ts:60` starts. No other file under `e2e/` names the binary.\n  - `catalog-version`, in `.github/actions/e2e-shard/action.yml:66`.\n- What those two commands depend on:\n  - `replay`'s shipped code (`crates/tools/src/replay.rs:31-90`) calls only `jackioh_engine` and `jackioh_cards`.\n  - The file's only `crate::` paths (lines 124 and 228, into `fuzz` and `duos_fuzz`) are in `#[cfg(test)]` helpers.\n  - `catalog-version` is `catalog::run_version` (`crates/tools/src/catalog.rs:1917`). It calls `newest_version` (`:1782`), which uses `patches`' `js` parser.\n- Every such pull request already holds what e2e would check:\n  - `replay.rs`'s own tests fold the hotseat fixture through `replay_json` and pin the answer to `HOTSEAT_HASH` (`replay.rs:155-314`).\n  - `catalog.rs:2887` holds `newest_version` to the cards' catalog version.\n  - Both run in `rust (test tools, wasm)`, which every `crates/tools/` change turns on (`ci-scope.sh:340`).\n  - Nothing the browser loads depends on `jackioh-tools`.\n  - A push to `main` runs whatever the merge queue skipped (`.github/ci/main_scope.py`, #3564). So each such commit still gets one e2e smoke after it lands.\n- I measured the effect by running today's script, and a copy with the change below, over the last 300 first-parent commits of `main` (2026-11-10 to 2026-11-18):\n  - e2e turns on for 236 commits today and for 229 with the change.\n  - The seven that drop out are all tooling work: #4192, #4175, #4165, #4138, #4121, #4105 and #4106. Between them they touch `fuzz.rs`, `duos_fuzz.rs`, `classify.rs`, `run_sim.rs`, `positions.rs` and `selfplay.rs`.\n  - In four of them (#4192, #4121, #4105, #4106) `web` was off too. Those would also skip `web (wasm module)`, `web (wasm c module)` and `web (client build)`, which `ci.yml` runs only on `web || e2e` (lines 892, 921, 961).\n  - Each push of such a pull request, and its merge-queue build, saves the four `e2e smoke (k/4)` shards. By the WEIGHTS in `e2e/scripts/shard-specs.mjs`, the smoke specs alone take 70 to 99 s per shard. On top of that, each shard boots its own client and server.\n- The same kind of narrowing went in for #4112 (the mutation-testing files), #4094 (`patches ship`) and #4157 (migrations).\n\n## Proposal\n\n1. In `scripts/ci-scope.sh`'s e2e case, add two arms before `*) on e2e`:\n   - `crates/tools/src/main.rs | crates/tools/src/replay.rs | crates/tools/src/catalog.rs | crates/tools/src/patches.rs) on e2e ;;`, the files the two commands run, kept on to be safe.\n   - Then `crates/tools/src/* | crates/tools/fuzz-corpus/*) ;;`.\n   - `crates/tools/Cargo.toml` stays on through `*`.\n2. Rewrite the header's e2e paragraph. It should say which of the tools' files e2e runs for, and why skipping the rest is safe.\n3. In `apps/web/src/net/ci-scope.test.ts`'s e2e table:\n   - `off` gains `crates/tools/src/fuzz.rs`, `crates/tools/src/classify.rs` and a `crates/tools/fuzz-corpus/` record.\n   - `on` keeps `replay.rs` and adds `main.rs`, `catalog.rs`, `patches.rs` and `crates/tools/Cargo.toml`.\n   - A diff of `fuzz.rs` plus any file that turns e2e on still turns it on.\n4. Add a guard so the list cannot go stale. A scan in `crates/tools/tests/acceptance.rs` holds `replay.rs`'s code outside `#[cfg(test)]` items to name no `crate::` module. If `replay` ever starts calling another module of the crate, the scan fails and names the file to add to the e2e case.\n\n## Where it lands\n\n- `scripts/ci-scope.sh` (the e2e case and its header)\n- `apps/web/src/net/ci-scope.test.ts`\n- `crates/tools/tests/acceptance.rs`\n\nIt needs no `.github/` file, spec section or ruling: CI scope is tooling, not game rules.\n\n## Acceptance criteria\n\n- [ ] `sh scripts/ci-scope.sh <base> <head>` prints `e2e=false` for a diff of only `crates/tools/src/fuzz.rs`, and for a diff of only a `crates/tools/fuzz-corpus/` record.\n- [ ] It prints `e2e=true` for a diff of `crates/tools/src/replay.rs`, `main.rs`, `catalog.rs`, `patches.rs` or `crates/tools/Cargo.toml`.\n- [ ] Every other line it prints for those diffs is unchanged (`rust_tools_wasm` is still true).\n- [ ] `pnpm --dir apps/web test src/net/ci-scope.test.ts` passes with the new cases.\n- [ ] The same test fails if the skip arm is moved above the arm that keeps `replay.rs` on.\n- [ ] The acceptance scan passes on today's tree, and fails, naming the file, when a `crate::fuzz::` call is added to `replay.rs` outside `#[cfg(test)]`.\n- [ ] `cargo test -p jackioh-tools --test acceptance`, `cargo fmt --check` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings` pass.\n\n## Size and risks\n\nSmall: about 15 lines of script and comment, a handful of test cases and one scan. Difficulty medium.\n\n- **The risk:** a tools change that alters what `replay` or `catalog-version` print without touching the four listed files.\n  - Today no such path exists, because `replay`'s shipped code names no other module, and the new scan keeps it that way.\n  - Even if one appeared, `replay.rs`'s pinned-hash tests would still run on the pull request, and `main`'s push would run e2e smoke after the merge.\n- **Timing:** the change scopes only the pull requests after it lands. CI's `changes` job runs `main`'s copy of the script (#2986), so the pull request that makes the change runs every job.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-20T23:03:41Z:\n\napprove\n\nSmall, and guarded by the new scan. It saves four e2e shards and the client builds on tooling-only pull requests.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4219: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-20T23:13:56Z",
+    "claimed_at": "2026-11-21T00:11:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
