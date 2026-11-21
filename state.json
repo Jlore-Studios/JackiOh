@@ -15046,12 +15046,15 @@
     "what": "revise #4416 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-21T19:57:41Z",
+    "at": "2026-11-21T20:08:17Z",
     "notes": [
-      "delivered review #4415 on claude-1 (run 44942308421): approved",
-      "delivered review #4413 on agy (run 44941384184): approved",
-      "delivered review #4412 on muse (run 44940419065): approved",
-      "delivered review #4411 on muse (run 44939610217): approved"
+      "#4413: green and waiting for a person to merge it, so `agy` gives up its claim on it",
+      "delivered review #4416 on claude-4 (run 44943109653): approved",
+      "delivered build #4396 on claude-3 (run 44936315945): built",
+      "started review #4417 on claude-3 (run 44945139367)",
+      "started revise #4416 on claude-4 (run 44945194392)",
+      "nothing more to start: nothing is queued",
+      "#4411: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15757,7 +15760,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T19:57:41Z",
+  "loop_tick": "2026-11-21T20:08:17Z",
   "machine_disk": {
     "issue": null,
     "reading": {
