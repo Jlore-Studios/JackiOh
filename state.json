@@ -37783,7 +37783,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-21T06:52:29Z",
         "every": 5,
+        "findings": 0,
         "head": "29e26cd8e1800af933432a1f8381513763d8cfc6",
         "issue": 4369,
         "merged_at": "2026-11-21T06:41:31Z",
@@ -37796,12 +37798,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:1321b5d3-1795243517",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44877067953",
         "sha": "aada4130004fa11ea7aa59d1b4d8687934c3454e",
         "started_at": "2026-11-21T06:45:32Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the changed-cards fuzz rotation plays the Duos wave too",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 415
