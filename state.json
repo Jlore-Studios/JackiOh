@@ -14316,6 +14316,13 @@
     "4332": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T04:55:22Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "Rule 5 / otherwise medium: does not touch engine rules, AI, cross-crate design, or migrations, and touches under 40 files"
+      },
       "failures": 2,
       "forced": false,
       "handoff": {
