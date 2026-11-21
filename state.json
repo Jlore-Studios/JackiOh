@@ -16260,6 +16260,7 @@
           }
         ],
         "head": "59cb33e212fe164854914174b1c0ee9b1c840e7a",
+        "interruptions": 0,
         "kind": "build",
         "model": "opus",
         "provider": "claude-3",
