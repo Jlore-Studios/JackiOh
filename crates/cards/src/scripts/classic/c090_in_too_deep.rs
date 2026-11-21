@@ -350,7 +350,7 @@ fn quest_completed(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Trigg
 }
 
 /// `spends`: R4331000's end, a base line that ends on a reward that is no Aura (J or K) sending the card to
-/// the graveyard; the kept scripts of v0.6.8 and before pass `false`, the card staying.
+/// the graveyard; the kept scripts of v0.6.8b and before pass `false`, the card staying.
 fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers, spends: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -436,9 +436,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.8 and the versions after v0.5.11r ran, kept for their replays: a line
+/// R767000: the scripts v0.6.8b and the versions after v0.5.11r ran, kept for their replays: a line
 /// that ended on J or K left the card on the field (issue #4331).
-pub fn script_v0_6_8() -> CardScripts {
+pub fn script_v0_6_8b() -> CardScripts {
     CardScripts {
         base: in_too_deep(false, true, QUESTS, false),
         radiant: in_too_deep(true, true, QUESTS, false),
@@ -1574,10 +1574,10 @@ mod tests {
                 assert_eq!(mana.current, mana.max + 100);
             }
 
-            /// R767000: through v0.6.8 a line that ended on J left In Too Deep on the field.
+            /// R767000: through v0.6.8b a line that ended on J left In Too Deep on the field.
             #[test]
-            fn r767000_the_script_kept_for_v0_6_8_keeps_the_card_after_reward_j() {
-                crate::under_kept(ITD, crate::scripts::classic::c090_in_too_deep::script_v0_6_8(), || {
+            fn r767000_the_script_kept_for_v0_6_8b_keeps_the_card_after_reward_j() {
+                crate::under_kept(ITD, crate::scripts::classic::c090_in_too_deep::script_v0_6_8b(), || {
                     let mut s = scenario(json!({
                         "p1": spare(json!({ "backrow": [ITD], "mana": 6 })),
                         "p2": spare(json!({})),

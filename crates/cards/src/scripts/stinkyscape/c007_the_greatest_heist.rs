@@ -6,15 +6,15 @@
 //!            {finds|time|times}: at random, add an Anomaly Found! to your hand or gain a random
 //!            Stinkyscape Resource.
 //!            Quest: Stage 3, Empty the Vaults. Steal an enemy card. Reward: Steal your opponent's mana
-//!            crystals." — finds 3
+//!            crystals, even past 4." — finds 3
 //!   Radiant: the Discover's options, Stage 1's Unit, Stage 2's Anomaly Found! and Resource Radiant.
 //!
 //! Staged Quest (R1854000, next_stage). Cry: Discover Acclaimed/Jelly Bean pool (R1873001, R380).
 //! Stage 1: unitsMadeRadiant (R1854002); reward summons random Acclaimed Unit (R64, R1).
 //! Stage 2: unitsDied; reward rolls Anomaly Found! or Resource (R1873002, §2.4, R1840002, R1840000).
 //! Stage 3: cardsStolen; reward steal_mana_crystals past the cap (R1854003, R4331001), then the Heist,
-//! spent, goes to the graveyard (end_quest_line, R4331000). Through v0.6.8 the steal stopped at the cap
-//! and the Heist stayed (`script_v0_6_8`, kept, R767000).
+//! spent, goes to the graveyard (end_quest_line, R4331000). Through v0.6.8b the steal stopped at the
+//! cap, its reward read without "even past 4", and the Heist stayed (`script_v0_6_8b`, kept, R767000).
 
 use jackioh_engine::effects::{AddToHandArgs, GainResourcesArgs, SummonRandomArgs, gain_resources, summon_random};
 use jackioh_engine::prelude::*;
@@ -39,7 +39,14 @@ const VAULTS: u32 = 3;
 const DEATHS: i32 = 2;
 const STOLEN: i32 = 1;
 
-fn stages() -> Vec<QuestStage> {
+/// Stage 3's reward as the view shows it, the card text's: the steal goes past the cap, `MAX_MANA`
+/// (R4331001). `kept`: the words of v0.6.8b and before, whose steal stopped at the cap (R767000).
+fn vaults_reward(kept: bool) -> String {
+    const STEAL: &str = "Steal your opponent's mana crystals";
+    if kept { STEAL.to_string() } else { format!("{STEAL}, even past {MAX_MANA}") }
+}
+
+fn stages(kept: bool) -> Vec<QuestStage> {
     json_as(json!([
         {
             "name": "Initiation",
@@ -58,7 +65,7 @@ fn stages() -> Vec<QuestStage> {
             "name": "Empty the Vaults",
             "goals": [{ "id": "steal", "text": "Steal an enemy card",
                         "goal": { "kind": "cardsStolen", "count": STOLEN } }],
-            "reward": { "id": "vaults", "text": "Steal your opponent's mana crystals" },
+            "reward": { "id": "vaults", "text": vaults_reward(kept) },
         },
     ]))
 }
@@ -94,7 +101,7 @@ fn finds(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
 }
 
 /// Each stage's reward, on the card's own `questCompleted` (R1854000). `kept` is the last reward as
-/// v0.6.8 and before gave it (R767000).
+/// v0.6.8b and before gave it (R767000).
 fn rewards(radiant: bool, kept: bool) -> TriggerDef {
     TriggerDef::new(
         "stage-completed",
@@ -136,7 +143,7 @@ fn add_the_pick(radiant: bool) -> Hook {
 
 fn heist(radiant: bool, kept: bool) -> Script {
     Script {
-        stages: stages(),
+        stages: stages(kept),
         triggers: vec![rewards(radiant, kept)],
         cry: Some(hook(|_ctx| vec![discover()])),
         resume: IndexMap::from([(PICKED, add_the_pick(radiant))]),
@@ -151,9 +158,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.8 and before ran, kept for their replays: Stage 3's steal stopped at the
+/// R767000: the scripts v0.6.8b and before ran, kept for their replays: Stage 3's steal stopped at the
 /// thief's cap (R1854003) and the Heist stayed on the field (issue #4331).
-pub fn script_v0_6_8() -> CardScripts {
+pub fn script_v0_6_8b() -> CardScripts {
     CardScripts {
         base: heist(false, true),
         radiant: heist(true, true),
@@ -417,10 +424,40 @@ mod tests {
         );
     }
 
-    /// R767000: through v0.6.8 the steal stopped at the cap and the Heist stayed, its line done.
+    /// The quest view's Stage 3 reward on a face of the Heist just played: the card's text, which ends
+    /// on it.
+    fn vaults_shown(radiant: bool) -> String {
+        let mut s = holding(radiant, "heist-text", &[]);
+        played(&mut s);
+        let heist = s.state().players.p1.backrow[0].as_ref().expect("the Heist");
+        let stages = subsystems::quest_view_of(s.state(), heist).and_then(|view| view.stages).expect("its stages");
+        stages[2].reward.clone()
+    }
+
     #[test]
-    fn r767000_the_script_kept_for_v0_6_8_steals_to_the_cap_and_keeps_the_heist() {
-        crate::under_kept(ID, script_v0_6_8(), || {
+    fn r4331001_stage_3s_reward_prints_that_the_steal_goes_past_the_cap_on_both_faces() {
+        for radiant in [false, true] {
+            let shown = vaults_shown(radiant);
+            assert_eq!(shown, "Steal your opponent's mana crystals, even past 4", "radiant {radiant}");
+            let def = crate::card_def(ID);
+            let text = if radiant { def.radiant.text } else { def.base.text };
+            assert!(text.ends_with(&format!("Reward: {shown}.")), "radiant {radiant}: {text}");
+        }
+    }
+
+    /// R767000: through v0.6.8b the steal stopped at the cap and the Heist stayed, its line done.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_8b_shows_stage_3s_reward_without_the_cap_exception() {
+        crate::under_kept(ID, script_v0_6_8b(), || {
+            for radiant in [false, true] {
+                assert_eq!(vaults_shown(radiant), "Steal your opponent's mana crystals", "radiant {radiant}");
+            }
+        });
+    }
+
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_8b_steals_to_the_cap_and_keeps_the_heist() {
+        crate::under_kept(ID, script_v0_6_8b(), || {
             let (s, theirs, mine) = vaults_stolen();
             let lost = theirs - s.state().players.p2.mana.max;
             assert!(lost > 0, "their crystals taken");

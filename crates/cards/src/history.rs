@@ -1131,11 +1131,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4331 (R4331000, R4331001): the last scripts before a spent Quest went to the graveyard and a steal
     // of mana crystals went past the cap.
-    (c090_in_too_deep::ID, "v0.6.8", c090_in_too_deep::script_v0_6_8),
+    (c090_in_too_deep::ID, "v0.6.8b", c090_in_too_deep::script_v0_6_8b),
     (
         c007_the_greatest_heist::ID,
-        "v0.6.8",
-        c007_the_greatest_heist::script_v0_6_8,
+        "v0.6.8b",
+        c007_the_greatest_heist::script_v0_6_8b,
     ),
 ];
 
@@ -1701,14 +1701,14 @@ mod tests {
         }
     }
 
-    /// Issue #4331: v0.6.7l, v0.6.7m and v0.6.8 shipped while it was built, so its rows are keyed at
-    /// v0.6.8, the newest version that ran the scripts they keep.
+    /// Issue #4331: v0.6.7l, v0.6.7m, v0.6.8 and v0.6.8b shipped while it was built, so its rows are
+    /// keyed at v0.6.8b, the newest version that ran the scripts they keep.
     #[test]
-    fn r767000_issue_4331_scripts_are_kept_through_v0_6_8_the_newest_version_that_ran_them() {
+    fn r767000_issue_4331_scripts_are_kept_through_v0_6_8b_the_newest_version_that_ran_them() {
         assert_kept_through(
             &[c090_in_too_deep::ID, c007_the_greatest_heist::ID],
-            &["v0.6.7k", "v0.6.7l", "v0.6.7m", "v0.6.8"],
-            "v0.6.8a",
+            &["v0.6.7k", "v0.6.7l", "v0.6.7m", "v0.6.8", "v0.6.8b"],
+            "v0.6.8c",
         );
     }
 

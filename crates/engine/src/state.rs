@@ -1501,7 +1501,7 @@ pub struct PlayerState {
     pub lost_refresh_through: Option<i32>,
     /// R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
     /// started", inside the cap): negative once theirs were stolen, positive once they stole some under
-    /// the steal of v0.6.8 and before (`mana::max_mana_for`; R4331001 counts a steal's gain apart).
+    /// the steal of v0.6.8b and before (`mana::max_mana_for`; R4331001 counts a steal's gain apart).
     /// Absent (never 0 stored) while none moved, so a game without a steal hashes as it did before this
     /// field existed (D3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
