@@ -26,8 +26,10 @@ struct HandRiders {
     at: Option<HandSide>,
     radiant: Option<bool>,
     cost_override: Option<i32>,
-    /// R1181003: the Embiggened version's own price (Meditative+ #23).
+    /// R1181003: the Embiggened version's own price (Meditative+ #23 through v0.6.8d).
     embiggen_cost_override: Option<i32>,
+    /// R4350000: no Embiggen premium (Meditative+ #23).
+    no_embiggen_premium: Option<bool>,
     cost_mod: Option<i32>,
     /// R1704003: a raise by `cost_mod` stops at this cost, and leaves an X-cost card as it is.
     cost_mod_up_to: Option<i32>,
@@ -90,6 +92,9 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
     }
     if let Some(cost) = riders.embiggen_cost_override {
         card.embiggen_cost_override = Some(cost);
+    }
+    if riders.no_embiggen_premium == Some(true) {
+        card.no_embiggen_premium = Some(true);
     }
     if let Some(cost_mod) = riders.cost_mod {
         card.cost_mod += cost_mod;
@@ -206,6 +211,7 @@ fn exact_riders(copy: &mut CardInstance, source: &CardInstance, priced: bool) {
         copy.cost_mod = source.cost_mod;
         copy.cost_override = source.cost_override;
         copy.embiggen_cost_override = source.embiggen_cost_override;
+        copy.no_embiggen_premium = source.no_embiggen_premium;
         copy.fixed_x = source.fixed_x;
     }
 }
@@ -229,6 +235,10 @@ pub struct AddToHandArgs {
     /// keeps its price.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embiggen_cost_override: Option<i32>,
+    /// R4350000: once in the hand the card has no Embiggen premium: its Embiggened version costs its
+    /// normal price.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_embiggen_premium: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -280,6 +290,7 @@ impl AddToHandArgs {
             radiant: self.radiant,
             cost_override: self.cost_override,
             embiggen_cost_override: self.embiggen_cost_override,
+            no_embiggen_premium: self.no_embiggen_premium,
             cost_mod: self.cost_mod,
             cost_mod_up_to: None,
             temporary: self.temporary,
@@ -370,6 +381,10 @@ pub struct AddRandomFromCatalogArgs {
     /// keeps its price.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embiggen_cost_override: Option<i32>,
+    /// R4350000: once in the hand the card has no Embiggen premium: its Embiggened version costs its
+    /// normal price.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_embiggen_premium: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_mod: Option<i32>,
     /// R1704003: a `costMod` raise stops at this cost (M #37's "(up to (4))"), and an X-cost card
@@ -406,6 +421,7 @@ impl AddRandomFromCatalogArgs {
             radiant: self.radiant,
             cost_override: self.cost_override,
             embiggen_cost_override: self.embiggen_cost_override,
+            no_embiggen_premium: self.no_embiggen_premium,
             cost_mod: self.cost_mod,
             cost_mod_up_to: self.cost_mod_up_to,
             temporary: self.temporary,

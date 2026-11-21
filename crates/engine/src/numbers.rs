@@ -105,8 +105,9 @@ fn in_unit_row(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R65, B3.4 rule 3: the card's own cost, `costOverride` or its printed cost (an Embiggened version's
-/// own, R1181003) plus its `costMod`, with no player discount, since a Degrade changes the card and not
-/// a price for a play. `None` for an X-cost card, whose X is no cost a number may move.
+/// own, R1181003, the normal one with no Embiggen premium, R4350000) plus its `costMod`, with no player
+/// discount, since a Degrade changes the card and not a price for a play. `None` for an X-cost card,
+/// whose X is no cost a number may move.
 pub fn own_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
     if crate::mana::is_x_cost(state, card) {
         return None;

@@ -614,6 +614,7 @@ fn hide(card: &mut CardInstance, def_id: &str) {
     card.enters_evolved = None;
     card.damage = 0;
     card.embiggen_cost_override = None;
+    card.no_embiggen_premium = None;
     card.x = None;
     card.embiggened = None;
     card.return_to_hand_at_end_of_turn = None;

@@ -349,8 +349,9 @@ describe("B8: faceModel cost", () => {
   });
 
   it("R1181003 the second badge shows the view's embiggenCost", () => {
-    // Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)", and Mountaintop Garden's
-    // dearer price: the view prices the Embiggened version.
+    // Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)" through v0.6.8d (since
+    // #4350 the normal price, R4350000), and Mountaintop Garden's dearer price: the view prices the
+    // Embiggened version.
     expect(face("core-084", false, { liveCost: 2, liveEmbiggenCost: 0 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "0" });
     expect(face("core-046", false, { liveCost: 2, liveEmbiggenCost: 4 }).cost.alt).toBe("4");
     expect(face("core-046", false, { liveEmbiggenCost: 6 }).cost.alt).toBe("6");
