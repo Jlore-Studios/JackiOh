@@ -15404,6 +15404,13 @@
     "4363": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T04:40:30Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "client-only gate in one app mirroring landed R4316000 voice precedent; no engine, AI, migration, or multi-crate design"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
