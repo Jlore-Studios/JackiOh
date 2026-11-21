@@ -17296,7 +17296,16 @@
       "feedback_since": "2026-11-21T18:33:45Z",
       "issue": 4393,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "gemini",
+        "built_by": "agy",
+        "rejections": [],
+        "reviews": [],
+        "sha": "da798b7984eb052942310b6d43cb98785f40bcb0",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
