@@ -53,7 +53,7 @@ trap backrow. This file binds every agent, not only Claude.
    since `spec-fold.yml` writes `spec/11-rulings.md`, `spec/INDEX.md` and `spec/CARDS.md` on `main` daily
    and a branch leaves all three alone. `spec/README.md`, Adding a ruling, has the details; `cargo jackioh
    spec check` fails on any mismatch between the notes, their tests and the R-ids cited in `crates/`,
-   `apps/web/src/`, `apps/edge/src/` or `e2e/`, comments included.
+   `apps/web/src/`, `apps/edge/src/`, `apps/admin/src/` or `e2e/`, comments included.
 4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/run` (the dungeon run) and `crates/shared` (the logic
    the server and the client share; its `README.md` holds the host contract) are pure: no clock, I/O,
    environment, threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw
