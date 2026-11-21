@@ -14897,15 +14897,8 @@
       }
     },
     "4418": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44946969302",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-21T20:42:34Z",
-        "until": "2026-11-21T21:12:34Z"
-      },
       "difficulty_by": {
         "at": "2026-11-21T20:42:25Z",
         "difficulty": "medium",
@@ -14924,10 +14917,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "erver/src/api/settings.rs` | change | `put_settings` reads the held row through the locking method |\n- | `crates/server/tests/store/contract.rs` | change | New `r4403000_\u2026` test in `mod player_settings`, registered in `both_stores!` |\n- | `spec/rulings/R1834001.md` | change | Title gains `and R4403000`; `cards` gains `R4403000`; failing-pick paragraph points at R4403000 |\n- | `spec/rulings/R4403000.md` | change | `proven_in` gains `crates/server/tests/store/contract.rs` |\n- Do not touch: anything under `.github/`, `.harness/`, `.squishy/` or `bot/`; `crates/server/migrations/` (no migration: the fix stays in the API/store layer); `spec/11-rulings.md`, `spec/INDEX.md`, `spec/CARDS.md` (the daily fold owns them); `spec/pending/` (no new ruling, so no new paragraph); any\u2026\n- ## Steps\n- 1. In `spec/rulings/R1834001.md`, change the title to end `amended by R2655000 and R4403000)`, following the R1295000/R0634 convention of listing every amending ruling. Add `R4403000` to `cards` after `R1834002` (ascending order, as the list reads).\n- 2. In the same note, qualify the failing-pick paragraph that now reads `A pick that fails is 400 bad_request, and nothing in the request is written.` Append a second sentence naming the exception with a link, e.g. `A cosmetics pick refused as NotOwned on PUT /api/settings is the exception: [[R44030\u2026\n- 3. In `spec/rulings/R4403000.md`, append `crates/server/tests/store/contract.rs` to `proven_in` (step 6 adds an `r4403000` test there, and `proven_in` must list every file that proves the ruling).\n- 4. In `crates/server/src/db/store.rs`, directly after `player_settings_get`, add the port method with a doc comment citing the reason:\n- `pub async fn player_settings_get_for_update(&mut self, profile_id: &str) -> StoreResult<Option<PlayerSettingsRow>>` dispatching via `dispatch!(self, player_settings_get_for_update(profile_id))`. Document: the locked read `put_settings` uses before its keep-out filter (R4403000, #4418); the lock is\u2026\n- 5. In `crates/server/src/db/pg.rs`, directly after `player_settings_get`, add `pub async fn player_settings_get_for_update` as a copy of that function (same `is_uuid` guard, same `run_as(t, Some(profile_id))`, same `player_settings_columns!()` and row mapping) with ` for update` appended to the `wh\u2026\n- 6. In `crates/server/src/db/fake.rs`, directly after `player_settings_get`, add the sync `pub fn player_settings_get_for_update(f: &mut FakeTx<'_>, profile_id: &str)` with hook name `\"playerSettings.getForUpdate\"` and the identical table lookup. Comment that the fake holds its one lock for the whol\u2026\n- 7. In `crates/server/src/api/settings.rs` `put_settings`, replace only the held-row read (`tx.player_settings_get(&profile.id).await?` at line 238) with `tx.player_settings_get_for_update(&profile.id).await?`, plus a one-line comment that the held cosmetics are now read under the row lock the merge\u2026\n- 8. In `crates/server/tests/store/contract.rs` `mod player_settings`, add `async fn r4403000_a_locked_read_answers_what_the_merge_just_left(harness: &StoreHarness)`: assert the locked read is `None` before the first write; `write` an `audio` group; assert the locked read in a new transaction equals \u2026\n- ## Tests\n- - `cargo test -p jackioh-server --test server_store r4403000` \u2014 the new contract test (memory half runs; the Postgres half self-skips without `DATABASE_URL`, CI runs it).\n- - `cargo test -p jackioh-server --test server r4403000` and `cargo test -p jackioh-server --test server r1834001` \u2014 the existing API keep-out/refusal tests still prove the behavior.\n- - `cargo fmt --check`; `cargo clippy -p jackioh-server --all-targets -- -D warnings`; `cargo jackioh spec check` (after the note edits; never run `spec index`).\n- - The Docker suites (`crates/server/tests/db/run.sh`, `tests/sql/run.sh`) stay CI's; do not run whole-workspace suites.\n- ## Done when\n- - [ ] `put_settings`' held-cosmetics read goes through the `FOR UPDATE` port method, so a concurrent device's committed write is seen, never reverted, per R4403000's keep sentence; the no-row-yet case still leaves the key out.\n- - [ ] R1834001's title names `amended by \u2026 R4403000`, its `cards` lists R4403000, and its failing-pick paragraph points at R4403000; R4403000's `proven_in` lists both test files.\n- - [ ] The new `r4403000` contract test and all existing `r4403000`/`r1834001` API tests pass; no test skipped, ignored, or weakened.\n- - [ ] `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, and `cargo jackioh spec check` are green.\n- ## Risks\n- - No hermetic test can fail without this fix: the fake serializes whole transactions, so the race is unobservable under `cargo test` (the issue says the same). The contract test pins the wiring on both stores (it fails if the method is missing or reads the wrong profile); the race itself is closed \u2026\n- - Reject the migration alternative (applying the keep inside `app.merge_player_settings`): a new migration file would make this a migration-class change and churn checksum-pinned files for no behavioral gain; the API-layer lock is sufficient because the merge already serializes writers on the profi\u2026\n- - Reject adding `FOR UPDATE` to the existing `player_settings_get`: it would put a write lock on the read-only `GET` route and on `loadout.rs`' seat picks. The separate method keeps the lock exactly where the filter needs it and keeps `round_trips.rs` counts unchanged.\n- ## Open questions\n- None. Both findings have a settled fix above; the one honest limit (no hermetic race reproduction) is disclosed, not decided.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4418 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4418/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-21T20:34:07Z",
       "owner_why": "it plans it",
@@ -14940,10 +14932,10 @@
       "provider": "muse",
       "queued_at": "2026-11-21T20:30:20Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "44946969302",
+      "run_id": "pending:8276999b-1795293784",
       "runs_on": "night-vm-muse",
       "spot_check_of": 4411,
-      "started_at": "2026-11-21T20:34:07Z",
+      "started_at": "2026-11-21T20:43:27Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15098,9 +15090,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T20:34:07Z",
+    "at": "2026-11-21T20:43:27Z",
     "url": "",
-    "what": "plan #4418 on muse"
+    "what": "build #4418 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T20:29:28Z",
