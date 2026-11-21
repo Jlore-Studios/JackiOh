@@ -17070,6 +17070,8 @@
       "taken_asks": []
     },
     "4411": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T18:17:56Z",
@@ -17083,8 +17085,11 @@
         "trail": "- Test run still in progress; ending the turn here and will continue when its result is delivered.Clippy passes on `jackioh-server` with `-D warnings` (exit 0, no warnings). The `spec check` run is still going; I'll report its result when it lands.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: an unowned cosmetic pick is left out of a settings save instead of refusing the whole save\"} -->\n- `PUT /api/settings` no longer refuses a whole save for one unowned `cosmetics` pick. A pick refused as `NotOwned` is left out of the write: the key keeps the account's stored pick when its held `cosmetics` group has one, otherwise the key is dropped, and everything else merges per R634. Wrong-kind,\u2026\n- Changed files: [settings.rs](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4403/crates/server/src/api/settings.rs) (`check_cosmetics_group` \u2192 `filter_cosmetics_group`; held row read in the same tx as the merge; new log line), [tests/api/settings.rs](/home/agent-muse/actions-runner-3/_work\u2026\n- How tested: `cargo test -p jackioh-server --test server api::settings` \u2192 18 passed, 0 failed (rewritten `r1834001_the_cosmetics_group_refuses_an_unowned_pick`, unchanged `\u2026_refuses_another_kind`, two new `r4403000_\u2026` tests pinning no-`table`-stored and keep-stored-at-new-time). `cargo fmt --check` \u2026\n- Decisions the issue did not settle: the held row is read in the same transaction as the merge, so a concurrent writer resolves as any valid newer whole-group write under strictly-later-wins (no torn key state, no new lock); a group whose every pick is refused still merges at the sent `at` (possibly\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4403 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4403/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4403,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T19:11:32Z",
         "from_run": "44934751414",
         "gates": [
           {
@@ -17143,8 +17148,15 @@
         "source": "build",
         "until": "2026-11-21T19:40:33Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-21T19:10:33Z",
+      "run_id": "pending:482834e1-1795288268",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-21T19:11:32Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17158,9 +17170,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T19:02:01Z",
+    "at": "2026-11-21T19:11:32Z",
     "url": "",
-    "what": "plan #4410 on claude-8"
+    "what": "review #4411 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T18:59:27Z",
