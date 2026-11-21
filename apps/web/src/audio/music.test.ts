@@ -55,7 +55,7 @@ type Rig = { engine: AudioEngine; audio: FakeAudio; player: MusicPlayer; fetch: 
 
 const live: { engine: AudioEngine; player: MusicPlayer }[] = [];
 
-async function rig(options: { unlock?: boolean } = {}): Promise<Rig> {
+async function rig(options: { unlock?: boolean; saveData?: () => boolean } = {}): Promise<Rig> {
   const factory = fakeContextFactory({ decodedSeconds: 30 });
   const engine = createAudioEngine({ createContext: factory.create, speech: null, visibility: () => "visible" });
   const fetch = new FakeFetch();
@@ -73,7 +73,7 @@ async function rig(options: { unlock?: boolean } = {}): Promise<Rig> {
       return () => listeners.delete(l);
     },
   };
-  const player = createMusicPlayer({ engine: () => engine, manifest: MANIFEST, fetchBytes: fetch.fetchBytes, focus: port });
+  const player = createMusicPlayer({ engine: () => engine, manifest: MANIFEST, fetchBytes: fetch.fetchBytes, focus: port, saveData: options.saveData });
   live.push({ engine, player });
   if (options.unlock !== false) {
     engine.unlock();
@@ -968,5 +968,37 @@ describe("background: the OS closes the context mid-game (issue #2034)", () => {
 
       expect(player.log().filter((e) => e.kind === "sting").map((e) => e.track)).toEqual(["intro-a"]);
     });
+  });
+});
+
+describe("R4363000 the music prefetch waits while the browser asks to save data", () => {
+  it("R4363000 held track and intro preloads fetch nothing while the browser asks to save data, and the current track still plays", async () => {
+    const r = await rig({ saveData: () => true });
+    r.player.preload(["tavern-danger"]);
+    r.player.preloadIntros(["intro-a"]);
+    await settle();
+    expect(r.fetch.urls()).toEqual([]);
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    expect(started(r)).toEqual(["tavern-1"]);
+    expect(r.fetch.urls()).toEqual(["/audio/music/tavern-1.m4a"]);
+    r.player.playIntro("intro-a");
+    await settle();
+    expect(r.fetch.urls().filter((u) => u === "/audio/music/intro-a.m4a")).toHaveLength(1);
+  });
+
+  it("R4363000 held preloads drain on the next pump after the signal clears", async () => {
+    let saving = true;
+    const r = await rig({ saveData: () => saving });
+    r.player.preload(["tavern-danger"]);
+    r.player.preloadIntros(["intro-a"]);
+    await settle();
+    expect(r.fetch.urls()).toEqual([]);
+    saving = false;
+    r.player.setBusy(true);
+    r.player.setBusy(false);
+    await settle();
+    expect(r.fetch.urls()).toContain("/audio/music/tavern-danger.m4a");
+    expect(r.fetch.urls()).toContain("/audio/music/intro-a.m4a");
   });
 });
