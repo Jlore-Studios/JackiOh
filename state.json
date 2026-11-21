@@ -16659,15 +16659,9 @@
     "what": "review #4387 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T05:51:43Z",
+    "at": "2026-11-21T06:01:59Z",
     "notes": [
-      "delivered build #4369 on muse (run 44867556914): built",
-      "delivered build #4378 on muse (run 44867472402): built",
-      "delivered build #4371 on muse (run 44867430387): built",
-      "started review #4388 on muse (run 44873051215)",
-      "started review #4389 on muse (run 44873085482)",
-      "started review #4387 on muse (run 44873122123)",
-      "nothing more to start: nothing is queued"
+      "#4388: `rust (test server)` red in CI run 44872936614; its other early jobs have until 2026-11-21T06:04:24Z to report"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17373,7 +17367,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T05:51:43Z",
+  "loop_tick": "2026-11-21T06:01:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
