@@ -13847,17 +13847,8 @@
       "verdict_rounds": 1
     },
     "4317": {
-      "action": "plan",
-      "asks": [
-        "c:7052756022"
-      ],
-      "build_next": {
-        "from_run": "44840617597",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-21T00:22:57Z",
-        "until": "2026-11-21T00:52:57Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T00:22:49Z",
         "difficulty": "medium",
@@ -13876,10 +13867,9 @@
         "reason": "planned on sonnet",
         "trail": "grep -n \\\"BadRequest\\\\|truncate\\\\|MESSAGE_CHARS\\\\|LOG_.*MAX\\\" crates/server/src/api/http.rs | head -30; grep -n \\\"LOG_.*MAX\\\\|MESSAGE.*MAX\\\" cr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 900,915p crates/server/src/config.rs; grep -rn \\\"CLIENT_ERROR_MESSAGE_MAX_CHARS\\\" crates/server/src | head; grep -n \\\"fn error_response\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -rn \\\"body_text\\\\|\\\\.message\\\" crates/server/src/api/http.rs crates/server/src/app.rs | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 10520,10625p crates/server/tests/store/contract.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 10880,11060p crates/server/tests/store/contract.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -n \\\"r2422000_a_practice_claim_is_kept_until_it_settles_once\\\\|practice_seeds_issue_claim_once_and_prune\\\\|macro_rules! both_stores\\\" crat\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 60,120p crates/server/tests/store/contract.rs; sed -n 11940,11960p crates/server/tests/store/contract.rs; cat crates/server/tests/db/run\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -rln \\\"run_purge\\\\|retention::\\\" crates/server/tests crates/server/src | head; grep -rn \\\"run_purge\\\" crates/server --include=*.rs | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 440,620p crates/server/tests/loops/failing.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 1,60p crates/server/tests/api/retention.rs; grep -n \\\"^async fn \\\\|^fn \\\\|#\\\\[tokio::test\\\\]\\\" crates/server/tests/api/retention.rs | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -n \\\"pub fn now_ms\\\" -B3 -A12 crates/server/src/app.rs; sed -n 470,520p crates/server/tests/api/game_records.rs; grep -n \\\"fn settle\\\\b\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -n \\\"async fn fail_on\\\" -A22 crates/server/tests/loops/failing.rs; grep -n \\\"fn alerts_after_each_pass\\\" -A30 crates/server/tests/loops/fa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -n \\\"run_purge\\\\|idempotency_sweep\\\\|idempotency keys\\\\|hourly\\\" crates/server/README.md | cut -c1-260 | head -30; grep -rn \\\"practice.swe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -n \\\"retention\\\" crates/server/README.md | cut -c1-240 | head -30; sed -n 842,850p docs/architecture.md | cut -c1-400; grep -rn \\\"sweep_un\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -rn \\\"purge's seven\\\\|FailingStreak::new\\\" --include=*.rs --include=*.md --include=*.py --include=*.sh . 2>/dev/null | grep -v \\\"^./target\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 1480,1520p crates/server/src/config.rs; grep -rn \\\"R1303001\\\\|R1483000\\\\|R2422000\\\\|R3500001\\\" spec/14-economy.md spec/09-architecture.m\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 20,80p spec/rulings/R1483000.md | cut -c1-600; echo ----; sed -n 30,60p spec/rulings/R2422000.md | cut -c1-400\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 170,212p crates/server/src/api/http.rs; grep -n \\\"pub fn deal_random_deck\\\" -A12 crates/server/src/actor/engine.rs; grep -n \\\"DECK_SIZE\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -rn '\\\\[\\\"error\\\"\\\\]\\\\[\\\"message\\\"\\\\]' crates/server/tests | head -3; grep -n \\\"pub async fn call\\\" -A25 crates/server/tests/support/deps.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 1,60p apps/web/src/net/practice.ts; grep -rn \\\"requestPracticeSeed\\\\|issuePracticeSeed\\\" apps/web/src --include=*.ts --include=*.tsx -l \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -rn \\\"requestSeed\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v test | head; \"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 625,690p apps/web/src/routes/practice.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 1,80p crates/server/migrations/0047_practice_seeds.sql; grep -n \\\"fn run_as\\\" -A25 crates/server/src/db/pg.rs | head -40; grep -n \\\"prac\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -rn \\\"pub async fn fail_on\\\" -A14 crates/server/tests/support/; grep -n \\\"pub fn count\\\\|pub fn named\\\\|pub fn entries\\\" crates/server/tes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -n \\\"fn seed_request\\\" -A12 crates/server/tests/api/economy_turns.rs; sed -n 536,556p crates/server/tests/api/practice.rs; cat crates/shar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 504,537p crates/server/tests/api/practice.rs; ls crates/server/tests; git log --oneline -1\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; grep -n -i \\\"fragment\\\" docs/issues-and-patches.md | cut -c1-260 | head -12; ls spec/pending; ls patches 2>/dev/null | head -3; ls crates/cards\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; sed -n 120,135p docs/issues-and-patches.md | cut -c1-500; sed -n 170,186p docs/issues-and-patches.md | cut -c1-400; cat spec/pending/4293.md | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4317; cat crates/server/tests/server_store.rs | head -20; sed -n 1,30p crates/server/tests/server.rs | head -30; grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A4 cra\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4317/.bot-plan.md\", \"content\": \"# Draft plan for #4317 (planner's notes; the final message is the plan)\\n\\nRating: medium (server crate + spec/docs on\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Rule 3 does not apply: the change stays in crates/server (it only calls crates/shared's existing `deal`) plus spec and docs. It has no engine, AI or migration change and is about 10 files, so none of the five lines holds.\"} --> ## Goal `POST /api/practice/\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-20T23:58:25Z",
       "owner_why": "it plans it",
@@ -13892,12 +13882,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-20T23:14:19Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44840617597",
+      "run_id": "pending:72a580de-1795220712",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-20T23:58:25Z",
+      "started_at": "2026-11-21T00:25:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7052756022"
+      ]
     },
     "4318": {
       "action": "build",
@@ -15223,9 +15215,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T00:25:00Z",
+    "at": "2026-11-21T00:25:51Z",
     "url": "",
-    "what": "review #4359 on muse"
+    "what": "build #4317 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-21T00:05:13Z",
