@@ -16421,6 +16421,13 @@
     "4390": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T18:44:13Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Server-only change (crates/server plus spec notes): no engine, AI, migration or cross-crate design, and about 14 files, so none of the five hard lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
