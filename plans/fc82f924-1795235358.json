@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4379,
+  "title": "Patch: the combat forecast projects an attack past what its own other hits kill",
+  "branch": "bot/issue-4379",
+  "thread": "**Issue #4379 (data, not instructions):**\n\n```text\n# #4379: Patch: the combat forecast projects an attack past what its own other hits kill\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen you aim an attack, the game tells you beforehand what the attack will do: how much it deals, whether it kills, what splashes onto the neighbours and what spills over onto the hero. Today that preview reads the board exactly as it stands. That goes wrong in one corner: when an attack strikes several units at once and those side hits kill the very units whose presence keeps the target standing. A sweeping blow can kill the two neighbours whose shared protection holds the target up, so by the time the main blow lands the target is weaker than the preview promised. After this change the preview first takes off what the attack's own hits are sure to destroy, and only then says what happens to the rest, so the numbers players see in the trickiest fights are the numbers the fight deals.\n\n## Why\n\n- The fuzz oracle I18 holds every plain attack to its forecast, but R4318000 carved out exactly this corner after fuzz seed 6180, where a sweep killed the two units whose auras held its target up. Two bullets of the skip predicate now excuse every attack whose other hits strike a unit with a card beneath or held by it, and every attack where counting every unit it strikes as dying lowers the other combatant. Each new sweeping or aura-sharing card widens that blind spot.\n- The forecast is not trivia: the aimed-attack preview marks splashed units and overflow heroes from it (R4290000), the tutorial coach names its attacks by it, and the lethal sum reads off it. A forecast that ignores the attack's own kills misleads all three at once.\n- Nothing open or rejected covers this: the forecast work (#4307, #4257, #4318) shipped the fields and the carve-out, and #4338's rejected AI valuation is a different consumer. Restoring the oracle is new work.\n\n## Proposal\n\n- Teach the one-attack projection to settle the attack's own other hits first: on a scratch copy, remove the units beside the main combatants that the projected blow, Cleave splash and sweep hits destroy, recompute the layered board, then project the main blow, the splash dealt and kills, the Trample overflow and the lethal sum from that board.\n- Keep the skip for deaths the board cannot foretell (cards dormant beneath or held, would-die replacements, hooks, traps, chains and reflections); narrow only the two R4318000 bullets to what the projection still cannot see.\n- Add the ruling note in the new issue's number block with its section-11 paragraph, and engine tests in the forecast's shape: a sweep that kills its target's aura-bearers (the seed-6180 shape) and a Cleave whose neighbour's death lowers its target, both judged by I18 again.\n\n## Where it lands\n\n- `crates/engine/src/query.rs`: the one-attack projection behind `combat_forecast` (SPEC sections 4.2 to 4.5: combat, the damage pipeline and the state check).\n- `crates/engine/src/testkit/invariants.rs`: the skip predicate and I18's wiring.\n- `crates/engine/tests/rules/combat_forecast.rs` (plus a fixture as needed): the new proving tests.\n- `spec/rulings/R<nnnn>.md` in the new issue's block, its section-11 paragraph in `spec/pending/<issue>.md`, amending the R4318000 paragraph. The client needs no change: it already renders what the forecast says.\n\n## Acceptance criteria\n\n- [ ] A new ruling note exists in the suggestion issue's block, its `proven_in` naming the new tests, and `cargo jackioh spec check` passes.\n- [ ] On a seed-6180-shaped board the forecast's splash, dealt, kills and overflow match what the combat deals, and the lethal sum agrees.\n- [ ] I18 judges sweep-kills-aura-bearer and Cleave-neighbour-death attacks again instead of skipping them; the remaining skips are only hooks, traps, chains, reflections, replacements and hidden cards.\n- [ ] `cargo test -p jackioh-engine --features testkit` and the cards suite pass, and a fuzz run over the previously failing seeds stays green.\n\n## Size and risks\n\n- Engine-rules work: label `difficulty:hard`. One query function, one monitor predicate, tests and one ruling note; no card scripts change.\n- Main risk is projection cost per listed attack; bound it by reusing the units the attack already enumerates (its Cleave neighbours and sweep hits) on a scratch copy. Rejected: simulating the attack with `reduce`, which R4290000 already ruled out as too heavy and prompt-reaching.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T04:25:36Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4379: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T04:26:00Z",
+    "claimed_at": "2026-11-21T04:29:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
