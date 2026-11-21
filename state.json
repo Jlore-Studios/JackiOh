@@ -15414,13 +15414,21 @@
     "what": "review #4429 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T21:07:58Z",
+    "at": "2026-11-21T21:18:35Z",
     "notes": [
-      "delivered build #4402 on claude-6 (run 44938666623): built",
-      "delivered build #4397 on muse (run 44934809094): built",
-      "started review #4421 on claude-6 (run 44950203343)",
-      "started review #4422 on muse (run 44950261330)",
-      "nothing more to start: nothing is queued"
+      "delivered suggest on claude-3 (run 44949174012): suggested",
+      "delivered suggest on claude-1 (run 44949127736): suggested",
+      "delivered suggest on claude-3 (run 44949081037): suggested",
+      "delivered build #4418 on muse (run 44947789398): built",
+      "started review #4429 on muse (run 44951152424)",
+      "nothing more to start: nothing is queued",
+      "#4428: typed it Feature",
+      "#4427: typed it Feature",
+      "#4426: typed it Task",
+      "#4425: typed it Task",
+      "#4424: typed it Task",
+      "#4423: typed it Task",
+      "runner gate: started 1 of 1 waiting run(s) (run 44951055998 on bot/issue-4418)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16126,7 +16134,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T21:07:58Z",
+  "loop_tick": "2026-11-21T21:18:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
