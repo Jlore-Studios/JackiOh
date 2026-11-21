@@ -256,6 +256,14 @@ fn zone_for(ctx: &EffectContext<'_>, player: PlayerId, row: Row, at: &SummonPlac
     zone_and_stance_for(ctx, player, row, at, false, false).map(|(slot, _)| slot)
 }
 
+/// R3554003: the half of a slashed board a summon by the running card lands on (`None`: any lane):
+/// the half of `ctx.self_`, a resolving Spell's being the one its cast chose (R3554004).
+pub(crate) fn summoner_half(ctx: &EffectContext<'_>) -> Option<crate::geometry::Half> {
+    ctx.self_
+        .as_ref()
+        .and_then(|source| crate::geometry::half_of_card(ctx.state, source))
+}
+
 /// `zone_for`, and whether the card stands in a backrow zone (`entry_zone`, R1081000, R2248000).
 fn zone_and_stance_for(
     ctx: &EffectContext<'_>,
@@ -266,10 +274,7 @@ fn zone_and_stance_for(
     giga: bool,
 ) -> Option<(ZoneSlot, bool)> {
     // R3554003: a summon stays on its summoner's half of a slashed board.
-    let half = ctx
-        .self_
-        .as_ref()
-        .and_then(|source| crate::geometry::half_of_card(ctx.state, source));
+    let half = summoner_half(ctx);
     let allow = |lane: i32| crate::geometry::lane_in_half(ctx.state, lane, half);
     let Some(lane) = at.lane else {
         // R3557003: backrow first, where a Unit stands as it does there (R1081000); else R64's row.
