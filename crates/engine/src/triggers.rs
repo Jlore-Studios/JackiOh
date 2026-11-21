@@ -37,7 +37,8 @@ use crate::traps::{
     resume_event_to_traps, trap_controllers_of,
 };
 use crate::wire::{
-    GameEvent, GameEventType, HookKind, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneName, ZoneRef,
+    ActionType, GameEvent, GameEventType, HookKind, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneName,
+    ZoneRef,
 };
 use crate::work::engine_resume;
 
@@ -117,6 +118,9 @@ pub const EVOLVE_RUN: &str = "@evolve";
 /// on either side may answer (#33 Unstable Clone Machine). Derived from config (CLAUDE.md rule 9).
 pub const SETTLE_PASS_CAP: usize =
     (LIBRARY_CAP * CAST_ON_DRAW_CHAIN_CAP * (UNIT_ZONES + BACKROW_ZONES)) as usize * PLAYER_IDS.len();
+
+// R3925000: the loop cap trips before any loop that `SETTLE_PASS_CAP` bounds can reach its panic.
+const _: () = assert!(crate::config::RESOLUTION_EVENT_CAP < SETTLE_PASS_CAP);
 
 // 1. The registry.
 
@@ -1252,6 +1256,10 @@ fn offer_to_gone_killer(
 /// from queue time: it may have died, been played or moved while it waited, and a trigger its
 /// current zone no longer registers fizzles instead of firing from the wrong zone (R78, R89).
 pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
+    // R3925000: card text is off at the loop cap.
+    if crate::loop_cap::capped(sink) {
+        return;
+    }
     let event = event_of_queued(entry);
     if entry.hook == OWED_TO_TRAPS {
         if let Some(event) = event {
@@ -1435,7 +1443,12 @@ fn queued_trigger_def(holder: &TriggerHolder, entry: &QueuedTrigger) -> Option<T
 /// (R62's delayed effects, each whole, R59; the triggers wait for its loop, R68), as does a cast's §10.5 step
 /// 4 inside its effect (R70).
 pub fn dispatch_pending(sink: &mut SettleSink<'_>) {
-    for _pass in 0..SETTLE_PASS_CAP {
+    for pass in 0..SETTLE_PASS_CAP {
+        // R3925000: at the loop cap nothing more is offered.
+        if crate::loop_cap::halted(sink, pass) {
+            crate::loop_cap::offer_nothing(sink);
+            return;
+        }
         dispatch_new_events(sink);
         if sink.state.pending.is_some() || sink.state.result.is_some() {
             return;
@@ -1485,6 +1498,15 @@ pub struct Frontier {
     /// `via` (`state_check::collect`). A cue for the client, never game state: it dies with the action.
     /// Boxed, as it is empty but in a combat, so a sink that owns its frontier stays small.
     pub death_via: Box<IndexMap<String, KeywordKind>>,
+    /// R3925000: where in the action's list the interaction now resolving began (`loop_cap.rs`), so the
+    /// events after it are its count against `RESOLUTION_EVENT_CAP`.
+    pub interaction_from: usize,
+    /// R3925000: the seat and kind of the interaction now resolving, which `loopCapped` names; `None` for
+    /// the setup and a Glitch's reset (R676), which are no seat's.
+    pub interaction: Option<(PlayerId, ActionType)>,
+    /// R3925000: the interaction reached the loop cap, so nothing more is offered and card text is off
+    /// until the next interaction begins.
+    pub capped: bool,
 }
 
 /// Where a sink keeps its `Frontier`: its own for an action's first sink (`EngineSink::new`), its
@@ -1607,10 +1629,20 @@ fn traps_still_owed(state: &GameState) -> bool {
 /// stops while a prompt is open, the game is over, or an `OWED_TO_TRAPS` entry says the previous
 /// event's traps have not all seen it: the traps see events in emission order.
 fn dispatch_new_events(sink: &mut SettleSink<'_>) {
+    // R3925000: a capped interaction offers nothing; a trap answering its own events would otherwise go
+    // round inside this loop with no loop top of the resolution loop's between.
+    if crate::loop_cap::halted(sink, 0) {
+        crate::loop_cap::offer_nothing(sink);
+        return;
+    }
     // Collect first and unconditionally, so a pause below leaves nothing owed on the sink (§9.3).
     collect_events(sink);
     while !sink.state.dispatch.is_empty() {
         if sink.state.pending.is_some() || sink.state.result.is_some() {
+            return;
+        }
+        if crate::loop_cap::halted(sink, 0) {
+            crate::loop_cap::offer_nothing(sink);
             return;
         }
         if traps_still_owed(sink.state) {
@@ -1641,7 +1673,12 @@ pub fn settle(sink: &mut SettleSink<'_>, options: SettleOptions) {
     // §4.5: the check follows something that resolved. Held, it waits until this loop has resolved a
     // piece of owed work or a queued trigger (a trap runs its own check as it fires, `traps::fire_trap`).
     let mut check_due = options.hold_check != Some(true);
-    for _pass in 0..SETTLE_PASS_CAP {
+    for pass in 0..SETTLE_PASS_CAP {
+        // R3925000: at the loop cap the rest is dropped; what is owed drains with its text off.
+        if crate::loop_cap::halted(sink, pass) {
+            crate::loop_cap::settle_capped(sink);
+            return;
+        }
         // First, so a pause below leaves nothing owed on the sink (§9.3).
         dispatch_new_events(sink);
         if sink.state.result.is_some() {

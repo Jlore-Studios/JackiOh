@@ -67,6 +67,11 @@ cargo jackioh golden check                     # the hotseat fixture's fold
 cargo test -p jackioh-tools                    # the tools' own tests
 ```
 
+With `JACKIOH_LOOP_PEAK` set, any command ends by printing to stderr the most events one interaction
+emitted in the run, with its kind and turn, and how many interactions reached the loop cap (R3925000,
+`jackioh_engine::testkit::loop_peak`): the measurement behind `RESOLUTION_EVENT_CAP`'s value, run over
+the fuzz waves, `golden check`, `perf` and `gate` (`JACKIOH_LOOP_PEAK=1 cargo jackioh fuzz --seeds 200`).
+
 `spec check` holds eight rules: every ruling note's `id` matches its file name and is unique; every
 `proven_in` path exists and holds a proof that runs (#1718): a Rust `#[test]` or `#[tokio::test]`
 `fn`, not `#[ignore]`d but for a `daily:` reason, or a `fn` a test macro of the same file lists, or a

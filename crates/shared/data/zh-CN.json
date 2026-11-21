@@ -346,6 +346,7 @@
   "{seat} could not draw more this turn": "{seat}本回合无法再抽牌",
   "{seat} could not be made to discard": "{seat}无法被迫弃牌",
   "{whose} turn was cut short": "{whose}回合被提前结束了",
+  "{whose} chain of effects was stopped at the loop cap": "{whose}连锁效果在循环上限处停止了",
   "The AI plays the rest of {whose} turn": "AI替{whose}打完本回合剩余的部分",
   "{card} awakened": "{card}已苏醒",
   "{card} evolved": "{card}已进化",

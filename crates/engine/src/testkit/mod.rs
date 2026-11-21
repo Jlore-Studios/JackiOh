@@ -24,6 +24,7 @@ pub mod duos_scenario;
 pub mod glow;
 pub mod golden;
 pub mod invariants;
+pub mod loop_peak;
 pub mod pick;
 pub mod played_attack;
 pub mod pool_probe;

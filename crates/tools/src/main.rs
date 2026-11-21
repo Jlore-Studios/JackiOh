@@ -132,6 +132,16 @@ fn main() -> ExitCode {
         Command::Positions(args) => positions::run(args),
         Command::Winrates(args) => winrates::run(args),
     };
+    // R3925000: the measurement behind `RESOLUTION_EVENT_CAP`, the most events one interaction emitted in
+    // the run (crates/tools/README.md, `JACKIOH_LOOP_PEAK`).
+    if std::env::var_os("JACKIOH_LOOP_PEAK").is_some() {
+        let peak = jackioh_engine::testkit::loop_peak::peak();
+        let kind = peak.kind.map_or("setup", |kind| kind.as_str());
+        eprintln!(
+            "loop peak: {} events in one interaction ({kind}, turn {}); {} interaction(s) capped",
+            peak.events, peak.turn, peak.capped
+        );
+    }
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {

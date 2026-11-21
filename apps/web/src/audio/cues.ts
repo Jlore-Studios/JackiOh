@@ -633,6 +633,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // B5 E3: the draw is called off, like an attack; R319 keeps the refusal sound the full library's own.
   drawLimited: { sfx: "cancel", cues: () => [sfx("cancel")] },
   turnCutShort: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
+  // R3925000: the loop cap stopped a loop: the same urgent notice.
+  loopCapped: { sfx: "notify", cues: () => [sfx("notify", { urgent: true })] },
   // R437: a mark brands its card as it lands (#50's pending steal) and lets go softly as it lifts.
   marked: { sfx: "brand", cues: markCues },
   // R676: a Glitch tears the match: the rollback's rush with a shattering glass over it.

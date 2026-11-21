@@ -1310,11 +1310,24 @@ pub const PROMPT_CARD_OPTION_LIMIT: usize = 4;
 /// C+ #29: "It costs (0)", "Each costs (0)" — a `costOverride` (R65) (`effects::last_board`).
 pub const LAST_BOARD_CARD_COST: i32 = 0;
 
-/// §4.5 loops until nothing changes; this bounds a pathological loop loudly (R69, R89) (`state_check`).
-pub const STATE_CHECK_PASS_CAP: usize = 100;
+/// R3925000, §10.3: the most events one interaction (an action of a seat, each answer a timeout gives,
+/// an autopilot or AI action, a turn the engine ends for a seat) emits before its resolution loop stops
+/// at the loop cap (`loop_cap.rs`): every `GameEvent` counts. Measured 2026-11-21 with
+/// `JACKIOH_LOOP_PEAK` on the release build: the most any one interaction emitted was 455, a play of
+/// Stinkyscape #4.6 The Big Crunch (fuzz seed 23, step 124, turn 25; `perf --smoke`'s heaviest state is
+/// the same play), against 285 in the handicapped wave, 220 in the Duos wave, 278 in `gate` and 16 in the
+/// golden fixture; R2067000's sixty-cast end of turn (`plays_and_casts.rs`) emits 523. 2,000 keeps about
+/// four times the most a game without a loop reaches.
+pub const RESOLUTION_EVENT_CAP: usize = 2_000;
 
-/// A drain that keeps parking new work stops here rather than spinning (§2.5's cap spirit) (`work`).
-pub const MAX_WORK_STEPS: usize = 500;
+/// §4.5 loops until nothing changes; a check still going round at `RESOLUTION_EVENT_CAP` passes stops at
+/// the loop cap first (R3925000), so this one past it is an assertion play cannot reach (`state_check`).
+pub const STATE_CHECK_PASS_CAP: usize = RESOLUTION_EVENT_CAP + 1;
+
+/// A drain that keeps parking new work stops at the loop cap first (R3925000), at `RESOLUTION_EVENT_CAP`
+/// steps, and then drains what was owed at the trip with its cards' text off; the room past that is an
+/// assertion play cannot reach (`work`).
+pub const MAX_WORK_STEPS: usize = 2 * RESOLUTION_EVENT_CAP;
 
 /// Enumerating answers is bounded like `legalActions`'s other combinations (R90) (`prompts`).
 pub const MAX_PROMPT_ANSWERS: usize = 256;

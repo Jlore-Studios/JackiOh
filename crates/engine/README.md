@@ -47,6 +47,13 @@ pause parks what it still owes on `state.work` as plain-data `Resume` records, n
 order R113 sets (`state.work_cursor`). Read `work.rs`'s header before touching anything that can
 open a prompt.
 
+`loop_cap.rs` is the backstop behind every loop (§10.3, R3925000): each interaction (an action, a
+timeout's answer, an autopilot or AI action, a turn the engine ends) counts its events on the sink's
+`Frontier`, and at `RESOLUTION_EVENT_CAP` the loops that resolve it (`settle`, `dispatch_pending`, the
+announce window, the state check's passes, `drain_work`) stop: the rest is dropped, `loopCapped` says so,
+the dead are collected with their text off (`state_check::capped_check`) and card text stays off until
+the next interaction. `STATE_CHECK_PASS_CAP` and `MAX_WORK_STEPS` sit past it as assertions.
+
 The event stream also says why things happen, for the client's cues and never for a rule. A keyword
 behind a `damage`, `damageAbsorbed`, `healed`, `destroyed` or `summoned` rides it as `via`, set where
 the keyword applies: Cleave, Trample and First Strike as the hit's route (`DamageFlags.via`, never

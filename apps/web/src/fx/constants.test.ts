@@ -386,6 +386,7 @@ const S2 = {
     coinsFlipped: "Coin flip",
     diceRolled: "Dice roll",
     turnCutShort: "Turn cut short",
+    loopCapped: "Loop stopped",
     autopilot: "The AI takes the turn",
     questComplete: "Quest complete",
     votedOut: "Voted out",

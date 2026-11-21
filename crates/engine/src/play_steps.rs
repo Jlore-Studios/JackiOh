@@ -1356,7 +1356,12 @@ fn answers_announce(entry: &QueuedTrigger, instance_id: &str) -> bool {
 /// cancels the play: later triggers find no card (`is_announce_live`), traps are not offered it
 /// (`traps::standing_event`). Stops at a prompt, the rest owed in state.
 fn run_announce_window(sink: &mut EngineSink<'_>, run: &PlayRun) {
-    for _ in 0..SETTLE_PASS_CAP {
+    for pass in 0..SETTLE_PASS_CAP {
+        // R3925000: at the loop cap the window closes with nothing more offered.
+        if crate::loop_cap::halted(sink, pass) {
+            crate::loop_cap::offer_nothing(sink);
+            return;
+        }
         dispatch_pending(sink);
         if paused(sink) {
             return;

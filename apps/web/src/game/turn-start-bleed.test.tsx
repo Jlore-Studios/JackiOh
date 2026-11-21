@@ -139,6 +139,28 @@ describe("R3910000 the turn banner says when a turn was cut short or the AI took
     expect(banner()).toHaveTextContent("Opponent's turn");
   });
 
+  it("R3925000 reads Loop stopped while its entry plays and the turn's words after the burst", () => {
+    const capped: GameEvent = { type: "loopCapped", player: "p1" };
+    const before = withEvents(baseView({ active: "p1", turn: 3 }), [started]);
+    const after = withEvents(baseView({ active: "p1", turn: 3 }), [started, capped, mana]);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    expect(banner()).toHaveTextContent("Your turn");
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+
+    expect(queue()).toBe("loopCapped");
+    expect(banner()).toHaveAttribute("data-animating", "loopCapped");
+    expect(banner()).toHaveTextContent(FX_TEXT.loopCapped);
+
+    advance(ANIMATIONS.loopCapped.durationMs);
+    expect(queue()).toBe("manaChanged");
+    expect(banner()).toHaveTextContent(FX_TEXT.loopCapped);
+
+    // Once the burst has played, the standing view's turn speaks again: the game goes on.
+    advance(ANIMATIONS.manaChanged.durationMs);
+    expect(queue()).toBeNull();
+    expect(banner()).toHaveTextContent("Your turn");
+  });
+
   it("R3910000 the AI's words do not outlast the entries that play them", () => {
     // An aura hands the turn back (R1844000): the engagement stays in the view's event window while its player acts again.
     const view = withEvents(baseView({ active: "p1", turn: 3 }), [started, engaged, mana]);

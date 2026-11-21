@@ -789,6 +789,8 @@ const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnAutoEnded") return [banner(p.D, FX_TEXT.autoEnded, "muted")];
   // B5 E10: an effect cut the turn short.
   if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
+  // R3925000: a loop reached the loop cap and stopped.
+  if (event.type === "loopCapped") return [banner(p.D, FX_TEXT.loopCapped, "muted")];
   // R1183002: the AI plays the rest of the turn.
   if (event.type === "autopilotEngaged") return [banner(p.D, FX_TEXT.autopilot, "muted")];
   // R1843000, R1843002: a player voted out, and an escape, in that player's colors.

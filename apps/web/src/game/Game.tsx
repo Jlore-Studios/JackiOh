@@ -128,16 +128,21 @@ function sameHoveredAttack(a: HoveredAttack | undefined, b: HoveredAttack | unde
 
 /**
  * The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). R3910000: the
- * events it speaks for are the turn's start, its end by no moves left, its being cut short and the AI's taking it.
+ * events it speaks for are the turn's start, its end by no moves left, its being cut short and the AI's taking it; R3925000:
+ * and a loop stopped at the loop cap.
  */
 function isTurnEvent(
   event: GameEvent,
-): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" | "turnCutShort" | "autopilotEngaged" }> {
+): event is Extract<
+  GameEvent,
+  { type: "turnStarted" | "turnAutoEnded" | "turnCutShort" | "autopilotEngaged" | "loopCapped" }
+> {
   return (
     event.type === "turnStarted" ||
     event.type === "turnAutoEnded" ||
     event.type === "turnCutShort" ||
-    event.type === "autopilotEngaged"
+    event.type === "autopilotEngaged" ||
+    event.type === "loopCapped"
   );
 }
 
@@ -152,6 +157,7 @@ function bannerText(
   // R3910000: the words the effects layer paints (fx/constants.ts), said by the board so they reach a player with the effects Off.
   if (lastType === "turnCutShort") return t("Turn cut short");
   if (lastType === "autopilotEngaged") return t("The AI takes the turn");
+  if (lastType === "loopCapped") return t("Loop stopped");
   // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
   // so its banner names the turn that is starting. R845: an extra turn's banner says so.
   if (startedFor !== undefined) {
@@ -928,8 +934,11 @@ export default function Game({
   // view's turn before the board catches up (#37).
   const burstTurn = burst.flatMap((entry) => entry.events).findLast(isTurnEvent);
   // The standing view's window spans several actions: an autopilotEngaged in it may be long past (an aura hands the turn
-  // back, R1844000), so only the burst's own entries say the AI plays now (R3910000).
-  const standingTurn = [...shown.events].reverse().find((event) => isTurnEvent(event) && event.type !== "autopilotEngaged");
+  // back, R1844000), so only the burst's own entries say the AI plays now (R3910000); a loopCapped likewise speaks only
+  // while its burst plays (R3925000), the turn's own words standing after it.
+  const standingTurn = [...shown.events]
+    .reverse()
+    .find((event) => isTurnEvent(event) && event.type !== "autopilotEngaged" && event.type !== "loopCapped");
   const lastTurnEvent = burstTurn ?? standingTurn;
   const banner = bannerText(
     shown,

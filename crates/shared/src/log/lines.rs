@@ -1142,6 +1142,11 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
         GameEvent::TurnCutShort { player, .. } => {
             cap(s("{whose} turn was cut short", vec![p("whose", whose(*player))]))
         }
+        // R3925000: the loop cap stopped the resolution loop of that seat's interaction.
+        GameEvent::LoopCapped { player } => cap(s(
+            "{whose} chain of effects was stopped at the loop cap",
+            vec![p("whose", whose(*player))],
+        )),
         // R1183002: the engine plays the rest of that turn; its actions log as their own lines.
         GameEvent::AutopilotEngaged { player, .. } => s(
             "The AI plays the rest of {whose} turn",

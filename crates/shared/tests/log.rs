@@ -959,6 +959,29 @@ fn r3857000_an_armor_gain_names_the_heros_side() {
     );
 }
 
+/// R3925000: the loop cap's line names the side whose interaction it stopped, in both languages.
+#[test]
+fn r3925000_a_capped_loop_names_its_side() {
+    let view = bare(json!([
+        { "type": "loopCapped", "player": "p1" },
+        { "type": "loopCapped", "player": "p2" },
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            "Your chain of effects was stopped at the loop cap".to_string(),
+            "The opponent's chain of effects was stopped at the loop cap".to_string(),
+        ]
+    );
+    assert_eq!(
+        said(&view, Locale::ZhCn),
+        [
+            "你的连锁效果在循环上限处停止了".to_string(),
+            "对手的连锁效果在循环上限处停止了".to_string()
+        ]
+    );
+}
+
 /// The ids of the keywords each line names, in order.
 fn keywords(view: &PlayerView, locale: Locale) -> Vec<Vec<String>> {
     call(view, locale)

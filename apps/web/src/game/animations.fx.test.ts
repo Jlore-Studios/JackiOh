@@ -156,6 +156,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   flickered: { type: "flickered", player: "p1", instanceId: "u2", defId: "core-004", row: "units", lane: 2 },
   drawLimited: { type: "drawLimited", player: "p2" },
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
+  loopCapped: { type: "loopCapped", player: "p2" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
@@ -304,6 +305,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   flickered: "void",
   drawLimited: "fizzle",
   turnCutShort: "banner",
+  loopCapped: "banner",
   marked: "brand",
   glitched: "banner",
   fengShui: "banner",
@@ -465,6 +467,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   flickered: ["jk-summon-scale", 300, "zone-<side>-<row>-<lane>"],
   drawLimited: ["jk-fatigue", 300, "library-<side>"],
   turnCutShort: ["jk-banner", 600, "turn-banner"],
+  loopCapped: ["jk-banner", 600, "turn-banner"],
   marked: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   glitched: ["jk-banner", 600, "turn-banner"],
   fengShui: ["jk-banner", 600, "turn-banner"],
@@ -498,11 +501,11 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 68 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) and the drawn line (R3554005) and the Armor gain (R3857000) carry fx with the listed recipe and the other 28 carry none", async () => {
+  it("B1 exactly the 69 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) and the drawn line (R3554005) and the Armor gain (R3857000) and the loop cap (R3925000) carry fx with the listed recipe and the other 28 carry none", async () => {
     const table = await freshTable();
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, table[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => table[t].fx !== undefined)).toHaveLength(68);
+    expect(GAME_EVENT_TYPES.filter((t) => table[t].fx !== undefined)).toHaveLength(69);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", async () => {

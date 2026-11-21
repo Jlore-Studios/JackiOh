@@ -85,7 +85,8 @@ pub fn make_context<'b>(
 /// on draw that killed its own hero), the rest of the list does not resolve (§2.5).
 pub fn apply_effects(effects: &[Effect], ctx: &mut EffectContext<'_>) {
     for effect in effects {
-        if ctx.state.result.is_some() {
+        // R3925000: nor once the loop cap has turned card text off.
+        if ctx.state.result.is_some() || crate::loop_cap::capped(&ctx.sink) {
             return;
         }
         (effect.apply)(ctx);

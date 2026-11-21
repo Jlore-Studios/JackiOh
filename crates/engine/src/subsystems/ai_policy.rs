@@ -195,12 +195,16 @@ pub fn play_out_turn(sink: &mut EngineSink<'_>, player: PlayerId, options: Polic
             };
         }
 
+        // R3925000: the AI's action is its seat's interaction, which its `reduce` counted; what follows
+        // here counts from after its events.
+        crate::loop_cap::begin_interaction(sink, Some((player, action.action_type())));
         adopt_state(sink, result.state);
         // §10.3: `reduce`'s own loop has run these, so they are reported (R168's window), never
         // offered to the traps and triggers again.
         let delivered = result.events.clone();
         sink.events.extend(result.events);
         crate::triggers::mark_dispatched(sink, &delivered);
+        crate::loop_cap::skip_nested(sink);
         actions.push(action);
     }
 

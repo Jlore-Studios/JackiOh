@@ -494,6 +494,8 @@ export const FX_TEXT = {
   diceRolled: "Dice roll",
   /** B5 E10: an effect ended the turn. */
   turnCutShort: "Turn cut short",
+  /** R3925000: a loop reached the loop cap and stopped. */
+  loopCapped: "Loop stopped",
   /** R1183002: the AI plays the rest of the turn (Meditative+ #18). */
   autopilot: "The AI takes the turn",
   /** R2785000: a quest's set-piece banner, the system's climax. */

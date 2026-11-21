@@ -191,6 +191,7 @@ pub mod layered_summons;
 pub mod layers;
 pub mod lethal;
 pub mod library_copies;
+pub mod loop_cap;
 pub mod mana;
 pub mod mana_before_play;
 pub mod marketplace;
