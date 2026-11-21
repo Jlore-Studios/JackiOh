@@ -16290,22 +16290,11 @@
     "what": "plan #4379 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-21T04:36:54Z",
+    "at": "2026-11-21T04:47:03Z",
     "notes": [
-      "delivered plan #4382 on claude-1 (run 44866421662): planned",
-      "delivered plan #4369 on muse (run 44866333929): planned",
-      "delivered plan #4378 on muse (run 44866293382): planned",
-      "delivered plan #4371 on muse (run 44866248494): planned",
-      "delivered plan #4363 on muse (run 44866210324): planned",
-      "delivered plan #4332 on agy (run 44853069137): failed",
-      "started build #4363 on muse (run 44867386149)",
-      "started build #4371 on muse (run 44867430387)",
-      "started build #4378 on muse (run 44867472402)",
-      "started plan #4332 on agy (run 44867514556)",
-      "started build #4369 on muse (run 44867556914)",
-      "started plan #4382 on claude-1 (run 44867599783)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered plan #4379 on claude-7 (run 44866373680): planned",
+      "started plan #4379 on claude-7 (run 44867877834)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17011,7 +17000,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T04:36:54Z",
+  "loop_tick": "2026-11-21T04:47:03Z",
   "machine_disk": {
     "issue": null,
     "reading": {
