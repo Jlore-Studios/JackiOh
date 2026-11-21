@@ -16896,17 +16896,8 @@
       }
     },
     "4402": {
-      "action": "plan",
-      "asks": [
-        "c:7066962780"
-      ],
-      "build_next": {
-        "from_run": "44936422142",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-21T19:00:23Z",
-        "until": "2026-11-21T19:30:23Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T19:00:13Z",
         "difficulty": "hard",
@@ -16925,10 +16916,9 @@
         "reason": "planned on opus",
         "trail": "\u2026\n- Bash: {\"command\": \"cat spec/pending/4382.md | head -30; echo ----; cat spec/README.md | grep -n -i -A25 \\\"Adding a ruling\\\" | head -60\", \"description\": \"Read a pending fragment and the ruling recipe\"}\n- Bash: {\"command\": \"ls spec/rulings/ | grep -c .; ls spec/rulings/R4402* 2>&1; grep -n -i \\\"A screen\\\\|## A\\\\b\\\\|^### A\\\" training/improve.md | head; \", \"description\": \"Check ruling number free and improve.\u2026\n- Bash: {\"command\": \"sed -n 100,175p training/improve.md\", \"description\": \"Read the A-screen protocol\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"bin:\\\\|bin:\\\\|--set\\\\|--games\\\\|--extend\\\\|improve-dev\\\" crates/tools/src/arena.rs | head -20\", \"description\": \"Check arena CLI flags for bin and set\"}\n- Bash: {\"command\": \"grep -n \\\"FEATURES_VERSION\\\" -B2 -A12 crates/ai/src/features.rs | head -50; ls training/\", \"description\": \"Read FEATURES_VERSION rule\"}\n- Bash: {\"command\": \"grep -n \\\"R4257000\\\\|R3937000\\\\|R4170000\\\" spec/09-architecture.md spec/06-keywords.md spec/04-*.md | cut -c1-400\", \"description\": \"Find walk ruling links in spec sections\"}\n- Bash: {\"command\": \"sed -n 168p spec/09-architecture.md | grep -o \\\"[^.]*R4257000[^.]*\\\\.[^.]*\\\\.\\\" | head -3; echo; sed -n 168p spec/09-architecture.md | grep -o \\\"face damage[^.]*\\\\.\\\" | head -5\", \"descri\u2026\n- Bash: {\"command\": \"grep -n \\\"^### \\\\|^## \\\" spec/04-*.md spec/06-keywords.md spec/09-architecture.md | head -40; ls spec/rulings/R0636.md spec/rulings/R3543003.md spec/rulings/R783000.md spec/rulings/R3937\u2026\n- Bash: {\"command\": \"sed -n 26,47p spec/04-combat.md | cut -c1-700\", \"description\": \"Read spec \\u00a74.3 combat resolution\"}\n- Bash: {\"command\": \"cat crates/ai/clippy.toml | grep -v \\\"^ *#\\\" | grep -i \\\"threshold\\\\|too\\\" ; cat clippy.toml 2>/dev/null | head; sed -n 1,60p crates/ai/src/evaluate.rs | grep -n \\\"use \\\\|IndexMap\\\\|Inde\u2026\n- Bash: {\"command\": \"sed -n 1255,1268p crates/ai/src/evaluate.rs; sed -n 25,60p crates/ai/src/evaluate.rs\", \"description\": \"Read soaked helper and imports\"}\n- Bash: {\"command\": \"grep -n \\\"summoned_turn\\\" crates/engine/src/testkit/scenario.rs | head -5; grep -n \\\"^| Ranged\\\" spec/06-keywords.md | cut -c1-500; rustc --version 2>/dev/null; cat rust-toolchain.toml\",\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor k,v in c.items():\\n if v.get('type')!='Unit': continue\\n b=v.get('base') or {}\\n kws=[x.get('kind')\u2026\n- Bash: {\"command\": \"grep -n \\\"shield\\\" crates/engine/src/state.rs | head -10; grep -rn \\\"fn pop_shield\\\\|shield_popped\\\\|divine_shield_spent\\\\|spent_shield\\\" crates/engine/src/*.rs | head -8\", \"description\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"DivineShield\\\" crates/engine/src/damage.rs | head -10\", \"description\": \"Find Divine Shield handling in damage\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn legal_actions\\\" crates/engine/src | head -3; grep -n \\\"pub use\\\\|pub mod\\\" crates/engine/src/testkit/mod.rs | head -20; grep -rln \\\"legal_actions(\\\" crates/ai/tests/ai/\u2026\n- Bash: {\"command\": \"grep -n \\\"pub enum Keyword\\\\b\\\" -A 50 crates/engine/src/state.rs crates/engine/src/*.rs 2>/dev/null | grep -E \\\"Windfury|Frenzy|Ranged|DivineShield|Taunt|Cleave|enum Keyword\\\" | head\", \"\u2026\n- Bash: {\"command\": \"grep -rn \\\"enum Keyword {\\\" crates/engine/src | head -2; f=$(grep -rln \\\"enum Keyword {\\\" crates/engine/src | head -1); grep -n \\\"enum Keyword {\\\" -A 60 $f | grep -E \\\"Windfury|Frenzy|Ra\u2026\n- Bash: {\"command\": \"sed -n 613,720p crates/engine/src/wire/catalog_types.rs | grep -nE \\\"Frenzy|Ranged|Rush|Poisonous\\\" \", \"description\": \"Check Frenzy and Ranged variants\"}\n- Bash: {\"command\": \"sed -n 613,820p crates/engine/src/wire/catalog_types.rs | grep -n \\\"Frenzy\\\" ; grep -n \\\"Frenzy\\\" crates/engine/src/wire/catalog_types.rs | head -5\", \"description\": \"Find Frenzy keyword \u2026\n- Bash: {\"command\": \"git show --stat 320e811c8e | head -30; git log --oneline -8 -- crates/ai/src/evaluate.rs\", \"description\": \"Inspect a sibling AI-read commit's files\"}\n- Bash: {\"command\": \"git show 320e811c8e -- crates/server/tests/api/daily.rs | head -60\", \"description\": \"See why a server test moved in the sibling commit\"}\n- Bash: {\"command\": \"git show --stat e1ebe4257f | head -30\", \"description\": \"Inspect the giga_cleave commit's files\"}\n- Bash: {\"command\": \"grep -n -A20 \\\"workspace.lints\\\" Cargo.toml | head -30; grep -n \\\"lints\\\" crates/ai/Cargo.toml\", \"description\": \"Check workspace clippy lint config\"}\n- Bash: {\"command\": \"grep -l \\\"cards:.*S #94\\\\b\\\" spec/rulings/*.md | head -3; grep -l \\\"cards:.*S+ #62\\\\b\\\" spec/rulings/*.md | head -3\", \"description\": \"Confirm card reference format in rulings\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn lasting_text_dormant\\\" -A 15 crates/engine/src/preview.rs\", \"description\": \"Check lasting_text_dormant for face-up backrow cards\"}\n- Bash: {\"command\": \"grep -n \\\"ready_gap\\\\|pub use\\\" crates/ai/src/lib.rs | head -20; grep -rn \\\"ready_gap(\\\" crates/ai/tests/ai/*.rs | head -3\", \"description\": \"Check ready_gap is exported to tests\"}\n- Bash: {\"command\": \"sed -n 1696,1706p crates/ai/src/evaluate.rs; sed -n 1826,1834p crates/ai/src/evaluate.rs\", \"description\": \"Recheck exact lines for anchors\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4402/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Rule line 2 (the AI): it changes the evaluation's static Taunt walk in\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count words in the draft plan\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4402/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Rule line 2 (the AI): it changes the evaluation's static Taunt walk in\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount draft words\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2 (the AI): it changes the evaluation's static Taunt walk in crates/ai/src/evaluate.rs, which feeds face_threat, ready_gap, wall decisions and the Duos pool loss\"} --> ## Goal The AI's static Taunt walk (`soak_past_taunts`, `crates/ai/src/evaluate.\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-21T18:36:01Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -16941,12 +16931,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-21T18:03:30Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44936422142",
+      "run_id": "pending:3dbb7522-1795287659",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T18:36:01Z",
+      "started_at": "2026-11-21T19:01:21Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7066962780"
+      ]
     },
     "4403": {
       "action": "build",
@@ -17064,9 +17056,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T18:45:19Z",
+    "at": "2026-11-21T19:01:21Z",
     "url": "",
-    "what": "build #4390 on claude-4"
+    "what": "build #4402 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-21T18:52:13Z",
