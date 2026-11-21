@@ -81,7 +81,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3569002_both_boards_fuse_into_an_alnilam() {
+        fn r3569002_r4353003_both_boards_fuse_into_an_alnilam_its_indestructible_refusing_nothing() {
             let mut s = game(
                 "supernova-base",
                 false,
@@ -123,7 +123,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3569002_radiant_supernova_makes_a_radiant_alnilam() {
+        fn r3569002_r4353003_radiant_supernova_makes_a_radiant_alnilam() {
             let mut s = game("supernova-radiant", true, json!([SMALL]), json!([MEDIUM]));
             s.play(ID, json!({}));
             assert!(units_of(&s, P2).is_empty());

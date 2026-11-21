@@ -847,11 +847,13 @@ pub fn fuse_board_into(args: FuseBoardIntoArgs) -> Effect {
         }
         let mut fused = vec![kept.clone()];
         fused.extend(ingredients);
+        // R4353003: the card just summoned takes the board in though it is an Indestructible Unit.
         fuse(
             ctx,
             FuseArgs {
                 ingredients: fused,
                 target: Some(kept),
+                fresh: Some(true),
                 ..FuseArgs::default()
             },
         );
