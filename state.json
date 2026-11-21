@@ -17541,6 +17541,8 @@
       }
     },
     "4415": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T18:34:19Z",
@@ -17554,8 +17556,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; git status --short | head; grep -n \\\"CHALLENGES_PER_HOUR\\\" crates/server/src/config.rs crates/server/src/social/mod.rs\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/social/shares.rs\", \"limit\": 130}\n- Bash: {\"command\": \"cd crates/server; sed -n 1370,1380p src/config.rs; sed -n 36,80p src/social/mod.rs; sed -n 200,220p src/social/friends.rs; grep -n \\\"shares_put\\\" -B3 -A22 src/db/pg.rs | head -50; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server; sed -n 22,27p src/social/friends.rs; grep -n \\\"rows_affected\\\" src/db/pg.rs | head -3\"}\n- said: Now the edits.\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ndef sub(path, old, new):\\n s=open(path).read()\\n assert s.count(old)==1,(path,old)\\n open(path,'w').write(s.replace(old,new))\\nsub('src/config.rs','pub cons\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(path, old, new):\\n s=open(path).read()\\n assert s.count(old)==1,(path,old)\\n open(path,'w').write(s.replace(old,new))\\nsub('src/db/pg.rs',''' .bind(share.creat\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(path, old, new):\\n s=open(path).read()\\n assert s.count(old)==1,(path,old)\\n open(path,'w').write(s.replace(old,new))\\np='spec/09-architecture.md'\\nsub(p,\\\"and\u2026\n- Bash: {\"command\": \"cd crates/server/tests; sed -n 130,225p api/shares.rs; sed -n 640,700p api/shares.rs; grep -n \\\"pub async fn advance\\\\|pub async fn feed\\\" -A12 support/store.rs; sed -n 270,310p api/chal\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server/tests; python3 - <<'EOF'\\np='api/shares.rs'\\ns=open(p).read()\\ns=s.replace(\\\"use jackioh_server::config::SHARED_REPLAYS_LIST_MAX;\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server/tests; grep -n \\\"shares_remove\\\" store/contract.rs | head -3; python3 - <<'EOF'\\np='store/contract.rs'\\ns=open(p).read()\\nanchor=\\\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server r4391000 2>&1 | tail -15; cargo test -p jackioh-server --test server_store r4391000 2>&1 | tail -8; git status --short\", \"timeout\": 600000}\n- said: The feed holds friend-request rows from befriending; my test's assumption was wrong. I'll count only `replayShared` rows.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/shares.rs'\\ns=open(p).read()\\nold=''' assert_eq!(first[\\\"notifications\\\"].as_array().map(Vec::len), Some(1), \\\"{first}\\\");\\n'''\\nnew=''' ass\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server r4391000_a_share_already 2>&1 | grep -B2 -A6 panicked | cut -c1-300\", \"timeout\": 600000}\n- Bash: {\"command\": \"sed -n 795,802p crates/server/tests/api/shares.rs\"}\n- said: cargo fmt had reformatted it, so my replacement missed.\n- bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/shares.rs'\\ns=open(p).read()\\nold=''' assert_eq!(\\n first[\\\"notifications\\\"].as_array().map(Vec::len),\\n Some(1),\\n \\\"{first}\\\"\\n );\\n'''\\na\u2026\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/shares.rs'\\ns=open(p).read()\\nold=''' assert_eq!(\\n first[\\\"notifications\\\"].as_array().map(Vec::len),\\n Some(1),\\n \\\"{first}\\\"\\n );\\n'''\\na\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server_store --test export_config --test export_cosmetics 2>&1 | grep -E \\\"test result|FAILED\\\"\", \"timeout\": 600000}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: replay shares count against an hourly limit, and re-sharing a replay already shared tells the friend nothing new\"} --> Replay shares now have an hourly cap, and sharing a replay that is already shared sends the friend nothing new. I followed the plan st\u2026"
       },
       "issue": 4391,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T19:41:46Z",
         "from_run": "44936264401",
         "gates": [
           {
@@ -17647,7 +17652,11 @@
         "source": "build",
         "until": "2026-11-21T20:10:42Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-21T19:40:42Z",
+      "run_id": "pending:59edbb19-1795290081",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17666,6 +17675,9 @@
         "provider": "claude-1",
         "run": "44936264401"
       },
+      "started_at": "2026-11-21T19:41:46Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17679,9 +17691,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T19:32:39Z",
+    "at": "2026-11-21T19:41:46Z",
     "url": "",
-    "what": "build #4410 on claude-8"
+    "what": "review #4415 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-21T19:27:35Z",
