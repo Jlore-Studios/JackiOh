@@ -16152,6 +16152,14 @@
       "taken_asks": [
         "c:7057254416"
       ]
+    },
+    "4385": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-21T04:42:03Z",
+      "issue": 4363,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
