@@ -17397,6 +17397,8 @@
       }
     },
     "4414": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T18:19:06Z",
@@ -17410,8 +17412,11 @@
         "trail": "- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4392/2af28e56-a8d4-4759-a7b4-0640827a0af6/tasks/bn94r6aw8.output | head -150; pkill -f \\\"pgrep\\\" ; true\"}\n- tool error: Exit code 144 [exited with code 0]\n- Bash: {\"command\": \"pkill -f \\\"while pgrep\\\" ; time cargo test -p jackioh-shared --features jackioh-engine/testkit --test host_fuzz 2>&1 | tail -60\", \"timeout\": 590000}\n- tool error: Exit code 144\n- Bash: {\"command\": \"(cargo test -p jackioh-shared --features jackioh-engine/testkit --test host_fuzz > /tmp/hf.log 2>&1; echo done >> /tmp/hf.log) &\\nsleep 1; echo started\", \"run_in_background\": true}\n- Bash: {\"command\": \"until grep -q '^done' /tmp/hf.log 2>/dev/null; do sleep 5; done; tail -80 /tmp/hf.log\", \"timeout\": 590000}\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features jackioh-engine/testkit --test host_fuzz survives -- --nocapture 2>&1 | grep -E \\\"host fuzz|test \\\"\", \"timeout\": 300000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/tests/host_fuzz.rs'\\ns=open(p).read()\\ns=s.replace(''' fn count_end(&mut self) {\\n self.endings += 1;''',''' fn count_end(&mut self) {\\n eprintln!(\\\"D\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/tests/host_fuzz.rs'\\ns=open(p).read()\\ns=s.replace(''' eprintln!(\\\"DEBUG end step {} after {}\\\", self.steps, self.last_event);\\n''','')\\ns=s.replace('\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/tests/host_fuzz.rs'\\ns=open(p).read()\\ns=s.replace(''' fn count_end(&mut self) {\\n self.endings += 1;''',''' fn count_end(&mut self) {\\n eprintln!(\\\"D\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/tests/host_fuzz.rs'\\ns=open(p).read()\\ns=s.replace(''' eprintln!(\\\"DEBUG end step {} rows {} after {}\\\", self.steps, self.store.rows.len(), self.last_\u2026\n- Bash: {\"command\": \"cd crates/shared; wc -l tests/host_fuzz.rs; grep -c \\\"^impl Rig for\\\" tests/host_fuzz.rs; grep -n \\\"^fn \\\\|^impl\\\\|^struct\\\\|^trait\\\" tests/host_fuzz.rs | head -80\"}\n- Bash: {\"command\": \"cd crates/shared; sed -n 685,700p tests/host_fuzz.rs | cat -A | cut -c1-80; git status --short\"}\n- Bash: {\"command\": \"grep -c \\\"fn drive\\\" tests/host_fuzz.rs; grep -n \\\"fn drive\\\\|fn restart\\\\|fn free_step\\\" tests/host_fuzz.rs; awk 'NF==0' tests/host_fuzz.rs | wc -l\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4392 && python3 - <<'EOF'\\np='crates/shared/tests/host_fuzz.rs'\\ns=open(p).read()\\nfor T,H in (('Duel','hash_state'),('Duos','duos_hash')):\\n ev = 'D\u2026\n- Bash: {\"command\": \"(cargo test -p jackioh-shared --features jackioh-engine/testkit --test host_fuzz daily -- --ignored --nocapture > /tmp/hf_daily.log 2>&1; echo done >> /tmp/hf_daily.log) > /dev/null 2>&1\u2026\n- Bash: {\"command\": \"until grep -q '^done' /tmp/hf_daily.log 2>/dev/null; do sleep 5; done; grep -E \\\"host fuzz|test |panicked|error\\\" -A3 /tmp/hf_daily.log | cut -c1-900\", \"timeout\": 590000}\n- Bash: {\"command\": \"sed -i 's/^const HOST_FUZZ_SEEDS: u64 = 8;/const HOST_FUZZ_SEEDS: u64 = 16;/' crates/shared/tests/host_fuzz.rs && cargo test -p jackioh-shared --features jackioh-engine/testkit --test ho\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/tests/host_fuzz.rs'\\ns=open(p).read()\\na=s.index('/// What each machine\\\\'s pull-request run must reach')\\nb=s.index('fn play_many<R: Rig>')\\nnew='''/\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/tests/host_fuzz.rs'\\ns=open(p).read()\\ns=s.replace(''' let met = Coverage {\\n matches: HOST_FUZZ_SEEDS,\\n ..Coverage::default()\\n };\\n assert_eq!(chec\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings 2>&1 | tail -3; cargo fmt --check && echo fmt-ok; time cargo test -p jackioh-shared --featur\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings 2>&1 | grep -E \\\"^.\\\\[1m.\\\\[9[12]m(error|warning)\\\" -A14 | head -120\", \"timeout\": 590000}\n- Bash: {\"command\": \"sed -i 's/self\\\\.steps % HOST_FUZZ_FULL_FOLD_EVERY == 0/self.steps.is_multiple_of(HOST_FUZZ_FULL_FOLD_EVERY)/; s/n % HOST_FUZZ_BOT_EVERY == 0/n.is_multiple_of(HOST_FUZZ_BOT_EVERY)/; s/hi\u2026\n- Bash: {\"command\": \"(cargo jackioh spec check > /tmp/spec.log 2>&1; echo done >> /tmp/spec.log) >/dev/null 2>&1 &\\necho bg\", \"run_in_background\": true}\n- said: Meanwhile, the README line.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/README.md'\\ns=open(p).read()\\nold=\\\"book) and `tests/host_boundary.rs`; the practice session's\\\"\\nassert old in s\\nnew=\\\"book) and `tests/host_boundar\u2026\n- Bash: {\"command\": \"tail -5 /tmp/spec.log; grep -n \\\"the_duel_host\\\\|CLAUDE.md rule 4\\\\|rust-test.toml\\\" -r .github/ci/rust-test.toml | head; cat .github/ci/rust-test.toml | head -30\"}\n- Bash: {\"command\": \"grep -n \\\"shared\\\" .github/ci/rust-test.toml | head -20; grep -n \\\"jackioh-shared\\\\|\\\\[\\\\[test\\\\]\\\\]\\\" -n crates/shared/Cargo.toml | head\"}\n- Bash: {\"command\": \"grep -n \\\"tools, wasm\\\" -B3 -A22 .github/ci/rust-test.toml | head -70\"}\n- Bash: {\"command\": \"until grep -q '^done' /tmp/spec.log; do sleep 5; done; tail -8 /tmp/spec.log\", \"timeout\": 590000}\n- Bash: {\"command\": \"grep -n \\\"tests/\\\\|\\\\.rs\\\\\\\"\\\" crates/tools/tests/acceptance.rs | grep -i \\\"shared\\\\|purity\\\\|walk\\\" | head -10; grep -n \\\"fn rule_4\\\\|RULE_4_STATICS\\\\|fn .*pure\\\" crates/tools/tests/acc\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; cargo test -p jackioh-shared --features jackioh-engine/testkit 2>&1 | grep -E \\\"test result|FAILED|failed|panicked\\\" | head -40\", \"timeout\": 590000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Goal')\\ns='''## State\\n\\n- DONE: `crates/shared/tests/host_fuzz.rs` (both machines, 5 invariants + Panicked, hand-br\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the online match host is fuzzed with random disconnects, clock expiries, failed writes and restarts, and its log always rebuilds the game it holds\"} --> ## What changed I added `crates/shared/tests/host_fuzz.rs`, which plays `DuelHost` and `DuosHost` on\u2026"
       },
       "issue": 4392,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T19:32:02Z",
         "from_run": "44934862010",
         "gates": [
           {
@@ -17503,7 +17508,11 @@
         "source": "build",
         "until": "2026-11-21T20:00:21Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-21T19:30:21Z",
+      "run_id": "pending:cf7937c7-1795289499",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17522,6 +17531,9 @@
         "provider": "claude-8",
         "run": "44934862010"
       },
+      "started_at": "2026-11-21T19:32:02Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17535,9 +17547,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T19:31:25Z",
+    "at": "2026-11-21T19:32:02Z",
     "url": "",
-    "what": "review #4413 on agy"
+    "what": "review #4414 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-21T19:18:24Z",
