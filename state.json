@@ -14929,7 +14929,7 @@
       "started_at": "2026-11-21T20:43:27Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "4419": {
       "action": "review",
