@@ -16447,17 +16447,8 @@
       "suggestion": true
     },
     "4392": {
-      "action": "plan",
-      "asks": [
-        "c:7066991168"
-      ],
-      "build_next": {
-        "from_run": "44933784623",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-21T18:15:24Z",
-        "until": "2026-11-21T18:45:24Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T18:15:15Z",
         "difficulty": "medium",
@@ -16476,10 +16467,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd crates/shared && ls; ls src src/host tests; wc -l src/host/*.rs tests/*.rs; cat Cargo.toml clippy.toml; ls ../../.bot-plan.md 2>&1\"}\n- tool error: Exit code 2 Cargo.toml README.md build.rs clippy.toml cosmetics.json data quests.json src tests src: bots config.rs cosmetics.rs deck.rs economy face host lib.rs loadout.rs log notify.rs ranked serie\u2026\n- Bash: {\"command\": \"cd crates/shared && cat src/host/types.rs; cat src/host/mod.rs\"}\n- Bash: {\"command\": \"cd crates/shared && sed -n 1,200p src/host/duel.rs\"}\n- tool error: Exit code 1 /bin/bash: line 1: cd: crates/shared: No such file or directory\n- Bash: {\"command\": \"sed -n 1,260p src/host/duel.rs\"}\n- Bash: {\"command\": \"sed -n 260,420p src/host/duel.rs; grep -n \\\"pub fn\\\\|pub(crate) fn\\\" src/host/duel.rs | head -60\"}\n- Bash: {\"command\": \"sed -n 420,560p src/host/duel.rs; cat src/host/timer.rs | sed -n 1,162p\"}\n- Bash: {\"command\": \"cd tests && sed -n 1,260p duel.rs\"}\n- Bash: {\"command\": \"cd ../../..; grep -n \\\"fold\\\\|next_seq\\\\|acked\\\\|DuelSetup\\\\|finished\\\" crates/server/src/actor/match_actor.rs | head -60; grep -rn \\\"pub fn fold\\\\|pub fn duos_fold\\\\|pub fn hash_state\\\\\u2026\n- Bash: {\"command\": \"sed -n 120,175p crates/server/src/actor/match_actor.rs; sed -n 460,530p crates/server/src/actor/match_actor.rs; grep -n \\\"fold_args\\\" -A25 crates/engine/src/replay.rs | head -80; sed -n \u2026\n- Bash: {\"command\": \"cd crates/shared/tests; grep -n \\\"fold\\\\|hash_state\\\\|duos_hash\\\" duel.rs duos.rs | head -30; sed -n 760,800p ../../engine/src/replay.rs; grep -n \\\"pub use.*replay\\\\|duos_fold\\\\|pub use.\u2026\n- Bash: {\"command\": \"sed -n 1,140p duos.rs\"}\n- Bash: {\"command\": \"cd ../src/host; grep -n \\\"pub enum DuosHostEvent\\\" -B3 -A75 duos.rs; grep -n \\\"pub enum DuosHostOutput\\\" -A90 duos.rs | head -150\"}\n- Bash: {\"command\": \"sed -n 487,520p duos.rs; grep -n \\\"pub struct DuosAction\\\\b\\\" -A14 ../../../engine/src/wire/*.rs | head -30; grep -n \\\"pub fn \\\\|pub enum DuosTeamB\\\" -A0 duos.rs | head -60; sed -n 140,3\u2026\n- Bash: {\"command\": \"sed -n 40,92p duos.rs; sed -n 640,722p duos.rs; grep -n \\\"DuosSetup\\\\|duos_fold\\\\|next_seq\\\\|acked\\\\|DuosAck\\\" ../../../server/src/duos/registry.rs | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4392; grep -rn \\\"DuosSetup {\\\" crates/server/src | head; \"}\n- Bash: {\"command\": \"sed -n 270,350p crates/server/src/duos/actor.rs; grep -n \\\"fn rebuild\\\\|duos_fold\\\\|fn fold\\\" -B2 -A30 crates/server/src/duos/registry.rs | head -90\"}\n- Bash: {\"command\": \"grep -rn \\\"fn seat_of_logged\\\" -A15 crates/server/src | head -30; sed -n 4020,4030p /dev/null; ls spec/rulings | grep -E \\\"R4013|R776|R1253|R744\\\" ; grep -n \\\"legal_actions\\\\|pub fn duos\u2026\n- Bash: {\"command\": \"sed -n 140,185p .github/ci/rust-test.toml; sed -n 1,60p crates/shared/README.md | cut -c1-220; cat spec/rulings/R4013000.md | head -30; grep -n \\\"opt-level\\\" Cargo.toml\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct Action\\\\b\\\" -B3 -A10 crates/engine/src/wire/*.rs | head -30; grep -n \\\"pub fn legal_actions\\\\|pub fn view_for\\\\|pub fn hash_state\\\\|pub fn duos_hash\\\" crates/engine/\u2026\n- Bash: {\"command\": \"cd crates/shared/src/host; grep -n \\\"fn apply\\\\b\\\" -A120 duel.rs | head -230\"}\n- Bash: {\"command\": \"grep -n \\\"fn on_timer\\\" -A75 duel.rs | head -140; grep -n \\\"DuelOutput::Record\\\\|DuelOutput::Voided\\\\|DuelOutput::CeilingDraw\\\" duel.rs\"}\n- Bash: {\"command\": \"sed -n 1335,1440p duel.rs; grep -n \\\"fn on_result_recorded\\\" -A30 duel.rs | head -50; grep -n \\\"fn on_stop\\\" -A25 duel.rs\"}\n- Bash: {\"command\": \"sed -n 1,123p bot.rs | grep -v \\\"^\\\\s*//\\\" | head -90; grep -n \\\"pub enum BotChoice\\\" -B3 -A20 ../bots/decide.rs; grep -n \\\"BotSeat {\\\" -B2 -A8 ../../tests/duel.rs | head -40\"}\n- Bash: {\"command\": \"grep -rn \\\"pub struct BotChoice\\\" -B3 -A25 ../bots/decide.rs; grep -n \\\"Decided\\\" -B3 -A12 ../../tests/duel.rs | sed -n 1,50p\"}\n- Bash: {\"command\": \"cd ../..; grep -n -i \\\"one at a time\\\\|awaits\\\\|in order\\\\|outstanding\\\\|serial\\\" README.md | head; ls ../../spec/ | head -30; grep -n \\\"Fuzz\\\\|fuzz\\\" ../../spec/README.md | head -3; sed\u2026\n- Bash: {\"command\": \"sed -n 330,350p README.md | cut -c1-400; grep -n \\\"^## \\\" README.md | sed -n 1,40p; cat ../../spec/pending/*.md 2>/dev/null | head -5; ls ../../spec/pending | head; grep -n \\\"HOST_\\\\|^pu\u2026\n- Bash: {\"command\": \"cd ../engine/src; grep -n \\\"pub fn duos_create_recorded\\\" -B6 -A12 duos/state.rs; grep -n \\\"pub fn create_recorded_game\\\" -B8 -A10 *.rs | head -40; sed -n 766,800p ../../shared/README.md\u2026\n- Bash: {\"command\": \"cd ../../shared/src/host; grep -n \\\"pub enum DuosLetGo\\\" -B2 -A14 duos.rs; grep -n \\\"LetGo\\\" duos.rs | head -20; grep -n \\\"pub struct DuosDecide\\\" -A22 duos.rs; grep -n \\\"fn on_row_check\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4392/.bot-plan.md\", \"content\": \"# Draft (planner, #4392)\\nRead: host/{types,duel,duos,timer,bot}.rs, tests/duel.rs+duos.rs Table, server match_actor.r\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the work is one new test binary in crates/shared plus a README line, with no engine, AI, migration or cross-crate design change. A fix is made only if the fuzz finds a bug in crates/shared/src/host/, and the plan tells th\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-21T18:07:30Z",
       "owner_why": "it plans it",
@@ -16492,12 +16482,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-21T18:05:41Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44933784623",
+      "run_id": "pending:089e23c0-1795285125",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T18:07:30Z",
+      "started_at": "2026-11-21T18:19:06Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7066991168"
+      ]
     },
     "4393": {
       "action": "plan",
@@ -16892,9 +16884,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T18:18:31Z",
+    "at": "2026-11-21T18:19:06Z",
     "url": "",
-    "what": "build #4397 on muse"
+    "what": "build #4392 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-21T18:16:56Z",
