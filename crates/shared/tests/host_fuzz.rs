@@ -625,6 +625,7 @@ struct DuelRig {
     endings: usize,
     rows_at_end: Option<usize>,
     voided: bool,
+    ceiling: bool,
     panics: usize,
     rebuild_now: bool,
     diverged: bool,
@@ -761,6 +762,7 @@ impl DuelRig {
                 DuelOutput::CeilingDraw { .. } => {
                     self.count_end();
                     self.store.finished = true;
+                    self.ceiling = true;
                 }
                 DuelOutput::Voided { .. } => {
                     self.count_end();
@@ -1168,6 +1170,7 @@ impl Rig for DuelRig {
             endings: 0,
             rows_at_end: None,
             voided: false,
+            ceiling: false,
             panics: 0,
             rebuild_now: false,
             diverged: false,
@@ -1207,8 +1210,14 @@ impl Rig for DuelRig {
         self.check_all()
     }
 
+    /// Invariant 4's "over", read off the game itself, not off the outputs it is counted against: a result
+    /// in the game, a ceiling draw (R1253000, which leaves the game as it is) or a voided match. While a
+    /// write is outstanding the game is not yet the log's, so only an ending already seen counts.
     fn over(&self) -> bool {
-        self.store.finished || self.voided
+        if self.held.is_some() {
+            return self.endings > 0;
+        }
+        self.host.game().result.is_some() || self.ceiling || self.voided
     }
 
     fn gone(&self) -> bool {
@@ -1271,6 +1280,7 @@ struct DuosRig {
     draw: Draw,
     endings: usize,
     rows_at_end: Option<usize>,
+    ceiling: bool,
     panics: usize,
     rebuild_now: bool,
     diverged: bool,
@@ -1351,6 +1361,7 @@ impl DuosRig {
                 DuosHostOutput::CeilingDraw { .. } => {
                     self.count_end();
                     self.store.finished = true;
+                    self.ceiling = true;
                 }
                 DuosHostOutput::Panicked { .. } => self.panics += 1,
                 DuosHostOutput::LetGo {
@@ -1742,6 +1753,7 @@ impl Rig for DuosRig {
             draw: Draw::new(Machine::Duos, n),
             endings: 0,
             rows_at_end: None,
+            ceiling: false,
             panics: 0,
             rebuild_now: false,
             diverged: false,
@@ -1780,8 +1792,14 @@ impl Rig for DuosRig {
         self.check_all()
     }
 
+    /// Invariant 4's "over", read off the game itself, not off the outputs it is counted against: a result
+    /// in the game or a ceiling draw (R1253000, which leaves the game as it is). While a write is outstanding
+    /// the game is not yet the log's, so only an ending already seen counts.
     fn over(&self) -> bool {
-        self.store.finished
+        if self.held.is_some() {
+            return self.endings > 0;
+        }
+        self.host.game().result.is_some() || self.ceiling
     }
 
     fn gone(&self) -> bool {
