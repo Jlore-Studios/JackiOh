@@ -3002,6 +3002,12 @@ impl Tx<'_> {
         dispatch!(self, shares_remove_between(x, y))
     }
 
+    /// R4390001: deletes every replay share whose match holds no action-log row (the retention purge
+    /// took it): `readable_share!`'s `exists` test, negated; answers how many.
+    pub async fn shares_purge_orphaned(&mut self) -> StoreResult<i64> {
+        dispatch!(self, shares_purge_orphaned())
+    }
+
     /// B52: who shared the finished match `match_id` with `friend` and may still be read through: each
     /// held a seat in it and is still `friend`'s friend, neither blocking the other. First shared
     /// first.
@@ -3250,6 +3256,12 @@ impl Tx<'_> {
     /// answers them, oldest first.
     pub async fn daily_invites_expire(&mut self, now: i64) -> StoreResult<Vec<DailyInviteRow>> {
         dispatch!(self, daily_invites_expire(now))
+    }
+
+    /// R4390000: deletes every daily invite, challenge or seek, whose `expires_at <= now`, whatever
+    /// its state; answers how many.
+    pub async fn daily_invites_purge(&mut self, now: i64) -> StoreResult<i64> {
+        dispatch!(self, daily_invites_purge(now))
     }
 
     // daily notices

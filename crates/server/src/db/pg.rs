@@ -7877,6 +7877,21 @@ pub async fn shares_remove_between(t: &mut PgTx<'_>, x: &str, y: &str) -> Result
     Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
 }
 
+/// R4390001: the shares whose match holds no action-log row, `readable_share!`'s `exists` test negated
+/// (the log's primary key, `(match_id, seq)`, serves the anti-join). No index, no migration: one row
+/// per share.
+pub async fn shares_purge_orphaned(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(
+        "delete from public.replay_shares s
+          where not exists (select 1 from public.match_actions a where a.match_id = s.match_id)",
+    )
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
 pub async fn shares_sharers(
     t: &mut PgTx<'_>,
     match_id: &str,
@@ -8456,6 +8471,19 @@ pub async fn daily_invites_expire(t: &mut PgTx<'_>, now: i64) -> Result<Vec<Dail
     .await
     .map_err(db_error)?;
     daily_invites_of(&rows)
+}
+
+/// R4390000: every invite lapsed by `now`, in any state. No index, no migration: the table holds
+/// about a week of invites once the first pass has run. (`expires_at` is a bigint, not a timestamp,
+/// so no `ts!`.)
+pub async fn daily_invites_purge(t: &mut PgTx<'_>, now: i64) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query("delete from public.daily_invites where expires_at <= $1::bigint")
+        .bind(now)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
 }
 
 // daily notices

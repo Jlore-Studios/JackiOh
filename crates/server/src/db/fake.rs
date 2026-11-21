@@ -4904,6 +4904,17 @@ pub fn shares_remove_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<i64
     Ok(gone as i64)
 }
 
+/// R4390001: a share survives only while its match holds an action-log row.
+pub fn shares_purge_orphaned(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
+    call(f, "shares.purgeOrphaned")?;
+    let tables = f.tables();
+    let logs = &tables.match_actions;
+    let gone = keep_only(&mut tables.replay_shares, |share| {
+        logs.iter().any(|row| row.match_id == share.match_id)
+    });
+    Ok(gone as i64)
+}
+
 pub fn shares_sharers(f: &mut FakeTx<'_>, match_id: &str, friend: &str) -> Result<Vec<String>, StoreError> {
     call(f, "shares.sharers")?;
     let tables: &FakeTables = f.tables();
@@ -5430,6 +5441,13 @@ pub fn daily_invites_expire(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<DailyInv
     }
     by_age(&mut expired);
     Ok(expired)
+}
+
+/// R4390000: every invite lapsed by `now`, in any state.
+pub fn daily_invites_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreError> {
+    call(f, "dailyInvites.purge")?;
+    let gone = keep_only(&mut f.tables().daily.invites, |row| row.expires_at > now);
+    Ok(gone as i64)
 }
 
 // daily notices
