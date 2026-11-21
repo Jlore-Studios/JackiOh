@@ -17236,7 +17236,11 @@
       "issue": 4393,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "agy",
+      "merge_owner_gave_up": {
+        "at": "2026-11-21T20:08:56Z",
+        "provider": "agy",
+        "sha": "da798b7984eb052942310b6d43cb98785f40bcb0"
+      },
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-21T19:29:25Z",
