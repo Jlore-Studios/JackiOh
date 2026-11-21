@@ -635,40 +635,109 @@ mod r1834001_the_cosmetics_group_holds_owned_ids_of_their_kinds {
     #[tokio::test]
     async fn r1834001_the_cosmetics_group_refuses_an_unowned_pick() {
         let f = setup().await;
-        // A per-card cosmetic owned on one card is no account-wide pick, and an account cosmetic
-        // the account does not hold is refused, as is one only another account holds.
+        // R4403000: a pick the account does not own is never stored, while the rest of the write
+        // merges. A per-card cosmetic owned on one card is no account-wide pick, and an account
+        // cosmetic the account does not hold is left out, as is one only another account holds.
         own(&f.app, &f.profile, Some("core-002"), "foil-glitter").await;
         own(&f.app, &f.other, None, "table-marble").await;
-        for (key, value) in [("foil", "foil-glitter"), ("table", "table-marble")] {
-            let (status, body) = put(
-                &f.app,
-                json!({ "groups": { "cosmetics": { "at": 1, "values": { key: value } } } }),
-                TOKEN,
-            )
-            .await;
-            assert_eq!(status, 400, "{key}: {body}");
-            assert_eq!(body["error"]["code"], "bad_request");
-            assert_eq!(
-                body["error"]["message"],
-                json!(format!(
-                    "\"cosmetics.{key}\" is a cosmetic this account does not own"
-                ))
-            );
-        }
-        assert!(stored(&f).await.is_empty());
-
-        // Once the account holds it, the same pick is kept.
-        own(&f.app, &f.profile, None, "table-marble").await;
-        let values = json!({ "table": "table-marble" });
+        let t = wall_ms() - 60_000;
         let answer = settings_of(
             put(
                 &f.app,
-                json!({ "groups": { "cosmetics": { "at": 2, "values": values.clone() } } }),
+                json!({ "groups": {
+                    "cosmetics": { "at": t, "values": { "foil": "foil-glitter", "table": "table-marble" } },
+                    "audio": { "at": t, "values": { "master": 0.5 } },
+                } }),
                 TOKEN,
             )
             .await,
         );
-        assert_eq!(answer["groups"]["cosmetics"]["values"], values);
+        assert_eq!(answer["groups"]["audio"]["values"], json!({ "master": 0.5 }));
+        let values = &answer["groups"]["cosmetics"]["values"];
+        assert!(values.get("foil").is_none(), "{values}");
+        assert!(values.get("table").is_none(), "{values}");
+
+        // Once the account holds the table, the same write keeps it, while the foil it still
+        // does not own is never stored.
+        own(&f.app, &f.profile, None, "table-marble").await;
+        let answer = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": {
+                    "cosmetics": { "at": t + 1000, "values": { "foil": "foil-glitter", "table": "table-marble" } },
+                } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(
+            answer["groups"]["cosmetics"]["values"],
+            json!({ "table": "table-marble" })
+        );
+    }
+
+    #[tokio::test]
+    async fn r4403000_an_unowned_table_is_left_out_while_the_rest_of_the_write_merges() {
+        let f = setup().await;
+        // `card-back-starfield` is a starter every account owns; `table-marble` is owned by none.
+        let t = wall_ms() - 60_000;
+        let (status, body) = put(
+            &f.app,
+            json!({ "groups": {
+                "cosmetics": { "at": t, "values": { "table": "table-marble", "cardBack": "card-back-starfield" } },
+                "audio": { "at": t, "values": { "master": 0.5 } },
+            } }),
+            TOKEN,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(
+            body["settings"]["groups"]["audio"]["values"],
+            json!({ "master": 0.5 })
+        );
+        assert_eq!(
+            body["settings"]["groups"]["cosmetics"]["values"],
+            json!({ "cardBack": "card-back-starfield" })
+        );
+        // The follow-up read agrees: no `table` is stored.
+        let held = settings_of(get(&f.app, TOKEN).await);
+        assert_eq!(
+            held["groups"]["cosmetics"]["values"],
+            json!({ "cardBack": "card-back-starfield" })
+        );
+        assert!(
+            held["groups"]["cosmetics"]["values"].get("table").is_none(),
+            "{held}"
+        );
+    }
+
+    #[tokio::test]
+    async fn r4403000_a_later_unowned_pick_keeps_the_stored_pick_at_the_new_time() {
+        let f = setup().await;
+        own(&f.app, &f.profile, None, "table-marble").await;
+        let t = wall_ms() - 60_000;
+        settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "cosmetics": { "at": t, "values": { "table": "table-marble" } } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        // A later write naming a table of its kind the account does not own keeps the stored
+        // one, with the group at the new time.
+        let answer = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "cosmetics": { "at": t + 1000, "values": { "table": "table-chessboard" } } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(
+            answer["groups"]["cosmetics"],
+            json!({ "at": t + 1000, "values": { "table": "table-marble" } })
+        );
     }
 
     #[tokio::test]
