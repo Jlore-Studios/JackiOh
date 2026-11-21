@@ -16446,6 +16446,13 @@
     "4391": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T18:28:20Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "None of rule 1\u20135 holds: only crates/server and docs change (about ten files, no migration, no engine/AI, no cross-crate contract), so it is medium."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
