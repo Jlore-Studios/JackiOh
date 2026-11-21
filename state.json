@@ -15191,6 +15191,8 @@
       }
     },
     "4360": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-20T23:28:45Z",
@@ -15204,8 +15206,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the dungeon run's map layer is fuzzed with refusal and invariant checks\"} -->\n- ## What changed\n- The run layer gets the invariant monitor and map fuzz test from the plan, confined to `crates/run`:\n- - [`crates/run/src/invariants.rs`](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4247/crates/run/src/invariants.rs) (new): `check_run_invariants` \u2014 `walk_tests`' bounds checker moved here verbatim, plus two new clauses: curses distinct (`curse {id} twice`, per R4067000) and every `run_sco\u2026\n- - [`crates/run/src/map_fuzz_tests.rs`](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4247/crates/run/src/map_fuzz_tests.rs) (new): `illegal_action` (one must-refuse action per phase: off-path `Go`, wrong-phase `Leave`, out-of-turn pack/take, outsider `Keep`, past-the-end extraction/buy/re\u2026\n- - `config.rs`: `MAP_FUZZ_SEEDS = 10`, `MAP_FUZZ_DAILY_SEEDS = 300`. `lib.rs`: module lines. `walk_tests.rs`: uses the shared checker; `free_action`/`random_action` shared as `pub(crate)`. `README.md`: one clause.\n- - No rules, card, or spec behavior change; nothing outside `crates/run` touched.\n- ## How tested\n- - `cargo test -p jackioh-run`: 113 passed, 0 failed, 1 ignored (~38s).\n- - `cargo test -p jackioh-run invariants`: 2 passed. Fast fuzz test passes (~22s); daily sweep passes under `-- --ignored` (600 drives, ~410s).\n- - `cargo fmt --check` and `cargo clippy -p jackioh-run --all-targets -- -D warnings`: clean, no new allows.\n- - All five acceptance mutants verified one at a time, each reverted after: uncapped `keep_count` \u2192 `deck holds 62 past 60`; unchecked `spend_coins` \u2192 `coins -33`; unfiltered `random_artifact` \u2192 `artifact temp-greedy twice`; Ok-on-Err `run_reduce` \u2192 `no refusal probed`; fold-skipping-last \u2192 per-step\u2026\n- - `cargo jackioh spec check` not run, per plan: no ruling added; the only R-ids cited (R2701000, R4067000) already have notes and were already cited in code.\n- ## Decisions and departures from the plan\n- - `mod invariants` is `#[cfg(test)]`, not unconditional: the plan's unconditional line fails the clippy `-D warnings` dead-code gate (only test code calls the helper), and adding `allow` is forbidden. No behavior difference.\n- - The fast test's catalog leg walks a curated seed list (`MAP_FUZZ_CATALOG_SEEDS = [19, 50, 65, 86, 100, 114, 119, 125, 149, 153]`) instead of `0..10`. Measured cause: with the deck cap commented out only ~1 catalog seed in 14 overfills (22/300, all `deck holds 61+ past 60`); the placeholder pool o\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4247 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4247/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4247,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T00:41:21Z",
         "from_run": "44837081444",
         "gates": [
           {
@@ -15264,8 +15269,15 @@
         "source": "build",
         "until": "2026-11-21T01:09:42Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-21T00:39:42Z",
+      "run_id": "pending:3b79c82d-1795221654",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-21T00:41:21Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15279,9 +15291,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T00:28:48Z",
+    "at": "2026-11-21T00:41:21Z",
     "url": "",
-    "what": "revise #4357 on claude-4"
+    "what": "review #4360 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T00:19:27Z",
