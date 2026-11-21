@@ -17,7 +17,8 @@
 //!  - a spend's idempotency key and kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written (R2124000).
 //!
 //! In Postgres it is one call to `app.purge_expired_rows` (migration 0013, with 0029's third cutoff
-//! and 0041's fourth).
+//! and 0041's fourth). A practice seed is a step of its own, after the sweep of unsettled claims: every
+//! account's lapsed unclaimed or settled seeds (`api::practice::purge_lapsed`, R4317001).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -95,6 +96,7 @@ pub async fn run_purge(app: Arc<App>) {
     let mut logging = FailingStreak::new("duos.logs.purge");
     let mut expiring = FailingStreak::new("idempotency.sweep");
     let mut settling = FailingStreak::new("practice.sweep");
+    let mut pruning = FailingStreak::new("practice.prune");
     loop {
         // R1044000: the records written before the totals are folded first, in transactions of their
         // own, so their detail can go on the purge's cutoff like any other's.
@@ -162,6 +164,13 @@ pub async fn run_purge(app: Arc<App>) {
                 json!({ "paid": swept.paid, "refused": swept.refused }),
             ),
             Err(error) => log_warn("practice.sweep_failed", json!({ "message": error.to_string() })),
+        }
+        // R4317001, after the sweep (which settles a lapsed claim, making it deletable): every account's
+        // lapsed seeds, not only the ones whose account asks for another.
+        match pruning.track(crate::api::practice::purge_lapsed(&app).await) {
+            Ok(0) => {}
+            Ok(purged) => log_info("practice.pruned", json!({ "seeds": purged })),
+            Err(error) => log_warn("practice.prune_failed", json!({ "message": error.to_string() })),
         }
         tokio::time::sleep(Duration::from_secs(RETENTION_PURGE_INTERVAL_SECONDS as u64)).await;
     }

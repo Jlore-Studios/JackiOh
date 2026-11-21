@@ -67,7 +67,10 @@ levels' costs (DR14's B5 to B11). `src/map_tests.rs` deals `MAP_SEEDS` maps on e
 graph: its shape, its edges (none crossing, none wider than a column but a boss's fans), its reach (no
 orphan, no dead end) and every route's fights and tiles, by dynamic programming over the whole graph
 (R3583000, R3583001). `src/walk_tests.rs` walks whole seeded runs on both contents,
-checking bounds, fight setups, each won route's fights and replay. `cargo jackioh run-sim` (#3065) plays whole runs' fights to
+checking bounds, fight setups, each won route's fights and replay. `src/map_fuzz_tests.rs` walks
+random-policy map-only runs with stubbed fight reports, firing one illegal action per step and
+checking each refusal leaves the state untouched, each acceptance keeps the bounds and each log
+replays. `cargo jackioh run-sim` (#3065) plays whole runs' fights to
 the end with the AI. The `ts` feature writes the public types to
 `apps/web/src/wire/generated/`, which `apps/web/src/wire/run.ts` re-exports as `@jackioh/run`; commit
 any diff.

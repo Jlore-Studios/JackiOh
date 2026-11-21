@@ -1,10 +1,10 @@
 //! SPEC §8.12 S+ #65 Thorium Wall, a card of the Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
-//! 0/8 embiggen 0/32  
+//! 0/10 embiggen 0/40 (0/8 embiggen 0/32 until issue #4353)  
 //! **Can’t attack**  
 //! **Can’t defend**  
 //! **Embiggen: GIGA**  
 //! \~\~\~  
-//! 0/16 embiggen 0/64  
+//! 0/20 embiggen 0/80 (0/16 embiggen 0/64 until issue #4353)  
 //! **Can’t attack**  
 //! **Can’t defend**  
 //! **Armor 2**  
@@ -23,7 +23,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-065";
 
-/// "Embiggened (4): GIGA, 0/32": the embiggened stats are this many times the face.
+/// "Embiggened (4): GIGA, 0/40": the embiggened stats are this many times the face.
 pub const EMBIGGENED_SCALE: i32 = 4;
 
 /// R3555001: the Walls' shared text. Embiggened, the card is GIGA at `EMBIGGENED_SCALE` times its printed
@@ -195,13 +195,13 @@ mod tests {
     }
 
     #[test]
-    fn r3555001_normal_it_fills_one_zone_at_0_8() {
+    fn r3555001_normal_it_fills_one_zone_at_0_10() {
         for radiant in [false, true] {
             let mut s = holding(radiant, &format!("s65-normal-{radiant}"));
             assert_eq!(offered_lanes(&s, false), vec![1, 2, 3, 4, 5], "radiant {radiant}");
             s.play(ID, json!({ "zone": 1 }));
             assert_eq!(s.card(ID).giga, None, "radiant {radiant}: no GIGA stamp");
-            let stats = if radiant { (0, 16) } else { (0, 8) };
+            let stats = if radiant { (0, 20) } else { (0, 10) };
             s.expect_stats(ID, json!({ "attack": stats.0, "maxHealth": stats.1 }));
             assert!(
                 is_empty(s.state(), ZoneSlot { player: P1, row: Row::Units, lane: 2 }),
@@ -211,7 +211,7 @@ mod tests {
     }
 
     #[test]
-    fn r3555001_embiggened_it_is_giga_at_0_32() {
+    fn r3555001_embiggened_it_is_giga_at_0_40() {
         for radiant in [false, true] {
             let mut s = holding(radiant, &format!("s65-embiggened-{radiant}"));
             assert_eq!(offered_lanes(&s, true), vec![1, 2, 3, 4], "radiant {radiant}");
@@ -223,7 +223,7 @@ mod tests {
                     "radiant {radiant}: {row} {lane} is filled"
                 );
             }
-            let health = if radiant { 64 } else { 32 };
+            let health = if radiant { 80 } else { 40 };
             s.expect_stats(ID, json!({ "attack": 0, "maxHealth": health }));
             if radiant {
                 assert_eq!(s.stats(ID).armor, 2);
@@ -232,7 +232,7 @@ mod tests {
     }
 
     #[test]
-    fn r3555001_a_vanilla_returns_it_to_0_8_and_keeps_its_size() {
+    fn r3555001_a_vanilla_returns_it_to_0_10_and_keeps_its_size() {
         let mut s = holding(false, "s65-vanilla");
         s.play(ID, json!({ "zone": 1, "embiggen": true }));
         assert_eq!(s.card(ID).giga, Some(true));
@@ -243,7 +243,7 @@ mod tests {
             P1,
         );
         // R115: back to the printed stats; R3546002: the stamped size stays.
-        s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 8 }));
+        s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 10 }));
         assert_eq!(s.card(ID).giga, Some(true));
         for (row, lane) in [(Row::Units, 1), (Row::Units, 2), (Row::Backrow, 1), (Row::Backrow, 2)] {
             assert!(
@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn r3935000_a_buff_counts_once() {
-        fixture::assert_a_buff_counts_once(ID, [8, 16]);
+        fixture::assert_a_buff_counts_once(ID, [10, 20]);
     }
 
     #[test]
@@ -268,7 +268,7 @@ mod tests {
         for radiant in [false, true] {
             let mut s = fixture::embiggened(ID, radiant, &format!("s65-nerf-{radiant}"));
             fixture::tune(&mut s, ID, json!({ "health": -4 }));
-            let health = if radiant { 60 } else { 28 };
+            let health = if radiant { 76 } else { 36 };
             s.expect_stats(ID, json!({ "attack": 0, "maxHealth": health }));
         }
     }
@@ -279,7 +279,7 @@ mod tests {
             let mut s = holding(radiant, &format!("s65-hand-{radiant}"));
             fixture::tune(&mut s, ID, json!({ "attack": 1, "health": 2 }));
             s.play(ID, json!({ "zone": 1, "embiggen": true }));
-            let health = if radiant { 66 } else { 34 };
+            let health = if radiant { 82 } else { 42 };
             s.expect_stats(ID, json!({ "attack": 1, "maxHealth": health }));
         }
     }

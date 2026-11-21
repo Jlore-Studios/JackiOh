@@ -1,8 +1,8 @@
-//! TG #11 Thwomp (SPEC §8.11 row TG 11; §4.4, R81, R90, R781001): (2) Spell, Common, a card of the
+//! TG #11 Thwomp (SPEC §8.11 row TG 11; §4.4, R81, R90, R4353001): (2) Spell, Common, a card of the
 //! held Training Grounds set (R1420, R2194000).
 //!   Base:    "Deal {damage} damage to a Unit." — 10.
 //!   Radiant: the same text — 100.
-//! C #12 Book of Blood without Lifesteal: target unit (not hero, R90; R781001 Immutable). Spell Damage adds (§4.4 step 0).
+//! C #12 Book of Blood without Lifesteal: target unit (not hero, R90; an Immutable one too, R4353001). Spell Damage adds (§4.4 step 0).
 
 use jackioh_engine::prelude::*;
 

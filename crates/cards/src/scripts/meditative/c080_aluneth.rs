@@ -231,7 +231,7 @@ mod tests {
             }
 
             #[test]
-            fn r781001_a_spell_cannot_target_it_and_a_destroy_of_every_permanent_leaves_it() {
+            fn r4353001_a_spell_may_target_it_and_its_destroy_and_a_destroy_of_every_permanent_leave_it() {
                 let mut s = crate::scenario(json!({
                     "seed": "aluneth-stays",
                     "active": "p2",
@@ -239,14 +239,14 @@ mod tests {
                     "p2": { "hand": [JAMMED, NETHER, FILLER], "library": [VANILLA, VANILLA], "mana": 10 },
                 }));
                 let aluneth = s.card(ID).id.clone();
-                // Immutable: a Spell can't target it in play (R781001)…
-                s.expect_refused(|s| {
-                    s.play(
-                        JAMMED,
-                        json!({ "targets": [{ "pick": "instance", "instanceId": aluneth }] }),
-                    )
-                });
-                // …and an effect on every permanent reaches it, which Indestructible survives.
+                // Immutable bars no aim (R4353001): Magic Jammed, a Spell, may target it in play, and
+                // Indestructible survives its destroy…
+                s.play(
+                    JAMMED,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": aluneth }] }),
+                );
+                s.expect_in_zone(ID, "field");
+                // …as it survives an effect on every permanent.
                 s.play(NETHER, json!({}));
                 s.expect_in_zone(ID, "field");
             }

@@ -1,13 +1,13 @@
-//! TG #34 Dino-size (SPEC §8.11 row TG 34; §6.3 Set stats, §10.4, R23, R78, R81, R781001, R1185002,
+//! TG #34 Dino-size (SPEC §8.11 row TG 34; §6.3 Set stats, §10.4, R23, R78, R81, R4353001, R1185002,
 //! R2198000): (3) Spell, Epic, a card of the held Training Grounds set (R1420, R2194000).
 //!   Base:    "Set a Unit's Attack and Health to 10/10."
 //!   Radiant: "Set a Unit's Attack and Health to 20/20."
 //!
 //! Engine: R2198000's `set_stats` on any Unit on either side (R81), M+ #21 Harmony Spirit's set
 //! (R1185002): layer 1 is 10/10, buffs and the stat half of its tuning go, damage healed, auras still
-//! add (§10.4); R78's reset takes it off as the card leaves the field. An Immutable Unit is never offered
-//! to a Spell (R781001), so never set (R23). The 10/10 is no param: which way is better hangs on whose
-//! Unit is picked (R1748003).
+//! add (§10.4); R78's reset takes it off as the card leaves the field. An Immutable Unit may be its target
+//! (R4353001) and is never set (R23). The 10/10 is no param: which way is better hangs on whose Unit is
+//! picked (R1748003).
 
 use jackioh_engine::prelude::*;
 
@@ -46,7 +46,7 @@ mod tests {
     const DINO: &str = "traininggrounds-034";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +2 Attack.
-    const PARAGON: &str = "stinkyscape-074"; // Paragon-X: Immutable
+    const MENACE: &str = "core-019"; // Midrange Menace: Immutable on its Radiant face.
 
     fn board(radiant: bool, mine: Value, my_backrow: Value, theirs: Value) -> Scenario {
         scenario(json!({
@@ -93,14 +93,15 @@ mod tests {
         }
 
         #[test]
-        fn an_immutable_unit_is_never_offered_so_unchanged() {
-            let s = board(false, json!([PARAGON, VANILLA]), json!([]), json!([]));
-            let (paragon, vanilla) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
-            let before = s.stats(&paragon);
+        fn r4353001_r23_an_immutable_unit_may_be_its_target_and_is_left_unchanged() {
+            let mut s = board(false, json!([{ "def": MENACE, "radiant": true }, VANILLA]), json!([]), json!([]));
+            let (menace, vanilla) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
+            let before = s.stats(&menace);
             let offered = s.play_targets(DINO);
-            assert!(!offered.contains(&Selection::Instance { instance_id: paragon.id.clone() }));
+            assert!(offered.contains(&Selection::Instance { instance_id: menace.id.clone() }));
             assert!(offered.contains(&Selection::Instance { instance_id: vanilla.id }));
-            assert_eq!(s.stats(&paragon), before);
+            s.play(DINO, pick::targets(pick::instance(&menace)));
+            assert_eq!(s.stats(&menace), before);
         }
 
         #[test]

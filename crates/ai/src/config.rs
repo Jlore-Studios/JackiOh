@@ -1027,8 +1027,10 @@ pub const AI_REPLY: AiReply = AiReply {
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
-    // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), which keeps nothing
-    // (training/improve.md, A screen); inconclusive (R4319000): 3 decided of 200 (won 3, lost 0).
+    // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), inconclusive (R4319000):
+    // 3 decided of 200 (won 3, lost 0). #4246's, on the reply as it stands since, 400 games on
+    // improve-dev against the control at baa7cdb93f, read 200-200, edge 0.0 (0.0 to 0.0), inconclusive
+    // (R4319000): 0 decided of 200, 21 diverged. Neither keeps it (training/improve.md, A screen).
     open_lethal: false,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean

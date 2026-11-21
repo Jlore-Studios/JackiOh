@@ -14,14 +14,14 @@ use crate::catalog::{
 use crate::damage::DamageTarget;
 use crate::enchantments::add_enchantment;
 use crate::faces::card_type_of;
-use crate::layers::{unit_has, unit_view};
+use crate::layers::unit_view;
 use crate::prelude::json_as;
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::temporary::is_temporary_card;
 use crate::wire::{
-    AttackHealth, CardDef, CardType, CostRange, Enchantment, GameEvent, Keyword, KeywordKind, OneOrMany,
-    PLAYER_IDS, PlayerId, Row, Tuning, Zone, ZoneName, opponent_of,
+    AttackHealth, CardDef, CardType, CostRange, Enchantment, GameEvent, Keyword, OneOrMany, PLAYER_IDS,
+    PlayerId, Row, Tuning, Zone, ZoneName, opponent_of,
 };
 use crate::zones::{
     LibraryPosition, MoveToZoneOptions, OffFieldZone, cease_to_exist, is_carried, move_to_zone, pile_at,
@@ -232,7 +232,7 @@ pub fn transform(args: TransformArgs) -> Effect {
 /// R23: Immutable blocks a Transform, which a Replace is on the field (§6.3). Off it the card is not
 /// rewritten but replaced, so R35 replaces an Immutable card too and a library keeps its count (§9.1).
 fn transformable(ctx: &EffectContext<'_>, old: &CardInstance) -> bool {
-    !(old.zone.z() == ZoneName::Field && unit_has(ctx.state, old, KeywordKind::Immutable))
+    !(old.zone.z() == ZoneName::Field && crate::layers::is_immutable(ctx.state, old))
 }
 
 /// Replace `old` with a new card of `def` where it is, and report it; `None` when the zone refuses it.
@@ -310,7 +310,7 @@ pub fn vanilla(args: TransformTarget) -> Effect {
         else {
             return;
         };
-        if unit_has(ctx.state, &card, KeywordKind::Immutable) {
+        if crate::layers::is_immutable(ctx.state, &card) {
             return;
         }
         if card.vanilla {
@@ -634,7 +634,7 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
         }
         for old in pile.iter().skip(1) {
             // R1839003: a Dormant card beneath the pile is reached by nothing, this Transform included.
-            if unit_has(ctx.state, old, KeywordKind::Immutable) || crate::slumber::is_slumbering(old) {
+            if crate::layers::is_immutable(ctx.state, old) || crate::slumber::is_slumbering(old) {
                 continue;
             }
             let mut copy = clone_of(ctx, &top, old.owner, &json_as(json!({ "of": { "of": "self" } })));

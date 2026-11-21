@@ -172,6 +172,13 @@ impl Tx<'_> {
     pub async fn notifications_purge(&mut self, before: i64) -> StoreResult<u64> {
         notifications_dispatch!(self, purge(before))
     }
+
+    /// R4348000: deletes every row whose recipient is one of `x`, `y` and whose actor is the
+    /// other, either way, read or not: how many. No third party's row is touched, and none with
+    /// no actor.
+    pub async fn notifications_delete_between(&mut self, x: &str, y: &str) -> StoreResult<u64> {
+        notifications_dispatch!(self, delete_between(x, y))
+    }
 }
 
 /// Migration 0093: a deleted profile takes the rows that tell it and the rows it is the actor of
@@ -383,6 +390,25 @@ mod pg {
             .await?;
         Ok(done.rows_affected())
     }
+
+    /// R4348000: the rows between the two accounts, either way; a row with no actor never
+    /// matches.
+    pub async fn delete_between(t: &mut PgTx<'_>, x: &str, y: &str) -> Result<u64, StoreError> {
+        run_as(t, None).await?;
+        if !is_uuid(x) || !is_uuid(y) {
+            return Ok(0);
+        }
+        let done = sqlx::query(
+            "delete from public.notifications
+              where (profile_id = $1::uuid and actor_id = $2::uuid)
+                 or (profile_id = $2::uuid and actor_id = $1::uuid)",
+        )
+        .bind(x)
+        .bind(y)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected())
+    }
 }
 
 mod fake {
@@ -526,6 +552,18 @@ mod fake {
         let tables = call(f, "notifications.purge")?;
         let held = tables.rows.len();
         tables.rows.retain(|row| row.created_at >= before);
+        Ok((held - tables.rows.len()) as u64)
+    }
+
+    /// R4348000: the rows between the two accounts, either way; a row with no actor never
+    /// matches.
+    pub fn delete_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<u64, StoreError> {
+        let tables = call(f, "notifications.deleteBetween")?;
+        let held = tables.rows.len();
+        tables.rows.retain(|row| {
+            !((row.profile_id == x && row.actor_id.as_deref() == Some(y))
+                || (row.profile_id == y && row.actor_id.as_deref() == Some(x)))
+        });
         Ok((held - tables.rows.len()) as u64)
     }
 }

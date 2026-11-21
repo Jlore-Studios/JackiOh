@@ -17,7 +17,7 @@ const FUSABLE: &str = "fusable";
 
 /// R23: a card a Fuse may keep is not Immutable.
 fn fusable(state: &GameState, card: &CardInstance) -> bool {
-    !unit_has(state, card, KeywordKind::Immutable)
+    !is_immutable(state, card)
 }
 
 /// R81: one card of the controller's own hand, declared with the activation.

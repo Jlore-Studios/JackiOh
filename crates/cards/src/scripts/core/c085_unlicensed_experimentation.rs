@@ -104,7 +104,7 @@ fn experimentation(on_all: bool) -> TrapTrigger {
             // R23: "Immutable permanents are never chosen" as the Fuse target.
             let target_ids: Vec<String> = matching_permanents(ctx, type_, &played)
                 .into_iter()
-                .filter(|card| !unit_has(ctx.state, card, KeywordKind::Immutable))
+                .filter(|card| !is_immutable(ctx.state, card))
                 .map(|card| card.id)
                 .collect();
 

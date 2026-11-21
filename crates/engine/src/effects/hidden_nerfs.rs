@@ -17,7 +17,7 @@ use crate::layers::card_keywords;
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, GameState, find_instance_mut};
-use crate::wire::{KeywordKind, TargetAim, ZoneName, has_keyword};
+use crate::wire::{TargetAim, ZoneName};
 
 use super::card_scope::{CardScopeOptions, cards_in_card_scope};
 use super::tune::{TuneArgs, degrade_as_played, named_card};
@@ -26,7 +26,7 @@ use super::tune::{TuneArgs, degrade_as_played, named_card};
 /// (R23, R386).
 fn can_hide(state: &GameState, card: &CardInstance) -> bool {
     matches!(card.zone.z(), ZoneName::Hand | ZoneName::Library)
-        && !has_keyword(&card_keywords(state, card), KeywordKind::Immutable)
+        && !crate::layers::immutable_by(state, card, &card_keywords(state, card))
 }
 
 /// R60, R129, R242: `random` different ids of the pool, kept in the pool's order — all of them, with

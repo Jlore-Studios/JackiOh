@@ -12,7 +12,8 @@
 //! - `replayShared`: a friend shared a replay (`social::shares`).
 //!
 //! A row replaces its recipient's unread row of the same kind, actor and subject, so a daily game's
-//! newer move never stacks; nobody is told of their own act, and a block either way writes nothing.
+//! newer move never stacks; nobody is told of their own act, and a block either way writes nothing
+//! and deletes the rows between the two, either way (R4348000).
 //! Each account keeps its newest `NOTIFICATIONS_KEEP` rows, and the daily sweep deletes rows older than
 //! `NOTIFICATIONS_KEEP_DAYS` (`daily::notify::sweep`).
 //!

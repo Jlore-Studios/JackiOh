@@ -55,7 +55,7 @@ mod tests {
     const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
     const ROCK: &str = "core-066"; // The Rock: Indestructible
     // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 8/8 since issue
-    // #3138, 10/10 from patch v0.3.10): a big body no Immutable keeps a Spell off (R781001).
+    // #3138, 10/10 from patch v0.3.10): a big body with no Immutable, which kept a Spell off until R4353001.
     const TEMPO: &str = "classicplus-026";
     const FILLER: &str = "core-005";
 

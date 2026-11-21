@@ -40,10 +40,10 @@ fn enemy_permanent() -> Value {
 
 /// R3996002, R23: whether there is a meal: 饕餮 is not Immutable and an enemy Unit stands that is not.
 fn has_meal(state: &GameState, me: &CardInstance, controller: PlayerId) -> bool {
-    !unit_has(state, me, KeywordKind::Immutable)
+    !is_immutable(state, me)
         && active_units_of(state, opponent_of(controller))
             .into_iter()
-            .any(|unit| !unit_has(state, unit, KeywordKind::Immutable))
+            .any(|unit| !is_immutable(state, unit))
 }
 
 /// R3996002: "Activate: Fuse a random enemy Unit into this[, then Freeze this][. Has an extra turn

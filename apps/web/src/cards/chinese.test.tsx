@@ -144,7 +144,8 @@ describe("R1301 a Chinese card in a match", () => {
   it("R1301 a Chinese card in play draws its Chinese name, text, type line and tags", () => {
     const root = draw(inPlay(card({ defId: "core-002", cost: 3, chinese: true })));
     expect(text(root, ".card-name")).toBe(zh("core-002").name);
-    expect(text(root, ".cf-text-base")).toBe(zh("core-002").base);
+    // Its {mana} prints the card's 1 (#4353), as each face fills its numbers (B3.4 rule 5).
+    expect(text(root, ".cf-text-base")).toBe(zh("core-002").base.replace("{mana}", "1"));
     expect(text(root, ".card-type")).toBe(CHINESE_TERMS.types.Unit);
     expect([...root.querySelectorAll(".cf-tag")].map((tag) => tag.textContent)).toEqual([CHINESE_TERMS.tags.Human]);
     // No English shows; the machine-read attributes keep the catalog's words.
@@ -153,7 +154,7 @@ describe("R1301 a Chinese card in a match", () => {
     expect(root.querySelector(".cf-tag")).toHaveAttribute("data-tag", "Human");
     // The Radiant face's gold marks are read off the two Chinese faces (R1302).
     const radiant = inPlay(card({ defId: "core-002", cost: 3, radiant: true, chinese: true }));
-    expect(radiant.text.full).toBe(zh("core-002").radiant);
+    expect(radiant.text.full).toBe(zh("core-002").radiant.replace("{mana}", "1"));
     expect(markedText(radiant.text.full, legacyText(radiant.text).marks)).toEqual(["所有"]);
   });
 
@@ -163,7 +164,7 @@ describe("R1301 a Chinese card in a match", () => {
       const root = draw(face);
       expect(face.chinese).toBeUndefined();
       expect(text(root, ".card-name")).toBe(def("core-002").name);
-      expect(text(root, ".cf-text-base")).toBe(def("core-002").base.text);
+      expect(text(root, ".cf-text-base")).toBe(def("core-002").base.text.replace("{mana}", "1"));
       expect(text(root, ".card-type")).toBe("Unit");
       expect(text(root, ".cf-tag")).toBe("Human");
       cleanup();

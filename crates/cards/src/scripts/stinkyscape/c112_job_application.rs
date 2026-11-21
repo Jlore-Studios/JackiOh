@@ -1,6 +1,6 @@
 //! SPEC §8.10 Stinkyscape 112 Job Application (§6.3 Quest stages, Hold beneath, Buff; §6.2 Death; §6.1
-//! Lucky; R81, R384, R1854000–R1854004, R1865000–R1865002). Field Spell, Quest, cost 1, Legendary, a card
-//! of the Stinkyscape set.
+//! Lucky; R81, R384, R1854000–R1854004, R1865000–R1865002). Field Spell, Quest, cost 0 (1 until issue
+//! #4353), Legendary, a card of the Stinkyscape set.
 //!   Base:    "Death: Resummon this at Stage 1.
 //!            Quest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your
 //!            resume. Reward: Hear back in 1 to 2 turns.
@@ -789,7 +789,7 @@ mod tests {
         assert_eq!(merit(SLIME), 0);
         assert_eq!(merit(VANILLA), 1);
         assert_eq!(merit(MENACE), 3);
-        assert_eq!(merit(SILAS), 7, "Legendary is 3, and its cost 4");
+        assert_eq!(merit(SILAS), 7, "Legendary is 3, and its cost (6) counts as MAX_MANA, 4");
         let mut radiant = in_hand(&s, VANILLA);
         radiant.radiant = true;
         assert_eq!(merit_of(s.state(), &radiant), 1 + RADIANT_MERIT);

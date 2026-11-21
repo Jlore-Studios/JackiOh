@@ -782,6 +782,11 @@ pub enum ModifierKind {
     UnitsHaveKeyword {
         keyword: Keyword,
     },
+    // ---- Stinkyscape+ Balance Changes V (issue #4353) ----
+    /// R4353020 (Stinkyscape+ #79 A Glimpse into the Endless Sea, "You are immune to fatigue damage"):
+    /// this player's draws from an empty library still happen, counted and announced (`fatigue`, its
+    /// nominal hit), but deal their hero no damage (`draw::draw_one`). Expiry `never`; several are one.
+    FatigueImmune,
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's

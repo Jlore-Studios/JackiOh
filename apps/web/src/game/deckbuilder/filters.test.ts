@@ -679,8 +679,10 @@ describe("R711000 the reader's language", () => {
 
   it("R711000 under zh-CN each face's Chinese text finds the card", async () => {
     await setLocale("zh-CN");
-    expect(searchMatches(real("core-002"), CHINESE["core-002"]?.base ?? "∅")).toBe(true);
-    expect(searchMatches(real("core-002"), CHINESE["core-002"]?.radiant ?? "∅")).toBe(true);
+    // Each face as it prints, its {mana} the card's 1 (#4353).
+    const printed = (text: string | undefined): string => (text ?? "∅").replace("{mana}", "1");
+    expect(searchMatches(real("core-002"), printed(CHINESE["core-002"]?.base))).toBe(true);
+    expect(searchMatches(real("core-002"), printed(CHINESE["core-002"]?.radiant))).toBe(true);
   });
 
   it("R711000 under zh-CN no catalog card's search reads a raw placeholder", async () => {
