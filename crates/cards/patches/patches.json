@@ -32784,5 +32784,79 @@
       "v0.6.8e"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.9b",
+    "date": "2026-11-21",
+    "title": "Enormous Elderberry's cards Embiggen for no extra mana",
+    "source": "#4350",
+    "notes": "Meditative+ #23 Enormous Elderberry adds its cards with no Embiggen premium (noEmbiggenPremium, R4350000): their Embiggened version costs their normal price, read live under every modifier, and under Mountaintop Garden so does the dearer choice; the card text says so. R1181003's (0) is superseded and the v0.6.8d script kept for replays (R767000). Ruling R4350000. The plays are the cards classify finds playing differently through it: the Fruit pools that reach the Elderberry (C+ #68, S #141, S+ #5) and cards in the games an Elderberry play changes (C+ #58, S #51, #82).",
+    "player": {
+      "title": "Enormous Elderberry's cards Embiggen for no extra mana",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "The cards Enormous Elderberry adds no longer cost (0) Embiggened: their Embiggened version costs the same as their normal version, whatever changes that price."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "a1bc49198d44db4d4482635d88fcc998d07b957e"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-058",
+      "classicplus-068",
+      "stinkyscape-051",
+      "stinkyscape-082",
+      "stinkyscape-141",
+      "stinkyscapeplus-005"
+    ],
+    "changes": [
+      {
+        "id": "meditativeplus-023",
+        "name": "Enormous Elderberry",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.9c",
+    "date": "2026-11-21",
+    "title": "Patch: The Maestro, MC Tech, Snom Bunny and a random Plague Counter placement never pick a Dormant card, which no effect reaches",
+    "source": "#4322",
+    "notes": "R4322000: The Maestro's field exile, MC Tech's and Snom Bunny's steal and a Plague Counter placement drawn at random (a random cast, or under a Mayor) draw only among the permanents an effect reaches, never a Dormant card (engine: plague::reachable_permanents_on_field; query::enemy_permanents now drops a Dormant backrow card), and MC Tech counts no Dormant card toward its 5. MC Tech's script loses its own copy of the walk, falling from 63 code lines to 50, under COMPLICATED_CODE_LINES (60): it leaves the complicated list, so by R2173001 the lists' readers S #111 Shockwave447 (its complicated pool loses MC Tech) and S #109 xxFreshJack (a BUSTED reader, whose pool MC Tech was never in) are claimed. classify stage 2 against main's build (2303b794e4) finds no other card that plays differently; C #43 Plague Nuke, #13 Jlockeed Shredder-10 and TG #29 Easterner, which an older main's unforced games named, play as before there and are not claimed. No KEPT_SCRIPTS entry: the engine's pools change for every catalog. Replays this change alters are refused as rules_changed (R767000).",
+    "player": {
+      "title": "Random picks pass Dormant cards by",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "MC Tech no longer counts a Dormant card among the enemy's permanents, a Dormant Field Spell included.",
+        "MC Tech is no longer a complicated card, so Shockwave447's random complicated cards can't be it."
+      ],
+      "text": [],
+      "fixes": [
+        "The Maestro could exile a Dormant card, a Dormant Starship and its fused pieces included. It now passes Dormant cards by, and a field of only Dormant cards is skipped.",
+        "MC Tech's and Snom Bunny's steal could land on a Dormant Field Spell and take nothing. Both now take an awake permanent.",
+        "Plague Counters placed at random, by a card cast at random or while Mayor Medinamogger is on the field, could land on a Dormant card. They never do now."
+      ]
+    },
+    "commits": [
+      "646b0c1abbfe9281571e4446018ff14bb3da7466"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-040",
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "changes": []
   }
 ]
