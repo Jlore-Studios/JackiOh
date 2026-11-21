@@ -1255,6 +1255,32 @@ mod r1181003_placeholder_names_no_embiggened_price {
     }
 }
 
+mod r4350000_placeholder_names_no_embiggen_premium {
+    use super::*;
+
+    /// R4350000, R185: an embiggen card's no-premium mark (Meditative+ #23 Enormous Elderberry's "no
+    /// extra mana") is the card's, so a placeholder carries none: which hidden cards the Elderberry
+    /// added is nothing the seat may know.
+    #[test]
+    fn r4350000_a_placeholder_carries_no_embiggen_premium_mark() {
+        let (mut a, _) = pair();
+        let hidden: Vec<String> = hidden_instance_ids(&a, AI).into_iter().collect();
+        assert!(!hidden.is_empty());
+        for id in &hidden {
+            find_instance_mut(&mut a, id)
+                .expect("the hidden card")
+                .no_embiggen_premium = Some(true);
+        }
+        let public = redact(&a, AI);
+        for id in &hidden {
+            let placeholder = card_by_id(&public, id).expect("the placeholder");
+            assert_eq!(placeholder.no_embiggen_premium, None, "{id}");
+        }
+        let (b, _) = pair();
+        assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // R2691000: the seat's own library as its owner was shown it
 // ---------------------------------------------------------------------------------------------

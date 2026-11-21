@@ -15,6 +15,7 @@
 //!  - a game record's detail `GAME_RECORD_RAW_RETENTION_DAYS` after it was written, once it is folded
 //!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept.
 //!  - a spend's idempotency key and kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written (R2124000).
+//!  - an expired private lobby, started or not, once its format's TTL past its last change has passed (SPEC §9.5, §13.9, R3730004). Reads already answer 404 for it; the sweep deletes the row, as lobby creation already does opportunistically.
 //!
 //! In Postgres it is one call to `app.purge_expired_rows` (migration 0013, with 0029's third cutoff
 //! and 0041's fourth). A practice seed is a step of its own, after the sweep of unsettled claims: every
@@ -53,6 +54,16 @@ pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError
         .await?;
     tx.commit().await?;
     Ok(purged)
+}
+
+/// Deletes every private lobby expired at now, started or not (SPEC §9.5, §13.9, R3730004):
+/// the same delete lobby creation already runs opportunistically. Answers how many rows it took.
+pub async fn sweep_lobbies(app: &App) -> Result<u64, StoreError> {
+    let now = now_ms();
+    let mut tx = app.db.begin(None).await?;
+    let reaped = tx.lobbies_reap(now).await?;
+    tx.commit().await?;
+    Ok(reaped)
 }
 
 /// R1596000: refiles every finished match whose record never landed, while its log is held: each
@@ -95,6 +106,7 @@ pub async fn run_purge(app: Arc<App>) {
     let mut chatting = FailingStreak::new("chat.purge");
     let mut logging = FailingStreak::new("duos.logs.purge");
     let mut expiring = FailingStreak::new("idempotency.sweep");
+    let mut lobbying = FailingStreak::new("lobbies.sweep");
     let mut settling = FailingStreak::new("practice.sweep");
     let mut pruning = FailingStreak::new("practice.prune");
     loop {
@@ -155,6 +167,12 @@ pub async fn run_purge(app: Arc<App>) {
                 "idempotency.sweep_failed",
                 json!({ "message": error.to_string() }),
             ),
+        }
+        // R3730004: expired private lobbies, started or not, apart too.
+        match lobbying.track(sweep_lobbies(&app).await) {
+            Ok(0) => {}
+            Ok(reaped) => log_info("lobbies.reaped", json!({ "lobbies": reaped })),
+            Err(error) => log_warn("lobbies.sweep_failed", json!({ "message": error.to_string() })),
         }
         // R2422000, last: each claim it settles re-runs its check, the slowest step of the pass.
         match settling.track(crate::api::practice::sweep_unsettled(&app).await) {

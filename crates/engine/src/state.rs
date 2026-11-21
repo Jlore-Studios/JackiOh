@@ -240,9 +240,17 @@ pub struct CardInstance {
     /// R1181003 (Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)"): the price of
     /// the Embiggened version alone, in place of its printed dearer price and of `costOverride` for it,
     /// before every modifier (R65); the normal version keeps its price. A price, so R766 takes it off.
+    /// Since #4350 only games of v0.6.8d and before carry it (R4350000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub embiggen_cost_override: Option<i32>,
+    /// R4350000 (Meditative+ #23 Enormous Elderberry's "Their Embiggened version costs no extra mana"):
+    /// no Embiggen premium. The Embiggened version (under a Garden, the dearer choice) starts from the
+    /// normal price (`mana::printed_cost`, `mana::garden_dearer_price`), so every modifier moves both
+    /// prices alike. Price-like, so R766 takes it off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub no_embiggen_premium: Option<bool>,
     pub counters: Counters,
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>"))]
     pub memory: IndexMap<String, Value>,
@@ -2844,6 +2852,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         x: None,
         embiggened: None,
         embiggen_cost_override: None,
+        no_embiggen_premium: None,
         counters: Counters::default(),
         memory: IndexMap::new(),
         exertion: Exertion {

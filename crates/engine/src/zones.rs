@@ -1280,12 +1280,14 @@ pub fn reset_instance(instance: &mut CardInstance) {
 }
 
 /// R766 (#473): a card that reaches a graveyard or exile costs its printed cost again (R65), a
-/// fused card its fused definition's (R77): `costMod`, `costOverride` and the Embiggened price
-/// (R1181003) go. Radiant, `tuning`, counts, enchantments and tags (R1300, R923) stay.
+/// fused card its fused definition's (R77): `costMod`, `costOverride`, the Embiggened price
+/// (R1181003) and the no-premium mark (R4350000) go. Radiant, `tuning`, counts, enchantments and tags
+/// (R1300, R923) stay.
 pub fn reset_price(instance: &mut CardInstance) {
     instance.cost_mod = 0;
     instance.cost_override = None;
     instance.embiggen_cost_override = None;
+    instance.no_embiggen_premium = None;
     // R1848003: and so does a set X, which is the card's price.
     instance.fixed_x = None;
 }

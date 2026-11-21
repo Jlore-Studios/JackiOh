@@ -2,10 +2,10 @@
 //! (docs/v0.3.0/SURFACE.md §11.2). What the store then deletes is asserted in `tests/store/contract.rs`
 //! and `tests/sql/07_retention_purge.sql`.
 
-use serde_json::json;
+use serde_json::{Value, json};
 
 use jackioh_engine::wire::GameRecord;
-use jackioh_server::api::retention::purge_expired;
+use jackioh_server::api::retention::{purge_expired, sweep_lobbies};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, IDEMPOTENCY_KEY_TTL_HOURS,
@@ -14,9 +14,10 @@ use jackioh_server::config::{
 use jackioh_server::db::store::{CodeAttempt, MatchActionRow, MatchRow, MatchSignalRow};
 use jackioh_server::economy::idempotency::sweep_expired;
 use jackioh_server::economy::store::IdempotencyRow;
+use jackioh_server::lobby::store::Lobby;
 
-use crate::support::deps::test_app;
-use crate::support::store::{fake_lock, from, to_json};
+use crate::support::deps::{call, test_app};
+use crate::support::store::{account, fake_lock, from, to_json, uuid};
 
 const DAY_MS: i64 = 86_400_000;
 const HOUR_MS: i64 = 3_600_000;
@@ -36,6 +37,27 @@ fn finished_match(id: &str, finished_at: Option<i64>) -> MatchRow {
         "createdAt": 0,
         "finishedAt": finished_at,
         "clocks": { "turnDeadline": null, "promptDeadline": null, "graceDeadline": { "p1": null, "p2": null }, "ceilingAt": 0 },
+    }))
+}
+
+/// One private lobby row (SPEC §9.5, §13.9, R3730004), shaped like `tests/store/contract.rs`'s.
+fn lobby(code: &str, host: &str, at: i64, expires_at: i64) -> Lobby {
+    from(json!({
+        "code": code,
+        "host": host,
+        "guest": null,
+        "settings": { "format": "duel", "mode": "bo1" },
+        "hostPick": null,
+        "guestPick": null,
+        "hostReady": false,
+        "guestReady": false,
+        "rev": 0,
+        "catalogVersion": "test-1",
+        "createdAt": at,
+        "expiresAt": expires_at,
+        "matchId": null,
+        "seriesId": null,
+        "startedAt": null,
     }))
 }
 
@@ -259,5 +281,90 @@ mod the_retention_purge {
             .collect();
         assert_eq!(kept, vec![cutoff, cutoff + MINUTE_MS]);
         assert_eq!(sweep_expired(&app).await.expect("the sweep again"), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn sweep_lobbies_reaps_expired_lobbies_started_or_not_and_keeps_live_ones() {
+        let app = test_app().await;
+        let now = now_ms();
+        let host = account(&app, 41, "Ana").await;
+        let guest = account(&app, 42, "Bo").await;
+        {
+            let mut tx = app.db.begin(None).await.expect("begin");
+            tx.lobbies_create(&lobby("LOBBYA", &host.id, now - 900_000, now - 1))
+                .await
+                .expect("lobbies.create expired");
+            tx.lobbies_create(&lobby("LOBBYB", &host.id, now, now + 900_000))
+                .await
+                .expect("lobbies.create live");
+            tx.lobbies_create(&lobby("LOBBCC", &host.id, now - 900_000, now + 900_000))
+                .await
+                .expect("lobbies.create started");
+            // The fake's `lobbies_create` drops `started_at`/`match_id`, so a started row is
+            // created live then marked started, as `tests/store/contract.rs` does.
+            let mut started = lobby("LOBBCC", &host.id, now - 900_000, now + 900_000);
+            started.guest = Some(guest.id.clone());
+            started.rev = 1;
+            started.started_at = Some(now - 600_000);
+            started.expires_at = now - 1;
+            started.match_id = Some(uuid(43));
+            assert!(
+                tx.lobbies_update(&started, 0)
+                    .await
+                    .expect("lobbies.update started")
+            );
+            tx.commit().await.expect("commit");
+        }
+
+        assert_eq!(sweep_lobbies(&app).await.expect("the lobby sweep"), 2);
+        let mut tx = app.db.begin(None).await.expect("begin");
+        assert_eq!(
+            tx.lobbies_get("LOBBYA").await.expect("lobbies.get"),
+            None,
+            "an expired unstarted lobby is gone"
+        );
+        assert!(
+            tx.lobbies_get("LOBBYB").await.expect("lobbies.get").is_some(),
+            "an unexpired lobby is untouched"
+        );
+        assert_eq!(
+            tx.lobbies_get("LOBBCC").await.expect("lobbies.get"),
+            None,
+            "an expired started lobby is gone, as creation's reap already deletes"
+        );
+        tx.commit().await.expect("commit");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn sweep_lobbies_leaves_a_live_games_current_match_alone() {
+        let app = test_app().await;
+        let now = now_ms();
+        let host = account(&app, 41, "Ana").await;
+        {
+            let mut tx = app.db.begin(None).await.expect("begin");
+            tx.lobbies_create(&lobby("LOBBXD", &host.id, now - 900_000, now - 1))
+                .await
+                .expect("lobbies.create expired");
+            tx.profiles_set_in_match(&host.id, Some("match-1"))
+                .await
+                .expect("profiles.setInMatch");
+            tx.commit().await.expect("commit");
+        }
+
+        assert_eq!(sweep_lobbies(&app).await.expect("the lobby sweep"), 1);
+        let mut tx = app.db.begin(None).await.expect("begin");
+        assert_eq!(
+            tx.lobbies_get("LOBBXD").await.expect("lobbies.get"),
+            None,
+            "the expired lobby row is gone"
+        );
+        tx.commit().await.expect("commit");
+        let (status, _, body) = call(&app, "GET", "/api/auth/me", Some(&host.token), Value::Null).await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            body["currentMatchId"],
+            json!("match-1"),
+            "the reaped lobby's live member still reaches it"
+        );
     }
 }

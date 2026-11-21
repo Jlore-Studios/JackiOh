@@ -282,5 +282,10 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
     const text = Buffer.from(instance.exports.memory.buffer.slice(instance.exports.jackioh_result_ptr(), instance.exports.jackioh_result_ptr() + len)).toString("utf8");
     if (!text) { console.error("build-wasm: the C module kept no panic text after the trap"); process.exit(1); }
   ' "$C_MODULE"
+  # #4332: play the hotseat fixture on the built module through its raw C ABI
+  if ! node "$ROOT/luau/tools/reference-host.mjs" fixture "$C_MODULE"; then
+    echo "build-wasm: luau/tools/reference-host.mjs fixture failed (reproduce with: node luau/tools/reference-host.mjs fixture $C_MODULE)" >&2
+    exit 1
+  fi
   echo "build-wasm: built $C_MODULE, which imports nothing: $(wc -c <"$C_MODULE") B raw, $(gzip -9 -c "$C_MODULE" | wc -c) B gzipped"
 fi

@@ -237,6 +237,9 @@ mod summarize_game_over_real_cards_s9_11 {
                 // The Radiant changes the step has made so far, for a card no play holds yet: one a hand
                 // trigger casts later in the step is played on the face it has by then (R1147000).
                 let mut radiant_here: IndexMap<String, bool> = IndexMap::new();
+                // The cards a replacement took the place of in this step, by the new card's id, for a card
+                // no play holds yet: a hand trigger's cast Devil's Pact replaces (R449) names the new card.
+                let mut replaced_here: IndexMap<String, String> = IndexMap::new();
                 for event in events {
                     match event {
                         GameEvent::AddedToHand { instance_id, .. }
@@ -255,6 +258,9 @@ mod summarize_game_over_real_cards_s9_11 {
                             to_def_id,
                             ..
                         } => {
+                            if open_play(&plays, instance_id).is_none() {
+                                replaced_here.insert(new_instance_id.clone(), instance_id.clone());
+                            }
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && !plays[seat][at].announced
                             {
@@ -310,7 +316,10 @@ mod summarize_game_over_real_cards_s9_11 {
                                 && let Some(card) = state.players[*caster]
                                     .hand
                                     .iter()
-                                    .find(|card| card.id == *instance_id)
+                                    .find(|card| {
+                                        card.id == *instance_id
+                                            || replaced_here.get(instance_id) == Some(&card.id)
+                                    })
                                     .or_else(|| {
                                         added_here
                                             .contains(&instance_id.as_str())
@@ -321,12 +330,22 @@ mod summarize_game_over_real_cards_s9_11 {
                                 // A card cast from the hand it stood in as the step began, or that the step
                                 // added to it, counts as a play with no `play` logged: M+ #17 Dogpile's hand
                                 // trigger (R1180005; summary-cards-35, -45, #1705, #2204). A Created one the
-                                // step made Radiant is played Radiant (R2368000; summary-cards-54).
+                                // step made Radiant is played Radiant (R2368000; summary-cards-54). One a
+                                // replacement took the place of is its new card, Created (R449, R943; a fused
+                                // M+ #17 Dogpile's cast under C #23 Devil's Pact, summary-cards-39).
+                                let replaced = replaced_here.contains_key(instance_id);
+                                if replaced {
+                                    replaced_plays += 1;
+                                }
                                 plays[*caster].push(Play {
                                     id: card.id.clone(),
                                     def_id: def_id.clone(),
-                                    radiant: radiant_here.get(instance_id).copied().unwrap_or(card.radiant),
-                                    created: card.created == Some(true),
+                                    radiant: if replaced {
+                                        find_instance(&result.state, instance_id).is_some_and(|c| c.radiant)
+                                    } else {
+                                        radiant_here.get(instance_id).copied().unwrap_or(card.radiant)
+                                    },
+                                    created: replaced || card.created == Some(true),
                                     placed: true,
                                     open: false,
                                     announced: true,

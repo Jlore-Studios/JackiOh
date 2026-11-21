@@ -184,3 +184,18 @@ none of them. Later shared modules add theirs here.
 - **One thread.** The module is single-threaded and **not reentrant**: one call at a time, from the
   thread that instantiated it, and the result buffer and the state cache are the instance's, so two
   instances do not share them.
+
+## Checking the built module
+
+The build (`JACKIOH_WASM_C=1 sh scripts/build-wasm.sh`) checks that the module imports nothing, contains no trapping stubs, and keeps readable panic text after a trap. It then plays the hotseat fixture (`crates/engine/tests/golden/01-hotseat-full-game.json`) move by move using the reference host (`luau/tools/reference-host.mjs fixture`), failing if the game ends anywhere other than `HOTSEAT_HASH` (`512357ea`).
+
+To run the reference host by hand:
+
+```
+node luau/tools/reference-host.mjs fixture <path/to/jackioh_wasm_c.wasm>
+node luau/tools/reference-host.mjs traces <path/to/jackioh_wasm_c.wasm> <path/to/trace.jsonl>
+```
+
+- `fixture` folds the hotseat fixture and replays its 39 actions step by step with `reduce` and `hash_state`.
+- `traces` replays a recorded game trace (from `cargo jackioh golden record`) step by step, verifying state hashes at each move.
+

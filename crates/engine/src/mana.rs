@@ -214,7 +214,8 @@ pub fn push_mana_spent(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32,
 }
 
 /// The printed cost as it stands: X uses the chosen X, an embiggen card the chosen price (R65).
-/// R1848003: an X-cost card whose X is set (`fixed_x`) costs that X wherever it is.
+/// R1848003: an X-cost card whose X is set (`fixed_x`) costs that X wherever it is. R4350000: an
+/// embiggen card with no Embiggen premium (Meditative+ #23) prints its normal price for both versions.
 pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
     let script = crate::scripts::script_of(state, instance);
     if let Some(cost) = script.cost.as_ref() {
@@ -232,7 +233,8 @@ pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
         CardCost::X => instance.x.or(instance.fixed_x).unwrap_or(0).max(0),
         CardCost::Fixed(n) => n,
         CardCost::Embiggen { base, embiggen } => {
-            if instance.embiggened == Some(true) {
+            // R4350000: no Embiggen premium prices the Embiggened version at the normal price.
+            if instance.embiggened == Some(true) && instance.no_embiggen_premium != Some(true) {
                 embiggen
             } else {
                 base
@@ -367,15 +369,19 @@ pub fn garden_offers_radiant(state: &GameState, card: &CardInstance) -> bool {
 
 /// R1181002, R1563004: the price a Garden sets on the dearer play of a card that is not Radiant: its
 /// normal price plus the premium, in place of an embiggen card's Embiggened price; else `None`.
+/// R4350000: a card with no Embiggen premium (Meditative+ #23) pays no Garden premium either, so its
+/// dearer choice costs its normal price, and is still the Garden's (`Some`, which stamps it Radiant).
 pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32> {
     if card.embiggened != Some(true) || card.radiant {
         return None;
     }
+    let premium = garden_premium_for(state, card)?;
+    // R4350000: a card with no Embiggen premium (M+ #23) has none under a Garden either.
+    let waived = card.no_embiggen_premium == Some(true);
+    let premium = if waived { 0 } else { premium };
     match def_of(Some(state), &card.def_id).cost {
-        CardCost::Embiggen { base, .. } => Some(base + garden_premium_for(state, card)?),
-        _ if garden_offers_radiant(state, card) => {
-            Some(printed_cost(state, card) + garden_premium_for(state, card)?)
-        }
+        CardCost::Embiggen { base, .. } => Some(base + premium),
+        _ if garden_offers_radiant(state, card) => Some(printed_cost(state, card) + premium),
         _ => None,
     }
 }

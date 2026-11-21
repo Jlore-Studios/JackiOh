@@ -653,6 +653,7 @@ fn price_held(card: &CardInstance) -> Vec<&'static str> {
         (card.cost_mod != 0, "costMod"),
         (card.cost_override.is_some(), "costOverride"),
         (card.embiggen_cost_override.is_some(), "embiggenCostOverride"),
+        (card.no_embiggen_premium.is_some(), "noEmbiggenPremium"),
         (card.fixed_x.is_some(), "fixedX"),
     ])
 }

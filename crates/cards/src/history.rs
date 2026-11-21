@@ -64,7 +64,7 @@ use crate::scripts::meditative::{
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c002_na_tech, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
-    c022_mountaintop_garden,
+    c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
     c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c013_asphyxiants_cloud,
@@ -111,9 +111,9 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002), #3935 (R3935000), #3996
 /// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202), #4079 (R4079000)
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000),
-/// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001) and #4353 (R4353020,
+/// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001), #4353 (R4353020,
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
-/// hooks).
+/// hooks) and #4350 (R4350000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -1158,6 +1158,12 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c041_mend_projector::ID,
         "v0.6.8b",
         c041_mend_projector::script_v0_6_8b,
+    ),
+    // #4350 (R4350000): Enormous Elderberry's cards before their Embiggened version cost the normal price.
+    (
+        c023_enormous_elderberry::ID,
+        "v0.6.8d",
+        c023_enormous_elderberry::script_v0_6_8d,
     ),
     // #4331 (R4331000, R4331001): the last scripts before a spent Quest went to the graveyard and a steal
     // of mana crystals went past the cap.
