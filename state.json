@@ -17060,15 +17060,8 @@
       }
     },
     "4410": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44938728617",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-21T19:28:33Z",
-        "until": "2026-11-21T19:58:33Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17080,10 +17073,9 @@
         "reason": "planned on opus",
         "trail": ", \"description\": \"Read glossary entries for Credits and Resources\"}\n- Bash: {\"command\": \"sed -n 1,40p apps/web/src/cards/marketQuote.test.tsx | cut -c1-250\", \"description\": \"Read the web test for the braces quote\"}\n- Bash: {\"command\": \"grep -n \\\"label\\\" apps/web/src/cards/RulesText.tsx | head -30\", \"description\": \"See how the client places a preview by its label\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/cards/RulesText.tsx; grep -rn \\\"previewSpans\\\\|function.*[Pp]review.*label\\\\|indexOf(.*label\\\\|label)\\\" apps/web/src/cards/*.ts | grep -v test | head -10\", \"des\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn .*preview\\\\|label\\\" crates/shared/src/face/*.rs 2>/dev/null | head -20; ls crates/shared/src | head -30\", \"description\": \"Find the face model's preview placement code\"}\n- Bash: {\"command\": \"grep -rn \\\"rules_changed\\\\|RulesChanged\\\" crates/engine/src crates/cards/src crates/shared/src crates/server/src 2>/dev/null | head -8\", \"description\": \"Find how a fold refuses a changed\u2026\n- Bash: {\"command\": \"sed -n 885,930p crates/engine/src/replay.rs\", \"description\": \"Read the replay fold's refusal path\"}\n- Bash: {\"command\": \"grep -n \\\"Spice\\\" spec/08-catalog.md spec/06-keywords.md spec/0[1-5]*.md spec/1[2-9]*.md 2>/dev/null | grep -v \\\"^spec/08-catalog.md:674\\\" | cut -c1-300\", \"description\": \"Find other spec\u2026\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights {\\\" --include=*.rs crates | grep -v \\\"^crates/ai/src/config.rs\\\" | head; grep -rn \\\"hand_sale\\\" training analysis 2>/dev/null | head -3\", \"description\": \"Find othe\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub const AI_VERSION\\\\|AI_REVISION\\\\|EVAL_VERSION\\\" crates/ai/src | head -3; grep -n \\\"R4154401\\\\|R4154400\\\" crates/ai/README.md | head\", \"description\": \"Check for an AI versi\u2026\n- Bash: {\"command\": \"grep -rn \\\"MarketSell\\\" crates/engine/src | cut -c1-160\", \"description\": \"List engine uses of the sell action\"}\n- Bash: {\"command\": \"sed -n 270,285p crates/engine/src/wire/actions.rs; sed -n 1145,1165p crates/engine/src/wire/events.rs; sed -n 1780,1810p crates/engine/src/testkit/invariants.rs\", \"description\": \"Read th\u2026\n- Bash: {\"command\": \"grep -n \\\" Play {\\\" -A4 crates/engine/src/wire/actions.rs | head -8; grep -n \\\"pub fn play_ai_turn\\\\|pub struct AiTurn\\\\|pub decisions\\\\|pub final_state\\\\|pub state\\\" crates/ai/src/*.rs \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4410/.bot-plan.md\", \"content\": \"# Draft plan #4410 (planner notes) \\u2014 shape settled, final plan being written\\n\\nDecisions taken:\\n- Flag `StaticF\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4410/.bot-plan.md\", \"content\": \"## Goal\\n\\nStinkyscape #89 Spice pays its quote in Credits the way a Resource does (R2250001): played from the hand, r\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count the plan's words and characters\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"| crates/engine/src/script.rs | change | `StaticFlags.hand_sale` \\u2192 `pays_credits` |\\\\n| crates/engine/src\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4410/.bot-plan.md\", \"offset\": 60, \"limit\": 40}\n- Bash: {\"command\": \"sed -n 100,175p .bot-plan.md\", \"description\": \"Show the rest of the current draft\"}\n- Bash: {\"command\": \"ls crates/ai/tests/ | head; ls crates/engine/tests/ | head -20; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/ai/Cargo.toml | head\", \"description\": \"Check the test target names\"}\n- Bash: {\"command\": \"grep -n \\\"marketplace\\\\|resources\\\" crates/engine/tests/rules.rs crates/engine/tests/rules_2.rs crates/engine/tests/rules_3.rs | head\", \"description\": \"Find which rules binary holds the \u2026\n- Bash: {\"command\": \"grep -rn \\\"mod marketplace\\\\|mod resources\\\" crates/engine/tests/ | head\", \"description\": \"Locate the marketplace test module declaration\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n assert a in s, a[:70]\\n s=s.replace(a,b)\\nr(\\\"\\\"\\\"- **Determinism.** `requote` must keep drawing Spice's q\u2026\n- Bash: {\"command\": \"sed -n 1,58p .bot-plan.md\", \"description\": \"Show the plan's first part\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n assert a in s, a[:70]\\n s=s.replace(a,b)\\nr(\\\"\\\"\\\"Stinkyscape #89 Spice pays its quote in Credits the way \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n assert a in s, a[:70]\\n s=s.replace(a,b)\\nr(\\\"\\\"\\\"- [ ] Every Goal item is in place, and the panel has no \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n assert a in s, a[:70]\\n s=s.replace(a,b)\\nr(\\\"\\\"\\\"pnpm --dir apps/web test src/game/Marketplace.test.tsx\\n\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4410/.bot-plan.md\"}\n- Bash: {\"command\": \"grep -n \\\"^### 8.10\\\\|^### 10.10\\\\|^### 10.8\\\\|^### 9.9\\\\|^### 10.5 \\\\|^### 6.3\\\" spec/*.md | cut -c1-80\", \"description\": \"Confirm the section headings exist\"}\n- Bash: {\"command\": \"awk 'NR<=203 && /^### /{h=$0; n=NR} NR==139{print \\\"139:\\\", h} NR==203{print \\\"203:\\\", h}' spec/10-engine-guide.md\", \"description\": \"Find the sections holding lines 139 and 203\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n assert a in s, a[:70]\\n s=s.replace(a,b)\\nr(\\\"proven_in the engine marketplace test, `c089_spice.rs` and `\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n assert a in s, a[:70]\\n s=s.replace(a,b)\\nr(\\\"\\\"\\\"R4410001's \\\"It edits [[\\u00a79.9]\\\".\\\"\\\"\\\", \\\"\\\"\\\"R4410\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4410/.bot-plan.md\"}\n- said: ## Goal Stinkyscape #89 Spice pays its quote in Credits the way a Resource does (R2250001): - **When played:** it pays right after `cardPlayed` and before its Cry. The Cry still Discovers a Stinkyscape card. - **When discarded from the hand:** it pays after it reaches the graveyard. - **A cast by a\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-21T19:02:01Z",
       "owner_why": "it plans it",
@@ -17096,9 +17088,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-21T18:56:58Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44938728617",
+      "run_id": "pending:610369f6-1795289536",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T19:02:01Z",
+      "started_at": "2026-11-21T19:32:39Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17547,9 +17539,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T19:32:02Z",
+    "at": "2026-11-21T19:32:39Z",
     "url": "",
-    "what": "review #4414 on claude-8"
+    "what": "build #4410 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-21T19:18:24Z",
