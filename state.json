@@ -14820,15 +14820,8 @@
       }
     },
     "4348": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44842001916",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-21T00:21:50Z",
-        "until": "2026-11-21T00:51:50Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14840,10 +14833,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "1 paragraph for R4348000 |\n- Do not touch `.github/`, `.harness/`, `.squishy/`, `bot/`, the client (`apps/web`, no display change: Recent reads the server's rows as before, R4039001), migrations (no schema change), or `crates/server/src/config.rs` (the delete introduces no number, so CLAUDE.md rule 9 adds none). Governing spec\u2026\n- ## Steps\n- 1. In `crates/server/src/notifications/store.rs`, add `Tx::notifications_delete_between(&mut self, x: &str, y: &str) -> StoreResult<u64>`, dispatching via the existing `notifications_dispatch!` macro to `delete_between(x, y)`. Doc comment: R4348000; deletes every row whose recipient is one of the t\u2026\n- 2. In the same file's `mod pg`, add `delete_between` copying `crate::server::db::pg::shares_remove_between` (`crates/server/src/db/pg.rs:7861`): `run_as(t, None)`, return `Ok(0)` when either id is not a uuid, else `delete from public.notifications where (profile_id = $1::uuid and actor_id = $2::uui\u2026\n- 3. In the same file's `mod fake`, add `delete_between` copying `crate::server::db::fake::shares_remove_between` (`crates/server/src/db/fake.rs:4898`): `call(f, \"notifications.deleteBetween\")?`, then retain rows not matching `((profile == x && actor == Some(y)) \\|\\| (profile == y && actor == Some(x)\u2026\n- 4. In `crates/server/src/social/friends.rs` `post_block`, directly after the `shares_remove_between` call (line 471), add `let notifications = tx.notifications_delete_between(&me, &target).await?;` \u2014 inside the same transaction, before `tx.commit()`, beside `tx.blocks_add`.\n- 5. In `post_block`, add `\"notificationsRemoved\": notifications` to the existing `log_info!(\"blocks.added\", \u2026)` json, and extend the push condition to `if unfriended || requests > 0 || !closed.is_empty() || !daily_closed.is_empty() || notifications > 0`, so both accounts' tabs re-read `notifications\u2026\n- 6. Update the two header comments: `friends.rs` lines 8\u20139 (block \"ends \u2026 shares\" gains \"and the notifications between the two, either way (R4348000)\") and `notifications/mod.rs` line 15 (\"a block either way writes nothing\" gains \"and deletes the rows between the two, either way (R4348000)\").\n- 7. Write `spec/rulings/R4348000.md` per `spec/README.md` Adding a ruling: front matter `id: R4348000`, a title such as \"A block deletes the notifications between the two accounts (issue #4348)\", `cards: \"\u00a79.4, R4039000, issue #4348\"`, `proven_in` listing `crates/server/tests/store/contract.rs` and \u2026\n- 8. Write `spec/pending/4348.md` with the single \u00a711 paragraph in the style of `spec/pending/4335.md`: `**[[R4348000]] \u2026 (issue #4348, <today's UTC date>)**: \u2026`, one or two sentences plus the Rejected line. Leave `spec/11-rulings.md`, `spec/INDEX.md`, `spec/CARDS.md` alone.\n- 9. Update `r4039000_a_blocked_account_writes_nothing` (`crates/server/tests/api/friends.rs:1327`): after `block(&app, &bea, &ada)`, both feeds are now empty \u2014 change the last two asserts to `assert_eq!(feed_kinds(&feed(&app, &ada).await), Vec::<String>::new())` and the same for `&bea` (Bea's `frien\u2026\n- ## Tests\n- - `crates/server/tests/store/contract.rs`, in `mod r4039000_notifications`, new case `r4348000_delete_between_removes_only_the_pairs_rows_either_way` (name must hold token `r4348000` between underscores): seed Ana, Bo, Cy; write rows Ana\u2190Bo, Bo\u2190Ana, Ana\u2190Cy, Bo\u2190Cy, Cy\u2190Bo, plus a null-actor row to An\u2026\n- - `crates/server/tests/api/friends.rs`, in `mod r4039000_friend_feed` reusing its `rows`, `requested`, `block` helpers and `feed`/`feed_kinds` from `crate::support::store`, new test `r4348000_a_block_deletes_the_notifications_between_the_two_and_unblock_restores_nothing`: Ana requests Bea (row Bea\u2190\u2026\n- - Regression: run `cargo test -p jackioh-server` (full crate: updated `r4039000_a_blocked_account_writes_nothing` plus every other suite that blocks after writing notifications, e.g. daily/shares/lobbies/challenges; fix any further fallout by updating expectations to the new behavior, never by weak\u2026\n- ## Done when\n- - [ ] After A blocks B, neither feed lists a row whose actor is the other, unread counts on both sides drop by the removed rows, third-party rows stay.\n- - [ ] Unblock restores nothing; a new request/share after unblock writes and lists as before.\n- - [ ] Store contract case passes on the fake and on Postgres (`both_stores!`).\n- - [ ] `spec/rulings/R4348000.md` and `spec/pending/4348.md` exist and `cargo jackioh spec check` passes.\n- - [ ] `cargo test -p jackioh-server`, `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings` pass.\n- ## Risks\n- - Existing tests that block after seeding notifications will fail honestly (known: `r4039000_a_blocked_account_writes_nothing` asserts Bea's `friendRequest` survives a block; it must be updated per step 9). Treat any other red block-adjacent test as the same contract change, not as breakage to rout\u2026\n- - The fake and Postgres implementations must agree exactly (null actor never matches; non-uuid ids answer 0 in Postgres and match nothing in the fake, as every neighboring method does) \u2014 the contract case pins both, and the Docker suites (`tests/db/run.sh`, `tests/store`) re-check Postgres in CI.\n- - No replay/determinism risk: notification rows are server-side feed state, never engine input. No hidden-information risk: the delete only removes rows, and `push_social` carries no row contents beyond what each recipient's own read already answers.\n- ## Open questions\n- None. The one judgment call the issue left open (delete at block time versus hide at list time) is settled by the issue itself in favor of deletion, and the plan implements exactly that.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4348 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4348/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-21T00:10:15Z",
       "owner_why": "it plans it",
@@ -14856,9 +14848,9 @@
       "provider": "muse",
       "queued_at": "2026-11-20T23:05:13Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44842001916",
+      "run_id": "pending:fb9d60c4-1795220763",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-21T00:10:15Z",
+      "started_at": "2026-11-21T00:26:33Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15215,9 +15207,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T00:25:51Z",
+    "at": "2026-11-21T00:26:33Z",
     "url": "",
-    "what": "build #4317 on claude-7"
+    "what": "build #4348 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T00:05:13Z",
