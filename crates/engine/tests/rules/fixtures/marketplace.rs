@@ -2,7 +2,7 @@
 //! R2250002; #3047, R3047000–R3047004), the four of the Boss-X set so a set lot draws among them (the four
 //! offers of a roll, R3047000, draw each of them), `MARKET_TABLE` in the shape of the set's (S21), and a
 //! card of each cost from (0) to (8) for the price curve; the Resources are `fixtures/resources.rs`'. Ids
-//! `fx-mkt-…` from 18530 (the hand-sale card 18610, the cost cards 18540) collide with no other fixture
+//! `fx-mkt-…` from 18530 (the card that pays Credits 18610, the cost cards 18540) collide with no other fixture
 //! file's.
 
 use std::sync::LazyLock;
@@ -111,27 +111,28 @@ pub static MARKET_TABLE: &[MarketLot] = &[
     },
 ];
 
-/// R1861000: a (1) Spell whose faces sell from the hand (`handSale`), as Stinkyscape #89 Spice does.
-/// Kept out of `MARKET_DEFS`, so the table's tests quote the Resources alone.
-pub const HAND_SALE: &str = "fx-mkt-hand-sale";
+/// R4410000: a (1) Spell whose faces pay Credits as a Resource does as it is played or discarded
+/// (`paysCredits`), as Stinkyscape #89 Spice does. Kept out of `MARKET_DEFS`, so the table's tests quote
+/// the Resources alone.
+pub const PAYS_CREDITS: &str = "fx-mkt-pays-credits";
 
-pub static HAND_SALE_DEF: LazyLock<CardDef> = LazyLock::new(|| {
+pub static PAYS_CREDITS_DEF: LazyLock<CardDef> = LazyLock::new(|| {
     spell_def(
         18610,
-        json!({ "id": HAND_SALE, "name": "Fixture Hand Sale", "set": "Core", "cost": 1 }),
+        json!({ "id": PAYS_CREDITS, "name": "Fixture Pays Credits", "set": "Core", "cost": 1 }),
     )
 });
 
-pub static HAND_SALE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
+pub static PAYS_CREDITS_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     let face = || Script {
         static_flags: Some(StaticFlags {
-            hand_sale: Some(true),
+            pays_credits: Some(true),
             ..StaticFlags::default()
         }),
         ..Script::default()
     };
     IndexMap::from([(
-        HAND_SALE.to_string(),
+        PAYS_CREDITS.to_string(),
         CardScripts {
             base: face(),
             radiant: face(),

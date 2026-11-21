@@ -1,20 +1,20 @@
 // The Marketplace (R1853000–R1853003, R2250002, R3047002, SPEC §10.10): Stinkyscape's shop, open for the
 // rest of the game once either player gains a Resource or Credits.
 //
-// A toggle opens a panel that draws `view.marketplace` and `legal` alone: the viewer's Credits, the
+// A toggle opens a panel that draws `view.marketplace` and `legal` alone: the viewer's Credits and the
 // offers rolled for them at the start of their turn, each marked with how many times it was Buffed or
-// Nerfed (R3047002) beside its price, and each card in their hand that sells from there (R1861000) with
-// its quote. "Buy" is live exactly when `legal` lists that lot's `marketBuy`,
-// and a sale exactly when `legal` lists its `marketSell`; each sends the listed body. Otherwise the
-// button is greyed, a lot's tooltip the engine's reason, and sends nothing. Every number shown is the
-// view's: nothing here prices, filters or refuses (CLAUDE.md rule 7). The view carries nothing while
-// the Marketplace is closed, and then nothing is drawn. Escape and Back (R2127000) close the panel.
+// Nerfed (R3047002) beside its price. "Buy" is live exactly when `legal` lists that lot's `marketBuy`,
+// and sends the listed body. Otherwise the button is greyed, its tooltip the engine's reason, and sends
+// nothing. Nothing sells here (R4410000): a Resource or Spice pays its Credits as it is played or
+// discarded, its quote in braces on it in hand. Every number shown is the view's: nothing here prices,
+// filters or refuses (CLAUDE.md rule 7). The view carries nothing while the Marketplace is closed, and
+// then nothing is drawn. Escape and Back (R2127000) close the panel.
 //
 // The toggle is a button of the control bar (Board.tsx, #2645), which owns whether the panel is open.
 
 import { useCallback, useId, useRef, type ReactElement } from "react";
 
-import type { ActionBody, CardDef, MarketOfferView, MarketSaleView, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CardDef, MarketOfferView, PlayerView } from "@jackioh/shared";
 
 import { chineseName, drawnInChinese } from "../cards/chinese.ts";
 import { CardFace, faceModel, useInspectTrigger } from "../cards/index.ts";
@@ -34,7 +34,6 @@ type MarketplaceProps = {
 };
 
 type MarketBuy = Extract<ActionBody, { type: "marketBuy" }>;
-type MarketSell = Extract<ActionBody, { type: "marketSell" }>;
 
 /** A card's name as the reader reads it (R711000): the Chinese table's for a Chinese reader. */
 function readerName(defId: string, english: string, def: CardDef | undefined): string {
@@ -109,30 +108,6 @@ function Offer(props: { offer: MarketOfferView; listed: MarketBuy | undefined; o
   );
 }
 
-/** One sale: a card in the viewer's hand that sells from there (R1861000), for this turn's quote. */
-function Sale(props: { sale: MarketSaleView; listed: MarketSell | undefined; onAction: (action: ActionBody) => void }) {
-  useLocale();
-  const { sale, listed } = props;
-  const info = useCardInfo(sale.defId, sale.radiant === true);
-  const name = readerName(sale.defId, info.name, info.def);
-  return (
-    <li>
-      <button
-        type="button"
-        className="marketplace-deal"
-        data-testid={testid.marketSell(sale.instanceId)}
-        data-legal={listed === undefined ? "false" : "true"}
-        disabled={listed === undefined}
-        onClick={() => {
-          if (listed !== undefined) props.onAction(listed);
-        }}
-      >
-        {t("Sell {name} for {n} Credits", { name, n: sale.credits })}
-      </button>
-    </li>
-  );
-}
-
 export default function Marketplace({ view, legal, onAction, open, onOpenChange }: MarketplaceProps): ReactElement | null {
   useLocale();
   const panelId = useId();
@@ -150,10 +125,8 @@ export default function Marketplace({ view, legal, onAction, open, onOpenChange 
   if (market === undefined) return null;
 
   const buys = new Map<number, MarketBuy>();
-  const sells = new Map<string, MarketSell>();
   for (const body of legal) {
     if (body.type === "marketBuy") buys.set(body.offer, body);
-    if (body.type === "marketSell") sells.set(body.instanceId, body);
   }
 
   return (
@@ -207,16 +180,6 @@ export default function Marketplace({ view, legal, onAction, open, onOpenChange 
                 <Offer key={offer.offer} offer={offer} listed={buys.get(offer.offer)} onAction={onAction} />
               ))}
             </ul>
-          )}
-          {market.sales.length === 0 ? null : (
-            <section className="marketplace-sales" aria-label={t("Sell")}>
-              <h3>{t("Sell")}</h3>
-              <ul className="market-barter-list">
-                {market.sales.map((sale) => (
-                  <Sale key={sale.instanceId} sale={sale} listed={sells.get(sale.instanceId)} onAction={onAction} />
-                ))}
-              </ul>
-            </section>
           )}
         </section>
       ) : null}

@@ -488,10 +488,6 @@ pub struct EvalWeights {
     /// buys: the Marketplace asks `MARKETPLACE_CREDITS_PER_MANA` a mana, which the hand prices at
     /// `hand_per_cost`. Own side only (#2389).
     pub market_credit: f64,
-    /// R4154401: whether an own hand card that sells from the hand (Stinkyscape #89 Spice, R1861000)
-    /// counts, while the Marketplace quotes it, as the Credits its sale brings now at `market_credit`
-    /// (`evaluate::hand_sale_worth`) in place of its hand price. Off, it is priced as any hand card.
-    pub hand_sale_credits: bool,
     /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
     /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
     /// its holder's turn starts. Every shipped one pays its holder.
@@ -705,7 +701,6 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     extra_turn_in_hand: 0.5,
     anomaly_miss: 0.2,
     market_credit: AI_HAND_PER_COST / MARKETPLACE_CREDITS_PER_MANA as f64,
-    hand_sale_credits: true,
     // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
     // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
     // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
@@ -872,7 +867,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `giga_cleave_read`, `hand_sale_credits`) is off.
+/// `giga_cleave_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -939,7 +934,6 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     extra_turn_in_hand: 0.0,
     anomaly_miss: 0.0,
     market_credit: 0.0,
-    hand_sale_credits: false,
     start_of_turn_effect: 0.0,
     alt_win: 0.0,
     doomed_hand_discount: 0.0,

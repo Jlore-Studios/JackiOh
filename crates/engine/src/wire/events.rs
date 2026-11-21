@@ -1148,7 +1148,7 @@ pub enum GameEvent {
     },
     /// R1853003, R1861000: `player` sold a card that sells from the hand at the Marketplace for
     /// `credits` Credits, and it ceased to exist; the `marketCreditsChanged` after it says the new
-    /// count. Public, as a discarded card is.
+    /// count. Public, as a discarded card is. Nothing emits it since issue #4410 (R4410000).
     MarketSold {
         player: PlayerId,
         instance_id: String,
