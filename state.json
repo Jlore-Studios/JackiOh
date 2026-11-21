@@ -15825,11 +15825,9 @@
     "what": "review #4376 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T02:21:19Z",
+    "at": "2026-11-21T02:30:24Z",
     "notes": [
-      "delivered build #4374 on muse (run 44854022737): built",
-      "started review #4376 on muse (run 44855604391)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4376 on muse (run 44855604391): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16535,7 +16533,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T02:21:19Z",
+  "loop_tick": "2026-11-21T02:30:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
