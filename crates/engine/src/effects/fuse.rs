@@ -23,7 +23,7 @@ use crate::state::{CardInstance, GameState, find_instance, new_instance};
 use crate::subsystems::fuse::{FuseArgs, HandPrice, fuse};
 use crate::wire::{CardDef, CardType, KeywordKind, PlayerId, Row, Zone, ZoneName, opponent_of};
 use crate::zones::{
-    StandingAt, ZoneSlot, acting_on, beneath_at, cease_to_exist, first_entry_zone, is_buried,
+    StandingAt, ZoneSlot, acting_on, beneath_at, cease_to_exist, first_entry_zone_where, is_buried,
 };
 
 /// R77 and R86: an ingredient that is only a definition, made in `{ z: "gone" }` (where the subsystem
@@ -795,7 +795,8 @@ pub struct FuseBoardIntoArgs {
 /// may not affect (Immune to Spells) stay on the board (R1839000, R781001, E35). With no Unit to fuse the
 /// card is summoned alone, and with no room for it, once the Units that stood on the caster's side
 /// are out, nothing changes at all. The subsystem's `fuse` makes the fusion (R77), so the kept card is
-/// kept whatever it is immune to.
+/// kept whatever it is immune to. On a slashed board the room is a unit zone on the half the Spell
+/// resolves on (R4318001), so no ingredient leaves unless the card lands.
 pub fn fuse_board_into(args: FuseBoardIntoArgs) -> Effect {
     Effect::new("fuseBoardInto", move |ctx| {
         let caster = ctx.controller;
@@ -812,24 +813,29 @@ pub fn fuse_board_into(args: FuseBoardIntoArgs) -> Effect {
                 .collect();
             ingredients.extend(units);
         }
-        // Room: a unit zone for the new card, free now or freed by a Unit of the caster's that goes.
+        // Room: a unit zone for the new card, free now or freed by a Unit of the caster's that goes, on
+        // the half `summon_fresh` lands it on (R4318001, R3554003): the same `allow` its entry zone reads,
+        // and as that zone never the hole's lane (R3554000).
+        let half = super::summon::summoner_half(ctx);
+        let allow = |lane: i32| crate::geometry::lane_in_half(ctx.state, lane, half);
         let frees_a_zone = ingredients.iter().any(|card| match card.zone {
             Zone::Field {
                 player,
                 row: Row::Units,
                 lane,
-            } if player == caster => beneath_at(
-                ctx.state,
-                ZoneSlot {
+            } if player == caster => {
+                let slot = ZoneSlot {
                     player,
                     row: Row::Units,
                     lane,
-                },
-            )
-            .is_empty(),
+                };
+                allow(lane)
+                    && !crate::geometry::in_hole(ctx.state, slot)
+                    && beneath_at(ctx.state, slot).is_empty()
+            }
             _ => false,
         });
-        if !frees_a_zone && first_entry_zone(ctx.state, caster, Row::Units).is_none() {
+        if !frees_a_zone && first_entry_zone_where(ctx.state, caster, Row::Units, allow).is_none() {
             return;
         }
         for card in &ingredients {

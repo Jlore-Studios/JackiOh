@@ -73,10 +73,10 @@ cargo test -p jackioh-tools                    # the tools' own tests
 `mod` holding one, whose name has the `_`-delimited token `r<n>`; a TypeScript `it(`, `test(` or
 `describe(` whose title has `R<n>` as a word, with no `.skip`, `.todo`, `.fixme` or `.only` on it or on
 a call around it; or an SQL script's `\echo '### R<n>: … ###'` heading; every `r<n>` test token and
-every `R<n>` cited in `crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in
+every `R<n>` cited in `crates/`, `apps/web/src/`, `apps/edge/src/`, `apps/admin/src/` or `e2e/` has a note; every `[[…]]` link in
 `spec/` resolves, a `[[CARDS#…]]` one to a heading of `spec/CARDS.md` as `index` would write it now (#3804); every note's `title` and `cards` are filled in, and every ruling, section and card its `cards` names exists (#2047); every file in `spec/pending/` is
 `<n>.md` and holds text, so `fold` can place it (the index is `fold`'s to keep, not a branch's); no
-code file under those three roots still says its ruling
+code file under those five roots still says its ruling
 is to be written (`proposed ruling` or `no R-row yet`, in any case; #1243); and every ruling
 marker in the notes of §2 to §10, a `(ruling)` or a `Ruling:`, links its ruling (`[[R<n>]]`)
 before its sentence ends (REVIEW A2.3, #2048). It reads ids, file names, test names and the references in `cards`, and of

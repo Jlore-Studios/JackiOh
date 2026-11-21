@@ -8,7 +8,8 @@
 //! its Radiant face for the Radiant card, onto the caster's side, and fuses the ingredients into it, so
 //! the one card that stands there is "Alnilam + …" with every stat, keyword and text (R3569002). A
 //! Dormant or Immutable Unit and one Immune to Spells stays. With no Unit to fuse it is summoned alone,
-//! and with no room for it nothing happens.
+//! and with no room for it nothing happens. On a slashed board its room is a zone on the half it
+//! resolves on (R4318001).
 
 use jackioh_engine::prelude::*;
 
@@ -116,6 +117,38 @@ mod tests {
             assert_eq!(mine[0].def_id, ALNILAM);
             let stats = s.stats(mine[0].id.as_str());
             assert_eq!((stats.attack, stats.health), (10, 10));
+        }
+    }
+
+    /// R4318001: a board slashed at lane 3 (R3554003), the caster's Right half filled by two Dormant
+    /// Units, which stay: cast on the Right half, Alnilam has no zone there, free or freed by the
+    /// caster's Unit on the Left, so nothing leaves and nothing is made.
+    #[test]
+    fn r4318001_on_a_slashed_board_with_no_room_on_its_half_nothing_leaves() {
+        for radiant in [false, true] {
+            let mut s = game(
+                "supernova-slashed",
+                radiant,
+                json!([
+                    { "def": SMALL, "lane": 1 },
+                    { "def": MEDIUM, "lane": 4, "slumber": {} },
+                    { "def": MEDIUM, "lane": 5, "slumber": {} },
+                ]),
+                json!([{ "def": SMALL, "lane": 2 }]),
+            );
+            s.state_mut().slashed_lane = Some(3);
+            let ids = |s: &Scenario, player: PlayerId| -> Vec<String> {
+                units_of(s, player).into_iter().map(|card| card.id).collect()
+            };
+            let (mine, theirs) = (ids(&s, P1), ids(&s, P2));
+            s.play(ID, json!({}));
+            s.answer(json!(["right"]));
+            assert_eq!(ids(&s, P1), mine, "radiant {radiant}: the caster's Units stay");
+            assert_eq!(ids(&s, P2), theirs, "radiant {radiant}: the enemy's Unit stays");
+            assert!(
+                !units_of(&s, P1).iter().any(|card| leads_with_alnilam(&s, card)),
+                "radiant {radiant}: no Alnilam is made"
+            );
         }
     }
 

@@ -1,0 +1,177 @@
+{
+  "seed": 11469,
+  "catalogVersion": "v0.6.7k",
+  "decks": [
+    [
+      "meditative-002",
+      "meditative-035",
+      "stinkyscape-168",
+      "stinkyscape-061",
+      "meditativeplus-022",
+      "classicplus-070",
+      "meditative-034",
+      "meditativeplus-006",
+      "stinkyscape-093",
+      "core-010",
+      "stinkyscape-087",
+      "meditative-010",
+      "core-049",
+      "stinkyscape-112",
+      "meditative-102",
+      "core-044",
+      "meditative-004",
+      "stinkyscape-025",
+      "classic-059",
+      "classicplus-031",
+      "stinkyscape-144",
+      "classicplus-056",
+      "stinkyscape-043",
+      "stinkyscapeplus-107",
+      "stinkyscapeplus-164"
+    ],
+    [
+      "stinkyscape-091",
+      "classic-002",
+      "traininggrounds-022",
+      "core-088",
+      "classic-043",
+      "stinkyscapeplus-082",
+      "core-011",
+      "stinkyscapeplus-047",
+      "core-095",
+      "stinkyscapeplus-161",
+      "stinkyscape-075",
+      "classicplus-026",
+      "stinkyscape-161",
+      "core-029",
+      "classic-070",
+      "meditative-049",
+      "stinkyscape-062",
+      "classic-076",
+      "traininggrounds-021",
+      "classic-015",
+      "meditativeplus-018",
+      "stinkyscape-058",
+      "stinkyscapeplus-061",
+      "stinkyscapeplus-125",
+      "classic-025"
+    ]
+  ],
+  "start": "last-boards",
+  "lastBoards": [
+    [
+      {
+        "defId": "stinkyscape-113",
+        "radiant": false
+      },
+      {
+        "defId": "stinkyscape-t-dormant-starship",
+        "radiant": true
+      },
+      {
+        "defId": "classic-021",
+        "radiant": false
+      },
+      {
+        "defId": "stinkyscape-098",
+        "radiant": true
+      },
+      {
+        "defId": "traininggrounds-041",
+        "radiant": true
+      },
+      {
+        "defId": "traininggrounds-007",
+        "radiant": true
+      },
+      {
+        "defId": "stinkyscape-005",
+        "radiant": false
+      },
+      {
+        "defId": "stinkyscape-165",
+        "radiant": true
+      },
+      {
+        "defId": "meditative-067",
+        "radiant": false
+      },
+      {
+        "defId": "stinkyscapeplus-086",
+        "radiant": false
+      },
+      {
+        "defId": "traininggrounds-053",
+        "radiant": false
+      },
+      {
+        "defId": "stinkyscape-047",
+        "radiant": false
+      },
+      {
+        "defId": "classicplus-019-5",
+        "radiant": true
+      },
+      {
+        "defId": "core-019",
+        "radiant": false
+      },
+      {
+        "defId": "stinkyscape-026",
+        "radiant": false
+      },
+      {
+        "defId": "stinkyscapeplus-125",
+        "radiant": true
+      },
+      {
+        "defId": "classicplus-069",
+        "radiant": true
+      },
+      {
+        "defId": "meditativeplus-022",
+        "radiant": true
+      },
+      {
+        "defId": "t-1:stinkyscapeplus-154+stinkyscapeplus-125",
+        "radiant": true
+      }
+    ],
+    [
+      {
+        "defId": "meditativeplus-024",
+        "radiant": true
+      },
+      {
+        "defId": "core-t-ghoul",
+        "radiant": false
+      },
+      {
+        "defId": "stinkyscape-168",
+        "radiant": true
+      },
+      {
+        "defId": "stinkyscape-086",
+        "radiant": false
+      },
+      {
+        "defId": "classic-015",
+        "radiant": true
+      },
+      {
+        "defId": "stinkyscape-070",
+        "radiant": true
+      },
+      {
+        "defId": "stinkyscape-157",
+        "radiant": true
+      },
+      {
+        "defId": "t-1:classic-015+classicplus-075",
+        "radiant": false
+      }
+    ]
+  ],
+  "endings": false,
+  "found": "Fuzz 4/4 (plain seeds 9376-12500) of super run 44753264287 at a691236 (#4318): I6 on turn 31, 140 actions in, from last boards: p1 was sent \"c90\" at view.events[0].sourceId, a card in no pile (it ceased to exist). An S+ T-supernova cast on one half of a board slashed at lane 3, with no unit zone for Alnilam on that half, counted a zone a Unit of its caster's on the other half would free, took every Unit it reached and made no Alnilam, so they ceased to exist with no event. Fixed in #4318 (effects/fuse.rs, R4318001), proven by stinkyscape_plus_s22.rs's r4318001_cast_on_a_half_with_no_room_it_fuses_nothing_and_every_unit_stays."
+}

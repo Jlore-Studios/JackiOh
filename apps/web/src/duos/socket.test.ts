@@ -403,6 +403,51 @@ describe("the co-op socket's reconnect", () => {
     expect(h.client.snapshot().error).toBeNull();
     expect(h.client.snapshot().errorCode).toBeNull();
   });
+
+  it("R4250000 a co-op socket refused with 4429 after open climbs the backoff", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < RECONNECT_DELAYS_MS.length + 1; round += 1) {
+      h.socket().open();
+      expect(h.socket().frames()).toEqual([HELLO]);
+      h.socket().drop(4429, "too many requests; slow down");
+      expect(h.client.snapshot().connection).toBe("reconnecting");
+      expect(h.pending()).toBe(1);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+  });
+
+  it("R4250000 a co-op socket closed with 1011 after open climbs the backoff", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < RECONNECT_DELAYS_MS.length + 1; round += 1) {
+      h.socket().open();
+      h.socket().drop(1011, "the server faulted");
+      expect(h.client.snapshot().connection).toBe("reconnecting");
+      expect(h.pending()).toBe(1);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+  });
+
+  it("R4250000 a co-op socket that delivered a view starts the backoff over", () => {
+    const h = harness();
+    h.client.connect();
+    h.socket().open();
+    h.socket().drop(1006);
+    h.runTimers();
+    h.socket().open();
+    h.socket().drop(1006);
+    h.runTimers();
+    expect(h.delays()).toEqual(RECONNECT_DELAYS_MS.slice(0, 2));
+
+    h.socket().open();
+    h.socket().deliver(view(3));
+    h.socket().drop(1006);
+    h.runTimers();
+    expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
+  });
 });
 
 describe("R3767000 a seat another tab or device took", () => {

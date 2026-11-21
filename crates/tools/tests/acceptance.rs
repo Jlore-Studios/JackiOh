@@ -13,6 +13,9 @@
 //!    its crate's directory (`repo_root().join(…)`, `repo().join(…)`,
 //!    `Path::new(env!("CARGO_MANIFEST_DIR")).join(…)` and `PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(…)`,
 //!    each a string literal or a same-file const with chained `.join(…)` literals appended);
+//!  - CI scope, e2e (#4219): `crates/tools/src/replay.rs`, outside its `#[cfg(test)]` items, names no other
+//!    module of the crate (`crate::` or `super::`): `scripts/ci-scope.sh` leaves e2e off for the tools' other
+//!    sources because e2e runs only `replay` and `catalog-version`;
 //!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`, naming what holds its rule
 //!    per pull request, so an ignore moves a test to super.yml's daily run and never switches one off;
 //!  - Config (BUILD §2, #1640): every `pub const` of the engine's `config.rs` is named, outside comments, by
@@ -995,6 +998,113 @@ fn ci_scope_runtime_scan_finds_each_repo_read() {
             (5, "migrations".to_string(), true),
         ]
     );
+}
+
+/// `line` with the inside of each single-line string literal cut out, so a brace in a format string
+/// is no block's. A literal over several lines, a raw string and a `'"'` are not followed.
+fn without_string_contents(line: &str) -> String {
+    let mut out = String::new();
+    let mut in_string = false;
+    let mut escaped = false;
+    for c in line.chars() {
+        if !in_string {
+            out.push(c);
+            in_string = c == '"';
+        } else if escaped {
+            escaped = false;
+        } else if c == '\\' {
+            escaped = true;
+        } else if c == '"' {
+            out.push(c);
+            in_string = false;
+        }
+    }
+    out
+}
+
+/// What a crate's source names to reach another of its modules.
+const OTHER_MODULES: [&str; 2] = ["crate::", "super::"];
+
+/// The 1-based lines of `text` that name `OTHER_MODULES`, comments aside, outside its `#[cfg(test)]`
+/// items: the code a shipped `jackioh replay` runs. A `#[cfg(test)]` item is the lines after the
+/// attribute alone on its line, up to the `;` that ends it or the `}` that closes its first block.
+/// An out-of-line `mod x;` is not seen.
+fn module_paths_outside_tests(text: &str) -> Vec<usize> {
+    let mut found = Vec::new();
+    // Inside a `#[cfg(test)]` item: the braces still open, and whether a block has opened.
+    let mut test_item: Option<(i32, bool)> = None;
+    for (index, line) in without_line_comments(text).lines().enumerate() {
+        let code = without_string_contents(line);
+        match test_item {
+            None if code.trim() == "#[cfg(test)]" => test_item = Some((0, false)),
+            None => {
+                if OTHER_MODULES.iter().any(|path| code.contains(path)) {
+                    found.push(index + 1);
+                }
+            }
+            Some((depth, opened)) => {
+                let depth = depth
+                    + code
+                        .chars()
+                        .map(|c| match c {
+                            '{' => 1,
+                            '}' => -1,
+                            _ => 0,
+                        })
+                        .sum::<i32>();
+                let opened = opened || code.contains('{');
+                let ended = if opened {
+                    depth <= 0
+                } else {
+                    code.trim_end().ends_with(';')
+                };
+                test_item = if ended { None } else { Some((depth, opened)) };
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn ci_scope_e2e_replay_names_no_module_the_e2e_case_leaves_off() {
+    let file = "crates/tools/src/replay.rs";
+    let text = fs::read_to_string(repo().join(file)).expect(file);
+    let lines = module_paths_outside_tests(&text);
+    assert!(
+        lines.is_empty(),
+        "{file}:{lines:?}: `jackioh replay`, which e2e specs 01 and 13 run, now reaches another module of the crate, so a change to that module can change what e2e checks: add its file to the keep-on arm of scripts/ci-scope.sh's e2e case (`crates/tools/src/main.rs | replay.rs | catalog.rs | patches.rs`), which leaves e2e off for the rest of crates/tools/src/"
+    );
+}
+
+#[test]
+fn ci_scope_e2e_module_scan_finds_each_path_outside_tests() {
+    let text = r#"use crate::fuzz::decks_for_seed;
+
+/// A doc comment naming crate::duos_fuzz is no call.
+pub fn run() {
+    crate::classify::run();
+    super::fuzz::run();
+}
+
+#[cfg(test)]
+const SEEDS: u32 = 8;
+
+#[cfg(test)]
+pub(crate) fn helper() -> String {
+    crate::fuzz::decks_for_seed(1);
+    format!("{")
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::fuzz::decks_for_seed;
+}
+
+pub fn after() {
+    crate::patches::repo_root();
+}
+"#;
+    assert_eq!(module_paths_outside_tests(text), [1, 5, 6, 24]);
 }
 
 /// The 1-based lines of `text` that ignore a test without saying it runs daily.
