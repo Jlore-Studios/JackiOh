@@ -3365,7 +3365,9 @@
     },
     "3925": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:7052770814"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3396,9 +3398,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-20T23:47:35Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:7052770814"
-      ]
+      "taken_asks": []
     },
     "3926": {
       "action": "review",
