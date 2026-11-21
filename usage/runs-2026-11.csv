@@ -3013,3 +3013,6 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-21T02:42:20Z,44857101345,muse,muse-spark-1.3-contributor,suggest,,,suggested,,2.2,0,0,0,,4,4,59,59,,,none,,1
 2026-11-21T02:47:34Z,44844092405,claude-4,opus,revise,4357,hard,built,,101.2,4,189,131143,3.0796,18,24,,,3.4,claude-1,fresh,,1
 2026-11-21T02:51:38Z,44853016428,claude-7,sonnet+opus,revise,4373,medium,approved,,14.6,47,8578,3405489,3.3431,2,6,,,0.3,claude-7,resumed,,2
+2026-11-21T02:59:52Z,44854087667,claude-3,sonnet+opus,revise,4372,medium,built,,6.7,14,4037,862873,1.4858,34,36,,,2.8,claude-3,resumed,,1
+2026-11-21T03:23:37Z,44859582477,claude-3,sonnet+opus,review,4372,medium,approved,,11.1,32,11455,1000409,0.8846,39,40,,,0.8,claude-3,none,,1
+2026-11-21T03:27:45Z,44845556436,claude-3,opus,build,4350,hard,built,,125.2,314,87967,26689889,8.9744,17,39,,,76.2,claude-3,fresh,,1
