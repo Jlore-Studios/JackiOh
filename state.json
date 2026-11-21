@@ -16313,6 +16313,7 @@
       "run_id": "44873122123",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 415,
       "started_at": "2026-11-21T05:55:36Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37686,9 +37687,33 @@
         "title": "Patch: the server checks a practice game's deck when it issues the seed, and the hourly purge deletes every account's lapsed seeds",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "29e26cd8e1800af933432a1f8381513763d8cfc6",
+        "issue": 4369,
+        "merged_at": "2026-11-21T06:41:31Z",
+        "n": 415,
+        "pr": 4387,
+        "queued_at": "2026-11-21T06:41:31Z",
+        "sha": "aada4130004fa11ea7aa59d1b4d8687934c3454e",
+        "status": "queued",
+        "title": "Patch: the changed-cards fuzz rotation plays the Duos wave too",
+        "tries": 0
       }
     ],
-    "count": 414
+    "count": 415
   },
   "statistics": {
     "at": "2026-11-21T06:32:19Z"
