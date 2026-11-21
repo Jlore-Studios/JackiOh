@@ -15600,15 +15600,6 @@
       "failures": 0,
       "feedback_since": "2026-11-21T02:07:09Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-21T02:59:52Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "- run 3 (ci fix): CI failed spacing.test.ts (workshop.css UNMIGRATED 87->88): my block's 'gap: 3px' was a new raw length; changed to gap: var(--space-2) (4px; no 3px step). Re-running css-reading web tests.\n\n## State (run 3, ci fix)\nBuilt and checked earlier (see run 2 above). CI's only red check was `web (unit 5/8)`: spacing.test.ts counted my block's `gap: 3px` as a new raw length in workshop.css. Fixed: `gap: var(--space-2)` (4px; the scale has no 3px). Ran spacing/layout/breakpoints/typescale and every src/*.test.ts, src/game/*.test.ts and deckbuilder test locally: 77 files pass. Nothing else left.\n",
-        "provider": "claude-3",
-        "reason": "built and checked; its own review run, on this subscription, reviews it next",
-        "trail": "- Bash: {\"command\": \"git status --short | head; sed -n 1,60p apps/web/src/spacing.test.ts | cut -c1-220; cat apps/web/src/spacing.css | head -40\", \"description\": \"Read spacing test and tokens\"}\n- Bash: {\"command\": \"grep -n \\\"gap: var(--space\\\" apps/web/src/game/deckbuilder/workshop.css | head -5; sed -n 1092,1112p apps/web/src/game/deckbuilder/workshop.css\", \"description\": \"See token usage in works\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np=\\\"apps/web/src/game/deckbuilder/workshop.css\\\"\\ns=open(p).read()\\nold=\\\"\\\"\\\" align-items: stretch;\\n gap: 3px;\\n }\\n\\n .ws-compare-pick .ws-select {\\n font-size: var\u2026\n- Bash: {\"command\": \"grep -ln \\\"readFileSync\\\\|readdirSync\\\" apps/web/src/*.test.ts apps/web/src/**/*.test.ts 2>/dev/null | sort -u | head -40\", \"description\": \"List web tests that read source files\"}\n- Bash: {\"command\": \"echo \\\"- run 3 (ci fix): CI failed spacing.test.ts (workshop.css UNMIGRATED 87->88): my block's 'gap: 3px' was a new raw length; changed to gap: var(--space-2) (4px; no 3px step). Re-run\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## State (run 3, ci fix)\\nBuilt and checked earlier (see run 2 above). CI's only red check was `web (unit 5/8)`: spacing.test.ts counted my block's `gap: \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the deck builder's Compare with picker reads in full at 744\u00d71133\"} --> The one red check on #4372, `web (unit 5/8)`, is fixed and passes locally. `spacing.test.ts` failed because my new media block in `workshop.css` added `gap: 3px`, which counts as a n\u2026"
-      },
       "interruptions": 0,
       "issue": 4349,
       "kind": "review",
