@@ -16511,8 +16511,14 @@
     "what": "spot-check #4399 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-21T08:57:38Z",
-    "notes": [],
+    "at": "2026-11-21T09:03:52Z",
+    "notes": [
+      "delivered revise #4361 on claude-8 (run 44879799657): approved",
+      "started revise #4361 on claude-8 (run 44887893724)",
+      "started review #4399 on claude-4 (run 44887924521)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17217,7 +17223,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T08:57:38Z",
+  "loop_tick": "2026-11-21T09:03:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
