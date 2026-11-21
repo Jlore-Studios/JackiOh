@@ -15544,12 +15544,8 @@
     "what": "review #4436 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-21T23:09:53Z",
-    "notes": [
-      "delivered build #4410 on claude-8 (run 44941501359): built",
-      "started review #4436 on claude-8 (run 44960585083)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-21T23:18:11Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16254,7 +16250,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T23:09:53Z",
+  "loop_tick": "2026-11-21T23:18:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
