@@ -844,7 +844,7 @@ pub fn heal_multiplier_of(state: &GameState, player: PlayerId) -> i32 {
 pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option<&str>) -> Vec<CardInstance> {
     permanents_held_by(state, player)
         .into_iter()
-        .filter(|held| Some(held.id.as_str()) != except && !unit_has(state, held, KeywordKind::Immutable))
+        .filter(|held| Some(held.id.as_str()) != except && !crate::layers::is_immutable(state, held))
         .collect()
 }
 

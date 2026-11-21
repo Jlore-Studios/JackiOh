@@ -96,6 +96,11 @@ pub struct FuseArgs {
     /// or, for an X-cost or embiggen card with none, that printed cost form on the fused definition.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_cost: Option<bool>,
+    /// R4353003: the kept `target` was made by the same effect for this fusion (Stinkyscape+
+    /// T-Supernova's Alnilam), so its being Immutable refuses nothing: the fusion is how the card is
+    /// made, not a change to a card that stood in play.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fresh: Option<bool>,
 }
 
 /// R352: the two prices a fused hand card can have.
@@ -2279,7 +2284,7 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         if !allowed {
             return None;
         }
-        if crate::layers::unit_has(sink.state, target, KeywordKind::Immutable) {
+        if args.fresh != Some(true) && crate::layers::is_immutable(sink.state, target) {
             return None;
         }
     } else if to_hand.is_none() {

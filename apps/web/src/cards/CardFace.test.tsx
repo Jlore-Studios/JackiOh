@@ -457,7 +457,7 @@ describe("B10: RulesText marks terms in bold", () => {
     const term = one(cry, ".card-text strong.cf-term");
     expect(term.getAttribute("data-term")).toBe("Cry");
     expect(term.textContent).toBe("Cry:");
-    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit.");
+    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit. You have 1 less mana next turn.");
     cleanup();
 
     const start = one(catalogFace("core-040"), '.card-text strong.cf-term[data-term="Start of turn"]');
@@ -700,7 +700,7 @@ describe("B14: the radiant face", () => {
 
   it("B14 a clause the radiant cell restates is printed once, in its radiant form (core-002, core-046)", () => {
     const speciesist = one(catalogFace("core-002", true), ".card-text");
-    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units.");
+    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. You have 1 less mana next turn.");
     expect(speciesist.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
     expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (4): −4/−4 instead.");
@@ -1364,8 +1364,9 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
   });
 
   it("#1017: a face that fits prints its whole text, and a clamp prints its whole text as printing less", () => {
-    // Silly Silas's Radiant face: his base face has been the clamp since it gained its first line (issue #3837).
-    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: true })} />);
+    // Silly Silas's base face: issue #4353 took off the line that made it clamp (issue #3837), and his Radiant
+    // face prints words written for it.
+    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: false })} />);
     flushFits();
     const fits = one(container, ".card-text");
     expect(fits.hasAttribute("data-short")).toBe(false);

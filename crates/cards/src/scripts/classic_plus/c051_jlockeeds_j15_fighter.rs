@@ -6,8 +6,9 @@
 //!   Through v0.5.11r: the same without Can't Defend, so it could switch to Defense Position (catalog data).
 //!   Through v0.5.9f: "First Strike, Rush (Radiant: and Divine Shield). Can't be in Defense Position. Can't
 //!   be attacked." (`script_v0_5_9f`, kept, R767000)
-//! Engine:  Evasive (§6.1, §4.2 step 2, R3551003): no attack may name it, a forced one included; it is
-//!            still targeted by effects and hit by "all" effects. Evasive alone never defends, so no
+//! Engine:  Evasive (§6.1, §4.2 step 2, R3551003): no attack may name it, a forced one included, and no
+//!            Spell or Field Spell may target it in play (R4353002); a Unit's, a Trap's or a Field Trap's
+//!            effect still may, and "all" effects still hit it. Evasive alone never defends, so no
 //!            Can't Defend is printed. A Taunt it gains binds nobody. Tunes: none.
 //!
 //! All keywords are the catalog's: the card carries no script.
@@ -215,11 +216,11 @@ mod tests {
         }
 
         #[test]
-        fn e35_an_effect_still_targets_it_hit_job_destroys_it() {
+        fn r4353002_no_spell_may_target_it_hit_job_is_refused() {
             let mut s = defended(false, &[]);
             let id = s.card(J15).id.clone();
-            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
-            s.expect_in_zone(J15, "graveyard");
+            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": id }] })));
+            s.expect_in_zone(J15, "field");
         }
 
         #[test]

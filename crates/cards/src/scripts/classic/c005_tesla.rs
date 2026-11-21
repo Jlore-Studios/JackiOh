@@ -70,19 +70,16 @@ fn zap() -> TriggerDef {
         if has_revealed(ctx) {
             return vec![];
         }
-        // R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
-        // animates but deals it nothing.
-        let state: &GameState = &*ctx.state;
-        let shielded = find_instance(state, &target).is_some_and(|unit| immutable_bars(state, ctx.live_self(), unit));
-        let mut effects = vec![remember(json_as(json!({ "key": REVEALED, "value": true })))];
-        if !shielded {
-            effects.push(damage(json_as(json!({
+        // R4353001: a Field Trap may target an Immutable Unit in play, so Tesla deals it the damage too
+        // (an Indestructible one takes none, as ever).
+        vec![
+            remember(json_as(json!({ "key": REVEALED, "value": true }))),
+            damage(json_as(json!({
                 "to": { "of": "instance", "instanceId": target },
                 "amount": param(&*ctx, "damage"),
-            }))));
-        }
-        effects.push(animate(json_as(json!({ "position": "DEF" }))));
-        effects
+            }))),
+            animate(json_as(json!({ "position": "DEF" }))),
+        ]
     })
     .with_when(|ctx, event| !has_revealed(ctx) && arrival(ctx, event).is_some())
 }
@@ -190,21 +187,21 @@ mod tests {
             }
 
             #[test]
-            fn r781002_an_immutable_unit_it_fires_on_takes_no_damage_and_tesla_still_animates() {
+            fn r4353001_an_immutable_unit_it_fires_on_takes_its_damage_and_tesla_animates() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [{ "def": MENACE, "radiant": true }, FILLER], "mana": 10 }), json!({}), false);
                 let menace = s.card(MENACE).clone();
 
                 s.play(&menace, json!({ "zone": 2 }));
 
-                // A Field Trap can't target an Immutable Unit in play (R781001): Tesla fires and animates,
-                // but its hit passes the Radiant Menace by, so its Lifesteal heals nothing.
+                // A Field Trap may target an Immutable Unit in play (R4353001): Tesla's hit lands on the
+                // Radiant Menace, its Lifesteal heals the 4 dealt, and Tesla animates.
                 let tesla = s.card(TESLA).clone();
                 assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
                 assert_eq!(s.count("trapFired"), 1);
-                assert_eq!(s.count("damage"), 0);
-                s.expect_stats(&menace, json!({ "health": 18 }));
-                s.expect_health(P1, 20);
+                assert_eq!(s.count("damage"), 1);
+                s.expect_stats(&menace, json!({ "health": 14, "maxHealth": 18 }));
+                s.expect_health(P1, 24);
             }
 
             #[test]

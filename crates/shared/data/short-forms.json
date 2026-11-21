@@ -1,8 +1,8 @@
 {
   "forms": {
     "core-052": {
-      "base": {
-        "en": "Summon this for your opponent.\nCry: Rotate every card on the field one step left or right. Crossing sides changes control."
+      "radiant": {
+        "en": "Float reduces cost.\nCry: Rotate every card on the field one step left or right. Cards crossing to your opponent's side are Bounced and cost (0)."
       }
     },
     "core-093": {

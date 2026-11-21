@@ -111,7 +111,7 @@
   "meditative-080": { bespoke: "aluneth", entrance: "lanternLight", aura: { look: "frost", palette: "Nerd/ink", scope: "zone" }, signature: true }, // Aluneth
   "meditative-081": { cast: { motif: "deal" } }, // Deadman's Hand
   "meditative-082": { cry: { motif: "bless" } }, // Medina Outfitter
-  "meditative-083": { trigger: { motif: "bless" } }, // Medina Enforcer
+  "meditative-083": { activate: { motif: "bless" } }, // Medina Enforcer
   "meditative-084": "none: vanilla (the census saw its Cry change nothing)", // Volatility
   "meditative-085": { trigger: { motif: "deal" } }, // Playtester
   "meditative-086": { entrance: "coinFlip", aura: { look: "orbit", palette: "Hustle/cash", scope: "tile" }, signature: true }, // Mayor Medinamogger

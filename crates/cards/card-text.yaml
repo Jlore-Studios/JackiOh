@@ -43,8 +43,8 @@ core-002: # Speciesist
     death: Tolerance wins. Again.
   zh:
     name: 物种歧视者
-    base: 战吼：消灭一个敌方非人类单位。
-    radiant: 战吼：消灭所有敌方非人类单位。
+    base: 战吼：消灭一个敌方非人类单位。你在下个回合少{mana}点法力值。
+    radiant: 战吼：消灭所有敌方非人类单位。你在下个回合少{mana}点法力值。
 core-003: # Right-house defender
   flavour: Wrong house? Impossible. He checked the address twice.
   voice:
@@ -506,8 +506,8 @@ core-052: # Silly Silas
     death: So... dizzy...
   zh:
     name: 憨憨塞拉斯
-    base: "为你的对手召唤此单位。\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。跨到另一侧的牌改变控制者。"
-    radiant: 战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。原本会跨到你对手一侧的牌改为被弹回，且其法力值消耗为(0)。
+    base: "结余减费。\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。跨到另一侧的牌改变控制者。"
+    radiant: "结余减费。\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。原本会跨到你对手一侧的牌改为被弹回，且其法力值消耗为(0)。"
 core-053: # Reno
   flavour: Bring it back. Bring it all back.
   voice:
@@ -3741,8 +3741,8 @@ meditative-083: # Medina Enforcer
     death: Shift's over.
   zh:
     name: 麦迪纳执法者
-    base: 回合结束时：强化你手牌中的每张牌。
-    radiant: 回合结束时：强化你手牌中的每张牌{times}次。
+    base: 激活：强化你手牌中的每张牌。
+    radiant: 激活：强化你手牌中的每张牌{times}次。
 meditative-084: # Volatility
   flavour: Shake well. Do not shake well.
   voice:
@@ -5039,8 +5039,8 @@ stinkyscape-059: # Repeater v5
     death: Barrels melted.
   zh:
     name: 连发炮v5
-    base: "星舰部件\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
-    radiant: "星舰部件\n激活3：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    base: "星舰部件\n激活4：对一个敌方单位造成{damage}点伤害，具有穿透。"
+    radiant: "星舰部件\n激活4：对一个敌方单位造成{damage}点伤害，具有穿透。"
 stinkyscape-060: # Cannon v5
   flavour: Its shells have names. Its crew does not.
   voice:
@@ -7225,7 +7225,7 @@ stinkyscapeplus-021: # Jlockeed Shredder-12
     death: Budget cuts got me.
   zh:
     name: Jlockeed收割机-12
-    base: "献祭3，穿透\n结余使献祭需求减少1。\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
+    base: "献祭3\n结余使献祭需求减少1。\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
     radiant: "献祭3，穿透\n结余使献祭需求减少1。\n回合结束时：对所有敌人造成{damage}点伤害，两次。"
 stinkyscapeplus-022: # Cryofluid
   flavour: Cold, thick and a little too eager to help. Don't drink it, however thirsty.
@@ -7423,8 +7423,8 @@ stinkyscapeplus-041: # Mend Projector
     cast: Everyone's fixed. You're welcome.
   zh:
     name: 修复投射器
-    base: 回合结束时：为所有单位恢复所有生命值。
-    radiant: 回合结束时：为所有单位恢复所有生命值，并使其获得圣盾。
+    base: 回合结束时：为所有单位恢复所有生命值，并使其获得+{health}点生命值。
+    radiant: 回合结束时：为所有单位恢复所有生命值，并使其获得+{health}点生命值和圣盾。
 stinkyscapeplus-042: # Force Projector
   flavour: It hums, it glows, and it politely tells the first few hits to go home.
   voice:
@@ -7635,8 +7635,8 @@ stinkyscapeplus-065: # Thorium Wall
     death: Cracked at last.
   zh:
     name: 钍墙
-    base: "无法攻击，嘲讽\n加码(4)：巨型，0/32。"
-    radiant: "无法攻击，嘲讽，护甲2\n加码(4)：巨型，0/64。"
+    base: "无法攻击，嘲讽\n加码(4)：巨型，0/40。"
+    radiant: "无法攻击，嘲讽，护甲2\n加码(4)：巨型，0/80。"
 stinkyscapeplus-066: # Plastanium Wall
   flavour: Built from a material nobody can pronounce and nobody can dent.
   voice:
@@ -7785,8 +7785,8 @@ stinkyscapeplus-079: # A Glimpse into the Endless Sea
     cast: Just wait. The sea remembers.
   zh:
     name: 无尽之海一瞥
-    base: 放逐你的牌库和所有永久物。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
-    radiant: 放逐你的牌库和所有永久物。你的英雄获得{armor}点护甲。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
+    base: 放逐你的牌库和所有永久物。你免疫疲劳伤害。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
+    radiant: 放逐你的牌库和所有永久物。你的英雄获得{armor}点护甲。你免疫疲劳伤害。开始一个{count}个回合的倒计时。倒计时结束时，赢得本局对战。
 stinkyscapeplus-080: # The Last Voyage
   flavour: Every ship leaves port. This fleet just forgot to pack a return.
   voice:
@@ -7941,8 +7941,8 @@ stinkyscapeplus-096: # Open Enrollment
     cast: Everyone's admitted! Even you, Gary.
   zh:
     name: 开放招生
-    base: 将你的手牌填满随机F级牌，若无则为D级牌。
-    radiant: 将你的手牌填满随机光辉F级牌，若无则为D级牌。
+    base: "将你的手牌填满随机F级牌，若无则为D级牌。\n加码(2)：它们的法力值消耗减少(1)点。"
+    radiant: "将你的手牌填满随机光辉F级牌，若无则为D级牌。\n加码(2)：它们的法力值消耗为(0)。"
 stinkyscapeplus-097: # Selective Enrollment
   flavour: The waiting list is a rumour and the interview is a fight.
   voice:
@@ -8675,8 +8675,8 @@ stinkyscapeplus-166: # Mindustrial Revolution
     cast: Open the gates. Mind the union.
   zh:
     name: 智工革命
-    base: "在本局对战的剩余时间内。\n回合开始时：将一张随机智工牌置入你的手牌。"
-    radiant: "在本局对战的剩余时间内。\n回合开始时：将一张随机光辉智工牌置入你的手牌。其法力值消耗减少(1)点。"
+    base: 在本局对战的剩余时间内，现在以及你的每个回合开始时，将一张随机智工牌置入你的手牌。
+    radiant: 在本局对战的剩余时间内，现在以及你的每个回合开始时，将一张随机光辉智工牌置入你的手牌。其法力值消耗减少(1)点。
 stinkyscapeplus-t-tears-of-the-kwzki-tree: # Tears of the Kwzki Tree
   flavour: One drop makes everything shine. The tree is fine, thanks for asking.
   voice:

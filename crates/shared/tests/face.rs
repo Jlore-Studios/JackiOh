@@ -701,7 +701,8 @@ fn r3045000_the_hull_itself_and_every_other_fusion_are_named_as_they_were() {
 /// once, and every other line in its place; a card that is no fusion prints its lines as they are.
 #[test]
 fn r3941002_a_fused_face_prints_its_ingredients_keyword_lines_as_one() {
-    let parts = ["core-011", "core-002", "core-003"].map(catalog_def);
+    // TG #41 Legacy: Speciesist, whose Cry line has no number (Core #2's gained one in #4353).
+    let parts = ["core-011", "traininggrounds-041", "core-003"].map(catalog_def);
     let mut def = fused(4, &[&parts[0], &parts[1], &parts[2]]);
     def.base.text = parts
         .iter()
@@ -821,9 +822,10 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
     assert!(written("meditative-009", true));
     assert_eq!(short_form_of("meditative-009", false), None);
     // Issue #3837: Silly Silas's base face gained "Summon this for your opponent." and clamped, and his
-    // Radiant face, Crater gone, fits.
-    assert!(written("core-052", false));
-    assert_eq!(short_form_of("core-052", true), None);
+    // Radiant face, Crater gone, fit. Issue #4353 took that line off and gave both faces "Float reduces
+    // cost.": the base face fits, and the Radiant face prints words written for it.
+    assert_eq!(short_form_of("core-052", false), None);
+    assert!(written("core-052", true));
     // Training Grounds #38's text is one short line since issue #3139.
     assert_eq!(short_form_of("traininggrounds-038", true), None);
 }

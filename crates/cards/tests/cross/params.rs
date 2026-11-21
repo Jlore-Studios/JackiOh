@@ -638,6 +638,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscapeplus-069-1", PRICE),
         ("stinkyscapeplus-075-1", PRICE),
         ("stinkyscapeplus-082", PRICE),
+        // R4353023: S+ #96's Embiggened price and the (1) less and (0) it gives the cards it adds.
+        ("stinkyscapeplus-096", PRICE),
         ("stinkyscapeplus-097", PRICE),
         ("stinkyscapeplus-098", PRICE),
         ("stinkyscapeplus-103", PRICE),

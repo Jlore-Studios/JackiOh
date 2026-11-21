@@ -48,19 +48,30 @@
     "rarity": "Common",
     "flavor": "Physical",
     "token": false,
-    "cost": 3,
+    "cost": 2,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
     "loc": 10,
     "base": {
-      "attack": 7,
+      "attack": 4,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Destroy an enemy non-Human Unit."
+      "text": "Cry: Destroy an enemy non-Human Unit. You have {mana} less mana next turn."
     },
     "radiant": {
-      "attack": 14,
+      "attack": 8,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Destroy all enemy non-Human Units."
+      "text": "Cry: Destroy all enemy non-Human Units. You have {mana} less mana next turn."
     }
   },
   "core-003": {
@@ -1789,19 +1800,19 @@
     "rarity": "Legendary",
     "flavor": "Chaos",
     "token": false,
-    "cost": 4,
+    "cost": 6,
     "loc": 14,
     "base": {
       "attack": 7,
       "health": 7,
       "keywords": [],
-      "text": "Summon this for your opponent.\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
+      "text": "Float reduces cost.\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
     },
     "radiant": {
       "attack": 14,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
+      "text": "Float reduces cost.\nCry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
     }
   },
   "core-053": {
@@ -15437,7 +15448,7 @@
     "rarity": "Rare",
     "flavor": "Physical",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "params": [
       {
         "key": "times",
@@ -15452,15 +15463,15 @@
     "loc": 17,
     "base": {
       "attack": 4,
-      "health": 4,
+      "health": 7,
       "keywords": [],
-      "text": "End of turn: Buff every card in your hand."
+      "text": "Activate: Buff every card in your hand."
     },
     "radiant": {
       "attack": 8,
-      "health": 8,
+      "health": 14,
       "keywords": [],
-      "text": "End of turn: Buff every card in your hand {times|time|times}."
+      "text": "Activate: Buff every card in your hand {times|time|times}."
     }
   },
   "meditative-084": {
@@ -20454,8 +20465,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 4,
-        "radiant": 8,
+        "base": 3,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20646,8 +20657,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 6,
-        "radiant": 12,
+        "base": 5,
+        "radiant": 10,
         "better": "up",
         "step": 2,
         "min": 1
@@ -20838,8 +20849,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 8,
-        "radiant": 16,
+        "base": 7,
+        "radiant": 14,
         "better": "up",
         "step": 2,
         "min": 1
@@ -20883,8 +20894,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 3,
-        "radiant": 6,
+        "base": 2,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20899,7 +20910,7 @@
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      "text": "Starship Piece\nActivate 4: Deal {damage} damage to an enemy Unit, with Pierce."
     },
     "radiant": {
       "attack": 0,
@@ -20909,7 +20920,7 @@
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      "text": "Starship Piece\nActivate 4: Deal {damage} damage to an enemy Unit, with Pierce."
     }
   },
   "stinkyscape-060": {
@@ -22889,7 +22900,7 @@
     "rarity": "Legendary",
     "flavor": "Hustle",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "refs": [
       "stinkyscape-112-1"
     ],
@@ -28070,16 +28081,16 @@
     "rarity": "Common",
     "flavor": "Physical",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 23,
     "base": {
-      "attack": 2,
+      "attack": 7,
       "health": 1,
       "keywords": [],
       "text": "Cry: Destroy an enemy non-Human Unit."
     },
     "radiant": {
-      "attack": 4,
+      "attack": 14,
       "health": 2,
       "keywords": [],
       "text": "Cry: Destroy all enemy non-Human Units."
@@ -29548,12 +29559,8 @@
     "base": {
       "attack": 12,
       "health": 16,
-      "keywords": [
-        {
-          "kind": "Pierce"
-        }
-      ],
-      "text": "Tribute 3, Pierce\nFloat reduces Tribute requirement by 1.\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      "keywords": [],
+      "text": "Tribute 3\nFloat reduces Tribute requirement by 1.\nEnd of turn: Deal {damage} damage to all enemies, twice."
     },
     "radiant": {
       "attack": 24,
@@ -30351,14 +30358,24 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "health",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "End of turn: Heal all Units to full."
+      "text": "End of turn: Heal all Units to full and give them +{health} Health."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Heal all Units to full and give them Divine Shield."
+      "text": "End of turn: Heal all Units to full and give them +{health} Health and Divine Shield."
     }
   },
   "stinkyscapeplus-042": {
@@ -31277,7 +31294,7 @@
     "loc": 29,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 10,
       "keywords": [
         {
           "kind": "Can't attack"
@@ -31286,11 +31303,11 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEmbiggened (4): GIGA, 0/32."
+      "text": "Can't attack, Taunt\nEmbiggened (4): GIGA, 0/40."
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 20,
       "keywords": [
         {
           "kind": "Can't attack"
@@ -31303,7 +31320,7 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/64."
+      "text": "Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/80."
     }
   },
   "stinkyscapeplus-066": {
@@ -31940,11 +31957,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Exile your deck and every permanent. Start an {count|turn|turns} countdown. When it ends, win the game."
+      "text": "Exile your deck and every permanent. You are immune to fatigue damage. Start an {count|turn|turns} countdown. When it ends, win the game."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile your deck and every permanent. Your hero gains {armor} Armor. Start an {count|turn|turns} countdown. When it ends, win the game."
+      "text": "Exile your deck and every permanent. Your hero gains {armor} Armor. You are immune to fatigue damage. Start an {count|turn|turns} countdown. When it ends, win the game."
     },
     "params": [
       {
@@ -32596,15 +32613,18 @@
     "rarity": "Common",
     "flavor": "Chaos",
     "token": false,
-    "cost": 0,
+    "cost": {
+      "base": 0,
+      "embiggen": 2
+    },
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Fill your hand with random F tier cards (or D tier if none exist)."
+      "text": "Fill your hand with random F tier cards (or D tier if none exist).\nEmbiggened (2): They cost (1) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your hand with random Radiant F tier cards (or D tier if none exist)."
+      "text": "Fill your hand with random Radiant F tier cards (or D tier if none exist).\nEmbiggened (2): They cost (0)."
     }
   },
   "stinkyscapeplus-097": {
@@ -34916,8 +34936,8 @@
     "params": [
       {
         "key": "crawlers",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35754,7 +35774,7 @@
     "rarity": "Epic",
     "flavor": "Physical",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "loc": 16,
     "base": {
       "attack": 1,
@@ -36079,8 +36099,8 @@
     "params": [
       {
         "key": "buff",
-        "base": 2,
-        "radiant": 2,
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -36088,8 +36108,8 @@
       },
       {
         "key": "buff2",
-        "base": 4,
-        "radiant": 4,
+        "base": 6,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -36163,11 +36183,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game.\nStart of turn: Add a random Mindustrial card to your hand."
+      "text": "Add a random Mindustrial card to your hand now and at the start of each of your turns, for the rest of the game."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game.\nStart of turn: Add a random Radiant Mindustrial card to your hand. It costs (1) less."
+      "text": "Add a random Radiant Mindustrial card to your hand now and at the start of each of your turns, for the rest of the game. Each costs (1) less."
     }
   },
   "stinkyscapeplus-t-tears-of-the-kwzki-tree": {

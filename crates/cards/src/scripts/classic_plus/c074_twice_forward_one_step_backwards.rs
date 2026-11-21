@@ -285,7 +285,7 @@ mod tests {
             }
 
             #[test]
-            fn r781002_an_immutable_unit_in_play_is_not_fused_in_and_it_still_fires_and_gains_its_brittle() {
+            fn r4353001_a_copy_of_an_immutable_unit_in_play_is_fused_in_and_it_gains_its_brittle_and_animates() {
                 let mut s = set_then_their_turn(
                     false,
                     json!({}),
@@ -295,18 +295,20 @@ mod tests {
                 s.play(RAPID, json!({}));
                 let menace = s.card(MENACE).clone();
                 s.play(MENACE, json!({ "zone": 1 }));
-                // A Field Trap can't target an Immutable card in play (R781001): it fires, fuses nothing in
-                // and gains its Brittle.
+                // A Field Trap may target an Immutable card in play (R4353001): a copy of the Radiant
+                // Menace's definition is fused in (a plain one, on the base face), the Menace staying where
+                // it is, and it gains its Brittle.
                 s.expect_in_zone(&menace, "field");
-                assert_eq!(fused_events(&s), 0);
+                assert_eq!(fused_events(&s), 1);
                 let trap = trap_of(&s);
+                assert_eq!(part_of(&s, &trap.def_id, MENACE), Some(json!({ "defId": MENACE })));
                 assert_eq!(trap.face_up, Some(true));
                 assert_eq!(active_brittle_count(&trap), Some(3));
-                // Nothing fused gives it no stats, so the last step of its firing leaves it in its zone
-                // (R2280000).
-                s.expect_events(json!(["cardResolved", "trapFired"]));
-                assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Animated));
-                assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+                // The copy gives it the Menace's stats, so the last step of its firing animates it (R2280000).
+                s.expect_events(json!(["cardResolved", "trapFired", "fused", "animated"]));
+                assert!(s.backrow(P1, 2).is_none());
+                assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(trap.id.clone()));
+                s.expect_stats(&trap, json!({ "attack": 9, "health": 9 }));
             }
 
             #[test]
@@ -632,7 +634,7 @@ mod tests {
             }
 
             #[test]
-            fn r781002_neither_an_immutable_unit_in_play_nor_a_copy_of_it_is_fused_in() {
+            fn r4353001_a_radiant_copy_of_an_immutable_unit_in_play_is_fused_in_the_unit_staying_where_it_is() {
                 let mut s = set_then_their_turn(
                     true,
                     json!({}),
@@ -641,8 +643,10 @@ mod tests {
                 );
                 s.play(RAPID, json!({}));
                 s.play(MENACE, json!({ "zone": 1 }));
-                assert_eq!(fused_events(&s), 0);
+                assert_eq!(fused_events(&s), 1);
+                assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(MENACE.to_string()));
                 let trap = trap_of(&s);
+                assert_eq!(part_of(&s, &trap.def_id, MENACE), Some(json!({ "defId": MENACE, "radiant": true })));
                 assert_eq!(trap.face_up, Some(true));
                 assert_eq!(active_brittle_count(&trap), Some(5));
             }
