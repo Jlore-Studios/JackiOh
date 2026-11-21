@@ -57,7 +57,7 @@ fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
                 .into_iter()
                 .filter_map(|slot| {
                     let card = card_at(ctx.state, slot)?;
-                    if unit_has(ctx.state, card, KeywordKind::Immutable) {
+                    if is_immutable(ctx.state, card) {
                         None
                     } else {
                         Some(card.clone())
