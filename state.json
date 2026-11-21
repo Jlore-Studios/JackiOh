@@ -15788,6 +15788,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 410,
       "started_at": "2026-11-21T01:55:49Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37086,9 +37087,33 @@
         "title": "Patch: the dungeon run's map layer is fuzzed with refusal and invariant checks",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "bc6f1cb0b98857f3fd25b2a7358065e2ee5ce85b",
+        "issue": 4317,
+        "merged_at": "2026-11-21T03:25:06Z",
+        "n": 410,
+        "pr": 4373,
+        "queued_at": "2026-11-21T03:25:06Z",
+        "sha": "1a46b42f91691d55cfe0fc039830cf3ce3b05af4",
+        "status": "queued",
+        "title": "Patch: the server checks a practice game's deck when it issues the seed, and the hourly purge deletes every account's lapsed seeds",
+        "tries": 0
       }
     ],
-    "count": 409
+    "count": 410
   },
   "statistics": {
     "at": "2026-11-21T03:13:28Z"
