@@ -45,8 +45,11 @@ function fillerDeck(): string[] {
     .map((def) => def.id);
 }
 
-/** A cost change on the board: the card's own `costMod` (R65), and p1's player modifiers (§10.1). */
-type CostChange = { costMod?: number; mods?: unknown[] };
+/**
+ * A cost change on the board: the card's own `costMod` (R65), p1's player modifiers (§10.1), and the
+ * card's no-premium mark (Meditative+ #23's, R4350000).
+ */
+type CostChange = { costMod?: number; mods?: unknown[]; noEmbiggenPremium?: boolean };
 
 /** The card is a copy of one the engine dealt, so it carries every field a new card has. */
 function board(defId: string, radiant: boolean, mana: number, change: CostChange = {}): { state: GameState; cardId: string } {
@@ -62,6 +65,7 @@ function board(defId: string, radiant: boolean, mana: number, change: CostChange
     layout.players[player].hand = [];
   }
   if (change.costMod !== undefined) card.costMod = change.costMod;
+  if (change.noEmbiggenPremium !== undefined) card.noEmbiggenPremium = change.noEmbiggenPremium;
   layout.players.p1.hand.push(card);
   layout.players.p1.mods = change.mods ?? [];
   layout.active = "p1";
@@ -281,6 +285,33 @@ describe("#492 the Embiggened card shows the embiggen price as it stands, and th
       });
     }
   }
+});
+
+describe("R4350000 a card with no Embiggen premium", () => {
+  it("R4350000 the view's embiggenCost and the second badge show the normal price, and the Embiggened play pays it", () => {
+    // Meditative+ #23 Enormous Elderberry's cards: "Their Embiggened version costs no extra mana". With
+    // mana for the normal price only, the Embiggened version is offered at that price.
+    const pick = EMBIGGEN.find(({ base, embiggen }) => base > 0 && embiggen > base);
+    if (pick === undefined) throw new Error("no embiggen card prints a normal price above 0 and a dearer one");
+    const { def, base } = pick;
+    const { state, cardId } = board(def.id, false, base, { noEmbiggenPremium: true });
+    const { legal, onAction } = render492(state);
+    expect(viewFor(state, "p1").you.hand).toEqual(
+      expect.arrayContaining([expect.objectContaining({ instanceId: cardId, cost: base, embiggenCost: base })]),
+    );
+    expect(new Set(plays(legal, cardId).map((play) => play.embiggen))).toEqual(new Set([false, true]));
+    expect(el(testid.handCard(cardId)).querySelector(".cf-cost-alt")?.textContent).toBe(String(base));
+
+    fireEvent.click(el(testid.handCard(cardId)));
+    expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "embiggen");
+    expect(el("prompt-option-false")).toHaveTextContent(`Pay (${String(base)})`);
+    expect(el("prompt-option-true")).toHaveTextContent(`Pay (${String(base)})`);
+    fireEvent.click(el("prompt-option-true"));
+    placeIfAsked(def);
+    const { paid, embiggened } = sent(state, legal, onAction);
+    expect(paid).toBe(base);
+    expect(embiggened).toBe(true);
+  });
 });
 
 // Drag to play. jsdom has no layout, so `document.elementsFromPoint` answers whatever the pointer is

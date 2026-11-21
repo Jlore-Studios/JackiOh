@@ -278,6 +278,8 @@ fn to_placeholder(card: &mut CardInstance) {
     card.cost_override = None;
     // R1181003: the price of the Embiggened version alone (Enormous Elderberry's (0)) goes with its face.
     card.embiggen_cost_override = None;
+    // R4350000: and so does its no-premium mark (Enormous Elderberry's no extra mana).
+    card.no_embiggen_premium = None;
     card.x = None;
     card.embiggened = None;
     card.return_to_hand_at_end_of_turn = None;
@@ -311,6 +313,8 @@ fn to_placeholder_json(card: &mut Value) {
         "costOverride",
         // R1181003: the Embiggened version's own price.
         "embiggenCostOverride",
+        // R4350000: and its no-premium mark.
+        "noEmbiggenPremium",
         "x",
         "embiggened",
         "returnToHandAtEndOfTurn",
