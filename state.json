@@ -11009,6 +11009,13 @@
     "4219": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T00:20:58Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is one shell case, a table in one web test and one scan in one Rust test, with no engine, AI, migration or cross-crate design and about 3 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
