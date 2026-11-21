@@ -15299,9 +15299,14 @@
     "what": "review #4361 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-21T00:49:27Z",
+    "at": "2026-11-21T00:56:35Z",
     "notes": [
-      "runner gate: started 1 of 1 waiting run(s) (run 44846425431 on claude/charming-bell-p8etig)"
+      "delivered review #4360 on muse (run 44845485083): approved",
+      "delivered review #4359 on muse (run 44843670322): approved",
+      "delivered build #4331 on claude-8 (run 44834431017): built",
+      "started review #4361 on claude-8 (run 44847455393)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16007,7 +16012,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T00:49:27Z",
+  "loop_tick": "2026-11-21T00:56:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
