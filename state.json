@@ -15052,15 +15052,10 @@
     "what": "spot-check #4411 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-21T20:08:17Z",
+    "at": "2026-11-21T20:21:26Z",
     "notes": [
-      "#4413: green and waiting for a person to merge it, so `agy` gives up its claim on it",
-      "delivered review #4416 on claude-4 (run 44943109653): approved",
-      "delivered build #4396 on claude-3 (run 44936315945): built",
-      "started review #4417 on claude-3 (run 44945139367)",
-      "started revise #4416 on claude-4 (run 44945194392)",
-      "nothing more to start: nothing is queued",
-      "#4411: closed, so `bot:merging` is off"
+      "started review #4411 on claude-1 (run 44945953883)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15766,7 +15761,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T20:08:17Z",
+  "loop_tick": "2026-11-21T20:21:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
