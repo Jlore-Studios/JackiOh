@@ -3090,3 +3090,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-21T19:51:51Z,44939610217,muse,muse-spark-1.3-contributor,review,4411,medium,approved,,39.4,0,0,0,,3,4,64,64,1,,none,,1
 2026-11-21T20:05:49Z,44943109653,claude-4,sonnet+opus,review,4416,medium,approved,,11.7,36,8448,1649908,1.1432,10,12,,,1,,none,,1
 2026-11-21T20:02:37Z,44936315945,claude-3,sonnet+opus,build,4396,medium,built,,57.5,50,11620,3997017,2.0624,6,11,,,30.2,claude-3,fresh,,1
+2026-11-21T20:26:32Z,44945953883,claude-1,opus,review,4411,medium,reviewed,,1.5,19,8271,561697,0.6477,4,5,,,,,none,,1
+2026-11-21T20:29:11Z,44945139367,claude-3,sonnet+opus,review,4417,medium,approved,,12.7,36,12862,1548678,1.1648,12,13,,,3.2,,none,,1
+2026-11-21T20:25:36Z,44941441848,claude-8,sonnet+opus,review,4414,medium,approved,,7.8,52,21502,2082015,2.1675,25,44,,,1.7,,fresh,,3
+2026-11-21T20:28:22Z,44936370457,claude-7,sonnet+opus,build,4395,medium,built,,67.5,88,26175,4085613,1.0682,5,8,,,30.7,claude-7,fresh,,1
