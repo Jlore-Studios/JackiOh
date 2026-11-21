@@ -15738,6 +15738,8 @@
       }
     },
     "4373": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T00:25:51Z",
@@ -15751,8 +15753,11 @@
         "trail": "head); grep -n \\\"practice/seeds\\\" crates/server/README.md | head; grep -n \\\"practice.sweep\\\" crates/server/README.md; grep -n \\\"0047\\\" cr\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/server/tests/db/run.sh; docker ps 2>&1 | head -3; docker images 2>&1 | head -5\"}\n- said: Docker works. I'll start the Postgres suite in the background and write the docs while it runs.\n- Bash: {\"command\": \"(sh crates/server/tests/db/run.sh > /tmp/db-run.log 2>&1; echo \\\"EXIT $?\\\" >> /tmp/db-run.log) &\\nsleep 1; echo started\", \"run_in_background\": false}\n- Bash: {\"command\": \"sed -n 806,812p crates/server/README.md; sed -n 1188,1200p crates/server/README.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/README.md'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1,(s.count(a),a)\\n s=s.replace(a,b)\\nrep(\\\"201 `{ seed, lastBoard, expires\u2026\n- Bash: {\"command\": \"cat spec/rulings/R1483000.md; echo ====; cat spec/pending/4327.md | head -20; sed -n 160,172p spec/14-economy.md; ls spec/rulings | grep -c .; ls spec/rulings | grep \\\"R43[0-9][0-9]\\\" ; \u2026\n- Bash: {\"command\": \"cat spec/rulings/R4335000.md; sed -n 1,10p spec/pending/4335.md | cut -c1-600\"}\n- said: Now the spec files.\n- Bash: {\"command\": \"cat > spec/rulings/R4317000.md <<'EOF'\\n---\\nid: R4317000\\ntitle: \\\"An issue refuses a practice game's deck its claim's deal would refuse (issue #4317; amends R1303001 and R1483000)\\\"\\nc\u2026\n- Bash: {\"command\": \"sed -i 's/ and is alerted on its own (\\\\[\\\\[R3770000\\\\]\\\\]), and it runs/ and is alerted on its own (`FailingStreak`, issue #3770), and it runs/' spec/rulings/R4317001.md && grep -c \\\"R3\u2026\n- said: Now the pending file and the edits to the older rulings and \u00a714.8.\n- Bash: {\"command\": \"cat > spec/pending/4317.md <<'EOF'\\n**[[R4317000]] An issue refuses a practice game's deck its claim's deal would refuse (issue #4317, 2026-11-21)**: a seed request ([[\\u00a714.8]]) was \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef edit(p, a, b):\\n s=open(p).read()\\n assert s.count(a)==1,(p,s.count(a))\\n open(p,'w').write(s.replace(a,b))\\n\\nedit('spec/rulings/R1303001.md',\\n\\\"\\\"\\\"and the acco\u2026\n- Bash: {\"command\": \"tail -15 /tmp/db-run.log; cargo run --release -p jackioh-tools -- spec check 2>&1 | tail -15\", \"timeout\": 900000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate=\\\"\\\"\\\"## State\\n\\nRun 2 (build, sonnet): the plan is built in full, no departure from it.\\n- Done: `deal_refusal` (economy/p\u2026\n- Bash: {\"command\": \"grep -n \\\"r4317001\\\" /tmp/db-run.log; grep -n \\\"test result\\\" /tmp/db-run.log; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\\n- 2026-11-21 build run: edits done\u2026\n- said: The Postgres suite passed, including my purge test on Postgres. Now the full server tests, clippy and classify.\n- Bash: {\"command\": \"cargo test -p jackioh-server 2>&1 | grep -E \\\"^test result|FAILED|failed|panicked|error\\\" | head -20\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo fmt --check && echo FMT-OK; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -8\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo test -p jackioh-server 2>&1 | grep -E \\\"^test result|\\\\.\\\\.\\\\. FAILED|^failures:\\\" | head -20\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server api::practice::r1483000_concurrent 2>&1 | tail -25\", \"timeout\": 900000}\n- Bash: {\"command\": \"grep -rn \\\"SPEND_TURNS\\\\|fn claim\\\" crates/server/src/economy/*.rs crates/server/src/app.rs crates/server/src/api/*.rs | grep -i \\\"turn\\\\|claim(\\\" | head -10; grep -n \\\"SPENDS_WAITING\\\\|\u2026\n- Bash: {\"command\": \"sed -n 1,110p crates/server/src/economy/spend_slots.rs; sed -n 1495,1515p crates/server/src/config.rs; cat spec/rulings/R2378000.md | head -40\"}\n- Bash: {\"command\": \"grep -n \\\"async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit\\\" -B2 -A22 crates/server/tests/api/practice.rs\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/practice.rs'\\ns=open(p).read()\\na=\\\"\\\"\\\"async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {\\n let (app, token) = auth\u2026\n- Bash: {\"command\": \"for i in 1 2 3 4 5 6 7 8; do cargo test -p jackioh-server --test server r1483000_concurrent 2>&1 | grep -E \\\"^test result\\\"; done; cargo test -p jackioh-server --test server api::economy\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo FMT-OK; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -4; cargo run --release -p jackioh-tools -- spec check 2>&1 | tail -2; git fetch\u2026\n- Bash: {\"command\": \"cargo run --release -p jackioh-tools -- classify --base origin/main 2>&1 | tail -8; cargo run --release -p jackioh-tools -- patches check 2>&1 | tail -3; cargo run --release -p jackioh-t\u2026\n- Bash: {\"command\": \"grep -n \\\"mutants\\\" .github/workflows/ci.yml | head; sed -n 1,40p scripts/mutants.sh | cut -c1-200; which cargo-mutants\"}\n- tool error: Exit code 1 #!/bin/sh # Mutation testing (#3490): whether a test fails when the code it covers is wrong, which coverage # (super.yml's llvm-cov) cannot say. cargo-mutants over the Rust crates (.cargo\u2026\n- Bash: {\"command\": \"cp crates/server/src/economy/practice.rs /tmp/practice.rs.bak && sed -i 's|engine::run_pinned(pinned, \\\\|\\\\| session::deal::deal(&config)).err()|{ let _ = (pinned, config); None }|' crat\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server api::practice::r4317 2>&1 | grep -E \\\"^test result|FAILED\\\"; cargo fmt --check && echo FMT-OK; git diff --stat | tail -3; rm -f /tmp/practice.r\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: `sh crates/server/tests/db/run.sh` (Docker works here; log /tmp/db-run.log), whole `cargo test -p jackioh-se\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the server checks a practice game's deck when it issues the seed, and the hourly purge deletes every account's lapsed seeds\"} --> ## What changed **Check at issue (R4317000).** `POST /api/practice/seeds` now deals the game its claim would deal before it\u2026"
       },
       "issue": 4317,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T01:43:10Z",
         "from_run": "44843770653",
         "gates": [
           {
@@ -15844,7 +15849,11 @@
         "source": "build",
         "until": "2026-11-21T02:12:11Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-21T01:42:11Z",
+      "run_id": "pending:742fe21f-1795225365",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15863,6 +15872,9 @@
         "provider": "claude-7",
         "run": "44843770653"
       },
+      "started_at": "2026-11-21T01:43:10Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15876,9 +15888,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T01:31:13Z",
+    "at": "2026-11-21T01:43:10Z",
     "url": "",
-    "what": "review #4366 on muse"
+    "what": "review #4373 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-21T01:24:37Z",
