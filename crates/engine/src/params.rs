@@ -92,6 +92,19 @@ pub fn param_decl_of(state: &GameState, def_id: &str, key: &str) -> Option<Param
     params_of(state, card).into_iter().find(|param| param.key == key)
 }
 
+/// R4382000: while this thread folds under a carried catalog (R767000), the declaration of a number the
+/// carried definition never declared, read off the build's definition, as R3574001 reads a past
+/// version's. Only `param_value` falls back to it: `param_decl_of` still answers `None`, so `param_or`
+/// keeps its printed number (R2657006) and `declared_or` its flag. A number the build's definition does
+/// not declare either, or a card the build lacks, stays `None`.
+fn carried_decl_of(state: &GameState, def_id: &str, key: &str) -> Option<Param> {
+    crate::catalog::folding()?;
+    crate::catalog::with_shipped(None, || {
+        crate::catalog::find_def(Some(state), def_id)?;
+        param_decl_of(state, def_id, key)
+    })
+}
+
 /// B3.4 rule 5: how far one Degrade or Upgrade moves a declared number: the `step` it declares, else
 /// `PARAM_DEFAULT_STEP` read off the face's printed value.
 pub fn param_step(param: &Param, printed: i32) -> i32 {
@@ -192,7 +205,9 @@ pub struct ParamValueOptions {
 
 /// B3.4 rule 5, R386: the value of the declared number `key` on `instance` now, for `view_for`
 /// (`CardView.params`) and a `preview` hook (R280). Panics for a key the definition does not declare:
-/// a card text that reads a number it never declared is a catalog error, not a 0.
+/// a card text that reads a number it never declared is a catalog error, not a 0. R4382000: under a
+/// carried catalog, whose card may run a script newer than its definition, such a key reads off the
+/// build's definition first, and panics only when that lacks it too.
 pub fn param_value(
     state: &GameState,
     instance: Option<&CardInstance>,
@@ -206,7 +221,8 @@ pub fn param_value(
         Some(def_id) => def_id,
         None => panic!("param \"{key}\": no card to read it on (B3.4 rule 5)"),
     };
-    let Some(param) = param_decl_of(state, &def_id, key) else {
+    let Some(param) = param_decl_of(state, &def_id, key).or_else(|| carried_decl_of(state, &def_id, key))
+    else {
         panic!("{def_id} declares no number \"{key}\" (B3.4 rule 5, CardDef.params)");
     };
     // R4334000: with no face named, a fused card's number reads on its declaring part's face, the one

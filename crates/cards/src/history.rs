@@ -46,8 +46,8 @@ use crate::scripts::core::{
     c033_unstable_clone_machine, c042_eugenics, c043_big_felinor, c049_snom_bunny_mind_control,
     c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas, c054_straaza, c059_unbiased_immigration,
     c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms, c070_spiteful_stab,
-    c073_anti_oneshot_armor, c075_infinite_reserves, c079_twinspell, c080_zao_gao, c081_radiant_saintess,
-    c083_transmogulate, c084_going_long, c089_corpse_eater, c098_heroic_power,
+    c073_anti_oneshot_armor, c074_adaptive_ui, c075_infinite_reserves, c079_twinspell, c080_zao_gao,
+    c081_radiant_saintess, c083_transmogulate, c084_going_long, c089_corpse_eater, c098_heroic_power,
 };
 use crate::scripts::meditative::{
     c001_disruptive_disruptor, c005_death_by_1000_cuts, c007_introspection, c009_joint_filing,
@@ -112,9 +112,11 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202), #4079 (R4079000)
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000)
 /// #4285 (R4285001 to R4285005), #4327 (R4327002) and #4353 (R4353020, R4353021, R4353022, R4353024,
-/// R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and hooks).
+/// R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and hooks), and #4382's sweep of the
+/// carried catalogs (R4382001: Adaptive UI's Rush Token through v0.1.0d).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
+    (c074_adaptive_ui::ID, "v0.1.0d", c074_adaptive_ui::script_v0_1_0d),
     (
         c097_2_wishing_well::ID,
         "v0.3.1",
@@ -1246,6 +1248,38 @@ pub fn carried_versions() -> Vec<&'static str> {
         .collect()
 }
 
+/// R4382000: the eras of `id` among the carried versions, oldest first, each its first and last version:
+/// a run of versions over which its definition (`changed`'s patch, which equal entries share) and its
+/// covering `KEPT_SCRIPTS` row stay the same. A version lacking the card ends an era. Empty for an id
+/// the catalog lacks. Builds no catalog.
+pub fn card_eras(id: &str) -> Vec<(&'static str, &'static str)> {
+    if !CATALOG.contains_key(id) {
+        return Vec::new();
+    }
+    let mut eras: Vec<(&'static str, &'static str)> = Vec::new();
+    let mut before: Option<(Option<usize>, Option<usize>)> = None;
+    for delta in HISTORY
+        .versions
+        .iter()
+        .filter(|delta| delta.version != crate::CATALOG_VERSION)
+    {
+        if delta.absent.contains(id) {
+            before = None;
+            continue;
+        }
+        let era = (
+            delta.changed.get(id).copied(),
+            covering_at(&HISTORY.order, KEPT_SCRIPTS, &delta.version, id),
+        );
+        match eras.last_mut() {
+            Some((_, last)) if before == Some(era) => *last = delta.version.as_str(),
+            _ => eras.push((delta.version.as_str(), delta.version.as_str())),
+        }
+        before = Some(era);
+    }
+    eras
+}
+
 /// R767000: the catalog of a carried version, `None` for the build's own version or any it does not
 /// carry. What `register_all` registers with the engine.
 pub fn shipped_catalog(version: &str) -> Option<&'static ShippedCatalog> {
@@ -2118,6 +2152,125 @@ mod tests {
         );
         // A catalog card still declares only its own numbers.
         assert!(jackioh_engine::params::param_decl_of(state, "stinkyscape-053", "damage").is_none());
+    }
+
+    /// R4382000: the carried definitions whose replays panicked, each lacking a number the build's
+    /// script reads: Big D-fender's `armor`, The True Sheep's `setCost`, Outbreak's `drawPer` and
+    /// Reoccurring Dream's `chance`.
+    const R4382000_MISSING: [(&str, &str, &str); 5] = [
+        ("v0.2.5f", "core-001", "armor"),
+        ("v0.3.1", "meditative-088", "setCost"),
+        ("v0.3.2b", "meditative-088", "setCost"),
+        ("v0.4.5", "classic-039", "drawPer"),
+        ("v0.4.5", "core-023", "chance"),
+    ];
+
+    #[test]
+    fn r4382000_the_four_carried_definitions_read_their_missing_numbers_off_the_build() {
+        use jackioh_engine::params::{ParamValueOptions, param_decl_of, param_value};
+        use jackioh_engine::{PlayerId, with_shipped};
+        crate::register_all();
+        for (version, card, key) in R4382000_MISSING {
+            let carried = &catalog_defs_at(version).expect("a carried version")[card];
+            assert!(
+                !carried.params.iter().flatten().any(|param| param.key == key),
+                "{version}'s {card} declares {key}"
+            );
+            let build = CATALOG[card]
+                .params
+                .iter()
+                .flatten()
+                .find(|param| param.key == key)
+                .unwrap_or_else(|| panic!("the build's {card} declares {key}"))
+                .base;
+            let s = jackioh_engine::testkit::scenario(serde_json::json!({
+                "seed": "r4382000",
+                "p1": { "hand": [card] },
+            }));
+            let state = s.state();
+            let instance = state.players[PlayerId::P1].hand[0].clone();
+            with_shipped(shipped_catalog(version), || {
+                assert_eq!(
+                    param_value(state, Some(&instance), key, ParamValueOptions::default()),
+                    build,
+                    "{version} {card} reads {key} off the build's definition"
+                );
+                // R2657006: `param_or` still reads its printed number there.
+                assert!(
+                    param_decl_of(state, card, key).is_none(),
+                    "{version} {card} declares {key}"
+                );
+                let undeclared = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    param_value(
+                        state,
+                        Some(&instance),
+                        "noSuchNumber",
+                        ParamValueOptions::default(),
+                    )
+                }));
+                let message = undeclared.expect_err("a number no definition declares read as a number");
+                let message = message.downcast_ref::<String>().cloned().unwrap_or_default();
+                assert!(message.contains("declares no number"), "{message}");
+            });
+            // Off a carried catalog, the build's card reads its own declaration as before.
+            assert_eq!(
+                param_value(state, Some(&instance), key, ParamValueOptions::default()),
+                build
+            );
+        }
+    }
+
+    #[test]
+    fn card_eras_start_at_each_change_of_definition_or_kept_script() {
+        let carried = carried_versions();
+        let at = |version: &str| {
+            carried
+                .iter()
+                .position(|listed| *listed == version)
+                .unwrap_or_else(|| panic!("{version} is not carried"))
+        };
+        for id in ["core-001", "classic-039", "core-023", "meditative-088"] {
+            let eras = card_eras(id);
+            assert!(!eras.is_empty(), "{id} has no era");
+            for (first, last) in &eras {
+                assert!(at(first) <= at(last), "{id}: {first} to {last}");
+            }
+            for pair in eras.windows(2) {
+                assert!(at(pair[0].1) < at(pair[1].0), "{id}: {pair:?} overlap");
+            }
+        }
+        let starts = |id: &str| {
+            card_eras(id)
+                .into_iter()
+                .map(|(first, _)| first)
+                .collect::<Vec<_>>()
+        };
+        // Outbreak's kept row ends at v0.4.4b and its definition declares `drawPer` from v0.4.6.
+        assert!(
+            starts("classic-039").contains(&"v0.4.5"),
+            "{:?}",
+            card_eras("classic-039")
+        );
+        assert!(
+            starts("classic-039").contains(&"v0.4.6"),
+            "{:?}",
+            card_eras("classic-039")
+        );
+        assert!(
+            starts("core-023").contains(&"v0.4.5"),
+            "{:?}",
+            card_eras("core-023")
+        );
+        // The True Sheep played alike from v0.3.1 to v0.3.2b, and declares `setCost` from v0.3.3.
+        let sheep = card_eras("meditative-088");
+        let holding = |version: &str| {
+            sheep
+                .iter()
+                .position(|(first, last)| at(first) <= at(version) && at(version) <= at(last))
+        };
+        assert_eq!(holding("v0.3.1"), holding("v0.3.2b"), "{sheep:?}");
+        assert!(starts("meditative-088").contains(&"v0.3.3"), "{sheep:?}");
+        assert!(card_eras("no-such-card").is_empty());
     }
 
     #[test]

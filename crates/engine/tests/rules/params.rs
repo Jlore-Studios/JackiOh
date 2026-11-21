@@ -510,3 +510,39 @@ mod r4334000_an_ingredient_fused_on_its_radiant_face_reads_its_numbers_there {
         assert_eq!(damage_read(&mut state, &outer, &[1, 0]), (4, 4, Some(4)));
     }
 }
+
+mod r4382000_a_fold_under_a_carried_catalog_reads_an_undeclared_number_off_the_build {
+    use super::*;
+
+    /// The carried catalog the test plants: the build's, the numbered spell's numbers taken off it, as a
+    /// snapshot from before the card declared them.
+    const CARRIED: &str = "v-r4382000";
+
+    #[test]
+    fn r4382000_a_fold_under_a_carried_catalog_reads_a_number_its_definition_never_declared_off_the_builds() {
+        let mut state = game();
+        let card = one(in_hand(&mut state, &numbered.id, P1, 1));
+        let mut defs = registered_catalog().clone();
+        defs.get_mut(&numbered.id).expect("the numbered spell").params = None;
+        register_shipped(vec![ShippedCatalog::new(CARRIED, defs, IndexMap::new())]);
+        let carried = shipped_catalog(CARRIED).expect("the planted catalog is carried");
+        with_shipped(Some(carried), || {
+            // The carried definition still declares nothing, so `param_or` keeps its printed number (R2657006).
+            assert!(param_decl_of(&state, &numbered.id, "damage").is_none());
+            assert_eq!(value(&state, &card, "damage"), 2);
+            live_mut(&mut state, &card).radiant = true;
+            assert_eq!(
+                value(&state, &card, "damage"),
+                4,
+                "on the Radiant face, the build's Radiant number"
+            );
+            live_mut(&mut state, &card).radiant = false;
+            // A number no definition of the card declares still panics (R386).
+            let text = panic_text(|| value(&state, &card, "noSuchNumber"));
+            assert!(text.contains("declares no number"), "{text}");
+        });
+        // Off the carried catalog, the build's definition declares it.
+        assert!(param_decl_of(&state, &numbered.id, "damage").is_some());
+        clear_overrides();
+    }
+}

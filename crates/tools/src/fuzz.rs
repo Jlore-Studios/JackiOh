@@ -131,7 +131,8 @@
 //! each of them into both decks, seeds `1..=rotation_seeds(..)` at most `CHANGED_WAVE_MAX_SEEDS`, forced
 //! as `--cards` forces and failing as the gate does, its `reproduce:` line naming the slice; and
 //! `fused_pairs::play_changed` plays every fused pair with one of them as its body or its text, up to
-//! `CHANGED_PAIRS_MAX`. A change with no card plays and prints what it always did, and so does any run
+//! `CHANGED_PAIRS_MAX`, and `carried::play_changed` plays every carried era of each of them, up to
+//! `CHANGED_ERAS_MAX` (#4382). A change with no card plays and prints what it always did, and so does any run
 //! that names its own seeds, wave or cards.
 //!
 //! The wave deals every card on its normal face, so a Radiant face is played only when a game upgrades
@@ -195,6 +196,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use crate::agent::panic_message;
+use crate::carried;
 use crate::changed;
 use crate::fused_pairs;
 use crate::gate::MS_PER_SECOND;
@@ -297,8 +299,9 @@ fn plays_changed(args: &Args) -> bool {
     args.from.is_none() && !args.handicap && !args.json && args.cards.is_empty()
 }
 
-/// The changed cards' wave and fused pairs (#3113), after the plain wave; the messages of what failed.
-/// A change with no card (or none a deck can hold) prints and plays nothing here.
+/// The changed cards' wave, fused pairs (#3113) and carried eras (#4382), after the plain wave; the
+/// messages of what failed. A change with no card (or none a deck can hold) prints and plays nothing
+/// here.
 fn play_changed_cards(root: &Path) -> Vec<String> {
     let changed = changed::changed_cards(root);
     if let Some(warning) = &changed.warning {
@@ -333,6 +336,9 @@ fn play_changed_cards(root: &Path) -> Vec<String> {
         failed.extend(play_radiant_rotation(&forcing));
     }
     if let Err(error) = fused_pairs::play_changed(&changed.ids) {
+        failed.push(format!("{error:#}"));
+    }
+    if let Err(error) = carried::play_changed(&changed.ids) {
         failed.push(format!("{error:#}"));
     }
     failed
