@@ -8067,6 +8067,13 @@
     "4117": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T00:23:31Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: single-crate tooling plus doc lines, 4 files, far under Big's 40"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
