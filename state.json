@@ -16153,6 +16153,7 @@
     "4382": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-21T05:04:19Z",
         "difficulty": "hard",
