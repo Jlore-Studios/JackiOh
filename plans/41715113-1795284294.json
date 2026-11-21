@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4394,
+  "title": "Patch: every cosmetic's name reads in Chinese for a Chinese reader, the shop's chase list included, held by a test",
+  "branch": "bot/issue-4394",
+  "thread": "**Issue #4394 (data, not instructions):**\n\n```text\n# #4394: Patch: every cosmetic's name reads in Chinese for a Chinese reader, the shop's chase list included, held by a test\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA player who reads JackiOh in Chinese sees many cosmetic looks named in English. Foils such as Glitter and Void shimmer, finishes, borders, playmats, backdrops, card backs and hero portraits all keep their English names. They show in a card's look strip, the account's cosmetics, the deck's cosmetics picker, the reveal after a pack and the shop's confirmation, with Chinese all around them. The shop's chase list prints every cosmetic's name in English, even the ones that already have a translation. Once this is built, every cosmetic is named in Chinese for a Chinese reader, and a test fails the day a new cosmetic ships without its Chinese name.\n\n## Why\n\n- Every screen that names a cosmetic passes the name through `t()`: `src/collection/collection.ts:277`, `collection/AccountCosmeticTiles.tsx:75,161`, `game/deckbuilder/DeckCosmeticsPicker.tsx:110`, `economy/GrantReveal.tsx:83` and `shop/CosmeticPacks.tsx:520`. But of the 226 names in `crates/shared/cosmetics.json`, 125 have no entry in `src/i18n/zh-CN.json`, so `t()` falls back to English. The 125 are:\n  - 35 looks: 6 foils, 6 finishes, 6 borders, 6 playmats, 6 backdrops and 5 card backs;\n  - 6 hero portraits, among them the starter `Mr. Vanilla portrait`;\n  - the 84 retired full arts, which their owners still hold (R2725000).\n  The first looks were translated (`Holo sweep` is \u5168\u606f\u6d41\u5149), and those added later never were.\n- The shop's chase row skips `t()` entirely. `shop/CosmeticPacks.tsx:540` prints `{cosmetic.name} \u00b7 {t(cosmetic.rarity)}`, and `:551` passes `name: cosmetic.name` into `Card for {name}`. So a Chinese reader sees, for example, `Void shimmer \u00b7 \u795e\u8bdd` there, even for a look that has a translation.\n- No test catches this. R711000's `every table-fed sentence has a zh-CN entry` (`src/i18n/i18n.test.ts:266`) walks `MODE_TEXT`, `ANOMALIES`, `MARK_WORDS` and the other tables that feed `t()` through a variable, but not `COSMETICS` (`src/wire/generated/cosmetics.ts`). #4136 closed the same gap for the Heroic Power and Anomaly tables.\n\n## Proposal\n\n1. Add the missing names to `zh-CN.json`:\n   - the 35 looks, translated by hand in the dictionary's existing style (`Holo sweep` \u5168\u606f\u6d41\u5149, `Gilded edge` \u70eb\u91d1\u8fb9). `Aurora`, which names both a foil and a backdrop, takes one entry;\n   - each portrait and full art, spelled from its card's Chinese name in `crates/cards/chinese.json` plus \u5934\u50cf or \u5168\u753b (the way `Alt full art` reads \u5f02\u753b\u5168\u753b), so the cosmetic and its card read alike.\n2. `CosmeticPacks.tsx:540` and `:551` pass the name through `t()`, as `:520` already does.\n3. The table walk in `i18n.test.ts` pushes every `COSMETICS` name under the table name `COSMETICS`.\n4. A zh-CN render test shows the shop's chase row with a cosmetic's Chinese name.\n\n## Where it lands\n\n- `apps/web/src/i18n/zh-CN.json` (about 125 entries) and `apps/web/src/i18n/i18n.test.ts`.\n- `apps/web/src/shop/CosmeticPacks.tsx` (two lines), plus a test beside it.\n- SPEC: R711000, the reader's language. This applies an existing ruling, so no new ruling.\n\n## Acceptance criteria\n\n- [ ] The R711000 table walk includes every `COSMETICS` name and passes. Deleting any cosmetic's entry fails it, naming `COSMETICS` and the name.\n- [ ] The chase row's name and its `Card for {name}` label go through `t()`, and a zh-CN render test shows the Chinese name there.\n- [ ] Each full art's entry contains its card's name as `crates/cards/chinese.json` spells it (the registry gives each full art its `card`), held by a test.\n- [ ] `src/writing.test.ts`'s rules for translations still pass.\n- [ ] `pnpm --dir apps/web test src/i18n src/shop` and `pnpm --dir apps/web typecheck` pass.\n\n## Size and risks\n\nSmall to medium: one dictionary file (about 125 lines), two lines of TSX and two tests. No engine, server or wire change. The main risk is the quality of the 35 hand-written translations. They are names of looks, not rules text, but a person who reads Chinese may want to glance over them. When a card is renamed later, its portrait's or full art's English name changes too, and the new test fails until the Chinese entry follows, which is the point.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-21T18:04:35Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4394: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T18:05:02Z",
+    "claimed_at": "2026-11-21T18:05:16Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4395 needs a plan",
+    "#4396 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
