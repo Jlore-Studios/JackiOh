@@ -15390,10 +15390,9 @@
     "what": "revise #4434 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T22:21:48Z",
+    "at": "2026-11-21T22:29:12Z",
     "notes": [
-      "started revise #4434 on muse (run 44956448721)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #4434 on muse (run 44956448721): blocked"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16099,7 +16098,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T22:21:48Z",
+  "loop_tick": "2026-11-21T22:29:12Z",
   "machine_disk": {
     "issue": null,
     "reading": {
