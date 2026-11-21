@@ -2686,6 +2686,27 @@ mod player_settings {
         assert_eq!(q!(harness, t => t.player_settings_get(&profile.id)), Some(row));
     }
 
+    async fn r4403000_a_locked_read_answers_what_the_merge_just_left(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        assert!(q!(harness, t => t.player_settings_get_for_update(&profile.id)).is_none());
+
+        let row = merged(
+            write(
+                harness,
+                &profile.id,
+                json!({ "audio": { "at": 1_000, "values": { "master": 0.5 } } }),
+                limits(),
+            )
+            .await,
+        );
+        let locked = must(
+            q!(harness, t => t.player_settings_get_for_update(&profile.id)),
+            "the locked row",
+        );
+        assert_eq!(locked, row);
+        assert_eq!(q!(harness, t => t.player_settings_get(&profile.id)), Some(row));
+    }
+
     async fn r634_a_strictly_later_group_replaces_the_stored_one_whole_an_older_or_tied_one_changes_nothing(
         harness: &StoreHarness,
     ) {
@@ -2877,6 +2898,7 @@ mod player_settings {
 
     both_stores!(
         r633_holds_no_row_before_the_first_write_and_the_first_write_makes_one,
+        r4403000_a_locked_read_answers_what_the_merge_just_left,
         r634_a_strictly_later_group_replaces_the_stored_one_whole_an_older_or_tied_one_changes_nothing,
         r634_a_group_a_write_does_not_name_stays_and_one_write_can_win_one_group_and_lose_another,
         r633_refuses_a_result_past_either_cap_and_writes_nothing_and_keeps_each_profile_s_row_apart,
@@ -8726,6 +8748,61 @@ mod social {
         assert!(q!(harness, t => t.shares_for(&b.id, 10)).is_empty());
     }
 
+    /// R4390001: a share whose match holds no action-log row is deleted, the purge having taken the
+    /// log, or the match never having existed; a share of a match whose log is held stays, and so
+    /// does what reads it.
+    async fn r4390001_shares_of_a_match_with_no_log_left_are_purged(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let day: i64 = 86_400_000;
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 92 * day));
+        let old = id();
+        q!(harness, t => t.matches_create(&match_row(&old, &a.id, &b.id, harness, now - 92 * day)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&old, 1, "p1", "n1", now - 92 * day)]));
+        q!(harness, t => t.matches_finish(&old, now - 91 * day));
+        let recent = id();
+        q!(harness, t => t.matches_create(&match_row(&recent, &a.id, &b.id, harness, now - 2 * day)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&recent, 1, "p1", "n1", now - 2 * day)]));
+        q!(harness, t => t.matches_finish(&recent, now - day));
+        for over in [&old, &recent] {
+            let share: ReplayShare = from(json!({
+                "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - day,
+            }));
+            q!(harness, t => t.shares_put(&share));
+        }
+
+        // Both logs are held: nothing to delete.
+        assert_eq!(q!(harness, t => t.shares_purge_orphaned()), 0, "{}", harness.name);
+        assert_eq!(q!(harness, t => t.shares_for(&b.id, 10)).len(), 2);
+
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * day,
+            "matchActionsEndedBefore": now - 90 * day,
+            "playTelemetryEndedBefore": now - 365 * day,
+            "gameRecordsRecordedBefore": now - 7 * day,
+        }));
+        q!(harness, t => t.purge_expired(&cutoffs));
+        let never = id();
+        let ghost: ReplayShare = from(json!({
+            "matchId": never, "sharer": a.id, "friend": b.id, "createdAt": now - day,
+        }));
+        q!(harness, t => t.shares_put(&ghost));
+
+        // The share of the purged log and the share of the match that never was go; the held one stays.
+        assert_eq!(q!(harness, t => t.shares_purge_orphaned()), 2, "{}", harness.name);
+        assert_eq!(q!(harness, t => t.shares_purge_orphaned()), 0, "{}", harness.name);
+        let kept = q!(harness, t => t.shares_for(&b.id, 10));
+        assert_eq!(kept.len(), 1, "{}", harness.name);
+        assert_eq!(kept[0].match_id, recent);
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&recent, &b.id)),
+            vec![a.id.clone()],
+            "{}",
+            harness.name
+        );
+    }
+
     /// #1825: the list is the newest shares, at most `limit` of them.
     async fn s7_replay_shares_list_the_newest_up_to_the_limit(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
@@ -8767,6 +8844,40 @@ mod social {
             "{}",
             harness.name
         );
+    }
+
+    /// R4391000 (#4391): `shares_put` answers whether it wrote a row, true for a new share and false
+    /// for one already held, which keeps its first `created_at`.
+    async fn r4391000_shares_put_reports_whether_it_wrote_a_row(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 10_000));
+        let mut shares = Vec::new();
+        for _ in 0..2 {
+            let over = id();
+            q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+            q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
+            q!(harness, t => t.matches_finish(&over, now - 5_000));
+            let share: ReplayShare = from(json!({
+                "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - 3_000,
+            }));
+            shares.push(share);
+        }
+
+        assert!(q!(harness, t => t.shares_put(&shares[0])), "{}", harness.name);
+        assert!(!q!(harness, t => t.shares_put(&shares[0])), "{}", harness.name);
+        let later: ReplayShare = from(json!({
+            "matchId": shares[0].match_id, "sharer": a.id, "friend": b.id, "createdAt": now - 1_000,
+        }));
+        assert!(!q!(harness, t => t.shares_put(&later)), "{}", harness.name);
+        let held = q!(harness, t => t.shares_for(&b.id, 10));
+        assert_eq!(held.len(), 1, "{}", harness.name);
+        assert_eq!(held[0].created_at, now - 3_000, "{}", harness.name);
+
+        assert!(q!(harness, t => t.shares_put(&shares[1])), "{}", harness.name);
+        q!(harness, t => t.shares_remove(&shares[0].match_id, &a.id, &b.id));
+        assert!(q!(harness, t => t.shares_put(&shares[0])), "{}", harness.name);
     }
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
@@ -9078,11 +9189,13 @@ mod social {
         s7_replay_shares_are_read_while_friends_and_unblocked,
         s7_replay_shares_hide_a_match_whose_log_the_purge_took,
         s7_replay_shares_list_the_newest_up_to_the_limit,
+        r4391000_shares_put_reports_whether_it_wrote_a_row,
         r1435000_a_sharers_shares_are_read_while_each_friend_may_read_them,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,
         s7_shares_between_a_pair_go_together,
         s7_challenges_lapsed_by_now_are_purged_whatever_their_state,
+        r4390001_shares_of_a_match_with_no_log_left_are_purged,
     );
 }
 
@@ -14684,6 +14797,121 @@ mod daily {
         );
     }
 
+    /// R4390000: every invite lapsed by `now` (`expires_at <= now`) is deleted whatever its state, a
+    /// challenge or a seek alike, open, accepted, declined, cancelled, expired or paired; one not yet
+    /// lapsed stays, in any state, and a second pass takes nothing.
+    async fn r4390000_daily_invites_lapsed_by_now_are_purged_whatever_their_state(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let made = now - 10_000;
+        let mut gone: Vec<String> = Vec::new();
+
+        // Each one lapses exactly at `now`, the boundary, and is closed before the next of its key.
+        for state in [
+            DailyInviteState::Accepted,
+            DailyInviteState::Declined,
+            DailyInviteState::Cancelled,
+            DailyInviteState::Expired,
+        ] {
+            let row = challenge(&a.id, &b.id, made, now);
+            assert!(
+                q!(harness, t => t.daily_invites_create(&row, made)),
+                "{}",
+                harness.name
+            );
+            let matched = matches!(state, DailyInviteState::Accepted).then(id);
+            must(
+                q!(harness, t => t.daily_invites_close(&row.id, state, matched.as_deref())),
+                "the closed challenge",
+            );
+            gone.push(row.id);
+        }
+        for state in [
+            DailyInviteState::Paired,
+            DailyInviteState::Cancelled,
+            DailyInviteState::Expired,
+        ] {
+            let row = seek(&a.id, QueueMode::Bo1, DAYS, made, now);
+            assert!(
+                q!(harness, t => t.daily_invites_create(&row, made)),
+                "{}",
+                harness.name
+            );
+            let matched = matches!(state, DailyInviteState::Paired).then(id);
+            must(
+                q!(harness, t => t.daily_invites_close(&row.id, state, matched.as_deref())),
+                "the closed seek",
+            );
+            gone.push(row.id);
+        }
+        // Open and lapsed, the sweep not having expired them yet.
+        for row in [
+            challenge(&a.id, &b.id, made, now - 1),
+            seek(&a.id, QueueMode::Bo1, DAYS, made, now - 1),
+        ] {
+            assert!(
+                q!(harness, t => t.daily_invites_create(&row, made)),
+                "{}",
+                harness.name
+            );
+            gone.push(row.id);
+        }
+
+        // One tick short of lapsing: open, and closed from open, are kept.
+        let open_challenge = challenge(&a.id, &c.id, made, now + 1);
+        let accepted = challenge(&c.id, &a.id, made, now + 1);
+        let open_seek = seek(&b.id, QueueMode::Random, DAYS, made, now + 1);
+        for row in [&open_challenge, &accepted, &open_seek] {
+            assert!(
+                q!(harness, t => t.daily_invites_create(row, made)),
+                "{}",
+                harness.name
+            );
+        }
+        let matched = id();
+        must(
+            q!(harness, t => t.daily_invites_close(&accepted.id, DailyInviteState::Accepted, Some(&matched))),
+            "the accepted challenge",
+        );
+        let kept = [open_challenge.id, accepted.id, open_seek.id];
+
+        assert_eq!(
+            q!(harness, t => t.daily_invites_purge(now)),
+            i64::try_from(gone.len()).unwrap_or(i64::MAX),
+            "{}",
+            harness.name
+        );
+        for invite_id in &gone {
+            assert_eq!(
+                q!(harness, t => t.daily_invites_get(invite_id)),
+                None,
+                "{}: {invite_id} is deleted",
+                harness.name
+            );
+        }
+        for invite_id in &kept {
+            assert!(
+                q!(harness, t => t.daily_invites_get(invite_id)).is_some(),
+                "{}: {invite_id} is kept",
+                harness.name
+            );
+        }
+        assert_eq!(
+            q!(harness, t => t.daily_invites_purge(now)),
+            0,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_invites_purge(now + 1)),
+            3,
+            "{}",
+            harness.name
+        );
+    }
+
     both_stores!(
         s913_daily_games_round_trip_list_and_end,
         s913_daily_games_due_by_deadline_and_left_out_of_the_live_matches,
@@ -14698,6 +14926,7 @@ mod daily {
         r3727008_a_profile_seated_in_a_running_daily_game_is_not_deleted,
         s913_a_voided_match_takes_its_daily_game,
         s913_daily_email_claims_stop_at_each_days_cap,
+        r4390000_daily_invites_lapsed_by_now_are_purged_whatever_their_state,
     );
 }
 

@@ -18,13 +18,14 @@ use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::api::{queue, results, retention, series};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    CHALLENGE_SWEEP_INTERVAL_SECONDS, DAILY_SWEEP_MINUTES, LOOP_FAILING_ALERT_MS, LOOP_FAILING_ALERT_PASSES,
-    MATCH_CEILING_MINUTES, MATCH_CEILING_MS, MATCH_REAPER_INTERVAL_SECONDS,
+    CHALLENGE_SWEEP_INTERVAL_SECONDS, DAILY_SWEEP_MINUTES, IDEMPOTENCY_KEY_TTL_HOURS, LOOP_FAILING_ALERT_MS,
+    LOOP_FAILING_ALERT_PASSES, MATCH_CEILING_MINUTES, MATCH_CEILING_MS, MATCH_REAPER_INTERVAL_SECONDS,
     MATCHMAKER_SWEEP_INTERVAL_SECONDS, MS_PER_SECOND, RETENTION_PURGE_INTERVAL_SECONDS,
     ROUTE_FAILING_ALERT_COUNT, ROUTE_FAILING_ALERT_MS, SERIES_SWEEP_INTERVAL_SECONDS,
 };
 use jackioh_server::db::store::{MatchRow, StoreError};
 use jackioh_server::duos::store::{DuosActionRow, DuosMatch};
+use jackioh_server::economy::store::IdempotencyRow;
 use jackioh_server::loops::FailingStreak;
 
 use crate::support::deps::{RecordingLogger, call, empty_test_app, record_logs};
@@ -528,6 +529,46 @@ async fn r4317001_a_practice_prune_that_keeps_failing_alerts_on_its_own_streak()
         expected_alerts(alerting, passes)
     );
     assert_eq!(failing_alerts(&logs), ["practice.prune.failing"]);
+    purge.abort();
+}
+
+#[tokio::test(start_paused = true)]
+async fn r4390001_a_share_purge_that_keeps_failing_alerts_on_its_own_streak_and_holds_no_later_step() {
+    let logs = record_logs();
+    let app = empty_test_app().await;
+    let interval = ms(RETENTION_PURGE_INTERVAL_SECONDS);
+    let alerting = alerting_pass(interval);
+    fail_on(&app, "shares.purgeOrphaned", "the share purge cannot run").await;
+    // The idempotency step runs after the share step: a key past its time shows it still ran.
+    {
+        let key: IdempotencyRow = from(json!({
+            "profileId": "p1",
+            "key": "00000000-0000-4000-8000-000000439001",
+            "route": "/api/packs/buy",
+            "bodyHash": "ab".repeat(32),
+            "status": 200,
+            "body": {},
+            "createdAt": now_ms() - (IDEMPOTENCY_KEY_TTL_HOURS + 1) * 60 * MINUTE_MS,
+        }));
+        let mut tx = app.db.begin(None).await.expect("begin");
+        tx.economy_idempotency_put(&key)
+            .await
+            .expect("economy.idempotencyKeys.put");
+        tx.commit().await.expect("commit");
+    }
+    let purge = tokio::spawn(retention::run_purge(app.clone()));
+
+    let passes = alerting + 2;
+    assert_eq!(
+        alerts_after_each_pass(&logs, "shares.purge.failing", interval / 2, interval, passes).await,
+        expected_alerts(alerting, passes)
+    );
+    assert_eq!(failing_alerts(&logs), ["shares.purge.failing"]);
+    assert_eq!(
+        logs.named("idempotency.swept").len(),
+        1,
+        "the steps after the failing one still ran"
+    );
     purge.abort();
 }
 

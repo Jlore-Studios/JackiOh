@@ -16,6 +16,7 @@
 //!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept.
 //!  - a spend's idempotency key and kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written (R2124000).
 //!  - an expired private lobby, started or not, once its format's TTL past its last change has passed (SPEC §9.5, §13.9, R3730004). Reads already answer 404 for it; the sweep deletes the row, as lobby creation already does opportunistically.
+//!  - a replay share whose match holds no action-log row, in a step of its own right after the purge (`purge_shares`, R4390001).
 //!
 //! In Postgres it is one call to `app.purge_expired_rows` (migration 0013, with 0029's third cutoff
 //! and 0041's fourth). A practice seed is a step of its own, after the sweep of unsettled claims: every
@@ -66,6 +67,16 @@ pub async fn sweep_lobbies(app: &App) -> Result<u64, StoreError> {
     Ok(reaped)
 }
 
+/// R4390001: deletes every replay share whose match holds no action-log row, the purge having taken
+/// it: `readable_share!`'s `exists` test, negated. A share of a match whose log is held stays. Answers
+/// how many it took.
+pub async fn purge_shares(app: &App) -> Result<i64, StoreError> {
+    let mut tx = app.db.begin(None).await?;
+    let purged = tx.shares_purge_orphaned().await?;
+    tx.commit().await?;
+    Ok(purged)
+}
+
 /// R1596000: refiles every finished match whose record never landed, while its log is held: each
 /// pass, those that ended inside the window but past the grace, and, a last time, those whose log
 /// the purge takes before its next pass. Answers how many it wrote.
@@ -103,6 +114,7 @@ pub async fn run_purge(app: Arc<App>) {
     let mut folding = FailingStreak::new("game_records.fold");
     let mut refiling = FailingStreak::new("game_records.refile");
     let mut purging = FailingStreak::new("retention.purge");
+    let mut sharing = FailingStreak::new("shares.purge");
     let mut chatting = FailingStreak::new("chat.purge");
     let mut logging = FailingStreak::new("duos.logs.purge");
     let mut expiring = FailingStreak::new("idempotency.sweep");
@@ -146,6 +158,12 @@ pub async fn run_purge(app: Arc<App>) {
                 }
             }
             Err(error) => log_warn("retention.purge_failed", json!({ "message": error.to_string() })),
+        }
+        // R4390001, after the purge that takes the logs: the shares of a replay that is gone.
+        match sharing.track(purge_shares(&app).await) {
+            Ok(0) => {}
+            Ok(purged) => log_info("shares.purged", json!({ "shares": purged })),
+            Err(error) => log_warn("shares.purge_failed", json!({ "message": error.to_string() })),
         }
         // Play together (#941): B53's chat retention, apart, so one failure never holds the other.
         match chatting.track(crate::social::chat::purge(&app).await) {

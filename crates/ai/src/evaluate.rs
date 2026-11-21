@@ -23,7 +23,7 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::config::{
     BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT,
@@ -1413,7 +1413,10 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// same way. With `w.static_attack_flags_read`, a unit that can only attack the Unit across lands nothing on a
 /// hero (R3550001), and one that Ignores Taunt is bound by no Taunt (R3560007). With
 /// `w.pool_and_conversion_read`, each hit meets §4.4 steps 3a and 3b as the walk's doc says, each side's pools
-/// read as they will stand when the attacks come (R4064000, R4064001).
+/// read as they will stand when the attacks come (R4064000, R4064001). With `w.strike_back_survival_read`
+/// (R4402000), an attacker a Taunt's strike back destroys swings no more, and a Frenzy one that destroys the
+/// Taunt it attacked and survives has its swings back to `attacks_per_turn`; an exile and a Cleave splash's
+/// kill free none.
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1504,6 +1507,25 @@ impl TauntStand {
     }
 }
 
+/// R4402000: one attacker's standing while `soak_past_taunts` walks it: the Divine Shield and health the
+/// Taunts' strikes back have left it, and whether one has destroyed it.
+struct AttackerStand {
+    shield: bool,
+    health: i32,
+    destroyed: bool,
+}
+
+impl AttackerStand {
+    fn of(state: &GameState, attacker: &CardInstance) -> Self {
+        let view = unit_view(state, attacker);
+        Self {
+            shield: has_keyword(&view.keywords, KeywordKind::DivineShield),
+            health: view.health,
+            destroyed: false,
+        }
+    }
+}
+
 /// `damage_past_taunts_with` at `AI_EVAL`'s weights: what the lethal solver's `ready_gap` reads.
 pub fn damage_past_taunts(
     state: &GameState,
@@ -1529,6 +1551,10 @@ pub fn damage_past_taunts(
 /// are this turn's, so each side's pools are read as they stand now. With `w.exile_on_damage_read`
 /// (R4065001), a hit or a Cleave splash from an attacker that exiles what it damages removes the Taunt it
 /// damages, with no Reborn body back, and a First Strike Taunt that does stops an attacker it damages whole.
+/// With `w.strike_back_survival_read` (R4402000), each hit takes the Taunt's strike back (§4.3,
+/// `strike_back_spares`): an attacker it destroys swings no more, and a Frenzy one that destroys the Taunt
+/// it attacked and survives has its swings back to `attacks_per_turn` (R3543003); an exile and a Cleave
+/// splash's kill free none.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
@@ -1635,8 +1661,12 @@ fn soak_past_taunts(
     let mut total = 0;
     // R4064000: what the defender's pools have left as the walk's hits land, in the order it counts them.
     let mut pool = pools.defender;
+    // R4402000: each attacker's standing once a Taunt's strike back meets it, with `w`'s flag only.
+    let mut standing: IndexMap<&str, AttackerStand> = IndexMap::new();
     let mut i = 0;
     while i < stands.len() {
+        // R4402000, R636: an attacker a strike back destroyed makes none of its later swings.
+        free.retain(|(attacker, _, _)| !struck_down(&standing, attacker));
         let target = AttackTarget::Unit {
             instance: stands[i].unit.clone(),
         };
@@ -1678,11 +1708,17 @@ fn soak_past_taunts(
         let mut poisoned = false;
         // R4065001: an exiling hit removes the Taunt whole: no Reborn body comes back.
         let mut exiled = false;
+        // R4402000, R3543003: the Frenzy attacker whose hit destroyed this Taunt and that survived it.
+        let mut frenzied: Option<(&CardInstance, i32, bool)> = None;
         while stands[i].health > 0 && !poisoned && !exiled {
             let Some((attacker, attack, may_hit_hero)) = bound.next() else {
                 break;
             };
-            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view, &pools, w) {
+            if struck_down(&standing, attacker) {
+                continue;
+            }
+            let met = standing.get(attacker.id.as_str());
+            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view, met, &pools, w) {
                 if w.best_attack_order_past_taunts {
                     stopped.push((attacker, attack, may_hit_hero));
                 }
@@ -1716,6 +1752,40 @@ fn soak_past_taunts(
             } else {
                 soaked(&mut pool, dealt_to(state, attack, &stands[i], pierce))
             };
+            // R4402000: the Taunt's strike back, read on the stand as the hit finds it. The hit destroys the
+            // Taunt as the walk below reads it: no shield, some damage, no Indestructible, and its health or
+            // more, Poisonous or exiling (R1124). §4.3: a Ranged attacker takes none from a non-Ranged Taunt
+            // (R783000), and one with First Strike none from a Taunt without it that its hit destroys (step
+            // 1); any other strike back lands even when the hit destroys the Taunt (step 2, R59).
+            let fells = !stands[i].shield
+                && dealt > 0
+                && !has_keyword(&stands[i].view.keywords, KeywordKind::Indestructible)
+                && (dealt >= stands[i].health || has_keyword(&keywords, KeywordKind::Poisonous) || exiling);
+            let survives = !w.strike_back_survival_read
+                || !takes_strike_back(state, attacker, &stands[i].unit)
+                || (fells
+                    && has_keyword(&keywords, KeywordKind::FirstStrike)
+                    && !has_keyword(&stands[i].view.keywords, KeywordKind::FirstStrike))
+                || strike_back_spares(
+                    state,
+                    attacker,
+                    &stands[i],
+                    standing
+                        .entry(attacker.id.as_str())
+                        .or_insert_with(|| AttackerStand::of(state, attacker)),
+                    &pools,
+                    w,
+                );
+            // R3543003: a Frenzy attacker that destroys the Unit it attacked and survives may attack again.
+            // An exiled Taunt is not destroyed (R1124), so it frees none.
+            if w.strike_back_survival_read
+                && fells
+                && survives
+                && !exiling
+                && unit_has(state, attacker, KeywordKind::Frenzy)
+            {
+                frenzied = Some((attacker, attack, may_hit_hero));
+            }
             // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
             if has_keyword(&keywords, KeywordKind::Trample) && dealt > stands[i].health {
                 let excess =
@@ -1816,6 +1886,16 @@ fn soak_past_taunts(
         if stands[i].health <= 0 || poisoned || exiled {
             unbound.extend(stopped);
         }
+        // R4402000, R3543003: Frenzy's fresh exertion brings its attacker's swings back to `attacks_per_turn`,
+        // each with the hit's own hero permission. It lands before a Reborn body comes back, as in the engine.
+        if let Some(entry) = frenzied {
+            let left = unbound
+                .iter()
+                .filter(|(attacker, _, _)| attacker.id == entry.0.id)
+                .count();
+            let fresh = usize::try_from(attacks_per_turn(state, entry.0)).unwrap_or(0);
+            unbound.extend(std::iter::repeat_n(entry, fresh.saturating_sub(left)));
+        }
         unbound.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
         free = unbound;
         // §4.5 step 4: a destroyed Reborn Taunt comes back and binds what is left.
@@ -1831,8 +1911,9 @@ fn soak_past_taunts(
     }
 
     for (attacker, hit, may_hit_hero) in &free {
-        // R4064001: a hit that Burns or is Toxic instead deals the hero nothing.
-        if !may_hit_hero || pools.converts(state, attacker) {
+        // R4064001: a hit that Burns or is Toxic instead deals the hero nothing. R4402000: an attacker a
+        // strike back destroyed makes no swing.
+        if !may_hit_hero || struck_down(&standing, attacker) || pools.converts(state, attacker) {
             continue;
         }
         let pierce = pierces(state, Some(attacker), None);
@@ -1871,7 +1952,7 @@ fn breaks_alone(
 ) -> bool {
     if stand.shield
         || pools.converts(state, attacker)
-        || falls_to_first_strike(state, attacker, &stand.unit, &stand.view, pools, w)
+        || falls_to_first_strike(state, attacker, &stand.unit, &stand.view, None, pools, w)
     {
         return false;
     }
@@ -1920,11 +2001,14 @@ fn first_giga_splash_breaker(
 /// that exiles what it damages removes with any (R4065001; `subsystems::lethal`'s copy does not read the exile).
 /// A Ranged attacker takes none from a non-Ranged Taunt (R783000). With `pools.read`, a Taunt whose hits
 /// convert destroys nothing (R4064001), and the attacker's whole pool meets its strike back (R4064000).
+/// With a `standing` (R4402000), the attacker meets it with the shield and health the walk's earlier strikes
+/// back have left it.
 fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
     taunt: &CardInstance,
     view: &UnitView,
+    standing: Option<&AttackerStand>,
     pools: &WalkPools,
     w: &EvalWeights,
 ) -> bool {
@@ -1938,8 +2022,15 @@ fn falls_to_first_strike(
         return false;
     }
     let mine = unit_view(state, attacker);
+    let (shield, health) = standing.map_or(
+        (
+            has_keyword(&mine.keywords, KeywordKind::DivineShield),
+            mine.health,
+        ),
+        |stand| (stand.shield, stand.health),
+    );
     if has_keyword(&mine.keywords, KeywordKind::FirstStrike)
-        || has_keyword(&mine.keywords, KeywordKind::DivineShield)
+        || shield
         || has_keyword(&mine.keywords, KeywordKind::Indestructible)
     {
         return false;
@@ -1955,7 +2046,58 @@ fn falls_to_first_strike(
     dealt > 0
         && (has_keyword(&view.keywords, KeywordKind::Poisonous)
             || exiles_what_it_damages(state, taunt, w)
-            || dealt >= mine.health)
+            || dealt >= health)
+}
+
+/// R4402000: whether `attacker` survives `stand`'s strike back (§4.3; step 1's when the Taunt alone has First
+/// Strike, step 2's otherwise), `me` its standing, which the strike back updates: the §4.4 steps it shares
+/// with `falls_to_first_strike` (Divine Shield, which it pops, Armor, which a Pierce Taunt skips, R346, the
+/// attacker's own cap, R2179005, Indestructible, the zero rule, a Poisonous strike, an exiling one by `w`'s
+/// flag, R4065001), and with `pools.read` a Taunt whose hits convert destroying nothing (R4064001) and the
+/// attacker's whole pool meeting the strike (R4064000). The caller asks only when one comes (R783000).
+fn strike_back_spares(
+    state: &GameState,
+    attacker: &CardInstance,
+    stand: &TauntStand,
+    me: &mut AttackerStand,
+    pools: &WalkPools,
+    w: &EvalWeights,
+) -> bool {
+    let strike = stand.view.attack;
+    if strike <= 0 {
+        return true;
+    }
+    if me.shield {
+        me.shield = false;
+        return true;
+    }
+    let mine = unit_view(state, attacker);
+    if has_keyword(&mine.keywords, KeywordKind::Indestructible) || pools.converts(state, &stand.unit) {
+        return true;
+    }
+    let dealt = if pierces(state, Some(&stand.unit), None) {
+        strike
+    } else {
+        (strike - mine.armor).max(0)
+    };
+    let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
+    let mut left = pools.attacker;
+    let dealt = soaked(&mut left, dealt);
+    if dealt <= 0 {
+        return true;
+    }
+    me.health -= dealt;
+    me.destroyed = me.health <= 0
+        || has_keyword(&stand.view.keywords, KeywordKind::Poisonous)
+        || exiles_what_it_damages(state, &stand.unit, w);
+    !me.destroyed
+}
+
+/// R4402000: whether a strike back in the walk has destroyed `attacker`.
+fn struck_down(standing: &IndexMap<&str, AttackerStand>, attacker: &CardInstance) -> bool {
+    standing
+        .get(attacker.id.as_str())
+        .is_some_and(|stand| stand.destroyed)
 }
 
 /// §4.5 step 4: the body a destroyed Reborn unit comes back as, a reset instance (R78) without Reborn

@@ -1376,6 +1376,10 @@ pub const SOCIAL_SOCKETS_PER_ACCOUNT: usize = 5;
 /// toast on the friend's screen, so a create-and-cancel loop is bounded; thirty is one every two
 /// minutes, a challenge's whole life, kept up for an hour.
 pub const CHALLENGES_PER_HOUR: usize = 30;
+/// R4391000: replay shares one account may make in an hour; the next is 429. Every attempt counts, a
+/// re-share included. A share tells the friend by a feed row and a toast, so a loop is bounded as
+/// challenges are; thirty, the same as `CHALLENGES_PER_HOUR`. Server-only.
+pub const REPLAY_SHARES_PER_HOUR: usize = 30;
 // NOT IN SPEC: how often the challenge sweeper deletes the challenges lapsed by now. A lapsed
 // challenge is already shut (its room expired with it, the reaper takes the room's row, and no read
 // lists the challenge), so the sweep only removes the rows; ten seconds keeps none much past its

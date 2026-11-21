@@ -5,13 +5,13 @@
 use serde_json::{Value, json};
 
 use jackioh_engine::wire::GameRecord;
-use jackioh_server::api::retention::{purge_expired, sweep_lobbies};
+use jackioh_server::api::retention::{purge_expired, purge_shares, sweep_lobbies};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, IDEMPOTENCY_KEY_TTL_HOURS,
     MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
 };
-use jackioh_server::db::store::{CodeAttempt, MatchActionRow, MatchRow, MatchSignalRow};
+use jackioh_server::db::store::{CodeAttempt, MatchActionRow, MatchRow, MatchSignalRow, ReplayShare};
 use jackioh_server::economy::idempotency::sweep_expired;
 use jackioh_server::economy::store::IdempotencyRow;
 use jackioh_server::lobby::store::Lobby;
@@ -366,5 +366,43 @@ mod the_retention_purge {
             json!("match-1"),
             "the reaped lobby's live member still reaches it"
         );
+    }
+
+    /// R4390001: the share step deletes a share whose match's log the purge took, and keeps one whose
+    /// log is held. It reads no clock: the purge's cutoff alone decides which log is gone.
+    #[tokio::test(start_paused = true)]
+    async fn r4390001_the_share_step_takes_a_share_whose_log_the_purge_took_and_keeps_one_whose_log_is_held()
+    {
+        let app = test_app().await;
+        let now = now_ms();
+        {
+            let mut data = fake_lock(&app).await;
+            data.tables.matches.push(finished_match(
+                "m-old",
+                Some(now - (MATCH_ACTION_RETENTION_DAYS + 1) * DAY_MS),
+            ));
+            data.tables
+                .matches
+                .push(finished_match("m-recent", Some(now - DAY_MS)));
+            for match_id in ["m-old", "m-recent"] {
+                data.tables.match_actions.push(action_row(match_id));
+                data.tables.replay_shares.push(from::<ReplayShare>(json!({
+                    "matchId": match_id, "sharer": "p1", "friend": "p2", "createdAt": now,
+                })));
+            }
+        }
+
+        assert_eq!(purge_shares(&app).await.expect("the share step"), 0);
+        assert_eq!(purge_expired(&app).await.expect("purgeExpired").match_actions, 1);
+        assert_eq!(purge_shares(&app).await.expect("the share step"), 1);
+        let shared: Vec<String> = fake_lock(&app)
+            .await
+            .tables
+            .replay_shares
+            .iter()
+            .map(|row| row.match_id.clone())
+            .collect();
+        assert_eq!(shared, vec!["m-recent".to_string()]);
+        assert_eq!(purge_shares(&app).await.expect("the share step"), 0);
     }
 }

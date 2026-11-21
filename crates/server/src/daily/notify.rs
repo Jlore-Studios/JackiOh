@@ -394,6 +394,8 @@ pub(crate) fn after_move(app: &Arc<App>, profiles: &[&str]) {
 #[derive(Default, serde::Serialize)]
 pub struct Swept {
     pub expired: usize,
+    /// Invites deleted past their lapse, whatever became of them (R4390000).
+    pub purged: usize,
     pub settled: usize,
     pub emailed: usize,
     pub pushed: usize,
@@ -408,6 +410,9 @@ pub async fn sweep(app: &Arc<App>, now: i64) -> Result<Swept, ApiError> {
     };
     let mut tx = app.db.begin(None).await?;
     let lapsed = tx.daily_invites_expire(now).await?;
+    // R4390000: an invite is kept no longer than its lapse, whatever became of it; the rows just
+    // expired are already in `lapsed` for the pushes below.
+    let deleted = tx.daily_invites_purge(now).await?;
     let due = tx.daily_games_due(now).await?;
     // R4039000: the notification feed keeps no row past NOTIFICATIONS_KEEP_DAYS, read or not.
     let purged = tx
@@ -417,7 +422,11 @@ pub async fn sweep(app: &Arc<App>, now: i64) -> Result<Swept, ApiError> {
     if purged > 0 {
         tracing::info!(event = "notifications.purged", rows = purged);
     }
+    if deleted > 0 {
+        tracing::info!(event = "daily.invites.purged", rows = deleted);
+    }
     swept.expired = lapsed.len();
+    swept.purged = usize::try_from(deleted).unwrap_or_default();
     for invite in &lapsed {
         let mut told = vec![invite.from_profile.as_str()];
         told.extend(invite.to_profile.as_deref());
@@ -473,6 +482,7 @@ pub async fn sweep_route(app: &Arc<App>, _req: Req) -> ApiResult {
     tracing::info!(
         event = "daily.swept",
         expired = swept.expired,
+        purged = swept.purged,
         settled = swept.settled,
         emailed = swept.emailed,
         pushed = swept.pushed

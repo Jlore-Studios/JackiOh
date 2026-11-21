@@ -143,6 +143,13 @@ is the engine's `query::cleave_struck` less the target: a GIGA beside the target
 met once, and beside a Unit standing in the backrow only standing Units (R3546001, R1081000). Where such a
 splash through a GIGA meets a later Taunt, the walk tries a third order, that Cleave attacker first
 (`giga_cleave_read`, R4257000, #4257; off in `GREEDY_EVAL`, whose walk keeps the one-lane splash).
+Each hit in the walk takes the Taunt's strike back (§4.3), read through the §4.4 steps that can stop it as a
+First Strike one is: an attacker it destroys still lands that hit but makes none of its later swings, a
+Windfury one's second included, and the wounds and popped shield it leaves carry to the attacker's next
+swing; a Ranged attacker takes none from a non-Ranged Taunt (R783000). A Frenzy attacker whose hit destroys
+the Taunt it attacked, and that survives, has its swings back to `attacks_per_turn`, each with the hit's own
+hero permission; an exiled Taunt and one a Cleave splash destroys free none (R3543003)
+(`strike_back_survival_read`, R4402000, #4402; off in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b

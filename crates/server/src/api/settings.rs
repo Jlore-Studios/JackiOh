@@ -2,7 +2,8 @@
 //!
 //! `GET /api/settings` and `PUT /api/settings` (`AuthLevel::Active`, §9.4).
 //! PUT merges groups by timestamp rather than replacing (R634).
-//! Validates cosmetic slot picks against owned registry items (R1834001, `PLAYER_SETTINGS_*`).
+//! Validates cosmetic slot picks against owned registry items (R1834001, R4403000,
+//! `PLAYER_SETTINGS_*`).
 
 use std::sync::Arc;
 
@@ -170,8 +171,15 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
     Ok(groups)
 }
 
-/// R1834001: validates cosmetic picks against owned items. R3335000: the four Starship picks too.
-fn check_cosmetics_group(group: &PlayerSettingsGroup, owned: &OwnedCosmetics) -> Result<(), ApiError> {
+/// R4403000 (amending R1834001): a pick the account does not own is left out of the write,
+/// keeping the stored pick for that key when the account's held `cosmetics` group has one, and any
+/// other refusal is still 400. R3335000: the four Starship picks too.
+fn filter_cosmetics_group(
+    group: &mut PlayerSettingsGroup,
+    held: Option<&PlayerSettingsGroup>,
+    owned: &OwnedCosmetics,
+) -> Result<Vec<String>, ApiError> {
+    let mut refused = Vec::new();
     for kind in CARD_SLOT_KINDS
         .into_iter()
         .chain(DECK_SLOT_KINDS)
@@ -179,16 +187,29 @@ fn check_cosmetics_group(group: &PlayerSettingsGroup, owned: &OwnedCosmetics) ->
     {
         let key = setting_key(kind);
         let field = format!("{COSMETICS_GROUP}.{key}");
-        match group.values.get(key) {
+        match group.values.get(key).cloned() {
             None => {}
             Some(PlayerSettingValue::Text(id)) => {
-                cosmetics::check_pick(cosmetics::registry(), owned, kind, id, None)
-                    .map_err(|refusal| bad_request(refusal.message(&field)))?;
+                match cosmetics::check_pick(cosmetics::registry(), owned, kind, &id, None) {
+                    Ok(()) => {}
+                    Err(PickRefusal::NotOwned) => {
+                        match held.and_then(|held| held.values.get(key)).cloned() {
+                            Some(value) => {
+                                group.values.insert(key.to_string(), value);
+                            }
+                            None => {
+                                group.values.shift_remove(key);
+                            }
+                        }
+                        refused.push(key.to_string());
+                    }
+                    Err(refusal) => return Err(bad_request(refusal.message(&field))),
+                }
             }
             Some(_) => return Err(bad_request(PickRefusal::WrongKind.message(&field))),
         }
     }
-    Ok(())
+    Ok(refused)
 }
 
 // Both routes require AuthLevel::Active (§9.4).
@@ -208,14 +229,20 @@ pub async fn get_settings(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let now = now_ms();
-    let groups = read_groups(&req.body, now)?;
+    let mut groups = read_groups(&req.body, now)?;
     let sent = groups.len();
 
     let mut tx = app.db.begin(Some(&profile.id)).await?;
-    if let Some(picks) = groups.get(COSMETICS_GROUP) {
+    let refused = if let Some(picks) = groups.get_mut(COSMETICS_GROUP) {
         let owned = tx.economy_cosmetics_get(&profile.id).await?;
-        check_cosmetics_group(picks, &owned)?;
-    }
+        // R4403000 (#4418): read the held cosmetics under the row lock the merge takes, so a
+        // concurrent device's committed write is seen here, never reverted by the filter below.
+        let held = tx.player_settings_get_for_update(&profile.id).await?;
+        let held_group = held.as_ref().and_then(|row| row.groups.get(COSMETICS_GROUP));
+        filter_cosmetics_group(picks, held_group, &owned)?
+    } else {
+        Vec::new()
+    };
     let outcome = tx
         .player_settings_merge(
             &PlayerSettingsMergeInput {
@@ -244,8 +271,14 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
     };
     log_info(
         "settings.merged",
-        json!({ "profileId": profile.id, "sent": sent, "held": settings.groups.len() }),
+        json!({ "profileId": profile.id.clone(), "sent": sent, "held": settings.groups.len() }),
     );
+    if !refused.is_empty() {
+        log_info(
+            "settings.pick_refused",
+            json!({ "profileId": profile.id, "keys": refused }),
+        );
+    }
     ok_of(&settings_answer(settings_view(Some(&settings))))
 }
 
