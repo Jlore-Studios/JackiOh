@@ -24,6 +24,8 @@ import { DRAW_TEXT } from "../game/DrawOffer.tsx";
 import { MODE_TEXT, RADIANT_MODE_TEXT, modeText } from "../game/modeText.ts";
 import { BOARD_NAMES_OPTIONS } from "../settings/controls.tsx";
 import { SETTINGS_SLOTS } from "../settings/slots.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import chineseJson from "../../../../crates/cards/chinese.json";
 import {
   formatDateTime,
   formatDay,
@@ -284,6 +286,7 @@ describe("R711000 internationalisation and reader language", () => {
     fed.push({ table: "modeText", value: cell.label });
     if (cell.detail !== undefined) fed.push({ table: "modeText", value: cell.detail });
     for (const anomaly of Object.values(ANOMALIES)) fed.push({ table: "ANOMALIES", value: anomaly.name });
+    for (const cosmetic of COSMETICS) fed.push({ table: "COSMETICS", value: cosmetic.name });
     for (const words of [...Object.values(MARK_WORDS), UNKNOWN_MARK_WORDS]) {
       fed.push({ table: "MARK_WORDS", value: words.name });
       fed.push({ table: "MARK_WORDS", value: words.text });
@@ -298,6 +301,21 @@ describe("R711000 internationalisation and reader language", () => {
     const missing = [...new Set(fed.filter(({ value }) => !Object.hasOwn(zhCN, value)).map(({ table, value }) => `${table}: ${JSON.stringify(value)}`))];
     expect(missing).toEqual([]);
     expect(fed.length).toBeGreaterThan(100);
+  });
+
+  it("R711000 every full-art cosmetic's zh-CN name holds its card's Chinese name", () => {
+    const cards = chineseJson as Record<string, unknown>;
+    let held = 0;
+    for (const cosmetic of COSMETICS) {
+      if (!("card" in cosmetic)) continue;
+      const cardName = (cards[cosmetic.card] as { name: unknown } | undefined)?.name;
+      expect(typeof cardName, `COSMETICS: ${JSON.stringify(cosmetic.name)} has no chinese.json name`).toBe("string");
+      const entry = (zhCN as Record<string, unknown>)[cosmetic.name];
+      expect(typeof entry, `COSMETICS: ${JSON.stringify(cosmetic.name)}`).toBe("string");
+      expect(entry as string, `COSMETICS: ${JSON.stringify(cosmetic.name)}`).toContain(cardName as string);
+      held += 1;
+    }
+    expect(held).toBeGreaterThan(0);
   });
 
   it("R711000 the t() guard names the file and line of a literal with no entry, in either branch of a conditional", () => {
