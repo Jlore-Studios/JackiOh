@@ -15388,6 +15388,8 @@
       }
     },
     "4367": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T00:26:33Z",
@@ -15401,8 +15403,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: blocking someone deletes the notifications between you, so their earlier ones leave your Recent list\"} -->\n- ## What changed\n- Blocking an account now deletes the notification rows between the two accounts, either way, at block time \u2014 not just refusing new rows.\n- - [store.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4348/crates/server/src/notifications/store.rs): new `Tx::notifications_delete_between(x, y)` dispatching to `pg::delete_between` (`delete ... where (profile_id = $1 and actor_id = $2) or (profile_id = $2 and actor_id = $1)`, `Ok(0)`\u2026\n- - [friends.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4348/crates/server/src/social/friends.rs): `post_block` calls the delete in the same transaction beside `tx.blocks_add`, logs `notificationsRemoved`, and pushes both accounts' social reads when rows were removed. `delete_block` un\u2026\n- - Tests: new contract case `r4348000_delete_between_removes_only_the_pairs_rows_either_way` in `both_stores!` ([contract.rs](/home/agent-muse/actions-runner/_work/_temp/work/item-4348/crates/server/tests/store/contract.rs)); new API test `r4348000_a_block_deletes_the_notifications_between_the_two_a\u2026\n- - Ruling [R4348000](/home/agent-muse/actions-runner/_work/_temp/work/item-4348/spec/rulings/R4348000.md) with proving tests, plus the \u00a711 paragraph in [spec/pending/4348.md](/home/agent-muse/actions-runner/_work/_temp/work/item-4348/spec/pending/4348.md). No migration, no config number (the delete \u2026\n- ## How tested\n- - `cargo test -p jackioh-server --test server_store r4348000` \u2014 2 passed (memory + Postgres).\n- - `cargo test -p jackioh-server --test server r4348000` and `r4039000_a_blocked_account_writes_nothing` \u2014 pass.\n- - Full `cargo test -p jackioh-server` \u2014 all green (1900 + 772 + unit tests, 0 failed), so no other block-adjacent suite regressed.\n- - `cargo fmt --check` clean, `cargo clippy -p jackioh-server --all-targets -- -D warnings` clean, `cargo jackioh spec check` ok (2325 rulings, 5858 proofs).\n- ## Decisions the issue did not settle\n- - pg uses `run_as(t, None)` like every neighboring notifications method, not `run_as(t, Some(x))` as `shares_remove_between` does. Rejected copying shares' subject-stamping: notifications methods uniformly run subject-less.\n- - The API test blocks as Bea rather than Ana. First draft blocked as Ana and failed honestly: a mutual ask-back marks the taker's own `friendRequest` row read (R4233000), so Bea's unread was 0, not 1. Rejected weakening the unread assertion; flipped the scenario so the blocker holds one unread row \u2026\n- - Contract case pins read rows are deleted too (trailing add, mark-read, delete round). Rejected leaving \"read or not\" to the SQL's obviousness.\n- ## For the reviewer\n- The one behavior change to look at twice: `post_block` now pushes both social reads whenever notification rows were deleted, even for a block of a stranger \u2014 that is what keeps both bells' dots in agreement with the deleted rows.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4348 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4348/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4348,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-21T01:29:50Z",
         "from_run": "44843847131",
         "gates": [
           {
@@ -15461,8 +15466,15 @@
         "source": "build",
         "until": "2026-11-21T01:57:44Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-21T01:27:44Z",
+      "run_id": "pending:cf7a3b87-1795224553",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-21T01:29:50Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15520,9 +15532,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T01:17:51Z",
+    "at": "2026-11-21T01:29:50Z",
     "url": "",
-    "what": "suggestions (tests) on muse"
+    "what": "review #4367 on muse"
   },
   "last_sweep": {
     "at": "2026-11-21T01:14:30Z",
