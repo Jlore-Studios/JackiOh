@@ -15270,6 +15270,15 @@
     },
     "4432": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-21T22:29:59Z",
+        "branch": "bot/issue-4432",
+        "head": "467072d365752d717caeafd2cbc35aa1969eb004",
+        "issue": 4432,
+        "item": 4434,
+        "pr": 4434,
+        "why": "A person must update the pin in bot/tests/test_ci_matrix.py (bot/ is forbidden to the night bot): in JOBS replace the entry \"tools, wasm\", with \"tools, wasm 1/4\", \"tools, wasm 2/4\", \"tools, wasm 3/4\", \"tools, wasm 4/4\", (same position, after \"tools duos, selfplay\",); and in test_the_committed_files_give_todays_jobs change jobs[\"tools, wasm\"][\"test\"] to jobs[\"tools, wasm 1/4\"][\"test\"]. No change to the shards-set assertion is needed. Then re-run python3 -m unittest discover -s tests -t . from bot/ and confirm green."
+      },
       "asks": [],
       "died": 0,
       "difficulty_by": {
@@ -15279,8 +15288,6 @@
         "tier": "medium",
         "why": "No hard line holds: one TOML count, no engine rules, AI, cross-crate design, migration, or 40 files."
       },
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-21T22:01:56Z",
         "family": "muse",
@@ -15291,13 +15298,9 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"CI: a job ran over 10 minutes\"} -->\n- Changed `scripts/ci-shards.toml`: `[rust-test]` `\"tools, wasm\" = 1` \u2192 `= 4`, so the 18m 24s `rust (test tools, wasm)` job splits into four hash-sharded jobs. Nothing else changed; the working tree holds only that file.\n- How tested: `python3 .github/ci/matrix.py matrix` (read-only) shows exactly `rust (test tools, wasm 1/4)` through `4/4` on stderr, each test in exactly one shard of the stdout matrix, and every other job name unchanged. `git status --porcelain` shows only `M scripts/ci-shards.toml`. No Rust or web \u2026\n- Decisions the issue did not settle: none \u2014 the change is the plan's single line. The count splits the run, not the compile, so if any `k/4` shard still runs 8 minutes or more the person-side group split in the plan's Open questions applies instead of a higher count.\n- For a person (bot may not touch `.github/` or `bot/`): update the pin in `bot/tests/test_ci_matrix.py` \u2014 in `JOBS` replace `\"tools, wasm\",` with the four `\"tools, wasm k/4\"` entries, and change `jobs[\"tools, wasm\"][\"test\"]` to `jobs[\"tools, wasm 1/4\"][\"test\"]`. Until then the pin test failing is ex\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4432 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4432/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "interruptions": 0,
-      "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-21T22:17:55Z",
-      "owner_why": "its approval shipped `467072d36575`, and the last approver owns the merge, so it fixes what CI found",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-21T21:43:02Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
@@ -15306,22 +15309,22 @@
       "pr": 4434,
       "provider": "muse",
       "question": "",
-      "round_tier": "medium",
       "run_id": "44953052504",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-21T21:43:53Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1
+      "taken_asks": []
     },
     "4434": {
       "action": "revise",
+      "archived": {
+        "at": "2026-11-21T22:29:59Z",
+        "branch": "bot/issue-4432",
+        "head": "467072d365752d717caeafd2cbc35aa1969eb004",
+        "issue": 4432,
+        "pr": 4434,
+        "why": "A person must update the pin in bot/tests/test_ci_matrix.py (bot/ is forbidden to the night bot): in JOBS replace the entry \"tools, wasm\", with \"tools, wasm 1/4\", \"tools, wasm 2/4\", \"tools, wasm 3/4\", \"tools, wasm 4/4\", (same position, after \"tools duos, selfplay\",); and in test_the_committed_files_give_todays_jobs change jobs[\"tools, wasm\"][\"test\"] to jobs[\"tools, wasm 1/4\"][\"test\"]. No change to the shards-set assertion is needed. Then re-run python3 -m unittest discover -s tests -t . from bot/ and confirm green."
+      },
       "asks": [],
-      "ci_early": true,
-      "ci_fixes": 1,
-      "ci_on_head": true,
-      "ci_run_id": 44954994581,
-      "ci_sha": "467072d365752d717caeafd2cbc35aa1969eb004",
       "cleared": {
         "approver": {
           "family": "muse",
@@ -15336,24 +15339,16 @@
       },
       "died": 0,
       "difficulty": "medium",
-      "failures": 0,
       "feedback_since": "2026-11-21T21:43:53Z",
-      "forced": false,
       "interruptions": 0,
       "issue": 4432,
-      "kind": "revise",
       "live": "fixing-ci",
-      "merge_owner": "muse",
-      "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-21T22:17:53Z",
-      "requested_by": "jgoetzmann-bot",
+      "question": "A person must update the pin in bot/tests/test_ci_matrix.py (bot/ is forbidden to the night bot): in JOBS replace the entry \"tools, wasm\", with \"tools, wasm 1/4\", \"tools, wasm 2/4\", \"tools, wasm 3/4\", \"tools, wasm 4/4\", (same position, after \"tools duos, selfplay\",); and in test_the_committed_files_give_todays_jobs change jobs[\"tools, wasm\"][\"test\"] to jobs[\"tools, wasm 1/4\"][\"test\"]. No change to the shards-set assertion is needed. Then re-run python3 -m unittest discover -s tests -t . from bot/ and confirm green.",
       "run_id": "44956448721",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "ci",
       "started_at": "2026-11-21T22:22:43Z",
-      "stop_requested": false,
       "taken_asks": [],
       "votes": {
         "approvals": [
