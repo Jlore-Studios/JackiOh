@@ -15987,11 +15987,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-21T04:47:37Z",
+        "at": "2026-11-21T05:12:16Z",
         "difficulty": "hard",
         "provider": "claude-7",
-        "tier": "medium",
-        "why": "Rule 1: it changes the engine's combat forecast (crates/engine/src/query.rs, state_check.rs) and the fuzz monitor, and adds a ruling and its proofs."
+        "tier": "strong",
+        "why": "Engine rules: it changes the combat forecast's projection in crates/engine/src/query.rs and the fuzz oracle I18"
       },
       "failures": 0,
       "forced": false,
