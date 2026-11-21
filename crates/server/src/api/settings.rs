@@ -235,7 +235,9 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let refused = if let Some(picks) = groups.get_mut(COSMETICS_GROUP) {
         let owned = tx.economy_cosmetics_get(&profile.id).await?;
-        let held = tx.player_settings_get(&profile.id).await?;
+        // R4403000 (#4418): read the held cosmetics under the row lock the merge takes, so a
+        // concurrent device's committed write is seen here, never reverted by the filter below.
+        let held = tx.player_settings_get_for_update(&profile.id).await?;
         let held_group = held.as_ref().and_then(|row| row.groups.get(COSMETICS_GROUP));
         filter_cosmetics_group(picks, held_group, &owned)?
     } else {

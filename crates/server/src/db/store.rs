@@ -2365,6 +2365,17 @@ impl Tx<'_> {
         dispatch!(self, player_settings_get(profile_id))
     }
 
+    /// R4403000 (#4418): the locked read `put_settings` uses before its keep-out filter. The
+    /// profile's row, or `None` before its first write, exactly as `player_settings_get`; the lock
+    /// is held until the transaction commits, so the later `player_settings_merge` in the same
+    /// transaction cannot commit over a row this read did not see.
+    pub async fn player_settings_get_for_update(
+        &mut self,
+        profile_id: &str,
+    ) -> StoreResult<Option<PlayerSettingsRow>> {
+        dispatch!(self, player_settings_get_for_update(profile_id))
+    }
+
     /// R634: one atomic merge. For each group sent, the stored group becomes the sent one only when
     /// the sent one's `at` is strictly later; a group the write does not name is left as it was. A
     /// profile with no row gets one.

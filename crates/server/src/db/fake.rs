@@ -2430,6 +2430,22 @@ pub fn player_settings_get(
         .cloned())
 }
 
+/// R4403000 (#4418): the locked entry point both stores expose for `put_settings`' keep-out
+/// filter. The fake holds its one lock for the whole transaction, so this is already serial and
+/// reads exactly what `player_settings_get` does; the method exists so both stores share the
+/// same locked read.
+pub fn player_settings_get_for_update(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+) -> Result<Option<PlayerSettingsRow>, StoreError> {
+    call(f, "playerSettings.getForUpdate")?;
+    Ok(f.tables()
+        .player_settings
+        .iter()
+        .find(|existing| existing.profile_id == profile_id)
+        .cloned())
+}
+
 pub fn player_settings_merge(
     f: &mut FakeTx<'_>,
     input: &PlayerSettingsMergeInput,
