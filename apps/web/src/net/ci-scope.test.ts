@@ -407,6 +407,7 @@ describe("scripts/ci-scope.sh", () => {
         // `web (wasm c module)` builds the C module and reads its imports (#3093, #3097).
         "crates/wasm/c/Cargo.toml",
         "crates/wasm/c/src/lib.rs",
+        "luau/tools/reference-host.mjs",
         "crates/server/src/env.rs",
         // apps/edge's config test holds the probe routes the Worker calls.
         "crates/server/src/app.rs",

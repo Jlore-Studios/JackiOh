@@ -14,6 +14,7 @@ as the browser module's.
 | `src/Host.luau` | `Host.new` / `host:call` / `Host.splitState`: the boundary |
 | `tests/mock.luau` | A mock module in Luau over a real `buffer`, the spec's oracle |
 | `tests/host.spec.luau` | The spec: a tiny assert helper, no framework |
+| `tools/reference-host.mjs` | Node reference host driving `jackioh_wasm_c.wasm` through the C ABI (`fixture` and `traces` modes; run by `scripts/build-wasm.sh`) |
 | `rokit.toml` | The pinned tools |
 | `stylua.toml` | The formatter's config |
 | `selene.toml` | The linter's config |
