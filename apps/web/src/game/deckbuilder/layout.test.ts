@@ -80,3 +80,20 @@ describe("R3956000 the Cards tab's set row", () => {
     expect(list).not.toContain("scrollbar-width: none");
   });
 });
+
+describe("R4349000 the deck editor's Compare with picker", () => {
+  it("R4349000 from 601 to 760 px on a tall screen the label sits over the select, which takes the body's size", () => {
+    const workshop = sheet("game/deckbuilder/workshop.css");
+    const narrow = workshop.indexOf("@media (max-width: 760px) {");
+    expect(narrow, "the 760 px block").toBeGreaterThanOrEqual(0);
+    const tall = workshop.indexOf("@media (min-width: 601px) and (min-height: 501px) and (max-width: 760px) {");
+    expect(tall, "a block from 601 to 760 px on a tall screen").toBeGreaterThan(narrow);
+    const pick = rule(workshop, ".ws-compare-pick", tall);
+    expect(pick).toContain("flex-direction: column;");
+    expect(pick).toContain("align-items: stretch;");
+    expect(rule(workshop, ".ws-compare-pick .ws-select", tall)).toContain("font-size: var(--type-md);");
+    // The phone's row and its 16 px stay in the 760 px block.
+    expect(rule(workshop, ".ws-compare-pick", narrow)).toContain("flex-direction: row;");
+    expect(rule(workshop, ".ws-compare-pick .ws-select", narrow)).toContain("flex: 1 1 auto;");
+  });
+});
