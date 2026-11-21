@@ -15,6 +15,10 @@ mod fight;
 #[cfg(test)]
 mod fight_tests;
 #[cfg(test)]
+mod invariants;
+#[cfg(test)]
+mod map_fuzz_tests;
+#[cfg(test)]
 mod map_tests;
 #[cfg(test)]
 mod tests;
