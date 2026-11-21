@@ -64,6 +64,7 @@ pub fn script_v0_6_8b() -> CardScripts {
 mod tests {
     use super::*;
     use crate::filler;
+    use jackioh_engine::testkit::*;
 
     use crate::scenario;
 

@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #41 Mend Projector (R3556003; R62, R1420):
-//! (2) Field Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
+//! (1) Field Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "End of turn: Heal all Units to full and give them +{health} Health." (1)
 //!   Radiant: "End of turn: Heal all Units to full and give them +{health} Health and Divine Shield." (2)
 //!
