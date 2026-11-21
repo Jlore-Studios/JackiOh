@@ -15131,12 +15131,10 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "at": "2026-11-21T09:04:34Z",
+        "at": "2026-11-21T10:47:46Z",
         "built_by": "claude-8",
         "by": "`claude` (strong)",
-        "carried_from": "f604485928f8aed162d0ad440cbb98412efee850",
-        "resolved_by": "`claude` (strong)",
-        "sha": "8071cbc5958fc200733e4744022dea6bab5cb8db"
+        "sha": "2e2b8afd1b51c2c77511f838fb9d24bdd06d39f6"
       },
       "died": 0,
       "difficulty": "hard",
