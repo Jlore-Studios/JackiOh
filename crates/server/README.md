@@ -358,7 +358,7 @@ token, no socket, no cookie and no engine in the client, so any client can play 
 | `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint at a browser's push service, one of `PUSH_SERVICE_HOSTS` or a subdomain of one, else 400; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
 | `DELETE /api/daily/push` | User | `{endpoint}`: the device's subscription goes, as the web signs out: 204 |
 | `GET /api/daily/unsubscribe?token=`, `POST …` | None | the email's own link: a small page whose button posts the `POST`, so opening it (a mail scanner following every link) changes nothing; the `POST` is RFC 8058's one-click, emails off for the token's account (a form-encoded or `multipart/form-data` body of `List-Unsubscribe=One-Click` is read as empty): a small page saying so |
-| `POST /daily-sweep` | None | the Worker's hourly cron: `{expired, settled, emailed, pushed}`. Outside `/api` and `/ws`, which the Worker never forwards from the public |
+| `POST /daily-sweep` | None | the Worker's hourly cron: `{expired, settled, purged, emailed, pushed}`. Outside `/api` and `/ws`, which the Worker never forwards from the public |
 | `POST /api/e2e/daily-clock` | None | `{offsetMs}`, end-to-end mode only (404 elsewhere): the daily clock reads that far ahead, for spec 53 |
 
 `GET /api/social` and the `social` frame carry `dailyWaiting`, and a daily match's
@@ -809,8 +809,8 @@ has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least
 pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
 `matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
-purge's eight, `game_records.fold`, `game_records.refile`, `retention.purge`, `chat.purge`, `duos.logs.purge`,
-`idempotency.sweep`, `practice.sweep` and `practice.prune`. Each step's text in `alerts::meaning` names its job and what
+purge's ten, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `chat.purge`, `duos.logs.purge`,
+`idempotency.sweep`, `lobbies.sweep`, `practice.sweep` and `practice.prune`. Each step's text in `alerts::meaning` names its job and what
 players notice while it fails (for the matchmaker, that nobody who queues gets a game), and says that the
 email's `message` field holds the error. A reaper pass in which any match would not reap counts as failed,
 so one wedged match is reported while the others reap; a co-op pass in which any match would not end
@@ -855,7 +855,8 @@ the other player while a draw offer stands (R3727006). A move past its deadline 
 `srv-daily-<seq>` and records the result. Every read settles a game first, and the sweep settles every game
 due: `daily::notify::sweep`, every `DAILY_SWEEP_MINUTES` while the server is awake (`daily.sweeper`) and
 on the Worker's hourly cron (`POST /daily-sweep`) while it sleeps, one at a time (`DailyState::begin_sweep`:
-one that lands while another runs does nothing). A game over whose result's write failed (its match still
+one that lands while another runs does nothing). The sweep also deletes every invite past its `expires_at`,
+whatever became of it; the game it started stays (R4390000). A game over whose result's write failed (its match still
 `live`) is due too, so the sweep writes it; a Glitch's void (R679) goes through `results::void_match`. A
 game is written in the transaction that accepts its challenge, so a start that fails leaves the challenge
 open; a seek's claim commits first, and a start that fails puts the claimed seek back where it stood.
@@ -1154,7 +1155,8 @@ the result) and `duos_match_actions` (the log, unique by seq and by nonce); the 
 the server's alone, as a 1v1 match's are: a room's host and guest may read it (but its frozen deck
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
-match's (`duos::purge_expired_logs`); the match row and its result stay.
+match's (`duos::purge_expired_logs`); the match row and its result stay. The loop also deletes a replay
+share whose match's log is gone (`shares.purge`, R4390001).
 
 Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
 `decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and
