@@ -1212,10 +1212,10 @@ fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &Atta
 
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::combat_forecast;
     use jackioh_engine::config::DECK_SIZE;
     use jackioh_engine::testkit::{Keyword, Scenario, Value, json, scenario};
     use jackioh_engine::{PerPlayer, Rng};
+    use jackioh_engine::{attack_deaths, attack_target_of, combat_forecast};
 
     use super::*;
     use crate::config::AI_REPLY;
@@ -2123,6 +2123,18 @@ mod tests {
                         }
                         let attacker = find_instance(state, &entry.attacker_id).expect("the attacker");
                         let target = find_instance(state, &entry.target_id).expect("the target");
+                        // R4379000: the forecast counts the state check's later passes after the
+                        // combat (an aura's source dying first), which the AI's trade reads leave out.
+                        let aimed = attack_target_of(state, &entry.target_id).expect("a listed target");
+                        if attack_deaths(state, attacker, &aimed)
+                            .passes
+                            .iter()
+                            .skip(1)
+                            .flatten()
+                            .any(|id| *id == attacker.id || *id == target.id)
+                        {
+                            continue;
+                        }
                         met.insert(attacker.def_id.clone());
                         met.insert(target.def_id.clone());
                         let read = fight(state, attacker, target);
