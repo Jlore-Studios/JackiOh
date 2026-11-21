@@ -4799,6 +4799,8 @@
         "why": "On GitHub, check main's recent e2e smoke runs for 51-menu-shell.cy.ts retries, and if the R3728000 screenshots test no longer retries, close issue #3982 citing that run plus the local numbers in this report. This environment holds no GitHub credential and must not try to reach the API."
       },
       "asks": [],
+      "died": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-20T23:16:02Z",
         "family": "muse",
@@ -4812,6 +4814,7 @@
       "last_findings": [],
       "live": "building",
       "owner": "",
+      "pending_request": false,
       "planned_at": "2026-11-20T23:26:32Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
