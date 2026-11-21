@@ -16911,9 +16911,19 @@
     "what": "plan #4390 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-21T18:16:56Z",
+    "at": "2026-11-21T18:14:27Z",
     "notes": [
-      "started a night run, as a lane was free: #4403 (medium) is queued to build, for `muse`: build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+      "#4390 needs a plan",
+      "#4391 needs a plan",
+      "delivered plan #4392 on claude-8 (run 44933784623): planned",
+      "delivered plan #4397 on muse (run 44933504027): planned",
+      "delivered plan #4403 on muse (run 44933406973): planned",
+      "started build #4403 on muse (run 44934751414)",
+      "started build #4397 on muse (run 44934809094)",
+      "started build #4392 on claude-8 (run 44934862010)",
+      "started plan #4391 on claude-1 (run 44934914476)",
+      "started plan #4390 on claude-4 (run 44934973251)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17619,7 +17629,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T18:02:30Z",
+  "loop_tick": "2026-11-21T18:14:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
