@@ -11177,17 +11177,8 @@
       "verdict_rounds": 2
     },
     "4225": {
-      "action": "plan",
-      "asks": [
-        "c:7052758617"
-      ],
-      "build_next": {
-        "from_run": "44842263824",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-21T00:20:25Z",
-        "until": "2026-11-21T00:50:25Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T00:20:16Z",
         "difficulty": "medium",
@@ -11206,10 +11197,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"sed -n 380,540p crates/server/src/alerts.rs && sed -n 660,760p crates/server/src/alerts.rs && wc -l crates/server/src/alerts.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"FailingStreak::new\\\\|log_alert\\\\|alert = true\\\" crates/server/src | grep -v \\\"^crates/server/src/alerts.rs\\\" | head -60\"}\n- Bash: {\"command\": \"sed -n 90,160p crates/server/src/loops.rs; sed -n 1445,1525p crates/server/src/app.rs; grep -n \\\"LOOP_FAILING\\\" -r crates/server/src | head; sed -n 790,830p crates/server/README.md\"}\n- Bash: {\"command\": \"cd crates/server/src; for f in api/http.rs:1351 api/http.rs:934 actor/guard.rs:104 api/client_errors.rs:86 api/ranked.rs:276 api/game_records.rs:42 bug_reports.rs:358 bug_reports.rs:411;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4225/crates/server/src; sed -n 825,900p api/results.rs; sed -n 70,200p api/retention.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4225/crates/server/src; sed -n 1350,1420p api/queue.rs; sed -n 680,740p api/series.rs; sed -n 285,340p duos/mod.rs; sed -n 255,300p social/challenges\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4225/crates/server/src; grep -n -B6 \\\"fn sweep_series\\\\|fn reap_pass\\\\|fn reap_open_matches\\\\|pub async fn try_reconcile\\\\|pub async fn sweep(\\\\|pub \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4225/crates/server/src; sed -n 440,500p seats.rs; sed -n 380,402p daily/notify.rs; sed -n 40,56p api/retention.rs; grep -n \\\"\\\\\\\"loop\\\\\\\"\\\\|\\\\\\\"loop\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4225/crates/server; ls; cat clippy.toml 2>/dev/null | head -20; sed -n 774,790p README.md; grep -n \\\"read_to_string\\\\|CARGO_MANIFEST_DIR\\\\|walkdir\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4225/crates/server; sed -n 640,662p src/api/results.rs; sed -n 400,440p src/seats.rs; grep -n \\\"^regex\\\\|^\\\\[dev-dep\\\\|^\\\\[dependencies\\\" Cargo.toml;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4225; echo \\\"Plan draft: see final message. Files: crates/server/src/alerts.rs, crates/server/README.md. Medium.\\\" > .bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the change is one function's texts and one test in crates/server/src/alerts.rs plus a README paragraph, with no engine, AI, cross-crate, migration or 40-file change.\"} --> ## Goal Every `<step>.failing` alert gets its own\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-21T00:12:30Z",
       "owner_why": "it plans it",
@@ -11222,12 +11212,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-20T23:14:07Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44842263824",
+      "run_id": "pending:5919cf6c-1795220854",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T00:12:30Z",
+      "started_at": "2026-11-21T00:28:03Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7052758617"
+      ]
     },
     "4227": {
       "action": "review",
@@ -15199,9 +15191,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T00:27:21Z",
+    "at": "2026-11-21T00:28:03Z",
     "url": "",
-    "what": "build #4219 on claude-7"
+    "what": "build #4225 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-21T00:05:13Z",
