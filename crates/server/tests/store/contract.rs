@@ -2686,6 +2686,27 @@ mod player_settings {
         assert_eq!(q!(harness, t => t.player_settings_get(&profile.id)), Some(row));
     }
 
+    async fn r4403000_a_locked_read_answers_what_the_merge_just_left(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        assert!(q!(harness, t => t.player_settings_get_for_update(&profile.id)).is_none());
+
+        let row = merged(
+            write(
+                harness,
+                &profile.id,
+                json!({ "audio": { "at": 1_000, "values": { "master": 0.5 } } }),
+                limits(),
+            )
+            .await,
+        );
+        let locked = must(
+            q!(harness, t => t.player_settings_get_for_update(&profile.id)),
+            "the locked row",
+        );
+        assert_eq!(locked, row);
+        assert_eq!(q!(harness, t => t.player_settings_get(&profile.id)), Some(row));
+    }
+
     async fn r634_a_strictly_later_group_replaces_the_stored_one_whole_an_older_or_tied_one_changes_nothing(
         harness: &StoreHarness,
     ) {
@@ -2877,6 +2898,7 @@ mod player_settings {
 
     both_stores!(
         r633_holds_no_row_before_the_first_write_and_the_first_write_makes_one,
+        r4403000_a_locked_read_answers_what_the_merge_just_left,
         r634_a_strictly_later_group_replaces_the_stored_one_whole_an_older_or_tied_one_changes_nothing,
         r634_a_group_a_write_does_not_name_stays_and_one_write_can_win_one_group_and_lose_another,
         r633_refuses_a_result_past_either_cap_and_writes_nothing_and_keeps_each_profile_s_row_apart,

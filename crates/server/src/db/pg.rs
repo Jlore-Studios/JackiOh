@@ -4407,6 +4407,29 @@ pub async fn player_settings_get(
         .transpose()
 }
 
+/// R4403000 (#4418): `player_settings_get` under the settings row lock, so the filter reads what
+/// the merge will merge: a concurrent device's committed write is seen, never reverted.
+pub async fn player_settings_get_for_update(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Option<PlayerSettingsRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(None);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        player_settings_columns!(),
+        " from public.player_settings where profile_id = $1::uuid for update"
+    ))
+    .bind(profile_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| PlayerSettingsDbRow::read(&row).map(to_player_settings))
+        .transpose()
+}
+
 /// R634: one call to `app.merge_player_settings` (0018), under the profile row lock, which also
 /// caps the result; then the row as it now stands, read in the same transaction so the answer is
 /// exactly what this write left.
