@@ -15190,6 +15190,14 @@
           "muse": "medium"
         }
       }
+    },
+    "4361": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-20T23:07:28Z",
+      "issue": 4331,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
