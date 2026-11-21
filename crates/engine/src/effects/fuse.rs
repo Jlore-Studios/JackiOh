@@ -17,11 +17,11 @@ use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_unique, query};
 use crate::config::FUSE_MIN_INGREDIENTS;
 use crate::effects::choose::{DiscoverFromCatalogArgs, chosen_options, discover_from_catalog};
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of, self_on_its_stay};
-use crate::layers::unit_has;
+
 use crate::script::{Effect, EffectContext, Hook, hook};
 use crate::state::{CardInstance, GameState, find_instance, new_instance};
 use crate::subsystems::fuse::{FuseArgs, HandPrice, fuse};
-use crate::wire::{CardDef, CardType, KeywordKind, PlayerId, Row, Zone, ZoneName, opponent_of};
+use crate::wire::{CardDef, CardType, PlayerId, Row, Zone, ZoneName, opponent_of};
 use crate::zones::{
     StandingAt, ZoneSlot, acting_on, beneath_at, cease_to_exist, first_entry_zone, is_buried,
 };
@@ -270,7 +270,7 @@ fn fuse_random_ingredient(
         .filter(|card| find_instance(ctx.sink.state, &card.id).is_some())
         .filter(|card| {
             find_instance(ctx.sink.state, &card.id)
-                .is_none_or(|live| !unit_has(ctx.sink.state, live, KeywordKind::Immutable))
+                .is_none_or(|live| !crate::layers::is_immutable(ctx.sink.state, live))
         })
         .collect();
     if pool.is_empty() {
@@ -327,7 +327,7 @@ fn keepable(state: &GameState, card: &CardInstance) -> bool {
     if refused {
         return false;
     }
-    !unit_has(state, card, KeywordKind::Immutable)
+    !crate::layers::is_immutable(state, card)
 }
 
 /// `FuseInto`'s pile: a hand or a library.

@@ -7,11 +7,11 @@ use crate::damage::{DamageTarget, set_hero_health};
 use crate::effects::targets::{
     BoardScope, PlayerSpec, TargetSpec, cards_in_scope, player_of, resolve_target,
 };
-use crate::layers::{unit_has, unit_view, worn_stats_override};
+use crate::layers::{unit_view, worn_stats_override};
 use crate::modifiers::add_modifier;
 use crate::script::Effect;
 use crate::state::{ModifierExpiry, ModifierKind, find_instance, find_instance_mut};
-use crate::wire::{AttackHealth, GameEvent, KeywordKind, Tuning};
+use crate::wire::{AttackHealth, GameEvent, Tuning};
 
 /// `setHealth`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -111,7 +111,7 @@ fn set_one(
     {
         return;
     }
-    if unit_has(ctx.state, unit, KeywordKind::Immutable) {
+    if crate::layers::is_immutable(ctx.state, unit) {
         return;
     }
     set_stats_on(ctx, &unit.id, stats);
@@ -189,7 +189,7 @@ pub fn give_stat_line(args: GiveStatLineArgs) -> Effect {
             return;
         };
         if crate::layers::has_stat_line(ctx.state, &instance)
-            || unit_has(ctx.state, &instance, KeywordKind::Immutable)
+            || crate::layers::is_immutable(ctx.state, &instance)
         {
             return;
         }

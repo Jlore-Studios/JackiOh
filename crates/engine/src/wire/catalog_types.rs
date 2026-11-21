@@ -944,6 +944,13 @@ pub fn has_keyword(keywords: &[Keyword], kind: KeywordKind) -> bool {
     keywords.iter().any(|k| k.kind() == kind)
 }
 
+/// R4353000: whether keywords make their card Immutable: the keyword itself, or Indestructible, which
+/// has it innately and never adds it, as Flying is Flexible (R3543000), so the card lists Indestructible
+/// alone. Every rule that asks whether a card is Immutable asks this.
+pub fn has_immutable(keywords: &[Keyword]) -> bool {
+    has_keyword(keywords, KeywordKind::Immutable) || has_keyword(keywords, KeywordKind::Indestructible)
+}
+
 /// Total Armor across every source (§10.4).
 pub fn armor_of(keywords: &[Keyword]) -> i32 {
     keywords.iter().fold(0, |sum, k| match k {

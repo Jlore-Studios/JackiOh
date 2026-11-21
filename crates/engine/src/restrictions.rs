@@ -4,9 +4,10 @@
 //!
 //!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `effects/targets.rs`'s, which
 //!    asks `effect_is_from_spell` for every card a target or a scope names.
-//!  * Immutable's targeting half (R781001, R450): every declaration and `target` prompt asks
-//!    `immutable_bars`, as does a Field Trap naming its one card (Classic #5 Tesla, Classic+ #74); random
-//!    picks, scopes and attacks still reach it. Its text half (R23) is read at each verb.
+//!  * Evasive's targeting half (R4353002, R450): every declaration and `target` prompt asks
+//!    `evasive_bars`, which bars a Spell's and a Field Spell's aim; random picks, scopes, Traps, Field
+//!    Traps and Units still reach it. Immutable bars no aim since R4353001: its text half (R23) is read
+//!    at each verb, through `layers::is_immutable`, which every Indestructible card answers too (R4353000).
 //!  * The attack restrictions (Classic+ #51, #19.1, a carried Unit's R446, Flying's #783, the Gauntlet's
 //!    R1849005): `combat.rs` asks `attack_restriction` for a declared attack (§4.2 step 2), the Taunt wall
 //!    (step 3: a Taunt binds only who may attack it) and every forced attack, which skips steps 1 to 3
@@ -69,9 +70,9 @@ pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
         && immune_to_spells(ctx.sink.state, card)
 }
 
-/// R781001: the type Immutable's targeting rule reads off a source: a Unit in a unit zone (an Animated
-/// card included), else its running face's printed type, so a revealed face-down Spell (ME-ALTPLAY,
-/// R1044) is a Spell and a Field Trap firing from the backrow a Field Trap, even if it animates later.
+/// R4353002: the type Evasive's targeting rule reads off a source (R781001's reading, kept): a Unit in a
+/// unit zone (an Animated card included), else its running face's printed type, so a revealed face-down
+/// Spell (ME-ALTPLAY, R1044) is a Spell and a Field Spell acting from the backrow a Field Spell.
 pub fn targeting_type_of(state: &GameState, source: &CardInstance) -> CardType {
     if let Zone::Field { row: Row::Units, .. } = source.zone {
         return CardType::Unit;
@@ -79,25 +80,34 @@ pub fn targeting_type_of(state: &GameState, source: &CardInstance) -> CardType {
     card_type_of_face(state, &source.def_id, source.radiant)
 }
 
-/// R781001: whether the card is Immutable in play: on the field, face-up (a face-down card's text is
-/// dormant, and reading it would tell the opponent what it is), with the keyword now.
+/// R781001, R4353000: whether the card is Immutable in play: on the field, face-up (a face-down card's
+/// text is dormant, and reading it would tell the opponent what it is), Immutable now, by the keyword or
+/// by Indestructible (`layers::is_immutable`).
 pub fn immutable_in_play(state: &GameState, card: &CardInstance) -> bool {
     matches!(card.zone, Zone::Field { .. })
         && !crate::preview::is_face_down(state, card)
-        && unit_has(state, card, KeywordKind::Immutable)
+        && crate::layers::is_immutable(state, card)
 }
 
-/// R781001: "While in play, Spells, Field Spells and Field Traps can't target it": true when `source`
-/// is one of those (`targeting_type_of`) and `card` is Immutable in play, its controller's own cards
-/// included. A Unit, a Trap that is not a Field Trap, and no source at all may target it.
-pub fn immutable_bars(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
+/// R4353002: whether the card is Evasive in play: on the field and face-up, with the keyword now.
+pub fn evasive_in_play(state: &GameState, card: &CardInstance) -> bool {
+    matches!(card.zone, Zone::Field { .. })
+        && !crate::preview::is_face_down(state, card)
+        && unit_has(state, card, KeywordKind::Evasive)
+}
+
+/// R4353002: "Spells and Field Spells can't target it": true when `source` is one of those
+/// (`targeting_type_of`) and `card` is Evasive in play, its controller's own cards included, as with
+/// Hearthstone's Elusive. A Unit, a Trap or a Field Trap, and no source at all, may target it.
+/// Immutable bars no targeting since R4353001: what it stops is the change, never the aim.
+pub fn evasive_bars(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
     let Some(source) = source else {
         return false;
     };
     matches!(
         targeting_type_of(state, source),
-        CardType::Spell | CardType::FieldSpell | CardType::FieldTrap
-    ) && immutable_in_play(state, card)
+        CardType::Spell | CardType::FieldSpell
+    ) && evasive_in_play(state, card)
 }
 
 /// MD-B1, R940: whether the card holds the tribal-hate immunity now (a static flag).

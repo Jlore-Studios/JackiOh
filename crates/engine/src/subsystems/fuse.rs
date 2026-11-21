@@ -2279,7 +2279,7 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         if !allowed {
             return None;
         }
-        if crate::layers::unit_has(sink.state, target, KeywordKind::Immutable) {
+        if crate::layers::is_immutable(sink.state, target) {
             return None;
         }
     } else if to_hand.is_none() {

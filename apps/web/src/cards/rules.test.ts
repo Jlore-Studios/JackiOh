@@ -422,13 +422,26 @@ describe("B10: tokenizeRules and termsIn", () => {
     }
   });
 
-  it("R781001 R781003 Immutable and Vanilla read the rules the SPEC rows give", () => {
+  it("R4353000 R4353001 R4353002 R781003 Indestructible, Immutable, Evasive and Vanilla read the rules the SPEC rows give", () => {
     expect(termsOf("Indestructible, Immutable")).toEqual([
       { text: "Indestructible", term: "Indestructible" },
       { text: "Immutable", term: "Immutable" },
     ]);
-    expect([GLOSSARY.Immutable, GLOSSARY.Vanilla].map((entry) => [entry.section, entry.rule])).toEqual([
-      ["§6.1", "Text can't be changed or transformed. While in play, Spells, Field Spells and Field Traps can't target it"],
+    expect(
+      [GLOSSARY.Indestructible, GLOSSARY.Immutable, GLOSSARY.Evasive, GLOSSARY.Vanilla].map((entry) => [
+        entry.section,
+        entry.rule,
+      ]),
+    ).toEqual([
+      [
+        "§6.1",
+        "Can't be destroyed or damaged, is Immutable, can't be in Defense Position and never has Taunt; can be exiled or tributed",
+      ],
+      ["§6.1", "Text can't be changed or transformed"],
+      [
+        "§6.1",
+        "No attack may target it, and it can't be in Defense Position. While in play, Spells and Field Spells can't target it",
+      ],
       ["§6.3", "Remove a unit's text and return it to its printed stats"],
     ]);
   });

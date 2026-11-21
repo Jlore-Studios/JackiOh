@@ -10,7 +10,7 @@ use crate::state::{CardInstance, GameState, ModifierKind, Position};
 use crate::tuning::{tuned_keywords, x_of};
 use crate::wire::{
     AttackHealth, CardDef, CardFace, CardType, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
-    armor_of, has_keyword,
+    armor_of, has_immutable, has_keyword,
 };
 
 /// §10.4: a unit's layered stats and keywords (`unit_view`). Not the view's `wire::UnitView`, which
@@ -596,6 +596,12 @@ pub fn keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
 
 pub fn unit_has(state: &GameState, instance: &CardInstance, kind: KeywordKind) -> bool {
     has_keyword(&unit_view(state, instance).keywords, kind)
+}
+
+/// R4353000: whether `instance`, read through the layers where it is (§10.4), is Immutable: it has the
+/// keyword, or it is Indestructible, which is Immutable innately (`wire::has_immutable`).
+pub fn is_immutable(state: &GameState, instance: &CardInstance) -> bool {
+    has_immutable(&unit_view(state, instance).keywords)
 }
 
 /// R3543000: whether a keyword lets its Unit enter its backrow as well as its unit row: Flexible, and

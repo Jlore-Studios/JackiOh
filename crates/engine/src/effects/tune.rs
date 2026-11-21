@@ -42,9 +42,7 @@ use crate::config::{
     TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE,
     TUNE_NERF_HAND_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
-use crate::layers::{
-    card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_has, unit_view,
-};
+use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
 use crate::mana::is_x_cost;
 use crate::numbers::{
     NumberRef, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on, numbers_on,
@@ -441,7 +439,7 @@ pub fn lose_keyword(args: LoseKeywordArgs) -> Effect {
         let Some(card) = instance_of(ctx, &args.target) else {
             return;
         };
-        if unit_has(ctx.state, &card, KeywordKind::Immutable) {
+        if crate::layers::is_immutable(ctx.state, &card) {
             return;
         }
         remove_kind(ctx.state, &card.id, args.kind);
@@ -797,7 +795,7 @@ fn menu_of(
     zone: TuneZone,
 ) -> Vec<MenuRow> {
     // Rule 2: an Immutable card is never changed, and nothing is drawn for it.
-    if has_keyword(&keywords_now(state, card), KeywordKind::Immutable) {
+    if crate::wire::has_immutable(&keywords_now(state, card)) {
         return Vec::new();
     }
     [
