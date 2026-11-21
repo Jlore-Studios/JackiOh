@@ -17117,9 +17117,11 @@
         "by": "`muse` (medium)",
         "sha": "2f9315bec479d339338f165205e7bb44fb3a057b"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-21T18:17:56Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-21T19:00:42Z",
         "family": "muse",
@@ -17129,6 +17131,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Test run still in progress; ending the turn here and will continue when its result is delivered.Clippy passes on `jackioh-server` with `-D warnings` (exit 0, no warnings). The `spec check` run is still going; I'll report its result when it lands.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: an unowned cosmetic pick is left out of a settings save instead of refusing the whole save\"} -->\n- `PUT /api/settings` no longer refuses a whole save for one unowned `cosmetics` pick. A pick refused as `NotOwned` is left out of the write: the key keeps the account's stored pick when its held `cosmetics` group has one, otherwise the key is dropped, and everything else merges per R634. Wrong-kind,\u2026\n- Changed files: [settings.rs](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4403/crates/server/src/api/settings.rs) (`check_cosmetics_group` \u2192 `filter_cosmetics_group`; held row read in the same tx as the merge; new log line), [tests/api/settings.rs](/home/agent-muse/actions-runner-3/_work\u2026\n- How tested: `cargo test -p jackioh-server --test server api::settings` \u2192 18 passed, 0 failed (rewritten `r1834001_the_cosmetics_group_refuses_an_unowned_pick`, unchanged `\u2026_refuses_another_kind`, two new `r4403000_\u2026` tests pinning no-`table`-stored and keep-stored-at-new-time). `cargo fmt --check` \u2026\n- Decisions the issue did not settle: the held row is read in the same transaction as the merge, so a concurrent writer resolves as any valid newer whole-group write under strictly-later-wins (no torn key state, no new lock); a group whose every pick is refused still merges at the sent `at` (possibly\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4403 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4403/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4403,
       "kind": "review",
       "live": "reviewing",
