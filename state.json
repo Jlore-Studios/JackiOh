@@ -14315,9 +14315,7 @@
     },
     "4332": {
       "action": "plan",
-      "asks": [
-        "c:7052755109"
-      ],
+      "asks": [],
       "failures": 2,
       "forced": false,
       "handoff": {
@@ -14342,9 +14340,9 @@
       "queued_at": "2026-11-20T23:03:46Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "44853069137",
+      "run_id": "pending:450e1333-1795236204",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-21T01:56:24Z",
+      "started_at": "2026-11-21T04:43:45Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s",
@@ -14352,7 +14350,9 @@
       ],
       "strikes": 2,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7052755109"
+      ],
       "verdict_rounds": 0
     },
     "4334": {
@@ -16272,9 +16272,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T04:43:11Z",
+    "at": "2026-11-21T04:43:45Z",
     "url": "",
-    "what": "build #4378 on muse"
+    "what": "plan #4332 on agy"
   },
   "last_sweep": {
     "at": "2026-11-21T04:26:25Z",
