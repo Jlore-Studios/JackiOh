@@ -16669,13 +16669,15 @@
     "what": "review #4387 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-21T05:42:55Z",
+    "at": "2026-11-21T05:51:43Z",
     "notes": [
-      "delivered build #4332 on agy (run 44868528148): built",
-      "started review #4386 on agy (run 44872289140)",
-      "started build #3925 on claude-8 (run 44872326268)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered build #4369 on muse (run 44867556914): built",
+      "delivered build #4378 on muse (run 44867472402): built",
+      "delivered build #4371 on muse (run 44867430387): built",
+      "started review #4388 on muse (run 44873051215)",
+      "started review #4389 on muse (run 44873085482)",
+      "started review #4387 on muse (run 44873122123)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17381,7 +17383,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T05:42:55Z",
+  "loop_tick": "2026-11-21T05:51:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
