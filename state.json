@@ -17573,6 +17573,14 @@
         "provider": "claude-4",
         "since": "2026-11-21T20:09:27Z"
       }
+    },
+    "4417": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-21T18:34:52Z",
+      "issue": 4396,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
