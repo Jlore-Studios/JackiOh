@@ -14882,15 +14882,8 @@
       "taken_asks": []
     },
     "4350": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44841912575",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-21T00:38:06Z",
-        "until": "2026-11-21T01:08:06Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14902,10 +14895,9 @@
         "reason": "planned on opus",
         "trail": "s/engine/src/alt_play.rs crates/engine/src/graveyard_play.rs 2>/dev/null | cut -c1-200 | head; \u2026\n- Bash: {\"command\": \"grep -n \\\"fn divergence\\\\|fn touched\\\\|fn touches\\\\|legal actions differ\\\\|own legal\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Find classify's divergence attribution\"}\n- Bash: {\"command\": \"sed -n 820,900p crates/tools/src/classify.rs\", \"description\": \"Read touched_by\"}\n- Bash: {\"command\": \"sed -n 680,760p crates/tools/src/classify.rs\", \"description\": \"Read how divergences are found\"}\n- Bash: {\"command\": \"ls crates/tools/src/ | head -80 | tr '\\\\n' ' '; grep -rn '\\\"l\\\"' crates/tools/src/golden*.rs 2>/dev/null | head -5\", \"description\": \"Find golden check's comparison order\"}\n- Bash: {\"command\": \"sed -n 120,175p crates/tools/src/golden.rs\", \"description\": \"Read golden check's per-step comparison\"}\n- Bash: {\"command\": \"grep -n \\\"Patch notes players read\\\" -A25 docs/issues-and-patches.md | cut -c1-600 | head -40\", \"description\": \"Read player-note categories\"}\n- Bash: {\"command\": \"sed -n 94,99p spec/10-engine-guide.md; grep -o \\\"for the Embiggened version, \\\\`embiggenCostOverride\\\\`[^;]*;\\\" spec/06-keywords.md; grep -o \\\"an \\\\`embiggenCostOverride\\\\` rider prices \u2026\n- Bash: {\"command\": \"grep -n '\\\"costOverride\\\"\\\\|\\\"costMod\\\"\\\\|\\\"embiggened\\\"' crates/engine/src/testkit/*.rs | head; sed -n 605,620p crates/engine/src/subsystems/scorer.rs | head -3; grep -n \\\"^pub fn\\\\|^fn\u2026\n- Bash: {\"command\": \"grep -n \\\"^function face\\\\|^const face\\\\|function face(\\\" -A12 apps/web/src/cards/model.test.ts | head -20; grep -n \\\"R1181003\\\\|R1181002\\\" apps/web/src/cards/*.ts apps/web/src/game/*.ts\u2026\n- Bash: {\"command\": \"grep -rln \\\"viewFor(\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head -10; grep -rn \\\"embiggenCost\\\" apps/web/src --include=*.test.ts* | cut -c1-200 | head -10\", \"descripti\u2026\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/game/embiggen-real.test.tsx\", \"description\": \"Read the real-engine embiggen web test\"}\n- Bash: {\"command\": \"sed -n 80,200p apps/web/src/game/embiggen-real.test.tsx\", \"description\": \"Read the rest of the real embiggen test\"}\n- Bash: {\"command\": \"grep -rn \\\"cost.alt\\\\|costAlt\\\\|cost-alt\\\\|embiggen-badge\\\" apps/web/src/cards/*.tsx apps/web/src/game/*.tsx 2>/dev/null | grep -v test | cut -c1-200 | head -10; grep -rn \\\"cost-alt\\\\|da\u2026\n- Bash: {\"command\": \"cat apps/web/src/wire/generated/HandView.ts 2>/dev/null | tail -5; grep -rn \\\"you.hand\\\" apps/web/src/game/*.test.tsx | head -3\", \"description\": \"Check the TS HandView shape\"}\n- Bash: {\"command\": \"ls apps/web/src/wire/generated/ | grep -i \\\"AddToHand\\\\|AddRandom\\\"; sed -n 215,226p crates/engine/src/effects/add_to_hand.rs; grep -rn \\\"AddToHandArgs {\\\" crates --include=*.rs | grep -\u2026\n- Bash: {\"command\": \"for f in crates/engine/tests/rules/call_to_chaos_meditative.rs:638 crates/engine/src/effects/delay.rs:789 crates/engine/src/effects/anomaly.rs:286 crates/engine/src/effects/fruit.rs:145 \u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/wording.test.ts | cut -c1-250\", \"description\": \"Read wording test rules\"}\n- Bash: {\"command\": \"grep -n \\\"costOverride\\\\|cost_override\\\" crates/engine/README.md crates/ai/README.md crates/cards/README.md docs/v0.3.0/SURFACE.md 2>/dev/null | head -5; grep -n \\\"include_str\\\\|export_c\u2026\n- Bash: {\"command\": \"sed -n 554p spec/08-catalog.md | grep -o \\\"R1181003[^|]*\\\" | head; grep -c \\\"\\\" spec/rulings/R1181003.md; grep -n \\\"R1181003\\\" crates/cards/src/scripts/meditative_plus/c022_mountaintop_g\u2026\n- Bash: {\"command\": \"ls spec/rulings/R0185.md spec/rulings/R0766.md spec/rulings/R0065.md spec/rulings/R4350000.md 2>&1; grep -n \\\"fn pair\\\\b\\\\|fn pair(\\\" crates/ai/tests/ai/observe.rs | head -2; grep -n \\\"^\u2026\n- Bash: {\"command\": \"sed -n 174p spec/06-keywords.md | cut -c1-200; grep -n \\\"Embiggen |\\\" spec/06-keywords.md | cut -c1-200 | head -3\", \"description\": \"Identify the spec rows to edit\"}\n- Bash: {\"command\": \"grep -n \\\"^### 8.9\\\\|^### 10.8\\\\|^### 6.3\\\" spec/*.md | head; grep -n \\\"fn act\\\\b\\\\|pub fn act(\\\" -A4 crates/engine/src/testkit/scenario.rs | head -6\", \"description\": \"Verify section ids\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4350/.bot-plan.md\", \"content\": \"## Goal\\n\\nEnormous Elderberry (M+ #23) adds its cards with a new mark, `noEmbiggenPremium`. A card with the mark pric\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; sed -n 272,279p crates/cards/src/lib.rs; ls crates/cards/patches/v*.json | sort -V | tail -1\", \"description\": \"Check plan length, under_kept, newest version\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"A new ruling, R4350000, supersedes R1181003's (0). The old `embiggenCostOverride` stays in the engine, unchang\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4350/.bot-plan.md\", \"content\": \"## Goal\\n\\nEnormous Elderberry (M+ #23) adds its cards with a new mark, `noEmbiggenPremium`. A marked card prices its \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Check the plan length\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" Doc: \\\\\\\"R4350000 (Meditative+ #23 Enormous Elderberry's \\\\\\\"Their Embiggened version costs no extra mana\\\\\\\"): no Embig\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" - Rejected:\\\\n - the Garden's premium on top, which prices the dearer choice above a version the text gives for no extra\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4350/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" - `proven_in`: the four test files below.\\\",\\n \\\" - `proven_in`: `crates/engine/tests/rules/mplus_b03.rs`, `crates/cards\u2026\n- said: ## Goal Enormous Elderberry (M+ #23) adds its cards with a new mark, `noEmbiggenPremium`. A marked card prices its Embiggened version at its normal price, read live each time a price is read. So every modifier (a `costOverride`, a `costMod`, a discount, an aura, R65's rules) moves both prices the s\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-21T00:09:29Z",
       "owner_why": "it plans it",
@@ -14918,9 +14910,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-20T23:25:49Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44841912575",
+      "run_id": "pending:2501a594-1795221694",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T00:09:29Z",
+      "started_at": "2026-11-21T00:42:00Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15291,9 +15283,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T00:41:21Z",
+    "at": "2026-11-21T00:42:00Z",
     "url": "",
-    "what": "review #4360 on muse"
+    "what": "build #4350 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-21T00:19:27Z",
