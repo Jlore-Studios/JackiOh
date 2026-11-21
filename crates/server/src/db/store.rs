@@ -2985,8 +2985,9 @@ pub struct SharedReplayRow {
 }
 
 impl Tx<'_> {
-    /// B52: records a share; one already held is left as it was (its first `created_at`).
-    pub async fn shares_put(&mut self, share: &ReplayShare) -> StoreResult<()> {
+    /// B52: records a share and answers whether it wrote a row; one already held is left as it was
+    /// (its first `created_at`) and answers false.
+    pub async fn shares_put(&mut self, share: &ReplayShare) -> StoreResult<bool> {
         dispatch!(self, shares_put(share))
     }
 

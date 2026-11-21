@@ -4862,7 +4862,7 @@ fn remove_watch_rows(tables: &mut FakeTables, profile_id: &str) {
     });
 }
 
-pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
+pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<bool, StoreError> {
     call(f, "shares.put")?;
     let tables = f.tables();
     let exists = |id: &str| tables.profiles.iter().any(|row| row.id == id);
@@ -4876,10 +4876,11 @@ pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<(), StoreEr
     let held = tables.replay_shares.iter().any(|row| {
         row.match_id == share.match_id && row.sharer == share.sharer && row.friend == share.friend
     });
-    if !held {
-        tables.replay_shares.push(share.clone());
+    if held {
+        return Ok(false);
     }
-    Ok(())
+    tables.replay_shares.push(share.clone());
+    Ok(true)
 }
 
 pub fn shares_remove(

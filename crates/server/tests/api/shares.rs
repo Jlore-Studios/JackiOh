@@ -8,7 +8,7 @@ use jackioh_engine::{Action, ActionBody, GameState, PlayerId, Winner, legal_acti
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::engine::{hash_state, seat_played_by};
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::SHARED_REPLAYS_LIST_MAX;
+use jackioh_server::config::{REPLAY_SHARES_PER_HOUR, SHARED_REPLAYS_LIST_MAX};
 use jackioh_server::db::store::{MatchActionRow, MatchRow, ReplayShare, ResultRow, StoreError};
 
 use crate::support::deps::{call, empty_test_app};
@@ -768,5 +768,99 @@ mod r4233000_read_on_open {
             vec![(json!(w.b.id), json!(true)), (json!(w.a.id), json!(true))],
             "{rows}"
         );
+    }
+}
+
+mod r4391000_share_limits {
+    //! R4391000 (#4391): a share already held tells the friend nothing again, and an account's
+    //! shares count against an hourly limit.
+    use super::*;
+    use crate::support::store::{advance, feed};
+
+    async fn unshare(w: &World, sharer: &Account, friend: &Account) {
+        let (status, body) = api(
+            &w.app,
+            "DELETE",
+            &format!("/api/replays/{}/shares/{}", w.match_id, friend.id),
+            &sharer.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+    }
+
+    #[tokio::test]
+    async fn r4391000_a_share_already_held_answers_204_and_tells_the_friend_nothing_again() {
+        let w = world("share-quiet").await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let first = feed(&w.app, &w.c).await;
+        assert_eq!(first["unread"], 1, "{first}");
+        assert_eq!(first["notifications"][0]["kind"], "replayShared", "{first}");
+        // The friend reads it.
+        let (status, body) = w.replay(&w.c).await;
+        assert_eq!(status, 200, "{body}");
+        let read = feed(&w.app, &w.c).await;
+        assert_eq!(read["unread"], 0, "{read}");
+        assert_eq!(read["notifications"][0]["read"], true, "{read}");
+
+        // Sharing it again answers 204 and changes nothing.
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let again = feed(&w.app, &w.c).await;
+        assert_eq!(again["unread"], 0, "{again}");
+        assert_eq!(again["notifications"], read["notifications"], "{again}");
+        assert_eq!(w.shared_with(&w.c).await.len(), 1);
+
+        // Unsharing, then sharing, writes a fresh row and tells again.
+        unshare(&w, &w.a, &w.c).await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        let fresh = feed(&w.app, &w.c).await;
+        assert_eq!(fresh["unread"], 1, "{fresh}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r4391000_past_replay_shares_per_hour_a_share_answers_429_until_the_hour_has_passed() {
+        let w = world("share-limit").await;
+        for n in 0..REPLAY_SHARES_PER_HOUR {
+            let (status, body) = w.share(&w.a, &w.c).await;
+            assert_eq!(status, 204, "share {n}: {body}");
+        }
+        unshare(&w, &w.a, &w.c).await;
+        let before = feed(&w.app, &w.c).await;
+
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 429, "{body}");
+        assert_eq!(body["error"]["code"], "rate_limited", "{body}");
+        assert!(
+            body["error"]["details"]["retryAfterMs"].as_i64().unwrap_or(0) > 0,
+            "{body}"
+        );
+        assert!(
+            w.shared_with(&w.c).await.is_empty(),
+            "the refused share wrote nothing"
+        );
+        assert_eq!(feed(&w.app, &w.c).await["unread"], before["unread"]);
+
+        // Another account's allowance is its own.
+        let (status, body) = w.share(&w.b, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+
+        advance(3_600_001_u64).await;
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(w.shared_with(&w.c).await.len(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r4391000_a_refused_share_still_counts_against_the_limit() {
+        let w = world("share-refused-counts").await;
+        for n in 0..REPLAY_SHARES_PER_HOUR {
+            let (status, body) = w.share(&w.a, &w.d).await;
+            assert_eq!(status, 404, "attempt {n}: {body}");
+        }
+        let (status, body) = w.share(&w.a, &w.c).await;
+        assert_eq!(status, 429, "{body}");
     }
 }
