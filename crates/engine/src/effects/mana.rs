@@ -159,7 +159,7 @@ pub fn steal_mana_crystals() -> Effect {
     steal_mana_crystals_with(crate::mana::CrystalGain::PastTheCap)
 }
 
-/// R767000: the steal v0.6.8b and before ran (R1854003), the thief gaining only up to the cap, for The
+/// R767000: the steal v0.6.8d and before ran (R1854003), the thief gaining only up to the cap, for The
 /// Greatest Heist's kept script.
 pub fn steal_mana_crystals_to_cap() -> Effect {
     steal_mana_crystals_with(crate::mana::CrystalGain::ToTheCap)

@@ -166,5 +166,13 @@ mod tests {
         fn r1857003_n_uses_a_turn_the_last_lands_and_the_next_is_refused() {
             fam::rep_uses_a_turn(ID, "s051", true, USES, RADIANT_DAMAGE);
         }
+
+        /// R4334000: a launched Starship holding a Radiant copy hits the chosen Unit for the Radiant
+        /// `damage` and shows it; one holding a base copy, the base `damage`.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            fam::shot_ship_hits(ID, "s051", "repeater", true, RADIANT_DAMAGE);
+            fam::shot_ship_hits(ID, "s051", "repeater", false, DAMAGE);
+        }
     }
 }

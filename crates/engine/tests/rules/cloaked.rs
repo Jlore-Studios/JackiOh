@@ -4,12 +4,12 @@
 
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{act, act_result, put, slot};
+use super::fixtures::harness::{act, act_ok, act_result, apply_now, put, slot};
 use super::fixtures::keywords_783::{
     REVEAL_ECHO, board_783 as playing, cloak_spells, cloak_units, cloaked_asker, cloaked_bolt,
     cloaked_charger, cloaked_echo, cloaked_field, cloaked_field_trap, cloaked_mourner, cloaked_rusher,
     cloaked_token, cloaked_trap, cloaked_unit, crater_cloaked, grunt, plain_spell, plain_unit, second_wind,
-    set_resolver, toe_cracker, trap_discount,
+    set_resolver, summon_set, toe_cracker, trap_discount,
 };
 use super::fixtures::prompt_harness::{answer_keys, cast_now, open_as, round_trip};
 
@@ -1273,5 +1273,289 @@ mod r3777000_a_set_card_is_a_backrow_card {
 
         assert!(state.players.p1.backrow[1].is_none());
         assert!(!backrow_picks(&mut state).contains(&set.id));
+    }
+}
+
+/// R4327000 (issue #4327): a summon's `setCloaked` sets its fresh Unit face-down by its Cloaked, standing
+/// as a Cloaked play does; R4327001: neither that set nor its reveal is a Unit summoned.
+mod r4327000_a_summon_set_by_its_cloaked {
+    use super::*;
+
+    /// What `summon_set` summons, in its order: a Cloaked mourner, a Cloaked token and a plain unit the
+    /// summon gives Cloaked.
+    fn summoned_defs() -> [String; 3] {
+        [cloaked_mourner().id, cloaked_token().id, plain_unit().id]
+    }
+
+    /// p1 casts `summon_set`, every backrow zone taken by a set Trap first when `full_backrow`: the
+    /// state and the cast's events.
+    fn cast_set(seed: &str, full_backrow: bool) -> (GameState, Vec<GameEvent>) {
+        let mut state = playing(seed);
+        if full_backrow {
+            for lane in 1..=5 {
+                put(
+                    &mut state,
+                    &cloaked_trap().id,
+                    slot(P1, Row::Backrow, lane),
+                    json!({}),
+                );
+            }
+        }
+        let spell = in_hand(&mut state, &summon_set().id, P1);
+        let cast = act_ok(
+            &state,
+            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
+        );
+        (cast.state, cast.events)
+    }
+
+    /// The card set in p1's backrow lane `lane`.
+    fn set_in(state: &GameState, lane: i32) -> CardInstance {
+        must(
+            state.players.p1.backrow[(lane - 1) as usize].clone(),
+            "a card set in that backrow zone",
+        )
+    }
+
+    #[test]
+    fn r4327000_each_summon_is_set_face_down_in_the_leftmost_backrow_zones_inert_and_hidden() {
+        let before = hero_health(&playing("r4327000-set"), P2);
+        let (state, events) = cast_set("r4327000-set", false);
+        assert!(state.pending.is_none(), "no Cry, no prompt");
+        assert_eq!(hero_health(&state, P2), before, "the mourner's Cry does not run");
+        assert!(
+            state.players.p1.units.iter().all(Option::is_none),
+            "nothing takes the unit row"
+        );
+
+        for (lane, def_id) in (1..).zip(summoned_defs()) {
+            let set = set_in(&state, lane);
+            assert_eq!(set.def_id, def_id, "lane {lane}");
+            assert_eq!(
+                set.set_as.map(|stamp| stamp.reveal),
+                Some(RevealAt::Cloaked),
+                "{def_id}"
+            );
+            assert_eq!(set.face_up, None, "{def_id} is face-down");
+            assert_eq!(set.position, None, "{def_id} stands in no position");
+            assert_eq!(
+                jackioh_engine::faces::card_type_of(&state, &set),
+                CardType::FieldTrap,
+                "{def_id}"
+            );
+            assert!(
+                jackioh_engine::alt_play::is_dormant(&set),
+                "{def_id}'s text is inert"
+            );
+            assert!(
+                !jackioh_engine::zones::is_standing_unit(&state, &set),
+                "{def_id} is no Unit"
+            );
+
+            // Its controller reads it and its Reveal; the opponent a card back.
+            let own = backrow_as_seen(&state, P1, P1, lane);
+            assert_eq!(own["defId"], json!(def_id));
+            assert_eq!(own["revealAt"], json!("cloaked"));
+            let theirs = backrow_as_seen(&state, P1, P2, lane);
+            assert_eq!(theirs["faceDown"], json!(true), "{def_id}");
+            for hidden in ["defId", "instanceId", "revealAt", "activations", "keywords"] {
+                assert!(theirs.get(hidden).is_none(), "{def_id}: {hidden} is hidden");
+            }
+        }
+
+        // The rider's Cloaked lands on the plain unit, unannounced.
+        let plain = set_in(&state, 3);
+        assert!(plain.granted_keywords.contains(&Keyword::Cloaked));
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::KeywordGranted { .. })),
+            "no keywordGranted names a set card"
+        );
+
+        // P2 reads three summons of hidden cards.
+        let seen = serde_json::to_value(view_for(&state, P2)).expect("a view serializes");
+        let summoned: Vec<&Value> = seen["events"]
+            .as_array()
+            .map(|events| {
+                events
+                    .iter()
+                    .filter(|event| event["type"] == json!("summoned"))
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert_eq!(summoned.len(), 3);
+        for event in summoned {
+            assert_eq!(event["instanceId"], json!(HIDDEN_ID), "{event}");
+            assert_eq!(event["defId"], json!(HIDDEN_ID), "{event}");
+        }
+    }
+
+    #[test]
+    fn r4327000_r4237000_its_reveal_is_offered_and_the_unit_comes_out_summoning_sick() {
+        let (mut state, _) = cast_set("r4327000-reveal", false);
+        for lane in 1..=3 {
+            let set = set_in(&state, lane);
+            assert!(reveal_offered(&state, &set.id, P1), "{}", set.def_id);
+            assert!(
+                !reveal_offered(&state, &set.id, P2),
+                "{}: only its controller",
+                set.def_id
+            );
+        }
+
+        // Revealed a turn later it enters its unit zone that turn, summoning sick, and its Cry runs as
+        // any Cloaked reveal's does (R783006).
+        let mourner = set_in(&state, 1);
+        state = end_turn(&state, "p1");
+        state = end_turn(&state, "p2");
+        let before = hero_health(&state, P2);
+        state = act(&state, reveal_body(&mourner.id, "p1"));
+        assert_eq!(hero_health(&state, P2), before - 1, "the mourner's Cry pings");
+        let revealed = must(
+            find_instance(&state, &mourner.id).cloned(),
+            "the revealed mourner",
+        );
+        assert!(matches!(
+            revealed.zone,
+            Zone::Field {
+                row: Row::Units,
+                lane: 1,
+                ..
+            }
+        ));
+        assert_eq!(revealed.set_as, None);
+        assert_eq!(revealed.summoned_turn, Some(state.turn));
+        assert_eq!(attack_count(&state, &mourner.id), 0, "summoning sick");
+    }
+
+    #[test]
+    fn r4327000_r2855000_unrevealed_a_set_token_ceases_to_exist_and_a_card_reaches_its_graveyard_as_printed()
+    {
+        let (mut state, _) = cast_set("r4327000-leave", false);
+        let before = hero_health(&state, P2);
+        let mourner = set_in(&state, 1);
+        let token = set_in(&state, 2);
+        assert!(jackioh_engine::zones::is_unit_token(&state, &token));
+
+        let destroy = |id: &str| {
+            jackioh_engine::effects::destroy(json_as(
+                json!({ "target": { "of": "instance", "instanceId": id } }),
+            ))
+        };
+        apply_now(&mut state, destroy(&token.id));
+        assert!(find_instance(&state, &token.id).is_none(), "the token is nowhere");
+        assert!(state.players.p1.backrow[1].is_none());
+
+        apply_now(&mut state, destroy(&mourner.id));
+        let landed = must(
+            state
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .find(|card| card.id == mourner.id)
+                .cloned(),
+            "the mourner in its owner's graveyard",
+        );
+        assert_eq!(landed.def_id, cloaked_mourner().id);
+        assert_eq!(landed.set_as, None);
+        assert_eq!(hero_health(&state, P2), before, "no Death");
+    }
+
+    #[test]
+    fn r4327000_with_no_backrow_zone_open_each_is_summoned_face_up_into_the_unit_row() {
+        let (state, events) = cast_set("r4327000-full", true);
+        for (lane, def_id) in (1..).zip(summoned_defs()) {
+            let unit = must(
+                state.players.p1.units[(lane - 1) as usize]
+                    .as_ref()
+                    .and_then(|pile| pile.first().cloned()),
+                "a unit in that lane",
+            );
+            assert_eq!(unit.def_id, def_id, "unit lane {lane}");
+            assert_eq!(unit.set_as, None, "{def_id}");
+            assert!(jackioh_engine::zones::is_standing_unit(&state, &unit), "{def_id}");
+        }
+        // Face-up, its rider is announced as any summon's is.
+        let plain = must(
+            state.players.p1.units[2]
+                .as_ref()
+                .and_then(|pile| pile.first().cloned()),
+            "the plain unit",
+        );
+        assert!(events.iter().any(|event| matches!(event,
+            GameEvent::KeywordGranted { instance_id, .. } if *instance_id == plain.id)));
+    }
+
+    #[test]
+    fn r4327001_a_set_summon_is_no_unit_arrival_and_its_reveal_no_summon() {
+        let (state, events) = cast_set("r4327001-arrival", false);
+        let summons: Vec<&GameEvent> = events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Summoned { .. }))
+            .collect();
+        assert_eq!(summons.len(), 3);
+        for event in summons {
+            assert!(
+                matches!(
+                    event,
+                    GameEvent::Summoned {
+                        row: Row::Backrow,
+                        ..
+                    }
+                ),
+                "{event:?}"
+            );
+            assert_eq!(
+                jackioh_engine::query::enemy_unit_arrival(&state, P2, event),
+                None,
+                "{event:?}"
+            );
+        }
+
+        let token = set_in(&state, 2);
+        let reveal = act_ok(&state, reveal_body(&token.id, "p1"));
+        assert!(reveal.events.iter().any(|event| matches!(event,
+            GameEvent::Animated { instance_id, .. } if *instance_id == token.id)));
+        assert!(
+            !reveal
+                .events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Summoned { .. })),
+            "a reveal is no summon"
+        );
+    }
+
+    #[test]
+    fn r4327000_a_named_lane_or_a_card_that_is_no_unit_lands_as_without_the_option() {
+        let mut state = playing("r4327000-not-set");
+        // A Unit named into a lane takes that unit zone face-up.
+        apply_now(
+            &mut state,
+            jackioh_engine::effects::summon(json_as(
+                json!({ "defId": cloaked_mourner().id, "setCloaked": true, "lane": 2 }),
+            )),
+        );
+        let named = must(
+            state.players.p1.units[1]
+                .as_ref()
+                .and_then(|pile| pile.first().cloned()),
+            "the mourner in unit lane 2",
+        );
+        assert_eq!(named.set_as, None);
+        assert!(state.players.p1.backrow.iter().all(Option::is_none));
+
+        // A Field Spell is summoned face-up into the backrow, as any summon of one is.
+        apply_now(
+            &mut state,
+            jackioh_engine::effects::summon(json_as(
+                json!({ "defId": cloaked_field().id, "setCloaked": true }),
+            )),
+        );
+        let field = set_in(&state, 1);
+        assert_eq!(field.def_id, cloaked_field().id);
+        assert_eq!(field.set_as, None);
+        assert_eq!(field.face_up, Some(true));
     }
 }

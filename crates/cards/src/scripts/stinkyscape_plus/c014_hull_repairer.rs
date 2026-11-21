@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #14 Hull Repairer (Unit 1/4 → 2/8, 0/2 → 0/4 through v0.6.7k, Starship Piece, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #14 Hull Repairer (Unit 1/4 → 2/8, 0/2 → 0/4 through v0.6.7k, Starship Piece, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000, R4334000).
 //!   Base:    "Starship Piece
 //!            End of turn: Heal this {health} health" — health 4
 //!   Radiant: "Starship Piece
@@ -6,22 +6,20 @@
 //!
 //! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped
 //! onto one of your Units it fuses into it (R1086), which then takes the End-of-turn trigger and heals itself (R1852000). `heal` restores
-//! the declared number, read through `piece_number` so a Radiant piece heals its 8 wherever it stands, never past
-//! full health (§6.3).
+//! the declared number, read through `param` on the face the piece fused on (R4334000) so a Radiant piece heals its 8
+//! wherever it stands, never past full health (§6.3).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-014";
 
-/// "End of turn: Heal this {health} health", the number read on the face this script was built for
-/// (`piece_number`, R1859001): fused into an Equip host, the piece runs its own face's script under the
-/// host's, whose `param` would read the host's face.
-fn repairer(radiant: bool) -> Script {
+/// "End of turn: Heal this {health} health".
+fn repairer() -> Script {
     Script {
-        end_of_turn: Some(hook(move |ctx| {
+        end_of_turn: Some(hook(|ctx| {
             vec![heal(json_as(json!({
                 "target": { "of": "self" },
-                "amount": piece_number(ctx, ID, radiant, "health"),
+                "amount": param(ctx, "health"),
             })))]
         })),
         ..Script::default()
@@ -29,9 +27,10 @@ fn repairer(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    let base = repairer();
     CardScripts {
-        base: repairer(false),
-        radiant: repairer(true),
+        base: base.clone(),
+        radiant: base,
     }
 }
 

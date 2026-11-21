@@ -522,6 +522,67 @@ mod r3569002_board_fuse {
     }
 }
 
+mod r4318001_board_fuse_on_a_slashed_board {
+    use super::*;
+
+    /// A board slashed at lane 3 (R3554003): the caster's small Unit on the Left half, two Units no
+    /// Spell reaches filling its Right half, and the enemy's small Unit on the Left.
+    fn slashed() -> Scenario {
+        let mut s = board(
+            json!({
+                "hand": [BOARD_FUSE],
+                "field": [
+                    { "def": SMALL, "lane": 1 },
+                    { "def": IMMUNE, "lane": 4 },
+                    { "def": IMMUNE, "lane": 5 },
+                ],
+            }),
+            json!({ "field": [{ "def": SMALL, "lane": 2 }] }),
+        );
+        s.state_mut().slashed_lane = Some(3);
+        s
+    }
+
+    fn unit_ids(s: &Scenario) -> Vec<String> {
+        [P1, P2]
+            .into_iter()
+            .flat_map(|player| units_of(s, player))
+            .map(|card| card.id)
+            .collect()
+    }
+
+    #[test]
+    fn r4318001_cast_on_a_half_with_no_room_it_fuses_nothing_and_every_unit_stays() {
+        let mut s = slashed();
+        let before = unit_ids(&s);
+        s.play(BOARD_FUSE, json!({}));
+        s.answer(json!(["right"]));
+        assert_eq!(
+            unit_ids(&s),
+            before,
+            "the Right half has no zone, free or freed, so no Unit leaves"
+        );
+        assert!(
+            !s.events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Fused { .. } | GameEvent::Summoned { .. })),
+            "nothing is fused and nothing summoned"
+        );
+    }
+
+    #[test]
+    fn r4318001_cast_on_the_half_its_casters_unit_frees_it_fuses_there() {
+        let mut s = slashed();
+        s.play(BOARD_FUSE, json!({}));
+        s.answer(json!(["left"]));
+        assert!(units_of(&s, P2).is_empty(), "the enemy's Unit is fused away");
+        let fused = s
+            .unit(P1, 1)
+            .expect("the fresh card stands in the zone its caster's Unit freed");
+        assert!(leads_with_kept(&s, &fused), "{}", fused.def_id);
+    }
+}
+
 mod r3569008_lose_max_mana {
     use super::*;
 

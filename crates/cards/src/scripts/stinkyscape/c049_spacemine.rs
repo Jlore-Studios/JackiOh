@@ -52,6 +52,7 @@ mod tests {
 
     use crate::scenario;
     use crate::filler;
+    use crate::stinkyscape_family as fam;
 
     const SPACEMINE: &str = "stinkyscape-049";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
@@ -209,6 +210,31 @@ mod tests {
 
             assert_eq!(hits_from(&s, &me.id), vec![10]);
             s.expect_health(PlayerId::P2, 20);
+        }
+
+        const RADIANT_TARGETS: i32 = 2;
+
+        /// R4334000: a launched Starship holding a Radiant copy hits the Radiant `targets` of
+        /// different random enemies when it dies, and shows it.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            let (mut s, ship) = fam::piece_ship(
+                ID,
+                "s049-piece-ship",
+                true,
+                json!({ "hand": [HIT_JOB] }),
+                // Durables outlast the piece's own Death, as it died to build the Starship.
+                json!({ "field": [{ "def": fam::DURABLE, "lane": 1 }, { "def": fam::DURABLE, "lane": 2 }] }),
+            );
+            assert_eq!(fam::shown_number(&s, &ship, "targets"), Some(RADIANT_TARGETS));
+            s.state_mut().players.p1.mana.current = 10;
+            s.play(HIT_JOB, json!({ "targets": pick::id(&ship) }));
+            let hits = crate::hits(s.last_events());
+            let mut targets: Vec<String> = hits.iter().map(|(id, _)| id.clone()).collect();
+            targets.sort();
+            targets.dedup();
+            let count = usize::try_from(RADIANT_TARGETS).expect("a count");
+            assert_eq!((hits.len(), targets.len()), (count, count), "{hits:?}");
         }
     }
 }

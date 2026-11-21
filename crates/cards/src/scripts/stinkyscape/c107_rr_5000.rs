@@ -34,6 +34,7 @@ mod tests {
 
     use crate::scenario;
     use crate::filler;
+    use crate::stinkyscape_family as fam;
 
     const RR: &str = "stinkyscape-107";
     const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
@@ -97,6 +98,29 @@ mod tests {
             s.end_turn();
             s.end_turn();
             s.expect_stats(RR, json!({ "attack": 16 }));
+        }
+
+        const RADIANT_ATTACK_GAIN: i32 = 8;
+
+        /// R4334000: a launched Starship holding a Radiant copy gains the Radiant `attackGain` at
+        /// the start of its controller's turn, and shows it.
+        #[test]
+        fn r4334000_a_starship_holding_a_radiant_copy_uses_its_radiant_number() {
+            let (mut s, ship) = fam::piece_ship(
+                ID,
+                "s107-piece-ship",
+                true,
+                json!({}),
+                json!({}),
+            );
+            assert_eq!(
+                fam::shown_number(&s, &ship, "attackGain"),
+                Some(RADIANT_ATTACK_GAIN)
+            );
+            let before = s.stats(ship.as_str()).attack;
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(s.stats(ship.as_str()).attack, before + RADIANT_ATTACK_GAIN);
         }
     }
 }

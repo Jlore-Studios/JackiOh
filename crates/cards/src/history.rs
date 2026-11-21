@@ -83,9 +83,10 @@ use crate::scripts::stinkyscape::{
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
     c037_scorch, c039_mindustrial_cross_over, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall,
-    c065_thorium_wall, c066_plastanium_wall, c067_phase_wall, c079_a_glimpse_into_the_endless_sea,
-    c080_the_last_voyage, c082_endless_expedition, c097_selective_enrollment, c104_tireless_cultivation,
-    c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
+    c065_thorium_wall, c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao,
+    c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
+    c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg,
+    c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -110,7 +111,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002), #3935 (R3935000), #3996
 /// (R3996000, R3996001, R3996002, R3996100, R3996101, R3996200, R3996201, R3996202), #4079 (R4079000)
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000),
-/// #4285 (R4285001 to R4285005) and #4331 (R4331000, R4331001).
+/// #4285 (R4285001 to R4285005), #4327 (R4327002) and #4331 (R4331000, R4331001).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -1129,13 +1130,15 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.7k",
         c095_call_to_chaos_meditative_edition::script_v0_6_7k,
     ),
+    // #4327 (R4327002): Ayys LMAO's summons before they were set face-down.
+    (c076_ayys_lmao::ID, "v0.6.8b", c076_ayys_lmao::script_v0_6_8b),
     // #4331 (R4331000, R4331001): the last scripts before a spent Quest went to the graveyard and a steal
     // of mana crystals went past the cap.
-    (c090_in_too_deep::ID, "v0.6.8b", c090_in_too_deep::script_v0_6_8b),
+    (c090_in_too_deep::ID, "v0.6.8d", c090_in_too_deep::script_v0_6_8d),
     (
         c007_the_greatest_heist::ID,
-        "v0.6.8b",
-        c007_the_greatest_heist::script_v0_6_8b,
+        "v0.6.8d",
+        c007_the_greatest_heist::script_v0_6_8d,
     ),
 ];
 
@@ -1701,14 +1704,16 @@ mod tests {
         }
     }
 
-    /// Issue #4331: v0.6.7l, v0.6.7m, v0.6.8 and v0.6.8b shipped while it was built, so its rows are
-    /// keyed at v0.6.8b, the newest version that ran the scripts they keep.
+    /// Issue #4331: v0.6.7l to v0.6.8d shipped while it was built, so its rows are keyed at v0.6.8d, the
+    /// newest version that ran the scripts they keep.
     #[test]
-    fn r767000_issue_4331_scripts_are_kept_through_v0_6_8b_the_newest_version_that_ran_them() {
+    fn r767000_issue_4331_scripts_are_kept_through_v0_6_8d_the_newest_version_that_ran_them() {
         assert_kept_through(
             &[c090_in_too_deep::ID, c007_the_greatest_heist::ID],
-            &["v0.6.7k", "v0.6.7l", "v0.6.7m", "v0.6.8", "v0.6.8b"],
-            "v0.6.8c",
+            &[
+                "v0.6.7k", "v0.6.7l", "v0.6.7m", "v0.6.8", "v0.6.8b", "v0.6.8c", "v0.6.8d",
+            ],
+            "v0.6.8e",
         );
     }
 
