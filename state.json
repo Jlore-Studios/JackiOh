@@ -15609,6 +15609,13 @@
     "4369": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-21T04:38:19Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-line holds: tools-crate-only change plus spec prose, no engine rules, AI, cross-crate design, migration, or 40-file scope"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
