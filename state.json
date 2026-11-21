@@ -36008,7 +36008,9 @@
         "approver": {},
         "builder": {},
         "difficulty": "hard",
+        "done_at": "2026-11-21T00:06:05Z",
         "every": 5,
+        "findings": 0,
         "head": "ab3aa85f436b3f3a1d90ac21475e43c129df60e5",
         "issue": 4327,
         "merged_at": "2026-11-20T23:45:59Z",
@@ -36021,12 +36023,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:f42d14f9-1795218468",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44839433351",
         "sha": "6d718b78293742d4d41e83e8c3cae29108f9c454",
         "started_at": "2026-11-20T23:48:11Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Ayys LMAO sets its Cloaked summons face-down in the backrow as Traps",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 400
