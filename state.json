@@ -37777,7 +37777,9 @@
           "provider": "claude-1"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-21T09:12:26Z",
         "every": 5,
+        "findings": 0,
         "head": "f13293ebe985cbbe20091249f12ac98583c12d26",
         "issue": 4382,
         "merged_at": "2026-11-21T09:01:45Z",
@@ -37790,12 +37792,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:975d9ae3-1795251926",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44887924521",
         "sha": "680f552e1bc685c27bd68a4dfff2463c50d07ac0",
         "started_at": "2026-11-21T09:05:38Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a sweep plays each card on every older catalog the build carries and folds the game back, and the four old replays that panic today open",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 420
