@@ -15081,6 +15081,85 @@ mod r4039000_notifications {
         );
     }
 
+    /// R4348000: `notifications_delete_between` deletes only the rows whose recipient is one
+    /// of the two and whose actor is the other, either way, read or not: a third party's rows
+    /// and rows with no actor stay, and a second call deletes nothing.
+    async fn r4348000_delete_between_removes_only_the_pairs_rows_either_way(harness: &StoreHarness) {
+        let ana = active_profile(harness, None).await;
+        let bo = active_profile(harness, None).await;
+        let cy = active_profile(harness, None).await;
+        let at = harness.now();
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::FriendRequest, Some(&bo.id), "ab", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::FriendAccepted, Some(&ana.id), "ba", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::FriendRequest, Some(&cy.id), "ac", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::FriendRequest, Some(&cy.id), "bc", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&cy.id, NotificationKind::FriendRequest, Some(&bo.id), "cb", at), 100));
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyEnded, None, "sys", at), 100));
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            3,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&bo.id, at)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_delete_between(&ana.id, &bo.id)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10))),
+            vec!["sys", "ac"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&bo.id, None, 10))),
+            vec!["bc"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            subjects(&q!(harness, t => t.notifications_page(&cy.id, None, 10))),
+            vec!["cb"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&ana.id, at)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_unread(&bo.id, at)),
+            1,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.notifications_delete_between(&ana.id, &bo.id)),
+            0,
+            "{}",
+            harness.name
+        );
+        // A read row between the two goes too.
+        q!(harness, t => t.notifications_add(&notice(&ana.id, NotificationKind::DailyMove, Some(&bo.id), "game-9", at), 100));
+        q!(harness, t => t.notifications_mark_read(&ana.id, None, at + 1));
+        assert_eq!(
+            q!(harness, t => t.notifications_delete_between(&ana.id, &bo.id)),
+            1,
+            "{}",
+            harness.name
+        );
+    }
+
     both_stores!(
         r4039000_add_replaces_an_unread_row_and_keeps_the_newest,
         r4039000_page_reads_newest_first_before_an_id,
@@ -15089,5 +15168,6 @@ mod r4039000_notifications {
         r4039000_a_deleted_profile_takes_its_rows_both_ways,
         r4233000_mark_subject_marks_only_matching_kind_subject_and_actor,
         r4233000_unread_leaves_out_a_dead_lobby_invite,
+        r4348000_delete_between_removes_only_the_pairs_rows_either_way,
     );
 }
