@@ -16444,17 +16444,8 @@
       ]
     },
     "4391": {
-      "action": "plan",
-      "asks": [
-        "c:7067075791"
-      ],
-      "build_next": {
-        "from_run": "44934914476",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-21T18:28:30Z",
-        "until": "2026-11-21T18:58:30Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-21T18:28:20Z",
         "difficulty": "medium",
@@ -16473,10 +16464,9 @@
         "reason": "planned on sonnet",
         "trail": "- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/social/shares.rs\"}\n- Grep: {\"pattern\": \"shares_put\", \"path\": \"/home/runner/work/_temp/work/item-4391\", \"output_mode\": \"content\", \"glob\": \"!target\"}\n- Grep: {\"pattern\": \"challenges_per_hour|CHALLENGES_PER_HOUR|FRIEND_REQUESTS_PER_HOUR\", \"path\": \"/home/runner/work/_temp/work/item-4391/crates/server\", \"output_mode\": \"content\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/social/mod.rs\", \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/config.rs\", \"offset\": 1295, \"limit\": 100}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/db/pg.rs\", \"offset\": 7800, \"limit\": 50}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/db/fake.rs\", \"offset\": 4855, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/db/store.rs\", \"offset\": 2975, \"limit\": 30}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/social/friends.rs\", \"offset\": 195, \"limit\": 45}\n- Grep: {\"pattern\": \"rows_affected\\\\(\\\\) *[>!=]\", \"path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/db/pg.rs\", \"output_mode\": \"content\", \"head_limit\": 6, \"-B\": 3}\n- Grep: {\"pattern\": \"fn account_key|fn rate_limited|use .*rate_limited|account_key\", \"path\": \"/home/runner/work/_temp/work/item-4391/crates/server/src/social\", \"output_mode\": \"content\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/tests/api/shares.rs\", \"limit\": 200}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/tests/api/challenges.rs\", \"offset\": 270, \"limit\": 50}\n- Grep: {\"pattern\": \"fn |#\\\\[tokio\", \"path\": \"/home/runner/work/_temp/work/item-4391/crates/server/tests/api/shares.rs\", \"output_mode\": \"content\", \"offset\": 0}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391; ls spec/rulings | grep -E 'R43[0-9]{2}|R4[0-9]{3}000' | tail -8; ls spec/pending | tail -5; ls spec/rulings | grep R4391; cat spec/rulings/R403\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/tests/api/shares.rs\", \"offset\": 645, \"limit\": 110}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391; cat spec/pending/4382.md | head -20; grep -n -i -A25 \\\"Adding a ruling\\\" spec/README.md | head -60; ls spec/rulings | grep -E 'R4382|R4379'\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4391/crates/server/tests/store/contract.rs\", \"offset\": 8690, \"limit\": 70}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server; grep -n \\\"replay\\\\|share\\\\|^async fn\\\\|^fn \\\\|^mod \\\\|^use \\\" tests/actor/social_live.rs | head -80; grep -n \\\"s7_replay_shares_l\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server; sed -n 40,75p tests/actor/social_live.rs; sed -n 769,880p tests/actor/social_live.rs; sed -n 9070,9090p tests/store/contract.rs; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391; grep -n -i \\\"shared replay\\\\|share\\\" spec/09-architecture.md | head -30; grep -n \\\"replays/shared\\\" crates/server/README.md | cut -c1-400; grep\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391; grep -n \\\"^### 9.5\\\\|^### 9.8\\\\|^## 9\\\" spec/09-architecture.md | head -30; grep -n -o \\\".\\\\{200\\\\}shared replays.\\\\{400\\\\}\\\" spec/09-architect\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391; sed -n 135,145p spec/09-architecture.md | cut -c1-900; grep -n -i \\\"replay\\\" spec/09-architecture.md | sed -n 1,40p | cut -c1-160; sed -n 268p \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391; sed -n 81p spec/09-architecture.md; sed -n 268p crates/server/README.md | cut -c200-1200; sed -n 53p spec/09-architecture.md | cut -c1-1500; gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server; grep -n -i \\\"server-only\\\\|NOTIFICATIONS_KEEP\\\\|SHARED_REPLAYS_LIST_MAX\\\\|PUBLIC\\\" tests/export_config.rs | head -20; grep -n \\\"a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server; grep -rn \\\"pub.* fn serve\\\\|pub.* fn match_row\\\\|pub.* fn action_row\\\\|pub.*struct WsClient\\\" tests/ | head; grep -n \\\"^mod \\\\|^u\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server; grep -rn \\\"matches_append_actions\\\\|matches_finish\\\" tests --include=*.rs -l; grep -n \\\"fn match_row\\\\|fn action_row\\\" -A22 tests\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391; grep -rn \\\"Social {\\\" crates --include=*.rs | grep -v \\\"^crates/server/src/social/mod.rs\\\" | head; grep -rn \\\"social.challenges\\\\b\\\" crates/ser\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4391/crates/server; grep -rn \\\"retryAfterMs\\\" tests/api/*.rs | head -5; grep -n \\\"friends_make\\\\|fn befriend\\\" tests/support/store.rs | head -3\"}\n- said: Now I'll write the plan draft and the final answer.\n- Write: {\"path\": \"/home/runner/work/_temp/work/item-4391/.bot-plan.md\", \"content\": \"Draft: plan for #4391 is in the final message (shares_put -> bool in store.rs/pg.rs/fake.rs; Social.replay_shares limiter; \u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of rule 1\u20135 holds: only crates/server and docs change (about ten files, no migration, no engine/AI, no cross-crate contract), so it is medium.\"} --> ## Goal A replay share that is already held sends the friend nothing new, and each account gets `REPLA\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-21T18:19:43Z",
       "owner_why": "it plans it",
@@ -16489,12 +16479,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-21T18:12:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44934914476",
+      "run_id": "pending:450b288c-1795286038",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T18:19:43Z",
+      "started_at": "2026-11-21T18:34:19Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7067075791"
+      ]
     },
     "4392": {
       "action": "build",
@@ -17051,9 +17043,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T18:33:45Z",
+    "at": "2026-11-21T18:34:19Z",
     "url": "",
-    "what": "build #4393 on agy"
+    "what": "build #4391 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-21T18:14:27Z",
