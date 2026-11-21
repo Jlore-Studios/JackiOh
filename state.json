@@ -14311,7 +14311,7 @@
       "started_at": "2026-11-20T23:07:28Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 4
     },
     "4332": {
       "action": "plan",
