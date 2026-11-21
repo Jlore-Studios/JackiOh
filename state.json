@@ -16363,11 +16363,13 @@
     "what": "build #3925 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-21T05:34:59Z",
+    "at": "2026-11-21T05:42:55Z",
     "notes": [
-      "delivered build #4363 on muse (run 44867386149): built",
-      "started review #4385 on muse (run 44871685338)",
-      "nothing more to start: nothing is queued"
+      "delivered build #4332 on agy (run 44868528148): built",
+      "started review #4386 on agy (run 44872289140)",
+      "started build #3925 on claude-8 (run 44872326268)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17073,7 +17075,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-21T05:34:59Z",
+  "loop_tick": "2026-11-21T05:42:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
