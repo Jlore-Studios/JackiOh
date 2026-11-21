@@ -14839,15 +14839,8 @@
       "taken_asks": []
     },
     "4349": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44842091520",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-21T00:37:29Z",
-        "until": "2026-11-21T01:07:29Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14859,10 +14852,9 @@
         "reason": "planned on sonnet",
         "trail": "tsx\", \"offset\": 380, \"limit\": 230}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4349/apps/web/src/game/deckbuilder/deckbuilder.css\", \"offset\": 1228, \"limit\": 80}\n- Bash: {\"command\": \"git log --oneline -5 --grep=\\\"4340\\\"; grep -n \\\"clip\\\\|scrollWidth\\\\|ellips\\\" e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts | head -50; ls ~/.cache/Cypress 2>/dev/null; ls e2e/node_modul\u2026\n- Bash: {\"command\": \"grep -rn \\\"clipped\\\\|isClipped\\\\|textFits\\\\|fitsWhole\\\\|measureText\\\" e2e/cypress e2e/support --include=*.ts --include=*.tsx -l | head; sed -n 140,175p e2e/support/config.ts\"}\n- Bash: {\"command\": \"git show e545e5fd01 --stat | head -30; sed -n 330,460p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts\"}\n- Bash: {\"command\": \"which chromium chromium-browser google-chrome chrome 2>/dev/null; ls ~/.cache 2>/dev/null; ls /home/runner/.cache 2>/dev/null; ls .claude/skills/ui-walkthrough; grep -rn \\\"test:component\u2026\n- Bash: {\"command\": \"grep -n \\\"font-family\\\\|--font-\\\" apps/web/src/styles.css apps/web/src/*.css 2>/dev/null | head -20; ls apps/web/src | head -40\"}\n- Bash: {\"command\": \"sed -n 50,75p apps/web/src/fonts.css; sed -n 140,170p apps/web/src/fonts.css; grep -n \\\"font-size\\\\|font-family\\\\|font:\\\" apps/web/src/index.css | head -10; grep -rn \\\"type-md\\\\b\\\" apps/\u2026\n- Bash: {\"command\": \"cat .claude/skills/ui-walkthrough/SKILL.md | head -60\"}\n- Bash: {\"command\": \"ls apps/web/public/fonts | head; grep -rn \\\"\\\\-\\\\-type-md:\\\" apps/web/src | head -3; grep -n \\\"class\\\\|ws-select\\\" apps/web/src/game/deckbuilder/DeckSidebar.tsx | head -30\"}\n- Bash: {\"command\": \"mkdir -p /tmp/plan4349 && cd /tmp/plan4349 && cat > m.html <<EOF\\n<!doctype html><meta charset=utf-8>\\n<style>\\n@font-face{font-family:Inter;font-weight:100 900;src:url(\\\"file://$OLDPWD/\u2026\n- Bash: {\"command\": \"cd /tmp/plan4349 && timeout 60 chromium --headless=new --no-sandbox --allow-file-access-from-files --disable-gpu --virtual-time-budget=5000 --window-size=300,200 --screenshot=/tmp/plan43\u2026\n- Read: {\"file_path\": \"/tmp/plan4349/m.png\"}\n- Bash: {\"command\": \"cd /tmp/plan4349 && python3 - <<EOF\\nimport os\\nroot=\\\"/home/runner/work/_temp/work/item-4349\\\"\\nrows=\\\"\\\"\\nfor w in (210,216,220,224,228,232):\\n rows+=f'<select style=\\\"width:{w}px;font\u2026\n- Read: {\"file_path\": \"/tmp/plan4349/n.png\"}\n- Bash: {\"command\": \"grep -rn \\\"Another deck or a trio\\\\|No other decks yet\\\" --include=* -r apps e2e spec docs crates 2>/dev/null | grep -v node_modules | head -20; ls apps/web/src/i18n\"}\n- Bash: {\"command\": \"cd /tmp/plan4349 && python3 - <<EOF\\nroot=\\\"/home/runner/work/_temp/work/item-4349\\\"\\nrows=\\\"\\\"\\nfor w in (236,242,248):\\n rows+=f'<select style=\\\"width:{w}px;font-size:16px\\\"><option>An\u2026\n- Read: {\"file_path\": \"/tmp/plan4349/n2.png\"}\n- Bash: {\"command\": \"cd /tmp/plan4349 && python3 - <<EOF\\nroot=\\\"/home/runner/work/_temp/work/item-4349\\\"\\nrows=\\\"\\\"\\nfor w in (210,214,218,222,226,230):\\n rows+=f'<select style=\\\"width:{w}px;font-size:16px\\\u2026\n- Read: {\"file_path\": \"/tmp/plan4349/n3.png\"}\n- Bash: {\"command\": \"ls spec/pending | tail -8; cat spec/pending/4335.md; echo ----; cat spec/rulings/R4335000.md; echo ----; grep -n \\\"Compare\\\\|compare\\\" spec/rulings/R3956000.md | head\"}\n- Bash: {\"command\": \"sed -n 1,80p spec/README.md | head -120; grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -80\"}\n- Bash: {\"command\": \"cat apps/web/src/typescale.css | head -50; sed -n 1,40p spec/rulings/R3956000.md | cut -c1-600\"}\n- Bash: {\"command\": \"cd /tmp/plan4349 && python3 - <<EOF\\nroot=\\\"/home/runner/work/_temp/work/item-4349\\\"\\nrows=\\\"\\\"\\nfor fs in (14,15):\\n for w in (200,205,210):\\n rows+=f'<select style=\\\"width:{w}px;font-s\u2026\n- Read: {\"file_path\": \"/tmp/plan4349/n4.png\"}\n- Bash: {\"command\": \"sed -n 130,200p e2e/cypress/component/deckbuilder-layout.cy.tsx; grep -n \\\"DECK_COMPARE_SELECT\\\\|DECK_EDITOR\\\\b\\\" e2e/support/testids.ts apps/web/src/game/deckbuilder/testids.ts | head; \u2026\n- Bash: {\"command\": \"cat apps/web/src/game/deckbuilder/layout.test.ts | head -80; grep -n \\\"ws-compare\\\\|601px\\\" apps/web/src/game/deckbuilder/layout.test.ts | head -30; ls e2e/cypress/support; grep -n \\\"css\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/typescale.test.ts; grep -n \\\"type-lg\\\\|font-size: 1[0-9]px\\\" apps/web/src/game/deckbuilder/workshop.css | head -20; ls e2e/support | head -20\"}\n- Bash: {\"command\": \"cat e2e/support/component.tsx | head -40; grep -rn \\\"typescale.css\\\" apps/web/src --include=*.ts --include=*.tsx --include=*.css | head -5; sed -n 118,175p e2e/support/config.ts | head -\u2026\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/breakpoints.test.ts; grep -n \\\"601\\\\|760\\\\|501\\\" apps/web/src/breakpoints.ts | head\"}\n- Bash: {\"command\": \"sed -n 1,50p apps/web/src/breakpoints.ts; sed -n 80,200p apps/web/src/breakpoints.test.ts\"}\n- Bash: {\"command\": \"grep -rn \\\"Compare with\\\\|compare picker\\\\|\\\\\\\"Compare\\\" spec/*.md apps/web/README.md docs/*.md 2>/dev/null | cut -c1-260 | head; grep -n \\\"744\\\" spec/09-architecture.md | cut -c1-300 | \u2026\n- Bash: {\"command\": \"grep -n \\\"46-\\\\|smoke\\\" .github/workflows/ci.yml | head -20; grep -n \\\"@media (max-width: 760px)\\\" apps/web/src/game/deckbuilder/workshop.css; ls e2e/cypress/component | head -50; sed -n\u2026\n- Bash: {\"command\": \"sed -n 1,30p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts; sed -n 60,140p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts\"}\n- Bash: {\"command\": \"ls spec/rulings | grep -c \\\"R4349\\\"; ls spec/pending | grep 4349; grep -n \\\"^### 9.4\\\" spec/09-architecture.md | head -2; grep -n \\\"R3956000\\\" spec/INDEX.md | head -1 | cut -c1-80; sed -\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4349/.bot-plan.md\", \"content\": \"# Plan draft #4349 (planner notes)\\n\\nFindings (measured in headless chromium with the shipped Inter woff2, scratch fi\u2026\n- said: **Goal.** At 744\u00d71133 the deck builder's \"Compare with\" picker shows its label and its chosen option (\"Another deck or a trio\u2026\") in full, and the editor has no horizontal overflow. The layouts at 820\u00d71180, 390\u00d7844 and the desktop sizes are unchanged. A spec 46 check fails on the clipped picker. The\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-21T00:10:59Z",
       "owner_why": "it plans it",
@@ -14875,9 +14867,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-20T23:05:16Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44842091520",
+      "run_id": "pending:6df7548f-1795221732",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-21T00:10:59Z",
+      "started_at": "2026-11-21T00:42:38Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15283,9 +15275,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T00:42:00Z",
+    "at": "2026-11-21T00:42:38Z",
     "url": "",
-    "what": "build #4350 on claude-3"
+    "what": "build #4349 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-21T00:19:27Z",
