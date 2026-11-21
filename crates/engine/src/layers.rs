@@ -10,7 +10,7 @@ use crate::state::{CardInstance, GameState, ModifierKind, Position};
 use crate::tuning::{tuned_keywords, x_of};
 use crate::wire::{
     AttackHealth, CardDef, CardFace, CardType, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
-    armor_of, has_immutable, has_keyword,
+    armor_of, has_keyword,
 };
 
 /// §10.4: a unit's layered stats and keywords (`unit_view`). Not the view's `wire::UnitView`, which
@@ -598,10 +598,21 @@ pub fn unit_has(state: &GameState, instance: &CardInstance, kind: KeywordKind) -
     has_keyword(&unit_view(state, instance).keywords, kind)
 }
 
-/// R4353000: whether `instance`, read through the layers where it is (§10.4), is Immutable: it has the
-/// keyword, or it is Indestructible, which is Immutable innately (`wire::has_immutable`).
+/// R4353000: whether `keywords`, the ones the caller reads `instance` by, make it Immutable: the keyword,
+/// or Indestructible on a Unit card (its running face's printed type), which is Immutable innately and
+/// never adds the keyword, as Flying is Flexible (R3543000). An Indestructible Field Spell is not, so
+/// its own fusing and tuning (C+ #33 Ivory Tower, Core #98 Heroic Power) go on. Every rule that asks
+/// whether a card is Immutable asks this or `is_immutable`.
+pub fn immutable_by(state: &GameState, instance: &CardInstance, keywords: &[Keyword]) -> bool {
+    has_keyword(keywords, KeywordKind::Immutable)
+        || (has_keyword(keywords, KeywordKind::Indestructible)
+            && crate::faces::card_type_of_face(state, &instance.def_id, instance.radiant) == CardType::Unit)
+}
+
+/// R4353000: whether `instance`, read through the layers where it is (§10.4), is Immutable
+/// (`immutable_by` over its layered keywords).
 pub fn is_immutable(state: &GameState, instance: &CardInstance) -> bool {
-    has_immutable(&unit_view(state, instance).keywords)
+    immutable_by(state, instance, &unit_view(state, instance).keywords)
 }
 
 /// R3543000: whether a keyword lets its Unit enter its backrow as well as its unit row: Flexible, and

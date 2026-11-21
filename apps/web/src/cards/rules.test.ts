@@ -435,7 +435,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     ).toEqual([
       [
         "§6.1",
-        "Can't be destroyed or damaged, is Immutable, can't be in Defense Position and never has Taunt; can be exiled or tributed",
+        "Can't be destroyed or damaged, can't be in Defense Position and never has Taunt, and a Unit with it is Immutable; can be exiled or tributed",
       ],
       ["§6.1", "Text can't be changed or transformed"],
       [

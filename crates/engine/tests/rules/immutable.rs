@@ -252,7 +252,7 @@ mod r4353001_immutable_bars_no_targeting {
     use super::*;
 
     #[test]
-    fn r4353001_a_spell_may_target_an_immutable_card_in_play_and_its_damage_lands() {
+    fn r4353001_r781001_a_spell_may_target_an_immutable_card_in_play_and_its_damage_lands() {
         let mut state = game("r4353001-spell");
         let wall = unit_with(&mut state, PlayerId::P2, 1, Keyword::Immutable);
         let bolt = one(&mut state, PlayerId::P1, &PA.bolt.id);
@@ -270,7 +270,7 @@ mod r4353001_immutable_bars_no_targeting {
     }
 
     #[test]
-    fn r4353001_field_spells_and_field_traps_may_target_it_too() {
+    fn r4353001_r781002_field_spells_and_field_traps_may_target_it_too() {
         let mut state = game("r4353001-sources");
         let wall = unit_with(&mut state, PlayerId::P2, 1, Keyword::Immutable);
         let field_spell = put(
@@ -304,5 +304,22 @@ mod r4353000_an_indestructible_card_is_immutable_innately {
         assert!(!immutable_in_play(&state, &plain));
         // Being Immutable bars no aim (R4353001).
         assert!(offered(&state, PlayerId::P1, &bolt).contains(&at(&rock)));
+    }
+
+    #[test]
+    fn r4353000_an_indestructible_field_spell_is_not_immutable() {
+        let mut state = game("r4353000-field-spell");
+        let field = put(
+            &mut state,
+            &PA.field.id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let field = grant(&mut state, &field, Keyword::Indestructible);
+        assert!(!immutable_in_play(&state, &field));
+        assert!(!jackioh_engine::layers::is_immutable(&state, &field));
+        // The same Field Spell given the keyword itself is Immutable.
+        let field = grant(&mut state, &field, Keyword::Immutable);
+        assert!(immutable_in_play(&state, &field));
     }
 }

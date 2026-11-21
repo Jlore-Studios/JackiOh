@@ -138,7 +138,7 @@ mod tests {
 
     const BREATH: &str = "classic-019";
     // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 8/8 since issue #3138): a big
-    // body no Immutable keeps a Spell off (R781001).
+    // body with no Immutable, which kept a Spell off until R4353001.
     const BIG: &str = "classicplus-026";
     const FILLER: &str = "core-005";
     const ANCHOR: &str = "core-010";

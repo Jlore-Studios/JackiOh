@@ -304,7 +304,7 @@ pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
     } else {
         card_keywords(state, card)
     };
-    if crate::wire::has_immutable(&keywords) {
+    if crate::layers::immutable_by(state, card, &keywords) {
         return Vec::new();
     }
     let mut out: Vec<NumberOnCard> = Vec::new();

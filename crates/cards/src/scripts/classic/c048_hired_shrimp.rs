@@ -82,7 +82,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // Mr. Vanilla: a Unit with very few
     const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell with few
     const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap with more
-    const ROCK: &str = "core-066"; // The Rock: Indestructible, few lines
+    const HEADQUARTERS: &str = "meditative-097-9"; // Jlockeed's Headquarters: Indestructible, many more lines
     const SPECIESIST: &str = "core-002";
     const GARY: &str = "core-004";
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
@@ -262,15 +262,18 @@ mod tests {
             }
 
             #[test]
-            fn r46_an_indestructible_target_with_more_lines_survives_a_fused_the_rock_and_carnivorous_cube() {
+            fn r46_an_indestructible_target_with_more_lines_survives_jlockeeds_headquarters() {
+                // Not a fused The Rock: Indestructible, it is Immutable (R4353000), and nothing fuses onto it.
                 crate::register_all();
-                let (mut s, fused_id) = fused(ROCK, CUBE, false);
-                let fused_loc = def_of(Some(s.state()), &s.card(&fused_id).def_id).loc;
-                assert_eq!(fused_loc, Some(loc(ROCK) + loc(CUBE)));
-                assert!(fused_loc.unwrap_or(0) > shrimp_loc());
-                s.play(SHRIMP, json!({ "targets": pick::id(&fused_id) }));
-                s.expect_in_zone(&fused_id, "field");
-                assert_eq!(js(&s.stats(&fused_id).position), json!("ATK"));
+                assert!(loc(HEADQUARTERS) > shrimp_loc());
+                let mut s = scenario(json!({
+                    "p1": { "hand": [SHRIMP, FILLER], "field": [HEADQUARTERS] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                let headquarters = s.card(HEADQUARTERS).id.clone();
+                s.play(SHRIMP, json!({ "targets": pick::id(&headquarters) }));
+                s.expect_in_zone(&headquarters, "field");
+                assert_eq!(js(&s.stats(&headquarters).position), json!("ATK"));
             }
 
             #[test]

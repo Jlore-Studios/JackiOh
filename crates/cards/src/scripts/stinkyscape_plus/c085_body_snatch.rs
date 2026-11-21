@@ -3,9 +3,10 @@
 //!   Radiant: "Transform a Unit into an Ayy."
 //!
 //! A declared target: any Unit on either side (R81). `transform` rewrites it in place into S+ #76.1 Ayy,
-//! the base token, no Cry (R691), and an Immutable Unit is no target (R781001, R23). A Transform keeps the
-//! position of the card it replaces, so the base face then switches the new Ayy, found in the zone the
-//! old Unit stood in, to Defense Position (`switch_position_of`, no exertion spent, R20); the Radiant face
+//! the base token, no Cry (R691); an Immutable Unit, an Indestructible one included (R4353000), may be
+//! its target and is left as it is (R4353001, R23). A Transform keeps the position of the card it
+//! replaces, so the base face then switches the new Ayy, found in the zone the old Unit stood in, to
+//! Defense Position (`switch_position_of`, no exertion spent, R20); the Radiant face
 //! leaves the position as the Unit had it (R3557003's reading: both faces make the base Ayy, the Radiant
 //! face's gain is the stance).
 
@@ -69,7 +70,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
     const BODY: &str = "core-019"; // Midrange Menace
-    const ROCK: &str = "core-066"; // The Rock: Immutable on its Radiant face.
+    const ROCK: &str = "core-066"; // The Rock: Indestructible, and Immutable on its Radiant face.
 
     fn board(radiant: bool, target: Value) -> Scenario {
         scenario(json!({
@@ -105,11 +106,23 @@ mod tests {
     }
 
     #[test]
-    fn r781001_an_immutable_unit_is_no_target() {
+    fn r4353001_an_immutable_unit_may_be_its_target_and_the_transform_leaves_it_as_it_is() {
         crate::register_all();
         let mut s = board(false, json!({ "def": ROCK, "lane": 1, "radiant": true }));
         let rock = s.card(ROCK).clone();
-        s.expect_refused(|s| s.play(ID, pick::targets(pick::id(&rock.id))));
+        s.play(ID, pick::targets(pick::id(&rock.id)));
         assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
+        assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Transformed));
+    }
+
+    #[test]
+    fn r4353000_an_indestructible_unit_is_immutable_innately_and_the_transform_leaves_it_as_it_is() {
+        crate::register_all();
+        // The base Rock prints Indestructible alone.
+        let mut s = board(false, json!({ "def": ROCK, "lane": 1 }));
+        let rock = s.card(ROCK).clone();
+        s.play(ID, pick::targets(pick::id(&rock.id)));
+        assert_eq!(s.unit(P2, 1).map(|unit| (unit.id, unit.def_id)), Some((rock.id, ROCK.to_string())));
+        assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Transformed));
     }
 }

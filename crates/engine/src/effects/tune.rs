@@ -795,7 +795,7 @@ fn menu_of(
     zone: TuneZone,
 ) -> Vec<MenuRow> {
     // Rule 2: an Immutable card is never changed, and nothing is drawn for it.
-    if crate::wire::has_immutable(&keywords_now(state, card)) {
+    if crate::layers::immutable_by(state, card, &keywords_now(state, card)) {
         return Vec::new();
     }
     [
