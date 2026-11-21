@@ -701,7 +701,8 @@ fn r3045000_the_hull_itself_and_every_other_fusion_are_named_as_they_were() {
 /// once, and every other line in its place; a card that is no fusion prints its lines as they are.
 #[test]
 fn r3941002_a_fused_face_prints_its_ingredients_keyword_lines_as_one() {
-    let parts = ["core-011", "core-002", "core-003"].map(catalog_def);
+    // TG #41 Legacy: Speciesist, whose Cry line has no number (Core #2's gained one in #4353).
+    let parts = ["core-011", "traininggrounds-041", "core-003"].map(catalog_def);
     let mut def = fused(4, &[&parts[0], &parts[1], &parts[2]]);
     def.base.text = parts
         .iter()
