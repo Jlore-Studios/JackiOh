@@ -524,6 +524,10 @@ pub fn meaning(event: &str) -> &'static str {
             "The practice settle sweep (R2422000), which settles practice claims unsettled after `PRACTICE_SETTLE_GRACE_SECONDS`, is failing.",
             "Practice claims are not paid or refused, so rewards are late."
         ),
+        "practice.prune.failing" => failing_step!(
+            "The practice seed prune (R4317001), which deletes every account's practice seeds issued over `PRACTICE_SEED_TTL_SECONDS` ago that are unclaimed or settled, is failing.",
+            "Nothing players see yet: lapsed practice seeds pile up in the database."
+        ),
         _ => UNDESCRIBED,
     }
 }
@@ -849,7 +853,7 @@ mod tests {
         names
     }
 
-    const FAILING_STEPS: [&str; 15] = [
+    const FAILING_STEPS: [&str; 16] = [
         "matchmaker",
         "matches.reaper",
         "seats.reconcile",
@@ -861,6 +865,7 @@ mod tests {
         "duos.logs.purge",
         "idempotency.sweep",
         "practice.sweep",
+        "practice.prune",
         "series.sweeper",
         "duos.sweeper",
         "challenges.sweeper",
