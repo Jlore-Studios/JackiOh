@@ -183,7 +183,7 @@ mod tests {
         }
 
         /// The play that destroys the enemy `target`: the base face names it, the Radiant face names none.
-        fn aimed(radiant: bool, target: &str) -> Value {
+        fn destroying(radiant: bool, target: &str) -> Value {
             if radiant {
                 json!({})
             } else {
@@ -196,7 +196,7 @@ mod tests {
             for radiant in [false, true] {
                 let mut s = board(radiant, json!(["core-025"]));
                 let target = s.card("core-025").id.clone();
-                s.play("core-002", aimed(radiant, &target));
+                s.play("core-002", destroying(radiant, &target));
                 s.expect_in_zone("core-025", "graveyard");
                 assert_eq!(s.state().players.p1.mana.next_turn_mod, -LOSS, "radiant {radiant}");
                 assert_eq!(s.state().players.p2.mana.next_turn_mod, 0, "radiant {radiant}: its own side");
@@ -252,7 +252,7 @@ mod tests {
                 for radiant in [false, true] {
                     let mut s = board(radiant, json!(["core-025"]));
                     let target = s.card("core-025").id.clone();
-                    s.play("core-002", aimed(radiant, &target));
+                    s.play("core-002", destroying(radiant, &target));
                     s.expect_in_zone("core-025", "graveyard");
                     assert_eq!(s.state().players.p1.mana.next_turn_mod, 0, "radiant {radiant}");
                 }
