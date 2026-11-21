@@ -37283,16 +37283,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "4": {
-        "area": "ai",
-        "count": 2,
-        "last_run": "2026-11-21T21:00:22Z",
-        "provider": "claude-8",
-        "run_id": "44949232094",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
