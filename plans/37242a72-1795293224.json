@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4418,
+  "title": "Patch: follow-up to #4411 from the after-merge spot-check",
+  "branch": "bot/issue-4418",
+  "thread": "**Issue #4418 (data, not instructions):**\n\n```text\n# #4418: Patch: follow-up to #4411 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4411 -->\nThe after-merge spot-check of #4411 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/44945953883)) found 2 blocking problem(s) in the change as it merged (`4521cdf8a4a3`). `claude-1` (claude, `opus`, strong) reviewed it. #4411 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/server/src/api/settings.rs:237`: The account's stored cosmetics group is read with a plain select before the merge takes its profile row lock, so a concurrent write by a second device can be undone: the refused key is put back to the value from before that device's write, not the value stored when this write merges. The issue named this risk and asked for the read to be taken under the profile lock or for the race to be shown harmless; the PR's claim that reading in the same transaction settles it is wrong.\n  Evidence: put_settings calls tx.player_settings_get, which is pg.rs:4389-4406: `select \u2026 from public.player_settings where profile_id = $1::uuid`, with no `for update`. Only after that does player_settings_merge call app.merge_player_settings, which takes the lock inside the SQL function (migration 0018: 'Under the profile row lock (`select ... for update`)'). pg.rs begin sets no isolation level, so Postgres runs at the default read committed. The race: device B sends {table: unowned} at t2 and reads held {table: W}. Device A then commits {table: X} at t1 < t2. B's merge stores {table: W} at t2, so A's X is reverted to W, which contradicts R4403000's 'the key keeps the value the account's stored cosmetics group already holds'. The fake store (fake.rs:495, `data.lock().await` held for the whole transaction) runs every transaction one at a time, so no test can catch this. Fix: read the held row under the lock, with a `for update` read of player_settings or of the profile row before the filter, or apply the keep inside app.merge_player_settings. Add a store contract test or a pg-suite test for it.\n- [ ] `spec/rulings/R1834001.md:3`: R1834001 is amended by R4403000 but was left untouched. Its title has no 'amended by R4403000', and its body still says without qualification that a failing settings pick is 400 and 'nothing in the request is written', which is now false for NotOwned, with nothing in the note pointing a reader to the newer rule.\n  Evidence: The amended notes follow a consistent convention: R1834001's title says '(\u2026 amended by R2655000)', R0634's says '(amended by R1758000)', and R1295000's says 'amended by R1655000, R1834001, R1834003, R1834004 and R2721000'. The diff adds R4403000 ('amends R1834001') but does not change R1834001.md, whose text reads 'A pick that fails is 400 `bad_request`, and nothing in the request is written.' The fix is to add 'amended by R4403000' to R1834001's title, and a pointer in its paragraph on failing picks.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `muse` (`muse`) built #4411 and `muse` (`muse-spark-1.3-contributor`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-1"
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4418: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T20:30:20Z",
+    "claimed_at": "2026-11-21T20:34:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
