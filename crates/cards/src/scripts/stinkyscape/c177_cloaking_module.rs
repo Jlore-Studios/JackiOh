@@ -5,8 +5,8 @@
 //!
 //! Keywords only (§6.1): its script is empty. Equip (R1086, R77): played onto one of your Units it fuses
 //! into it, Starship Piece only into a piece (R1852001). Cloaked (R783004–R783006): it may be set
-//! face-down and revealed into a unit zone. Immutable (R23, R781001): no Spell, Field Spell or Field Trap
-//! targets it in play, and nothing fuses onto it. Starship Piece: played alone, its death fuses its base
+//! face-down and revealed into a unit zone. Immutable (R23, R4353001): nothing fuses onto it, and it bars
+//! no targeting, so a Spell may aim at it in play. Starship Piece: played alone, its death fuses its base
 //! version into its owner's Dormant Starship (R1852000, R2521000). Immune to Spells (E35): no Spell
 //! targets or affects it.
 
@@ -93,7 +93,7 @@ mod tests {
 
         #[test]
         fn r1852000_played_alone_its_death_fuses_it_into_a_dormant_starship() {
-            // Immutable keeps a targeted Spell off it in play (R781001): a sweep destroys it.
+            // Immutable stops no destroy (R4353001): a sweep destroys it.
             let mut s = standing(false, json!([NETHER, ANCHOR]), json!([ANCHOR]));
             let me = s.unit_at(P1, 1);
             assert!(has_keyword(&s.stats(&me).keywords, KeywordKind::StarshipPiece));
@@ -106,12 +106,13 @@ mod tests {
         }
 
         #[test]
-        fn r781001_immutable_no_spell_may_target_it_in_play() {
+        fn r4353001_a_spell_may_target_it_in_play_and_its_destroy_lands() {
             let mut s = standing(false, json!([HIT_JOB, ANCHOR]), json!([ANCHOR]));
             let me = s.unit_at(P1, 1);
             assert!(!immune_to_spells(s.state(), &me), "the base face is not Immune to Spells");
-            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": pick::instance(&me) })));
-            s.expect_in_zone(&me, "field");
+            // Immutable bars no aim: its own controller's Hit Job destroys it as any Unit.
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+            s.expect_in_zone(&me, "graveyard");
         }
     }
 

@@ -14,7 +14,7 @@ use crate::brittle_count::active_brittle_count;
 use crate::layers::{card_keywords, has_stat_line, printed_keywords_of, stats_with_buffs, unit_view};
 use crate::script::{ActivationUses, Script};
 use crate::state::{CardInstance, GameState};
-use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, has_keyword};
+use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter};
 
 /// B3.4 rule 3: the numbered keywords, by the tuning key each is read under (`tuning::tuned_count`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -305,7 +305,7 @@ pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
     } else {
         card_keywords(state, card)
     };
-    if has_keyword(&keywords, KeywordKind::Immutable) {
+    if crate::layers::immutable_by(state, card, &keywords) {
         return Vec::new();
     }
     let mut out: Vec<NumberOnCard> = Vec::new();

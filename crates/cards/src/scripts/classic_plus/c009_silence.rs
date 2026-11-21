@@ -22,7 +22,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #9 Silence — SPEC §8.7 row 9, BUILD M9 Classic+ row C+ 9 (§10.4, R781001, R781003, R97, R177).
+// C+ #9 Silence — SPEC §8.7 row 9, BUILD M9 Classic+ row C+ 9 (§10.4, R4353001, R781003, R97, R177).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -154,19 +154,19 @@ mod tests {
         }
 
         #[test]
-        fn r781001_r23_an_immutable_unit_in_play_is_no_target_and_keeps_its_text() {
+        fn r4353001_r23_an_immutable_unit_in_play_may_be_its_target_and_keeps_its_text() {
             crate::register_all();
             let mut s = setup(json!({}), json!({ "field": [{ "def": MENACE, "radiant": true }] }), false);
             let menace = s.card(MENACE).clone();
 
-            s.expect_refused(|s| s.play(SILENCE, json!({ "targets": pick::id(&menace.id) })));
-            // With no other Unit it is played with no pick and fizzles (R90).
-            s.play(SILENCE, json!({}));
+            // Immutable bars no aim (R4353001), and it still refuses the Vanilla (R23).
+            s.play(SILENCE, json!({ "targets": pick::id(&menace.id) }));
 
             assert!(!s.card(&menace).vanilla);
             let now = kinds(&s, &menace.id);
             assert!(now.contains(&KeywordKind::Taunt));
             assert!(now.contains(&KeywordKind::Immutable));
+            assert_eq!(s.count("transformed"), 0);
             s.expect_in_zone(SILENCE, "graveyard");
         }
 

@@ -2232,11 +2232,11 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
             })
             .expect("a zone one step from lane 1");
         let played = event(json!({
-            "type": "cardPlayed", "player": "p1", "instanceId": "silas", "defId": "core-052", "costPaid": 4,
+            "type": "cardPlayed", "player": "p1", "instanceId": "silas", "defId": "core-052", "costPaid": 6,
         }));
         let announced = event(json!({
             "type": "cardAnnounced", "player": "p1", "instanceId": "silas", "defId": "core-052",
-            "cardType": "Unit", "costPaid": 4, "targets": [], "row": "units", "lane": from,
+            "cardType": "Unit", "costPaid": 6, "targets": [], "row": "units", "lane": from,
         }));
         let rotated = event(json!({ "type": "rotated", "direction": direction }));
 

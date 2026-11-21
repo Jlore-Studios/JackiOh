@@ -29,7 +29,7 @@ use crate::script::{Effect, EffectContext, EffectPart, Hook, hook};
 use crate::state::{GameState, ModifierKind, find_instance, find_instance_mut};
 use crate::subsystems::call_to_chaos::{ChaosEffectDef, cast_random_call_to_chaos};
 use crate::subsystems::fuse::{FuseArgs, HandPrice};
-use crate::wire::{KeywordKind, PlayerId, SetName, ZoneName};
+use crate::wire::{PlayerId, SetName, ZoneName};
 
 /// §7: the tokens this edition summons, by their indices in the Meditative set (B2.2).
 const TOKEN_SET: SetName = SetName::Meditative;
@@ -127,7 +127,7 @@ fn fuse_entry(cost: i32) -> Effect {
             let fusable: Vec<_> = state.players[controller]
                 .hand
                 .iter()
-                .filter(|card| !crate::layers::unit_has(state, card, KeywordKind::Immutable))
+                .filter(|card| !crate::layers::is_immutable(state, card))
                 .cloned()
                 .collect();
             let kept_id = match fusable.len() {

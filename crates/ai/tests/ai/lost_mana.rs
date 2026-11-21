@@ -1,9 +1,10 @@
 //! R844 (#1224): the AI prices the mana its coming turns will not bring (`evaluate.rs` holds the price
 //! itself). Holding Meditative #18 Expedition12 with one spare crystal, it casts the Expedition beside two
 //! Fanatics, (3) 1/1s with a Radiant 2/2 Divine Shield face, that next turn's four crystals would cast, and
-//! beside Silly Silas, a (4) 4/4, Radiant 8/8: the price does not stop it casting the card. The Fanatic
-//! was K-Pop Fanatic (Core #50) until issue #4292 took its Radiant Divine Shield off; since then it is a
-//! stand-in with those numbers and that Divine Shield, and no Cry.
+//! beside a (4) 7/7, Radiant 14/14: the price does not stop it casting the card. The Fanatic was K-Pop
+//! Fanatic (Core #50) until issue #4292 took its Radiant Divine Shield off; since then it is a stand-in
+//! with those numbers and that Divine Shield, and no Cry. The four-drop was Silly Silas (Core #52) until
+//! issue #4353 made him (6); since then it is a stand-in with his old cost and stats, and no Cry.
 //!
 //! R1012005, R4159000: both are the hand eval's decisions, held again now that no network corrects it.
 //! With the Fanatics the hand eval once kept the card; casting it is the line R1012005 measured to win
@@ -17,7 +18,8 @@ use super::support::{AI, register_cards, scenario};
 const EXPEDITION: &str = "meditative-018";
 /// K-Pop Fanatic's Radiant face until issue #4292 (Core #50, whose Cry it leaves out), as a stand-in.
 const FANATIC: &str = "stand-in (3) 1/1 R2/2 Divine Shield";
-const SILAS: &str = "core-052";
+/// Silly Silas's cost and faces until issue #4353 (Core #52, whose Cry it leaves out), as a stand-in.
+const FOUR_DROP: &str = "stand-in (4) 7/7 R14/14";
 const VANILLA: &str = "core-008";
 const FILLER: &str = "core-005";
 
@@ -58,7 +60,7 @@ fn r844_r1012005_r4159000_with_two_fanatics_and_one_spare_crystal_the_ai_casts_e
 
 #[test]
 fn r844_r1012005_when_its_radiant_face_doubles_a_four_drop_the_ai_still_casts_expedition12() {
-    let state = position(&[EXPEDITION, SILAS]);
+    let state = position(&[EXPEDITION, FOUR_DROP]);
     for seed in ["r844-cast-a", "r844-cast-b", "r844-cast-c"] {
         assert!(casts_expedition(&state, seed), "it kept the card on {seed}");
     }

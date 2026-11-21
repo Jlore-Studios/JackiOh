@@ -417,9 +417,9 @@ mod tests {
         }
 
         #[test]
-        fn r781001_its_revealed_spell_cannot_target_an_immutable_unit() {
+        fn r4353001_its_revealed_spell_may_target_an_immutable_unit() {
             // The Great Wall (Immutable) on p2's field: the revealed Lunar Eclipse is a Spell card
-            // however it was played, so its prompt never lists the Wall.
+            // however it was played, and Immutable bars no Spell's aim, so its prompt lists the Wall.
             let mut s = paranoid(
                 "paranoia-immutable",
                 json!([ECLIPSE, VANILLA]),
@@ -428,18 +428,18 @@ mod tests {
             );
             let wall = s.unit(P2, 1).expect("the Wall").id;
             let eclipse = set(&mut s, ECLIPSE);
-            // As it is set (R3806000) and as it reveals, its prompt never lists the Wall.
+            // As it is set (R3806000) and as it reveals, its prompt lists the Wall.
             for resolution in ["set", "reveal"] {
                 if resolution == "reveal" {
                     reveal(&mut s, &eclipse);
                 }
                 let pending = s.state().pending.clone().expect("the Target prompt");
                 assert!(
-                    !pending
+                    pending
                         .options
                         .iter()
                         .any(|option| option.selection == Selection::Instance { instance_id: wall.clone() }),
-                    "the Immutable Wall is never offered as it resolves at its {resolution}"
+                    "the Immutable Wall is offered as it resolves at its {resolution}"
                 );
                 assert!(
                     pending

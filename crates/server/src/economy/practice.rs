@@ -181,6 +181,16 @@ pub fn config_of(seed: &str, setup: &PracticeSetup) -> PracticeConfig {
     config
 }
 
+/// R4317000: why the game `setup` asks for on `seed` cannot be dealt, `None` when it can. It is the practice
+/// session's `deal` over [`config_of`]'s config, the call `check_claim` makes first (`PracticeHost::open`), under
+/// `pinned` (R767000), so an issue and its claim cannot disagree on a deck. The last board decides no refusal
+/// (`validate_setup` reads decks, handicaps and marks only). A few milliseconds (it deals the AI's deck too):
+/// the caller runs it off the runtime.
+pub fn deal_refusal(pinned: Pinned, seed: &str, setup: &PracticeSetup) -> Option<String> {
+    let config = config_of(seed, setup);
+    engine::run_pinned(pinned, || session::deal::deal(&config)).err()
+}
+
 /// A practice claim checked: `log` folded from `setup` on `seed`, each action under its player's next
 /// nonce and from the seat that player plays then (R677), to a finished game whose result for the human
 /// is `claimed`. No AI action is re-run ([[R2560000]]). Panics, as the engine does, on a setup it cannot

@@ -180,12 +180,14 @@ mod tests {
     }
 
     #[test]
-    fn r23_an_immutable_permanent_is_no_target() {
+    fn r4353001_r23_an_immutable_permanent_may_be_its_target_and_is_left_as_it_is() {
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER], "mana": 10, "library": filler(4) },
             "p2": { "hand": [FILLER], "field": [{ "def": "core-066", "radiant": true }], "library": filler(4) },
         }));
         let rock = s.unit_at(P2, 1).id;
-        s.expect_refused(|s| s.play(ID, pick::targets(pick::id(&rock))));
+        // Immutable bars no aim (R4353001), and it still refuses the Transform (R23).
+        s.play(ID, pick::targets(pick::id(&rock)));
+        assert_eq!(s.unit(P2, 1).map(|unit| (unit.id, unit.def_id)), Some((rock, "core-066".to_string())));
     }
 }

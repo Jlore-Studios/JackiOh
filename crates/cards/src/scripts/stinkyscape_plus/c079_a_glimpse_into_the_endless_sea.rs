@@ -1,9 +1,9 @@
 //! SPEC §8.12 S+ #79 A Glimpse into the Endless Sea (4) Spell, Wincon, Terminus, Mythic, a card of
 //! the Stinkyscape+ set (R1420, R3535000; R3569005, R3569006).
-//!   Base:    "Exile your deck and every permanent. Start an {count} turn countdown. When it ends, win
-//!            the game." (7; 8 through v0.6.7k, issue #4285)
-//!   Radiant: "Exile your deck and every permanent. Your hero gains {armor} Armor. Start an {count} turn
-//!            countdown. When it ends, win the game." (7, Armor 5)
+//!   Base:    "Exile your deck and every permanent. You are immune to fatigue damage. Start an {count}
+//!            turn countdown. When it ends, win the game." (7; 8 through v0.6.7k, issue #4285)
+//!   Radiant: "Exile your deck and every permanent. Your hero gains {armor} Armor. You are immune to
+//!            fatigue damage. Start an {count} turn countdown. When it ends, win the game." (7, Armor 5)
 //!
 //! Engine: the whole library is exiled with no draw, so no fatigue (§2.4), as S+ #80 does. The
 //! countdown is `delay` "in N turns" (R1181000): a badge on its owner's side counts down the turns they
@@ -17,7 +17,11 @@
 //! `script_v0_6_4c` leaves out for the replays of v0.6.4c and before (R767000). Issue #4154 has both
 //! faces exile every permanent after the deck (R4154200): each side's board, the caster's first, by
 //! `exile_board` as S #80 The Last Voyage's, face-down and Dormant cards included and only a card no
-//! effect reaches spared; through v0.6.6h it exiled the deck alone, which `script_v0_6_6h` keeps.
+//! effect reaches spared; through v0.6.6h it exiled the deck alone, which `script_v0_6_6h` keeps. Issue
+//! #4353 makes both faces' caster immune to fatigue damage for the rest of the game (R4353020): a
+//! `fatigueImmune` player modifier, expiry `never`, after the exiles and the Armor, so each later draw from
+//! the empty deck is a fatigue draw, counted and announced, that deals their hero nothing; through v0.6.8b
+//! it gave none, which `script_v0_6_8b` keeps.
 
 use jackioh_engine::prelude::*;
 
@@ -29,8 +33,10 @@ const BADGE: &str = "A Glimpse into the Endless Sea: you win";
 const STEP: &str = "win";
 
 /// `armor`: whether the face gains its hero the declared `armor` (the Radiant face, since issue #3951);
-/// `board`: whether it exiles every permanent after the deck (R4154200, since issue #4154).
-fn glimpse(armor: bool, board: bool) -> Script {
+/// `board`: whether it exiles every permanent after the deck (R4154200, since issue #4154); `fatigue`:
+/// whether it makes its caster immune to fatigue damage for the rest of the game (R4353020, since issue
+/// #4353).
+fn glimpse(armor: bool, board: bool, fatigue: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut effects = vec![exile_bottom_of_library(json_as(json!({
@@ -42,6 +48,11 @@ fn glimpse(armor: bool, board: bool) -> Script {
             }
             if armor {
                 effects.push(gain_hero_armor(json_as(json!({ "amount": param(ctx, "armor") }))));
+            }
+            if fatigue {
+                effects.push(add_player_modifier(json_as(json!({
+                    "mod": { "expiry": { "until": "never" }, "kind": "fatigueImmune" },
+                }))));
             }
             effects.push(delay(json_as(json!({
                 "at": { "phase": "start", "player": "self" },
@@ -58,8 +69,17 @@ fn glimpse(armor: bool, board: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: glimpse(false, true),
-        radiant: glimpse(true, true),
+        base: glimpse(false, true, true),
+        radiant: glimpse(true, true, true),
+    }
+}
+
+/// R767000: the scripts through v0.6.8b, which gave no immunity to fatigue damage (issue #4353).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_8b() -> CardScripts {
+    CardScripts {
+        base: glimpse(false, true, false),
+        radiant: glimpse(true, true, false),
     }
 }
 
@@ -67,8 +87,8 @@ pub fn script() -> CardScripts {
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: glimpse(false, false),
-        radiant: glimpse(true, false),
+        base: glimpse(false, false, false),
+        radiant: glimpse(true, false, false),
     }
 }
 
@@ -76,8 +96,8 @@ pub fn script_v0_6_6h() -> CardScripts {
 /// folds those replays under it.
 pub fn script_v0_6_4c() -> CardScripts {
     CardScripts {
-        base: glimpse(false, false),
-        radiant: glimpse(false, false),
+        base: glimpse(false, false, false),
+        radiant: glimpse(false, false, false),
     }
 }
 
@@ -110,8 +130,8 @@ mod tests {
         s
     }
 
-    /// The countdown badges on p1's side, as `viewer` reads them (R169).
-    fn badges(s: &Scenario, viewer: PlayerId) -> Vec<String> {
+    /// Every badge on p1's side, as `viewer` reads them (R169).
+    fn all_badges(s: &Scenario, viewer: PlayerId) -> Vec<String> {
         let view = s.view(viewer);
         let modifiers = if viewer == P1 {
             view.you.modifiers
@@ -119,6 +139,23 @@ mod tests {
             view.opponent.modifiers
         };
         modifiers.iter().map(|modifier| modifier.label.clone()).collect()
+    }
+
+    /// The countdown badges on p1's side, as `viewer` reads them (R169).
+    fn badges(s: &Scenario, viewer: PlayerId) -> Vec<String> {
+        all_badges(s, viewer).into_iter().filter(|label| label.starts_with(BADGE)).collect()
+    }
+
+    /// R4353020: the badge of the immunity to fatigue damage (`view_for`'s words for it).
+    const FATIGUE_BADGE: &str = "You are immune to fatigue damage";
+
+    /// How many `fatigueImmune` modifiers `player` holds, each for the rest of the game.
+    fn immunities(s: &Scenario, player: PlayerId) -> usize {
+        s.state().players[player]
+            .mods
+            .iter()
+            .filter(|modifier| modifier.kind == ModifierKind::FatigueImmune && modifier.expiry == ModifierExpiry::Never)
+            .count()
     }
 
     /// How many of p1's own turns pass after the cast before the game is won, and the winner.
@@ -174,8 +211,23 @@ mod tests {
             s.state_mut().players[P1].library.clear();
             s.play(ID, json!({}));
             let (turns, winner) = turns_to_win(&mut s, 12);
-            // With no deck, fatigue (1+2+…) is what the countdown races: 200 health holds.
+            // With no deck every draw is a fatigue draw, which hits nothing since issue #4353 (R4353020).
             assert_eq!((turns, winner), (7, Some(Winner::P1)));
+            assert_eq!(s.state().players[P1].hero.health, 200);
+        }
+
+        /// R767000: through v0.6.8b it gave no immunity, so the empty deck's fatigue hits (issue #4353).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_8b_leaves_fatigue_hitting() {
+            crate::under_kept(ID, script_v0_6_8b(), || {
+                let mut s = game("glimpse-fatigue-kept", false);
+                s.play(ID, json!({}));
+                assert_eq!(immunities(&s, P1), 0);
+                let health = s.state().players[P1].hero.health;
+                next_turn_of(&mut s, P1);
+                assert_eq!(s.state().players[P1].fatigue_count, 1);
+                assert_eq!(s.state().players[P1].hero.health, health - FATIGUE_DAMAGE(1));
+            });
         }
 
         /// R767000: through v0.6.4c neither face gave Armor (issue #3951).
@@ -200,6 +252,28 @@ mod tests {
             assert_eq!(s.state().players[P1].hero.armor, 5);
             let (turns, winner) = turns_to_win(&mut s, 12);
             assert_eq!((turns, winner), (7, Some(Winner::P1)));
+        }
+    }
+
+    /// R4353020: both faces make their caster immune to fatigue damage for the rest of the game, issue
+    /// #4353: each of their turns' draws from the exiled deck is a fatigue draw, counted, and their hero
+    /// takes nothing. The badge says so on both seats; the opponent gets no immunity.
+    #[test]
+    fn r4353020_both_faces_make_the_caster_immune_to_fatigue_damage_for_the_rest_of_the_game() {
+        for radiant in [false, true] {
+            let mut s = game(&format!("glimpse-fatigue-{radiant}"), radiant);
+            s.play(ID, json!({}));
+            assert_eq!(immunities(&s, P1), 1, "radiant {radiant}");
+            assert_eq!(immunities(&s, P2), 0, "radiant {radiant}");
+            assert!(all_badges(&s, P1).contains(&FATIGUE_BADGE.to_string()), "radiant {radiant}");
+            assert!(all_badges(&s, P2).contains(&FATIGUE_BADGE.to_string()), "radiant {radiant}");
+            let health = s.state().players[P1].hero.health;
+            for _turn in 0..3 {
+                next_turn_of(&mut s, P1);
+            }
+            assert_eq!(s.state().players[P1].fatigue_count, 3, "radiant {radiant}");
+            assert_eq!(s.state().players[P1].hero.health, health, "radiant {radiant}");
+            assert_eq!(immunities(&s, P1), 1, "radiant {radiant}: it lasts");
         }
     }
 

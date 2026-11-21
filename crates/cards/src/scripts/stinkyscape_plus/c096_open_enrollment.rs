@@ -1,14 +1,24 @@
-//! S+ #96 Open Enrollment (SPEC §8.12 row 96). (2) Spell, Common.
-//!   Base:    "Fill your hand with random F tier cards (or D tier if none exist)."
-//!   Radiant: "Fill your hand with random Radiant F tier cards (or D tier if none exist)."
+//! S+ #96 Open Enrollment (SPEC §8.12 row 96). (0) embiggen (2) Spell, Common.
+//!   Base:    "Fill your hand with random F tier cards (or D tier if none exist).
+//!            Embiggened (2): They cost (1) less."
+//!   Radiant: "Fill your hand with random Radiant F tier cards (or D tier if none exist).
+//!            Embiggened (2): They cost (0)."
 //!
 //! Cry (R1): add F-tier cards (D-tier when no F card exists, R3538001) until the hand is full,
-//! Radiant on the Radiant face.
-//! Its catalog row, sound, flavour and Chinese entries are already written.
+//! Radiant on the Radiant face. Issue #4353 gave it its Embiggened price, (2) (R1175000, the play's
+//! `embiggen`, which the Cry reads as `ctx.embiggened`): played so, every card it adds costs `DISCOUNT`
+//! less, a `costMod` on each (R65, never below (0)), or on the Radiant face costs `EMBIGGENED_COST`, a
+//! `costOverride` (R4353023); at its base price it fills the hand as before. Through v0.6.8b it had no
+//! Embiggened price, so no play of it could be embiggened and its script needs no keeping (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-096";
+
+/// "Embiggened (2): They cost (1) less", the base face's (R1748003: a price, printed, declared nowhere).
+const DISCOUNT: i32 = 1;
+/// "Embiggened (2): They cost (0)", the Radiant face's (R1748003: a price, printed, declared nowhere).
+const EMBIGGENED_COST: i32 = 0;
 
 /// R3538001: `first` unless its pool is empty, then `then`.
 fn tier_or(first: CardTier, then: CardTier) -> CardTier {
@@ -26,11 +36,20 @@ fn face(radiant: bool) -> Script {
             let mut effects = Vec::new();
             let room = room_in(ctx.state, ctx.controller, OffFieldZone::Hand);
             if room > 0 {
-                effects.push(add_random_from_catalog(json_as(json!({
+                let mut args = json!({
                     "query": { "tier": tier },
                     "count": room,
                     "radiant": radiant,
-                }))));
+                });
+                // R4353023: Embiggened, each card added is cheaper: (1) less, or (0) on the Radiant face.
+                if ctx.embiggened {
+                    if radiant {
+                        args["costOverride"] = json!(EMBIGGENED_COST);
+                    } else {
+                        args["costMod"] = json!(-DISCOUNT);
+                    }
+                }
+                effects.push(add_random_from_catalog(json_as(args)));
             }
             effects
         })),
@@ -130,6 +149,52 @@ mod tests {
             "every card filled is F tier"
         );
         assert!(added.iter().all(|card| card.radiant), "all of them Radiant");
+        clear_overrides();
+    }
+
+    /// R4353023: at its base price neither face touches the cost of the cards it adds.
+    #[test]
+    fn r4353023_at_its_base_price_the_cards_keep_their_cost() {
+        crate::register_all();
+        register_win_rates(table(vec![(FILLER, 200, 1000), ("core-008", 460, 1000)]));
+        for radiant in [false, true] {
+            let mut s = board(radiant, &format!("open-enrollment-price-{radiant}"));
+            s.play(ID, json!({}));
+            let added: Vec<CardInstance> = s.hand(P1).into_iter().skip(1).collect();
+            assert!(!added.is_empty());
+            assert!(
+                added.iter().all(|card| card.cost_mod == 0 && card.cost_override.is_none()),
+                "radiant {radiant}"
+            );
+        }
+        clear_overrides();
+    }
+
+    /// R4353023: Embiggened (2), the base face's cards each cost (1) less, a `costMod`.
+    #[test]
+    fn r4353023_embiggened_the_base_face_s_cards_cost_1_less() {
+        crate::register_all();
+        register_win_rates(table(vec![(FILLER, 200, 1000), ("core-008", 460, 1000)]));
+        let mut s = board(false, "open-enrollment-embiggened");
+        s.play(ID, json!({ "embiggen": true }));
+        assert_eq!(s.hand(P1).len(), HAND_CAP as usize, "the hand is full");
+        let added: Vec<CardInstance> = s.hand(P1).into_iter().skip(1).collect();
+        assert!(added.iter().all(|card| tier_of_record(&card.def_id) == Some(CardTier::F)));
+        assert!(added.iter().all(|card| card.cost_mod == -DISCOUNT && card.cost_override.is_none()));
+        clear_overrides();
+    }
+
+    /// R4353023: Embiggened (2), the Radiant face's cards each cost (0), a `costOverride`.
+    #[test]
+    fn r4353023_embiggened_the_radiant_face_s_cards_cost_0() {
+        crate::register_all();
+        register_win_rates(table(vec![(FILLER, 200, 1000), ("core-008", 460, 1000)]));
+        let mut s = board(true, "open-enrollment-embiggened-radiant");
+        s.play(ID, json!({ "embiggen": true }));
+        assert_eq!(s.hand(P1).len(), HAND_CAP as usize, "the hand is full");
+        let added: Vec<CardInstance> = s.hand(P1).into_iter().skip(1).collect();
+        assert!(added.iter().all(|card| card.radiant));
+        assert!(added.iter().all(|card| card.cost_override == Some(EMBIGGENED_COST)));
         clear_overrides();
     }
 }

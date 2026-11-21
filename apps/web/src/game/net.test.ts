@@ -1003,7 +1003,7 @@ describe("reconnect", () => {
     expect(h.client.snapshot().connection).toBe("open");
   });
 
-  it("R1441 the backoff's last step repeats, and an opened socket starts the steps over", () => {
+  it("R1441 the backoff's last step repeats, and a socket that delivered a view starts the steps over", () => {
     const h = connected();
     for (let round = 0; round <= RECONNECT_DELAYS_MS.length; round += 1) {
       h.socket().drop(1006);
@@ -1012,7 +1012,53 @@ describe("reconnect", () => {
     expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
 
     h.socket().open();
+    h.socket().deliver({ type: "view", view: baseView() });
     h.socket().drop(1006);
+    expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
+  });
+
+  it("R4250000 a socket refused with 4429 after open climbs the backoff", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < RECONNECT_DELAYS_MS.length + 1; round += 1) {
+      h.socket().open();
+      expect(h.socket().frames()).toEqual([{ type: "hello", token: "tok", matchId: "m-1" }]);
+      h.socket().drop(4429, "too many requests; slow down");
+      expect(h.client.snapshot().connection).toBe("reconnecting");
+      expect(h.pending()).toBe(1);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+  });
+
+  it("R4250000 a socket closed with 1011 after open climbs the backoff", () => {
+    const h = harness();
+    h.client.connect();
+    for (let round = 0; round < RECONNECT_DELAYS_MS.length + 1; round += 1) {
+      h.socket().open();
+      h.socket().drop(1011, "the server faulted");
+      expect(h.client.snapshot().connection).toBe("reconnecting");
+      expect(h.pending()).toBe(1);
+      h.runTimers();
+    }
+    expect(h.delays()).toEqual([...RECONNECT_DELAYS_MS, RECONNECT_DELAYS_MS.at(-1)]);
+  });
+
+  it("R4250000 a socket that delivered a view starts the backoff over", () => {
+    const h = harness();
+    h.client.connect();
+    h.socket().open();
+    h.socket().drop(1006);
+    h.runTimers();
+    h.socket().open();
+    h.socket().drop(1006);
+    h.runTimers();
+    expect(h.delays()).toEqual(RECONNECT_DELAYS_MS.slice(0, 2));
+
+    h.socket().open();
+    h.socket().deliver({ type: "view", view: baseView() });
+    h.socket().drop(1006);
+    h.runTimers();
     expect(h.delays().at(-1)).toBe(RECONNECT_DELAYS_MS[0]);
   });
 });

@@ -1330,13 +1330,67 @@ mod r4039000_friend_feed {
         let bea = account(&app, 2, "Bea").await;
         let request_id = requested(&app, &ada, &bea).await;
         block(&app, &bea, &ada).await;
-        // A block hides the request and refuses its accept; nothing new reaches either feed.
+        // A block deletes the request's row (R4348000) and refuses its accept; nothing new
+        // reaches either feed.
         let (status, _) = accept(&app, &bea, &request_id).await;
         assert_eq!(status, 404);
         let (status, _) = request(&app, &ada, &bea.name).await;
         assert_eq!(status, 404);
         assert_eq!(feed_kinds(&feed(&app, &ada).await), Vec::<String>::new());
-        assert_eq!(feed_kinds(&feed(&app, &bea).await), vec!["friendRequest"]);
+        assert_eq!(feed_kinds(&feed(&app, &bea).await), Vec::<String>::new());
+    }
+
+    #[tokio::test]
+    async fn r4348000_a_block_deletes_the_notifications_between_the_two_and_unblock_restores_nothing() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let cy = account(&app, 3, "Cy").await;
+        // Ada's ask back takes Bea's request: Bea is told `friendAccepted`, Ada's
+        // `friendRequest` row is marked read; Cy's request tells Ada too.
+        requested(&app, &bea, &ada).await;
+        let (status, body) = request(&app, &ada, &bea.name).await;
+        assert!((200..300).contains(&status), "{status}: {body}");
+        requested(&app, &cy, &ada).await;
+        assert_eq!(feed(&app, &ada).await["unread"].as_i64().unwrap_or_default(), 1);
+        assert_eq!(feed(&app, &bea).await["unread"].as_i64().unwrap_or_default(), 1);
+
+        block(&app, &bea, &ada).await;
+
+        // Neither feed lists a row whose actor is the other; Cy's row stays on Ada's. Bea's
+        // unread drops by the row removed; Ada's removed row was already read.
+        let adas = rows(&app, &ada).await;
+        let beas = rows(&app, &bea).await;
+        assert!(!adas.iter().any(|(_, actor, _)| actor == &bea.id), "{adas:?}");
+        assert!(!beas.iter().any(|(_, actor, _)| actor == &ada.id), "{beas:?}");
+        assert!(
+            adas.iter()
+                .any(|(kind, actor, _)| kind == "friendRequest" && actor == &cy.id),
+            "{adas:?}"
+        );
+        assert_eq!(feed(&app, &ada).await["unread"].as_i64().unwrap_or_default(), 1);
+        assert_eq!(feed(&app, &bea).await["unread"].as_i64().unwrap_or_default(), 0);
+
+        // Unblocking restores nothing; a new request after it arrives as before.
+        let (status, body) = api(
+            &app,
+            "DELETE",
+            &format!("/api/blocks/{}", ada.id),
+            &bea.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        let beas = rows(&app, &bea).await;
+        assert!(!beas.iter().any(|(_, actor, _)| actor == &ada.id), "{beas:?}");
+        assert_eq!(feed(&app, &ada).await["unread"].as_i64().unwrap_or_default(), 1);
+        let request_id = requested(&app, &ada, &bea).await;
+        assert!(
+            rows(&app, &bea)
+                .await
+                .contains(&("friendRequest".to_string(), ada.id.clone(), request_id)),
+            "the request after the unblock tells Bea"
+        );
     }
 }
 
