@@ -1047,3 +1047,172 @@ mod r4290001_a_sweeping_cleaver_s_splash_counts_its_sweep {
         assert_eq!((overflow.hero_id.as_str(), overflow.dealt), ("hero-p2", 4 + 5));
     }
 }
+
+mod r4379000_the_forecast_settles_the_state_check {
+    use super::*;
+    use crate::rules::fixtures::aura_deaths::{aura_board, register_sweeper, stack_on};
+
+    /// The passes of the state check the forecast settles after `attacker`'s attack on `target`.
+    fn passes_of(state: &GameState, attacker: &str, target: &str) -> Vec<Vec<String>> {
+        let aimed = attack_target_of(state, target).expect("a target on the board");
+        attack_deaths(state, &live(state, attacker), &aimed).passes
+    }
+
+    /// Fuzz seed 6180's shape through a Cleave: its 3 on the Charger beside the target kills it, and the
+    /// 5/12 Big Body the blow left at 1, its +2 aura gone, falls at the next pass (§4.5 step 1).
+    #[test]
+    fn r4379000_a_cleave_that_kills_the_neighbour_holding_its_target_up_kills_the_target() {
+        let (state, attacker, defender, aura) = aura_board("r4379000-cleave", &cleaver.id, 2);
+        let forecast = forecast_played(&state, &attacker, &defender);
+        assert_eq!(
+            (forecast.dealt, forecast.taken, forecast.kills, forecast.survives),
+            (3, 5, true, true)
+        );
+        let splash = splash_on(&forecast, &aura);
+        assert_eq!((splash.dealt, splash.kills, splash.pops), (3, true, false));
+        assert_eq!(
+            passes_of(&state, &attacker, &defender),
+            vec![vec![aura.clone()], vec![defender.clone()]]
+        );
+
+        // Out of the Cleave's reach, the Charger holds the Big Body up at 1.
+        let (state, attacker, defender, _) = aura_board("r4379000-cleave-out-of-reach", &cleaver.id, 3);
+        assert!(!forecast_played(&state, &attacker, &defender).kills);
+        assert!(passes_of(&state, &attacker, &defender).is_empty());
+
+        // A Charger the Cleave does not kill keeps its aura.
+        let (mut state, attacker, defender, aura) = aura_board("r4379000-cleave-sturdy", &cleaver.id, 2);
+        find_instance_mut(&mut state, &aura)
+            .expect("on the field")
+            .buffs
+            .health = 5;
+        assert!(!forecast_played(&state, &attacker, &defender).kills);
+    }
+
+    /// The seed's own shape: a sweep's other hit kills the Charger, so the Big Body falls a pass after the
+    /// attacker and the Charger.
+    #[test]
+    fn r4379000_a_sweep_that_kills_its_target_s_aura_bearer_kills_the_target() {
+        let (state, attacker, defender, aura) = aura_board("r4379000-sweep", &plain.id, 2);
+        register_sweeper(&plain.id);
+        let forecast = forecast_played(&state, &attacker, &defender);
+        assert_eq!(
+            (forecast.dealt, forecast.taken, forecast.kills, forecast.survives),
+            (3, 5, true, false)
+        );
+        assert!(forecast.splash.is_empty(), "a sweep is no Cleave");
+        assert_eq!(
+            passes_of(&state, &attacker, &defender),
+            vec![vec![attacker.clone(), aura.clone()], vec![defender.clone()]]
+        );
+    }
+
+    /// Every hit lands before any check (R59): a Trample blow is dealt against the health the board
+    /// shows, so the aura's later loss sends nothing on to the hero. An overflow that ends the game
+    /// ends it after the first pass (§4.5 step 2), so the Big Body never falls.
+    #[test]
+    fn r4379000_a_trample_blow_is_dealt_on_the_standing_board() {
+        let (mut state, attacker, defender, aura) = aura_board("r4379000-trample", &cleaver.id, 2);
+        grant(&mut state, &attacker, Keyword::Trample);
+        let forecast = forecast_played(&state, &attacker, &defender);
+        assert_eq!(
+            (forecast.dealt, &forecast.overflow, forecast.kills),
+            (3, &None, true)
+        );
+
+        // The Cleave's 3 on a Charger at 2 sends 1 on to a hero at 1.
+        find_instance_mut(&mut state, &aura).expect("on the field").damage = 1;
+        state.players[P2].hero.health = 1;
+        let forecast = forecast_played(&state, &attacker, &defender);
+        let overflow = forecast
+            .overflow
+            .as_ref()
+            .expect("the Cleave's excess reaches the hero");
+        assert_eq!((overflow.dealt, overflow.kills, forecast.kills), (1, true, false));
+        assert_eq!(passes_of(&state, &attacker, &defender), vec![vec![aura]]);
+    }
+
+    /// A sweeper's attack on the hero sweeps the Charger and, a pass later, the Big Body; a blow that ends
+    /// the game ends it after the first pass (§4.5 step 2), and the lethal sum agrees with the combat.
+    #[test]
+    fn r4379000_a_sweep_on_the_hero_settles_and_the_lethal_sum_agrees() {
+        let (mut state, attacker, defender, aura) = aura_board("r4379000-hero", &plain.id, 2);
+        register_sweeper(&plain.id);
+        state.players[P2].hero.health = 4;
+        let forecast = forecast_played(&state, &attacker, "hero-p2");
+        assert_eq!(
+            (forecast.dealt, forecast.kills, forecast.survives),
+            (3, false, true)
+        );
+        assert_eq!(
+            passes_of(&state, &attacker, "hero-p2"),
+            vec![vec![aura.clone()], vec![defender.clone()]]
+        );
+        assert!(!combat_forecast(&state, P1).lethal);
+
+        state.players[P2].hero.health = 3;
+        assert!(forecast_played(&state, &attacker, "hero-p2").kills);
+        assert_eq!(passes_of(&state, &attacker, "hero-p2"), vec![vec![aura]]);
+        let lethal = combat_forecast(&state, P1).lethal;
+        let ended = act_ok(&state, attack_of(&attacker, "hero-p2"))
+            .state
+            .result
+            .is_some();
+        assert_eq!((lethal, ended), (true, true));
+    }
+
+    /// §4.5 step 4: a Reborn Charger is back in its zone at 1 health before the next pass, its aura with
+    /// it (R83), so the Big Body stands.
+    #[test]
+    fn r4379000_a_reborn_neighbour_comes_back_before_the_next_pass() {
+        let (mut state, attacker, defender, aura) = aura_board("r4379000-reborn", &cleaver.id, 2);
+        grant(&mut state, &aura, Keyword::Reborn);
+        let forecast = forecast_played(&state, &attacker, &defender);
+        assert!(!forecast.kills);
+        assert!(splash_on(&forecast, &aura).kills, "the Charger died once");
+        assert_eq!(passes_of(&state, &attacker, &defender), vec![vec![aura]]);
+    }
+
+    /// R13: a card dormant beneath the dying Charger is not shown, so the forecast reads a pile as it
+    /// reads a lone Charger, whatever lies under it (I18 does not judge it, R4221002).
+    #[test]
+    fn r4379000_the_settle_reads_no_card_beneath_a_pile() {
+        let (state, attacker, defender, aura) = aura_board("r4379000-pile", &cleaver.id, 2);
+        let lone = forecast_of(&state, &attacker, &defender).expect("the attack is legal");
+        let mut piled = state.clone();
+        let top = stack_on(&mut piled, &charger.id, slot(P2, Row::Units, 2));
+        let stacked = forecast_of(&piled, &attacker, &defender).expect("the attack is legal");
+        let read = |forecast: &AttackForecast, beside: &str| {
+            let splash = splash_on(forecast, beside);
+            (
+                (forecast.dealt, forecast.taken, forecast.kills, forecast.survives),
+                (splash.dealt, splash.kills, splash.pops),
+            )
+        };
+        assert_eq!(read(&stacked, &top), read(&lone, &aura));
+        assert!(stacked.kills);
+        assert_eq!(
+            passes_of(&piled, &attacker, &defender),
+            vec![vec![top], vec![defender]]
+        );
+    }
+
+    /// With no aura and no unit setting its stats from the board, the units the hits destroy are the
+    /// whole check.
+    #[test]
+    fn r4379000_a_board_with_no_aura_settles_in_one_pass() {
+        let mut state = board("r4379000-no-aura");
+        let striker = put(&mut state, &cleaver.id, slot(P1, Row::Units, 2), json!({}));
+        let mut plains: Vec<String> = (1..=3)
+            .map(|lane| put(&mut state, &plain.id, slot(P2, Row::Units, lane), json!({})).id)
+            .collect();
+        let target = plains[1].clone();
+        let forecast = forecast_played(&state, &striker.id, &target);
+        assert!(forecast.kills && forecast.survives);
+        let mut passes = passes_of(&state, &striker.id, &target);
+        assert_eq!(passes.len(), 1, "{passes:?}");
+        passes[0].sort();
+        plains.sort();
+        assert_eq!(passes[0], plains);
+    }
+}

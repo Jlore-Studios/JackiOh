@@ -22,8 +22,9 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::SwapWhat;
 
+use crate::rules::fixtures::aura_deaths::{aura_board, register_sweeper, stack_on};
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
-use crate::rules::fixtures::combat::{big_body, charger, cleaver, plain};
+use crate::rules::fixtures::combat::{big_body, cleaver, plain};
 use crate::rules::fixtures::combat_reactions::{POOL, register_e6_fixtures};
 use crate::rules::fixtures::harness::{act_ok, both, new_game, put, setup_catalog, slot};
 use crate::rules::fixtures::stinkyscape_verbs::{WARP, register_stinkyscape_verbs};
@@ -1929,95 +1930,74 @@ fn r4221004_i18_an_attack_on_a_reflector_into_the_attacker_s_pool_is_not_judged(
     assert!(found[0].contains("I18 forecast drift"), "{}", found[0]);
 }
 
-/// p1's main phase on turn 4, `attacker_def` in p1's lane 1 facing a Big Body in p2's, 8 damage on it,
-/// and a Charger in p2's lane `aura_lane` whose aura gives p2's other Units +2 Health: the Big Body
-/// stands at 5/12 with 4 left only while the Charger does (R4318000).
-fn aura_board(seed: &str, attacker_def: &str, aura_lane: i32) -> (GameState, String, String) {
-    let mut state = new_game(seed, None);
-    state.turn = 4;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state.players[P1].auto_end_turn = Some(false);
-    register_i18_script(
-        &charger.id,
-        Script {
-            aura: Some(aura_hook(|args| {
-                vec![AuraEntry {
-                    applies: Box::new(move |unit: &CardInstance| {
-                        unit.controller == args.self_.controller && unit.id != args.self_.id
-                    }),
-                    mod_: StatMod {
-                        max_health: Some(2),
-                        ..StatMod::default()
-                    },
-                }]
-            })),
-            ..Script::default()
-        },
-    );
-    let attacker = put(&mut state, attacker_def, slot(P1, Row::Units, 1), json!({}));
-    let defender = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), json!({}));
-    put(
-        &mut state,
-        &charger.id,
-        slot(P2, Row::Units, aura_lane),
-        json!({}),
-    );
-    find_instance_mut(&mut state, &defender.id)
-        .expect("on the field")
-        .damage = 8;
-    (state, attacker.id, defender.id)
+/// R4318000, R4379000: a Unit the state check after the combat takes off with a card dormant beneath it
+/// (R1829000) brings that card in, which may act on a combatant by its aura, and the forecast is not
+/// shown it (R13), so I18 does not judge the attack; a sweep's other hit here, since a Cleave
+/// neighbour's pile is R4221002's skip already. With the pile's top left standing, nothing comes in
+/// and the attack is judged.
+#[test]
+fn r4318000_r4379000_i18_an_attack_whose_settled_deaths_bring_a_card_in_is_not_judged() {
+    for (seed, top, under, judged) in [
+        ("r4379000-i18-pile-falls", &plain.id, &big_body.id, 0),
+        ("r4379000-i18-pile-stands", &big_body.id, &plain.id, 1),
+    ] {
+        let (mut state, attacker, defender) = i18_board(seed);
+        register_sweeper(&plain.id);
+        put(&mut state, under, slot(P2, Row::Units, 2), json!({}));
+        stack_on(&mut state, top, slot(P2, Row::Units, 2));
+        let (count, found) = judged_drift(&state, &attacker, &defender);
+        assert_eq!(count, judged, "{seed}: {found:?}");
+        assert_eq!(found.len(), judged, "{seed}: {found:?}");
+        assert!(
+            found.iter().all(|finding| finding.contains("I18 forecast drift")),
+            "{seed}: {found:?}"
+        );
+    }
 }
 
-/// R4318000 (fuzz seed 6180): an attack whose other hit (a Cleave neighbour, §4.4 step 10; a sweep's,
-/// R3554008) kills the Unit whose aura holds its target up: the target dies at the state check after
-/// the combat for want of health (§4.5 step 1), which the forecast, reading the aura as the board shows
-/// it, does not foretell, so I18 does not judge the attack; with the aura's Unit out of the attack's
-/// reach, the same attack is judged.
+/// R4379000 (fuzz seed 6180): an attack whose other hit (a Cleave neighbour's, §4.4 step 10; a sweep's,
+/// R3554008, on a Unit or the hero) kills the Unit whose aura holds its target up is judged again: the
+/// forecast settles the state check after the combat, so it foretells the target's fall a pass later,
+/// and a drift is still found. With the aura's Unit out of reach, the same attack is judged too.
 #[test]
-fn r4318000_i18_an_attack_whose_other_hits_can_take_away_a_combatant_s_aura_is_not_judged() {
-    for (seed, sweeps) in [("r4318000-i18-cleave", false), ("r4318000-i18-sweep", true)] {
+fn r4379000_i18_judges_an_attack_whose_other_hits_take_away_a_combatant_s_aura() {
+    for (seed, sweeps, aimed_at_hero) in [
+        ("r4379000-i18-cleave", false, false),
+        ("r4379000-i18-sweep", true, false),
+        ("r4379000-i18-sweep-hero", true, true),
+    ] {
         let attacker_def = if sweeps { &plain.id } else { &cleaver.id };
-        let (state, attacker, defender) = aura_board(seed, attacker_def, 2);
+        let (state, attacker, defender, _) = aura_board(seed, attacker_def, 2);
         if sweeps {
-            register_i18_script(
-                &plain.id,
-                Script {
-                    static_flags: Some(StaticFlags {
-                        sweep_lane: Some(1),
-                        sweep_adjacent: Some(1),
-                        ..StaticFlags::default()
-                    }),
-                    ..Script::default()
-                },
-            );
+            register_sweeper(&plain.id);
         }
-        let forecast = combat_forecast(&state, P1);
-        let entry = forecast
-            .attacks
-            .iter()
-            .find(|entry| entry.attacker_id == attacker && entry.target_id == defender)
-            .expect("the attack is legal");
+        let target = if aimed_at_hero {
+            "hero-p2".to_string()
+        } else {
+            defender.clone()
+        };
+        let (mut monitor, result) = i18_attack(&state, &attacker, &target);
         assert!(
-            !entry.kills,
-            "{seed}: the forecast reads the aura as it stands: {entry:?}"
-        );
-        let splashed: Vec<String> = entry.splash.iter().map(|hit| hit.instance_id.clone()).collect();
-        let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
-        let played = PlayedAttack::read(&result.events, &result.state, &attacker, &defender, &splashed);
-        assert!(
-            played.kills,
-            "{seed}: the aura's Unit died, and the target with it: {played}"
+            result.events.iter().any(|event| matches!(
+                event,
+                GameEvent::Destroyed { instance_id, .. } if *instance_id == defender
+            )),
+            "{seed}: the aura's Unit died, and the Big Body with it"
         );
         assert_eq!(
             i18(&mut monitor, &result.events, &result.state),
             Vec::<String>::new(),
             "{seed}"
         );
-        assert_eq!(monitor.forecast_judged(), 0, "{seed}");
+        assert_eq!(monitor.forecast_judged(), 1, "{seed}");
+        if !aimed_at_hero {
+            let (judged, found) = judged_drift(&state, &attacker, &defender);
+            assert_eq!((judged, found.len()), (1, 1), "{seed}: {found:?}");
+            assert!(found[0].contains("I18 forecast drift"), "{seed}: {}", found[0]);
+        }
     }
 
-    let (state, attacker, defender) = aura_board("r4318000-i18-out-of-reach", &cleaver.id, 3);
+    let (state, attacker, defender, _) = aura_board("r4379000-i18-out-of-reach", &cleaver.id, 3);
     let (judged, found) = judged_drift(&state, &attacker, &defender);
     assert_eq!(
         judged, 1,
@@ -2025,6 +2005,23 @@ fn r4318000_i18_an_attack_whose_other_hits_can_take_away_a_combatant_s_aura_is_n
     );
     assert_eq!(found.len(), 1, "{found:?}");
     assert!(found[0].contains("I18 forecast drift"), "{}", found[0]);
+}
+
+/// R4379000, §4.5 step 4: a Reborn Charger the Cleave kills is back with its aura before the next pass,
+/// so the Big Body stands, as the forecast says; I18 judges the attack and finds it clean.
+#[test]
+fn r4379000_i18_judges_an_attack_past_a_reborn_return() {
+    let (mut state, attacker, defender, aura) = aura_board("r4379000-i18-reborn", &cleaver.id, 2);
+    find_instance_mut(&mut state, &aura)
+        .expect("on the field")
+        .granted_keywords
+        .push(Keyword::Reborn);
+    let (mut monitor, result) = i18_attack(&state, &attacker, &defender);
+    assert_eq!(
+        i18(&mut monitor, &result.events, &result.state),
+        Vec::<String>::new()
+    );
+    assert_eq!(monitor.forecast_judged(), 1);
 }
 
 /// `i18_board` with a 3/8 Cleave Unit with Trample in p1's lane 2, facing a 3/3 hurt to 1 health in

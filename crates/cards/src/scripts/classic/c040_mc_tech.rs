@@ -3,7 +3,8 @@
 //!   Radiant: "Cry: If your opponent controls {threshold} or more permanents, steal one of your choice." — 5
 //!
 //! Permanents your opponent controls: the top card of each of their unit piles (a card dormant under
-//! a Stack is not on the field, R13) and every backrow card, face-down ones included; the count is
+//! a Stack is not on the field, R13) and every backrow card, face-down ones included; never a Dormant
+//! card, which neither counts nor is drawn (R4322000, `query::enemy_permanents`); the count is
 //! public. It is read as the Cry resolves. Base: a random pick (R60) from the match rng. Radiant: a
 //! target prompt opened then (§10.6): the condition is only known at resolution, so the pick cannot be
 //! declared with the play (R81); a face-down option names nothing but its id to its chooser (R177).
@@ -18,21 +19,6 @@ use jackioh_engine::effects::{ForEachCardArgs, choose_target, for_each_card, ste
 pub const ID: &str = "classic-040";
 
 const STEAL_STEP: &str = "steal";
-
-fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    let enemy = opponent_of(player);
-    let backrow: Vec<CardInstance> = slots_of(enemy, Row::Backrow)
-        .iter()
-        .flat_map(|slot| card_at(state, slot).cloned())
-        .collect();
-    let mut permanents: Vec<CardInstance> =
-        active_units_of(state, enemy).into_iter().cloned().collect();
-    // R1081000: a Unit standing in the backrow is already among the units — one permanent, once.
-    let backrow: Vec<CardInstance> =
-        backrow.into_iter().filter(|card| !permanents.iter().any(|unit| unit.id == card.id)).collect();
-    permanents.extend(backrow);
-    permanents
-}
 
 fn enough_permanents(state: &GameState, controller: PlayerId, threshold: i32) -> bool {
     enemy_permanents(state, controller).len() as i32 >= threshold
@@ -111,11 +97,17 @@ mod tests {
     const UNLICENSED: &str = "core-085";
     const HONEYPOT: &str = "core-060";
     const ANCHOR: &str = "core-010";
+    const DOME: &str = "stinkyscapeplus-063"; // Overdrive Dome: a Field Spell printing Dormant
 
     use crate::js;
 
     fn face_down_traps() -> Value {
         Value::Array([PAWN, BREAD, STIMMY, UNLICENSED, HONEYPOT].iter().map(|d| json!({ "def": d, "faceUp": false })).collect())
+    }
+
+    /// R4322000: a Field Spell asleep in the backrow, no permanent an effect reaches.
+    fn dormant_dome() -> Value {
+        json!({ "def": DOME, "faceUp": true, "slumber": { "turns": 2 } })
     }
 
     fn stolen_ids(s: &Scenario) -> Vec<String> {
@@ -205,6 +197,42 @@ mod tests {
 
                 assert!(stolen_ids(&s).is_empty());
                 assert_eq!(s.state().rng_cursor, cursor);
+            }
+
+            #[test]
+            fn r4322000_a_dormant_field_spell_counts_for_nothing() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [TECH, ANCHOR] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA], "backrow": [dormant_dome()] },
+                }));
+                let cursor = s.state().rng_cursor;
+
+                s.play(TECH, json!({ "zone": 5 }));
+
+                assert!(stolen_ids(&s).is_empty());
+                assert_eq!(s.state().rng_cursor, cursor, "four permanents: no pick is drawn");
+            }
+
+            #[test]
+            fn r4322000_a_dormant_field_spell_is_never_drawn() {
+                for cursor in 0..16u32 {
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [TECH, ANCHOR] },
+                        "p2": {
+                            "hand": [ANCHOR],
+                            "field": [VANILLA, MENACE, TEMPO, VANILLA, VANILLA],
+                            "backrow": [dormant_dome()],
+                        },
+                    }));
+                    s.state_mut().rng_cursor = cursor;
+
+                    s.play(TECH, json!({ "zone": 5 }));
+
+                    let stolen = stolen_ids(&s);
+                    assert_eq!(stolen.len(), 1, "cursor {cursor}");
+                    assert_ne!(s.card(first_or_empty(&stolen)).def_id, DOME, "cursor {cursor}");
+                    assert_eq!(s.card(DOME).controller, PlayerId::P2, "cursor {cursor}");
+                }
             }
 
             #[test]
@@ -354,6 +382,19 @@ mod tests {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
+                }));
+
+                s.play(TECH, json!({ "zone": 5 }));
+
+                assert!(s.state().pending.is_none());
+                assert!(stolen_ids(&s).is_empty());
+            }
+
+            #[test]
+            fn r4322000_a_dormant_field_spell_counts_for_nothing_so_no_prompt_opens() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA], "backrow": [dormant_dome()] },
                 }));
 
                 s.play(TECH, json!({ "zone": 5 }));

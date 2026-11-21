@@ -1,0 +1,26 @@
+{
+  "title": "Enormous Elderberry's cards Embiggen for no extra mana",
+  "sources": "#4350",
+  "notes": "Meditative+ #23 Enormous Elderberry adds its cards with no Embiggen premium (noEmbiggenPremium, R4350000): their Embiggened version costs their normal price, read live under every modifier, and under Mountaintop Garden so does the dearer choice; the card text says so. R1181003's (0) is superseded and the v0.6.8d script kept for replays (R767000). Ruling R4350000. The plays are the cards classify finds playing differently through it: the Fruit pools that reach the Elderberry (C+ #68, S #141, S+ #5) and cards in the games an Elderberry play changes (C+ #58, S #51, #82).",
+  "player": {
+    "title": "Enormous Elderberry's cards Embiggen for no extra mana",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "The cards Enormous Elderberry adds no longer cost (0) Embiggened: their Embiggened version costs the same as their normal version, whatever changes that price."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "meditativeplus-023"
+  ],
+  "plays": [
+    "classicplus-058",
+    "classicplus-068",
+    "stinkyscape-051",
+    "stinkyscape-082",
+    "stinkyscape-141",
+    "stinkyscapeplus-005"
+  ]
+}

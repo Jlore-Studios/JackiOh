@@ -35,7 +35,7 @@ use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live
 /// R13, R174), so §4.5 step 1 never reaches under a pile: an aura that stops reaching a buried card cannot
 /// kill it there; it keeps its damage, cannot be marked (R90) and is judged once it resumes on top.
 /// Collecting buried cards also let a buried Reborn card come back over the card acting in its zone (R175).
-fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+pub(crate) fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut units: Vec<CardInstance> = Vec::new();
     for lane in 1..=UNIT_ZONES {
@@ -61,7 +61,7 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 
 /// §4.5 step 1: a unit dies at 0 or less health or when marked destroyed; an Indestructible one only
 /// when its max health has fallen to 0 or less (R69), or when a steal had no room for it (R4205000).
-fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+pub(crate) fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
     if unit.unpreventable_destroy == Some(true) {
         return true;
     }

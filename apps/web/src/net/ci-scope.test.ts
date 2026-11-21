@@ -407,6 +407,7 @@ describe("scripts/ci-scope.sh", () => {
         // `web (wasm c module)` builds the C module and reads its imports (#3093, #3097).
         "crates/wasm/c/Cargo.toml",
         "crates/wasm/c/src/lib.rs",
+        "luau/tools/reference-host.mjs",
         "crates/server/src/env.rs",
         // apps/edge's config test holds the probe routes the Worker calls.
         "crates/server/src/app.rs",
@@ -530,6 +531,14 @@ describe("scripts/ci-scope.sh", () => {
     expect(onFor("crates/tools/fuzz-corpus/seed-8-v0.4.12d.json")).toEqual(["full", "rust_tools_wasm"]);
     expect(onFor("crates/tools/src/replay.rs")).toEqual(["full", "clippy", "rust_tools_wasm", "e2e"]);
     expect(onFor("crates/tools/Cargo.toml")).toEqual(["full", "clippy", "rust_tools_wasm", "web", "e2e"]);
+  });
+
+  it("#4371 leaves e2e off for a dashboard-only diff but on for the dashboard's test ids", () => {
+    expect(onFor("apps/admin/src/Dashboard.tsx")).toEqual(["full", "web"]);
+    expect(onFor("apps/admin/src/testids.ts")).toEqual(["full", "web", "e2e"]);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "apps/admin/headers.ts").e2e).toBe(false);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "crates/server/src/main.rs").e2e).toBe(true);
+    expect(answerFor("apps/admin/src/Dashboard.tsx", "apps/web/src/main.tsx").e2e).toBe(true);
   });
 
   // `web (promote-production)` runs promote-production.test.ts on its own line; an `on` path turns `web` on too, so that job runs.

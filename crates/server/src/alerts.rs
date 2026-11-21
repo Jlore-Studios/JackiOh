@@ -520,6 +520,10 @@ pub fn meaning(event: &str) -> &'static str {
             "The idempotency sweep (R2124000), which deletes spend keys past `IDEMPOTENCY_KEY_TTL_HOURS`, is failing.",
             "Nothing players see yet: expired keys pile up."
         ),
+        "lobbies.sweep.failing" => failing_step!(
+            "The lobby sweep (R3730004), which deletes expired private lobbies past their format's TTL, is failing.",
+            "Nothing players see yet: expired lobbies pile up with their deck picks."
+        ),
         "practice.sweep.failing" => failing_step!(
             "The practice settle sweep (R2422000), which settles practice claims unsettled after `PRACTICE_SETTLE_GRACE_SECONDS`, is failing.",
             "Practice claims are not paid or refused, so rewards are late."
@@ -853,7 +857,7 @@ mod tests {
         names
     }
 
-    const FAILING_STEPS: [&str; 16] = [
+    const FAILING_STEPS: [&str; 17] = [
         "matchmaker",
         "matches.reaper",
         "seats.reconcile",
@@ -864,6 +868,7 @@ mod tests {
         "chat.purge",
         "duos.logs.purge",
         "idempotency.sweep",
+        "lobbies.sweep",
         "practice.sweep",
         "practice.prune",
         "series.sweeper",

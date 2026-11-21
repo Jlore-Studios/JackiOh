@@ -34,6 +34,7 @@ import { fetchAudioBytes, getAudioEngine } from "./engine.ts";
 import { isStationTrack, musicUrl } from "./musicData.ts";
 import { loadSoundTables, onSoundTablesLoaded, soundTablesNow, type SoundTables } from "./soundTablesLoader.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
+import { savingData } from "../net/saveData.ts";
 import type { AudioEngine, AudioSettings, MusicManifest, MusicTrack } from "./types.ts";
 
 export type MusicRequest = {
@@ -84,6 +85,7 @@ export type MusicPlayerOptions = {
   focus?: FocusPort | null;
   settings?: () => AudioSettings;
   subscribeSettings?: (listener: (s: AudioSettings) => void) => () => void;
+  saveData?: () => boolean; // default shared savingData() (R4363000); tests pass an explicit port
 };
 
 const LOG_MAX = 100;
@@ -178,6 +180,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   const focusPort = options.focus === undefined ? browserFocus() : options.focus;
   const settings = options.settings ?? readAudioSettings;
   const subscribeSettings = options.subscribeSettings ?? subscribeAudioSettings;
+  const saveData = options.saveData ?? savingData;
 
   let graph: Graph | null = null;
   let voices: Voice[] = [];
@@ -537,6 +540,8 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
 
   function pumpPreload(): void {
     if (busy || disposed || loadedManifest === null) return;
+    // R4363000: while the browser asks to save data, held preloads stay held.
+    if (saveData()) return;
     if (audible()) {
       const ids = heldPreload;
       heldPreload = [];
