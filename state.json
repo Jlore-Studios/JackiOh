@@ -14469,13 +14469,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-1",
       "queued_at": "2026-11-21T19:10:33Z",
-      "run_id": "44939610217",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:f416eb2b-1795292534",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 425,
-      "started_at": "2026-11-21T19:11:32Z",
+      "started_at": "2026-11-21T20:22:34Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15046,9 +15047,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-21T20:14:08Z",
+    "at": "2026-11-21T20:22:34Z",
     "url": "",
-    "what": "revise #4416 on claude-4"
+    "what": "spot-check #4411 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-21T20:08:17Z",
@@ -36400,7 +36401,15 @@
         "n": 425,
         "pr": 4411,
         "queued_at": "2026-11-21T20:15:00Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:f416eb2b-1795292534",
         "sha": "4521cdf8a4a379d1d24a25443d34bd60dab5b024",
+        "started_at": "2026-11-21T20:22:34Z",
         "status": "queued",
         "title": "Patch: an unowned cosmetic pick is left out of a settings save instead of refusing the whole save",
         "tries": 0
