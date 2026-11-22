@@ -38022,7 +38022,7 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-22T02:53:26Z",
+    "idle_since": null,
     "last_area": "client",
     "last_run": "2026-11-22T02:53:26Z",
     "provider": null,
