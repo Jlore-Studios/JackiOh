@@ -15218,6 +15218,13 @@
     "4430": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T00:54:14Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "None of hard's five lines holds: no engine rules, no AI, one crate, no migration, far under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
