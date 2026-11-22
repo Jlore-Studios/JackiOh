@@ -6,8 +6,9 @@
 //!    judged after the turn's end while a handed card would be discarded there (R3696001).
 //! 2. Face-up activations (up to AI_REPLY.visible_activations).
 //! 3. Static trades: best value attack (lethal, kill, trade up, face; Deft trials R49).
-//! 4. Defense switches up to AI_REPLY.defense_switches (#1696); facing lethal, weighed against the best
-//!    attack (R4187000).
+//! 4. Defense switches up to AI_REPLY.defense_switches (#1696), and switches back to Attack of units
+//!    without Deft up to AI_REPLY.attack_switches (R4433000); facing lethal, walls weighed against the
+//!    best attack (R4187000).
 //!
 //! Step evaluation uses real `reduce` calls (catching unwinds, SURFACE §4.4.9). Countdowns
 //! waiting where reply ends are blended via `AI_REPLY.countdown_share` (#1995, R1181000).
@@ -650,8 +651,10 @@ fn deft_switch(
     Known::Nothing
 }
 
-/// Step 4 (#1696): trials switching up to `AI_REPLY.defense_switches` units from Attack to
-/// Defense when no attack is worth making (§4.1, R49).
+/// Step 4 (#1696): once no attack is worth making, trials the switches `defense_switch_tries` lists,
+/// one node each, and keeps the best by the opponent's own evaluation when it beats standing still
+/// (`best_try`): to Defense of units in Attack (§4.1, R49), and back to Attack of units in Defense
+/// without Deft (R4433000), a switch that spends the unit's exertion, so it attacks from its next turn.
 fn defense_switch(
     state: &GameState,
     seat: PlayerId,
@@ -659,17 +662,47 @@ fn defense_switch(
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> Known {
-    let tries: Vec<ActionBody> = legal
-        .iter()
-        .filter(|action| {
-            matches!(action, ActionBody::SwitchPosition { instance_id }
-                if find_instance(state, instance_id)
-                    .is_some_and(|unit| unit_view(state, unit).position == Position::Atk))
-        })
-        .take(AI_REPLY.defense_switches.max(0) as usize)
-        .cloned()
-        .collect();
+    let tries = defense_switch_tries(
+        state,
+        legal,
+        AI_REPLY.defense_switches.max(0) as usize,
+        AI_REPLY.attack_switches.max(0) as usize,
+    );
     best_try(state, seat.opponent(), &tries, false, counter, prices)
+}
+
+/// Step 4's tries, in `legal` order: the switches to Defense Position of the opponent's units in Attack,
+/// up to `defense_cap`, then the switches back to Attack of its units in Defense without Deft, up to
+/// `attack_cap` (R4433000). A Deft unit in Defense is step 3's (`deft_switch`, R49), whose Defense
+/// already counts its whole attack. `legal` lists no switch a unit has spent (§4.1), so none flips twice.
+fn defense_switch_tries(
+    state: &GameState,
+    legal: &[ActionBody],
+    defense_cap: usize,
+    attack_cap: usize,
+) -> Vec<ActionBody> {
+    let mut to_defense = Vec::new();
+    let mut to_attack = Vec::new();
+    for action in legal {
+        let ActionBody::SwitchPosition { instance_id } = action else {
+            continue;
+        };
+        let Some(unit) = find_instance(state, instance_id) else {
+            continue;
+        };
+        let view = unit_view(state, unit);
+        match view.position {
+            Position::Atk if to_defense.len() < defense_cap => to_defense.push(action.clone()),
+            Position::Def
+                if to_attack.len() < attack_cap && !has_keyword(&view.keywords, KeywordKind::Deft) =>
+            {
+                to_attack.push(action.clone());
+            }
+            _ => {}
+        }
+    }
+    to_defense.extend(to_attack);
+    to_defense
 }
 
 /// Step 4, R4187000: facing lethal, the switches to Defense Position that lower the seat's threat
@@ -769,7 +802,7 @@ pub fn simulate_reply_with(
         }
 
         // One legal_actions serves the known-play try (its ordered candidates), the visible
-        // activations, the Deft switches, the static trader's attack list and the switches to Defense.
+        // activations, the Deft switches, the static trader's attack list and the position switches.
         let legal = legal_actions(&current, opp);
         match known_play(&current, seat, &legal, hidden, counter, prices) {
             Known::Cut => return None,
@@ -802,7 +835,8 @@ pub fn simulate_reply_with(
             .into_iter()
             .next();
         // #1696: no attack is worth making, so before it ends its turn the opponent switches a unit
-        // its evaluation would rather have in Defense Position.
+        // its evaluation would rather have in Defense Position, or (R4433000) one without Deft it would
+        // rather have back in Attack.
         // R4187000: facing lethal, it weighs a wall against that attack.
         let walled = match &attack {
             None => defense_switch(&current, seat, &legal, counter, prices),
@@ -1459,5 +1493,48 @@ mod tests {
             guesses.insert(modes.join(","));
         }
         assert!(guesses.len() > 1, "{guesses:?}");
+    }
+
+    /// M #100 Greaser, a vanilla 7/7.
+    const GREASER: &str = "meditative-100";
+    /// #45 Deft Duelist, a 4/3 Charge with Deft.
+    const DUELIST: &str = "core-045";
+
+    /// R4433000: with `attack_switches` at 0, step 4 tries exactly the switches to Defense it tried
+    /// before (#1696's filter, kept here as it read); on, the switch back of the Greaser in Defense comes
+    /// after them, and the Deft Duelist's, though legal, is never among them (step 3's, R49).
+    #[test]
+    fn r4433000_attack_switches_at_zero_leave_the_tries_as_they_were() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "active": "p2",
+            "p2": { "field": [
+                VANILLA,
+                { "def": GREASER, "position": "DEF" },
+                { "def": DUELIST, "position": "DEF" },
+            ] },
+        }));
+        let state = s.state();
+        let legal = legal_actions(state, PlayerId::P2);
+        let switch = |def_id: &str| ActionBody::SwitchPosition {
+            instance_id: s.card(def_id).id.clone(),
+        };
+        assert!(legal.contains(&switch(DUELIST)));
+        let before: Vec<ActionBody> = legal
+            .iter()
+            .filter(|action| {
+                matches!(action, ActionBody::SwitchPosition { instance_id }
+                    if find_instance(state, instance_id)
+                        .is_some_and(|unit| unit_view(state, unit).position == Position::Atk))
+            })
+            .cloned()
+            .collect();
+        assert_eq!(before, vec![switch(VANILLA)]);
+        assert_eq!(defense_switch_tries(state, &legal, 4, 0), before);
+        assert_eq!(
+            defense_switch_tries(state, &legal, 4, 4),
+            vec![switch(VANILLA), switch(GREASER)]
+        );
+        assert_eq!(defense_switch_tries(state, &legal, 0, 4), vec![switch(GREASER)]);
     }
 }
