@@ -16742,17 +16742,15 @@
       "ci_sha": "7921b3517968331a490738e65586787ec652560c",
       "cleared": {
         "approver": {
-          "family": "gemini",
-          "model": "gemini-3.8-flash-high",
-          "provider": "agy",
-          "tier": "medium"
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
         },
-        "at": "2026-11-22T14:49:13Z",
-        "built_by": "agy",
-        "by": "`gemini` (medium)",
-        "carried_from": "2d9a952bf8a196df9a34c4a61f0083f314661419",
-        "resolved_by": "`gemini` (medium)",
-        "sha": "9bc8102411daf77db3d9a62110f575e40629b2c6"
+        "at": "2026-11-22T19:48:27Z",
+        "built_by": "claude-3",
+        "by": "`claude` (strong)",
+        "sha": "8030b6e99a00ef41ccf81caf7fe148ed20aa5fea"
       },
       "cross_rounds": 2,
       "died": 0,
@@ -16774,7 +16772,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "agy",
+      "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
