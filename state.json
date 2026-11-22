@@ -15304,6 +15304,7 @@
     "4427": {
       "action": "plan",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-22T08:59:14Z",
         "difficulty": "hard",
@@ -15311,7 +15312,7 @@
         "tier": "",
         "why": "failed 3 times at difficulty:medium"
       },
-      "failures": 2,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-11-22T06:24:25Z",
@@ -15332,7 +15333,7 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-11-22T01:10:41Z",
+      "queued_at": "2026-11-22T08:59:14Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
       "run_id": "44993773547",
