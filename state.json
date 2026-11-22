@@ -16584,6 +16584,8 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "ci_fixed_head": "fd5e4e5be319ef127f88f4c96545c7d4fd5aab84",
+      "ci_fixes": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
