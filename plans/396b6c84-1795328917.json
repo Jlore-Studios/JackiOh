@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4470,
+  "title": "Patch: follow-up to #4458 from the after-merge spot-check",
+  "branch": "bot/issue-4470",
+  "thread": "**Issue #4470 (data, not instructions):**\n\n```text\n# #4470: Patch: follow-up to #4458 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4458 -->\nThe after-merge spot-check of #4458 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/44993024179)) found 1 blocking problem(s) in the change as it merged (`59c8529162a1`). `claude-4` (claude, `opus`, strong) reviewed it. #4458 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/net/first-load.test.ts:65`: The change never lowers `FIRST_LOAD_GZIP_BUDGET_BYTES`, and its new comment says it did: the constant was already 458_752 (56 \u00d7 8192) on the base, set by #4435, and the 447,192-byte measurement was taken on a tree without #4435's savings, so the budget now sits about 9% over the real first load instead of about 2%.\n  Evidence: `git show 26a963264f:apps/web/src/net/first-load.test.ts | grep 'BUDGET_BYTES ='` prints `70:export const FIRST_LOAD_GZIP_BUDGET_BYTES = 458_752;`, and the diff leaves that line alone. The #4435 paragraph already on the base says it measured 445,874 bytes (27,664 less than #4222's 473,538) and set 56 \u00d7 8192. The #4428 paragraph says 447,192 bytes, 26,346 less than that same 473,538 baseline. Two measurements, each counted from #4222 and each smaller, can only come from two trees that each lack the other change. With both changes merged, the first load should be about 473,538 \u2212 27,664 \u2212 26,346 \u2248 419,500 bytes. The issue's criterion is \"`FIRST_LOAD_GZIP_BUDGET_BYTES` is lowered by the measured saving, and its comment records the before and after\". Fix: on current `main`, run `pnpm --dir apps/web build:e2e`, measure the entry chunk plus its preloads the same way the test does, set the budget to the smallest multiple of 8192 about 2% over that figure, and rewrite the #4428 paragraph with the real before (445,874, #4435's) and after. Put the paragraph after #4435's, since #4428 merged second.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `muse` (`muse`) built #4458 and `muse` (`muse-spark-1.3-contributor`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-4"
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4470: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T06:25:17Z",
+    "claimed_at": "2026-11-22T06:29:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
