@@ -40165,6 +40165,12 @@
         "number": 4467,
         "title": "Patch: a daily test holds the ladder skill knob's order, full skill over mid over miss",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-22T16:01:57Z",
+        "number": 4450,
+        "title": "Patch: the engine module and the scene data that load before any card shows have a download budget, held on every pull request as the first load's is",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
