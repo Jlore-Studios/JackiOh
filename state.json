@@ -18446,13 +18446,14 @@
     "what": "plan #4496 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-22T16:50:26Z",
+    "at": "2026-11-22T17:00:24Z",
     "notes": [
-      "#4480: approved and green, so its strikes are cleared",
-      "delivered build #4449 on muse (run 45042396202): built",
-      "started review #4494 on muse (run 45046265243)",
-      "started review #4480 on claude-6 (run 45046316775)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4480 on claude-6 (run 45046316775): reviewed",
+      "delivered build #4493 on claude-7 (run 45043810825): interrupted",
+      "started build #4493 on claude-6 (run 45047170156)",
+      "started plan #4496 on claude-3 (run 45047224180)",
+      "nothing more to start: nothing is queued",
+      "#4496: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19158,7 +19159,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T16:50:26Z",
+  "loop_tick": "2026-11-22T17:00:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
