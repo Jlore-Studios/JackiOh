@@ -16968,10 +16968,8 @@
       ]
     },
     "4468": {
-      "action": "plan",
-      "asks": [
-        "c:7075255550"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T07:05:03Z",
         "difficulty": "hard",
@@ -16992,25 +16990,27 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-22T06:40:53Z",
-      "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
+      "live": "building",
+      "owner": "claude-7",
+      "owner_since": "2026-11-22T07:06:22Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-22T07:05:05Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-7",
       "queued_at": "2026-11-22T06:19:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44994817235",
+      "run_id": "pending:78fda452-1795331150",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T06:40:53Z",
+      "started_at": "2026-11-22T07:06:22Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7075255550"
+      ]
     },
     "4469": {
       "action": "plan",
@@ -17329,9 +17329,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T06:55:55Z",
+    "at": "2026-11-22T07:06:22Z",
     "url": "",
-    "what": "plan #4466 on claude-7"
+    "what": "build #4468 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-22T06:48:22Z",
