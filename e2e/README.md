@@ -52,8 +52,8 @@ pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 Under `E2E=1` the server needs no other variable: the Supabase, database and pepper settings fall
 back to fixture placeholders, the store is in memory, and `CATALOG_VERSION` defaults to the version
 compiled into it. It reseeds its fixture accounts and invite codes at every boot and on
-`POST /api/e2e/reseed` (R144), which spec 10 calls before its first test, so spec 10 re-runs against the
-same server with no restart. CI (`.github/actions/e2e-shard`) boots one release `jackioh-server` and one
+`POST /api/e2e/reseed` (R144), which specs 10 and 19 call before each test, so each re-runs, and a retried test
+starts afresh, against the same server with no restart. CI (`.github/actions/e2e-shard`) boots one release `jackioh-server` and one
 `vite preview` of the `build:e2e` client per shard, waits for `/api/catalog` and the client to answer,
 then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 51,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
@@ -107,11 +107,12 @@ screenshotsFolder` does not reach the component block). Stop a server you starte
 everyone else's. Headless Chrome's default window crops a capture taller than about 633 px; pass
 `--config viewportHeight=…` (or `cy.viewport`) with a browser launched at a larger `--window-size`
 when a shot must show a full 1280x720, 768x1024 or 390x844 screen, or spec 51's shots of the menus'
-shell at each of `MENU_SIZES`. `E2E_WINDOW_SIZE=W,H` does the launch (`cypress.config.ts`, Chrome and
+shell at each of `MENU_SIZES`, which spec 51 takes only with `--expose shots=1`. `E2E_WINDOW_SIZE=W,H` does the launch (`cypress.config.ts`, Chrome and
 Electron; unset, nothing changes):
 
 ```
 E2E_WINDOW_SIZE=1600,1200 pnpm exec cypress run --browser chrome --spec cypress/e2e/25-overflow-animations.cy.ts --expose shots=1
+E2E_WINDOW_SIZE=1600,1200 pnpm exec cypress run --browser chrome --spec cypress/e2e/51-menu-shell.cy.ts --expose shots=1
 E2E_WINDOW_SIZE=1600,1300 pnpm exec cypress run --component --browser chrome --spec cypress/component/lobby-screen.cy.tsx
 ```
 

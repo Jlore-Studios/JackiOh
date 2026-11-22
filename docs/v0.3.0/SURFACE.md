@@ -495,7 +495,12 @@ after it. It is withheld from the trigger loop, public, takes no room in R168's 
 of the golden texts (R3857000). Since #3925 `GameEvent::LoopCapped { player }` reports that an
 interaction reached `RESOLUTION_EVENT_CAP` events and its loop stopped (`loop_cap.rs`, whose count rides
 `Frontier.interaction_from` and dies with the action); public, and emitted only by a capped interaction,
-so no game that never reaches the cap hashes differently (R3925000).
+so no game that never reaches the cap hashes differently (R3925000). Since #4423 `destroyed` carries an
+optional `diedAs: CardType`, the card's type as it died (`faces::card_type_of`, read by
+`state_check.rs` before any collected card moves), serialized only when it differs from the printed
+face's: a Field Trap or Trap for a card set by its Cloaked, a Unit for an Animated one in a unit zone.
+Unlike `via` the rules read it (`as_rules_read` keeps it; `query::is_unit_death`); `view_for` removes it
+with the card's identity, and the golden texts leave it out (R4423000).
 
 ### 6.5 Mutation convention and the per-call sink
 
@@ -743,6 +748,7 @@ pub struct AiOptions<'a> {
 }
 pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a host's limit at which it fires wrap_up
     // SearchStats gains replied and worldsScored, and Decision::fell_short() a finalist left unscored on a sampled world (R3498000)
+    // SearchStats gains replaysCut, the finalist replays a sampled world cut short (R4447000)
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the

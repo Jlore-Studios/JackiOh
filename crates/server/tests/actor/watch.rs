@@ -1555,3 +1555,106 @@ mod r2990000_a_watchers_emotes {
         assert_eq!(w.app.matches.watcher_count(&w.match_id), 2);
     }
 }
+
+// What the record reuses: the views the seats were sent, encoded once and only for a watcher
+
+mod the_record_reuses_the_seats_views {
+    use super::*;
+
+    impl World {
+        fn actor(&self) -> jackioh_server::actor::match_actor::MatchActor {
+            self.app.matches.get(&self.match_id).expect("the live match")
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_match_nobody_watches_encodes_no_watcher_frame() {
+        let w = world(false).await;
+        w.keep_both().await;
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        settle().await;
+        assert_eq!(w.actor().spectate_frames_encoded(), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_change_with_both_seats_connected_builds_two_views() {
+        let w = world(false).await;
+        let actor = w.actor();
+        let built = actor.seat_views_built();
+        let view = last_view_of(&w.p1);
+        let keep: Vec<Value> = view["you"]["hand"]
+            .as_array()
+            .expect("a hand")
+            .iter()
+            .map(|card| card["instanceId"].clone())
+            .collect();
+        w.p1.receive_json(json!({
+            "type": "action",
+            "action": { "type": "mulligan", "keep": keep, "nonce": "keep-p1" },
+        }));
+        settle().await;
+        assert_eq!(actor.seat_views_built(), built + 2);
+        w.keep_both().await;
+        settle().await;
+        assert_eq!(
+            actor.seat_views_built(),
+            built + 4,
+            "one more change, two more views"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_newcomer_is_sent_the_newest_due_view_at_once() {
+        let w = world(false).await;
+        w.keep_both().await;
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        assert_eq!(w.actor().spectate_frames_encoded(), 0);
+
+        let watcher = w.watch(&w.watcher).await;
+
+        let views = watcher.of_type("view");
+        assert_eq!(views.len(), 1, "{:?}", watcher.frames());
+        assert_eq!(views[0]["view"]["phase"], "main", "{}", views[0]);
+        assert_eq!(w.actor().spectate_frames_encoded(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_watchers_frame_is_the_seats_own_view_with_no_legal_action_or_forecast() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        tokio::time::sleep(BEFORE_THE_PLAYERS_ACT).await;
+        w.keep_both().await;
+        let seats = last_view_of(&w.p1);
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        settle().await;
+
+        let frames = watcher.of_type("view");
+        let shown = frames.last().expect("the watcher was sent a view");
+        // The same pushed view, clock included.
+        assert_eq!(shown["view"], seats, "{shown}");
+        assert_eq!(shown["legal"], json!([]), "{shown}");
+        assert!(shown.get("forecast").is_none(), "{shown}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn two_watchers_of_one_seat_share_each_encode() {
+        let w = world(false).await;
+        let fan = account(&w.app, 21, "Fan").await;
+        befriend(&w.app, &fan, &w.friend).await;
+        let first = w.watch(&w.watcher).await;
+        let second = w.watch(&fan).await;
+        tokio::time::sleep(BEFORE_THE_PLAYERS_ACT).await;
+        w.keep_both().await;
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        settle().await;
+
+        let frames = first.of_type("view");
+        assert!(frames.len() >= 2, "{:?}", first.frames());
+        assert_eq!(second.of_type("view"), frames, "both are sent the same frames");
+        assert_eq!(
+            w.actor().spectate_frames_encoded(),
+            u64::try_from(frames.len()).expect("a count"),
+            "each frame encoded once, for both"
+        );
+    }
+}

@@ -640,7 +640,9 @@ export function beamSearch(det: GameState, seat: PlayerId, counter: NodeCounter,
  * AI_SEARCH.maxAutoAnswers prompts), the line's own answer is dropped, and the line plays on. What
  * is left ends its turn and is scored: after the
  * opponent's reply when `reply` is set (`replyScore`, with `hidden` as there), statically otherwise.
- * null if the counter ran out.
+ * null if the counter ran out. R4447000: `replay_line` is this replay reporting its cut, which `decide`
+ * counts in `stats.replaysCut` and, with `AI_SEARCH.replay_fill_steps` above 0, finishes greedily;
+ * `scoreLine` keeps the cut.
  */
 export function scoreLine(
   det: GameState, seat: PlayerId, actions: readonly ActionBody[], counter: NodeCounter,
@@ -674,9 +676,11 @@ export function decide(state: GameState, seat: PlayerId, options: AiOptions): De
    share of the reserve and never past the wrap-up: `shortlist_lines`, `payoff_score`, R3696000) are
    scored after the opponent's reply on `dets[0]` (`replyScore`), each first
    action keeps its best line, and the best `finalists` first actions are re-scored the same way
-   with `scoreLine(…, reply: true)` on `dets[1..K-1]`; a line's answer that a world does not offer
-   (each world draws its own Discover) gives way to that world's best answer (#1636), so every
-   finalist is scored after the reply. The best mean over all K wins (ties go to
+   with `replay_line` (`scoreLine`'s replay, after the reply) on `dets[1..K-1]`; a line's answer that
+   a world does not offer (each world draws its own Discover) gives way to that world's best answer
+   (#1636), so every finalist is scored after the reply. Any other step a world does not offer cuts
+   the replay there, counted in `stats.replaysCut`, and with `AI_SEARCH.replay_fill_steps` above 0
+   that world's turn is played on greedily before it ends (R4447000). The best mean over all K wins (ties go to
    det-0 order). If the counter ran out before any reply was scored, the static scores decide as
    they would without the reply. Reason `"prompt"` if `pub.pending` was the seat's, else `"search"`.
 7. If no line was ever scored (all simulations failed or the budget was 0): `endTurn` if it is a

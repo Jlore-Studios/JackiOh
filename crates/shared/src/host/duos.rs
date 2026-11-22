@@ -424,7 +424,14 @@ pub enum DuosHostOutput {
         message: String,
     },
     /// Every view and clock of a change has been sent: where watchers' views are recorded (R2881000).
-    Pushed,
+    /// `views` is each person's view as it was sent, clock included, none for a person with no socket; it
+    /// is for a host in the same process, and is not serialized (a caller that gets none builds the view
+    /// itself).
+    Pushed {
+        #[serde(skip)]
+        #[cfg_attr(feature = "ts", ts(skip))]
+        views: Vec<(DuosSeat, Box<DuosView>)>,
+    },
     /// Run the AI's search for a seat.
     Decide { request: DuosDecide },
     /// The game is over: record it (B40). Nothing is fed back.
@@ -853,9 +860,10 @@ impl DuosHost {
     }
 
     /// B35: view and legal actions.
-    fn push_view(&mut self, seat: DuosSeat, now: i64) {
+    /// Returns the view as it was sent, `None` when the seat is not here.
+    fn push_view(&mut self, seat: DuosSeat, now: i64) -> Option<Box<DuosView>> {
         if !self.here(seat) {
-            return;
+            return None;
         }
         let legal = self.legal(seat);
         let view = Box::new(self.view_for(seat, now));
@@ -863,11 +871,12 @@ impl DuosHost {
         self.send(
             seat,
             DuosSeatMessage::View {
-                view,
+                view: view.clone(),
                 legal,
                 forecast,
             },
         );
+        Some(view)
     }
 
     fn push_clock(&mut self, seat: DuosSeat, now: i64) {
@@ -898,7 +907,7 @@ impl DuosHost {
 
     /// Everything a seat that (re)joins needs: its view, its clock and its teammate.
     fn push_seat(&mut self, seat: DuosSeat, now: i64) {
-        self.push_view(seat, now);
+        let _sent = self.push_view(seat, now);
         self.push_clock(seat, now);
         self.push_teammate(seat);
     }
@@ -1019,7 +1028,7 @@ impl DuosHost {
         }
         self.sync_clocks(now);
         // R2881000: the watchers' record starts with the state the host opens on.
-        self.emit(DuosHostOutput::Pushed);
+        self.emit(DuosHostOutput::Pushed { views: Vec::new() });
         let over = self.game.result.is_some();
         let live = !over && !self.finished;
         let left = ceiling_at(self.created_at) - now;
@@ -1414,12 +1423,15 @@ impl DuosHost {
     /// B35: pushes fresh views and clocks after every action, then writes the result or moves the AI.
     fn after_change(&mut self, now: i64) {
         self.sync_clocks(now);
+        let mut views = Vec::new();
         for &seat in self.team_b.people() {
-            self.push_view(seat, now);
+            if let Some(view) = self.push_view(seat, now) {
+                views.push((seat, view));
+            }
             self.push_clock(seat, now);
         }
         // R2881000: the watchers' record of the change, sent SPECTATE_DELAY_MS on.
-        self.emit(DuosHostOutput::Pushed);
+        self.emit(DuosHostOutput::Pushed { views });
         if self.game.result.is_some() {
             self.on_terminal(now);
         } else {

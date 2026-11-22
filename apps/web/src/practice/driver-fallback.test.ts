@@ -32,6 +32,7 @@ vi.mock("@jackioh/ai", async (importOriginal) => {
       stoppedBy: "exhausted",
       replied: 0,
       worldsScored: 0,
+      replaysCut: 0,
       score: 0,
     },
   });

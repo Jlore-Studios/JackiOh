@@ -2365,6 +2365,33 @@ mod rescored_own_prompts_1636 {
         assert!(answered.contains(&score), "{score} is none of {answered:?}");
     }
 
+    /// R4447000: the line [Scarab, its answer] replayed on a world whose offer lacks that answer is not
+    /// cut: that world's own Discover is answered there (#1636), so the fill, on or off, changes nothing.
+    #[test]
+    fn r4447000_an_own_prompt_answer_another_world_does_not_offer_is_not_a_cut() {
+        let found_on = scarab_turn("search-rescore-a", 1);
+        let play = play_of(&found_on, SCARAB);
+        let answer = answers(&act(&found_on, AI, &play))
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| panic!("the Discover is not open"));
+        let line = [play, answer];
+        let world = scarab_turn("search-rescore-b", 1);
+        let replay = |fill: ReplayFill| {
+            let counter = create_node_counter(AI_BUDGET.nodes, None);
+            replay_line(&world, AI, &line, &counter, None, Prices::NONE, fill)
+                .unwrap_or_else(|| panic!("the counter ran out"))
+        };
+        let off = replay(ReplayFill::OFF);
+        let on = replay(ReplayFill {
+            steps: 3,
+            width: AI_BUDGET.branching,
+        });
+        assert!(!off.cut);
+        assert!(!on.cut);
+        assert_eq!(on, off);
+    }
+
     /// #1636: a line cut at a refused play, no prompt open, is scored as before: where it stopped,
     /// its turn ended and the opponent's reply played, the rest of the line dropped.
     #[test]

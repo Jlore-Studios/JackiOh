@@ -339,6 +339,16 @@ as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover
 `fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
 Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
 
+**Layer memory on a phone** (R4493000, R4493001): every DOM effect part is a GPU layer held at the device's full density,
+and a phone's browser kills the tab past its memory. So on a phone (the window's narrower side under `FX_MOBILE_WIDTH`) a
+takeover's stage merges its slices or planes into `FX_PHONE_STAGE_LAYERS` pictures (`fx/layers.ts`'s `mergeStage`). No
+effect element covers more than `FX_LAYER_MAX_SCREENS` at its largest scale. On a phone, or a device with
+`navigator.deviceMemory` of `FX_LOW_DEVICE_MEMORY_GB` or less, the director keeps what its mounted and coming DOM cues hold
+within `FX_PHONE_LAYER_BUDGET_MB` (`budgetTakeover`, from `layers.ts`'s tables). It mounts a takeover in the fullest form
+that fits: merged, then without its art, then without its stage, and at the least its dark and its sweep. No other cue is
+reduced. `fx/layerBudget.test.ts` estimates every DOM cue kind from `fx.css` (`src/test/layerEstimate.ts`) and holds the
+tables to it per pull request; `e2e/cypress/component/fx-phone-layers.cy.tsx` measures the phone scenes at 3x daily.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -534,6 +544,16 @@ difference. The control's tap band (up to
 44px) reaches down from the control only, never out of the zone; the marks let a tap through. An empty
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
 the unit's picture (#3341: its art runs up to the frame) and the backrow's outline keep a card's shape.
+
+**A short phone held upright** (#4427) keeps the same layout. Measured in Cypress's Chrome, the upright board
+needs no scrolling down to a window 491px tall with nothing above it and 537px tall with the top strip's rail,
+and End turn stays on the screen down to 484px and 530px (in the practice frame, which hides what overflows,
+down to 484px). So End turn and the whole hand stay on the screen of an iPhone SE in Safari (375x548), a
+320x568 phone and a 360x560 Android in Chrome, with every field row at its 44px floor or above;
+`e2e/cypress/component/board-layout.cy.tsx` holds those three sizes (its `#2876` and `#4427` rows). The Duos
+board, the only one that draws its rail in the control bar on an upright phone, budgets its cards in
+`duos.css` and is not measured here. A phone shorter than these would need a peek of the hand, as a phone on
+its side has.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
@@ -1444,9 +1464,12 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
   The scene kits and both recipe tables load in a chunk beside the module (#4222:
   `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
-  and `test/setup.ts` installs the tables synchronously. The flavour sidecar loads in a chunk beside
-  the module too (#4435, `src/cards/flavour.ts`): no screen waits for it, and an inspect view opened
-  before it arrives gains its line when it does.
+  and `test/setup.ts` installs the tables synchronously. The sound-effect recipes load the same way
+  (#4428: `src/audio/sfxLoader.ts`): `main.tsx` starts them off the first paint beside the page-wide
+  sound, and the engine's `unlock()` is the backstop, never behind the module; a sound asked for
+  before they land is skipped silently, and `test/setup.ts` installs them synchronously. The
+  flavour sidecar loads in a chunk beside the module too (#4435, `src/cards/flavour.ts`): no screen
+  waits for it, and an inspect view opened before it arrives gains its line when it does.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match

@@ -1338,5 +1338,29 @@
     "commit": "2ec3005287077253bba95e409bdbae378313a1c7",
     "blob": "42d08aae5d71260715a4a474d0c0151c5ccbbfd6",
     "cardMetricsBlob": "e367dfeb428e03e70fb9240b74bbb3bc8eec5d6f"
+  },
+  {
+    "version": "v0.6.9j",
+    "commit": "77e6ef9230ea211df04b826b19911fb95b818017",
+    "blob": "42d08aae5d71260715a4a474d0c0151c5ccbbfd6",
+    "cardMetricsBlob": "e367dfeb428e03e70fb9240b74bbb3bc8eec5d6f"
+  },
+  {
+    "version": "v0.6.9k",
+    "commit": "3de2d02ce519dd27590d14371b55d27034b6b5e8",
+    "blob": "42d08aae5d71260715a4a474d0c0151c5ccbbfd6",
+    "cardMetricsBlob": "e367dfeb428e03e70fb9240b74bbb3bc8eec5d6f"
+  },
+  {
+    "version": "v0.6.9l",
+    "commit": "4d9671dfb8218af74c50eb15423bf2198699988b",
+    "blob": "42d08aae5d71260715a4a474d0c0151c5ccbbfd6",
+    "cardMetricsBlob": "e367dfeb428e03e70fb9240b74bbb3bc8eec5d6f"
+  },
+  {
+    "version": "v0.6.9m",
+    "commit": "8ca254f1a9fd9867870086ca76c42f59970658b9",
+    "blob": "42d08aae5d71260715a4a474d0c0151c5ccbbfd6",
+    "cardMetricsBlob": "39c042fc651062f1b4097bae53205047404c077a"
   }
 ]

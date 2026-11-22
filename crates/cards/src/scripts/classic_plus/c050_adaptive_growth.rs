@@ -223,6 +223,19 @@ mod tests {
             let mine = unit_id(&down, PlayerId::P1, 1);
             down.expect_stats(&mine, json!({ "attack": 1, "health": 1 }));
         }
+
+        #[test]
+        fn r4453000_the_minus_2_minus_2_passes_an_immune_enemy_unit_by() {
+            // §6.1: a Spell's "all Units" passes a Unit Immune to Spells by.
+            let mut s = held(false, json!([VANILLA]), json!([VANILLA, VANILLA]));
+            let warded = unit_id(&s, PlayerId::P2, 1);
+            s.card_mut(warded.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+            s.play(GROWTH, json!({}));
+            s.expect_stats(&warded, json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
+            for id in [unit_id(&s, PlayerId::P1, 1), unit_id(&s, PlayerId::P2, 2)] {
+                s.expect_stats(&id, json!({ "attack": 2, "health": 2, "maxHealth": 2 }));
+            }
+        }
     }
 
     mod radiant {

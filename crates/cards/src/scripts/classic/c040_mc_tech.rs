@@ -30,8 +30,9 @@ fn condition_met(c: ConditionContext) -> bool {
 }
 
 /// R60: one of them at random, drawn as the Cry reaches the clause.
-fn random_permanent(c: &mut EffectContext) -> Vec<String> {
-    let permanents = enemy_permanents(c.state, c.controller);
+fn random_permanent(c: &mut EffectContext, slash_aware: bool) -> Vec<String> {
+    let mut permanents = enemy_permanents(c.state, c.controller);
+    permanents.retain(|card| !slash_aware || reaches(c.state, c.self_.as_ref(), card));
     c.rng.shuffle(&permanents).into_iter().take(1).map(|card| card.id).collect()
 }
 
@@ -39,13 +40,13 @@ fn steal_it(instance_id: &str) -> Effect {
     steal(json_as(json!({ "instanceId": instance_id })))
 }
 
-pub fn script() -> CardScripts {
+fn scripts(slash_aware: bool) -> CardScripts {
     let base = Script {
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             let threshold = param(ctx, "threshold");
             if enough_permanents(ctx.state, ctx.controller, threshold) {
                 vec![for_each_card(ForEachCardArgs {
-                    cards: Arc::new(random_permanent),
+                    cards: Arc::new(move |c: &mut EffectContext| random_permanent(c, slash_aware)),
                     each: Arc::new(steal_it),
                 })]
             } else {
@@ -75,6 +76,16 @@ pub fn script() -> CardScripts {
     };
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(true)
+}
+
+/// v0.6.9k and before: the base Cry drew among every enemy permanent, across a slash too
+/// (R3554003); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9j() -> CardScripts {
+    scripts(false)
 }
 
 // C #40 MC Tech — SPEC §8.6 row 40, BUILD M9 Classic row C 40 (R13, R60, R15, R171, R177, R33, R386).
@@ -232,6 +243,36 @@ mod tests {
                     assert_eq!(stolen.len(), 1, "cursor {cursor}");
                     assert_ne!(s.card(first_or_empty(&stolen)).def_id, DOME, "cursor {cursor}");
                     assert_eq!(s.card(DOME).controller, PlayerId::P2, "cursor {cursor}");
+                }
+            }
+
+            /// R3554003: on a slashed board the pick stops at the slash, as the Radiant face's scope does:
+            /// MC Tech on the right half steals one of the two permanents there, never one across it.
+            #[test]
+            fn r3554003_the_base_cry_steals_only_from_its_own_half_of_a_slashed_board() {
+                for cursor in 0..16u32 {
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [TECH, ANCHOR] },
+                        "p2": {
+                            "hand": [ANCHOR],
+                            "field": [
+                                { "def": VANILLA, "lane": 1 },
+                                { "def": MENACE, "lane": 2 },
+                                { "def": TEMPO, "lane": 4 },
+                                { "def": VANILLA, "lane": 5 },
+                            ],
+                            "backrow": [{ "def": FIELD_SPELL, "lane": 1 }],
+                        },
+                    }));
+                    s.state_mut().slashed_lane = Some(3);
+                    s.state_mut().rng_cursor = cursor;
+                    let own_half = [s.unit_at(PlayerId::P2, 4).id.clone(), s.unit_at(PlayerId::P2, 5).id.clone()];
+
+                    s.play(TECH, json!({ "zone": 5 }));
+
+                    let stolen = stolen_ids(&s);
+                    assert_eq!(stolen.len(), 1, "cursor {cursor}");
+                    assert!(own_half.contains(&stolen[0]), "cursor {cursor}: stole {}", stolen[0]);
                 }
             }
 

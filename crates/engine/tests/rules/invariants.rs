@@ -17,6 +17,9 @@
 //! And its I18 (#4111): a plain attack does what the combat forecast its seat was shown said
 //! (R3100000, R4111000). Each check is proved by tampering with one payload of a real attack's events;
 //! the untampered events are clean, and a step or a board the forecast cannot foretell is not judged.
+//!
+//! And its I20 (#4478): a field card's stored damage moves only with its `damage` and `healed` events
+//! (§4.4, §10.3, R78), proved on synthetic events, edited states, real effects and a planted bump.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -300,6 +303,7 @@ fn destroyed_by(instance_id: &str, killer_id: &str) -> GameEvent {
         killer_id: Some(killer_id.to_string()),
         radiant: None,
         animated: None,
+        died_as: None,
         via: None,
     }
 }
@@ -2139,4 +2143,1133 @@ fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative
         reason: GameOverReason::HeroDeath,
     });
     assert!(PlayedAttack::read(&[hit("hero-p2", 3)], &hero_death, &attacker, "hero-p2", &[]).kills);
+}
+
+// I19: nothing reaches a Dormant card (§6.1 Dormant, §3.2, R1839000; #4454). Proved on synthetic events
+// for each kind that names a card, on edited records, and on real steps over `fixtures/slumber.rs`'s
+// Dormant cards and the engine's own board verbs (a swap, a rotation, a board exile, a slash).
+mod i19 {
+    use super::*;
+    use jackioh_engine::effects::{exile_board, fuse_cards, make_all_radiant, slash_board, swap_board};
+    use jackioh_engine::subsystems::board_history::{
+        RollBackArgs, RollBackSides, record_board_snapshot, roll_back,
+    };
+    use jackioh_engine::subsystems::rotation::{RotationArgs, RotationDirection, rotate_rings};
+
+    use crate::rules::fixtures::combat::stacker;
+    use crate::rules::fixtures::harness::run_effect;
+    use crate::rules::fixtures::slumber::{
+        LAUNCH, cheer, copycat, flood, frost, heist, imprisoned, napper, quake, register_slumber_fixtures,
+        rouse, starship, void, wipe,
+    };
+
+    /// I19 of one step from `before` to `after`, read as the fuzz reads it.
+    fn i19(before: &GameState, events: &[GameEvent], after: &GameState) -> Vec<String> {
+        let mut monitor = create_invariant_monitor(before);
+        monitor.before(before, before.active, &ActionBody::EndTurn);
+        invariant("I19", monitor.after(events, after))
+    }
+
+    /// I19 of the step `act` takes on `s`.
+    fn i19_of(s: &mut Scenario, act: impl FnOnce(&mut Scenario)) -> Vec<String> {
+        let before = s.state().clone();
+        act(s);
+        i19(&before, s.last_events(), s.state())
+    }
+
+    /// `def_id` put at `at`, Dormant with two turns left: its id.
+    fn put_dormant(state: &mut GameState, def_id: &str, at: zones::ZoneSlot) -> String {
+        let card = put(state, def_id, at, json!({}));
+        find_instance_mut(state, &card.id).expect("the permanent").slumber = Some(Slumber { turns: Some(2) });
+        card.id
+    }
+
+    /// p1's first main phase with an `fx-21` Dormant in p2's unit zone 1, and its id.
+    fn dormant_board(seed: &str) -> (GameState, String) {
+        let mut state = playing(seed);
+        let id = put_dormant(&mut state, "fx-21", slot(P2, Row::Units, 1));
+        (state, id)
+    }
+
+    /// slumber.rs's board: `active`'s turn with the given hands and fields over the Dormant fixtures.
+    fn board(active: &str, p1_hand: Value, p1_field: Value, p2_hand: Value, p2_field: Value) -> Scenario {
+        register_slumber_fixtures();
+        let library = json!([plain.id, plain.id, plain.id, plain.id, plain.id, plain.id]);
+        scenario(json!({
+            "seed": "i19",
+            "active": active,
+            "p1": { "hand": p1_hand, "field": p1_field, "library": library },
+            "p2": { "hand": p2_hand, "field": p2_field, "library": library },
+        }))
+    }
+
+    fn awakened(id: &str) -> GameEvent {
+        json_as(json!({ "type": "awakened", "player": "p2", "instanceId": id, "defId": "fx-21" }))
+    }
+
+    fn marker(def_id: &str) -> GameEvent {
+        json_as(json!({
+            "type": "hookResolving",
+            "sourceId": "i19-source",
+            "defId": def_id,
+            "controller": "p1",
+            "hook": "cry",
+        }))
+    }
+
+    fn fused(id: &str) -> GameEvent {
+        json_as(json!({
+            "type": "fused",
+            "instanceIds": [id, "i19-piece"],
+            "resultInstanceId": id,
+            "defId": "fx-21",
+        }))
+    }
+
+    fn starship_fused(id: &str) -> GameEvent {
+        json_as(json!({
+            "type": "starshipFused",
+            "player": "p2",
+            "instanceId": id,
+            "pieceId": "i19-piece",
+            "defId": "fx-2",
+            "pieces": 1,
+        }))
+    }
+
+    /// Every event kind that changes a card and names it, each naming `card`, by its wire name.
+    fn reaching(card: &CardInstance) -> Vec<(&'static str, GameEvent)> {
+        let id = card.id.as_str();
+        let zone = serde_json::to_value(&card.zone).expect("a zone serializes");
+        vec![
+            ("damage", damage_event(id, 1)),
+            (
+                "healed",
+                json_as(json!({ "type": "healed", "targetId": id, "amount": 1 })),
+            ),
+            (
+                "buffed",
+                json_as(json!({ "type": "buffed", "instanceId": id, "attack": 1, "health": 1 })),
+            ),
+            (
+                "keywordGranted",
+                json_as(
+                    json!({ "type": "keywordGranted", "instanceId": id, "keyword": { "kind": "Taunt" } }),
+                ),
+            ),
+            (
+                "counterChanged",
+                json_as(
+                    json!({ "type": "counterChanged", "instanceId": id, "counter": "plague", "value": 1 }),
+                ),
+            ),
+            (
+                "costChanged",
+                json_as(json!({ "type": "costChanged", "instanceId": id, "cost": 1 })),
+            ),
+            (
+                "radiantSet",
+                json_as(json!({ "type": "radiantSet", "instanceId": id, "defId": "fx-21", "zone": zone })),
+            ),
+            (
+                "transformed",
+                json_as(json!({
+                    "type": "transformed",
+                    "instanceId": id,
+                    "fromDefId": "fx-21",
+                    "toDefId": "fx-22",
+                    "newInstanceId": "i19-new",
+                })),
+            ),
+            (
+                "bounced",
+                json_as(json!({ "type": "bounced", "instanceId": id, "defId": "fx-21", "owner": "p2" })),
+            ),
+            (
+                "stolen",
+                json_as(json!({
+                    "type": "stolen",
+                    "instanceId": id,
+                    "defId": "fx-21",
+                    "from": "p2",
+                    "to": "p1",
+                    "zone": "field",
+                })),
+            ),
+            (
+                "controlChanged",
+                json_as(json!({
+                    "type": "controlChanged",
+                    "instanceId": id,
+                    "controller": "p1",
+                    "row": "units",
+                    "lane": 1,
+                })),
+            ),
+            (
+                "positionSwitched",
+                json_as(json!({ "type": "positionSwitched", "instanceId": id, "position": "DEF" })),
+            ),
+            ("fused", fused(id)),
+            (
+                "held",
+                json_as(json!({
+                    "type": "held",
+                    "player": "p2",
+                    "instanceId": id,
+                    "defId": "fx-21",
+                    "holderId": "i19-holder",
+                })),
+            ),
+            (
+                "destroyed",
+                json_as(json!({
+                    "type": "destroyed",
+                    "instanceId": id,
+                    "defId": "fx-21",
+                    "owner": "p2",
+                    "controller": "p2",
+                    "attack": 2,
+                    "maxHealth": 2,
+                })),
+            ),
+            (
+                "exiled",
+                json_as(json!({ "type": "exiled", "instanceId": id, "defId": "fx-21", "owner": "p2" })),
+            ),
+        ]
+    }
+
+    #[test]
+    fn i19_a_step_that_reaches_no_dormant_card_is_clean() {
+        let (state, _) = dormant_board("i19-quiet");
+        assert_eq!(i19(&state, &[], &state), Vec::<String>::new());
+        // A real end of turn: p2's turn start counts the Dormant card down (R1839001).
+        let ended = reduce(&state, &Action::new(ActionBody::EndTurn, P1, "i19-end"));
+        assert!(ended.error.is_none(), "{:?}", ended.error);
+        assert_eq!(i19(&state, &ended.events, &ended.state), Vec::<String>::new());
+        // Every sweep that passes a Dormant card by (R1839000), beside a Unit it reaches.
+        for spell in [&quake, &wipe, &void, &flood, &frost, &cheer, &heist] {
+            let mut s = board(
+                "p1",
+                json!([spell.id, plain.id]),
+                json!([]),
+                json!([plain.id]),
+                json!([
+                    { "def": imprisoned.id, "lane": 1, "slumber": { "turns": 2 } },
+                    { "def": plain.id, "lane": 2 },
+                ]),
+            );
+            let found = i19_of(&mut s, |s| {
+                s.play(spell.id.as_str(), json!({}));
+            });
+            assert_eq!(found, Vec::<String>::new(), "{}", spell.id);
+            assert!(!s.last_events().is_empty(), "{} reached the plain Unit", spell.id);
+        }
+    }
+
+    #[test]
+    fn i19_each_event_that_names_a_dormant_card_is_one_finding() {
+        let (state, id) = dormant_board("i19-events");
+        let card = find_instance(&state, &id).expect("the Dormant card").clone();
+        for (kind, event) in reaching(&card) {
+            assert_eq!(event.event_type().as_str(), kind);
+            let found = i19(&state, &[event], &state);
+            only(&found, &id, &["I19 reached Dormant", kind, "§6.1", "R1839000"]);
+        }
+        // A mark aimed at it reaches it; a mark taken off, its waiting effect gone, does not (R437).
+        let mark = |added: bool| -> GameEvent {
+            json_as(
+                json!({ "type": "marked", "instanceId": id, "mark": "steal", "color": "purple", "added": added }),
+            )
+        };
+        only(
+            &i19(&state, &[mark(true)], &state),
+            &id,
+            &["I19 reached Dormant", "marked"],
+        );
+        assert_eq!(i19(&state, &[mark(false)], &state), Vec::<String>::new());
+        // A card is one finding however often it is reached.
+        let twice = [damage_event(&id, 1), damage_event(&id, 2)];
+        only(&i19(&state, &twice, &state), &id, &["I19 reached Dormant"]);
+        // The running card is named.
+        let hit = [marker("fx-1"), damage_event(&id, 1)];
+        only(&i19(&state, &hit, &state), &id, &["in fx-1's run"]);
+    }
+
+    #[test]
+    fn i19_a_record_change_with_no_event_is_one_finding_naming_the_field() {
+        let (state, id) = dormant_board("i19-record");
+        /// A record field's JSON name and an edit that changes only it.
+        type RecordEdit = (&'static str, fn(&mut CardInstance));
+        let edits: Vec<RecordEdit> = vec![
+            ("damage", |card| card.damage = 1),
+            ("buffs", |card| card.buffs = AttackHealth { attack: 1, health: 1 }),
+            ("grantedKeywords", |card| {
+                card.granted_keywords = vec![json_as(json!({ "kind": "Taunt" }))]
+            }),
+            ("counters", |card| card.counters.plague = Some(1)),
+            ("frozen", |card| card.frozen = Some(1)),
+            ("costMod", |card| card.cost_mod = -1),
+            ("position", |card| card.position = Some(Position::Def)),
+            ("radiant", |card| card.radiant = true),
+            ("controller", |card| card.controller = P1),
+            ("markedDestroyed", |card| card.marked_destroyed = Some(true)),
+            ("defId", |card| card.def_id = "fx-22".to_string()),
+        ];
+        for (field, edit) in edits {
+            let mut after = state.clone();
+            edit(find_instance_mut(&mut after, &id).expect("the Dormant card"));
+            only(
+                &i19(&state, &[], &after),
+                &id,
+                &["I19 Dormant record changed", field, "§6.1", "R1839000"],
+            );
+        }
+        // The countdown is its own (R1839001), and the zone a move along its side changes (R14).
+        let mut after = state.clone();
+        find_instance_mut(&mut after, &id)
+            .expect("the Dormant card")
+            .slumber = Some(Slumber { turns: Some(1) });
+        assert_eq!(i19(&state, &[], &after), Vec::<String>::new());
+    }
+
+    /// An exile of one card of `walk`'s, drawn on the match rng: The Maestro's field pick before #4322.
+    fn random_exile(walk: fn(&GameState) -> Vec<CardInstance>) -> Effect {
+        Effect::new("i19-random-exile", move |ctx| {
+            let pool = walk(ctx.state);
+            if let Some(card) = ctx.rng.pick(&pool).cloned() {
+                zones::exile_to_pile(&mut ctx.sink, card);
+            }
+        })
+    }
+
+    #[test]
+    fn i19_a_random_exile_drawn_from_a_walk_that_keeps_dormant_cards_is_flagged() {
+        let (before, id) = dormant_board("i19-maestro");
+        let mut state = before.clone();
+        let keeps = random_exile(|state| zones::units_on_field_of(state, P2).into_iter().cloned().collect());
+        let events = run_effect(&mut state, keeps, P1);
+        assert!(
+            state.players[P2].exile.iter().any(|card| card.id == id),
+            "the Dormant card is the only pick"
+        );
+        only(
+            &i19(&before, &events, &state),
+            &id,
+            &["I19 reached Dormant", "exiled", "§6.1", "R1839000"],
+        );
+        // Drawn from the permanents an effect reaches (R4322000), the pick finds nothing.
+        let mut state = before.clone();
+        let reaches = random_exile(|state| {
+            plague::reachable_permanents_on_field(state, P2)
+                .into_iter()
+                .cloned()
+                .collect()
+        });
+        let events = run_effect(&mut state, reaches, P1);
+        assert!(events.is_empty(), "{events:?}");
+        assert_eq!(i19(&before, &events, &state), Vec::<String>::new());
+    }
+
+    /// One effect step of `player`'s turn start: the Dormant countdowns (R1839001).
+    fn count_down(state: &mut GameState, player: PlayerId) -> Vec<GameEvent> {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            slumber::awaken_at_turn_start(&mut sink, player);
+        }
+        state.rng_cursor = rng.cursor();
+        events
+    }
+
+    /// Silly Silas's rotation (R14) from the active player's seat.
+    fn rotate(state: &mut GameState, direction: RotationDirection, radiant: bool) -> Vec<GameEvent> {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        let perspective = state.active;
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            rotate_rings(
+                &mut sink,
+                &RotationArgs {
+                    direction,
+                    perspective,
+                    radiant: Some(radiant),
+                },
+            );
+        }
+        state.rng_cursor = rng.cursor();
+        events
+    }
+
+    #[test]
+    fn r4454000_a_board_swap_and_a_rotation_carry_a_dormant_card_and_i19_allows_it() {
+        let (before, id) = dormant_board("r4454000-swap");
+        let mut swapped = before.clone();
+        let events = run_effect(&mut swapped, swap_board(), P1);
+        let card = find_instance(&swapped, &id).expect("still on the field");
+        assert_eq!(
+            card.zone,
+            Zone::Field {
+                player: P1,
+                row: Row::Units,
+                lane: 1
+            }
+        );
+        assert_eq!(card.controller, P1);
+        assert_eq!(card.slumber, Some(Slumber { turns: Some(2) }), "still Dormant");
+        assert_eq!(i19(&before, &events, &swapped), Vec::<String>::new());
+        // Its countdown then counts its new controller's turns, not its owner's (R1839001).
+        let mut theirs = swapped.clone();
+        count_down(&mut theirs, P2);
+        assert_eq!(
+            find_instance(&theirs, &id).expect("on the field").slumber,
+            Some(Slumber { turns: Some(2) })
+        );
+        let mut mine = swapped.clone();
+        let counted = count_down(&mut mine, P1);
+        assert_eq!(
+            find_instance(&mine, &id).expect("on the field").slumber,
+            Some(Slumber { turns: Some(1) })
+        );
+        assert_eq!(i19(&swapped, &counted, &mine), Vec::<String>::new());
+        // A hit inside the swap's window is still a reach.
+        let mut hit = events.clone();
+        hit.push(damage_event(&id, 1));
+        only(
+            &i19(&before, &hit, &swapped),
+            &id,
+            &["I19 reached Dormant", "damage"],
+        );
+
+        // A rotation carries it along its side or across the center line, still Dormant (R14).
+        for direction in [RotationDirection::Left, RotationDirection::Right] {
+            let mut rotated = before.clone();
+            let events = rotate(&mut rotated, direction, false);
+            let card = find_instance(&rotated, &id).expect("still on the field");
+            assert_ne!(
+                card.zone,
+                Zone::Field {
+                    player: P2,
+                    row: Row::Units,
+                    lane: 1
+                }
+            );
+            assert_eq!(card.slumber, Some(Slumber { turns: Some(2) }), "{direction:?}");
+            assert_eq!(
+                i19(&before, &events, &rotated),
+                Vec::<String>::new(),
+                "{direction:?}"
+            );
+        }
+        // The Radiant rotation bounces a card leaving its caster's side (R14): to its hand, its status
+        // gone with R78's reset.
+        let mut ends = playing("r4454000-radiant");
+        let first = put_dormant(&mut ends, "fx-1", slot(P1, Row::Units, 1));
+        let last = put_dormant(&mut ends, "fx-2", slot(P1, Row::Units, 5));
+        for direction in [RotationDirection::Left, RotationDirection::Right] {
+            let mut rotated = ends.clone();
+            let events = rotate(&mut rotated, direction, true);
+            let in_hand: Vec<&CardInstance> = rotated.players[P1]
+                .hand
+                .iter()
+                .filter(|card| card.id == first || card.id == last)
+                .collect();
+            assert_eq!(in_hand.len(), 1, "{direction:?}");
+            assert_eq!(in_hand[0].slumber, None);
+            assert_eq!(
+                i19(&ends, &events, &rotated),
+                Vec::<String>::new(),
+                "{direction:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn i19_the_countdown_awaken_and_a_dormant_card_s_own_launch_are_lawful() {
+        let mut s = board(
+            "p2",
+            json!([rouse.id, plain.id]),
+            json!([
+                { "def": napper.id, "lane": 1, "slumber": { "turns": 1 } },
+                { "def": imprisoned.id, "lane": 2, "slumber": { "turns": 2 } },
+                { "def": starship.id, "lane": 3, "slumber": {} },
+            ]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let ids: Vec<String> = (1..=3)
+            .map(|lane| s.unit(P1, lane).expect("a Dormant card").id)
+            .collect();
+        // p1's turn start: the Napper's countdown ends and the Imprisoned's counts (R1839001).
+        assert_eq!(
+            i19_of(&mut s, |s| {
+                s.end_turn();
+            }),
+            Vec::<String>::new()
+        );
+        assert_eq!(s.card(ids[0].as_str()).slumber, None);
+        assert_eq!(s.card(ids[1].as_str()).slumber, Some(Slumber { turns: Some(1) }));
+        // The Starship's own Activate awakens it (R1839002).
+        let launch = i19_of(&mut s, |s| {
+            s.activate(ids[2].as_str(), json!({ "ability": LAUNCH }));
+        });
+        assert_eq!(launch, Vec::<String>::new());
+        assert_eq!(s.card(ids[2].as_str()).slumber, None);
+        // The Awaken verb from another card (R1839002).
+        assert_eq!(
+            i19_of(&mut s, |s| {
+                s.play(rouse.id.as_str(), json!({}));
+            }),
+            Vec::<String>::new()
+        );
+        assert_eq!(s.card(ids[1].as_str()).slumber, None);
+    }
+
+    #[test]
+    fn i19_a_hull_fuse_is_lawful_and_any_other_fuse_onto_a_dormant_card_is_not() {
+        let (before, id) = dormant_board("i19-hull");
+        // The hull keeps its zone and status and becomes the fusion (R1852000): a new definition.
+        let mut after = before.clone();
+        find_instance_mut(&mut after, &id).expect("the hull").def_id = "fx-22".to_string();
+        let hull = [fused(&id), starship_fused(&id)];
+        assert_eq!(i19(&before, &hull, &after), Vec::<String>::new());
+        // An Equip's or a spell's fuse onto it has no `starshipFused` (R2260000, #4424).
+        only(
+            &i19(&before, &[fused(&id)], &after),
+            &id,
+            &["I19 reached Dormant", "fused"],
+        );
+        // Nor does a `starshipFused` naming another ship lend it one.
+        let elsewhere = [fused(&id), starship_fused("i19-other")];
+        only(&i19(&before, &elsewhere, &after), &id, &["fused"]);
+    }
+
+    #[test]
+    fn i19_an_exile_inside_a_board_sweep_s_run_is_lawful_and_outside_it_is_not() {
+        let (before, id) = dormant_board("i19-sweep");
+        let mut swept = before.clone();
+        let exiled = run_effect(&mut swept, exile_board(json_as(json!({ "player": "enemy" }))), P1);
+        assert!(swept.players[P2].exile.iter().any(|card| card.id == id));
+        let behind = |markers: &[GameEvent]| -> Vec<GameEvent> {
+            markers.iter().chain(exiled.iter()).cloned().collect()
+        };
+        // S+ #79, #80 and #81's sweeps (R3539002).
+        for sweep in [
+            "stinkyscapeplus-079",
+            "stinkyscapeplus-080",
+            "stinkyscapeplus-081",
+        ] {
+            assert_eq!(
+                i19(&before, &behind(&[marker(sweep)]), &swept),
+                Vec::<String>::new(),
+                "{sweep}"
+            );
+        }
+        // Any other card's run, none, or another card's marker opened since the sweep's is a reach.
+        only(
+            &i19(&before, &behind(&[marker("fx-1")]), &swept),
+            &id,
+            &["exiled", "fx-1"],
+        );
+        only(&i19(&before, &exiled, &swept), &id, &["exiled", "no card"]);
+        let interrupted = behind(&[marker("stinkyscapeplus-080"), marker("fx-1")]);
+        only(&i19(&before, &interrupted, &swept), &id, &["exiled"]);
+
+        // S+ #78's slash exiles lane 3, Dormant cards included (R3554002).
+        let mut lane = playing("i19-slash");
+        let middle = put_dormant(&mut lane, "fx-21", slot(P2, Row::Units, 3));
+        let mut slashed = lane.clone();
+        let events = run_effect(&mut slashed, slash_board(json_as(json!({}))), P1);
+        assert!(slashed.players[P2].exile.iter().any(|card| card.id == middle));
+        let marked: Vec<GameEvent> = std::iter::once(marker("stinkyscapeplus-078"))
+            .chain(events.iter().cloned())
+            .collect();
+        assert_eq!(i19(&lane, &marked, &slashed), Vec::<String>::new());
+        // The Radiant face's lane answer continues the slash's run with no marker of its own (R2783000).
+        let mut asked = lane.clone();
+        open_prompt(&mut asked, "i19-slash-asked");
+        asked.pending.as_mut().expect("a prompt").resume.def_id = "stinkyscapeplus-078".to_string();
+        assert_eq!(i19(&asked, &events, &slashed), Vec::<String>::new());
+        only(&i19(&lane, &events, &slashed), &middle, &["exiled"]);
+    }
+
+    #[test]
+    fn i19_a_stack_card_laid_onto_a_dormant_card_is_clean() {
+        for top in [&stacker, &copycat] {
+            let mut s = board(
+                "p1",
+                json!([top.id, plain.id]),
+                json!([{ "def": imprisoned.id, "lane": 1, "slumber": { "turns": 2 } }]),
+                json!([plain.id]),
+                json!([]),
+            );
+            let dormant = s.unit(P1, 1).expect("the Dormant card").id;
+            let found = i19_of(&mut s, |s| {
+                s.play(top.id.as_str(), json!({ "zone": 1 }));
+            });
+            assert_eq!(found, Vec::<String>::new(), "{}", top.id);
+            // It lies beneath, still Dormant and still itself (R1839003).
+            assert_eq!(s.unit(P1, 1).expect("the top").def_id, top.id);
+            assert_eq!(s.card(dormant.as_str()).def_id, imprisoned.id);
+            assert_eq!(s.card(dormant.as_str()).slumber, Some(Slumber { turns: Some(2) }));
+        }
+    }
+
+    #[test]
+    fn i19_a_card_dormant_only_after_the_step_began_or_woken_before_the_hit_is_clean() {
+        let (dormant, id) = dormant_board("i19-timing");
+        let mut awake = dormant.clone();
+        find_instance_mut(&mut awake, &id).expect("the card").slumber = None;
+        // Dormant only by the step's end: it is judged from the next step.
+        assert_eq!(
+            i19(&awake, &[damage_event(&id, 1)], &dormant),
+            Vec::<String>::new()
+        );
+        // Woken, then hit (R1839002).
+        let woken_first = [awakened(&id), damage_event(&id, 1)];
+        assert_eq!(i19(&dormant, &woken_first, &awake), Vec::<String>::new());
+        // Hit, then woken.
+        let hit_first = [damage_event(&id, 1), awakened(&id)];
+        only(
+            &i19(&dormant, &hit_first, &awake),
+            &id,
+            &["I19 reached Dormant", "damage"],
+        );
+        // Launched, then hit (R1852003); its own Activate, then hit (R1839002).
+        let launched: GameEvent = json_as(json!({
+            "type": "starshipLaunched",
+            "player": "p2",
+            "instanceId": id,
+            "defId": "fx-21",
+            "name": "i19",
+            "pieces": [],
+        }));
+        let activated: GameEvent = json_as(json!({
+            "type": "activated",
+            "player": "p2",
+            "instanceId": id,
+            "defId": "fx-21",
+            "ability": "launch",
+        }));
+        for first in [launched, activated] {
+            let hits = [first, damage_event(&id, 1)];
+            assert_eq!(i19(&dormant, &hits, &awake), Vec::<String>::new());
+        }
+        // An `after` with no `before` judges nothing.
+        let mut unprimed = create_invariant_monitor(&dormant);
+        assert_eq!(
+            invariant("I19", unprimed.after(&[damage_event(&id, 1)], &dormant)),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn i19_runs_on_i14_s_branches() {
+        let (state, id) = dormant_board("i19-i14");
+        let hit = damage_event(&id, 1);
+        let branch = |state: &GameState, action: &Action| -> ReduceResult {
+            let mut result = reduce(state, action);
+            result.events.push(hit.clone());
+            result
+        };
+        let found: Vec<String> = listed_refused(&state, P1, &[ActionBody::EndTurn], branch)
+            .into_iter()
+            .filter(|finding| finding.contains("I19"))
+            .collect();
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 branch:"), "{}", found[0]);
+        assert!(found[0].contains("I19 reached Dormant"), "{}", found[0]);
+        assert!(found[0].contains(&id), "{}", found[0]);
+        // The plain reducer's branch reaches nothing.
+        let clean: Vec<String> = listed_refused(&state, P1, &[ActionBody::EndTurn], reduce)
+            .into_iter()
+            .filter(|finding| finding.contains("I19"))
+            .collect();
+        assert_eq!(clean, Vec::<String>::new());
+    }
+
+    /// `effect` applied as p1's and settled, as a card's effect is (§10.3): the events it emitted.
+    fn settled(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            {
+                let mut ctx = make_context(&mut sink, None, by_p1());
+                (effect.apply)(&mut ctx);
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        state.rng_cursor = rng.cursor();
+        events
+    }
+
+    fn by_p1() -> HookOptions {
+        HookOptions {
+            controller: Some(P1),
+            ..Default::default()
+        }
+    }
+
+    fn radiant_set(card: &CardInstance) -> GameEvent {
+        json_as(json!({
+            "type": "radiantSet",
+            "instanceId": card.id,
+            "defId": card.def_id,
+            "zone": serde_json::to_value(&card.zone).expect("a zone serializes"),
+        }))
+    }
+
+    #[test]
+    fn r4454001_tears_of_the_kwzki_tree_s_world_makes_a_dormant_card_radiant_and_i19_allows_it() {
+        let (before, id) = dormant_board("r4454001");
+        let mut after = before.clone();
+        let events = settled(&mut after, make_all_radiant());
+        let card = find_instance(&after, &id).expect("still on the field");
+        assert!(card.radiant, "Radiant with every other card (R3569000)");
+        assert_eq!(card.slumber, Some(Slumber { turns: Some(2) }), "still Dormant");
+        assert!(
+            events.iter().any(
+                |event| matches!(event, GameEvent::RadiantSet { instance_id, .. } if *instance_id == id)
+            ),
+            "{events:?}"
+        );
+        assert_eq!(i19(&before, &events, &after), Vec::<String>::new());
+        // Outside that world the same `radiantSet` is a reach, and the face a record change.
+        let mut no_world = after.clone();
+        no_world.radiant_world = None;
+        only(
+            &i19(&before, &events, &no_world),
+            &id,
+            &["I19 reached Dormant", "radiantSet"],
+        );
+        only(
+            &i19(&before, &[], &no_world),
+            &id,
+            &["I19 Dormant record changed", "radiant"],
+        );
+    }
+
+    #[test]
+    fn r4454002_a_board_restore_takes_a_dormant_card_back_with_the_board_and_i19_allows_it() {
+        let mut snapshotted = playing("r4454002");
+        let held = put_dormant(&mut snapshotted, "fx-21", slot(P2, Row::Units, 1));
+        // The only snapshot is this one: the turn's own, of an empty board, would be found first.
+        snapshotted.board_history = None;
+        record_board_snapshot(&mut snapshotted);
+        // Since the snapshot: a piece fused into the held card (R1852000), and a second Dormant card.
+        let mut before = snapshotted.clone();
+        find_instance_mut(&mut before, &held)
+            .expect("the held card")
+            .def_id = "fx-22".to_string();
+        let later = put_dormant(&mut before, "fx-23", slot(P2, Row::Units, 2));
+        let mut after = before.clone();
+        let rollback = roll_back(RollBackArgs {
+            turns_ago: 0,
+            sides: RollBackSides::Both,
+        });
+        let events = run_effect(&mut after, rollback, P1);
+        let back = find_instance(&after, &held).expect("back on the field");
+        assert_eq!(back.def_id, "fx-21", "as the snapshot holds it");
+        assert_eq!(back.slumber, Some(Slumber { turns: Some(2) }), "still Dormant");
+        let returned = find_instance(&after, &later).expect("in a hand");
+        assert_eq!(
+            returned.zone,
+            Zone::Hand { player: P2 },
+            "not in the snapshot: to its hand (R419)"
+        );
+        assert_eq!(returned.slumber, None, "its status gone with R78's reset");
+        assert_eq!(i19(&before, &events, &after), Vec::<String>::new());
+        // Without its `rolledBack` the same step reaches both.
+        let unmarked: Vec<GameEvent> = events
+            .iter()
+            .filter(|event| !matches!(event, GameEvent::RolledBack { .. }))
+            .cloned()
+            .collect();
+        let found = i19(&before, &unmarked, &after);
+        assert_eq!(found.len(), 2, "{found:?}");
+        assert!(
+            found
+                .iter()
+                .any(|finding| finding.contains(&later) && finding.contains("bounced"))
+        );
+        assert!(
+            found
+                .iter()
+                .any(|finding| finding.contains(&held) && finding.contains("defId"))
+        );
+        // Bogos Binted's Radiant face rebuilds its side Radiant (R3550007).
+        let restored: GameEvent = json_as(json!({
+            "type": "rolledBack",
+            "player": "p2",
+            "turnsAgo": 1,
+            "sides": ["p2"],
+        }));
+        let card = find_instance(&before, &held).expect("the held card").clone();
+        let mut radiant = before.clone();
+        find_instance_mut(&mut radiant, &held)
+            .expect("the held card")
+            .radiant = true;
+        let rebuilt = [restored, radiant_set(&card)];
+        assert_eq!(i19(&before, &rebuilt, &radiant), Vec::<String>::new());
+        only(
+            &i19(&before, &[radiant_set(&card)], &radiant),
+            &held,
+            &["radiantSet"],
+        );
+    }
+
+    #[test]
+    fn r4454003_a_fuse_passes_a_dormant_ingredient_or_target_by() {
+        let (before, dormant) = dormant_board("r4454003");
+        let mut state = before.clone();
+        let awake = put(&mut state, "fx-22", slot(P2, Row::Units, 2), json!({})).id;
+        let played = put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({})).id;
+        // Onto the Dormant card alone: nothing happens, as onto an Immutable one (R23, R61).
+        let mut onto = state.clone();
+        let only_dormant = fuse_cards(json_as(json!({
+            "instanceIds": [played],
+            "targetInstanceIds": [dormant],
+            "pick": "random",
+        })));
+        let events = run_effect(&mut onto, only_dormant, P2);
+        assert!(events.is_empty(), "{events:?}");
+        assert_eq!(onto, state, "nothing changed");
+        // Beside an awake match, the random pick draws only the awake one.
+        for seed in 0..8 {
+            let mut picked = state.clone();
+            picked.seed = format!("r4454003-{seed}");
+            let either = fuse_cards(json_as(json!({
+                "instanceIds": [played],
+                "targetInstanceIds": [dormant, awake],
+                "pick": "random",
+            })));
+            let events = run_effect(&mut picked, either, P2);
+            let dormant_card = find_instance(&picked, &dormant).expect("still on the field");
+            assert_eq!(dormant_card.def_id, "fx-21", "seed {seed}");
+            assert_ne!(
+                find_instance(&picked, &awake).expect("fused").def_id,
+                "fx-22",
+                "seed {seed}"
+            );
+            assert_eq!(i19(&state, &events, &picked), Vec::<String>::new(), "seed {seed}");
+        }
+        // As an ingredient it drops out, leaving too few to fuse.
+        let mut into = state.clone();
+        let from_dormant = fuse_cards(json_as(json!({
+            "instanceIds": [dormant],
+            "targetInstanceIds": [awake],
+        })));
+        assert!(run_effect(&mut into, from_dormant, P2).is_empty());
+        assert_eq!(into, state, "nothing changed");
+    }
+
+    #[test]
+    fn r4454004_a_dormant_card_s_brittle_count_waits_until_it_awakens() {
+        let brittle = BrittleCounter {
+            count: 1,
+            since: -10,
+            printed: None,
+        };
+        let mut state = playing("r4454004");
+        let id = put(&mut state, "fx-21", slot(P2, Row::Units, 1), json!({})).id;
+        find_instance_mut(&mut state, &id).expect("the card").brittle = Some(brittle);
+        let mut dormant = state.clone();
+        find_instance_mut(&mut dormant, &id).expect("the card").slumber = Some(Slumber { turns: Some(3) });
+        // p2's turn start ticks no count of a Dormant card's, and crumbles nothing.
+        let ended = reduce(
+            &dormant,
+            &Action::new(ActionBody::EndTurn, P1, "r4454004-dormant"),
+        );
+        assert!(ended.error.is_none(), "{:?}", ended.error);
+        let card = find_instance(&ended.state, &id).expect("still on the field");
+        assert_eq!(
+            card.brittle.map(|brittle| brittle.count),
+            Some(1),
+            "its count waits"
+        );
+        assert_eq!(
+            card.slumber,
+            Some(Slumber { turns: Some(2) }),
+            "its countdown counts"
+        );
+        assert_eq!(i19(&dormant, &ended.events, &ended.state), Vec::<String>::new());
+        // Awake, the same count ticks to 0 and crumbles it (R385).
+        let ended = reduce(&state, &Action::new(ActionBody::EndTurn, P1, "r4454004-awake"));
+        assert!(ended.error.is_none(), "{:?}", ended.error);
+        assert!(
+            ended
+                .events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Crumbled { instance_id, .. } if *instance_id == id)),
+            "{:?}",
+            ended.events
+        );
+        assert!(ended.state.players[P2].graveyard.iter().any(|card| card.id == id));
+
+        // A Burn waits on a Dormant card through the turn's end, and is dealt and removed once awake.
+        let mut burning = playing("r4454004-burn");
+        let id = put(&mut burning, "fx-21", slot(P2, Row::Units, 1), json!({})).id;
+        find_instance_mut(&mut burning, &id)
+            .expect("the card")
+            .counters
+            .burn = Some(1);
+        let mut dormant = burning.clone();
+        find_instance_mut(&mut dormant, &id).expect("the card").slumber = Some(Slumber { turns: Some(3) });
+        let ended = reduce(
+            &dormant,
+            &Action::new(ActionBody::EndTurn, P1, "r4454004-burn-dormant"),
+        );
+        assert!(ended.error.is_none(), "{:?}", ended.error);
+        let card = find_instance(&ended.state, &id).expect("still on the field");
+        assert_eq!((card.counters.burn, card.damage), (Some(1), 0), "its Burn waits");
+        assert_eq!(i19(&dormant, &ended.events, &ended.state), Vec::<String>::new());
+        let ended = reduce(
+            &burning,
+            &Action::new(ActionBody::EndTurn, P1, "r4454004-burn-awake"),
+        );
+        assert!(ended.error.is_none(), "{:?}", ended.error);
+        let card = find_instance(&ended.state, &id).expect("still on the field");
+        assert_eq!(
+            (card.counters.burn, card.damage),
+            (None, 1),
+            "awake, it burns (R4154000)"
+        );
+    }
+
+    #[test]
+    fn r4454005_the_switch_out_of_defense_passes_a_dormant_card_by_until_it_awakens() {
+        let mut state = playing("r4454005");
+        let id = put(&mut state, "fx-21", slot(P2, Row::Units, 1), json!({})).id;
+        let card = find_instance_mut(&mut state, &id).expect("the card");
+        card.position = Some(Position::Def);
+        card.granted_keywords = vec![json_as(json!({ "kind": "Indestructible" }))];
+        let mut dormant = state.clone();
+        find_instance_mut(&mut dormant, &id).expect("the card").slumber = Some(Slumber { turns: Some(2) });
+        let check = || Effect::new("r4454005-check", |_ctx| {});
+        // The state check leaves the Dormant card in Defense Position, and I17 holds it lawful there.
+        let mut checked = dormant.clone();
+        let events = settled(&mut checked, check());
+        assert_eq!(
+            find_instance(&checked, &id).expect("on the field").position,
+            Some(Position::Def)
+        );
+        assert_eq!(i19(&dormant, &events, &checked), Vec::<String>::new());
+        assert_eq!(i17(&checked, &events), Vec::<String>::new());
+        // Awake, an Indestructible Unit in Defense Position is switched to Attack Position (R2179000).
+        let mut checked = state.clone();
+        let events = settled(&mut checked, check());
+        assert_eq!(
+            find_instance(&checked, &id).expect("on the field").position,
+            Some(Position::Atk)
+        );
+        assert!(events.iter().any(
+            |event| matches!(event, GameEvent::PositionSwitched { instance_id, .. } if *instance_id == id)
+        ));
+    }
+}
+
+mod i20 {
+    use super::*;
+    use jackioh_engine::effects;
+    use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, move_to_zone};
+
+    use crate::rules::fixtures::harness::run_effect;
+
+    fn i20(start: &GameState, events: &[GameEvent], state: &GameState) -> Vec<String> {
+        invariant("I20", create_invariant_monitor(start).after(events, state))
+    }
+
+    /// `state` with `id`'s stored damage set to `damage`.
+    fn with_damage(state: &GameState, id: &str, damage: i32) -> GameState {
+        let mut out = state.clone();
+        find_instance_mut(&mut out, id).expect("the unit").damage = damage;
+        out
+    }
+
+    fn healed(id: &str, amount: i32) -> GameEvent {
+        json_as(json!({ "type": "healed", "targetId": id, "amount": amount }))
+    }
+
+    fn summoned(id: &str, via: Value) -> GameEvent {
+        json_as(json!({
+            "type": "summoned", "player": "p1", "instanceId": id, "defId": "fx-1",
+            "row": "units", "lane": 1, "via": via,
+        }))
+    }
+
+    #[test]
+    fn i20_a_unit_s_damage_and_heal_events_with_their_moves_are_clean() {
+        let (start, id) = hurt("i20-clean", 2);
+        let mut monitor = create_invariant_monitor(&start);
+        let hit = with_damage(&start, &id, 3);
+        assert!(invariant("I20", monitor.after(&[damage_event(&id, 1)], &hit)).is_empty());
+        let mended = with_damage(&start, &id, 1);
+        assert!(invariant("I20", monitor.after(&[healed(&id, 2)], &mended)).is_empty());
+    }
+
+    #[test]
+    fn i20_stored_damage_that_moves_with_no_event_is_flagged_once() {
+        let (start, id) = hurt("i20-silent", 0);
+        let bumped = with_damage(&start, &id, 1);
+        let mut monitor = create_invariant_monitor(&start);
+        only(
+            &invariant("I20", monitor.after(&[], &bumped)),
+            &id,
+            &["I20 silent card damage", "§4.4", "R78"],
+        );
+        // Reported once: the tally then follows the state.
+        assert!(invariant("I20", monitor.after(&[], &bumped)).is_empty());
+        // An event with no move is as silent.
+        only(
+            &i20(&start, &[damage_event(&id, 1)], &start),
+            &id,
+            &["I20 silent card damage"],
+        );
+    }
+
+    #[test]
+    fn i20_an_overheal_that_emits_no_healed_and_changes_nothing_is_clean() {
+        let (mut state, id) = hurt("i20-overheal", 1);
+        let start = state.clone();
+        assert!(i20(&start, &[], &start).is_empty());
+        let events = run_effect(
+            &mut state,
+            effects::heal(json_as(json!({
+                "target": { "of": "instance", "instanceId": id },
+                "amount": 20,
+            }))),
+            P1,
+        );
+        assert_eq!(find_instance(&state, &id).expect("the unit").damage, 0);
+        assert!(i20(&start, &events, &state).is_empty());
+        // Healed again at 0 damage: no `healed`, no move.
+        let again = state.clone();
+        let events = run_effect(
+            &mut state,
+            effects::heal(json_as(json!({
+                "target": { "of": "instance", "instanceId": id },
+                "amount": 20,
+            }))),
+            P1,
+        );
+        assert!(events.is_empty(), "{events:?}");
+        assert!(i20(&again, &events, &state).is_empty());
+    }
+
+    #[test]
+    fn i20_a_fresh_summon_anchors_at_zero() {
+        let start = playing("i20-summon");
+        let mut state = start.clone();
+        let id = put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({})).id;
+        let arrival = summoned(&id, Value::Null);
+        assert!(i20(&start, std::slice::from_ref(&arrival), &state).is_empty());
+        let hurt_on_arrival = with_damage(&state, &id, 2);
+        only(
+            &i20(&start, std::slice::from_ref(&arrival), &hurt_on_arrival),
+            &id,
+            &["I20 silent card damage"],
+        );
+        let hit = with_damage(&state, &id, 1);
+        assert!(i20(&start, &[arrival, damage_event(&id, 1)], &hit).is_empty());
+    }
+
+    #[test]
+    fn i20_vanilla_s_one_health_write_passes_through_the_transformed_re_anchor() {
+        let (mut state, id) = hurt("i20-vanilla", 3);
+        find_instance_mut(&mut state, &id).expect("the unit").buffs.health = 2;
+        let start = state.clone();
+        let events = run_effect(
+            &mut state,
+            effects::vanilla(json_as(json!({ "instanceId": id }))),
+            P1,
+        );
+        assert_eq!(find_instance(&state, &id).expect("the unit").damage, 1);
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Transformed { .. }))
+        );
+        assert!(i20(&start, &events, &state).is_empty());
+        only(&i20(&start, &[], &state), &id, &["I20 silent card damage"]);
+    }
+
+    #[test]
+    fn i20_a_card_that_leaves_the_field_drops_its_entry() {
+        let (start, id) = hurt("i20-leaves", 2);
+        let mut gone = start.clone();
+        let mut card = find_instance(&gone, &id).expect("the unit").clone();
+        move_to_zone(
+            &mut gone,
+            &mut card,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
+        assert!(find_instance(&gone, &id).is_some_and(|c| c.zone.z() != ZoneName::Field));
+        let mut monitor = create_invariant_monitor(&start);
+        assert!(invariant("I20", monitor.after(&[], &gone)).is_empty());
+        // Back on the field at 0 with no event: the old tally of 2 did not survive.
+        assert!(
+            invariant(
+                "I20",
+                monitor.after(&[], &{
+                    let mut back = start.clone();
+                    find_instance_mut(&mut back, &id).expect("the unit").damage = 0;
+                    back
+                })
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn i20_set_stats_a_reborn_return_a_flicker_a_rollback_and_a_glitch_reset_re_anchor() {
+        let (start, id) = hurt("i20-anchors", 2);
+        let cleared = with_damage(&start, &id, 0);
+        let number: GameEvent = json_as(json!({
+            "type": "numberChanged", "instanceId": id, "defId": "fx-1", "key": "health", "value": 5,
+        }));
+        let rolled: GameEvent = json_as(json!({
+            "type": "rolledBack", "player": "p1", "turnsAgo": 1, "sides": ["p1"],
+        }));
+        let flicker: GameEvent = json_as(json!({
+            "type": "flickered", "player": "p1", "instanceId": id, "defId": "fx-1",
+            "row": "units", "lane": 1,
+        }));
+        for (name, events) in [
+            ("numberChanged", vec![number]),
+            ("rolledBack", vec![rolled]),
+            ("flickered", vec![flicker]),
+        ] {
+            assert!(i20(&start, &events, &cleared).is_empty(), "{name}");
+            assert_eq!(i20(&start, &[], &cleared).len(), 1, "{name} without its event");
+        }
+        // Reborn returns a card with its maximum health less 1 as damage, announced by its `summoned`.
+        let (fresh, id) = hurt("i20-reborn", 0);
+        let reborn = with_damage(&fresh, &id, 1);
+        assert!(i20(&fresh, &[summoned(&id, json!("Reborn"))], &reborn).is_empty());
+        assert_eq!(i20(&fresh, &[summoned(&id, Value::Null)], &reborn).len(), 1);
+        // A Glitch's reset (R676) starts every tally again.
+        let mut reset = cleared.clone();
+        reset.resets = Some(start.resets.unwrap_or(0) + 1);
+        assert!(i20(&start, &[], &reset).is_empty());
+    }
+
+    #[test]
+    fn i20_a_planted_stored_damage_bump_is_caught_on_a_real_step() {
+        let (start, id) = hurt("i20-plant", 1);
+        let result = reduce(&start, &Action::new(ActionBody::EndTurn, P1, "i20-end"));
+        assert!(result.error.is_none(), "{:?}", result.error);
+        assert!(i20(&start, &result.events, &result.state).is_empty());
+        let mut planted = result.state.clone();
+        find_instance_mut(&mut planted, &id).expect("the unit").damage += 1;
+        only(
+            &i20(&start, &result.events, &planted),
+            &id,
+            &["I20 silent card damage", "§4.4"],
+        );
+    }
 }

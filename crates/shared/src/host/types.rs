@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, CombatForecast, EmoteId, GameEventType, GameResult, LastBoardEntry, PlayerId,
-    PlayerView, PromptKind,
+    Action, ActionBody, Aim, CombatForecast, EmoteId, GameEventType, GameResult, LastBoardEntry, PerPlayer,
+    PlayerId, PlayerView, PromptKind,
 };
 
 use crate::bots::decide::BotChoice;
@@ -372,8 +372,15 @@ pub enum DuelOutput {
     /// The change produced `fresh` events, which a bot's persona reads (R645).
     Changed { fresh: usize },
     /// Every view, prompt and clock of a change has been sent: the point a think time starts from, and
-    /// where watchers' views are recorded.
-    Pushed { snapshot: MatchSnapshot },
+    /// where watchers' views are recorded. `views` is each home's view as it was sent, clock included,
+    /// `None` for a home with no socket; it is for a host in the same process, and is not serialized (a
+    /// caller that gets none builds the view itself).
+    Pushed {
+        snapshot: MatchSnapshot,
+        #[serde(skip)]
+        #[cfg_attr(feature = "ts", ts(skip))]
+        views: PerPlayer<Option<Box<PlayerView>>>,
+    },
     /// Decide a move for a seat the host plays.
     Decide { request: DecideRequest },
     /// The game is over: record it. Feed [`DuelEvent::ResultRecorded`] once written.
