@@ -15869,16 +15869,11 @@
     "what": "plan #4428 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T02:05:25Z",
+    "at": "2026-11-22T02:16:02Z",
     "notes": [
-      "delivered plan #4423 on claude-4 (run 44972651224): planned",
-      "delivered review #4439 on muse (run 44972567339): approved",
-      "delivered build #4431 on muse (run 44969119382): built",
-      "started review #4442 on muse (run 44974703903)",
-      "started build #4423 on claude-4 (run 44974743485)",
-      "nothing more to start: nothing is queued",
-      "pruned 7 plan file(s) older than 7 days",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "#4428 needs a plan",
+      "started plan #4428 on muse (run 44975360996)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16584,7 +16579,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T02:05:25Z",
+  "loop_tick": "2026-11-22T02:16:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
