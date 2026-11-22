@@ -16985,7 +16985,7 @@
       }
     },
     "4464": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "decision": {
         "answer": "1",
@@ -17037,16 +17037,16 @@
       "interruptions": 0,
       "issue": 4456,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "muse",
       "question": "What should carry out the history rewrite this worktree is forbidden to do (no commit, rebase, reset, merge, or branch switch)?",
       "queued_at": "2026-11-22T16:42:08Z",
-      "run_id": "44990297939",
+      "run_id": "pending:64cf60da-1795365727",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "decision",
-      "started_at": "2026-11-22T05:38:40Z",
+      "started_at": "2026-11-22T16:42:35Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18308,9 +18308,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T16:41:54Z",
+    "at": "2026-11-22T16:42:35Z",
     "url": "",
-    "what": "build #4472 on gpt"
+    "what": "revise #4464 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T16:21:33Z",
