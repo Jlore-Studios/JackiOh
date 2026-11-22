@@ -65,7 +65,8 @@ impl Default for SwitchAllPositionsArgs {
     }
 }
 
-/// #48: switch every unit, or only one side's, spending no exertion (R20).
+/// #48: switch every unit, or only one side's, spending no exertion (R20); a Spell's passes a Unit
+/// Immune to Spells by (R4453000).
 pub fn switch_all_positions(args: SwitchAllPositionsArgs) -> Effect {
     Effect::new("switchAllPositions", move |ctx| {
         let players = match args.side {
@@ -80,6 +81,10 @@ pub fn switch_all_positions(args: SwitchAllPositionsArgs) -> Effect {
             // The list as it stands before the first switch.
             let units: Vec<CardInstance> = active_units_of(ctx.state, player).into_iter().cloned().collect();
             for unit in units {
+                // R4453000: a Spell's "every Unit" passes a Unit Immune to Spells by (§6.1).
+                if crate::restrictions::unaffected_by(ctx, &unit) {
+                    continue;
+                }
                 let _ = switch_position(
                     ctx,
                     &unit,
