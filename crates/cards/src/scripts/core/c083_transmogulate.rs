@@ -144,9 +144,9 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.9i a Dormant board card drew a random Legendary it was never replaced by
-/// (issue #4424).
-pub fn script_v0_6_9i() -> CardScripts {
+/// R767000: through v0.6.9l a Dormant board card drew a random Legendary it was never replaced by
+/// (issue #4424); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9l() -> CardScripts {
     CardScripts {
         base: transmogulate(false, OFF_FIELD_ZONES, Board::Embiggened, true),
         radiant: transmogulate(true, OFF_FIELD_ZONES, Board::Embiggened, true),

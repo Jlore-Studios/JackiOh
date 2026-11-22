@@ -1186,16 +1186,28 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9e",
         c134_felinor_containment_chamber::script_v0_6_9e,
     ),
-    // #4424 (R4424000): the last scripts that still drew a Dormant card.
+    // #4424 (R4424000): the last scripts that still drew a Dormant card or a Unit immune to Spells.
+    // Arcane Missiles ran three: v0.6.9j's row above (#4469) keeps its first, v0.6.9k ran the same, and
+    // v0.6.9l's drew among the acting enemy Units on the half the cast chose.
+    (
+        c011_2_arcane_missiles::ID,
+        "v0.6.9k",
+        c011_2_arcane_missiles::script_v0_6_9k,
+    ),
+    (
+        c011_2_arcane_missiles::ID,
+        "v0.6.9l",
+        c011_2_arcane_missiles::script_v0_6_9l,
+    ),
     (
         c083_transmogulate::ID,
-        "v0.6.9i",
-        c083_transmogulate::script_v0_6_9i,
+        "v0.6.9l",
+        c083_transmogulate::script_v0_6_9l,
     ),
     (
         c085_unlicensed_experimentation::ID,
-        "v0.6.9i",
-        c085_unlicensed_experimentation::script_v0_6_9i,
+        "v0.6.9l",
+        c085_unlicensed_experimentation::script_v0_6_9l,
     ),
     // #4469 (R3554003): the last scripts that drew a random pick among cards across a slash.
     (c040_mc_tech::ID, "v0.6.9j", c040_mc_tech::script_v0_6_9j),
@@ -1847,15 +1859,42 @@ mod tests {
         );
     }
 
-    /// Issue #4424: v0.6.9g to v0.6.9i shipped while it was built, so its rows are keyed at
-    /// v0.6.9i, the newest version that ran the scripts they keep.
+    /// Issue #4424: v0.6.9g to v0.6.9l shipped while it was built, so the rows of Transmogulate and
+    /// Unlicensed Experimentation are keyed at v0.6.9l, the newest version that ran the scripts they keep.
     #[test]
-    fn r767000_issue_4424_scripts_are_kept_through_v0_6_9i_the_newest_version_that_ran_them() {
+    fn r767000_issue_4424_scripts_are_kept_through_v0_6_9l_the_newest_version_that_ran_them() {
         assert_kept_through(
             &[c083_transmogulate::ID, c085_unlicensed_experimentation::ID],
-            &["v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i"],
-            "v0.6.9j",
+            &[
+                "v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i", "v0.6.9j", "v0.6.9k", "v0.6.9l",
+            ],
+            "v0.6.9m",
         );
+    }
+
+    /// Issue #4424: Arcane Missiles ran a different pool in each of v0.6.9j (#4469's row), v0.6.9k and
+    /// v0.6.9l, so each of those folds under the row kept at its own version and v0.6.9m, the first to
+    /// draw from `cards_in_scope`, under none.
+    #[test]
+    fn r767000_issue_4424_arcane_missiles_keeps_the_pool_each_of_v0_6_9j_k_and_l_ran() {
+        crate::register_all();
+        let kept_at = |version: &str| {
+            covering_at(&HISTORY.order, KEPT_SCRIPTS, version, c011_2_arcane_missiles::ID)
+                .map(|at| KEPT_SCRIPTS[at].1)
+        };
+        for (version, key) in [
+            ("v0.6.9i", "v0.6.9j"),
+            ("v0.6.9j", "v0.6.9j"),
+            ("v0.6.9k", "v0.6.9k"),
+            ("v0.6.9l", "v0.6.9l"),
+        ] {
+            assert_eq!(
+                kept_at(version),
+                Some(key),
+                "{version} ran the script kept at {key}"
+            );
+        }
+        assert_eq!(kept_at("v0.6.9m"), None, "v0.6.9m draws from cards_in_scope");
     }
 
     /// Issue #4469: v0.6.9j was the newest shipped version as it was built, and no later one had shipped,

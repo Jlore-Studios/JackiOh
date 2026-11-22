@@ -14,35 +14,52 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-011-2";
 
-fn arcane_missiles(echo: i32, kept: bool) -> Script {
+/// The enemy Units a missile may be drawn onto, which each shipped version of the card read differently.
+#[derive(Clone, Copy)]
+enum Pool {
+    /// R4424000: the enemy Units a Spell may affect (C+ #25 Soul Shot's pool): `cards_in_scope`, which
+    /// leaves out a Unit immune to Spells, a Dormant card and, on a slashed board (R3554003), a card
+    /// across the slash.
+    InScope,
+    /// v0.6.9l: every acting enemy Unit on the half the cast chose (R3554003).
+    Reaching,
+    /// v0.6.9k and before: every acting enemy Unit, across a slash too.
+    Acting,
+}
+
+fn arcane_missiles(echo: i32, pool: Pool) -> Script {
     Script {
         static_flags: Some(StaticFlags { echo: Some(echo), ..StaticFlags::default() }),
         cry: Some(hook(move |ctx| {
             let amount = param(&*ctx, "damage");
             let enemy = opponent_of(ctx.controller);
-            // R4424000: the pool is the enemy Units a Spell may affect (C+ #25 Soul Shot's pool),
-            // so a Unit immune to Spells and a Dormant card are never drawn.
-            // R3554003: on a slashed board, `cards_in_scope` draws only from the cards on its own half.
-            let ids: Vec<String> = if kept {
-                active_units_of(ctx.sink.state, enemy)
-                    .iter()
-                    .map(|unit| unit.id.clone())
-                    .collect()
-            } else {
-                cards_in_scope(ctx, &json_as(json!({ "side": "enemy" })))
+            let ids: Vec<String> = match pool {
+                Pool::InScope => cards_in_scope(ctx, &json_as(json!({ "side": "enemy" })))
                     .into_iter()
                     .map(|unit| unit.id)
-                    .collect()
+                    .collect(),
+                Pool::Reaching => {
+                    let state: &GameState = &*ctx.sink.state;
+                    let source = ctx.self_.as_ref();
+                    active_units_of(state, enemy)
+                        .iter()
+                        .filter(|unit| reaches(state, source, unit))
+                        .map(|unit| unit.id.clone())
+                        .collect()
+                }
+                Pool::Acting => active_units_of(&*ctx.sink.state, enemy)
+                    .iter()
+                    .map(|unit| unit.id.clone())
+                    .collect(),
             };
             // The state and the rng are two fields of the sink: the pool reads the one while the
             // draw rolls from the other (C+ #25 Soul Shot's shape).
-            let sink = &mut ctx.sink;
-            let rng: &mut Rng = &mut *sink.rng;
-            let mut pool: Vec<Value> = vec![json!({ "of": "enemyHero" })];
-            pool.extend(ids.iter().map(|id| {
+            let rng: &mut Rng = &mut *ctx.sink.rng;
+            let mut targets: Vec<Value> = vec![json!({ "of": "enemyHero" })];
+            targets.extend(ids.iter().map(|id| {
                 json!({ "of": "instance", "instanceId": id.clone() })
             }));
-            let Some(picked) = rng.pick(&pool) else {
+            let Some(picked) = rng.pick(&targets) else {
                 return vec![];
             };
             vec![damage(json_as(json!({ "to": picked, "amount": amount })))]
@@ -53,24 +70,33 @@ fn arcane_missiles(echo: i32, kept: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: arcane_missiles(2, false),
-        radiant: arcane_missiles(5, false),
+        base: arcane_missiles(2, Pool::InScope),
+        radiant: arcane_missiles(5, Pool::InScope),
     }
 }
 
-/// v0.6.9j and before: each missile drew among every enemy Unit, across a slash too (R3554003) and onto
-/// Units immune to Spells or Dormant (R4424000); `KEPT_SCRIPTS` folds those replays under it.
+/// R767000: v0.6.9l drew each missile among the acting enemy Units on the half the cast chose
+/// (R3554003), a Unit immune to Spells among them (issue #4424); `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_6_9l() -> CardScripts {
+    CardScripts {
+        base: arcane_missiles(2, Pool::Reaching),
+        radiant: arcane_missiles(5, Pool::Reaching),
+    }
+}
+
+/// R767000: v0.6.9k drew each missile among every acting enemy Unit, as v0.6.9j did (issue #4424).
+pub fn script_v0_6_9k() -> CardScripts {
+    script_v0_6_9j()
+}
+
+/// v0.6.9j and before: each missile drew among every enemy Unit, across a slash too (R3554003);
+/// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_9j() -> CardScripts {
     CardScripts {
-        base: arcane_missiles(2, true),
-        radiant: arcane_missiles(5, true),
+        base: arcane_missiles(2, Pool::Acting),
+        radiant: arcane_missiles(5, Pool::Acting),
     }
-}
-
-/// R767000: through v0.6.9i a missile could be drawn onto a Unit immune to Spells (issue #4424);
-/// folded under `script_v0_6_9j`.
-pub fn script_v0_6_9i() -> CardScripts {
-    script_v0_6_9j()
 }
 
 // S #11.2 Arcane Missiles — SPEC §8.10 row S 11.2, BUILD M12 row S 11.2.
