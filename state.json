@@ -15525,6 +15525,8 @@
       "run_id": "44953052504",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-21T21:43:53Z",
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "4433": {
