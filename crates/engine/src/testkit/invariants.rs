@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The eighteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
+//! The nineteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
 //! one bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -53,9 +53,10 @@
 //!   I14 every action `legal_actions` lists, `reduce` accepts (§10.2; #3062), I8's converse: each seat's
 //!      listing is reduced on a copy of the state, at most `I14_ACTION_CAP` of a long one spread over it,
 //!      verifying that `reduce` accepts it without refusal or panic, and verifying the resulting state
-//!      and events with the stateless invariants (I5, I7, I10, I11, I16 and I17; #4057); invariants
-//!      requiring shadow history (I2, I3, I4, I9's health tally, I12) remain on the played path. Run at
-//!      setup (the mulligan's subsets) and every `I14_GATE_STRIDE`-th state; not in Duos.
+//!      and events with the stateless invariants (I5, I7, I10, I11, I16 and I17; #4057), and I19 against
+//!      the state it was reduced from (#4454); invariants requiring shadow history (I2, I3, I4, I9's
+//!      health tally, I12) remain on the played path. Run at setup (the mulligan's subsets) and every
+//!      `I14_GATE_STRIDE`-th state; not in Duos.
 //!   I15 every Activate ability a seat may see is held to the listing (§10.8, R384, R3061000): while it may
 //!      act, each shown on a unit or backrow top of either side is `usable` exactly when `legal_actions`
 //!      lists an `activate` of it and carries `reason` exactly when not; read off I6's view and listing in
@@ -77,6 +78,15 @@
 //!      step to it, a Cleave attack's splash and a Trample attack's overflow included (R4290000); what it
 //!      skips is `foreseeable_attack`'s and `plain_combat`'s (a hook, a trap, a redirect, a damage chain,
 //!      a reflection, a prompt or a turn end). 1v1 only.
+//!   I19 nothing reaches a Dormant card (§6.1 Dormant, §3.2, R1839000; #4454): `before` notes each Dormant
+//!      field card and its record (`SLUMBER_KEPT`); `after` fails an event that changes one and names it
+//!      (`reached_ids`) before its `awakened`, `starshipLaunched` or own `activated` (R1839001, R1839002),
+//!      and one whose record changed with no event. Lawful: a hull's `fused` then `starshipFused`
+//!      (R1852000, R3539004), an exile in a `BOARD_SWEEPS` card's run (R3539002, R3554002, R3567000), a
+//!      `controlChanged` or `bounced` after a board `swapped` or a `rotated` (R4454000), a board
+//!      restore's after its `rolledBack` (R4454002), and a `radiantSet` under Tears of the Kwzki Tree's
+//!      world (R4454001). A card Dormant mid-step is judged from the next; I14's branches and each Duos
+//!      duel run it.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -610,6 +620,54 @@ const KEPT_IN_HAND_OR_LIBRARY: [&str; 8] = [
 /// (R3536000), so a card that holds it off the field evolved there.
 const KEPT_BY_AN_EVOLVE: [&str; 4] = ["evolved", "buffs", "grantedKeywords", "statsOverride"];
 
+/// I19 (§6.1 Dormant, R1839000): what a Dormant card keeps while it sleeps, by field name: whatever an
+/// effect would change by reaching it. Left out on purpose: `slumber`, the countdown, which its
+/// controller's turns count down (R1839001); `summonedTurn` and `exertion`, the entry stamp a lawful
+/// carry gives it (R171); `memory` and `starship`, the engine's bookkeeping (a hull's pieces, R1852000);
+/// `zone`, which a board move along its own side changes with no event (R14); and `brittle`, its own
+/// text's count, which waits while it sleeps (R4454004) and whose tick `counterChanged` reports.
+const SLUMBER_KEPT: [&str; 20] = [
+    "defId",
+    "radiant",
+    "controller",
+    "position",
+    "damage",
+    "buffs",
+    "grantedKeywords",
+    "vanilla",
+    "costMod",
+    "costOverride",
+    "counters",
+    "statsOverride",
+    "armorOverride",
+    "markedDestroyed",
+    "markedExiled",
+    "tuning",
+    "enchantments",
+    "frozen",
+    "grants",
+    "grantedTags",
+];
+
+/// I19: the cards whose run is a board sweep, each with the ruling that lets it exile a Dormant card:
+/// a sweep is no effect reaching for a card (R3539002, R3554002). Its `exiled` looks the same as The
+/// Maestro's random pick did before #4322 (R4322000), so the card running is the only signature; a new
+/// sweep joins the table with its ruling. A fusion holding one sweeps too (R43, R102). A kept version's
+/// id (`<id>@v<version>`, R767000) sweeps only where its own script did.
+const BOARD_SWEEPS: [(&str, &str); 5] = [
+    // S+ #4 Profe Yates through v0.6.5b, a past version a fuzz game still plays: every card named with
+    // M, O, U, S or E, Dormant cards included (`exile_named`).
+    ("stinkyscapeplus-004@v0.6.5b", "R3567000"),
+    // S+ #78 Slashed Dream Cries in Red: the slashed lane, Dormant cards included.
+    ("stinkyscapeplus-078", "R3554002"),
+    // S+ #79 A Glimpse into the Endless Sea: every permanent (R4154200's `exile_board`).
+    ("stinkyscapeplus-079", "R3539002"),
+    // S+ #80 The Last Voyage: its caster's board, the Radiant face's both.
+    ("stinkyscapeplus-080", "R3539002"),
+    // S+ #81 Doomsayer: its controller's board at the start of their turn.
+    ("stinkyscapeplus-081", "R3539002"),
+];
+
 /// A card's fields as JSON, by name: each optional field is absent when unset.
 fn card_fields(card: &CardInstance) -> Map<String, Value> {
     match serde_json::to_value(card).expect("a CardInstance serializes") {
@@ -794,8 +852,9 @@ fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> 
     let barred = crate::restrictions::defense_barred(state);
     for player in PLAYER_IDS {
         for unit in crate::zones::units_on_field_of(state, player) {
-            // §4.5 step 1's switch out of Defense (`leave_defense`) skips no Dormant unit either.
+            // §4.5 step 1's switch out of Defense (`leave_defense`) passes a Dormant card by (R4454005).
             if unit.position == Some(Position::Def)
+                && !crate::slumber::is_slumbering(unit)
                 && let Some(rule) = forbidden_defense(&auras, unit, barred)
             {
                 found.push(format!(
@@ -924,6 +983,318 @@ pub fn branch_state_findings(events: &[GameEvent], state: &GameState) -> Vec<Str
     found.extend(unit_token_pile_findings(state));
     found.extend(card_record_findings(state));
     found.extend(state_check_findings(events, state));
+    found
+}
+
+/// I19: a field card Dormant as a step begins (§6.1 Dormant, R1839000): its name then, for the message,
+/// and what it keeps while it sleeps (`SLUMBER_KEPT`).
+#[derive(Clone, Debug)]
+struct SlumberMark {
+    label: String,
+    /// The side whose field holds it as the step begins.
+    side: PlayerId,
+    kept: Map<String, Value>,
+}
+
+/// I19: a board move the step is inside, from its event to the next `hookResolving`, trap or turn edge:
+/// a board swap or a rotation (`Swapped` of the board, `Rotated`; R73, R14), or a board restore
+/// (`RolledBack`: C+ #35 Rollback, S+ #84 Bogos Binted; R419, R3550007).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BoardMove {
+    Carry,
+    Restore,
+}
+
+/// I19: the Dormant field cards a step begins with, by instance id, and the run an answer step
+/// continues (`state.pending`'s resume: its card's definition and instance), which marks no
+/// `hookResolving` of its own (R2783000).
+#[derive(Clone, Debug)]
+struct SlumberStep {
+    marks: IndexMap<String, SlumberMark>,
+    pending_def: Option<String>,
+    pending_instance: Option<String>,
+}
+
+/// I19: a Dormant card's `SLUMBER_KEPT` fields.
+fn kept_record(card: &CardInstance) -> Map<String, Value> {
+    let mut fields = card_fields(card);
+    fields.retain(|field, _| SLUMBER_KEPT.contains(&field.as_str()));
+    fields
+}
+
+/// I19: the state a step begins on, as I19 reads it: every Dormant card in a field slot, a pile's, a
+/// backrow pile's and a carried one's included (R1839003, R446). A card `held` beneath another is in no
+/// slot (R1850003).
+fn slumber_step(state: &GameState) -> SlumberStep {
+    let marks = placed_cards(state)
+        .into_iter()
+        .filter(|placed| {
+            matches!(placed.zone, Zone::Field { .. }) && crate::slumber::is_slumbering(placed.card)
+        })
+        .map(|placed| {
+            let mark = SlumberMark {
+                label: name_of(placed.card),
+                side: placed.zone.player(),
+                kept: kept_record(placed.card),
+            };
+            (placed.card.id.clone(), mark)
+        })
+        .collect();
+    let resume = state.pending.as_ref().map(|pending| &pending.resume);
+    SlumberStep {
+        marks,
+        pending_def: resume.map(|resume| resume.def_id.clone()),
+        pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
+    }
+}
+
+/// I19: whether `def_id`'s run is a board sweep (`BOARD_SWEEPS`): a card the table names, or a fusion
+/// holding one, which carries its text (R43, R102).
+fn is_board_sweep(state: &GameState, def_id: &str) -> bool {
+    BOARD_SWEEPS.iter().any(|(sweep, _)| *sweep == def_id)
+        || crate::subsystems::fuse::fused_ingredients(state, def_id)
+            .is_some_and(|parts| parts.iter().any(|part| is_board_sweep(state, part)))
+}
+
+/// I19: whether the card `source_id` runs a copied Spell's text that is a board sweep (C #57 Echo
+/// copying S+ #80 The Last Voyage, R399, R546): the copy its play fixed, kept in its memory in every pile.
+fn copies_a_sweep(state: &GameState, source_id: &str) -> bool {
+    find_instance(state, source_id)
+        .and_then(|card| crate::subsystems::copied_text::copied_text_of(state, card))
+        .is_some_and(|copy| is_board_sweep(state, &copy.def_id))
+}
+
+/// I19: the cards an event changes and names (§10.3): the floor of what reaches a card, each id once.
+fn reached_ids(event: &GameEvent) -> Vec<&str> {
+    let mut ids: Vec<&str> = match event {
+        GameEvent::Damage { target_id, .. }
+        | GameEvent::DamageAbsorbed { target_id, .. }
+        | GameEvent::Healed { target_id, .. } => vec![target_id],
+        GameEvent::AttackDeclared {
+            attacker_id,
+            target_id,
+            ..
+        } => vec![attacker_id, target_id],
+        GameEvent::DivineShieldLost { instance_id }
+        | GameEvent::Buffed { instance_id, .. }
+        | GameEvent::KeywordGranted { instance_id, .. }
+        | GameEvent::CounterChanged { instance_id, .. }
+        | GameEvent::CostChanged { instance_id, .. }
+        | GameEvent::RadiantSet { instance_id, .. }
+        | GameEvent::Deradianted { instance_id, .. }
+        | GameEvent::Degraded { instance_id, .. }
+        | GameEvent::Upgraded { instance_id, .. }
+        | GameEvent::NumberChanged { instance_id, .. }
+        | GameEvent::Evolved { instance_id, .. }
+        | GameEvent::Transformed { instance_id, .. }
+        | GameEvent::PositionSwitched { instance_id, .. }
+        | GameEvent::Stolen { instance_id, .. }
+        | GameEvent::Bounced { instance_id, .. }
+        | GameEvent::Destroyed { instance_id, .. }
+        | GameEvent::Crumbled { instance_id, .. }
+        | GameEvent::Exiled { instance_id, .. }
+        | GameEvent::Held { instance_id, .. }
+        | GameEvent::Flickered { instance_id, .. }
+        | GameEvent::Animated { instance_id, .. }
+        | GameEvent::Deanimated { instance_id, .. }
+        | GameEvent::Translated { instance_id } => vec![instance_id],
+        // R437: a mark added is something aimed at the card; one taken off says the effect that waited
+        // has gone (its own run is judged by its events), and a thaw's change shows in the record.
+        GameEvent::Marked {
+            instance_id,
+            added: true,
+            ..
+        } => vec![instance_id],
+        GameEvent::ControlChanged {
+            instance_id,
+            former_id,
+            ..
+        } => std::iter::once(instance_id.as_str())
+            .chain(former_id.as_deref())
+            .collect(),
+        GameEvent::Fused {
+            instance_ids,
+            result_instance_id,
+            ..
+        } => instance_ids
+            .iter()
+            .chain(std::iter::once(result_instance_id))
+            .map(String::as_str)
+            .collect(),
+        _ => Vec::new(),
+    };
+    let mut seen: IndexSet<&str> = IndexSet::new();
+    ids.retain(|id| seen.insert(*id));
+    ids
+}
+
+/// I19 (§6.1 Dormant, §3.2, R1839000): nothing reaches a card Dormant as the step began (`step`) until
+/// it wakes. The step's events are walked in order: a card's `awakened`, `starshipLaunched` or own
+/// `activated` (its waking Activate, the one ability it keeps, R1839001, R1839002, R3539004) frees it,
+/// and before that every event that changes it and names it (`reached_ids`) is a finding, but for the
+/// lawful ones:
+/// - a hull's fuse, `fused` with `starshipFused` naming the card right after it (`starship::fuse_copy_into`,
+///   R1852000, R3539004); an Equip's (R2260000) or any other fuse onto it is not;
+/// - an `exiled` inside a `BOARD_SWEEPS` card's run, or a copier's running one's text (`copies_a_sweep`),
+///   from its `hookResolving` (or the prompt its answer continues) to the next marker, trap or turn edge
+///   (R3539002, R3554002, R3567000);
+/// - a `controlChanged` or a `bounced` after a board `swapped` or a `rotated`, in the same window: the
+///   board move carries the card whole (R4454000; the bounce is R73's and R14's at a Locked, reserved or
+///   void zone, R3554002);
+/// - a board restore's (`rolledBack`), in the same window: every card on a side it restores goes back as
+///   the snapshot holds it, or to its hand with a `bounced`, a `controlChanged` for one that enters the
+///   side and a `radiantSet` for Bogos Binted's Radiant face (R4454002);
+/// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (`radiantWorld`,
+///   R3569000, R4454001), which is no record change either.
+///
+/// A card still the same instance, still Dormant and still on the field after the step, neither freed
+/// nor carried, holds the record it began with (`SLUMBER_KEPT`), which catches a change made with no
+/// event. A card that turns Dormant inside the step is judged from the next. Draws nothing.
+fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
+    let mut found: Vec<String> = Vec::new();
+    if step.marks.is_empty() {
+        return found;
+    }
+    // A Dormant card's own Activate answered by a prompt continues its run (R1839002).
+    let mut released: IndexSet<&str> = step
+        .pending_instance
+        .as_deref()
+        .filter(|id| step.marks.contains_key(*id))
+        .into_iter()
+        .collect();
+    let mut carried: IndexSet<&str> = IndexSet::new();
+    let mut running: Option<&str> = step.pending_def.as_deref();
+    let mut sweeping = running.is_some_and(|def_id| is_board_sweep(after, def_id))
+        || step
+            .pending_instance
+            .as_deref()
+            .is_some_and(|id| copies_a_sweep(after, id));
+    let mut moving: Option<BoardMove> = None;
+    // R4454001: under Tears of the Kwzki Tree every card is Radiant, the Dormant ones too (R3569000).
+    let radiant_world = after.radiant_world == Some(true);
+    for (at, event) in events.iter().enumerate() {
+        match event {
+            GameEvent::HookResolving {
+                source_id, def_id, ..
+            } => {
+                running = Some(def_id);
+                sweeping = is_board_sweep(after, def_id) || copies_a_sweep(after, source_id);
+                moving = None;
+                continue;
+            }
+            GameEvent::TrapFired { def_id, .. } => {
+                running = Some(def_id);
+                sweeping = false;
+                moving = None;
+                continue;
+            }
+            GameEvent::TurnStarted { .. } | GameEvent::TurnEnded { .. } => {
+                running = None;
+                sweeping = false;
+                moving = None;
+                continue;
+            }
+            GameEvent::Swapped {
+                what: SwapWhat::Board,
+            }
+            | GameEvent::Rotated { .. } => {
+                moving = Some(BoardMove::Carry);
+                continue;
+            }
+            GameEvent::RolledBack { sides, .. } => {
+                moving = Some(BoardMove::Restore);
+                // R4454002: what stood on a restored side goes back as the snapshot holds it.
+                carried.extend(
+                    step.marks
+                        .iter()
+                        .filter(|(_, mark)| sides.contains(&mark.side))
+                        .map(|(id, _)| id.as_str()),
+                );
+                continue;
+            }
+            GameEvent::Awakened { instance_id, .. }
+            | GameEvent::StarshipLaunched { instance_id, .. }
+            | GameEvent::Activated { instance_id, .. } => {
+                released.insert(instance_id);
+                continue;
+            }
+            _ => {}
+        }
+        for id in reached_ids(event) {
+            let Some((id, mark)) = step.marks.get_key_value(id) else {
+                continue;
+            };
+            let id = id.as_str();
+            if released.contains(id) {
+                continue;
+            }
+            match event {
+                // R1852000, R3539004: a piece fusing into its hull.
+                GameEvent::Fused { .. }
+                    if matches!(
+                        events.get(at + 1),
+                        Some(GameEvent::StarshipFused { instance_id, .. }) if instance_id == id
+                    ) =>
+                {
+                    carried.insert(id);
+                }
+                // R3539002, R3554002, R3567000: a board sweep.
+                GameEvent::Exiled { .. } if sweeping => {
+                    released.insert(id);
+                }
+                // R4454000, R4454002: a board move carries it whole, or bounces it on the way.
+                GameEvent::ControlChanged { .. } if moving.is_some() => {
+                    carried.insert(id);
+                }
+                GameEvent::Bounced { .. } if moving.is_some() => {
+                    released.insert(id);
+                }
+                // R4454002: Bogos Binted's Radiant face rebuilds its side Radiant.
+                GameEvent::RadiantSet { .. } if moving == Some(BoardMove::Restore) => {
+                    carried.insert(id);
+                }
+                // R4454001: Tears of the Kwzki Tree's world.
+                GameEvent::RadiantSet { .. } if radiant_world => {}
+                _ => {
+                    found.push(format!(
+                        "I19 reached Dormant: {} names {} on turn {} while it is Dormant, in {}'s run (§6.1 \
+                         Dormant, R1839000)",
+                        event.event_type().as_str(),
+                        mark.label,
+                        after.turn,
+                        running.unwrap_or("no card")
+                    ));
+                    released.insert(id);
+                }
+            }
+        }
+    }
+    for (id, mark) in &step.marks {
+        if released.contains(id.as_str()) || carried.contains(id.as_str()) {
+            continue;
+        }
+        let Some(card) = find_instance(after, id) else {
+            continue;
+        };
+        if !crate::slumber::is_slumbering(card) {
+            continue;
+        }
+        let now = kept_record(card);
+        let changed: Vec<&str> = SLUMBER_KEPT
+            .into_iter()
+            .filter(|field| !(radiant_world && *field == "radiant"))
+            .filter(|field| now.get(*field) != mark.kept.get(*field))
+            .collect();
+        if !changed.is_empty() {
+            found.push(format!(
+                "I19 Dormant record changed: {} holds a different {} after the step on turn {}, with no event \
+                 naming it (§6.1 Dormant, R1839000)",
+                mark.label,
+                changed.join(", "),
+                after.turn
+            ));
+        }
+    }
     found
 }
 
@@ -1950,7 +2321,8 @@ fn sampled(legal: &[ActionBody], rotate: u32) -> Vec<&ActionBody> {
 
 /// I14 for one seat (§10.2; #3062, #4057): each action of `legal` (at most `I14_ACTION_CAP`, spread over the
 /// list) sent to `reducer` on a copy of `state`; each it refuses, panics on, or leaves with a stateless
-/// invariant violation on the resulting board is a finding. Empty when clean.
+/// invariant violation on the resulting board, or with I19's against the state it was reduced from
+/// (#4454), is a finding. Empty when clean.
 pub fn listed_refused(
     state: &GameState,
     player: PlayerId,
@@ -1959,6 +2331,8 @@ pub fn listed_refused(
 ) -> Vec<String> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
+    // I19: the Dormant cards every branch begins with (#4454).
+    let slumber = slumber_step(&probed);
     let mut found: Vec<String> = Vec::new();
     for body in sampled(legal, state.rng_cursor) {
         let action = Action::new(body.clone(), player, I14_NONCE);
@@ -1972,7 +2346,10 @@ pub fn listed_refused(
                         state.turn, state.seed
                     ));
                 } else {
-                    for finding in branch_state_findings(&result.events, &result.state) {
+                    let branch = branch_state_findings(&result.events, &result.state)
+                        .into_iter()
+                        .chain(slumber_reach_findings(&slumber, &result.events, &result.state));
+                    for finding in branch {
                         found.push(format!(
                             "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
                             state.turn, state.seed
@@ -2542,9 +2919,10 @@ fn plain_combat(events: &[GameEvent], state: &GameState, entry: &crate::query::A
 }
 
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
-/// run against it. `before` is I1, I3, I12's chosen-action snapshot and I18's kept forecast, `after`
-/// feeds one action's events into the shadow and runs I2, I4, I5, I7, I9, I10, I11, I12, I16, I17 and
-/// I18, `hidden` is I6, I13 and I15 for both seats, `unlisted` is I8 and `listed` is I14.
+/// run against it. `before` is I1, I3, I12's chosen-action snapshot, I18's kept forecast and I19's
+/// Dormant cards, `after` feeds one action's events into the shadow and runs I2, I4, I5, I7, I9, I10,
+/// I11, I12, I16, I17, I18 and I19, `hidden` is I6, I13 and I15 for both seats, `unlisted` is I8 and
+/// `listed` is I14 (I19 on each branch).
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -2612,6 +2990,9 @@ pub struct InvariantMonitor {
     forecast_kept: Option<KeptForecast>,
     /// I18: how many attacks `after` held to their forecast, so a filter that judges nothing shows.
     forecast_judged: usize,
+    /// I19: the Dormant cards the step began with, noted by `before` (or the Duos monitor's for the duel
+    /// not acting) and judged by `after`, which takes them: an `after` with no `before` judges none.
+    slumber_step: Option<SlumberStep>,
 }
 
 /// R781004: whether `later`, the rest of an action's events, summons `id` again (back through Reborn): an
@@ -2655,7 +3036,13 @@ impl InvariantMonitor {
             judge_forecast: true,
             forecast_kept: None,
             forecast_judged: 0,
+            slumber_step: None,
         }
+    }
+
+    /// I19: the Dormant cards `state` holds as a step begins on it, for `after` to judge.
+    fn note_slumber(&mut self, state: &GameState) {
+        self.slumber_step = Some(slumber_step(state));
     }
 
     /// I18: how many attacks this monitor held to their forecast (#4111).
@@ -3154,11 +3541,12 @@ impl InvariantMonitor {
         self.hold_hero_floor(seat, state);
     }
 
-    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot and the
-    /// forecast I18 holds a chosen attack to. Empty when clean.
+    /// I1 and I3 on the state the next action is chosen in, plus I12's chosen exertion snapshot, the
+    /// forecast I18 holds a chosen attack to and the Dormant cards I19 holds untouched. Empty when clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
         // I18: the forecast the seat was shown for the attack it chose, kept for `after` (R3100000).
         self.forecast_kept = None;
+        self.note_slumber(state);
         if self.judge_forecast
             && let ActionBody::Attack {
                 attacker_id,
@@ -3281,11 +3669,12 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12, I16, I17 and I18 against
-    /// the resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12 and I16–I19 against the
+    /// resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
-        // I18: a kept forecast is this step's alone.
+        // I18: a kept forecast is this step's alone, and so are I19's Dormant cards.
         let kept = self.forecast_kept.take();
+        let slumber = self.slumber_step.take();
         let mut found: Vec<String> = Vec::new();
         // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
         let began_on = self.turn;
@@ -3835,6 +4224,10 @@ impl InvariantMonitor {
         }
 
         found.extend(branch_state_findings(events, state));
+        // I19: nothing reached a card Dormant as the step began (§6.1 Dormant, R1839000).
+        if let Some(step) = &slumber {
+            found.extend(slumber_reach_findings(step, events, state));
+        }
         // I18: a plain attack did what its seat's forecast said (R3100000, R4111000).
         if let Some(kept) = kept
             && kept.foreseeable
@@ -4002,7 +4395,8 @@ impl DuosInvariantMonitor {
         &mut self.monitors[duel]
     }
 
-    /// I1 and I3 on the state the next Duos action is chosen in, plus I12's chosen exertion snapshot.
+    /// I1 and I3 on the state the next Duos action is chosen in, plus I12's chosen exertion snapshot, and
+    /// I19's Dormant cards in every duel, since an action in one may reach into the other (#4454).
     pub fn before(&mut self, state: &DuosState, seat: DuosSeat, action: &DuosActionBody) -> Vec<String> {
         let duel = seat.duel();
         let violations = match action {
@@ -4013,14 +4407,21 @@ impl DuosInvariantMonitor {
                 self.monitors[duel].before(&state.duels[duel], seat.player(), &ActionBody::EndTurn)
             }
         };
+        for (other, monitor) in self.monitors.iter_mut().enumerate() {
+            if other != duel
+                && let Some(other_state) = state.duels.get(other)
+            {
+                monitor.note_slumber(other_state);
+            }
+        }
         violations
             .into_iter()
             .map(|v| format!("duel {duel}: {v}"))
             .collect()
     }
 
-    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9–I12, I16 and I17 against
-    /// both duels, and checks pool bounds (§13.4) for both teams.
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9–I12, I16, I17 and I19
+    /// against both duels, and checks pool bounds (§13.4) for both teams.
     pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
         let mut duel_events: [Vec<GameEvent>; DUOS_DUELS] = [Vec::new(), Vec::new()];
@@ -4251,5 +4652,53 @@ mod tests {
             "{}",
             found[0]
         );
+    }
+
+    /// I19 (#4454): each Duos duel's monitor judges the Dormant cards its duel began the step with,
+    /// whichever duel the acting seat sits in, and an `after` with no `before` judges none.
+    #[test]
+    fn i19_each_duos_duel_judges_its_dormant_cards() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i19-duos", test_decks(), None);
+        let duel = &mut state.duels[1];
+        let def_id = duel.players[PlayerId::P1].hand[0].def_id.clone();
+        let at = Zone::Field {
+            player: PlayerId::P1,
+            row: Row::Units,
+            lane: 1,
+        };
+        let mut card = crate::state::new_instance(duel, &def_id, PlayerId::P1, at);
+        card.slumber = Some(crate::state::Slumber { turns: Some(2) });
+        let id = card.id.clone();
+        duel.players[PlayerId::P1].units[0] = Some(vec![card]);
+        let hit: GameEvent = serde_json::from_value(serde_json::json!({
+            "type": "damage",
+            "sourceId": null,
+            "targetId": id,
+            "amount": 1,
+            "combat": false,
+        }))
+        .expect("a damage event");
+        let events = [DuosEvent::Duel { duel: 1, event: hit }];
+        let i19 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains(": I19 ")).collect()
+        };
+        let end_turn = DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        };
+        // A seat of duel 0 acts, and duel 1 judges its own Dormant card; a seat of duel 1 likewise.
+        for seat in [DuosSeat::A1, DuosSeat::A2] {
+            let mut monitor = create_duos_invariant_monitor(&state);
+            monitor.before(&state, seat, &end_turn);
+            let found = i19(monitor.after(&events, &state));
+            assert_eq!(found.len(), 1, "{seat}: {found:?}");
+            assert!(
+                found[0].starts_with("duel 1: I19 reached Dormant"),
+                "{}",
+                found[0]
+            );
+            assert!(found[0].contains(&id), "{}", found[0]);
+        }
+        let mut unprimed = create_duos_invariant_monitor(&state);
+        assert_eq!(i19(unprimed.after(&events, &state)), Vec::<String>::new());
     }
 }

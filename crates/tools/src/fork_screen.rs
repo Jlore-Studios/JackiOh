@@ -786,6 +786,32 @@ mod tests {
         // trunk's replacement; either way the fork itself is real.
         assert_eq!(ctl.log[fork.at_move].body, fork.control.clone().unwrap());
         assert_ne!(fork_key(&fork.candidate), fork_key(&fork.control));
+    }
+
+    /// R4397000's tally over one fork, byte-identical on one thread and on four: one fork's
+    /// 16 arms twice, several minutes, so the daily run holds it (#4462) while
+    /// `r4397000_an_always_differing_candidate_forks_every_game_at_the_cap` keeps the trunk
+    /// cap and the pair determinism on every pull request.
+    #[test]
+    #[ignore = "daily: one fork's 16 arms on one thread and on four, several minutes; r4397000_an_always_differing_candidate_forks_every_game_at_the_cap keeps the trunk cap and the pair determinism per pull request"]
+    fn r4397000_fork_tally_is_byte_identical_on_one_thread_and_on_four() {
+        let games = vec![trunk_game("r4397000-tally:1", 1)];
+        let played: Vec<(ArenaOutcome, Vec<ForkPoint>, Vec<String>)> = games
+            .par_iter()
+            .map(|game| {
+                let probe = Probe::scripted(game.n, flip);
+                play_game_probed(game, Some(probe)).unwrap()
+            })
+            .collect();
+        let mut forks: Vec<(usize, ForkPoint)> = Vec::new();
+        for (index, (outcome, points, probe_faults)) in played.iter().enumerate() {
+            assert!(probe_faults.is_empty(), "{probe_faults:?}");
+            assert_eq!(points.len(), FORK_MAX_PER_GAME, "deal {}", outcome.game.n);
+            for point in points {
+                forks.push((index, point.clone()));
+            }
+        }
+        assert_eq!(forks.len(), games.len() * FORK_MAX_PER_GAME);
 
         // The whole tally is byte-identical on one thread and on four. One fork is enough to show
         // the order does not follow completion (its 16 arms play on rayon's pool); the last fork

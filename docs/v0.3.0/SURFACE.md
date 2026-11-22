@@ -748,6 +748,7 @@ pub struct AiOptions<'a> {
 }
 pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a host's limit at which it fires wrap_up
     // SearchStats gains replied and worldsScored, and Decision::fell_short() a finalist left unscored on a sampled world (R3498000)
+    // SearchStats gains replaysCut, the finalist replays a sampled world cut short (R4447000)
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the

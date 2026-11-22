@@ -185,12 +185,15 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
 /// it arrived in it or stood in it as the aura came. An effect's switch (R20), so no exertion is spent;
 /// `positionSwitched` reports it. R2179000: so does an Indestructible Unit in Defense Position, aura or not
 /// (one that arrived in it, or became Indestructible standing in it), R2657000 a Unit with Can't Defend,
-/// and R3543002 an Evasive one, which implies Can't Defend as an Indestructible one does.
+/// and R3543002 an Evasive one, which implies Can't Defend as an Indestructible one does. A Dormant card is
+/// passed by until it awakens (R4454005).
 fn leave_defense(sink: &mut EngineSink<'_>) {
     let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
         for unit in units_of(sink.state, player) {
-            if unit.position != Some(Position::Def) {
+            // R4454005: a Dormant card is no Unit and nothing reaches it (R1839000): it keeps its position
+            // until it awakens, and the next check after that switches it.
+            if unit.position != Some(Position::Def) || crate::slumber::is_slumbering(&unit) {
                 continue;
             }
             if !barred

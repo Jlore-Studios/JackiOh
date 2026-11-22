@@ -1501,6 +1501,16 @@ while the match has no `ended_at` and its log holds that row, replaced only by a
 by `duos_matches_finish`; the retention purge never meets one. A catalog retcon leaves it on the old
 version, so the next rebuild refuses it as `catalog` and folds the whole log.
 
+Migration 0098 only adds three indexes (#4468). `player_stats_public_games_idx` is keyed on
+`player_stats_list_public`'s `order by`, expression for expression, and partial on `is_private = false`, so
+`GET /api/stats/players` walks it in order and stops after its page instead of sorting every public row
+(R654, R3911000); a change to that `order by` needs a migration that rebuilds it.
+`jlore_grants_profile_reason_at_idx` and `fleet_track_grants_profile_reason_at_idx` on
+`(profile_id, reason, at)` let `game_jlore_totals` and `fleet_get`, the payout's and the daily-cap reads' day
+sums (R1483000), read one day of the account's `game` rows, not its whole history.
+`tests/sql/01_schema_invariants.sql` CHECK 26 and CHECK 27 plan them with sequential scans off, and fail
+when the list sorts or a ledger filters the day.
+
 ## Tests
 
 ```
