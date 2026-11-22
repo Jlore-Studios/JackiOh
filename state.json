@@ -15940,7 +15940,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-22T22:17:39Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:1ff3a83b-1795388280",
+      "run_id": "45080638831",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
