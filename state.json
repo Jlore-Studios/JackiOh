@@ -16407,9 +16407,11 @@
         "by": "`claude` (strong)",
         "sha": "d901a02b8092860a5564079f8edb3f373ddf0e2c"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T02:26:56Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-22T03:40:04Z",
         "family": "claude",
@@ -16419,6 +16421,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; grep -n \\\"r4397000\\\" crates/tools/src/fork_screen.rs\"}\n- Bash: {\"command\": \"sed -n 720,802p crates/tools/src/fork_screen.rs; (cargo test -p jackioh-tools --bin jackioh fork_screen > /tmp/base.log 2>&1 &)\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np='crates/tools/src/fork_screen.rs'\\ns=open(p).read()\\ns=s.replace('''let games = vec![trunk_game(\\\"r4397000-self:1\\\", 1), trunk_game(\\\"r4397000-self:2\\\", 2)];\\n let pla\u2026\n- Bash: {\"command\": \"pkill -f \\\"cargo test\\\" ; sleep 1; pkill -f \\\"jackioh-\\\" ; sed -n 36,40p scripts/ci-shards.toml\"}\n- tool error: Exit code 144\n- Bash: {\"command\": \"sed -n 34,41p scripts/ci-shards.toml\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np='scripts/ci-shards.toml'\\ns=open(p).read()\\nc='''# `tools, wasm` ran 14m 8s at 1 (#4441, 18m 24s in #4432) and runs in 4 shards (#4434). One test of the jackioh\\n# bin\u2026\n- Bash: {\"command\": \"cd crates/tools/src && python3 - <<'E'\\np='fork_screen.rs'\\ns=open(p).read()\\ns=s.replace(''' let games = vec![trunk_game(\\\"r4397000-cap:1\\\", 1), trunk_game(\\\"r4397000-cap:2\\\", 2)];\\n'''\u2026\n- Bash: {\"command\": \"python3 - <<'E'\\np='crates/tools/src/fork_screen.rs'\\ns=open(p).read()\\ns=s.replace(''' // The whole tally is byte-identical on one thread and on four. One fork from each deal is\\n // en\u2026\n- Bash: {\"command\": \"grep -n \\\"FORK_MAX_PER_GAME:\\\" crates/tools/src/*.rs; python3 - <<'E'\\np='crates/tools/src/fork_screen.rs'\\ns=open(p).read()\\ns=s.replace(''' // The whole tally is byte-identical on one \u2026\n- Bash: {\"command\": \"sed -i '/eprintln!(\\\"TIMING/d; /let t0 = std::time::Instant::now();/d' crates/tools/src/fork_screen.rs; git diff crates/tools | head -80; cargo fmt --check && echo FMT OK\"}\n- Bash: {\"command\": \"timeout 590 cargo test -p jackioh-tools --bin jackioh fork_screen 2>&1 | tail -4; cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -3\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -3; python3 .github/ci/matrix.py matrix >/dev/null && echo MATRIX OK; (cd bot && python3 -m unittest tests.test_ci_matrix 2>&1 | tail -3)\", \"timeout\"\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: a job ran over 10 minutes\"} --> I made the two slowest `fork_screen` tests much cheaper, but the 120 s target is missed. `cargo test -p jackioh-tools --bin jackioh fork_screen` now finishes in 209 s (the plan expected under 120 s). The plan's 477 s figure \u2026"
       },
+      "interruptions": 0,
       "issue": 4441,
       "kind": "review",
       "live": "reviewing",
