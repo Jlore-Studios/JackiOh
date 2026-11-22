@@ -17838,6 +17838,14 @@
           "claude": "strong"
         }
       }
+    },
+    "4489": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-22T08:27:41Z",
+      "issue": 4469,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
