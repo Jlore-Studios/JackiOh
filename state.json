@@ -17011,10 +17011,10 @@
     "what": "review #4464 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T05:26:22Z",
+    "at": "2026-11-22T05:36:21Z",
     "notes": [
-      "delivered build #4446 on claude-7 (run 44984093198): built",
-      "started review #4463 on claude-7 (run 44989577074)",
+      "delivered build #4456 on muse (run 44981595138): built",
+      "started review #4464 on muse (run 44990297939)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -17721,7 +17721,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T05:26:22Z",
+  "loop_tick": "2026-11-22T05:36:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
