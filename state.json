@@ -15995,17 +15995,8 @@
       ]
     },
     "4511": {
-      "action": "plan",
-      "asks": [
-        "c:7086691373"
-      ],
-      "build_next": {
-        "from_run": "45078885612",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-22T22:46:33Z",
-        "until": "2026-11-22T23:16:33Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T22:46:24Z",
         "difficulty": "medium",
@@ -16024,10 +16015,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "eCost, liveEmbiggenCost, fixedX, live, inPlay, chinese, tags`; `const locale = useLocale()`; keys `tagsKey = (t\u2026\n- 2. **`routes/landingFan.ts`: reorder `fitsTheFan`.** Move `if (fullArtOn && isFullArtCard(def.id)) return true;` above the `[false, true].every(...)` so full-art cards cost zero crossings when full art is on. Keep the signature and R1017002 semantics.\n- 3. **`routes/landingFan.ts`: add sampler constants and function.** Add `export const FAN_SAMPLE_MAX_DRAWS = 32;` (per-rarity draw cap) and `export const LANDING_DEAL_FACE_BUDGET = 64;` (deal face-call bound for tests). Add `export function sampleFittingCard(cards: readonly CardDef[], random: Random\u2026\n- 4. **`routes/landingFan.ts`: rewire `dealLandingFan`.** New signature `dealLandingFan(random, pool = corePool(), weigh = EVEN, fullArtOn = false)`. Keep rarity grouping, `shuffled` order, and `FAN_FACES` slicing; replace each rarity's `pickWeighted` with `sampleFittingCard(group, random, weigh, ful\u2026\n- 5. **`routes/landingFan.ts`: rewire `rotateFan`.** New signature `rotateFan(hand, slot, random, pool = shippedPool(), weigh = featureWeight, fullArtOn = false)`. Replace `pickWeighted(candidates, random, weigh)` with `sampleFittingCard(candidates, random, weigh, fullArtOn)`; keep modulo slot, shown\u2026\n- 6. **`routes/landing.tsx`: update four call sites.** Initial `useState` initializer and the `engineReady` effect: `dealLandingFan(random, fullPool ? shippedPool() : corePool(), fullPool ? favoringFullArt(featureWeight, fullArt) : favoringFullArt(EVEN, fullArt), fullArt)`. Rotation interval: `rotate\u2026\n- 7. **`collection/OwnedCards.tsx`: tile face.** In `CollectionCardTile`, replace the inline `faceModel({defId: def.id, def, radiant: false})` with `useFaceModel({defId: def.id, def, radiant: false})` (add `useLocale`-driven invalidation free via the hook). Leave `hover.trigger(def.id)` and all callb\u2026\n- 8. **`routes/stats.tsx`: memoized grid faces.** Add `const StatsGridFace = memo(function StatsGridFace({defId}: {defId: string})` that reads `def = catalog()[defId]`, returns null when missing, else the `div.stats-grid-face` + `CardFace` with `useFaceModel({defId, def, radiant: false})`. Replace th\u2026\n- 9. **`game/Prompt.tsx`: `CardOption` face memo.** Keep `useCardInfo`/`useFieldPower`/`useCopiedDef`/`isFlagged` reads; wrap the whole `drawn` computation plus `pricedFace` in one `useMemo` with deps `[info.def, info.name, props.item.card, fieldPower, copied, radiant, cost, flagged, props.item.price\u2026\n- ## Tests\n- - `landingFan.test.ts`, new `it(\"the sampler deals each fitting card with its weighted share and never deals an unfitting one\")`: fixture pool of ~6 defs with stub `weigh` (e.g. weights 1 and 3, `maxWeight` 4), stub `fitsTheFan`-false for one card; 20k seeded draws assert frequency within \u00b115% of e\u2026\n- - `landingFan.test.ts`, new `it(\"dealing a returning player's fan costs at most LANDING_DEAL_FACE_BUDGET face calls\")`: `vi.mock` `cards/model.ts` `faceModel` with a counter delegating to real (Board.render.test.tsx pattern), `dealLandingFan(seeded(n), shippedPool(), favoringFullArt(featureWeight, \u2026\n- - Collection (new `OwnedCards.render.test.tsx`, else extend `CardGrid.test.tsx`): spy the wasm `face` module as Board.render.test does; render `OwnedCards`, open/close hover via timers (`HOVER_DELAY_MS`) and assert zero new `card` calls; change the filter so only new ids mount and assert calls name\u2026\n- - `stats.test.tsx`: in grid view, record `card`-call defIds, type one search letter, assert no new call for still-listed ids; locale switch asserts rebuild. Follow the existing `R654 filters cards by search input` setup.\n- - `PromptCards.test.tsx`: render an open picker, spy `face`, rerender the same view with a hover/animation-only change, assert zero new calls; locale switch asserts rebuild; embiggen option still shows `priceLine`.\n- - Commands: `pnpm --dir apps/web test <each touched file>`; `pnpm --dir apps/web typecheck`; eslint on touched files; `cargo jackioh spec check`; confirm `net/first-load.test.ts` budget unchanged (no new imports allowed).\n- ## Done when\n- - [ ] Landing deal from the shipped pool costs at most the named budget; sampler probability test passes; unfitting never dealt; fallback deals today's hand for sparse rarities.\n- - [ ] All existing R374/R639/R704/R1017002 tests keep their claims (re-pinned at most).\n- - [ ] Hover open/close builds no Collection face; scroll/filter builds only newly mounted ones; keystroke builds no already-listed stats face; board-only re-render builds no option face; locale switch rebuilds every face on each screen.\n- - [ ] Touched web test files, typecheck, and eslint pass; `spec check` passes; first-load budget unchanged.\n- ## Risks\n- - Seeded streams move (different draw order): expected; re-pin, never loosen. If a rarity's fitting cards are nearly unreachable, the `FAN_SAMPLE_MAX_DRAWS` fallback keeps the deal correct, just slower \u2014 that path is the old cost, bounded per rarity.\n- - `maxWeight` must cover the passed `weigh`; all production weighs peak at `FEATURE_WEIGHT_PLAIN * FULL_ART_WEIGHT_FACTOR`, and overweight custom weighs clamp to accept, so odds stay exact while the cap holds.\n- - `FITTING`/`WEIGHTS` module caches stay; the sampler bypasses `FITTING` on the fast path and uses it only via the fallback filter.\n- - `JSON.stringify` keys cover only small `live`/`inPlay` objects; `def` is keyed by reference from the stable module catalog, never stringified.\n- ## Open questions\n- None. No person-only step: no secrets, dashboards, migrations, or forbidden paths are involved.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4511 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4511/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-22T22:38:45Z",
       "owner_why": "it plans it",
@@ -16040,12 +16030,14 @@
       "provider": "muse",
       "queued_at": "2026-11-22T22:33:16Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45078885612",
+      "run_id": "pending:fd31a84f-1795387729",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-22T22:38:45Z",
+      "started_at": "2026-11-22T22:49:03Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7086691373"
+      ]
     },
     "4512": {
       "action": "build",
@@ -16353,9 +16345,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T22:39:13Z",
+    "at": "2026-11-22T22:49:03Z",
     "url": "",
-    "what": "plan #4508 on claude-1"
+    "what": "build #4511 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T22:33:06Z",
