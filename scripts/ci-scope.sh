@@ -79,7 +79,8 @@
 #  - Run everything but the db suites: the workspace's Cargo.toml, Cargo.lock, rust-toolchain.toml,
 #    .cargo/ but .cargo/mutants.toml, anything under .github/ that is not on the skip list, and this script. Of these, only
 #    .github/ and this script run infra too: the terraform steps read no cargo file.
-#  - infra: infra/, which nothing else reads (no web or e2e line turns on for it).
+#  - infra: infra/, of which only infra/cloudflare.tf turns web on (apps/edge's config
+#    test reads it, #4011); no e2e line turns on for it.
 #  - The db suites, each on what its script exercises (each script's header says): the migrations
 #    all three; tests/sql/ the sql invariants; the store (src/db/), the Supabase bootstrap
 #    (tests/db/bootstrap.sql), the server's manifest and Cargo.lock the store contract and the deploy
@@ -143,7 +144,8 @@
 #    quest pool, quests.json, has titles the quests panel's test holds to zh-CN, #3104) and the WASM crate's tests (except the engine's tests/fixtures/,
 #    which two web tests read), the C module's tests (crates/wasm/c/src/tests.rs; its other sources run
 #    `web`, since `web (wasm c module)` builds them, #3097), docs/, training/ (but training/file-records.sh,
-#    which env-production.test.ts holds to R1933001), reviews/, analysis/, infra/ and the top-level
+#    which env-production.test.ts holds to R1933001), reviews/, analysis/, infra/ but
+#    infra/cloudflare.tf (#4011) and the top-level
 #    Markdown. The Worker in front of the server, apps/edge/, and wrangler.jsonc are among what it
 #    runs for: the job lints, typechecks and tests the Worker, and cloudflare-config.test.ts reads
 #    the file.
@@ -175,7 +177,8 @@
 #    scripts/worktree.sh).
 #
 # apps/web/src/net/ci-scope.test.ts holds every line both ways, and holds `web` and `e2e` to every
-# repository path their sources name; crates/tools/tests/acceptance.rs holds the Rust groups to
+# repository path the web's, the Worker's and the dashboard's sources name (apps/web, apps/edge,
+# apps/admin); crates/tools/tests/acceptance.rs holds the Rust groups to
 # `cargo metadata` and to every file a crate includes from outside itself, and `replay`'s source
 # (tools' replay.rs) to the modules the e2e case keeps on (#4219).
 #
@@ -356,6 +359,7 @@ for file in $files; do
     apps/web/src/wire/*) on rust_engine rust_server rust_tools_wasm ;;
     docs/radiant-audit.md | spec/07-tokens.md | spec/08-catalog.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
+    e2e/cypress/e2e/01-* | e2e/cypress/e2e/13-*) on rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
@@ -377,6 +381,7 @@ for file in $files; do
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/* | crates/shared/tests/*) ;;
     crates/wasm/c/src/tests.rs) ;;
     training/file-records.sh) on web ;;
+    infra/cloudflare.tf) on web ;;
     docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     *) on web ;;

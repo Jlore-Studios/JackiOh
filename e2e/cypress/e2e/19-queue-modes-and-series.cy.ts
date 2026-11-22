@@ -1,7 +1,8 @@
 // BUILD M8 spec 19: Best-of-1, All random, Conquest, and rooms (R257, R258, R264, R330, R338, R765).
 // #21 Hinder is the selected deck's observable opening-hand card.
 // Browser p1 uses the UI; p2 seeds matches over HTTP/socket (R143). Opening hands prove selected decks (R245; §10.8).
-// Balance each fixture account's rated endings and clean both before every test; pairing allows §9.5's R108 window.
+// Free both fixture accounts, then reseed (R144) before every test, so each starts at the starting rating and pairing never
+// waits on §9.5's R108 window widening after an earlier rated game.
 
 import {
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
@@ -13,6 +14,7 @@ import { TOKEN_NAMES, tokenId } from "../../support/cards.ts";
 import type { InstalledLoadout } from "../../support/commands.ts";
 import { openQueuePanel } from "../../support/play.ts";
 import {
+  E2E_RESEED_PATH,
   accounts,
   apiUrl,
   bearerHeaders,
@@ -266,6 +268,8 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
   beforeEach(() => {
     cy.freeAccount(accounts.p1());
     cy.freeAccount(accounts.p2());
+    // R144: both fixture accounts back at the starting rating, so no rated game before this test leaves a gap R108's window must widen across.
+    cy.request({ method: "POST", url: apiUrl(E2E_RESEED_PATH) }).its("status").should("eq", 200);
   });
 
   it("Best of 1 plays the deck the player chose, not the first saved one (R257, R253)", () => {
