@@ -209,6 +209,13 @@ const S2 = {
   FX_COVERAGE_FLOOR: 0.5,
   FX_MOTIF_MIN_CARDS: 3,
   FX_PHONE_FRAME_BUDGET_MS: 50,
+  // Issue #4493: the phone's layer budget (R4493001) and its stage's and elements' caps (R4493000).
+  FX_PHONE_LAYER_BUDGET_MB: 200,
+  FX_PHONE_STAGE_LAYERS: 3,
+  FX_LAYER_MAX_SCREENS: 3,
+  FX_LOW_DEVICE_MEMORY_GB: 4,
+  FX_LAYER_BYTES_PER_PX: 4,
+  FX_BYTES_PER_MB: 1_048_576,
   FX_PHONE_FRAME_WORST_MS: 120,
   PHONE_MOTION_BUDGET: 6,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
@@ -502,6 +509,20 @@ describe("S2 the effects constants", () => {
     // as a stall, not motion.
     expect(constants.FX_PHONE_FRAME_WORST_MS).toBeGreaterThan(constants.FX_PHONE_FRAME_BUDGET_MS);
     expect(constants.FX_PHONE_FRAME_WORST_MS).toBeLessThanOrEqual(250);
+  });
+
+  it("R4493001 the layer budget's constants", () => {
+    const { FX_PHONE_LAYER_BUDGET_MB, FX_PHONE_STAGE_LAYERS, FX_LAYER_MAX_SCREENS, FX_LOW_DEVICE_MEMORY_GB, FX_LAYER_BYTES_PER_PX, FX_BYTES_PER_MB } = constants;
+    // A phone stage keeps at least one picture and at most far, middle and near.
+    expect(FX_PHONE_STAGE_LAYERS).toBeGreaterThanOrEqual(1);
+    expect(FX_PHONE_STAGE_LAYERS).toBeLessThanOrEqual(3);
+    // One element may always cover the square on a 390x844 window's diagonal, which a radial look turning about its middle needs.
+    expect(FX_LAYER_MAX_SCREENS).toBeGreaterThanOrEqual((390 ** 2 + 844 ** 2) / (390 * 844));
+    // The budget holds at least one full-window layer at 3x on the largest phone screen, and the low-memory line is a phone's.
+    expect(FX_PHONE_LAYER_BUDGET_MB * FX_BYTES_PER_MB).toBeGreaterThan(430 * 932 * 9 * FX_LAYER_BYTES_PER_PX * FX_LAYER_MAX_SCREENS);
+    expect(FX_LOW_DEVICE_MEMORY_GB).toBeGreaterThan(0);
+    expect(FX_LAYER_BYTES_PER_PX).toBe(4);
+    expect(FX_BYTES_PER_MB).toBe(1024 * 1024);
   });
 
   it("R3674000 a moment's run is eight frames", () => {
