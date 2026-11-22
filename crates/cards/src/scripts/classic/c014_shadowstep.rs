@@ -8,7 +8,7 @@
 //! `is_unit_death`; R4395000: a Field Spell, Trap or Field Trap of yours is none, alone or beside Units, unless
 //! it died standing as a Unit, Animated, R4395001; a Unit standing in the backrow is one, R1081000; a Unit set
 //! face-down by its Cloaked and destroyed before it reveals died as a Field Trap, none; `script_v0_6_9i` keeps
-//! v0.6.9g's to v0.6.9i's read, the definition's type unless the action's own `destroyed` says Animated,
+//! v0.6.9h's to v0.6.9i's read, the definition's type unless the action's own `destroyed` says Animated,
 //! R767000). R99: the condition is its `when`, so an enemy's death leaves it
 //! set. One firing reads the whole §4.5 step 1 pass it stands in and takes every Unit of yours (the
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
@@ -66,7 +66,7 @@ fn is_unit(ctx: &EffectContext<'_>, died: &GameEvent, by_print: bool) -> bool {
     animated || card_type_of_face(ctx.state, def_id, *radiant == Some(true)) == CardType::Unit
 }
 
-/// `units_only` is R4395000's trigger; off, it is what v0.6.9f and before ran: any card of yours destroyed.
+/// `units_only` is R4395000's trigger; off, it is what v0.6.9g and before ran: any card of yours destroyed.
 /// `by_print`: as `is_unit`'s.
 fn shadowstep(units_only: bool, by_print: bool) -> TriggerDef {
     TriggerDef::new("shadowstep", &[GameEventType::Destroyed], move |ctx, event| {
@@ -159,13 +159,13 @@ pub fn script_v0_4_12b() -> CardScripts {
     scripts(false, false, true)
 }
 
-/// R4395000: v0.6.9f and every version before it answered every card of yours that was destroyed;
+/// R4395000: v0.6.9g and every version before it answered every card of yours that was destroyed;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9f() -> CardScripts {
+pub fn script_v0_6_9g() -> CardScripts {
     scripts(true, false, true)
 }
 
-/// R4423000: v0.6.9i and the versions before it back to v0.6.9g read a death by the definition's type unless
+/// R4423000: v0.6.9i and the versions before it back to v0.6.9h read a death by the definition's type unless
 /// the action's own `destroyed` said Animated, so a Unit set face-down by its Cloaked and destroyed before it
 /// reveals answered it; `KEPT_SCRIPTS` folds those replays under it (R767000).
 pub fn script_v0_6_9i() -> CardScripts {
@@ -778,11 +778,11 @@ mod tests {
         });
     }
 
-    /// R4395000: v0.4.12b's and v0.6.9f's scripts answer every card of yours that was destroyed, a
+    /// R4395000: v0.4.12b's and v0.6.9g's scripts answer every card of yours that was destroyed, a
     /// Field Spell included: they hand it back at cost 0 and are spent.
     #[test]
     fn r4395000_the_kept_scripts_still_answer_a_destroyed_field_spell_of_yours() {
-        for (version, kept) in [("v0.4.12b", script_v0_4_12b()), ("v0.6.9f", script_v0_6_9f())] {
+        for (version, kept) in [("v0.4.12b", script_v0_4_12b()), ("v0.6.9g", script_v0_6_9g())] {
             crate::under_kept(SHADOWSTEP, kept, || {
                 let mut s = datacenter();
                 let program = s.card(FIELD_SPELL).clone();

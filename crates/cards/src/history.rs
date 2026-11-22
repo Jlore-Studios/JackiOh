@@ -1178,8 +1178,9 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9c",
         c007_the_greatest_heist::script_v0_6_9c,
     ),
-    // #4395 (R4395000): the last Shadowstep trigger that answered any card of yours that was destroyed.
-    (c014_shadowstep::ID, "v0.6.9f", c014_shadowstep::script_v0_6_9f),
+    // #4395 (R4395000): the last Shadowstep trigger that answered any card of yours that was destroyed, kept
+    // under v0.6.9g, the newest shipped version that ran it (#4423 re-keyed it from v0.6.9f).
+    (c014_shadowstep::ID, "v0.6.9g", c014_shadowstep::script_v0_6_9g),
     // #4396 (R4396000): the last scripts before a Death read its stats with the auras on.
     (c049_spacemine::ID, "v0.6.9e", c049_spacemine::script_v0_6_9e),
     (
@@ -1826,23 +1827,31 @@ mod tests {
     }
 
     /// Issue #4395: Shadowstep's base trigger answered any card of yours that was destroyed through
-    /// v0.6.9f, the newest version shipped as it was built, so its row is keyed there; v0.4.12b and before
+    /// v0.6.9g, which shipped while it was built (#4437 before #4419; the fix shipped in v0.6.9h), so its
+    /// row is keyed there (#4423 re-keyed it from v0.6.9f, as #4086 re-keyed #3837's); v0.4.12b and before
     /// keep their own.
     #[test]
-    fn r767000_issue_4395_shadowstep_is_kept_through_v0_6_9f_the_newest_version_that_ran_it() {
+    fn r767000_issue_4395_shadowstep_is_kept_through_v0_6_9g_the_newest_version_that_ran_it() {
         crate::register_all();
         let kept_at = |version: &str| {
             covering_at(&HISTORY.order, KEPT_SCRIPTS, version, c014_shadowstep::ID)
                 .map(|at| KEPT_SCRIPTS[at].1)
         };
         assert_eq!(kept_at("v0.4.12b"), Some("v0.4.12b"));
-        for version in ["v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e", "v0.6.9f"] {
+        for version in [
+            "v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e", "v0.6.9f", "v0.6.9g",
+        ] {
             assert_eq!(
                 kept_at(version),
-                Some("v0.6.9f"),
-                "{version} ran the script kept at v0.6.9f"
+                Some("v0.6.9g"),
+                "{version} ran the script kept at v0.6.9g"
             );
         }
+        assert_ne!(
+            kept_at("v0.6.9h"),
+            Some("v0.6.9g"),
+            "v0.6.9h ran the units-only trigger"
+        );
     }
 
     /// Issue #4396: v0.6.9e was the newest shipped version as it was built.
@@ -1856,8 +1865,8 @@ mod tests {
     }
 
     /// Issue #4423: v0.6.9h, then v0.6.9i, shipped while it was built, so its rows are keyed at v0.6.9i, the
-    /// newest version that ran the scripts they keep. Shadowstep's row before it is v0.6.9f's (#4395), so it
-    /// ran the kept script from v0.6.9g.
+    /// newest version that ran the scripts they keep. Shadowstep's row before it is v0.6.9g's (#4395, whose
+    /// fix shipped in v0.6.9h), so it ran the kept script from v0.6.9h.
     #[test]
     fn r767000_issue_4423_scripts_are_kept_through_v0_6_9i_the_newest_version_that_ran_them() {
         assert_kept_through(
@@ -1872,11 +1881,7 @@ mod tests {
             &["v0.6.9d", "v0.6.9e", "v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i"],
             "v0.6.9j",
         );
-        assert_kept_through(
-            &[c014_shadowstep::ID],
-            &["v0.6.9g", "v0.6.9h", "v0.6.9i"],
-            "v0.6.9j",
-        );
+        assert_kept_through(&[c014_shadowstep::ID], &["v0.6.9h", "v0.6.9i"], "v0.6.9j");
     }
 
     /// Issue #4086: each block below was once keyed at a version older than the newest shipped as it
