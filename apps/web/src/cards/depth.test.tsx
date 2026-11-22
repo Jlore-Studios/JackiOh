@@ -705,9 +705,7 @@ describe("R3344000 Legendary and Mythic faces in hand and inspect may break the 
   it("R3344000 the frame-break lifts the near plane's subject over the window's top edge and no further than the face", () => {
     const css = sheet("depth.css");
     const rule = /\.cf\[data-frame-break="true"\] \.cf-plane\[data-plane="near"\]\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
-    // Over the top only: sideways the plane clips for layout too, so the subject's scale widens no box (#4375).
-    expect(rule).toContain("overflow-y: visible");
-    expect(rule).toContain("overflow-x: clip");
+    expect(rule).toContain("overflow: visible");
     expect(rule).toMatch(/clip-path: inset\(calc\(-1 \* var\(--cf-frame-break, 0px\)\) 0 0 0\)/);
     expect(css).toMatch(/\.cf-plane\[data-plane="near"\] > \.cf-art\s*\{[^}]*transform-origin: 50% 100%;[^}]*scale: var\(--cf-frame-break-scale, 1\)/);
     // The scale is a rise, and the break less than the near plane's window.

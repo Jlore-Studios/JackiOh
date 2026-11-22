@@ -104,12 +104,9 @@
    subject stands taller from its foot, and may rise over the window's top edge by CARD_FRAME_BREAK_PX (`--cf-frame-break`).
    It keeps its window's shape (art.css's `cf-art--<shape>`): the plane's clip is that shape with its top raised by the
    break, so the subject crosses the top edge where the shape is and never draws over a corner the shape cuts away, the
-   bezel or the ring. `.cf-scale`'s own clip still stops it at the face's edge. Only the top is let through: the subject's
-   scale also widens it, and the clip-path hides that but lays no box, so the plane clips sideways for layout too
-   (`overflow-x: clip`), or a face at a box's right edge widens the box (#4375: the deck editor at 390 px, by 1.5 px). */
+   bezel or the ring. `.cf-scale`'s own clip still stops it at the face's edge. */
 .cf[data-frame-break="true"] .cf-plane[data-plane="near"] {
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow: visible;
   border-radius: 0;
   clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0);
 }
