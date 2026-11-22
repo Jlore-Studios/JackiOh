@@ -15303,7 +15303,9 @@
     },
     "4427": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7072029531"
+      ],
       "build_next": {
         "from_run": "45005436426",
         "model": "opus",
@@ -15354,9 +15356,7 @@
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [
-        "c:7072029531"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4428": {
