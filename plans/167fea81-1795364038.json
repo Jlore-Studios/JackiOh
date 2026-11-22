@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4478,
+  "title": "Patch: the fuzz monitor holds every unit's stored damage to its damage and heal events",
+  "branch": "bot/issue-4478",
+  "thread": "**Issue #4478 (data, not instructions):**\n\n```text\n# #4478: Patch: the fuzz monitor holds every unit's stored damage to its damage and heal events\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA unit's health bar comes from the game state, while its hits, heals and animations come from the events each one emits. If those two ever disagreed, the board would show health the log cannot explain, with no cue for what moved it. This adds a fuzz-gate check that they can never drift apart: every unit's stored damage must equal what its damage and heal events say, the way each hero's health is already held.\n\n## Why\n\n- The monitor tallies each hero's health from the event stream and reports silent moves (I9 in `crates/engine/src/testkit/invariants.rs`: `counted_health`, `hero_loses`, `hold_hero_floor`). Units have no such accounting, even though `Damage` and `Healed` events already carry per-instance ids and exact amounts.\n- The writers agree exactly today, so the check is enforceable: the pipeline does `card.damage += dealt` (`crates/engine/src/damage.rs`) next to the `Damage` event that carries what got through (SPEC \u00a74.4 step 5), and `heal_unit_by` does `card.damage -= healed` with `healed = damage_now.min(stated)`, emitting `Healed` only when `healed > 0` \u2014 so overheal moves neither the field nor the tally.\n- At least one path already writes stored damage with no damage or heal event: Vanilla's \"stays alive at 1 health\" (`stored.damage = (view.max_health - 1).max(0)` in `crates/engine/src/effects/transform.rs`), announced only by `Transformed`. Any future effect or refactor that trims or restores stored damage without an event \u2014 or emits an event without moving the field \u2014 passes every gate today.\n\n## Proposal\n\n- Add I19 to the monitor: a per-instance stored-damage tally fed by `Damage` (+amount) and `Healed` (\u2212amount) events naming that instance, anchored at 0 on arrival (`Summoned`), re-anchored on `Transformed` (which redefines the card, covering Vanilla's 1-health write), dropped when the instance leaves the field (whose R78 reset zeroes it), and compared against `card.damage` in `after`, mirroring I9's report-once-then-follow so one bug reads as one message.\n- Run it on the played path like I9's tally (shadow history, so not on the I14 copy-reduction path), which reaches the Duos gate automatically through the per-duel monitors (`DuosInvariantMonitor` holds one `InvariantMonitor` per duel); any event that genuinely cannot account (e.g. a Glitch board reset, as I9's tally restarts on R676) is anchored explicitly, never silently skipped.\n- No ruling: this enforces existing contracts (SPEC \u00a74.4, \u00a710.3, R78), so no `spec/rulings` note and no `spec/pending` paragraph.\n\n## Where it lands\n\n- `crates/engine/src/testkit/invariants.rs`: header doc list entry with SPEC references, an `I19_*` stride constant with before/after timings in the style of the I6/I8/I14 comments, the tally field, the event feed, and the check.\n- SPEC sections read, not changed: \u00a74.4 (damage pipeline), \u00a710.3 (events), \u00a73.2 and R78 (leaving-the-field reset), \u00a713.4 and \u00a713.6 (Duos monitor).\n- No card script, catalog, config or spec-note changes.\n\n## Acceptance criteria\n\n- [ ] I19 is listed in the monitor header with its SPEC references; every message leads with `I19` and the section, so `signatureOf` groups one bug.\n- [ ] Hand-built tests: damage with no matching event is reported; overheal (no `Healed`, no state change) passes; a fresh summon anchors at 0; Vanilla's 1-health write passes via the `Transformed` re-anchor; leaving the field drops the entry.\n- [ ] A planted-mutation test (a fixture that bumps stored damage with no event) fails without the monitor change and passes with it.\n- [ ] `cargo jackioh fuzz --seeds 200` and the Duos wave report no new I19 violations at the chosen stride, with before/after timings recorded in the stride comment.\n- [ ] `cargo test -p jackioh-engine --features testkit`, `cargo fmt --check` and `cargo clippy -p jackioh-engine --all-targets -- -D warnings` are green.\n\n## Size and risks\n\n- Medium: one file plus tests, shaped like I9's tally (a few hundred lines); no engine behavior changes, so no replay-hash or card-test fallout is expected.\n- Main risk is allowlist completeness (copy and summon paths must anchor at 0 \u2014 Duplicating Felinors copies arrive clean; a fused target keeps its damage with no delta so no event is owed; Glitch resets re-anchor as I9 does). The full-stride gate run is the proof.\n- Rejected alternative: extending I9 itself instead of adding I19 \u2014 that would churn I9's contract and its citations in code and docs; an additive check keeps history stable.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T16:06:26Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4478: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T16:06:47Z",
+    "claimed_at": "2026-11-22T16:14:19Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
