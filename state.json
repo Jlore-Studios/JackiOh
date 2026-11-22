@@ -37899,14 +37899,6 @@
         "provider": "claude-7",
         "run_id": "44977403999",
         "taken_asks": []
-      },
-      "4": {
-        "area": "server",
-        "count": 2,
-        "last_run": "2026-11-22T02:44:02Z",
-        "provider": "claude-8",
-        "run_id": "44977442169",
-        "taken_asks": []
       }
     },
     "taken_asks": []
