@@ -14954,6 +14954,7 @@
       "run_id": "44973883719",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
+      "spot_check_n": 435,
       "started_at": "2026-11-22T01:58:10Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37462,9 +37463,33 @@
         "title": "Patch: Spice pays Credits when played or discarded, as a Resource does, instead of selling from the hand",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "fcf37b48c939dcd17ca8eb3d758f1a82464ba2ec",
+        "issue": 4395,
+        "merged_at": "2026-11-22T03:09:07Z",
+        "n": 435,
+        "pr": 4419,
+        "queued_at": "2026-11-22T03:09:07Z",
+        "sha": "dd441f06baa7462cff6cdbd2eacdf0f203859229",
+        "status": "queued",
+        "title": "Patch: Shadowstep answers only your Units that die, not your destroyed Field Spells and Traps",
+        "tries": 0
       }
     ],
-    "count": 434
+    "count": 435
   },
   "statistics": {
     "at": "2026-11-22T03:00:29Z"
