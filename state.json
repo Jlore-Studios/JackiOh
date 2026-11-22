@@ -15629,8 +15629,15 @@
     "what": "plan #4427 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-22T01:04:17Z",
-    "notes": [],
+    "at": "2026-11-22T01:11:18Z",
+    "notes": [
+      "#4427 needs a plan",
+      "delivered plan #4433 on claude-3 (run 44968150126): planned",
+      "started build #4433 on claude-3 (run 44970403995)",
+      "started review #4436 on claude-1 (run 44970448179)",
+      "started plan #4427 on agy (run 44970487503)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16335,7 +16342,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T01:04:17Z",
+  "loop_tick": "2026-11-22T01:11:18Z",
   "machine_disk": {
     "issue": null,
     "reading": {
