@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4428,
+  "title": "Patch: the sound-effect recipes load when sound first needs them, not in the first page load",
+  "branch": "bot/issue-4428",
+  "thread": "**Issue #4428 (data, not instructions):**\n\n```text\n# #4428: Patch: the sound-effect recipes load when sound first needs them, not in the first page load\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen someone opens JackiOh, the browser downloads and reads the code that makes every sound effect before the first screen appears. No sound can play until the player first taps or clicks. Once this is built, that code arrives just after the first screen instead, as the sound tables already do. Every first visit gets a lighter first page load, which matters most on a phone over a slow connection. Sounds play as before.\n\n## Why\n- `apps/web/src/audio/sfx.ts` (the recipes) is 213,542 bytes in 4,998 lines. That is 52,584 bytes gzipped as source, and about 45 KB with its comment lines and indentation cut. Before minification, that is roughly 9% of `FIRST_LOAD_GZIP_BUDGET_BYTES` (483,328, `apps/web/src/net/first-load.test.ts:64`).\n- Static imports put it in the entry chunk:\n  - `main.tsx:90` imports `notfound/NotFoundPlay.tsx`, which imports `audio/engine.ts` (line 9).\n  - `main.tsx:67` imports `cards/index.ts`, whose full-screen art host imports `audio/music.ts` (`FullScreenArt.tsx:13`), which imports `engine.ts` (line 33).\n  - `engine.ts:44` imports `SFX` and `renderSfx` statically, and `vite.config.ts` sets no manual chunks.\n- The engine reads the recipes only to play a sound: `playSfx` (`engine.ts:535`) and the cue path (`:609`, `:613`). Both bail out until the audio context runs, which takes the first gesture (`audio/unlock.ts`).\n- `main.tsx:974-975` already means page-wide sound to load off the first paint: it imports `audio/appAudio.ts` dynamically. The static chains above bring sound's biggest file back into the entry anyway.\n- #4130/#4158 moved the sound tables out the same way (`audio/soundTablesLoader.ts`, about 100 KB gzipped), with guards in `first-load.test.ts` (lines 113-130 and 202). The recipes stayed behind.\n\n## Proposal\n1. Load `sfx.ts` through `import()` from a small loader beside `soundTablesLoader.ts`:\n   - Start the load off the first paint, where `main.tsx` already loads `appAudio.ts`, and at `unlock()` at the latest.\n   - Do not make it wait on the WebAssembly module, as the tables do: the recipes need no catalog.\n   - A sound asked for before the recipes land is skipped without throwing. If the build finds a reason, it may queue the sound instead and say why.\n2. Move what eagerly loaded code still needs from `sfx.ts` into a small leaf module, for example `noiseBuffer`, which `audio/crowd.ts:5` imports. `audio/soundTables.ts` can keep its static import, since it is itself a lazy chunk.\n3. Hold it in `first-load.test.ts`, as #4130 did:\n   - No module the entry reaches imports `sfx.ts` statically.\n   - A probe string from a recipe is absent from the entry chunk and its preloads.\n   - The budget comes down by the measured saving, with the measurement in its comment, like the earlier steps.\n\n## Where it lands\n- `apps/web/src/audio/engine.ts`, `apps/web/src/audio/sfx.ts`, a new loader in `apps/web/src/audio/`, `apps/web/src/audio/crowd.ts`\n- `apps/web/src/net/first-load.test.ts`; `apps/web/src/audio/engine.test.ts` for the before-and-after behavior\n- `apps/web/README.md` and `docs/polish/2-sound.md`, where they say what loads when\n- SPEC: \u00a710.11 (sound) is unchanged; no rule moves.\n\n## Acceptance criteria\n- [ ] The built entry chunk and its preloads hold none of `sfx.ts`'s recipes, checked by a probe string in `first-load.test.ts`.\n- [ ] A test fails when a module the entry reaches imports `sfx.ts` statically.\n- [ ] `FIRST_LOAD_GZIP_BUDGET_BYTES` is lowered by the measured saving, and its comment records the before and after.\n- [ ] An engine test shows a sound asked for before the recipes load is skipped without an error, and the same sound plays once they have loaded.\n- [ ] The recipes' load starts without waiting on the WebAssembly module (a test with a module load that never resolves).\n- [ ] The audio unit tests and e2e spec `15-audio` pass unchanged.\n\n## Size and risks\nSmall to medium: 4-6 files.\n- On a cold load, a sound asked for in the first moments could be silent if the chunk has not landed: the click on the very first tap, say. Starting the load right after the first paint, not behind the module, should make that rare.\n- The Cypress specs that import `sfx.ts` alone keep working, since the file exports the same names.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T02:11:15Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4428: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T02:12:01Z",
+    "claimed_at": "2026-11-22T02:17:01Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
