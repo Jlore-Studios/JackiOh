@@ -15131,7 +15131,9 @@
     },
     "4423": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:7072134752"
+      ],
       "died": 1,
       "difficulty_by": {
         "at": "2026-11-22T02:06:08Z",
@@ -15175,9 +15177,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:7072134752"
-      ]
+      "taken_asks": []
     },
     "4424": {
       "action": "build",
