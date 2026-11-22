@@ -683,14 +683,23 @@ fn entered_exile(state: &GameState, def_id: &str) -> bool {
 /// R1854002: whether the card an event names is a Unit with `tag` (any Unit for none), by its type and
 /// tags now, or its definition's once it has ceased to exist (a unit token, R11).
 fn is_unit_tagged(state: &GameState, instance_id: &str, def_id: &str, tag: Option<Tag>) -> bool {
-    let (card_type, tags) = match find_instance(state, instance_id) {
-        Some(card) => (card_type_of(state, card), crate::query::tags_of(state, card)),
-        None => {
-            let def = def_of(Some(state), def_id);
-            (def.type_, def.tags.clone())
-        }
+    let card_type = match find_instance(state, instance_id) {
+        Some(card) => card_type_of(state, card),
+        None => def_of(Some(state), def_id).type_,
     };
-    card_type == CardType::Unit && tag.is_none_or(|tag| tags.contains(&tag))
+    card_type == CardType::Unit && has_tag(state, instance_id, def_id, tag)
+}
+
+/// R1854002: whether the card an event names has `tag` (any card for none), by its tags now, or its
+/// definition's once it has ceased to exist (a unit token, R11).
+fn has_tag(state: &GameState, instance_id: &str, def_id: &str, tag: Option<Tag>) -> bool {
+    let Some(tag) = tag else {
+        return true;
+    };
+    match find_instance(state, instance_id) {
+        Some(card) => crate::query::tags_of(state, card).contains(&tag),
+        None => def_of(Some(state), def_id).tags.contains(&tag),
+    }
 }
 
 /// What one event adds to a quest of `goal` on a card `me` controls; `after` is the events since.
@@ -752,16 +761,24 @@ fn credit_of(
                 zone,
             },
         ) => i32::from(zone.player() == me && is_unit_tagged(state, instance_id, def_id, *tag)),
-        // R1854002, R172: a Unit with the tag that died under your control.
+        // R1854002, R172: a Unit with the tag that died under your control; R4423000: a Unit by what the
+        // card was as it died, which the graveyard card no longer tells (`byPrint` reads it there, R767000).
         (
-            QuestGoal::UnitsDied { tag, .. },
+            QuestGoal::UnitsDied { tag, by_print, .. },
             GameEvent::Destroyed {
                 instance_id,
                 def_id,
                 controller,
                 ..
             },
-        ) => i32::from(*controller == me && is_unit_tagged(state, instance_id, def_id, *tag)),
+        ) => {
+            let unit = if *by_print == Some(true) {
+                is_unit_tagged(state, instance_id, def_id, *tag)
+            } else {
+                crate::query::is_unit_death(state, event) && has_tag(state, instance_id, def_id, *tag)
+            };
+            i32::from(*controller == me && unit)
+        }
         // R1854002, R56, R70: a card of yours played (a cast included) at the cost the goal names.
         (
             QuestGoal::PlayCosting { .. },

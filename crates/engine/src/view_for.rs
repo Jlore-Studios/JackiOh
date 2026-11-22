@@ -2226,6 +2226,8 @@ fn redact_event(
                 shown.remove("radiant");
                 // R4395001: what it stood as is the card's too.
                 shown.remove("animated");
+                // R4423000: what it died as is the card's too.
+                shown.remove("diedAs");
                 // R2783001: the keyword it died by is the card's.
                 shown.remove("via");
                 hide(&mut shown, &["instanceId", "defId"]);
