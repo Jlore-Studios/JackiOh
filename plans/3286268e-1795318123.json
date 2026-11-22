@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4456,
+  "title": "Patch: follow-up to #4419 from the after-merge spot-check",
+  "branch": "bot/issue-4456",
+  "thread": "**Issue #4456 (data, not instructions):**\n\n```text\n# #4456: Patch: follow-up to #4419 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4419 -->\nThe after-merge spot-check of #4419 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/44980007181)) found 1 blocking problem(s) in the change as it merged (`dd441f06baa7`). `claude-8` (claude, `opus`, strong) reviewed it. #4419 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/cards/src/history.rs:1180`: Shadowstep's kept-script row is keyed at v0.6.9f, but v0.6.9g had already shipped when #4419 merged. Games recorded at v0.6.9g ran the old trigger (it answered any destroyed card of yours) but now fold under the new Units-only script, so any such game where a Field Spell or Trap of that player was destroyed with a base Shadowstep set fails its recorded final hash (R767000).\n  Evidence: `crates/cards/patches/patches.json` ends with v0.6.9f and then v0.6.9g (dated 2026-11-22). `git merge-base --is-ancestor 4a7e988aae HEAD` succeeds: `patches ship: v0.6.9g (#4437)`, 01:22 UTC, is an ancestor of the merge dd441f06ba, 02:52 UTC. `covering_at` (history.rs:1425) only uses a row whose key comes at or after the replayed version, so v0.6.9g matches no Shadowstep row. The test `r767000_issue_4395_shadowstep_is_kept_through_v0_6_9f_\u2026` (history.rs:1802) checks versions only up to v0.6.9f and has no `after` assertion, so it cannot catch this. This is the same mistake #4086 fixed for earlier rows. Fix: re-key the row at v0.6.9g (exactly that version, not whatever is newest when the follow-up is built). Rename `script_v0_6_9f` to `script_v0_6_9g` in c014_shadowstep.rs and update its kept-script test. Update the version named in spec/rulings/R4395000.md (Replays bullet), spec/pending/4395.md and the fragment's `notes`. Switch the history test to `assert_kept_through(&[c014_shadowstep::ID], &[\u2026, \"v0.6.9f\", \"v0.6.9g\"], \"<first version shipped after #4419>\")` once that version exists, or else at least assert v0.6.9g maps to the row.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-7` (`claude`) built #4419 and `muse` (`muse-spark-1.3-contributor`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-8"
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4456: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T03:27:22Z",
+    "claimed_at": "2026-11-22T03:29:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4456 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
