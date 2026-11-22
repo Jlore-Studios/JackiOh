@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4427,
+  "title": "Patch: on a short phone held upright, End turn and your hand stay on the screen",
+  "branch": "bot/issue-4427",
+  "thread": "**Issue #4427 (data, not instructions):**\n\n```text\n# #4427: Patch: on a short phone held upright, End turn and your hand stay on the screen\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn a small phone held upright, such as an iPhone SE in Safari with its address bar showing, the game board is taller than the screen. The cards stop shrinking at their smallest size. The bottom of the board, which holds your hand and the End turn button, is cut off below the edge of the screen, where it cannot be scrolled to. Once this is built, a short phone gets a fit of its own, as a phone on its side already does. Your hand shows the top part of each card (its cost, name and first line), a tap lifts a card to read it, and End turn stays on the screen. Taller phones see no change.\n\n## Why\n- The upright phone board sizes every card from the board's own height: `--card-h: clamp(44px, calc((100cqh - 330px) / 5.24), 94px)` (`apps/web/src/game/board.css:3410`). The cards stop at 44px, so a board under about 330 + 5.24 \u00d7 44 \u2248 561px tall needs more room than it has. With a rail (an online match's Back row, `--board-rail-phone-h: 62px`, `board.css:3562-3564`) it needs about 623px.\n- The stylesheet already says the cards are at that 44px floor at 390\u00d7664 (`board.css:4180-4182`, B46). A 375\u00d7548 screen (an iPhone SE in Safari with its bars showing) is 116px shorter than that.\n- Both hosts clip what does not fit. The practice shell is exactly the visible viewport tall, with `overflow: hidden` (`apps/web/src/practice/practice.css:1433-1439`). A match's host is a `100dvh` grid (`board.css:4110-4118`). The board's last rows are the ones lost: your hand, and the control bar that holds End turn.\n- Phone landscape already solved this with a peek of your hand (`board.css:3912-3931`, `:4046`). A phone held upright has no short-height rule. `apps/web/src/breakpoints.ts` names only `short: 500` (a phone on its side), and no `@media` in `board.css` reads a portrait height.\n- No test looks. The smallest upright size in `e2e/cypress/component/board-layout.cy.tsx` (`VIEWPORTS`, line 13) is 390\u00d7664, where `#2876 End turn and your hand stay on screen at 390x664` runs (line 1156). `mobile-ux.cy.tsx`'s `BAR_VIEWPORTS` (line 993) does include 320\u00d7568 and 375\u00d7667. But `expectOneRow` (line 1041) checks only that the bar's buttons share one row inside the screen's width, never its height.\n- The overflow figures above are worked out from the stylesheet, not measured in a browser. Step 1 below measures them.\n\n## Proposal\n1. Add the failing rows first. Run the `#2876` End-turn-and-hand test and the no-overflow describe in `board-layout.cy.tsx` at 375\u00d7548 and 320\u00d7568 upright, and at about 360\u00d7560 (a small Android phone with Chrome's bars), with and without a rail. Record on `main` how far End turn's bottom edge lands below the screen.\n2. Name a short-portrait breakpoint in `breakpoints.ts`: a phone held upright whose window is at most about 620px tall. The build picks the exact height from step 1's measurements, and `breakpoints.test.ts` holds every sheet's `@media` to the named breakpoints.\n3. Under that breakpoint, the upright board gives back height as the landscape layout does:\n   - Your hand's row becomes a peek. The top of each card shows, a tap lifts the card clear to read it, and a drag starts from the part that shows.\n   - The card budget's 1.24 share for the hand drops to the peek's share, so the four field rows keep their 44px floor.\n   - Only if that is still not enough, the seats' plates compact.\n   - Taller phones keep today's layout exactly.\n4. The Duos board keeps its own budget (`apps/web/src/duos/duos.css:589-593`) and is left alone. The PR says whether it needs the same rule, as a follow-up.\n\n## Where it lands\n- `apps/web/src/breakpoints.ts`, `apps/web/src/breakpoints.test.ts` (the new name)\n- `apps/web/src/game/board.css`: one short-portrait block beside the `max-width: 600px` one\n- `e2e/cypress/component/board-layout.cy.tsx`: the new sizes\n- `apps/web/README.md`, where it describes the phone layouts\n- SPEC: none. This is layout only; no rule changes.\n\n## Acceptance criteria\n- [ ] `board-layout.cy.tsx` runs `#2876 End turn and your hand stay on screen` at 375\u00d7548, 320\u00d7568 and 360\u00d7560, with and without a rail, and the PR shows it failing on `main` with the measured overflow.\n- [ ] At those sizes, End turn's bottom edge and every hand card's visible part are inside the screen, nothing scrolls either way, and every field card is at least 44px tall.\n- [ ] A peeking hand card lifts clear on a tap and can be dragged from the part that shows (component test).\n- [ ] At 390\u00d7664, 390\u00d7844 and the other existing `VIEWPORTS`, every existing layout test passes unchanged, including `#2876 your hand keeps its size at 390x844` and `#2932`'s area check.\n- [ ] `breakpoints.test.ts` passes with the new named breakpoint.\n\n## Size and risks\nMedium: about 4-6 files, one CSS block of roughly 40-80 lines, and the spec rows.\n- The upright phone board's CSS carries many earlier fixes (#2876, #2932, #3633's single layout pass). The new block should override only custom properties and the hand row, never re-lay the field.\n- On those phones a hand reads as a peek, not as whole cards. That is the trade phone landscape already makes.\n- Cypress component runs are slow, so add rows only where they prove something.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T01:10:20Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4427: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T01:10:41Z",
+    "claimed_at": "2026-11-22T01:14:08Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
