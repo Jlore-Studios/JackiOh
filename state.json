@@ -18739,9 +18739,11 @@
         "by": "`muse` (medium)",
         "sha": "744e9e1cf06fb5fd42db5f4d7188938c240a63ef"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T16:40:13Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-22T18:08:36Z",
         "family": "muse",
@@ -18751,6 +18753,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Prefetch tests still running (web pretest builds WASM first); will continue on delivery.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: the friends drawer and chat panels load on first open, not in the first page load\"} -->\n- This patch moves the Friends drawer content out of the entry chunk. First load now carries only the rail button, its unread badge and its polling; the friends list, rows, friend menu, chat panel and challenge dialog arrive in a lazily imported drawer chunk on first open, prefetched on rail pointer/\u2026\n- How tested (commands run, output seen):\n- - `pnpm --dir apps/web test src/together/friendsDrawerChunk.test.ts` \u2014 3/3 pass (prefetch once, save-data off, signed-out off).\n- - `pnpm --dir apps/web test src/together/FriendsButton.test.tsx` \u2014 36/36 pass, including the new `#4444` first-open test. Note: on this box (2 CPUs, load 4\u20137, swap, other lanes' release rustc builds) the two heaviest full-App drawer tests exceed the 15s budget when the whole file runs in one proces\u2026\n- - `pnpm --dir apps/web test src/together/ChatPanel.test.tsx` \u2014 37/37, including the new scroll-up paging test; existing `R1384000` button tests unmodified and green.\n- - `pnpm --dir apps/web test src/together/polling.test.tsx` \u2014 25/25; `src/dialogs.test.ts`, `src/routes/chunks.test.tsx` \u2014 green; `src/net/first-load.test.ts` \u2014 20/20, including the new static-import guard, the built-asset probe test, and the lowered budget.\n- - `pnpm --dir apps/web typecheck`, `pnpm exec eslint` on all 11 touched web files, `cargo fmt --check` \u2014 clean.\n- - `pnpm --dir apps/web exec vite build --mode development` \u2014 entry-plus-preloads gzip 413,393 bytes; budget lowered to 51 \u00d7 8192 (417,792) with the measurement quoted in the test comment; all three drawer probes absent from entry, drawer text in its own `FriendsDrawer-*.js` chunk.\n- - E2E 51/42 left to CI per the plan.\n- Decisions (with rejected alternatives): prefetch dedups once per page with a `resetFriendsDrawerPrefetchForTests` seam mirroring `prefetchRoute` (rejected: loading on every intent); chunk warm-ups in fake-timer/file-level tests so they measure reads, not code arrival (rejected: touching timeouts or\u2026\n- Reviewer attention: `apps/web/src/together/FriendsDrawer.tsx` is a verbatim move of the panel code (only imports it uses, no CSS); `FriendsButton.tsx` keeps every testid, badge, and close/focus path; `ChatPanel.tsx` anchor effect only consumes the ref set by `loadEarlier`, so the newest-message scr\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4444 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4444/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4444,
       "kind": "review",
       "live": "reviewing",
