@@ -650,11 +650,11 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // #967: Meditative #49 is a Catalyst and its #49.1 a Prime, beside #45 and #91 and their tokens,
         // and Acclaimed is on #49 and #49.1 alone. Meditative+ adds a Catalyst and a Prime (#16, #16.1) and
         // no Acclaimed; the Stinkyscape set #147 (a Catalyst), #147.1 (a Prime) and nine Acclaimed; the
-        // Stinkyscape+ set one Catalyst and three Acclaimed.
+        // Stinkyscape+ set one Catalyst (#4), one Prime (#4.1, since #4440) and four Acclaimed.
         for (tag, theirs, plus, stinky, stinky_plus) in [
             ("Catalyst", 3, 1, 1, 1),
-            ("Prime", 3, 1, 1, 0),
-            ("Acclaimed", 2, 0, 9, 3),
+            ("Prime", 3, 1, 1, 1),
+            ("Acclaimed", 2, 0, 9, 4),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
