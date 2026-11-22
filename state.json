@@ -17042,7 +17042,7 @@
       "provider": "muse",
       "question": "What should carry out the history rewrite this worktree is forbidden to do (no commit, rebase, reset, merge, or branch switch)?",
       "queued_at": "2026-11-22T16:42:08Z",
-      "run_id": "pending:64cf60da-1795365727",
+      "run_id": "45045346324",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "decision",
