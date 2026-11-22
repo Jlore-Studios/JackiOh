@@ -36737,7 +36737,7 @@
           "resets_at": "2026-11-22T20:55:00Z",
           "utilization": 0.02
         },
-        "observed_at": "2026-11-22T16:08:57Z",
+        "observed_at": "2026-11-22T16:23:33Z",
         "seven_day": {
           "resets_at": "2026-11-23T00:00:00Z",
           "utilization": 0.77
@@ -40526,7 +40526,8 @@
       "2026-11-22T16:17:21Z,claude-1,stream,call,45042694359,1,2026-11-22T21:10:00Z,,,allowed,40,,",
       "2026-11-22T16:19:06Z,claude-1,stream,call,45042694359,2,2026-11-22T21:10:00Z,,,allowed,40,,",
       "2026-11-22T16:17:10Z,claude-8,ping,before,45042644729,0,2026-11-22T17:00:00Z,,,allowed,100,,",
-      "2026-11-22T16:17:43Z,claude-8,stream,call,45042644729,1,2026-11-22T17:00:00Z,,,allowed,100,,"
+      "2026-11-22T16:17:43Z,claude-8,stream,call,45042644729,1,2026-11-22T17:00:00Z,,,allowed,100,,",
+      "2026-11-22T16:10:56Z,muse,usage-command,before,45042344855,2,2026-11-22T20:55:00Z,77,2026-11-23T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-22T16:02:44Z,45040808994,muse,muse-spark-1.3-contributor,review,4459,medium,reviewed,,5.5,0,0,0,,,,,,0.6,agy,none,,1",
