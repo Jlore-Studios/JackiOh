@@ -16507,6 +16507,8 @@
       }
     },
     "4529": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T22:37:53Z",
@@ -16520,8 +16522,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a seat's socket that drops while the server seats it starts the disconnect grace, and never pushes the player's open tab out\"} -->\n- A dropped socket no longer takes a seat, in 1v1 or co-op. Both seat attaches (`MatchActor::attach` in [match_actor.rs](crates/server/src/actor/match_actor.rs), `DuosActor::attach` in [duos/actor.rs](crates/server/src/duos/actor.rs)) now return early when the socket is already closed \u2014 no seat write\u2026\n- How I tested it: four new tests in the existing `seat_states_3678` modules (grace survives a dropped attach; rebuild + absent grace ending in a P2-by-disconnect no-show loss; held socket keeps its only view with no close; co-op grace runs and the AI takes A1 over). Results observed: 1v1 module 8/8,\u2026\n- Decisions the issue did not settle: I kept the plan's exact guard order (post-handler `on_socket_gone` before the previous-socket `SEAT_TAKEN_CLOSE_CODE` close) \u2014 in the untestable no-await window the replaced socket is still closed with 4412, and either order is defensible. I did not spot-check fa\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4509 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4509/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4509,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T23:46:52Z",
         "from_run": "45078806682",
         "gates": [
           {
@@ -16580,8 +16585,15 @@
         "source": "build",
         "until": "2026-11-23T00:16:06Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-22T23:46:06Z",
+      "run_id": "pending:ef738445-1795391197",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-22T23:46:52Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16595,9 +16607,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T23:38:38Z",
+    "at": "2026-11-22T23:46:52Z",
     "url": "",
-    "what": "build #4510 on claude-6"
+    "what": "review #4529 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T23:37:07Z",
