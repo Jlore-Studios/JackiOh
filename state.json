@@ -17943,10 +17943,10 @@
     "what": "review #4459 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T15:44:14Z",
+    "at": "2026-11-22T15:52:14Z",
     "notes": [
-      "#4493 needs a plan",
-      "started plan #4493 on claude-7 (run 45040041219)",
+      "delivered revise #4459 on agy (run 45034952926): built",
+      "started review #4459 on muse (run 45040808994)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -18653,7 +18653,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T15:44:14Z",
+  "loop_tick": "2026-11-22T15:52:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
