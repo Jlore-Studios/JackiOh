@@ -19187,13 +19187,14 @@
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-8",
       "queued_at": "2026-11-22T18:48:53Z",
-      "run_id": "45057279017",
+      "run_id": "pending:2c290f3b-1795375667",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 455,
-      "started_at": "2026-11-22T18:49:45Z",
+      "started_at": "2026-11-22T19:28:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -19255,9 +19256,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T19:18:44Z",
+    "at": "2026-11-22T19:28:09Z",
     "url": "",
-    "what": "build #4507 on muse"
+    "what": "spot-check #4506 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-22T19:15:27Z",
@@ -40992,7 +40993,15 @@
         "n": 455,
         "pr": 4506,
         "queued_at": "2026-11-22T19:15:37Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:2c290f3b-1795375667",
         "sha": "cd440dcb0ff9deabc49681ecea0107b33d2f91f3",
+        "started_at": "2026-11-22T19:28:09Z",
         "status": "queued",
         "title": "Patch: big set pieces fit a phone's memory, and a layer budget keeps every future animation inside it",
         "tries": 0
