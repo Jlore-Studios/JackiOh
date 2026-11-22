@@ -18412,11 +18412,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T17:01:11Z",
+        "at": "2026-11-22T17:18:01Z",
         "difficulty": "hard",
-        "provider": "claude-6",
+        "provider": "claude-3",
         "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4480, a hard change"
+        "why": "The bot already rated it hard and a rating can't go lower; by the rule alone it would be medium (about 19 files, only row keys and comments in crates/cards, no engine rule)."
       },
       "failures": 0,
       "forced": false,
