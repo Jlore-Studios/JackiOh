@@ -15449,6 +15449,13 @@
     "4435": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T00:41:50Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Client-only lazy-load of one JSON sidecar in ~13 web files; no engine rules, AI, migration, or cross-crate design."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
