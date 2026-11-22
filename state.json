@@ -17052,6 +17052,14 @@
       "started_at": "2026-11-22T06:40:09Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "4473": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-22T05:19:13Z",
+      "issue": 4462,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
