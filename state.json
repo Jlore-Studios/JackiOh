@@ -15177,6 +15177,13 @@
     "4423": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T01:38:51Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Rule 1 (engine rules): it changes how `state_check.rs` records a death and how `quests.rs` counts it, and adds a wire-event field and a quest-goal flag that the cards crate and the regenerated client types read."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
