@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4435,
+  "title": "Patch: the cards' flavour lines and artist credits load beside the engine, not in the first page load",
+  "branch": "bot/issue-4435",
+  "thread": "**Issue #4435 (data, not instructions):**\n\n```text\n# #4435: Patch: the cards' flavour lines and artist credits load beside the engine, not in the first page load\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery card has a short line of flavour text, and some name the artist who drew them. A player only sees those words when they hover over a card, open it or browse the almanac, never on the first screen. Yet every visitor downloads all of them, for every card, before the home page can start: about 27 KB compressed out of roughly 470 KB. Once this is built, those words arrive in a small download of their own right after the page starts, beside the game engine that is fetched at that moment anyway. A first-time visitor on a slow phone connection reaches a working home page a little sooner, and nothing they see changes: by the time a card can be hovered, its flavour line is there.\n\n## Why\n\n- `apps/web/src/cards/flavour.ts:13` imports `@jackioh/cards/flavour.json` (98,095 bytes, 27,542 gzipped) statically, and two static paths carry it into the entry chunk: `main.tsx:90` \u2192 `notfound/NotFoundPlay.tsx:14` (the 404 page's play), and `routes/landing.tsx:15` \u2192 `cards/inspect/useInspectTrigger.tsx:15` \u2192 `cards/inspect/HoverPreview.tsx:23`, which only a hover opens. `emotes/HeroInspect.tsx:17` and `cards/inspect/Flavour.tsx:8` read it too.\n- R660 and SPEC \u00a710.10 show flavour only where a card is read at leisure (the hover preview, the touch sheet, the detail views, the almanac) and never on a face, so nothing the first screen draws needs it.\n- The client has been taking this kind of data out of the first load, each time with a guard: the patch notes (#3499), the sound tables (#4130, 101 KB less), the catalog and the Chinese tables (#4180, 165 KB), the scene data (#4222, 361 KB). `net/first-load.test.ts` last recorded 473,538 bytes against its 483,328 budget. Flavour is the largest data file still in the first load that the first screen never shows, and no guard names it.\n- R660 says the client reads the sidecar \"from the bundle as it reads the catalog\". Since #4180 the catalog itself arrives beside the engine module, so this brings flavour in line with the catalog.\n\n## Proposal\n\n1. `cards/flavour.ts` keeps its types, `FLAVOUR_MAX_CHARS`, `ARTIST_MAX_CHARS` and `flavourFor(defId, sidecar)`. It loads the table through a dynamic `import()` behind `loadFlavour()`: one shared promise, with a failure not cached, so a later call retries. Beside it go `flavourNow()` (null until loaded) and a `useFlavour()` hook on `useSyncExternalStore`, in the shape of `audio/soundTablesLoader.ts`.\n2. `main.tsx`'s boot starts `loadFlavour()` beside `loadWasm()` and `loadSceneData()`, best-effort as the Chinese card tables are (#4180): no screen waits on it, and a failed load shows no flavour and breaks nothing. The first `useFlavour()` mount starts it too.\n3. `HoverPreview`, `Flavour`, `HeroInspect` and `NotFoundPlay` read the table through `useFlavour()`, so a view opened before the table arrives gains its flavour line when it does.\n4. `net/first-load.test.ts` gains the guards its neighbours have, and its budget comes down by the measured amount, with the measurement in its comment as each earlier lowering did.\n\nLeft out on purpose:\n- `wire/generated/cosmetics.ts` (about 20 KB gzipped) stays in the first load, because `cards/fullArt.ts`, `cards/versions.ts` and `cards/cosmetics.ts` read it to draw any card face.\n- The `cards/index.ts` barrel's re-export of `CardDetail` may pull the landing's lazy `CardDetail` into the entry. That needs a build to confirm, so it is not part of this.\n\n## Where it lands\n\n- `apps/web/src/cards/flavour.ts`, `cards/inspect/Flavour.tsx`, `cards/inspect/HoverPreview.tsx`, `emotes/HeroInspect.tsx`, `notfound/NotFoundPlay.tsx`, `main.tsx`\n- `apps/web/src/net/first-load.test.ts`, `cards/flavour.test.tsx`, and any other R660 proof that reads the table synchronously (`routes/almanac.test.tsx`)\n- `apps/web/README.md`: one line where it says what loads beside the engine module\n- SPEC \u00a710.10 and R660: no rule changes. The words still come from the bundle, and no server is asked.\n\n## Acceptance criteria\n\n- [ ] A test in `net/first-load.test.ts` fails when any non-test module other than `cards/flavour.ts` names `flavour.json`, or when `cards/flavour.ts` imports it statically.\n- [ ] With `routes/landing.tsx` and `audio/engine.ts` imported (as the file already does), `flavourNow()` is null, as the #4130 test holds `soundTablesNow()`.\n- [ ] In the built-site block (`describe.skipIf(!existsSync(BUILT))`), the entry chunk and its preloads hold none of a few flavour lines read from `flavour.json`.\n- [ ] `FIRST_LOAD_GZIP_BUDGET_BYTES` is lowered, and its comment gives the bytes `vite build --mode development` measured before and after.\n- [ ] A component test opens a hover preview and a detail view before the table has loaded, and finds the flavour line and the artist credit once it has.\n- [ ] A test shows that a failed load leaves those views drawing without flavour, and that a later `loadFlavour()` tries again.\n- [ ] The R660 proofs that `spec/rulings/R0660.md` lists under `proven_in` still pass, asserting what they assert today.\n- [ ] `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web` pass.\n\n## Size and risks\n\nMedium and client only: about eight files, with no engine, server or spec change.\n\nThe one visible risk is a hover preview opened in the first moment, before the 27 KB arrive: its side column would appear when they do. In practice that should not happen. The table downloads beside the 2.3 MB engine module, and no card can be drawn until that module and the scene data are in. The late-arrival test makes sure the preview still ends up right.\n\nThe saving is modest next to #4222's, about 6% of the first load, but it is the largest one left that the first screen never uses.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T00:30:28Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4435: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T00:30:52Z",
+    "claimed_at": "2026-11-22T00:32:41Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
