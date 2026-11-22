@@ -16626,13 +16626,24 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "gemini",
         "built_by": "agy",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "gemini",
+            "provider": "agy",
+            "run": "45023549960",
+            "tier": "medium"
+          }
+        ],
         "sha": "2d9a952bf8a196df9a34c4a61f0083f314661419",
-        "tiers": {}
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     },
     "4460": {
