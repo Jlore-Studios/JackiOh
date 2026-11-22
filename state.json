@@ -15087,11 +15087,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T01:38:51Z",
+        "at": "2026-11-22T02:06:08Z",
         "difficulty": "hard",
         "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 1 (engine rules): it changes how `state_check.rs` records a death and how `quests.rs` counts it, and adds a wire-event field and a quest-goal flag that the cards crate and the regenerated client types read."
+        "tier": "strong",
+        "why": "Engine rules: adds a field to the destroyed event in crates/engine/src (state_check, events, query, quests, view_for) and readers across crates must agree"
       },
       "failures": 0,
       "forced": false,
