@@ -17539,6 +17539,13 @@
     "4478": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T16:22:16Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Only the fuzz monitor in crates/engine/src/testkit/ and its tests change: no rules, resolution loop, AI, migration or cross-crate contract, and well under 40 files; rule 1 (engine rules) does not apply because no engine behavior changes."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
