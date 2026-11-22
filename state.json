@@ -16617,24 +16617,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "muse",
-        "built_by": "muse",
+        "approvals": [],
+        "builder": "gemini",
+        "built_by": "agy",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "provider": "agy",
-            "run": "45011563227",
-            "tier": "medium"
-          }
-        ],
-        "sha": "7921b3517968331a490738e65586787ec652560c",
-        "tiers": {
-          "gemini": "medium"
-        }
+        "reviews": [],
+        "sha": "2d9a952bf8a196df9a34c4a61f0083f314661419",
+        "tiers": {}
       }
     },
     "4460": {
