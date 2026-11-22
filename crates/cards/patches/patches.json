@@ -33181,5 +33181,33 @@
       "traininggrounds-042"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.9l",
+    "date": "2026-11-22",
+    "title": "Random picks on a slashed board draw only from the cards they reach",
+    "source": "#4469",
+    "notes": "R3554003: MC Tech's base Cry, Arcane Missiles, Snom Bunny's Death, Casper's Activate and Siva 1's Cry draw their random pick only among the cards they reach on a slashed board; their v0.6.9j scripts are kept for replays (R767000).",
+    "player": {
+      "title": "Random picks respect the slash",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "On a board split by Slashed Dream Cries in Red, MC Tech, Arcane Missiles, Snom Bunny, Casper and Siva 1 sometimes picked a card on the far half, and the effect did nothing.",
+        "Each now picks only among the cards on its own half that it can affect, so the pick is never wasted on a card out of its reach."
+      ]
+    },
+    "commits": [
+      "4d9671dfb8218af74c50eb15423bf2198699988b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-040",
+      "stinkyscape-018"
+    ],
+    "changes": []
   }
 ]
