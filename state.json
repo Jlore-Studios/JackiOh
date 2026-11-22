@@ -17012,9 +17012,7 @@
     },
     "4468": {
       "action": "plan",
-      "asks": [
-        "c:7075255550"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T06:38:56Z",
         "difficulty": "hard",
@@ -17033,28 +17031,29 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- Do not touch: any query text in `crates/server/src/db/pg.rs` or `crates/server/src/economy/store.rs`, any handler (`api/stats.rs`, `api/results.rs`, `duos/mod.rs`), `db/fake.rs`, CHECK 2 (no table is added, so its expected array is unchanged), anything under `.github/`, `.harness/`, `.squishy/`, or\u2026\n- ## Steps\n- 1. **Write the migration** `crates/server/migrations/0098_stats_and_daily_pay_indexes.sql`. Header comment in the 0062/0064 style: which query each index serves (`player_stats_list_public` in `src/db/pg.rs`; `game_jlore_totals` and `fleet_get` in `src/economy/store.rs`, reached from `api/results.rs\u2026\n- ```sql\n- create index if not exists player_stats_public_games_idx\n- on public.player_stats ((case when (stats->>'games') ~ '^[0-9]+$' then (stats->>'games')::bigint else 0 end) desc, updated_at desc, profile_id)\n- where is_private = false;\n- create index if not exists jlore_grants_profile_reason_at_idx\n- on public.jlore_grants (profile_id, reason, at);\n- create index if not exists fleet_track_grants_profile_reason_at_idx\n- on public.fleet_track_grants (profile_id, reason, at);\n- ```\n- The players expression must be character for character the query's `order by` (alias `ps.` dropped): `case when (stats->>'games') ~ '^[0-9]+$' then (stats->>'games')::bigint else 0 end` first, then `updated_at desc`, then `profile_id` ascending, partial on `is_private = false`.\n- 2. **Register it** in `crates/server/src/db/migrate.rs`: copy the 0097 tuple block and add the 0098 filename with its `include_str!` line directly after it, keeping lexical order.\n- 3. **Pin it** in `crates/server/tests/store/migrations_pinned.rs`: add the `(\"0098_stats_and_daily_pay_indexes.sql\", \"<sum>\")` line after 0097's. Get `<sum>` by adding the line with a placeholder, running `cargo test -p jackioh-server --test server_store migrations_pinned`, and copying the actual c\u2026\n- 4. **Add CHECK 26 (players)** in `01_schema_invariants.sql` after CHECK 25, built exactly like CHECK 21: open with `begin;`, seed ~2,000 public `player_stats` rows whose `stats` jsonb is several KB each (pad with a filler key via `repeat()`), plus a handful of `is_private = true` rows and one `bann\u2026\n- 5. **Add CHECK 27 (ledgers)** the same way: `begin;`, one profile, ~2,000 `jlore_grants` rows with `reason = 'game'` and `at` spread over ~400 days via `generate_series`, and the same count in `fleet_track_grants`; `analyze` both tables. `explain` the literal forms of `game_jlore_totals`'s sum (pro\u2026\n- 6. **Update the one doc comment** on `game_jlore_totals` (`crates/server/src/economy/store.rs`, ~line 1295) to name `jlore_grants_profile_reason_at_idx`. Leave `fleet_get` (no such comment exists) and everything else in the file alone.\n- 7. **Write the two doc paragraphs**: in `crates/server/README.md` after the 0097 paragraph, one paragraph in the 0062/0064 style naming the three indexes, the queries they serve, and the two new CHECKs; in `docs/architecture.md` where the schema passage names 0097, one sentence adding 0098 with the\u2026\n- ## Tests\n- - `cargo test -p jackioh-server --test server_store migrations_pinned` \u2014 the new checksum line passes.\n- - `sh crates/server/tests/sql/run.sh` \u2014 CHECK 26 and CHECK 27 pass (and to prove each CHECK fails without the fix: temporarily drop the matching index in a scratch database, re-run, see its `FAIL (CHECK 2n)` exception, restore).\n- - `sh crates/server/tests/db/run.sh` \u2014 the store contract still passes against Postgres.\n- - `cargo test -p jackioh-server --test server api::stats` \u2014 R654, R1436, R3911000 tests pass unedited.\n- - `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, and `cargo jackioh spec check`.\n- ## Done when\n- - [ ] One new migration adds exactly the three indexes above; the players expression matches the query's `order by` character for character and is partial on `is_private = false`.\n- - [ ] `migrate.rs` registers it and `migrations_pinned.rs` pins it.\n- - [ ] CHECK 26 and CHECK 27 each name their index and query, and fail on a sequential scan, on a sort over `player_stats`, or on filtering the ledgers by day outside the index.\n- - [ ] The `db` suite, the stats tests, fmt, clippy, and `spec check` all pass; no query, handler, fake-store, or spec text changed beyond the one doc comment.\n- ## Risks\n- - An expression index only serves a query whose `order by` matches it exactly; CHECK 26 pins that match, and any later edit to the query's ordering must update the index expression in a new migration or the CHECK goes red by design.\n- - On today's small tables the planner may still prefer a sequential scan, which is cheap at that size; the CHECKs price sequential scans out (as CHECK 20/21 do) so they prove the indexed plan at scale.\n- - Building each index holds writes to its table for the duration of a plain `create index`; each index also adds a small write cost per future insert (one row per paid game or stats save). A result cache was rejected instead: caching the list would break R1436 and R3911000, which the unedited tests\u2026\n- ## Open questions\n- None. The filename, index names, expressions, CHECK numbers, and doc spots are all fixed above; no person-only decision is needed.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4468 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4468/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "muse",
-      "owner_since": "2026-11-22T06:27:42Z",
-      "owner_why": "it plans it",
+      "owner": "claude-3",
+      "owner_since": "2026-11-22T06:40:53Z",
+      "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
       "pending_request": false,
       "planned_at": "2026-11-22T06:38:59Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-11-22T06:19:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44993824168",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-22T06:27:42Z",
+      "run_id": "pending:445ec5d1-1795329624",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-22T06:40:53Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7075255550"
+      ]
     },
     "4469": {
       "action": "plan",
@@ -17127,9 +17126,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T06:40:09Z",
+    "at": "2026-11-22T06:40:53Z",
     "url": "",
-    "what": "build #4470 on claude-8"
+    "what": "plan #4468 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-22T06:24:20Z",
