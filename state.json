@@ -15271,6 +15271,13 @@
     "4431": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T00:55:01Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Test-only addition in one crate's tests directory: no engine rules, no AI, no cross-crate design, no migration, far under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
