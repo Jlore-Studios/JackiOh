@@ -18725,6 +18725,8 @@
     "4502": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "744e9e1cf06fb5fd42db5f4d7188938c240a63ef",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T16:40:13Z",
