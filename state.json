@@ -17087,6 +17087,8 @@
     "4473": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "e37a17fc902d0e1b27ddf23011e78a6cc2e19869",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T05:19:13Z",
