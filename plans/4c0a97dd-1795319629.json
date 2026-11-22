@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4446,
+  "title": "Patch: the hourly purge deletes cancelled queue tickets, each a copy of its player's deck that nothing reads again",
+  "branch": "bot/issue-4446",
+  "thread": "**Issue #4446 (data, not instructions):**\n\n```text\n# #4446: Patch: the hourly purge deletes cancelled queue tickets, each a copy of its player's deck that nothing reads again\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a player joins the online queue, the server writes a ticket holding a copy of the deck they chose. If they leave the queue, or close the tab and the server gives up on them after a few seconds, the ticket is marked cancelled. Then it is kept forever, deck copy and all, though nothing ever reads it again. Someone who clicks Find game and Cancel over and over leaves a new ticket each time, up to about 150 a minute, and every one stays. Once this is built, the server's hourly clean-up deletes cancelled tickets, as it already deletes lapsed daily challenges and expired private lobbies. Nobody at the table notices anything, and the database stops growing from it.\n\n## Why\n\n- Each enqueue writes one `public.tickets` row (`crates/server/src/api/queue.rs:370`, `tickets_insert` at `crates/server/src/db/pg.rs:3772`). The row holds the frozen deck (`frozen_deck`, plus `frozen_trio`'s three decks for Conquest) and its cosmetics as jsonb (migrations `0004_matches.sql:276`, `0008_queue_modes.sql`, `0061`).\n- All three ways a ticket stops waiting only mark it: `DELETE /api/queue` (`queue.rs:1444-1455`), the stale-ticket sweep after `QUEUE_TICKET_STALE_MS` (12 s) unheard (R897000, `queue.rs:719-742`), and a match end's stray cancel. Each runs `update \u2026 set status = 'cancelled'` (`pg.rs:3981-3983`). No statement in `crates/server/src` or the migrations deletes from `public.tickets`, and the hourly purge (`api/retention.rs`, `run_purge`) has no ticket step. A row goes only with its account (`on delete cascade`).\n- Nothing reads a cancelled ticket:\n  - the status `TicketStatus::Canceled` is set only by the fake store (`db/fake.rs:1874`) and matched nowhere;\n  - the queue readout (`tickets_recent_waits`, `pg.rs:3877-3884`) reads claimed tickets of the last hour;\n  - the pairing scan reads queued ones;\n  - the pairing's re-read of a ticket it lost already takes a missing row as gone (`queue.rs:837-838`);\n  - the web client never reads the table.\n- `POST /api/queue` and `DELETE /api/queue` have no limit of their own beyond the API's `API_REQUESTS_PER_MINUTE` (300), so a loop leaves about 150 rows a minute per account, for good.\n- The precedent:\n  - R4390000 (#4390) deletes every daily invite past its lapse, whatever became of it, because each kept the sender's frozen deck forever;\n  - #4378 reaps expired private lobbies;\n  - a cancelled room's row is deleted (`rooms_release`, `pg.rs:7597`).\n\n## Proposal\n\n1. A store method `tickets_purge(cutoff)` on both stores (`db/store.rs`'s dispatch, `db/pg.rs`, `db/fake.rs`). It deletes every ticket with `status = 'cancelled'` and `enqueued_at` before `cutoff`, and answers the count. It never touches a queued or a claimed ticket.\n2. A step of the hourly retention pass (`api/retention.rs`, `run_purge`) calls it with `now \u2212 QUEUE_TICKET_CANCELLED_KEEP_SECONDS`. That is a new named constant in `crates/server/src/config.rs`, an hour say, so the ticket an enqueue is still reading back is never the one deleted. The step has its own `FailingStreak` (`tickets.purge`, #3770), logs `tickets.purged` with the count and logs `tickets.purge_failed` on an error, as the steps beside it do.\n3. A ruling note (the lowest free number in the issue's block) with its `spec/pending/<issue>.md` paragraph, a sentence in SPEC \u00a79.5's enqueue paragraph (`spec/09-architecture.md:63`) that a cancelled ticket goes with the next purge, and the server README's retention lines.\n4. No migration and no new index. `tickets_pairing_scan_idx (status, rating, enqueued_at)` leads with `status`, and after the first pass the table holds at most about an hour of cancelled tickets.\n\n## Where it lands\n\n- `crates/server/src/db/store.rs`, `crates/server/src/db/pg.rs`, `crates/server/src/db/fake.rs`, `crates/server/src/api/retention.rs`, `crates/server/src/config.rs`\n- `crates/server/tests/store/contract.rs`, `crates/server/tests/api/retention.rs`\n- `crates/server/README.md`, `spec/09-architecture.md` \u00a79.5, `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] In `tests/store/contract.rs`, against both stores (Postgres under `tests/db/run.sh`): given a queued ticket, a claimed one and two cancelled ones, one enqueued before the cutoff and one after, the purge deletes only the older cancelled ticket and answers 1. The claimed ticket's match still reads its mode (`matches_mode_of`).\n- [ ] In `tests/api/retention.rs`: a retention pass deletes a ticket cancelled by `DELETE /api/queue` once it is older than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS`, and the same account can queue, leave and queue again afterwards. A purge the store fails is logged and counted by its `FailingStreak` while the other steps still run.\n- [ ] Both proving tests are named after the ruling, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-server`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo fmt --check` and `sh crates/server/tests/db/run.sh` are green.\n\n## Size and risks\n\nSmall: about eight files, no migration, nothing a player can see.\n\nThe first pass on a live database deletes every cancelled ticket ever written in one statement. Its size is unknown, so the step may delete in batches if that is too much for one transaction.\n\nClaimed tickets stay. `matches_mode_of` (`pg.rs:3320-3335`) and `replays_list_with_modes` read a queue match's mode from its ticket, so deleting them would first need `matches.mode` stamped and backfilled by a migration, which is rejected here as too much risk for the gain.\n\nAlso rejected:\n- A limit on how often an account may join the queue, which would refuse an honest player switching decks, while the purge bounds the rows without refusing anyone.\n- Deleting a ticket as it is cancelled, which needs all three cancel paths to delete and stops the purge from clearing the backlog. R4390000 rejected the same for the daily invites.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T03:49:24Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4446: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T03:49:49Z",
+    "claimed_at": "2026-11-22T03:54:16Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4453 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
