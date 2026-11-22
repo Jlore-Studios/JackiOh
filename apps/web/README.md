@@ -490,10 +490,11 @@ their counts alone, each name staying in its chip's title and label and in that 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
 a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
 its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's
-Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
-the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
-sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
-`marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
+Credits, the turn the offering re-rolls on, and each lot on its face with the price and the copies left
+the view gives and its "Buy" (`market-buy-<offer>`), live exactly when `legal` lists its `marketBuy` and
+sending that body; otherwise it is greyed, its tooltip the engine's `reason`. There is no "Sell": a
+Resource or Spice pays its Credits as it is played or discarded, and shows its quote in braces in the hand
+while the Marketplace is open (R3047004, R4410000).
 
 **The match menu** (#2645). On a phone (`game/phoneBar.ts`, board.css's two phone layouts) the control bar
 keeps to one row: End turn, the Marketplace toggle while the view carries a marketplace, the log toggle,

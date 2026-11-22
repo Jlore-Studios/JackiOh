@@ -22052,11 +22052,11 @@
     "loc": 40,
     "base": {
       "keywords": [],
-      "text": "Can be sold from your hand at the Marketplace.\nDiscover a Stinkyscape card."
+      "text": "Gives Credits like a Resource when played or discarded.\nDiscover a Stinkyscape card."
     },
     "radiant": {
       "keywords": [],
-      "text": "Can be sold from your hand at the Marketplace.\nDiscover a Radiant Stinkyscape card."
+      "text": "Gives Credits like a Resource when played or discarded.\nDiscover a Radiant Stinkyscape card."
     }
   },
   "stinkyscape-090": {

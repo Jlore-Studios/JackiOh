@@ -16,9 +16,8 @@
 //! reach (`float_credit`, #3695). The Burn and Toxic still to come on a unit or a hero count by the ticks
 //! they will deal (`afflicted`, `coming_hero_ticks`, R3822000). While a Feng Shui acts, the seat's next
 //! face-up play counts by the verdict its last element gives it (`feng_shui_outlook`, R3951100). An own
-//! dead Tradable card counts less than its price (`dead_in_hand`, R4154400), an own card that sells from the
-//! hand as the Credits its sale brings (`hand_sale_worth`, R4154401), and a permanent a Living Bomb destroys
-//! at its controller's next turn start as a Brittle 1 one (`plague_doomed`, R4154402).
+//! dead Tradable card counts less than its price (`dead_in_hand`, R4154400), and a permanent a Living Bomb
+//! destroys at its controller's next turn start as a Brittle 1 one (`plague_doomed`, R4154402).
 //! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
 //! handicap or a difficulty (R180).
 
@@ -47,9 +46,9 @@ use jackioh_engine::{
     is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, is_tradable,
     left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
     own_cost, pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance,
-    script_of, sell_quote, sells_from_hand, settle, slots_of, stats_with_buffs, subsystems,
-    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back,
+    toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of,
+    why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -892,20 +891,10 @@ pub fn dead_in_hand(state: &GameState, seat: PlayerId, card: &CardInstance) -> b
         && is_tradable(state, card)
 }
 
-/// R4154401: what a card that sells from the hand (`sells_from_hand`, Stinkyscape #89 Spice, R1861000) is
-/// worth in its holder's hand while the Marketplace quotes it (`sell_quote`): the Credits its sale brings
-/// now, at `market_credit` each, since a sale is on offer every turn of its holder's at no mana. `None`
-/// without `w.hand_sale_credits` (the frozen baseline's) or a quote: then it is priced as any hand card.
-pub fn hand_sale_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> Option<f64> {
-    if !w.hand_sale_credits || !sells_from_hand(state, card) {
-        return None;
-    }
-    sell_quote(state, card).map(|credits| w.market_credit * f64::from(credits))
-}
-
-/// An own hand card's place in `material`: `doomed_hand_card_value`, but a card that sells from the hand at
-/// what its sale brings (`hand_sale_worth`, R4154401), and a dead Tradable card at `dead_tradable_discount`
-/// off (`dead_in_hand`, R4154400; no reading at a zero share).
+/// An own hand card's place in `material`: `doomed_hand_card_value`, but a dead Tradable card at
+/// `dead_tradable_discount` off (`dead_in_hand`, R4154400; no reading at a zero share). R4410001:
+/// Stinkyscape #89 Spice is priced as any hand card, the Credits it pays counted once its play or discard
+/// gains them.
 fn own_hand_card_value(
     state: &GameState,
     seat: PlayerId,
@@ -913,9 +902,6 @@ fn own_hand_card_value(
     doomed: bool,
     w: &EvalWeights,
 ) -> f64 {
-    if let Some(credits) = hand_sale_worth(state, card, w) {
-        return credits;
-    }
     let value = doomed_hand_card_value(state, card, doomed, w);
     if w.dead_tradable_discount != 0.0 && dead_in_hand(state, seat, card) {
         value * (1.0 - w.dead_tradable_discount)

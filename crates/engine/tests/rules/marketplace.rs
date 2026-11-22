@@ -3,14 +3,14 @@
 //! turn `MARKETPLACE_OFFERS_PER_TURN` (4) offers of their own, one copy each, rolled from a table of
 //! lots weighted by their counts and replacing the ones before, each perhaps Buffed or Nerfed; the
 //! designer's prices, moved as they are rolled, and the Resources' quotes, which a Resource played or
-//! discarded fetches and which it shows in braces in its owner's hand; `marketBuy` and `marketSell` in
-//! the player's own main phase, for Credits and no mana, listed, refused and shown by one function
-//! each, the card bought costing (0) and carrying its lot's Buffs and Nerfs; and a lot an effect adds
-//! for the rest of the game.
+//! discarded fetches and which it shows in braces in its owner's hand, a `paysCredits` card's too
+//! (R4410000); `marketBuy` in the player's own main phase, for Credits and no mana, listed, refused and
+//! shown by one function, the card bought costing (0) and carrying its lot's Buffs and Nerfs, and every
+//! `marketSell` refused (R4410000); and a lot an effect adds for the rest of the game.
 
 use jackioh_engine::effects::{
-    TuneDirection, TuneRow, add_market_lot, applicable_changes, discard_hand, discard_resource,
-    gain_market_credits, gain_resources,
+    TuneDirection, TuneRow, add_market_lot, applicable_changes, cast, discard_hand, discard_random,
+    discard_resource, gain_market_credits, gain_resources,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::{HIDDEN_ID, view_for};
@@ -602,10 +602,7 @@ fn r1853003_r2250001_a_resource_is_not_sold_and_the_view_lists_no_sale_of_it() {
     credits(&mut state, P1, 10);
     let id = resources_in_hand_of(&state, P1)[0].id.clone();
     assert!(sales_listed(&state, P1).is_empty());
-    assert_eq!(
-        sell(&state, P1, &id).error,
-        Some(format!("no card {id} in your hand sells at the Marketplace"))
-    );
+    assert_eq!(sell(&state, P1, &id).error.as_deref(), Some(NOTHING_SELLS));
     assert!(view_for(&state, P1).marketplace.expect("open").sales.is_empty());
 }
 
@@ -755,14 +752,14 @@ fn r1853005_r2250002_a_fixed_lot_is_its_casters_alone_at_a_fixed_price_renewed_e
     assert_eq!(market(&state).offers.len(), before);
 }
 
-/// `board`, with the hand-sale card and its script registered too (R1861000).
-fn hand_sale_board(seed: &str, p1: Value, p2: Value) -> GameState {
+/// `board`, with the card that pays Credits and its script registered too (R4410000).
+fn pays_credits_board(seed: &str, p1: Value, p2: Value) -> GameState {
     register();
     let mut defs = registered_catalog().clone();
-    defs.insert(HAND_SALE.to_string(), HAND_SALE_DEF.clone());
+    defs.insert(PAYS_CREDITS.to_string(), PAYS_CREDITS_DEF.clone());
     register_catalog(defs);
     let mut scripts = registered_scripts();
-    scripts.extend(HAND_SALE_SCRIPTS.clone());
+    scripts.extend(PAYS_CREDITS_SCRIPTS.clone());
     register_scripts(scripts);
     let side = |extra: Value| {
         spread(
@@ -779,142 +776,248 @@ fn in_range(price: ResourcePrice, credits: i32) -> bool {
     (price.sell_min..=price.sell_max).contains(&credits)
 }
 
-#[test]
-fn r1861000_a_hand_sale_card_is_quoted_after_the_resources_listed_shown_and_sold_from_the_hand() {
-    let mut state = hand_sale_board(
-        "r1861000-sale",
-        json!({ "hand": ["fx-1", HAND_SALE, { "def": HAND_SALE, "radiant": true }, COMMON_A] }),
-        json!({ "hand": ["fx-1", HAND_SALE] }),
-    );
-    let hand: Vec<String> = state.players[P1]
+/// The ids of `player`'s hand, in hand order.
+fn hand_ids_of(state: &GameState, player: PlayerId) -> Vec<String> {
+    state.players[player]
         .hand
         .iter()
         .map(|card| card.id.clone())
-        .collect();
-    let (plain, radiant) = (hand[1].clone(), hand[2].clone());
+        .collect()
+}
+
+/// The quote the Marketplace holds for the card that pays Credits, the last it quotes (R4410000).
+fn pays_credits_quote(state: &GameState) -> ResourceQuote {
+    let quote = market(state).quotes.last().cloned().expect("quoted");
+    assert_eq!(quote.def_id, PAYS_CREDITS, "quoted after the Resources");
+    quote
+}
+
+/// `player`'s first listed play of the hand card `id`, reduced.
+fn play_listed(state: &GameState, player: PlayerId, id: &str) -> ReduceResult {
+    let play = plays_in(state, player, id)
+        .into_iter()
+        .next()
+        .expect("the play is listed");
+    let out = deal(state, player, play);
+    assert_eq!(out.error, None);
+    out
+}
+
+/// Where the first event of `kind` sits in `events`.
+fn position_of(events: &[GameEvent], kind: GameEventType) -> usize {
+    let kinds = types_of(events);
+    kinds
+        .iter()
+        .position(|each| *each == kind)
+        .unwrap_or_else(|| panic!("no {kind:?} in {kinds:?}"))
+}
+
+#[test]
+fn r4410000_r1861000_a_card_that_pays_credits_is_quoted_after_the_resources_and_shows_it_in_braces() {
+    let mut state = pays_credits_board(
+        "r4410000-quote",
+        json!({ "hand": ["fx-1", PAYS_CREDITS, { "def": PAYS_CREDITS, "radiant": true }, COMMON_A] }),
+        json!({ "hand": ["fx-1", PAYS_CREDITS] }),
+    );
+    let shown = |state: &GameState, viewer: PlayerId| -> Vec<Option<Vec<PreviewValue>>> {
+        hand_of(state, viewer)
+            .into_iter()
+            .map(|card| card.preview)
+            .collect()
+    };
+    assert!(
+        shown(&state, P1).iter().all(Option::is_none),
+        "closed, nothing is quoted"
+    );
     credits(&mut state, P1, 10);
 
-    // Quoted after every Resource, each face in its range, turn after turn.
+    // Quoted after every Resource, each face in its range, turn after turn (R1861000's order).
     let mut expected = resource_ids();
     expected.sort();
-    expected.push(HAND_SALE);
+    expected.push(PAYS_CREDITS);
     for player in [P2, P1, P2] {
         let ids: Vec<&str> = market(&state)
             .quotes
             .iter()
             .map(|quote| quote.def_id.as_str())
             .collect();
-        assert_eq!(ids, expected, "the Resources sorted, then the hand-sale card");
-        let quote = market(&state).quotes.last().cloned().expect("quoted");
+        assert_eq!(
+            ids, expected,
+            "the Resources sorted, then the card that pays Credits"
+        );
+        let quote = pays_credits_quote(&state);
         assert!(in_range(HAND_SALE_PRICE, quote.base), "{quote:?}");
         assert!(in_range(HAND_SALE_RADIANT_PRICE, quote.radiant), "{quote:?}");
         start_turn_of(&mut state, player);
     }
     state.active = P1;
-    let quote = market(&state).quotes.last().cloned().expect("quoted");
+    let quote = pays_credits_quote(&state);
 
-    // Listed and shown in hand order, the Resource not among them; the other player's is theirs alone.
-    assert_eq!(sales_listed(&state, P1), vec![plain.clone(), radiant.clone()]);
-    let sales = |viewer: PlayerId, state: &GameState| -> Vec<(String, i32)> {
-        view_for(state, viewer)
-            .marketplace
-            .expect("open")
-            .sales
-            .into_iter()
-            .map(|sale| (sale.instance_id, sale.credits))
-            .collect()
+    // Its quote in braces on each face in its owner's hand, as a Resource's (R3047004).
+    let braces = |credits: i32| {
+        Some(vec![PreviewValue {
+            label: SELL_QUOTE_LABEL.to_string(),
+            value: credits,
+            display: None,
+            ids: None,
+        }])
     };
-    assert_eq!(
-        sales(P1, &state),
-        vec![(plain.clone(), quote.base), (radiant.clone(), quote.radiant)]
-    );
-    let theirs = state.players[P2].hand[1].id.clone();
-    assert_eq!(
-        sales(P2, &state),
-        vec![(theirs.clone(), quote.base)],
-        "p2 sees its own hand-sale card, not p1's"
-    );
-    assert_eq!(
-        sell(&state, P1, &theirs).error,
-        Some(format!("no card {theirs} in your hand sells at the Marketplace"))
-    );
-
-    // The sale: public, the quote in Credits, and the card gone from the hand.
-    let out = sell(&state, P1, &plain);
-    assert_eq!(out.error, None);
-    assert_eq!(
-        types_of(&out.events),
-        vec![GameEventType::MarketSold, GameEventType::MarketCreditsChanged]
-    );
-    assert_eq!(out.state.players[P1].market_credits, Some(10 + quote.base));
-    assert!(find_instance(&out.state, &plain).is_none(), "it ceased to exist");
-    assert_eq!(
-        create_invariant_monitor(&out.state).hidden(&out.state),
-        Vec::<String>::new(),
-        "I6: the sale named it to both seats as it went, though it is no token"
-    );
-    assert_eq!(out.state.players[P1].hand.len(), state.players[P1].hand.len() - 1);
-    let sold_in_p2 = view_for(&out.state, P2)
-        .events
-        .into_iter()
-        .find(|event| event.event_type() == GameEventType::MarketSold)
-        .expect("the other view carries the sale");
-    assert_eq!(
-        sold_in_p2,
-        GameEvent::MarketSold {
-            player: P1,
-            instance_id: plain,
-            def_id: HAND_SALE.to_string(),
-            radiant: None,
-            credits: quote.base,
-        },
-        "a sale is public"
-    );
-    let out = sell(&out.state, P1, &radiant);
-    assert_eq!(out.error, None);
-    assert_eq!(
-        out.state.players[P1].market_credits,
-        Some(10 + quote.base + quote.radiant),
-        "a Radiant one sells at the Radiant quote"
+    let mine = shown(&state, P1);
+    assert_eq!(mine[0], None, "a card that pays nothing shows nothing");
+    assert_eq!(mine[1], braces(quote.base), "the base face's quote");
+    assert_eq!(mine[2], braces(quote.radiant), "the Radiant face's quote");
+    assert_eq!(shown(&state, P2)[1], braces(quote.base), "p2's own hand");
+    assert!(
+        sales_listed(&state, P1).is_empty(),
+        "and nothing sells (R1853003)"
     );
 }
 
 #[test]
-fn r1861000_closed_on_the_opponents_turn_or_unflagged_it_does_not_sell() {
-    let mut state = hand_sale_board(
-        "r1861000-refused",
-        json!({ "hand": ["fx-1", HAND_SALE] }),
+fn r4410000_played_it_pays_its_quote_right_after_card_played() {
+    let mut state = pays_credits_board(
+        "r4410000-play",
+        json!({ "hand": ["fx-1", PAYS_CREDITS, { "def": PAYS_CREDITS, "radiant": true }] }),
         json!({}),
     );
-    let hand: Vec<String> = state.players[P1]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect();
-    assert!(sales_listed(&state, P1).is_empty());
-    assert_eq!(
-        sell(&state, P1, &hand[1]).error.as_deref(),
-        Some("the Marketplace is not open")
-    );
-    assert_eq!(view_for(&state, P1).marketplace, None);
-
+    let hand = hand_ids_of(&state, P1);
+    let (plain, radiant) = (hand[1].clone(), hand[2].clone());
     credits(&mut state, P1, 10);
-    assert_eq!(sales_listed(&state, P1), vec![hand[1].clone()]);
+    let quote = pays_credits_quote(&state);
+
+    let out = play_listed(&state, P1, &plain);
+    let played = position_of(&out.events, GameEventType::CardPlayed);
     assert_eq!(
-        sell(&state, P1, &hand[0]).error,
-        Some(format!(
-            "no card {} in your hand sells at the Marketplace",
-            hand[0]
-        )),
-        "a hand card that does not sell from the hand"
+        types_of(&out.events).get(played + 1),
+        Some(&GameEventType::MarketCreditsChanged),
+        "paid right after its cardPlayed (§10.5 step 4, R2250001)"
     );
+    assert_eq!(out.state.players[P1].market_credits, Some(10 + quote.base));
+
+    let out = play_listed(&out.state, P1, &radiant);
+    assert_eq!(
+        out.state.players[P1].market_credits,
+        Some(10 + quote.base + quote.radiant),
+        "a Radiant one pays the Radiant quote"
+    );
+}
+
+#[test]
+fn r4410000_discarded_it_pays_its_quote_after_the_graveyard() {
+    let mut state = pays_credits_board(
+        "r4410000-discard",
+        json!({ "hand": [{ "def": PAYS_CREDITS, "radiant": true }] }),
+        json!({}),
+    );
+    let id = hand_ids_of(&state, P1).remove(0);
+    credits(&mut state, P1, 10);
+    let quote = pays_credits_quote(&state);
+    let events = run_effect(&mut state, discard_random(json_as(json!({ "count": 1 }))), P1);
+    assert!(
+        position_of(&events, GameEventType::Discarded)
+            < position_of(&events, GameEventType::MarketCreditsChanged)
+    );
+    assert_eq!(state.players[P1].market_credits, Some(10 + quote.radiant));
+    assert!(state.players[P1].graveyard.iter().any(|card| card.id == id));
+}
+
+#[test]
+fn r4410000_closed_its_play_draws_in_range_and_opens_the_marketplace() {
+    for radiant in [false, true] {
+        let state = pays_credits_board(
+            &format!("r4410000-closed-{radiant}"),
+            json!({ "hand": ["fx-1", { "def": PAYS_CREDITS, "radiant": radiant }] }),
+            json!({}),
+        );
+        assert!(state.marketplace.is_none());
+        let id = hand_ids_of(&state, P1).remove(1);
+        let out = play_listed(&state, P1, &id);
+        let paid = out.state.players[P1].market_credits.expect("it paid");
+        let range = if radiant {
+            HAND_SALE_RADIANT_PRICE
+        } else {
+            HAND_SALE_PRICE
+        };
+        assert!(in_range(range, paid), "radiant {radiant}: {paid}");
+        assert!(
+            out.state.marketplace.is_some(),
+            "radiant {radiant}: the Credits opened it (R1853000)"
+        );
+    }
+}
+
+#[test]
+fn r4410000_a_cast_by_an_effect_pays_nothing() {
+    let mut state = pays_credits_board("r4410000-cast", json!({ "hand": [PAYS_CREDITS] }), json!({}));
+    let id = hand_ids_of(&state, P1).remove(0);
+    credits(&mut state, P1, 10);
+    let events = run_effect(
+        &mut state,
+        cast(json_as(
+            json!({ "target": { "of": "instance", "instanceId": id } }),
+        )),
+        P1,
+    );
+    position_of(&events, GameEventType::CardPlayed);
+    assert!(
+        events
+            .iter()
+            .all(|event| event.event_type() != GameEventType::MarketCreditsChanged),
+        "a cast is no play of its player's: {:?}",
+        types_of(&events)
+    );
+    assert_eq!(state.players[P1].market_credits, Some(10));
+}
+
+#[test]
+fn r4410000_a_vanilla_one_pays_as_a_vanilla_resource_does() {
+    let mut state = pays_credits_board(
+        "r4410000-vanilla",
+        json!({ "hand": ["fx-1", PAYS_CREDITS, PAYS_CREDITS] }),
+        json!({}),
+    );
+    credits(&mut state, P1, 10);
+    let quote = pays_credits_quote(&state);
+    let hand = hand_ids_of(&state, P1);
+    for card in state.players[P1].hand.iter_mut() {
+        card.vanilla = true;
+    }
+    // Played.
+    let out = play_listed(&state, P1, &hand[1]);
+    assert_eq!(out.state.players[P1].market_credits, Some(10 + quote.base));
+    // Discarded, with only it left in hand.
+    let mut state = out.state;
+    state.players[P1].hand.retain(|card| card.id == hand[2]);
+    run_effect(&mut state, discard_random(json_as(json!({ "count": 1 }))), P1);
+    assert_eq!(state.players[P1].market_credits, Some(10 + 2 * quote.base));
+}
+
+#[test]
+fn r4410000_r1853003_no_hand_card_sells() {
+    let mut state = pays_credits_board(
+        "r4410000-no-sale",
+        json!({ "hand": ["fx-1", PAYS_CREDITS, { "def": PAYS_CREDITS, "radiant": true }, COMMON_A] }),
+        json!({ "hand": [PAYS_CREDITS] }),
+    );
+    let mut ids = hand_ids_of(&state, P1);
+    ids.extend(hand_ids_of(&state, P2));
+    let refused = |state: &GameState, name: &str, why: &str| {
+        assert!(sales_listed(state, P1).is_empty(), "{name}: none is listed");
+        for id in &ids {
+            assert_eq!(sell(state, P1, id).error.as_deref(), Some(why), "{name}: {id}");
+        }
+    };
+    refused(&state, "closed", NOTHING_SELLS);
+    credits(&mut state, P1, 10);
+    refused(&state, "open", NOTHING_SELLS);
     let mut theirs = state.clone();
     theirs.active = P2;
-    assert!(sales_listed(&theirs, P1).is_empty());
-    assert_eq!(
-        sell(&theirs, P1, &hand[1]).error.as_deref(),
-        Some("it is not your turn")
-    );
+    refused(&theirs, "the other seat's turn", "it is not your turn");
+    // The view keeps its `sales` on the wire, always empty, for either seat.
+    for viewer in [P1, P2] {
+        let view = serde_json::to_value(view_for(&state, viewer)).expect("a view serializes");
+        assert_eq!(view["marketplace"]["sales"], json!([]), "{viewer:?}");
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -993,32 +1096,15 @@ fn i8_fires_on_a_buy_reduce_accepts_that_the_list_leaves_out() {
 }
 
 #[test]
-fn i8_fires_on_a_sale_reduce_accepts_that_the_list_leaves_out() {
-    let mut state = hand_sale_board("i8-sale", json!({ "hand": ["fx-1", HAND_SALE] }), json!({}));
+fn i8_stays_clean_as_every_sale_is_refused() {
+    let mut state = pays_credits_board("i8-sale", json!({ "hand": ["fx-1", PAYS_CREDITS] }), json!({}));
     credits(&mut state, P1, 10);
-    let hand: Vec<String> = state.players[P1]
-        .hand
-        .iter()
-        .map(|card| card.id.clone())
-        .collect();
-    assert_eq!(sales_listed(&state, P1), vec![hand[1].clone()]);
-    assert!(
-        sell(&state, P1, &hand[0]).error.is_some(),
-        "the card with no sale is refused, so forging it is silent"
+    assert!(sales_listed(&state, P1).is_empty());
+    assert_eq!(
+        unlisted_of(&state),
+        Vec::<String>::new(),
+        "a forged marketSell of each hand card is refused (R4410000)"
     );
-    assert_eq!(unlisted_of(&state), Vec::<String>::new(), "the full list");
-
-    let legal = without_deal(legal_actions(&state, P1), &sell_of(&hand[1]));
-    let found = unlisted_accepted(&state, P1, &legal);
-    assert_eq!(found.len(), 1, "{found:?}");
-    assert!(
-        found[0].starts_with("I8 unlisted marketSell accepted"),
-        "{}",
-        found[0]
-    );
-    assert!(found[0].contains(&hand[1]), "{}", found[0]);
-    assert!(found[0].contains("R1853003"), "{}", found[0]);
-    assert!(found[0].contains("§10.2"), "{}", found[0]);
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -5343,8 +5343,8 @@ stinkyscape-089: # Spice
     cast: The spice must flow. For a price.
   zh:
     name: 香料
-    base: "可以从你的手牌中在市场出售。\n发现一张臭臭星景牌。"
-    radiant: "可以从你的手牌中在市场出售。\n发现一张光辉臭臭星景牌。"
+    base: "在打出或被弃掉时，像资源一样提供信用点。\n发现一张臭臭星景牌。"
+    radiant: "在打出或被弃掉时，像资源一样提供信用点。\n发现一张光辉臭臭星景牌。"
 stinkyscape-090: # After Burner
   flavour: Bolted on at the last minute, it turns a slow ship into a very loud mistake.
   voice:
