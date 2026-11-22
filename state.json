@@ -30707,7 +30707,7 @@
           "resets_at": "2026-11-22T03:20:00Z",
           "utilization": 0.13
         },
-        "observed_at": "2026-11-22T01:48:56Z",
+        "observed_at": "2026-11-22T01:57:11Z",
         "status": "allowed"
       }
     },
@@ -37877,7 +37877,8 @@
       "2026-11-22T01:31:04Z,claude-7,stream,call,44946916469,11,2026-11-22T03:20:00Z,,,allowed,50,,",
       "2026-11-22T01:32:34Z,claude-7,stream,call,44946916469,12,2026-11-22T03:20:00Z,,,allowed,50,,",
       "2026-11-22T01:33:42Z,claude-7,stream,call,44946916469,13,2026-11-22T03:20:00Z,,,allowed,50,,",
-      "2026-11-22T01:44:40Z,claude-7,stream,call,44946916469,13,2026-11-22T03:20:00Z,,,allowed,50,,"
+      "2026-11-22T01:44:40Z,claude-7,stream,call,44946916469,13,2026-11-22T03:20:00Z,,,allowed,50,,",
+      "2026-11-22T01:53:09Z,claude-7,ping,before,44973278631,13,2026-11-22T03:20:00Z,,,allowed,50,,"
     ],
     "runs": [
       "2026-11-22T01:44:40Z,44946916469,claude-7,sonnet+opus,review,4419,medium,interrupted,time budget,215.9,346,100391,16246157,8.9192,8,13,,,1,,fresh,,8"
