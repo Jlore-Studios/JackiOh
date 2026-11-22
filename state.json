@@ -15989,12 +15989,14 @@
     "what": "plan #4516 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-22T20:03:53Z",
+    "at": "2026-11-22T20:11:58Z",
     "notes": [
-      "#4459: approved and green, so its strikes are cleared",
-      "delivered suggest on claude-3 (run 45062074917): suggested",
-      "delivered review #4502 on muse (run 45053780097): approved",
-      "#4515: typed it Task"
+      "#4516 needs a plan",
+      "started revise #4459 on claude-3 (run 45065317655)",
+      "started plan #4516 on claude-3 (run 45065365588)",
+      "nothing more to start: nothing is queued",
+      "pruned 6 plan file(s) older than 7 days",
+      "#4516: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16700,7 +16702,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T20:03:53Z",
+  "loop_tick": "2026-11-22T20:11:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
