@@ -3221,3 +3221,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-22T10:32:32Z,45012202066,claude-7,opus,review,4490,hard,approved,,6.2,25,6913,737596,0.6745,20,21,,,0.6,,none,,1
 2026-11-22T10:39:28Z,45004226566,claude-1,opus,review,4476,hard,approved,,75.7,172,41481,8422533,5.6595,1,14,,,65,,fresh,,3
 2026-11-22T12:12:24Z,45001363713,claude-3,opus,review,4480,hard,approved,,141.3,459,127810,21137288,12.2074,74,11,,,1.3,,fresh,,7
+2026-11-22T12:34:37Z,45014079938,agy,gemini-3.8-flash-high,revise,4459,medium,built,,106.9,526056,28840,0,,8,2,10,11,1.5,agy,none,,1
