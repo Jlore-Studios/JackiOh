@@ -15397,11 +15397,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T00:41:08Z",
+        "at": "2026-11-22T01:12:05Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The AI: the change rewrites the opponent model's switch logic in crates/ai/src/reply.rs and adds an AI search constant"
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 2, The AI: it changes the opponent model in crates/ai/src/reply.rs that every AI decision is scored through"
       },
       "failures": 0,
       "forced": false,
