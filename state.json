@@ -16567,7 +16567,7 @@
       }
     },
     "4459": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -16605,11 +16605,13 @@
       },
       "interruptions": 0,
       "issue": 4424,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "agy",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T12:40:57Z",
         "from_run": "45014079938",
         "gates": [
           {
@@ -16676,11 +16678,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "45014079938",
+      "run_id": "pending:2c84969c-1795351243",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-22T10:46:45Z",
+      "started_at": "2026-11-22T12:40:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17895,9 +17897,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T12:33:08Z",
+    "at": "2026-11-22T12:40:57Z",
     "url": "",
-    "what": "revise #4489 on claude-4"
+    "what": "review #4459 on agy"
   },
   "last_sweep": {
     "at": "2026-11-22T12:31:40Z",
