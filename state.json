@@ -15306,11 +15306,11 @@
       "asks": [],
       "died": 0,
       "difficulty_by": {
-        "at": "2026-11-22T08:59:14Z",
+        "at": "2026-11-22T09:24:01Z",
         "difficulty": "hard",
-        "provider": "step-up",
-        "tier": "",
-        "why": "failed 3 times at difficulty:medium"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "already rated difficulty:hard (step-up), which a planner may not lower; the change itself is a medium-sized client test change"
       },
       "failures": 0,
       "forced": false,
