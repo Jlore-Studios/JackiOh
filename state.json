@@ -39488,14 +39488,6 @@
         "provider": "claude-8",
         "run_id": "44999406518",
         "taken_asks": []
-      },
-      "3": {
-        "area": "rules",
-        "count": 1,
-        "last_run": "2026-11-22T07:42:38Z",
-        "provider": "muse",
-        "run_id": "44999463093",
-        "taken_asks": []
       }
     },
     "taken_asks": []
