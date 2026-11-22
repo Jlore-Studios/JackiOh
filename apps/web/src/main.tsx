@@ -973,4 +973,7 @@ if (import.meta.env.MODE !== "test") {
   });
   // Polish 2: UI ticks and the audio unlock on every screen, off the first paint (audio/appAudio.ts).
   void import("./audio/appAudio.ts").then((audio) => audio.retainAppAudio());
+  // #4428: the sound-effect recipes start beside the page-wide sound, off the first paint, without
+  // waiting on the WebAssembly module; the engine's `unlock()` is the backstop on the first gesture.
+  void import("./audio/sfxLoader.ts").then((sfx) => sfx.loadSfx()).catch(() => undefined);
 }
