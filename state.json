@@ -16671,7 +16671,7 @@
     "4459": {
       "action": "review",
       "asks": [],
-      "audit_tier": "",
+      "audit_tier": "medium",
       "ci_early": false,
       "ci_fixed_head": "2d9a952bf8a196df9a34c4a61f0083f314661419",
       "ci_fixes": 3,
@@ -16692,7 +16692,7 @@
         "resolved_by": "`gemini` (medium)",
         "sha": "9bc8102411daf77db3d9a62110f575e40629b2c6"
       },
-      "cross_rounds": 0,
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16709,14 +16709,33 @@
       },
       "interruptions": 0,
       "issue": 4424,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "plays omits directly-changed core-085 and lists two untouched cards.",
+          "evidence": "The diff changes three scripts (stinkyscape-011-2, core-083, core-085) and adds KEPT rows for 083/085, but plays is [011-2, 083, stinkyscape-109, stinkyscape-111]. c109 casts a random BUSTED card and c111 replaces hands with complicated cards; neither file is touched nor reads Dormant/immune state changed here. The plan prescribed --plays 011-2 083 085, and the builder's gate table shows classify --claims was never run.",
+          "severity": "blocking",
+          "where": "crates/cards/patches/pending/arcane-missiles-never-aims-at-a-unit-immune-to-spells-and.json"
+        },
+        {
+          "claim": "Kept rows keyed at v0.6.9i, but newer ships ran the same old scripts and are uncovered.",
+          "evidence": "Branch shipped.json order already ends at v0.6.9k and main at v0.6.9l; git show --stat on #4476 (3de2d02) and #4489 (4d9671d) shows neither touched c083/c085, so v0.6.9j/k/l all ran the kept scripts yet covering() returns None for them and they resolve under the new scripts. Fix: re-key both rows at the newest version that ran the old scripts, extend ran_it through it, and set after to the next unreleased version.",
+          "severity": "blocking",
+          "where": "crates/cards/src/history.rs"
+        },
+        {
+          "claim": "Ruling misstates the old Transmogulate behavior: plain transform does NOT pass Dormant by.",
+          "evidence": "transform() at crates/engine/src/effects/transform.rs:212-230 checks only transformable() (Immutable); only transform_random/cost_step/beneath guard slumber (lines ~424 comment, 566, 637), and replace_on_field/replace_in_zone have no slumber guard. So the old script both drew the Legendary AND replaced the Dormant card. Same false 'never replaced it, since transform passes a Dormant card by' sentence is in spec/pending/4424.md. The fix itself is still what the task prescribes; only the mechanism prose needs correcting.",
+          "severity": "blocking",
+          "where": "spec/rulings/R4424000.md"
+        }
+      ],
       "live": "reviewing",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-11-22T15:53:11Z",
+      "queued_at": "2026-11-22T16:09:51Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -16724,7 +16743,7 @@
       "run_id": "45040808994",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-22T15:53:48Z",
       "stop_requested": false,
       "taken_asks": [],
