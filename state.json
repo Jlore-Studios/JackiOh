@@ -17809,6 +17809,8 @@
       "stop_requested": false
     },
     "4487": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-22T04:58:29Z",
@@ -17822,8 +17824,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -50; sed -n 2385,2440p crates/engine/tests/rules/invariants.rs\", \"description\": \"Read notes and the failing test code\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/tests/rules/invariants.rs'\\ns=open(p).read()\\nold=' let edits: Vec<(&str, fn(&mut CardInstance))> = vec!['\\nnew=''' /// A record field's JSON name and\u2026\n- Bash: {\"command\": \"(cargo test -p jackioh-engine --features testkit --test 'rules*' 2>&1 | grep -E \\\"^test result|FAILED|panicked\\\" ; cargo test -p jackioh-engine --features testkit --lib invariants 2>&1 |\u2026\n- Bash: {\"command\": \"git diff 3af82963008ac47ebffb4e9903f8f93fc41da15d...HEAD --stat >/dev/null; cat spec/pending/4454.md; for f in spec/rulings/R445400*.md; do echo \\\"== $f\\\"; head -8 $f; done; cat .patches\u2026\n- Bash: {\"command\": \"git log -1 --format=%B a207a10507 | head -40; cat crates/cards/patches/pending/nothing-reaches-a-dormant-card.json\", \"description\": \"Read pass 1 commit message and fragment\"}\n- said: Waiting for the test run.\n- Bash: {\"command\": \"sleep 1; cat /tmp/p2-tests.log\", \"description\": \"Check test log progress\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"git diff 3af82963008ac47ebffb4e9903f8f93fc41da15d...HEAD -- crates/engine/src/afflictions.rs crates/engine/src/brittle.rs crates/engine/src/effects/fuse.rs crates/engine/src/state_check.\u2026\n- Monitor: {\"description\": \"wait for pass-2 test run to finish\", \"timeout_ms\": 600000, \"command\": \"while ! [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4454/4af536c9-9801-4edc-9903-fcdfcafe1fdc/tasks\u2026\n- tool error: cat in '/tmp/p2-tests.log' was blocked. For security, Claude Code may only concatenate files from the allowed working directories for this session: '/home/runner/work/_temp/work/item-4454'.\n- Monitor: {\"description\": \"wait for pass-2 test run to finish\", \"timeout_ms\": 600000, \"command\": \"while pgrep -f \\\"cargo (test|run|jackioh)\\\" >/dev/null; do sleep 5; done; echo finished\"}\n- Read: {\"file_path\": \"/tmp/p2-tests.log\"}\n- said: Clippy is clean after the fix. The engine, cards and spec checks are still running.\n- Bash: {\"command\": \"until ! pgrep -f \\\"cargo (test|run|jackioh)\\\" >/dev/null; do sleep 10; done; echo ok\", \"description\": \"Wait until the cargo runs end\", \"timeout\": 3600000, \"run_in_background\": true}\n- Monitor: {\"description\": \"pass-2 test log lines\", \"timeout_ms\": 600000, \"command\": \"tail -n +1 -F /tmp/p2-tests.log 2>/dev/null | grep --line-buffered -E \\\"test result|FAILED|panicked|error|ok|check\\\" & while\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: tail -n +1 -F /tmp/p2-tests.log, grep --line-buffered -E \"test result|FAILED|panicked|error|ok|check\" & while pgr\u2026\n- Bash: {\"command\": \"until ! pgrep -f \\\"cargo (test|run|jackioh)\\\" >/dev/null; do sleep 10; done; cat /tmp/p2-tests.log\", \"description\": \"Block until test runs end, then show log\", \"timeout\": 600000}\n- said: All green. Next, the fuzz gate and the three 1,000-seed waves, to confirm pass 1's findings were all dealt with.\n- Bash: {\"command\": \"echo \\\"- pass 2: clippy, fmt, rules/lib/cards i19 tests, spec/patches/catalog checks all green; now fuzz 200 + 1000 waves\\\" >> .bot-notes.md\\nfor a in \\\"--seeds 200\\\" \\\"--seeds 1000\\\" \\\"\u2026\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4454/4af536c9-9801-4edc-9903-fcdfcafe1fdc/tasks/bj42drfic.output; until grep -q \\\"duos\\\" $f && [ $(grep -c \\\"^exit\\\" $f) -ge 4 ]; do \u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-4454/4af536c9-9801-4edc-9903-fcdfcafe1fdc/tasks/bj42drfic.output\"}\n- said: The 200-seed gate (60s), `--seeds 1000` and `--handicap --seeds 1000` all exited 0. The Duos wave is still running.\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4454/4af536c9-9801-4edc-9903-fcdfcafe1fdc/tasks/bj42drfic.output; until [ $(grep -c \\\"^exit\\\" $f) -ge 4 ]; do sleep 10; done; sed -n \u2026\n- Bash: {\"command\": \"echo \\\"- pass 2: fuzz --seeds 200 (60s), --seeds 1000, --handicap --seeds 1000, --duos --seeds 1000 all exit 0. Done.\\\" >> .bot-notes.md; git status --short\", \"description\": \"Update note\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the fuzz monitor fails a game in which anything reaches a Dormant card\"} --> ## What this does A Dormant card is meant to be out of reach until it wakes (\u00a76.1 Dormant, \u00a73, R1839000). Until now each card had to remember that on its own. This adds **I19**\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the fuzz monitor fails a game in which anything reaches a Dormant card\"} --> ## What this does A Dormant card is meant to be out of reach until it wakes (\u00a76.1 Dormant, \u00a73, R1839000). Until now each card had to remember that on its own. This adds **I19**\u2026"
       },
       "issue": 4454,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T09:09:19Z",
         "from_run": "44987353538",
         "gates": [
           {
@@ -17915,7 +17920,11 @@
         "source": "build",
         "until": "2026-11-22T09:38:36Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-22T09:08:36Z",
+      "run_id": "pending:60ddd194-1795338543",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17934,6 +17943,9 @@
         "provider": "claude-3",
         "run": "44987353538"
       },
+      "started_at": "2026-11-22T09:09:19Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17947,9 +17959,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T09:00:31Z",
+    "at": "2026-11-22T09:09:19Z",
     "url": "",
-    "what": "plan #4427 on claude-7"
+    "what": "review #4487 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-22T08:58:04Z",
