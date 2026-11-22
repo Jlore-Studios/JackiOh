@@ -16241,6 +16241,13 @@
     "4518": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45077662363",
+        "model": "gpt-5.6-sol",
+        "provider": "gpt",
+        "since": "2026-11-22T22:48:23Z",
+        "until": "2026-11-22T23:18:23Z"
+      },
       "difficulty_by": {
         "at": "2026-11-22T22:48:15Z",
         "difficulty": "medium",
