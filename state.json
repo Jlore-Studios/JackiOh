@@ -18409,15 +18409,8 @@
       }
     },
     "4496": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45047224180",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-22T17:18:11Z",
-        "until": "2026-11-22T17:48:11Z"
-      },
       "difficulty_by": {
         "at": "2026-11-22T17:18:01Z",
         "difficulty": "hard",
@@ -18436,10 +18429,9 @@
         "reason": "planned on opus",
         "trail": " show HEAD -- spec/08-catalog.md spec/06-keywords.md | grep \\\"^[-+]\\\" | grep -o \\\"[^.;(]*\\\\(through\\\\|kept\\\\|v0\\\\.6\\\\.9\\\\)[^.;)]*\\\" | head -30\", \"description\": \"Show #4480's spec \\u00\u2026\n- Bash: {\"command\": \"for n in 140 180 459 837 859 920; do sed -n \\\"${n}p\\\" spec/08-catalog.md | grep -o \\\".\\\\{160\\\\}script_v0_6_9i.\\\\{60\\\\}\\\"; echo; done\", \"description\": \"Show context around script_v0_6_9i \u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20\", \"description\": \"Read classify's contract in the tools README\"}\n- Bash: {\"command\": \"git log --oneline --grep=\\\"#4086\\\" | head; git log --oneline -8 -- crates/cards/src/history.rs\", \"description\": \"Find prior re-keying fixes of kept scripts\"}\n- Bash: {\"command\": \"git show 93438a9957 --stat | head -30; git log --oneline --grep=\\\"spot-check\\\" | head -10\", \"description\": \"Inspect the #4090 re-keying fix's shape\"}\n- Bash: {\"command\": \"git show 93438a9957 --stat | sed -n 30,80p | grep -v \\\"scripts/\\\"\", \"description\": \"Check whether #4090 added a pending fragment\"}\n- Bash: {\"command\": \"git log --format='%h %p %ci %s' -6 | cut -c1-120; grep -n \\\"v0\\\\.6\\\\.9[jkl]\\\\|script_v0_6_9j\\\" spec/rulings/R3554003.md spec/08-catalog.md | cut -c1-60\", \"description\": \"Confirm the merg\u2026\n- Bash: {\"command\": \"grep -rn \\\"v0\\\\.6\\\\.9j\\\" spec/rulings spec/pending spec/08-catalog.md spec/07-tokens.md crates/cards/src crates/engine/src crates/cards/patches/pending 2>/dev/null | cut -c1-220\", \"descr\u2026\n- Bash: {\"command\": \"grep -n \\\"kept\\\\|replay\\\\|R767000\\\\|v0\\\\.6\\\" spec/rulings/R3554003.md | cut -c1-400; ls spec/pending/\", \"description\": \"Check R3554003's replay wording and pending notes\"}\n- Bash: {\"command\": \"git show 4d9671dfb8 -- spec/rulings/R3554003.md | grep \\\"^[-+]\\\" | cut -c1-600\", \"description\": \"See what #4489 changed in R3554003\"}\n- Bash: {\"command\": \"git show 3de2d02ce5 --stat | grep -v \\\"^ *$\\\" | head -40\", \"description\": \"List the files #4476 (v0.6.9k) changed\"}\n- Bash: {\"command\": \"ls crates/cards/patches/ | grep \\\"v0.6.9[jkl]\\\"; for v in v0.6.9j v0.6.9k v0.6.9l; do f=crates/cards/patches/$v.json; [ -f $f ] && python3 -I -c \\\"\\nimport json,sys\\nd=json.load(open(sys\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const ID\\\" crates/cards/src/scripts/core/c089_corpse_eater.rs crates/cards/src/scripts/training_grounds/c056_corpse_eater.rs crates/cards/src/scripts/training_grounds/c035_\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\nids=[\\\"core-089\\\",\\\"traininggrounds-056\\\",\\\"traininggrounds-035\\\",\\\"stinkyscapeplus-093\\\",\\\"meditative-060\\\",\\\"stinkyscape-007\\\",\\\"classic-014\\\",\\\"clas\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4496/.bot-plan.md\", \"content\": \"# Draft plan, issue #4496 (planner notes)\\n\\n## Found\\n- Merge order on main: 3de2d02ce5 #4476 (= v0.6.9k's commit) ->\u2026\n- Bash: {\"command\": \"grep -rn \\\"script_v0_6_9i\\\\|script_v0_6_9j\\\\|\\\\\\\"v0\\\\.6\\\\.9i\\\\\\\"\\\\|\\\\\\\"v0\\\\.6\\\\.9j\\\\\\\"\\\\|\\\\\\\"v0\\\\.6\\\\.9k\\\\\\\"\\\\|\\\\\\\"v0\\\\.6\\\\.9l\\\\\\\"\\\" crates --include=*.rs | grep -v \\\"crates/cards/src/hi\u2026\n- Bash: {\"command\": \"sed -n 1780,1788p crates/engine/src/script.rs; sed -n 1832,1836p crates/engine/src/script.rs\", \"description\": \"Read the engine doc comments naming v0.6.9k\"}\n- Bash: {\"command\": \"grep -rn \\\"v0\\\\.6\\\\.9\\\" apps/web/src/wire | cut -c1-200\", \"description\": \"Check generated wire types for version text\"}\n- Bash: {\"command\": \"grep -rln \\\"byPrint\\\" apps/web/src/wire | head; grep -rn \\\"byPrint\\\" apps/web/src/wire | cut -c1-200 | head\", \"description\": \"Find where the byPrint field lands in generated TS\"}\n- Bash: {\"command\": \"grep -n -i \\\"pending\\\" spec/README.md | head -30\", \"description\": \"Read how spec/pending paragraphs are folded and amended\"}\n- Bash: {\"command\": \"grep -n \\\"9j\\\\|9_j\\\" crates/cards/src/scripts/classic/c040_mc_tech.rs crates/cards/src/scripts/stinkyscape/c011_2_arcane_missiles.rs crates/cards/src/scripts/stinkyscape_plus/c025_snom_b\u2026\n- Bash: {\"command\": \"for f in crates/cards/src/scripts/core/c089_corpse_eater.rs crates/cards/src/scripts/training_grounds/c056_corpse_eater.rs crates/cards/src/scripts/training_grounds/c035_corpse_recycler.\u2026\n- Bash: {\"command\": \"cat rustfmt.toml 2>/dev/null; awk 'length > 110' crates/cards/src/history.rs | wc -l; awk '{ if (length > m) m = length } END { print m }' crates/cards/src/history.rs\", \"description\": \"C\u2026\n- Bash: {\"command\": \"grep -rn \\\"kept_through_v0_6_9k_once_it_shipped\\\\|4469_scripts_are_kept_through_v0_6_9j\\\" --include=* . 2>/dev/null | grep -v \\\"^./target\\\" | cut -c1-160; grep -n \\\"history.rs\\\" spec/rul\u2026\n- Bash: {\"command\": \"grep -rln \\\"KEPT_SCRIPTS\\\" crates apps/web/src 2>/dev/null | grep -v \\\"/target/\\\"\", \"description\": \"Find every consumer of KEPT_SCRIPTS\"}\n- Bash: {\"command\": \"grep -n \\\"KEPT_SCRIPTS\\\" crates/tools/src/carried.rs crates/tools/src/patches.rs crates/cards/tests/cross/*.rs | cut -c1-200\", \"description\": \"See how tools and cross tests read KEPT_SCR\u2026\n- Bash: {\"command\": \"for f in activate_listed.rs:1485 balance_2521_b.rs:312 forced_attacks.rs:33 game_summary.rs:1550; do n=${f#*:}; sed -n \\\"${n},$((n+10))p\\\" crates/cards/tests/cross/${f%:*} | grep -n \\\"fi\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nlines = [\\n\\\" // #4423: v0.6.9j (#4488), v0.6.9k (#4491) and v0.6.9l (#4492) shipped on `main` after this branch's base\\\",\\n\\\" // and ran the same scripts, so they \u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nlines = [\\n\\\" // #4423: v0.6.9j (#4488), v0.6.9k (#4491) and v0.6.9l (#4492) shipped on `main` after this branch's base\\\",\\n\\\" // and ran the same scripts, so they \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4496/.bot-plan.md\", \"content\": \"# Draft plan, issue #4496 (planner notes)\\n\\n## Found\\n- Merge order on main: 3de2d02ce5 #4476 (= v0.6.9k's commit) ->\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"The bot already rated it hard and a rating can't go lower; by the rule alone it would be medium (about 19 files, only row keys and comments in crates/cards, no engine rule).\"} --> ## Goal v0.6.9l games fold under the scripts v0.6.9l actually ran. That means \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-22T17:03:01Z",
       "owner_why": "it plans it",
@@ -18452,19 +18444,19 @@
       "provider": "claude-3",
       "queued_at": "2026-11-22T17:01:11Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45047224180",
+      "run_id": "pending:e0fb0c68-1795367921",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 4480,
-      "started_at": "2026-11-22T17:03:01Z",
+      "started_at": "2026-11-22T17:19:02Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T17:03:01Z",
+    "at": "2026-11-22T17:19:02Z",
     "url": "",
-    "what": "plan #4496 on claude-3"
+    "what": "build #4496 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-22T17:10:28Z",
