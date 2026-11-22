@@ -5,28 +5,41 @@
 //!
 //! Engine: §6.2 Echo X — the Cry resolves once, then re-resolves twice (five times on the Radiant
 //! face), each resolution its own run. Each run draws one enemy from the match rng (R60) among the
-//! enemy hero and the acting enemy Units still standing, a Unit the last hit killed never drawn
-//! again, and deals it one hit of the declared damage (§4.4: Spell Damage raises each hit). With no
-//! enemy Unit the hero takes every hit.
+//! enemy hero and the enemy Units a Spell may affect (C+ #25 Soul Shot's pool, `cards_in_scope`):
+//! a Unit immune to Spells is never drawn, and a Dormant card never is (R4424000); a Unit the last
+//! hit killed is never drawn again, and each draw deals its hit of the declared damage (§4.4: Spell
+//! Damage raises each hit). With no enemy Unit the hero takes every hit.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-011-2";
 
-fn arcane_missiles(echo: i32) -> Script {
+fn arcane_missiles(echo: i32, kept: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags { echo: Some(echo), ..StaticFlags::default() }),
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             let amount = param(&*ctx, "damage");
+            let enemy = opponent_of(ctx.controller);
+            // R4424000: the pool is the enemy Units a Spell may affect (C+ #25 Soul Shot's pool),
+            // so a Unit immune to Spells and a Dormant card are never drawn.
+            let ids: Vec<String> = if kept {
+                active_units_of(&ctx.sink.state, enemy)
+                    .iter()
+                    .map(|unit| unit.id.clone())
+                    .collect()
+            } else {
+                cards_in_scope(ctx, &json_as(json!({ "side": "enemy" })))
+                    .into_iter()
+                    .map(|unit| unit.id)
+                    .collect()
+            };
             // The state and the rng are two fields of the sink: the pool reads the one while the
             // draw rolls from the other (C+ #25 Soul Shot's shape).
-            let enemy = opponent_of(ctx.controller);
             let sink = &mut ctx.sink;
-            let state: &GameState = &*sink.state;
             let rng: &mut Rng = &mut *sink.rng;
             let mut pool: Vec<Value> = vec![json!({ "of": "enemyHero" })];
-            pool.extend(active_units_of(state, enemy).iter().map(|unit| {
-                json!({ "of": "instance", "instanceId": unit.id.clone() })
+            pool.extend(ids.iter().map(|id| {
+                json!({ "of": "instance", "instanceId": id.clone() })
             }));
             let Some(picked) = rng.pick(&pool) else {
                 return vec![];
@@ -39,8 +52,16 @@ fn arcane_missiles(echo: i32) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: arcane_missiles(2),
-        radiant: arcane_missiles(5),
+        base: arcane_missiles(2, false),
+        radiant: arcane_missiles(5, false),
+    }
+}
+
+/// R767000: through v0.6.9f a missile could be drawn onto a Unit immune to Spells (issue #4424).
+pub fn script_v0_6_9f() -> CardScripts {
+    CardScripts {
+        base: arcane_missiles(2, true),
+        radiant: arcane_missiles(5, true),
     }
 }
 
@@ -57,6 +78,7 @@ mod tests {
     const MISSILES: &str = "stinkyscape-011-2";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const IMMUNE: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells
     const FILLER: &str = "core-005";
 
     fn hits(s: &Scenario) -> Vec<String> {
@@ -166,6 +188,50 @@ mod tests {
             s.play(MISSILES, json!({}));
 
             s.expect_health(P2, HERO_HEALTH - 6);
+        }
+
+        #[test]
+        fn r4424000_with_only_spell_immune_enemies_every_missile_hits_the_enemy_hero() {
+            let mut s = scenario(json!({
+                "seed": "missiles-immune-only",
+                "p1": { "hand": [MISSILES, FILLER], "field": [VANILLA] },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [
+                        { "def": IMMUNE, "lane": 1, "radiant": true },
+                        { "def": IMMUNE, "lane": 2, "radiant": true },
+                    ],
+                },
+            }));
+
+            s.play(MISSILES, json!({}));
+
+            assert_eq!(hits(&s), vec!["hero-p2", "hero-p2", "hero-p2"]);
+            s.expect_health(P2, HERO_HEALTH - 3);
+        }
+
+        #[test]
+        fn r4424000_a_spell_immune_enemy_is_never_drawn() {
+            for seed in 1..=16 {
+                let mut s = scenario(json!({
+                    "seed": format!("missiles-immune-{seed}"),
+                    "p1": { "hand": [MISSILES, FILLER], "field": [VANILLA] },
+                    "p2": {
+                        "hand": [FILLER],
+                        "field": [
+                            { "def": IMMUNE, "lane": 1, "radiant": true },
+                            { "def": VANILLA, "lane": 2 },
+                        ],
+                    },
+                }));
+                let immune = s.unit_at(P2, 1).id.clone();
+                s.play(MISSILES, json!({}));
+
+                // Every missile lands: none is drawn onto the immune Unit and dropped there.
+                let landed = hits(&s);
+                assert_eq!(landed.len(), 3, "seed missiles-immune-{seed}");
+                assert!(!landed.contains(&immune), "seed missiles-immune-{seed}");
+            }
         }
     }
 

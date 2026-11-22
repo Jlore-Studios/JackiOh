@@ -6,7 +6,8 @@
 //!
 //! ARMING vs FIRING (R61): what must leave the trap armed and face-down lives in `when`, never in
 //! `run`, whose empty list means "fired for nothing". An Immutable permanent of yours still counts in
-//! `when` but `run` never picks it (R23). EVENT: `CardResolved` (§10.5 step 7, R17, R70), not
+//! `when` but `run` never picks it (R23); a Dormant card matches nothing in either, so a Dormant-only
+//! match leaves the trap armed (R4424000). EVENT: `CardResolved` (§10.5 step 7, R17, R70), not
 //! `CardPlayed` (#41 Sheepish's moment): the trap fires after the played permanent's Cry.
 
 use jackioh_engine::prelude::*;
@@ -57,10 +58,15 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<(CardI
 }
 
 /// "a permanent of yours of that type" (§8): never the firing trap (R61), a card dormant under a Stack
-/// (R13), or the played card: #52 Silly Silas rotated onto this side (§3.1) would be fused onto himself,
-/// which `fuse` refuses, spending the trap although another match was there. Left out of both, the trap
-/// stays armed when he is the only match (R99).
-fn matching_permanents(ctx: &EffectContext<'_>, type_: CardType, played: &CardInstance) -> Vec<CardInstance> {
+/// (R13), a Dormant card (R4424000), or the played card: #52 Silly Silas rotated onto this side (§3.1)
+/// would be fused onto himself, which `fuse` refuses, spending the trap although another match was
+/// there. Left out of both, the trap stays armed when he is the only match (R99).
+fn matching_permanents(
+    ctx: &EffectContext<'_>,
+    type_: CardType,
+    played: &CardInstance,
+    kept: bool,
+) -> Vec<CardInstance> {
     let wanted = type_key(type_);
     let self_id = ctx.self_.as_ref().map(|card| card.id.clone());
     [Row::Units, Row::Backrow]
@@ -71,6 +77,10 @@ fn matching_permanents(ctx: &EffectContext<'_>, type_: CardType, played: &CardIn
                 .filter_map(|slot| {
                     let card = card_at(ctx.state, slot)?;
                     if Some(&card.id) == self_id.as_ref() || card.id == played.id {
+                        return None;
+                    }
+                    // R4424000: no effect reaches a Dormant card, so it matches nothing.
+                    if !kept && is_slumbering(card) {
                         return None;
                     }
                     if type_key(def_of(Some(&*ctx.state), &card.def_id).type_) == wanted {
@@ -85,7 +95,7 @@ fn matching_permanents(ctx: &EffectContext<'_>, type_: CardType, played: &CardIn
 }
 
 /// `on_all` is the radiant face: R77's "onto each matching permanent separately".
-fn experimentation(on_all: bool) -> TrapTrigger {
+fn experimentation(on_all: bool, kept: bool) -> TrapTrigger {
     TriggerDef::new(
         if on_all {
             "85r-unlicensed-experimentation"
@@ -102,7 +112,7 @@ fn experimentation(on_all: bool) -> TrapTrigger {
             };
 
             // R23: "Immutable permanents are never chosen" as the Fuse target.
-            let target_ids: Vec<String> = matching_permanents(ctx, type_, &played)
+            let target_ids: Vec<String> = matching_permanents(ctx, type_, &played, kept)
                 .into_iter()
                 .filter(|card| !is_immutable(ctx.state, card))
                 .map(|card| card.id)
@@ -125,7 +135,7 @@ fn experimentation(on_all: bool) -> TrapTrigger {
             })))]
         },
     )
-    .with_when(|ctx, event| {
+    .with_when(move |ctx, event| {
         if !matches!(event, GameEvent::CardResolved { .. }) {
             return false;
         }
@@ -134,7 +144,7 @@ fn experimentation(on_all: bool) -> TrapTrigger {
         };
         // §8: "whose type matches one you control". R61 counts an Immutable permanent of yours here,
         // so the trap fires and is consumed even though nothing can be fused onto it.
-        !matching_permanents(ctx, type_, &played).is_empty()
+        !matching_permanents(ctx, type_, &played, kept).is_empty()
     })
 }
 
@@ -151,12 +161,28 @@ fn condition_met() -> ConditionHook {
 pub fn script() -> CardScripts {
     let condition_met = condition_met();
     let base = Script {
-        triggers: vec![experimentation(false)],
+        triggers: vec![experimentation(false, false)],
         condition_met: Some(condition_met.clone()),
         ..Script::default()
     };
     let radiant = Script {
-        triggers: vec![experimentation(true)],
+        triggers: vec![experimentation(true, false)],
+        condition_met: Some(condition_met),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.6.9f a Dormant card matched in `when` and `run` (issue #4424).
+pub fn script_v0_6_9f() -> CardScripts {
+    let condition_met = condition_met();
+    let base = Script {
+        triggers: vec![experimentation(false, true)],
+        condition_met: Some(condition_met.clone()),
+        ..Script::default()
+    };
+    let radiant = Script {
+        triggers: vec![experimentation(true, true)],
         condition_met: Some(condition_met),
         ..Script::default()
     };
@@ -386,6 +412,27 @@ mod tests {
             assert!(count_of(&s, GameEventType::Summoned) > 0);
             expect_still_armed(&s);
         }
+
+        #[test]
+        fn r4424000_a_dormant_only_match_leaves_the_trap_armed_and_face_down() {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": {
+                    "backrow": [armed(false)],
+                    "field": [{ "def": "stinkyscape-017", "slumber": { "turns": 2 } }],
+                },
+                // R82: core-010 is always playable, so the turn never auto-ends under the assertions.
+                "p2": { "hand": [BIG_UNIT, STOCKPILE, "core-010"] },
+            }));
+
+            s.play(BIG_UNIT, json!({ "zone": 1 }));
+
+            expect_still_armed(&s);
+            s.expect_in_zone(BIG_UNIT, "field");
+            let smith = s.unit(P1, 1).expect("the Smith still stands");
+            assert_eq!(smith.def_id, "stinkyscape-017");
+            assert_eq!(slumber_turns_of(&smith), Some(2));
+        }
     }
 
     mod n85_unlicensed_experimentation_base_when_it_fires {
@@ -474,6 +521,32 @@ mod tests {
             let timmy_grew = s.stats(&first).attack == 10;
             let token_grew = s.stats(&second).attack == 8;
             assert_eq!([timmy_grew, token_grew].into_iter().filter(|grew| *grew).count(), 1);
+        }
+
+        #[test]
+        fn r4424000_the_base_face_fuses_onto_the_acting_match() {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": {
+                    "backrow": [armed(false)],
+                    "field": [{ "def": "stinkyscape-017", "slumber": { "turns": 2 } }, TIMMY],
+                },
+                // R82: core-010 is always playable, so the consumed play never auto-ends p2's turn
+                // and ticks the Smith.
+                "p2": { "hand": [BIG_UNIT, STOCKPILE, "core-010"] },
+            }));
+            let smith = s.unit(P1, 1).expect("the Smith");
+            let timmy = s.unit(P1, 2).expect("p1's Timmy");
+
+            s.play(BIG_UNIT, json!({ "zone": 1 }));
+
+            assert_eq!(count_of(&s, GameEventType::Fused), 1);
+            s.expect_stats(&timmy, json!({ "attack": 10, "maxHealth": 10 }));
+            assert_eq!(s.card(&timmy).id, timmy.id);
+            let smith_now = s.unit(P1, 1).expect("the Smith still stands");
+            assert_eq!(smith_now.id, smith.id);
+            assert_eq!(smith_now.def_id, "stinkyscape-017");
+            assert_eq!(slumber_turns_of(&smith_now), Some(2));
         }
 
         #[test]
@@ -625,6 +698,32 @@ mod tests {
             assert_eq!(count_of(&s, GameEventType::Fused), 1);
             s.expect_stats(&vanilla, json!({ "attack": 18, "maxHealth": 18 }));
             s.expect_stats(&timmy, json!({ "attack": 10, "maxHealth": 10 }));
+        }
+
+        #[test]
+        fn r4424000_the_radiant_face_fuses_onto_acting_matches_only() {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": {
+                    "backrow": [armed(true)],
+                    "field": [{ "def": "stinkyscape-017", "slumber": { "turns": 2 } }, TIMMY],
+                },
+                // R82: core-010 is always playable, so the consumed play never auto-ends p2's turn
+                // and ticks the Smith.
+                "p2": { "hand": [BIG_UNIT, STOCKPILE, "core-010"] },
+            }));
+            let smith = s.unit(P1, 1).expect("the Smith");
+            let timmy = s.unit(P1, 2).expect("p1's Timmy");
+
+            s.play(BIG_UNIT, json!({ "zone": 1 }));
+
+            assert_eq!(count_of(&s, GameEventType::Fused), 1);
+            s.expect_stats(&timmy, json!({ "attack": 10, "maxHealth": 10 }));
+            assert_eq!(s.card(&timmy).id, timmy.id);
+            let smith_now = s.unit(P1, 1).expect("the Smith still stands");
+            assert_eq!(smith_now.id, smith.id);
+            assert_eq!(smith_now.def_id, "stinkyscape-017");
+            assert_eq!(slumber_turns_of(&smith_now), Some(2));
         }
     }
 

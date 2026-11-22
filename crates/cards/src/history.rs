@@ -47,7 +47,8 @@ use crate::scripts::core::{
     c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas, c054_straaza, c059_unbiased_immigration,
     c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms, c070_spiteful_stab,
     c073_anti_oneshot_armor, c074_adaptive_ui, c075_infinite_reserves, c079_twinspell, c080_zao_gao,
-    c081_radiant_saintess, c083_transmogulate, c084_going_long, c089_corpse_eater, c098_heroic_power,
+    c081_radiant_saintess, c083_transmogulate, c084_going_long, c085_unlicensed_experimentation,
+    c089_corpse_eater, c098_heroic_power,
 };
 use crate::scripts::meditative::{
     c001_disruptive_disruptor, c005_death_by_1000_cuts, c007_introspection, c009_joint_filing,
@@ -67,19 +68,19 @@ use crate::scripts::meditative_plus::{
     c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
-    c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c013_asphyxiants_cloud,
-    c016_rod_of_ages, c018_1_melchior, c018_imitated_instrumentality, c023_warp_disruptor,
-    c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix,
-    c036_drone_core_x, c042_core_researcher, c045_drone_commander, c046_circadian_halfcycler, c049_spacemine,
-    c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4,
-    c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth,
-    c074_paragon_x, c083_halo, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack,
-    c111_shockwave447, c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system,
-    c129_jlockeeds_missile_pod, c134_felinor_containment_chamber, c140_rush_token_launcher,
-    c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck, c154_dice_of_doom,
-    c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid,
-    c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette,
-    t_drone_interceptor, t_narcor, t_red_narcor,
+    c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c011_2_arcane_missiles,
+    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c018_imitated_instrumentality,
+    c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii,
+    c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
+    c046_circadian_halfcycler, c049_spacemine, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3,
+    c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5,
+    c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c083_halo, c086_prototype_x2, c094_tmack_trav,
+    c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi,
+    c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c134_felinor_containment_chamber,
+    c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck,
+    c154_dice_of_doom, c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid,
+    c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower,
+    t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
@@ -115,7 +116,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001), #4353 (R4353020,
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
 /// hooks), #4350 (R4350000), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
-/// Token through v0.1.0d), and #4396 (R4396000).
+/// Token through v0.1.0d), #4396 (R4396000), and #4424 (R4424000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c074_adaptive_ui::ID, "v0.1.0d", c074_adaptive_ui::script_v0_1_0d),
@@ -1183,6 +1184,22 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9e",
         c134_felinor_containment_chamber::script_v0_6_9e,
     ),
+    // #4424 (R4424000): the last scripts that still drew a Dormant or Spell-immune card.
+    (
+        c011_2_arcane_missiles::ID,
+        "v0.6.9f",
+        c011_2_arcane_missiles::script_v0_6_9f,
+    ),
+    (
+        c083_transmogulate::ID,
+        "v0.6.9f",
+        c083_transmogulate::script_v0_6_9f,
+    ),
+    (
+        c085_unlicensed_experimentation::ID,
+        "v0.6.9f",
+        c085_unlicensed_experimentation::script_v0_6_9f,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1800,6 +1817,20 @@ mod tests {
             &[c049_spacemine::ID, c134_felinor_containment_chamber::ID],
             &["v0.6.9d", "v0.6.9e"],
             "v0.6.9f",
+        );
+    }
+
+    /// Issue #4424: v0.6.9f was the newest shipped version as it was built.
+    #[test]
+    fn r767000_issue_4424_scripts_are_kept_through_v0_6_9f_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c011_2_arcane_missiles::ID,
+                c083_transmogulate::ID,
+                c085_unlicensed_experimentation::ID,
+            ],
+            &["v0.6.9f"],
+            "v0.6.9g",
         );
     }
 
