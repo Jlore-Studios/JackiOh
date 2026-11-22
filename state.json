@@ -39243,16 +39243,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "tests",
-        "count": 2,
-        "last_run": "2026-11-22T05:56:17Z",
-        "provider": "claude-8",
-        "run_id": "44991519562",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
