@@ -16057,17 +16057,8 @@
       ]
     },
     "4447": {
-      "action": "plan",
-      "asks": [
-        "c:7073812160"
-      ],
-      "build_next": {
-        "from_run": "44984262120",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-22T04:47:29Z",
-        "until": "2026-11-22T05:17:29Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T04:47:18Z",
         "difficulty": "hard",
@@ -16086,10 +16077,9 @@
         "reason": "planned on opus",
         "trail": "id\\\"' crates/tools/tests/acceptance.rs | head\", \"descr\u2026\n- Bash: {\"command\": \"sed -n 1385,1420p crates/tools/tests/acceptance.rs; sed -n 1484,1500p crates/tools/tests/acceptance.rs\", \"description\": \"Read testkit pick helper restrictions\"}\n- Bash: {\"command\": \"grep -n 'pub fn candidate_set\\\\|pub fn root_candidate_set\\\\|pub fn candidate_actions\\\\|pub fn root_candidate_actions' crates/ai/src/candidates.rs; grep -n 'unspent_at_end' crates/engine/\u2026\n- Bash: {\"command\": \"ls .harness; grep -n 'budget\\\\|minutes\\\\|timeout\\\\|hours' .harness/config.json | head -20\", \"description\": \"Check the harness time budget\"}\n- Bash: {\"command\": \"nproc; free -g | head -2; grep -n 'FORK_ROLLOUTS\\\\|FORK_MAX_PER_GAME\\\\|SCREEN_MAX_GAMES\\\\|SCREEN_MIN_DECIDED' crates/tools/src/*.rs | grep 'const' | head\", \"description\": \"Check runner c\u2026\n- Bash: {\"command\": \"grep -rn 'fork screen' crates/ai/src/*.rs training/attempts.md 2>/dev/null | head -10 | cut -c1-300\", \"description\": \"Look for earlier recorded fork screens\"}\n- Bash: {\"command\": \"grep -rln 'forkEdge\\\\|fork screen' --include=*.rs --include=*.md . 2>/dev/null | grep -v target | grep -v node_modules | head; git log --oneline -15 -- crates/tools/src/fork_screen.rs | \u2026\n- Bash: {\"command\": \"grep -n 'improve-dev\\\\|screen' crates/ai/src/config.rs | head -20 | cut -c1-250\", \"description\": \"See how config records past screens\"}\n- Bash: {\"command\": \"git log --oneline --grep='4402' | head -5; sed -n 640,655p crates/ai/src/config.rs\", \"description\": \"Look at #4402's recorded screen\"}\n- Bash: {\"command\": \"grep -n 'forks' crates/tools/src/arena.rs | head -40\", \"description\": \"Check arena's --forks handling and game counts\"}\n- Bash: {\"command\": \"sed -n 140,152p crates/tools/src/arena.rs; sed -n 1440,1475p crates/tools/src/arena.rs; grep -n 'pub(crate) fn run\\\\|fn run_forks\\\\|games\\\\b' crates/tools/src/fork_screen.rs | head -20\",\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/tools/src/arena.rs | grep -n 'set\\\\|games\\\\|400\\\\|200' | head; grep -n 'IMPROVE_DEV\\\\|dev_set_games\\\\|SET_GAMES\\\\|fn set_games\\\\|refuse' crates/tools/src/arena.rs | h\u2026\n- Bash: {\"command\": \"sed -n 596,696p crates/tools/src/fork_screen.rs\", \"description\": \"Read the fork screen run loop\"}\n- Bash: {\"command\": \"ls target 2>/dev/null | head; ls -la target/release/jackioh 2>/dev/null; ls ~/control-jackioh 2>/dev/null; echo CARGO_TARGET_DIR=$CARGO_TARGET_DIR; cat .cargo/config.toml 2>/dev/null | h\u2026\n- Bash: {\"command\": \"ls -la /home/runner/work/JackiOh/JackiOh/target/ 2>/dev/null | head; ls -la /home/runner/work/JackiOh/JackiOh/target/release/jackioh 2>/dev/null; du -sh /home/runner/work/JackiOh/JackiOh\u2026\n- Bash: {\"command\": \"(time cargo build --release -p jackioh-tools) > /tmp/plan-build.log 2>&1\", \"description\": \"Build the release tools binary to time it\", \"run_in_background\": true}\n- Bash: {\"command\": \"grep -n 'fn scaled_budget' -A 30 crates/ai/src/decide.rs | head -40\", \"description\": \"Read scaled_budget\"}\n- Bash: {\"command\": \"sed -n 2262,2282p crates/ai/tests/ai/search.rs; sed -n 1,40p crates/ai/tests/ai/search.rs | grep -n 'use\\\\|^//' \", \"description\": \"Read the #1636 test module header in search.rs\"}\n- Bash: {\"command\": \"sed -n 1716,1770p crates/tools/tests/acceptance.rs; grep -n 'LOOKUP\\\\|looks a card up' crates/tools/tests/acceptance.rs | head\", \"description\": \"Read which helper copies acceptance refus\u2026\n- Bash: {\"command\": \"tail -5 /tmp/plan-build.log\", \"description\": \"Check release build progress\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Shape decided (run 2)\\n- search.rs: `ReplayFill {steps,width}` (OFF, configured(width), ceiling()=steps*(width+1)); `LineReplay {score,cut,closed}`;\\n `\u2026\n- Bash: {\"command\": \"sleep 60; tail -3 /tmp/plan-build.log\", \"description\": \"Wait briefly and check build progress\"}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -3 /tmp/plan-build.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you\u2026\n- Bash: {\"command\": \"grep -rn 'pub fn action_key' crates/ai/src/ | head -2; grep -n 'fn r3498000\\\\|decide(&' crates/ai/tests/ai/search.rs | head -5; sed -n 1860,1880p crates/ai/tests/ai/search.rs\", \"descript\u2026\n- Bash: {\"command\": \"grep -n 'score_line\\\\|beam_search\\\\|SearchStats' docs/v0.3.0/SURFACE.md | head\", \"description\": \"Check SURFACE.md for search API entries\"}\n- Bash: {\"command\": \"grep -n 'dev-dependencies' -A 8 crates/ai/Cargo.toml; grep -n '\\\\[\\\\[test\\\\]\\\\]' -A 4 crates/ai/Cargo.toml\", \"description\": \"Check AI crate test features\"}\n- Bash: {\"command\": \"tail -3 /tmp/plan-build.log\", \"description\": \"Check build progress\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q 'real' /tmp/plan-build.log; do sleep 5; done; tail -6 /tmp/plan-build.log\", \"description\": \"Wait for the release build to finish\", \"timeout\": 600000}\n- Bash: {\"command\": \"mkdir -p /tmp/plan-arena && (time \\\"$CARGO_TARGET_DIR/release/jackioh\\\" arena --a self --b self --games 8 --seed plan-timing-4447 --out /tmp/plan-arena) > /tmp/plan-arena.log 2>&1; tail \u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Measured (run 2)\\n- release build of jackioh-tools, deps cached: 3m48s.\\n- arena self vs self, 8 games: 88 s wall, 193 s CPU (~24 CPU-s/game) on this 4-\u2026\n- Bash: {\"command\": \"grep -rn 'LineReplay\\\\|ReplayFill\\\\|replay_line\\\\|fn open_in_main\\\\|fn fill_turn\\\\|replays_cut\\\\|replaysCut' crates apps/web/src | head -3; ls spec/pending/4447.md 2>&1 | tail -1\", \"desc\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Final plan written in the answer (run 2). Key departures from the sonnet plan:\\n- SearchStats literals: only quiet_stats + stats closure; Scratch has 2 \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 2 (the AI): it changes how decide scores its finalists and how it reserves nodes, in crates/ai/src/search.rs and decide.rs\"} --> ## Goal 1. **Count the cut replays.** Add `SearchStats.replays_cut`. It counts the finalist replays on worlds 1 and up that \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-22T03:56:24Z",
       "owner_why": "it plans it",
@@ -16102,12 +16092,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-22T03:50:34Z",
       "requested_by": "jgoetzmann",
-      "run_id": "44984262120",
+      "run_id": "pending:95998e43-1795322890",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T04:15:36Z",
+      "started_at": "2026-11-22T04:48:42Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7073812160"
+      ]
     },
     "4448": {
       "action": "plan",
@@ -16722,9 +16714,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T04:38:46Z",
+    "at": "2026-11-22T04:48:42Z",
     "url": "",
-    "what": "build #4453 on claude-1"
+    "what": "build #4447 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-22T04:36:26Z",
