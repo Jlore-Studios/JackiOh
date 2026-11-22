@@ -58,15 +58,15 @@ mod tests {
     const SCREAM: &str = "stinkyscape-012-3";
     const FILLER: &str = "core-005";
 
-    /// #3142: it costs (3) on both faces, where it cost (2).
+    /// #4440: it costs (4) on both faces, where it cost (3) (#3142's, up from (2)).
     #[test]
-    fn it_costs_3_on_both_faces() {
+    fn it_costs_4_on_both_faces() {
         for radiant in [false, true] {
             let s = scenario(json!({
                 "p1": { "hand": [{ "def": NIGHTMARE, "radiant": radiant }] },
                 "p2": { "hand": [FILLER] },
             }));
-            assert_eq!(effective_cost(s.state(), s.card(NIGHTMARE), Default::default()), 3, "radiant {radiant}");
+            assert_eq!(effective_cost(s.state(), s.card(NIGHTMARE), Default::default()), 4, "radiant {radiant}");
         }
     }
 
