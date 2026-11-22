@@ -50,11 +50,8 @@ const ONE_SCREEN = 1;
 
 /** A box's edge may sit this far past the window's (a sub-pixel border) and still be inside it. */
 const EDGE_SLACK_PX = 1;
-/** How many of the elements past an edge an overflow names, and how much of each one's text (#4375). */
+/** How many of the boxes an overflow starts in its message names (#4375). */
 const PAST_EDGE_NAMED = 5;
-const PAST_EDGE_TEXT_CHARS = 40;
-/** How many of the first culprit's ancestors an overflow names, with how each clips (#4375). */
-const PAST_EDGE_ANCESTORS = 12;
 
 /** #4349: Chrome's select arrow and the gap before it, measured (Inter at 16 px: whole at a 218 px select with 8 px of padding, cut at 214, so 18 to 19.6); 20 rounds up. */
 const SELECT_ARROW_PX = 20;
@@ -151,31 +148,32 @@ function expectComparePickerWhole(select: HTMLSelectElement, where: string): voi
   expect(editor?.scrollWidth, `the editor does not overflow sideways at ${where}${past}`).to.be.at.most((editor?.clientWidth ?? 0) + EDGE_SLACK_PX);
 }
 
-/** The widest of `box`'s descendants that reach past its right edge, so an overflow names what overflows (#4375). */
+/**
+ * Where `box`'s sideways overflow starts (#4375): the deepest of its descendants that lay their overflow
+ * out (`overflow-x: visible`) and are wider inside than out, each with the child that reaches furthest
+ * right, its right margin included, so an overflow names the box it comes from rather than a clipped picture.
+ */
 function pastRightEdge(box: HTMLElement): string {
-  const right = box.getBoundingClientRect().right;
-  const past = [...box.querySelectorAll<HTMLElement>("*")]
-    .map((element) => ({ element, over: element.getBoundingClientRect().right - right }))
-    .filter(({ over }) => over > EDGE_SLACK_PX)
-    .sort((a, b) => b.over - a.over)
-    .slice(0, PAST_EDGE_NAMED)
-    .map(({ element, over }) => {
-      const classes = [...element.classList].map((name) => `.${name}`).join("");
-      const text = (element.textContent ?? "").trim().slice(0, PAST_EDGE_TEXT_CHARS);
-      return `${element.tagName.toLowerCase()}${classes} +${over.toFixed(1)}px "${text}"`;
-    });
-  if (past.length === 0) return "";
-  // The first culprit's ancestors up to `box`, each with what decides whether it clips the culprit's overflow.
-  const first = [...box.querySelectorAll<HTMLElement>("*")].find((element) => element.getBoundingClientRect().right - right > EDGE_SLACK_PX);
-  const chain: string[] = [];
-  for (let node = first?.parentElement ?? null; node !== null && node !== box && chain.length < PAST_EDGE_ANCESTORS; node = node.parentElement) {
-    const style = getComputedStyle(node);
-    const classes = [...node.classList].map((name) => `.${name}`).join("");
-    const over = (node.getBoundingClientRect().right - right).toFixed(1);
-    chain.push(`${node.tagName.toLowerCase()}${classes} [overflow-x ${style.overflowX}, ${style.position}, transform ${style.transform}, ${over}px]`);
-  }
-  const boxStyle = getComputedStyle(box);
-  return ` (past its edge: ${past.join("; ")}; its ancestors: ${chain.join(" < ")}; the editor: padding-right ${boxStyle.paddingRight}, overflow-x ${boxStyle.overflowX})`;
+  const widened = [box, ...box.querySelectorAll<HTMLElement>("*")].filter(
+    (element) => element.clientWidth > 0 && element.scrollWidth > element.clientWidth + EDGE_SLACK_PX && getComputedStyle(element).overflowX === "visible",
+  );
+  const deepest = widened.filter((element) => !widened.some((other) => other !== element && element.contains(other))).slice(0, PAST_EDGE_NAMED);
+  const named = (element: Element): string => `${element.tagName.toLowerCase()}${[...element.classList].map((name) => `.${name}`).join("")}`;
+  const parts = deepest.map((element) => {
+    const right = element.getBoundingClientRect().left + element.clientWidth;
+    let reach = "none";
+    let most = -Infinity;
+    for (const child of element.children) {
+      const end = child.getBoundingClientRect().right + parseFloat(getComputedStyle(child).marginRight || "0");
+      if (end > most) {
+        most = end;
+        reach = `${named(child)} ${(end - right).toFixed(1)}px (margin-right ${getComputedStyle(child).marginRight})`;
+      }
+    }
+    const style = getComputedStyle(element);
+    return `${named(element)} scroll ${element.scrollWidth} > client ${element.clientWidth} (display ${style.display}, padding-right ${style.paddingRight}); furthest child ${reach}`;
+  });
+  return parts.length === 0 ? "" : ` (widened by: ${parts.join("; ")})`;
 }
 
 /**
