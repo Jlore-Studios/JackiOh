@@ -15261,17 +15261,8 @@
       "taken_asks": []
     },
     "4426": {
-      "action": "plan",
-      "asks": [
-        "c:7072119026"
-      ],
-      "build_next": {
-        "from_run": "44971227173",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-22T01:38:16Z",
-        "until": "2026-11-22T02:08:16Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T01:38:07Z",
         "difficulty": "medium",
@@ -15290,10 +15281,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cat crates/wasm/core/Cargo.toml; sed -n 1,60p crates/shared/Cargo.toml; grep -n \\\"ts\\\" crates/run/Cargo.toml; grep -rn \\\"features ts\\\\|jackioh-run/ts\\\\|jackioh-shared/ts\\\" --include=* -r\u2026\n- Bash: {\"command\": \"sed -n 440,455p .github/workflows/ci.yml; sed -n 160,185p .github/ci/rust-test.toml; sed -n 340,360p scripts/ci-scope.sh; grep -n \\\"^fn \\\\|^#\\\\[test\\\\]\\\" crates/tools/tests/acceptance.rs\u2026\n- Bash: {\"command\": \"sed -n 1,135p crates/tools/tests/acceptance.rs; sed -n 560,640p crates/tools/tests/acceptance.rs\"}\n- Bash: {\"command\": \"cat .cargo/config.toml 2>/dev/null | head -30; grep -n \\\"ts-rs\\\" Cargo.toml; ls target 2>/dev/null | head; sed -n 45,60p crates/run/README.md; grep -n \\\"features ts\\\\|ts-rs\\\\|\\\\`ts\\\\`\\\" \u2026\n- Bash: {\"command\": \"grep -rn \\\"jackioh-run --features ts\\\\|jackioh-shared --features ts\\\\|run/ts\\\\|shared/ts\\\" --exclude-dir=target --exclude-dir=node_modules --exclude-dir=.git . | grep -v \\\"^./spec/ruling\u2026\n- Bash: {\"command\": \"sed -n 1,12p apps/web/src/wire/run.ts; sed -n 72,90p crates/run/README.md; sed -n 784,800p crates/shared/README.md; sed -n 428,438p docs/dungeon-run.md; grep -n \\\"features ts\\\\|ts-rs\\\\|-\u2026\n- Bash: {\"command\": \"sed -n 183,190p docs/v0.3.0/SURFACE.md | cut -c1-500; sed -n 350,360p docs/v0.3.0/SURFACE.md; sed -n 3,8p apps/web/src/wire/index.ts; ls target 2>/dev/null | head -3; ls ~/.cargo 2>/dev/\u2026\n- Bash: {\"command\": \"(timeout 1500 sh -c 'cargo test -p jackioh-run --features ts >/tmp/run-ts.log 2>&1; cargo test -p jackioh-shared --features ts,jackioh-engine/testkit --lib >/tmp/shared-ts.log 2>&1; git \u2026\n- said: Meanwhile, check how acceptance tests read manifests/cargo metadata, and the `Package` struct.\n- Bash: {\"command\": \"sed -n 440,535p crates/tools/tests/acceptance.rs; grep -n \\\"RULE_4_STATICS\\\" crates/tools/tests/acceptance.rs | head -3; tail -40 crates/tools/tests/acceptance.rs\"}\n- Bash: {\"command\": \"sleep 400; cat /tmp/wire-status.txt 2>/dev/null; tail -3 /tmp/run-ts.log\", \"timeout\": 450000}\n- tool error: <tool_use_error>Blocked: sleep 400 followed by: cat /tmp/wire-status.txt tail -3 /tmp/run-ts.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To \u2026\n- Bash: {\"command\": \"until grep -q done /tmp/wire-status.txt 2>/dev/null; do sleep 10; done; cat /tmp/wire-status.txt; tail -4 /tmp/run-ts.log; tail -4 /tmp/shared-ts.log\", \"timeout\": 600000}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4426/.bot-plan.md\", \"content\": \"Draft: plan done; regen run on base produced no diff under apps/web/src/wire. Files: crates/wasm/core/Cargo.toml, crat\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of rules 1\u20135 holds: a two-line dev-dependency change, one acceptance test and doc edits, with no engine, AI, migration or cross-crate design change and well under 40 files.\"} --> ## Goal Turn on `jackioh-run/ts` and `jackioh-shared/ts` through `jackio\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-22T01:23:13Z",
       "owner_why": "it plans it",
@@ -15306,12 +15296,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-22T01:18:48Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44971227173",
+      "run_id": "pending:475ebc6f-1795311650",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T01:23:13Z",
+      "started_at": "2026-11-22T01:41:07Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7072119026"
+      ]
     },
     "4427": {
       "action": "plan",
@@ -15853,9 +15845,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T01:40:37Z",
+    "at": "2026-11-22T01:41:07Z",
     "url": "",
-    "what": "review #4439 on muse"
+    "what": "build #4426 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-22T01:29:52Z",
