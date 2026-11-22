@@ -16105,11 +16105,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T04:06:13Z",
+        "at": "2026-11-22T05:07:16Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's evaluation weights in crates/ai/src (decisions), and the keep/revert call rests on two long fork screens."
+        "tier": "strong",
+        "why": "Rule line 2, the AI: it moves AI_EVAL weights in crates/ai/src/config.rs that change the AI's decisions"
       },
       "failures": 0,
       "forced": false,
