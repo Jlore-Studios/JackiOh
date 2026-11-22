@@ -38412,14 +38412,6 @@
         "provider": "claude-1",
         "run_id": "45067442049",
         "taken_asks": []
-      },
-      "2": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-22T20:37:25Z",
-        "provider": "claude-6",
-        "run_id": "45067483135",
-        "taken_asks": []
       }
     },
     "taken_asks": []
