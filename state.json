@@ -16138,17 +16138,8 @@
       "taken_asks": []
     },
     "4517": {
-      "action": "plan",
-      "asks": [
-        "c:7086692110"
-      ],
-      "build_next": {
-        "from_run": "45077489177",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-22T22:35:38Z",
-        "until": "2026-11-22T23:05:38Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T22:35:30Z",
         "difficulty": "medium",
@@ -16167,10 +16158,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "ingData` from `../../net/saveData.ts`, `type CardDetailProps` from `./CardDetail.tsx`; `export const cardDetailChunk = routeChunk<Car\u2026\n- 3. **Landing.** Replace the line 59\u201360 `lazy(...)` with the chunk's screen (e.g. `const CardDetailDialog = cardDetailChunk.Screen;`, updating the `<CardDetail \u2026/>` use in the `open !== null` block); drop `lazy` from the react import iff unused, keeping `Suspense`. In `LandingFanCard`'s face div, af\u2026\n- 4. **Drop the barrel re-exports** (the two deletions in the table) and switch the four screens plus `PatchNotes.tsx`-style direct imports: each keeps every other name from its barrel import and takes only `CardDetail` from `../cards/inspect/CardDetail.tsx` (relative to the importer: `../../cards/in\u2026\n- 5. **New `auth/signOut.ts`.** Move `signOut`, `signOutLabel`, `useSigningOut`, `resetSigningOutForTests` plus their state (`signingOut`, `signingOutListeners`, `setSigningOut`) verbatim from `routes/account.tsx`. Head it with a comment: the gate's own panels need sign-out synchronously when lazy ch\u2026\n- 6. **Repoint the five importers** (`main.tsx`, `UsernamePrompt.tsx`, `ConsentPrompt.tsx`, `login.tsx`, `invite.tsx`) to take the trio from `auth/signOut.ts`, and `account.test.tsx` to take `resetSigningOutForTests` from there. In `routes/account.tsx`, delete the moved block, add the import from `..\u2026\n- 7. **`chunks.tsx` + `main.tsx`.** Add `account: routeChunk(() => import(\"./account.tsx\"))` beside the other gated screens and `\"account\"` to `ENGINE_CHUNKS` (`/account` renders inside `EngineGate`, like collection/decks). `chunkAt` needs no change (`paths.account`). In `main.tsx`: replace line 98's\u2026\n- 8. **Built-text guards.** In `first-load.test.ts`'s built suite add two tests mirroring #4444's: no card-history text and no account-screen text in the entry chunk and preloads. Pick three probes each by grepping `src/`: runtime strings occurring only in the removed modules, their tests, or comment\u2026\n- 9. **Budget.** Run `pnpm --dir apps/web build:e2e`, then the first-load test; read the measured gzip bytes from the budget assertion output. Set `FIRST_LOAD_GZIP_BUDGET_BYTES` to the smallest `N \u00d7 8192` covering measured \u00d7 ~1.025, and append a `#4517` paragraph to the comment in the file's existing\u2026\n- 10. **Update `chunks.test.tsx`.** Remove the `<a href=\"/account\">Account</a>` line and its hover from the prefetches-nothing test (`/` still maps to no chunk). Add: intent on `/account` loads `routeChunks.account` once and starts `loadWasm`/`loadSceneData` (mirror the catalog-screens test). Add a `\u2026\n- ## Tests\n- - `apps/web/src/cards/inspect/cardDetailChunk.test.ts` (new, mirror `friendsDrawerChunk.test.ts`): intent helper prefetches the chunk exactly once across pointer/focus/touch; prefetch is skipped while `savingData()` is true. `pnpm --dir apps/web test src/cards/inspect/cardDetailChunk.test.ts`.\n- - `apps/web/src/routes/landing.test.tsx`: `it(\"R639 pointer, touch or focus intent on a fan card starts the dialog's chunk once, never while saving data\")` \u2014 spy on `cardDetailChunk.load`, render `LandingRoute`, fire pointerEnter/focus/touchStart on a fan card, expect one call; with `saveData` set,\u2026\n- - `apps/web/src/routes/shell-gate.test.tsx`: in the long-check describe, `it(\"\u2026the gate's Sign out signs out when the account chunk fails to load\")` \u2014 seed a session, hang fetch, `mockRejectedValue` on `routeChunks.account.load`, press `shellTestid.signOut`, expect `location.assign` with `paths.lan\u2026\n- - `apps/web/src/net/first-load.test.ts`: the new source test (fails before, passes after), the two built tests, the budget test (needs `pnpm --dir apps/web build:e2e` first). `pnpm --dir apps/web test src/net/first-load.test.ts`.\n- - `apps/web/src/routes/chunks.test.tsx`, `src/routes/account.test.tsx`, `src/game/Dialog.test.tsx`, `src/cards/flavour.test.tsx`, `src/cards/inspect/CardDetail.test.tsx`: run each touched file. Then `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web`.\n- ## Done when\n- - [ ] Neither barrel names `CardDetail`; no statically-reachable-from-`main.tsx` module value-imports `cards/inspect/CardDetail.tsx` (source test proves it).\n- - [ ] Landing click/tap still opens the dialog; existing `landing.test.tsx` passes; intent starts the chunk once, never under save-data (new tests).\n- - [ ] Sign-out trio lives in `auth/signOut.ts` importing nothing from `routes/account.tsx`; `/account` renders only via `routeChunks.account`; gate sign-out works with the chunk rejected; `/account` keeps its `Gated` flags and `EngineGate`; `startScreen(\"/account\", \u2026)` asks for the chunk (tests).\n- - [ ] Built entry holds no card-history or account-screen text; budget lowered to new measurement + ~2.5% with comment.\n- - [ ] Touched test files, `typecheck`, and `eslint apps/web` pass.\n- ## Risks\n- - First click on a slow network waits for the chunk: covered by the prefetch plus the existing `Suspense` fallback; the intent test pins the prefetch.\n- - Direct `/account` visit fetches one more chunk, but it starts beside the 2.31 MB engine module via existing `startScreen`, so no added wait of its own.\n- - Sign-out must survive all lazy-chunk failures: the trio stays entry-static by construction, and the shell-gate test rejects the account chunk to prove it.\n- - Regex graph walk misses runtime-built specifiers: the client uses none outside `import.meta.glob` (stated in the test comment, as #4517 requires).\n- ## Open questions\n- None. Every choice above follows the issue or copies the named precedent (`friendsDrawerChunk.ts`, #4444 tests, `PatchNotes.tsx` direct import).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4517 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4517/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-22T22:23:45Z",
       "owner_why": "it plans it",
@@ -16183,12 +16173,14 @@
       "provider": "muse",
       "queued_at": "2026-11-22T22:18:20Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45077489177",
+      "run_id": "pending:8b4cc593-1795387031",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-22T22:23:45Z",
+      "started_at": "2026-11-22T22:37:26Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7086692110"
+      ]
     },
     "4518": {
       "action": "plan",
@@ -16276,9 +16268,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T22:36:59Z",
+    "at": "2026-11-22T22:37:26Z",
     "url": "",
-    "what": "build #4512 on muse"
+    "what": "build #4517 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T22:22:24Z",
