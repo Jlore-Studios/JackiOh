@@ -29287,3 +29287,4 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-21T21:49:03Z,claude-8,stream,call,44941501359,85,2026-11-21T22:20:00Z,,,allowed,100,,
 2026-11-21T21:54:33Z,claude-8,stream,call,44941501359,86,2026-11-21T22:20:00Z,,,allowed,100,,
 2026-11-21T22:05:19Z,claude-8,stream,call,44941501359,87,2026-11-21T22:20:00Z,,,allowed,100,,
+2026-11-22T00:33:38Z,muse,usage-command,before,44967185485,0,2026-11-22T04:12:00Z,65,2026-11-23T00:00:00Z,allowed,100,100,
