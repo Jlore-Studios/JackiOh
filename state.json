@@ -18008,12 +18008,10 @@
     "what": "revise #4459 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T09:58:52Z",
+    "at": "2026-11-22T10:07:03Z",
     "notes": [
-      "delivered build #4469 on claude-4 (run 45002921268): built",
-      "started review #4489 on claude-4 (run 45010277830)",
-      "nothing more to start: nothing is queued",
-      "pruned 15 plan file(s) older than 7 days"
+      "started revise #4459 on muse (run 45010911192)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18719,7 +18717,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T09:58:52Z",
+  "loop_tick": "2026-11-22T10:07:03Z",
   "machine_disk": {
     "issue": null,
     "reading": {
