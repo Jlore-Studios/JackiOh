@@ -16277,23 +16277,22 @@
     "what": "plan #4508 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-22T22:22:24Z",
+    "at": "2026-11-22T22:33:06Z",
     "notes": [
-      "#4508 needs a plan",
-      "#4509 needs a plan",
-      "#4512 needs a plan",
-      "#4513 needs a plan",
-      "#4515 needs a plan",
-      "#4517 needs a plan",
-      "#4518 needs a plan",
-      "started plan #4512 on muse (run 45077442139)",
-      "started plan #4517 on muse (run 45077489177)",
-      "started plan #4509 on muse (run 45077528413)",
-      "started plan #4508 on muse (run 45077572070)",
-      "started plan #4513 on agy (run 45077612973)",
-      "started plan #4518 on gpt (run 45077662363)",
-      "started plan #4515 on claude-7 (run 45077704959)",
-      "nothing more to start: nothing is queued"
+      "answered a comment on #4511 that was never answered",
+      "#4511 needs a plan",
+      "delivered plan #4508 on muse (run 45077572070): planned",
+      "delivered plan #4509 on muse (run 45077528413): planned",
+      "delivered plan #4517 on muse (run 45077489177): planned",
+      "delivered plan #4512 on muse (run 45077442139): planned",
+      "started build #4512 on muse (run 45078727153)",
+      "started build #4517 on muse (run 45078767338)",
+      "started build #4509 on muse (run 45078806682)",
+      "started review #4520 on claude-8 (run 45078845556)",
+      "started plan #4511 on muse (run 45078885612)",
+      "started plan #4508 on claude-1 (run 45078926554)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16999,7 +16998,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T22:22:24Z",
+  "loop_tick": "2026-11-22T22:33:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
