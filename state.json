@@ -16372,6 +16372,8 @@
       "taken_asks": []
     },
     "4528": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T22:36:59Z",
@@ -16385,8 +16387,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a match in a background tab plays no crowd murmurs, as its sound effects and voices already stay quiet\"} -->\n- ## What changed and why\n- A match in a hidden tab played crowd murmurs every 6\u201315 s while effects and voices stayed quiet, because the crowd's `live()` gate in [crowd.ts](apps/web/src/audio/crowd.ts) only checked `context.state === \"running\"`, and desktop browsers keep a hidden tab's context running. The engine already clos\u2026\n- - [engine.ts](apps/web/src/audio/engine.ts:1186): `crowdOutput()` now returns null while `visibility()` is `\"hidden\"`, with an `R4512000` comment. No other source change: `live()` already treats a null output as no output, so murmurs and reactions due while hidden are dropped exactly like ones due \u2026\n- - [crowd.test.ts](apps/web/src/audio/crowd.test.ts:171): new `it(\"R4512000 \u2026\")` in the background `describe`, reusing its `due`/`heard`/`crowdBusOf` helpers with an explicit visibility port as `engine.test.ts`'s rig does. A GIGA hit lands while visible, the page hides, the due murmur and roar play \u2026\n- - [R4512000.md](spec/rulings/R4512000.md) and [4512.md](spec/pending/4512.md): the ruling note (first free number in the issue's block) and its \u00a711 paragraph. No \u00a710.11 body edit, per the issue's scoping.\n- ## How I tested it\n- - `pnpm --dir apps/web test src/audio/crowd.test.ts src/audio/engine.test.ts` \u2192 2 files, 110 tests passed (crowd 5 including the new test, engine 105 unchanged).\n- - `cargo jackioh spec check` \u2192 ok (2377 rulings, 5994 proofs).\n- - `cargo fmt --check` \u2192 clean; `git status` shows only the 4 intended files.\n- - `pnpm --dir apps/web typecheck` \u2192 clean. Note: the first attempt crashed node (exit 134) on this small box; with `NODE_OPTIONS=--max-old-space-size=6144` it passes, so that was memory, not code.\n- ## Decisions worth a look\n- - Gate placement: the issue offered gating in `crowdOutput()` or a visibility port on the crowd; I took `crowdOutput()` since `live()` already null-checks it and the existing `accepting()` gate set the pattern. Rejected the music-setting alternative in the ruling note.\n- - jsdom risk from the plan did not materialize: the default visibility port is not `\"hidden\"`, so the four pre-existing crowd tests pass unchanged.\n- - The ruling follows the effects' rule (quiet whatever the settings say, music-only setting untouched) and a visible-but-unfocused window keeps its crowd, as it keeps its effects \u2014 both asserted in the note, matching R631/R669.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4512 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4512/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4512,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T23:21:33Z",
         "from_run": "45078727153",
         "gates": [
           {
@@ -16445,8 +16450,15 @@
         "source": "build",
         "until": "2026-11-22T23:50:42Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-22T23:20:42Z",
+      "run_id": "pending:56174e4a-1795389679",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-22T23:21:33Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16460,9 +16472,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T23:06:39Z",
+    "at": "2026-11-22T23:21:33Z",
     "url": "",
-    "what": "build #4515 on claude-7"
+    "what": "review #4528 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T23:13:05Z",
