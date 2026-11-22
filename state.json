@@ -18724,6 +18724,8 @@
       }
     },
     "4500": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T16:41:22Z",
@@ -18737,8 +18739,11 @@
         "trail": "- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4484 && git grep -n \"cast_random\" crates/\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 680, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/crates/engine/tests/rules/effects_cast.rs\", \"StartLine\": 620}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 800, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/crates/engine/tests/rules/effects_cast.rs\", \"StartLine\": 680}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 1267, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/crates/engine/tests/rules/effects_cast.rs\", \"StartLine\": 1180}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 150, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/crates/engine/tests/rules/effects_cast.rs\", \"StartLine\": 20}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4484 && git grep -n \"choose_target\" crates/engine/\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 275, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/crates/engine/src/effects/choose.rs\", \"StartLine\": 240}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 60, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/spec/rulings/R0452.md\", \"StartLine\": 1}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 60, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/spec/rulings/R0656.md\", \"StartLine\": 1}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 60, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/spec/rulings/R4353002.md\", \"StartLine\": 1}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/spec/06-keywords.md\", \"StartLine\": 50}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4484 && git grep -n \"| Cast |\" spec/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4484 && cargo jackioh spec check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5b9294ed-6c8a-41b0-bc47-671f988e8818/task-54\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/.bot-notes.md\"}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 1360, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/crates/engine/src/prompts.rs\", \"StartLine\": 1290}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5b9294ed-6c8a-41b0-bc47-671f988e8818/task-54\"}\n- said: I have launched `cargo jackioh spec check` in the background to verify the baseline specification and will proceed with the changes as soon as it finishes.\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 1335, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/crates/engine/src/prompts.rs\", \"StartLine\": 1290}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4484/crates/engine/src/prompts.rs\"}\n- said: \n- said: I have launched `cargo test -p jackioh-engine --features testkit --test 'rules*'` in the background and will proceed once the run finishes."
       },
       "issue": 4484,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T17:54:17Z",
         "from_run": "45045237459",
         "gates": [
           {
@@ -18797,8 +18802,15 @@
         "source": "build",
         "until": "2026-11-22T18:22:43Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-22T17:52:43Z",
+      "run_id": "pending:3e96a497-1795370035",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-22T17:54:17Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -18812,9 +18824,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T17:35:06Z",
+    "at": "2026-11-22T17:54:17Z",
     "url": "",
-    "what": "review #4498 on claude-8"
+    "what": "review #4500 on agy"
   },
   "last_sweep": {
     "at": "2026-11-22T17:42:24Z",
