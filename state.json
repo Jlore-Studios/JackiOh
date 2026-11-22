@@ -17199,6 +17199,8 @@
       }
     },
     "4475": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T06:40:09Z",
@@ -17212,8 +17214,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n \\\"BUDGET_BYTES =\\\\|lowered it\\\" apps/web/src/net/first-load.test.ts; ls apps/web/dist 2>/dev/null | head -3\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4470/apps/web/src/net/first-load.test.ts\", \"offset\": 56, \"limit\": 22}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/net/first-load.test.ts'\\ns=open(p).read()\\na=s.index(\\\" * #4428 lowered it\\\")\\nb=s.index(\\\" * #4435 lowered it\\\")\\ns=s[:a]+s[b:]\\nnew=\\\"\\\"\\\" *\\n * #442\u2026\n- Bash: {\"command\": \"tail -3 /tmp/build.log; pnpm --dir apps/web test src/net/first-load.test.ts 2>&1 | tail -15\", \"timeout\": 600000}\n- said: Quickly confirm the measurement itself.\n- Bash: {\"command\": \"cd apps/web/dist && node -e '\\nconst fs=require(\\\"fs\\\"),z=require(\\\"zlib\\\");const h=fs.readFileSync(\\\"index.html\\\",\\\"utf8\\\");\\nconst files=new Set();for(const m of h.matchAll(/(?:src|hre\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #4458 from the after-merge spot-check\"} --> This lowers `FIRST_LOAD_GZIP_BUDGET_BYTES` from 458,752 to 434,176 (53 \u00d7 8192) and rewrites the #4428 paragraph with the real before and after figures. It is the spot-check's one finding on #4458.\u2026"
       },
       "issue": 4470,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T07:28:29Z",
         "from_run": "44994756884",
         "gates": [
           {
@@ -17305,7 +17310,11 @@
         "source": "build",
         "until": "2026-11-22T07:56:21Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-22T07:26:21Z",
+      "run_id": "pending:54155a66-1795332474",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17324,6 +17333,9 @@
         "provider": "claude-8",
         "run": "44994756884"
       },
+      "started_at": "2026-11-22T07:28:29Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17337,9 +17349,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T07:16:40Z",
+    "at": "2026-11-22T07:28:29Z",
     "url": "",
-    "what": "build #4466 on claude-7"
+    "what": "review #4475 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-22T07:14:21Z",
