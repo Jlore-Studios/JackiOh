@@ -1,0 +1,18 @@
+{
+  "title": "The deck editor fits a phone sideways",
+  "sources": "#4375",
+  "notes": "On a phone the cost row's eight crystals each carry a hit area wider than the crystal (a `::before`), and the last one's reached out to --hit-min past its own border; the row ends at the deck editor's right edge, so that reach widened the editor by 2 px and let the page pan sideways at 390x844 (spec 46's R4349000 check). The last crystal's hit area now stops at its own border on the right; the first still reaches out on its left, and every crystal still splits the 4 px gaps. How the deck editor lays out only: no card plays differently.",
+  "player": {
+    "title": "The deck editor fits a phone sideways",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "On a phone the deck editor no longer slides a couple of pixels sideways: the last cost filter's tap area reached just past the screen's edge."
+    ]
+  },
+  "cards": [],
+  "plays": [],
+  "visual": true
+}
