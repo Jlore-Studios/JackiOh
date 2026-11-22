@@ -229,6 +229,8 @@ export type FxTakeoverCue = {
   delayMs: number;
   durationMs: number;
   art?: string;
+  /** R4493001: the layer budget dropped the look's own art (takeoverArt.ts's parts or drawing) and its picture (`art`). */
+  artless?: true;
 };
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board

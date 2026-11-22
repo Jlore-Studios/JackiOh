@@ -1,5 +1,7 @@
 // S8 effects director. R200: it only decorates; every visual stays within planned duration, FX_MAX_TAIL_MS and FX_MAX_PARTICLE_LIFE_MS.
 // Cues measure anchors when firing (a frame's due effect cues read before any of them mounts, #3633) and expire from scheduled due time; frames loop only while active work remains.
+// R4493001: on a phone (or a device with little memory) a due takeover takes the fullest form that keeps the layers its
+// mounted and coming DOM cues hold within FX_PHONE_LAYER_BUDGET_MB (layers.ts), never dropping a main beat (R3351000).
 
 import { createCanvasFx } from "./canvasFx.ts";
 import {
@@ -23,6 +25,7 @@ import {
 } from "./constants.ts";
 import { dropPointOfTestid } from "../game/drag/landing.ts";
 import { landingBox, mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
+import { budgetTakeover, cueScreens, hasLayerBudget, type FxDevice } from "./layers.ts";
 import { createFrameLoop, type FxFrame } from "./loop.ts";
 import { createParticleSystem } from "./particles.ts";
 import { artBoxOf, atOf, pointIn } from "./anchors.ts";
@@ -59,6 +62,8 @@ export type FxDirectorOptions = {
   element?: (testid: string) => HTMLElement | null;
   /** Scroll/resize subscription for tracking parked stand-ins; defaults to window events. */
   viewport?: FxViewportEvents;
+  /** R4493001: the device the layer budget reads, at each frame that fires a takeover; absent, no budget (the board's layer passes `readDevice`). */
+  device?: () => FxDevice;
 };
 
 export type FxViewportEvents = { subscribe(listener: () => void): () => void };
@@ -99,7 +104,8 @@ type PendingCue = { cue: FxCue; due: number };
 type FxEffectCue = Exclude<FxCue, FxStageCue>;
 /** The boxes an effect cue lands on, measured before its frame mounts anything (#3633). */
 type Landing = { at?: FxBox; from?: FxBox; to?: FxBox };
-type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string; key?: string };
+/** R4493001: `screens`, the layers it holds (layers.ts `cueScreens`). */
+type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; screens: number; tone?: string; key?: string };
 type StagedEffect = { undo(): void; track?: () => void; expiresAt: number };
 
 function defaultViewport(): FxViewportEvents {
@@ -160,6 +166,11 @@ function isCanvasCue(cue: FxCue): boolean {
   return (
     cue.kind === "burst" || cue.kind === "projectile" || cue.kind === "shot" || cue.kind === "crack" || cue.kind === "ring"
   );
+}
+
+/** R4493001: a cue `mountDomEffect` mounts: neither the stage's, nor the canvas's, nor the shake. */
+function isDomCue(cue: FxCue): cue is FxDomCue {
+  return !isStageCue(cue) && !isCanvasCue(cue) && cue.kind !== "shake";
 }
 
 export function createFxDirector(options: FxDirectorOptions): FxDirector {
@@ -330,7 +341,14 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     }
     const effect = mountDomEffect(domRoot, cue, boxes);
     if (effect !== null) {
-      mounted.push({ effect, expiresAt, kind: cue.kind, ...(cue.kind === "rays" ? { tone: cue.tone } : {}), ...(key === undefined ? {} : { key }) });
+      mounted.push({
+        effect,
+        expiresAt,
+        kind: cue.kind,
+        screens: cueScreens(cue),
+        ...(cue.kind === "rays" ? { tone: cue.tone } : {}),
+        ...(key === undefined ? {} : { key }),
+      });
     }
   };
 
@@ -600,6 +618,35 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     flush();
   };
 
+  /**
+   * R4493001: a frame's due cues with each takeover in the form the device's layer budget holds (layers.ts
+   * `budgetTakeover`), in their order: what it holds besides is every mounted effect still up, this frame's other DOM
+   * cues (an earlier takeover in its chosen form) and the pending ones due before it ends. A frame with no takeover, or a
+   * device with no budget, fires as it is; every other cue, a set piece's main beats among them, is never touched.
+   */
+  const budgetDue = (due: readonly PendingCue[], at: number): readonly PendingCue[] => {
+    if (!due.some((item) => item.cue.kind === "takeover")) return due;
+    const device = options.device?.();
+    if (device === undefined || !hasLayerBudget(device)) return due;
+    const up = mounted.reduce((sum, item) => (item.expiresAt > at ? sum + item.screens : sum), 0);
+    const screensOf = (cue: FxCue): number => (isDomCue(cue) ? cueScreens(cue) : 0);
+    const out: PendingCue[] = [];
+    due.forEach((item, index) => {
+      const { cue } = item;
+      if (cue.kind !== "takeover") {
+        out.push(item);
+        return;
+      }
+      const ends = item.due + cue.durationMs;
+      const before = out.reduce((sum, earlier) => sum + screensOf(earlier.cue), 0);
+      const after = due.slice(index + 1).reduce((sum, later) => sum + screensOf(later.cue), 0);
+      const coming = pending.reduce((sum, later) => (later.due < ends ? sum + screensOf(later.cue) : sum), 0);
+      const form = budgetTakeover(cue, up + before + after + coming, device);
+      out.push(form === cue ? item : { cue: form, due: item.due });
+    });
+    return out;
+  };
+
   // R3351000: a shed stage keeps the loop alive, so healthy windows drain a stranded level back
   // to full on an idle board instead of freezing faces for the rest of the session.
   const hasWork = (): boolean =>
@@ -620,7 +667,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       const later: PendingCue[] = [];
       for (const item of pending) (item.due <= at ? due : later).push(item);
       pending = later;
-      fireDue(due, at);
+      fireDue(budgetDue(due, at), at);
     }
 
     const age = Math.max(0, frame.raw);

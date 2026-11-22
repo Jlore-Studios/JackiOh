@@ -33,6 +33,7 @@ import { planStarshipStill } from "./starship.ts";
 import { planTerminusStill } from "./terminus/index.ts";
 import { planStage } from "./stage.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "./director.ts";
+import { readDevice, type FxDevice } from "./layers.ts";
 import { createFxMemory } from "./memory.ts";
 import { useFxSettings } from "./settings.ts";
 import { setShedPointer } from "./shed.ts";
@@ -65,6 +66,8 @@ export type FxSeams = {
   viewportWidth: () => number;
   /** The board element a stage cue acts on (stage.ts), by testid. */
   element: (testid: string) => HTMLElement | null;
+  /** R4493001: the device the director's layer budget reads (layers.ts); production reads the browser's (`readDevice`). */
+  device: () => FxDevice;
 };
 
 export type FxLayerProps = {
@@ -219,6 +222,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       seed: s.seed ?? FX_DEFAULT_SEED,
       capacity: capacityFor(s.viewportWidth?.() ?? window.innerWidth),
       element: s.element,
+      device: s.device ?? readDevice,
     });
     director.current = created;
     // React runs an effect's cleanup before its next setup, so the ref still holds this run's own.

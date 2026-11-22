@@ -240,6 +240,22 @@ export const FX_MOTIF_MIN_CARDS = 3;
 // R2803000: the audit's phone budget. The heaviest set pieces and a board of four auras hold this
 // mean frame time at the phone particle cap with mobile emulation.
 export const FX_PHONE_FRAME_BUDGET_MS = 50;
+// R4493001: the layer memory the director lets its mounted DOM cues hold on a phone (or a device with
+// little memory), each promoted element's box at its largest scale times the device's pixels: past it, a
+// takeover sheds its optional parts in order (its slices merged, its art, its stage), never a main beat.
+export const FX_PHONE_LAYER_BUDGET_MB = 200;
+// R4493000: the most layers a takeover's stage draws on a phone: adjacent slices (or planes) merge into
+// one picture each, far, middle and near.
+export const FX_PHONE_STAGE_LAYERS = 3;
+// R4493000: the most screens' worth of area one effect element may cover at its largest scale.
+export const FX_LAYER_MAX_SCREENS = 3;
+// R4493001: a device reporting this much memory or less (`navigator.deviceMemory`, in GB) holds the
+// phone's layer budget at any width.
+export const FX_LOW_DEVICE_MEMORY_GB = 4;
+// R4493001: the bytes one composited pixel holds (RGBA, 8 bits a channel).
+export const FX_LAYER_BYTES_PER_PX = 4;
+// R4493001: the bytes in a megabyte, as FX_PHONE_LAYER_BUDGET_MB counts them.
+export const FX_BYTES_PER_MB = 1_048_576;
 // R3351000: the living game's worst single frame on a phone, about one frame at 8 fps; the mean
 // still holds FX_PHONE_FRAME_BUDGET_MS, so one hitch never costs the scene its budget.
 export const FX_PHONE_FRAME_WORST_MS = 120;

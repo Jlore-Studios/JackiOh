@@ -189,6 +189,8 @@ function fakeSeams() {
     catalog: () => undefined,
     viewportWidth: () => 1280,
     element: () => null,
+    // R4493001: a desktop, which holds no layer budget.
+    device: () => ({ width: 1280, height: 800, dpr: 1, memoryGb: null }),
   };
   function runFrames(): void {
     const due = [...pending.values()];
