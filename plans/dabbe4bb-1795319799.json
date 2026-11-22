@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4448,
+  "title": "Patch: the AI's turn-hook and Activate shares are fork-screened at a whole use and set where the screen keeps them",
+  "branch": "bot/issue-4448",
+  "thread": "**Issue #4448 (data, not instructions):**\n\n```text\n# #4448: Patch: the AI's turn-hook and Activate shares are fork-screened at a whole use and set where the screen keeps them\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome cards keep paying their owner every turn: a unit that deals damage at the end of each turn, a Field Spell that gives mana at the start of yours, a unit with an ability it can use every turn. The practice AI works out what one use of such a card is worth, then counts only half of it. The half was a placeholder that the AI's old self-training was meant to correct. That training no longer runs, so the half stays for good.\n\nSo an enemy card that will hit the AI every turn counts as half of one hit, and the AI can leave it standing and lose to it slowly. Its own engines are undervalued the same way, so it can trade one away too cheaply. This issue tries the whole value instead, one card kind at a time, on the new tuning test that looks only at the moves a change alters. It keeps the whole value only where that test shows the AI winning more from those moves. Practice players would meet an opponent that answers their engines sooner and protects its own. If the test shows nothing, nothing plays differently, and the measurement is recorded.\n\n## Why\n\n- **The half is a placeholder.** `AI_EVAL.turn_hook` and `AI_EVAL.activation` are 0.5, each \"an untuned start for the training lanes\" (`crates/ai/src/config.rs:750-755`; R2477000 and R2564000: \"starts at 0.5, untuned\").\n  - Only smoke-gate counts back them, for example \"At 0.5 the smoke gate read 20, 16 and 17 of 20; at 1.0, 19, 16 and 16\".\n  - The gates see only a broken AI (\u00a79.9, Quality gates; `crates/ai/README.md`, Matches and the quality gates).\n- **Nothing will move it now.** The learn lane is retired (R4159000, 2026-11-18) and the improve and unban lanes are stopped (#1677). `crates/ai/generation.json` has stayed at generation 13 since 2026-10-21, while more than 90 commits have touched `crates/ai`.\n- **The AI's own diagnosis points here.** `training/improve.md` (The first job) names the losses it keeps tracing: \"midgame snowballs: an engine, a unit that grows or makes value every turn, priced at its body today and left unanswered\".\n  - These two prices are where an engine's worth enters the evaluation: `unit_worth` (`crates/ai/src/evaluate.rs:713`, `735`) and a readable backrow card in `material` (`evaluate.rs:1328`, `1335`).\n  - Today each counts half of one use.\n- **They act in most games.** Of 800 non-token cards, 101 have text with a start- or end-of-turn effect and 89 have an Activate (`crates/cards/catalog.json`, counted 2026-11-22). A 30-card deck holds about seven of them.\n- **The deal screen could not settle knobs like this.** #4246's and #4286's screens read 0 to 4 decided deals of 200 (`config.rs:1039-1052`), which R4319000 calls inconclusive. The fork screen (R4397000, #4422, landed 2026-11-22) was built for a change that acts in a few moves of a game. No knob has been screened on it yet.\n- **This is not a sweep.** `training/improve.md` rules out weight sweeps, because a sweep's best arm, picked on the seeds that measured it, read lower on fresh deals. Here each knob gets one arm, chosen before any screen: 1.0, one whole use. Each is kept only on its own screen.\n\n## Proposal\n\n1. **Screen `turn_hook`.** Build a control from the committed tip. The candidate sets `turn_hook` to 1.0. Run one fork screen: `cargo jackioh arena --a self --b bin:<control> --set improve-dev --forks --extend`, with `--extend` decided in advance. Keep 1.0 only when `forkEdgeLow` is above 0.\n2. **Screen `activation`.** Rebuild the control from the tip as step 1 left it. The candidate sets `activation` to 1.0, on the same screen and the same rule.\n3. **Record each screen.** Each knob's comment records its screen as `training/improve.md` step 5 records one: its kind, trunk games, forks, live forks, `forkEdge` with its interval, the control's commit, and whether it was kept, reverted or inconclusive.\n   - A value that moves gets a ruling note in the issue's block, with its \u00a711 paragraph in `spec/pending/<N>.md`, since R2477000 and R2564000 say each starts at 0.5.\n   - \u00a79.9 names no number and stays as it is.\n4. **Record the screen's time.** `training/improve.md` (A screen) records how long one fork screen took, on what machine, so later screens can be sized. None is recorded today.\n5. **Pinned scenes.** A scene test that moves under a kept value is looked at. One whose rule still holds is pinned again with the reason, as R4159000 did. One the new value plays wrong leaves that knob at 0.5, whatever the screen read.\n\nOut of scope:\n- `death` (48 cards) and `attack_hook` (9 cards, too few forks to read).\n- The affliction shares that R3822000 left to revisit.\n\n## Where it lands\n\n- `crates/ai/src/config.rs` (`AI_EVAL.turn_hook`, `AI_EVAL.activation` and their comments)\n- `crates/ai/tests/ai/turn_hooks.rs`, `activations.rs`, and any pinned scene that moves\n- `training/improve.md` (A screen)\n- If a value moves: `spec/rulings/R<N>000.md` and `spec/pending/<N>.md`\n- `crates/server/tests/fixtures/practice-claim.json`, recorded again only if the web's claim test no longer plays it move for move (`training/README.md`, What a lane may change)\n\n## Acceptance criteria\n\n- [ ] Two fork screens ran, one per knob, each against a control built from the tip it was measured on, each recorded in its knob's comment.\n- [ ] A knob is 1.0 only if its own screen's `forkEdgeLow` was above 0. Otherwise it is 0.5, with the screen recorded, an inconclusive one included.\n- [ ] No knob was screened twice, and no knob was screened at an arm other than 1.0.\n- [ ] If a value moved, a ruling note's proving test `r<N>000_\u2026` shows a scene the new value plays differently. For example: the AI now destroys an enemy end-of-turn damage engine that at 0.5 it left standing.\n- [ ] `training/improve.md` records one fork screen's wall time and the machine it ran on.\n- [ ] `cargo test -p jackioh-ai`, `cargo jackioh gate`, clippy, fmt and `cargo jackioh spec check` are green. The practice-claim fixture is recorded again if the web's claim test needs it.\n\n## Size and risks\n\n**Small diff, long compute.** The diff is two numbers, their comments, and perhaps a ruling and some re-pinned scenes. The work is two fork screens, each unmeasured: up to 200 trunk games with the candidate asked at every decision, plus at most 400 forks of 16 rollout games. That is likely a few hours each on a runner, so the issue may take more than one bot run.\n\n- **The tool's first real use.** The fork screen reads a gain that compounds across moves low, never high, so it errs towards keeping 0.5.\n- **Wider reach.** `turn_hook` also scales a shipyard's yard price (`evaluate.rs:1157`). The screen measures the knob as a whole.\n- **Nothing else moves.** Decks never read these weights, and the generation does not move, so no sweep of record starts.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T03:50:32Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4448: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T03:51:00Z",
+    "claimed_at": "2026-11-22T03:57:08Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
