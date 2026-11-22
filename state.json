@@ -17013,6 +17013,13 @@
     "4468": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T06:38:56Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Rule 4: the change is a database migration (crates/server/migrations/), which is hard by definition."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
