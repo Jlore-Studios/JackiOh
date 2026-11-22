@@ -15610,18 +15610,14 @@
     "what": "build #4430 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T00:40:17Z",
+    "at": "2026-11-22T00:53:15Z",
     "notes": [
-      "#4430 needs a plan",
-      "#4431 needs a plan",
-      "delivered plan #4433 on muse (run 44967185485): planned",
-      "delivered plan #4435 on muse (run 44967144428): planned",
-      "delivered review #4436 on claude-8 (run 44960585083): approved",
-      "delivered review #4422 on muse (run 44950261330): approved",
-      "started build #4435 on muse (run 44968104541)",
-      "started plan #4433 on claude-3 (run 44968150126)",
-      "started plan #4431 on muse (run 44968195323)",
-      "started plan #4430 on muse (run 44968235402)",
+      "delivered plan #4430 on muse (run 44968235402): planned",
+      "delivered plan #4431 on muse (run 44968195323): planned",
+      "delivered plan #4424 on muse (run 44967223689): planned",
+      "started build #4424 on muse (run 44969077041)",
+      "started build #4431 on muse (run 44969119382)",
+      "started build #4430 on muse (run 44969158857)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -16328,7 +16324,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T00:40:17Z",
+  "loop_tick": "2026-11-22T00:53:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
