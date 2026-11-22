@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4453,
+  "title": "Patch: a Spell's effects on every card and its random picks pass a Unit Immune to Spells by, as its aimed ones already do, and Meteor's spill skips a Dormant neighbour",
+  "branch": "bot/issue-4453",
+  "thread": "**Issue #4453 (data, not instructions):**\n\n```text\n# #4453: Patch: a Spell's effects on every card and its random picks pass a Unit Immune to Spells by, as its aimed ones already do, and Meteor's spill skips a Dormant neighbour\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome Units are immune to Spells: the rules say no Spell may aim at them or change them. Today that holds only when a Spell aims at one. A Spell that changes every Unit, or picks cards at random, still reaches the immune Unit. Adaptive Growth gives every Unit \u22122/\u22122, and an immune Paragon-X shrinks with the rest. \u9ad8\u8003 shows the gap inside one card: its destroy half spares an immune card, and its Buff half, in the same Spell, upgrades it. Once this is built, a Spell passes an immune Unit by whatever its wording, so a player who builds around immunity gets what the card promises. While at it, Meteor's spilled damage stops vanishing into a sleeping (Dormant) card beside its target and goes on to the live Unit on the other side.\n\n## Why\n- SPEC \u00a76.1, Immune to Spells: \"Spells can't target it or affect it \u2026 every Spell's effect list skip[s] it\". R1185002: \"a Spell's set passes a Unit Immune to Spells by, as every scope does\". R781001 (superseded on Immutable only): \"Immune to Spells stops every effect of a Spell, aimed or not\".\n- The aimed path asks `restrictions::unaffected_by` (`effects/targets.rs`: `resolve_target`, `instance_on_its_stay`, `matches_scope`), so a target and a `cards_in_scope` walk are right. These walks never ask it:\n  - `cards_in_card_scope`'s field walk (`crates/engine/src/effects/card_scope.rs:147-165`) drops Dormant cards and nothing else (R940's tribal immunity aside), so a Spell's `buff_cards`, `grant_keyword_cards`, scoped `upgrade`/`degrade` (`tune.rs:1034`) and `transform_cost_step` (`transform.rs:548`) reach an immune Unit;\n  - `buff_all_units` (`buff.rs:146`) and `switch_all_positions` (`position.rs:69`) walk `active_units_of` and call `apply_buff` and `switch_position`, which do not ask;\n  - `set_radiant_random`'s field pool (`radiant.rs:111`) and Book of Plague's random placement (`effects/plague.rs:208`, in a random cast or under a Mayor) draw from `reachable_permanents_on_field`, which drops only Dormant cards (R4322000).\n- Spells that reach an immune Unit today: C+ #50 Adaptive Growth, M+ #1.4 Leg Day, Core #62 Friend of Felinors (Radiant), Core #48 5pek Controller, S+ #32 Z-Patch, S+ #20 B-Patch, M #34 \u9ad8\u8003 (its Buff), C+ #77 Anti-Softlock, C+ #40 Appropriations (Military), S+ #103 Transcend, Core #28 Knockoff Temu Glowy Jelly Bean and C #70 Book of Plague (random placement). Eleven cards and seven tokens carry Immune to Spells (`spec/CARDS.md`, Keywords: S #74 Paragon-X, S #116 Megabase, S+ #67 Phase Wall, S+ #110 to #114, S+ #160 Icarus \u2026), so it comes up in real games. No test covers any of these walks against an immune Unit; \u9ad8\u8003's covers only its destroy half (`c034_gaokao.rs:212`).\n- S #3 Meteor: `adjacent_units_of` (`crates/engine/src/damage.rs:934`) leaves out a neighbour a Spell cannot reach but keeps a Dormant one. A Dormant neighbour is in the coin flip, `land` refuses it (`acts_on_field`) with `held: 0`, and the excess stops there: the other neighbour, and the Radiant face's hero, get nothing. R1848001 spills onto the Units acting beside the target.\n\n## Proposal\n1. `cards_in_card_scope`'s field walk asks `restrictions::unaffected_by(ctx, card)`, so every verb on a card scope passes an immune field Unit by when the running effect is a Spell. Hands and decks are untouched (immunity protects only on the field, R940), and Field Spells, Traps and Units still reach it.\n2. `buff_all_units` and `switch_all_positions` skip a Unit `unaffected_by` names.\n3. `set_radiant_random`'s field pool and Book of Plague's random placement leave out a Unit a Spell cannot reach, so the draw lands where it can change something, as R4322000 did for Dormant cards.\n4. `adjacent_units_of` leaves out a Dormant neighbour, so Meteor's excess goes on.\n5. A ruling in the issue's block naming the verbs and cards, its \u00a711 paragraph in `spec/pending/<issue>.md`, and a pending patch fragment with its player note (`cargo jackioh patches \u2026 --rule`).\n\nArcane Missiles stays with #4424. Evasive is out of scope: it bars aim, and scopes and random picks still reach it by design (`restrictions.rs` header).\n\n## Where it lands\n- `crates/engine/src/effects/card_scope.rs`, `effects/buff.rs`, `effects/position.rs`, `effects/radiant.rs`, `effects/plague.rs`, `damage.rs`, and the header list of `restrictions.rs`\n- rules tests in `crates/engine/tests/rules/` on fixture scripts, one per verb\n- the tests of the card scripts above: at least Adaptive Growth, 5pek Controller, \u9ad8\u8003, Z-Patch, Knockoff Temu Glowy Jelly Bean, Book of Plague and Meteor\n- `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`, `crates/cards/patches/pending/`\n- SPEC \u00a76.1 (Immune to Spells, Dormant); R940, R1185002, R1848001, R4322000\n\n## Acceptance criteria\n- [ ] Adaptive Growth's \u22122/\u22122 leaves an enemy Unit with Immune to Spells as it was and shrinks the others; an every-Unit buff from a Unit or a Field Spell still reaches it.\n- [ ] 5pek Controller leaves an immune Unit in its position.\n- [ ] \u9ad8\u8003's Buff passes an immune CN or KY permanent by, as its destroy already does.\n- [ ] A Spell's scoped `upgrade`, `buff_cards`, `grant_keyword_cards` and `transform_cost_step` skip an immune field Unit, and the same scope still reaches an immune card's copy in a hand or a deck.\n- [ ] Knockoff Temu Glowy Jelly Bean never draws an immune field Unit; with only immune Units on the field it draws among the hand and the library.\n- [ ] Book of Plague's random placement never lands on an immune Unit, and places nothing when no other permanent stands.\n- [ ] Meteor beside a Dormant card and a live Unit sends its excess to the live Unit (and the Radiant face's hero) whichever way the coin lands.\n- [ ] The ruling's note, a test named after it, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims` are green.\n- [ ] `cargo test -p jackioh-engine --features testkit --test 'rules*'`, `cargo test -p jackioh-cards`, `cargo jackioh golden check` and `cargo jackioh fuzz --seeds 200` are green.\n\n## Size and risks\nHard: engine rules across six verbs, about 15 to 20 files, mostly tests. Risks:\n- The rule makes no difference between harm and help, so Leg Day's and Appropriations' buffs skip the caster's own immune Unit too. If the designer wants helpful Spells to reach it, the ruling records that as a spec change instead.\n- The change is in engine verbs, not in one card's script, so `KEPT_SCRIPTS` does not cover it. The build runs `cargo jackioh golden check` and `cargo jackioh carried` and says how an older replay that played one of these Spells against an immune Unit is treated. #4357 made the same kind of engine change for Dormant cards.\n- The AI plays through the engine, so its reads follow without changes.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T03:52:16Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4453: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T03:53:41Z",
+    "claimed_at": "2026-11-22T03:54:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
