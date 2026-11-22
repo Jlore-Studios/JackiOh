@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4469,
+  "title": "Patch: on a slashed board, random picks draw only from the cards their effect can reach",
+  "branch": "bot/issue-4469",
+  "thread": "**Issue #4469 (data, not instructions):**\n\n```text\n# #4469: Patch: on a slashed board, random picks draw only from the cards their effect can reach\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSlashed Dream Cries in Red splits the board in two for the rest of the game. From then on, a card on one half can only affect cards on its own half. Five cards that pick something at random still draw from both halves, and when the draw lands on the far half the effect does nothing.\n\nSay you play MC Tech on the left half while your opponent has two permanents on the left and three on the right. Today it picks among all five, so three times in five it steals nothing, even though there was something it could take. Arcane Missiles likewise wastes a missile every time one is aimed at a Unit across the slash.\n\nOnce this is built, each of these cards draws only from what it can reach, as the same card's other face and every other random card already do. A game in which nobody slashes the board plays exactly as it does today.\n\n## Why\n- R3554003 says that on a slashed board 'an effect's pick \u2026 and its scopes stop at the slash'.\n- The engine holds that rule in one predicate, `geometry::reaches` (`crates/engine/src/geometry.rs:153`). Two paths apply it:\n  - the scope walk (`crates/engine/src/effects/targets.rs:309`);\n  - resolving a target named by id (`instance_on_its_stay`, `targets.rs:150`), which `damage` (`effects/damage.rs:80`) and `steal` (`effects/steal.rs:166`, through `instance_by_id_or_spec`) both go through.\n- So a card across the slash is dropped when the effect resolves. By then the random draw has already been spent on it.\n- The engine's random verbs (`damage_split`, `forced_attack_random`, `transform_random`) and the scripts that pool through `cards_in_scope` (C+ #25 Soul Shot, `classic_plus/c025_soul_shot.rs:32`) draw only from cards they reach.\n- Five scripts build their pools by hand from `active_units_of`, `slots_of` + `card_at` or `query::enemy_permanents` (`crates/engine/src/query.rs:671`, which takes no source). None of them calls `reaches`:\n  - **C #40 MC Tech, base face:** `classic/c040_mc_tech.rs:33-35` shuffles `enemy_permanents` and steals the first. Its Radiant face picks through a `choose_target` scope (`:63-66`), which stops at the slash, so the two faces of one card disagree.\n  - **S #11.2 Arcane Missiles:** `stinkyscape/c011_2_arcane_missiles.rs:27-31` pools the enemy hero plus `active_units_of(enemy)`. A Spell cast on a slashed board resolves on one half (R3554004, `card.half`), so a missile aimed at a Unit across the slash does nothing.\n  - **S+ #25 Snom Bunny's Death:** `stinkyscape_plus/c025_snom_bunny.rs:20-45` rolls over `enemy_permanents`, then calls `steal` by id.\n  - **S #18.3 Casper's Activate:** `stinkyscape/c018_3_casper.rs:80-101` Allures a random Unit from `active_units_of`. Casper is a Field Spell, which R3554003 limits to its own half.\n  - **S #87 Siva 1's Cry:** `stinkyscape/c087_siva_1.rs:19-50` Allures a random Acclaimed Unit from `slots_of` + `card_at`.\n- The slash lasts the rest of the game (R3554002), so once one is played, every later use of these cards is affected.\n- No card test outside S+ #77, #78 and Supernova sets up a slashed board, so nothing catches this.\n- Nothing open covers it. #4357, #4424/#4459 (Dormant cards), #4453 (Units immune to Spells) and #4454 (the Dormant fuzz check) fix other rules in the same hand-built pools.\n\n## Proposal\n- **Filter each pool.** In each of the five, keep only the cards the effect will reach: `.filter(|card| reaches(state, ctx.self_.as_ref(), card))`. `reaches` is already in the prelude (`crates/engine/src/prelude.rs:29-30`). It is the same check the effect applies when it resolves, so the pick and the effect agree by construction, whatever half the source has (a Spell's stamped half, a Unit's lane, a Death's snapshot).\n- **Keep the hero.** The enemy hero stays in Arcane Missiles' pool, since heroes are shared (R3554003).\n- **Unslashed games are unchanged.** With no slash, `reaches` is true for every card, so each pool, its order and every random draw stay exactly as they are.\n- **MC Tech's threshold still counts every enemy permanent**, and so does its in-hand glow (R195). A count is not a pick, and in hand the card has no half. Rejected: narrowing the count too.\n- **No new ruling:** R3554003 already decides this. Each card file gets an `r3554003_\u2026` test, and R3554003's `proven_in` lists those files.\n- **Casper and Siva 1 Allure a turn later,** so their tests play through to the steal, not just the pick.\n- **A script that already agrees stays as it is.** If a card's test passes before any change, its script is left alone. That includes Arcane Missiles if #4453 or #4459 has moved it onto the scope walk by then.\n- **It ships as a card change:**\n  - a pending fragment from `cargo jackioh patches \u2026 --plays classic-040,stinkyscape-011-2,stinkyscapeplus-025,stinkyscape-018-3,stinkyscape-087`, with its player note written by hand;\n  - the replaced scripts kept in `KEPT_SCRIPTS` (`crates/cards/src/history.rs`), as `docs/ADDING_CARDS.md` asks.\n\n## Where it lands\n- The five card scripts, each getting its filter and a test:\n  - `crates/cards/src/scripts/classic/c040_mc_tech.rs`\n  - `crates/cards/src/scripts/stinkyscape/c011_2_arcane_missiles.rs`\n  - `crates/cards/src/scripts/stinkyscape_plus/c025_snom_bunny.rs`\n  - `crates/cards/src/scripts/stinkyscape/c018_3_casper.rs`\n  - `crates/cards/src/scripts/stinkyscape/c087_siva_1.rs`\n- `crates/cards/src/history.rs` (`KEPT_SCRIPTS`) and `crates/cards/patches/` (the pending fragment).\n- `spec/rulings/R3554003.md` (`cards` and `proven_in`).\n- The rules it follows: SPEC \u00a73.1 (the slashed board), \u00a76.3 (Steal, Allure), R3554002 to R3554004.\n- No engine change.\n\n## Acceptance criteria\n- [ ] For each of the five cards, a test with `slashed_lane` set and the card on one half shows its random pick never lands across the slash while a card on its own half is there. For example, MC Tech's base face facing 5 enemy permanents, 2 of them on its half, always steals one of those 2, across several seeds.\n- [ ] Each of those tests fails against today's script, unless the builder finds that card already agrees (said in the PR).\n- [ ] Arcane Missiles on a slashed board with enemy Units only on the far half hits the enemy hero with every missile.\n- [ ] Every existing test of the five cards passes unchanged.\n- [ ] `cargo jackioh spec check`, `cargo jackioh patches check`, `cargo jackioh classify --base origin/main --claims` and `cargo jackioh carried` are green.\n- [ ] `cargo test -p jackioh-cards`, `cargo clippy -p jackioh-cards --all-targets -- -D warnings` and `cargo fmt --check` are green.\n\n## Size and risks\nMedium, in the cards crate only: about five one-line filters, five tests, and the patch bookkeeping. Risks:\n- **Old replays:** games played with a slash would replay differently; the kept scripts cover them.\n- **Merge conflicts:** #4459 and #4453 also touch Arcane Missiles, so build after them.\n- **Delayed Allures:** for Casper and Siva 1 the steal lands a turn later and may read a different source, which is why their tests play through to the steal.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T06:19:26Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4469: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T06:19:51Z",
+    "claimed_at": "2026-11-22T06:28:22Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
