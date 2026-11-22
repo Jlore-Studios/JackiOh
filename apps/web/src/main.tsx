@@ -131,7 +131,6 @@ const DungeonStatsRoute = routeChunks.dungeonStats.Screen;
 const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
-const AccessibilityRoute = routeChunks.accessibility.Screen;
 const CopyrightRoute = routeChunks.copyright.Screen;
 const PatchNotesRoute = routeChunks.patchNotes.Screen;
 const AlmanacRoute = routeChunks.almanac.Screen;
@@ -755,7 +754,6 @@ export function App(): ReactElement {
     if (path === paths.terms) return <TermsRoute />;
     // R1665000: the page is public, its disclaimer anyone's; with a session it reads the odds and the account's counters itself.
     if (path === paths.purchases) return <PurchasesRoute />;
-    if (path === paths.accessibility) return <AccessibilityRoute />;
     if (path === paths.copyright) return <CopyrightRoute />;
     // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) {

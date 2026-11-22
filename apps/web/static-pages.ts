@@ -62,10 +62,6 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
   },
   { path: paths.terms, description: "The terms of playing JackiOh." },
   {
-    path: paths.accessibility,
-    description: "JackiOh's accessibility statement, and how to tell us about a barrier.",
-  },
-  {
     path: paths.copyright,
     description: "How to report content on JackiOh that infringes your copyright, and how to answer a report.",
   },
@@ -86,8 +82,8 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
 const section = (heading: string, body: string): string => `<section><h2>${heading}</h2>${body}</section>`;
 
 /**
- * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms,
- * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
+ * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms
+ * and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
  */
 export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.landing]:
@@ -217,46 +213,6 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     section(
       "Repeat infringers",
       "<p>We close the accounts of players who repeatedly infringe others&rsquo; copyrights.</p>",
-    ),
-  [paths.accessibility]:
-    section(
-      "Our goal",
-      "<p>We want JackiOh to be usable by as many players as we can make it. It has had an automated " +
-        "check against the Web Content Accessibility Guidelines (WCAG) 2.2 at levels A and AA, and no " +
-        "audit by a person. We do not claim that it conforms to WCAG.</p>",
-    ) +
-    section(
-      "What we checked",
-      "<p>On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer's " +
-        "size and at a phone's, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed " +
-        "every serious or critical problem it found, except " +
-        "those listed below. The same check runs every day, and fails when a new one appears.</p>" +
-        "<ul><li>The home page, signing in, creating an account, resetting a password, the invite code " +
-        "screen and the screen that asks for your date of birth and agreement to the terms.</li>" +
-        "<li>Play, Decks, Account and the leaderboard.</li>" +
-        "<li>The Almanac, Patch notes and Stats.</li>" +
-        "<li>Practice, its setup and a game, and a game on one device.</li>" +
-        "<li>Replays, Play together and the Collection.</li>" +
-        "<li>The Privacy Policy, the Terms, this page and the Copyright page.</li></ul>",
-    ) +
-    section(
-      "Current support",
-      "<ul><li>Menus, the deck builder, and the board's cards, zones and prompts can be used " +
-        "from the keyboard.</li>" +
-        "<li>Focused controls are marked, and each screen has headings.</li>" +
-        "<li>Card art is decorative and hidden from screen readers; each card's name and text are " +
-        "on the card as text.</li>" +
-        "<li>Reduce motion, effects and sound can be changed in Settings.</li></ul>",
-    ) +
-    section(
-      "Known gaps",
-      "<ul><li>A card shown as a button, on the home page, in the Almanac's card pool, in the Collection and in a game's " +
-        "prompts, is named by a short summary that names the card, not by all the text on its face.</li>" +
-        "<li>Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where " +
-        "it goes does the same, by click or by Enter on each.</li>" +
-        "<li>Color contrast is checked only where the tool can measure it, so text over card art and " +
-        "gradients has not been checked.</li>" +
-        "<li>No one has tested JackiOh with a screen reader or other assistive technology yet.</li></ul>",
     ),
 };
 

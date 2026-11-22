@@ -42,7 +42,6 @@ export const routeChunks = {
   privacy: routeChunk(() => import("./privacy.tsx")),
   terms: routeChunk(() => import("./terms.tsx")),
   purchases: routeChunk(() => import("./purchases.tsx")),
-  accessibility: routeChunk(() => import("./accessibility.tsx")),
   copyright: routeChunk(() => import("./copyright.tsx")),
   patchNotes: routeChunk(() => import("./patch-notes.tsx")),
   almanac: routeChunk(() => import("./almanac.tsx")),

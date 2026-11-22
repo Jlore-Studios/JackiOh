@@ -247,7 +247,6 @@ export const paths = {
   practice: "/practice",
   privacy: "/privacy",
   terms: "/terms",
-  accessibility: "/accessibility",
   /** Issue #757: the copyright and takedown page. */
   copyright: "/copyright",
   /** R388: patch notes and touched cards. */
