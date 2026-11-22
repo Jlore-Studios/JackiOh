@@ -65,10 +65,11 @@ sweep = load_sweep(["sweep-1.jsonl", "sweep-2.jsonl"])  # cargo jackioh sweep --
 generations = load_generations(".")  # a repository root
 ```
 
-`load_sweep` is one row per card and tier (`card`, `tier`, `games`, `drawn_games`, `affordable_turns`, `plays`,
-`errors`, `timeouts`, `eval_delta_sum`, `eval_delta_count`, `eval_delta_mean` (NaN with no plays), `flags` (a list
-of `error`, `timeout`, `neverPlayed`, `selfHarm`) and `unswept`). It skips a pass-2 line, so the files of a whole
-sweep may be named together, and refuses a card and tier it has already read. `load_generations` is one row per
+`load_sweep` is one row per card, tier and face (`card`, `tier`, `face` (`base` or `radiant`; `base` when a line
+has none), `games`, `drawn_games`, `affordable_turns`, `plays`, `errors`, `timeouts`, `eval_delta_sum`,
+`eval_delta_count`, `eval_delta_mean` (NaN with no plays), `flags` (a list of `error`, `timeout`, `neverPlayed`,
+`selfHarm`) and `unswept`). It skips a pass-2 line, so the files of a whole sweep may be named together, and
+refuses a card, tier and face it has already read. `load_generations` is one row per
 generation, oldest first, from `training/history/*.jsonl` and `crates/ai/generation.json` under the root (the
 history's line for a generation wins over `generation.json`'s, which holds the newest again and generation 0);
 `vs_random_wins` and `vs_random_games`, `vs_parent_wins` and `vs_parent_games` are the gate's `"93/100"` split in two.
@@ -83,7 +84,7 @@ one; `test_notebooks.py` fails on a notebook that holds any), and `test_notebook
 |---|---|
 | `01-card-win-rates.ipynb` | R377's breakdowns for every card beside their games, by set and rarity, the 15 best and worst cards by in-deck win rate and by drawn delta, one patch against the one before it, and a development run against live games of the same patch (R378) |
 | `02-decks-and-play.ipynb` | Mana curves by mode and pilot, play rate and the cards most often drawn and not played, the turn cards are first played on, and the first player's win rate, how games end and the length of a game by mode and patch |
-| `03-ai-sweep-and-generations.ipynb` | A shadow-ban sweep's pass-1 lines per card and tier with its flags, and the AI's generations against random play and their parents, per lane |
+| `03-ai-sweep-and-generations.ipynb` | A shadow-ban sweep's pass-1 lines per card, tier and face with its flags, and the AI's generations against random play and their parents, per lane |
 
 Each one's first cell reads its inputs from the environment and defaults to the fixtures, saying so when it does:
 
