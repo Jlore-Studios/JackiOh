@@ -16000,17 +16000,8 @@
       ]
     },
     "4510": {
-      "action": "plan",
-      "asks": [
-        "c:7087527938"
-      ],
-      "build_next": {
-        "from_run": "45083563867",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-22T23:37:53Z",
-        "until": "2026-11-23T00:07:53Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T23:37:45Z",
         "difficulty": "medium",
@@ -16029,10 +16020,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; ls .bot-plan.md 2>&1; sed -n 840,960p crates/server/src/daily/games.rs; grep -n \\\"matches_get\\\\|daily_games_due\\\\|fn matches_\\\" crates/server/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -n 960,1010p crates/server/src/daily/games.rs; sed -n 1785,1800p crates/server/src/db/store.rs; sed -n 1830,1885p crates/server/src/db/stor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -n 640,660p crates/server/src/db/pg.rs; sed -n 3040,3110p crates/server/src/db/pg.rs; sed -n 8195,8240p crates/server/src/db/pg.rs; grep -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; grep -n \\\"portraits\\\\|p1_portrait\\\" crates/server/src/db/pg.rs | head -20; grep -n \\\"any(\\\\$1::uuid\\\\[\\\\])\\\\|= any(\\\" crates/server/src/db/pg.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -n 685,700p crates/server/src/db/pg.rs; grep -n \\\"fn portrait_or_default\\\" -A10 crates/server/src/db/pg.rs; sed -n 1890,1930p crates/server\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; grep -n \\\"CHECK 20\\\\|CHECK 27\\\" crates/server/tests/sql/01_schema_invariants.sql | head; grep -n \\\"s913\\\" crates/server/tests/store/contract.rs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -n 13985,14040p crates/server/tests/store/contract.rs; sed -n 3555,3600p crates/server/tests/store/contract.rs; sed -n 1156,1215p crates/se\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; grep -rn \\\"matches_status_created_at_idx\\\\|daily_games_due_idx\\\" crates/server/migrations | head; sed -n 60,110p crates/server/migrations/0089_\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -n 180,190p crates/server/migrations/0004_matches.sql; sed -n 1625,1660p crates/server/tests/sql/01_schema_invariants.sql | head -5; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -n 1,70p crates/server/tests/sql/53_daily_games.sql; sed -n 1481,1539p crates/server/tests/sql/01_schema_invariants.sql\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; grep -rn \\\"matches.seats\\\\|\\\\\\\"matches.live\\\\\\\"\\\" crates/server --include=*.rs | grep -v \\\"^crates/server/src/db/fake.rs:15\\\" | head; grep -n \\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; grep -n \\\"portrait_or_default\\\" crates/server/src/db/pg.rs | head -3; grep -n \\\"fn call\\\\b\\\" -A22 crates/server/src/db/fake.rs; grep -rn \\\"call\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; grep -rn \\\"on_call\\\" crates/server --include=*.rs | head -12; sed -n 905,945p crates/server/tests/api/daily.rs; sed -n 1,40p crates/server/test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -n 55,100p crates/server/tests/support/store.rs; sed -n 1280,1310p crates/server/tests/api/stats.rs; sed -n 1425,1470p crates/server/tests/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; grep -n \\\"portraits\\\" crates/server/src/daily/*.rs | head; grep -n \\\"record_calls\\\" crates/server/tests/api/*.rs | head -3; sed -n 101,135p cra\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; grep -n \\\"s913_daily_games_due_by_deadline\\\\|a_malformed_match_id_is_no_match\\\" crates/server/tests/store/*.rs; grep -n \\\"fn match_row\\\" -A32 c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4510; sed -n 4225,4262p crates/server/tests/store/contract.rs; sed -n 3015,3040p crates/server/tests/store/contract.rs\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4510/.bot-plan.md\", \"content\": \"# Draft plan #4510 (medium)\\nRead: daily/games.rs list+summary_json, store.rs/pg.rs/fake.rs matches_get + daily_games_\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"One crate (crates/server): a new store read in three files, one query rewritten and one SQL check. No migration (rule 4 does not apply), no engine or AI change, and well under 40 files.\"} --> ## Goal `GET /api/daily` reads every game's portraits in one sto\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-22T23:29:57Z",
       "owner_why": "it plans it",
@@ -16045,12 +16035,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-22T23:23:05Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45083563867",
+      "run_id": "pending:f3f8fbe4-1795390702",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T23:29:57Z",
+      "started_at": "2026-11-22T23:38:38Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7087527938"
+      ]
     },
     "4511": {
       "action": "build",
@@ -16513,9 +16505,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T23:29:57Z",
+    "at": "2026-11-22T23:38:38Z",
     "url": "",
-    "what": "plan #4510 on claude-6"
+    "what": "build #4510 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-22T23:27:55Z",
