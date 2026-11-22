@@ -16491,13 +16491,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-4",
       "queued_at": "2026-11-22T03:48:29Z",
-      "run_id": "44982509003",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:a489875a-1795328195",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 440,
-      "started_at": "2026-11-22T03:51:35Z",
+      "started_at": "2026-11-22T06:17:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16963,9 +16964,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T05:58:22Z",
+    "at": "2026-11-22T06:17:00Z",
     "url": "",
-    "what": "suggestions (server) on claude-4"
+    "what": "spot-check #4458 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-22T06:06:23Z",
@@ -38443,7 +38444,15 @@
         "n": 440,
         "pr": 4458,
         "queued_at": "2026-11-22T06:13:53Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:a489875a-1795328195",
         "sha": "59c8529162a1918db28ec1fa883ce19ebb0c0c9e",
+        "started_at": "2026-11-22T06:17:00Z",
         "status": "queued",
         "title": "Patch: the sound-effect recipes load when sound first needs them, not in the first page load",
         "tries": 0
