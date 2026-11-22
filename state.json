@@ -40177,6 +40177,12 @@
         "number": 4450,
         "title": "Patch: the engine module and the scene data that load before any card shows have a download budget, held on every pull request as the first load's is",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-22T16:02:26Z",
+        "number": 4471,
+        "title": "Patch: an e2e test that passes only on its retry is named in every run, and fails the daily run",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
