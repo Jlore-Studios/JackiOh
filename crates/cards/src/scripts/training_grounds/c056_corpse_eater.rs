@@ -10,8 +10,9 @@
 //! meant for both (R2195003), reads a death as the Core card does since: by what the card was on the field
 //! as it died (R4423000, `is_unit_death`), so a Unit set face-down by its Cloaked and destroyed before it
 //! reveals feeds nothing and an Animated Field Spell or Trap killed in a unit zone feeds it;
-//! `script_v0_6_9i` keeps the definition's type for v0.6.9j and before (R767000). The Core file's notes,
-//! as they stood:
+//! `script_v0_6_9i` keeps the definition's type for v0.6.9j and before (R767000). The same patch stops its
+//! gain at `MULTIPLIED_STAT_CAP` (R4423001), as the Core card's, which `script_v0_6_9i` does not. The Core
+//! file's notes, as they stood:
 //!
 //! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89).
 //!
@@ -31,8 +32,9 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "traininggrounds-056";
 
 /// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
-/// `by_print` reads a death by the dead card's definition, as v0.6.9j and before did (R767000).
-fn feed(factor: i32, by_print: bool) -> TriggerDef {
+/// `kept` is what v0.6.9j and before ran (R767000): a death read by the dead card's definition, and a gain with
+/// no cap (R4423001).
+fn feed(factor: i32, kept: bool) -> TriggerDef {
     TriggerDef::new(
         "corpse-eater-feed",
         &[GameEventType::Destroyed],
@@ -51,7 +53,7 @@ fn feed(factor: i32, by_print: bool) -> TriggerDef {
             let dead = def_of(Some(&*ctx.state), def_id);
             // A destroyed Field Spell or Trap emits the same event; only units feed it, R4423000: by what
             // the card was as it died.
-            let unit = if by_print {
+            let unit = if kept {
                 dead.type_ == CardType::Unit
             } else {
                 is_unit_death(&*ctx.state, event)
@@ -67,8 +69,20 @@ fn feed(factor: i32, by_print: bool) -> TriggerDef {
             // R38, R89: the attack and max health the layers computed at the moment it died. R219: a gain
             // is never a loss, so a unit #46 starved below 0 max health gives nothing rather than shrinking
             // the Eater (§10.4 floors attack at 0 already; max health below 0 is only the check's signal).
-            let gained_attack = (*attack).max(0) * factor;
-            let gained_health = (*max_health).max(0) * factor;
+            let mut gained_attack = (*attack).max(0) * factor;
+            let mut gained_health = (*max_health).max(0) * factor;
+            // R4423001: the gain takes its Attack and max Health no higher than `MULTIPLIED_STAT_CAP`, so an Eater
+            // that eats another Eater (the doubling R4079000 bounds) stops there; one the cap leaves nothing to
+            // gain buffs nothing.
+            if !kept && let Some(eater) = ctx.live_self() {
+                let now = unit_view(&*ctx.state, eater);
+                let attack = gained_attack.min(MULTIPLIED_STAT_CAP - now.attack).max(0);
+                let health = gained_health.min(MULTIPLIED_STAT_CAP - now.max_health).max(0);
+                if (attack, health) == (0, 0) && (gained_attack, gained_health) != (0, 0) {
+                    return vec![];
+                }
+                (gained_attack, gained_health) = (attack, health);
+            }
             vec![buff(json_as(json!({
                 "target": { "of": "self" },
                 "attack": gained_attack,
@@ -88,14 +102,14 @@ pub fn script_v0_6_9i() -> CardScripts {
     eater(true)
 }
 
-/// `by_print` as `feed`'s.
-fn eater(by_print: bool) -> CardScripts {
+/// `kept` as `feed`'s.
+fn eater(kept: bool) -> CardScripts {
     let base = Script {
-        hand_triggers: vec![feed(1, by_print)],
+        hand_triggers: vec![feed(1, kept)],
         ..Script::default()
     };
     let radiant = Script {
-        hand_triggers: vec![feed(2, by_print)],
+        hand_triggers: vec![feed(2, kept)],
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -476,6 +490,58 @@ mod tests {
                     .expect("the set card's destroyed");
                 assert!(attack > 0 && max_health > 0, "{attack}/{max_health}");
                 s.expect_stats(EATER, json!({ "attack": 5 + attack, "maxHealth": 5 + max_health }));
+            });
+        }
+    }
+
+    /// R4423001: the gain takes the Eater's Attack and max Health no higher than `MULTIPLIED_STAT_CAP`, as
+    /// the Core card's (R2195003).
+    mod n56_corpse_eater_r4423001 {
+        use super::*;
+
+        const HIT_JOB: &str = "core-016";
+        const BIG: &str = "stand-in (1) 600/600";
+
+        /// p2's two Hit Jobs kill p1's two 600/600 Units, p1's Eater in hand; the Buffs of each death.
+        fn two_deaths(radiant: bool) -> (Scenario, [usize; 2]) {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "active": "p2",
+                "p1": {
+                    "hand": [{ "def": EATER, "radiant": radiant }, FILLER],
+                    "field": [{ "def": BIG, "lane": 1 }, { "def": BIG, "lane": 2 }],
+                },
+                "p2": { "hand": [HIT_JOB, HIT_JOB, FILLER], "mana": 10 },
+            }));
+            let mut buffs = [0; 2];
+            for (lane, buffed) in [1, 2].into_iter().zip(&mut buffs) {
+                let big = s.unit_at(P1, lane).id.clone();
+                s.play(HIT_JOB, json!({ "targets": pick::id(&big) }));
+                *buffed = s.last_events_of(GameEventType::Buffed).len();
+            }
+            (s, buffs)
+        }
+
+        #[test]
+        fn r4423001_legacy_corpse_eater_s_gain_stops_at_the_multiplied_stat_cap() {
+            // The base face's 5/5 takes 600/600 and then the 394/394 left below the cap; the Radiant
+            // face's 10/10 takes the 989/989 left of its doubled 1200/1200 and then gains nothing.
+            for (radiant, buffs) in [(false, [1, 1]), (true, [1, 0])] {
+                let (mut s, buffed) = two_deaths(radiant);
+                assert_eq!(buffed, buffs, "radiant {radiant}");
+                s.expect_stats(
+                    EATER,
+                    json!({ "attack": MULTIPLIED_STAT_CAP, "maxHealth": MULTIPLIED_STAT_CAP }),
+                );
+            }
+        }
+
+        /// R767000: v0.6.9j and before had no cap.
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_9i_gains_past_the_cap() {
+            crate::under_kept(ID, script_v0_6_9i(), || {
+                let (mut s, _) = two_deaths(true);
+                s.expect_stats(EATER, json!({ "attack": 2410, "maxHealth": 2410 }));
             });
         }
     }
