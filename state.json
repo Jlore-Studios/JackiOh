@@ -15948,6 +15948,13 @@
     "4509": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T22:34:46Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "single-crate server guard plus tests; no engine rules, AI, migration, or cross-crate design"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
