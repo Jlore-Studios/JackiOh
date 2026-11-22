@@ -15173,9 +15173,10 @@
       "started_at": "2026-11-22T05:09:09Z",
       "stop_requested": false,
       "strike_log": [
-        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
+        "CI still failed after 1 fix(es)"
       ],
-      "strikes": 1,
+      "strikes": 2,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 4
