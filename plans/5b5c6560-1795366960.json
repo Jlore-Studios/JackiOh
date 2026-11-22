@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4496,
+  "title": "Patch: follow-up to #4480 from the after-merge spot-check",
+  "branch": "bot/issue-4496",
+  "thread": "**Issue #4496 (data, not instructions):**\n\n```text\n# #4496: Patch: follow-up to #4480 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4480 -->\nThe after-merge spot-check of #4480 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45046316775)) found 1 blocking problem(s) in the change as it merged (`8ca254f1a9fd`). `claude-6` (claude, `opus`, strong) reviewed it. #4480 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/cards/src/history.rs:1221`: The kept scripts for the seven changed cards stop at v0.6.9k, but v0.6.9l shipped before this change merged and still ran the old scripts. A v0.6.9l game therefore folds under the new scripts: the new death read, and Corpse Eater's new 999 cap.\n  Evidence: The merge commit's parent is 99a9c84d7f 'patches ship: v0.6.9l (#4492)', and crates/cards/patches/shipped.json at HEAD ends at \"version\": \"v0.6.9l\". The newest KEPT_SCRIPTS rows for c089_corpse_eater, c056_legacy_corpse_eater, c035_corpse_recycler, c093_recessive_replicators, c060_eschews, c007_the_greatest_heist and c014_shadowstep are keyed \"v0.6.9k\" (history.rs:1221-1248). covering_at (history.rs:1496) only takes rows keyed at or after the asked version, so it finds no row for v0.6.9l and that version runs script(). docs/ADDING_CARDS.md:222 says to key the row at 'the newest shipped version'. The tests only cover v0.6.9i, v0.6.9j and v0.6.9k (history.rs:1907-1957), so nothing catches this. The fix: key these rows at v0.6.9l, extend r767000_issue_4423_scripts_are_kept_through_v0_6_9k_once_it_shipped to v0.6.9l, and change 'v0.6.9k and before' in R4423000.md, R4423001.md, spec/pending/4423.md, the scripts' doc comments and the \u00a78 rows to v0.6.9l.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-3` (`claude`) built #4480 and `claude-3` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-6"
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4496: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T17:01:11Z",
+    "claimed_at": "2026-11-22T17:03:01Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
