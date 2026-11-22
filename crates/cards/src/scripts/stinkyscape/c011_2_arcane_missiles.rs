@@ -23,7 +23,7 @@ fn arcane_missiles(echo: i32, kept: bool) -> Script {
             // R4424000: the pool is the enemy Units a Spell may affect (C+ #25 Soul Shot's pool),
             // so a Unit immune to Spells and a Dormant card are never drawn.
             let ids: Vec<String> = if kept {
-                active_units_of(&ctx.sink.state, enemy)
+                active_units_of(ctx.sink.state, enemy)
                     .iter()
                     .map(|unit| unit.id.clone())
                     .collect()
