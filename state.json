@@ -16103,6 +16103,13 @@
     },
     "4448": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-22T05:07:32Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "run the issue's two fork screens on a machine of your own (Part P below). Then post, in one comment on #4448, each screen's closing tally line, its wall time, the control's commit and the machine. Then take `human required` off and put `bot:build` back. No bot run can finish one of these screens:"
+      },
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T05:07:16Z",
@@ -16111,8 +16118,6 @@
         "tier": "strong",
         "why": "Rule line 2, the AI: it moves AI_EVAL weights in crates/ai/src/config.rs that change the AI's decisions"
       },
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-22T04:01:33Z",
         "family": "claude",
@@ -16122,25 +16127,18 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; sed -n 700,790p crates/ai/src/config.rs; grep -n \\\"turn_hook\\\\|activation\\\" crates/ai/src/config.rs | head -50\"}\n- Bash: {\"command\": \"sed -n 1025,1075p crates/ai/src/config.rs; grep -n \\\"A screen\\\" -n training/improve.md | head; ls spec/rulings | tail -5; ls spec/pending | head; ls crates/ai/tests/ai | head -80\"}\n- Bash: {\"command\": \"cat spec/rulings/R4397000.md; grep -n \\\"fork\\\" training/improve.md | head -60\"}\n- Bash: {\"command\": \"sed -n 120,215p training/improve.md; cat spec/pending/4397.md | head -30; sed -n 536,552p crates/ai/src/config.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"turn_hook\\\\b\\\\|\\\\.activation\\\\b\\\" crates --include=*.rs | grep -v \\\"^crates/ai/src/config.rs\\\" | head -40; ls target 2>/dev/null | head; nproc; grep -n \\\"fn \\\\|^//!\\\" crates/a\u2026\n- Bash: {\"command\": \"grep -n \\\"practice-claim\\\" -r training/README.md crates/ai/README.md | head; grep -n \\\"What a lane may change\\\" -A25 training/README.md | head -50; grep -n \\\"forks\\\\|extend\\\" crates/tool\u2026\n- Bash: {\"command\": \"grep -n \\\"timeout\\\\|budget\\\\|minutes\\\\|hours\\\" .harness/config.json | head -20; grep -n \\\"R2477000\\\\|R2564000\\\" -r spec/rulings/*.md -l | head; grep -n \\\"SCREEN_MAX_GAMES\\\\|FORK_ROLLOUTS\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\.\\\\.AI_EVAL\\\" crates/ai/tests crates/ai/src | head -8; grep -n \\\"pub fn evaluate_priced\\\\|pub fn decide\\\\|pub fn evaluate\\\\b\\\\|pub fn kill_worth\\\\|pub fn unit_worth\\\" crates\u2026\n- Bash: {\"command\": \"grep -n \\\"crates/ai\\\" crates/tools/src/classify.rs | head -10; grep -n \\\"AI\\\\b.*kind\\\\|Ai =>\\\" crates/tools/src/classify.rs | head\"}\n- Bash: {\"command\": \"sed -n 285,330p crates/tools/src/classify.rs; git log --oneline -8 -- crates/ai/src/config.rs; git show --stat HEAD~3 | head -5\"}\n- Bash: {\"command\": \"git show --stat 095640be39 | head -20; git show --stat e41f3eb9e9 | head -20\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4448/.bot-plan.md\", \"content\": \"Draft: plan for #4448 \\u2014 hard (AI). Two fork screens (turn_hook, activation) at 1.0 vs control; record in config.r\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 2: it changes the AI's evaluation weights in crates/ai/src (decisions), and the keep/revert call rests on two long fork screens.\"} --> ## Goal Screen `AI_EVAL.turn_hook` and `AI_EVAL.activation` at 1.0, one fork screen each. Each screen runs against a c\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-8",
-      "owner_since": "2026-11-22T03:57:08Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-22T05:07:19Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "queued_at": "2026-11-22T03:51:00Z",
-      "requested_by": "jgoetzmann",
+      "question": "run the issue's two fork screens on a machine of your own (Part P below). Then post, in one comment on #4448, each screen's closing tally line, its wall time, the control's commit and the machine. Then take `human required` off and put `bot:build` back. No bot run can finish one of these screens:",
       "run_id": "44984316561",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-22T04:16:20Z",
-      "stop_requested": false,
       "suggestion": true,
       "taken_asks": [
         "c:7073816949"
