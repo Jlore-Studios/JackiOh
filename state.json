@@ -18492,6 +18492,8 @@
       "spot_check_of": 4480,
       "started_at": "2026-11-22T17:19:02Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 2
     },
