@@ -15565,6 +15565,7 @@
       "run_id": "44960585083",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 430,
       "started_at": "2026-11-21T23:11:43Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36966,9 +36967,33 @@
         "title": "Patch: an unowned cosmetic pick is left out of a settings save instead of refusing the whole save",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "eadf8fc6a39f53185f860b9b8277dbbed30a45a2",
+        "issue": 4410,
+        "merged_at": "2026-11-22T01:05:43Z",
+        "n": 430,
+        "pr": 4436,
+        "queued_at": "2026-11-22T01:05:43Z",
+        "sha": "07683ea0a11b48a247e9f7f468f3e6e2b95e72fb",
+        "status": "queued",
+        "title": "Patch: Spice pays Credits when played or discarded, as a Resource does, instead of selling from the hand",
+        "tries": 0
       }
     ],
-    "count": 429
+    "count": 430
   },
   "statistics": {
     "at": "2026-11-22T01:04:13Z"
