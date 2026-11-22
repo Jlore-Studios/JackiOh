@@ -3261,3 +3261,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-22T18:23:45Z,45048754991,claude-3,opus,build,4496,hard,built,,27.4,84,21520,3198434,1.6777,11,14,,,17.9,claude-3,fresh,,1
 2026-11-22T18:46:20Z,45054907263,claude-1,sonnet+opus,review,4504,medium,approved,,18.7,25,8002,1031358,0.9388,5,7,,,1.4,,none,,1
 2026-11-22T18:42:00Z,45047170156,claude-6,opus,build,4493,hard,built,,47.1,256,94782,24356621,8.7633,0,16,,,84.2,claude-7,fresh,cap,1
+2026-11-22T18:59:56Z,45057279017,claude-6,opus,review,4506,hard,approved,,6.9,39,13693,2143393,3.0719,17,23,,,0.9,,none,,1
+2026-11-22T19:09:24Z,45058900368,muse,muse-spark-1.3-contributor,plan,4507,medium,planned,,1.6,0,0,0,,6,7,78,79,0.2,,none,,1
+2026-11-22T19:11:10Z,45058789545,gpt,gpt-5.6-sol,revise,4501,medium,blocked,,4.5,934888,9515,0,,,,19,19,0.5,gpt,none,,1
+2026-11-22T19:08:31Z,45054853613,muse,muse-spark-1.3-contributor,review,4503,medium,approved,,43.5,0,0,0,,6,6,78,78,1.6,,none,,1
