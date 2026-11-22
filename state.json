@@ -17792,6 +17792,13 @@
     },
     "4486": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-22T09:23:36Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "a person must restructure `.github/workflows/sweep.yml` so a sweep of record runs as several shard jobs. Bots may not edit anything under `.github/`, and no code-only change can make the sweep fit in one 350-minute job. Steps 1\u20136 below are written for that person."
+      },
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T09:23:25Z",
@@ -17800,28 +17807,19 @@
         "tier": "strong",
         "why": "already rated hard (it cannot go lower); the fix is splitting the shadow-ban sweep's workflow into shards, a structural change to a measurement of record"
       },
-      "failures": 0,
-      "forced": false,
-      "in_lane": true,
       "interruptions": 0,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-7",
-      "owner_since": "2026-11-22T09:09:46Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-22T09:23:28Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "queued_at": "2026-11-22T09:07:58Z",
-      "requested_by": "jgoetzmann-bot",
+      "question": "a person must restructure `.github/workflows/sweep.yml` so a sweep of record runs as several shard jobs. Bots may not edit anything under `.github/`, and no code-only change can make the sweep fit in one 350-minute job. Steps 1\u20136 below are written for that person.",
       "run_id": "45006183126",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 4481,
       "started_at": "2026-11-22T09:09:46Z",
-      "stop_requested": false,
       "taken_asks": []
     },
     "4487": {
