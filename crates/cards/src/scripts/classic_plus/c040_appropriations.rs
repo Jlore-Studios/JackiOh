@@ -387,6 +387,25 @@ mod tests {
         }
 
         #[test]
+        fn r4453000_military_passes_your_immune_field_unit_by_and_reaches_your_immune_hand_unit() {
+            // §6.1: Immune to Spells guards a Unit on the field only, so a copy in a hand is reached.
+            let mut s = appropriations(false, json!({}), json!({}));
+            let timmy = unit(&s, P1, 1).id;
+            let held = mine(&s, VANILLA, "hand").id;
+            for id in [&timmy, &held] {
+                s.card_mut(id.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+            }
+            s.play(APPROPRIATIONS, json!({ "x": 3, "modes": ["Military"] }));
+            s.expect_stats(timmy.as_str(), json!({ "attack": 3, "health": 3 }));
+            assert_eq!(s.card(timmy.as_str()).buffs.attack, 0);
+            assert!(!s.card(timmy.as_str()).granted_keywords.iter().map(kind_of).any(|kind| kind == "Rush"));
+            let held = s.card(held.as_str()).clone();
+            assert_eq!(held.buffs.attack, 3);
+            assert!(held.granted_keywords.iter().map(kind_of).any(|kind| kind == "Rush"));
+            assert_eq!(mine(&s, MENACE, "library").buffs.attack, 3);
+        }
+
+        #[test]
         fn r13_a_unit_dormant_under_a_stack_is_not_on_the_field_only_the_piles_top_is_buffed() {
             let mut s = appropriations(false, json!({ "field": [VANILLA, { "def": FIENDER, "stack": true }] }), json!({}));
             let buried = s.state().players.p1.units[0].as_ref().expect("a pile in lane 1")[1].clone();
@@ -714,6 +733,24 @@ mod tests {
             // Field 1 + hand 2 + deck 2: five rolls whether or not the hand's Vanilla is Radiant already.
             assert_eq!(rolls(false), 5);
             assert_eq!(rolls(true), 5);
+        }
+
+        #[test]
+        fn r4453000_culture_never_rolls_your_immune_field_unit() {
+            // §6.1: 108% turns every card it rolls, so the immune Unit stays as it is only because the
+            // Spell passes it by; the hand and the deck are no field and still turn.
+            let mut s = appropriations(true, json!({ "mana": 9 }), json!({}));
+            let timmy = unit(&s, P1, 1).id;
+            s.card_mut(timmy.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+            s.play(APPROPRIATIONS, json!({ "x": 9, "modes": ["Culture"] }));
+            assert!(!s.card(timmy.as_str()).radiant);
+            s.expect_stats(timmy.as_str(), json!({ "attack": 3, "health": 3 }));
+            let mut cards = s.hand(P1);
+            cards.extend(s.pile(P1, "library"));
+            assert_eq!(cards.len(), 4);
+            for card in &cards {
+                assert!(card.radiant, "{}", card.def_id);
+            }
         }
 
         #[test]
