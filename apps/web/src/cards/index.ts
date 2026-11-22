@@ -3,7 +3,7 @@
 // files import each other by path, never through this barrel, so it cannot create an import cycle.
 
 export { faceModel } from "./model.ts";
-export type { FaceModel, InPlay, RolledPower } from "./model.ts";
+export type { FaceModel, FaceSource, InPlay, RolledPower } from "./model.ts";
 export { ALL_TRIBES } from "./frame.ts";
 
 export { CardDefsProvider } from "./refContext.tsx";
