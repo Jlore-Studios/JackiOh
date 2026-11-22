@@ -17089,7 +17089,7 @@
       }
     },
     "4464": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -17108,10 +17108,12 @@
       },
       "interruptions": 0,
       "issue": 4456,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T18:13:24Z",
         "from_run": "45045346324",
         "gates": [
           {
@@ -17186,11 +17188,11 @@
       "question": "",
       "queued_at": "2026-11-22T18:10:13Z",
       "round_tier": "medium",
-      "run_id": "45045346324",
+      "run_id": "pending:8a657550-1795371183",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-22T16:42:35Z",
+      "started_at": "2026-11-22T18:13:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -19064,9 +19066,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T18:12:51Z",
+    "at": "2026-11-22T18:13:24Z",
     "url": "",
-    "what": "review #4502 on muse"
+    "what": "review #4464 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T18:02:22Z",
