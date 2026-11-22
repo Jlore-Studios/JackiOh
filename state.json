@@ -16701,7 +16701,7 @@
     "4459": {
       "action": "review",
       "asks": [],
-      "audit_tier": "",
+      "audit_tier": "medium",
       "ci_early": false,
       "ci_fixed_head": "2d9a952bf8a196df9a34c4a61f0083f314661419",
       "ci_fixes": 3,
@@ -16722,7 +16722,7 @@
         "resolved_by": "`gemini` (medium)",
         "sha": "9bc8102411daf77db3d9a62110f575e40629b2c6"
       },
-      "cross_rounds": 1,
+      "cross_rounds": 2,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16730,14 +16730,33 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4424,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The Transmogulate and Unlicensed Experimentation kept rows are keyed at v0.6.9i, but v0.6.9j, v0.6.9k and v0.6.9l shipped after it and ran the pre-fix scripts, so replays from those versions fold under the new script.",
+          "evidence": "shipped.json ends v0.6.9i, v0.6.9j (77e6ef9230), v0.6.9k (3de2d02ce5), v0.6.9l (4d9671dfb8), and `git log` shows c083 and c085 were untouched between v0.6.9i and this branch. `covering_at` (history.rs:1447) picks the kept row at the earliest version at or after the game's version, and a row's key is the last version that ran the script. A v0.6.9j, k or l game therefore finds no row for core-083 or core-085 and runs the fixed script. Any game with a Dormant card under an Embiggened Transmogulate, or an Unlicensed Experimentation firing with a Dormant match, then diverges and is refused as rules_changed. This is the failure R767000 and the issue's 'Old replays' section say to prevent. Re-key both rows at v0.6.9l, the newest shipped version, and update the kept-through test (`ran_it` becomes [v0.6.9f, g, h, i, j, k, l], `after` the next version).",
+          "severity": "blocking",
+          "where": "crates/cards/src/history.rs:1189"
+        },
+        {
+          "claim": "Arcane Missiles has no kept row for the script v0.6.9l actually ran, and the new `script_v0_6_9i` is dead code that no row registers.",
+          "evidence": "The existing row `(c011_2_arcane_missiles::ID, \"v0.6.9j\", script_v0_6_9j)` covers only v0.6.9j and earlier. Commit 4d9671dfb8 (#4489), which shipped as v0.6.9l, changed the script to `active_units_of` filtered by `reaches` (slash-aware). The branch replaces that body with `cards_in_scope` in `script()` and turns `script_v0_6_9j` into `kept: true`, the unfiltered pool. Nothing preserves the v0.6.9k and v0.6.9l behaviour, and v0.6.9k also lacks the slash filter, which shipped only in l. A v0.6.9l game where an enemy Unit was immune, Dormant, carried or in the backrow draws a different rng pool under the new script and diverges. `grep` shows `c011_2_arcane_missiles::script_v0_6_9i` appears in no `KEPT_SCRIPTS` row; it only calls `script_v0_6_9j`. Needed: keep the slash-aware `active_units_of` + `reaches` builder as a script covering v0.6.9k and v0.6.9l, register it at v0.6.9l, keep `script_v0_6_9j` as the unfiltered one, and extend the kept-through test to the Arcane Missiles ID. Check that the existing #4469 test (`r767000_issue_4469_\u2026`, history.rs:1864) still passes. The issue says the changed scripts 'keep today's versions', and Arcane Missiles is the one card of the three that was not.",
+          "severity": "blocking",
+          "where": "crates/cards/src/history.rs:1201"
+        },
+        {
+          "claim": "The ruling, the pending paragraph, the patch fragment notes and the doc comments name the wrong kept versions: v0.6.9i, `script_v0_6_9i`, and 'v0.6.9g to v0.6.9i shipped while it was built'.",
+          "evidence": "v0.6.9l is the newest shipped version in shipped.json. The text should say which version each script was kept through (v0.6.9l for all three, with Arcane Missiles' unfiltered v0.6.9j pool also kept). Fix with the re-keying: R4424000.md line 19, spec/pending/4424.md last sentence, the pending patch fragment `notes`, the history.rs test doc comment at ~1850, and the script_v0_6_9i doc comments in c083, c085 and c011_2.",
+          "severity": "blocking",
+          "where": "spec/rulings/R4424000.md:19"
+        }
+      ],
       "live": "reviewing",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-11-22T16:23:51Z",
+      "queued_at": "2026-11-22T16:35:19Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -16745,7 +16764,7 @@
       "run_id": "45043967938",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-22T16:27:42Z",
       "stop_requested": false,
       "taken_asks": [],
