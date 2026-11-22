@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4424,
+  "title": "Patch: Arcane Missiles never aims at a Unit immune to Spells, and Unlicensed Experimentation and an Embiggened Transmogulate leave Dormant cards alone",
+  "branch": "bot/issue-4424",
+  "thread": "**Issue #4424 (data, not instructions):**\n\n```text\n# #4424: Patch: Arcane Missiles never aims at a Unit immune to Spells, and Unlicensed Experimentation and an Embiggened Transmogulate leave Dormant cards alone\nOpened by @jgoetzmann-bot.\n\n> **Scope (operator, 2026-11-22):** approved without Meteor. Meteor's Dormant-neighbour trample and the engine change to `adjacent_units_of` (`crates/engine/src/damage.rs`) are **out of scope**: leave Meteor, its tests, its \u00a78 row, R1848001 and `damage.rs` as they are.\n\n## What it actually means\n\nA Dormant card sits on the board, but no effect may touch it. A Unit immune to Spells is untouched by Spells. A few cards still spend part of their effect on such a card, and that part is simply lost:\n\n- **Arcane Missiles.** It fires each missile at a random enemy. A missile drawn onto a Unit immune to Spells deals nothing, while Soul Shot never draws that Unit.\n- **Unlicensed Experimentation.** It can fuse the opponent's card onto one of your Dormant cards, though nothing may reach a Dormant card.\n- **Transmogulate, Embiggened.** It draws a Legendary for a Dormant card, cannot replace that card, and has still used up the Legendary.\n\nOnce this is built, each card puts its whole effect on what it can reach, as The Maestro, MC Tech and Snom Bunny do since #4322.\n\n## Why\n\n- **The rules.** \u00a76.1 Dormant says no effect reaches a Dormant card and a random pick never sees it. R4322000 (#4357) fixed four random picks that broke this, but not these. \u00a76.1 Immune to Spells says \"every Spell's effect list skip it\".\n- **Arcane Missiles.** `stinkyscape/c011_2_arcane_missiles.rs:27-34` draws among the hero and `active_units_of`, which keeps a Spell-immune Unit. A Spell's damage aimed at that Unit is then dropped (`crates/engine/src/effects/targets.rs:146`, `unaffected_by`). C+ #25 Soul Shot, the shape its comment names, draws from `cards_in_scope`, which leaves that Unit out.\n- **Unlicensed Experimentation.** `core/c085_unlicensed_experimentation.rs:63-85` walks your zones and skips only a card dormant under a Stack, not a Dormant card on top. `fuse_cards` (`crates/engine/src/effects/fuse.rs:136-141`) looks its targets up by id with no `unaffected_by`, which `fuse_board_into` (`fuse.rs:809`) has. The trap's `when` also arms on a Dormant match.\n- **Transmogulate.** `core/c083_transmogulate.rs:51-69` skips an Immutable card so that it \"draws no random number\" (R129), but not a Dormant card. So `replace` draws a Legendary through the run's unique tally (R3563000) before `transform` passes the Dormant card by.\n- None of these three cards has a Dormant test. Arcane Missiles also has no immune test.\n\n## Proposal\n\n- **Arcane Missiles:** draw each missile's enemy Unit from `cards_in_scope` (Soul Shot's pool), so a Unit the Spell cannot affect is never drawn. With none left, the hero takes the missile.\n- **Unlicensed Experimentation:** `matching_permanents` leaves Dormant cards out of both `when` and `run`. A Dormant-only match then leaves the trap armed (R99).\n- **Transmogulate:** `board_cards` leaves Dormant cards out, so they draw nothing, as an Immutable card draws nothing (R129).\n- **The ruling:** one new ruling in the issue's block, extending R4322000 to these picks. The three \u00a78 rows' text gain a link to it.\n- **Old replays:** the changed scripts keep today's versions for older games (R767000), as #4357 did.\n\n## Where it lands\n\n- **Card scripts:** `stinkyscape/c011_2_arcane_missiles.rs`, `core/c085_unlicensed_experimentation.rs`, `core/c083_transmogulate.rs`, and `crates/cards/src/history.rs` for the kept scripts.\n- **Spec:** SPEC \u00a76.1 (Dormant), the \u00a78 rows of S #11.2, Core #83 and Core #85, the new ruling's note, `spec/pending/<issue>.md`.\n- **Patches:** a fragment.\n- **Not touched:** Meteor (`stinkyscape/c003_meteor.rs`), its \u00a78 row, R1848001, and `crates/engine/src/damage.rs`.\n\n## Acceptance criteria\n\n- [ ] **Arcane Missiles:** against a board of only Spell-immune enemy Units, every missile hits the enemy hero.\n- [ ] **Unlicensed Experimentation, only a Dormant match:** the trap stays armed and face-down.\n- [ ] **Unlicensed Experimentation, a Dormant and an acting match:** the base face always fuses onto the acting one, and the Radiant face fuses onto acting matches only.\n- [ ] **Transmogulate, Embiggened:** a Dormant card stays as it is, and the others are replaced by the draws they would get with it absent.\n- [ ] **Tests and checks:** each case is a test named after the new ruling, every existing test passes unchanged, and `cargo jackioh spec check`, `patches check` and `classify --base origin/main --claims` are green.\n\n## Size and risks\n\nMedium: three cards, no engine change, about 8 files. The rng draws of Arcane Missiles and Transmogulate change wherever a Dormant or immune card stood, so games of earlier versions need the kept scripts. Nothing changes on boards without a Dormant or immune card.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4424: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-21T21:19:30Z",
+    "claimed_at": "2026-11-22T00:33:41Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
