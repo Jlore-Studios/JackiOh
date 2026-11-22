@@ -40366,18 +40366,8 @@
     "pinned": true
   },
   "usage_spool": {
-    "readings": [
-      "2026-11-22T14:50:16Z,agy,usage-command,before,45034952926,9,2026-11-22T16:14:46Z,12,2026-11-28T18:09:17Z,allowed,100,100,",
-      "2026-11-22T15:00:31Z,agy,usage-command,call,45034952926,12,2026-11-22T16:14:46Z,14,2026-11-28T18:09:17Z,allowed,100,100,",
-      "2026-11-22T15:10:36Z,agy,usage-command,call,45034952926,13,2026-11-22T16:14:46Z,15,2026-11-28T18:09:17Z,allowed,100,100,",
-      "2026-11-22T15:20:39Z,agy,usage-command,call,45034952926,14,2026-11-22T16:14:46Z,15,2026-11-28T18:09:17Z,allowed,100,100,",
-      "2026-11-22T15:35:06Z,agy,usage-command,call,45034952926,16,2026-11-22T16:14:46Z,15,2026-11-28T18:09:17Z,allowed,100,100,",
-      "2026-11-22T16:03:01Z,muse,usage-command,before,45041485720,1,2026-11-22T20:55:00Z,77,2026-11-23T00:00:00Z,allowed,100,100,",
-      "2026-11-22T16:05:03Z,muse,usage-command,after,45041485720,2,2026-11-22T20:55:00Z,77,2026-11-23T00:00:00Z,allowed,100,100,"
-    ],
+    "readings": [],
     "runs": [
-      "2026-11-22T15:44:34Z,45034952926,agy,gemini-3.8-flash-high,revise,4459,medium,built,,53.7,986011,93021,0,,9,16,12,15,0.2,agy,none,,2",
-      "2026-11-22T16:05:03Z,45041485720,muse,muse-spark-1.3-contributor,plan,4449,medium,planned,,1.9,0,0,0,,1,2,77,77,1.3,,none,,1",
       "2026-11-22T16:02:44Z,45040808994,muse,muse-spark-1.3-contributor,review,4459,medium,reviewed,,5.5,0,0,0,,,,,,0.6,agy,none,,1"
     ]
   },
