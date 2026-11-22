@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4512,
+  "title": "Patch: a match in a background tab plays no crowd murmurs, as its sound effects and voices already stay quiet",
+  "branch": "bot/issue-4512",
+  "thread": "**Issue #4512 (data, not instructions):**\n\n```text\n# #4512: Patch: a match in a background tab plays no crowd murmurs, as its sound effects and voices already stay quiet\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a player switches to another tab in the middle of a match, the game already silences its sound effects and voice lines. The crowd's quiet background murmurs carry on, though: a short burst of chatter every 6 to 15 seconds from a tab the player is not looking at, until the match ends or they come back. Once this is built, a match in a background tab makes no crowd noise, and the murmurs resume when the player returns.\n\n## Why\n\n- **Effects and voices are gated on a hidden page.** The engine's gate, `accepting()` (`apps/web/src/audio/engine.ts:534-540`), drops anything asked for while the page is hidden (`visibility() === 'hidden'`). Hiding the page only silences the voice (`onLifecycle`, `engine.ts:468-474`); the audio context is never suspended, and desktop browsers keep a hidden tab's audio context running.\n- **The crowd skips that gate.**\n  - Its `live()` (`apps/web/src/audio/crowd.ts:139-143`) checks only that the context is `running`.\n  - The murmur loop (`crowd.ts:147-160`) fires every `CROWD_FEEL.patronMinMs` to `patronMaxMs` (6,000 to 15,000 ms, `game/damageFeel.ts:32-35`), from `crowd.start()` (`audio/useGameAudio.ts:139-148`) until the board leaves or the game ends.\n  - Each murmur is a 0.34 s band-passed noise burst (`crowd.ts:60-84`) on the crowd bus. That bus defaults to 0.5 (`audio/settings.ts:17`), and only Mute silences it (`audio/mix.ts:75,94`).\n- **The crowd's own test assumes a hidden page means a stopped context:** 'the page hides and the OS stops the context' (`crowd.test.ts:142-170`). That holds when a phone puts the app away, not for a desktop browser tab.\n- **The Audio settings promise quiet.** The hint reads 'Sound effects and voices stay quiet either way' (`audio/AudioControls.tsx:53`), and the music fades while the page is hidden too (`audio/music.ts:98`). SPEC \u00a710.11 says nothing about the crowd while the page is hidden.\n\n## Proposal\n\n- Drop a murmur or a crowd reaction that comes due while the page is hidden, exactly as one due on a suspended context is dropped today. Nothing is saved up to burst out on return, and the murmur loop keeps its rhythm.\n- The simplest seam: the engine's `crowdOutput()` (`engine.ts:1186`) returns null while `visibility()` says hidden, and `live()` already treats null as no output. If the builder prefers the crowd to read visibility itself, a visibility port on `CrowdDirectorOptions` works too.\n- The crowd follows the effects' rule, quiet while hidden whatever the setting says, not the music's 'Keep playing music when this tab is in the background', which stays music-only. A window that is visible but not focused keeps its crowd, as it keeps its effects.\n- Add a ruling numbered in the issue's block: the crowd is quiet while the page is hidden, as the effects and voices are. Its \u00a711 paragraph goes in `spec/pending/<issue>.md`, and its test is named after it.\n\n## Where it lands\n\n- `apps/web/src/audio/engine.ts` (or `apps/web/src/audio/crowd.ts`) and `apps/web/src/audio/crowd.test.ts`\n- `spec/rulings/R<next>.md` in the issue's block and `spec/pending/<issue>.md` (SPEC \u00a710.11)\n\n## Acceptance criteria\n\n- [ ] With the context `running` and the page hidden, a murmur and a crowd reaction that come due (a GIGA hit's roar) play nothing on the crowd bus. The test sets the engine's `visibility` option, as `engine.test.ts`'s rig does.\n- [ ] The murmur loop stays scheduled while hidden, and on return only the next murmur due plays; nothing held back plays as a burst.\n- [ ] The existing crowd tests pass unchanged: the suspended and interrupted context, the rebuilt context, and #352's murmurs.\n- [ ] The new ruling note lists its test in `proven_in`, and `cargo jackioh spec check` passes.\n- [ ] `pnpm --dir apps/web test src/audio/crowd.test.ts src/audio/engine.test.ts` passes.\n\n## Size and risks\n\nSmall: one or two source lines in one file, plus a test and a ruling note. The one risk is a crowd that fails to come back once the page shows again. The return test covers that, and since the context is never touched, nothing has to be resumed.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T22:16:38Z:\n\napprove\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4512: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T22:17:57Z",
+    "claimed_at": "2026-11-22T22:23:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
