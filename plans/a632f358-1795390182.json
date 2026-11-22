@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4510,
+  "title": "Patch: the Daily list reads its games' portraits in one query, and the daily sweep finds the games due through its index instead of reading every daily game",
+  "branch": "bot/issue-4510",
+  "thread": "**Issue #4510 (data, not instructions):**\n\n```text\n# #4510: Patch: the Daily list reads its games' portraits in one query, and the daily sweep finds the games due through its index instead of reading every daily game\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe Daily screen, where friends play a move every few days, asks the server for its list of games every minute while it is open, and after every change made from it. To draw two hero portraits per game, the server today fetches each game's whole stored match, one game at a time. That includes both decks, both saved boards and more. A player with 20 running games and 10 finished ones costs 30 separate trips to the database on every refresh. After this change, the list reads all the portraits in one trip.\n\nSeparately, the hourly check that ends games whose time ran out reads every daily game ever played, finished ones included, though it only wants the few that are due. After this change, it reads only those.\n\nPlayers get their list back sooner, and the server's work no longer grows with every daily game that has ever finished.\n\n## Why\n\n**The list reads one whole match per game.**\n- `daily::games::list` (`crates/server/src/daily/games.rs:928-953`) loops over `daily_games_of(&me, DAILY_RECENT_FINISHED)` and calls `tx.matches_get` once per game (`:938-942`). That is up to `DAILY_MAX_ACTIVE_GAMES` (20) running plus `DAILY_RECENT_FINISHED` (10) finished (`crates/shared/src/config.rs:2016`, `:2025`), each a query of its own, one after another.\n- `matches_get` (`crates/server/src/db/pg.rs:3056`) selects every column of `match_columns!` (`pg.rs:648-654`): both decks, both last boards and Glitch boards, `loadouts` and `win_rates`. `summary_json` (`games.rs:865-906`) reads only `portraits`.\n- The client asks for the list every `DAILY_REREAD_MS` (60 s, `apps/web/src/daily/config.ts:9`) while the tab shows, after each of the screen's own changes, and on each `dailyWaiting` change (`apps/web/src/daily/DailyRoute.tsx:6-9`).\n\n**The sweep reads the whole table.**\n- `daily_games_due` (`pg.rs:8211-8226`) is documented as \"Through `daily_games_due_idx`\". Its `where` is an OR, and its second arm, `d.ended_at <= $1 and exists (... m.status = 'live')`, has no index on `daily_games.ended_at`. Migration 0089 indexes only `next_deadline_at` where `ended_at is null`, the primary key and the two seats (`0089_daily_games.sql:94-98`).\n- Postgres combines indexes for an OR only when every arm has one. So it reads the whole table and probes `matches` once for each finished row.\n- No `daily_games` row is ever deleted, because finished matches are kept (`api/retention.rs`'s header). The scan therefore grows with every daily game ever played.\n- It runs every `DAILY_SWEEP_MINUTES` (60) while the server is awake, and again on the Worker's hourly `/daily-sweep` cron (`daily/notify.rs:405-416`).\n\n**Precedent.** #4468 made the same kind of fix for the public players list and the daily pay sums, held by CHECK 27 in `crates/server/tests/sql/01_schema_invariants.sql`. CHECK 20 and CHECK 27 are the pattern to follow.\n\n## Proposal\n\n1. **One portraits read for the list.** Add a batch store read, for example `Tx::matches_portraits(&[id])`: `select id, p1_portrait, p2_portrait from public.matches where id = any($1::uuid[]) and status in ('live','over')`, through the primary key, with the fake's twin.\n   - `list` calls it once instead of `matches_get` per game.\n   - `summary_json` takes the portrait pair instead of a `MatchRow`.\n2. **Two indexed reads for the sweep.** Split `daily_games_due` into two reads, merged in today's order (`case when ended_at is null then next_deadline_at else ended_at end, match_id`):\n   - the running games due, through `daily_games_due_idx`;\n   - the finished games whose match is still live, driven from the live matches (`public.matches m join public.daily_games d on d.match_id = m.id where m.status = 'live' and d.ended_at <= $1`), through `matches_status_created_at_idx` and the `daily_games` primary key.\n\n   No migration is needed. Its doc comment then names what each read goes through.\n3. **A plan check.** Add CHECK 28 in `01_schema_invariants.sql`, modelled on CHECK 20 and 27. With `enable_seqscan` off, neither the sweep's reads nor the portraits read may show a `Seq Scan` on `daily_games` or `matches`, and each must name its index.\n\n## Where it lands\n\n- `crates/server/src/daily/games.rs` (`list`, `summary_json`)\n- `crates/server/src/db/store.rs`, `pg.rs` and `fake.rs` (the new read, `daily_games_due`)\n- `crates/server/tests/store/contract.rs`: the batch read, plus `s913_daily_games_due_by_deadline_and_left_out_of_the_live_matches` with new cases\n- `crates/server/tests/sql/01_schema_invariants.sql` (CHECK 28)\n- `crates/server/tests/api/daily.rs`\n- SPEC \u00a79.13, Storage, unchanged\n\n## Acceptance criteria\n\n- [ ] **Same answer:** `GET /api/daily` answers as before for a player with running and finished games, both portraits of each game included.\n- [ ] **One read:** `list` makes one match read for the whole list, not one per game.\n- [ ] **Batch read contract:** on both stores, the batch read answers the asked live and over matches and leaves out an unknown id, a non-uuid and an open room's id.\n- [ ] **Due games unchanged:** `daily_games_due` answers the same games in the same order as before. s913 passes, with new cases for:\n  - a finished daily game whose match is still `live` (due);\n  - one whose match is `over` (not due);\n  - a running one before and past its deadline.\n- [ ] **Plan check:** CHECK 28 passes under `sh crates/server/tests/sql/run.sh` and fails against today's `daily_games_due` query.\n- [ ] **Suites:** `cargo test -p jackioh-server`, `sh crates/server/tests/db/run.sh`, `cargo clippy -p jackioh-server --all-targets -- -D warnings` and `cargo fmt --check` pass.\n\n## Size and risks\n\nSmall to medium: one new store read in three places, one query rewritten, one SQL check and about four tests. Difficulty medium.\n\n- **Docker:** the plan check and the Postgres contract need Docker, which CI's `db` job has.\n- **Order:** the sweep settles games in the merged order, so it must stay exactly today's.\n- **Open PR:** #4503, open, changes `daily/notify.rs`'s sweep, but not this query.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-22T23:22:41Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4510: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T23:23:05Z",
+    "claimed_at": "2026-11-22T23:29:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
