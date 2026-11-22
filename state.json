@@ -17914,13 +17914,9 @@
     "what": "build #4427 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-22T09:22:50Z",
+    "at": "2026-11-22T09:31:07Z",
     "notes": [
-      "delivered plan #4486 on claude-7 (run 45006183126): blocked",
-      "delivered plan #4427 on claude-7 (run 45005436426): planned",
-      "started build #4427 on claude-7 (run 45007429086)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered review #4487 on claude-3 (run 45006149461): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18626,7 +18622,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T09:22:50Z",
+  "loop_tick": "2026-11-22T09:31:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
