@@ -16675,7 +16675,7 @@
       }
     },
     "4459": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "ci_early": false,
@@ -16727,7 +16727,7 @@
           "where": "spec/rulings/R4424000.md"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "muse",
@@ -16737,11 +16737,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "45040808994",
+      "run_id": "pending:1662c1ee-1795363813",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-22T15:53:48Z",
+      "started_at": "2026-11-22T16:10:35Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -18145,9 +18145,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T16:01:19Z",
+    "at": "2026-11-22T16:10:35Z",
     "url": "",
-    "what": "plan #4449 on muse"
+    "what": "revise #4459 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T16:00:22Z",
