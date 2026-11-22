@@ -17705,7 +17705,7 @@
       }
     },
     "4489": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -17727,12 +17727,12 @@
       "interruptions": 0,
       "issue": 4469,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-22T12:32:01Z",
-      "run_id": "45010277830",
+      "run_id": "pending:0d3214aa-1795350772",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17753,16 +17753,9 @@
         "run": "45002921268"
       },
       "source": "conflict",
-      "started_at": "2026-11-22T10:00:28Z",
+      "started_at": "2026-11-22T12:33:08Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-22T12:32:01Z",
-        "until": "2026-11-22T13:02:01Z",
-        "why": "it waited 120 minutes for #4459, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -17845,9 +17838,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T12:32:40Z",
+    "at": "2026-11-22T12:33:08Z",
     "url": "",
-    "what": "revise #4480 on claude-3"
+    "what": "revise #4489 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-22T12:25:11Z",
