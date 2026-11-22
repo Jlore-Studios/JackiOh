@@ -18490,7 +18490,16 @@
       "feedback_since": "2026-11-22T16:43:07Z",
       "issue": 4477,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-4",
+        "rejections": [],
+        "reviews": [],
+        "sha": "16e3622f2656cd05d5cb1b0b9446e75623649799",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
