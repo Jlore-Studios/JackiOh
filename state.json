@@ -15131,9 +15131,7 @@
     },
     "4423": {
       "action": "build",
-      "asks": [
-        "c:7072134752"
-      ],
+      "asks": [],
       "died": 1,
       "difficulty_by": {
         "at": "2026-11-22T02:06:08Z",
@@ -15156,28 +15154,30 @@
       "interruptions": 0,
       "kind": "build",
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-22T01:22:44Z",
-      "owner_why": "it plans it",
+      "owner": "claude-3",
+      "owner_since": "2026-11-22T05:09:09Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-22T05:58:08Z",
       "pending_request": false,
       "planned_at": "2026-11-22T02:06:10Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-4",
+      "provider": "claude-3",
       "queued_at": "2026-11-22T05:08:07Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44974743485",
+      "run_id": "pending:a540e7d3-1795324124",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T02:09:18Z",
+      "started_at": "2026-11-22T05:09:09Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7072134752"
+      ]
     },
     "4424": {
       "action": "build",
@@ -16713,9 +16713,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T04:58:29Z",
+    "at": "2026-11-22T05:09:09Z",
     "url": "",
-    "what": "build #4454 on claude-3"
+    "what": "build #4423 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-22T04:56:22Z",
