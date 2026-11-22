@@ -18300,7 +18300,16 @@
       "feedback_since": "2026-11-22T16:11:07Z",
       "issue": 4449,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "cad64542e90ae6b3a68045f24917db59a94d51ce",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
