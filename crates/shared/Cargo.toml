@@ -28,7 +28,8 @@ serde_json = { workspace = true }
 indexmap = { workspace = true }
 # Off by default, as the engine's and the run's `ts` are: the types that cross the boundary (README.md, the
 # host contract) are written to `apps/web/src/wire/generated/` by `cargo test -p jackioh-shared --features ts`,
-# and nothing else derives types.
+# and nothing else derives types. `jackioh-wasm-core`'s dev-dependencies turn it on for the workspace test
+# build (#4426).
 ts-rs = { workspace = true, optional = true }
 
 [features]
