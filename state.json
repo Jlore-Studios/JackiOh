@@ -16711,15 +16711,8 @@
       }
     },
     "4462": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44988193993",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-22T05:18:09Z",
-        "until": "2026-11-22T05:48:09Z"
-      },
       "difficulty_by": {
         "at": "2026-11-22T05:17:58Z",
         "difficulty": "medium",
@@ -16736,9 +16729,8 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- 3. Time each suspect module alone with `time`, one command each (all per-PR tests of the group, filters as in Step 1):\n- - `cargo test -p jackioh-tools --bin jackioh -- fork_screen::`\n- - `cargo test -p jackioh-tools --bin jackioh -- sweep::`\n- - `cargo test -p jackioh-tools --bin jackioh -- gate::`\n- - `cargo test -p jackioh-tools --bin jackioh -- arena::`\n- - `cargo test -p jackioh-tools --bin jackioh -- stats::`\n- - `cargo test -p jackioh-tools --test perf perf_smoke`\n- - `cargo test -p jackioh-tools --test golden`\n- - The dominant test is the single test or module over 120 s wall. Copy the #4441 pattern (`git show 709c303c0a -- crates/tools/src/fork_screen.rs`): halve its games/pairs/rollouts (e.g. two trunk games to one), keep every assertion byte-identical, and add a workload-pinning assert in the same test \u2026\n- 4. Re-run Step 1's timed shard command. If shard 1/4 wall drops by at least 250 s versus Step 1 (711 s to under about 460 s locally, giving headroom for runner noise), keep `\"tools, wasm\" = 4` and skip Step 5: no person needed.\n- 5. Diffuse branch only (no test over 120 s): in `scripts/ci-shards.toml` replace lines 40-44 with a comment recording `#4462` (11m 51s on shard 1/4 at 4; 8 is `matrix.py`'s `MAX_SHARDS`) and `\"tools, wasm\" = 8`. Then run `python3 .github/ci/matrix.py matrix 2>/dev/null | head -3` and confirm eight \u2026\n- 6. Compile-dominated contingency only (Step 1 shows compile alone over about 6 minutes): do not raise the count past 8; a count splits the run, not the compile. Report the compile wall time and hand the person the exact group split in Open questions.\n- ## Tests\n- - No new test names: the trimmed test keeps its name and must pass with its new workload assert: `cargo test -p jackioh-tools --bin jackioh <trimmed test path>` (e.g. `cargo test -p jackioh-tools --bin jackioh fork_screen::tests::r4397000_an_always_differing_candidate_forks_every_game_at_the_cap` i\u2026\n- - Shard-integrity: `python3 .github/ci/matrix.py matrix` still lists every group and the count change only renames `tools, wasm` shards; every name lands in exactly one shard for any count by construction (`matrix.shard` CRC-32).\n- - `cargo fmt --check`.\n- - `cargo clippy -p jackioh-tools --all-targets -- -D warnings`.\n- - Do not run `cargo test --workspace`, whole web vitest, or e2e; V20 wire and `spec check` are unaffected (no generated types, no rulings touched).\n- ## Done when\n- - [ ] Step 1-3 measurements recorded (shard 1/4 members, compile vs run split, dominant test and its wall time).\n- - [ ] Dominant test trimmed (or daily-marked with canary) with workload-pinning assert, targeted test and module runs green.\n- - [ ] Shard 1/4 reproduction at least 250 s faster, or count at 8 with eight jobs in matrix output.\n- - [ ] `cargo fmt --check` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings` green.\n- - [ ] If the count moved: final report names the person-side pin diff (Open questions) as expected-red until co-landed.\n- - [ ] Every decision the task did not settle recorded with the rejected alternative.\n- ## Risks\n- - Compile-dominated job: each shard recompiles the workspace subset (about 6 minutes estimated from #4441's 848 s at count 1); a count cannot fix that, hence Step 6 hands a group split to a person instead of burning runners up to the cap.\n- - Hash reshuffle: any test rename re-deals CRC-32 shards; the workload assert pins the fix to the test, not to shard luck.\n- - Pin redness: with count 8, `bot selftest` fails until the person co-lands the pin; say so in the report rather than touching `bot/`.\n- - Determinism: keep thread-count assertions (the #4441 one-thread-vs-four pattern) wherever rollouts use rayon's pool; keep `Rng`-seeded draws, never wall-clock.\n- - V20: every group checks `apps/web/src/wire` is unchanged; a pure test trim writes nothing there.\n- ## Open questions\n- - Person-side pin for the diffuse branch (`bot/tests/test_ci_matrix.py`): in the comment on lines 25-27 change `` `tools, wasm` four since #4432 `` to `` `tools, wasm` eight since #4462 ``; line 33 becomes `\"tools, wasm 1/8\", \"tools, wasm 2/8\", \"tools, wasm 3/8\", \"tools, wasm 4/8\", \"tools, wasm 5/8\u2026\n- - Person-side compile split for the Step 6 contingency (`.github/ci/rust-test.toml`, replacing the `tools, wasm` group at lines 170-174; both halves reuse scope `tools_wasm` so `scripts/ci-scope.sh` needs no change):\n- `[[group]] group = \"tools\" scope = \"tools_wasm\" cache = \"tools-wasm\" test = \"-p jackioh-tools -- --skip fuzz:: --skip selfplay:: --skip positions::\"` and `[[group]] group = \"wasm\" scope = \"tools_wasm\" cache = \"tools-wasm\" test = \"-p jackioh-run -p jackioh-shared -p jackioh-wasm -p jackioh-wasm-core\u2026\n- - Nothing else needs a person: a new `#[ignore = \"daily: \u2026\"]` is picked up by super.yml's daily `cargo test -- --ignored` with no workflow change.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4462 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4462/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-22T05:09:50Z",
       "owner_why": "it plans it",
@@ -16749,18 +16741,18 @@
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "muse",
-      "run_id": "44988193993",
+      "run_id": "pending:bfa9ee74-1795324725",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-22T05:09:50Z",
+      "started_at": "2026-11-22T05:19:13Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T05:09:50Z",
+    "at": "2026-11-22T05:19:13Z",
     "url": "",
-    "what": "plan #4462 on muse"
+    "what": "build #4462 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T05:06:23Z",
