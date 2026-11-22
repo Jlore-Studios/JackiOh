@@ -16790,7 +16790,16 @@
       "feedback_since": "2026-11-22T22:37:26Z",
       "issue": 4517,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "71357f96523df6a3f7645d1596e5fdac20b901ac",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
