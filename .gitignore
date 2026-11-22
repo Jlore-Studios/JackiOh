@@ -25,6 +25,11 @@ ai-gate-shards/
 *.tmp.*
 __pycache__/
 
+# A /brag launch video and its work files (.claude/skills/brag/SKILL.md, #1711): handed to a person,
+# never committed.
+brag-output/
+brag-output-*/
+
 # Agent worktrees (git worktrees created by the Agent tool for isolated parallel work).
 .claude/worktrees/
 
