@@ -16059,8 +16059,13 @@
     "what": "suggestions (client) on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-22T20:29:46Z",
-    "notes": [],
+    "at": "2026-11-22T20:36:13Z",
+    "notes": [
+      "started suggest on claude-1 (run 45067442049)",
+      "started suggest on claude-6 (run 45067483135)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16765,7 +16770,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T20:29:46Z",
+  "loop_tick": "2026-11-22T20:36:13Z",
   "machine_disk": {
     "issue": null,
     "reading": {
