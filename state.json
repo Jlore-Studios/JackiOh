@@ -18638,7 +18638,7 @@
         "by": "`gemini` (medium)",
         "sha": "09402ad0d3050ca15c9b342d40ee4f119c1263e7"
       },
-      "died": 0,
+      "died": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T16:41:22Z",
@@ -18650,7 +18650,7 @@
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-11-22T19:42:46Z",
+      "queued_at": "2026-11-22T19:56:33Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "45062917175",
       "runs_on": "night-vm-agy",
