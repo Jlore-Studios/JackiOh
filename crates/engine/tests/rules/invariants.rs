@@ -300,6 +300,7 @@ fn destroyed_by(instance_id: &str, killer_id: &str) -> GameEvent {
         killer_id: Some(killer_id.to_string()),
         radiant: None,
         animated: None,
+        died_as: None,
         via: None,
     }
 }

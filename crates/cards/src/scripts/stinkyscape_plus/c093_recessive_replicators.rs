@@ -2,8 +2,12 @@
 //!   Base:    "Evolves when a friendly Unit dies. / Evolve: Gain “Death: Resummon that Unit.”"
 //!   Radiant: "Evolves when a friendly Unit dies. / Evolve: Gain “Death: Resummon that Unit. Make it Radiant.”"
 //!
-//! R3542002: "that Unit" is the first friendly card whose definition is a Unit (a token included) whose death
-//! evolved this, remembered with its face (`Destroyed` is the card's own trigger evolving itself, R3536001).
+//! R3542002: "that Unit" is the first friendly card that died as a Unit (R4423000, superseding R3542002's "whose
+//! definition is a Unit"; a token included) whose death evolved this, remembered with its face (`Destroyed` is
+//! the card's own trigger evolving itself, R3536001). A Unit set face-down by its Cloaked and destroyed before
+//! it reveals died as a Field Trap and evolves nothing; an Animated Field Spell or Trap killed in a unit zone
+//! died as a Unit and evolves it, and is resummoned as its printed card, which a summon places in the backrow.
+//! `script_v0_6_9h` keeps the definition's type for v0.6.9h and before (R767000).
 //! One that is already evolved, or that dies in the same pass as the Unit, remembers nothing more. Its Evolve
 //! text gains one Death each run (`gainedDeaths`, a list in its memory): under High Evolutionary's Aura it
 //! gains two or three, and the Death, read as it dies (R78), resummons a fresh copy of that Unit for each
@@ -59,13 +63,14 @@ fn preview() -> PreviewHook {
     })
 }
 
-fn replicators(radiant: bool) -> Script {
+/// `by_print` reads a death by the dead card's definition, as v0.6.9h and before did (R767000).
+fn replicators(radiant: bool, by_print: bool) -> Script {
     Script {
         triggers: vec![TriggerDef::new(
             "replicators-mourn",
             &[GameEventType::Destroyed],
             // The condition is read in `run`, as a `when` would be for a trigger that is no trap (R2271000).
-            |ctx, event| {
+            move |ctx, event| {
                 let view: &EffectContext = ctx;
                 let GameEvent::Destroyed {
                     instance_id,
@@ -80,10 +85,12 @@ fn replicators(radiant: bool) -> Script {
                 let Some(this) = view.live_self() else {
                     return Vec::new();
                 };
-                if *controller != view.controller
-                    || *instance_id == this.id
-                    || this.evolved == Some(true)
-                    || def_of(Some(&*view.state), def_id).type_ != CardType::Unit
+                let unit = if by_print {
+                    def_of(Some(&*view.state), def_id).type_ == CardType::Unit
+                } else {
+                    is_unit_death(&*view.state, event)
+                };
+                if *controller != view.controller || *instance_id == this.id || this.evolved == Some(true) || !unit
                 {
                     return Vec::new();
                 }
@@ -122,8 +129,17 @@ fn replicators(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: replicators(false),
-        radiant: replicators(true),
+        base: replicators(false, false),
+        radiant: replicators(true, false),
+    }
+}
+
+/// R767000: a Unit's death read by the dead card's definition (R4423000), through v0.6.9h; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_9h() -> CardScripts {
+    CardScripts {
+        base: replicators(false, true),
+        radiant: replicators(true, true),
     }
 }
 
@@ -321,5 +337,80 @@ mod tests {
         let named = vec![(THAT_UNIT_LABEL.to_string(), 1, Some(format!("Radiant {name}")))];
         assert_eq!(preview_seen(&s, P1, &replicators), named);
         assert_eq!(preview_seen(&s, P2, &replicators), named);
+    }
+
+    /// R4423000: a friendly death evolves it by what the card was on the field as it died.
+    mod r4423000_what_it_died_as {
+        use super::*;
+
+        const FILLER: &str = "core-005";
+
+        /// p1 sets a Cloaked Toe Cracker face-down and destroys it with Magic Jammed before it reveals,
+        /// its Replicators in unit lane 1; the Replicators' id and the set card's.
+        fn jammed() -> (Scenario, String, String) {
+            let mut s = scenario(json!({
+                "seed": "s093-cloaked",
+                "p1": {
+                    "mana": 10,
+                    "hand": [crate::CLOAKED_UNIT, MAGIC_JAMMED, FILLER],
+                    "field": [ID],
+                    "library": crate::filler(6),
+                },
+                "p2": { "hand": crate::filler(1), "library": crate::filler(4) },
+            }));
+            let replicators = s.unit_at(P1, 1).id;
+            let set = crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 2);
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&set) }));
+            (s, replicators, set)
+        }
+
+        #[test]
+        fn r4423000_a_set_cloaked_unit_destroyed_before_it_reveals_is_no_unit_death_for_it() {
+            let (s, replicators, set) = jammed();
+            assert_eq!(crate::died_as_of(&s, &set), Some(CardType::FieldTrap));
+            assert_ne!(s.card(replicators.as_str()).evolved, Some(true));
+            assert_eq!(evolutions_of(s.state(), P1), 0);
+        }
+
+        /// p1's set Catnip animates after p2's Spell and p2's Hit Job kills it in its unit zone: it evolves
+        /// the Replicators, whose Death resummons it as the printed Field Trap it is, in the backrow.
+        #[test]
+        fn r4423000_an_animated_field_trap_killed_in_a_unit_zone_is_a_unit_death_for_it() {
+            let mut s = scenario(json!({
+                "seed": "s093-animated",
+                "active": "p2",
+                "p1": {
+                    "hand": [FILLER],
+                    "field": [ID],
+                    "backrow": [{ "def": crate::ANIMATED_TRAP, "faceUp": false, "lane": 2 }],
+                    "library": crate::filler(6),
+                },
+                "p2": { "mana": 10, "hand": [FILLER, HIT_JOB, HIT_JOB, FILLER], "library": crate::filler(4) },
+            }));
+            let replicators = s.unit_at(P1, 1).id;
+            s.play(FILLER, json!({}));
+            let catnip = s.card(crate::ANIMATED_TRAP).id.clone();
+            assert_eq!(s.unit_at(P1, 2).id, catnip, "Catnip animated");
+            s.play(HIT_JOB, json!({ "targets": pick::id(&catnip) }));
+
+            assert_eq!(crate::died_as_of(&s, &catnip), Some(CardType::Unit));
+            let evolved = s.card(replicators.as_str()).clone();
+            assert_eq!(evolved.evolved, Some(true));
+            assert_eq!(evolved.memory["thatUnit"]["defId"], crate::ANIMATED_TRAP);
+
+            s.play(HIT_JOB, json!({ "targets": pick::id(&replicators) }));
+            s.expect_in_zone(&replicators, "graveyard");
+            let back = (1..=5).filter_map(|lane| s.backrow(P1, lane)).find(|card| card.def_id == crate::ANIMATED_TRAP);
+            assert!(back.is_some_and(|card| card.id != catnip), "a fresh Catnip in p1's backrow");
+        }
+
+        /// R767000: v0.6.9h and before evolved it on the set card's death, by the definition's type.
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_9h_counts_a_set_cloaked_unit_s_death() {
+            crate::under_kept(ID, super::super::script_v0_6_9h(), || {
+                let (s, replicators, _) = jammed();
+                assert_eq!(s.card(replicators.as_str()).evolved, Some(true));
+            });
+        }
     }
 }

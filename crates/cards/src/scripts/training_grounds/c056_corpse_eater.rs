@@ -6,8 +6,12 @@
 //! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
 //! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). Since issue #3136
 //! its data differs from the Core card's: 5/5 with no keyword, Radiant 10/10 with Rush (it was 2/2 with
-//! Rush and 4/4 with Rush and Divine Shield); the hand-growth script is unchanged. The Core
-//! file's notes, as they stood:
+//! Rush and 4/4 with Rush and Divine Shield); the hand-growth script is unchanged. Issue #4423, a patch
+//! meant for both (R2195003), reads a death as the Core card does since: by what the card was on the field
+//! as it died (R4423000, `is_unit_death`), so a Unit set face-down by its Cloaked and destroyed before it
+//! reveals feeds nothing and an Animated Field Spell or Trap killed in a unit zone feeds it;
+//! `script_v0_6_9h` keeps the definition's type for v0.6.9h and before (R767000). The Core file's notes,
+//! as they stood:
 //!
 //! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89).
 //!
@@ -27,7 +31,8 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "traininggrounds-056";
 
 /// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
-fn feed(factor: i32) -> TriggerDef {
+/// `by_print` reads a death by the dead card's definition, as v0.6.9h and before did (R767000).
+fn feed(factor: i32, by_print: bool) -> TriggerDef {
     TriggerDef::new(
         "corpse-eater-feed",
         &[GameEventType::Destroyed],
@@ -44,8 +49,14 @@ fn feed(factor: i32) -> TriggerDef {
             };
 
             let dead = def_of(Some(&*ctx.state), def_id);
-            // A destroyed Field Spell or Trap emits the same event; only units feed it.
-            if dead.type_ != CardType::Unit {
+            // A destroyed Field Spell or Trap emits the same event; only units feed it, R4423000: by what
+            // the card was as it died.
+            let unit = if by_print {
+                dead.type_ == CardType::Unit
+            } else {
+                is_unit_death(&*ctx.state, event)
+            };
+            if !unit {
                 return vec![];
             }
             // R11: a unit token ceases to exist and never reaches a graveyard, so it never died for this.
@@ -68,12 +79,23 @@ fn feed(factor: i32) -> TriggerDef {
 }
 
 pub fn script() -> CardScripts {
+    eater(false)
+}
+
+/// R767000: the script v0.6.9h and the versions before it ran, reading a death by the dead card's
+/// definition (R4423000); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9h() -> CardScripts {
+    eater(true)
+}
+
+/// `by_print` as `feed`'s.
+fn eater(by_print: bool) -> CardScripts {
     let base = Script {
-        hand_triggers: vec![feed(1)],
+        hand_triggers: vec![feed(1, by_print)],
         ..Script::default()
     };
     let radiant = Script {
-        hand_triggers: vec![feed(2)],
+        hand_triggers: vec![feed(2, by_print)],
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -368,6 +390,93 @@ mod tests {
             s.attack(STRAAZA, GARY);
 
             s.expect_stats(EATER, json!({ "attack": 10, "maxHealth": 10 }));
+        }
+    }
+
+    /// R4423000: a death feeds it by what the card was on the field as it died.
+    mod n56_corpse_eater_r4423000 {
+        use super::*;
+
+        const MAGIC_JAMMED: &str = "core-036";
+        const HIT_JOB: &str = "core-016";
+
+        /// p1 sets a Cloaked Toe Cracker (3/4) face-down and destroys it with Magic Jammed before it
+        /// reveals, its Eater in hand; the set card's id.
+        fn jammed(radiant: bool) -> (Scenario, String) {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "p1": {
+                    "hand": [{ "def": EATER, "radiant": radiant }, crate::CLOAKED_UNIT, MAGIC_JAMMED, FILLER],
+                    "mana": 10,
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            let set = crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 2);
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&set) }));
+            (s, set)
+        }
+
+        /// p1's set Catnip (a 5/5 Animated Field Trap) animates after p2's Spell, and p2's Hit Job kills
+        /// it in its unit zone, p1's Eater in hand; Catnip's id.
+        fn hit(radiant: bool) -> (Scenario, String) {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "active": "p2",
+                "p1": {
+                    "hand": [{ "def": EATER, "radiant": radiant }, FILLER],
+                    "backrow": [{ "def": crate::ANIMATED_TRAP, "faceUp": false, "lane": 2 }],
+                },
+                "p2": { "hand": [FILLER, HIT_JOB, FILLER], "mana": 10 },
+            }));
+            s.play(FILLER, json!({}));
+            let catnip = s.card(crate::ANIMATED_TRAP).id.clone();
+            assert!(s.unit(P1, 2).is_some_and(|unit| unit.id == catnip), "Catnip animated");
+            s.play(HIT_JOB, json!({ "targets": pick::id(&catnip) }));
+            (s, catnip)
+        }
+
+        #[test]
+        fn r4423000_a_set_cloaked_unit_destroyed_before_it_reveals_is_no_unit_death_for_it() {
+            for (radiant, printed) in [(false, 5), (true, 10)] {
+                let (mut s, set) = jammed(radiant);
+                assert_eq!(crate::died_as_of(&s, &set), Some(CardType::FieldTrap));
+                s.expect_stats(EATER, json!({ "attack": printed, "maxHealth": printed }));
+                assert_eq!(count_of(&s, GameEventType::Buffed), 0);
+            }
+        }
+
+        #[test]
+        fn r4423000_an_animated_field_trap_killed_in_a_unit_zone_is_a_unit_death_for_it() {
+            for (radiant, printed, factor) in [(false, 5, 1), (true, 10, 2)] {
+                let (mut s, catnip) = hit(radiant);
+                assert_eq!(crate::died_as_of(&s, &catnip), Some(CardType::Unit));
+                // Catnip died a 5/5.
+                let fed = printed + 5 * factor;
+                s.expect_stats(EATER, json!({ "attack": fed, "maxHealth": fed }));
+            }
+        }
+
+        /// R767000: v0.6.9h and before fed it on the set card's death, by the definition's type.
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_9h_counts_a_set_cloaked_unit_s_death() {
+            crate::under_kept(ID, script_v0_6_9h(), || {
+                let (mut s, set) = jammed(false);
+                let (attack, max_health) = s
+                    .events()
+                    .iter()
+                    .find_map(|event| match event {
+                        GameEvent::Destroyed {
+                            instance_id,
+                            attack,
+                            max_health,
+                            ..
+                        } if *instance_id == set => Some((*attack, *max_health)),
+                        _ => None,
+                    })
+                    .expect("the set card's destroyed");
+                assert!(attack > 0 && max_health > 0, "{attack}/{max_health}");
+                s.expect_stats(EATER, json!({ "attack": 5 + attack, "maxHealth": 5 + max_health }));
+            });
         }
     }
 

@@ -1,12 +1,15 @@
 //! C #14 Shadowstep (SPEC §8.6 row 14, §4.5, §6.2 Replacement, §6.3 Flicker; R4, R11, R12, R33, R57,
-//! R61, R64, R69, R78, R97, R99, R317, R4395000, R4395001). Trap, cost 1 (2 until issue #3136), Common.
+//! R61, R64, R69, R78, R97, R99, R317, R4395000, R4395001, R4423000). Trap, cost 1 (2 until issue #3136), Common.
 //!   Base:    "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
 //!   Radiant: "Activates when any of your Units would die: Flicker them instead, so they survive. Add a
 //!            copy of each to your hand. The copies cost ({setCost})."
 //!
-//! BASE: a `destroyed` of a Unit of yours, read by its definition's type on the face it died on
-//! (R4395000: a Field Spell, Trap or Field Trap of yours is none, alone or beside Units, unless it died
-//! standing as a Unit, Animated, R4395001; a Unit standing in the backrow is one, R1081000). R99: the condition is its `when`, so an enemy's death leaves it
+//! BASE: a `destroyed` of a Unit of yours, read by what the card was on the field as it died (R4423000,
+//! `is_unit_death`; R4395000: a Field Spell, Trap or Field Trap of yours is none, alone or beside Units, unless
+//! it died standing as a Unit, Animated, R4395001; a Unit standing in the backrow is one, R1081000; a Unit set
+//! face-down by its Cloaked and destroyed before it reveals died as a Field Trap, none; `script_v0_6_9h` keeps
+//! v0.6.9g's and v0.6.9h's read, the definition's type unless the action's own `destroyed` says Animated,
+//! R767000). R99: the condition is its `when`, so an enemy's death leaves it
 //! set. One firing reads the whole §4.5 step 1 pass it stands in and takes every Unit of yours (the
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
 //! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78),
@@ -46,11 +49,14 @@ fn pass_of(ctx: &EffectContext<'_>, answered: &GameEvent, answered_id: &str) -> 
         .collect()
 }
 
-/// R4395000: a `destroyed` event whose card is a Unit: by its definition's type on the face it died on, as
-/// M #60 Eschews reads a death, or, R4395001, an Animated Field Spell or Trap that died standing in a unit
-/// zone. The trigger loop holds the event without its `animated`, so that is read off the action's own
-/// `destroyed` of the same card.
-fn is_unit(ctx: &EffectContext<'_>, died: &GameEvent) -> bool {
+/// R4423000: a `destroyed` event whose card died as a Unit (`is_unit_death`). `by_print` is the read of
+/// v0.6.9h and before (R767000): R4395000, by its definition's type on the face it died on, or, R4395001, an
+/// Animated Field Spell or Trap that died standing in a unit zone. The trigger loop holds the event without
+/// its `animated`, so that is read off the action's own `destroyed` of the same card.
+fn is_unit(ctx: &EffectContext<'_>, died: &GameEvent, by_print: bool) -> bool {
+    if !by_print {
+        return is_unit_death(ctx.state, died);
+    }
     let GameEvent::Destroyed { instance_id, def_id, radiant, .. } = died else {
         return false;
     };
@@ -61,7 +67,8 @@ fn is_unit(ctx: &EffectContext<'_>, died: &GameEvent) -> bool {
 }
 
 /// `units_only` is R4395000's trigger; off, it is what v0.6.9f and before ran: any card of yours destroyed.
-fn shadowstep(units_only: bool) -> TriggerDef {
+/// `by_print`: as `is_unit`'s.
+fn shadowstep(units_only: bool, by_print: bool) -> TriggerDef {
     TriggerDef::new("shadowstep", &[GameEventType::Destroyed], move |ctx, event| {
         let GameEvent::Destroyed { instance_id: answered_id, .. } = event else {
             return vec![];
@@ -69,7 +76,7 @@ fn shadowstep(units_only: bool) -> TriggerDef {
         let cost = param(&*ctx, "setCost");
         pass_of(ctx, event, answered_id)
             .into_iter()
-            .filter(|died| !units_only || is_unit(ctx, died))
+            .filter(|died| !units_only || is_unit(ctx, died, by_print))
             .filter_map(|died| match died {
                 GameEvent::Destroyed { instance_id, controller, .. } => Some((instance_id, controller)),
                 _ => None,
@@ -88,12 +95,12 @@ fn shadowstep(units_only: bool) -> TriggerDef {
     })
     .with_when(move |ctx, event| {
         matches!(event, GameEvent::Destroyed { controller, .. } if *controller == ctx.controller)
-            && (!units_only || is_unit(ctx, event))
+            && (!units_only || is_unit(ctx, event, by_print))
     })
 }
 
-fn scripts(copy_face: bool, units_only: bool) -> CardScripts {
-    let base = Script { triggers: vec![shadowstep(units_only)], ..Script::default() };
+fn scripts(copy_face: bool, units_only: bool, by_print: bool) -> CardScripts {
+    let base = Script { triggers: vec![shadowstep(units_only, by_print)], ..Script::default() };
 
     let radiant = Script {
         replacements: vec![ReplacementDef {
@@ -143,19 +150,26 @@ fn scripts(copy_face: bool, units_only: bool) -> CardScripts {
 }
 
 pub fn script() -> CardScripts {
-    scripts(true, true)
+    scripts(true, true, false)
 }
 
 /// R767000: v0.4.12b and every version before it made Shadowstep's hand card from only its definition
 /// and Radiant flag; `KEPT_SCRIPTS` folds those replays under that script.
 pub fn script_v0_4_12b() -> CardScripts {
-    scripts(false, false)
+    scripts(false, false, true)
 }
 
 /// R4395000: v0.6.9f and every version before it answered every card of yours that was destroyed;
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_9f() -> CardScripts {
-    scripts(true, false)
+    scripts(true, false, true)
+}
+
+/// R4423000: v0.6.9h and the versions before it back to v0.6.9g read a death by the definition's type unless
+/// the action's own `destroyed` said Animated, so a Unit set face-down by its Cloaked and destroyed before it
+/// reveals answered it; `KEPT_SCRIPTS` folds those replays under it (R767000).
+pub fn script_v0_6_9h() -> CardScripts {
+    scripts(true, true, true)
 }
 
 // C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14 (R33, §4.5, §3.2, R78, R317, R11, R69,
@@ -720,6 +734,47 @@ mod tests {
             let copy = s.hand(P1).into_iter().find(|card| card.def_id == RUSH_TOKEN).expect("copy in hand");
             assert_eq!(copy.stats_override, None);
             assert_eq!(copy.armor_override, None);
+        });
+    }
+
+    /// p1 sets a Cloaked Toe Cracker face-down beside its face-down base Shadowstep, and on p2's turn p2
+    /// destroys it with Magic Jammed before it reveals; the set card's id.
+    fn cloaked_jammed() -> (Scenario, String) {
+        const MAGIC_JAMMED: &str = "core-036";
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [crate::CLOAKED_UNIT, STOCKPILE],
+                "library": [STOCKPILE, STOCKPILE],
+                "backrow": [{ "def": SHADOWSTEP, "faceUp": false, "lane": 3 }],
+                "mana": 10,
+            },
+            "p2": { "hand": [MAGIC_JAMMED, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
+        }));
+        let set = crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 2);
+        s.end_turn();
+        s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&set) }));
+        (s, set)
+    }
+
+    /// R4423000: a Unit set face-down by its Cloaked and destroyed before it reveals died as a Field Trap,
+    /// none of your Units, so the base face stays set and the card stays in your graveyard.
+    #[test]
+    fn r4423000_a_set_cloaked_unit_destroyed_before_it_reveals_is_no_unit_death_for_it() {
+        let (s, set) = cloaked_jammed();
+        assert_eq!(crate::died_as_of(&s, &set), Some(CardType::FieldTrap));
+        assert_eq!(s.count(GameEventType::TrapFired), 0);
+        assert_eq!(backrow_def(&s, P1, 3), Some(SHADOWSTEP.to_string()));
+        assert!(s.pile(P1, "graveyard").iter().any(|card| card.id == set));
+    }
+
+    /// R767000: v0.6.9h's script read the set card by its definition's type, a Unit, and handed it back.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9h_answers_a_set_cloaked_unit_s_death() {
+        crate::under_kept(SHADOWSTEP, script_v0_6_9h(), || {
+            let (s, set) = cloaked_jammed();
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
+            let back = s.hand(P1).into_iter().find(|card| card.id == set).expect("the Toe Cracker in hand");
+            assert_eq!(back.cost_override, Some(0));
         });
     }
 

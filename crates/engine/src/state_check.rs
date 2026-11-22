@@ -23,8 +23,8 @@ use crate::state::{
     CardInstance, GameState, Resume, WorkItem, active_first, find_instance, find_instance_mut,
 };
 use crate::wire::{
-    AttackHealth, GameEvent, GameOverReason, HookKind, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position,
-    Row, Winner, Zone, ZoneName, ZoneRef, has_keyword,
+    AttackHealth, CardType, GameEvent, GameOverReason, HookKind, Keyword, KeywordKind, PLAYER_IDS, PlayerId,
+    Position, Row, Winner, Zone, ZoneName, ZoneRef, has_keyword,
 };
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, engine_resume, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
@@ -721,9 +721,19 @@ struct ReadCard {
     standing: bool,
     /// R4395001: a Field Spell, Trap or Field Trap that dies standing in a unit zone (Animated, R383).
     animated: bool,
+    /// R4423000: what it dies as, when not its face's printed type.
+    died_as: Option<CardType>,
     /// R1849002, R4207000: a destroy-to-exile aura sends it to its exile pile instead of its graveyard.
     exiled: bool,
     snapshot: CardInstance,
+}
+
+/// R4423000: the card's type as it dies when not its face's printed one (`faces::card_type_of`: a card set
+/// by its Cloaked is a Field Trap or a Trap, R3777000; one standing in a unit zone a Unit, R383), read
+/// before any collected card leaves the field (R89).
+fn died_as(state: &GameState, card: &CardInstance) -> Option<CardType> {
+    let now = crate::faces::card_type_of(state, card);
+    (now != crate::faces::card_type_of_face(state, &card.def_id, card.radiant)).then_some(now)
 }
 
 /// §4.5 step 1: move the collected cards (units by health or a destroy mark, backrow cards by a mark) all at
@@ -756,6 +766,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 // exiles itself and the rest; a Sacrifice is no destroy, so this aura leaves it alone.
                 exiled: cause == DeathCause::Collected
                     && crate::replacements::destroy_exiles(sink.state, &unit),
+                died_as: died_as(sink.state, &unit),
                 // R78 resets an instance as it leaves, so the Death hook of step 3 reads this snapshot (R89).
                 snapshot: unit.clone(),
                 unit,
@@ -927,6 +938,9 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             radiant: if card.snapshot.radiant { Some(true) } else { None },
             // R4395001: an Animated Field Spell or Trap that died standing as a Unit (R383).
             animated: card.animated.then_some(true),
+            // R4423000: what it died as, when its printed type does not say it (a set Cloaked card, an
+            // Animated one).
+            died_as: card.died_as,
             via,
         });
         // R4207000: then where it went, as `zones::exile_to_pile` reports an exile (a unit token's
