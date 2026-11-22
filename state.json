@@ -17260,17 +17260,8 @@
       "verdict_rounds": 1
     },
     "4472": {
-      "action": "plan",
-      "asks": [
-        "c:7081773479"
-      ],
-      "build_next": {
-        "from_run": "45042592793",
-        "model": "gpt-5.6-sol",
-        "provider": "gpt",
-        "since": "2026-11-22T16:36:39Z",
-        "until": "2026-11-22T17:06:39Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T16:36:31Z",
         "difficulty": "medium",
@@ -17289,10 +17280,9 @@
         "reason": "planned on gpt-5.6-sol",
         "trail": "- said: I\u2019ll map the existing perf pipeline, its tests, and the governing spec sections before drafting. I\u2019ll use parallel read-only surveys for the perf implementation and spec/history, then reconcile everything into `.bot-plan.md`; no tracked files will be changed.\n- ran `/bin/bash -lc \"sed -n '1,260p' CLAUDE.md && sed -n '261,520p' CLAUDE.md && sed -n '1,220p' AGENTS.md && git status --short && git log -5 --oneline --decorate\"` (exit 0)\n- ran `/bin/bash -lc \"wc -l SPEC.md spec/README.md crates/tools/README.md crates/tools/src/perf.rs crates/tools/tests/perf.rs && sed -n '1,240p' SPEC.md && sed -n '1,\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"perf|Performance\\\" crates/tools/README.md crates/tools/src/perf.rs crates/tools/tests/perf.rs && sed -n '1,260p' crates/tools/src/perf.r\u2026` (exit 0)\n- ran `/bin/bash -lc \"sed -n '130,360p' crates/tools/src/perf.rs && sed -n '740,1045p' crates/tools/src/perf.rs\"` (exit 0)\n- ran `/bin/bash -lc \"sed -n '600,845p' crates/tools/src/perf.rs && rg -n \\\"combat_forecast|pub struct Combat|struct Combat|Forecast|attacks\\\" crates/engine/src/query\u2026` (exit 0)\n- said: The implementation is tightly contained in the tools crate: the new timings can reuse the existing deterministic corpus and the same per-seat loops that already time `view_for`. I\u2019m now pinning down the report shape and the \u201c10 or more attacks\u201d coverage test so the builder won\u2019t have to invent eith\u2026\n- ran `/bin/bash -lc \"sed -n '1010,1185p' crates/engine/src/query.rs && sed -n '800,840p' crates/shared/src/host/duos.rs && sed -n '1,190p' spec/09-architecture.md &&\u2026` (exit 0)\n- ran `/bin/bash -lc \"git log --all --oneline --decorate -- crates/tools/src/perf.rs | head -40 && git show --stat --oneline 0cd6b9dfb3 && git show --format=fuller --\u2026` (exit 0)\n- ran `/bin/bash -lc \"git cat-file -t 0cd6b9dfb3; git log -8 --oneline -- crates/tools/src/perf.rs; git branch -a --list '*4472*'\"` (exit 0)\n- ran `/bin/bash -lc \"git show --stat --oneline --no-renames 0cd6b9dfb3 | head -80 && git show --format=fuller --no-ext-diff 0cd6b9dfb3 -- crates/engine/src/query.rs \u2026` (exit 0)\n- ran `/bin/bash -lc \"git show --stat --oneline a844d068d9 && git show --format=fuller --no-ext-diff a844d068d9 | sed -n '1,320p'\"` (exit 0)\n- ran `/bin/bash -lc \"git show --format= --no-ext-diff dd0f3b2d73 -- crates/tools/src/perf.rs crates/tools/tests/perf.rs crates/tools/README.md | sed -n '1,420p'\"` (exit 0)\n- ran `/bin/bash -lc \"if test -f .bot-plan.md; then sed -n '1,260p' .bot-plan.md; else echo 'NO_DRAFT'; fi\"` (exit 0)\n- ran `/bin/bash -lc \"rg -n \\\"mod perf|pub mod perf|perf::\\\" crates/tools/src/lib.rs crates/tools/src/main.rs crates/tools/Cargo.toml && sed -n '1,100p' crates/tools/\u2026` (exit 2)\n- said: The key planning decision is now explicit: count total listed attacks separately for 1v1 and Duos in the report header, and also expose the maximum attacks in any single 1v1 forecast so the smoke test can prove the required 10-attack stress state without rebuilding the corpus a second time. Duos wi\u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4472/.bot-plan.md\n- ran `/bin/bash -lc \"wc -w -c .bot-plan.md && sed -n '1,320p' .bot-plan.md && git status --short --ignored | head -30 && git diff --check\"` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4472/.bot-plan.md\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4472/.bot-plan.md\n- said: The draft is complete at 1,554 words and names only the three allowed tools files. It now avoids an extra forecast traversal by deriving attack coverage from the timed results themselves, keeps warmups excluded, and gives the builder a mechanical six-run calibration procedure for the four values th\u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4472/.bot-plan.md\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Only the tools crate's perf command, its tests, and its README change; no engine rules, AI decisions/search, cross-crate design, migration, or large file set is involved.\"} --> ## Goal Extend `cargo jackioh perf` so every timed pass measures `combat_foreca\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "gpt",
       "owner_since": "2026-11-22T16:13:12Z",
       "owner_why": "it plans it",
@@ -17305,12 +17295,14 @@
       "provider": "gpt",
       "queued_at": "2026-11-22T16:03:26Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45042592793",
+      "run_id": "pending:37807812-1795365695",
       "runs_on": "night-vm-gpt",
-      "started_at": "2026-11-22T16:13:12Z",
+      "started_at": "2026-11-22T16:41:54Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7081773479"
+      ]
     },
     "4473": {
       "action": "review",
@@ -18312,9 +18304,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T16:41:22Z",
+    "at": "2026-11-22T16:41:54Z",
     "url": "",
-    "what": "build #4484 on agy"
+    "what": "build #4472 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-22T16:21:33Z",
