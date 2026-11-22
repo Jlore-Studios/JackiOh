@@ -50,7 +50,7 @@ fn pass_of(ctx: &EffectContext<'_>, answered: &GameEvent, answered_id: &str) -> 
 }
 
 /// R4423000: a `destroyed` event whose card died as a Unit (`is_unit_death`). `by_print` is the read of
-/// v0.6.9j and before (R767000): R4395000, by its definition's type on the face it died on, or, R4395001, an
+/// v0.6.9k and before (R767000): R4395000, by its definition's type on the face it died on, or, R4395001, an
 /// Animated Field Spell or Trap that died standing in a unit zone. The trigger loop holds the event without
 /// its `animated`, so that is read off the action's own `destroyed` of the same card.
 fn is_unit(ctx: &EffectContext<'_>, died: &GameEvent, by_print: bool) -> bool {

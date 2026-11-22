@@ -31,8 +31,8 @@ use crate::scripts::classic::{
     c001_curse_of_the_forgotten_classic, c004_palantir, c008_pickle, c009_income_tax,
     c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
     c024_book_of_knowledge, c027_pestilent_slime, c028_second_wind, c032_felinor_feelings, c035_prep,
-    c037_last_hurrah, c039_outbreak, c047_recurring_felinor, c052_final_gambit, c057_echo, c062_living_bomb,
-    c064_malzahars_recycler, c070_book_of_plague, c088_siphon_squad, c090_in_too_deep,
+    c037_last_hurrah, c039_outbreak, c040_mc_tech, c047_recurring_felinor, c052_final_gambit, c057_echo,
+    c062_living_bomb, c064_malzahars_recycler, c070_book_of_plague, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
@@ -67,25 +67,25 @@ use crate::scripts::meditative_plus::{
     c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
-    c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c013_asphyxiants_cloud,
-    c016_rod_of_ages, c018_1_melchior, c018_imitated_instrumentality, c023_warp_disruptor,
-    c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix,
-    c036_drone_core_x, c042_core_researcher, c045_drone_commander, c046_circadian_halfcycler, c049_spacemine,
-    c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4,
-    c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth,
-    c074_paragon_x, c083_halo, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack,
-    c111_shockwave447, c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system,
-    c129_jlockeeds_missile_pod, c134_felinor_containment_chamber, c140_rush_token_launcher,
-    c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck, c154_dice_of_doom,
-    c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid,
-    c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette,
-    t_drone_interceptor, t_narcor, t_red_narcor,
+    c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c011_2_arcane_missiles,
+    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c018_3_casper, c018_imitated_instrumentality,
+    c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii,
+    c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
+    c046_circadian_halfcycler, c049_spacemine, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3,
+    c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5,
+    c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c083_halo, c086_prototype_x2, c087_siva_1,
+    c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application,
+    c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod,
+    c134_felinor_containment_chamber, c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach,
+    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c163_swear_loyalities, c165_the_trade_union,
+    c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
+    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
-    c037_scorch, c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law,
-    c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao,
-    c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
+    c025_snom_bunny, c037_scorch, c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric,
+    c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall,
+    c076_ayys_lmao, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
     c093_recessive_replicators, c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse,
     c120_crawler, c121_1_toxopid_leg, c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
     c166_mindustrial_revolution,
@@ -116,7 +116,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #4154 (R4154001, R4154100 to R4154105, R4154200 to R4154213, R4154300 to R4154305), #4238 (R4238000),
 /// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001), #4353 (R4353020,
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
-/// hooks), #4350 (R4350000), #4395 (R4395000), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
+/// hooks), #4350 (R4350000), #4395 (R4395000), #4469 (R3554003), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
 /// Token through v0.1.0d), #4396 (R4396000), and #4423 (R4423000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -1216,37 +1216,46 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c007_the_greatest_heist::script_v0_6_9i,
     ),
     (c014_shadowstep::ID, "v0.6.9i", c014_shadowstep::script_v0_6_9i),
-    // #4423: v0.6.9j shipped on `main` (#4488) after this branch's base and ran the same scripts, so they
-    // are kept under it too. On a tree whose history stops at v0.6.9i these rows cover nothing
-    // (`covering_at` skips a version the history lacks); merged with `main`, which no run merges when it
-    // merges cleanly (bot/README.md, The own review run), they cover v0.6.9j and the rows above the rest.
+    // #4423: v0.6.9j (#4488) and v0.6.9k (#4491) shipped on `main` after this branch's base and ran the same
+    // scripts, so they are kept under v0.6.9k too, which covers both (`covering_at` takes the nearest row at
+    // or after a version).
     (
         c089_corpse_eater::ID,
-        "v0.6.9j",
+        "v0.6.9k",
         c089_corpse_eater::script_v0_6_9i,
     ),
     (
         c056_legacy_corpse_eater::ID,
-        "v0.6.9j",
+        "v0.6.9k",
         c056_legacy_corpse_eater::script_v0_6_9i,
     ),
     (
         c035_corpse_recycler::ID,
-        "v0.6.9j",
+        "v0.6.9k",
         c035_corpse_recycler::script_v0_6_9i,
     ),
     (
         c093_recessive_replicators::ID,
-        "v0.6.9j",
+        "v0.6.9k",
         c093_recessive_replicators::script_v0_6_9i,
     ),
-    (c060_eschews::ID, "v0.6.9j", c060_eschews::script_v0_6_9i),
+    (c060_eschews::ID, "v0.6.9k", c060_eschews::script_v0_6_9i),
     (
         c007_the_greatest_heist::ID,
-        "v0.6.9j",
+        "v0.6.9k",
         c007_the_greatest_heist::script_v0_6_9i,
     ),
-    (c014_shadowstep::ID, "v0.6.9j", c014_shadowstep::script_v0_6_9i),
+    (c014_shadowstep::ID, "v0.6.9k", c014_shadowstep::script_v0_6_9i),
+    // #4469 (R3554003): the last scripts that drew a random pick among cards across a slash.
+    (c040_mc_tech::ID, "v0.6.9j", c040_mc_tech::script_v0_6_9j),
+    (
+        c011_2_arcane_missiles::ID,
+        "v0.6.9j",
+        c011_2_arcane_missiles::script_v0_6_9j,
+    ),
+    (c025_snom_bunny::ID, "v0.6.9j", c025_snom_bunny::script_v0_6_9j),
+    (c018_3_casper::ID, "v0.6.9j", c018_3_casper::script_v0_6_9j),
+    (c087_siva_1::ID, "v0.6.9j", c087_siva_1::script_v0_6_9j),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1915,13 +1924,11 @@ mod tests {
         assert_kept_through(&[c014_shadowstep::ID], &["v0.6.9h", "v0.6.9i"], "v0.6.9j");
     }
 
-    /// Issue #4423: v0.6.9j (#4488) shipped on `main` after this branch's base, still running the scripts
-    /// kept above. Where the history holds it, it is kept under its own row; where it does not, nothing
-    /// covers it; either way v0.6.9k, the first that can ship with the change, runs the new scripts.
+    /// Issue #4423: v0.6.9j (#4488) and v0.6.9k (#4491) shipped on `main` after this branch's base, still
+    /// running the scripts kept above, so both fold under the row kept at v0.6.9k.
     #[test]
-    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9j_once_it_shipped() {
+    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9k_once_it_shipped() {
         crate::register_all();
-        let shipped = HISTORY.order.iter().any(|version| version == "v0.6.9j");
         for id in [
             c089_corpse_eater::ID,
             c056_legacy_corpse_eater::ID,
@@ -1939,12 +1946,37 @@ mod tests {
                 Some("v0.6.9i"),
                 "{id}: v0.6.9i keeps its own row"
             );
-            assert_eq!(
-                kept_at("v0.6.9j"),
-                shipped.then_some("v0.6.9j"),
-                "{id}: v0.6.9j ran the script kept at v0.6.9i"
-            );
-            assert_eq!(kept_at("v0.6.9k"), None, "{id}: v0.6.9k runs its replacement");
+            for version in ["v0.6.9j", "v0.6.9k"] {
+                assert_eq!(
+                    kept_at(version),
+                    Some("v0.6.9k"),
+                    "{id}: {version} ran the script kept at v0.6.9i"
+                );
+            }
+        }
+    }
+
+    /// Issue #4469: v0.6.9j was the newest shipped version as it was built, and no later one had shipped,
+    /// so `assert_kept_through` (which needs one) cannot hold these.
+    #[test]
+    fn r767000_issue_4469_scripts_are_kept_through_v0_6_9j_the_newest_version_that_ran_them() {
+        crate::register_all();
+        for id in [
+            c040_mc_tech::ID,
+            c011_2_arcane_missiles::ID,
+            c025_snom_bunny::ID,
+            c018_3_casper::ID,
+            c087_siva_1::ID,
+        ] {
+            for version in ["v0.6.9", "v0.6.9h", "v0.6.9i", "v0.6.9j"] {
+                let kept =
+                    covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1);
+                assert_eq!(
+                    kept,
+                    Some("v0.6.9j"),
+                    "{id} on {version} runs the script kept at v0.6.9j"
+                );
+            }
         }
     }
 

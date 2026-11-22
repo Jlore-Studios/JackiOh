@@ -1,7 +1,7 @@
 {
   "title": "Cards that count a Unit's death read what the card was as it died",
   "sources": "#4423",
-  "notes": "Corpse Eater (Core #89 and TG #56), Corpse Recycler, Recessive Replicators, Eschews, The Greatest Heist's Stage 2 and Shadowstep's base face read a death as a Unit's by what the card was on the field as it died, from the destroyed event's new diedAs (R4423000): a Unit set by its Cloaked and destroyed before it reveals is none, an Animated Field Spell or Trap killed in a unit zone is one. Both Corpse Eaters' gain also stops at MULTIPLIED_STAT_CAP (999), since Eaters fed to one another grew past the fuzz gate's growth bound (R4423001). The scripts of v0.6.9i are kept (script_v0_6_9i) for v0.6.9j and before.",
+  "notes": "Corpse Eater (Core #89 and TG #56), Corpse Recycler, Recessive Replicators, Eschews, The Greatest Heist's Stage 2 and Shadowstep's base face read a death as a Unit's by what the card was on the field as it died, from the destroyed event's new diedAs (R4423000): a Unit set by its Cloaked and destroyed before it reveals is none, an Animated Field Spell or Trap killed in a unit zone is one. Both Corpse Eaters' gain also stops at MULTIPLIED_STAT_CAP (999), since Eaters fed to one another grew past the fuzz gate's growth bound (R4423001). The scripts of v0.6.9i are kept (script_v0_6_9i) for v0.6.9k and before.",
   "player": {
     "title": "Deaths count by what the card was as it died",
     "new": [],

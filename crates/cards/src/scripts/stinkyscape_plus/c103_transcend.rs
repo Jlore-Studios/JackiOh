@@ -150,4 +150,16 @@ mod tests {
         s.play(ID, json!({}));
         assert_eq!(s.unit_at(P1, 1).id, old);
     }
+
+    #[test]
+    fn r4453000_an_immune_unit_is_not_transformed() {
+        // §6.1: a Spell passes a Unit Immune to Spells by, its caster's own included.
+        crate::register_all();
+        let mut s = board(false, json!(["core-019", "core-008"]));
+        let (first, warded) = (s.unit_at(P1, 1).id, s.unit_at(P1, 2).id);
+        s.card_mut(warded.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+        s.play(ID, json!({}));
+        assert_eq!(s.unit_at(P1, 2).id, warded, "the immune Unit stays as it is");
+        assert_ne!(s.unit_at(P1, 1).id, first, "the other is replaced");
+    }
 }

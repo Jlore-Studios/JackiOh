@@ -10,7 +10,7 @@
 //! meant for both (R2195003), reads a death as the Core card does since: by what the card was on the field
 //! as it died (R4423000, `is_unit_death`), so a Unit set face-down by its Cloaked and destroyed before it
 //! reveals feeds nothing and an Animated Field Spell or Trap killed in a unit zone feeds it;
-//! `script_v0_6_9i` keeps the definition's type for v0.6.9j and before (R767000). The same patch stops its
+//! `script_v0_6_9i` keeps the definition's type for v0.6.9k and before (R767000). The same patch stops its
 //! gain at `MULTIPLIED_STAT_CAP` (R4423001), as the Core card's, which `script_v0_6_9i` does not. The Core
 //! file's notes, as they stood:
 //!
@@ -32,7 +32,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "traininggrounds-056";
 
 /// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
-/// `kept` is what v0.6.9j and before ran (R767000): a death read by the dead card's definition, and a gain with
+/// `kept` is what v0.6.9k and before ran (R767000): a death read by the dead card's definition, and a gain with
 /// no cap (R4423001).
 fn feed(factor: i32, kept: bool) -> TriggerDef {
     TriggerDef::new(
@@ -470,7 +470,7 @@ mod tests {
             }
         }
 
-        /// R767000: v0.6.9j and before fed it on the set card's death, by the definition's type.
+        /// R767000: v0.6.9k and before fed it on the set card's death, by the definition's type.
         #[test]
         fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
             crate::under_kept(ID, script_v0_6_9i(), || {
@@ -536,7 +536,7 @@ mod tests {
             }
         }
 
-        /// R767000: v0.6.9j and before had no cap.
+        /// R767000: v0.6.9k and before had no cap.
         #[test]
         fn r767000_the_script_kept_for_v0_6_9i_gains_past_the_cap() {
             crate::under_kept(ID, script_v0_6_9i(), || {

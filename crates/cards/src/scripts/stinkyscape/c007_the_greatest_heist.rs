@@ -13,7 +13,7 @@
 //! Stage 1: unitsMadeRadiant (R1854002); reward summons random Acclaimed Unit (R64, R1).
 //! Stage 2: unitsDied; reward rolls Anomaly Found! or Resource (R1873002, §2.4, R1840002, R1840000). A Unit
 //! by what the card was on the field as it died (R4423000): an Acclaimed Unit set face-down by its Cloaked and
-//! destroyed before it reveals is not counted; through v0.6.9j the goal read the card where it lay after the
+//! destroyed before it reveals is not counted; through v0.6.9k the goal read the card where it lay after the
 //! death, its printed card (`byPrint`, `script_v0_6_9i`, kept, R767000).
 //! Stage 3: cardsStolen; reward steal_mana_crystals past the cap (R1854003, R4331001), then the Heist,
 //! spent, goes to the graveyard (end_quest_line, R4331000). Through v0.6.9c the steal stopped at the
@@ -49,7 +49,7 @@ fn vaults_reward(kept: bool) -> String {
     if kept { STEAL.to_string() } else { format!("{STEAL}, even past {MAX_MANA}") }
 }
 
-/// `by_print`: Stage 2 reads a death off the dead card where it lies, as v0.6.9j and before (R767000).
+/// `by_print`: Stage 2 reads a death off the dead card where it lies, as v0.6.9k and before (R767000).
 fn stages(kept: bool, by_print: bool) -> Vec<QuestStage> {
     let mut deaths = json!({ "kind": "unitsDied", "count": DEATHS, "tag": Tag::Acclaimed });
     if by_print {
@@ -165,7 +165,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.6.9j and before ran back to v0.6.9d, kept for their replays: Stage 2 read a death
+/// R767000: the scripts v0.6.9k and before ran back to v0.6.9d, kept for their replays: Stage 2 read a death
 /// off the dead card where it lay (R4423000).
 pub fn script_v0_6_9i() -> CardScripts {
     CardScripts {
@@ -405,7 +405,7 @@ mod tests {
         assert_eq!(stage(&s), Some(COMRADERY));
     }
 
-    /// R767000: through v0.6.9j Stage 2 read the dead card in its graveyard, a Unit there.
+    /// R767000: through v0.6.9k Stage 2 read the dead card in its graveyard, a Unit there.
     #[test]
     fn r767000_the_script_kept_for_v0_6_9i_counts_set_cloaked_deaths_toward_stage_2() {
         crate::under_kept(ID, script_v0_6_9i(), || {

@@ -21,7 +21,7 @@
 //! R4423000: a Unit's death is read by what the card was on the field as it died (`is_unit_death`): a Unit
 //! set face-down by its Cloaked and destroyed before it reveals died as a Field Trap and feeds nothing, and
 //! an Animated Field Spell or Trap killed in a unit zone died as a Unit and feeds it. `script_v0_6_9i` keeps
-//! the definition's type for v0.6.9j and before (R767000).
+//! the definition's type for v0.6.9k and before (R767000).
 //!
 //! R4423001: the gain takes its Attack and max Health no higher than `MULTIPLIED_STAT_CAP`, as R4079000's
 //! doublings stop: an Eater in hand that eats another Eater gains what that one gathered, so copies fed to
@@ -32,7 +32,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-089";
 
 /// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
-/// `kept` is what v0.6.9j and before ran (R767000): a death read by the dead card's definition, and a gain with
+/// `kept` is what v0.6.9k and before ran (R767000): a death read by the dead card's definition, and a gain with
 /// no cap (R4423001).
 fn feed(factor: i32, kept: bool) -> TriggerDef {
     TriggerDef::new("corpse-eater-feed", &[GameEventType::Destroyed], move |ctx, event| {
@@ -653,7 +653,7 @@ mod tests {
             }
         }
 
-        /// R767000: v0.6.9j and before fed it on the set card's death, by the definition's type.
+        /// R767000: v0.6.9k and before fed it on the set card's death, by the definition's type.
         #[test]
         fn r767000_the_script_kept_for_v0_6_9i_counts_a_set_cloaked_unit_s_death() {
             crate::under_kept(ID, script_v0_6_9i(), || {
@@ -718,7 +718,7 @@ mod tests {
             }
         }
 
-        /// R767000: v0.6.9j and before had no cap.
+        /// R767000: v0.6.9k and before had no cap.
         #[test]
         fn r767000_the_script_kept_for_v0_6_9i_gains_past_the_cap() {
             crate::under_kept(ID, script_v0_6_9i(), || {
