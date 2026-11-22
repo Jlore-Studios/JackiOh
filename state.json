@@ -19261,13 +19261,17 @@
     "what": "spot-check #4506 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-22T19:15:27Z",
+    "at": "2026-11-22T19:25:26Z",
     "notes": [
-      "delivered plan #4507 on muse (run 45058900368): planned",
-      "delivered revise #4501 on gpt (run 45058789545): blocked",
-      "delivered review #4503 on muse (run 45054853613): approved",
-      "started build #4507 on muse (run 45060031075)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-22T20:40:00Z; it can start a build or a plan again in 20m; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is idle, but nothing queued is for it; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` is idle, but nothing queued is for it; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
+      "delivered suggest on claude-1 (run 45059067670): suggested",
+      "delivered suggest on claude-8 (run 45058843327): suggested",
+      "delivered review #4500 on agy (run 45052038496): approved",
+      "started review #4506 on claude-8 (run 45060920603)",
+      "nothing more to start: nothing is queued",
+      "#4510: typed it Task",
+      "#4509: typed it Task",
+      "#4508: typed it Bug",
+      "runner gate: started 1 of 1 waiting run(s) (run 45060831931 on bot/issue-4484)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19973,7 +19977,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T19:15:27Z",
+  "loop_tick": "2026-11-22T19:25:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
