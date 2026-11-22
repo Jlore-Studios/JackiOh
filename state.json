@@ -17514,17 +17514,8 @@
       ]
     },
     "4478": {
-      "action": "plan",
-      "asks": [
-        "c:7081817251"
-      ],
-      "build_next": {
-        "from_run": "45042694359",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-22T16:22:24Z",
-        "until": "2026-11-22T16:52:24Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T16:22:16Z",
         "difficulty": "medium",
@@ -17543,10 +17534,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"ls .bot-plan.md 2>&1; wc -l crates/engine/src/testkit/invariants.rs; grep -n \\\"I9\\\\|counted_health\\\\|hero_loses\\\\|hold_hero_floor\\\\|I18\\\\|I17\\\\|I19\\\\|STRIDE\\\" crates/engine/src/testkit/i\u2026\n- Bash: {\"command\": \"cd crates/engine/src/testkit; sed -n 1,140p invariants.rs; grep -n \\\"I20\\\\|I21\\\" invariants.rs | head\"}\n- Bash: {\"command\": \"cd crates/engine/src/testkit; sed -n 2920,3060p invariants.rs; sed -n 3495,3545p invariants.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; f=crates/engine/src/testkit/invariants.rs; sed -n 3668,3800p $f\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; f=crates/engine/src/testkit/invariants.rs; sed -n 3800,3900p $f; echo ------; sed -n 4170,4260p $f\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -rn \\\"\\\\.damage\\\\s*[-+]\\\\?=[^=]\\\\|\\\\bdamage: 0\\\\|\\\\.damage = \\\" crates/engine/src crates/cards/src --include=*.rs | grep -v \\\"^crates/card\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; sed -n 75,95p crates/engine/src/effects/health.rs; echo ---T; sed -n 300,345p crates/engine/src/effects/transform.rs; echo ---SC; sed -n 470,49\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; sed -n 395,470p crates/engine/src/state_check.rs; sed -n 495,560p crates/engine/src/state_check.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; sed -n 640,720p crates/engine/src/damage.rs; sed -n 1235,1300p crates/engine/src/damage.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; f=crates/engine/src/testkit/invariants.rs; grep -n \\\"^fn field_cards\\\\|^pub fn field_cards\\\" -A22 $f | head -50; grep -n \\\"fn dormant_cards\\\" -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -n \\\"enum SwapWhat\\\" -A15 crates/engine/src/wire/*.rs | head -30; grep -n \\\"damage\\\" crates/engine/src/effects/transform.rs | head -30; gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; sed -n 95,135p crates/engine/src/effects/health.rs; for f in tune heal datacenter; do echo \\\"== $f\\\"; grep -n \\\"damage\\\" crates/engine/src/effe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -rn \\\"NumberChanged\\\" crates/engine/src --include=*.rs | grep -v \\\"testkit\\\\|wire/\\\" | head -20; grep -rn \\\"damage\\\\s*=\\\\s\\\\|\\\\.damage\\\\s*\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; sed -n 40,80p crates/cards/src/scripts/core/c012_duplicating_felinors.rs; sed -n 1225,1245p crates/engine/src/effects/tune.rs; sed -n 185,200p \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; f=crates/engine/src/testkit/invariants.rs; sed -n 4296,4330p $f; sed -n 4395,4470p $f\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -rn \\\"I6_GATE_STRIDE\\\\|I14_GATE_STRIDE\\\\|I8_GATE_STRIDE\\\" --include=*.rs --include=*.md . 2>/dev/null | grep -v \\\"^./target\\\" | head -20; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; wc -l crates/engine/tests/rules/invariants.rs; grep -n \\\"^fn \\\\|^use \\\\|^mod \\\\|^ fn \\\\|^#\\\\[test\\\\]\\\" crates/engine/tests/rules/invariants.rs \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; sed -n 30,84p crates/engine/tests/rules/invariants.rs; sed -n 905,1100p crates/engine/tests/rules/invariants.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; sed -n 2144,2260p crates/engine/tests/rules/invariants.rs; grep -n \\\"pub fn put\\\\b\\\\|pub fn slot\\\\|pub fn act_ok\\\\|pub fn new_game\\\\|pub fn bot\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -rnE \\\"damage\\\\)?\\\\s*(\\\\+|-|=)=?\\\\s\\\" crates/engine/src --include=*.rs | grep -vE \\\"testkit|^\\\\S+:[0-9]+:\\\\s*//|==|let |amount|total_damag\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -n \\\"RolledBack\\\\|Glitched {\\\" crates/engine/src/wire/events.rs | head; grep -n \\\"snapshot\\\\|restore\\\" crates/engine/src/subsystems/board_\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -n \\\"pub fn run_effect\\\" -B3 -A25 crates/engine/tests/rules/fixtures/harness.rs; grep -rn \\\"effects::vanilla\\\\|vanilla(\\\" crates/engine/te\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -n \\\"^fn hurt\\\" -B3 -A22 crates/engine/tests/rules/invariants.rs; grep -n \\\"pub static plain\\\\|pub fn plain\\\\|plain:\\\" -A8 crates/engine/t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -rn \\\"signature_of\\\\|signatureOf\\\" crates --include=*.rs | head -5; grep -rn \\\"I1\\u2013I19\\\\|I1-I19\\\\|I19\\\" --include=*.md --include=*.rs \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4478; grep -n \\\"I19\\\\|I1\\u2013I1\\\\|I18\\\" spec/10-engine-guide.md crates/engine/src/testkit/mod.rs crates/engine/README.md crates/tools/src/main.rs cr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4478/.bot-plan.md\", \"content\": \"# Draft plan #4478 (planner notes)\\n- I19 is TAKEN (Dormant, #4454). New check = I20. Header says \\\"nineteen checks\\\" \u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Only the fuzz monitor in crates/engine/src/testkit/ and its tests change: no rules, resolution loop, AI, migration or cross-crate contract, and well under 40 files; rule 1 (engine rules) does not apply because no engine behavior changes.\"} --> ## Goal Add \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-22T16:14:19Z",
       "owner_why": "it plans it",
@@ -17559,12 +17549,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-22T16:06:47Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45042694359",
+      "run_id": "pending:ae78ee2f-1795364804",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T16:14:19Z",
+      "started_at": "2026-11-22T16:27:06Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7081817251"
+      ]
     },
     "4479": {
       "action": "plan",
@@ -18180,9 +18172,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T16:26:32Z",
+    "at": "2026-11-22T16:27:06Z",
     "url": "",
-    "what": "build #4485 on claude-8"
+    "what": "build #4478 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-22T16:08:15Z",
