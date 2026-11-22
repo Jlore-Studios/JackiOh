@@ -37,14 +37,11 @@
 "ai slow" = 1
 "tools fuzz" = 1
 "tools duos, selfplay" = 1
-# `tools, wasm` ran 14m 8s at 1 (#4441, 18m 24s in #4432) and went to 4 shards (#4434). One test of the jackioh
+# `tools, wasm` ran 14m 8s at 1 (#4441, 18m 24s in #4432) and runs in 4 shards (#4434). One test of the jackioh
 # binary, fork_screen's r4397000 cap test, ran 477 s alone (the group's other 487 tests, 490 s on four
-# threads together), and a count cannot split a test: #4441 cut that test's rollouts instead.
-# Shard 1/4 still ran 11m 51s (#4462): the trimmed cap test is the long pole again (209 s alone, 32 rollout
-# arms over two pools; its trunk plays in parallel and the pools are the test's point, so no honest trim is
-# left) while the other ~500 tests are diffuse, so the group goes to 8 shards, the most matrix.py allows.
-# Any count other than 8 needs bot/tests/test_ci_matrix.py's pin changed.
-"tools, wasm" = 8
+# threads together), and a count cannot split a test: #4441 cut that test's rollouts instead. Any count
+# other than 4 needs bot/tests/test_ci_matrix.py's pin changed.
+"tools, wasm" = 4
 
 # `web (unit k/K)`: Vitest's `--shard=k/K` over the web's and the Worker's unit tests.
 # 4 shards ran one past seven minutes (web (unit 1/4), 8m 52s, #3258); 8 is the most a count may be (matrix.py's MAX_SHARDS).
