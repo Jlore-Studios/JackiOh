@@ -1217,44 +1217,39 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c007_the_greatest_heist::script_v0_6_9i,
     ),
     (c014_shadowstep::ID, "v0.6.9i", c014_shadowstep::script_v0_6_9i),
-    // #4423: v0.6.9j (#4488) and v0.6.9k (#4491) shipped on `main` after this branch's base and ran the same
-    // scripts, so they are kept under v0.6.9k too, which covers both (`covering_at` takes the nearest row at
-    // or after a version).
+    // #4423: v0.6.9j (#4488), v0.6.9k (#4491) and v0.6.9l (#4492) shipped on `main` after this branch's base
+    // and ran the same scripts, so they are kept under v0.6.9l too, which covers all three (`covering_at`
+    // takes the nearest row at or after a version; #4496 re-keyed them from v0.6.9k).
     (
         c089_corpse_eater::ID,
-        "v0.6.9k",
+        "v0.6.9l",
         c089_corpse_eater::script_v0_6_9i,
     ),
     (
         c056_legacy_corpse_eater::ID,
-        "v0.6.9k",
+        "v0.6.9l",
         c056_legacy_corpse_eater::script_v0_6_9i,
     ),
     (
         c035_corpse_recycler::ID,
-        "v0.6.9k",
+        "v0.6.9l",
         c035_corpse_recycler::script_v0_6_9i,
     ),
     (
         c093_recessive_replicators::ID,
-        "v0.6.9k",
+        "v0.6.9l",
         c093_recessive_replicators::script_v0_6_9i,
     ),
-    (c060_eschews::ID, "v0.6.9k", c060_eschews::script_v0_6_9i),
+    (c060_eschews::ID, "v0.6.9l", c060_eschews::script_v0_6_9i),
     (
         c007_the_greatest_heist::ID,
-        "v0.6.9k",
+        "v0.6.9l",
         c007_the_greatest_heist::script_v0_6_9i,
     ),
-    (c014_shadowstep::ID, "v0.6.9k", c014_shadowstep::script_v0_6_9i),
+    (c014_shadowstep::ID, "v0.6.9l", c014_shadowstep::script_v0_6_9i),
     // #4424 (R4424000): the last scripts that still drew a Dormant card or a Unit immune to Spells.
-    // Arcane Missiles ran three: v0.6.9j's row above (#4469) keeps its first, v0.6.9k ran the same, and
+    // Arcane Missiles ran three: #4469's row below keeps the first, which v0.6.9j and v0.6.9k ran, and
     // v0.6.9l's drew among the acting enemy Units on the half the cast chose.
-    (
-        c011_2_arcane_missiles::ID,
-        "v0.6.9k",
-        c011_2_arcane_missiles::script_v0_6_9k,
-    ),
     (
         c011_2_arcane_missiles::ID,
         "v0.6.9l",
@@ -1278,16 +1273,17 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9m",
         c085_unlicensed_experimentation::script_v0_6_9l,
     ),
-    // #4469 (R3554003): the last scripts that drew a random pick among cards across a slash.
-    (c040_mc_tech::ID, "v0.6.9j", c040_mc_tech::script_v0_6_9j),
+    // #4469 (R3554003): the last scripts that drew a random pick among cards across a slash, kept under
+    // v0.6.9k, which shipped (#4491) before #4489 merged and so ran them (#4496 re-keyed them from v0.6.9j).
+    (c040_mc_tech::ID, "v0.6.9k", c040_mc_tech::script_v0_6_9j),
     (
         c011_2_arcane_missiles::ID,
-        "v0.6.9j",
+        "v0.6.9k",
         c011_2_arcane_missiles::script_v0_6_9j,
     ),
-    (c025_snom_bunny::ID, "v0.6.9j", c025_snom_bunny::script_v0_6_9j),
-    (c018_3_casper::ID, "v0.6.9j", c018_3_casper::script_v0_6_9j),
-    (c087_siva_1::ID, "v0.6.9j", c087_siva_1::script_v0_6_9j),
+    (c025_snom_bunny::ID, "v0.6.9k", c025_snom_bunny::script_v0_6_9j),
+    (c018_3_casper::ID, "v0.6.9k", c018_3_casper::script_v0_6_9j),
+    (c087_siva_1::ID, "v0.6.9k", c087_siva_1::script_v0_6_9j),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1956,10 +1952,12 @@ mod tests {
         assert_kept_through(&[c014_shadowstep::ID], &["v0.6.9h", "v0.6.9i"], "v0.6.9j");
     }
 
-    /// Issue #4423: v0.6.9j (#4488) and v0.6.9k (#4491) shipped on `main` after this branch's base, still
-    /// running the scripts kept above, so both fold under the row kept at v0.6.9k.
+    /// Issue #4423: v0.6.9j (#4488), v0.6.9k (#4491) and v0.6.9l (#4492) shipped on `main` after this
+    /// branch's base, still running the scripts kept above, so all three fold under the row kept at v0.6.9l
+    /// (#4496 re-keyed it from v0.6.9k, which left v0.6.9l under the build's scripts). v0.6.9m (#4495) is
+    /// the first version that ran #4480's.
     #[test]
-    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9k_once_it_shipped() {
+    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9l_once_it_shipped() {
         crate::register_all();
         for id in [
             c089_corpse_eater::ID,
@@ -1978,13 +1976,14 @@ mod tests {
                 Some("v0.6.9i"),
                 "{id}: v0.6.9i keeps its own row"
             );
-            for version in ["v0.6.9j", "v0.6.9k"] {
+            for version in ["v0.6.9j", "v0.6.9k", "v0.6.9l"] {
                 assert_eq!(
                     kept_at(version),
-                    Some("v0.6.9k"),
+                    Some("v0.6.9l"),
                     "{id}: {version} ran the script kept at v0.6.9i"
                 );
             }
+            assert_ne!(kept_at("v0.6.9m"), Some("v0.6.9l"), "{id}: v0.6.9m ran #4480's");
         }
     }
 
@@ -2001,20 +2000,20 @@ mod tests {
         );
     }
 
-    /// Issue #4424: Arcane Missiles ran a different pool in each of v0.6.9j (#4469's row), v0.6.9k and
-    /// v0.6.9l, so each of those folds under the row kept at its own version (v0.6.9m, which ran v0.6.9l's
-    /// script, under v0.6.9m's row) and v0.6.9n, the first to
-    /// draw from `cards_in_scope`, under none.
+    /// Issue #4424: Arcane Missiles ran the unfiltered pool through v0.6.9k (#4469's row, which #4496
+    /// keyed there), the slash-aware one in v0.6.9l and v0.6.9m, so each of those folds under the row kept
+    /// at its own version (v0.6.9j and v0.6.9k under v0.6.9k's) and v0.6.9n, the first to draw from
+    /// `cards_in_scope`, under none.
     #[test]
-    fn r767000_issue_4424_arcane_missiles_keeps_the_pool_each_of_v0_6_9j_k_and_l_ran() {
+    fn r767000_issue_4424_arcane_missiles_keeps_the_pool_each_of_v0_6_9k_l_and_m_ran() {
         crate::register_all();
         let kept_at = |version: &str| {
             covering_at(&HISTORY.order, KEPT_SCRIPTS, version, c011_2_arcane_missiles::ID)
                 .map(|at| KEPT_SCRIPTS[at].1)
         };
         for (version, key) in [
-            ("v0.6.9i", "v0.6.9j"),
-            ("v0.6.9j", "v0.6.9j"),
+            ("v0.6.9i", "v0.6.9k"),
+            ("v0.6.9j", "v0.6.9k"),
             ("v0.6.9k", "v0.6.9k"),
             ("v0.6.9l", "v0.6.9l"),
             ("v0.6.9m", "v0.6.9m"),
@@ -2028,28 +2027,21 @@ mod tests {
         assert_eq!(kept_at("v0.6.9n"), None, "v0.6.9n draws from cards_in_scope");
     }
 
-    /// Issue #4469: v0.6.9j was the newest shipped version as it was built, and no later one had shipped,
-    /// so `assert_kept_through` (which needs one) cannot hold these.
+    /// Issue #4469: v0.6.9k (#4491) shipped ten minutes before #4489 merged, so it ran the scripts kept
+    /// here, and v0.6.9l (#4492) is the first version that ran #4489's (#4496 re-keyed them from v0.6.9j).
     #[test]
-    fn r767000_issue_4469_scripts_are_kept_through_v0_6_9j_the_newest_version_that_ran_them() {
-        crate::register_all();
-        for id in [
-            c040_mc_tech::ID,
-            c011_2_arcane_missiles::ID,
-            c025_snom_bunny::ID,
-            c018_3_casper::ID,
-            c087_siva_1::ID,
-        ] {
-            for version in ["v0.6.9", "v0.6.9h", "v0.6.9i", "v0.6.9j"] {
-                let kept =
-                    covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1);
-                assert_eq!(
-                    kept,
-                    Some("v0.6.9j"),
-                    "{id} on {version} runs the script kept at v0.6.9j"
-                );
-            }
-        }
+    fn r767000_issue_4469_scripts_are_kept_through_v0_6_9k_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c040_mc_tech::ID,
+                c011_2_arcane_missiles::ID,
+                c025_snom_bunny::ID,
+                c018_3_casper::ID,
+                c087_siva_1::ID,
+            ],
+            &["v0.6.9", "v0.6.9h", "v0.6.9i", "v0.6.9j", "v0.6.9k"],
+            "v0.6.9l",
+        );
     }
 
     /// Issue #4086: each block below was once keyed at a version older than the newest shipped as it

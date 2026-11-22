@@ -339,6 +339,16 @@ as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover
 `fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
 Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
 
+**Layer memory on a phone** (R4493000, R4493001): every DOM effect part is a GPU layer held at the device's full density,
+and a phone's browser kills the tab past its memory. So on a phone (the window's narrower side under `FX_MOBILE_WIDTH`) a
+takeover's stage merges its slices or planes into `FX_PHONE_STAGE_LAYERS` pictures (`fx/layers.ts`'s `mergeStage`). No
+effect element covers more than `FX_LAYER_MAX_SCREENS` at its largest scale. On a phone, or a device with
+`navigator.deviceMemory` of `FX_LOW_DEVICE_MEMORY_GB` or less, the director keeps what its mounted and coming DOM cues hold
+within `FX_PHONE_LAYER_BUDGET_MB` (`budgetTakeover`, from `layers.ts`'s tables). It mounts a takeover in the fullest form
+that fits: merged, then without its art, then without its stage, and at the least its dark and its sweep. No other cue is
+reduced. `fx/layerBudget.test.ts` estimates every DOM cue kind from `fx.css` (`src/test/layerEstimate.ts`) and holds the
+tables to it per pull request; `e2e/cypress/component/fx-phone-layers.cy.tsx` measures the phone scenes at 3x daily.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
