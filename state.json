@@ -15850,8 +15850,17 @@
     "what": "plan #4423 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-22T01:29:52Z",
-    "notes": [],
+    "at": "2026-11-22T01:37:21Z",
+    "notes": [
+      "delivered plan #4426 on claude-6 (run 44971227173): planned",
+      "delivered plan #4423 on claude-4 (run 44971190206): planned",
+      "delivered build #4430 on muse (run 44969158857): built",
+      "started review #4439 on muse (run 44972567339)",
+      "started build #4426 on claude-6 (run 44972607921)",
+      "started plan #4423 on claude-4 (run 44972651224)",
+      "nothing more to start: nothing is queued",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16556,7 +16565,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T01:29:52Z",
+  "loop_tick": "2026-11-22T01:37:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
