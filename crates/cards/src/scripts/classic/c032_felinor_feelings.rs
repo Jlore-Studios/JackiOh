@@ -494,6 +494,91 @@ mod tests {
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.card(BEAR).controller, P2);
             }
+
+            #[test]
+            fn r4353002_radiant_felinor_feelings_random_cast_never_steals_evasive_enemy() {
+                use jackioh_engine::effects::cast_random;
+                use jackioh_engine::resolve::{apply_effects, make_context, HookOptions};
+
+                crate::register_all();
+                let mut s = setup(
+                    json!({}),
+                    json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
+                    true,
+                );
+                let menace = must_unit(&s, P2, 1);
+                s.card_mut(&menace).granted_keywords.push(Keyword::Evasive);
+
+                // Cast Radiant Felinor Feelings at random.
+                let mut events = Vec::new();
+                let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+                {
+                    let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions {
+                            controller: Some(P1),
+                            ..HookOptions::default()
+                        },
+                    );
+                    apply_effects(
+                        &[cast_random(json_as(json!({
+                            "query": { "defId": FEELINGS },
+                            "count": 1,
+                            "radiant": true,
+                        })))],
+                        &mut ctx,
+                    );
+                    settle(&mut ctx.sink, SettleOptions::default());
+                }
+                s.state_mut().rng_cursor = rng.cursor();
+
+                // Felinor token was summoned in lane 1, but the evasive menace in lane 1 was not stolen and no prompt opened.
+                assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(TOKEN.to_string()));
+                assert!(s.state().pending.is_none());
+                assert_eq!(must_unit(&s, P2, 1).controller, P2);
+
+                // With an evasive enemy in lane 1 and a non-evasive enemy in lane 2 (where P1 also controls a (1)-cost unit),
+                // a random cast steals only the legal non-evasive enemy.
+                let mut s2 = setup(
+                    json!({ "field": [{ "def": TIMMY, "lane": 2 }] }),
+                    json!({ "field": [{ "def": MENACE, "lane": 1 }, { "def": VANILLA, "lane": 2 }] }),
+                    true,
+                );
+                let evasive_menace = must_unit(&s2, P2, 1);
+                s2.card_mut(&evasive_menace).granted_keywords.push(Keyword::Evasive);
+                let vanilla = must_unit(&s2, P2, 2);
+
+                let mut events = Vec::new();
+                let mut rng = Rng::new(&s2.state().seed, s2.state().rng_cursor);
+                {
+                    let mut sink = EngineSink::new(s2.state_mut(), &mut events, &mut rng);
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions {
+                            controller: Some(P1),
+                            ..HookOptions::default()
+                        },
+                    );
+                    apply_effects(
+                        &[cast_random(json_as(json!({
+                            "query": { "defId": FEELINGS },
+                            "count": 1,
+                            "radiant": true,
+                        })))],
+                        &mut ctx,
+                    );
+                    settle(&mut ctx.sink, SettleOptions::default());
+                }
+                s2.state_mut().rng_cursor = rng.cursor();
+
+                assert_eq!(s2.unit(P1, 1).map(|unit| unit.def_id), Some(TOKEN.to_string()));
+                assert!(s2.state().pending.is_none());
+                assert_eq!(must_unit(&s2, P2, 1).controller, P2);
+                assert_eq!(s2.card(&vanilla).controller, P1);
+            }
         }
 
         /// R767000: the scripts kept for the replays of v0.4.0f and before, which stole any permanent.

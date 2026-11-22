@@ -1293,18 +1293,18 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
     if has_answerer(&args.resume.hook) {
         return Some(args);
     }
+    // R450, R452: a prompt opened inside a cast filters its options through the targeting point
+    // first, so a random answer is one a player could pick and an aimed cast counts only legal targets.
+    let options = crate::targeting_point::targetable_options(sink.state, &args);
+    if options.is_empty() {
+        return None;
+    }
+    let args = OpenPromptArgs { options, ..args };
     // R1200: while a Mayor acts a `target` prompt is answered at once at random, for whichever player
     // it opened for, meeting no targeting point (as R452's picks). R1201: the opener's Lucky rolls again.
     if args.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
-        let shaped = OpenPromptArgs {
-            options: crate::targeting_point::targetable_options(sink.state, &args),
-            ..args
-        };
-        if shaped.options.is_empty() {
-            return None;
-        }
-        let luck = crate::random_targets::mayor_luck(sink.state, shaped.player);
-        answer_at_random(sink, &shaped, luck);
+        let luck = crate::random_targets::mayor_luck(sink.state, args.player);
+        answer_at_random(sink, &args, luck);
         return None;
     }
     let Some(mode) =
