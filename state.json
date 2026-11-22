@@ -17737,6 +17737,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 450,
       "started_at": "2026-11-22T14:28:08Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -40008,9 +40009,33 @@
         "title": "Patch: the shadow-ban sweep plays each swept card Radiant too",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "d4e798a9959222fbe518aa1fa58b6bab714d176e",
+        "issue": 4423,
+        "merged_at": "2026-11-22T16:52:02Z",
+        "n": 450,
+        "pr": 4480,
+        "queued_at": "2026-11-22T16:52:02Z",
+        "sha": "8ca254f1a9fd9867870086ca76c42f59970658b9",
+        "status": "queued",
+        "title": "Patch: the cards that count a Unit's death read what the card was as it died, so a Cloaked card destroyed while set is no Unit and an animated Field Spell or Trap is one",
+        "tries": 0
       }
     ],
-    "count": 449
+    "count": 450
   },
   "statistics": {
     "at": "2026-11-22T16:51:21Z"
