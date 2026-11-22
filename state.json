@@ -40042,7 +40042,10 @@
           "provider": "claude-3"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-22T17:01:10Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4496,
         "head": "d4e798a9959222fbe518aa1fa58b6bab714d176e",
         "issue": 4423,
         "merged_at": "2026-11-22T16:52:02Z",
@@ -40055,12 +40058,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:16d49e26-1795366370",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45046316775",
         "sha": "8ca254f1a9fd9867870086ca76c42f59970658b9",
         "started_at": "2026-11-22T16:53:12Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the cards that count a Unit's death read what the card was as it died, so a Cloaked card destroyed while set is no Unit and an animated Field Spell or Trap is one",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 450
