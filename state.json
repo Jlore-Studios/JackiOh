@@ -16963,11 +16963,10 @@
     "what": "review #4464 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T05:36:21Z",
+    "at": "2026-11-22T05:46:22Z",
     "notes": [
-      "delivered build #4456 on muse (run 44981595138): built",
-      "started review #4464 on muse (run 44990297939)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4458 on muse (run 44982509003): approved",
+      "runner gate: started 1 of 1 waiting run(s) (run 44990913125 on bot/issue-4428)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17673,7 +17672,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T05:36:21Z",
+  "loop_tick": "2026-11-22T05:46:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
