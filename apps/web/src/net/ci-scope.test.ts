@@ -586,6 +586,9 @@ describe("scripts/ci-scope.sh", () => {
   it.each(["infra/versions.tf", "infra/.terraform.lock.hcl", "infra/README.md"])("runs infra/'s terraform steps, and nothing else, for %s", (file) => {
     expect(onFor(file), file).toEqual(["full", "infra"]);
   });
+  it("runs infra/'s terraform steps and web, and nothing else, for infra/cloudflare.tf, which the Worker's config test reads", () => {
+    expect(onFor("infra/cloudflare.tf")).toEqual(["full", "web", "infra"]);
+  });
   it.each([
     "crates/engine/src/reduce.rs",
     "apps/web/src/main.tsx",
@@ -621,6 +624,9 @@ describe("scripts/ci-scope.sh", () => {
     ["docs/radiant-audit.md", ["rust_cards"]],
     ["spec/07-tokens.md", ["rust_cards"]],
     ["e2e/support/config.ts", ["rust_server"]],
+    // The tools' README check reads the cited e2e specs, so their files run its group (#4449).
+    ["e2e/cypress/e2e/01-hotseat-full-game.cy.ts", ["rust_tools_wasm"]],
+    ["e2e/cypress/e2e/13-practice-vs-ai.cy.ts", ["rust_tools_wasm"]],
     ["apps/web/.env.production", ["rust_tools_wasm"]],
     ["packages/engine/src/x.ts", ["rust_tools_wasm"]],
     ["apps/server/src/x.ts", ["rust_tools_wasm"]],
@@ -650,7 +656,7 @@ describe("scripts/ci-scope.sh", () => {
   }
   it.each([
     "apps/web/src/main.tsx",
-    "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
+    "e2e/cypress/e2e/02-prompts.cy.ts",
     "docs/architecture.md",
     "spec/rulings/R0195.md",
     "SPEC.md",
@@ -801,7 +807,8 @@ function namedPaths(roots: string[], keep: (file: string) => boolean): Map<strin
   return found;
 }
 
-/** What the web's typecheck, lint and unit tests read. ci-scope.test.ts, build-wasm-cache.test.ts and
+/** What the web job's typecheck, lint and unit tests read: the web's, the Worker's (apps/edge)
+ * and the dashboard's (apps/admin) sources. ci-scope.test.ts, build-wasm-cache.test.ts and
  * server-image.test.ts name paths only as data for their throwaway repos (the second reads only
  * scripts/build-wasm.sh for real, and the third scripts/server-image.sh and wrangler.jsonc, which run
  * web anyway). */
@@ -811,7 +818,19 @@ const DATA_ONLY = [
   "apps/web/src/net/server-image.test.ts",
 ];
 const WEB = namedPaths(
-  ["apps/web/src", "apps/web/scripts", "apps/web/vite.config.ts", "apps/web/vitest.config.ts", "apps/web/static-pages.ts"],
+  [
+    "apps/web/src",
+    "apps/web/scripts",
+    "apps/web/vite.config.ts",
+    "apps/web/vitest.config.ts",
+    "apps/web/static-pages.ts",
+    "apps/edge/src",
+    "apps/admin/src",
+    "apps/admin/worker",
+    "apps/admin/headers.test.ts",
+    "apps/admin/build.test.ts",
+    "apps/admin/wrangler.test.ts",
+  ],
   (file) => !DATA_ONLY.includes(file),
 );
 /** What e2e smoke's client build and specs read. */
@@ -822,7 +841,9 @@ const E2E = namedPaths(
 
 describe("scripts/ci-scope.sh against the paths the sources name", () => {
   it("finds the paths it must, so a scan that broke cannot pass empty", () => {
-    expect([...WEB.keys()]).toEqual(expect.arrayContaining(["crates/server/src/env.rs", "crates/engine/tests/fixtures/code-input-cases.json"]));
+    expect([...WEB.keys()]).toEqual(
+      expect.arrayContaining(["crates/server/src/env.rs", "crates/engine/tests/fixtures/code-input-cases.json", "infra/cloudflare.tf"]),
+    );
     expect([...E2E.keys()]).toEqual(expect.arrayContaining(["crates/cards/catalog.json"]));
   });
 

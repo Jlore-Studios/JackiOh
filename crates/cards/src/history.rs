@@ -55,7 +55,7 @@ use crate::scripts::meditative::{
     c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten, c032_spiritually_zhongguo,
     c033_first_day_of_xuexiao, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c044_cn_jade_well,
     c045_knowledge_breaker, c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
-    c049_yilegpt_tamed, c050_cn_tech, c053_prestige, c054_money_machine, c056_house_party,
+    c049_yilegpt_tamed, c050_cn_tech, c053_prestige, c054_money_machine, c056_house_party, c060_eschews,
     c063_skull_of_jnari, c065_keymaster_keenus, c074_montana_giant, c078_occidentless_mandate, c080_aluneth,
     c081_deadmans_hand, c083_medina_enforcer, c085_playtester, c087_tatches_the_totem, c090_spell_basket,
     c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior,
@@ -86,13 +86,15 @@ use crate::scripts::stinkyscape_plus::{
     c025_snom_bunny, c037_scorch, c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric,
     c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall,
     c076_ayys_lmao, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
-    c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg,
-    c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond, c166_mindustrial_revolution,
+    c093_recessive_replicators, c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse,
+    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c145_fire_beam_v5, c155_the_far_vagabond,
+    c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
     c039_call_to_chaos_training_grounds_edition, c040_goetzmann_game_design, c045_jlockeeds_weapons,
     c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
+    c056_corpse_eater as c056_legacy_corpse_eater,
 };
 use crate::{CATALOG, REGISTRY, catalog_json};
 
@@ -115,7 +117,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001), #4353 (R4353020,
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
 /// hooks), #4350 (R4350000), #4395 (R4395000), #4469 (R3554003), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
-/// Token through v0.1.0d), and #4396 (R4396000).
+/// Token through v0.1.0d), #4396 (R4396000), and #4423 (R4423000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c074_adaptive_ui::ID, "v0.1.0d", c074_adaptive_ui::script_v0_1_0d),
@@ -1176,7 +1178,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9c",
         c007_the_greatest_heist::script_v0_6_9c,
     ),
-    // #4395 (R4395000): the last Shadowstep trigger that answered any card of yours that was destroyed.
+    // #4395 (R4395000): the last Shadowstep trigger that answered any card of yours that was destroyed, kept
+    // under v0.6.9g, the newest shipped version that ran it (#4423 re-keyed it from v0.6.9f).
     (c014_shadowstep::ID, "v0.6.9g", c014_shadowstep::script_v0_6_9g),
     // #4396 (R4396000): the last scripts before a Death read its stats with the auras on.
     (c049_spacemine::ID, "v0.6.9e", c049_spacemine::script_v0_6_9e),
@@ -1185,6 +1188,64 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9e",
         c134_felinor_containment_chamber::script_v0_6_9e,
     ),
+    // #4423 (R4423000): the last scripts before a death counted as a Unit's by what the card was as it died.
+    (
+        c089_corpse_eater::ID,
+        "v0.6.9i",
+        c089_corpse_eater::script_v0_6_9i,
+    ),
+    (
+        c056_legacy_corpse_eater::ID,
+        "v0.6.9i",
+        c056_legacy_corpse_eater::script_v0_6_9i,
+    ),
+    (
+        c035_corpse_recycler::ID,
+        "v0.6.9i",
+        c035_corpse_recycler::script_v0_6_9i,
+    ),
+    (
+        c093_recessive_replicators::ID,
+        "v0.6.9i",
+        c093_recessive_replicators::script_v0_6_9i,
+    ),
+    (c060_eschews::ID, "v0.6.9i", c060_eschews::script_v0_6_9i),
+    (
+        c007_the_greatest_heist::ID,
+        "v0.6.9i",
+        c007_the_greatest_heist::script_v0_6_9i,
+    ),
+    (c014_shadowstep::ID, "v0.6.9i", c014_shadowstep::script_v0_6_9i),
+    // #4423: v0.6.9j (#4488) and v0.6.9k (#4491) shipped on `main` after this branch's base and ran the same
+    // scripts, so they are kept under v0.6.9k too, which covers both (`covering_at` takes the nearest row at
+    // or after a version).
+    (
+        c089_corpse_eater::ID,
+        "v0.6.9k",
+        c089_corpse_eater::script_v0_6_9i,
+    ),
+    (
+        c056_legacy_corpse_eater::ID,
+        "v0.6.9k",
+        c056_legacy_corpse_eater::script_v0_6_9i,
+    ),
+    (
+        c035_corpse_recycler::ID,
+        "v0.6.9k",
+        c035_corpse_recycler::script_v0_6_9i,
+    ),
+    (
+        c093_recessive_replicators::ID,
+        "v0.6.9k",
+        c093_recessive_replicators::script_v0_6_9i,
+    ),
+    (c060_eschews::ID, "v0.6.9k", c060_eschews::script_v0_6_9i),
+    (
+        c007_the_greatest_heist::ID,
+        "v0.6.9k",
+        c007_the_greatest_heist::script_v0_6_9i,
+    ),
+    (c014_shadowstep::ID, "v0.6.9k", c014_shadowstep::script_v0_6_9i),
     // #4469 (R3554003): the last scripts that drew a random pick among cards across a slash.
     (c040_mc_tech::ID, "v0.6.9j", c040_mc_tech::script_v0_6_9j),
     (
@@ -1806,7 +1867,8 @@ mod tests {
     }
 
     /// Issue #4395: Shadowstep's base trigger answered any card of yours that was destroyed through
-    /// v0.6.9g, the newest version that ran it, so its row is keyed there; v0.4.12b and before
+    /// v0.6.9g, which shipped while it was built (#4437 before #4419; the fix shipped in v0.6.9h), so its
+    /// row is keyed there (#4423 re-keyed it from v0.6.9f, as #4086 re-keyed #3837's); v0.4.12b and before
     /// keep their own.
     #[test]
     fn r767000_issue_4395_shadowstep_is_kept_through_v0_6_9g_the_newest_version_that_ran_it() {
@@ -1816,12 +1878,19 @@ mod tests {
                 .map(|at| KEPT_SCRIPTS[at].1)
         };
         assert_eq!(kept_at("v0.4.12b"), Some("v0.4.12b"));
-        assert_kept_through(
-            &[c014_shadowstep::ID],
-            &[
-                "v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e", "v0.6.9f", "v0.6.9g",
-            ],
-            "v0.6.9h",
+        for version in [
+            "v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e", "v0.6.9f", "v0.6.9g",
+        ] {
+            assert_eq!(
+                kept_at(version),
+                Some("v0.6.9g"),
+                "{version} ran the script kept at v0.6.9g"
+            );
+        }
+        assert_ne!(
+            kept_at("v0.6.9h"),
+            Some("v0.6.9g"),
+            "v0.6.9h ran the units-only trigger"
         );
     }
 
@@ -1833,6 +1902,58 @@ mod tests {
             &["v0.6.9d", "v0.6.9e"],
             "v0.6.9f",
         );
+    }
+
+    /// Issue #4423: v0.6.9h, then v0.6.9i, shipped while it was built, so its rows are keyed at v0.6.9i, the
+    /// newest version that ran the scripts they keep. Shadowstep's row before it is v0.6.9g's (#4395, whose
+    /// fix shipped in v0.6.9h), so it ran the kept script from v0.6.9h.
+    #[test]
+    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9i_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c089_corpse_eater::ID,
+                c056_legacy_corpse_eater::ID,
+                c035_corpse_recycler::ID,
+                c093_recessive_replicators::ID,
+                c060_eschews::ID,
+                c007_the_greatest_heist::ID,
+            ],
+            &["v0.6.9d", "v0.6.9e", "v0.6.9f", "v0.6.9g", "v0.6.9h", "v0.6.9i"],
+            "v0.6.9j",
+        );
+        assert_kept_through(&[c014_shadowstep::ID], &["v0.6.9h", "v0.6.9i"], "v0.6.9j");
+    }
+
+    /// Issue #4423: v0.6.9j (#4488) and v0.6.9k (#4491) shipped on `main` after this branch's base, still
+    /// running the scripts kept above, so both fold under the row kept at v0.6.9k.
+    #[test]
+    fn r767000_issue_4423_scripts_are_kept_through_v0_6_9k_once_it_shipped() {
+        crate::register_all();
+        for id in [
+            c089_corpse_eater::ID,
+            c056_legacy_corpse_eater::ID,
+            c035_corpse_recycler::ID,
+            c093_recessive_replicators::ID,
+            c060_eschews::ID,
+            c007_the_greatest_heist::ID,
+            c014_shadowstep::ID,
+        ] {
+            let kept_at = |version: &str| {
+                covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1)
+            };
+            assert_eq!(
+                kept_at("v0.6.9i"),
+                Some("v0.6.9i"),
+                "{id}: v0.6.9i keeps its own row"
+            );
+            for version in ["v0.6.9j", "v0.6.9k"] {
+                assert_eq!(
+                    kept_at(version),
+                    Some("v0.6.9k"),
+                    "{id}: {version} ran the script kept at v0.6.9i"
+                );
+            }
+        }
     }
 
     /// Issue #4469: v0.6.9j was the newest shipped version as it was built, and no later one had shipped,
