@@ -14338,11 +14338,11 @@
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "45052085307",
+            "run": "45065317655",
             "tier": "strong"
           }
         ],
-        "sha": "8030b6e99a00ef41ccf81caf7fe148ed20aa5fea",
+        "sha": "31ead5a525c3ce4657b926d7fc9b5171b7dcb872",
         "tiers": {
           "claude": "strong"
         }
