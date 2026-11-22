@@ -15084,17 +15084,8 @@
       }
     },
     "4423": {
-      "action": "plan",
-      "asks": [
-        "c:7072134752"
-      ],
-      "build_next": {
-        "from_run": "44972651224",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-22T02:06:17Z",
-        "until": "2026-11-22T02:36:17Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T02:06:08Z",
         "difficulty": "hard",
@@ -15113,10 +15104,9 @@
         "reason": "planned on opus",
         "trail": "|card_type' crates/cards/src/scripts/classic/c014_shadowstep.rs | head\", \"description\": \"Check whet\u2026\n- Bash: {\"command\": \"grep -rln 'GameEventType::Destroyed' crates/cards/src/scripts | xargs grep -ln 'CardType::Unit\\\\|card_type_of' | head -30\", \"description\": \"Find other death readers that check the Unit t\u2026\n- Bash: {\"command\": \"grep -n 'CardType::Unit\\\\|card_type_of\\\\|Destroyed' crates/cards/src/scripts/classic_plus/c033_ivory_tower.rs | head; grep -rln 'GameEventType::Destroyed' crates/cards/src/scripts | xarg\u2026\n- Bash: {\"command\": \"sed -n '60,90p' crates/cards/src/scripts/classic_plus/c033_ivory_tower.rs; grep -n 'type_\\\\|Destroyed' crates/cards/src/scripts/core/c085_unlicensed_experimentation.rs | head\", \"descript\u2026\n- Bash: {\"command\": \"grep -rln 'GameEventType::Destroyed' crates/cards/src/scripts | xargs grep -ln 'Unit' | xargs grep -Ln 'CardType::Unit' | head -40 | tr '\\\\n' ' '\", \"description\": \"List death readers men\u2026\n- Bash: {\"command\": \"sed -n '1,15p' crates/cards/src/scripts/classic_plus/c019_5_bot_loser.rs; grep -n 'Destroyed' -A12 crates/cards/src/scripts/classic_plus/c019_5_bot_loser.rs | sed -n '1,30p'\", \"descripti\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- DECIDED: strip diedAs from golden events_text + view_texts (testkit/golden.rs), precedent via/creator/switchReason (R1956001 way), so classify stage 2 attr\u2026\n- Bash: {\"command\": \"grep -n 'KEPT_SCRIPTS\\\\|script_v' docs/ADDING_CARDS.md | head -8 | cut -c1-300\", \"description\": \"Check ADDING_CARDS guidance on kept scripts\"}\n- Bash: {\"command\": \"sed -n '212,240p' docs/ADDING_CARDS.md\", \"description\": \"Read ADDING_CARDS kept-script section\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: adds a field to the destroyed event in crates/engine/src\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; grep -n 'fn credit_of' -A6 crates/engine/src/subsystems/quests.rs | head -8; grep -n 'pub static banner\\\\|pub static plain' crates/engine/tests/ru\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: adds a field to the destroyed event in crates/engine/src\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n 'fn field_game' -A12 crates/engine/tests/rules/fixtures/field.rs | grep -n 'banner\\\\|catalog' | head\", \"description\": \"Recount plan words; confirm banner is i\u2026\n- Bash: {\"command\": \"sed -n '520,552p' crates/engine/tests/rules/fixtures/field.rs\", \"description\": \"Read field_game's catalog setup\"}\n- Bash: {\"command\": \"grep -n 'FIELD_DEFS' -A8 crates/engine/tests/rules/fixtures/field.rs | head -14\", \"description\": \"Check FIELD_DEFS contains banner\"}\n- Bash: {\"command\": \"sed -n '236,250p' crates/engine/tests/rules/fixtures/field.rs\", \"description\": \"See rest of FIELD_DEFS list\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"old_string\": \"Departures from the first plan: the version key (v0.6.9g shipped since, so every kept script \u2026\n- tool error: <tool_use_error>String to replace not found in file. String: Departures from the first plan: the version key (v0.6.9g shipped since, so every kept script is `script_v0_6_9g`); `diedAs` stripped from \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"limit\": 25}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"old_string\": \"Departures from the first plan:\\n- **Version key.** v0.6.9g shipped since that plan, so every\u2026\n- Bash: {\"command\": \"sed -n '45,60p' .bot-plan.md; grep -n '^## Risks' -A30 .bot-plan.md\", \"description\": \"View do-not-touch block and risks section\"}\n- Bash: {\"command\": \"wc -w .bot-plan.md; awk '/^## /{if(name)print name, n; name=$0; n=0} {n+=NF} END{print name, n}' .bot-plan.md\", \"description\": \"Count words per section\"}\n- Bash: {\"command\": \"grep -n '^16\\\\.' -A20 .bot-plan.md | head -24\", \"description\": \"View the spec step to compress it\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"old_string\": \" - Body, as in Hearthstone (only a minion's death is a minion's death): a set Cloaked card de\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- **Replay hash.** `diedAs` reaches `state.dispatch` and trap-window prompt data,\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n '^## Tests' -A60 .bot-plan.md | head -70\", \"description\": \"Recount words and view the tests section\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"old_string\": \"The `destroyed` event gets an optional `diedAs: CardType`. It holds the card's type as it die\u2026\n- Bash: {\"command\": \"grep -n '^9\\\\. \\\\|^14\\\\. ' -A8 .bot-plan.md | head -22\", \"description\": \"View steps 9 and 14 for trimming\"}\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n '^## Done when' -A10 .bot-plan.md\", \"description\": \"Recount and view the Done when section\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"old_string\": \"A helper, `query::is_unit_death`, reads it. Six readers switch to it:\\n- Core #89 Corpse Eate\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4423/.bot-plan.md\", \"old_string\": \"- **`cloaked.rs`, `mod r783008_leaving_unrevealed`:** `cast_now_effect` gets `-> Vec<GameEven\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount plan size\"}\n- Bash: {\"command\": \"cat .bot-plan.md\", \"description\": \"Print the final plan\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: adds a field to the destroyed event in crates/engine/src (state_check, events, query, quests, view_for) and readers across crates must agree\"} --> ## Goal The `destroyed` event gets an optional `diedAs: CardType`: the card's type as it died, re\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-22T01:22:44Z",
       "owner_why": "it plans it",
@@ -15129,12 +15119,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-22T01:20:23Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "44972651224",
+      "run_id": "pending:63fa52b4-1795313340",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T01:41:39Z",
+      "started_at": "2026-11-22T02:09:18Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7072134752"
+      ]
     },
     "4424": {
       "action": "build",
@@ -15841,9 +15833,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T02:08:47Z",
+    "at": "2026-11-22T02:09:18Z",
     "url": "",
-    "what": "review #4442 on muse"
+    "what": "build #4423 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-22T01:56:33Z",
