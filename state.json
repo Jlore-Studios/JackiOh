@@ -17082,15 +17082,8 @@
       ]
     },
     "4470": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "44993922368",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-22T06:38:13Z",
-        "until": "2026-11-22T07:08:13Z"
-      },
       "difficulty_by": {
         "at": "2026-11-22T06:38:03Z",
         "difficulty": "medium",
@@ -17109,10 +17102,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cat apps/web/src/net/first-load.test.ts | head -200; git log --oneline -5 -- apps/web/src/net/first-load.test.ts\"}\n- Bash: {\"command\": \"sed -n 200,320p apps/web/src/net/first-load.test.ts; ls apps/web/dist 2>/dev/null | head; grep -n \\\"build:e2e\\\" apps/web/package.json\"}\n- Bash: {\"command\": \"sed -n 320,420p apps/web/src/net/first-load.test.ts; ls apps/web/src/wasm/pkg 2>/dev/null | head -3; ls ~/.cargo/bin 2>/dev/null | grep wasm\"}\n- Bash: {\"command\": \"cd apps/web && (time pnpm build:e2e) 2>&1 | tail -15\", \"timeout\": 600000}\n- Bash: {\"command\": \"cat > /tmp/measure.mjs <<'EOF'\\nimport { readFileSync } from \\\"node:fs\\\";\\nimport { gzipSync } from \\\"node:zlib\\\";\\nimport { join } from \\\"node:path\\\";\\nconst B = process.argv[2];\\nconst\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4470 && pnpm --dir apps/web exec vitest run --project web src/net/first-load.test.ts 2>&1 | tail -15\", \"timeout\": 300000}\n- Bash: {\"command\": \"echo \\\"Plan: measured 420,381 gz on main 59c8529162; set budget 53*8192=434,176; rewrite #4428 paragraph after #4435's in apps/web/src/net/first-load.test.ts\\\" > .bot-plan.md; git status\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Not engine, AI, cross-crate, migration or big: one constant and one comment block in a single web test file.\"} --> ## Goal Fix the spot-check's finding on #4458. `FIRST_LOAD_GZIP_BUDGET_BYTES` in `apps/web/src/net/first-load.test.ts` was left at 458,752 (5\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-22T06:29:05Z",
       "owner_why": "it plans it",
@@ -17125,19 +17117,19 @@
       "provider": "claude-8",
       "queued_at": "2026-11-22T06:25:17Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "44993922368",
+      "run_id": "pending:f799a750-1795329581",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 4458,
-      "started_at": "2026-11-22T06:29:05Z",
+      "started_at": "2026-11-22T06:40:09Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T06:29:48Z",
+    "at": "2026-11-22T06:40:09Z",
     "url": "",
-    "what": "plan #4466 on claude-3"
+    "what": "build #4470 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-22T06:24:20Z",
