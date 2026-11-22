@@ -18151,15 +18151,8 @@
       }
     },
     "4493": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45040041219",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-22T16:24:22Z",
-        "until": "2026-11-22T16:54:22Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18171,10 +18164,9 @@
         "reason": "planned on opus",
         "trail": "-n 836,870p apps/web/src/fx/director.test.ts\", \"description\": \"Read director test harness \u2026\n- Bash: {\"command\": \"grep -n \\\"^function harness\\\" -A40 apps/web/src/fx/director.test.ts | head -60\", \"description\": \"Read director test harness function\"}\n- Bash: {\"command\": \"grep -n \\\"fx-phone-frame\\\\|fx-phone-living\\\" e2e/README.md docs/*.md apps/web/README.md 2>/dev/null | head; grep -rn \\\"fx-phone-frame\\\" --include=*.md . 2>/dev/null | grep -v node_module\u2026\n- Bash: {\"command\": \"grep -n \\\"visual\\\\|--visual\\\\|presentation\\\" docs/issues-and-patches.md | head -20\", \"description\": \"Check whether visual changes need a patch fragment\"}\n- Bash: {\"command\": \"sed -n 315,345p docs/issues-and-patches.md; ls patches 2>/dev/null | head; ls crates/tools/src | head -30\", \"description\": \"Read patch-fragment rules for visual changes\"}\n- Bash: {\"command\": \"git log --oneline -15 -- apps/web/src/fx/fx.css | head -15; for c in $(git log --format=%h -6 -- apps/web/src/fx/fx.css); do echo \\\"== $c\\\"; git show --stat --format=%s $c | grep -E \\\"pa\u2026\n- Bash: {\"command\": \"for c in 48f21c55aa 3163b425c1 add37b58df 6aea0f59f4; do echo \\\"== $c\\\"; git show --stat --format= $c | grep -E \\\"patches/pending\\\" | head -3; done; ls crates/cards/patches/pending | hea\u2026\n- Bash: {\"command\": \"for f in apps/web/src/cards/art/dioramas/traininggrounds/goetzmannGameDesign.ts apps/web/src/cards/art/dioramas/stinkyscapeplus/toxopid.ts apps/web/src/cards/art/dioramas/stinkyscapeplus\u2026\n- Bash: {\"command\": \"grep -rn \\\"bigCrunch\\\" apps/web/src/fx/terminus/*.ts | head -5; grep -rn \\\"The Big Crunch\\\" crates/cards/data/*.json 2>/dev/null | head -2; grep -rln \\\"\\\\\\\"The Big Crunch\\\\\\\"\\\" crates/ca\u2026\n- Bash: {\"command\": \"sed -n 315,335p apps/web/src/fx/terminus/terminus.test.ts; grep -n \\\"\\\\\\\"The Big Crunch\\\\\\\"\\\" -B3 crates/cards/catalog.json | grep '\\\"id\\\"' | head -2\", \"description\": \"Find Big Crunch de\u2026\n- Bash: {\"command\": \"sed -n 328,345p e2e/cypress/component/fx-phone-frame.cy.tsx\", \"description\": \"Read signature scene pattern in phone spec\"}\n- said: Survey work is done. Saving the full design to the draft before writing the plan.\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Numbers decided (390x844, 1 screen = 329,160 px\\u00b2; 3x -> 11.3 MiB/screen at 4 B/px)\\n- FX_LAYER_MAX_SCREENS = 3 (window's diagonal square is 2.63 sc\u2026\n- Bash: {\"command\": \"sed -n 324,350p apps/web/src/fx/starshipMoments.test.ts; grep -n \\\"type Ctx\\\" -A3 apps/web/src/fx/starship.ts\", \"description\": \"Read phone cinematic test and Ctx type\"}\n- Bash: {\"command\": \"grep -n \\\"share: \\\\|: Ctx = \\\" apps/web/src/fx/starship.ts | head; grep -n \\\"stern\\\\b\\\\|const stern\\\\|tune.zoom\\\" apps/web/src/fx/starship.ts | head\", \"description\": \"Find Ctx constructi\u2026\n- Bash: {\"command\": \"grep -rn \\\"STARSHIP_CINEMATIC)\\\" apps/web/src --include=*.test.ts | head -3; grep -rn \\\"toEqual({ panFrom\\\\|phoneShare: 0.5\\\" apps/web/src --include=*.test.ts | head\", \"description\": \"Ch\u2026\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/fx/FxLayer.director.test.tsx | grep -v \\\"^import\\\" | head -60\", \"description\": \"Read FxLayer.director.test helper\"}\n- said: Writing the final plan now.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4493/.bot-plan.md\", \"content\": \"## Goal\\n\\nOn a phone, the Mythic takeover and the other big DOM cues fit a memory budget. The takeover plane loses it\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4493/.bot-plan.md\", \"limit\": 5}\n- Bash: {\"command\": \"cp .bot-plan.md /tmp/bot-plan-notes.md && echo ok\", \"description\": \"Back up notes before overwriting draft\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4493/.bot-plan.md\", \"content\": \"## Goal\\n\\nOn a phone, the Mythic takeover and the other big DOM cues fit a memory budget, and three checks keep them \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- said: The plan is about 2,965 words, over the 2,500 limit. Tightening it.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4493/.bot-plan.md\", \"content\": \"## Goal\\n\\nOn a phone, a Mythic takeover and the other big DOM cues fit a memory budget, held three ways.\\n\\n**Part A,\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"On a phone, a Mythic takeover and the other big DOM cues fit a memory budget, held three ways.\\\\n\\\\n\\\",\\\"On a \u2026\n- Bash: {\"command\": \"python3 -c \\\"\\nimport re\\ns=open('.bot-plan.md').read()\\nw=[t for t in s.split() if re.search(r'[A-Za-z0-9]',t)]\\nprint(len(w))\\n\\\"\", \"description\": \"Count words containing letters or di\u2026\n- said: The estimator's fallback for auto-sized parts would have wrongly failed the banner (a text-sized part scaled 1.9\u00d7). Fixing that rule in step 10.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=\\\" 5. the containing block (0 for a pseudo-element).\\\"\\nb=\\\" 5. absolutely positioned (every cue part and pseudo-element): the la\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nedits=[\\n(\\\"- mounted set pieces make the takeover drop its stage while every set piece mounts;\\\",\\\"- mounted crunch set pieces (as\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4493/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nedits=[\\n(\\\"- **The harness's web check excludes `src/fx/**`.** Run those tests yourself; CI's `web` job runs them.\\\",\\n \\\"- **The \u2026\n- said: ## Goal On a phone the big DOM cues fit a memory budget. **Part A, the trims:** - `.fx-takeover-plane` loses `will-change` and its overscan. - A phone stage merges adjacent slices into at most `FX_PHONE_STAGE_LAYERS` pictures. - The rays, the wave, the void sweep, the Big Crunch collapse, the fold'\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-22T15:45:11Z",
       "owner_why": "it plans it",
@@ -18187,18 +18179,18 @@
       "provider": "claude-7",
       "queued_at": "2026-11-22T15:38:18Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45040041219",
+      "run_id": "pending:94398da8-1795364736",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T15:45:11Z",
+      "started_at": "2026-11-22T16:25:57Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T16:14:52Z",
+    "at": "2026-11-22T16:25:57Z",
     "url": "",
-    "what": "plan #4477 on claude-4"
+    "what": "build #4493 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-22T16:08:15Z",
