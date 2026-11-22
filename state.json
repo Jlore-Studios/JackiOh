@@ -17561,18 +17561,19 @@
     "what": "review #4459 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-22T07:50:49Z",
+    "at": "2026-11-22T08:02:21Z",
     "notes": [
       "#4476 is held for `claude-1` until 02:40 (5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%))",
-      "delivered suggest on muse (run 44999516674): suggested",
-      "delivered suggest on muse (run 44999463093): suggested",
-      "delivered suggest on claude-8 (run 44999406518): interrupted",
-      "delivered suggest on claude-8 (run 44999348528): interrupted",
-      "started suggest on muse (run 45000321058)",
-      "started suggest on muse (run 45000373268)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-22T09:10:00Z; it can start a build or a plan again in 14m; `claude-1` 5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-22T08:40:00Z; it takes reviews only; it can start a build or a plan again in 44m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4476 held for `claude-1` until 02:40 (5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%))",
-      "#4478: typed it Task",
-      "#4477: typed it Task"
+      "delivered suggest on muse (run 45000373268): suggested",
+      "delivered suggest on muse (run 45000321058): suggested",
+      "delivered revise #4459 on muse (run 44998447904): built",
+      "delivered review #4473 on muse (run 44995767663): approved",
+      "delivered build #4423 on claude-3 (run 44988143709): built",
+      "started review #4480 on claude-3 (run 45001363713)",
+      "started review #4459 on muse (run 45001425581)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-22T09:10:00Z; it can start a build or a plan again in now; `claude-1` 5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-22T08:40:00Z; it takes reviews only; it can start a build or a plan again in 30m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-22T11:42:02Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4476 held for `claude-1` until 02:40 (5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "pruned 1 plan file(s) older than 7 days",
+      "#4479: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18278,7 +18279,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T07:50:49Z",
+  "loop_tick": "2026-11-22T08:02:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
