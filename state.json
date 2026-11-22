@@ -39483,14 +39483,6 @@
         "provider": "muse",
         "run_id": "45000321058",
         "taken_asks": []
-      },
-      "2": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-22T07:54:54Z",
-        "provider": "muse",
-        "run_id": "45000373268",
-        "taken_asks": []
       }
     },
     "taken_asks": []
