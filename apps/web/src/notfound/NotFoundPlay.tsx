@@ -11,7 +11,7 @@ import { useSoundTables } from "../audio/soundTablesLoader.ts";
 import { CardBack } from "../cards/CardBack.tsx";
 import { CardFace } from "../cards/CardFace.tsx";
 import { readerName } from "../cards/chinese.ts";
-import { flavourFor } from "../cards/flavour.ts";
+import { flavourFor, useFlavour } from "../cards/flavour.ts";
 import { GlitchBlob } from "../cards/GlitchBlob.tsx";
 import { faceModel } from "../cards/model.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
@@ -127,6 +127,7 @@ function WayOutCard({ way, faceUp }: { way: WayOut; faceUp: boolean }): ReactEle
 /** The lost card: tapped, it says its line through the audio engine (muting is the engine's, R630). */
 function LostCard({ path }: { path: string }): ReactElement | null {
   const tables = useSoundTables();
+  const sidecar = useFlavour();
   const defId = lostCardFor(path);
   // This page is engine-free (#778): the card's face is worked out by the module (jackioh-shared), so it is drawn once that is in.
   const ready = useEngineReady();
@@ -144,7 +145,7 @@ function LostCard({ path }: { path: string }): ReactElement | null {
   }, [speaking]);
   if (def === undefined || tables === null) return null;
   const line = lostCardLine(defId, tables.cardAudio);
-  const flavour = flavourFor(defId)?.flavour;
+  const flavour = flavourFor(defId, sidecar ?? {})?.flavour;
   const speak = (): void => {
     if (line === null) return;
     const engine = getAudioEngine();

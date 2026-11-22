@@ -1439,7 +1439,9 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
   The scene kits and both recipe tables load in a chunk beside the module (#4222:
   `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
-  and `test/setup.ts` installs the tables synchronously.
+  and `test/setup.ts` installs the tables synchronously. The flavour sidecar loads in a chunk beside
+  the module too (#4435, `src/cards/flavour.ts`): no screen waits for it, and an inspect view opened
+  before it arrives gains its line when it does.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match
