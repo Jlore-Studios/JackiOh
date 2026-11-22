@@ -2365,6 +2365,17 @@ impl Tx<'_> {
         dispatch!(self, player_settings_get(profile_id))
     }
 
+    /// R4403000 (#4418): the locked read `put_settings` uses before its keep-out filter. The
+    /// profile's row, or `None` before its first write, exactly as `player_settings_get`; the lock
+    /// is held until the transaction commits, so the later `player_settings_merge` in the same
+    /// transaction cannot commit over a row this read did not see.
+    pub async fn player_settings_get_for_update(
+        &mut self,
+        profile_id: &str,
+    ) -> StoreResult<Option<PlayerSettingsRow>> {
+        dispatch!(self, player_settings_get_for_update(profile_id))
+    }
+
     /// R634: one atomic merge. For each group sent, the stored group becomes the sent one only when
     /// the sent one's `at` is strictly later; a group the write does not name is left as it was. A
     /// profile with no row gets one.
@@ -2985,8 +2996,9 @@ pub struct SharedReplayRow {
 }
 
 impl Tx<'_> {
-    /// B52: records a share; one already held is left as it was (its first `created_at`).
-    pub async fn shares_put(&mut self, share: &ReplayShare) -> StoreResult<()> {
+    /// B52: records a share and answers whether it wrote a row; one already held is left as it was
+    /// (its first `created_at`) and answers false.
+    pub async fn shares_put(&mut self, share: &ReplayShare) -> StoreResult<bool> {
         dispatch!(self, shares_put(share))
     }
 
@@ -2999,6 +3011,12 @@ impl Tx<'_> {
     /// for good, so making friends again restores none. Answers how many went.
     pub async fn shares_remove_between(&mut self, x: &str, y: &str) -> StoreResult<i64> {
         dispatch!(self, shares_remove_between(x, y))
+    }
+
+    /// R4390001: deletes every replay share whose match holds no action-log row (the retention purge
+    /// took it): `readable_share!`'s `exists` test, negated; answers how many.
+    pub async fn shares_purge_orphaned(&mut self) -> StoreResult<i64> {
+        dispatch!(self, shares_purge_orphaned())
     }
 
     /// B52: who shared the finished match `match_id` with `friend` and may still be read through: each
@@ -3249,6 +3267,12 @@ impl Tx<'_> {
     /// answers them, oldest first.
     pub async fn daily_invites_expire(&mut self, now: i64) -> StoreResult<Vec<DailyInviteRow>> {
         dispatch!(self, daily_invites_expire(now))
+    }
+
+    /// R4390000: deletes every daily invite, challenge or seek, whose `expires_at <= now`, whatever
+    /// its state; answers how many.
+    pub async fn daily_invites_purge(&mut self, now: i64) -> StoreResult<i64> {
+        dispatch!(self, daily_invites_purge(now))
     }
 
     // daily notices

@@ -27,3 +27,7 @@
 # The bundle, its chunks and the engine's module (Vite's build output): every name carries its content's hash, so a browser keeps it a year (#778).
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# The audio (voice lines and music tracks): every fetch carries its manifest's hash (?v=), so a browser keeps it a year (#4393).
+/audio/*
+  Cache-Control: public, max-age=31536000, immutable

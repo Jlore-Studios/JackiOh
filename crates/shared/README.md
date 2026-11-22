@@ -777,7 +777,13 @@ The economy's rolls carry their tests in their modules
 decisions over records and their boundary. The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
 the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/again.rs` (the co-op machine and its Play again
-book) and `tests/host_boundary.rs`; the practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
+book) and `tests/host_boundary.rs`; `tests/host_fuzz.rs` plays both host machines on seeded random events (#4392: a clock
+running out, a socket dropping and returning, a refused or taken log write, a resent or copied nonce, a restart rebuilt
+from the written rows) and checks after every step that the log rebuilds the game, that it is well formed, that a stale
+timer changes nothing, that a match ends once and that a restart holds the game. `HOST_FUZZ_SEEDS` matches per machine
+run on every pull request and `daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEEDS`; to rerun one failing seed, set
+`REPRO = Some((Machine::Duel, <seed>))` (or `Duos`) in the file, as the failure's text says, and run `cargo test -p
+jackioh-shared --features jackioh-engine/testkit --test host_fuzz repro`; the practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
 standing in for a host). The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
 with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`decide` and its JSON calls). The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.

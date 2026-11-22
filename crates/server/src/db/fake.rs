@@ -2430,6 +2430,22 @@ pub fn player_settings_get(
         .cloned())
 }
 
+/// R4403000 (#4418): the locked entry point both stores expose for `put_settings`' keep-out
+/// filter. The fake holds its one lock for the whole transaction, so this is already serial and
+/// reads exactly what `player_settings_get` does; the method exists so both stores share the
+/// same locked read.
+pub fn player_settings_get_for_update(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+) -> Result<Option<PlayerSettingsRow>, StoreError> {
+    call(f, "playerSettings.getForUpdate")?;
+    Ok(f.tables()
+        .player_settings
+        .iter()
+        .find(|existing| existing.profile_id == profile_id)
+        .cloned())
+}
+
 pub fn player_settings_merge(
     f: &mut FakeTx<'_>,
     input: &PlayerSettingsMergeInput,
@@ -4862,7 +4878,7 @@ fn remove_watch_rows(tables: &mut FakeTables, profile_id: &str) {
     });
 }
 
-pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
+pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<bool, StoreError> {
     call(f, "shares.put")?;
     let tables = f.tables();
     let exists = |id: &str| tables.profiles.iter().any(|row| row.id == id);
@@ -4876,10 +4892,11 @@ pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<(), StoreEr
     let held = tables.replay_shares.iter().any(|row| {
         row.match_id == share.match_id && row.sharer == share.sharer && row.friend == share.friend
     });
-    if !held {
-        tables.replay_shares.push(share.clone());
+    if held {
+        return Ok(false);
     }
-    Ok(())
+    tables.replay_shares.push(share.clone());
+    Ok(true)
 }
 
 pub fn shares_remove(
@@ -4899,6 +4916,17 @@ pub fn shares_remove_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<i64
     call(f, "shares.removeBetween")?;
     let gone = keep_only(&mut f.tables().replay_shares, |row| {
         !((row.sharer == x && row.friend == y) || (row.sharer == y && row.friend == x))
+    });
+    Ok(gone as i64)
+}
+
+/// R4390001: a share survives only while its match holds an action-log row.
+pub fn shares_purge_orphaned(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
+    call(f, "shares.purgeOrphaned")?;
+    let tables = f.tables();
+    let logs = &tables.match_actions;
+    let gone = keep_only(&mut tables.replay_shares, |share| {
+        logs.iter().any(|row| row.match_id == share.match_id)
     });
     Ok(gone as i64)
 }
@@ -5429,6 +5457,13 @@ pub fn daily_invites_expire(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<DailyInv
     }
     by_age(&mut expired);
     Ok(expired)
+}
+
+/// R4390000: every invite lapsed by `now`, in any state.
+pub fn daily_invites_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreError> {
+    call(f, "dailyInvites.purge")?;
+    let gone = keep_only(&mut f.tables().daily.invites, |row| row.expires_at > now);
+    Ok(gone as i64)
 }
 
 // daily notices

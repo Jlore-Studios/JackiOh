@@ -4407,6 +4407,29 @@ pub async fn player_settings_get(
         .transpose()
 }
 
+/// R4403000 (#4418): `player_settings_get` under the settings row lock, so the filter reads what
+/// the merge will merge: a concurrent device's committed write is seen, never reverted.
+pub async fn player_settings_get_for_update(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Option<PlayerSettingsRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(None);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        player_settings_columns!(),
+        " from public.player_settings where profile_id = $1::uuid for update"
+    ))
+    .bind(profile_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| PlayerSettingsDbRow::read(&row).map(to_player_settings))
+        .transpose()
+}
+
 /// R634: one call to `app.merge_player_settings` (0018), under the profile row lock, which also
 /// caps the result; then the row as it now stands, read in the same transaction so the answer is
 /// exactly what this write left.
@@ -7810,7 +7833,7 @@ macro_rules! readable_share {
     };
 }
 
-pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
+pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<bool, StoreError> {
     if !is_uuid(&share.match_id) || !is_uuid(&share.sharer) || !is_uuid(&share.friend) {
         return Err(StoreError::from(format!(
             "a replay share names an id that is not a UUID: {}",
@@ -7818,7 +7841,7 @@ pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), Sto
         )));
     }
     run_as(t, Some(&share.sharer)).await?;
-    sqlx::query(concat!(
+    let done = sqlx::query(concat!(
         "insert into public.replay_shares (match_id, sharer, friend, created_at)
          values ($1::uuid, $2::uuid, $3::uuid, ",
         ts!("$4"),
@@ -7832,7 +7855,8 @@ pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), Sto
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
-    Ok(())
+    // `do nothing` on a held share affects no row.
+    Ok(done.rows_affected() == 1)
 }
 
 pub async fn shares_remove(
@@ -7870,6 +7894,21 @@ pub async fn shares_remove_between(t: &mut PgTx<'_>, x: &str, y: &str) -> Result
     )
     .bind(x)
     .bind(y)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
+/// R4390001: the shares whose match holds no action-log row, `readable_share!`'s `exists` test negated
+/// (the log's primary key, `(match_id, seq)`, serves the anti-join). No index, no migration: one row
+/// per share.
+pub async fn shares_purge_orphaned(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(
+        "delete from public.replay_shares s
+          where not exists (select 1 from public.match_actions a where a.match_id = s.match_id)",
+    )
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -8455,6 +8494,19 @@ pub async fn daily_invites_expire(t: &mut PgTx<'_>, now: i64) -> Result<Vec<Dail
     .await
     .map_err(db_error)?;
     daily_invites_of(&rows)
+}
+
+/// R4390000: every invite lapsed by `now`, in any state. No index, no migration: the table holds
+/// about a week of invites once the first pass has run. (`expires_at` is a bigint, not a timestamp,
+/// so no `ts!`.)
+pub async fn daily_invites_purge(t: &mut PgTx<'_>, now: i64) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query("delete from public.daily_invites where expires_at <= $1::bigint")
+        .bind(now)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
 }
 
 // daily notices

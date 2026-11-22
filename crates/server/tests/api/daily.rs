@@ -731,6 +731,79 @@ async fn r3727000_a_move_after_its_deadline_is_refused_and_lost_on_time() {
     }
 }
 
+// R4390000: a lapsed invite is deleted whatever became of it; the game it started plays on
+
+#[tokio::test]
+async fn r4390000_the_sweep_deletes_lapsed_invites_and_the_game_an_accept_started_plays_on() {
+    let (app, ada, bo) = two_friends().await;
+    // 14 days a move: its deadline outlasts the invites' week.
+    let match_id = daily_game(&app, &ada, &bo, 14).await;
+    let (status, cancelled) = api(
+        &app,
+        "POST",
+        "/api/daily/challenges",
+        &ada.token,
+        random_challenge(&bo, 3),
+    )
+    .await;
+    assert_eq!(status, 201, "{cancelled}");
+    let (status, body) = api(
+        &app,
+        "DELETE",
+        &format!(
+            "/api/daily/challenges/{}",
+            cancelled["id"].as_str().expect("a challenge id")
+        ),
+        &ada.token,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 204, "{body}");
+    let (status, seek) = api(
+        &app,
+        "POST",
+        "/api/daily/seeks",
+        &ada.token,
+        json!({ "mode": "random", "perMoveDays": 3 }),
+    )
+    .await;
+    assert_eq!(status, 201, "{seek}");
+    // The accepted challenge, the cancelled one and the open seek.
+    assert_eq!(fake_lock(&app).await.tables.daily.invites.len(), 3);
+
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(status, 200, "{swept}");
+    assert_eq!(swept["purged"], 0, "none has lapsed yet: {swept}");
+    assert_eq!(fake_lock(&app).await.tables.daily.invites.len(), 3);
+
+    app.daily
+        .set_offset(jackioh_server::config::DAILY_CHALLENGE_TTL_DAYS * MS_PER_DAY + 1);
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(status, 200, "{swept}");
+    assert_eq!(swept["expired"], 1, "the open seek: {swept}");
+    assert_eq!(swept["purged"], 3, "{swept}");
+    assert_eq!(swept["settled"], 0, "the game's clock has days left: {swept}");
+    assert!(fake_lock(&app).await.tables.daily.invites.is_empty());
+
+    // The game the accepted challenge started opens, plays and ends.
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+    let (on_move, other) = holder(&app, [&ada, &bo], &match_id).await;
+    let game = read(&app, on_move, &match_id).await;
+    assert_eq!(game["over"], false, "{game}");
+    let (status, body) = send(
+        &app,
+        on_move,
+        &match_id,
+        game["seq"].as_i64().expect("a seq"),
+        "concede",
+        json!({ "type": "concede" }),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["over"], true, "{body}");
+    assert_eq!(read(&app, other, &match_id).await["over"], true);
+}
+
 // R3934000: a finished game whose moves the retention purge took
 
 /// Dates the end of `match_id` past the retention window and runs the purge: how many log rows it took.

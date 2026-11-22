@@ -11,7 +11,7 @@
 //! composes are `effects::tray`'s; this module is the rule they share.
 
 use crate::catalog::{DrawTally, find_def, record_draw, registered_catalog, times_drawn};
-use crate::config::RESOURCE_RARITY_ODDS;
+use crate::config::{HAND_SALE_PRICE, HAND_SALE_RADIANT_PRICE, RESOURCE_RARITY_ODDS};
 use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, new_instance};
@@ -99,7 +99,9 @@ pub fn draw_sell_price(rng: &mut Rng, price: ResourcePrice) -> i32 {
 /// R1840001, R2250001: what a Resource fetches now: its quote this turn while the Marketplace is open,
 /// with no draw (R1853002); otherwise a draw in its face's sell range. 0, with no draw, for no Resource.
 /// R3548002: a Warhero Token fetches the game-wide worth, doubled on its Radiant face, whatever the
-/// Marketplace holds.
+/// Marketplace holds. R4410000: a card that pays Credits as a Resource does (`paysCredits`, S #89 Spice)
+/// fetches its quote the same way, else a draw in `HAND_SALE_PRICE` (`HAND_SALE_RADIANT_PRICE` on its
+/// Radiant face).
 pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 {
     if let Some(worth) = crate::warhero::worth_of(state, card) {
         return worth;
@@ -107,13 +109,17 @@ pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 
     if let Some(quote) = crate::marketplace::sell_quote(state, card) {
         return quote;
     }
-    let Some(resource) = find_def(Some(state), &card.def_id).and_then(|def| def.resource) else {
-        return 0;
-    };
-    let price = if card.radiant {
-        resource.radiant
-    } else {
-        resource.base
+    let price = match find_def(Some(state), &card.def_id).and_then(|def| def.resource) {
+        Some(resource) if card.radiant => resource.radiant,
+        Some(resource) => resource.base,
+        None if pays_credits_like_a_resource(card) => {
+            if card.radiant {
+                HAND_SALE_RADIANT_PRICE
+            } else {
+                HAND_SALE_PRICE
+            }
+        }
+        None => return 0,
     };
     draw_sell_price(rng, price)
 }
@@ -157,10 +163,21 @@ pub fn is_resource_card(state: &GameState, card: &CardInstance) -> bool {
         || crate::warhero::is_warhero_token(&card.def_id)
 }
 
+/// R4410000: whether a card that is no Resource pays Credits as one does: its face sets
+/// `StaticFlags.pays_credits` (Stinkyscape #89 Spice). Read off its registered face, as a Resource is
+/// read off its definition (`is_resource_card`), so a Vanilla one pays as a Vanilla Resource does.
+pub fn pays_credits_like_a_resource(card: &CardInstance) -> bool {
+    crate::scripts::registered_entry(&card.def_id).is_some_and(|entry| {
+        let face = if card.radiant { &entry.radiant } else { &entry.base };
+        face.flags().pays_credits == Some(true)
+    })
+}
+
 /// R2250001: a Resource `player` played or discarded from their hand pays them its Credits
-/// (`sell_price`). A card that is no Resource pays nothing and draws nothing.
+/// (`sell_price`), and so does a card that pays Credits as one does (R4410000). Any other card pays
+/// nothing and draws nothing.
 pub fn pay_resource_credits(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInstance) {
-    if !is_resource_card(sink.state, card) {
+    if !is_resource_card(sink.state, card) && !pays_credits_like_a_resource(card) {
         return;
     }
     let credits = sell_price(sink.state, sink.rng, card);

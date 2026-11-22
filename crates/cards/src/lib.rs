@@ -183,6 +183,33 @@ pub(crate) fn never_defense_kept(mut scripts: CardScripts, base: bool, radiant: 
     scripts
 }
 
+/// R4396000, R89: the `(attack, max_health)` a Death's card died with: those of its own latest `destroyed`
+/// event, read by §4.5 step 1 with the auras on before any collected card left, so an aura whose source
+/// died in the same pass still counts. A Death that runs in a later action (after an earlier Death's
+/// prompt) no longer holds the event and reads the board's auras as they stand (R1884004).
+pub(crate) fn stats_as_it_died(
+    ctx: &jackioh_engine::prelude::EffectContext<'_>,
+    me: &jackioh_engine::prelude::CardInstance,
+) -> (i32, i32) {
+    use jackioh_engine::prelude::{GameEvent, unit_view_as_it_died};
+    ctx.events
+        .iter()
+        .rev()
+        .find_map(|event| match event {
+            GameEvent::Destroyed {
+                instance_id,
+                attack,
+                max_health,
+                ..
+            } if *instance_id == me.id => Some((*attack, *max_health)),
+            _ => None,
+        })
+        .unwrap_or_else(|| {
+            let view = unit_view_as_it_died(&*ctx.state, me);
+            (view.attack, view.max_health)
+        })
+}
+
 /// #3483: the Stinkyscape families' shared card-test bodies (beam, repeater, cannon, flak,
 /// miner, asteroid and drone helpers), one body per family instead of one copy per card.
 #[cfg(test)]

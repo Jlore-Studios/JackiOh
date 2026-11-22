@@ -421,6 +421,16 @@ pub struct EvalWeights {
     /// destroys it alone goes in first when its splash meets a later Taunt and the two are not both one lane
     /// wide. Off, the one-lane splash and the two orders, as before.
     pub giga_cleave_read: bool,
+    /// R4402000, #4402: whether the Taunt walk of `damage_past_taunts_with` (so `face_threat`, the threat and
+    /// pressure terms, `wall_switches_priced`, `ready_gap`, the Duos pool loss and the learned features) reads
+    /// each Taunt's strike back (§4.3), with the §4.4 steps that can stop it, as `falls_to_first_strike` reads
+    /// a First Strike one. An attacker the strike back destroys still lands that hit (R59) but makes none of
+    /// its later swings (R636), and the wounds and the popped shield a strike back leaves carry to its next
+    /// swing; a Ranged attacker takes none from a non-Ranged Taunt (R783000). A Frenzy attacker whose hit
+    /// destroys the Taunt it attacked, and that survives, has its swings back to `attacks_per_turn`
+    /// (R3543003); an exiling hit's removal and a Cleave splash's kill free none. Off, every swing counts and
+    /// Frenzy frees none, as before.
+    pub strike_back_survival_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -488,10 +498,6 @@ pub struct EvalWeights {
     /// buys: the Marketplace asks `MARKETPLACE_CREDITS_PER_MANA` a mana, which the hand prices at
     /// `hand_per_cost`. Own side only (#2389).
     pub market_credit: f64,
-    /// R4154401: whether an own hand card that sells from the hand (Stinkyscape #89 Spice, R1861000)
-    /// counts, while the Marketplace quotes it, as the Credits its sale brings now at `market_credit`
-    /// (`evaluate::hand_sale_worth`) in place of its hand price. Off, it is priced as any hand card.
-    pub hand_sale_credits: bool,
     /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
     /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
     /// its holder's turn starts. Every shipped one pays its holder.
@@ -639,6 +645,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     exile_on_damage_read: true,
     pool_and_conversion_read: true,
     giga_cleave_read: true,
+    // #4402: on. Its screen, 400 games on improve-dev against the control at 90cb03f196, read 200-200,
+    // edge 0.0 (-0.028 to 0.028); inconclusive (R4319000): 8 decided of 200 (won 4, lost 4), 33 diverged;
+    // its scene tests settle it (training/improve.md, A screen).
+    strike_back_survival_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -705,7 +715,6 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     extra_turn_in_hand: 0.5,
     anomaly_miss: 0.2,
     market_credit: AI_HAND_PER_COST / MARKETPLACE_CREDITS_PER_MANA as f64,
-    hand_sale_credits: true,
     // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
     // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
     // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
@@ -872,7 +881,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `giga_cleave_read`, `hand_sale_credits`) is off.
+/// `giga_cleave_read`, `strike_back_survival_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -893,6 +902,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     exile_on_damage_read: false,
     pool_and_conversion_read: false,
     giga_cleave_read: false,
+    strike_back_survival_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -939,7 +949,6 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     extra_turn_in_hand: 0.0,
     anomaly_miss: 0.0,
     market_credit: 0.0,
-    hand_sale_credits: false,
     start_of_turn_effect: 0.0,
     alt_win: 0.0,
     doomed_hand_discount: 0.0,

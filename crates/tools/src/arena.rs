@@ -14,6 +14,8 @@
 //! Each finished game leaves one `GameRecord` (R376, R378) on a JSONL line in `<--out>/<date>.jsonl`,
 //! else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout; a tally closes the duel lines with agent
 //! `a`'s share of the games won and its 95% Wilson interval (a paired series adds its edge).
+//! `--forks` hands the trunk to `crate::fork_screen` (R4397000): the control on both seats, the
+//! candidate probed at each decision, each fork played out both ways from where it was made.
 
 use std::cell::RefCell;
 use std::io::{BufRead, BufReader, Write};
@@ -140,6 +142,11 @@ pub struct Args {
     /// until `SCREEN_MIN_DECIDED` deals are decided or `SCREEN_MAX_GAMES` games are played.
     #[arg(long)]
     pub extend: bool,
+    /// R4397000: the fork screen: each deal of the set once with the control on both seats, the
+    /// candidate asked each decision until the game's fork cap, each fork played out both ways.
+    /// Needs `--set improve-dev`; the candidate is probed at full skill, so `--a-skill` stays 1.
+    #[arg(long)]
+    pub forks: bool,
     /// The directory the game records go to (`<dir>/<date>.jsonl`); default `$JACKIOH_TRAINING_OUT`,
     /// else stdout.
     #[arg(long)]
@@ -517,14 +524,16 @@ pub(crate) fn play_games(games: &[ArenaGame]) -> anyhow::Result<Vec<ArenaOutcome
     games.par_iter().map(play_game).collect()
 }
 
-enum Live {
+/// Who decides for a seat while a game plays (R4397000: the fork screen's probe holds one too,
+/// so the candidate is asked exactly as a seated agent would be).
+pub(crate) enum Live {
     SelfAi,
     Random,
     Bin(BinAgent),
 }
 
 impl Live {
-    fn start(spec: &AgentSpec) -> anyhow::Result<Live> {
+    pub(crate) fn start(spec: &AgentSpec) -> anyhow::Result<Live> {
         Ok(match spec {
             AgentSpec::SelfAi => Live::SelfAi,
             AgentSpec::Random => Live::Random,
@@ -540,7 +549,7 @@ impl Live {
         }
     }
 
-    fn finish(self) {
+    pub(crate) fn finish(self) {
         if let Live::Bin(bin) = self {
             bin.quit();
         }
@@ -623,7 +632,8 @@ impl BinAgent {
 
     /// The agent's move on `redact(state, seat)`; the stream moves to the cursor the agent answers
     /// with. The request is verbose, so the answer tells the decision's `reason` and `stats.simPanics`.
-    fn decide(
+    /// `pub(crate)` for the fork screen's probe (R4397000): the candidate gets the same request.
+    pub(crate) fn decide(
         &mut self,
         state: &GameState,
         seat: PlayerId,
@@ -666,21 +676,22 @@ impl BinAgent {
 }
 
 /// One controller call's answer: the action, `None` for "no move", and what an AI's decision told of
-/// itself (R1489000).
+/// itself (R1489000). `pub(crate)` for the fork screen's probe (R4397000), which asks the candidate
+/// exactly as `choose_for` asks a seated agent.
 #[derive(Default)]
-struct Choice {
-    action: Option<ActionBody>,
+pub(crate) struct Choice {
+    pub action: Option<ActionBody>,
     /// The decision came off the AI's fallback path (`DecisionReason::Fallback`).
-    fell_back: bool,
+    pub fell_back: bool,
     /// The panics its search caught (`SearchStats::sim_panics`).
-    sim_panics: usize,
+    pub sim_panics: usize,
     /// The first one's message, when the agent kept it (`self` does; a `bin:` agent sends none).
-    first_sim_panic: Option<String>,
+    pub first_sim_panic: Option<String>,
 }
 
 impl Choice {
     /// An answer that is only its action: the random policy's, or a skill miss's (R2214000).
-    fn plain(action: Option<ActionBody>) -> Choice {
+    pub(crate) fn plain(action: Option<ActionBody>) -> Choice {
         Choice {
             action,
             ..Choice::default()
@@ -688,7 +699,7 @@ impl Choice {
     }
 
     /// `self`'s answer: the decision's action and what it tells of itself.
-    fn of(decision: Option<Decision>) -> Choice {
+    pub(crate) fn of(decision: Option<Decision>) -> Choice {
         let Some(decision) = decision else {
             return Choice::default();
         };
@@ -717,7 +728,8 @@ fn told_of(answer: &Value) -> (bool, usize) {
 /// `redact(state, seat)`; `random` plays on the referee's state. R747000: a decision the seat's roll
 /// does not give the AI is `jackioh_ai::skill_miss_action`'s (R2214000), handed the referee's state as
 /// `random` is and drawn on the same stream; a `bin:` agent is asked only when the roll keeps it.
-fn choose_for(
+/// `pub(crate)` for the fork screen's probe (R4397000): the candidate is asked at full skill.
+pub(crate) fn choose_for(
     live: &mut Live,
     skill: f64,
     state: &GameState,
@@ -775,7 +787,8 @@ fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
 }
 
 /// The chosen action, or, when the reducer refuses it, the first replacement it accepts (recorded).
-fn accept(
+/// `pub(crate)` for the fork screen's rollouts (R4397000): each arm's first action goes through it.
+pub(crate) fn accept(
     state: &GameState,
     seat: PlayerId,
     chosen: &ActionBody,
@@ -802,72 +815,93 @@ fn accept(
     None
 }
 
-/// Plays one game: the actor is `seat_to_act` (R265), its stream `<seed>:ctl:<seat>`, the nonce `m<log
-/// length>`. "No move" is replaced by the random policy; a refused action is recorded in `rejected`
-/// and replaced; a throw ends the game.
-pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
-    let options = CreateGameOptions {
-        seed: game.seed.clone(),
-        decks: game.decks.clone(),
-        ..Default::default()
-    };
-    let mut state =
-        catch_unwind(AssertUnwindSafe(|| begin_game(&create_game(&options)).state)).map_err(|panic| {
-            anyhow!(
-                "{}: the game cannot start: {}",
-                game.seed,
-                agent::panic_message(&*panic)
-            )
-        })?;
+/// A game in progress, from its first decision to its last, so a fork rollout can play on from a
+/// mid-game state beside `play_game` (R4397000). The trunk builds one per game; a rollout builds one
+/// per arm, with the fork's streams and the control on both seats.
+pub(crate) struct FinishCtx {
+    /// Each seat's stream seed (`<seed>:ctl:<seat>` in a game, the fork's own in a rollout arm).
+    pub ctl: PerPlayer<String>,
+    pub live: PerPlayer<Live>,
+    pub skills: PerPlayer<f64>,
+    /// R1489000: the budget a `self` seat decides at (a `bin:` agent decides at its own build's).
+    pub budget: SearchBudget,
+    pub turn_actions: Option<usize>,
+    pub stop_unsettled: bool,
+    pub log: Vec<Action>,
+    pub rejected: Vec<RejectedAction>,
+    pub thrown: Vec<String>,
+    pub fallbacks: PerPlayer<i32>,
+    pub sim_panics: PerPlayer<usize>,
+    pub first_sim_panic: Option<SimPanic>,
+    pub times: PerPlayer<Vec<f64>>,
+    pub rngs: PerPlayer<Rng>,
+    pub turn: i32,
+    pub this_turn: usize,
+    /// R4397000: the fork screen's probe, asking the candidate at each decision; `None` elsewhere.
+    pub probe: Option<crate::fork_screen::Probe>,
+}
 
-    let ctl = PerPlayer::new(format!("{}:ctl:p1", game.seed), format!("{}:ctl:p2", game.seed));
-    let mut rngs = PerPlayer::new(Rng::new(&ctl.p1, 0), Rng::new(&ctl.p2, 0));
-    let mut live = PerPlayer::new(Live::start(&game.seats.p1)?, Live::start(&game.seats.p2)?);
+/// What playing on came to: the result, the final hash and turn, everything the loop collected, and
+/// the fork screen's probe points and probe faults beside them (R4397000).
+pub(crate) struct PlayTail {
+    pub result: Option<GameResult>,
+    pub hash: String,
+    pub turns: i32,
+    pub log: Vec<Action>,
+    pub rejected: Vec<RejectedAction>,
+    pub thrown: Vec<String>,
+    pub fallbacks: PerPlayer<i32>,
+    pub sim_panics: PerPlayer<usize>,
+    pub first_sim_panic: Option<SimPanic>,
+    pub times: PerPlayer<Vec<f64>>,
+    pub points: Vec<crate::fork_screen::ForkPoint>,
+    pub probe_faults: Vec<String>,
+}
 
-    let mut log: Vec<Action> = Vec::new();
-    let mut rejected: Vec<RejectedAction> = Vec::new();
-    let mut thrown: Vec<String> = Vec::new();
-    let mut fallbacks: PerPlayer<i32> = PerPlayer::new(0, 0);
-    let mut sim_panics: PerPlayer<usize> = PerPlayer::new(0, 0);
-    let mut first_sim_panic: Option<SimPanic> = None;
-    let mut times: PerPlayer<Vec<f64>> = PerPlayer::new(Vec::new(), Vec::new());
-
-    let mut turn = state.turn;
-    let mut this_turn = 0usize;
-    while state.result.is_none() && log.len() < ARENA_MAX_ACTIONS {
+/// Plays on from `state` to the end through `ctx`, finishing its agents after. The trunk starts here
+/// from the game's first state; a fork rollout starts here from its arm's state (R4397000). Rayon
+/// runs games and arms in parallel, but every input is owned, so completion order never reaches the
+/// output.
+pub(crate) fn finish_from(mut state: GameState, mut ctx: FinishCtx) -> PlayTail {
+    while state.result.is_none() && ctx.log.len() < ARENA_MAX_ACTIONS {
         // R1006005: a turn that will not end (an endless combo the AI keeps finding worth playing)
         // ends the game without a result once it passes the ceiling.
-        if state.turn != turn {
-            turn = state.turn;
-            this_turn = 0;
+        if state.turn != ctx.turn {
+            ctx.turn = state.turn;
+            ctx.this_turn = 0;
         }
-        if let Some(ceiling) = game.turn_actions
-            && this_turn >= ceiling
+        if let Some(ceiling) = ctx.turn_actions
+            && ctx.this_turn >= ceiling
         {
-            thrown.push(format!(
-                "{this_turn} actions in turn {turn}, the ceiling of one turn (R1006005)"
+            ctx.thrown.push(format!(
+                "{} actions in turn {}, the ceiling of one turn (R1006005)",
+                ctx.this_turn, ctx.turn
             ));
             break;
         }
-        this_turn += 1;
+        ctx.this_turn += 1;
         let Some(seat) = seat_to_act(&state) else {
-            thrown.push(format!(
+            ctx.thrown.push(format!(
                 "no seat to act while the game is live (turn {})",
                 state.turn
             ));
             break;
         };
 
+        // R4397000: the candidate sees the same request the control's seat got, on the stream cloned
+        // before the control's decision moves it.
+        let probe_rng = ctx.probe.as_ref().map(|_| ctx.rngs[seat].clone());
+
         let started = Instant::now();
-        let budget = game.self_budget;
-        let choice = if game.stop_unsettled && matches!(live[seat], Live::SelfAi) {
+        let budget = ctx.budget;
+        let choice = if ctx.stop_unsettled && matches!(ctx.live[seat], Live::SelfAi) {
             // R1006007: a decision whose search runs a board to a settle cap ends the game without
             // a result, at the cap's first panic: the search would reach the loop again and again.
             let (skill, at, ctl_seed, start) = (
-                game.skills[seat],
+                ctx.skills[seat],
                 state.clone(),
-                ctl[seat].clone(),
-                rngs[seat].clone(),
+                ctx.ctl[seat].clone(),
+                ctx.rngs[seat].clone(),
             );
             let watched = watch_unsettled(move || {
                 let mut rng = start;
@@ -875,47 +909,47 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
                 (choice, rng)
             });
             let Some((choice, next)) = watched else {
-                thrown.push(format!(
+                ctx.thrown.push(format!(
                     "{}: a line the search played did not settle (turn {}, R1006007)",
                     seat.as_str(),
                     state.turn
                 ));
                 break;
             };
-            rngs[seat] = next;
+            ctx.rngs[seat] = next;
             choice
         } else {
             choose_for(
-                &mut live[seat],
-                game.skills[seat],
+                &mut ctx.live[seat],
+                ctx.skills[seat],
                 &state,
                 seat,
-                &ctl[seat],
-                &mut rngs[seat],
-                game.self_budget,
+                &ctx.ctl[seat],
+                &mut ctx.rngs[seat],
+                ctx.budget,
             )
         };
-        times[seat].push(started.elapsed().as_secs_f64() * MS_PER_SECOND);
+        ctx.times[seat].push(started.elapsed().as_secs_f64() * MS_PER_SECOND);
         let choice = match choice {
             Ok(choice) => choice,
             Err(message) => {
-                thrown.push(format!(
+                ctx.thrown.push(format!(
                     "{}: controller {} threw: {message}",
                     seat.as_str(),
-                    live[seat].label()
+                    ctx.live[seat].label()
                 ));
                 break;
             }
         };
         // R1489000: what an AI's decision told of itself, counted as match_.rs's `play_match` counts it.
         if choice.fell_back {
-            fallbacks[seat] += 1;
+            ctx.fallbacks[seat] += 1;
         }
-        sim_panics[seat] += choice.sim_panics;
-        if first_sim_panic.is_none()
+        ctx.sim_panics[seat] += choice.sim_panics;
+        if ctx.first_sim_panic.is_none()
             && let Some(message) = &choice.first_sim_panic
         {
-            first_sim_panic = Some(SimPanic {
+            ctx.first_sim_panic = Some(SimPanic {
                 seat,
                 message: message.clone(),
             });
@@ -924,11 +958,11 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
         let chosen = match choice.action {
             Some(chosen) => chosen,
             None => {
-                fallbacks[seat] += 1;
-                match random_action(&state, seat, &mut rngs[seat]) {
+                ctx.fallbacks[seat] += 1;
+                match random_action(&state, seat, &mut ctx.rngs[seat]) {
                     Some(chosen) => chosen,
                     None => {
-                        thrown.push(format!(
+                        ctx.thrown.push(format!(
                             "no action for {} while the game is live (turn {})",
                             seat.as_str(),
                             state.turn
@@ -939,15 +973,21 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
             }
         };
 
-        let nonce = format!("m{}", log.len());
+        // R4397000: ask the candidate before the trunk plays on with the control's action; the probe
+        // compares its answer to the final played body and records the fork, if any.
+        if let (Some(probe), Some(rng)) = (ctx.probe.as_mut(), probe_rng.as_ref()) {
+            probe.check(&state, seat, &ctx.ctl[seat], rng, &chosen, ctx.log.len());
+        }
+
+        let nonce = format!("m{}", ctx.log.len());
         let current = &state;
         let step = catch_unwind(AssertUnwindSafe(|| {
-            accept(current, seat, &chosen, &nonce, &mut rejected)
+            accept(current, seat, &chosen, &nonce, &mut ctx.rejected)
         }));
         let accepted = match step {
             Ok(accepted) => accepted,
             Err(panic) => {
-                thrown.push(format!(
+                ctx.thrown.push(format!(
                     "{}: reduce threw on \"{}\": {}",
                     seat.as_str(),
                     chosen.action_type().as_str(),
@@ -957,7 +997,7 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
             }
         };
         let Some((action, next)) = accepted else {
-            thrown.push(format!(
+            ctx.thrown.push(format!(
                 "{}: no legal replacement for a refused \"{}\" (turn {})",
                 seat.as_str(),
                 chosen.action_type().as_str(),
@@ -966,27 +1006,102 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
             break;
         };
 
-        log.push(action);
+        ctx.log.push(action);
         state = next;
     }
 
-    let PerPlayer { p1, p2 } = live;
+    let PerPlayer { p1, p2 } = ctx.live;
     p1.finish();
     p2.finish();
+    let (points, probe_faults) = ctx
+        .probe
+        .map(crate::fork_screen::Probe::finish)
+        .unwrap_or_default();
 
-    Ok(ArenaOutcome {
-        game: game.clone(),
+    PlayTail {
         result: state.result,
         hash: hash_state(&state),
         turns: state.turn,
-        log,
-        rejected,
-        thrown,
-        fallbacks,
-        sim_panics,
-        first_sim_panic,
-        times,
-    })
+        log: ctx.log,
+        rejected: ctx.rejected,
+        thrown: ctx.thrown,
+        fallbacks: ctx.fallbacks,
+        sim_panics: ctx.sim_panics,
+        first_sim_panic: ctx.first_sim_panic,
+        times: ctx.times,
+        points,
+        probe_faults,
+    }
+}
+
+/// Plays one game with the fork screen's probe beside it, asking the candidate at each decision
+/// until the game's fork cap (R4397000). The game always plays on with its own seats' actions; the
+/// probe only records where the candidate would have differed, with its query faults beside them.
+pub(crate) fn play_game_probed(
+    game: &ArenaGame,
+    probe: Option<crate::fork_screen::Probe>,
+) -> anyhow::Result<(ArenaOutcome, Vec<crate::fork_screen::ForkPoint>, Vec<String>)> {
+    let options = CreateGameOptions {
+        seed: game.seed.clone(),
+        decks: game.decks.clone(),
+        ..Default::default()
+    };
+    let state =
+        catch_unwind(AssertUnwindSafe(|| begin_game(&create_game(&options)).state)).map_err(|panic| {
+            anyhow!(
+                "{}: the game cannot start: {}",
+                game.seed,
+                agent::panic_message(&*panic)
+            )
+        })?;
+
+    let ctl = PerPlayer::new(format!("{}:ctl:p1", game.seed), format!("{}:ctl:p2", game.seed));
+    let turn = state.turn;
+    let ctx = FinishCtx {
+        rngs: PerPlayer::new(Rng::new(&ctl.p1, 0), Rng::new(&ctl.p2, 0)),
+        ctl,
+        live: PerPlayer::new(Live::start(&game.seats.p1)?, Live::start(&game.seats.p2)?),
+        skills: PerPlayer::new(game.skills[PlayerId::P1], game.skills[PlayerId::P2]),
+        budget: game.self_budget,
+        turn_actions: game.turn_actions,
+        stop_unsettled: game.stop_unsettled,
+        log: Vec::new(),
+        rejected: Vec::new(),
+        thrown: Vec::new(),
+        fallbacks: PerPlayer::new(0, 0),
+        sim_panics: PerPlayer::new(0, 0),
+        first_sim_panic: None,
+        times: PerPlayer::new(Vec::new(), Vec::new()),
+        turn,
+        this_turn: 0,
+        probe,
+    };
+    let tail = finish_from(state, ctx);
+
+    Ok((
+        ArenaOutcome {
+            game: game.clone(),
+            result: tail.result,
+            hash: tail.hash,
+            turns: tail.turns,
+            log: tail.log,
+            rejected: tail.rejected,
+            thrown: tail.thrown,
+            fallbacks: tail.fallbacks,
+            sim_panics: tail.sim_panics,
+            first_sim_panic: tail.first_sim_panic,
+            times: tail.times,
+        },
+        tail.points,
+        tail.probe_faults,
+    ))
+}
+
+/// Plays one game: the actor is `seat_to_act` (R265), its stream `<seed>:ctl:<seat>`, the nonce `m<log
+/// length>`. "No move" is replaced by the random policy; a refused action is recorded in `rejected`
+/// and replaced; a throw ends the game.
+pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
+    play_game_probed(game, None).map(|(outcome, _, _)| outcome)
 }
 
 fn fold_args(outcome: &ArenaOutcome) -> anyhow::Result<FoldArgs> {
@@ -1126,8 +1241,8 @@ fn round_ms(ms: f64) -> i64 {
 
 /// The per-game duel line: outcome from a's side, `aborted` (no result; no gate counts it a draw),
 /// why it ended, hash, whether it replays, both seats' fallbacks and caught search panics, and a's
-/// decision count and times.
-fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> {
+/// decision count and times. `pub(crate)` for the fork screen's trunk lines (R4397000).
+pub(crate) fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> {
     let subject = outcome.game.a_seat;
     let other = subject.opponent();
     let mine = &outcome.times[subject];
@@ -1337,6 +1452,9 @@ pub(crate) fn records_of(outcomes: &[ArenaOutcome]) -> anyhow::Result<Vec<GameRe
 }
 
 pub fn run(args: Args) -> anyhow::Result<()> {
+    if args.forks {
+        return crate::fork_screen::run(args);
+    }
     jackioh_cards::register_all();
     let (base, paired, games) = series(&args)?;
     let screen = args.set.is_some();
@@ -1665,6 +1783,7 @@ mod tests {
             set,
             paired,
             extend,
+            forks: false,
             out: None,
             a_skill: AI_SKILL_MAX,
             b_skill: AI_SKILL_MAX,

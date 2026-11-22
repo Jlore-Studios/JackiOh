@@ -143,6 +143,13 @@ is the engine's `query::cleave_struck` less the target: a GIGA beside the target
 met once, and beside a Unit standing in the backrow only standing Units (R3546001, R1081000). Where such a
 splash through a GIGA meets a later Taunt, the walk tries a third order, that Cleave attacker first
 (`giga_cleave_read`, R4257000, #4257; off in `GREEDY_EVAL`, whose walk keeps the one-lane splash).
+Each hit in the walk takes the Taunt's strike back (§4.3), read through the §4.4 steps that can stop it as a
+First Strike one is: an attacker it destroys still lands that hit but makes none of its later swings, a
+Windfury one's second included, and the wounds and popped shield it leaves carry to the attacker's next
+swing; a Ranged attacker takes none from a non-Ranged Taunt (R783000). A Frenzy attacker whose hit destroys
+the Taunt it attacked, and that survives, has its swings back to `attacks_per_turn`, each with the hit's own
+hero permission; an exiled Taunt and one a Cleave splash destroys free none (R3543003)
+(`strike_back_survival_read`, R4402000, #4402; off in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
@@ -247,10 +254,9 @@ before the rewarded plays (`Auspice::Judge`, R4154403), so a busy turn's `branch
 A Tradable card in the seat's own hand whose own cost is above the crystals its next refresh brings (this
 turn's `mana.max`, one more under `MAX_MANA`, moved by the rider; never the handicap) is dead
 (`dead_in_hand`): `material` holds it at `AI_EVAL.dead_tradable_discount` off its hand price, and its Trade
-is tried before the plays, so a line can play what it draws (R4154400). A card that sells from the hand
-(S #89 Spice) counts, while the Marketplace quotes it, as the Credits its sale brings at `market_credit`
-(`hand_sale_worth`, `AI_EVAL.hand_sale_credits`), so a sale moves nothing and one that completes a buy
-gains it (R4154401). A permanent a Living Bomb (`AI_PLAGUE_BOMBS`) will destroy at its controller's next
+is tried before the plays, so a line can play what it draws (R4154400). S #89 Spice in the seat's own
+hand is priced as any (1) card, and the Credits it pays as it is played or discarded count at
+`market_credit` once gained, as a Resource's do (R4410001). A permanent a Living Bomb (`AI_PLAGUE_BOMBS`) will destroy at its controller's next
 turn start (`plague_doomed`: a Plague Counter, not Indestructible, and the bomb's hook that fires then
 registered where the engine's `trigger_holders_with_hook` finds it) keeps Brittle 1's share, its counters
 banking nothing, and a placement prompt under one tries the enemy's permanents first, every answer when
@@ -270,7 +276,7 @@ first, ties in that order (#2825): a kill by `trade_value`, a hit on the hero by
 unless the hit is lethal, #3858), and every hit on the hero first while
 the seat's ready attacks reach the face together (`ready_gap`); then the Trades of dead Tradable cards (R4154400), the plays round-robin, answers, the
 other Trades of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
-buys and sales at the Marketplace (R1853004), the other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
+buys at the Marketplace (R1853004), the other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units

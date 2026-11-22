@@ -331,11 +331,6 @@
   outline-offset: 2px;
 }
 
-.marketplace-sales h3 {
-  margin: var(--space-6) 0 var(--space-3);
-  font-size: var(--type-xl);
-}
-
 /* The phone and a short landscape screen (prompt.css's breakpoint): two lots a row. */
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .marketplace-offers {

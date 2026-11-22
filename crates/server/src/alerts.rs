@@ -524,6 +524,10 @@ pub fn meaning(event: &str) -> &'static str {
             "The lobby sweep (R3730004), which deletes expired private lobbies past their format's TTL, is failing.",
             "Nothing players see yet: expired lobbies pile up with their deck picks."
         ),
+        "shares.purge.failing" => failing_step!(
+            "The replay share purge (R4390001), which deletes shares whose replay's log the retention purge took, is failing.",
+            "Nothing players see yet: dead replay shares pile up in the database."
+        ),
         "practice.sweep.failing" => failing_step!(
             "The practice settle sweep (R2422000), which settles practice claims unsettled after `PRACTICE_SETTLE_GRACE_SECONDS`, is failing.",
             "Practice claims are not paid or refused, so rewards are late."
@@ -857,7 +861,7 @@ mod tests {
         names
     }
 
-    const FAILING_STEPS: [&str; 17] = [
+    const FAILING_STEPS: [&str; 18] = [
         "matchmaker",
         "matches.reaper",
         "seats.reconcile",
@@ -865,6 +869,7 @@ mod tests {
         "game_records.fold",
         "game_records.refile",
         "retention.purge",
+        "shares.purge",
         "chat.purge",
         "duos.logs.purge",
         "idempotency.sweep",

@@ -70,15 +70,16 @@ use crate::scripts::stinkyscape::{
     c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c013_asphyxiants_cloud,
     c016_rod_of_ages, c018_1_melchior, c018_imitated_instrumentality, c023_warp_disruptor,
     c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix,
-    c036_drone_core_x, c042_core_researcher, c045_drone_commander, c046_circadian_halfcycler, c050_beam_v3,
-    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
-    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x,
-    c083_halo, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447,
-    c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod,
-    c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck,
-    c154_dice_of_doom, c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid,
-    c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower,
-    t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
+    c036_drone_core_x, c042_core_researcher, c045_drone_commander, c046_circadian_halfcycler, c049_spacemine,
+    c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4,
+    c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth,
+    c074_paragon_x, c083_halo, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack,
+    c111_shockwave447, c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system,
+    c129_jlockeeds_missile_pod, c134_felinor_containment_chamber, c140_rush_token_launcher,
+    c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck, c154_dice_of_doom,
+    c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid,
+    c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette,
+    t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
@@ -114,7 +115,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #4285 (R4285001 to R4285005), #4327 (R4327002), #4331 (R4331000, R4331001), #4353 (R4353020,
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
 /// hooks), #4350 (R4350000), #4395 (R4395000), and #4382's sweep of the carried catalogs (R4382001: Adaptive UI's Rush
-/// Token through v0.1.0d).
+/// Token through v0.1.0d), and #4396 (R4396000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c074_adaptive_ui::ID, "v0.1.0d", c074_adaptive_ui::script_v0_1_0d),
@@ -1176,7 +1177,14 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c007_the_greatest_heist::script_v0_6_9c,
     ),
     // #4395 (R4395000): the last Shadowstep trigger that answered any card of yours that was destroyed.
-    (c014_shadowstep::ID, "v0.6.9e", c014_shadowstep::script_v0_6_9e),
+    (c014_shadowstep::ID, "v0.6.9f", c014_shadowstep::script_v0_6_9f),
+    // #4396 (R4396000): the last scripts before a Death read its stats with the auras on.
+    (c049_spacemine::ID, "v0.6.9e", c049_spacemine::script_v0_6_9e),
+    (
+        c134_felinor_containment_chamber::ID,
+        "v0.6.9e",
+        c134_felinor_containment_chamber::script_v0_6_9e,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1788,23 +1796,33 @@ mod tests {
     }
 
     /// Issue #4395: Shadowstep's base trigger answered any card of yours that was destroyed through
-    /// v0.6.9e, the newest version shipped as it was built, so its row is keyed there; v0.4.12b and before
+    /// v0.6.9f, the newest version shipped as it was built, so its row is keyed there; v0.4.12b and before
     /// keep their own.
     #[test]
-    fn r767000_issue_4395_shadowstep_is_kept_through_v0_6_9e_the_newest_version_that_ran_it() {
+    fn r767000_issue_4395_shadowstep_is_kept_through_v0_6_9f_the_newest_version_that_ran_it() {
         crate::register_all();
         let kept_at = |version: &str| {
             covering_at(&HISTORY.order, KEPT_SCRIPTS, version, c014_shadowstep::ID)
                 .map(|at| KEPT_SCRIPTS[at].1)
         };
         assert_eq!(kept_at("v0.4.12b"), Some("v0.4.12b"));
-        for version in ["v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e"] {
+        for version in ["v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e", "v0.6.9f"] {
             assert_eq!(
                 kept_at(version),
-                Some("v0.6.9e"),
-                "{version} ran the script kept at v0.6.9e"
+                Some("v0.6.9f"),
+                "{version} ran the script kept at v0.6.9f"
             );
         }
+    }
+
+    /// Issue #4396: v0.6.9e was the newest shipped version as it was built.
+    #[test]
+    fn r767000_issue_4396_scripts_are_kept_through_v0_6_9e_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[c049_spacemine::ID, c134_felinor_containment_chamber::ID],
+            &["v0.6.9d", "v0.6.9e"],
+            "v0.6.9f",
+        );
     }
 
     /// Issue #4086: each block below was once keyed at a version older than the newest shipped as it

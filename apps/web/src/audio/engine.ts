@@ -677,9 +677,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function fetchCached(key: VoiceKey): Promise<ArrayBuffer | null> {
     const cached = bytes.get(key);
     if (cached !== undefined) return cached;
+    const hash = loadedManifest?.files[key]?.hash;
+    if (hash === undefined) return Promise.resolve(null);
     const pending = (async (): Promise<ArrayBuffer | null> => {
       try {
-        return await fetchBytes(voiceUrl(key));
+        return await fetchBytes(voiceUrl(key, hash));
       } catch {
         return null;
       }
