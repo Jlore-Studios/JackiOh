@@ -15,6 +15,7 @@ mod classify;
 mod dealt_fit;
 mod duos_fuzz;
 mod duos_gate;
+mod fork_screen;
 mod fused_pairs;
 mod fuzz;
 mod fx_census;
