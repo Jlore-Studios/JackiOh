@@ -15871,15 +15871,9 @@
     "what": "build #4441 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-22T02:23:50Z",
+    "at": "2026-11-22T02:33:51Z",
     "notes": [
-      "delivered plan #4428 on muse (run 44975360996): planned",
-      "delivered plan #4441 on claude-8 (run 44973921061): planned",
-      "started build #4428 on muse (run 44976096803)",
-      "started build #4441 on claude-8 (run 44976133743)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days",
-      "runner gate: started 1 of 1 waiting run(s) (run 44976096704 on claude/admiring-faraday-bn71h3)"
+      "delivered review #4442 on muse (run 44974703903): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16585,7 +16579,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T02:23:50Z",
+  "loop_tick": "2026-11-22T02:33:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
