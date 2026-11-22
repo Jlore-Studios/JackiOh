@@ -16254,11 +16254,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T04:26:16Z",
+        "at": "2026-11-22T04:57:13Z",
         "difficulty": "hard",
         "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 1 (engine rules): the monitor is testkit, but this base still has #4424's open bugs (Core #83 Transmogulate, #85 Unlicensed Experimentation reach Dormant cards), so the 1,000-seed waves will force engine or card fixes, and the swap/rotation ruling decides a rule. Torn between medium and hard, s"
+        "tier": "strong",
+        "why": "Engine rules (line 1): the check encodes \u00a76.1 Dormant and its rulings, and the fuzz waves' findings are fixed in crates/engine/src or card scripts; already rated hard"
       },
       "failures": 0,
       "forced": false,
