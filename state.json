@@ -15913,11 +15913,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T22:34:07Z",
+        "at": "2026-11-22T23:28:34Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Engine rules: the resolution loop, the keyword layers and the fuzz monitor (crates/engine/src) decide it"
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Engine rules: the Doctrines' fix changes the layers' lend in crates/engine/src/layers.rs, and I21 is a new fuzz-monitor check in crates/engine/src"
       },
       "failures": 0,
       "forced": false,
