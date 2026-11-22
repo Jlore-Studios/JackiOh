@@ -15303,9 +15303,7 @@
     },
     "4427": {
       "action": "plan",
-      "asks": [
-        "c:7072029531"
-      ],
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-22T08:59:14Z",
@@ -15330,22 +15328,24 @@
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "agy",
-      "owner_since": "2026-11-22T01:14:08Z",
-      "owner_why": "it plans it",
+      "owner": "claude-7",
+      "owner_since": "2026-11-22T09:00:31Z",
+      "owner_why": "handed off from `agy`: its owner `agy` has no strong seat, which it needs",
       "pending_request": false,
-      "provider": "agy",
+      "provider": "claude-7",
       "queued_at": "2026-11-22T08:59:14Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "44993773547",
-      "runs_on": "night-vm-agy",
-      "started_at": "2026-11-22T06:27:02Z",
+      "run_id": "pending:b08ec124-1795338014",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-22T09:00:31Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7072029531"
+      ],
       "verdict_rounds": 0
     },
     "4428": {
@@ -17789,9 +17789,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T09:00:02Z",
+    "at": "2026-11-22T09:00:31Z",
     "url": "",
-    "what": "spot-check #4481 on claude-1"
+    "what": "plan #4427 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-22T08:51:06Z",
