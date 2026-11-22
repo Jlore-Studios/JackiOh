@@ -22,6 +22,8 @@ const HEROIC: &str = "core-098";
 const CRACKER: &str = "classic-006";
 /// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
 const BARKER: &str = "classicplus-013";
+/// M #100 Greaser, a vanilla 7/7.
+const GREASER: &str = "meditative-100";
 
 fn spread(base: Value, over: Option<&Value>) -> Value {
     let mut out = base;
@@ -123,17 +125,6 @@ mod simulate_reply {
         assert_eq!(unit_view(&reply, &duelist_of(&reply)).position, Position::Atk);
         assert_eq!(reply.active, AI);
         assert_eq!(counter.used(), 3);
-    }
-
-    #[test]
-    fn leaves_a_unit_without_deft_in_defense_position_and_ends_its_turn() {
-        let state = handed_over(json!({ "p2": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
-        let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
-            .expect("a reply");
-        assert_eq!(reply.players[AI].hero.health, 30);
-        assert_eq!(reply.active, AI);
-        assert_eq!(counter.used(), 1);
     }
 
     #[test]
@@ -813,8 +804,8 @@ mod defense_switch_1696 {
             .expect("the unit is on p2's field")
     }
 
-    /// What p2's own evaluation gains by switching its unit `def_id` to Defense Position, the seat
-    /// swinging next: the comparison the reply's trial switch makes.
+    /// What p2's own evaluation gains by switching its unit `def_id` to Defense Position, or back to
+    /// Attack (R4433000), the seat swinging next: the comparison the reply's trial switch makes.
     fn switch_gain(state: &GameState, def_id: &str) -> f64 {
         let switch = ActionBody::SwitchPosition {
             instance_id: unit_of(state, def_id).id,
@@ -1031,5 +1022,69 @@ mod defense_switch_1696 {
         assert_eq!(unwalled.active, AI);
         assert!(face_threat(&unwalled, AI) >= effective_life(&unwalled, HUMAN));
         assert!((carried(&unwalled) - AI_EVAL.lethal_on_board).abs() < 1e-9);
+    }
+
+    /// R4433000: the seat's board is empty, so nothing punishes p2's Greaser for leaving Defense
+    /// Position: p2 switches it back to Attack and ends its turn. The switch spent its exertion, so the
+    /// seat's hero is untouched; one node for the switch tried, one for the endTurn.
+    #[test]
+    fn r4433000_switches_a_unit_without_deft_back_to_attack_when_nothing_is_worth_making() {
+        let state = handed_over(json!({ "p2": { "field": [{ "def": GREASER, "position": "DEF" }] } }));
+        assert!(switch_gain(&state, GREASER) > 0.0);
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, GREASER)).position,
+            Position::Atk
+        );
+        assert_eq!(reply.players[AI].hero.health, 30);
+        assert_eq!(reply.active, AI);
+        assert_eq!(used, 2);
+    }
+
+    /// R4433000: the seat's 7/7 would finish p2 at 7 next turn but for the Taunt of p2's Greaser in
+    /// Defense Position, so the trial switch back is dropped (its own evaluation prefers standing
+    /// still) and the Greaser stays walled, for the same two nodes.
+    #[test]
+    fn r4433000_leaves_the_unit_in_defense_while_its_taunt_holds_back_the_seats_lethal() {
+        let state = handed_over(json!({
+            "p1": { "field": [GREASER] },
+            "p2": { "health": 7, "field": [{ "def": GREASER, "position": "DEF" }] },
+        }));
+        assert!(switch_gain(&state, GREASER) < 0.0);
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, GREASER)).position,
+            Position::Def
+        );
+        assert_eq!(reply.players[AI].hero.health, 30);
+        assert_eq!(reply.players[HUMAN].hero.health, 7);
+        assert_eq!(reply.active, AI);
+        assert_eq!(used, 2);
+    }
+
+    /// R4433000: the AI at 7 holds Mr. Vanilla in Defense Position against p2's Greaser in Defense.
+    /// Read as a wall that stays a wall, the Greaser threatened nothing, and the AI switched Mr. Vanilla
+    /// out to Attack; expecting the switch back, it keeps its Taunt between the Greaser and its face.
+    #[test]
+    fn r4433000_decide_keeps_its_taunt_blocker_against_a_defense_unit_that_will_switch_back() {
+        let run = run_puzzle(
+            "r4433000-keeps",
+            json!({
+                "p1": { "health": 7, "field": [{ "def": "core-008", "position": "DEF" }], "library": LIBRARY },
+                "p2": { "field": [{ "def": GREASER, "position": "DEF" }], "library": LIBRARY },
+            }),
+        );
+        assert!(run.end.result.is_none(), "{}", trace(&run.turn));
+        let vanilla = active_units_of(&run.end, AI)
+            .into_iter()
+            .find(|unit| unit.def_id == "core-008")
+            .cloned()
+            .expect("Mr. Vanilla is on p1's field");
+        assert_eq!(
+            unit_view(&run.end, &vanilla).position,
+            Position::Def,
+            "{}",
+            trace(&run.turn)
+        );
     }
 }

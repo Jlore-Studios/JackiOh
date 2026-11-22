@@ -1021,6 +1021,10 @@ pub struct AiReply {
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
     /// R4187000: also the most walls (`wall_switches`) a step facing lethal weighs against its best attack.
     pub defense_switches: i32,
+    /// R4433000: switches back to Attack Position that one reply step tries once no attack is worth
+    /// making, of the opponent's units in Defense Position without Deft whose switch `legal_actions`
+    /// lists, in that order, after the `defense_switches` tries and weighed with them; 0 turns them off.
+    pub attack_switches: i32,
     /// #1995: per turn a countdown (R1181000) still waits past its owner's next turn start, the share
     /// of a line's second score, the one with every countdown fired at the seat's next turn start, that
     /// `reply_score` blends in: `first + share^wait · (second − first)`.
@@ -1045,6 +1049,11 @@ pub const AI_REPLY: AiReply = AiReply {
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
     // (training/improve.md, A screen); about 34 decided (17-17, R4319000); 0 turns it off.
     defense_switches: 4,
+    // R4433000: on. Its screen, 400 games on improve-dev against the control at 7201a2687e, read 198-202,
+    // edge -0.01 (-0.044 to 0.024); inconclusive (R4319000): 12 decided of 200 (won 5, lost 7), 66
+    // diverged, every game clean; its scene tests settle it (training/improve.md, A screen). 0 turns it
+    // off.
+    attack_switches: 4,
     // #1995: 0.5. #4286's screens (training/improve.md, A screen), each 400 games on improve-dev against
     // the 0.5 control at ae977ece3e, kept no other value: 0 read 200-200, edge 0.0 (-0.02 to 0.02),
     // inconclusive (R4319000), 4 decided of 200 (won 2, lost 2); 0.25 read 200-200, edge 0.0
