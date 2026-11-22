@@ -16054,11 +16054,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T03:27:22Z",
+        "at": "2026-11-22T03:37:45Z",
         "difficulty": "medium",
-        "provider": "claude-8",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4419, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Only a kept-script key, its tests and three doc lines in crates/cards: no engine rules loop, no AI, no cross-crate design, no migration, five files."
       },
       "failures": 0,
       "forced": false,
