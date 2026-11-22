@@ -39361,6 +39361,9 @@
       "2026-11-22T06:58:35Z,claude-1,stream,call,44995819658,94,2026-11-22T08:40:00Z,,,allowed_warning,100,,",
       "2026-11-22T06:59:35Z,claude-1,stream,call,44995819658,95,2026-11-22T08:40:00Z,,,allowed_warning,100,,",
       "2026-11-22T07:10:21Z,claude-1,stream,call,44995819658,96,2026-11-22T08:40:00Z,,,allowed_warning,100,,"
+    ],
+    "runs": [
+      "2026-11-22T07:17:07Z,44995819658,claude-1,sonnet+opus,review,4474,medium,approved,,19.2,49,14537,2094809,1.359,93,96,,,1.9,,none,,1"
     ]
   },
   "version": 1
