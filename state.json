@@ -16120,6 +16120,13 @@
     "4515": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T22:47:34Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's decisions (the opponent-reply tries in crates/ai/src/reply.rs and the root's activation price in evaluate.rs), which is hard by the rule."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
