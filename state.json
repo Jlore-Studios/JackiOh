@@ -18177,26 +18177,18 @@
     "what": "review #4459 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-22T16:08:15Z",
+    "at": "2026-11-22T16:21:33Z",
     "notes": [
-      "#4472 needs a plan",
-      "#4478 needs a plan",
-      "#4479 needs a plan",
-      "#4484 needs a plan",
-      "#4485 needs a plan",
-      "delivered plan #4449 on muse (run 45041485720): planned",
-      "delivered review #4459 on muse (run 45040808994): reviewed",
-      "started revise #4459 on muse (run 45042344855)",
-      "started build #4449 on muse (run 45042396202)",
-      "started plan #4479 on muse (run 45042445322)",
-      "started plan #4444 on muse (run 45042495542)",
-      "started plan #4484 on agy (run 45042539378)",
-      "started plan #4472 on gpt (run 45042592793)",
-      "started plan #4485 on claude-8 (run 45042644729)",
-      "started plan #4478 on claude-1 (run 45042694359)",
-      "started plan #4477 on claude-4 (run 45042744211)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered plan #4478 on claude-1 (run 45042694359): planned",
+      "delivered plan #4485 on claude-8 (run 45042644729): planned",
+      "delivered revise #4459 on muse (run 45042344855): built",
+      "delivered plan #4493 on claude-7 (run 45040041219): planned",
+      "delivered review #4480 on claude-3 (run 45032976570): approved",
+      "started build #4493 on claude-7 (run 45043810825)",
+      "started build #4485 on claude-8 (run 45043862441)",
+      "started build #4478 on claude-1 (run 45043913400)",
+      "started review #4459 on claude-3 (run 45043967938)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18902,7 +18894,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T16:08:15Z",
+  "loop_tick": "2026-11-22T16:21:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
