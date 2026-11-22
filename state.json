@@ -15741,6 +15741,8 @@
       "taken_asks": []
     },
     "4442": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T00:57:09Z",
@@ -15754,8 +15756,11 @@
         "trail": "- Suite written; waiting on the first test run before fmt, clippy, and spec check.Test run still compiling; todo list recorded. Waiting on its terminal result before fmt, clippy, and spec check.\n- Nothing further to edit \u2014 waiting on the spec check result.Spec check still building; will report its terminal result when delivered.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the daily game clock and move handover rules are fuzzed across random action sequences and deadlines\"} -->\n- Added the seeded randomized daily-clock invariant suite as one new test file, [crates/shared/tests/daily_invariants.rs](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4431/crates/shared/tests/daily_invariants.rs). No source, spec, or config changes.\n- What it does: `play_daily_game(seed)` plays a random daily game (random valid action from `daily_legal` for a random holder, clock advances, scripted Competition casts for multi-step prompts, seat-swap bumps, jumps to the exact deadline) and runs `check_all` after every step \u2014 hold monotonicity und\u2026\n- How I tested it, all green:\n- - `cargo test -p jackioh-shared --test daily_invariants` \u2014 7 passed, 1 ignored\n- - Same binary with `daily_clock_sweep -- --ignored` \u2014 400 seeds pass in 4.4s\n- - `cargo test -p jackioh-shared --test daily` (existing suite) \u2014 15 passed\n- - `cargo fmt --check` clean; `cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings` clean (the feature flag mirrors CI's workspace feature unification; bare `--all-targets` fails on pre-existing `tests/log.rs`, untouched by this change)\n- - `cargo jackioh spec check` \u2014 ok, 2356 rulings, 5927 proofs, 73313 citations\n- - A temporary probe (removed afterwards, grep confirms zero leftovers) showed the 24 PR seeds really cover the space: 16 prompt-steps, 14 completions, 10 expiries, 10 successful Competition casts\n- Decisions I made where the issue/plan left room: `check_timeliness` derives the expected deadline from the previous clock rather than the clock under test, because a tampered-early deadline reads consistently on its own \u2014 only an independent expectation makes \"fires before the deadline\" falsifiable\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4431 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4431/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4431,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T02:08:47Z",
         "from_run": "44969119382",
         "gates": [
           {
@@ -15814,8 +15819,15 @@
         "source": "build",
         "until": "2026-11-22T02:37:59Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-22T02:07:59Z",
+      "run_id": "pending:cfd9c497-1795313309",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-22T02:08:47Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15829,9 +15841,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T01:58:45Z",
+    "at": "2026-11-22T02:08:47Z",
     "url": "",
-    "what": "plan #4441 on claude-8"
+    "what": "review #4442 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T01:56:33Z",
