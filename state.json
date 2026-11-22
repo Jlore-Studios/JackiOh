@@ -15302,17 +15302,8 @@
       "verdict_rounds": 1
     },
     "4427": {
-      "action": "plan",
-      "asks": [
-        "c:7072029531"
-      ],
-      "build_next": {
-        "from_run": "45005436426",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-22T09:24:09Z",
-        "until": "2026-11-22T09:54:09Z"
-      },
+      "action": "build",
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-22T09:24:01Z",
@@ -15332,10 +15323,9 @@
         "reason": "planned on opus",
         "trail": "tion\": \"Confirm WASM build output\"}\n- Bash: {\"command\": \"git status --porcelain | head; cd apps/web && (timeout 3000 pnpm exec vite --port 5199 --strictPort > /tmp/vite4427.log 2>&1 &) ; sleep 1; echo started\", \"description\": \"Start the Vite d\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4427; for i in $(seq 1 30); do curl -s -o /dev/null -w \\\"%{http_code}\\\" http://localhost:5199/ && break; sleep 2; done; echo; tail -5 /tmp/vite4427.l\u2026\n- tool error: Permission to use Bash with command cd /home/runner/work/_temp/work/item-4427; for i in $(seq 1 30); do curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5199/ && break; sleep 2; done; echo; ta\u2026\n- Bash: {\"command\": \"curl -s -o /dev/null -w \\\"%{http_code}\\\\n\\\" http://localhost:5199/; tail -5 /tmp/vite4427.log\", \"description\": \"Check the dev server answers\"}\n- tool error: Permission to use Bash with command curl -s -o /dev/null -w \"%{http_code}\\n\" http://localhost:5199/; tail -5 /tmp/vite4427.log has been denied.\n- Read: {\"file_path\": \"/tmp/vite4427.log\"}\n- Bash: {\"command\": \"sh /home/runner/work/_temp/work/item-4427/scripts/browse.sh open \\\"http://localhost:5199/dev/hotseat?seed=42\\\" 2>&1 | tail -5\", \"description\": \"Open the hotseat route in the headless bro\u2026\n- Bash: {\"command\": \"sh /home/runner/work/_temp/work/item-4427/scripts/browse.sh eval \\\"async () => {\\n const until = Date.now() + 15000;\\n while (!window.__jackioh && Date.now() < until) await new Promise((\u2026\n- Bash: {\"command\": \"sh /home/runner/work/_temp/work/item-4427/scripts/browse.sh eval \\\"() => {\\n const shell = document.querySelector('.app-shell--wide');\\n window.__m = () => {\\n const b = document.querySe\u2026\n- Bash: {\"command\": \"B=/home/runner/work/_temp/work/item-4427/scripts/browse.sh; sh $B resize 390 664 >/dev/null 2>&1; sh $B eval \\\"() => window.__m()\\\" --raw 2>&1 | tail -1; sh $B eval \\\"() => { document.qu\u2026\n- Bash: {\"command\": \"B=/home/runner/work/_temp/work/item-4427/scripts/browse.sh; for s in \\\"375 548\\\" \\\"320 568\\\" \\\"360 560\\\"; do sh $B resize $s >/dev/null 2>&1; sh $B eval \\\"() => window.__m()\\\" --raw 2>&1\u2026\n- Bash: {\"command\": \"B=/home/runner/work/_temp/work/item-4427/scripts/browse.sh; sh $B eval \\\"() => { const cb = document.querySelector('[data-testid=board] > .control-bar'); const d = document.createElement\u2026\n- Bash: {\"command\": \"B=/home/runner/work/_temp/work/item-4427/scripts/browse.sh; sh $B eval \\\"() => { document.getElementById('fake-rail').remove(); const g = document.querySelector('.game'); g.dataset.railT\u2026\n- Bash: {\"command\": \"sed -n 895,965p /home/runner/work/_temp/work/item-4427/e2e/cypress/component/mobile-ux.cy.tsx\", \"description\": \"Read B46 match and hotseat route fit tests\"}\n- Bash: {\"command\": \"B=/home/runner/work/_temp/work/item-4427/scripts/browse.sh; sh $B eval \\\"() => { document.getElementById('top-rail').remove(); delete document.querySelector('.game').dataset.railTop; doc\u2026\n- Bash: {\"command\": \"sed -n 560,600p /home/runner/work/_temp/work/item-4427/apps/web/src/routes/match.tsx\", \"description\": \"Read match route's shell around Game\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4427; grep -n \\\"practice-hud\\\" apps/web/src/practice/practice.css | head; grep -n \\\"practice-hud\\\" apps/web/src/routes/practice.tsx | head -5\", \"desc\u2026\n- Bash: {\"command\": \"grep -n \\\"export function fullBoardView\\\" -A40 apps/web/src/test/fixtures.ts | grep -n \\\"clock\\\\|hand\\\\|status\\\\|effects\\\\|modifiers\\\" | head; grep -n \\\"turn-mechanism-clock\\\" apps/web/s\u2026\n- Bash: {\"command\": \"grep -n \\\"export function fullBoardView\\\" apps/web/src/test/fixtures.ts; sed -n \\\"$(grep -n 'export function fullBoardView' apps/web/src/test/fixtures.ts | cut -d: -f1),+75p\\\" apps/web/s\u2026\n- Bash: {\"command\": \"grep -n \\\"^\\\\.board-rail\\\\|^\\\\.board \\\\.board-rail\\\\|^\\\\.control-bar > \\\\.board-rail\\\\|\\\\.board-rail {\\\" apps/web/src/game/board.css | head; sed -n \\\"$(grep -n '^\\\\.board-rail {' apps/we\u2026\n- Bash: {\"command\": \"B=/home/runner/work/_temp/work/item-4427/scripts/browse.sh; sh $B resize 375 548 >/dev/null 2>&1; sh $B eval \\\"() => { const z = document.querySelector('.zone'); const s = getComputedSty\u2026\n- Bash: {\"command\": \"grep -n \\\"component\\\" .github/workflows/ci.yml | head -20; grep -n \\\"board-layout\\\" .github/workflows/*.yml scripts/*.sh 2>/dev/null | head\", \"description\": \"Check which CI jobs run comp\u2026\n- Bash: {\"command\": \"grep -rln \\\"README.md\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head -5; grep -rn \\\"web/README\\\" crates/tools/src 2>/dev/null | head -3; sh scripts/browse.sh close >/dev/\u2026\n- tool error: Exit code 144 apps/web/src/net/ci-scope.test.ts apps/web/src/net/server-image.test.ts apps/web/src/practice/claim.test.ts\n- Bash: {\"command\": \"grep -n \\\"README\\\" apps/web/src/net/ci-scope.test.ts apps/web/src/practice/claim.test.ts | head -6; git status --porcelain | head\", \"description\": \"Check how tests read READMEs and confi\u2026\n- Bash: {\"command\": \"awk 'NR>=509 && NR<=560 && /^$/ {print NR; exit}' apps/web/README.md; sed -n \\\"$(awk 'NR>=509 && /^$/ {print NR; exit}' apps/web/README.md),+3p\\\" apps/web/README.md | cut -c1-200\", \"desc\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4427/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"already rated difficulty:hard (step-up), which a planner may not lower\u2026\n- Bash: {\"command\": \"grep -n \\\"cy.task(\\\\\\\"layout:report\\\\\\\", { issue: 2932\\\" e2e/cypress/component/board-layout.cy.tsx; grep -n 'it(\\\"#2876 your hand keeps its size' e2e/cypress/component/board-layout.cy.ts\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-4427/.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"I measured this: zone 44, `clientHeight` 42. A 44px card would need a lower-th\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"already rated difficulty:hard (step-up), which a planner may not lower; the change itself is a medium-sized client test change\"} --> ## Goal I measured step 1 of the issue in a browser before planning, and it disproves the issue's premise. On `main`, at 375\u00d7\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-22T09:00:31Z",
       "owner_why": "handed off from `agy`: its owner `agy` has no strong seat, which it needs",
@@ -15349,14 +15339,16 @@
       "queued_at": "2026-11-22T08:59:14Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "45005436426",
+      "run_id": "pending:7835d2da-1795339473",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-22T09:00:31Z",
+      "started_at": "2026-11-22T09:24:48Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7072029531"
+      ],
       "verdict_rounds": 0
     },
     "4428": {
@@ -17993,9 +17985,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T09:09:46Z",
+    "at": "2026-11-22T09:24:48Z",
     "url": "",
-    "what": "plan #4486 on claude-7"
+    "what": "build #4427 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-22T09:16:13Z",
