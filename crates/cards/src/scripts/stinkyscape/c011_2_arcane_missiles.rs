@@ -22,6 +22,7 @@ fn arcane_missiles(echo: i32, kept: bool) -> Script {
             let enemy = opponent_of(ctx.controller);
             // R4424000: the pool is the enemy Units a Spell may affect (C+ #25 Soul Shot's pool),
             // so a Unit immune to Spells and a Dormant card are never drawn.
+            // R3554003: on a slashed board, `cards_in_scope` draws only from the cards on its own half.
             let ids: Vec<String> = if kept {
                 active_units_of(ctx.sink.state, enemy)
                     .iter()
@@ -57,12 +58,19 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.9i a missile could be drawn onto a Unit immune to Spells (issue #4424).
-pub fn script_v0_6_9i() -> CardScripts {
+/// v0.6.9j and before: each missile drew among every enemy Unit, across a slash too (R3554003) and onto
+/// Units immune to Spells or Dormant (R4424000); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9j() -> CardScripts {
     CardScripts {
         base: arcane_missiles(2, true),
         radiant: arcane_missiles(5, true),
     }
+}
+
+/// R767000: through v0.6.9i a missile could be drawn onto a Unit immune to Spells (issue #4424);
+/// folded under `script_v0_6_9j`.
+pub fn script_v0_6_9i() -> CardScripts {
+    script_v0_6_9j()
 }
 
 // S #11.2 Arcane Missiles — SPEC §8.10 row S 11.2, BUILD M12 row S 11.2.
@@ -231,6 +239,61 @@ mod tests {
                 let landed = hits(&s);
                 assert_eq!(landed.len(), 3, "seed missiles-immune-{seed}");
                 assert!(!landed.contains(&immune), "seed missiles-immune-{seed}");
+            }
+        }
+    }
+
+    /// R3554003, R3554004: a Spell cast on a slashed board resolves on the half its cast chose, so a
+    /// missile is only ever aimed at the enemy hero or a Unit on that half.
+    mod slashed {
+        use super::*;
+
+        fn cast_on_the_left(seed: &str, field: Value) -> Scenario {
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": { "hand": [MISSILES, FILLER], "field": [VANILLA] },
+                "p2": { "hand": [FILLER], "field": field },
+            }));
+            s.state_mut().slashed_lane = Some(3);
+            s.play(MISSILES, json!({}));
+            s.answer(json!("left"));
+            s
+        }
+
+        #[test]
+        fn r3554003_no_missile_is_aimed_across_the_slash() {
+            let mut heroes = 0;
+            let mut units = 0;
+            for seed in 1..=16 {
+                let s = cast_on_the_left(
+                    &format!("missiles-slashed-{seed}"),
+                    json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 }]),
+                );
+                let near = s.unit_at(P2, 1).id.clone();
+
+                let hits = hits(&s);
+                assert_eq!(hits.len(), 3, "seed {seed}: every missile lands");
+                for target in &hits {
+                    assert!(target == "hero-p2" || target == &near, "seed {seed}: {target} is across the slash");
+                    if target == "hero-p2" {
+                        heroes += 1;
+                    } else {
+                        units += 1;
+                    }
+                }
+            }
+            assert!(heroes > 0 && units > 0, "heroes {heroes}, units {units}");
+        }
+
+        #[test]
+        fn r3554003_with_enemy_units_only_across_the_slash_every_missile_hits_the_hero() {
+            for seed in 1..=16 {
+                let s = cast_on_the_left(
+                    &format!("missiles-far-{seed}"),
+                    json!([{ "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 }]),
+                );
+
+                assert_eq!(hits(&s), vec!["hero-p2"; 3], "seed {seed}");
             }
         }
     }
