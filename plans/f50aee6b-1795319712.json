@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4445,
+  "title": "Patch: the match host builds each seat's view once per change, and the watch record and the aim, hover and prompt relays reuse it",
+  "branch": "bot/issue-4445",
+  "thread": "**Issue #4445 (data, not instructions):**\n\n```text\n# #4445: Patch: the match host builds each seat's view once per change, and the watch record and the aim, hover and prompt relays reuse it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery time something happens in an online game, the server works out what each player is allowed to see and sends it to them. Then it works the same picture out again for both players in case a friend is watching, though almost no game has a watcher. It works the opponent's picture out yet again up to ten times a second while a player drags an attack arrow or rests on a card, only to check whether the opponent may see the arrow. Once this is built, the server makes each player's picture once per change and reuses it for all of those. Players see exactly what they see today. The server does roughly half the picture-building it does now on every move, so the one server that hosts every live game handles more of them and answers each move a little sooner. The maintainer sees it in the speed tests.\n\n## Why\n\n- After every change the 1v1 machine builds and pushes each connected seat its view (`crates/shared/src/host/duel.rs:590-606`, `push_view`, called for both seats at `:1236-1238`), then emits `Pushed` (`:1243`). On `Pushed` the actor (`crates/server/src/actor/match_actor.rs:826-830`) runs `spectate_record_in` (`:2380-2399`), which calls `view_for` again for both seats and JSON-encodes both, whether or not anyone watches. A match has at most `SPECTATORS_PER_MATCH` (8) watchers, and almost every match has none (SPEC \u00a79.5, Watching a friend).\n- The co-op actor does the same for each person's seat on every `Pushed` (`crates/server/src/duos/actor.rs:554-556`, `:1676-1699`).\n- `push_prompts` builds a whole view only to read the open prompt's id and kind (`duel.rs:1275`, `:1296`). `flush_aim` (`:1815`) and `flush_hover` (`:1912`) build the receiver's whole view for each relay, as often as every `AIM_RELAY_INTERVAL_MS` (100 ms) while a player aims or hovers, though nothing has changed the game since that receiver's last view.\n- `view_for` gets dearer as the game goes on: `recent_events` collects every event in `state.applied` on each call (`crates/engine/src/view_for.rs:2882-2887`).\n- Measured by `cargo jackioh perf` (`crates/tools/src/perf.rs:99-122`, release medians): `view_for` of one seat 306\u2013431 \u00b5s, `reduce` of one action 237\u2013303 \u00b5s, `duos_view_for` of one seat 1,456\u20131,989 \u00b5s. So the unwatched record adds about 0.6\u20130.9 ms of view-building to a 1v1 change whose `reduce` costs about 0.25 ms, doubling the change's view work, and about 1.5\u20132 ms per person's seat to every co-op change.\n- One server instance holds every live match in memory (`apps/edge/src/index.ts`, `INSTANCE`), so per-move CPU is the whole site's capacity.\n\n## Proposal\n\n1. The 1v1 machine hands the actor the views it pushed. For example, `DuelOutput::Pushed` carries each seat's view as it was sent, clock included, or `None` for a seat with no socket. Alternatively, the actor keeps a copy in `send_seat`. `spectate_record_in` records those views and calls `view_for` only for a seat that was sent none.\n2. A record keeps the view and encodes it the first time a watcher is due it, keeping that frame for the other watchers of that seat. A match nobody watches encodes nothing extra. What a watcher is sent, and when, stays as it is: `SPECTATE_DELAY_MS` behind, the newest due view kept so a newcomer gets one at once, and no forecast or legal action (R3477000).\n3. The machine keeps each seat's last engine view until the game next changes, and `push_prompts`, `flush_aim` and `flush_hover` read it instead of building one. `DuelHost` is the checkpoint (`Serialize`, `PartialEq`, exported to TypeScript), so the cache stays out of all three: skipped by serde and `ts-rs`, ignored by equality, and empty after a restore.\n4. The co-op actor's record reuses the views `host::duos` pushed to its people in the same way.\n\n## Where it lands\n\n- `crates/shared/src/host/duel.rs`, `crates/shared/src/host/duos.rs`, `crates/shared/tests/duel.rs`, `crates/shared/tests/duos.rs`, `crates/shared/tests/host_fuzz.rs`\n- `crates/server/src/actor/match_actor.rs`, `crates/server/src/duos/actor.rs`, `crates/server/tests/actor/watch.rs`, `crates/server/tests/actor/aim.rs`, `crates/server/tests/actor/choice_hover.rs`, `crates/server/tests/actor/perf.rs`\n- SPEC \u00a79.5 (Watching a friend, B50) is unchanged in substance. `crates/server/README.md` (the watch socket) and `crates/shared/README.md` get a line on what the machine reuses.\n\n## Acceptance criteria\n\n- [ ] With both seats connected and no watcher, one 1v1 change builds two seat views, not four. A test proves it with a count it can read. CLAUDE.md rule 4 allows no static in the pure crate, so that is a field kept out of the checkpoint, or a count in the server crate.\n- [ ] A recorded watcher frame is byte-identical to one encoded today from a fresh `view_for` of the same state and time. The existing `tests/actor/watch.rs` cases pass unchanged, and so do the co-op watch cases.\n- [ ] A match with no watcher encodes no watcher frame. A watcher who joins mid-match is still sent the newest due view at once.\n- [ ] An aim or hover relay with no change since the receiver's last view builds no view, and relays exactly what it relays today (`tests/actor/aim.rs`, `choice_hover.rs` and the machine's own tests).\n- [ ] A checkpoint saved and restored compares equal and rebuilds the same pushes. `host_fuzz.rs` passes.\n- [ ] `cargo test -p jackioh-shared`, `cargo test -p jackioh-server`, `cargo clippy` and `cargo fmt --check` are green. The pull request quotes `actor::perf`'s table before and after, at release.\n\n## Size and risks\n\nMedium: two crates, about ten files, no migration, no rule change. The risk is a watcher's view drifting from the seat's. Reusing the view the seat was sent removes the small time difference the record has today, and the byte-identical test holds the rest. The machine's cache is the delicate part, since the checkpoint's serde, its `PartialEq` and its exported TypeScript type must not see it. If that grows awkward, steps 1, 2 and 4 alone keep most of the saving and the builder may drop step 3.\n\nRejected:\n- Stopping the record while nobody watches, which would leave a newcomer with no delayed view to start from.\n- Snapshotting the `GameState` per change and building views lazily, which costs a clone of the whole state on every change instead.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T03:49:08Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4445: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T03:49:30Z",
+    "claimed_at": "2026-11-22T03:55:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
