@@ -16187,6 +16187,13 @@
     "4453": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T04:08:31Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Rule 1: it changes engine rules and the resolution loop (crates/engine/src/: card scopes, buff, switch, random pools, Trample spill), so every Spell and replay is affected, and it needs a new ruling."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
