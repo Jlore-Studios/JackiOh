@@ -1014,15 +1014,17 @@ mod the_two_pass_sweep_r390 {
         // at risk, lifted, dealt as filler — and `keep_out` the bug bans, never dealt. A fake clock
         // makes every AI decision 2.5 s long.
         jackioh_cards::register_all();
-        let lifted: Vec<String> = ai_pool()
-            .into_iter()
-            .filter(|id| id != "classic-013")
-            .take(8)
-            .collect();
         let keep_out: Vec<String> = ai_pool()
             .into_iter()
-            .filter(|id| !lifted.contains(id) && id != "classic-013")
+            .filter(|id| id != "classic-013")
             .take(10)
+            .collect();
+        // Every other card of the pool is a judgement ban, so the filler the deal takes is a lifted one
+        // whatever the pool's order: eight named ones leaned on the roll, and the pool probe's rotation
+        // dealt none of them (#4375).
+        let lifted: Vec<String> = ai_pool()
+            .into_iter()
+            .filter(|id| id != "classic-013" && !keep_out.contains(id))
             .collect();
         let mut at_risk: Vec<String> = lifted
             .iter()
