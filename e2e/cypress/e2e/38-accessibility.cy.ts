@@ -63,7 +63,6 @@ const SCREEN = {
   almanac: "almanac",
   privacy: "privacy-screen",
   terms: "terms-screen",
-  accessibility: "accessibility-screen",
   copyright: "copyright-screen",
 } as const;
 
@@ -206,10 +205,6 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
 
         it("/terms", () => {
           checkPublic(at("/terms"), "/terms", SCREEN.terms);
-        });
-
-        it("/accessibility", () => {
-          checkPublic(at("/accessibility"), "/accessibility", SCREEN.accessibility);
         });
 
         it("/copyright", () => {

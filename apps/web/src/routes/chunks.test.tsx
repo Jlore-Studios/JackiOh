@@ -248,14 +248,14 @@ describe("R2116000 prefetching a screen on intent", () => {
     const privacy = vi.spyOn(routeChunks.privacy, "load").mockResolvedValue(stubModule);
     const terms = vi.spyOn(routeChunks.terms, "load").mockResolvedValue(stubModule);
     const purchases = vi.spyOn(routeChunks.purchases, "load").mockResolvedValue(stubModule);
-    const accessibility = vi.spyOn(routeChunks.accessibility, "load").mockResolvedValue(stubModule);
+    const login = vi.spyOn(routeChunks.login, "load").mockResolvedValue(stubModule);
     const copyright = vi.spyOn(routeChunks.copyright, "load").mockResolvedValue(stubModule);
     render(
       <>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="/purchases">Purchases</a>
-        <a href="/accessibility">Accessibility</a>
+        <a href="/login">Sign in</a>
         <a href="/copyright">Copyright</a>
       </>,
     );
@@ -263,13 +263,13 @@ describe("R2116000 prefetching a screen on intent", () => {
     fireEvent.pointerEnter(screen.getByText("Privacy"));
     fireEvent.focus(screen.getByText("Terms"));
     fireEvent.touchStart(screen.getByText("Purchases"));
-    fireEvent.pointerEnter(screen.getByText("Accessibility"));
+    fireEvent.pointerEnter(screen.getByText("Sign in"));
     fireEvent.focus(screen.getByText("Copyright"));
 
     expect(privacy).toHaveBeenCalledTimes(1);
     expect(terms).toHaveBeenCalledTimes(1);
     expect(purchases).toHaveBeenCalledTimes(1);
-    expect(accessibility).toHaveBeenCalledTimes(1);
+    expect(login).toHaveBeenCalledTimes(1);
     expect(copyright).toHaveBeenCalledTimes(1);
     expect(loadWasm).not.toHaveBeenCalled();
     expect(loadSceneData).not.toHaveBeenCalled();

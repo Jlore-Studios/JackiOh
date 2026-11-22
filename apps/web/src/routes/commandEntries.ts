@@ -72,7 +72,6 @@ export function commandPages(): CommandEntry[] {
     { id: "page-account", kind: "page", label: t("Account"), path: paths.account },
     { id: "page-privacy", kind: "page", label: t("Privacy policy"), path: paths.privacy },
     { id: "page-terms", kind: "page", label: t("Terms of service"), path: paths.terms },
-    { id: "page-accessibility", kind: "page", label: t("Accessibility"), path: paths.accessibility },
     { id: "page-copyright", kind: "page", label: t("Copyright"), path: paths.copyright },
   ];
 }
