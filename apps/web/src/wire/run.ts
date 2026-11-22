@@ -2,8 +2,8 @@
 // as ts-rs writes them from the Rust into `generated/`. The run's rules stay the Rust crate's, which
 // the browser reaches through `../wasm` (DR14 part C); this module names their shapes and nothing else.
 //
-// Regenerate them with `cargo test -p jackioh-run --features ts` and commit the diff. CI does not run
-// that command yet, so nothing holds these files to the Rust until `ci.yml` does.
+// Regenerate them with `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` (or
+// `cargo test -p jackioh-run --features ts` alone) and commit the diff. CI's V20 step fails on any difference.
 
 export type { RunAction } from "./generated/RunAction.ts";
 export type { RunArtifact } from "./generated/RunArtifact.ts";

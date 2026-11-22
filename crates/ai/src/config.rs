@@ -156,6 +156,10 @@ pub struct AiSearch {
     pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
+    /// R4447000: the most steps a finalist's replay on another determinization plays past the first step
+    /// that world does not offer (`search::fill_turn`), on a slice of `steps × (branching + 1)` nodes that
+    /// `decide` keeps back per world. 0 keeps the cut: the line ends its turn where it stands.
+    pub replay_fill_steps: i32,
     /// Answers tried for each auto-answered prompt before the answerer's best is committed
     /// (`simulate`'s, the opponent's reply's and `own_prompt_score`'s auto-answers, #891): each one
     /// node. A prompt with more answers tries this many drawn from all of them (#1382,
@@ -219,6 +223,10 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     position_switches: 2,
     max_auto_answers: 8,
+    // #4447: 0. Its fork screen (3 against the control at 0, built from 3af8296300; 50 trunk deals on
+    // improve-dev) did not finish in the bot's run: stopped after 2 hours, nothing printed (training/
+    // improve.md, A screen).
+    replay_fill_steps: 0,
     max_auto_answer_options: 4,
     auto_answer_seed: "ai:answers",
     lethal_max_depth: 10,
@@ -1021,6 +1029,10 @@ pub struct AiReply {
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
     /// R4187000: also the most walls (`wall_switches`) a step facing lethal weighs against its best attack.
     pub defense_switches: i32,
+    /// R4433000: switches back to Attack Position that one reply step tries once no attack is worth
+    /// making, of the opponent's units in Defense Position without Deft whose switch `legal_actions`
+    /// lists, in that order, after the `defense_switches` tries and weighed with them; 0 turns them off.
+    pub attack_switches: i32,
     /// #1995: per turn a countdown (R1181000) still waits past its owner's next turn start, the share
     /// of a line's second score, the one with every countdown fired at the seat's next turn start, that
     /// `reply_score` blends in: `first + share^wait · (second − first)`.
@@ -1045,6 +1057,11 @@ pub const AI_REPLY: AiReply = AiReply {
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
     // (training/improve.md, A screen); about 34 decided (17-17, R4319000); 0 turns it off.
     defense_switches: 4,
+    // R4433000: on. Its screen, 400 games on improve-dev against the control at 7201a2687e, read 198-202,
+    // edge -0.01 (-0.044 to 0.024); inconclusive (R4319000): 12 decided of 200 (won 5, lost 7), 66
+    // diverged, every game clean; its scene tests settle it (training/improve.md, A screen). 0 turns it
+    // off.
+    attack_switches: 4,
     // #1995: 0.5. #4286's screens (training/improve.md, A screen), each 400 games on improve-dev against
     // the 0.5 control at ae977ece3e, kept no other value: 0 read 200-200, edge 0.0 (-0.02 to 0.02),
     // inconclusive (R4319000), 4 decided of 200 (won 2, lost 2); 0.25 read 200-200, edge 0.0

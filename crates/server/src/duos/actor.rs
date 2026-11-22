@@ -551,9 +551,9 @@ impl DuosActor {
             DuosHostOutput::Panicked { action, seq, message } => {
                 self.on_reduce_panicked(&action, seq, &message)
             }
-            DuosHostOutput::Pushed => {
+            DuosHostOutput::Pushed { views } => {
                 // R2881000: the watchers' record of the change, sent SPECTATE_DELAY_MS on.
-                self.spectate_record_in(core);
+                self.spectate_record_in(core, views);
             }
             DuosHostOutput::Decide { request } => self.spawn_search(core, request),
             DuosHostOutput::Note { note } => self.log_note(note),
@@ -1313,12 +1313,43 @@ use crate::social::watch::{
     SPECTATOR_EMOTE_LIMITS, WatchFrame, deal_spectator_emote_hand, parse_watch_frame, send_spectator_emote,
 };
 
-/// One recorded view of a person's seat: its encoded `view` frame, when the state it shows was reached,
-/// and its place in the record.
+/// What a recorded view is kept as: the view the person was sent, until a watcher is first due it, then
+/// its encoded `view` frame, which every watcher of that seat is sent as it is.
+enum DuosFrameBody {
+    View(Box<DuosView>),
+    Encoded(String),
+}
+
+/// One recorded view of a person's seat: its `view` frame, encoded the first time a watcher is due it,
+/// when the state it shows was reached, and its place in the record.
 struct DuosSpectateFrame {
     seq: u64,
     shown_at: i64,
-    frame: String,
+    body: DuosFrameBody,
+}
+
+impl DuosSpectateFrame {
+    /// The encoded frame, encoding it now if no watcher has been due it yet (`encoded` counts that).
+    fn text(&mut self, encoded: &mut u64) -> &str {
+        if matches!(self.body, DuosFrameBody::View(_))
+            && let DuosFrameBody::View(view) =
+                std::mem::replace(&mut self.body, DuosFrameBody::Encoded(String::new()))
+        {
+            self.body = DuosFrameBody::Encoded(encode(&DuosServerMessage::View {
+                view,
+                legal: Vec::new(),
+                // R3477000: a watcher is shown no forecast, as it is shown no legal action.
+                forecast: None,
+                jlore_capped: false,
+                economy: None,
+            }));
+            *encoded += 1;
+        }
+        match &self.body {
+            DuosFrameBody::Encoded(text) => text,
+            DuosFrameBody::View(_) => unreachable!("the body was just encoded"),
+        }
+    }
 }
 
 /// One watching socket: the account behind it, the `slot` of its friend's seat, the last
@@ -1342,6 +1373,8 @@ struct DuosWatcher {
 struct DuosSpectate {
     records: [VecDeque<DuosSpectateFrame>; 4],
     watchers: Vec<DuosWatcher>,
+    /// How many frames have been encoded for a watcher: none while nobody watches. For tests.
+    encoded: u64,
     next_seq: u64,
     next_id: u64,
     /// The one wait armed for the next view due to a watcher, and when it is due.
@@ -1475,6 +1508,12 @@ impl DuosActor {
         self.lock().spectate.watchers.len()
     }
 
+    /// For the server's tests (`crates/server/tests/`): how many frames the record has encoded for a
+    /// watcher, none while nobody watches.
+    pub fn spectate_frames_encoded(&self) -> u64 {
+        self.lock().spectate.encoded
+    }
+
     /// B50, B46: revokes the watchers for which `revoked(watcher's account, its friend's, the friend's
     /// teammate's)` holds (unfriended, blocked, a deleted account), sending forbidden and closing with
     /// R148's 4403; updates every person's count (B51). Answers how many.
@@ -1526,13 +1565,16 @@ impl DuosActor {
             return;
         }
         let DuosSpectate {
-            records, watchers, ..
+            records,
+            watchers,
+            encoded,
+            ..
         } = &mut core.spectate;
         let Some(watcher) = watchers.iter_mut().find(|watcher| watcher.id == id) else {
             return;
         };
         let Some(record) = records[watcher.home]
-            .iter()
+            .iter_mut()
             .find(|record| watcher.sent == Some(record.seq))
         else {
             return;
@@ -1541,7 +1583,7 @@ impl DuosActor {
         if !watcher.guard.hello_answer_allowed(id, now_ms()) {
             return;
         }
-        watcher.socket.send(record.frame.as_str());
+        watcher.socket.send(record.text(encoded));
     }
 
     /// R2609000: a frame of a watcher's that is neither a hello nor an emote is still unanswered
@@ -1672,28 +1714,27 @@ impl DuosActor {
     }
 
     /// B50: records each person's seat's view of the state as it stands now, the clock's time left in
-    /// it as the seat was shown, and sends whatever has come due.
-    fn spectate_record_in(&self, core: &mut Core) {
+    /// it as the seat was shown, and sends whatever has come due. `pushed` holds the views the machine
+    /// just sent its people, which the record takes as they were; it builds a view only for a person sent
+    /// none.
+    fn spectate_record_in(&self, core: &mut Core, pushed: Vec<(DuosSeat, Box<DuosView>)>) {
         if core.spectate.closed {
             return;
         }
         let now = now_ms();
+        let mut pushed = pushed;
         for &seat in self.shared.row.team_b().people() {
             let index = slot(seat);
-            let frame = encode(&DuosServerMessage::View {
-                view: Box::new(self.seat_view(core, seat)),
-                legal: Vec::new(),
-                // R3477000: a watcher is shown no forecast, as it is shown no legal action.
-                forecast: None,
-                jlore_capped: false,
-                economy: None,
-            });
+            let view = match pushed.iter().position(|(sent, _)| *sent == seat) {
+                Some(at) => pushed.swap_remove(at).1,
+                None => Box::new(self.seat_view(core, seat)),
+            };
             let seq = core.spectate.next_seq;
             core.spectate.next_seq += 1;
             core.spectate.records[index].push_back(DuosSpectateFrame {
                 seq,
                 shown_at: now,
-                frame,
+                body: DuosFrameBody::View(view),
             });
         }
         self.spectate_flush(core, now);
@@ -1706,6 +1747,7 @@ impl DuosActor {
         let DuosSpectate {
             records,
             watchers,
+            encoded,
             timer,
             closed,
             ..
@@ -1714,14 +1756,14 @@ impl DuosActor {
             return;
         }
         for watcher in watchers.iter_mut() {
-            for record in &records[watcher.home] {
+            for record in records[watcher.home].iter_mut() {
                 if record.shown_at + SPECTATE_DELAY_MS > now {
                     break;
                 }
                 if watcher.sent.is_some_and(|sent| record.seq <= sent) {
                     continue;
                 }
-                watcher.socket.send(record.frame.as_str());
+                watcher.socket.send(record.text(encoded));
                 watcher.sent = Some(record.seq);
             }
         }

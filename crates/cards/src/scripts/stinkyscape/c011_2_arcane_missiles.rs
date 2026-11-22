@@ -13,21 +13,25 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-011-2";
 
-fn arcane_missiles(echo: i32) -> Script {
+fn arcane_missiles(echo: i32, slash_aware: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags { echo: Some(echo), ..StaticFlags::default() }),
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             let amount = param(&*ctx, "damage");
             // The state and the rng are two fields of the sink: the pool reads the one while the
             // draw rolls from the other (C+ #25 Soul Shot's shape).
             let enemy = opponent_of(ctx.controller);
+            let source = ctx.self_.as_ref();
             let sink = &mut ctx.sink;
             let state: &GameState = &*sink.state;
             let rng: &mut Rng = &mut *sink.rng;
             let mut pool: Vec<Value> = vec![json!({ "of": "enemyHero" })];
-            pool.extend(active_units_of(state, enemy).iter().map(|unit| {
-                json!({ "of": "instance", "instanceId": unit.id.clone() })
-            }));
+            pool.extend(
+                active_units_of(state, enemy)
+                    .iter()
+                    .filter(|unit| !slash_aware || reaches(state, source, unit))
+                    .map(|unit| json!({ "of": "instance", "instanceId": unit.id.clone() })),
+            );
             let Some(picked) = rng.pick(&pool) else {
                 return vec![];
             };
@@ -39,8 +43,17 @@ fn arcane_missiles(echo: i32) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: arcane_missiles(2),
-        radiant: arcane_missiles(5),
+        base: arcane_missiles(2, true),
+        radiant: arcane_missiles(5, true),
+    }
+}
+
+/// v0.6.9j and before: each missile drew among every enemy Unit, across a slash too (R3554003);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9j() -> CardScripts {
+    CardScripts {
+        base: arcane_missiles(2, false),
+        radiant: arcane_missiles(5, false),
     }
 }
 
@@ -166,6 +179,61 @@ mod tests {
             s.play(MISSILES, json!({}));
 
             s.expect_health(P2, HERO_HEALTH - 6);
+        }
+    }
+
+    /// R3554003, R3554004: a Spell cast on a slashed board resolves on the half its cast chose, so a
+    /// missile is only ever aimed at the enemy hero or a Unit on that half.
+    mod slashed {
+        use super::*;
+
+        fn cast_on_the_left(seed: &str, field: Value) -> Scenario {
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": { "hand": [MISSILES, FILLER], "field": [VANILLA] },
+                "p2": { "hand": [FILLER], "field": field },
+            }));
+            s.state_mut().slashed_lane = Some(3);
+            s.play(MISSILES, json!({}));
+            s.answer(json!("left"));
+            s
+        }
+
+        #[test]
+        fn r3554003_no_missile_is_aimed_across_the_slash() {
+            let mut heroes = 0;
+            let mut units = 0;
+            for seed in 1..=16 {
+                let s = cast_on_the_left(
+                    &format!("missiles-slashed-{seed}"),
+                    json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 }]),
+                );
+                let near = s.unit_at(P2, 1).id.clone();
+
+                let hits = hits(&s);
+                assert_eq!(hits.len(), 3, "seed {seed}: every missile lands");
+                for target in &hits {
+                    assert!(target == "hero-p2" || target == &near, "seed {seed}: {target} is across the slash");
+                    if target == "hero-p2" {
+                        heroes += 1;
+                    } else {
+                        units += 1;
+                    }
+                }
+            }
+            assert!(heroes > 0 && units > 0, "heroes {heroes}, units {units}");
+        }
+
+        #[test]
+        fn r3554003_with_enemy_units_only_across_the_slash_every_missile_hits_the_hero() {
+            for seed in 1..=16 {
+                let s = cast_on_the_left(
+                    &format!("missiles-far-{seed}"),
+                    json!([{ "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 }]),
+                );
+
+                assert_eq!(hits(&s), vec!["hero-p2"; 3], "seed {seed}");
+            }
         }
     }
 

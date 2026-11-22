@@ -473,6 +473,50 @@ mod tests {
             assert!(counters && cards, "the thief's random mode took both: counters {counters}, cards {cards}");
         }
 
+        /// R4453000: a Spell can't target a Unit Immune to Spells (§6.1), so its placement never offers one
+        /// (the targeting point's filter, R450, and the placement's own pool both leave it out).
+        #[test]
+        fn r4453000_the_chosen_placement_offers_no_immune_unit() {
+            let mut s = board(false);
+            let menace = s.card(MENACE).id.clone();
+            s.card_mut(menace.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+            let others = vec![s.card(VANILLA).id.clone(), s.card(MANA_WELL).id.clone(), s.card(PAWN).id.clone()];
+
+            s.play(BOOK, json!({ "modes": [COUNTERS] }));
+
+            assert_eq!(sorted(option_ids(&s)), sorted(others));
+        }
+
+        /// R4453000: the thief's random placement (R452) draws only among the permanents the Spell reaches,
+        /// and with none it places nothing (R129).
+        #[test]
+        fn r4453000_a_random_placement_never_lands_on_an_immune_unit() {
+            let stolen = |seed: String, field: Value| {
+                let mut s = scenario(json!({
+                    "seed": seed,
+                    "p1": { "hand": [{ "def": BOOK, "costMod": 1 }, ANCHOR], "field": field, "mana": 4 },
+                    "p2": { "hand": [ANCHOR], "backrow": [PALANTIR] },
+                }));
+                let warded = s.card(VANILLA).id.clone();
+                s.card_mut(warded.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+                let book = s.card(BOOK).clone();
+                s.play(&book, json!({ "modes": [COUNTERS] }));
+                s.expect_in_zone(PALANTIR, "graveyard");
+                assert!(s.state().pending.is_none());
+                assert_eq!(s.card(warded.as_str()).counters.plague.unwrap_or(0), 0);
+                s
+            };
+            let mut landed = false;
+            for n in 0..24 {
+                let s = stolen(format!("book-immune-{n}"), json!([VANILLA, MENACE]));
+                landed |= s.card(MENACE).counters.plague == Some(5);
+            }
+            assert!(landed, "some seed's random mode placed the counters, all on the Menace");
+            for n in 0..24 {
+                stolen(format!("book-immune-alone-{n}"), json!([VANILLA]));
+            }
+        }
+
         /// §9.3 the open prompt survives a JSON round trip and finishes as the live one does
         #[test]
         fn s9_3_the_open_prompt_survives_a_json_round_trip_and_finishes_as_the_live_one_does() {

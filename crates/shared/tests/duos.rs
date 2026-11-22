@@ -6,7 +6,9 @@
 
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::duos::{DuosState, duos_begin, duos_create};
-use jackioh_engine::wire::{ActionBody, DuosAction, DuosActionBody, DuosCreateOptions, DuosResult, DuosSeat};
+use jackioh_engine::wire::{
+    ActionBody, DuosAction, DuosActionBody, DuosCreateOptions, DuosResult, DuosSeat, DuosView,
+};
 use jackioh_engine::{DECK_SIZE, Rng};
 use jackioh_shared::config::{
     BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS,
@@ -81,6 +83,8 @@ struct Table {
     ceiling_draws: usize,
     row_checks: usize,
     pushed: usize,
+    /// The views each `Pushed` carried, in order.
+    pushed_views: Vec<Vec<(DuosSeat, Box<DuosView>)>>,
     failing_appends: usize,
     /// While set, a row the host asks for is neither written nor answered: the test feeds its `Logged` itself.
     holding_appends: bool,
@@ -105,6 +109,7 @@ impl Table {
             ceiling_draws: 0,
             row_checks: 0,
             pushed: 0,
+            pushed_views: Vec::new(),
             failing_appends: 0,
             holding_appends: false,
         };
@@ -149,7 +154,10 @@ impl Table {
                 DuosHostOutput::Answer { nonce, answer } => self.answers.push((nonce, answer)),
                 DuosHostOutput::Greeting { seat, part } => self.greetings.push((seat, part)),
                 DuosHostOutput::Refused { seat } => self.refused.push(seat),
-                DuosHostOutput::Pushed => self.pushed += 1,
+                DuosHostOutput::Pushed { views } => {
+                    self.pushed += 1;
+                    self.pushed_views.push(views);
+                }
                 DuosHostOutput::Decide { request } => self.decides.push(request),
                 DuosHostOutput::Record { result, .. } => self.records.push(result),
                 DuosHostOutput::CeilingDraw { .. } => self.ceiling_draws += 1,
@@ -2083,6 +2091,42 @@ mod two_v_two {
                 json.get("graceB1").is_none() && json.get("graceB2").is_some(),
                 "{json}"
             );
+        }
+    }
+}
+
+mod the_pushed_views {
+    use super::*;
+
+    #[test]
+    fn pushed_hands_over_the_views_it_sent() {
+        let mut table = Table::new(setup(opening("duos-pushed-1")));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        // The opening record has no views: the caller builds them.
+        assert!(table.pushed_views[0].is_empty());
+        let keep =
+            jackioh_shared::host::duos::keep_whole_hand(&table.host.legal(A1)).expect("a mulligan is legal");
+        let answer = table.act(A1, "m-0", keep);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        let views = table.pushed_views.last().expect("a change was pushed");
+        assert_eq!(views.len(), 2);
+        for seat in [A1, A2] {
+            let (_, pushed) = views
+                .iter()
+                .find(|(held, _)| *held == seat)
+                .expect("a connected person is pushed its view");
+            let sent = table.sent[slot(seat)]
+                .iter()
+                .rev()
+                .find_map(|message| match message {
+                    DuosSeatMessage::View { view, .. } => Some(view),
+                    _ => None,
+                })
+                .expect("a view was sent");
+            assert_eq!(pushed, sent);
+            assert_eq!(**pushed, table.host.view_for(seat, table.now));
         }
     }
 }

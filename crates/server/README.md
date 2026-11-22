@@ -496,7 +496,8 @@ holds, with four seats:
 A friend watches at `/ws/watch`, authenticated as `/ws/match` is: `hello {matchId, friendId}` for a
 friend's live match, ranked or unranked, that has fewer than `SPECTATORS_PER_MATCH` watchers; no setting of the
 friend's refuses it, and unfriending or a block ends a watch already running (R2615000). The watcher gets `view {view, legal: []}`, the friend's seat's
-`view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
+`view_for`, each `SPECTATE_DELAY_MS` after the state it shows (the record keeps the view the seat was sent and
+encodes it when a watcher is first due it, so a match nobody watches encodes nothing); anything else is `error forbidden` and a
 close. It is sent `loadouts` as it attaches and a `cardLoadouts` after each delayed view that newly
 shows a dealt card, by the match sockets' rule (R1834003). Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a
 frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_WINDOW` of them it is
@@ -1499,6 +1500,16 @@ libraries, so it is server-only like `duos_matches` (RLS on, no policy, no grant
 while the match has no `ended_at` and its log holds that row, replaced only by a later seq, and deleted
 by `duos_matches_finish`; the retention purge never meets one. A catalog retcon leaves it on the old
 version, so the next rebuild refuses it as `catalog` and folds the whole log.
+
+Migration 0098 only adds three indexes (#4468). `player_stats_public_games_idx` is keyed on
+`player_stats_list_public`'s `order by`, expression for expression, and partial on `is_private = false`, so
+`GET /api/stats/players` walks it in order and stops after its page instead of sorting every public row
+(R654, R3911000); a change to that `order by` needs a migration that rebuilds it.
+`jlore_grants_profile_reason_at_idx` and `fleet_track_grants_profile_reason_at_idx` on
+`(profile_id, reason, at)` let `game_jlore_totals` and `fleet_get`, the payout's and the daily-cap reads' day
+sums (R1483000), read one day of the account's `game` rows, not its whole history.
+`tests/sql/01_schema_invariants.sql` CHECK 26 and CHECK 27 plan them with sequential scans off, and fail
+when the list sorts or a ledger filters the day.
 
 ## Tests
 

@@ -315,6 +315,7 @@ mod sweep_flags_b25 {
                 tier: None,
                 banned: None,
                 setup: None,
+                face: None,
             },
         ));
         assert_eq!(result["defId"], json!("core-011"));
@@ -549,6 +550,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
                     tier: Some(Difficulty::Easy),
                     banned: Some(FIXTURE_BANNED_IDS),
                     setup: None,
+                    face: None,
                 },
             )
         }));
@@ -574,12 +576,210 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
                 tier: Some(Difficulty::Hard),
                 banned: Some(FIXTURE_BANNED_IDS),
                 setup: None,
+                face: None,
             },
         ));
         assert_eq!(hard["tier"], json!("hard"));
         assert_eq!(hard["errors"], json!(0));
         assert!(hard["affordableTurns"].as_i64().unwrap_or(0) > 0);
         assert_eq!(hard["unswept"], json!(false));
+    }
+}
+
+// #4466: every card is swept on both faces, its ordinary one and its Radiant one (dealt through a deck
+// mark, R2702000), and each face is judged over its own games, so a card the AI mishandles only once it
+// is Radiant is banned for that face and the reason names it.
+
+mod both_faces_r186 {
+    use super::*;
+
+    /// Pass-1 numbers that raise no flag of their own, at full or half strength.
+    fn quiet() -> Value {
+        json!({ "affordableTurns": 4, "plays": 2, "evalDeltaCount": 2 })
+    }
+
+    /// `quiet()` with the keys of `over` laid over it.
+    fn quiet_with(over: Value) -> Value {
+        spread(quiet(), Some(&over))
+    }
+
+    #[test]
+    fn r186_a_card_that_errs_only_on_its_radiant_face_is_flagged_on_it_and_clear_on_the_base_face() {
+        let pass1 = results(&[
+            result(quiet()),
+            result(quiet_with(json!({ "face": "radiant", "errors": 1 }))),
+        ]);
+        assert_eq!(
+            face_flags("core-011", &pass1, &[], SweepFace::Radiant),
+            vec![SweepFlag::Error]
+        );
+        assert!(face_flags("core-011", &pass1, &[], SweepFace::Base).is_empty());
+        assert_eq!(
+            sweep_verdict(&pass1, &[]).reason.as_deref(),
+            Some("error: easy (Radiant): 1 engine or search error(s) over 8 games")
+        );
+    }
+
+    #[test]
+    fn r186_a_pass_2_self_kill_on_the_radiant_face_names_it_and_leaves_the_base_face_clear() {
+        let pass1 = [result(quiet()), result(quiet_with(json!({ "face": "radiant" })))];
+        let pass2 = [
+            pass2_of("core-011", "easy", vec![quiet()], json!([])),
+            pass2_of(
+                "core-011",
+                "easy",
+                vec![json!({ "face": "radiant", "plays": 4, "losingPlays": AI_SWEEP.ban_losing_plays })],
+                json!([]),
+            ),
+        ];
+        let judged = verdict(&pass1, &pass2);
+        assert_eq!(judged["flags"], json!(["selfKill"]));
+        let reason = reason_of(&judged).unwrap_or_default();
+        assert!(matches_reason(&reason), "{reason}");
+        assert!(
+            reason.starts_with("selfKill: easy (Radiant): lost the game on 4 of 4 play(s)"),
+            "{reason}"
+        );
+        assert!(!reason.contains("easy: "), "{reason}");
+        assert!(face_flags("core-011", &results(&pass1), &passes(&pass2), SweepFace::Base).is_empty());
+        assert_eq!(
+            face_flags("core-011", &results(&pass1), &passes(&pass2), SweepFace::Radiant),
+            vec![SweepFlag::SelfKill]
+        );
+    }
+
+    #[test]
+    fn r186_a_card_flagged_on_both_faces_lists_each_face() {
+        let judged = verdict(
+            &[
+                result(quiet_with(json!({ "errors": 1 }))),
+                result(quiet_with(json!({ "face": "radiant", "errors": 2 }))),
+            ],
+            &[],
+        );
+        assert_eq!(judged["flags"], json!(["error"]));
+        assert_eq!(
+            reason_of(&judged).as_deref(),
+            Some(
+                "error: easy: 1 engine or search error(s) over 8 games; easy (Radiant): 2 engine or search error(s) over 8 games"
+            )
+        );
+    }
+
+    #[test]
+    fn r186_pass_2_stats_add_a_face_over_its_own_entries_and_filler_counts_for_its_base_face() {
+        let pass2 = passes(&[
+            pass2_of(
+                "core-011",
+                "easy",
+                vec![json!({ "plays": 3 }), json!({ "defId": "core-078", "plays": 1 })],
+                json!([]),
+            ),
+            pass2_of(
+                "core-011",
+                "easy",
+                vec![
+                    json!({ "face": "radiant", "plays": 5 }),
+                    json!({ "defId": "core-078", "plays": 2 }),
+                ],
+                json!([]),
+            ),
+        ]);
+        let base = pass2_stats(&pass2, "core-011", Difficulty::Easy, SweepFace::Base);
+        let radiant = pass2_stats(&pass2, "core-011", Difficulty::Easy, SweepFace::Radiant);
+        assert_eq!((base.plays, base.face), (3, SweepFace::Base));
+        assert_eq!((radiant.plays, radiant.face), (5, SweepFace::Radiant));
+        let filler = pass2_stats(&pass2, "core-078", Difficulty::Easy, SweepFace::Base);
+        assert_eq!(
+            (filler.plays, filler.games),
+            (3, 2 * AI_SWEEP.seeds_per_card_at_risk)
+        );
+        assert_eq!(
+            pass2_stats(&pass2, "core-078", Difficulty::Easy, SweepFace::Radiant).games,
+            0
+        );
+    }
+
+    #[test]
+    fn r186_a_base_line_has_no_face_key_a_radiant_line_names_it_and_an_old_line_reads_as_base() {
+        let base: SweepResult = json_as(result(quiet()));
+        assert_eq!(base.face, SweepFace::Base);
+        assert!(js(&base).get("face").is_none());
+        let radiant: SweepResult = json_as(result(quiet_with(json!({ "face": "radiant" }))));
+        assert_eq!(radiant.face, SweepFace::Radiant);
+        assert_eq!(js(&radiant)["face"], json!("radiant"));
+        let old: SweepResult = serde_json::from_value(json!({
+            "defId": "core-030", "games": 8, "drawnGames": 6, "affordableTurns": 5, "plays": 3, "errors": 0,
+            "timeouts": 0, "evalDeltaSum": 12.5, "evalDeltaCount": 3, "tier": "easy", "flags": [], "unswept": false,
+        }))
+        .expect("an old pass-1 line reads");
+        assert_eq!(old.face, SweepFace::Base);
+        assert_eq!(SweepFace::ALL, [SweepFace::Base, SweepFace::Radiant]);
+        assert_eq!(
+            (SweepFace::Base.to_string(), SweepFace::Radiant.to_string()),
+            ("base".to_string(), "radiant".to_string())
+        );
+    }
+
+    /// One real pass-2 game on the Radiant face, every card of the pool at risk so each card the AI is
+    /// dealt is counted: the deck mark is accepted (a refused one would panic, an error), the forced card
+    /// is counted for its Radiant face and every filler card for its base face.
+    #[test]
+    fn r186_a_real_radiant_pass_2_game_errs_nowhere_and_counts_filler_for_its_base_face() {
+        let pool = ai_pool();
+        let pass2 = sweep_at_risk(
+            "core-011",
+            &pool,
+            &[],
+            &SweepOptions {
+                seeds: Some(1),
+                now: None,
+                retime: None,
+                tier: Some(Difficulty::Easy),
+                banned: None,
+                setup: None,
+                face: Some(SweepFace::Radiant),
+            },
+        );
+        assert_eq!(pass2.cards[0].def_id, "core-011");
+        assert_eq!(pass2.cards[0].face, SweepFace::Radiant);
+        assert_eq!((pass2.cards[0].games, pass2.cards[0].errors), (1, 0));
+        assert!(pass2.cards.len() > 1, "the AI was dealt filler");
+        assert!(
+            pass2.cards[1..]
+                .iter()
+                .all(|card| card.face == SweepFace::Base && card.def_id != "core-011")
+        );
+        assert!(pass2.suspects.is_empty(), "{:?}", pass2.suspects);
+    }
+
+    #[test]
+    fn r186_an_undealable_card_swept_on_its_radiant_face_errs_on_that_face() {
+        jackioh_cards::register_all();
+        let options = SweepOptions {
+            seeds: Some(2),
+            now: None,
+            retime: None,
+            tier: Some(Difficulty::Easy),
+            banned: None,
+            setup: None,
+            face: Some(SweepFace::Radiant),
+        };
+        // build_ai_deck refuses an id that is no card, so no game is played: each one is an error.
+        let first = sweep_card("nonesuch-001", &options);
+        assert_eq!(first.face, SweepFace::Radiant);
+        assert_eq!((first.games, first.errors), (2, 2));
+        assert_eq!(first.flags, vec![SweepFlag::Error]);
+        assert_eq!(js(&first)["face"], json!("radiant"));
+
+        let second = sweep_at_risk("nonesuch-001", &["nonesuch-001".to_string()], &[], &options);
+        assert_eq!(second.cards.len(), 1);
+        assert_eq!(second.cards[0].face, SweepFace::Radiant);
+        assert_eq!(second.cards[0].errors, 2);
+        assert_eq!(
+            sweep_verdict(&[first], &[second]).reason.as_deref(),
+            Some("error: easy (Radiant): 4 engine or search error(s) over 4 games")
+        );
     }
 }
 
@@ -1014,15 +1214,17 @@ mod the_two_pass_sweep_r390 {
         // at risk, lifted, dealt as filler — and `keep_out` the bug bans, never dealt. A fake clock
         // makes every AI decision 2.5 s long.
         jackioh_cards::register_all();
-        let lifted: Vec<String> = ai_pool()
-            .into_iter()
-            .filter(|id| id != "classic-013")
-            .take(8)
-            .collect();
         let keep_out: Vec<String> = ai_pool()
             .into_iter()
-            .filter(|id| !lifted.contains(id) && id != "classic-013")
+            .filter(|id| id != "classic-013")
             .take(10)
+            .collect();
+        // Every other card of the pool is a judgement ban, so the filler the deal takes is a lifted one
+        // whatever the pool's order: eight named ones leaned on the roll, and the pool probe's rotation
+        // dealt none of them (#4375).
+        let lifted: Vec<String> = ai_pool()
+            .into_iter()
+            .filter(|id| id != "classic-013" && !keep_out.contains(id))
             .collect();
         let mut at_risk: Vec<String> = lifted
             .iter()
@@ -1047,6 +1249,7 @@ mod the_two_pass_sweep_r390 {
                 tier: Some(Difficulty::Easy),
                 banned: None,
                 setup: None,
+                face: None,
             },
         ));
         assert_eq!(timed["forced"], json!("classic-013"));
@@ -1098,6 +1301,7 @@ mod the_two_pass_sweep_r390 {
                 tier: Some(Difficulty::Easy),
                 banned: None,
                 setup: None,
+                face: None,
             },
         ));
         assert_eq!(plain["suspects"], json!([]));
@@ -1149,6 +1353,7 @@ mod a_slow_decision_timed_again_r977000 {
             tier: Some(Difficulty::Easy),
             banned: None,
             setup: None,
+            face: None,
         });
         (out, handed.get(), budget.get())
     }
@@ -1197,7 +1402,7 @@ mod a_slow_decision_timed_again_r977000 {
         assert_eq!(pass2.cards[0].def_id, "core-011");
         assert_eq!((pass2.cards[0].timeouts, pass2.cards[0].raw_timeouts), (0, 1));
         assert_eq!(
-            pass2_stats(&[pass2], "core-011", Difficulty::Easy).raw_timeouts,
+            pass2_stats(&[pass2], "core-011", Difficulty::Easy, SweepFace::Base).raw_timeouts,
             1
         );
     }
@@ -1220,6 +1425,7 @@ mod a_slow_decision_timed_again_r977000 {
                 tier: Some(Difficulty::Easy),
                 banned: None,
                 setup: None,
+                face: None,
             },
         );
         assert!(result.timeouts > 0);
@@ -1361,6 +1567,7 @@ mod a_game_ending_play_r390 {
             &[old_pass2.clone(), old_pass2.clone()],
             "core-030",
             Difficulty::Easy,
+            SweepFace::Base,
         );
         assert_eq!(merged.games, 48);
         assert_eq!(merged.plays, 18);

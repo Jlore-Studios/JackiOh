@@ -32,7 +32,7 @@ use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{
     Action, ActionBody, ActionType, Aim, CombatForecast, EmoteId, GameOverReason, GameState, PLAYER_IDS,
-    PendingView, PerPlayer, PlayerId, PlayerView, Rng, aim_key,
+    PendingView, PerPlayer, PlayerId, PlayerView, PromptKind, Rng, aim_key,
 };
 
 use super::bot::{BotSeat, DecideJob, RematchPlan, fallback_action, never_played};
@@ -270,6 +270,9 @@ pub struct DuelHost {
     bot_personas: PerPlayer<Option<EmotePersona>>,
     bot_persona_cursor: PerPlayer<u32>,
     bot_views: PerPlayer<Option<PlayerView>>,
+    #[serde(skip)]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    views: ViewCache,
     bot_emotes: PerPlayer<Vec<DueEmote>>,
     bot_emote_timer: PerPlayer<Option<u32>>,
     bot_long_turn_timer: PerPlayer<Option<u32>>,
@@ -291,6 +294,21 @@ pub struct DuelHost {
     #[serde(skip)]
     #[cfg_attr(feature = "ts", ts(skip))]
     out: Vec<DuelOutput>,
+}
+
+/// Each seat's engine view of the game as it stands, built the first time something reads it and kept until
+/// the game next changes (`Logged`). A cache and no state: it is skipped by serde and `ts-rs`, equal to every
+/// other cache, and empty on a host rebuilt from a checkpoint. `built` counts the builds, for tests.
+#[derive(Clone, Debug, Default)]
+struct ViewCache {
+    views: PerPlayer<Option<PlayerView>>,
+    built: u64,
+}
+
+impl PartialEq for ViewCache {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
 }
 
 /// The machine's one function: `host` and `event` in, the next `host` and its outputs out.
@@ -357,6 +375,7 @@ impl DuelHost {
             bot_personas: PerPlayer::new(None, None),
             bot_persona_cursor: PerPlayer::new(0, 0),
             bot_views: PerPlayer::new(None, None),
+            views: ViewCache::default(),
             bot_emotes: PerPlayer::new(Vec::new(), Vec::new()),
             bot_emote_timer: PerPlayer::new(None, None),
             bot_long_turn_timer: PerPlayer::new(None, None),
@@ -517,13 +536,45 @@ impl DuelHost {
     /// §10.8: the only window a seat gets onto the match, with the clock filled in (R79: the engine never
     /// reads a clock, so the view's `clockMs` is filled in here, from the one component that knows).
     pub fn view_for(&self, player: PlayerId, now: i64) -> PlayerView {
-        let view = jackioh_engine::view_for(&self.game, player);
+        let view = self.views.views[player]
+            .clone()
+            .unwrap_or_else(|| jackioh_engine::view_for(&self.game, player));
+        self.with_clock(view, player, now)
+    }
+
+    /// `view` with `player`'s clock as it reads at `now`.
+    fn with_clock(&self, view: PlayerView, player: PlayerId, now: i64) -> PlayerView {
         PlayerView {
             clock_ms: self
                 .clock
                 .remaining_for(player, now)
                 .map(|ms| i32::try_from(ms).unwrap_or(i32::MAX)),
             ..view
+        }
+    }
+
+    /// `player`'s engine view (no clock) of the game as it stands, built once until the game changes.
+    fn engine_view(&mut self, player: PlayerId) -> &PlayerView {
+        if self.views.views[player].is_none() {
+            self.views.views[player] = Some(jackioh_engine::view_for(&self.game, player));
+            self.views.built += 1;
+        }
+        self.views.views[player]
+            .as_ref()
+            .expect("the view was just built")
+    }
+
+    /// How many engine views this host has built since it was made or restored: what a test reads to see
+    /// that a change builds one per seat and a relay with no change builds none.
+    pub fn views_built(&self) -> u64 {
+        self.views.built
+    }
+
+    /// The id and kind of the prompt `player` owes an answer to, read off their view.
+    fn prompt_of(&mut self, player: PlayerId) -> Option<(String, PromptKind)> {
+        match &self.engine_view(player).pending {
+            Some(PendingView::ForYou(pending)) => Some((pending.choice_id.clone(), pending.kind)),
+            _ => None,
         }
     }
 
@@ -588,22 +639,25 @@ impl DuelHost {
         self.emit(DuelOutput::Send { home, message });
     }
 
-    fn push_view(&mut self, player: PlayerId, now: i64) {
+    /// Sends `player`'s seat its view, and returns the view as it was sent (`None` when nobody is there).
+    fn push_view(&mut self, player: PlayerId, now: i64) -> Option<Box<PlayerView>> {
         let home = self.playing(player);
         if !self.connected[home] {
-            return;
+            return None;
         }
-        let view = Box::new(self.view_for(player, now));
+        let engine = self.engine_view(player).clone();
+        let view = Box::new(self.with_clock(engine, player, now));
         let legal = self.legal(player);
         let forecast = Some(self.forecast(player));
         self.send_to_home(
             home,
             SeatMessage::View {
-                view,
+                view: view.clone(),
                 legal,
                 forecast,
             },
         );
+        Some(view)
     }
 
     fn push_clock(&mut self, player: PlayerId, now: i64) {
@@ -1080,6 +1134,7 @@ impl DuelHost {
             LogOutcome::Written => {
                 let player = action.player_id;
                 let before = std::mem::replace(&mut self.game, after);
+                self.views.views = PerPlayer::new(None, None);
                 self.next_seq = seq + 1;
                 self.acks.insert(nonce.clone(), (player, seq));
                 // R1442: the move as it arrived, on the state it was made in, once the state has moved
@@ -1233,8 +1288,10 @@ impl DuelHost {
         // R2739001: a hover on a prompt the change answered or replaced is cleared before the view that
         // shows it gone.
         self.end_stale_hovers();
+        let mut views = PerPlayer::new(None, None);
         for player in PLAYER_IDS {
-            self.push_view(player, now);
+            let home = self.playing(player);
+            views[home] = self.push_view(player, now);
         }
         self.push_prompts(&snapshot);
         for player in PLAYER_IDS {
@@ -1242,6 +1299,7 @@ impl DuelHost {
         }
         self.emit(DuelOutput::Pushed {
             snapshot: snapshot.clone(),
+            views,
         });
 
         if snapshot.result.is_some() {
@@ -1251,8 +1309,8 @@ impl DuelHost {
         }
     }
 
-    /// The `prompt` frames for a change in who owes an answer. Each is built off that seat's own
-    /// `view_for`, so a frame never carries more than the view it travels with (§10.8).
+    /// The `prompt` frames for a change in who owes an answer. Each is read off that seat's own
+    /// view (the machine's kept one), so a frame never carries more than the view it travels with (§10.8).
     fn push_prompts(&mut self, snapshot: &MatchSnapshot) {
         let deadline = self.clock.snapshot().prompt_deadline;
 
@@ -1272,14 +1330,13 @@ impl DuelHost {
                     );
                     continue;
                 }
-                let view = jackioh_engine::view_for(&self.game, player);
-                if let Some(PendingView::ForYou(pending)) = &view.pending {
+                if let Some((choice_id, kind)) = self.prompt_of(player) {
                     self.send(
                         player,
                         SeatMessage::PromptForYou {
                             player,
-                            choice_id: pending.choice_id.clone(),
-                            kind: pending.kind,
+                            choice_id,
+                            kind,
                             deadline,
                         },
                     );
@@ -1293,14 +1350,13 @@ impl DuelHost {
         if let Some(holder) = pending_for
             && Some(holder) != self.last_pending_for
         {
-            let view = jackioh_engine::view_for(&self.game, holder);
-            if let Some(PendingView::ForYou(pending)) = &view.pending {
+            if let Some((choice_id, kind)) = self.prompt_of(holder) {
                 self.send(
                     holder,
                     SeatMessage::PromptForYou {
                         player: holder,
-                        choice_id: pending.choice_id.clone(),
-                        kind: pending.kind,
+                        choice_id,
+                        kind,
                         deadline,
                     },
                 );
@@ -1719,7 +1775,7 @@ impl DuelHost {
                 continue;
             }
             let seat = self.playing(home);
-            let view = jackioh_engine::view_for(&self.game, seat);
+            let view = self.engine_view(seat).clone();
             // R2652000: less the face-down rolls this seat's view leaves out of the change.
             let fresh = jackioh_engine::viewed_of_newest(&self.game, seat, fresh);
             let from = view.events.len().saturating_sub(fresh);
@@ -1809,16 +1865,7 @@ impl DuelHost {
             return;
         }
         let receiver = player.opponent();
-        let shown = match aim {
-            None => None,
-            Some(aim) => {
-                if aim_is_public(&aim, player, &jackioh_engine::view_for(&self.game, receiver)) {
-                    Some(aim)
-                } else {
-                    None
-                }
-            }
-        };
+        let shown = aim.filter(|aim| aim_is_public(aim, player, self.engine_view(receiver)));
         if aim_key(shown.as_ref()) == aim_key(self.aims[player].relayed.as_ref()) {
             return;
         }
@@ -1908,9 +1955,12 @@ impl DuelHost {
         }
         let receiver = player.opponent();
         let current = self.hovers[player].prompt == self.open_prompt_of(player);
-        let shown = index.filter(|index| {
-            current && hover_is_shown(*index, player, &jackioh_engine::view_for(&self.game, receiver))
-        });
+        let shown = match index {
+            Some(index) if current && hover_is_shown(index, player, self.engine_view(receiver)) => {
+                Some(index)
+            }
+            _ => None,
+        };
         if shown == self.hovers[player].relayed {
             return;
         }

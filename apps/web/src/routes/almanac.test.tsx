@@ -16,7 +16,7 @@ import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { CHINESE } from "../cards/chinese.ts";
 import { resetCosmeticsForTests, writeCardPick } from "../cards/cosmetics.ts";
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
-import { CARD_FLAVOUR } from "../cards/flavour.ts";
+import { flavourNow, loadFlavour } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
 import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
@@ -48,6 +48,7 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
 
 const { canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
+await loadFlavour();
 
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
@@ -202,7 +203,7 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     for (const id of ["core-001", "core-t-sheep"]) {
       fireEvent.click(screen.getByTestId(poolCardId(id)));
       const flavour = within(screen.getByTestId(INSPECT_DETAIL)).getByTestId(INSPECT_FLAVOUR);
-      expect(flavour).toHaveTextContent(CARD_FLAVOUR[id]?.flavour ?? "missing");
+      expect(flavour).toHaveTextContent(flavourNow()?.[id]?.flavour ?? "missing");
       closeInspect();
     }
   });

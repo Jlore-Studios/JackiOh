@@ -929,8 +929,8 @@ fn trample_onto_adjacent(
     }
 }
 
-/// R1848001: the Units acting beside `struck` now, lane order (its lower lane first), that a hit from
-/// `source` may reach.
+/// R1848001: the Units acting beside `struck` now (a Dormant card acts not, R1839000, R4453000), lane
+/// order (its lower lane first), that a hit from `source` may reach.
 fn adjacent_units_of(
     state: &GameState,
     struck: &CardInstance,
@@ -948,6 +948,7 @@ fn adjacent_units_of(
         }
         met.push(neighbour.id.clone());
         if crate::zones::is_adjacent_card(state, struck, &neighbour)
+            && !crate::slumber::is_slumbering(&neighbour)
             && !crate::restrictions::spell_cannot_reach(state, source, &neighbour)
         {
             out.push(neighbour);

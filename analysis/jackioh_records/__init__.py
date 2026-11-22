@@ -243,9 +243,13 @@ def load_catalog(path: str | Path = CATALOG_PATH) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["id", "name", "set", "rarity", "cost", "type", "tags"]).set_index("id")
 
 
+# The faces a sweep deals its forced card on (#4466): a line with no `face` is a base one.
+SWEEP_FACES = ("base", "radiant")
+
 SWEEP_COLUMNS = {
     "card": "str",
     "tier": "str",
+    "face": "str",
     "games": "int64",
     "drawn_games": "int64",
     "affordable_turns": "int64",
@@ -262,9 +266,13 @@ SWEEP_COLUMNS = {
 
 def _sweep_row(line: dict) -> dict:
     count = line["evalDeltaCount"]
+    face = line.get("face", "base")
+    if face not in SWEEP_FACES:
+        raise ValueError(f"face {face!r}")
     return {
         "card": line["defId"],
         "tier": line["tier"],
+        "face": face,
         "games": line["games"],
         "drawn_games": line["drawnGames"],
         "affordable_turns": line["affordableTurns"],
@@ -281,19 +289,20 @@ def _sweep_row(line: dict) -> dict:
 
 
 def load_sweep(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
-    """A sweep's pass-1 lines (`cargo jackioh sweep --json`) as one row per card and tier.
+    """A sweep's pass-1 lines (`cargo jackioh sweep --json`) as one row per card, tier and face.
 
-    Columns: card, tier, games, drawn_games, affordable_turns, plays, errors, timeouts, eval_delta_sum,
+    Columns: card, tier, face (`base` or `radiant`, the face the card was dealt on, #4466; `base` for a line
+    with none), games, drawn_games, affordable_turns, plays, errors, timeouts, eval_delta_sum,
     eval_delta_count, eval_delta_mean (NaN with no plays), flags (a list of `error`, `timeout`, `neverPlayed`
     and `selfHarm`, as the sweep wrote them) and unswept (never once affordable in hand: no evidence either
     way). A pass-2 line (`--pass2`'s, which names a `forced` card) is skipped, so the files of a whole sweep
-    may be named together. A blank line is skipped; a line that is not a result, or a card and tier an earlier
-    line holds, raises a ValueError naming its file and line.
+    may be named together. A blank line is skipped; a line that is not a result, or a card, tier and face an
+    earlier line holds, raises a ValueError naming its file and line.
     """
     if isinstance(paths, (str, Path)):
         paths = [paths]
     rows: list[dict] = []
-    where: dict[tuple[str, str], str] = {}
+    where: dict[tuple[str, str, str], str] = {}
     for path in paths:
         with open(path, encoding="utf-8") as lines:
             for number, line in enumerate(lines, start=1):
@@ -307,9 +316,10 @@ def load_sweep(paths: str | Path | Iterable[str | Path]) -> pd.DataFrame:
                     row = _sweep_row(parsed)
                 except (KeyError, TypeError, ValueError) as error:
                     raise ValueError(f"{here}: not a sweep result ({error!r})") from error
-                key = (row["card"], row["tier"])
+                card, tier, face = key = (row["card"], row["tier"], row["face"])
                 if key in where:
-                    raise ValueError(f"{here}: {key[0]} at {key[1]} is also at {where[key]}")
+                    named = tier if face == "base" else f"{tier} ({face})"
+                    raise ValueError(f"{here}: {card} at {named} is also at {where[key]}")
                 where[key] = here
                 rows.append(row)
     return pd.DataFrame(rows, columns=list(SWEEP_COLUMNS)).astype(SWEEP_COLUMNS)

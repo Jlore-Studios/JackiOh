@@ -21,7 +21,8 @@ pub use crate::brittle_count::{
 
 /// B3.3 rule 2, R638: every card whose count this player's start of turn ticks, in R68's order: units
 /// by lane (each pile's top only; a card dormant under a Stack is not on the field, R13), then the
-/// backrow by lane. Read once, as copies; the tick writes through ids.
+/// backrow by lane. Read once, as copies; the tick writes through ids. A Dormant card's text is off, so
+/// its count waits until it awakens (§6.1 Dormant, R1839000, R4454004).
 fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut cards: Vec<CardInstance> = Vec::new();
@@ -44,6 +45,7 @@ fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
             cards.push(card.clone());
         }
     }
+    cards.retain(|card| !crate::slumber::is_slumbering(card));
     cards
 }
 
