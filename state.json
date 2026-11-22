@@ -16267,8 +16267,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-1",
-      "owner_since": "2026-11-22T03:54:56Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-22T12:47:43Z",
+      "owner_why": "its turn came (it waited 120 minutes for #4459, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-22T04:37:27Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -17347,12 +17347,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4453,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
-      "queued_at": "2026-11-22T07:39:40Z",
+      "queued_at": "2026-11-22T12:47:43Z",
       "run_id": "45004226566",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17373,9 +17373,17 @@
         "provider": "claude-1",
         "run": "45004226566"
       },
+      "source": "conflict",
       "started_at": "2026-11-22T08:44:38Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-22T12:47:43Z",
+        "until": "2026-11-22T13:17:43Z",
+        "why": "it waited 120 minutes for #4459, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -17396,18 +17404,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 7076058221,
-      "waiting_turn": {
-        "behind": [
-          4459
-        ],
-        "ends": "2026-11-22T12:46:00Z",
-        "from_run": "45004226566",
-        "head": "968b2b6a28990c10339933777e3f73fc6f5f06d0",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-22T10:46:00Z"
-      }
+      "waiting_comment": 7076058221
     },
     "4480": {
       "action": "revise",
