@@ -14070,14 +14070,14 @@
       "question": "",
       "queued_at": "2026-11-21T18:04:47Z",
       "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "44936370457",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-21T18:35:27Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [],
-      "verdict_rounds": 4
+      "verdict_rounds": 0
     },
     "4396": {
       "action": "build",
