@@ -73,8 +73,14 @@ const SOURCE = join(SRC, "patches/source.ts");
  * 445,874. With both merged, `vite build --mode development`, as CI builds it, measured 420,381 bytes
  * on `main` at 59c8529162: 25,493 less than #4435's 445,874. The budget is now 53 × 8192 (434,176),
  * about 13 KB (3.3%) over that: putting the recipes, the sidecar or the scene data back would cross it.
+ *
+ * #4444 lowered it: the Friends drawer (the friends list and rows, the friend menu, the chat panel
+ * and the challenge dialog) rides its own lazy chunk behind the rail button rather than with the
+ * entry chunk. `vite build --mode development`, as CI builds it, measured 413,393 bytes
+ * (6,988 less). The budget is now 51 × 8192 (417,792), about 4 KB (1.1%)
+ * over that: putting the drawer panels back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 434_176;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 417_792;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -164,6 +170,38 @@ it("#4428 no non-test module statically imports sfx.ts", () => {
   const dynamicSfx = /import\(\s*["'][^"']*sfx\.ts["']\s*\)/u;
   const holders = files.filter((path) => dynamicSfx.test(readFileSync(path, "utf8")));
   expect(holders.map((path) => relative(SRC, path))).toEqual(["audio/sfxLoader.ts"]);
+});
+
+it("#4444 no non-test module statically imports the friends drawer panels", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const drawerPanel = (specifier: string): boolean =>
+    ["ChallengeDialog.tsx", "ChatPanel.tsx", "FriendList.tsx", "FriendRows.tsx", "FriendMenu.tsx"].includes(specifier.split("/").pop() ?? "");
+  // Already reached only through a lazy chunk: the drawer's own module and the lazy Friends
+  // page (`TogetherRoute.tsx`, `TogetherPanels.tsx`), and the list's own rows.
+  const allowed = new Set([
+    "together/FriendsDrawer.tsx",
+    "together/TogetherRoute.tsx",
+    "together/TogetherPanels.tsx",
+    "together/FriendList.tsx",
+    "together/FriendRows.tsx",
+  ]);
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    if (allowed.has(rel)) return false;
+    // `import type` lines emit no bytes: only a value import joins the chunk.
+    const text = readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/.test(line))
+      .join("\n");
+    return [...text.matchAll(staticFrom)].some((match) => drawerPanel(match[1] ?? ""));
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+  // The one module allowed to pull the drawer in, dynamically, is its chunk.
+  const dynamicDrawer = /import\(\s*["'][^"']*FriendsDrawer\.tsx["']\s*\)/u;
+  const holders = files.filter((path) => dynamicDrawer.test(readFileSync(path, "utf8")));
+  expect(holders.map((path) => relative(SRC, path))).toEqual(["together/friendsDrawerChunk.ts"]);
 });
 
 it("#4435 no non-test module names flavour.json except cards/flavour.ts, which never imports it statically", () => {
@@ -308,6 +346,17 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     // figure pose, and a figure item each a recipe places.
     const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
     for (const probe of sceneProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4444 the entry chunk and its preloads hold no friends-drawer text", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each occurs in `src` only in
+    // the drawer panels, their tests, or comments: the chat's earlier page, the drawer's link to
+    // the Friends page, and the friend menu's daily item.
+    const drawerProbes = ["Show earlier messages", "See all friends", "Daily challenge"];
+    for (const probe of drawerProbes) {
       for (const text of texts) expect(text).not.toContain(probe);
     }
   });

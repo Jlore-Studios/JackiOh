@@ -10,7 +10,7 @@
 // R3732002: opened from the friends drawer or the Friends page it is the Dialog's drawer instead (`drawer`),
 // where the friends list was.
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
 import { CHAT_MAX_CHARS, CHAT_POLL_MS } from "@jackioh/server-config";
 
@@ -22,6 +22,7 @@ import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { navigate } from "../net/navigate.ts";
 import { findRoomLinkInText } from "../net/roomLink.ts";
 import { getChat, reportMessage, sendChat, type ChatMessage, type PlayerRef } from "../net/social.ts";
+import { CHAT_EARLIER_EDGE_PX } from "./config.ts";
 import { onChatPush, useSocialReads } from "./socialPoll.ts";
 import { chatTestid } from "./testids.ts";
 import { Named } from "./words.tsx";
@@ -89,6 +90,8 @@ export function ChatPanel({
   const [reported, setReported] = useState<ReadonlySet<string>>(() => new Set());
   const list = useRef<HTMLOListElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  /** #4444: the gap above the oldest message when an earlier page was asked for, restored once it arrives. */
+  const anchor = useRef<number | null>(null);
   /** The poll's read, for Try again to make at once (#1898). */
   const readNow = useRef<() => void>(() => undefined);
   const sendCount = useRef(0);
@@ -171,8 +174,19 @@ export function ChatPanel({
     if (box !== null) box.scrollTop = box.scrollHeight;
   }, [newest, newestSend]);
 
+  // #4444: an earlier page arriving keeps the oldest message where it was, so reading holds its place.
+  useLayoutEffect(() => {
+    const box = list.current;
+    if (anchor.current !== null && box !== null) {
+      box.scrollTop = box.scrollHeight - anchor.current;
+      anchor.current = null;
+    }
+  }, [messages]);
+
   const loadEarlier = useCallback((): void => {
     if (earlier === null || loadingEarlier) return;
+    const box = list.current;
+    if (box !== null) anchor.current = box.scrollHeight - box.scrollTop;
     setLoadingEarlier(true);
     attempt(() => getChat(friendId, earlier))
       .then(
@@ -264,7 +278,14 @@ export function ChatPanel({
       className="chat-panel"
       focus={input}
     >
-      <ol className="chat-panel__messages" ref={list} aria-live="polite">
+      <ol
+        className="chat-panel__messages"
+        ref={list}
+        aria-live="polite"
+        onScroll={() => {
+          if (list.current !== null && list.current.scrollTop <= CHAT_EARLIER_EDGE_PX) loadEarlier();
+        }}
+      >
         {earlier !== null ? (
           <li className="chat-panel__earlier">
             <button type="button" className="link-button" data-testid={chatTestid.earlier} disabled={loadingEarlier} onClick={loadEarlier}>
