@@ -17399,6 +17399,14 @@
         "tiers": {}
       },
       "waiting_comment": 7076058221
+    },
+    "4480": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-22T05:09:09Z",
+      "issue": 4423,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
