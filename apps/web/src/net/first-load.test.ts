@@ -62,17 +62,19 @@ const SOURCE = join(SRC, "patches/source.ts");
  * (360,749 less). The budget is now 59 × 8192 (483,328), about 10 KB (2.1%)
  * over that: putting the scene data back would cross it.
  *
- * #4428 lowered it: the sound-effect recipes ride their own lazy chunk beside the module rather
- * than with the entry chunk. `vite build --mode development`, as CI builds it, measured 447,192
- * bytes (26,346 less). The budget is now 56 × 8192 (458,752), about 11 KB (2.6%)
- * over that: putting the recipes back would cross it.
- *
  * #4435 lowered it: the flavour sidecar (every card's flavour line and artist credit) loads in a
  * chunk beside the engine module rather than with the entry chunk. `vite build --mode development`,
  * as CI builds it, measured 445,874 bytes (27,664 less). The budget is now 56 × 8192 (458,752),
  * about 13 KB (2.9%) over that: putting the sidecar back would cross it.
+ *
+ * #4428 lowered it, and merged after #4435: the sound-effect recipes ride their own lazy chunk beside
+ * the module rather than with the entry chunk. Its own build, which lacked #4435's change, measured
+ * 447,192 bytes (26,346 less than #4222's 473,538); #4435's own build, which lacked this one, measured
+ * 445,874. With both merged, `vite build --mode development`, as CI builds it, measured 420,381 bytes
+ * on `main` at 59c8529162: 25,493 less than #4435's 445,874. The budget is now 53 × 8192 (434,176),
+ * about 13 KB (3.3%) over that: putting the recipes, the sidecar or the scene data back would cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 458_752;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 434_176;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

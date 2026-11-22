@@ -43,7 +43,7 @@ use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
-use crate::search::{Line, beam_search, score_line};
+use crate::search::{Line, ReplayFill, beam_search, replay_line};
 use crate::simulate::{
     CountingNodeCounter, LineStatus, create_node_counter, create_sub_counter, create_wrap_up_counter,
     note_sim_panic,
@@ -62,6 +62,7 @@ fn quiet_stats() -> SearchStats {
         stopped_by: StoppedBy::Exhausted,
         replied: 0,
         worlds_scored: 0,
+        replays_cut: 0,
         score: 0.0,
     }
 }
@@ -403,6 +404,8 @@ struct Scratch {
     replied: usize,
     /// R3498000: `SearchStats.worldsScored`.
     worlds_scored: usize,
+    /// R4447000: `SearchStats.replaysCut`.
+    replays_cut: usize,
 }
 
 /// R4070000: the world a decision's root lists its candidates and probes its prices on: `public`
@@ -576,8 +579,10 @@ fn plan(
     let root_turn = det0.turn;
     let remaining = budget.nodes.saturating_sub(counter.used());
     let finalist_count = budget.finalists.max(1);
-    // What one finalist's scores on every other determinization keep back (R3696000's `keep`, below).
-    let other_worlds = (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
+    // What one finalist's scores on every other determinization keep back (R3696000's `keep`, below),
+    // R4447000's fill slice included.
+    let fill = ReplayFill::configured(budget.branching);
+    let other_worlds = (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize + fill.ceiling());
     let per_finalist = (AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps) as usize + other_worlds;
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
@@ -680,19 +685,21 @@ fn plan(
     for world in dets.iter().skip(1) {
         let hidden = hidden_card_ids(world, seat);
         let mut row: Vec<f64> = Vec::new();
+        let mut cuts: usize = 0;
         for entry in &finalists {
-            let Some(score) = score_line(
+            let Some(replay) = replay_line(
                 world,
                 seat,
                 &entry.line.actions,
                 counter,
-                !replied.is_empty(),
-                Some(&hidden),
+                (!replied.is_empty()).then_some(&hidden),
                 &prices,
+                fill,
             ) else {
                 break;
             };
-            row.push(score);
+            row.push(replay.score);
+            cuts += usize::from(replay.cut);
         }
         // A world the counter could not finish is left out for every finalist alike.
         if row.len() < finalists.len() {
@@ -704,6 +711,7 @@ fn plan(
             }
         }
         scored_on += 1;
+        scratch.replays_cut += cuts;
     }
     scratch.worlds_scored = usize::try_from(scored_on).unwrap_or(0);
 
@@ -884,6 +892,7 @@ fn decide_in(
         lines: 0,
         replied: 0,
         worlds_scored: 0,
+        replays_cut: 0,
     };
 
     let outcome = catch_unwind(AssertUnwindSafe(|| {
@@ -899,6 +908,7 @@ fn decide_in(
         stopped_by: stopped_by.unwrap_or_else(|| counter.stopped_by()),
         replied: scratch.replied,
         worlds_scored: scratch.worlds_scored,
+        replays_cut: scratch.replays_cut,
         score,
     };
 
@@ -981,6 +991,7 @@ mod tests {
             lines: 0,
             replied: 0,
             worlds_scored: 0,
+            replays_cut: 0,
         };
         let mut options = AiOptions::with_budget(Rng::new("decide-1575", 0), AI_BUDGET);
         let Plan::Searched {

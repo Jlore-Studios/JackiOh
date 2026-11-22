@@ -306,6 +306,8 @@ def test_load_sweep_reads_the_fixtures_lines_one_row_per_card_and_tier():
 
     assert [(row.card, row.tier) for row in sweep.itertuples()] == [(line["defId"], line["tier"]) for line in lines]
     assert len(sweep) == 8 and set(sweep["tier"]) == {"easy", "hard"}
+    # The fixture's lines predate faces (#4466): every one reads as a base line.
+    assert set(sweep["face"]) == {"base"}
     for row, line in zip(sweep.to_dict("records"), lines, strict=True):
         assert row["games"] == line["games"]
         assert row["drawn_games"] == line["drawnGames"]
@@ -368,6 +370,36 @@ def test_load_sweep_names_the_file_and_line_it_cannot_read_and_a_card_and_tier_i
     )
     with pytest.raises(ValueError, match=r"again\.jsonl: line 3: a at easy is also at .*again\.jsonl: line 1"):
         load_sweep(again)
+
+
+def test_load_sweep_reads_each_face_and_a_line_without_one_as_base(tmp_path):
+    path = write_records(
+        tmp_path / "faces.jsonl",
+        [
+            sweep_line("a", "easy", face="base"),
+            sweep_line("a", "easy", face="radiant", flags=["error"], errors=1),
+            sweep_line("b", "easy"),
+        ],
+    )
+    sweep = load_sweep(path)
+    assert list(sweep["face"]) == ["base", "radiant", "base"]
+    assert list(sweep.columns[:3]) == ["card", "tier", "face"]
+    by_face = sweep.set_index(["card", "tier", "face"])
+    assert by_face.loc[("a", "easy", "base"), "flags"] == []
+    assert by_face.loc[("a", "easy", "radiant"), "flags"] == ["error"]
+    assert by_face.loc[("a", "easy", "radiant"), "errors"] == 1
+
+
+def test_load_sweep_refuses_a_card_tier_and_face_it_has_read_and_a_face_it_does_not_know(tmp_path):
+    again = write_records(
+        tmp_path / "again.jsonl",
+        [sweep_line("a", "easy", face="radiant"), sweep_line("a", "easy"), sweep_line("a", "easy", face="radiant")],
+    )
+    with pytest.raises(ValueError, match=r"again\.jsonl: line 3: a at easy \(radiant\) is also at .*again\.jsonl: line 1"):
+        load_sweep(again)
+    golden = write_records(tmp_path / "golden.jsonl", [sweep_line("a", "easy", face="golden")])
+    with pytest.raises(ValueError, match=r"golden\.jsonl: line 1: not a sweep result"):
+        load_sweep(golden)
 
 
 def test_load_generations_reads_the_fixture_repository_oldest_first():
