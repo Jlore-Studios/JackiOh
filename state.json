@@ -15111,13 +15111,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "cf57556750df4892a95141cfd1a843e66c3956f4",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "44950261330",
+            "tier": "medium"
+          }
+        ],
+        "sha": "99b252408ac2bc6f318819ccc56af722b2bdae17",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4424": {
