@@ -16013,17 +16013,8 @@
       "suggestion": true
     },
     "4512": {
-      "action": "plan",
-      "asks": [
-        "c:7086691549"
-      ],
-      "build_next": {
-        "from_run": "45077442139",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-22T22:36:21Z",
-        "until": "2026-11-22T23:06:21Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-22T22:36:12Z",
         "difficulty": "medium",
@@ -16042,10 +16033,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Goal\n- A match in a hidden tab plays no crowd sound: with the context `running` and the page hidden, a murmur or reaction that comes due is dropped exactly like one due on a suspended context, the murmur loop keeps its rhythm, and on return only the next murmur due plays with nothing bursting out. The cha\u2026\n- ## Files to touch\n- | File | New/change | What changes |\n- |------|------------|--------------|\n- | `apps/web/src/audio/engine.ts` | change | `crowdOutput()` (line 1186): return null while `visibility()` is `\"hidden\"`, with an `R4512000` comment |\n- | `apps/web/src/audio/crowd.test.ts` | change | New `it(\"R4512000 \u2026\")` in the background `describe` (lines 101\u2013192), reusing its `due`/`heard` helpers |\n- | `spec/rulings/R4512000.md` | new | Ruling note, first free number in issue #4512's block |\n- | `spec/pending/4512.md` | new | The \u00a711 paragraph for this issue's branch |\n- Do not touch `.github/`, `.harness/`, `.squishy/` or `bot/`; no `crates/` file; no other spec note, and leave `spec/11-rulings.md`, `spec/INDEX.md` and `spec/CARDS.md` alone (the daily fold writes them). Governing spec: `\u00a710.11` (Autoplay, Settings), `R631`, `R669`.\n- ## Steps\n- 1. In `apps/web/src/audio/engine.ts`, change `crowdOutput` (line 1186) so it returns null while the page is hidden:\n- `crowdOutput: () => (ctx === null || buses === null || disposed || visibility() === \"hidden\" ? null : { context: ctx, crowd: buses.crowd }),`\n- Add a one-line comment above it citing the ruling, e.g. `// R4512000: the crowd bus is closed while the page is hidden, as effects and voices are.` No other engine code changes: `live()` in `apps/web/src/audio/crowd.ts` (lines 140\u2013143) already treats a null output as no output, so murmurs (lines 15\u2026\n- 2. In `apps/web/src/audio/crowd.test.ts`, add `it(\"R4512000 the crowd stays quiet while the page is hidden and murmurs again on return\", \u2026)` inside the existing `describe(\"background: \u2026 (issue #2034)\")`, reusing its `due`, `heard` and `crowdBusOf` helpers. Build its engine with an explicit visibili\u2026\n- 3. In the new test: `crowd.start()`; `crowd.observeDamage(25)` while visible (a GIGA hit, so its roar is pending behind `CROWD_FEEL.reactionDebounceMs`); set `visibility = \"hidden\"`; fire `due(tasks)`; assert `heard(audio, bus)` is empty (murmur and roar dropped). Then assert a `crowd.observeDamage\u2026\n- 4. Still in the test: set `visibility = \"visible\"`; fire `due(tasks)`; assert `heard(audio, bus)` has length 1 (only the next murmur due, no burst). End with `expect(audio.violations).toEqual([])`.\n- 5. Write `spec/rulings/R4512000.md` in the format of `spec/rulings/R0702.md`: front matter `id: R4512000`, a title naming the question (mention `issue #4512`), `cards: \"\u00a710.11, R631, R669, issue #4512\"`, `proven_in: [apps/web/src/audio/crowd.test.ts]`. Body: the crowd is quiet while the page is hid\u2026\n- 6. Write `spec/pending/4512.md` holding the one \u00a711 paragraph in the style of `spec/pending/4424.md`: `**[[R4512000]] <title> (issue #4512, 2026-11-22)**: <one-paragraph summary>`.\n- 7. Do not edit `spec/10-engine-guide.md` \u00a710.11 body, `crowd.ts`, `useGameAudio.ts`, settings or mix files: the issue scopes the spec change to the ruling note plus pending paragraph, and no source change beyond the gate line is needed.\n- ## Tests\n- - `apps/web/src/audio/crowd.test.ts`, `it(\"R4512000 the crowd stays quiet while the page is hidden and murmurs again on return\")`: asserts hidden-due murmur and GIGA roar play nothing, hidden `observeDamage` schedules nothing, the loop stays scheduled (one live patron task), and on return exactly o\u2026\n- - Existing `apps/web/src/audio/crowd.test.ts` tests pass unchanged (#352 murmurs, suspended/interrupted drop, rebuilt context), proving no regression.\n- - Commands: `pnpm --dir apps/web test src/audio/crowd.test.ts src/audio/engine.test.ts`, then `cargo jackioh spec check`.\n- ## Done when\n- - [ ] With context `running` and page hidden, a due murmur and a due GIGA roar play nothing on the crowd bus.\n- - [ ] The murmur loop stays scheduled while hidden; on return only the next murmur due plays.\n- - [ ] Existing crowd tests pass unchanged, and the engine test file still passes.\n- - [ ] The ruling note lists its test in `proven_in`, and `cargo jackioh spec check` passes.\n- - [ ] `cargo fmt --check` is clean (no other checks needed for this scope).\n- ## Risks\n- - A crowd that never comes back: avoided because the context is never touched \u2014 only the output gate closes, so return needs no resume; the return assertion covers it.\n- - `document.visibilityState` defaulting to something other than `\"visible\"` in jsdom would break existing crowd tests after the gate: the existing tests use the default port, so if they still pass the default is not `\"hidden\"`; the new test uses an explicit port either way.\n- - No \u00a710.11 body edit is a deliberate scoping choice per the issue's Where-it-lands; if the reviewer wants the Autoplay bullet extended, that is a one-sentence follow-up.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4512 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4512/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-22T22:23:15Z",
       "owner_why": "it plans it",
@@ -16058,12 +16048,14 @@
       "provider": "muse",
       "queued_at": "2026-11-22T22:17:57Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45077442139",
+      "run_id": "pending:c72b57e2-1795387005",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-22T22:23:15Z",
+      "started_at": "2026-11-22T22:36:59Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7086691549"
+      ]
     },
     "4513": {
       "action": "plan",
@@ -16284,9 +16276,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T22:26:05Z",
+    "at": "2026-11-22T22:36:59Z",
     "url": "",
-    "what": "plan #4515 on claude-7"
+    "what": "build #4512 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T22:22:24Z",
