@@ -18951,9 +18951,11 @@
         "by": "`muse` (medium)",
         "sha": "6b2bbe1cf8dc3d73852058ba926930ad005259f9"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T16:39:38Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-22T18:09:55Z",
         "family": "muse",
@@ -18963,6 +18965,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the after-move notice and the hourly sweep never send the same 'your move' twice\"} -->\n- ## What changed\n- `notify_one` (the pure-decision reader plus email/push sender in [notify.rs](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4479/crates/server/src/daily/notify.rs)) now holds one per-profile async exclusion across its whole body \u2014 reading `waiting`/settings/subs, `decide_notify`, both send\u2026\n- - [mod.rs](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4479/crates/server/src/daily/mod.rs): new `notify_locks: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>` field on `DailyState` with a \u00a79.13 comment, init in `new()`, and a `pub(crate) fn notify_lock()` accessor. The map mutex i\u2026\n- - [notify.rs](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4479/crates/server/src/daily/notify.rs): two-line guard at the top of `notify_one` plus doc comments on `notify_one` and the module header.\n- - [daily.rs tests](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4479/crates/server/tests/api/daily.rs): two new tests (below). `after_move` stays enqueue-and-return; the move's HTTP answer is asserted via `answers_at_once` in both.\n- ## How tested\n- - `cargo test -p jackioh-server --test server -- the_after_move_task_and_the_sweep_send_one_profile_one_email_and_push a_stalled_send_for_one_account_never_delays_another` \u2192 2 passed. The overlap test forces the collision with a held mail service (gate closed) plus a spawned sweep, then asserts exa\u2026\n- - Negative control: with the two guard lines temporarily commented out, both new tests fail 3/3 runs; guard restored afterward.\n- - `cargo test -p jackioh-server --test server api::daily::` \u2192 55 passed, 0 failed (all sequential cap/gap/release/ordering tests unchanged).\n- - `cargo fmt --check` clean (one long line wrapped), `cargo clippy -p jackioh-server --all-targets -- -D warnings` clean.\n- ## Decisions the issue did not settle\n- - The overlap test asserts 1\u20132 gated mails and `swept.emailed <= 1` instead of the plan's exact 2/`{emailed: 1, pushed: 1}`. Which holder the sweep reaches first is the seats' coin toss (`prepare_between` seats p1 by seed), so post-fix the sweep either sends the challenger's notices or waits on bot\u2026\n- - No new config number, no spec or ruling change, no migration: the issue explicitly scopes these out and the code follows (in-memory map, one server instance).\n- ## For the reviewer\n- Look twice at the sweep's holder loop under the new lock: a sweep that reaches a queue-held profile first now blocks there instead of sending, so `swept` can legitimately be `{0, 0}` while totals stay exactly-once \u2014 that is the intended serialization, not a missed notice. Timeout behavior is unchan\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4479 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4479/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4479,
       "kind": "review",
       "live": "reviewing",
