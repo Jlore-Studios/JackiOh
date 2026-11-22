@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The nineteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
+//! The twenty checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
 //! one bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -55,7 +55,7 @@
 //!      verifying that `reduce` accepts it without refusal or panic, and verifying the resulting state
 //!      and events with the stateless invariants (I5, I7, I10, I11, I16 and I17; #4057), and I19 against
 //!      the state it was reduced from (#4454); invariants requiring shadow history (I2, I3, I4, I9's
-//!      health tally, I12) remain on the played path. Run at setup (the mulligan's subsets) and every
+//!      health tally, I12, I20's damage tally) remain on the played path. Run at setup (the mulligan's subsets) and every
 //!      `I14_GATE_STRIDE`-th state; not in Duos.
 //!   I15 every Activate ability a seat may see is held to the listing (§10.8, R384, R3061000): while it may
 //!      act, each shown on a unit or backrow top of either side is `usable` exactly when `legal_actions`
@@ -87,6 +87,12 @@
 //!      restore's after its `rolledBack` (R4454002), and a `radiantSet` under Tears of the Kwzki Tree's
 //!      world (R4454001). A card Dormant mid-step is judged from the next; I14's branches and each Duos
 //!      duel run it.
+//!   I20 stored damage is what its events say (§4.4, §10.3, R78; #4478): each field card's `damage` is 0 on
+//!      arrival (`summoned`, `cardPlayed`), plus each `damage` on it, less each `healed`, as I9 holds a hero's
+//!      health; re-anchored by the lawful silent writers (`transformed`, `numberChanged` "health", a
+//!      `summoned` via Reborn, `flickered`, `rolledBack`, a Glitch's reset or boards); dropped when the card
+//!      leaves the field. Played path only (shadow history, so not on I14's copies); each Duos duel's
+//!      monitor runs it.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -2715,6 +2721,15 @@ fn field_cards(state: &GameState) -> Vec<&CardInstance> {
     out
 }
 
+/// I20: every card `field_cards_of` finds on either side, with the damage it stores.
+fn field_damage(state: &GameState) -> IndexMap<String, i32> {
+    PLAYER_IDS
+        .into_iter()
+        .flat_map(|player| field_cards_of(state, player))
+        .map(|card| (card.id.clone(), card.damage))
+        .collect()
+}
+
 /// R1829000: the cards dormant beneath the top of a unit pile or a backrow pile (§3.2, R13).
 fn dormant_cards(state: &GameState) -> IndexSet<String> {
     let mut out = IndexSet::new();
@@ -2981,6 +2996,10 @@ pub struct InvariantMonitor {
     /// (health), held to the seat's hero floor as `duos_life` holds it (R2201000); a Glitch's reset (R676)
     /// starts it again from the state it left.
     health: PerPlayer<i32>,
+    /// I20: each field card's stored damage as the stream's `damage` and `healed` events moved it (§4.4,
+    /// §10.3): 0 on arrival, plus each `damage` on it, less each `healed`; `counted_damage` re-anchors it
+    /// where a lawful writer moves the field with no such event and drops a card that left the field.
+    unit_damage: IndexMap<String, i32>,
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
     /// I18: whether this monitor holds attacks to their forecast; `new` sets it, and the Duos monitor
@@ -3032,6 +3051,7 @@ impl InvariantMonitor {
             resets: start.resets,
             fatigue: start.players.map(|_, side| side.fatigue_count),
             health: start.players.map(|_, side| side.hero.health),
+            unit_damage: field_damage(start),
             dormant: dormant_cards(start),
             judge_forecast: true,
             forecast_kept: None,
@@ -3527,6 +3547,101 @@ impl InvariantMonitor {
         found
     }
 
+    /// I20: feeds one event into the stored-damage tally (§4.4, §10.3, R78). `anchored` collects the cards
+    /// whose damage a lawful writer moved with no `damage` or `healed` (the tally then takes the state's),
+    /// and `anchor_all` is a board put back or dealt again. A blind spot, accepted: `numberChanged`
+    /// "health" is also a health tuning that leaves damage as it was, so that card is not held in that step.
+    fn feed_damage(&mut self, event: &GameEvent, anchored: &mut IndexSet<String>, anchor_all: &mut bool) {
+        match event {
+            // §4.4 step 5: the amount is what got through; the pipeline adds exactly it to `damage`.
+            GameEvent::Damage {
+                target_id, amount, ..
+            } => {
+                if let Some(held) = self.unit_damage.get_mut(target_id) {
+                    *held += *amount;
+                }
+            }
+            // `heal_unit_by` removes what it healed and emits only when that is above 0.
+            GameEvent::Healed {
+                target_id, amount, ..
+            } => {
+                if let Some(held) = self.unit_damage.get_mut(target_id) {
+                    *held -= *amount;
+                }
+            }
+            // R78: a card arrives with its damage reset.
+            GameEvent::CardPlayed { instance_id, .. } => {
+                self.unit_damage.insert(instance_id.clone(), 0);
+            }
+            GameEvent::Summoned { instance_id, via, .. } => {
+                self.unit_damage.insert(instance_id.clone(), 0);
+                // `reborn_step` returns a card with `max_health - 1` damage, announced by this `summoned`.
+                if matches!(via, Some(KeywordKind::Reborn)) {
+                    anchored.insert(instance_id.clone());
+                }
+            }
+            // Vanilla's "stays alive at 1 health" writes stored damage on the card it makes; the
+            // transform redefines the card, so both ids take the state's.
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                ..
+            } => {
+                anchored.insert(instance_id.clone());
+                anchored.insert(new_instance_id.clone());
+            }
+            // `set_stats_on` clears `damage` with no `healed`, announced only by this.
+            GameEvent::NumberChanged { instance_id, key, .. } if key == "health" => {
+                anchored.insert(instance_id.clone());
+            }
+            // R78: a card that left the field and came back at once is reset, with no `healed`.
+            GameEvent::Flickered { instance_id, .. } => {
+                anchored.insert(instance_id.clone());
+            }
+            // `restore_board` puts records back and a Glitch's boards deal both fields again, with no
+            // event per card.
+            GameEvent::RolledBack { .. }
+            | GameEvent::Glitched {
+                outcome: crate::wire::GlitchOutcome::Boards,
+                ..
+            } => *anchor_all = true,
+            _ => {}
+        }
+    }
+
+    /// I20 on the state one action left: each field card's stored `damage` is what the stream's `damage`
+    /// and `healed` events left it (§4.4, §10.3, R78), as `counted_health` holds a hero's health. A card
+    /// the tally has not seen (a Stack pile's uncovering, a Glitch's deal) and one `anchored` or under
+    /// `reset` (R676) takes the state's; a card that left the field is dropped (R78 zeroed it). A silent
+    /// move is reported once: the tally then follows the state.
+    ///
+    /// No stride: the tally is fed from every event and read in one pass over the field's cards with no
+    /// clone, so a stride would only delay a report. Measured on 2026-11-22 (4 cores, seeds 1–200, the
+    /// release `cargo jackioh fuzz`): 52 s before I20 and 54–57 s with it for the 1v1 wave (an
+    /// unloaded repeat, 54 s), 146 s before and 151–152 s with it for the Duos wave, checked on every
+    /// state; the handicapped wave 51 s with it. Each is under the 10% that would call for a stride.
+    fn counted_damage(&mut self, state: &GameState, reset: bool, anchored: &IndexSet<String>) -> Vec<String> {
+        let mut found: Vec<String> = Vec::new();
+        let held_now = field_damage(state);
+        self.unit_damage.retain(|id, _| held_now.contains_key(id));
+        for (id, held) in held_now {
+            let counted = match self.unit_damage.get(&id) {
+                Some(counted) if !reset && !anchored.contains(&id) => *counted,
+                _ => held,
+            };
+            if counted != held {
+                let name = find_instance(state, &id).map_or("a card", |card| card.def_id.as_str());
+                found.push(format!(
+                    "I20 silent card damage: {name} ({id}) holds damage {held} on turn {}, but the stream's tally \
+                     for it is {counted} (§4.4, §10.3, R78)",
+                    state.turn
+                ));
+            }
+            self.unit_damage.insert(id, held);
+        }
+        found
+    }
+
     /// R2201000: a floored hero's tally reads its floor after any move that would take it lower.
     fn hold_hero_floor(&mut self, seat: PlayerId, state: &GameState) {
         if let Some(floor) = crate::state::hero_floor_of(state, seat)
@@ -3669,7 +3784,7 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12 and I16–I19 against the
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12 and I16–I20 against the
     /// resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         // I18: a kept forecast is this step's alone, and so are I19's Dormant cards.
@@ -3686,7 +3801,10 @@ impl InvariantMonitor {
             self.behind_joiners.clear();
         }
 
+        let mut anchored: IndexSet<String> = IndexSet::new();
+        let mut anchor_all = false;
         for (index, event) in events.iter().enumerate() {
+            self.feed_damage(event, &mut anchored, &mut anchor_all);
             match event {
                 GameEvent::TurnStarted { player, turn, .. } => {
                     self.turn = *turn;
@@ -4184,6 +4302,7 @@ impl InvariantMonitor {
         found.extend(InvariantMonitor::announced_state(events, state, reset));
         found.extend(self.counted_fatigue(state, reset));
         found.extend(self.counted_health(state, reset));
+        found.extend(self.counted_damage(state, reset || anchor_all, &anchored));
 
         // R1829000: a card a Stack pile uncovers has entered, though no event says so (R212).
         if !reset {
@@ -4700,5 +4819,53 @@ mod tests {
         }
         let mut unprimed = create_duos_invariant_monitor(&state);
         assert_eq!(i19(unprimed.after(&events, &state)), Vec::<String>::new());
+    }
+
+    /// I20 (#4478): each Duos duel's monitor holds its own cards' stored damage to its own events.
+    #[test]
+    fn i20_each_duos_duel_s_monitor_holds_its_stored_damage() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i20-duos", test_decks(), None);
+        let duel = &mut state.duels[1];
+        let def_id = duel.players[PlayerId::P1].hand[0].def_id.clone();
+        let at = Zone::Field {
+            player: PlayerId::P1,
+            row: Row::Units,
+            lane: 1,
+        };
+        let card = crate::state::new_instance(duel, &def_id, PlayerId::P1, at);
+        let id = card.id.clone();
+        duel.players[PlayerId::P1].units[0] = Some(vec![card]);
+        let monitor = create_duos_invariant_monitor(&state);
+        let i20 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains(": I20 ")).collect()
+        };
+        let hit: GameEvent = serde_json::from_value(serde_json::json!({
+            "type": "damage",
+            "sourceId": null,
+            "targetId": id,
+            "amount": 1,
+            "combat": false,
+        }))
+        .expect("a damage event");
+        let events = [DuosEvent::Duel { duel: 1, event: hit }];
+
+        // A bump with no event is reported by the duel that holds the card.
+        let bump = |state: &mut DuosState| {
+            let card = state.duels[1].players[PlayerId::P1].units[0]
+                .as_mut()
+                .and_then(|pile| pile.first_mut())
+                .expect("the unit");
+            card.damage += 1;
+        };
+        bump(&mut state);
+        let found = i20(monitor.clone().after(&[], &state));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("duel 1: I20 silent card damage"),
+            "{}",
+            found[0]
+        );
+        // The same bump with its `damage` event is clean.
+        assert_eq!(i20(monitor.clone().after(&events, &state)), Vec::<String>::new());
     }
 }
