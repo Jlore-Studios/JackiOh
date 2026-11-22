@@ -16373,7 +16373,16 @@
       "feedback_since": "2026-11-22T22:36:59Z",
       "issue": 4512,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "d7f8e75acc9019eb2cddabfe3bdbf95ed07d8ef6",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
