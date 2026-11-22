@@ -15780,12 +15780,14 @@
     "what": "plan #4441 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-22T01:48:16Z",
+    "at": "2026-11-22T01:56:33Z",
     "notes": [
-      "delivered review #4419 on claude-7 (run 44946916469): interrupted",
-      "started review #4419 on claude-7 (run 44973278631)",
+      "delivered review #4419 on claude-7 (run 44973278631): built",
+      "started review #4419 on muse (run 44973883719)",
+      "started plan #4441 on claude-8 (run 44973921061)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 1 of 1 waiting run(s) (run 44973217310 on bot/issue-4395)"
+      "#4441: typed it Task",
+      "runner gate: started 1 of 1 waiting run(s) (run 44972889226 on main)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16491,7 +16493,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T01:48:16Z",
+  "loop_tick": "2026-11-22T01:56:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
