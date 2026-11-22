@@ -16801,6 +16801,8 @@
       }
     },
     "4532": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T22:37:26Z",
@@ -16814,8 +16816,11 @@
         "trail": "- Base comparison still building \u2014 ending here; its result will wake the session, then I'll confirm whether the floor-test failures are pre-existing, re-run the contended suites alone, and finish with eslint plus the production build and budget.Landing diff is minimal and correct. Waiting on the base\u2026\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the card detail view and the account screen load when first opened, not in the first page load\"} -->\n- ## What changed\n- **Card detail dialog leaves the entry chunk.** `CardDetail` is dropped from both `cards/inspect/index.ts` and `cards/index.ts` barrels. Its four lazy-screen users (`packs/PackOpening.tsx`, `collection/OwnedCards.tsx`, `collection/CardCosmeticsView.tsx`, `game/deckbuilder/CardBrowser.tsx`) import it\u2026\n- **Account screen rides `routeChunks.account`.** `signOut`, `signOutLabel`, `useSigningOut`, and `resetSigningOutForTests` moved verbatim to a new `auth/signOut.ts` that imports nothing from `routes/account.tsx`. The five importers (`main.tsx`, `UsernamePrompt.tsx`, `ConsentPrompt.tsx`, `login.tsx`,\u2026\n- **Guards in `net/first-load.test.ts`.** New source test walks the static import graph from `main.tsx` and fails on any non-test `import()` target inside it, allowing only `cards/chinese.ts` and `audio/sfxLoader.ts` with reasons. Two built tests probe for card-history and account-screen strings in t\u2026\n- ## How tested\n- - Guard fails on the base shape naming exactly `routes/landing.tsx \u2192 cards/inspect/CardDetail.tsx` (proved by temporarily restoring base barrels + base `landing.tsx`, both reverted) and passes fixed.\n- - `first-load.test.ts` 23/23 (incl. budget at 393,216 against measured 384,276 gz, down 29,117 from 413,393); `landing.test.tsx` 52/52; `shell-gate.test.tsx` 30/30; `chunks.test.tsx` + `cardDetailChunk.test.ts` 17/17; account/Dialog/flavour/CardDetail/inspect 167/167; LiveCards/auth-flows/gate-sess\u2026\n- - Budget claim verified by measurement, not arithmetic: card view temporarily back = 402,403 gz (crosses by 9,187); account screen temporarily back = 395,243 gz (crosses by 2,027). Final `dist` rebuilt from the fixed tree afterward.\n- ## Decisions\n- - Budget N=48 (393,216, +2.3%) rather than N=49: N=49's 17 KB headroom would let either module slip back unnoticed; N=48 keeps the \"either module back crosses it\" property while matching the file's usual 1\u20133% style (as #4444's +1.1% did).\n- - History probes use `No patch has recorded this card.` (CardHistory-only) instead of the issue's `There are no patch notes yet.`, which also occurs in the lazy `PatchNotes.tsx`; account probes are screen-only strings, never the sign-out buttons' words.\n- - Landing intent test uses a pass-through spy: stubbing the chunk import would poison `routeChunk`'s cache for later tests in the file.\n- - `readSession`/`forgetLinkAfterSignIn` imports left `account.tsx` with the moved block (grep showed no other use), against the plan's guess that `readSession` stays.\n- - No spec or ruling change: load timing is presentation only (rule 7); the dialog still opens on click/tap per R639.\n- ## Reviewer notes\n- - `typecheck` needs `NODE_OPTIONS=--max-old-space-size=6144` on this 2-core box; the default 2 GB heap OOMs even on the base tree.\n- - Four `landing.test.tsx` failures seen mid-work (R1017002 long-visit, three R1584000 floor tests) reproduce identically on the untouched base commit and pass in an unloaded full-file run \u2014 pre-existing/environmental, unrelated to this diff.\n- - No `.rs` files touched, so no cargo gates apply; no ruling added, so `spec check` has nothing new to hold.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4517 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4517/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4517,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T23:57:16Z",
         "from_run": "45078767338",
         "gates": [
           {
@@ -16874,8 +16879,15 @@
         "source": "build",
         "until": "2026-11-23T00:25:58Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-22T23:55:58Z",
+      "run_id": "pending:715ea8be-1795391819",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-22T23:57:16Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16889,9 +16901,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T23:56:46Z",
+    "at": "2026-11-22T23:57:16Z",
     "url": "",
-    "what": "review #4531 on muse"
+    "what": "review #4532 on muse"
   },
   "last_sweep": {
     "at": "2026-11-22T23:53:29Z",
