@@ -77,7 +77,8 @@ const ZETAS = SET.filter((card) => card.tags.includes("Automa-ζ"));
 
 describe("R3572001: the Stinkyscape+ set draws its own art", () => {
   it("R3572001 every entry of the set is routed to its art, and no other set's card is", () => {
-    expect(SET).toHaveLength(204);
+    // 204 until #4440 added S+ #4.1 Profe Yates Prime.
+    expect(SET).toHaveLength(205);
     expect(SET.every((card) => card.id.startsWith(STINKYSCAPE_PLUS_PREFIX))).toBe(true);
     expect(SET.every((card) => isStinkyscapePlusArt(card.id))).toBe(true);
     expect(OTHERS.some((card) => isStinkyscapePlusArt(card.id))).toBe(false);
@@ -201,7 +202,7 @@ describe("R3572001: the Mindustrial overlay", () => {
   });
 
   it("R3572001 every card but a ship and a fusion draws the painter's picture under the overlay, none when it draws the subject alone", () => {
-    expect(PLAIN).toHaveLength(204 - 15);
+    expect(PLAIN).toHaveLength(205 - 15);
     for (const card of PLAIN) {
       for (const radiant of [false, true]) {
         const whole = stinkyscapePlusSvg(card.id, card.name, card.tags, card.type, radiant);
