@@ -39062,6 +39062,12 @@
         "number": 4448,
         "title": "Patch: the AI's turn-hook and Activate shares are fork-screened at a whole use and set where the screen keeps them",
         "why": "the bot could not build it: run the issue's two fork screens on a machine of your own (Part P below). Then post, in one comment on #4448, each screen's closing tally line, its wall time, the control's commit and the machine. Then take `human required` off and put `bot:build` back. No bot run can fin"
+      },
+      {
+        "at": "2026-11-22T06:18:47Z",
+        "number": 4467,
+        "title": "Patch: a daily test holds the ladder skill knob's order, full skill over mid over miss",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
