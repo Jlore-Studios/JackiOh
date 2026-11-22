@@ -15823,9 +15823,11 @@
         "by": "`muse` (medium)",
         "sha": "5470af2f1932e2b72e1a0b166a61e609fcc010f9"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T00:57:09Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-22T01:57:07Z",
         "family": "muse",
@@ -15835,6 +15837,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Suite written; waiting on the first test run before fmt, clippy, and spec check.Test run still compiling; todo list recorded. Waiting on its terminal result before fmt, clippy, and spec check.\n- Nothing further to edit \u2014 waiting on the spec check result.Spec check still building; will report its terminal result when delivered.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the daily game clock and move handover rules are fuzzed across random action sequences and deadlines\"} -->\n- Added the seeded randomized daily-clock invariant suite as one new test file, [crates/shared/tests/daily_invariants.rs](/home/agent-muse/actions-runner-3/_work/_temp/work/item-4431/crates/shared/tests/daily_invariants.rs). No source, spec, or config changes.\n- What it does: `play_daily_game(seed)` plays a random daily game (random valid action from `daily_legal` for a random holder, clock advances, scripted Competition casts for multi-step prompts, seat-swap bumps, jumps to the exact deadline) and runs `check_all` after every step \u2014 hold monotonicity und\u2026\n- How I tested it, all green:\n- - `cargo test -p jackioh-shared --test daily_invariants` \u2014 7 passed, 1 ignored\n- - Same binary with `daily_clock_sweep -- --ignored` \u2014 400 seeds pass in 4.4s\n- - `cargo test -p jackioh-shared --test daily` (existing suite) \u2014 15 passed\n- - `cargo fmt --check` clean; `cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings` clean (the feature flag mirrors CI's workspace feature unification; bare `--all-targets` fails on pre-existing `tests/log.rs`, untouched by this change)\n- - `cargo jackioh spec check` \u2014 ok, 2356 rulings, 5927 proofs, 73313 citations\n- - A temporary probe (removed afterwards, grep confirms zero leftovers) showed the 24 PR seeds really cover the space: 16 prompt-steps, 14 completions, 10 expiries, 10 successful Competition casts\n- Decisions I made where the issue/plan left room: `check_timeliness` derives the expected deadline from the previous clock rather than the clock under test, because a tampered-early deadline reads consistently on its own \u2014 only an independent expectation makes \"fires before the deadline\" falsifiable\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4431 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4431/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4431,
       "kind": "review",
       "live": "reviewing",
