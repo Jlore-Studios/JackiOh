@@ -16609,11 +16609,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "45031554033",
+      "run_id": "pending:aa1c030a-1795358974",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-22T14:12:24Z",
+      "started_at": "2026-11-22T14:49:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -17926,9 +17926,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T14:28:08Z",
+    "at": "2026-11-22T14:49:57Z",
     "url": "",
-    "what": "review #4480 on claude-3"
+    "what": "revise #4459 on agy"
   },
   "last_sweep": {
     "at": "2026-11-22T14:41:34Z",
