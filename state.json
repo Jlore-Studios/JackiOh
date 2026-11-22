@@ -37067,7 +37067,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-22T01:22:08Z",
         "every": 5,
+        "findings": 0,
         "head": "eadf8fc6a39f53185f860b9b8277dbbed30a45a2",
         "issue": 4410,
         "merged_at": "2026-11-22T01:05:43Z",
@@ -37080,12 +37082,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:0b906801-1795309998",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44970448179",
         "sha": "07683ea0a11b48a247e9f7f468f3e6e2b95e72fb",
         "started_at": "2026-11-22T01:13:37Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Spice pays Credits when played or discarded, as a Resource does, instead of selling from the hand",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 431
