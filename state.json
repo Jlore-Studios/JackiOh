@@ -16140,9 +16140,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-22T04:16:20Z",
       "suggestion": true,
-      "taken_asks": [
-        "c:7073816949"
-      ]
+      "taken_asks": []
     },
     "4451": {
       "action": "review",
