@@ -23,12 +23,14 @@ matrix = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(matrix)
 
 #: ci.yml's `rust (test <group>)` jobs as #2964 left them, in order: the move to the generator kept
-#: every one, under its name; `server api` is four shards since #3585 (scripts/ci-shards.toml).
+#: every one, under its name; `server api` is four shards since #3585 and `tools, wasm` four since
+#: #4432 (scripts/ci-shards.toml).
 JOBS = [
     "engine rules", "engine rules 2", "engine rules 3", "engine", "engine golden", "cards lib",
     "cards", "server", "server api 1/4", "server api 2/4", "server api 3/4", "server api 4/4",
     "server practice", "server practice rulings", "ai", "ai slow",
-    "tools fuzz", "tools duos, selfplay", "tools, wasm",
+    "tools fuzz", "tools duos, selfplay",
+    "tools, wasm 1/4", "tools, wasm 2/4", "tools, wasm 3/4", "tools, wasm 4/4",
 ]
 
 RULES = ("-p jackioh-engine --features jackioh-engine/testkit --test {} "
@@ -82,7 +84,7 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual({name for name, job in jobs.items() if job["doc"]}, {"engine", "cards", "ai"})
         self.assertEqual({(job["shard"], job["shards"]) for job in jobs.values()},
                          {(1, 1), (1, 4), (2, 4), (3, 4), (4, 4)})
-        self.assertEqual(jobs["tools, wasm"]["test"].split(" -- ")[1],
+        self.assertEqual(jobs["tools, wasm 1/4"]["test"].split(" -- ")[1],
                          "--skip fuzz:: --skip selfplay:: --skip positions::")
 
     def test_a_new_rules_binary_gets_a_job_and_the_binaries_check_by_itself(self):
