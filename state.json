@@ -16009,6 +16009,13 @@
     "4447": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T04:06:58Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's search (`score_line` and `decide`'s node reserve in crates/ai/src) and adds a new field to the `SearchStats` wire type that the tools and the web must agree on."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
