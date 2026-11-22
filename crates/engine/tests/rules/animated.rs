@@ -345,6 +345,51 @@ mod r383_b3_1_an_animated_card_is_a_unit_for_every_rule {
         assert!(card_at(&state, slot(P2, Row::Units, 4)).is_none());
     }
 
+    /// R4423000: killed in its unit zone, an animated Trap died as a Unit, which its `destroyed` says and
+    /// the rules keep, though its definition prints a Trap.
+    #[test]
+    fn r4423000_an_animated_trap_killed_in_its_unit_zone_died_as_a_unit() {
+        let mut state = playing("animated-died-as");
+        let trap = put(
+            &mut state,
+            &springer.id,
+            slot(P2, Row::Backrow, 4),
+            Default::default(),
+        );
+        state = play_plain(&mut state, 1).state;
+        state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" })));
+        state = act(&state, input(json!({ "type": "endTurn", "playerId": "p2" })));
+        let attacker = card_at(&state, slot(P1, Row::Units, 1))
+            .cloned()
+            .expect("p1's plain unit");
+        live_mut(&mut state, &trap.id).damage = 2;
+        let attacked = act_result(
+            &state,
+            input(
+                json!({ "type": "attack", "attackerId": attacker.id, "targetId": trap.id, "playerId": "p1" }),
+            ),
+        );
+        assert_eq!(attacked.error, None);
+        let died = attacked
+            .events
+            .iter()
+            .find(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == trap.id),
+            )
+            .expect("the animated Trap's destroyed");
+        assert!(
+            matches!(
+                died,
+                GameEvent::Destroyed {
+                    died_as: Some(CardType::Unit),
+                    ..
+                }
+            ),
+            "{died:?}"
+        );
+        assert!(query::is_unit_death(&attacked.state, &died.as_rules_read()));
+    }
+
     #[test]
     fn r383_entering_the_unit_zone_is_entering_it_on_that_turn_summoning_sick_a_fresh_exertion_and_it_cannot_attack_yet()
      {

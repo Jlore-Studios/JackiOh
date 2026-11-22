@@ -386,6 +386,29 @@ pub(crate) fn set_cloaked(
         .id
 }
 
+/// R383: an Animated Field Trap, Meditative #68 Catnip (5/5, Radiant 10/10), which animates into its lane's
+/// unit zone after its opponent's Spell.
+#[cfg(test)]
+pub(crate) const ANIMATED_TRAP: &str = "meditative-068";
+
+/// R4423000: what the `destroyed` of `id` among the scenario's last events says its card died as.
+#[cfg(test)]
+pub(crate) fn died_as_of(
+    s: &jackioh_engine::testkit::Scenario,
+    id: &str,
+) -> Option<jackioh_engine::CardType> {
+    use jackioh_engine::prelude::*;
+    s.events()
+        .iter()
+        .find_map(|event| match event {
+            GameEvent::Destroyed {
+                instance_id, died_as, ..
+            } if instance_id == id => Some(*died_as),
+            _ => None,
+        })
+        .expect("a destroyed of the card")
+}
+
 /// R1852000, #1859: builds p1's Dormant Starship from pieces fused via Core #16 Hit Jobs.
 #[cfg(test)]
 pub(crate) fn built_starship(
@@ -459,6 +482,14 @@ pub(crate) fn give_flying(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
     use jackioh_engine::prelude::*;
     let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
     card.granted_keywords.push(Keyword::Flying);
+}
+
+/// R783004: grants Cloaked to the card `id` while it is held, so it may be set face-down by it.
+#[cfg(test)]
+pub(crate) fn give_cloaked(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
+    use jackioh_engine::prelude::*;
+    let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
+    card.granted_keywords.push(Keyword::Cloaked);
 }
 
 /// R3546002: grants GIGA to the card `id` while it is held, so it enters the field GIGA when played.
