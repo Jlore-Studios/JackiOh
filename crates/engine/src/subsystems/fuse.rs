@@ -1126,6 +1126,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 credit_instalments: numbers(|f| f.credit_instalments),
                 credit_lapses: flags(|f| f.credit_lapses),
                 no_natural_mana: flags(|f| f.no_natural_mana),
+                mana_per_turn: sum_defined(defined.iter().map(|f| f.mana_per_turn)),
                 feng_shui: flags(|f| f.feng_shui),
                 luck: sum_defined(defined.iter().map(|f| f.luck)),
                 spell_damage_aura: summed_spell_damage_aura(defined.iter().map(|f| f.spell_damage_aura)),

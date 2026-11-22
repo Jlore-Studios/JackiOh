@@ -1,5 +1,5 @@
-//! S #12 Otherworldly Nightmare (SPEC §8.10 row S 12; §2.4, ST8, R1837000): (3) Spell,
-//! Otherworldly, Epic.
+//! S #12 Otherworldly Nightmare (SPEC §8.10 row S 12; §2.4, ST8, R1837000): (4) Spell ((3) until issue
+//! #4440), Otherworldly, Epic.
 //!   Base:    "Add a Shadow Word Death, a Shadow Word Pain and a Psychic Scream to your hand."
 //!   Radiant: "Add a Radiant Shadow Word Death, a Radiant Shadow Word Pain and a Radiant Psychic
 //!            Scream to your hand."

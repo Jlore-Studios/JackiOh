@@ -22,7 +22,7 @@ Your lane N faces the opponent's lane N. "This lane" (Zoomerbin Oomen) means the
 
 **Ruling (rotation topology, [[R14]]):** for Silly Silas the ten unit zones form a ring: your lane 1 to 5, then the opponent's lane 5 down to 1, and back to your lane 1; the backrow forms a second ring the same way. "Rotate right" moves every card one step around its ring, so your lane-5 card becomes the opponent's lane-5 card and changes control. Both rings rotate together.
 
-**Ruling:** the Black Hole occupies the middle lane (lane 3) on both sides: anything standing there is exiled, and at each player's turn start their permanents step one lane toward it ([[R3554000]], [[R3554001]]). **Ruling:** the slash voids one lane for the rest of the game and halves the rest: a Unit or Field Spell reaches only its own half, and a rotation or swap into the void bounces ([[R3554002]], [[R3554003]]).
+**Ruling:** the Black Hole occupies the middle lane (lane 3) on both sides: anything standing there is exiled, and at each player's turn start their permanents step one lane toward it, or at each player's turn end for the hole S+ #77's base face opens ([[R3554000]], [[R3554001]], [[R4440050]]). **Ruling:** the slash voids one lane for the rest of the game and halves the rest: a Unit or Field Spell reaches only its own half, and a rotation or swap into the void bounces ([[R3554002]], [[R3554003]]).
 
 ### 3.2 Zone rules
 

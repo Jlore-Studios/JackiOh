@@ -3190,6 +3190,11 @@
       attack: { voice: "prof" },
       death: { voice: "prof" },
     },
+    "stinkyscapeplus-004-1": { // Profe Yates Prime
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
     "stinkyscapeplus-005": { // Dingleberry Droat
       play: { voice: "hustler" },
       attack: { voice: "hustler" },

@@ -1,6 +1,8 @@
 //! C #37 Last Hurrah (SPEC §8.6 row 37). Spell, cost 0, Epic.
-//!   Base:    "Draw your deck."
-//!   Radiant: "Draw your deck. Give {flashback} random cards in your hand Flashback." (flashback 4)
+//!   Base:    "Tradable\nDraw your deck. Give {flashback} random cards in your hand Flashback." (flashback 4)
+//!   Radiant: "Tradable\nDraw your deck. Give all cards in your hand Flashback."
+//!   Through v0.6.9i: "Draw your deck." (Radiant: "Draw your deck. Give {flashback} random cards in your
+//!   hand Flashback."), not Tradable (`script_v0_6_9i`, kept, R767000; issue #4440).
 //!   Through v0.6.6h: "Draw your deck. At the end of this turn (Radiant: of your next turn), discard
 //!   {discard|card|cards}." (`script_v0_6_6h`, kept, R767000; discard 4, 6 until issue #3951).
 //!   Through v0.5.11r: "… discard your hand." (`script_v0_5_11o`, kept, R767000).
@@ -9,11 +11,13 @@
 //! effect starts, each an ordinary §2.4 draw — a cast-on-draw card is cast (R58), a card past the hand
 //! cap of 10 burns (R4, R317), and a draw a draw limit stops does not happen (§2.4). An empty library
 //! means no draws, so no fatigue. Issue #4154 took the delayed discard and its `discard` off both faces
-//! (R4154201). The Radiant face then gives `flashback` (R386, the Radiant face's alone) different random
-//! cards of the hand, drawn as the clause is reached from the cards that lack Flashback (R60, R129),
-//! Flashback for good (`gain_keyword_for_good`, R4154202): kept in their tuning, so a card played or
-//! discarded from the hand still has it in the graveyard (R215), where it is played once (R783012,
-//! R783013). The other player learns that cards of that hand gained it, never which (R177).
+//! (R4154201). Since issue #4440 the base face then gives `flashback` (R386, tuned on the base face alone
+//! since then, the Radiant face's before) different random cards of the hand, drawn as the clause is
+//! reached from the cards that lack Flashback (R60, R129), and the Radiant face every card of the hand
+//! that lacks it, with no draw, each Flashback for good (`gain_keyword_for_good`, R4154202): kept in their
+//! tuning, so a card played or discarded from the hand still has it in the graveyard (R215), where it is
+//! played once (R783012, R783013). The other player learns that cards of that hand gained it, never which
+//! (R177). Tradable (R1838000) is catalog data the engine reads in the hand (`trade.rs`).
 //! Through v0.6.6h a delayed effect (§10.1, `discardHandAtTurnEnd`) discarded `discard` random cards of
 //! the hand (R682, R3134000) at the end of the turn it was played on (Radiant: its controller's next).
 
@@ -46,14 +50,30 @@ fn flashback_picks(c: &mut EffectContext<'_>, count: usize) -> Vec<String> {
     c.sink.rng.shuffle(&candidates).into_iter().take(count).map(|card| card.id).collect()
 }
 
-/// One face since issue #4154: draw the deck, then, with `flashback`, give `flashback` random cards of
-/// the hand Flashback for good (R4154201, R4154202).
-fn last_hurrah(flashback: bool) -> Script {
+/// Which cards of the hand gain Flashback once the deck is drawn (R4154202).
+#[derive(Clone, Copy)]
+enum Grant {
+    /// None: the base face after v0.6.6h through v0.6.9i.
+    Nothing,
+    /// `flashback` random cards: the Radiant face through v0.6.9i, the base face since issue #4440.
+    Random,
+    /// Every card: the Radiant face since issue #4440.
+    All,
+}
+
+/// One face since issue #4154: draw the deck, then give the cards `grant` names Flashback for good
+/// (R4154201, R4154202).
+fn last_hurrah(grant: Grant) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut effects = vec![draw_deck(ctx)];
-            if flashback {
-                let count = param(&*ctx, FLASHBACK).max(0) as usize;
+            let count = match grant {
+                Grant::Nothing => None,
+                Grant::Random => Some(param(&*ctx, FLASHBACK).max(0) as usize),
+                // No hand is ever larger, so every card is taken with no draw (R129).
+                Grant::All => Some(usize::MAX),
+            };
+            if let Some(count) = count {
                 effects.push(for_each_card(ForEachCardArgs {
                     cards: Arc::new(move |c: &mut EffectContext<'_>| flashback_picks(c, count)),
                     each: Arc::new(|instance_id: &str| {
@@ -72,8 +92,17 @@ fn last_hurrah(flashback: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: last_hurrah(false),
-        radiant: last_hurrah(true),
+        base: last_hurrah(Grant::Random),
+        radiant: last_hurrah(Grant::All),
+    }
+}
+
+/// R767000: after v0.6.6h through v0.6.9i the base face gave no Flashback and the Radiant face `flashback`
+/// random cards (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9i() -> CardScripts {
+    CardScripts {
+        base: last_hurrah(Grant::Nothing),
+        radiant: last_hurrah(Grant::Random),
     }
 }
 
@@ -107,15 +136,17 @@ pub fn script_v0_5_11o() -> CardScripts {
 
 // C #37 Last Hurrah — SPEC §8.6 row 37, BUILD M9 Classic row C 37: draws the whole deck (R58), the
 // cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
-// fatigue; nothing is discarded since issue #4154 (R4154201); radiant: `flashback` random cards of the
-// hand gain Flashback for good, kept into the graveyard (R4154202). The script kept for v0.6.6h discards
+// fatigue; nothing is discarded since issue #4154 (R4154201); `flashback` random cards of the hand gain
+// Flashback for good, kept into the graveyard (R4154202), and on the Radiant face every card (issue #4440);
+// both faces are Tradable (R1838000). The script kept for v0.6.9i gives the base face none and the Radiant
+// face `flashback` random ones. The script kept for v0.6.6h discards
 // `discard` random cards at the end of this turn (radiant: the controller's next, R62, R682, R3134000),
 // and the one kept for v0.5.11r the whole hand (R767000).
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
 
-    use super::{script_v0_5_11o, script_v0_6_6h};
+    use super::{script_v0_5_11o, script_v0_6_6h, script_v0_6_9i};
     use crate::def_ids;
     use crate::merged;
     use crate::scenario;
@@ -132,6 +163,8 @@ mod tests {
     const FELINORS: &str = "core-012";
 
     const DECK: [&str; 5] = [VANILLA, TIMMY, MENACE, POINTMASTER, FELINORS];
+    /// The declared `flashback`, on the base face since issue #4440.
+    const FLASHBACK: usize = 4;
 
     use crate::js;
 
@@ -208,17 +241,43 @@ mod tests {
     mod c_37_last_hurrah {
         use super::*;
 
+        /// Issue #4440: `flashback` is tuned on the base face, which prints it; the Radiant face gives every card.
         #[test]
-        fn r4154201_declares_flashback_4_on_the_radiant_face_alone_and_no_discard() {
+        fn r4154201_declares_flashback_4_tuned_on_the_base_face_and_no_discard() {
             crate::register_all();
             let def = js(&crate::card_def(HURRAH));
             assert_eq!(
                 def["params"],
-                json!([{ "key": "flashback", "base": 4, "radiant": 4, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }]),
+                json!([{ "key": "flashback", "base": 4, "radiant": 4, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }]),
             );
-            assert_eq!(def["base"]["text"], json!("Draw your deck."));
+            assert_eq!(
+                def["base"]["text"],
+                json!("Tradable\nDraw your deck. Give {flashback} random cards in your hand Flashback."),
+            );
+            assert_eq!(def["radiant"]["text"], json!("Tradable\nDraw your deck. Give all cards in your hand Flashback."));
             for face in ["base", "radiant"] {
                 assert!(!def[face]["text"].as_str().unwrap_or_default().contains("discard"));
+            }
+        }
+
+        /// R1838000: Last Hurrah is Tradable on both faces since issue #4440 — Traded from the hand into the
+        /// deck for a draw, at no mana — and a Trade is no play of it (R1838002): nothing is drawn.
+        #[test]
+        fn r1838000_both_faces_trade_into_the_deck_for_a_draw_at_no_mana() {
+            for radiant in [false, true] {
+                let mut s = setup(json!({}), json!({}), radiant);
+                let hurrah = s.card(HURRAH).clone();
+                assert!(is_tradable(s.state(), &hurrah), "radiant {radiant}: the face prints Tradable");
+                let (hand, deck, mana) = (
+                    s.hand(PlayerId::P1).len(),
+                    s.pile(PlayerId::P1, "library").len(),
+                    s.state().players.p1.mana.current,
+                );
+                s.trade(&hurrah.id);
+                s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+                assert_eq!(s.hand(PlayerId::P1).len(), hand, "one card went in and one came out");
+                assert_eq!(s.pile(PlayerId::P1, "library").len(), deck, "no Cry drew the deck");
+                assert_eq!(s.state().players.p1.mana.current, mana, "at no mana");
             }
         }
 
@@ -316,7 +375,7 @@ mod tests {
                 s.play(HURRAH, json!({}));
                 let held = s.hand(PlayerId::P1).len();
                 assert_eq!(held, 8);
-                assert!(with_flashback(&s).is_empty(), "the base face gives no Flashback");
+                assert_eq!(with_flashback(&s).len(), FLASHBACK, "the base face gives 4 Flashback (issue #4440)");
 
                 s.end_turn();
                 s.end_turn();
@@ -325,6 +384,77 @@ mod tests {
 
                 assert!(discarded(&s).is_empty());
                 assert_eq!(s.count("discarded"), 0);
+            }
+
+            #[test]
+            fn r4154202_four_random_cards_of_the_hand_gain_flashback_and_the_rest_do_not() {
+                let mut s = setup(json!({}), json!({}), false);
+                s.play(HURRAH, json!({}));
+                let hand = hand_ids(&s);
+                assert_eq!(hand.len(), DECK.len() + 1);
+                let given = with_flashback(&s);
+                assert_eq!(given.len(), FLASHBACK);
+                assert!(contains_all(&hand, &given));
+                // R177: the other player reads that cards of that hand gained it, never which.
+                let granted = |player: PlayerId| -> Vec<String> {
+                    s.view(player)
+                        .events
+                        .iter()
+                        .map(js)
+                        .filter(|event| event["type"] == "keywordGranted")
+                        .map(|event| event["instanceId"].as_str().unwrap_or_default().to_string())
+                        .collect()
+                };
+                let mut mine = granted(PlayerId::P1);
+                mine.sort();
+                let mut want = given.clone();
+                want.sort();
+                assert_eq!(mine, want);
+                assert_eq!(granted(PlayerId::P2), vec!["hidden".to_string(); FLASHBACK]);
+            }
+
+            #[test]
+            fn r4154202_a_hand_of_four_or_fewer_all_gain_it_and_keep_it_into_the_graveyard() {
+                let mut s = setup(
+                    json!({ "hand": [HURRAH, FILLER, VANILLA], "library": [], "mana": 10 }),
+                    json!({}),
+                    false,
+                );
+                s.play(HURRAH, json!({}));
+                let hand = hand_ids(&s);
+                assert_eq!(hand.len(), 2);
+                let mut given = with_flashback(&s);
+                given.sort();
+                let mut want = hand.clone();
+                want.sort();
+                assert_eq!(given, want, "both cards, with no draw to pick them");
+
+                // R215 keeps tuning: played from the hand, the Spell reaches the graveyard with it.
+                let stockpile = s.hand(PlayerId::P1).into_iter().find(|card| card.def_id == FILLER).expect("the Stockpile").id;
+                s.play(&stockpile, json!({}));
+                s.expect_in_zone(&stockpile, "graveyard");
+                assert!(s.can_play(&stockpile), "its Flashback offers it from the graveyard (R783012)");
+            }
+
+            #[test]
+            fn r4154202_a_card_that_has_flashback_is_passed_over() {
+                let mut s = setup(
+                    json!({ "hand": [HURRAH, FILLER, VANILLA], "library": [] }),
+                    json!({}),
+                    false,
+                );
+                let vanilla = s.hand(PlayerId::P1).into_iter().find(|card| card.def_id == VANILLA).expect("the Vanilla").id;
+                s.card_mut(&vanilla).granted_keywords.push(Keyword::Flashback);
+                s.play(HURRAH, json!({}));
+                assert_eq!(s.count("keywordGranted"), 1, "only the Stockpile gains it");
+            }
+
+            #[test]
+            fn r386_flashback_reads_through_param() {
+                let mut s = setup(json!({}), json!({}), false);
+                assert_eq!(crate::degrade_number(&mut s, HURRAH, "flashback"), 3);
+                s.play(HURRAH, json!({}));
+                assert_eq!(with_flashback(&s).len(), 3);
             }
         }
 
@@ -353,54 +483,26 @@ mod tests {
                 assert!(discarded(&s).is_empty());
             }
 
+            /// Issue #4440: every card of the hand gains it, with no draw; the other player reads that they did,
+            /// never which (R177).
             #[test]
-            fn r4154202_four_random_cards_of_the_hand_gain_flashback_and_the_rest_do_not() {
+            fn r4154202_every_card_of_the_hand_gains_flashback() {
                 let mut s = setup(json!({}), json!({}), true);
                 s.play(HURRAH, json!({}));
-                let hand = hand_ids(&s);
+                let mut hand = hand_ids(&s);
                 assert_eq!(hand.len(), DECK.len() + 1);
-                let given = with_flashback(&s);
-                assert_eq!(given.len(), 4);
-                assert!(contains_all(&hand, &given));
-                // R177: the other player reads that cards of that hand gained it, never which.
-                let granted = |player: PlayerId| -> Vec<String> {
-                    s.view(player)
-                        .events
-                        .iter()
-                        .map(js)
-                        .filter(|event| event["type"] == "keywordGranted")
-                        .map(|event| event["instanceId"].as_str().unwrap_or_default().to_string())
-                        .collect()
-                };
-                let mut mine = granted(PlayerId::P1);
-                mine.sort();
-                let mut want = given.clone();
-                want.sort();
-                assert_eq!(mine, want);
-                assert_eq!(granted(PlayerId::P2), vec!["hidden".to_string(); 4]);
-            }
-
-            #[test]
-            fn r4154202_a_hand_of_four_or_fewer_all_gain_it_and_keep_it_into_the_graveyard() {
-                let mut s = setup(
-                    json!({ "hand": [{ "def": HURRAH, "radiant": true }, FILLER, VANILLA], "library": [], "mana": 10 }),
-                    json!({}),
-                    true,
-                );
-                s.play(HURRAH, json!({}));
-                let hand = hand_ids(&s);
-                assert_eq!(hand.len(), 2);
                 let mut given = with_flashback(&s);
                 given.sort();
-                let mut want = hand.clone();
-                want.sort();
-                assert_eq!(given, want, "both cards, with no draw to pick them");
-
-                // R215 keeps tuning: played from the hand, the Spell reaches the graveyard with it.
-                let stockpile = s.hand(PlayerId::P1).into_iter().find(|card| card.def_id == FILLER).expect("the Stockpile").id;
-                s.play(&stockpile, json!({}));
-                s.expect_in_zone(&stockpile, "graveyard");
-                assert!(s.can_play(&stockpile), "its Flashback offers it from the graveyard (R783012)");
+                hand.sort();
+                assert_eq!(given, hand);
+                let hidden = s
+                    .view(PlayerId::P2)
+                    .events
+                    .iter()
+                    .map(js)
+                    .filter(|event| event["type"] == "keywordGranted")
+                    .count();
+                assert_eq!(hidden, DECK.len() + 1);
             }
 
             #[test]
@@ -414,14 +516,25 @@ mod tests {
                 s.card_mut(&vanilla).granted_keywords.push(Keyword::Flashback);
                 s.play(HURRAH, json!({}));
                 assert_eq!(s.count("keywordGranted"), 1, "only the Stockpile gains it");
+                assert_eq!(with_flashback(&s).len(), 2);
             }
+        }
+
+        /// R767000: the scripts kept for v0.6.9i: the base face gave no Flashback, and the Radiant face
+        /// `flashback` random cards (issue #4440).
+        mod through_v0_6_9i {
+            use super::*;
 
             #[test]
-            fn r386_flashback_reads_through_param() {
-                let mut s = setup(json!({}), json!({}), true);
-                assert_eq!(crate::degrade_number(&mut s, HURRAH, "flashback"), 3);
-                s.play(HURRAH, json!({}));
-                assert_eq!(with_flashback(&s).len(), 3);
+            fn r767000_the_kept_base_face_gives_none_and_the_kept_radiant_face_4_random() {
+                for (radiant, given) in [(false, 0), (true, FLASHBACK)] {
+                    crate::under_kept(HURRAH, script_v0_6_9i(), || {
+                        let mut s = setup(json!({}), json!({}), radiant);
+                        s.play(HURRAH, json!({}));
+                        assert_eq!(s.hand(PlayerId::P1).len(), DECK.len() + 1);
+                        assert_eq!(with_flashback(&s).len(), given, "radiant {radiant}");
+                    });
+                }
             }
         }
 

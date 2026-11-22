@@ -1,0 +1,68 @@
+# Temporary (#4440, removed before merge): renders Profe Yates Prime's intro (R1352), which needs
+# FluidSynth, on a runner, and commits the file and its manifest row back to the branch.
+name: music (temporary, #4440)
+
+on:
+  push:
+    branches: [claude/charming-bell-p8etig]
+
+concurrency:
+  group: voice-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  CYPRESS_INSTALL_BINARY: "0"
+
+jobs:
+  render:
+    name: render the Prime's intro
+    if: contains(github.event.head_commit.message, '[gen:music]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - name: fluidsynth, the FluidR3 SoundFont and ffmpeg
+        run: sudo apt-get update -q && sudo apt-get install -y -q fluidsynth fluid-soundfont-gm ffmpeg
+      - name: render
+        run: node apps/web/scripts/gen-music.mjs --only intro-stinkyscapeplus-004-1
+      - name: its card entry and its license row
+        run: |
+          node -e '
+            const fs = require("fs");
+            const id = "intro-stinkyscapeplus-004-1";
+            const m = JSON.parse(fs.readFileSync("apps/web/src/audio/music-manifest.json", "utf8")).files[id];
+            console.log(JSON.stringify(m));
+            const cards = "apps/web/src/audio/music-cards.json";
+            let c = fs.readFileSync(cards, "utf8");
+            const after = `    "stinkyscapeplus-004": { "intro": "intro-stinkyscapeplus-004" },\n`;
+            if (!c.includes(`"stinkyscapeplus-004-1"`)) c = c.replace(after, after + `    "stinkyscapeplus-004-1": { "intro": "${id}" },\n`);
+            fs.writeFileSync(cards, c);
+            const lic = "assets/music/LICENSES.md";
+            let l = fs.readFileSync(lic, "utf8");
+            const row = `| \`${id}\` | \`apps/web/public/audio/music/${id}.m4a\` | Intro of Stinkyscape+ #4.1 Profe Yates Prime (token printed Legendary): pizzicato, strings, pizzicato, E dorian, 4/4 at ${m.bpm} | ${m.duration.toFixed(1)} s |`;
+            if (!l.includes(`\`${id}\``)) l = l.split("\n").flatMap((line) => line.startsWith("| `intro-stinkyscapeplus-004` |") ? [line, row] : [line]).join("\n");
+            fs.writeFileSync(lic, l);
+          '
+          git diff -- apps/web/src/audio/music-cards.json assets/music/LICENSES.md
+      - name: check
+        run: node apps/web/scripts/gen-music.mjs --check
+      - name: commit and push what rendered
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A apps/web/public/audio/music apps/web/src/audio/music-manifest.json apps/web/src/audio/music-cards.json assets/music/LICENSES.md
+          if git diff --cached --quiet; then
+            echo "nothing rendered"
+            exit 0
+          fi
+          git commit -q -m "Music: Profe Yates Prime's intro (gen:music, R1352)"
+          git pull -q --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

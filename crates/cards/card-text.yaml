@@ -1121,8 +1121,8 @@ classic-011: # Mind Melt
     cast: Your thoughts are mine to read.
   zh:
     name: 心灵熔化
-    base: 查看你对手的手牌。从中放逐{cards}张牌。
-    radiant: 查看你对手的手牌。选择一个法力值消耗。从中放逐所有该法力值消耗的牌。
+    base: "可交易\n查看你对手的手牌。从中放逐{cards}张牌。"
+    radiant: "可交易\n查看你对手的手牌。选择一个法力值消耗。从中放逐所有该法力值消耗的牌。"
 classic-012: # Book of Blood
   flavour: Written in red, signed in red, read in red.
   voice:
@@ -1270,8 +1270,8 @@ classic-028: # Second Wind
     cast: Not done yet. Deep breath.
   zh:
     name: 重振旗鼓
-    base: "不可摧毁\n战吼：弃掉你的手牌并放逐你的牌库。\n光环：你牌库和墓地中的每张牌都拥有闪回。"
-    radiant: "不可摧毁\n战吼：弃掉你的手牌和你的牌库。\n光环：你牌库和墓地中的每张牌都拥有闪回。"
+    base: "不可摧毁\n战吼：弃掉你的手牌并放逐你的牌库。\n光环：你牌库和墓地中的每张牌都拥有闪回。你每回合拥有+{mana}点法力值。"
+    radiant: "不可摧毁\n战吼：弃掉你的手牌和你的牌库。\n光环：你牌库和墓地中的每张牌都拥有闪回。你每回合拥有+{mana}点法力值。"
 classic-029: # Book of Vital Kill
   flavour: Thirteen is an unlucky number. Ask the hero who got it.
   voice:
@@ -1346,8 +1346,8 @@ classic-037: # Last Hurrah
     cast: One last hurrah, together!
   zh:
     name: 最后的狂欢
-    base: 抽光你的牌库。
-    radiant: 抽光你的牌库。使你手牌中的{flashback}张随机牌获得闪回。
+    base: "可交易\n抽光你的牌库。使你手牌中的{flashback}张随机牌获得闪回。"
+    radiant: "可交易\n抽光你的牌库。使你手牌中的所有牌获得闪回。"
 classic-038: # Jackiestan Auctioneer
   flavour: Going once, going twice, sold to the player in lane three.
   voice:
@@ -2186,8 +2186,8 @@ classicplus-026: # Tommy Tempo
     death: Out of time.
   zh:
     name: 汤米节奏
-    base: "嘲讽\n抽到时施放：结束回合。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}生命值。"
-    radiant: "嘲讽\n抽到时施放：你可以再进行{actions}次行动。然后你的回合结束。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}生命值。"
+    base: "嘲讽\n抽到时施放：结束回合。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}/+{per}。"
+    radiant: "嘲讽\n抽到时施放：你可以再进行{actions}次行动。然后你的回合结束。\n战吼：失去你所有的法力值。每失去一点法力值，获得+{per}/+{per}。"
 classicplus-027: # Zephrys Zealotism
   flavour: Ask for the perfect hand, and get a lecture about it too.
   voice:
@@ -2946,15 +2946,15 @@ meditative-009: # Joint Filing
     cast: Filed twice, just to be sure.
   zh:
     name: 联合报税
-    base: "战吼：将一张具有回合开始时或回合结束时效果的随机牌置入你的手牌。\n光环：你的回合开始时和回合结束时效果会额外触发{extra}次。"
-    radiant: "战吼：将一张具有回合开始时效果的随机牌和一张具有回合结束时效果的随机牌置入你的手牌。\n光环：你的回合开始时和回合结束时效果会额外触发{extra}次。"
+    base: "光环：你的回合开始时和回合结束时效果会额外触发{extra}次。\n激活：发现一张具有回合开始时或回合结束时效果的牌。"
+    radiant: "光环：你的回合开始时和回合结束时效果会额外触发{extra}次。\n激活：发现一张具有回合开始时或回合结束时效果的牌。"
 meditative-010: # Double Counting
   flavour: The books balance if you count every entry twice.
   voice:
     cast: One, two, and one, two again.
   zh:
     name: 重复计算
-    base: "光环：你的战吼和亡语效果会额外触发{extra}次。\n激活：支付({price})点法力值，发现一张战吼或亡语牌。"
+    base: "光环：你的战吼和亡语效果会额外触发{extra}次。\n激活：发现一张战吼或亡语牌。"
     radiant: "光环：你的战吼和亡语效果会额外触发{extra}次。\n激活：发现一张战吼或亡语牌。"
 meditative-011: # Double Header
   flavour: Buy one ticket, watch two games, and keep the stub.
@@ -4739,8 +4739,8 @@ stinkyscape-026: # ZolarKeth
     death: Office hours are over.
   zh:
     name: ZolarKeth
-    base: "献祭1\n战吼：抉择：召唤一个大学；或此单位获得“回合结束时：随机召唤一个星舰部件。”"
-    radiant: "献祭1\n战吼：抉择：召唤一个光辉大学；或此单位获得“回合结束时：随机召唤一个光辉星舰部件。”"
+    base: "献祭2\n战吼：抉择：召唤一个大学；或此单位获得“回合结束时：随机召唤一个星舰部件。”"
+    radiant: "献祭2\n战吼：抉择：召唤一个光辉大学；或此单位获得“回合结束时：随机召唤一个光辉星舰部件。”"
 stinkyscape-027: # Drone Core I
   flavour: The cheapest core on the market. It eats a card, but the drone works fine.
   voice:
@@ -5249,8 +5249,8 @@ stinkyscape-080: # Galaxy
     death: Abandon the Galaxy.
   zh:
     name: 银河
-    base: "献祭2，飞行\n战吼：发现2张光辉采矿机，并将它们装备到此单位上。"
-    radiant: "献祭2，飞行\n战吼：将每种采矿机的一张光辉复制装备到此单位上。"
+    base: "献祭3，飞行\n战吼：发现2张光辉采矿机，并将它们装备到此单位上。"
+    radiant: "献祭3，飞行\n战吼：将每种采矿机的一张光辉复制装备到此单位上。"
 stinkyscape-081: # Radix
   flavour: A bare frame with two empty hardpoints and a catalog of bad ideas.
   voice:
@@ -5535,8 +5535,8 @@ stinkyscape-109: # xxFreshJack
     death: GG, chat.
   zh:
     name: xxFreshJack
-    base: "献祭1\n战吼：施放一张来自游戏代码中任意位置的随机BUSTED牌。"
-    radiant: "献祭1\n战吼：从游戏代码中的任意位置发现一张光辉BUSTED牌，并施放它。"
+    base: "献祭2\n结余使献祭需求减少1。\n战吼：施放一张来自游戏代码中任意位置的随机BUSTED牌。"
+    radiant: "献祭2\n结余使献祭需求减少1。\n战吼：从游戏代码中的任意位置发现一张光辉BUSTED牌，并施放它。"
 stinkyscape-110: # iKwzki
   flavour: Everyone shines brighter standing next to her.
   voice:
@@ -6063,8 +6063,8 @@ stinkyscape-158: # Stratos Swarm
     cast: Squadron launch. All wings, go!
   zh:
     name: 斯塔托斯蜂群
-    base: 用斯塔托斯填满你的单位区。
-    radiant: 用光辉斯塔托斯填满你的单位区。
+    base: 召唤{stratos}个斯塔托斯。
+    radiant: 召唤{stratos}个光辉斯塔托斯。
 stinkyscape-159: # Faction: ETHICS
   flavour: The board met, deliberated at length, and approved absolutely everything.
   voice:
@@ -7038,13 +7038,23 @@ stinkyscapeplus-003: # High Evolutionary
     base: "战吼：使一个友方永久物进化。\n光环：你的进化会触发两次。"
     radiant: "战吼：使一个友方永久物进化。\n光环：你的进化会触发三次。"
 stinkyscapeplus-004: # Profe Yates
-  flavour: Class is cancelled for anyone whose name spells trouble, or at least spells M-O-U-S-E.
+  flavour: Every pack needs an alpha, and every alpha who falls leaves a sharper one behind.
   voice:
     play: Every pack needs an alpha. I'll step up.
     attack: Mouse bit my sister!
     death: I'll never see the Northern Lights.
   zh:
     name: 耶茨教授
+    base: "献祭1\n战吼：召唤一张随机陷阱。\n亡语：将一张至尊耶茨教授洗入你的牌库。"
+    radiant: "献祭1\n战吼：召唤一张随机光辉陷阱。\n亡语：将一张光辉至尊耶茨教授洗入你的牌库。"
+stinkyscapeplus-004-1: # Profe Yates Prime
+  flavour: Class is cancelled for anyone whose name spells trouble, or at least spells M-O-U-S-E.
+  voice:
+    play: Class is back. Mice to the front!
+    attack: Pop quiz, mouse!
+    death: Office hours are over.
+  zh:
+    name: 至尊耶茨教授
     base: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤一张随机陷阱。
     radiant: 战吼：放逐一个名称和文本中含有M、O、U、S和E的非中国永久物。然后召唤三张随机陷阱。
 stinkyscapeplus-005: # Dingleberry Droat
@@ -7769,7 +7779,7 @@ stinkyscapeplus-077: # Black Hole
     cast: Everything must go. Into me.
   zh:
     name: 黑洞
-    base: 在中间纵列开启一个黑洞。在每名玩家的回合开始时，它会将该玩家的永久物向中间拉近一条纵列。它吞噬{permanents}个永久物后关闭。
+    base: 在中间纵列开启一个黑洞。在每名玩家的回合结束时，它会将该玩家的永久物向中间拉近一条纵列。它吞噬{permanents}个永久物后关闭。
     radiant: 在中间纵列开启一个黑洞。在对手的回合开始时，它会将其永久物拉近一条纵列。
 stinkyscapeplus-078: # Slashed Dream Cries in Red
   flavour: One clean cut and the dream bleeds red. Stitching is extra.
@@ -7793,8 +7803,8 @@ stinkyscapeplus-080: # The Last Voyage
     cast: All ships, last voyage. Sail!
   zh:
     name: 最后的航行
-    base: 放逐你的手牌、牌库和场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。在你的每个回合开始时，发射一艘随机的。
-    radiant: 放逐你的手牌、牌库、场上以及你对手的场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。现在发射一艘随机的，并在你的每个回合开始时再发射一艘。
+    base: 放逐你的手牌、牌库和场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。在你的每个回合结束时，发射一艘随机的。
+    radiant: 放逐你的手牌、牌库、场上以及你对手的场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。现在发射一艘随机的，并在你的每个回合结束时再发射一艘。
 stinkyscapeplus-081: # Doomsayer
   flavour: He predicts the end every morning. Technically he keeps being early.
   voice:
@@ -8397,8 +8407,8 @@ stinkyscapeplus-139: # Operation Omega
     cast: Operation Omega is a go!
   zh:
     name: "Ω行动"
-    base: "将{automa}张自动机-Ω牌置入你的手牌。\n加码(4)：它们拥有献祭2。"
-    radiant: "将{automa}张光辉自动机-Ω牌置入你的手牌。\n加码(4)：它们拥有献祭2。"
+    base: "将{automa}张自动机-Ω牌置入你的手牌。\n加码(3)：它们拥有献祭2。"
+    radiant: "将{automa}张光辉自动机-Ω牌置入你的手牌。\n加码(3)：它们拥有献祭2。"
 stinkyscapeplus-140: # Automa Reintegration Plan
   flavour: The robots are back in the building, and HR insists it was a voluntary return.
   voice:
@@ -8609,8 +8619,8 @@ stinkyscapeplus-159: # Raven
     death: Nevermore. Okay, sometimes more.
   zh:
     name: 渡鸦
-    base: "献祭1\n战吼：发现{rare}张稀有武器牌；将它们装备进此单位。"
-    radiant: "献祭1\n战吼：发现{rare}张史诗武器牌；将它们装备进此单位。"
+    base: "献祭2\n战吼：发现{rare}张稀有武器牌；将它们装备进此单位。"
+    radiant: "献祭2\n战吼：发现{rare}张史诗武器牌；将它们装备进此单位。"
 stinkyscapeplus-160: # Icarus
   flavour: He was warned about the sun. He took notes, in very small print.
   voice:

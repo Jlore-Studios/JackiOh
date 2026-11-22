@@ -1,13 +1,14 @@
 //! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/5 → 4/10 (2/7 → 4/14
 //! through v0.6.7k, issue #4285; 2/9 → 4/18 until #3041), of the Stinkyscape set.
-//!   Base:    "Tribute 1
+//!   Base:    "Tribute 2
 //!            Cry: Choose one: summon a University, or this gains 'End of turn: Summon a random Starship
 //!            Piece.'"
-//!   Radiant: "Tribute 1
+//!   Radiant: "Tribute 2
 //!            Cry: Choose one: summon a Radiant University, or this gains 'End of turn: Summon a random
 //!            Radiant Starship Piece.'"
-//! Tribute 1 since issue #3996, the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
-//! keyword line's printed Tribute (R366); through v0.6.5b it took none (`script_v0_6_5b`, kept, R767000).
+//! Tribute 2 since issue #4440, the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
+//! keyword line's printed Tribute (R366); after v0.6.5b through v0.6.9i it was Tribute 1 (issue #3996,
+//! `script_v0_6_9i`, kept, R767000), and through v0.6.5b it took none (`script_v0_6_5b`, kept).
 //! Engine since #2657: the Cry's two modes are declared at play (R81, R1). `university` summons an
 //! M #97.6 University (R64), Radiant from the Radiant face, whose own Activate is its own to use; a full
 //! unit row summons nothing. `piece` has ZolarKeth remember its new ability (`memory`), so the End of turn
@@ -40,8 +41,10 @@ const CRY_UNIVERSITY: &str = "university";
 const CRY_PIECE: &str = "piece";
 /// #2657: what ZolarKeth remembers once its Cry gave it the Activate (since #3041 the End of turn).
 const GAINED_KEY: &str = "gainedPieceActivate";
-/// "Tribute 1" (R101, R366: printed, declared nowhere), since issue #3996.
-const TRIBUTE: i32 = 1;
+/// "Tribute 2" (R101, R366: printed, declared nowhere), since issue #4440.
+const TRIBUTE: i32 = 2;
+/// "Tribute 1", after v0.6.5b through v0.6.9i (issue #3996).
+const TRIBUTE_V0_6_9G: i32 = 1;
 
 /// R1876000: the Universities this Cry summoned.
 fn summoned_universities(ctx: &mut EffectContext<'_>) -> Vec<String> {
@@ -221,6 +224,15 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: after v0.6.5b through v0.6.9i it was Tribute 1 (issue #4440); `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_6_9i() -> CardScripts {
+    CardScripts {
+        base: chooses(false, true, Some(TRIBUTE_V0_6_9G)),
+        radiant: chooses(true, true, Some(TRIBUTE_V0_6_9G)),
+    }
+}
+
 /// R767000: through v0.6.5b it took no Tribute (issue #3996); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
@@ -272,8 +284,8 @@ mod tests {
     use jackioh_engine::play_choices::tribute_cost_of;
 
     use super::{
-        CRY_PIECE, CRY_UNIVERSITY, ID, PIECE, TRIBUTE, UNIVERSITIES, UNIVERSITY, script_v0_5_11, script_v0_5_11o,
-        script_v0_5_9f, script_v0_6_5b,
+        CRY_PIECE, CRY_UNIVERSITY, ID, PIECE, TRIBUTE, TRIBUTE_V0_6_9G, UNIVERSITIES, UNIVERSITY, script_v0_5_11,
+        script_v0_5_11o, script_v0_5_9f, script_v0_6_5b, script_v0_6_9i,
     };
     use crate::{filler, scenario};
 
@@ -321,32 +333,55 @@ mod tests {
             .collect()
     }
 
-    /// The lane of the Unit `paying` boards hold for ZolarKeth's Tribute 1 (issue #3996).
-    const TRIBUTE_LANE: i32 = 4;
+    /// The lanes of the Units `paying` boards hold for ZolarKeth's Tribute 2 (issue #4440).
+    const TRIBUTE_LANES: [i32; 2] = [3, 4];
 
-    /// `board` with a Vanilla in `TRIBUTE_LANE` to pay the Tribute, beside `field`.
+    /// `board` with a Vanilla in each of `TRIBUTE_LANES` to pay the Tribute, beside `field`.
     fn paying(radiant: bool, field: Value) -> Scenario {
         let mut field = field.as_array().cloned().unwrap_or_default();
-        field.push(json!({ "def": VANILLA, "lane": TRIBUTE_LANE }));
+        for lane in TRIBUTE_LANES {
+            field.push(json!({ "def": VANILLA, "lane": lane }));
+        }
         board(radiant, json!(field))
     }
 
-    /// Plays ZolarKeth into zone 1 choosing `mode`, the Unit in `TRIBUTE_LANE` paying its Tribute 1.
+    /// Plays ZolarKeth into zone 1 choosing `mode`, the Units in `TRIBUTE_LANES` paying its Tribute 2.
     fn cry(s: &mut Scenario, mode: &str) {
-        let tribute = s.unit_at(P1, TRIBUTE_LANE).id;
-        s.play(ID, json!({ "zone": 1, "modes": [mode], "tributes": [tribute] }));
-        s.expect_in_zone(tribute.as_str(), "graveyard");
+        let tributes = TRIBUTE_LANES.map(|lane| s.unit_at(P1, lane).id);
+        s.play(ID, json!({ "zone": 1, "modes": [mode], "tributes": tributes }));
+        for tribute in &tributes {
+            s.expect_in_zone(tribute.as_str(), "graveyard");
+        }
     }
 
+    /// Issue #4440: Tribute 2 on both faces, so one Unit no longer pays it.
     #[test]
-    fn r101_it_needs_tribute_1_on_both_faces() {
+    fn r101_it_needs_tribute_2_on_both_faces() {
         for radiant in [false, true] {
             let mut s = paying(radiant, json!([]));
             assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
+            let first = s.unit_at(P1, TRIBUTE_LANES[0]).id;
             s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] })));
+            s.expect_refused(|s| {
+                s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY], "tributes": [first.as_str()] }))
+            });
             cry(&mut s, CRY_UNIVERSITY);
             s.expect_in_zone(ID, "field");
         }
+    }
+
+    /// R767000: after v0.6.5b through v0.6.9i one Unit paid it (issue #4440).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9i_takes_tribute_1() {
+        crate::under_kept(ID, script_v0_6_9i(), || {
+            let mut s = paying(false, json!([]));
+            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_9G);
+            let first = s.unit_at(P1, TRIBUTE_LANES[0]).id;
+            s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY], "tributes": [first.as_str()] }));
+            s.expect_in_zone(first.as_str(), "graveyard");
+            s.expect_in_zone(ID, "field");
+            assert!(s.unit(P1, TRIBUTE_LANES[1]).is_some(), "the second Unit stays");
+        });
     }
 
     /// R767000: through v0.6.5b it took no Tribute (issue #3996).

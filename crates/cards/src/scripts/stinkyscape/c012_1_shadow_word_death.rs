@@ -68,7 +68,7 @@ mod tests {
 
     const DEATH: &str = "stinkyscape-012-1";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your units have +2 Attack
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your units have +1 Attack
     const ROCK: &str = "core-066"; // The Rock: Indestructible
     const MENACE: &str = "core-019"; // Midrange Menace
     const FILLER: &str = "core-005";
@@ -159,7 +159,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [VANILLA], "backrow": [WEAPONS] },
             }));
             let target = s.unit_at(P2, 1);
-            s.expect_stats(&target, json!({ "attack": 6 }));
+            s.expect_stats(&target, json!({ "attack": 5 }));
 
             s.play(DEATH, json!({ "targets": pick::instance(&target) }));
 

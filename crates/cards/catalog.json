@@ -519,8 +519,8 @@
     "params": [
       {
         "key": "attack",
-        "base": 2,
-        "radiant": 4,
+        "base": 1,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -4502,12 +4502,20 @@
     ],
     "loc": 23,
     "base": {
-      "keywords": [],
-      "text": "Look at your opponent's hand. Exile {cards|card|cards} from it."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nLook at your opponent's hand. Exile {cards|card|cards} from it."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Look at your opponent's hand. Choose a cost. Exile every card of that cost from it."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nLook at your opponent's hand. Choose a cost. Exile every card of that cost from it."
     }
   },
   "classic-012": {
@@ -5158,6 +5166,16 @@
     "flavor": "Physical",
     "token": false,
     "cost": 0,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 24,
     "base": {
       "keywords": [
@@ -5165,7 +5183,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nCry: Discard your hand and exile your deck.\nAura: Every card in your deck and graveyard has Flashback."
+      "text": "Indestructible\nCry: Discard your hand and exile your deck.\nAura: Every card in your deck and graveyard has Flashback. You have +{mana} mana per turn."
     },
     "radiant": {
       "keywords": [
@@ -5173,7 +5191,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nCry: Discard your hand and your deck.\nAura: Every card in your deck and graveyard has Flashback."
+      "text": "Indestructible\nCry: Discard your hand and your deck.\nAura: Every card in your deck and graveyard has Flashback. You have +{mana} mana per turn."
     }
   },
   "classic-029": {
@@ -5471,17 +5489,25 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "base"
       }
     ],
     "loc": 11,
     "base": {
-      "keywords": [],
-      "text": "Draw your deck."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nDraw your deck. Give {flashback} random cards in your hand Flashback."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Draw your deck. Give {flashback} random cards in your hand Flashback."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nDraw your deck. Give all cards in your hand Flashback."
     }
   },
   "classic-038": {
@@ -8924,7 +8950,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per} Health per mana lost."
+      "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
     },
     "radiant": {
       "attack": 6,
@@ -8934,7 +8960,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per} Health per mana lost."
+      "text": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
     }
   },
   "classicplus-027": {
@@ -9859,8 +9885,8 @@
     "params": [
       {
         "key": "casts",
-        "base": 10,
-        "radiant": 20,
+        "base": 8,
+        "radiant": 16,
         "better": "up",
         "step": 2,
         "min": 1
@@ -12056,11 +12082,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Cry: Add a random card with a Start of turn or an End of turn effect to your hand.\nAura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
+      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}.\nActivate: Discover a card with a Start of turn or End of turn effect."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Add a random card with a Start of turn effect and a random card with an End of turn effect to your hand.\nAura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
+      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}.\nActivate: Discover a card with a Start of turn or End of turn effect."
     }
   },
   "meditative-010": {
@@ -12073,7 +12099,7 @@
     "rarity": "Epic",
     "flavor": "Nerd",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "params": [
       {
         "key": "extra",
@@ -12082,21 +12108,12 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "price",
-        "base": 1,
-        "radiant": 1,
-        "better": "down",
-        "step": 1,
-        "min": 0,
-        "tunedOn": "base"
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate: Pay ({price}) to Discover a Cry or Death card."
+      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate: Discover a Cry or Death card."
     },
     "radiant": {
       "keywords": [],
@@ -18899,7 +18916,7 @@
     "rarity": "Epic",
     "flavor": "Dark",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "stinkyscape-012-1",
       "stinkyscape-012-2",
@@ -19652,13 +19669,13 @@
       "attack": 2,
       "health": 5,
       "keywords": [],
-      "text": "Tribute 1\nCry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
+      "text": "Tribute 2\nCry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
     },
     "radiant": {
       "attack": 4,
       "health": 10,
       "keywords": [],
-      "text": "Tribute 1\nCry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
+      "text": "Tribute 2\nCry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
     }
   },
   "stinkyscape-027": {
@@ -20465,8 +20482,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 3,
-        "radiant": 6,
+        "base": 2,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20657,8 +20674,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 5,
-        "radiant": 10,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 2,
         "min": 1
@@ -20849,8 +20866,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 7,
-        "radiant": 14,
+        "base": 6,
+        "radiant": 12,
         "better": "up",
         "step": 2,
         "min": 1
@@ -21572,8 +21589,8 @@
     "cost": 2,
     "loc": 18,
     "base": {
-      "attack": 4,
-      "health": 6,
+      "attack": 2,
+      "health": 5,
       "keywords": [
         {
           "kind": "Rush"
@@ -21582,8 +21599,8 @@
       "text": "Rush\nWhen this attacks, gain a random Stinkyscape Resource."
     },
     "radiant": {
-      "attack": 8,
-      "health": 12,
+      "attack": 4,
+      "health": 10,
       "keywords": [
         {
           "kind": "Rush"
@@ -21710,7 +21727,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Tribute 2, Flying\nCry: Discover 2 Radiant Miners and Equip them into this."
+      "text": "Tribute 3, Flying\nCry: Discover 2 Radiant Miners and Equip them into this."
     },
     "radiant": {
       "attack": 4,
@@ -21720,7 +21737,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Tribute 2, Flying\nCry: Equip a Radiant copy of every Miner into this."
+      "text": "Tribute 3, Flying\nCry: Equip a Radiant copy of every Miner into this."
     }
   },
   "stinkyscape-081": {
@@ -22813,13 +22830,13 @@
       "attack": 6,
       "health": 11,
       "keywords": [],
-      "text": "Tribute 1\nCry: Cast a random BUSTED card from anywhere in the game's code."
+      "text": "Tribute 2\nFloat reduces Tribute requirement by 1.\nCry: Cast a random BUSTED card from anywhere in the game's code."
     },
     "radiant": {
       "attack": 12,
       "health": 22,
       "keywords": [],
-      "text": "Tribute 1\nCry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it."
+      "text": "Tribute 2\nFloat reduces Tribute requirement by 1.\nCry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it."
     }
   },
   "stinkyscape-110": {
@@ -23904,8 +23921,8 @@
     ],
     "loc": 46,
     "base": {
-      "attack": 9,
-      "health": 9,
+      "attack": 7,
+      "health": 7,
       "keywords": [
         {
           "kind": "First Strike"
@@ -23914,8 +23931,8 @@
       "text": "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and cast it."
     },
     "radiant": {
-      "attack": 18,
-      "health": 18,
+      "attack": 14,
+      "health": 14,
       "keywords": [
         {
           "kind": "First Strike"
@@ -24904,14 +24921,24 @@
     "refs": [
       "stinkyscape-068"
     ],
+    "params": [
+      {
+        "key": "stratos",
+        "base": 7,
+        "radiant": 7,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Fill your board with Stratos."
+      "text": "Summon {stratos} Stratos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Radiant Stratos."
+      "text": "Summon {stratos} Radiant Stratos."
     }
   },
   "stinkyscape-159": {
@@ -25486,8 +25513,8 @@
       },
       {
         "key": "selfDamage",
-        "base": 4,
-        "radiant": 4,
+        "base": 2,
+        "radiant": 2,
         "better": "down",
         "step": 1,
         "min": 1
@@ -26190,14 +26217,14 @@
     "resource": {
       "rarity": "Epic",
       "base": {
-        "sellMin": 4,
-        "sellMax": 14,
-        "buy": 14
+        "sellMin": 3,
+        "sellMax": 13,
+        "buy": 13
       },
       "radiant": {
-        "sellMin": 8,
-        "sellMax": 28,
-        "buy": 28
+        "sellMin": 6,
+        "sellMax": 26,
+        "buy": 26
       }
     },
     "loc": 29,
@@ -26228,14 +26255,14 @@
     "resource": {
       "rarity": "Legendary",
       "base": {
-        "sellMin": 10,
-        "sellMax": 21,
-        "buy": 21
+        "sellMin": 8,
+        "sellMax": 19,
+        "buy": 19
       },
       "radiant": {
-        "sellMin": 20,
-        "sellMax": 42,
-        "buy": 42
+        "sellMin": 16,
+        "sellMax": 38,
+        "buy": 38
       }
     },
     "loc": 18,
@@ -26284,14 +26311,14 @@
     "resource": {
       "rarity": "Mythic",
       "base": {
-        "sellMin": 16,
-        "sellMax": 32,
-        "buy": 32
+        "sellMin": 14,
+        "sellMax": 30,
+        "buy": 30
       },
       "radiant": {
-        "sellMin": 32,
-        "sellMax": 64,
-        "buy": 64
+        "sellMin": 28,
+        "sellMax": 60,
+        "buy": 60
       }
     },
     "loc": 22,
@@ -28880,8 +28907,44 @@
     "rarity": "Legendary",
     "flavor": "Beast",
     "token": false,
-    "cost": 4,
+    "cost": 2,
+    "refs": [
+      "stinkyscapeplus-004",
+      "stinkyscapeplus-004-1"
+    ],
     "loc": 166,
+    "base": {
+      "attack": 3,
+      "health": 7,
+      "keywords": [],
+      "text": "Tribute 1\nCry: Summon a random Trap.\nDeath: Shuffle a Profe Yates Prime into your deck."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 14,
+      "keywords": [],
+      "text": "Tribute 1\nCry: Summon a random Radiant Trap.\nDeath: Shuffle a Radiant Profe Yates Prime into your deck."
+    }
+  },
+  "stinkyscapeplus-004-1": {
+    "id": "stinkyscapeplus-004-1",
+    "index": "4.1",
+    "name": "Profe Yates Prime",
+    "set": "Stinkyscape+",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Felinor",
+      "Acclaimed",
+      "Prime",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 2,
+    "loc": 7,
     "base": {
       "attack": 6,
       "health": 6,
@@ -31896,7 +31959,7 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Open a Black Hole in midlane. At the start of each player's turn, it draws their permanents one lane closer. It closes after swallowing {permanents} permanents."
+      "text": "Open a Black Hole in midlane. At the end of each player's turn, it draws their permanents one lane closer. It closes after swallowing {permanents} permanents."
     },
     "radiant": {
       "keywords": [],
@@ -31999,11 +32062,11 @@
     "loc": 85,
     "base": {
       "keywords": [],
-      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one at the start of each of your turns."
+      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one at the end of each of your turns."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile your hand, deck and board and your opponent's board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the start of each of your turns."
+      "text": "Exile your hand, deck and board and your opponent's board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the end of each of your turns."
     },
     "params": [
       {
@@ -32637,7 +32700,7 @@
     "rarity": "Common",
     "flavor": "Chaos",
     "token": false,
-    "cost": 5,
+    "cost": 6,
     "loc": 37,
     "base": {
       "keywords": [],
@@ -33820,13 +33883,13 @@
     "cost": 1,
     "loc": 87,
     "base": {
-      "attack": 3,
+      "attack": 2,
       "health": 1,
       "keywords": [],
       "text": "May be played from your graveyard for (1).\nDeath: Add a Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 4,
       "health": 2,
       "keywords": [],
       "text": "May be played from your graveyard for (1).\nDeath: Add a Radiant Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
@@ -35083,17 +35146,17 @@
     "flavor": "Tech",
     "token": false,
     "cost": {
-      "base": 2,
-      "embiggen": 4
+      "base": 1,
+      "embiggen": 3
     },
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Add {automa} Automa-Ω cards to your hand.\nEmbiggened (4): They have Tribute 2."
+      "text": "Add {automa} Automa-Ω cards to your hand.\nEmbiggened (3): They have Tribute 2."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {automa} Radiant Automa-Ω cards to your hand.\nEmbiggened (4): They have Tribute 2."
+      "text": "Add {automa} Radiant Automa-Ω cards to your hand.\nEmbiggened (3): They have Tribute 2."
     },
     "params": [
       {
@@ -35807,7 +35870,7 @@
     "rarity": "Epic",
     "flavor": "Physical",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 22,
     "base": {
       "attack": 3,
@@ -35952,16 +36015,16 @@
     "cost": 0,
     "loc": 23,
     "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [],
-      "text": "Tribute 1\nCry: Discover {rare} Rare Weapons; Equip them into this."
-    },
-    "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Tribute 1\nCry: Discover {rare} Epic Weapons; Equip them into this."
+      "text": "Tribute 2\nCry: Discover {rare} Rare Weapons; Equip them into this."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Tribute 2\nCry: Discover {rare} Epic Weapons; Equip them into this."
     },
     "params": [
       {

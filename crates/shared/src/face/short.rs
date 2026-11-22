@@ -16,7 +16,8 @@
 //! #52's Radiant face; issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry and
 //! draw lines put them over; issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose
 //! new keyword line (Divine Shield, Tradable) makes a seventh line; and Meditative #9's Radiant face, whose Cry
-//! and Aura run to seven lines (R3134001).
+//! and Aura ran to seven lines (R3134001) until issue #4440 put an Activate in the Cry's place; issue #4440:
+//! Classic #28 Second Wind's faces, whose Aura gained a mana line.
 //!
 //! Issue #3941 (R3941001) wrote the words of every face that clamped but five, the in-game text a face prints on
 //! the board and in a hand, an object `{ "en": … }` in the same file: its `{key}`s are filled as its whole text's

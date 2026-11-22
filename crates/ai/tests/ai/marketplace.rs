@@ -206,15 +206,25 @@ fn spice_board(seed: &str, mana: i32) -> GameState {
     state
 }
 
+/// `AI_EVAL` with R4440002's discount off: the weights Spice was priced at before issue #4440.
+const UNDISCOUNTED: EvalWeights = EvalWeights {
+    credits_card_discount: 0.0,
+    ..AI_EVAL
+};
+
 #[test]
-fn r4410001_r4154401_spice_in_hand_is_priced_as_any_1_card() {
+fn r4410001_r4154401_r4440002_spice_in_hand_is_priced_as_a_1_card_at_the_credits_card_discount() {
     let held = spice_board("ai-market-spice-eval", 0);
     let mut gone = clone(&held);
     gone.players[AI].hand.retain(|card| card.def_id != SPICE);
+    let price = AI_EVAL.hand_card + AI_EVAL.hand_per_cost;
     close(
         eval(&held) - eval(&gone),
-        AI_EVAL.hand_card + AI_EVAL.hand_per_cost,
+        price * (1.0 - AI_EVAL.credits_card_discount),
     );
+    // Without the discount, any (1) card's price (R4410001).
+    let undiscounted = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &UNDISCOUNTED);
+    close(undiscounted(&held) - undiscounted(&gone), price);
     // Its quote is no sale on offer: none is listed, and one is refused (R4410000).
     let spice = held.players[AI]
         .hand
@@ -274,6 +284,82 @@ fn r4410001_the_ai_casts_spice_it_can_afford() {
         assert!(
             line.iter()
                 .all(|action| action.action_type() != ActionType::MarketSell),
+            "{k}: {line:?}"
+        );
+    }
+}
+
+/// The id of the Spice in the AI's hand on `state`.
+fn spice_in_hand(state: &GameState) -> String {
+    state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.def_id == SPICE)
+        .map(|card| card.id.clone())
+        .expect("Spice in hand")
+}
+
+/// R4440002: the AI's turn holding one Vanilla Spice, its Discover gone and its Credits kept (R4410000),
+/// with one crystal, the Marketplace open, quoting it `SPICE_QUOTE` and offering the AI nothing, and no
+/// Credits held: its cast is the sale alone, `SPICE_QUOTE` Credits for the card and the crystal. The
+/// human's Mr. Vanilla on the field.
+fn sale_board(seed: &str) -> GameState {
+    let mut state = spice_board(seed, 1);
+    state.players[AI].market_credits = None;
+    for card in state.players[AI].hand.iter_mut() {
+        card.vanilla = true;
+    }
+    if let Some(marketplace) = state.marketplace.as_mut() {
+        marketplace.offers.clear();
+    }
+    state
+}
+
+#[test]
+fn r4440002_a_spice_cast_for_its_credits_alone_read_as_a_loss_before_the_discount_and_reads_as_a_gain() {
+    let held = sale_board("ai-market-spice-sale");
+    let spice = spice_in_hand(&held);
+    let play = legal_actions(&held, AI)
+        .into_iter()
+        .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == spice))
+        .expect("the Spice's play is listed");
+    let out = reduce(&held, &Action::new(play, AI, "ai-market-spice-sale-play"));
+    assert_eq!(out.error, None);
+    let cast = out.state;
+    assert!(cast.pending.is_none(), "setup: a Vanilla Spice Discovers nothing");
+    assert_eq!(
+        cast.players[AI].market_credits,
+        Some(SPICE_QUOTE),
+        "setup: the play pays the quote"
+    );
+    // What the line that casts it gains over the line that holds it: the evaluation's move, and the
+    // crystal it spends, which the held line ends the turn with (`unspent_mana`).
+    let gain = |w: &EvalWeights| {
+        evaluate(&cast, AI, NextSwing::Enemy, w) - evaluate(&held, AI, NextSwing::Enemy, w) + w.unspent_mana
+    };
+    assert!(
+        gain(&UNDISCOUNTED) < 0.0,
+        "before issue #4440: {}",
+        gain(&UNDISCOUNTED)
+    );
+    assert!(gain(&AI_EVAL) > 0.0, "since: {}", gain(&AI_EVAL));
+    close(
+        gain(&AI_EVAL) - gain(&UNDISCOUNTED),
+        AI_EVAL.credits_card_discount * (AI_EVAL.hand_card + AI_EVAL.hand_per_cost),
+    );
+}
+
+#[test]
+fn r4440002_the_ai_casts_a_spice_that_brings_only_its_credits() {
+    let state = sale_board("ai-market-spice-sale-turn");
+    let spice = spice_in_hand(&state);
+    for k in ["ai-market-spice-sale-k1", "ai-market-spice-sale-k2"] {
+        let turn = play_ai_turn(&state, AI, &mut ai_options(k, AI_BUDGET));
+        let line: Vec<&ActionBody> = turn.decisions.iter().map(|decision| &decision.action).collect();
+        assert!(
+            line.iter().any(
+                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == spice)
+            ),
             "{k}: {line:?}"
         );
     }

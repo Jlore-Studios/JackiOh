@@ -2,20 +2,22 @@
 //! Launch; R3539000–R3539002): (4) Spell, Terminus, Mythic.
 //!   Base:    "Exile your hand, deck and board, Dormant cards included. Summon {starships|random
 //!            Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a
-//!            random one at the start of each of your turns."
+//!            random one at the end of each of your turns."
 //!   Radiant: "Exile your hand, deck and board and your opponent's board, Dormant cards included.
-//!            Summon … They can't be launched by hand. Launch a random one now and at the start of each
+//!            Summon … They can't be launched by hand. Launch a random one now and at the end of each
 //!            of your turns."
 //!
 //! Engine: the board exile reaches Dormant cards (`exile_board`, R3539002) and spares only a card no
 //! effect reaches; the ten Terminus Starships are summoned already holding their fixed loadouts
 //! (`summon_starships`, R3539001; five worth 5 mana of Starship Pieces and five worth 6 since issue #3951,
 //! 5 to 12 through v0.6.4c, which `script_v0_6_4c` keeps for those replays, R767000), sealed against a
-//! launch by hand (R3539000); one launches at the start of each of its caster's turns from the next on
-//! (`launch_random_starship`, kept by `for_rest_of_game`, R3539002), a free launch (R1852006), and on
-//! the Radiant face one at once as well. The number summoned is the declared `starships`. Issue #4154
-//! took the base face's launch at once out; `script_v0_6_6h` keeps it for the replays of v0.6.6h and
-//! before (R767000).
+//! launch by hand (R3539000); one launches at the end of each of its caster's turns, this one's included
+//! (`launch_random_starship`, kept by `for_rest_of_game` with `atEnd`, R3539002, R1861002, R4440053), a
+//! free launch (R1852006), and on the Radiant face one at once as well. The number summoned is the
+//! declared `starships`. Issue #4440 moved the launch from the start of each of its caster's turns from
+//! the next on to the end of each; `script_v0_6_9i` keeps the start for the replays of v0.6.9i and before.
+//! Issue #4154 took the base face's launch at once out; `script_v0_6_6h` keeps it for the replays of
+//! v0.6.6h and before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -125,12 +127,28 @@ pub fn terminus_hull() -> CardScripts {
     }
 }
 
-/// The badge its caster carries for the rest of the game.
-const BADGE: &str = "Start of turn: Launch a random Terminus Starship.";
+/// The badge its caster carries for the rest of the game, since issue #4440.
+const BADGE: &str = "End of turn: Launch a random Terminus Starship.";
+/// The badge through v0.6.9i, when the launch came at the start of each of its caster's turns.
+const BADGE_V0_6_9G: &str = "Start of turn: Launch a random Terminus Starship.";
 
-/// One face: `radiant` also exiles the opponent's board, and `launch_now` launches one at once (the
-/// Radiant face's, and the base face's through v0.6.6h).
-fn voyage(radiant: bool, launch_now: bool, blueprints: fn() -> Vec<StarshipBlueprint>) -> Script {
+/// When the rest-of-game launch comes: at the end of each of its caster's turns (since issue #4440), or
+/// at the start of each from the next on (through v0.6.9i).
+#[derive(Clone, Copy)]
+enum Launches {
+    AtEnd,
+    AtStart,
+}
+
+/// One face: `radiant` also exiles the opponent's board, `launch_now` launches one at once (the
+/// Radiant face's, and the base face's through v0.6.6h), and `launches` is when the rest-of-game launch
+/// comes.
+fn voyage(
+    radiant: bool,
+    launch_now: bool,
+    launches: Launches,
+    blueprints: fn() -> Vec<StarshipBlueprint>,
+) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let starships = param(ctx, "starships");
@@ -153,10 +171,10 @@ fn voyage(radiant: bool, launch_now: bool, blueprints: fn() -> Vec<StarshipBluep
                     "hulls": hull_ids(),
                 }))));
             }
-            effects.push(for_rest_of_game(json_as(json!({
-                "step": "launch",
-                "label": BADGE,
-            }))));
+            effects.push(for_rest_of_game(json_as(match launches {
+                Launches::AtEnd => json!({ "step": "launch", "label": BADGE, "atEnd": true }),
+                Launches::AtStart => json!({ "step": "launch", "label": BADGE_V0_6_9G }),
+            })));
             effects
         })),
         delayed: Some(hook(|_ctx| {
@@ -170,8 +188,17 @@ fn voyage(radiant: bool, launch_now: bool, blueprints: fn() -> Vec<StarshipBluep
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: voyage(false, false, blueprints),
-        radiant: voyage(true, true, blueprints),
+        base: voyage(false, false, Launches::AtEnd, blueprints),
+        radiant: voyage(true, true, Launches::AtEnd, blueprints),
+    }
+}
+
+/// R767000: after v0.6.6h through v0.6.9i the rest-of-game launch came at the start of each of its
+/// caster's turns from the next on (issue #4440). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9i() -> CardScripts {
+    CardScripts {
+        base: voyage(false, false, Launches::AtStart, blueprints),
+        radiant: voyage(true, true, Launches::AtStart, blueprints),
     }
 }
 
@@ -179,8 +206,8 @@ pub fn script() -> CardScripts {
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: voyage(false, true, blueprints),
-        radiant: voyage(true, true, blueprints),
+        base: voyage(false, true, Launches::AtStart, blueprints),
+        radiant: voyage(true, true, Launches::AtStart, blueprints),
     }
 }
 
@@ -193,8 +220,8 @@ pub fn blueprints_v0_6_4c() -> Vec<StarshipBlueprint> {
 /// folds those replays under it.
 pub fn script_v0_6_4c() -> CardScripts {
     CardScripts {
-        base: voyage(false, true, blueprints_v0_6_4c),
-        radiant: voyage(true, true, blueprints_v0_6_4c),
+        base: voyage(false, true, Launches::AtStart, blueprints_v0_6_4c),
+        radiant: voyage(true, true, Launches::AtStart, blueprints_v0_6_4c),
     }
 }
 
@@ -243,7 +270,7 @@ pub(crate) fn assert_terminus(id: &str, pieces: &[&str], radiant: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6h};
+    use super::{BADGE, ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6h, script_v0_6_9i};
     use crate::built_starship;
     use jackioh_engine::testkit::*;
 
@@ -382,18 +409,39 @@ mod tests {
         );
     }
 
+    /// R4440053, R1861002: since issue #4440 one launches at the end of each of its caster's turns, the
+    /// turn it is cast on included, and none at the opponent's; its badge says so.
     #[test]
-    fn r3539002_launches_one_at_each_start_of_its_casters_turn_only() {
+    fn r4440053_launches_one_at_each_end_of_its_casters_turn_this_one_included() {
         let (mut s, _, _, _, _, _, _) = voyaging(false);
         s.play(VOYAGE, json!({}));
-        assert_eq!(launched_count(&s), 0);
+        assert_eq!(launched_count(&s), 0, "none as it is cast");
+        let badge = s.state().players[P1].mods.iter().find_map(|modifier| match &modifier.kind {
+            ModifierKind::StartOfTurnEffect { label, at_end, .. } => Some((label.clone(), *at_end)),
+            _ => None,
+        });
+        assert_eq!(badge, Some((BADGE.to_string(), Some(true))));
         s.end_turn();
-        assert_eq!(launched_count(&s), 0, "no launch at the opponent's start");
+        assert_eq!(launched_count(&s), 1, "one at the end of the turn it was cast on");
         s.end_turn();
-        assert_eq!(launched_count(&s), 1, "one at its caster's next start");
+        assert_eq!(launched_count(&s), 1, "none at the opponent's end of turn, or at its caster's start");
         s.end_turn();
-        s.end_turn();
-        assert_eq!(launched_count(&s), 2, "and another at the one after");
+        assert_eq!(launched_count(&s), 2, "and another at its caster's next end of turn");
+    }
+
+    /// R767000: after v0.6.6h through v0.6.9i one launched at the start of each of its caster's turns from
+    /// the next on (issue #4440).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9i_launches_one_at_each_start_of_its_casters_turn_only() {
+        crate::under_kept(ID, script_v0_6_9i(), || {
+            let (mut s, _, _, _, _, _, _) = voyaging(false);
+            s.play(VOYAGE, json!({}));
+            assert_eq!(launched_count(&s), 0);
+            s.end_turn();
+            assert_eq!(launched_count(&s), 0, "no launch at the opponent's start");
+            s.end_turn();
+            assert_eq!(launched_count(&s), 1, "one at its caster's next start");
+        });
     }
 
     /// R767000: through v0.6.6h the base face launched one at once too (issue #4154).
@@ -425,7 +473,7 @@ mod tests {
         assert!(exile.contains(&dormant_id));
         assert_eq!(ships(&s).len(), 10);
         assert_eq!(launched_count(&s), 1, "one launches now");
-        s.end_turn().end_turn();
-        assert_eq!(launched_count(&s), 2, "another at its caster's next start");
+        s.end_turn();
+        assert_eq!(launched_count(&s), 2, "another at the end of the turn it was cast on (R4440053)");
     }
 }

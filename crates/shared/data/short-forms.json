@@ -42,6 +42,14 @@
         "en": "Indestructible, Spell Damage +1\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
       }
     },
+    "classic-028": {
+      "base": {
+        "en": "Indestructible\nCry: Discard your hand and exile your deck.\nAura: Your deck and graveyard have Flashback. +{mana} mana per turn."
+      },
+      "radiant": {
+        "en": "Indestructible\nCry: Discard your hand and your deck.\nAura: Your deck and graveyard have Flashback. +{mana} mana per turn."
+      }
+    },
     "classicplus-007": {
       "radiant": {
         "en": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nActivate: Spend one to summon a Radiant Right-house defender or Wrong-House Attacker."
@@ -50,11 +58,6 @@
     "classicplus-019-2": {
       "radiant": {
         "en": "Can't attack\nEnd of turn: Attack a random enemy Unit. A kill across from your Bot Loser is its kill."
-      }
-    },
-    "classicplus-026": {
-      "radiant": {
-        "en": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per} Health per mana."
       }
     },
     "classicplus-042-1": {
@@ -82,11 +85,6 @@
     "meditative-008": {
       "base": 2,
       "radiant": 2
-    },
-    "meditative-009": {
-      "radiant": {
-        "en": "Cry: Add a random Start of turn card and a random End of turn card to your hand.\nAura: Your turn effects trigger {extra|extra time|extra times}."
-      }
     },
     "meditative-020": {
       "base": {
@@ -461,10 +459,10 @@
     },
     "stinkyscapeplus-080": {
       "base": {
-        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one each turn."
+        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one each turn end."
       },
       "radiant": {
-        "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn."
+        "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn end."
       }
     },
     "stinkyscapeplus-087": {
