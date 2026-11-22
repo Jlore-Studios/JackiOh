@@ -16769,6 +16769,36 @@
     "4464": {
       "action": "review",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-22T07:38:49Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-23T07:38:49Z",
+        "hours": 24,
+        "kind": "revise",
+        "model": "muse-spark-1.3-contributor",
+        "options": [
+          {
+            "change": "Rebase the branch onto origin/main (81abc32326) and keep the 5-file fix, resolving the one patches.json notes line to v0.6.9g so it becomes a plain modification.",
+            "tradeoff": "Requires rewriting branch history, which this worktree is forbidden to do; needs a run with rebase rights or the harness's own resolve step."
+          },
+          {
+            "change": "Rebuild the change fresh from origin/main: reset to main and reapply the 5-file fix as new edits.",
+            "tradeoff": "Discards the two committed passes' history and still needs branch-reset rights this worktree does not have."
+          },
+          {
+            "change": "Drop the shipped-prose edit (revert patches dir to base) so the branch merges without a rewrite.",
+            "tradeoff": "Leaves the shipped v0.6.9h notes saying v0.6.9f and breaks patches-check consistency in an old-base worktree; abandons the reviewer's directed fix."
+          }
+        ],
+        "problem": "The branch cannot auto-merge: its vendored v0.6.9h block in crates/cards/patches/patches.json and main's shipped v0.6.9h block are competing additions of the same text differing in one notes line (v0.6.9f vs v0.6.9g). I verified this with git merge-tree (base dd441f06ba, our 81abc32326, their HEAD): patches.json reports 'changed in both' with the two notes lines in conflict markers. The code fix itself is complete and green, but no file-only edit in this worktree can clear that conflict while keeping the checks green.",
+        "provider": "muse",
+        "question": "What should carry out the history rewrite this worktree is forbidden to do (no commit, rebase, reset, merge, or branch switch)?",
+        "why": "because it is the only option that keeps the substantive re-key fix and the reviewer's directed prose fix intact while making the prose edit the plain modification the reviewer asked for; I proved the alternatives either keep the conflict or break the checks."
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T03:38:56Z",
@@ -16786,6 +16816,7 @@
       "live": "reviewing",
       "pending_request": false,
       "provider": "muse",
+      "question": "What should carry out the history rewrite this worktree is forbidden to do (no commit, rebase, reset, merge, or branch switch)?",
       "queued_at": "2026-11-22T05:37:36Z",
       "run_id": "44990297939",
       "runs_on": "night-vm-muse",
