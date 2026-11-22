@@ -16241,6 +16241,13 @@
     "4518": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T22:48:15Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "No hard line holds: this is a behavior-preserving validator API refactor plus one server call site and tests, not an engine-rules change or a cross-crate design decision."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
