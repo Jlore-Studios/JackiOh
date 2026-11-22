@@ -16130,11 +16130,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-22T22:47:34Z",
+        "at": "2026-11-22T23:05:48Z",
         "difficulty": "hard",
         "provider": "claude-7",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's decisions (the opponent-reply tries in crates/ai/src/reply.rs and the root's activation price in evaluate.rs), which is hard by the rule."
+        "tier": "strong",
+        "why": "Rule line 2, The AI: it changes which opponent moves the reply search tries (crates/ai/src/reply.rs), and through that the AI's decisions and its activation prices"
       },
       "failures": 0,
       "forced": false,
