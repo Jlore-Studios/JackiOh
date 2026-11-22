@@ -17843,8 +17843,15 @@
     "what": "revise #4489 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-22T12:25:11Z",
-    "notes": [],
+    "at": "2026-11-22T12:31:40Z",
+    "notes": [
+      "#4480 no longer waits its turn",
+      "#4489: its turn came (it waited 120 minutes for #4459, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
+      "started revise #4480 on claude-3 (run 45022832244)",
+      "started revise #4489 on claude-4 (run 45022873638)",
+      "nothing more to start: nothing is queued",
+      "pruned 11 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18549,7 +18556,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T12:25:11Z",
+  "loop_tick": "2026-11-22T12:31:40Z",
   "machine_disk": {
     "issue": null,
     "reading": {
