@@ -18794,7 +18794,7 @@
       }
     },
     "4501": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "decision": {
         "answer": "1",
@@ -18842,16 +18842,16 @@
       "interruptions": 0,
       "issue": 4472,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "gpt",
       "question": "Please choose whether to rerun with the locked Cargo dependencies available or explicitly waive the exact local calibration requirement.",
       "queued_at": "2026-11-22T19:05:19Z",
-      "run_id": "45053882187",
+      "run_id": "pending:ea23b0ae-1795374318",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "decision",
-      "started_at": "2026-11-22T18:13:55Z",
+      "started_at": "2026-11-22T19:05:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -19341,9 +19341,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T19:05:06Z",
+    "at": "2026-11-22T19:05:46Z",
     "url": "",
-    "what": "suggestions (ai) on claude-8"
+    "what": "revise #4501 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-22T18:56:34Z",
