@@ -15595,6 +15595,7 @@
         "by": "`muse` (medium)",
         "sha": "467072d365752d717caeafd2cbc35aa1969eb004"
       },
+      "closed_at": "2026-11-22T01:45:09Z",
       "died": 0,
       "difficulty": "medium",
       "feedback_since": "2026-11-21T21:43:53Z",
@@ -15611,6 +15612,7 @@
       "interruptions": 0,
       "issue": 4432,
       "live": "fixing-ci",
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "A person must update the pin in bot/tests/test_ci_matrix.py (bot/ is forbidden to the night bot): in JOBS replace the entry \"tools, wasm\", with \"tools, wasm 1/4\", \"tools, wasm 2/4\", \"tools, wasm 3/4\", \"tools, wasm 4/4\", (same position, after \"tools duos, selfplay\",); and in test_the_committed_files_give_todays_jobs change jobs[\"tools, wasm\"][\"test\"] to jobs[\"tools, wasm 1/4\"][\"test\"]. No change to the shards-set assertion is needed. Then re-run python3 -m unittest discover -s tests -t . from bot/ and confirm green.",
