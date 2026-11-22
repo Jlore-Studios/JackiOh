@@ -16286,6 +16286,8 @@
     "4455": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "d4d332465fb7e87cde6f15dab10c4dec512b193c",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T00:44:36Z",
