@@ -16148,23 +16148,17 @@
     "what": "spot-check #4419 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-22T03:02:59Z",
+    "at": "2026-11-22T03:14:47Z",
     "notes": [
-      "delivered suggest on muse (run 44978135692): suggested",
-      "delivered suggest on claude-8 (run 44977442169): suggested",
-      "delivered suggest on claude-7 (run 44977403999): suggested",
-      "delivered suggest on claude-7 (run 44977328955): suggested",
-      "delivered build #4426 on claude-6 (run 44972607921): built",
-      "started review #4451 on claude-6 (run 44979164133)",
+      "delivered suggest on claude-3 (run 44977365249): suggested",
+      "delivered build #4435 on muse (run 44968104541): built",
+      "started review #4455 on muse (run 44979962679)",
+      "started review #4419 on claude-8 (run 44980007181)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "#4450: typed it Task",
-      "#4449: typed it Task",
-      "#4448: typed it Feature",
-      "#4447: typed it Task",
-      "#4446: typed it Task",
-      "#4445: typed it Task",
-      "#4444: typed it Feature"
+      "pruned 1 plan file(s) older than 7 days",
+      "#4454: typed it Bug",
+      "#4453: typed it Task",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16870,7 +16864,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-22T03:02:59Z",
+  "loop_tick": "2026-11-22T03:14:47Z",
   "machine_disk": {
     "issue": null,
     "reading": {
