@@ -37655,6 +37655,12 @@
         "number": 4377,
         "title": "Patch: card controls announce the card's full rules text to screen readers",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-22T01:20:38Z",
+        "number": 4425,
+        "title": "Patch: the fuzz plays practice sandbox games, using the sandbox's tools at random mid-game",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
