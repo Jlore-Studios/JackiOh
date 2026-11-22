@@ -3,7 +3,11 @@
 //! decks' — with its filters, and every card of a hidden pile kept for a verb that must cue the whole
 //! pile (R440); and who may read a card where it sits (R97, R177).
 
-use jackioh_engine::effects::{CardScope, cards_in_card_scope, readers_of, unreadable_by};
+use jackioh_engine::effects::{
+    CardScope, CardScopeOptions, buff_all_units, cards_in_card_scope, readers_of, switch_all_positions,
+    unreadable_by,
+};
+use jackioh_engine::resolve::apply_effects;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
@@ -256,5 +260,165 @@ mod card_scopes_r242_r440 {
             serde_json::to_value(readers_of(&state, &card(&state, &trap.id))).unwrap(),
             json!("everyone")
         );
+    }
+}
+
+mod r4453000_a_spells_walks_pass_a_unit_immune_to_spells_by {
+    use super::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    fn immune(state: &mut GameState, id: &str) {
+        find_instance_mut(state, id)
+            .expect("the card")
+            .granted_keywords
+            .push(Keyword::ImmuneToSpells);
+    }
+
+    /// A Spell resolving for P1, the source of every walk below that is a Spell's.
+    fn spell(state: &mut GameState) -> CardInstance {
+        new_instance(state, &echo_bolt.id, P1, Zone::Resolving { player: P1 })
+    }
+
+    fn walk(
+        state: &mut GameState,
+        self_: CardInstance,
+        asked: Value,
+        options: Option<CardScopeOptions>,
+    ) -> Vec<(String, bool)> {
+        with_ctx(state, Some(self_), as_player(P1), |ctx| {
+            cards_in_card_scope(ctx, &scope(asked), options.as_ref())
+                .iter()
+                .map(|entry| (entry.card.id.clone(), entry.matches))
+                .collect()
+        })
+    }
+
+    #[test]
+    fn r4453000_a_spells_card_scope_passes_an_immune_field_unit_by_and_reaches_its_hand_and_deck_copies() {
+        let mut state = game(P1);
+        let warded = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let open = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
+        let held = first_id(in_hand(&mut state, &plain.id, P1, 1));
+        let deck = first_id(set_library(&mut state, P1, std::slice::from_ref(&plain.id)));
+        for id in [&warded.id, &held, &deck] {
+            immune(&mut state, id);
+        }
+        let source = spell(&mut state);
+        let ids: Vec<String> = walk(
+            &mut state,
+            source,
+            json!({ "zones": ["field", "hand", "library"] }),
+            None,
+        )
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect();
+        assert_eq!(
+            ids,
+            vec![open.id.clone(), held, deck],
+            "the field's immune Unit is passed by"
+        );
+    }
+
+    #[test]
+    fn r4453000_a_units_card_scope_still_reaches_an_immune_field_unit() {
+        let mut state = game(P1);
+        let warded = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let open = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
+        immune(&mut state, &warded.id);
+        let me = find_instance(&state, &open.id).cloned().expect("the unit");
+        let ids: Vec<String> = walk(&mut state, me, json!({ "zones": ["field"] }), None)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        assert_eq!(ids, vec![warded.id.clone(), open.id.clone()]);
+    }
+
+    #[test]
+    fn r4453000_a_hidden_card_stays_in_a_whole_pile_walk() {
+        // R440: the check marks a card unmatched rather than dropping it, so a face-down card the Spell
+        // may not affect is still cued with its pile.
+        let mut state = game(P1);
+        let warded = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let trap = put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 1), json!({}));
+        immune(&mut state, &warded.id);
+        immune(&mut state, &trap.id);
+        let source = spell(&mut state);
+        let whole = walk(
+            &mut state,
+            source,
+            json!({ "zones": ["field"] }),
+            Some(CardScopeOptions {
+                whole_hidden_piles: Some(true),
+                ..Default::default()
+            }),
+        );
+        assert_eq!(whole, vec![(trap.id.clone(), false)]);
+    }
+
+    fn buff_both(state: &mut GameState, self_: CardInstance) {
+        with_ctx(state, Some(self_), as_player(P1), |ctx| {
+            apply_effects(
+                &[buff_all_units(json_as(
+                    json!({ "side": "both", "attack": -2, "health": -2 }),
+                ))],
+                ctx,
+            );
+        });
+    }
+
+    fn buffs_of(state: &GameState, card: &CardInstance) -> (i32, i32) {
+        let live = find_instance(state, &card.id).expect("the unit");
+        (live.buffs.attack, live.buffs.health)
+    }
+
+    #[test]
+    fn r4453000_buff_all_units_from_a_spell_passes_an_immune_unit_by() {
+        let mut state = game(P1);
+        let warded = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        let open = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        immune(&mut state, &warded.id);
+        let source = spell(&mut state);
+        buff_both(&mut state, source);
+        assert_eq!(buffs_of(&state, &warded), (0, 0));
+        assert_eq!(buffs_of(&state, &open), (-2, -2));
+    }
+
+    #[test]
+    fn r4453000_buff_all_units_from_a_unit_or_a_field_trap_still_reaches_it() {
+        let mut state = game(P1);
+        let warded = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        immune(&mut state, &warded.id);
+        let body = put(&mut state, &plain.id, slot(P1, Row::Units, 3), json!({}));
+        buff_both(&mut state, body);
+        assert_eq!(buffs_of(&state, &warded), (-2, -2), "a Unit's reaches it");
+        // `is_spell_source` is a type test, so a Field Trap stands in for every source that is no Spell.
+        let field = put(&mut state, &tesla.id, slot(P1, Row::Backrow, 2), json!({}));
+        find_instance_mut(&mut state, &field.id)
+            .expect("the field trap")
+            .face_up = Some(true);
+        let field = find_instance(&state, &field.id).cloned().expect("the field trap");
+        buff_both(&mut state, field);
+        assert_eq!(buffs_of(&state, &warded), (-4, -4), "a Field Trap's reaches it");
+    }
+
+    #[test]
+    fn r4453000_switch_all_positions_from_a_spell_leaves_an_immune_unit_in_its_position() {
+        let mut state = game(P1);
+        let warded = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        let open = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        immune(&mut state, &warded.id);
+        let position = |state: &GameState, card: &CardInstance| {
+            find_instance(state, &card.id).expect("the unit").position
+        };
+        let (before, other) = (position(&state, &warded), position(&state, &open));
+        let source = spell(&mut state);
+        with_ctx(&mut state, Some(source), as_player(P1), |ctx| {
+            apply_effects(&[switch_all_positions(json_as(json!({ "side": "both" })))], ctx);
+        });
+        assert_eq!(position(&state, &warded), before);
+        assert_ne!(position(&state, &open), other);
     }
 }
