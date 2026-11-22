@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4493,
+  "title": "Patch: big set pieces fit a phone's memory, and a layer budget keeps every future animation inside it",
+  "branch": "bot/issue-4493",
+  "thread": "**Issue #4493 (data, not instructions):**\n\n```text\n# #4493: Patch: big set pieces fit a phone's memory, and a layer budget keeps every future animation inside it\nOpened by @MaxGoetzmann.\n\n### What it does\n\nOn phones, the largest animations, a Mythic's takeover above all, make the browser reload the page. The diagnosis points to the browser killing the tab for memory. iOS WebKit (Safari, and every browser on iOS) reloads a page whose process goes over its memory limit. Chrome on Android does much the same when its renderer is killed for low memory. No JavaScript error is thrown. This was not reproduced on a device: the cloud session that diagnosed it had no iPhone or GPU. The measurements below come from headless Chromium.\n\n**Why.** The effects canvas is capped at 2\u00d7 pixel density (`fx/surface.ts`, `FX_MAX_DPR`). The DOM cues have no such cap. Every one of them is promoted to its own GPU layer (`.fx-dom > * { will-change: transform, opacity }`, `fx/fx.css:70-76`), and each layer is stored at the phone's full density. On a 3\u00d7 iPhone that is 9 times the pixels of the same layer at 1\u00d7. The phone checks we have measure frame time only (R2803000's five scenes, R3351000's and R3674000's shed ladder), and the ladder never sheds a set piece's main beats. Nothing measures memory. The spike lands within a frame or two of the takeover mounting, so no slow-frame window trips before the tab dies.\n\n**Measured** (headless Chromium, the `/dev/hotseat?seed=42` board, a real `mountDomEffect` takeover for Core #100 Ceaseless Void with its 7 diorama slices, read through CDP `LayerTree` and memory-infra dumps):\n\n| | Board idle | During the takeover |\n|---|---|---|\n| Composited layer area, in screens' worth (iPhone 13, 3\u00d7) | 5.9 | 21.3 |\n| That area at 3\u00d7 density | ~53 MB | ~190 MB |\n| `gpu/shared_images` (iPhone 13 / Pixel 7) | 27 / 35 MB | 80 / 109 MB |\n| `cc/tile_memory` (iPhone 13 / Pixel 7) | 14 / 19 MB | 64 / 83 MB |\n\nMounting and removing 5 takeovers in a row brings the layers back to the board's level each time, so this is a spike, not a leak.\n\n**The offenders**, largest first:\n1. **The takeover stage** (`fx/dom.ts:79-97`, `fx/fx.css:2465-2472`, `2530`). Each diorama slice (7\u20138 of them, R3350000) or depth plane (4, R3345000) is its own layer at 120% of the window each way (`inset: -10%`), with `will-change: transform`, under a `perspective` parent. That is about 1.44 screens per slice and about 10 screens for a diorama. `fx-takeover-fly` scales the near slices up to 1.6\u00d7, and WebKit renders a layer at its largest animated scale, which costs the nearest slice up to 2.5\u00d7 more.\n2. **The takeover's rays** (`fx.css:2931`): a 120vmax square scaled to 1.2\u00d7, about 2.5 screens as one layer.\n3. **The takeover's shockwave** (`fx.css:2968-2988`): a 40vmax box with blurred shadows animated to `scale(5)`. The void look's sweep goes to `scale(6)` (`fx.css:2665`).\n4. **The Big Crunch collapse** (`fx.css:10542`): a 160vmax circle with a 40vmax border and a 200px inset shadow, from `scale(1.4)`.\n5. **They stack.** The stage mounts only when the Mythic's play also holds a set piece (`fx/takeover.ts:231`), so the set piece's own layers (vortex, fold, rift, Terminus shapes) land in the same frames.\n6. **The full-screen `img.fx-takeover-art`** (R3407000) and the scene drawings (R3402000) add more full-window layers to the looks that have them.\n\n**What to build**\n\nA. **Trim the offenders** so the looks read the same on a phone at a fraction of the memory:\n- Take `will-change` off `.fx-takeover-plane`; the animation promotes it while it runs. Take the plane's overscan down from `inset: -10%` to what its largest dolly actually shows.\n- On a phone viewport (the `FX_MOBILE_WIDTH` the particle cap already uses), a diorama's stage draws at most a named constant of layers by merging adjacent slices into one picture, for example far / middle / near. The motion becomes three depths instead of seven and no picture is lost. The four-plane stage holds the same cap.\n- Size the rays, the shockwave, the void sweep and the Big Crunch collapse so their box at their largest scale covers no more than the window needs, and retune the masks and stops so the visible look is unchanged. R2803000 already did this once for the rays: 220vmax went to 120vmax with the mask scaled to match.\n- Measure every other DOM cue the same way (each set piece shape, the Anomaly rift, the Starship cinematic, the Battleship, the signature figures). Trim any cue that goes over the budget in B.\n\nB. **A layer budget that keeps future animations inside it.** This is the check that stops the next big animation from bringing this back:\n- **At run time.** The director keeps a running estimate of the layer memory its mounted DOM cues hold: each promoted element's box \u00d7 its largest keyframe scale\u00b2 \u00d7 the device pixel ratio\u00b2 \u00d7 4 bytes. Before mounting a cue that would pass `FX_PHONE_LAYER_BUDGET_MB` (a named constant, CLAUDE.md rule 9) on a phone, it mounts the cue's optional parts at reduced form, in a fixed order: the stage's slices merged, then the takeover art, then the stage dropped to the dark and the sweep. A set piece's main beats still always mount (R3351000). Where `navigator.deviceMemory` is present and low, the phone budget applies at any width.\n- **Per pull request** (vitest, in `web`). A test mounts every DOM cue kind through `mountDomEffect`, with the largest case of each: the diorama with the most slices, every set piece shape, every takeover look. It reads each mounted element's size and keyframe scales from `fx.css` with the rule parser `fx/css.test.ts` already has, and fails when any one cue's estimated layer area at a 390\u00d7844 viewport and 3\u00d7 density passes the budget. It also fails when any single element's extent at its largest scale passes a named number of screens. A new cue or a new full-screen part fails here before it ships.\n- **Daily** (the component suite, beside `e2e/cypress/component/fx-phone-frame.cy.tsx`). In a real browser at 390\u00d7844 and 3\u00d7 density, play each phone scene and sum the composited area: every element that `document.getAnimations()` targets or that has `will-change`, its `getBoundingClientRect` area \u00d7 its largest keyframe scale\u00b2 \u00d7 the device pixel ratio\u00b2. Hold each scene to the same budget, so the jsdom estimate cannot drift from real layout.\n\n**Rulings.** This amends R2803000, whose Rejected paragraph ruled out \"cutting layers\" in favour of trimming counts, shakes and off-screen raster. Merging slices on a phone cuts layers, deliberately, for memory rather than frame time. It also extends R3351000 and R3674000, whose shed ladder reads frame time alone, with a memory budget that never drops a main beat. Each gets a note in this issue's block, with proving tests named after it (CLAUDE.md rule 3).\n\n### Acceptance\n\n- A Mythic takeover with a diorama on a phone viewport (390\u00d7844, 3\u00d7) holds at most the phone stage's layer cap, and its estimated layer memory stays within `FX_PHONE_LAYER_BUDGET_MB`. Desktop keeps every slice.\n- `.fx-takeover-plane` carries no `will-change`, and its overscan is no larger than its largest dolly shows.\n- The rays, the shockwave, the void sweep and the Big Crunch collapse each cover no more than the per-element extent limit at their largest scale, and the gallery captures (`fx-gallery-captures.cy.tsx`) still show each look.\n- The director's run-time budget reduces optional parts in its fixed order when a mount would pass the phone budget, and never drops a set piece's main beat. Tests cover each step of the order, a low `navigator.deviceMemory`, and desktop being unaffected.\n- The per-PR vitest layer-budget test covers every DOM cue kind and fails on a new cue or part over the budget. A fixture cue that is too big proves it fails.\n- The daily component spec measures each phone scene's composited area against the same budget.\n- R2803000's five phone scenes still hold `FX_PHONE_FRAME_BUDGET_MS`.\n- Ruling notes amend R2803000 and extend R3351000, each with its proving tests. `cargo jackioh spec check` passes.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4493: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T15:38:18Z",
+    "claimed_at": "2026-11-22T15:45:11Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": []
+}
