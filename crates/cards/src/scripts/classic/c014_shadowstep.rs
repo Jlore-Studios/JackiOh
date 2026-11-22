@@ -60,7 +60,7 @@ fn is_unit(ctx: &EffectContext<'_>, died: &GameEvent) -> bool {
     animated || card_type_of_face(ctx.state, def_id, *radiant == Some(true)) == CardType::Unit
 }
 
-/// `units_only` is R4395000's trigger; off, it is what v0.6.9f and before ran: any card of yours destroyed.
+/// `units_only` is R4395000's trigger; off, it is what v0.6.9g and before ran: any card of yours destroyed.
 fn shadowstep(units_only: bool) -> TriggerDef {
     TriggerDef::new("shadowstep", &[GameEventType::Destroyed], move |ctx, event| {
         let GameEvent::Destroyed { instance_id: answered_id, .. } = event else {
@@ -152,9 +152,9 @@ pub fn script_v0_4_12b() -> CardScripts {
     scripts(false, false)
 }
 
-/// R4395000: v0.6.9f and every version before it answered every card of yours that was destroyed;
+/// R4395000: v0.6.9g and every version before it answered every card of yours that was destroyed;
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_9f() -> CardScripts {
+pub fn script_v0_6_9g() -> CardScripts {
     scripts(true, false)
 }
 
@@ -723,11 +723,11 @@ mod tests {
         });
     }
 
-    /// R4395000: v0.4.12b's and v0.6.9f's scripts answer every card of yours that was destroyed, a
+    /// R4395000: v0.4.12b's and v0.6.9g's scripts answer every card of yours that was destroyed, a
     /// Field Spell included: they hand it back at cost 0 and are spent.
     #[test]
     fn r4395000_the_kept_scripts_still_answer_a_destroyed_field_spell_of_yours() {
-        for (version, kept) in [("v0.4.12b", script_v0_4_12b()), ("v0.6.9f", script_v0_6_9f())] {
+        for (version, kept) in [("v0.4.12b", script_v0_4_12b()), ("v0.6.9g", script_v0_6_9g())] {
             crate::under_kept(SHADOWSTEP, kept, || {
                 let mut s = datacenter();
                 let program = s.card(FIELD_SPELL).clone();
