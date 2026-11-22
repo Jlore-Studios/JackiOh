@@ -16770,7 +16770,7 @@
       "started_at": "2026-11-22T05:19:13Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 3
     },
     "4463": {
       "action": "review",
