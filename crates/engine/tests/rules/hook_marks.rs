@@ -814,6 +814,35 @@ fn r2783000_r2783001_golden_texts_leave_out_markers_and_via() {
 }
 
 #[test]
+fn r4395001_golden_texts_leave_out_a_destroyed_events_animated() {
+    let died = |animated: Option<bool>| GameEvent::Destroyed {
+        instance_id: "c4".into(),
+        def_id: "core-001".into(),
+        owner: P1,
+        controller: P1,
+        attack: 1,
+        max_health: 1,
+        killer_id: None,
+        radiant: None,
+        animated,
+        via: None,
+    };
+    assert_eq!(events_text(&[died(Some(true))]), events_text(&[died(None)]));
+
+    let mut state = playing("golden");
+    let mut bare = state.clone();
+    state.applied.push(AppliedAction {
+        nonce: "golden".into(),
+        events: vec![died(Some(true))],
+    });
+    bare.applied.push(AppliedAction {
+        nonce: "golden".into(),
+        events: vec![died(None)],
+    });
+    assert_eq!(view_texts(&state), view_texts(&bare));
+}
+
+#[test]
 fn r2783000_a_round_tripped_state_replays_its_markers_and_they_take_no_number() {
     let mut state = playing("round-trip");
     let bare = act_with_nonce(&state, json!({ "type": "endTurn", "playerId": "p1" }), "hm-end");
