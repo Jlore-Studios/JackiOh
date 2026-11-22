@@ -16300,9 +16300,11 @@
         "by": "`muse` (medium)",
         "sha": "d4d332465fb7e87cde6f15dab10c4dec512b193c"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T00:44:36Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-22T03:04:29Z",
         "family": "muse",
@@ -16312,6 +16314,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the cards' flavour lines and artist credits load beside the engine, not in the first page load\"} -->\n- ## What changed\n- `apps/web` no longer bundles `flavour.json` (~98 KB raw) into the first load. `cards/flavour.ts` serves the sidecar through `loadFlavour()` (one shared dynamic-`import()` promise, failure not cached so a later call retries), `flavourNow()` and a `useSyncExternalStore` `useFlavour()` hook shaped lik\u2026\n- `net/first-load.test.ts` gains the three guards from the plan and the budget drops from 483,328 to 458,752: `vite build --mode development` measures 445,874 bytes for entry-plus-preloads (27,664 less than the 473,538 the #4222 comment recorded), with ~2.9% headroom. `apps/web/README.md` gains the o\u2026\n- ## How it was tested\n- - `pnpm --dir apps/web test src/cards/flavour.test.tsx` \u2014 11/11, including the new late-arrival test (hover preview + detail view gain line and artist once the held table resolves) and the failure/retry test.\n- - `pnpm --dir apps/web test src/net/first-load.test.ts` \u2014 16/16 with `dist/` built, including the static-guard, `flavourNow()`-null and built-site probe tests and the lowered budget.\n- - `pnpm --dir apps/web test src/notfound/NotFoundPlay.test.tsx` (9/9), `src/game/emotes.test.tsx` (52/52), `src/wording.test.ts` (15/15) \u2014 pass.\n- - `src/routes/almanac.test.tsx`, `src/cards/inspect/inspect.test.tsx`, `CardDetail/Extended/sheetClose/swipe/convention/hero-counters` \u2014 every R660 assertion passes; inspect suite 78/78 in isolation.\n- - `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`, `cargo jackioh spec check` (2356 rulings, 5927 proofs: ok), `cargo fmt --check` \u2014 all green.\n- ## Decisions the issue did not settle\n- - The shipped sidecar names zero artists (0 of 978 entries), so the late-arrival test resolves the held table as the real entries plus a synthetic `\"A. Painter\"` on `core-001`, and the built-site probe falls back to a middle flavour line until an artist ships. Rejected: asserting artist text from t\u2026\n- - The dynamic import uses the `@jackioh/cards/flavour.json` alias as planned, not the relative fallback \u2014 the built-site probe passes, so no switch was needed. Verified all 978 flavour lines are absent from `catalog.json`/`chinese.json`, so the probes are first/last/middle lines.\n- ## Reviewer attention\n- One red is environmental, with base evidence: almanac's `?card=` test (30 s budget, ~3 full-grid renders) times out in full-file runs on this shared box. It passes in isolation on the branch (21.4 s) and on untouched base (18.4 s), and a full-file run on untouched base fails the same test at 32.2 s\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4435 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4435/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4435,
       "kind": "review",
       "live": "reviewing",
