@@ -17803,6 +17803,14 @@
       "requested_by": "jgoetzmann-bot",
       "spot_check_of": 4481,
       "stop_requested": false
+    },
+    "4487": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-22T04:58:29Z",
+      "issue": 4454,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
