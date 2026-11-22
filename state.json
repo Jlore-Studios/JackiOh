@@ -15900,7 +15900,7 @@
       "started_at": "2026-11-22T02:26:56Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "4442": {
       "action": "review",
