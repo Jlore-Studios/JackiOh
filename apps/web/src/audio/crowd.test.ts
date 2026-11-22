@@ -168,6 +168,52 @@ describe("background: the page hides mid-game and comes back (issue #2034)", () 
     expect(audio.violations).toEqual([]);
   });
 
+  it("R4512000 the crowd stays quiet while the page is hidden and murmurs again on return", () => {
+    let visibility: DocumentVisibilityState = "visible";
+    const factory = fakeContextFactory({ state: "running" });
+    const engine = createAudioEngine({
+      createContext: factory.create,
+      lifecycle: null,
+      speech: null,
+      visibility: () => visibility,
+    });
+    engines.push(engine);
+    engine.unlock();
+    const tasks: Task[] = [];
+    const crowd = createCrowdDirector({
+      engine,
+      later: (ms, run) => {
+        const task = { ms, run, canceled: false, ran: false };
+        tasks.push(task);
+        return () => {
+          task.canceled = true;
+        };
+      },
+    });
+    crowd.start();
+    const audio = factory.last();
+    const bus = crowdBusOf(engine, audio);
+    // A GIGA hit lands while visible, then the tab goes to the background with the context still running.
+    crowd.observeDamage(25);
+    visibility = "hidden";
+    // The patron and the roar come due on the hidden page and are dropped …
+    due(tasks);
+    // … and a hit asked for now draws nothing, not even a quiet period.
+    const before = tasks.length;
+    crowd.observeDamage(25);
+    expect(tasks).toHaveLength(before);
+    expect(heard(audio, bus)).toEqual([]);
+    // The murmur loop keeps its rhythm for when the page shows again.
+    expect(tasks.filter((t) => t.ms >= CROWD_FEEL.patronMinMs && !t.canceled && !t.ran)).toHaveLength(1);
+
+    // The tab shows again: nothing held back plays as a burst …
+    visibility = "visible";
+    due(tasks);
+    // … only the one patron now due murmurs.
+    expect(heard(audio, bus)).toHaveLength(1);
+    expect(audio.violations).toEqual([]);
+  });
+
   it("background: after the OS closed the context and the tap rebuilt it, the crowd plays on the new context", async () => {
     const r = rig();
     const closed = r.factory.last();
