@@ -3199,3 +3199,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-22T08:01:46Z,44988143709,claude-3,opus,build,4423,hard,built,,150,0,0,0,,9,73,,,1,claude-4,fresh,other,1
 2026-11-22T08:08:52Z,44997499994,claude-7,opus,build,4466,hard,built,,15.4,152,57005,11314855,4.9451,28,38,,,59.1,claude-7,fresh,,1
 2026-11-22T08:06:13Z,44996706869,claude-7,opus,build,4468,hard,built,,18,58,16231,1969797,1.2001,23,37,,,47,claude-3,fresh,other,1
+2026-11-22T08:15:37Z,44986679993,claude-6,opus,build,4447,hard,built,,150,267,66151,20443677,6.9183,20,10,,,58.1,claude-6,fresh,,1
