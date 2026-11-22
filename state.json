@@ -18880,6 +18880,8 @@
       }
     },
     "4501": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-22T16:41:54Z",
@@ -18893,8 +18895,11 @@
         "trail": "- said: The final release relink is in thin LTO again; dependencies are reused, but changing the perf constants still requires rebuilding the CLI artifact. No calibration numbers are being changed during this validation step.\n- ran `/bin/bash -lc 'cargo build --release -p jackioh-tools --bin jackioh'` (exit 0)\n- ran `/bin/bash -lc 'target/release/jackioh perf'` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4472/.bot-notes.md\n- said: Both finalized 10-pass gates now pass all twelve rows. I\u2019m in the last validation phase: JSON/smoke output, tools clippy, formatting and repository checks, then a clean diff/scope audit. The only known limitation remains Cargo\u2019s missing test-only YAML crates, which I\u2019ll retry and report exactly.\n- ran `/bin/bash -lc 'target/release/jackioh perf --smoke --json'` (exit 0)\n- ran `/bin/bash -lc 'cargo clippy -p jackioh-tools --bin jackioh -- -D warnings'` (exit 0)\n- ran `/bin/bash -lc 'cargo fmt --check'` (exit 0)\n- ran `/bin/bash -lc 'cargo jackioh catalog check'` (exit 0)\n- ran `/bin/bash -lc 'cargo jackioh patches check'` (exit 0)\n- ran `/bin/bash -lc 'cargo jackioh spec check'` (exit 0)\n- said: Final JSON, binary clippy, rustfmt, catalog, patches and spec checks all pass. I\u2019m retrying the requested integration test once in the finalized tree; if Cargo again stops at the uncached test-only crate, I\u2019ll leave that as an explicit environmental limitation rather than altering dependency or tes\u2026\n- ran `/bin/bash -lc 'cargo test -p jackioh-tools --test perf'` (exit 101)\n- ran `/bin/bash -lc 'cargo clippy -p jackioh-tools --all-targets -- -D warnings'` (exit 101)\n- ran `/bin/bash -lc \"lscpu | rg 'Model name|\"'^CPU'\"\\\\(s\\\\)' | head -n 4 git diff --check git status --short git diff --stat git diff -- crates/tools/src/perf.rs cra\u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4472/crates/tools/README.md, /home/agent-gpt/actions-runner/_work/_temp/work/item-4472/crates/tools/src/perf.rs\n- ran `/bin/bash -lc 'cargo fmt --all git diff --check git status --short git diff --stat'` (exit 0)\n- ran `/bin/bash -lc \"rg --files target/perf-test/deps | rg '/lib(serde_json|jackioh_engine)-[\"'^/]+'\"\\\\.rlib\"'$'\"' | sort\"` (exit 0)\n- ran `/bin/bash -lc 'ls -l --time-style=long-iso target/perf-test/deps/libserde_json-*.rlib target/perf-test/deps/libjackioh_engine-*.rlib'` (exit 0)\n- ran `/bin/bash -lc \"sed -n '1,22p' Cargo.toml rustc --version\"` (exit 0)\n- said: Cargo cannot resolve any test target without the missing YAML dev-dependency, but the finalized test-profile artifacts already contain everything `tests/perf.rs` itself imports. I\u2019m compiling that exact integration-test source directly against those artifacts in `/tmp` and running it, so the smoke \u2026\n- ran `/bin/bash -lc 'env CARGO_BIN_EXE_jackioh=/home/agent-gpt/actions-runner/_work/_temp/work/item-4472/target/perf-test/jackioh rustc --edition=2024 --test crates/\u2026` (exit 0)\n- ran `/bin/bash -lc /tmp/jackioh-perf-test-4472` (exit 0)\n- ran `/bin/bash -lc '/tmp/jackioh-perf-test-4472 --ignored --nocapture'` (exit 0)\n- ran `/bin/bash -lc 'for crate in anyhow clap indexmap jackioh_ai jackioh_cards jackioh_engine jackioh_run rayon serde serde_json; do rg --files target/debug/deps | \u2026` (exit 0)\n- ran `/bin/bash -lc 'ls -l --time-style=long-iso target/debug/deps/libserde_json-*.rlib target/debug/deps/libjackioh_engine-*.rlib'` (exit 0)\n- ran `/bin/bash -lc \"for f in target/debug/.fingerprint/serde_json-*/lib-serde_json.json; do printf '%s ' \\\"\"'$f\"; rg -o '\"'\\\"features\\\":\\\\[[\"'^]]*'\"\\\\]' \\\"\"'$f\"; do\u2026` (exit 1)\n- ran `/bin/bash -lc \"sed -n '1p' target/debug/.fingerprint/serde_json-15bd278996162f8e/lib-serde_json.json sed -n '1p' target/debug/.fingerprint/serde_json-e6831fbc5\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -o '\\\\[[0-9]+,\\\"serde_json\\\",false,[0-9]+\\\\]' target/debug/.fingerprint/jackioh-engine-9687ac9f687c2179/lib-jackioh_engine.json rg -o '\\\\[[0-\u2026` (exit 0)\n- ran `/bin/bash -lc \"rg -n 'env\"'!'\"\\\\(\\\"CARGO_|option_env\"'!'\"\\\\(\\\"CARGO_' crates/tools/src | head -n 80\"` (exit 0)\n- ran `/bin/bash -lc 'env CARGO_MANIFEST_DIR=/home/agent-gpt/actions-runner/_work/_temp/work/item-4472/crates/tools rustc --edition=2024 --test crates/tools/src/main.\u2026` (exit 1)\n- ran `/bin/bash -lc 'env CARGO_MANIFEST_DIR=/home/agent-gpt/actions-runner/_work/_temp/work/item-4472/crates/tools CARGO_PKG_VERSION=0.5.0 rustc --edition=2024 --tes\u2026` (exit 0)\n- ran `/bin/bash -lc '/tmp/jackioh-tools-unit-4472 every_measure_over_its_budget_fails_naming_its_median_p95_and_budget'` (exit 0)\n- ran `/bin/bash -lc '/tmp/jackioh-tools-unit-4472 the_table_has_a_line_per_measure_under_its_header'` (exit 0)\n- ran `/bin/bash -lc \"/tmp/jackioh-tools-unit-4472 'perf::tests'\"` (exit 0)\n- said: The direct fallback exercised the exact repository test sources successfully: all eight `perf.rs` unit tests passed, `perf_smoke_times_the_corpus_once` passed, and the ignored daily perf integration test passed with all twelve rows. No stubs or manifest edits were used; only Cargo\u2019s unavailable dev\u2026\n- ran `/bin/bash -lc 'cargo fmt --check'` (exit 0)\n- ran `/bin/bash -lc \"git diff --check git diff --name-only rg -n 'COMBAT_FORECAST_US_BUDGET|DUOS_COMBAT_FORECAST_US_BUDGET|combat_forecast|forecast_attacks|max_forec\u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-4472/.bot-notes.md\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the perf check times the combat forecast that every host computes beside each view\"} --> ## Summary - Added `combat_forecast` and `duos_combat_forecast` timing rows to table and JSON output. - Added 1v1/Duos listed-attack totals and the maximum 1v1 fore\u2026"
       },
       "issue": 4472,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-22T18:13:55Z",
         "from_run": "45045284261",
         "gates": [
           {
@@ -18953,8 +18958,15 @@
         "source": "build",
         "until": "2026-11-22T18:41:01Z"
       },
+      "pending_request": false,
+      "provider": "gpt",
       "queued_at": "2026-11-22T18:11:01Z",
+      "run_id": "pending:12b88b16-1795371215",
+      "runs_on": "night-vm-gpt",
       "self_check_findings": [],
+      "started_at": "2026-11-22T18:13:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gpt",
@@ -19066,9 +19078,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-22T18:13:24Z",
+    "at": "2026-11-22T18:13:55Z",
     "url": "",
-    "what": "review #4464 on muse"
+    "what": "review #4501 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-22T18:02:22Z",
