@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4454,
+  "title": "Patch: the fuzz monitor fails a game in which anything reaches a Dormant card",
+  "branch": "bot/issue-4454",
+  "thread": "**Issue #4454 (data, not instructions):**\n\n```text\n# #4454: Patch: the fuzz monitor fails a game in which anything reaches a Dormant card\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA sleeping (Dormant) card, such as a Starship waiting to launch, is meant to be untouchable until it wakes: nothing may damage, buff, move, steal, transform or exile it. Each card has had to remember that on its own, and several forgot: one exiled a sleeping card, another fused onto one, a third transformed one, and each was found by hand after it shipped. Once this is built, the thousands of random games every pull request already plays fail on any step where something changes a sleeping card, so the next card that forgets is caught before it ships. The maintainer and the bot see the failure. Players see fewer of these bugs.\n\n## Why\n- SPEC \u00a76.1, Dormant: \"no effect reaches it\"; \u00a73's Dormant line (\"nothing reaches it\"); R1839000; R3539003. The engine keeps the rule piece by piece: `restrictions::unaffected_by`, `effects/card_scope.rs:161`, `plague::reachable_permanents_on_field`, `effects/geometry.rs:197`, `effects/transform.rs`, `combat.rs`. About 25 engine files call `slumber::is_slumbering`, and every new verb or card that walks the board must remember to.\n- The class keeps shipping: #2274 (R2260000, an Equip fused onto a Dormant host, `e69af8ff23`), #4322 (R4322000, The Maestro's exile and random Plague Counter placements reaching a Dormant card, `646b0c1abb`), and #4424, still open (Transmogulate transforms one, Unlicensed Experimentation fuses onto one). All were found by reading, not by a check.\n- The fuzz monitor's eighteen checks (`crates/engine/src/testkit/invariants.rs`, header) touch Dormant only in I17 (a 0-health Dormant hull may stand). Dormant cards are common in fuzz games: each of the 69 Starship Pieces summons a Dormant Starship when it dies (`spec/CARDS.md`).\n- The rule holds whatever the source, so the check needs no attribution: the state before a step, its events and the state after are enough. Every event that changes a card names its instance.\n\n## Proposal\nAdd I19 to the monitor: nothing reaches a Dormant card.\n- `before` notes each field card that is Dormant as the step starts, with its record.\n- `after` walks the step's events in order and drops a card at its `awakened` or `starshipLaunched`. Until then, an event that changes a card and names it is a violation: damage dealt to it, `healed`, `buffed`, `keywordGranted`, placed counters, `costChanged`, `radiantSet`, `transformed`, `bounced`, `stolen`, `controlChanged`, `positionSwitched`, `fused`, `held`, `destroyed`, `exiled` and the like. A card that is still the same instance, still Dormant and still on the field at the end must also keep its record (damage, buffs, granted keywords, counters, Frozen, tuning, enchantments, controller, position, cost changes, Radiant), which catches a change made with no event.\n- The lawful exceptions sit in the check, each citing its ruling: the countdown (R1839001), Awaken and the card's own waking Activate (R1839002), a Stack card laid onto it (R1839003), the Starship hull's fuses (R1852000, R3539004), board exiles (R3539002) and lane voids (R3554002). A card that turns Dormant mid-step is checked from the next step.\n- I14's branches run it too (`listed_refused` holds both states), so listed plays meet Dormant boards far more often than the random policy alone would, and the Duos monitor runs it for each duel.\n- Whatever a 1,000-seed run turns up in the same pull request is fixed there or ruled lawful, with an exception citing the new ruling. One is known: Pocket Chaos's board swap (`effects/swap.rs`) and Silly Silas's rotation (`subsystems/rotation.rs`) move Dormant cards and change their controller, and no ruling says whether that is lawful (board replacements pass them by, \u00a73). The pull request makes that call with a ruling and its test.\n\n## Where it lands\n- `crates/engine/src/testkit/invariants.rs` (header line I19, the check, its calls from `before`/`after`, I14's branches and the Duos monitor)\n- `crates/engine/tests/rules/invariants.rs` (its tests)\n- `crates/tools/src/fuzz.rs` only if the signature grouping needs the new id\n- `spec/10-engine-guide.md`'s I14 line (the stateless list) if I19 joins it; `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`\n- SPEC \u00a76.1 Dormant, \u00a73; R1839000 to R1839003, R1852000, R3539002 to R3539004, R3554002, R4322000\n\n## Acceptance criteria\n- [ ] The monitor's header lists I19, and its message leads with `I19` and cites \u00a76.1 and R1839000.\n- [ ] Tests on fixture scripts: damage, a buff, a keyword grant, counters, a transform, an exile, a steal and a position switch on a Dormant card each fail I19, and a record change made with no event fails it too.\n- [ ] Each lawful exception passes: the countdown, Awaken, a hull fuse, a board exile, a lane void, a Stack card laid onto it, a card that turns Dormant mid-step, and a card that wakes and is then hit in the same step.\n- [ ] A test shows I19 failing a fixture that draws a random exile from a walk that keeps Dormant cards, as The Maestro did before #4322.\n- [ ] I19 runs on the played path, on I14's branches and per duel in Duos.\n- [ ] `cargo jackioh fuzz --seeds 1000`, `--handicap` and `--duos` pass, each finding fixed or exempted under a ruling. Board swaps and rotations of Dormant cards are ruled, with a proving test.\n- [ ] `cargo jackioh spec check`, `cargo test -p jackioh-engine --features testkit --test 'rules*'` and `cargo jackioh fuzz --seeds 200` are green.\n\n## Size and risks\nMedium: testkit only, about the size of I16's change (#3746): around 200 lines in the monitor, ten tests and a ruling. Risks:\n- An exception list that misses a lawful case would make the per-pull-request fuzz gate red, which is why the 1,000-seed run comes before it lands.\n- If a finding needs an engine fix rather than a ruling, the work grows toward hard; the pull request may then fix it or file it, with the exception citing that issue's ruling.\n- Build it after #4424 lands, or the gate meets that issue's open Transmogulate bug.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T03:54:59Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4454: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T03:55:38Z",
+    "claimed_at": "2026-11-22T03:57:51Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
