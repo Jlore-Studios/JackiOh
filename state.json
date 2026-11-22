@@ -38520,7 +38520,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-22T06:25:16Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4470,
         "head": "268ebeea881249ddeb45d4462e8bd2c4c66201ed",
         "issue": 4428,
         "merged_at": "2026-11-22T06:13:53Z",
@@ -38533,12 +38536,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:a489875a-1795328195",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/44993024179",
         "sha": "59c8529162a1918db28ec1fa883ce19ebb0c0c9e",
         "started_at": "2026-11-22T06:17:00Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the sound-effect recipes load when sound first needs them, not in the first page load",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 440
