@@ -16012,6 +16012,13 @@
     "4446": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-22T04:09:14Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "None of the rule's five lines holds: no engine or AI change, one crate (a store method on both stores plus a retention step), no migration, about 14 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
