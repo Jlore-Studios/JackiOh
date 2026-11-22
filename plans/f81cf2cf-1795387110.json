@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 4511,
+  "title": "Patch: the landing fan checks a few cards instead of all 800, and the collection, the stats grid and card prompts stop rebuilding every card face on each hover, scroll or keystroke",
+  "branch": "bot/issue-4511",
+  "thread": "**Issue #4511 (data, not instructions):**\n\n```text\n# #4511: Patch: the landing fan checks a few cards instead of all 800, and the collection, the stats grid and card prompts stop rebuilding every card face on each hover, scroll or keystroke\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a returning player opens the home page, the client picks the four cards fanned across it by first measuring the text of every card in the game, twice each, all at once. That freezes the page for a moment, just as it becomes usable. The same kind of waste happens elsewhere. In the Collection, resting the mouse on one card redraws every card on the screen. On the statistics page's card grid, each letter typed into the search redraws every card listed. In a game, an open card choice redraws all its options whenever anything on the board changes.\n\nOnce this is built, the home page measures only the few cards it is about to show, and those screens redraw only the cards that changed. Players see the same cards, dealt at the same odds, with less stutter. Phones gain the most.\n\n## Why\n\n- Each card face is worked out by the engine module. `faceModel` (`apps/web/src/cards/model.ts:42`) turns the card's definition into JSON, crosses into WebAssembly (`apps/web/src/wasm/index.ts:721`) and parses a JSON answer back. I timed it natively on the survey machine: a release build of `jackioh-wasm-core`'s `face` on 4 cores, run over the catalog's 800 non-token shipped cards, both faces each. 1,600 calls took 45 ms, 0.028 ms a call. The average call is 652 bytes and the average answer 2,402 bytes. In the browser, WebAssembly overhead and a `JSON.stringify` plus `JSON.parse` per call come on top of that, and a phone is several times slower again.\n- **Landing fan.** A device with `ROTATION_MIN_GAMES` (10) finished games deals from `rotationPool` (`routes/landing.tsx:609-622`).\n  - `fitting` (`routes/landingFan.ts:72-79`) runs `fitsTheFan` (`:61-67`) over all 800 shipped non-token cards. That is two `faceModel` calls per card (the normal face and the Radiant one), made before its cheap full-art check.\n  - `dealLandingFan` then has `pickWeighted` (`:141-154`) weigh every card of each of the four drawn rarities through `featureWeight` (`:120-131`), at one more `faceModel` call per card.\n  - All told, that is about 2,000 to 2,400 crossings in one synchronous task, a `useState` initializer or the effect that runs when the engine arrives, to show four cards. The `FITTING` and `WEIGHTS` caches last only for the page load, so every visit pays again.\n- **Collection grid.**\n  - Each tile calls `faceModel` inline (`collection/OwnedCards.tsx:111`).\n  - The hover preview's state lives in `OwnedCards` (`useLookHover`, `:167`; `collection/LookHover.tsx:105-111`), so every time a preview opens or closes, every mounted tile re-renders. That is `POOL_FIRST_CARDS`, 48, or more.\n  - Each tile then gets a fresh face object. That defeats `memo(CardFace)` (`cards/CardFace.tsx:798`, #3633), so the art, the text and the marks are all drawn again.\n- **Stats grid.**\n  - In grid view, `routes/stats.tsx:989` calls `faceModel` for every filtered card. The grid is not virtualized.\n  - It sits inside `StatsPage`, which also holds the search box's state (`:293`, `:680`), so each keystroke rebuilds and redraws up to 800 faces.\n  - `gridFaceOf` (`:149`) and the drill-down's tokens (`:1634`) do the same.\n- **Card prompts.** `CardOption` (`game/Prompt.tsx:929-941`) calls `liveFace`/`faceModel` directly, and `pricedFace` wraps the result in yet another new object. So every re-render of `Game` while a picker is open redraws every option: a hovered target, an animation step, the opponent's choice hover.\n- The repo already has the cure: `useLiveFace` (`game/faces.ts:74-97`, #3478, held by the test 'hovering the hand redraws no card's face' in `game/Board.render.test.tsx`) and the deck builder's `useMemo` around `faceModel` (`game/deckbuilder/PoolGrid.tsx:203`). These four places never adopted it.\n\n## Proposal\n\n1. **Landing fan: stop checking the whole pool.**\n   - For each drawn rarity, draw a card uniformly from that rarity and work out its fit and weight (one or two faces).\n   - Accept the card with probability equal to its weight divided by the largest weight any card can have (`FEATURE_WEIGHT_PLAIN`, times `FULL_ART_WEIGHT_FACTOR` while full art is on). Otherwise draw again. A card that does not fit is never accepted.\n   - This is rejection sampling: each card's chance stays exactly its weight over the summed weights of the fitting cards, as R374, R639, R704 and R1017002 say today.\n   - After a bounded number of draws for one rarity, fall back to today's full filter. The hand then deals exactly what today's would when a rarity holds few or no fitting cards.\n   - In `fitsTheFan`, run the `isFullArtCard` check before calling `faceModel`.\n   - `rotateFan` uses the same sampler.\n2. **One small hook for faces.** Add `useFaceModel(source)`, beside `useLiveFace` in `game/faces.ts` or in `cards/model.ts`. Memoize it on the definition, the Radiant flag, the face's other inputs and the locale, so a language switch still rebuilds every face (R711000). Use it in:\n   - the collection tile;\n   - a memoized stats grid card, in place of the inline `.map`;\n   - `gridFaceOf`'s callers and the drill-down's;\n   - `CardOption`, with the `pricedFace` wrap inside the memo.\n3. **Behaviour-neutral.** No face, wording, odds or rule changes, so no ruling and no patch fragment.\n\n## Where it lands\n\n- `apps/web/src/routes/landingFan.ts` and `apps/web/src/routes/landingFan.test.ts`; `apps/web/src/routes/landing.tsx` only if the call shape changes\n- `apps/web/src/game/faces.ts` (or `apps/web/src/cards/model.ts`) for the hook\n- `apps/web/src/collection/OwnedCards.tsx`, `apps/web/src/routes/stats.tsx`, `apps/web/src/game/Prompt.tsx` and their tests\n- SPEC \u00a710.10 (the landing hand's R374, R639, R704; R1017002) is read, not changed\n\n## Acceptance criteria\n\n- [ ] A test counts face crossings while dealing a returning player's fan from the shipped pool, through a spy on `faceModel` or on the module's `face`, as `Board.render.test.tsx` counts its own. The count stays under a small named bound (say 64). Today it is every shipped card's two faces and more.\n- [ ] A test shows the new sampler gives each card of a fixture pool the same probability as a weighted draw over the fitting cards, either computed exactly or measured by frequency over a seeded source within a stated tolerance. A card that does not fit is never dealt.\n- [ ] Every existing R374, R639, R704 and R1017002 test in `landingFan.test.ts` and `landing.test.tsx` keeps its claim. A test that pinned one card to one random stream may be re-pinned, never deleted or loosened.\n- [ ] Collection: opening and closing the hover preview on one tile builds no face for any tile, and a scroll step builds faces only for the tiles it newly mounts.\n- [ ] Stats grid: typing a letter into the search in grid view builds no face for a card that was already listed.\n- [ ] Card prompt: a board re-render that leaves a picker's options unchanged (a hover, an animation step) builds no option's face.\n- [ ] A language switch still rebuilds every face on each of these screens (R711000).\n- [ ] `pnpm --dir apps/web test` on the touched files, `pnpm --dir apps/web typecheck` and eslint pass, and `net/first-load.test.ts`'s budget is unchanged or lower.\n\n## Size and risks\n\nMedium: about six source files and their tests, all in `apps/web`, with no engine, server or spec change.\n\n- The sampler must keep the odds exactly; the probability test is there for that.\n- A rarity whose cards almost never fit could loop; the bounded fallback covers it.\n- A memo keyed on too little would show a stale face after a setting or language change. Keying on the locale and the face's inputs, as `useLiveFace` does, covers that.\n- The saving in the browser was not measured here, because the survey machine has no WebAssembly bindgen toolchain. The native figure above is the lower bound of the cost being removed.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-22T22:16:37Z:\n\napprove\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4511: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-22T22:33:16Z",
+    "claimed_at": "2026-11-22T22:38:45Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
